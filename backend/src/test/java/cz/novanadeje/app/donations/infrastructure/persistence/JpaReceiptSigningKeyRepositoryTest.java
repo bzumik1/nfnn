@@ -68,6 +68,17 @@ class JpaReceiptSigningKeyRepositoryTest {
     }
 
     @Test
+    @DisplayName("Given a restore, when its adoption is recorded twice, then only the first records it and one row names it")
+    void should_record_once_when_adoption_is_recorded_twice_given_one_restore() {
+        assertThat(keys.recordRestoreAdoption("019a1b2c-0000-7000-8000-000000000001", NOW)).isTrue();
+        assertThat(keys.recordRestoreAdoption("019a1b2c-0000-7000-8000-000000000001", NOW.plusSeconds(60))).isFalse();
+        assertThat(keys.recordRestoreAdoption("2026-11-13T10:02:41Z", NOW)).isTrue();
+
+        assertThat(jdbc.sql("select count(*) from receipt_signing_key_adoption where restore_id = ?").param("019a1b2c-0000-7000-8000-000000000001")
+                .query(Integer.class).single()).isEqualTo(1);
+    }
+
+    @Test
     @DisplayName("Given a row with a public key that is not 32 bytes, when it is written, then the database refuses it")
     void should_refuse_row_when_written_given_public_key_of_wrong_length() {
         assertThatThrownBy(() -> insert("00000000", new byte[31], "active")).isInstanceOf(DataIntegrityViolationException.class);

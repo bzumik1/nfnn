@@ -151,6 +151,28 @@ describe('Given an administrator on the history page', () => {
     expect(rowText(row.querySelector('details') as HTMLElement)).not.toContain('Správce:');
   });
 
+  it('when the server adopted a receipt signing key from a restored backup, then the row names the server and the adoption in Czech', () => {
+    firstPage([
+      adminAction({
+        id: '019a1c00-0000-7000-8000-00000000e011',
+        adminId: '00000000-0000-0000-0000-000000000000',
+        adminName: null,
+        adminEmail: null,
+        action: 'ADOPT_RECEIPT_SIGNING_KEY',
+        subjectId: null,
+        donorId: null,
+        summary:
+          'Server převzal ze zálohy obnovené požadavkem 019a1b2c-0000-7000-8000-000000000001 klíč k ověřovacím QR kódům 39f713d0 a zveřejnil ho.',
+        details:
+          'Server převzal klíč k ověřovacím QR 39f713d0 ze zálohy obnovené požadavkem 019a1b2c-0000-7000-8000-000000000001',
+      }),
+    ]);
+
+    const [row] = rows();
+    expect(rowText(row.querySelector('.admin-col') as HTMLElement)).toBe('server');
+    expect(rowText(row)).toContain('Převzetí klíče k ověřovacím QR kódům ze zálohy');
+  });
+
   it('when a change names the donor it concerned, then the row links to the donor card and a change without a donor does not', () => {
     firstPage([
       paired,

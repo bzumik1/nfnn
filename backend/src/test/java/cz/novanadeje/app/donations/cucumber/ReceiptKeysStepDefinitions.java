@@ -8,6 +8,7 @@ import cz.novanadeje.app.cucumber.ApiClient;
 import cz.novanadeje.app.cucumber.DonorSessions;
 import cz.novanadeje.app.donations.application.signing.ReceiptSigningKeyRegistration;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKey;
+import cz.novanadeje.app.operations.infrastructure.backup.BackupProperties;
 import cz.novanadeje.app.operations.infrastructure.settings.EarlierServerSeals;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import io.cucumber.datatable.DataTable;
@@ -15,13 +16,21 @@ import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpHeaders;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import tools.jackson.databind.JsonNode;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.Timestamp;
+import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -43,16 +52,22 @@ public class ReceiptKeysStepDefinitions {
     private final ReceiptSigningKeyRegistration registration;
     private final JdbcClient jdbc;
     private final Environment environment;
+    private final ConfigurableApplicationContext context;
+    private final Clock clock;
+    private final Path restoreStatus;
     private final List<String> loggedErrors = new ArrayList<>();
     private String visitorAnswer;
 
     public ReceiptKeysStepDefinitions(ApiClient api, DonorSessions sessions, ReceiptSigningKeyRegistration registration, JdbcClient jdbc,
-                                      Environment environment) {
+                                      Environment environment, ConfigurableApplicationContext context, Clock clock, BackupProperties backups) {
         this.api = api;
         this.sessions = sessions;
         this.registration = registration;
         this.jdbc = jdbc;
         this.environment = environment;
+        this.context = context;
+        this.clock = clock;
+        this.restoreStatus = backups.directory().resolve("status").resolve("restore");
     }
 
     @Given("the server has started and registered its receipt signing key")
@@ -62,12 +77,29 @@ public class ReceiptKeysStepDefinitions {
 
     @When("the server starts again")
     public void theServerStartsAgain() {
+        whileLogging(registration::registerOwnKey);
+    }
+
+    @When("the backend is ready")
+    public void theBackendIsReady() {
+        whileLogging(() -> context.publishEvent(new ApplicationReadyEvent(new SpringApplication(), new String[0], context, Duration.ZERO)));
+    }
+
+    @Given("the backup container finished that restore {int} minutes ago under the request {string}")
+    public void theBackupContainerFinishedThatRestore(int minutes, String requestId) throws IOException {
+        Instant finished = clock.instant().minus(Duration.ofMinutes(minutes));
+        Files.createDirectories(restoreStatus.getParent());
+        Files.writeString(restoreStatus, "outcome=ok\nstarted_at=" + finished.minusSeconds(40) + "\nfinished_at=" + finished
+                + "\nfile=nfnn-2026-11-01_0300.dump.age\nsize=1000\ntables=37\nrequest=" + requestId + "\nadmin=\n");
+    }
+
+    private void whileLogging(Runnable start) {
         Logger logger = (Logger) LoggerFactory.getLogger(ReceiptSigningKeyRegistration.class);
         ListAppender<ILoggingEvent> lines = new ListAppender<>();
         lines.start();
         logger.addAppender(lines);
         try {
-            registration.registerOwnKey();
+            start.run();
         } finally {
             logger.detachAppender(lines);
         }

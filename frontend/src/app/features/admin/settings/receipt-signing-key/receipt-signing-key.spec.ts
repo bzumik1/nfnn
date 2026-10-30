@@ -58,6 +58,9 @@ describe('Given the receipt signing key section of the receipt settings', () => 
     await load(receiptSigningKeys());
 
     expect(text('h2')).toBe('Klíč k ověřovacím QR kódům');
+    expect(text('.ui-card__intro')).toBe(
+      'Tímto klíčem bude server podepisovat ověřovací QR kódy na potvrzeních o daru. Jeho veřejnou část web zveřejňuje, aby se podle ní dala potvrzení ověřit. Klíč vytvořil server sám a tady se nedá změnit.',
+    );
     expect(rows()).toEqual({
       'Klíč serveru': '21fe31df',
       Zaregistrovaný: '13. 11. 2026 12:00',
@@ -82,7 +85,16 @@ describe('Given the receipt signing key section of the receipt settings', () => 
 
     expect(rows()['Stav']).toBe('Nezveřejněný');
     expect(text('[role="alert"]')).toBe(
-      'Klíče 39f713d0, 21fe31df neprošly kontrolou pečeti, proto je web nezveřejňuje a QR kódy jimi podepsané se neověří. Záznam v databázi se změnil mimo web; obraťte se na technika serveru.',
+      'Klíče 39f713d0, 21fe31df nejsou zveřejněné, proto se QR kódy jimi podepsané neověří. Jejich záznamy v databázi chybí nebo neprošly kontrolou pečeti (změna mimo web nebo záloha jiného serveru, kterou server nepřevzal); obraťte se na technika serveru.',
+    );
+  });
+
+  it('when the key of the server is missing from the list, then its id is shown as not published and an alert says so', async () => {
+    await load({ currentKeyId: '21fe31df', currentKeyPublished: false, keys: [] });
+
+    expect(rows()).toEqual({ 'Klíč serveru': '21fe31df', Stav: 'Nezveřejněný' });
+    expect(text('[role="alert"]')).toBe(
+      'Klíč 21fe31df není zveřejněný, proto se QR kódy jím podepsané neověří. Jeho záznam v databázi chybí nebo neprošel kontrolou pečeti (změna mimo web nebo záloha jiného serveru, kterou server nepřevzal); obraťte se na technika serveru.',
     );
   });
 
@@ -99,7 +111,7 @@ describe('Given the receipt signing key section of the receipt settings', () => 
     );
 
     expect(text('.signing-key-earlier')).toBe(
-      'Ověřují se i potvrzení podepsaná dřívějšími klíči: 39f713d0 (zaregistrovaný 01. 11. 2026 08:00).',
+      'Zveřejněné jsou i dřívější klíče: 39f713d0 (zaregistrovaný 01. 11. 2026 08:00).',
     );
   });
 

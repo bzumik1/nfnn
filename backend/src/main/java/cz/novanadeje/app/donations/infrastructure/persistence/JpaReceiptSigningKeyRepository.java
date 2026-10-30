@@ -4,6 +4,7 @@ import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKey;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.List;
 
 @Repository
@@ -23,5 +24,10 @@ class JpaReceiptSigningKeyRepository implements ReceiptSigningKeyRepository {
     @Override
     public void save(ReceiptSigningKey key) {
         keys.save(ReceiptSigningKeyJpaEntity.of(key));
+    }
+
+    @Override
+    public boolean recordRestoreAdoption(String restoreId, Instant adoptedAt) {
+        return false;
     }
 }

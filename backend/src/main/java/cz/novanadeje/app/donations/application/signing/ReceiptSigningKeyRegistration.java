@@ -4,6 +4,7 @@ import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKey;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyId;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyRepository;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.shared.application.restore.FinishedRestores;
 import cz.novanadeje.app.shared.application.seal.RecordSeals;
 import cz.novanadeje.app.shared.application.seal.SealVerdict;
 import org.slf4j.Logger;
@@ -11,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionOperations;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -21,6 +23,7 @@ import java.util.Optional;
 public class ReceiptSigningKeyRegistration {
 
     public static final String ACTION = "REGISTER_RECEIPT_SIGNING_KEY";
+    public static final String ADOPT_ACTION = "ADOPT_RECEIPT_SIGNING_KEY";
     private static final Logger log = LoggerFactory.getLogger(ReceiptSigningKeyRegistration.class);
 
     private final ReceiptSigner signer;
@@ -29,8 +32,8 @@ public class ReceiptSigningKeyRegistration {
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
-    public ReceiptSigningKeyRegistration(ReceiptSigner signer, ReceiptSigningKeyRepository keys, RecordSeals seals, ApplicationEventPublisher events,
-                                         Clock clock) {
+    public ReceiptSigningKeyRegistration(ReceiptSigner signer, ReceiptSigningKeyRepository keys, RecordSeals seals, FinishedRestores restores,
+                                         ApplicationEventPublisher events, TransactionOperations transactions, Clock clock) {
         this.signer = signer;
         this.keys = keys;
         this.seals = seals;

@@ -37,4 +37,20 @@ class ReceiptSigningKeyTest {
         assertThat(otherTime.sealedContent()).isNotEqualTo(key.sealedContent());
         assertThat(otherStatus.sealedContent()).isNotEqualTo(key.sealedContent());
     }
+
+    @Test
+    @DisplayName("Given a registered key, when its id is checked against its public key, then it matches")
+    void should_match_when_id_is_checked_given_a_registered_key() {
+        assertThat(ReceiptSigningKey.register(HexFormat.of().parseHex(PUBLIC_KEY), REGISTERED_AT, content -> "seal").idMatchesPublicKey()).isTrue();
+    }
+
+    @Test
+    @DisplayName("Given a row that pairs a key id with another public key, when its id is checked, then it does not match")
+    void should_not_match_when_id_is_checked_given_another_public_key_under_the_id() {
+        ReceiptSigningKey key = ReceiptSigningKey.register(HexFormat.of().parseHex(PUBLIC_KEY), REGISTERED_AT, content -> "seal");
+
+        assertThat(new ReceiptSigningKey(key.id(), HexFormat.of().parseHex(OTHER_PUBLIC_KEY), key.registeredAt(), key.status(), key.seal())
+                .idMatchesPublicKey()).isFalse();
+        assertThat(new ReceiptSigningKey(key.id(), new byte[31], key.registeredAt(), key.status(), key.seal()).idMatchesPublicKey()).isFalse();
+    }
 }
