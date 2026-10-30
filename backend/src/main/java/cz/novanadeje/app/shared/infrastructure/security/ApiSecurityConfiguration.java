@@ -35,6 +35,7 @@ class ApiSecurityConfiguration {
             "/api/admin/donors/*/second-factor/reset",
             "/api/admin/donations/symbol-claims/*/reverse",
             "/api/admin/donations/receipt-signature",
+            "/api/admin/donations/receipt-signing-keys/*/withdrawal",
             "/api/admin/operations/backups/key/reveal",
             "/api/admin/operations/backups/key/confirmation"};
 

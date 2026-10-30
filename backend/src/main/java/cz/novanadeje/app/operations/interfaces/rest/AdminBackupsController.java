@@ -6,6 +6,7 @@ import cz.novanadeje.app.operations.application.backup.BackupKeyService;
 import cz.novanadeje.app.operations.application.backup.BackupRestoreService;
 import cz.novanadeje.app.operations.application.backup.BackupScheduleService;
 import cz.novanadeje.app.operations.domain.backup.BackupFile;
+import cz.novanadeje.app.shared.interfaces.rest.FreshSecondFactorRequest;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
@@ -59,7 +60,7 @@ class AdminBackupsController {
     }
 
     @PostMapping("/key/reveal")
-    ResponseEntity<BackupKeyResponse> revealKey(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody BackupKeyRevealRequest request, HttpServletRequest http) {
+    ResponseEntity<BackupKeyResponse> revealKey(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody FreshSecondFactorRequest request, HttpServletRequest http) {
         keyRateLimiter.check(http.getRemoteAddr());
         return ResponseEntity.ok()
                 .header(HttpHeaders.CACHE_CONTROL, NOT_STORED_BY_ANY_CACHE)

@@ -123,6 +123,8 @@ public record AdminActionFacts(String summaryKey, Map<String, String> values) {
                 full("Server zaregistroval svůj klíč k ověřovacím QR na potvrzeních o daru: (?<key>[0-9a-f]{8})")));
         shapes.put("ADOPT_RECEIPT_SIGNING_KEY", List.of(
                 full("Server převzal klíč k ověřovacím QR (?<key>[0-9a-f]{8}) z obnovené zálohy \\(obnova (?<restore>[0-9A-Za-z:.-]{1,40})\\)")));
+        shapes.put("WITHDRAW_RECEIPT_SIGNING_KEY", List.of(
+                full("Stažen klíč k ověřovacím QR (?<key>[0-9a-f]{8}) \\(ověřeno druhým faktorem\\)")));
         shapes.put("REMOVE_RECEIPT_SIGNATURE", List.of(
                 full("Obrázek podpisu odebrán; .*"),
                 full("Signature image for receipts removed; .*")));

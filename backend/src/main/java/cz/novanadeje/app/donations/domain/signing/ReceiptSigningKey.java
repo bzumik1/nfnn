@@ -48,6 +48,18 @@ public record ReceiptSigningKey(ReceiptSigningKeyId id, byte[] publicKey, Instan
         return publicKey.clone();
     }
 
+    public boolean isWithdrawn() {
+        return status == ReceiptSigningKeyStatus.REVOKED;
+    }
+
+    public ReceiptSigningKey withdrawn(Function<byte[], String> sealing) {
+        if (isWithdrawn()) {
+            throw new ReceiptSigningKeyAlreadyWithdrawn(id);
+        }
+        return new ReceiptSigningKey(id, publicKey, registeredAt, ReceiptSigningKeyStatus.REVOKED,
+                sealing.apply(sealedContent(id, publicKey, registeredAt, ReceiptSigningKeyStatus.REVOKED)));
+    }
+
     public ReceiptSigningKey sealedAgain(String newSeal) {
         return new ReceiptSigningKey(id, publicKey, registeredAt, status, newSeal);
     }
