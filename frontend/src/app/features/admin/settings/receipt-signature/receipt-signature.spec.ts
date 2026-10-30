@@ -6,6 +6,7 @@ import {
   noReceiptSignature,
   receiptSignature,
   SIGNATURE_IMAGE,
+  vectorReceiptSignature,
 } from '../../testing/admin-fixtures';
 import { ReceiptSignature } from './receipt-signature';
 
@@ -47,6 +48,10 @@ describe('Given the signature section of the receipt settings', () => {
     return fixture.nativeElement.querySelector('img.signature-preview');
   }
 
+  function vectorPreview(): SVGSVGElement | null {
+    return fixture.nativeElement.querySelector('svg.signature-preview');
+  }
+
   async function settle(): Promise<void> {
     await fixture.whenStable();
     fixture.detectChanges();
@@ -84,7 +89,7 @@ describe('Given the signature section of the receipt settings', () => {
     );
     expect(fixture.nativeElement.textContent).not.toContain('Odebrat podpis');
     expect(text('h2')).toBe('Podpis na potvrzeních');
-    expect(text('label[for="receipt-signature-file"]')).toBe('Nahrát sken');
+    expect(text('label[for="receipt-signature-file"]')).toBe('Nahrát podpis');
   });
 
   it('when a signature is uploaded, then it shows the scan with its size and upload time', async () => {
@@ -93,7 +98,48 @@ describe('Given the signature section of the receipt settings', () => {
     expect(preview()?.getAttribute('src')).toBe(SIGNATURE_IMAGE);
     expect(preview()?.getAttribute('alt')).toBe('Nahraný podpis');
     expect(text('.signature-state')).toBe('Nahráno 23. 10. 2026 21:30, 1 200 × 400 px.');
-    expect(text('label[for="receipt-signature-file"]')).toBe('Nahrát jiný sken');
+    expect(text('label[for="receipt-signature-file"]')).toBe('Nahrát jiný podpis');
+    expect(vectorPreview()).toBeNull();
+  });
+
+  it('when a vector signature is uploaded, then it draws its paths from the data and names it as SVG', async () => {
+    await load(vectorReceiptSignature());
+
+    const svg = vectorPreview();
+    expect(preview()).toBeNull();
+    expect(svg?.getAttribute('role')).toBe('img');
+    expect(svg?.getAttribute('aria-label')).toBe('Nahraný podpis');
+    expect(svg?.getAttribute('viewBox')).toBe('0 0 300 100');
+    const paths = Array.from(svg?.querySelectorAll('path') ?? []);
+    expect(paths.map((path) => path.namespaceURI)).toEqual([
+      'http://www.w3.org/2000/svg',
+      'http://www.w3.org/2000/svg',
+    ]);
+    expect(
+      paths.map((path) => [
+        path.getAttribute('d'),
+        path.getAttribute('fill'),
+        path.getAttribute('fill-opacity'),
+      ]),
+    ).toEqual([
+      ['M10 80 C40 10 65 10 95 80 S150 150 180 80 Z', '#1d2a5c', '0.9'],
+      ['m250 50 l40 40 z', '#c0392b', '1'],
+    ]);
+    expect(text('.signature-state')).toBe('Nahráno 23. 10. 2026 21:30, vektorový podpis (SVG).');
+    expect(text('label[for="receipt-signature-file"]')).toBe('Nahrát jiný podpis');
+  });
+
+  it('when a vector path carries a fill that is not a hex colour, then it is drawn black', async () => {
+    await load(
+      vectorReceiptSignature({
+        vector: {
+          viewBox: [0, 0, 10, 10],
+          paths: [{ d: 'M0 0 L1 1', fill: 'url(https://example.com/a)', opacity: 1 }],
+        },
+      }),
+    );
+
+    expect(vectorPreview()?.querySelector('path')?.getAttribute('fill')).toBe('#000000');
   });
 
   it('when the signature cannot be loaded, then it says so and loads again on request', async () => {
@@ -129,8 +175,64 @@ describe('Given the signature section of the receipt settings', () => {
       await choose(scan('podpis.pdf', 'application/pdf'));
 
       expect(text('[role="alert"]:not(:empty)')).toBe(
-        'Vyberte prosím sken ve formátu JPEG, PNG nebo WebP.',
+        'Vyberte prosím podpis ve formátu SVG nebo sken ve formátu JPEG, PNG či WebP.',
       );
+    });
+
+    it('then an SVG is uploaded and its vector is shown', async () => {
+      await choose(scan('podpis.svg', 'image/svg+xml', 30 * 1024));
+
+      http.expectOne({ method: 'POST', url: SIGNATURE_URL }).flush(vectorReceiptSignature());
+      await settle();
+
+      expect(vectorPreview()?.querySelectorAll('path').length).toBe(2);
+      expect(text('[role="status"]:not(:empty)')).toBe(
+        'Podpis je uložený. Ponesou ho potvrzení vystavená od teď.',
+      );
+    });
+
+    it('then an SVG whose browser names no type is still uploaded', async () => {
+      await choose(scan('Podpis.SVG', '', 1000));
+
+      http.expectOne({ method: 'POST', url: SIGNATURE_URL }).flush(vectorReceiptSignature());
+      await settle();
+
+      expect(vectorPreview()).not.toBeNull();
+    });
+
+    it('then an SVG over 200 kB is refused before uploading', async () => {
+      await choose(scan('podpis.svg', 'image/svg+xml', 200 * 1024 + 1));
+
+      expect(text('[role="alert"]:not(:empty)')).toBe(
+        'SVG je větší než 200 kB. Zjednodušte ho prosím a zkuste to znovu.',
+      );
+    });
+
+    it('then a refused SVG shows what the server found in it', async () => {
+      await choose(scan('podpis.svg', 'image/svg+xml', 1000));
+
+      http.expectOne({ method: 'POST', url: SIGNATURE_URL }).flush(
+        {
+          type: 'https://nfnn.cz/problems/donations/unsupported-signature-vector',
+          title: 'SVG nejde použít jako podpis',
+          detail: 'Podpis ve formátu SVG smí obsahovat jen tvary (path) s barevnou výplní.',
+          status: 400,
+          errors: [
+            {
+              field: 'file',
+              code: 'element',
+              message: 'Soubor obsahuje nepovolený prvek „script“.',
+            },
+          ],
+        },
+        { status: 400, statusText: 'Bad Request' },
+      );
+      await settle();
+
+      expect(text('[role="alert"]:not(:empty)')).toBe(
+        'SVG nejde použít jako podpis. Podpis ve formátu SVG smí obsahovat jen tvary (path) s barevnou výplní. Soubor obsahuje nepovolený prvek „script“.',
+      );
+      expect(vectorPreview()).toBeNull();
     });
 
     it('then a file over 10 MB is refused before uploading', async () => {

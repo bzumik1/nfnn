@@ -1,7 +1,7 @@
 import { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { administrator, adminSettings, mockDonorApi, session } from './donor-session';
-import { noSignature, uploadedSignature } from './signature-image';
+import { noSignature, refusedVector, uploadedSignature, vectorSignature } from './signature-image';
 
 const SETTINGS = '/api/admin/operations/settings';
 const SIGNATURE = '/api/admin/donations/receipt-signature';
@@ -175,7 +175,7 @@ test.describe('Given an administrator on the settings page', () => {
     const card = page.getByRole('region', { name: 'Podpis na potvrzeních' });
     await expect(card).toContainText('Podpis není nahraný.');
 
-    await card.getByLabel('Nahrát sken').setInputFiles({
+    await card.getByLabel('Nahrát podpis').setInputFiles({
       name: 'podpis.jpg',
       mimeType: 'image/jpeg',
       buffer: Buffer.from('JPEG'),
@@ -199,5 +199,61 @@ test.describe('Given an administrator on the settings page', () => {
     );
     await expect(card.getByRole('img', { name: 'Nahraný podpis' })).toHaveCount(0);
     expect(methods).toEqual(['GET', 'POST', 'DELETE']);
+  });
+
+  test('when they upload a vector signature, then the card draws it and a refused SVG keeps it with the reason', async ({
+    page,
+  }) => {
+    let current: object = noSignature;
+    let uploads = 0;
+    await page.route(
+      (url) => url.pathname === SETTINGS,
+      (route) => route.fulfill({ json: adminSettings }),
+    );
+    await page.route(
+      (url) => url.pathname === SIGNATURE,
+      (route) => {
+        if (route.request().method() !== 'POST') {
+          return route.fulfill({ json: current });
+        }
+        uploads++;
+        if (uploads === 1) {
+          current = vectorSignature;
+          return route.fulfill({ json: current });
+        }
+        return route.fulfill({
+          status: 400,
+          contentType: 'application/problem+json',
+          body: JSON.stringify(refusedVector),
+        });
+      },
+    );
+
+    await page.goto('/sprava/nastaveni');
+    const card = page.getByRole('region', { name: 'Podpis na potvrzeních' });
+    await expect(card).toContainText('Podpis není nahraný.');
+
+    await card.getByLabel('Nahrát podpis').setInputFiles({
+      name: 'podpis.svg',
+      mimeType: 'image/svg+xml',
+      buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 100"/>'),
+    });
+
+    const drawing = card.getByRole('img', { name: 'Nahraný podpis' });
+    await expect(drawing).toBeVisible();
+    await expect(drawing.locator('path')).toHaveCount(2);
+    await expect(card).toContainText('Nahráno 23. 10. 2026 21:30, vektorový podpis (SVG).');
+
+    await card.getByLabel('Nahrát jiný podpis').setInputFiles({
+      name: 'jiny.svg',
+      mimeType: 'image/svg+xml',
+      buffer: Buffer.from('<svg><script/></svg>'),
+    });
+
+    await expect(card.getByRole('alert').filter({ hasText: /\S/ })).toContainText(
+      'Soubor obsahuje nepovolený prvek „script“.',
+    );
+    await expect(drawing.locator('path')).toHaveCount(2);
+    expect(uploads).toBe(2);
   });
 });

@@ -3,7 +3,9 @@ export const signatureImage =
 
 export const uploadedSignature = {
   configured: true,
+  kind: 'RASTER',
   image: signatureImage,
+  vector: null,
   width: 600,
   height: 200,
   uploadedAt: '2026-10-23T19:30:00Z',
@@ -11,8 +13,45 @@ export const uploadedSignature = {
 
 export const noSignature = {
   configured: false,
+  kind: null,
   image: null,
+  vector: null,
   width: null,
   height: null,
   uploadedAt: null,
+};
+
+export const vectorSignature = {
+  configured: true,
+  kind: 'VECTOR',
+  image: null,
+  vector: {
+    viewBox: [0, 0, 300, 100],
+    paths: [
+      {
+        d: 'M20 70 C40 20 60 20 70 60 C75 80 90 80 100 50 C110 20 130 30 125 60 C120 85 150 85 165 55 C175 35 190 40 200 60 C210 75 240 70 280 40 L282 44 C240 76 210 82 197 64 C188 48 178 42 169 58 C152 90 116 92 120 60 C124 34 112 30 104 52 C94 84 72 86 65 62 C56 30 42 28 25 72 Z',
+        fill: '#1d2a5c',
+        opacity: 0.9,
+      },
+      {
+        d: 'M30 85 C120 78 200 80 270 76 L270 79 C200 83 120 81 30 88 Z',
+        fill: '#121c66',
+        opacity: 0.6,
+      },
+    ],
+  },
+  width: 1200,
+  height: 400,
+  uploadedAt: '2026-10-23T19:30:00Z',
+};
+
+export const refusedVector = {
+  type: 'https://nfnn.cz/problems/donations/unsupported-signature-vector',
+  title: 'SVG nejde použít jako podpis',
+  status: 400,
+  detail:
+    'Podpis ve formátu SVG smí obsahovat jen tvary (path) s barevnou výplní a mít nejvýš 200 kB. Sken ve formátu JPEG, PNG nebo WebP jde nahrát dál.',
+  errors: [
+    { field: 'file', code: 'element', message: 'Soubor obsahuje nepovolený prvek „script“.' },
+  ],
 };
