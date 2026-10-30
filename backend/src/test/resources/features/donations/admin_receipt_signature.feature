@@ -16,21 +16,24 @@ Feature: An administrator uploads the signature printed on donation receipts
       | id   | date       | amount  | account    | bankCode | name          | variableSymbol |
       | 2001 | 2026-10-01 | 1000.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
     And the application starts the import
-    And "Jana" downloads the receipt of her donation received on 2026-10-01
-    And the PDF shows 1 image
+    And "Jana" issues the receipt of her donation received on 2026-10-01
+    And the frozen receipt shows no signature image
     When "Jana" uploads a 3000 by 1000 pixel JPEG scan named "podpis.jpg" as the receipt signature
     Then the response status is 200
     And the receipt signature is set, 1200 by 400 pixels, uploaded at "2026-12-20T11:00:00Z"
     And the admin action "CHANGE_RECEIPT_SIGNATURE" by "Jana" is recorded with details containing "Nahrán obrázek podpisu na potvrzení o daru: 1200 × 400 px"
     When "Jana" asks for the receipt signature
     Then the receipt signature is set, 1200 by 400 pixels, uploaded at "2026-12-20T11:00:00Z"
-    When "Jana" downloads the receipt of her donation received on 2026-10-01
-    Then the PDF shows 1 image
+    When "Jana" issues the receipt of her donation received on 2026-10-01
+    Then the issued receipt is the one issued before
+    And the frozen receipt shows no signature image
     Given today is 2027-01-15
-    When "Jana" downloads her yearly receipt for 2026
+    When "Jana" issues her yearly receipt for 2026
     Then the response status is 200
-    And the PDF shows 2 images
-    And the PDF says "Pavel Znamenáček"
+    And the frozen receipt shows the current signature image
+    And the frozen receipt holds:
+      | field          | value            |
+      | signatory.name | Pavel Znamenáček |
 
   Scenario: A removed signature leaves the next receipts with the line and the name
     Given "Jana" uploads a 600 by 200 pixel JPEG scan named "podpis.jpg" as the receipt signature

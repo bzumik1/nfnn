@@ -184,7 +184,7 @@ Feature: An administrator pairs bank payments by hand
       | id   | date       | amount | account    | bankCode | name          | variableSymbol |
       | 1001 | 2026-10-10 | 500.00 | 2900233333 | 2010     | Svoboda Petr  | {Petr}         |
     And the application starts the import
-    And "Petr" downloads the receipt of his donation received on 2026-10-10
+    And "Petr" issues the receipt of his donation received on 2026-10-10
     When "Jana" unpairs payment 1001
     Then the response status is 409
     And the problem type ends with "donations/donation-has-receipt"
@@ -200,7 +200,7 @@ Feature: An administrator pairs bank payments by hand
       | 1002 | 2026-10-12 | 200.00 | 2900233333 | 2010     | Svoboda Petr  | 1111111111     |
     And the application starts the import
     And today is 2027-01-15
-    And "Petr" downloads his yearly receipt for 2026
+    And "Petr" issues his yearly receipt for 2026
     When "Jana" pairs payment 1002 with "Petr"
     Then the response status is 200
     And the pairing changed the yearly receipt for 2026

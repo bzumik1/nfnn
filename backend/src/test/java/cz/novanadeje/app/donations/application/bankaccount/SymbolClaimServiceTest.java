@@ -25,11 +25,9 @@ import cz.novanadeje.app.donations.domain.donor.SymbolClaimId;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimRepository;
 import cz.novanadeje.app.donations.domain.donor.SymbolOfferNotAvailable;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
-import cz.novanadeje.app.donations.domain.receipt.DonationReceiptId;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
 import cz.novanadeje.app.donations.domain.receipt.FirstReceiptYear;
-import cz.novanadeje.app.donations.domain.receipt.ReceiptFingerprint;
-import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
+import cz.novanadeje.app.donations.domain.receipt.Receipts;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
@@ -54,7 +52,6 @@ import java.util.Optional;
 
 import static cz.novanadeje.app.donations.BankPayments.PAYER_NAME;
 import static cz.novanadeje.app.donations.BankPayments.payment;
-import static cz.novanadeje.app.donations.domain.receipt.Receipts.SNAPSHOT_CONTENT;
 import static cz.novanadeje.app.shared.domain.Money.czk;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -275,7 +272,6 @@ class SymbolClaimServiceTest {
     }
 
     private static DonationReceipt yearlyReceipt(Year year) {
-        return DonationReceipt.issueForYear(DonationReceiptId.newId(NOW), JANA, year, ReceiptNumber.of(Year.of(2027), 1), LocalDate.of(2027, 1, 15),
-                NOW, LocaleCode.CS, new ReceiptFingerprint("0123456789abcdef".repeat(4)), SNAPSHOT_CONTENT, Optional.empty());
+        return Receipts.yearlyReceiptOf(JANA, year);
     }
 }

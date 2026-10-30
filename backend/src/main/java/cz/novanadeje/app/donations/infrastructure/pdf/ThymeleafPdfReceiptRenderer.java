@@ -6,6 +6,7 @@ import com.openhtmltopdf.pdfboxout.PdfBoxRenderer;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 import cz.novanadeje.app.donations.application.receipt.DonationReceiptRenderer;
 import cz.novanadeje.app.donations.domain.receipt.ContentDigest;
+import cz.novanadeje.app.donations.domain.receipt.FrozenReceipt;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptDocument;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatureRepository;
@@ -72,6 +73,10 @@ class ThymeleafPdfReceiptRenderer implements DonationReceiptRenderer {
     }
 
     @Override
+    public byte[] render(FrozenReceipt receipt, Instant issuedAt) {
+        throw new UnsupportedOperationException("Rendering a frozen receipt arrives with the implementation of slice 1.6");
+    }
+
     public ReceiptSnapshot freeze(ReceiptDocument document) {
         Instant now = clock.instant();
         resources.storeTemplate(templateDigest, templateContent, now);
@@ -82,7 +87,6 @@ class ThymeleafPdfReceiptRenderer implements DonationReceiptRenderer {
         return new ReceiptSnapshot(templateDigest, data, logo.digest(), signature.map(ReceiptImage::digest), RENDER_PROFILE);
     }
 
-    @Override
     public byte[] render(ReceiptSnapshot snapshot, ReceiptNumber number, Instant issuedAt) {
         if (snapshot.renderProfile() != RENDER_PROFILE) {
             throw new IllegalStateException("Receipt " + number + " needs render profile " + snapshot.renderProfile()

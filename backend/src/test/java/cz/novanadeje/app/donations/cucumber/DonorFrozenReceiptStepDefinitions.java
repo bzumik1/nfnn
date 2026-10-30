@@ -1,0 +1,342 @@
+package cz.novanadeje.app.donations.cucumber;
+
+import cz.novanadeje.app.cucumber.ApiClient;
+import cz.novanadeje.app.cucumber.DonorSessions;
+import cz.novanadeje.app.cucumber.ScenarioDonors;
+import cz.novanadeje.app.donations.application.signing.ReceiptSigner;
+import io.cucumber.datatable.DataTable;
+import io.cucumber.java.en.Then;
+import io.cucumber.java.en.When;
+import org.springframework.http.HttpHeaders;
+import org.springframework.jdbc.core.simple.JdbcClient;
+import tools.jackson.databind.JsonNode;
+
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HexFormat;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+public class DonorFrozenReceiptStepDefinitions {
+
+    private static final String RECEIPTS_PATH = "/api/donations/me/receipts";
+    private static final String IMAGES_PATH = "/api/donations/me/receipt-images/";
+    private static final String QR_PREFIX = "https://nfnn.cz/overit#1";
+
+    private final ApiClient api;
+    private final DonorSessions sessions;
+    private final ScenarioDonors scenarioDonors;
+    private final JdbcClient jdbc;
+    private final ReceiptSigner signer;
+    private final List<JsonNode> issued = new ArrayList<>();
+
+    public DonorFrozenReceiptStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors scenarioDonors, JdbcClient jdbc, ReceiptSigner signer) {
+        this.api = api;
+        this.sessions = sessions;
+        this.scenarioDonors = scenarioDonors;
+        this.jdbc = jdbc;
+        this.signer = signer;
+    }
+
+    @When("{string} issues her/his/its yearly receipt for {int}")
+    public void issuesTheYearlyReceipt(String alias, int year) {
+        issueAs(alias, Map.of("year", year));
+    }
+
+    @When("{string} issues the receipt of her/his/its donation received on {date}")
+    public void issuesTheReceiptOfTheirDonation(String alias, LocalDate receivedOn) {
+        issueAs(alias, Map.of("donationId", donationIdOf(alias, receivedOn).toString()));
+    }
+
+    @When("{string} issues the receipt of the donation of {string} received on {date}")
+    public void issuesTheReceiptOfSomeoneElsesDonation(String alias, String owner, LocalDate receivedOn) {
+        issueAs(alias, Map.of("donationId", donationIdOf(owner, receivedOn).toString()));
+    }
+
+    @When("{string} issues the receipt of donation {string}")
+    public void issuesTheReceiptOfDonation(String alias, String donationId) {
+        issueAs(alias, Map.of("donationId", donationId));
+    }
+
+    @When("{string} asks to issue a receipt naming the year {string} and the donation {string}")
+    public void asksToIssueAReceiptNaming(String alias, String year, String donationId) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        if (!year.isEmpty()) {
+            body.put("year", Long.parseLong(year));
+        }
+        if (!donationId.isEmpty()) {
+            body.put("donationId", donationId);
+        }
+        issueAs(alias, body);
+    }
+
+    @When("{string} lists her/his/its receipts")
+    public void listsTheReceipts(String alias) {
+        sessions.actAs(alias);
+        api.get(RECEIPTS_PATH);
+    }
+
+    @When("{string} reads the issued receipt again")
+    public void readsTheIssuedReceiptAgain(String alias) {
+        sessions.actAs(alias);
+        api.get(RECEIPTS_PATH + "/" + lastIssued().get("id").asString());
+    }
+
+    @When("{string} reads receipt {string}")
+    public void readsReceipt(String alias, String number) {
+        sessions.actAs(alias);
+        api.get(RECEIPTS_PATH + "/" + receiptIdOf(number));
+    }
+
+    @When("{string} reads the receipt with id {string}")
+    public void readsTheReceiptWithId(String alias, String id) {
+        sessions.actAs(alias);
+        api.get(RECEIPTS_PATH + "/" + id);
+    }
+
+    @When("{string} fetches the signature image of receipt {string}")
+    public void fetchesTheSignatureImageOfReceipt(String alias, String number) {
+        sessions.actAs(alias);
+        api.getBytes(IMAGES_PATH + signatureImageOf(number));
+    }
+
+    @When("{string} fetches the receipt image {string}")
+    public void fetchesTheReceiptImage(String alias, String digest) {
+        sessions.actAs(alias);
+        api.getBytes(IMAGES_PATH + digest);
+    }
+
+    @When("someone without a token issues the yearly receipt for {int}")
+    public void someoneWithoutATokenIssuesTheYearlyReceipt(int year) {
+        api.forgetCredentials();
+        api.post(RECEIPTS_PATH, Map.of("year", year));
+    }
+
+    @When("someone without a token lists the receipts")
+    public void someoneWithoutATokenListsTheReceipts() {
+        api.forgetCredentials();
+        api.get(RECEIPTS_PATH);
+    }
+
+    @When("someone without a token reads the receipt with id {string}")
+    public void someoneWithoutATokenReadsTheReceipt(String id) {
+        api.forgetCredentials();
+        api.get(RECEIPTS_PATH + "/" + id);
+    }
+
+    @When("someone without a token fetches the receipt image {string}")
+    public void someoneWithoutATokenFetchesTheReceiptImage(String digest) {
+        api.forgetCredentials();
+        api.getBytes(IMAGES_PATH + digest);
+    }
+
+    @Then("the answer is JSON that must not be cached")
+    public void theAnswerIsJsonThatMustNotBeCached() {
+        HttpHeaders headers = api.lastResponse().getHeaders();
+        assertThat(headers.getContentType()).hasToString("application/json");
+        assertThat(headers.getCacheControl()).isEqualTo("private, no-store");
+    }
+
+    @Then("the issued receipt has number {string}")
+    public void theIssuedReceiptHasNumber(String number) {
+        assertThat(answeredReceipt().get("number").asString()).isEqualTo(number);
+        assertThat(answeredReceipt().get("receipt").get("number").asString()).isEqualTo(number);
+    }
+
+    @Then("the issued receipt is {word}")
+    public void theIssuedReceiptIs(String status) {
+        assertThat(answeredReceipt().get("status").asString()).isEqualTo(status.toUpperCase(Locale.ROOT));
+    }
+
+    @Then("the issued receipt is the yearly receipt for {int}")
+    public void theIssuedReceiptIsTheYearlyReceiptFor(int year) {
+        JsonNode receipt = answeredReceipt();
+        assertThat(receipt.get("kind").asString()).isEqualTo("YEARLY");
+        assertThat(receipt.get("year").asInt()).isEqualTo(year);
+        assertThat(receipt.get("donationId").isNull()).isTrue();
+        assertThat(receipt.get("receipt").get("year").asInt()).isEqualTo(year);
+    }
+
+    @Then("the issued receipt is the single receipt of the donation of {string} received on {date}")
+    public void theIssuedReceiptIsTheSingleReceiptOf(String alias, LocalDate receivedOn) {
+        JsonNode receipt = answeredReceipt();
+        assertThat(receipt.get("kind").asString()).isEqualTo("SINGLE");
+        assertThat(receipt.get("donationId").asString()).isEqualTo(donationIdOf(alias, receivedOn).toString());
+        assertThat(receipt.get("year").isNull()).isTrue();
+        assertThat(receipt.get("receipt").get("gifts")).hasSize(1);
+        assertThat(receipt.get("receipt").get("gifts").get(0).get("receivedOn").asString()).isEqualTo(receivedOn.toString());
+    }
+
+    @Then("the issued receipt is the one issued before")
+    public void theIssuedReceiptIsTheOneIssuedBefore() {
+        assertThat(issued).withFailMessage("Fewer than two receipts were issued").hasSizeGreaterThanOrEqualTo(2);
+        assertThat(issued.getLast()).isEqualTo(issued.get(issued.size() - 2));
+    }
+
+    @Then("the frozen receipt holds:")
+    public void theFrozenReceiptHolds(DataTable table) {
+        JsonNode frozen = answeredReceipt().get("receipt");
+        for (Map<String, String> row : table.asMaps()) {
+            JsonNode value = at(frozen, row.get("field"));
+            String expected = scenarioDonors.resolve(row.get("value"));
+            if (expected == null || "null".equals(expected)) {
+                assertThat(value.isNull()).withFailMessage("%s is %s, not null", row.get("field"), value).isTrue();
+            } else {
+                assertThat(value.isString() ? value.asString() : value.toString()).as(row.get("field")).isEqualTo(expected);
+            }
+        }
+    }
+
+    @Then("the frozen receipt lists the gifts:")
+    public void theFrozenReceiptListsTheGifts(DataTable table) {
+        JsonNode frozen = answeredReceipt().get("receipt");
+        List<String> gifts = frozen.get("gifts").valueStream()
+                .map(gift -> gift.get("receivedOn").asString() + " " + gift.get("amountMinor").asLong() + " " + gift.get("source").asString()).toList();
+        assertThat(gifts).containsExactlyElementsOf(table.asMaps().stream()
+                .map(row -> row.get("receivedOn") + " " + row.get("amountMinor") + " " + row.getOrDefault("source", "BANK_TRANSFER")).toList());
+        assertThat(frozen.get("total").get("amountMinor").asLong())
+                .isEqualTo(frozen.get("gifts").valueStream().mapToLong(gift -> gift.get("amountMinor").asLong()).sum());
+        assertThat(frozen.get("total").get("currency").asString()).isEqualTo("CZK");
+    }
+
+    @Then("the frozen receipt carries the Czech texts only")
+    public void theFrozenReceiptCarriesTheCzechTextsOnly() {
+        JsonNode texts = answeredReceipt().get("receipt").get("texts");
+        assertThat(texts.get("cs").get("receipt.title.single").asString()).isEqualTo("Potvrzení o přijetí daru");
+        assertThat(texts.get("en").isNull()).isTrue();
+    }
+
+    @Then("the frozen receipt carries the Czech and the English texts")
+    public void theFrozenReceiptCarriesTheCzechAndTheEnglishTexts() {
+        JsonNode texts = answeredReceipt().get("receipt").get("texts");
+        assertThat(texts.get("cs").get("receipt.title.single").asString()).isEqualTo("Potvrzení o přijetí daru");
+        assertThat(texts.get("en").get("receipt.title.single").asString()).isEqualTo("Confirmation of a donation received");
+    }
+
+    @Then("the frozen receipt is signed with the server's key")
+    public void theFrozenReceiptIsSignedWithTheServersKey() {
+        JsonNode verification = answeredReceipt().get("receipt").get("verification");
+        assertThat(verification.get("keyId").asString()).isEqualTo(signer.keyId().value());
+        assertThat(verification.get("qrText").asString()).startsWith(QR_PREFIX).matches("https://nfnn\\.cz/overit#1[0-9]+");
+    }
+
+    @Then("its proof differs from the receipt it replaces")
+    public void itsProofDiffersFromTheReceiptItReplaces() {
+        JsonNode receipt = answeredReceipt().get("receipt");
+        String replaced = receipt.get("replaces").get("number").asString();
+        assertThat(receipt.get("verification").get("qrText").asString()).isNotEqualTo(qrTextOf(replaced));
+        assertThat(jdbc.sql("select count(distinct status_sha256) from issued_receipt where number in (?, ?)")
+                .params(receipt.get("number").asString(), replaced).query(Long.class).single()).isEqualTo(2);
+    }
+
+    @Then("the frozen receipt shows no signature image")
+    public void theFrozenReceiptShowsNoSignatureImage() {
+        assertThat(answeredReceipt().get("receipt").get("signatory").get("signatureImage").isNull()).isTrue();
+    }
+
+    @Then("the frozen receipt shows the current signature image")
+    public void theFrozenReceiptShowsTheCurrentSignatureImage() {
+        assertThat(answeredReceipt().get("receipt").get("signatory").get("signatureImage").get("sha256").asString()).isEqualTo(currentSignatureImage());
+    }
+
+    @Then("the image is the current signature, kept by the browser")
+    public void theImageIsTheCurrentSignature() {
+        HttpHeaders headers = api.lastResponse().getHeaders();
+        assertThat(headers.getContentType()).hasToString("image/png");
+        assertThat(headers.getCacheControl()).isEqualTo("private, max-age=31536000, immutable");
+        assertThat(sha256(api.lastResponseBytes())).isEqualTo(currentSignatureImage());
+    }
+
+    @Then("the receipt list shows:")
+    public void theReceiptListShows(DataTable table) {
+        JsonNode items = api.lastResponseJson().get("items");
+        assertThat(items).withFailMessage("No items in %s", api.lastResponse().getBody()).isNotNull();
+        assertThat(items.valueStream().map(item -> item.get("number").asString() + " " + item.get("status").asString() + " " + item.get("kind").asString()).toList())
+                .containsExactlyElementsOf(table.asMaps().stream().map(row -> row.get("number") + " " + row.get("status") + " " + row.get("kind")).toList());
+    }
+
+    @Then("the receipt list is empty")
+    public void theReceiptListIsEmpty() {
+        assertThat(api.lastResponseJson().get("items")).isEmpty();
+    }
+
+    @Then("receipt {string} is kept as its frozen data")
+    public void receiptIsKeptAsItsFrozenData(String number) {
+        Map<String, Object> row = jdbc.sql("select frozen, schema_version, signing_key_id, status_sha256 from issued_receipt where number = ?")
+                .param(number).query().singleRow();
+        assertThat((String) row.get("frozen")).contains("\"number\":\"" + number + "\"").contains("\"texts\":{\"cs\":{").doesNotContain("data:image");
+        assertThat(((Number) row.get("schema_version")).intValue()).isEqualTo(1);
+        assertThat(row.get("signing_key_id")).isEqualTo(signer.keyId().value());
+        assertThat((String) row.get("status_sha256")).matches("[0-9a-f]{64}");
+    }
+
+    private void issueAs(String alias, Map<String, ?> body) {
+        sessions.actAs(alias);
+        api.post(RECEIPTS_PATH, body);
+        if (api.lastResponse().getStatusCode().is2xxSuccessful()) {
+            issued.add(api.lastResponseJson());
+        }
+    }
+
+    private JsonNode lastIssued() {
+        assertThat(issued).withFailMessage("No receipt was issued").isNotEmpty();
+        return issued.getLast();
+    }
+
+    private JsonNode answeredReceipt() {
+        JsonNode answer = api.lastResponseJson();
+        assertThat(answer.get("receipt")).withFailMessage("No frozen receipt in %s", api.lastResponse().getBody()).isNotNull();
+        return answer;
+    }
+
+    private static JsonNode at(JsonNode node, String path) {
+        JsonNode value = node;
+        for (String part : path.split("\\.")) {
+            value = value.isArray() ? value.get(Integer.parseInt(part)) : value.get(part);
+            assertThat(value).withFailMessage("No %s in %s", path, node).isNotNull();
+        }
+        return value;
+    }
+
+    private UUID donationIdOf(String alias, LocalDate receivedOn) {
+        return jdbc.sql("select id from donation where donor_id = ? and received_on = ?")
+                .params(scenarioDonors.idOf(alias), receivedOn)
+                .query(UUID.class)
+                .single();
+    }
+
+    private UUID receiptIdOf(String number) {
+        return jdbc.sql("select id from issued_receipt where number = ?").param(number).query(UUID.class).single();
+    }
+
+    private String signatureImageOf(String number) {
+        return jdbc.sql("select signature_image_sha256 from issued_receipt where number = ?").param(number).query(String.class).single();
+    }
+
+    private String qrTextOf(String number) {
+        return issued.stream().filter(receipt -> receipt.get("number").asString().equals(number)).findFirst()
+                .map(receipt -> receipt.get("receipt").get("verification").get("qrText").asString())
+                .orElseThrow(() -> new AssertionError("Receipt " + number + " was not issued in this scenario"));
+    }
+
+    private String currentSignatureImage() {
+        Optional<String> digest = jdbc.sql("select image_sha256 from donation_receipt_signature").query(String.class).optional();
+        return digest.orElseThrow(() -> new AssertionError("No receipt signature is set"));
+    }
+
+    private static String sha256(byte[] bytes) {
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+}

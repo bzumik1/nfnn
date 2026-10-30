@@ -15,6 +15,7 @@ import cz.novanadeje.app.donations.domain.donation.PairingMethod;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
+import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
 import cz.novanadeje.app.donations.domain.receipt.YearlyReceiptNotAvailable;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.Money;
@@ -89,27 +90,28 @@ class DonationReceiptIssuerConcurrencyTest {
         Donation donation = storedDonation(jana, 7001, LocalDate.of(2026, 3, 15), 50000);
         LocalDate today = FoundationCalendar.today(Clock.systemUTC());
         CountDownLatch start = new CountDownLatch(1);
-        Callable<IssuedReceipt> issue = () -> {
+        Callable<DonationReceipt> issue = () -> {
             start.await();
             return issuer.issueForDonation(jana.id(), donation.id(), today);
         };
 
         ExecutorService callers = Executors.newFixedThreadPool(2);
         try {
-            Future<IssuedReceipt> first = callers.submit(issue);
-            Future<IssuedReceipt> second = callers.submit(issue);
+            Future<DonationReceipt> first = callers.submit(issue);
+            Future<DonationReceipt> second = callers.submit(issue);
             start.countDown();
 
-            IssuedReceipt firstReceipt = first.get(60, TimeUnit.SECONDS);
-            IssuedReceipt secondReceipt = second.get(60, TimeUnit.SECONDS);
+            DonationReceipt firstReceipt = first.get(60, TimeUnit.SECONDS);
+            DonationReceipt secondReceipt = second.get(60, TimeUnit.SECONDS);
 
             assertThat(secondReceipt.number()).isEqualTo(firstReceipt.number());
-            assertThat(secondReceipt.content()).isEqualTo(firstReceipt.content());
+            assertThat(secondReceipt.id()).isEqualTo(firstReceipt.id());
+            assertThat(secondReceipt.frozen().statusDigest()).isEqualTo(firstReceipt.frozen().statusDigest());
         } finally {
             callers.shutdownNow();
         }
         assertThat(storedReceipts()).isEqualTo(1);
-        assertThat(jdbc.sql("select count(*) from donation_receipt where superseded_at is null and donation_id = ?")
+        assertThat(jdbc.sql("select count(*) from issued_receipt where status = 'ACTIVE' and donation_id = ?")
                 .param(donation.id().value()).query(Long.class).single()).isEqualTo(1);
     }
 
@@ -118,14 +120,16 @@ class DonationReceiptIssuerConcurrencyTest {
     void should_issue_replacement_from_committed_profile_when_download_waited_given_profile_change_in_flight() throws Exception {
         DonorRecord jana = storedJana();
         storedDonation(jana, 7101, LocalDate.of(2025, 3, 15), 50000);
-        IssuedReceipt beforeTheChange = receipts.yearlyReceipt(jana.id(), YEAR_2025);
+        DonationReceipt beforeTheChange = receipts.issueForYear(jana.id(), YEAR_2025);
 
-        IssuedReceipt waited = downloadWaitingFor(
+        DonationReceipt waited = downloadWaitingFor(
                 () -> donorRecordService.changeProfile(new ChangeDonorRecordProfileCommand(jana.id().value(), jana.name(), NEW_ADDRESS, LocaleCode.CS)),
-                () -> receipts.yearlyReceipt(jana.id(), YEAR_2025));
+                () -> receipts.issueForYear(jana.id(), YEAR_2025));
 
         assertThat(waited.number()).isNotEqualTo(beforeTheChange.number());
-        assertThat(receipts.yearlyReceipt(jana.id(), YEAR_2025).number()).isEqualTo(waited.number());
+        assertThat(waited.frozen().document().donor().address()).isEqualTo(NEW_ADDRESS);
+        assertThat(waited.frozen().document().replaces()).map(replaced -> replaced.number()).contains(beforeTheChange.number());
+        assertThat(receipts.issueForYear(jana.id(), YEAR_2025).number()).isEqualTo(waited.number());
         assertThat(storedReceipts()).isEqualTo(2);
     }
 
@@ -135,11 +139,13 @@ class DonationReceiptIssuerConcurrencyTest {
         DonorRecord jana = storedJana();
         storedDonation(jana, 7201, LocalDate.of(2025, 3, 15), 50000);
 
-        IssuedReceipt waited = downloadWaitingFor(
+        DonationReceipt waited = downloadWaitingFor(
                 () -> storedDonation(jana, 7202, LocalDate.of(2025, 9, 1), 25000),
-                () -> receipts.yearlyReceipt(jana.id(), YEAR_2025));
+                () -> receipts.issueForYear(jana.id(), YEAR_2025));
 
-        assertThat(receipts.yearlyReceipt(jana.id(), YEAR_2025).number()).isEqualTo(waited.number());
+        assertThat(waited.frozen().document().lines()).hasSize(2);
+        assertThat(waited.frozen().document().total()).isEqualTo(Money.czk(75000));
+        assertThat(receipts.issueForYear(jana.id(), YEAR_2025).number()).isEqualTo(waited.number());
         assertThat(storedReceipts()).isEqualTo(1);
     }
 
@@ -170,7 +176,7 @@ class DonationReceiptIssuerConcurrencyTest {
         assertThatThrownBy(() -> requests.forYear(jana.id(), YEAR_2025, today)).isInstanceOf(IllegalTransactionStateException.class);
     }
 
-    private IssuedReceipt downloadWaitingFor(Runnable uncommittedChange, Callable<IssuedReceipt> download) throws Exception {
+    private DonationReceipt downloadWaitingFor(Runnable uncommittedChange, Callable<DonationReceipt> download) throws Exception {
         CountDownLatch changed = new CountDownLatch(1);
         CountDownLatch commit = new CountDownLatch(1);
         TransactionTemplate separately = new TransactionTemplate(transactionManager);
@@ -183,7 +189,7 @@ class DonationReceiptIssuerConcurrencyTest {
                 awaitRelease(commit);
             }));
             assertThat(changed.await(30, TimeUnit.SECONDS)).isTrue();
-            Future<IssuedReceipt> downloading = threads.submit(download);
+            Future<DonationReceipt> downloading = threads.submit(download);
             await().atMost(Duration.ofSeconds(30)).until(() -> sessionsWaitingForALock() > 0);
             commit.countDown();
             changing.get(30, TimeUnit.SECONDS);
@@ -228,6 +234,6 @@ class DonationReceiptIssuerConcurrencyTest {
     }
 
     private long storedReceipts() {
-        return jdbc.sql("select count(*) from donation_receipt").query(Long.class).single();
+        return jdbc.sql("select count(*) from issued_receipt").query(Long.class).single();
     }
 }

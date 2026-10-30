@@ -1,0 +1,159 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nfnn.cz/shared-cases/schemas/receipts/v1/frozen.schema.json",
+  "title": "Frozen receipt v1 cases: a receipt as the issuer puts it together and the frozen receipt the donor's receipt endpoints answer",
+  "type": "object",
+  "required": ["source", "logic", "cases"],
+  "additionalProperties": false,
+  "properties": {
+    "source": { "$ref": "../../defs/source.schema.json" },
+    "logic": { "type": "string", "minLength": 1 },
+    "cases": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/case" } }
+  },
+  "$defs": {
+    "case": {
+      "type": "object",
+      "required": ["name", "input", "expected"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "input": { "$ref": "#/$defs/document" },
+        "expected": { "$ref": "#/$defs/frozen" }
+      }
+    },
+    "day": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+    "number": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{6}$" },
+    "text": { "type": "string", "minLength": 1 },
+    "address": {
+      "type": "object",
+      "required": ["street", "city", "postalCode"],
+      "additionalProperties": false,
+      "properties": { "street": { "$ref": "#/$defs/text" }, "city": { "$ref": "#/$defs/text" }, "postalCode": { "$ref": "#/$defs/text" } }
+    },
+    "documentProperties": {
+      "type": "object",
+      "properties": {
+        "kind": { "enum": ["SINGLE", "YEARLY"] },
+        "number": { "$ref": "#/$defs/number" },
+        "issuedOn": { "$ref": "#/$defs/day" },
+        "locale": { "enum": ["cs", "en"] },
+        "year": { "type": ["integer", "null"], "minimum": 2000 },
+        "replaces": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "required": ["number", "issuedOn"],
+              "additionalProperties": false,
+              "properties": { "number": { "$ref": "#/$defs/number" }, "issuedOn": { "$ref": "#/$defs/day" } }
+            }
+          ]
+        },
+        "foundation": {
+          "type": "object",
+          "required": ["name", "companyIdentifier", "address", "registryCourt", "registryFile", "bankAccountNumber", "issuePlace", "issuePlaceEn"],
+          "additionalProperties": false,
+          "properties": {
+            "name": { "$ref": "#/$defs/text" },
+            "companyIdentifier": { "type": "string", "pattern": "^[0-9]{8}$" },
+            "address": { "$ref": "#/$defs/address" },
+            "registryCourt": { "$ref": "#/$defs/text" },
+            "registryFile": { "$ref": "#/$defs/text" },
+            "bankAccountNumber": { "$ref": "#/$defs/text" },
+            "issuePlace": { "$ref": "#/$defs/text" },
+            "issuePlaceEn": { "$ref": "#/$defs/text" }
+          }
+        },
+        "donor": {
+          "type": "object",
+          "required": ["type", "name", "companyIdentifier", "address", "variableSymbol"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "enum": ["PERSON", "COMPANY"] },
+            "name": { "$ref": "#/$defs/text" },
+            "companyIdentifier": { "type": ["string", "null"], "pattern": "^[0-9]{8}$" },
+            "address": { "$ref": "#/$defs/address" },
+            "variableSymbol": { "type": "string", "pattern": "^[0-9]{1,10}$" }
+          }
+        },
+        "gifts": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["receivedOn", "amountMinor", "source"],
+            "additionalProperties": false,
+            "properties": {
+              "receivedOn": { "$ref": "#/$defs/day" },
+              "amountMinor": { "type": "integer", "minimum": 1 },
+              "source": { "enum": ["BANK_TRANSFER", "MANUAL"] }
+            }
+          }
+        },
+        "total": {
+          "type": "object",
+          "required": ["amountMinor", "currency"],
+          "additionalProperties": false,
+          "properties": { "amountMinor": { "type": "integer", "minimum": 1 }, "currency": { "const": "CZK" } }
+        },
+        "signatory": {
+          "type": "object",
+          "required": ["name", "role", "signatureImage"],
+          "additionalProperties": false,
+          "properties": {
+            "name": { "$ref": "#/$defs/text" },
+            "role": { "$ref": "#/$defs/text" },
+            "signatureImage": {
+              "oneOf": [
+                { "type": "null" },
+                {
+                  "type": "object",
+                  "required": ["sha256"],
+                  "additionalProperties": false,
+                  "properties": { "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" } }
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "document": {
+      "allOf": [{ "$ref": "#/$defs/documentProperties" }],
+      "type": "object",
+      "required": ["v2Sample", "kind", "number", "issuedOn", "locale", "year", "replaces", "foundation", "donor", "gifts", "total", "signatory"],
+      "properties": { "v2Sample": { "type": "string", "pattern": "^[a-z0-9-]+$" } },
+      "unevaluatedProperties": false
+    },
+    "texts": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "pattern": "^receipt\\." },
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "frozen": {
+      "allOf": [{ "$ref": "#/$defs/documentProperties" }],
+      "type": "object",
+      "required": ["schemaVersion", "kind", "number", "issuedOn", "locale", "year", "replaces", "foundation", "donor", "gifts", "total", "signatory", "texts", "verification"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "texts": {
+          "type": "object",
+          "required": ["cs", "en"],
+          "additionalProperties": false,
+          "properties": { "cs": { "$ref": "#/$defs/texts" }, "en": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/texts" }] } }
+        },
+        "verification": {
+          "type": "object",
+          "required": ["keyId", "qrText"],
+          "additionalProperties": false,
+          "properties": {
+            "keyId": { "type": "string", "pattern": "^[0-9a-f]{8}$" },
+            "qrText": { "type": "string", "pattern": "^https://nfnn\\.cz/overit#1[0-9]+$" }
+          }
+        }
+      },
+      "unevaluatedProperties": false
+    }
+  }
+}

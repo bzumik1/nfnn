@@ -13,6 +13,8 @@ import java.util.Set;
 
 public interface DonationReceiptRepository {
 
+    Optional<DonationReceipt> findById(DonationReceiptId id);
+
     Optional<DonationReceipt> findActiveForDonation(DonationId donation);
 
     Optional<DonationReceipt> findActiveForYear(DonorReference donor, Year year);
@@ -28,6 +30,8 @@ public interface DonationReceiptRepository {
     Map<DonationId, ReceiptNumber> findActiveSingleNumbersFor(DonorReference donor);
 
     List<DonationReceipt> findByDonorNewestFirst(DonorReference donor);
+
+    boolean showsSignatureImage(DonorReference donor, ContentDigest image);
 
     long nextSerial();
 

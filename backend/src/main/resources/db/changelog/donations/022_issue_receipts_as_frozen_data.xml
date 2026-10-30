@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="022-issue-receipts-as-frozen-data" author="nfnn">
+        <createTable tableName="issued_receipt">
+            <column name="id" type="uuid">
+                <constraints primaryKey="true" primaryKeyName="pk_issued_receipt" nullable="false"/>
+            </column>
+            <column name="donor_id" type="uuid">
+                <constraints nullable="false" foreignKeyName="fk_issued_receipt_donor" referencedTableName="donor_record"
+                             referencedColumnNames="donor_id"/>
+            </column>
+            <column name="kind" type="varchar(10)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="donation_id" type="uuid">
+                <constraints foreignKeyName="fk_issued_receipt_donation" referencedTableName="donation" referencedColumnNames="id"/>
+            </column>
+            <column name="receipt_year" type="integer"/>
+            <column name="number" type="varchar(11)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_issued_receipt_number"/>
+            </column>
+            <column name="issued_on" type="date">
+                <constraints nullable="false"/>
+            </column>
+            <column name="issued_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+            <column name="locale" type="varchar(2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="fingerprint" type="varchar(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="varchar(10)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="schema_version" type="smallint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="frozen" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="signature_image_sha256" type="varchar(64)">
+                <constraints foreignKeyName="fk_issued_receipt_signature_image" referencedTableName="receipt_image"
+                             referencedColumnNames="sha256"/>
+            </column>
+            <column name="signing_key_id" type="varchar(8)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="proof" type="bytea">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status_sha256" type="varchar(64)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_issued_receipt_status_sha256"/>
+            </column>
+            <column name="supersedes_id" type="uuid">
+                <constraints foreignKeyName="fk_issued_receipt_supersedes" referencedTableName="issued_receipt" referencedColumnNames="id"/>
+            </column>
+            <column name="superseded_at" type="timestamp with time zone"/>
+        </createTable>
+        <sql>alter table issued_receipt add constraint ck_issued_receipt_shape check ((kind = 'SINGLE' and donation_id is not null and receipt_year is null) or (kind = 'YEARLY' and donation_id is null and receipt_year is not null))</sql>
+        <sql>alter table issued_receipt add constraint ck_issued_receipt_status check (status in ('ACTIVE', 'REPLACED', 'WITHDRAWN'))</sql>
+        <sql>alter table issued_receipt add constraint ck_issued_receipt_superseded check ((status = 'REPLACED') = (superseded_at is not null))</sql>
+        <sql>alter table issued_receipt add constraint ck_issued_receipt_schema_version check (schema_version = 1)</sql>
+        <sql>alter table issued_receipt add constraint ck_issued_receipt_proof check (octet_length(proof) > 64)</sql>
+        <sql>create unique index uq_issued_receipt_active_donation on issued_receipt (donation_id) where status = 'ACTIVE'</sql>
+        <sql>create unique index uq_issued_receipt_active_year on issued_receipt (donor_id, receipt_year) where status = 'ACTIVE'</sql>
+        <createIndex tableName="issued_receipt" indexName="ix_issued_receipt_donor">
+            <column name="donor_id"/>
+            <column name="kind"/>
+        </createIndex>
+        <createIndex tableName="issued_receipt" indexName="ix_issued_receipt_donation">
+            <column name="donation_id"/>
+        </createIndex>
+        <createIndex tableName="issued_receipt" indexName="ix_issued_receipt_signature_image">
+            <column name="signature_image_sha256"/>
+        </createIndex>
+        <createIndex tableName="issued_receipt" indexName="ix_issued_receipt_supersedes">
+            <column name="supersedes_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

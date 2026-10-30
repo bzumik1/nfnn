@@ -14,7 +14,7 @@ Feature: An administrator sees a donor's bank accounts, donations and receipts a
       | 1002 | 2026-10-10 | 500.00 | 2900233333 | 2010     | Svoboda Petr | {Petr}         |
       | 1003 | 2026-10-12 | 300.00 | 2900233333 | 2010     | Svoboda Petr |                |
     And the application starts the import
-    And "Petr" downloads the receipt of his donation received on 2026-10-10
+    And "Petr" issues the receipt of his donation received on 2026-10-10
     When "Jana" opens the donations of "Petr"
     Then the response status is 200
     And the donations card names "Petr Svoboda" with the variable symbol of "Petr"
@@ -94,7 +94,7 @@ Feature: An administrator sees a donor's bank accounts, donations and receipts a
       | 1001 | 2026-10-05 | 200.00 | 2900233333 | 2010     | Svoboda Petr |                |
       | 1002 | 2026-10-10 | 500.00 | 2900233333 | 2010     | Svoboda Petr | {Petr}         |
     And the application starts the import
-    And "Petr" downloads the receipt of his donation received on 2026-10-05
+    And "Petr" issues the receipt of his donation received on 2026-10-05
     When "Jana" removes bank account "2900233333/2010" of "Petr"
     Then the response status is 409
     And the problem type ends with "donations/bank-account-has-receipt"

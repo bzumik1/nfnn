@@ -423,18 +423,26 @@ Feature: A donor is asked whether an old variable symbol from their verified acc
       | 1003 | 2026-09-01 | 1000.00 | 1234567 | 0800     | Nováková Jana | {Jana}         |                                       |
       | 1004 | 2027-01-12 | 1.00    | 1234567 | 0800     | Nováková Jana | {Jana}         | OVERENI UCTU NADACNI FOND NOVA NADEJE |
     And the application starts the import
-    And "Jana" downloads her yearly receipt for 2026
-    And the PDF says "Číslo potvrzení: 2027-000001"
-    And the PDF says "Počet darů: 1"
+    And "Jana" issues her yearly receipt for 2026
+    And the issued receipt has number "2027-000001"
+    And the frozen receipt lists the gifts:
+      | receivedOn | amountMinor |
+      | 2026-09-01 | 100000      |
     When "Jana" confirms symbol "6123456789" at bank account "1234567/0800"
     Then the response status is 200
     And the confirmation paired 2 payments and changed the yearly receipt for 2026
-    When "Jana" downloads her yearly receipt for 2026
+    When "Jana" issues her yearly receipt for 2026
     Then the response status is 200
-    And the PDF says "Číslo potvrzení: 2027-000002"
-    And the PDF says "Toto potvrzení nahrazuje potvrzení č. 2027-000001 ze dne 15. 1. 2027, které tímto pozbývá platnosti."
-    And the PDF says "5. 6. 2026 500 Kč"
-    And the PDF says "Počet darů: 2"
+    And the issued receipt has number "2027-000002"
+    And the frozen receipt holds:
+      | field             | value       |
+      | replaces.number   | 2027-000001 |
+      | replaces.issuedOn | 2027-01-15  |
+    And the frozen receipt lists the gifts:
+      | receivedOn | amountMinor |
+      | 2026-06-05 | 50000       |
+      | 2026-09-01 | 100000      |
+    And its proof differs from the receipt it replaces
     And receipt "2027-000001" is superseded
 
   Scenario: A second answer, an answer at another donor's account and a malformed symbol are refused

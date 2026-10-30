@@ -16,7 +16,7 @@ Feature: Donations keep an erased donor's gifts and receipts without personal da
       | 1004 | 2026-10-14 | 1.00   | 2900233333 | 2010     | Svoboda Petr | {Petr}         | OVERENI UCTU NADACNI FOND NOVA NADEJE |
     And the application starts the import
     And "Petr" confirms symbol "6123456789" at bank account "2900233333/2010"
-    And "Petr" downloads the receipt of his donation received on 2026-10-10
+    And "Petr" issues the receipt of his donation received on 2026-10-10
     And "Petr" has 4 donations
     When "Jana" erases the donor "Petr"
     Then the response status is 204

@@ -1,13 +1,16 @@
 package cz.novanadeje.app.donations.infrastructure.pdf;
 
-import cz.novanadeje.app.donations.application.receipt.DonationReceiptRenderer;
 import cz.novanadeje.app.donations.domain.donation.Donation;
+import cz.novanadeje.app.donations.domain.receipt.ContentDigest;
+import cz.novanadeje.app.donations.domain.receipt.FrozenReceipt;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptDocument;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptDocumentFactory;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
 import cz.novanadeje.app.donations.domain.receipt.Receipts;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptTextSet;
 import cz.novanadeje.app.donations.domain.receipt.ReplacedReceipt;
 import cz.novanadeje.app.donations.domain.receipt.SignatureImage;
+import cz.novanadeje.app.donations.infrastructure.texts.BundleReceiptTextSource;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -32,6 +35,8 @@ import java.time.Year;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
 import java.util.stream.StreamSupport;
@@ -47,12 +52,17 @@ import static cz.novanadeje.app.donations.domain.receipt.Receipts.jana;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.janaSpeakingEnglish;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.receivedFromAcme;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.receivedFromJana;
+import static cz.novanadeje.app.donations.domain.receipt.Receipts.verificationOf;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class ThymeleafPdfReceiptRendererTest {
 
     private static final Donation MARCH = receivedFromJana(LocalDate.of(2026, 3, 15), 50000);
     private static final Donation JUNE = receivedFromJana(LocalDate.of(2026, 6, 1), 125050);
+
+    private static final BundleReceiptTextSource TEXTS = new BundleReceiptTextSource();
+    private static final Optional<SignatureImage> SIGNED = Optional.of(signature(300, 100));
 
     private final InMemoryReceiptResources resources = new InMemoryReceiptResources();
 
@@ -184,7 +194,7 @@ class ThymeleafPdfReceiptRendererTest {
     @Test
     @DisplayName("Given a configured PNG signature, when a receipt is rendered, then it renders without error and still names the signatory")
     void should_render_with_signature_when_rendered_given_png_signature() {
-        byte[] pdf = issue(signed(), Receipts.singleDocument(jana(), MARCH));
+        byte[] pdf = issue(SIGNED, Receipts.singleDocument(jana(), MARCH));
 
         assertThat(text(pdf)).contains("Pavel Znamenáček");
         assertThat(imagesOnFirstPage(pdf)).as("logo and signature").isEqualTo(2);
@@ -209,7 +219,7 @@ class ThymeleafPdfReceiptRendererTest {
     @Test
     @DisplayName("Given a bilingual single receipt with a signature image, when rendered, then it fits on one page")
     void should_fit_on_one_page_when_rendered_given_bilingual_single_receipt_with_signature() {
-        byte[] pdf = issue(signed(), Receipts.singleDocument(janaSpeakingEnglish(), MARCH));
+        byte[] pdf = issue(SIGNED, Receipts.singleDocument(janaSpeakingEnglish(), MARCH));
 
         assertThat(pages(pdf)).isEqualTo(1);
     }
@@ -219,7 +229,7 @@ class ThymeleafPdfReceiptRendererTest {
     void should_keep_declaration_with_signature_when_rendered_given_bilingual_yearly_receipt_over_one_page() {
         List<Donation> gifts = IntStream.rangeClosed(1, 6).mapToObj(month -> receivedFromJana(LocalDate.of(2026, month, 1), 10000)).toList();
 
-        byte[] pdf = issue(signed(), Receipts.yearlyDocument(janaSpeakingEnglish(), gifts));
+        byte[] pdf = issue(SIGNED, Receipts.yearlyDocument(janaSpeakingEnglish(), gifts));
 
         assertThat(pages(pdf)).isEqualTo(2);
         assertThat(pageText(pdf, 1)).doesNotContain("potvrzuje, že");
@@ -228,16 +238,45 @@ class ThymeleafPdfReceiptRendererTest {
                 .contains("Pavel Znamenáček");
     }
 
-    private ThymeleafPdfReceiptRenderer unsigned() {
-        return renderer(ReceiptTemplate.fromClasspath(), Optional.empty());
+    @Test
+    @DisplayName("Given a frozen receipt, when rendered, then the PDF prints the frozen texts, not the texts the bundle has today")
+    void should_print_frozen_texts_when_rendered_given_texts_changed_since_issue() {
+        ReceiptDocument document = Receipts.singleDocument(jana(), MARCH);
+        SortedMap<String, String> czech = new TreeMap<>(TEXTS.textsFor(LocaleCode.CS).czech());
+        czech.put("receipt.title.single", "Potvrzení o daru, jak znělo při vystavení");
+        FrozenReceipt frozen = new FrozenReceipt(document, ReceiptTextSet.czechOnly(czech), Optional.empty(), verificationOf(document.number()));
+
+        assertThat(text(renderer().render(frozen, NOW)))
+                .contains("Potvrzení o daru, jak znělo při vystavení")
+                .doesNotContain("Potvrzení o přijetí daru");
     }
 
-    private ThymeleafPdfReceiptRenderer signed() {
-        return renderer(ReceiptTemplate.fromClasspath(), Optional.of(signature(300, 100)));
+    @Test
+    @DisplayName("Given a document, when its frozen receipt is rendered, then the text equals what the receipt-snapshot path renders for the same document")
+    void should_render_same_text_as_snapshot_path_when_rendered_given_same_document() {
+        for (ReceiptDocument document : List.of(Receipts.singleDocument(jana(), MARCH), Receipts.yearlyDocument(janaSpeakingEnglish(), List.of(MARCH, JUNE)))) {
+            ThymeleafPdfReceiptRenderer renderer = renderer();
+            byte[] snapshotPdf = renderer.render(renderer.freeze(document), document.number(), NOW);
+
+            assertThat(text(issue(Optional.empty(), document))).isEqualTo(text(snapshotPdf));
+        }
     }
 
-    private ThymeleafPdfReceiptRenderer renderer(ReceiptTemplate template, Optional<SignatureImage> signature) {
-        return new ThymeleafPdfReceiptRenderer(resources, template, InMemoryReceiptSignatures.holding(signature), Clock.fixed(NOW, ZoneOffset.UTC));
+    @Test
+    @DisplayName("Given a frozen receipt naming a signature image that is not stored, when rendered, then rendering fails instead of leaving the signature out")
+    void should_fail_when_rendered_given_unknown_signature_image() {
+        ReceiptDocument document = Receipts.singleDocument(jana(), MARCH);
+        FrozenReceipt frozen = new FrozenReceipt(document, TEXTS.textsFor(LocaleCode.CS), Optional.of(new ContentDigest("f".repeat(64))),
+                verificationOf(document.number()));
+
+        assertThatThrownBy(() -> renderer().render(frozen, NOW))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("is not stored");
+    }
+
+    private ThymeleafPdfReceiptRenderer renderer() {
+        return new ThymeleafPdfReceiptRenderer(resources, ReceiptTemplate.fromClasspath(), InMemoryReceiptSignatures.holding(Optional.empty()),
+                Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
     static SignatureImage signature(int width, int height) {
@@ -250,14 +289,17 @@ class ThymeleafPdfReceiptRendererTest {
         }
     }
 
-    private static byte[] issue(DonationReceiptRenderer renderer, ReceiptDocument document) {
-        byte[] pdf = renderer.render(renderer.freeze(document), document.number(), NOW);
+    private byte[] issue(Optional<SignatureImage> signature, ReceiptDocument document) {
+        signature.ifPresent(image -> resources.storeImage(image.digest(), new ReceiptImage(image.png(), "image/png"), NOW));
+        FrozenReceipt frozen = new FrozenReceipt(document, TEXTS.textsFor(document.locale()), signature.map(SignatureImage::digest),
+                verificationOf(document.number()));
+        byte[] pdf = renderer().render(frozen, NOW);
         assertThat(new String(pdf, 0, 5, StandardCharsets.US_ASCII)).isEqualTo("%PDF-");
         return pdf;
     }
 
     private void render(ReceiptDocument document, Consumer<byte[]> assertions) {
-        assertions.accept(issue(unsigned(), document));
+        assertions.accept(issue(Optional.empty(), document));
     }
 
     private static String text(byte[] pdf) {
