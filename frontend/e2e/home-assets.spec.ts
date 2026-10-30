@@ -111,14 +111,10 @@ test.describe('Given a visitor on the home page', () => {
     expect(icoImageWidths(await ico.body())).toEqual([16, 32, 48]);
   });
 
-  test('when a server dashboard asks for the app icon, then the site serves it as a 512 px PNG', async ({
+  test('when a server dashboard asks for the app icon as PNG, then the site has none, because the icon is SVG', async ({
     request,
   }) => {
-    const icon = await request.get('/app-icon.png');
-
-    expect(icon.ok()).toBe(true);
-    expect(icon.headers()['content-type']).toBe('image/png');
-    expect(pngSize(await icon.body())).toEqual([512, 512]);
+    expect((await request.get('/app-icon.png')).status()).toBe(404);
   });
 
   test('when a server dashboard asks for the app icon as SVG, then the site serves the white tile with the star', async ({
