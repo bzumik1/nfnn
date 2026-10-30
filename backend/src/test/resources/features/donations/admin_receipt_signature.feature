@@ -16,7 +16,8 @@ Feature: An administrator uploads the signature printed on donation receipts
       | id   | date       | amount  | account    | bankCode | name          | variableSymbol |
       | 2001 | 2026-10-01 | 1000.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
     And the application starts the import
-    And "Jana" issues the receipt of her donation received on 2026-10-01
+    And "Jana" downloads the receipt of her donation received on 2026-10-01
+    And the receipt "Jana" downloaded is the frozen receipt issued to her last
     And the frozen receipt shows no signature image
     When "Jana" uploads a 3000 by 1000 pixel JPEG scan named "podpis.jpg" as the receipt signature
     Then the response status is 200
@@ -24,12 +25,14 @@ Feature: An administrator uploads the signature printed on donation receipts
     And the admin action "CHANGE_RECEIPT_SIGNATURE" by "Jana" is recorded with details containing "Nahrán obrázek podpisu na potvrzení o daru: 1200 × 400 px"
     When "Jana" asks for the receipt signature
     Then the receipt signature is set, 1200 by 400 pixels, uploaded at "2026-12-20T11:00:00Z"
-    When "Jana" issues the receipt of her donation received on 2026-10-01
-    Then the issued receipt is the one issued before
+    When "Jana" downloads the receipt of her donation received on 2026-10-01
+    Then 1 receipt is stored
+    And the receipt "Jana" downloaded is the frozen receipt issued to her last
     And the frozen receipt shows no signature image
     Given today is 2027-01-15
-    When "Jana" issues her yearly receipt for 2026
+    When "Jana" downloads her yearly receipt for 2026
     Then the response status is 200
+    And the receipt "Jana" downloaded is the frozen receipt issued to her last
     And the frozen receipt shows the current signature image
     And the frozen receipt holds:
       | field          | value            |
