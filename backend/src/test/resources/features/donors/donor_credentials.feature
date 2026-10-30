@@ -191,6 +191,7 @@ Feature: Donor changes the password or the e-mail while signed in
     Given a person registered with email "jana@example.cz" and password "correct horse battery"
     And the donor signed in with email "jana@example.cz" and password "correct horse battery"
     When the donor asks to change the e-mail to "jana.nova@example.cz" with password "correct horse battery"
+    And e-mail 1 goes to "jana.nova@example.cz" with the subject "Potvrďte novou e-mailovou adresu – Nová naděje"
     And the donor asks to send the e-mail change link again
     Then the response status is 202
     And e-mail 2 goes to "jana.nova@example.cz" with the subject "Potvrďte novou e-mailovou adresu – Nová naděje"
