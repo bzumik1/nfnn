@@ -34,7 +34,7 @@ export interface QrSymbol {
   readonly matrix: readonly string[];
 }
 
-export interface PaymentQrInput {
+export interface SpaydInput {
   readonly recipient: {
     readonly accountNumber: string;
     readonly iban: string;
@@ -45,8 +45,8 @@ export interface PaymentQrInput {
   readonly purpose?: string;
 }
 
-export type PaymentQrExpected =
-  | (QrSymbol & { readonly spayd: string })
+export type SpaydExpected =
+  | { readonly spayd: string }
   | {
       readonly refused: {
         readonly status: number;
@@ -54,6 +54,10 @@ export type PaymentQrExpected =
         readonly fields: readonly string[];
       };
     };
+
+export interface PaymentQrInput {
+  readonly spayd: string;
+}
 
 export interface TotpQrInput {
   readonly secret: string;
@@ -93,7 +97,8 @@ export interface SharedCaseTopics {
   readonly 'donor-summary/summary.json': SharedCase<RowsInput, Answer>;
   readonly 'monthly-report/formatting.json': SharedCase<Answer, { readonly text: string }>;
   readonly 'monthly-report/report.json': SharedCase<RowsInput, Answer>;
-  readonly 'qr/payment.json': SharedCase<PaymentQrInput, PaymentQrExpected>;
+  readonly 'payment/spayd.json': SharedCase<SpaydInput, SpaydExpected>;
+  readonly 'qr/payment.json': SharedCase<PaymentQrInput, QrSymbol>;
   readonly 'qr/totp.json': SharedCase<TotpQrInput, QrSymbol & { readonly uri: string }>;
   readonly 'receipts/formatting.json': SharedCase<
     ReceiptFormattingInput,
@@ -108,6 +113,7 @@ const REGISTERED_TOPICS: Readonly<Record<SharedCaseTopic, true>> = {
   'donor-summary/summary.json': true,
   'monthly-report/formatting.json': true,
   'monthly-report/report.json': true,
+  'payment/spayd.json': true,
   'qr/payment.json': true,
   'qr/totp.json': true,
   'receipts/formatting.json': true,
