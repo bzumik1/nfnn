@@ -698,8 +698,12 @@ describe('Given the files the pull request changes', () => {
     }
   });
 
-  it('when it changes the CI job or the test JVM settings, then the report names those files', () => {
-    const files = ['.github/workflows/pr-check.yml', 'backend/build.gradle.kts'];
+  it('when it changes the CI job, the test JVM settings or the baseline anchor, then the report names those files', () => {
+    const files = [
+      '.github/workflows/pr-check.yml',
+      'backend/build.gradle.kts',
+      'regression/v2/BASELINE_COMMIT',
+    ];
     const result = compare(workspace({ changed: files }));
     assert.equal(result.status, 0, result.output);
     assert.match(result.report, /### Změny nahrávání a srovnání/);
