@@ -22,17 +22,20 @@ public final class PublicDevelopmentKeys {
 
     private final Optional<byte[]> settingsKey;
     private final Optional<BackupKey> backupKey;
+    private final Optional<String> jwtSecret;
 
-    private PublicDevelopmentKeys(Optional<byte[]> settingsKey, Optional<BackupKey> backupKey) {
+    private PublicDevelopmentKeys(Optional<byte[]> settingsKey, Optional<BackupKey> backupKey, Optional<String> jwtSecret) {
         this.settingsKey = settingsKey;
         this.backupKey = backupKey;
+        this.jwtSecret = jwtSecret;
     }
 
     public static PublicDevelopmentKeys ofDevelopmentProfile() {
         PropertySourcesPropertyResolver defaults = new PropertySourcesPropertyResolver(developmentConfiguration());
         return new PublicDevelopmentKeys(
                 Optional.ofNullable(defaults.getProperty(SETTINGS_KEY_PROPERTY)).flatMap(PublicDevelopmentKeys::settingsKeyBytes),
-                Optional.ofNullable(defaults.getProperty(BACKUP_KEY_PROPERTY)).flatMap(PublicDevelopmentKeys::backupKeyOf));
+                Optional.ofNullable(defaults.getProperty(BACKUP_KEY_PROPERTY)).flatMap(PublicDevelopmentKeys::backupKeyOf),
+                Optional.ofNullable(defaults.getProperty(JWT_SECRET_PROPERTY)).flatMap(PublicDevelopmentKeys::stripped));
     }
 
     public Optional<BackupKey> backupKey() {
@@ -44,7 +47,7 @@ public final class PublicDevelopmentKeys {
     }
 
     public boolean isJwtSecret(String value) {
-        return false;
+        return jwtSecret.isPresent() && stripped(value).filter(jwtSecret.get()::equals).isPresent();
     }
 
     public boolean isBackupKey(String value) {
@@ -59,6 +62,10 @@ public final class PublicDevelopmentKeys {
             throw new UncheckedIOException("The development configuration " + DEVELOPMENT_CONFIGURATION + " could not be read", unreadable);
         }
         return sources;
+    }
+
+    private static Optional<String> stripped(String value) {
+        return value == null || value.isBlank() ? Optional.empty() : Optional.of(value.strip());
     }
 
     private static Optional<byte[]> settingsKeyBytes(String value) {

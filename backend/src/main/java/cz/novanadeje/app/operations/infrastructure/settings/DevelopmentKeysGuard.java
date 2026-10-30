@@ -14,8 +14,9 @@ public class DevelopmentKeysGuard implements EnvironmentPostProcessor, Ordered {
     static final String PRODUCTION_PROFILE = "prod";
     private static final String SETTINGS_KEY = "SETTINGS_KEY (" + PublicDevelopmentKeys.SETTINGS_KEY_PROPERTY + ")";
     private static final String BACKUP_KEY = "BACKUP_KEY (" + PublicDevelopmentKeys.BACKUP_KEY_PROPERTY + ")";
+    private static final String JWT_SECRET = "JWT_SECRET (" + PublicDevelopmentKeys.JWT_SECRET_PROPERTY + ")";
     private static final String PUBLIC_VALUE = " holds the public value of the development profile (application-dev.yml), which outside development "
-            + "the backend refuses; give the server a key of its own (deploy/README.md, section Hesla a nastavení serveru)";
+            + "the backend refuses; give the server a secret of its own (deploy/README.md, section Hesla a nastavení serveru)";
 
     @Override
     public int getOrder() {
@@ -39,6 +40,9 @@ public class DevelopmentKeysGuard implements EnvironmentPostProcessor, Ordered {
         }
         if (publicKeys.isBackupKey(environment.getProperty(PublicDevelopmentKeys.BACKUP_KEY_PROPERTY))) {
             throw new IllegalStateException(BACKUP_KEY + PUBLIC_VALUE);
+        }
+        if (publicKeys.isJwtSecret(environment.getProperty(PublicDevelopmentKeys.JWT_SECRET_PROPERTY))) {
+            throw new IllegalStateException(JWT_SECRET + PUBLIC_VALUE);
         }
     }
 }
