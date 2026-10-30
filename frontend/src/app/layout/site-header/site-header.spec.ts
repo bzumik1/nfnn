@@ -133,6 +133,19 @@ describe('Given the site header on a phone', () => {
     expect(TestBed.inject(LoginDialogService).isOpen()).toBe(true);
   });
 
+  it('when the visitor opens the menu without an account, then Založit účet closes the menu and opens the registration', () => {
+    openMenu();
+
+    const register = menu()!.querySelector('button.mobile-register') as HTMLButtonElement;
+    expect(register.textContent?.trim()).toBe('Založit účet');
+    register.click();
+    fixture.detectChanges();
+
+    expect(menu()).toBeNull();
+    expect(TestBed.inject(LoginDialogService).isOpen()).toBe(true);
+    expect(TestBed.inject(LoginDialogService).initialMode()).toBe('register');
+  });
+
   it('when the visitor signs in from the menu, then the page stays and the focus waits quietly at the top of the header', async () => {
     openMenu();
     (menu()!.querySelector('button.mobile-login') as HTMLButtonElement).click();
@@ -173,6 +186,29 @@ describe('Given the site header on a computer', () => {
 
     expect(links).toEqual(['O nás', 'Projekty', 'Aktuality', 'Kontakt', 'Přispět']);
     expect(fixture.nativeElement.querySelector('.brand').getAttribute('href')).toBe('/#uvod');
+  });
+
+  it('when it renders without a session, then Založit účet stands beside Přihlásit se and opens the registration', () => {
+    const register = fixture.nativeElement.querySelector(
+      '.desktop-nav .nav-register',
+    ) as HTMLButtonElement;
+    expect(register.textContent?.trim()).toBe('Založit účet');
+    expect(register.nextElementSibling).toBe(loginButton());
+
+    register.click();
+    fixture.detectChanges();
+
+    expect(TestBed.inject(LoginDialogService).isOpen()).toBe(true);
+    expect(TestBed.inject(LoginDialogService).initialMode()).toBe('register');
+  });
+
+  it('when the visitor is signed in, then the header no longer offers Založit účet', async () => {
+    loginButton().click();
+    fixture.detectChanges();
+
+    await signInThroughTheDialog(fixture);
+
+    expect(fixture.nativeElement.querySelector('.nav-register')).toBeNull();
   });
 
   it('when the visitor signs in, then the page stays, the header offers the overview and no control is left highlighted', async () => {
