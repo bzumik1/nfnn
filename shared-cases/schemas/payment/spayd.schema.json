@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://nfnn.cz/shared-cases/schemas/payment/spayd.schema.json",
   "title": "SPAYD cases: a recipient account and the payment's amount, variable symbol and purpose give the SPAYD text of its QR, or a refusal",
-  "description": "A refusal is the problem GET /api/donations/payment-qr answers (status, type, fields). Slice 1.2 runs every case through SpaydText and 1.4 through spayd() in the browser; 1.4 removes the endpoint, so it rewrites these refusals as the refusals SpaydText and spayd() share. qr/payment.json holds the QR symbol of each text under the same case name.",
+  "description": "A refusal is the problem GET /api/donations/payment-qr answers (status, type, fields). The backend runs the cases through that endpoint and GeneratePaymentQrService until slice 1.4, which removes the endpoint and retires the backend runner; from 1.4 the browser composes the text with spayd() from what GET /api/donations/payment-details serves, runs every case and rewrites these refusals as the ones spayd() gives. The messages and recipient name the backend serves have their own backend-only file from 1.2. qr/payment.json holds the QR symbol of each text under the same case name.",
   "type": "object",
   "required": ["source", "logic", "cases"],
   "additionalProperties": false,

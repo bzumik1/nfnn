@@ -1,6 +1,6 @@
 {
   "source": "edited",
-  "logic": "The SPAYD text of a payment QR that GET /api/donations/payment-qr answers for the foundation's account (QrPayment.toSpayd), and the refusals of its invalid parameters as the problem's status, type and the fields it names; the recipient cases come from GeneratePaymentQrService with another account. From slice 1.2 the backend runs every case through SpaydText, and from 1.4 the browser runs them through spayd(); 1.4 removes the endpoint, so it rewrites each refusal as the refusal that SpaydText and spayd() share. qr/payment.json encodes each text into its QR symbol under the same case name",
+  "logic": "The SPAYD text of a payment QR that GET /api/donations/payment-qr answers for the foundation's account (QrPayment.toSpayd), and the refusals of its invalid parameters as the problem's status, type and the fields it names; the recipient cases come from GeneratePaymentQrService with another account. The backend runs every case through that production path until slice 1.4, which removes the endpoint and retires the backend runner: from 1.4 GET /api/donations/payment-details serves the SPAYD-ready messages and the recipient, the browser composes the text with spayd() and runs every case, and 1.4 rewrites each refusal as the one spayd() gives. The messages and the recipient name the backend serves are a computation of their own, in a backend-only case file that slice 1.2 creates. qr/payment.json encodes each text into its QR symbol under the same case name",
   "cases": [
     {
       "name": "1 Kč without a variable symbol",
