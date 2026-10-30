@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -68,6 +69,18 @@ class ApiTranscriptsTest {
     void should_refuse_to_record_when_the_backup_key_is_in_the_environment() {
         assertThatThrownBy(() -> ApiTranscripts.refuseRealSecrets(Map.of("BACKUP_KEY", "AGE-SECRET-KEY-1PLANTED")))
                 .isInstanceOf(IllegalStateException.class).hasMessageContaining("BACKUP_KEY").hasMessageNotContaining("PLANTED");
+    }
+
+    @Test
+    @DisplayName("Given a secret under a name Spring binds by relaxed binding, an application variable or SPRING_APPLICATION_JSON, when recording starts, then it is refused")
+    void should_refuse_to_record_when_a_secret_could_reach_spring_under_another_name() {
+        for (String name : List.of("APP_OPERATIONS_BACKUPKEY_VALUE", "APP_SECURITY_JWT_SECRET", "APP_DONATIONS_FIO_TOKEN", "SPRING_APPLICATION_JSON",
+                "SPRING_MAIL_PASSWORD", "SPRING_DATASOURCE_PASSWORD")) {
+            assertThatThrownBy(() -> ApiTranscripts.refuseRealSecrets(Map.of(name, "x"))).as(name).isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining(name);
+        }
+        assertThatCode(() -> ApiTranscripts.refuseRealSecrets(Map.of("API_TRANSCRIPTS", "record", "SPRING_PROFILES_ACTIVE", "dev",
+                "TESTCONTAINERS_HUB_IMAGE_NAME_PREFIX", "mirror.gcr.io/"))).doesNotThrowAnyException();
     }
 
     @Test
