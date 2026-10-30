@@ -52,7 +52,8 @@ class ReceiptTextsHistoryTest {
         try (Stream<Path> files = Files.list(HISTORY)) {
             for (Path file : files.sorted().toList()) {
                 String content = Files.readString(file, StandardCharsets.UTF_8);
-                tests.add(DynamicTest.dynamicTest(file.getFileName().toString(), () -> {
+                tests.add(DynamicTest.dynamicTest("Given the recorded receipt texts " + file.getFileName()
+                        + ", when they are read, then they are named by their digest and hold the same Czech and English keys", () -> {
                     assertThat(ContentDigest.of(content.getBytes(StandardCharsets.UTF_8)).value() + SUFFIX).isEqualTo(file.getFileName().toString());
                     Map<String, Map<String, String>> texts = JSON.readValue(content, JSON.getTypeFactory().constructMapType(LinkedHashMap.class,
                             JSON.getTypeFactory().constructType(String.class), JSON.getTypeFactory().constructMapType(LinkedHashMap.class, String.class, String.class)));

@@ -330,7 +330,7 @@ class JpaDonationReceiptRepositoryTest {
         assertThatThrownBy(() -> insert(jana, "'SINGLE'", "2025", "'ACTIVE'", "null", "1", 65)).hasMessageContaining("ck_issued_receipt_shape");
     }
 
-    @ParameterizedTest(name = "{0}")
+    @ParameterizedTest(name = "Given the schema, when a receipt with {0} is inserted, then {5} refuses it")
     @CsvSource(delimiter = '|', textBlock = """
             a status the receipt cannot have          | LOST     | null  | 1 | 65 | ck_issued_receipt_status
             a replaced receipt without its time       | REPLACED | null  | 1 | 65 | ck_issued_receipt_superseded

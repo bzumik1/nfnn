@@ -47,7 +47,7 @@ class FrozenReceiptCasesTest {
         Map<String, ReceiptCorpusTest.Sample> samples = ReceiptCorpusTest.samples().stream()
                 .collect(Collectors.toMap(ReceiptCorpusTest.Sample::name, Function.identity()));
         return SharedCases.read(FrozenReceiptCases.CASE_FILE).cases().stream().map(sharedCase -> DynamicTest.dynamicTest(
-                "Given the case " + sharedCase.name() + ", when its v2 sample is put together, then the case holds it as input", () -> {
+                "Given " + sharedCase.name() + ", when its v2 sample is put together as the issuer does, then the case holds it as input", () -> {
                     ReceiptCorpusTest.Sample sample = samples.get(sharedCase.input().get("v2Sample").asString());
                     ReceiptDocument document = sample.document();
                     FrozenReceipt frozen = new FrozenReceipt(document,
@@ -66,7 +66,8 @@ class FrozenReceiptCasesTest {
     @TestFactory
     @DisplayName("Given every frozen receipt case, when the v2 receipt data is put together from the frozen receipt alone, then it equals the data v2 froze for that sample")
     Stream<DynamicTest> should_equal_the_v2_data_when_put_together_from_every_frozen_receipt_case() {
-        return SharedCases.read(FrozenReceiptCases.CASE_FILE).cases().stream().map(sharedCase -> DynamicTest.dynamicTest(sharedCase.name(), () -> {
+        return SharedCases.read(FrozenReceiptCases.CASE_FILE).cases().stream().map(sharedCase -> DynamicTest.dynamicTest("Given " + sharedCase.name()
+                + ", when the v2 receipt data is put together from its frozen receipt alone, then it equals the data v2 froze for that sample", () -> {
             JsonNode frozen = sharedCase.expected();
             String sample = sharedCase.input().get("v2Sample").asString();
             JsonNode v2 = JSON.readTree(Files.readString(SharedCases.repositoryRoot().resolve(ReceiptCorpusTest.CORPUS).resolve(sample + ".json"),
