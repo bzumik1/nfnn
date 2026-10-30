@@ -11,7 +11,7 @@ import {
   readReceiptProof,
   type SignatureCheck,
   type SignedReceipt,
-  signedDigest,
+  statusDigest,
   type ValidProof,
 } from './receipt-proof';
 import { type ReceiptStatus, ReceiptStatusApi } from './receipt-status-api';
@@ -118,7 +118,7 @@ export class ReceiptVerifier {
   }
 
   private async status(proof: ValidProof): Promise<SignedStatus> {
-    const digest = await signedDigest(proof);
+    const digest = await statusDigest(proof);
     try {
       const answer = await firstValueFrom(
         this.statusApi.status(digest).pipe(timeout(REQUEST_TIMEOUT_MS)),

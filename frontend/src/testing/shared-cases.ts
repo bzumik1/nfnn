@@ -134,7 +134,7 @@ export type VerificationExpected =
   | {
       readonly payloadHex: string;
       readonly signatureHex: string;
-      readonly signedSha256: string;
+      readonly statusSha256: string;
       readonly qrText: string;
       readonly qr:
         | { readonly version: number; readonly errorCorrection: 'M' | 'L' }

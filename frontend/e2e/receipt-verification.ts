@@ -5,7 +5,7 @@ import { join } from 'node:path';
 interface VerificationCase {
   name: string;
   input: { qrText?: string; receipt?: { donor: { name: string } } };
-  expected: { qrText?: string; signedSha256?: string };
+  expected: { qrText?: string; statusSha256?: string };
 }
 
 const VERIFICATION_CASES: { cases: VerificationCase[] } = JSON.parse(
@@ -17,7 +17,7 @@ const STORAGE_KEY = 'nfnn.receipt-keys';
 
 export interface VerificationProof {
   readonly fragment: string;
-  readonly signedSha256: string;
+  readonly statusSha256: string;
 }
 
 export function proof(name: string): VerificationProof {
@@ -28,7 +28,7 @@ export function proof(name: string): VerificationProof {
   }
   return {
     fragment: qrText.slice(PROOF_ADDRESS.length),
-    signedSha256: found?.expected.signedSha256 ?? '',
+    statusSha256: found?.expected.statusSha256 ?? '',
   };
 }
 

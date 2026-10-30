@@ -82,7 +82,7 @@ class ReceiptProofSharedCasesTest extends SharedCaseRunner {
         ObjectNode answer = NODES.objectNode()
                 .put("payloadHex", HEX.formatHex(body))
                 .put("signatureHex", HEX.formatHex(proof.signature()))
-                .put("signedSha256", HEX.formatHex(MessageDigest.getInstance("SHA-256").digest(message)))
+                .put("statusSha256", HEX.formatHex(statusDigest(message, proof.signature())))
                 .put("qrText", proof.text());
         ReceiptProofs proofs = new ReceiptProofs(signer, Receipts.FOUNDATION);
         Optional<VerificationQrSymbol> symbol = VerificationQrSymbol.of(proof.text());
@@ -125,6 +125,13 @@ class ReceiptProofSharedCasesTest extends SharedCaseRunner {
         } catch (InvalidReceiptProof rejected) {
             return NODES.objectNode().put("verdict", "rejected").put("reason", rejected.rejection().code());
         }
+    }
+
+    private static byte[] statusDigest(byte[] message, byte[] signature) throws Exception {
+        MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
+        sha256.update(message);
+        sha256.update(signature);
+        return sha256.digest();
     }
 
     private static SignedReceipt receiptOf(JsonNode receipt) {

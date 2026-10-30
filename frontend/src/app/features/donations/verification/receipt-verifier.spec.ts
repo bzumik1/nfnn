@@ -87,7 +87,7 @@ describe('Given the receipt verifier', () => {
 
       (await request(KEYS)).flush(KEY_LIST);
       const status = await request(STATUS);
-      expect(status.request.body).toEqual({ digest: SINGLE.signedSha256 });
+      expect(status.request.body).toEqual({ digest: SINGLE.statusSha256 });
       status.flush({ status: 'active' });
 
       expect(await outcome).toEqual(signedWith('active'));

@@ -55,7 +55,7 @@ test.describe('Given a visitor who scans the verification QR of a receipt', () =
     const keys = api.find((request) => request.url().endsWith('/receipt-keys'));
     expect(await keys?.headerValue('cache-control')).toBe('no-cache');
     const status = api.find((request) => request.method() === 'POST');
-    expect(status?.postDataJSON()).toEqual({ digest: SINGLE_RECEIPT.signedSha256 });
+    expect(status?.postDataJSON()).toEqual({ digest: SINGLE_RECEIPT.statusSha256 });
     for (const request of requests) {
       expect(request.url()).not.toContain(SINGLE_RECEIPT.fragment.slice(0, 17));
       expect(request.postData() ?? '').not.toContain(SINGLE_RECEIPT.fragment.slice(0, 17));

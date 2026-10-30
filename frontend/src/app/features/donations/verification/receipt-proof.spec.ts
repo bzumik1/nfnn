@@ -6,7 +6,7 @@ import {
   proofBytes,
   readReceiptProof,
   type SignatureCheck,
-  signedDigest,
+  statusDigest,
 } from './receipt-proof';
 
 const CASES = sharedCases('verification/payload.json');
@@ -62,6 +62,7 @@ for (const path of VERIFY_PATHS) {
             keyId: input.signingKeyId,
             receipt: input.receipt,
             signedMessage: expect.any(Uint8Array),
+            signature: expect.any(Uint8Array),
           });
         });
 
@@ -71,7 +72,7 @@ for (const path of VERIFY_PATHS) {
           );
         });
 
-        it('when its signed message is hashed, then the digest is the one the status check sends', async () => {
+        it('when its signed message and signature are hashed, then the digest is the one the status check sends', async () => {
           const reading = await readReceiptProof(
             expected.qrText,
             input.foundation.companyIdentifier,
@@ -79,8 +80,8 @@ for (const path of VERIFY_PATHS) {
             path.verifies,
           );
 
-          expect(reading.verdict === 'valid' && (await signedDigest(reading))).toBe(
-            expected.signedSha256,
+          expect(reading.verdict === 'valid' && (await statusDigest(reading))).toBe(
+            expected.statusSha256,
           );
         });
       }
@@ -100,6 +101,7 @@ for (const path of VERIFY_PATHS) {
                   keyId: expected.keyId,
                   receipt: expected.receipt,
                   signedMessage: expect.any(Uint8Array),
+                  signature: expect.any(Uint8Array),
                 }
               : expected,
           );

@@ -85,6 +85,7 @@ export interface ValidProof {
   readonly keyId: string;
   readonly receipt: SignedReceipt;
   readonly signedMessage: Uint8Array<ArrayBuffer>;
+  readonly signature: Uint8Array<ArrayBuffer>;
 }
 
 export type ProofReading =
@@ -154,7 +155,7 @@ export async function readReceiptProof(
     if (!(await verifies(key.publicKey, signedMessage, signature))) {
       throw new InvalidProof('bad-signature');
     }
-    return { verdict: 'valid', keyId, receipt: parseBody(body), signedMessage };
+    return { verdict: 'valid', keyId, receipt: parseBody(body), signedMessage, signature };
   } catch (failure: unknown) {
     if (failure instanceof InvalidProof) {
       return { verdict: 'rejected', reason: failure.reason };
@@ -163,8 +164,11 @@ export async function readReceiptProof(
   }
 }
 
-export async function signedDigest(proof: ValidProof): Promise<string> {
-  return hexOf(new Uint8Array(await crypto.subtle.digest('SHA-256', proof.signedMessage)));
+export async function statusDigest(proof: ValidProof): Promise<string> {
+  const whole = new Uint8Array(proof.signedMessage.length + proof.signature.length);
+  whole.set(proof.signedMessage);
+  whole.set(proof.signature, proof.signedMessage.length);
+  return hexOf(new Uint8Array(await crypto.subtle.digest('SHA-256', whole)));
 }
 
 export function hexOf(bytes: Uint8Array): string {

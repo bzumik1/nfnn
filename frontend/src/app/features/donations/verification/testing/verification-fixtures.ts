@@ -3,7 +3,7 @@ import { PROOF_ADDRESS } from '../receipt-proof';
 
 export interface ProofCase {
   readonly fragment: string;
-  readonly signedSha256: string;
+  readonly statusSha256: string;
   readonly receipt: VerifiedReceipt;
 }
 
@@ -18,7 +18,7 @@ export function proofCase(name: string): ProofCase {
   const qrText = 'qrText' in expected ? expected.qrText : 'qrText' in input ? input.qrText : '';
   return {
     fragment: qrText.slice(PROOF_ADDRESS.length),
-    signedSha256: 'signedSha256' in expected ? expected.signedSha256 : '',
+    statusSha256: 'statusSha256' in expected ? expected.statusSha256 : '',
     receipt:
       'receipt' in input ? input.receipt : (expected as { receipt: VerifiedReceipt }).receipt,
   };
