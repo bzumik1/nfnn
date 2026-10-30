@@ -17,6 +17,7 @@ public final class PublicDevelopmentKeys {
     public static final String DEVELOPMENT_PROFILE = "dev";
     static final String SETTINGS_KEY_PROPERTY = "app.operations.settings.key";
     static final String BACKUP_KEY_PROPERTY = "app.operations.backup-key.value";
+    static final String JWT_SECRET_PROPERTY = "app.security.jwt.secret";
     private static final String DEVELOPMENT_CONFIGURATION = "application-" + DEVELOPMENT_PROFILE + ".yml";
 
     private final Optional<byte[]> settingsKey;
@@ -40,6 +41,10 @@ public final class PublicDevelopmentKeys {
 
     public boolean isSettingsKey(String value) {
         return settingsKey.isPresent() && settingsKeyBytes(value).filter(bytes -> MessageDigest.isEqual(bytes, settingsKey.get())).isPresent();
+    }
+
+    public boolean isJwtSecret(String value) {
+        return false;
     }
 
     public boolean isBackupKey(String value) {

@@ -20,37 +20,43 @@ class PublicDevelopmentKeysTest {
 
     static final String SERVER_SETTINGS_KEY = Base64.getEncoder().encodeToString("settings-key-of-thirty-two-byte!".getBytes());
     static final String SERVER_BACKUP_KEY = "AGE-SECRET-KEY-1R45A984EXXAFC85YZSYGY9R6XJTD4E9AKY65ZCRGPDQ89E7ANW8QKT6GWH";
+    static final String SERVER_JWT_SECRET = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
     private final PublicDevelopmentKeys keys = PublicDevelopmentKeys.ofDevelopmentProfile();
 
     @Test
-    @DisplayName("Given the development profile without an environment, when its public keys are read, then they are the values that profile binds")
+    @DisplayName("Given the development profile without an environment, when its public secrets are read, then they are the values that profile binds")
     void should_hold_the_bound_values_when_read_given_the_development_profile() {
         String settingsKey = developmentValue("app.operations.settings.key");
         String backupKey = developmentValue("app.operations.backup-key.value");
+        String jwtSecret = developmentValue("app.security.jwt.secret");
 
         assertThat(settingsKey).isNotBlank();
         assertThat(backupKey).isNotBlank();
+        assertThat(jwtSecret).isNotBlank();
+        assertThat(keys.isJwtSecret(jwtSecret)).isTrue();
         assertThat(keys.isSettingsKey(settingsKey)).isTrue();
         assertThat(keys.isBackupKey(backupKey)).isTrue();
         assertThat(keys.backupKey()).contains(new BackupKey(backupKey));
     }
 
     @Test
-    @DisplayName("Given the public keys written another way, when compared, then they are still recognised")
+    @DisplayName("Given the public secrets written another way, when compared, then they are still recognised")
     void should_recognise_the_keys_when_compared_given_another_spelling() {
         String settingsKey = developmentValue("app.operations.settings.key");
         String backupKey = developmentValue("app.operations.backup-key.value");
 
         assertThat(keys.isSettingsKey("  " + settingsKey.replace("=", "") + "\n")).isTrue();
         assertThat(keys.isBackupKey(" " + backupKey.toLowerCase(Locale.ROOT) + "\n")).isTrue();
+        assertThat(keys.isJwtSecret(" " + developmentValue("app.security.jwt.secret") + "\n")).isTrue();
     }
 
     @Test
-    @DisplayName("Given keys a server generated for itself, when compared, then neither is a public development key")
+    @DisplayName("Given secrets a server generated for itself, when compared, then none is a public development secret")
     void should_not_recognise_the_keys_when_compared_given_a_server_s_own_keys() {
         assertThat(keys.isSettingsKey(SERVER_SETTINGS_KEY)).isFalse();
         assertThat(keys.isBackupKey(SERVER_BACKUP_KEY)).isFalse();
+        assertThat(keys.isJwtSecret(SERVER_JWT_SECRET)).isFalse();
     }
 
     @ParameterizedTest
@@ -60,6 +66,7 @@ class PublicDevelopmentKeysTest {
     void should_not_recognise_the_value_when_compared_given_a_malformed_value(String value) {
         assertThat(keys.isSettingsKey(value)).isFalse();
         assertThat(keys.isBackupKey(value)).isFalse();
+        assertThat(keys.isJwtSecret(value)).isFalse();
     }
 
     static String developmentValue(String property) {

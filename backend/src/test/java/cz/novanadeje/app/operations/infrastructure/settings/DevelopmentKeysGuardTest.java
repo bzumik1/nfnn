@@ -25,6 +25,7 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static cz.novanadeje.app.operations.infrastructure.settings.PublicDevelopmentKeysTest.SERVER_BACKUP_KEY;
+import static cz.novanadeje.app.operations.infrastructure.settings.PublicDevelopmentKeysTest.SERVER_JWT_SECRET;
 import static cz.novanadeje.app.operations.infrastructure.settings.PublicDevelopmentKeysTest.SERVER_SETTINGS_KEY;
 import static cz.novanadeje.app.operations.infrastructure.settings.PublicDevelopmentKeysTest.developmentValue;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -51,7 +52,8 @@ class DevelopmentKeysGuardTest {
     @DisplayName("Given exactly the prod profile with the server's own keys, when the backend starts, then nothing is refused")
     void should_refuse_nothing_when_started_given_prod_with_its_own_keys() {
         assertThatNoException().isThrownBy(() -> guard.postProcessEnvironment(
-                environment("spring.profiles.active=prod", "SETTINGS_KEY=" + SERVER_SETTINGS_KEY, "BACKUP_KEY=" + SERVER_BACKUP_KEY), new SpringApplication()));
+                environment("spring.profiles.active=prod", "SETTINGS_KEY=" + SERVER_SETTINGS_KEY, "BACKUP_KEY=" + SERVER_BACKUP_KEY,
+                        "JWT_SECRET=" + SERVER_JWT_SECRET), new SpringApplication()));
     }
 
     @Test
@@ -86,6 +88,19 @@ class DevelopmentKeysGuardTest {
                 .withMessageContaining("development")
                 .withMessageNotContaining(developmentKey)
                 .withMessageNotContaining(lowerCase);
+    }
+
+    @Test
+    @DisplayName("Given the prod profile with the public development JWT_SECRET, when the backend starts, then it stops naming the variable without its value")
+    void should_stop_naming_the_variable_when_started_given_prod_with_the_development_jwt_secret() {
+        String developmentSecret = developmentValue("app.security.jwt.secret");
+
+        assertThatIllegalStateException()
+                .isThrownBy(() -> guard.postProcessEnvironment(environment("spring.profiles.active=prod", "SETTINGS_KEY=" + SERVER_SETTINGS_KEY,
+                        "BACKUP_KEY=" + SERVER_BACKUP_KEY, "JWT_SECRET=" + developmentSecret), new SpringApplication()))
+                .withMessageContaining("JWT_SECRET (app.security.jwt.secret)")
+                .withMessageContaining("development")
+                .withMessageNotContaining(developmentSecret);
     }
 
     @ParameterizedTest
