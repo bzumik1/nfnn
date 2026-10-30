@@ -149,6 +149,14 @@
   object-fit: cover;
 }
 
+.board-photo--initials {
+  display: grid;
+  place-items: center;
+  background: var(--color-surface-alt);
+  color: var(--color-text-muted);
+  font: var(--weight-bold) var(--text-4xl) var(--font-serif);
+}
+
 .board-name {
   font-family: var(--font-serif);
   font-size: var(--text-3xl);
@@ -162,6 +170,47 @@
   color: var(--color-text-muted);
   font-size: var(--text-lg);
   line-height: var(--leading-snug);
+}
+
+.founders-note {
+  display: grid;
+  gap: var(--space-4);
+  max-width: 44rem;
+  margin-top: var(--space-10);
+}
+
+.founders-note-text {
+  color: var(--color-text-muted);
+  font-size: var(--text-xl);
+  line-height: var(--leading-relaxed);
+  white-space: pre-line;
+}
+
+.signatures {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-4) var(--space-10);
+  margin-top: var(--space-2);
+  padding: 0;
+  list-style: none;
+}
+
+.signature {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-1-5);
+}
+
+.signature-ink {
+  width: auto;
+  height: 44px;
+  max-width: 100%;
+}
+
+.signature-name {
+  color: var(--color-text-soft);
+  font-size: var(--text-sm);
 }
 
 .board-members {
@@ -204,5 +253,9 @@
 
   .board-name {
     font-size: var(--text-2xl);
+  }
+
+  .signature-ink {
+    height: 34px;
   }
 }

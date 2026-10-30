@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/site-header/site-header.spec.ts > Given the site header over the dark top of a page > when any page opens, then the header gives the phone browser the strip it tints its status bar from, never seen nor read",
+    "reason": "PR #248: the hidden strip of #245 never tinted the iPhone status bar (WebKit skips hidden boxes and boxes 10 px or thinner), so the strip moved from the site header to the app shell and an e2e spec now checks it against WebKit's sampling rules",
+    "replacement": "e2e/status-bar.spec.ts > Given a visitor on an iPhone, whose Safari tints its status bar from the fixed box at the top edge > when / opens, then the box Safari finds there carries the site's blue",
+    "contract": "docs/frontend-overview.md, app.ts"
+  }
+]
