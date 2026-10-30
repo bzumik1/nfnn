@@ -72,5 +72,30 @@
         "<key-id>": "the receipt signing key id: 8 hex digits of the SHA-256 of the public key, public (GET /api/donations/receipt-keys serves it to anyone); no personal data and no secret"
       }
     }
+  },
+  {
+    "kind": "log-field",
+    "line": "donations.application.signing.ReceiptSigningKeyRegistration: Receipt signing key <key-id> is a public test key of RFC <n>, so it is not published",
+    "reason": "1.5 logs at ERROR, once per key row and after the commit, a row whose key id is one of the public RFC 8032 test keys when the server runs outside development; it is never published or adopted (1.5 security review round 2, N2)",
+    "contract": "docs/api-contract.md, Receipt verification proof and signing keys; docs/security-overview.md, Receipt signing key",
+    "security": {
+      "approvedIn": "PENDING",
+      "fields": {
+        "<key-id>": "the receipt signing key id: 8 hex digits of the SHA-256 of the public key, public (GET /api/donations/receipt-keys serves it to anyone); no personal data and no secret",
+        "<n>": "8032, the number of the RFC that publishes the test keys (a constant)"
+      }
+    }
+  },
+  {
+    "kind": "log-field",
+    "line": "operations.infrastructure.backup.BackupStoreFinishedRestores: The last restore names a request id of <n> characters, more than <n>, so it confirms no receipt signing key",
+    "reason": "1.5 logs at WARN when the backup container's restore status names a request id longer than the 40 characters a restore id may have, so that restore confirms no key adoption (1.5 testing review round 2, n3)",
+    "contract": "docs/api-contract.md, Receipt verification proof and signing keys; docs/system-overview.md, donations (Receipt signing keys)",
+    "security": {
+      "approvedIn": "PENDING",
+      "fields": {
+        "<n>": "the length of the request id and the limit of 40; the id itself, which comes from a file, is not logged"
+      }
+    }
   }
 ]

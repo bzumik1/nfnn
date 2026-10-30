@@ -14,6 +14,10 @@ final class Rfc8032Keys {
     static final String TEST_2_KEY_ID = "39f713d0";
     static final String TEST_2_MESSAGE = "72";
     static final String TEST_2_SIGNATURE = "92a009a9f0d4cab8720e820b5f642540a2b27b5416503f8fb3762223ebdb69da085ac1e43e15996e458f3613d0f11d8c387b2eaeb4302aeeb00d291612bb0c00";
+    static final String TEST_3_SEED = "c5aa8df43f9f837bedb7442f31dcb7b166d38535076f094b85ce3a2e0b4458f7";
+    static final String TEST_3_KEY_ID = "dac073e0";
+    static final String TEST_1024_SEED = "f5e5767cf153319517630f226876b86c8160cc583bc013744c6bf255f5cc0ee5";
+    static final String TEST_1024_KEY_ID = "91384c41";
     static final String TEST_SHA_ABC_SEED = "833fe62409237b9d62ec77587520911e9a759cec1d19755b7da901b96dca3d42";
     static final String TEST_SHA_ABC_PUBLIC_KEY = "ec172b93ad5e563bf4932c70e1245034c35467ef2efd4d64ebf819683467e2bf";
     static final String TEST_SHA_ABC_KEY_ID = "5f9b247e";

@@ -185,14 +185,16 @@ class BaselineHygieneTest {
         String otherHex = "4ccd089b28ff96da9db6c346ec114e0f5b8a319f35aba624da8cf6ed4fb8a6fb";
         String oddXHex = "833fe62409237b9d62ec77587520911e9a759cec1d19755b7da901b96dca3d42";
         String prodTestBase64 = "bmZubi1wcm9kLXRlc3Qtc2VlZC1ub3QtcmZjLTgwMzI=";
-        String text = "dev %s, upper %s, base64url %s, test 2 %s, test SHA(abc) %s, prod test %s".formatted(base64, hex.toUpperCase(Locale.ROOT),
-                "nWGxne_9WmC6hEr0kuwsxERJxWl7MmkZcDusAxyuf2A", otherHex, oddXHex, prodTestBase64);
+        String test3Hex = "c5aa8df43f9f837bedb7442f31dcb7b166d38535076f094b85ce3a2e0b4458f7";
+        String test1024Base64 = "9eV2fPFTMZUXYw8iaHa4bIFgzFg7wBN0TGvyVfXMDuU=";
+        String text = "dev %s, upper %s, base64url %s, test 2 %s, test SHA(abc) %s, prod test %s, test 3 %s, test 1024 %s".formatted(base64,
+                hex.toUpperCase(Locale.ROOT), "nWGxne_9WmC6hEr0kuwsxERJxWl7MmkZcDusAxyuf2A", otherHex, oddXHex, prodTestBase64, test3Hex, test1024Base64);
         BaselineHygiene.Fixtures spelled = new BaselineHygiene.Fixtures(Set.of(), Set.of(hex, base64, otherHex, hex.toUpperCase(Locale.ROOT),
-                "nWGxne_9WmC6hEr0kuwsxERJxWl7MmkZcDusAxyuf2A", oddXHex, prodTestBase64));
+                "nWGxne_9WmC6hEr0kuwsxERJxWl7MmkZcDusAxyuf2A", oddXHex, prodTestBase64, test3Hex, test1024Base64));
 
         List<String> findings = BaselineHygiene.findings("seeds.txt", text, spelled);
 
-        assertThat(findings).filteredOn(finding -> finding.contains("a receipt signing seed")).hasSize(6);
+        assertThat(findings).filteredOn(finding -> finding.contains("a receipt signing seed")).hasSize(8);
     }
 
     @Test

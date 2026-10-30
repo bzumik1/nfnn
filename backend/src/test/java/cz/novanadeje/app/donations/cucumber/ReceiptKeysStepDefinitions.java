@@ -11,6 +11,7 @@ import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKey;
 import cz.novanadeje.app.operations.infrastructure.backup.BackupProperties;
 import cz.novanadeje.app.operations.infrastructure.settings.EarlierServerSeals;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.support.SwitchablePublicTestKeyPolicy;
 import io.cucumber.datatable.DataTable;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
@@ -46,9 +47,8 @@ public class ReceiptKeysStepDefinitions {
     private static final String ADMIN_RECEIPT_KEYS = "/api/admin/donations/receipt-signing-keys";
     private static final String EARLIER_PUBLIC_KEY = "3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c";
     private static final String EARLIER_SETTINGS_KEY = Base64.getEncoder().encodeToString("an-earlier-server-settings-key!!".getBytes(StandardCharsets.US_ASCII));
-    private static final String APPLICATION_LOGGERS = "cz.novanadeje.app";
-    private static final List<String> KEY_LOGGERS = List.of(ReceiptSigningKeyRegistration.class.getName(),
-            "cz.novanadeje.app.donations.infrastructure.signing.ReceiptSigningKeyStartup");
+    private static final List<String> OTHER_START_LISTENERS = List.of("cz.novanadeje.app.shared.infrastructure.config.BuildRevision",
+            "cz.novanadeje.app.operations.infrastructure.backup.BackupSchedulePublisher", "cz.novanadeje.app.operations.application.settings.SetupService");
 
     private final ApiClient api;
     private final DonorSessions sessions;
@@ -58,11 +58,13 @@ public class ReceiptKeysStepDefinitions {
     private final ConfigurableApplicationContext context;
     private final Clock clock;
     private final Path restoreStatus;
+    private final SwitchablePublicTestKeyPolicy testKeys;
     private final List<String> loggedErrors = new ArrayList<>();
     private String visitorAnswer;
 
     public ReceiptKeysStepDefinitions(ApiClient api, DonorSessions sessions, ReceiptSigningKeyRegistration registration, JdbcClient jdbc,
-                                      Environment environment, ConfigurableApplicationContext context, Clock clock, BackupProperties backups) {
+                                      Environment environment, ConfigurableApplicationContext context, Clock clock, BackupProperties backups,
+                                      SwitchablePublicTestKeyPolicy testKeys) {
         this.api = api;
         this.sessions = sessions;
         this.registration = registration;
@@ -71,6 +73,7 @@ public class ReceiptKeysStepDefinitions {
         this.context = context;
         this.clock = clock;
         this.restoreStatus = backups.directory().resolve("status").resolve("restore");
+        this.testKeys = testKeys;
     }
 
     @Given("the server has started and registered its receipt signing key")
@@ -85,26 +88,26 @@ public class ReceiptKeysStepDefinitions {
 
     @When("the backend is ready")
     public void theBackendIsReady() {
-        whileOnlyKeyLinesAreLogged(() -> whileLogging(
+        whileOtherStartListenersAreMuted(() -> whileLogging(
                 () -> context.publishEvent(new ApplicationReadyEvent(new SpringApplication(), new String[0], context, Duration.ZERO))));
     }
 
-    private static void whileOnlyKeyLinesAreLogged(Runnable start) {
-        Logger application = (Logger) LoggerFactory.getLogger(APPLICATION_LOGGERS);
-        List<Logger> keyLoggers = KEY_LOGGERS.stream().map(name -> (Logger) LoggerFactory.getLogger(name)).toList();
-        Level applicationLevel = application.getLevel();
-        List<Level> keyLevels = keyLoggers.stream().map(Logger::getLevel).toList();
-        Level effective = application.getEffectiveLevel();
-        keyLoggers.forEach(logger -> logger.setLevel(effective));
-        application.setLevel(Level.OFF);
+    private static void whileOtherStartListenersAreMuted(Runnable start) {
+        List<Logger> others = OTHER_START_LISTENERS.stream().map(name -> (Logger) LoggerFactory.getLogger(name)).toList();
+        List<Level> levels = others.stream().map(Logger::getLevel).toList();
+        others.forEach(logger -> logger.setLevel(Level.OFF));
         try {
             start.run();
         } finally {
-            application.setLevel(applicationLevel);
-            for (int index = 0; index < keyLoggers.size(); index++) {
-                keyLoggers.get(index).setLevel(keyLevels.get(index));
+            for (int index = 0; index < others.size(); index++) {
+                others.get(index).setLevel(levels.get(index));
             }
         }
+    }
+
+    @Given("the server runs outside development")
+    public void theServerRunsOutsideDevelopment() {
+        testKeys.outsideDevelopment();
     }
 
     @Given("the backup container finished that restore {int} minutes ago under the request {string}")

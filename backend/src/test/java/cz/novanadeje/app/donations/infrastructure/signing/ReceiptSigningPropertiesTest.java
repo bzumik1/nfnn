@@ -1,6 +1,8 @@
 package cz.novanadeje.app.donations.infrastructure.signing;
 
+import cz.novanadeje.app.donations.application.signing.PublicTestKeyPolicy;
 import cz.novanadeje.app.donations.application.signing.ReceiptSigner;
+import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyId;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -62,7 +64,8 @@ class ReceiptSigningPropertiesTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {Rfc8032Keys.TEST_1_SEED, Rfc8032Keys.TEST_2_SEED, Rfc8032Keys.TEST_SHA_ABC_SEED})
+    @ValueSource(strings = {Rfc8032Keys.TEST_1_SEED, Rfc8032Keys.TEST_2_SEED, Rfc8032Keys.TEST_3_SEED, Rfc8032Keys.TEST_1024_SEED,
+            Rfc8032Keys.TEST_SHA_ABC_SEED})
     @DisplayName("Given the prod profile with the seed of a public RFC 8032 test key, when the context starts, then it fails naming the environment variable without the value")
     void should_fail_naming_env_var_when_started_given_prod_profile_with_rfc_test_seed(String seedHex) {
         String seed = Base64.getEncoder().encodeToString(HexFormat.of().parseHex(seedHex));
@@ -71,6 +74,24 @@ class ReceiptSigningPropertiesTest {
             assertThat(context.getStartupFailure()).rootCause().hasMessageContaining(NAME).hasMessageContaining("RFC 8032")
                     .hasMessageNotContaining(seed.substring(0, 8)).hasMessageNotContaining(seedHex.substring(0, 8));
         });
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {Rfc8032Keys.TEST_1_KEY_ID, Rfc8032Keys.TEST_2_KEY_ID, Rfc8032Keys.TEST_3_KEY_ID, Rfc8032Keys.TEST_1024_KEY_ID,
+            Rfc8032Keys.TEST_SHA_ABC_KEY_ID})
+    @DisplayName("Given the prod profile with a seed of its own, when a key row of a public RFC 8032 test key is judged, then it is refused and the server's own is not")
+    void should_refuse_rfc_test_key_ids_when_judged_given_prod_profile(String keyId) {
+        contexts.withPropertyValues("spring.profiles.active=prod", "RECEIPT_SIGNING_KEY=" + SERVER_SEED).run(context -> {
+            PublicTestKeyPolicy policy = context.getBean(PublicTestKeyPolicy.class);
+            assertThat(policy.refuses(new ReceiptSigningKeyId(keyId))).isTrue();
+            assertThat(policy.refuses(new ReceiptSigningKeyId("5e00e8d0"))).isFalse();
+        });
+    }
+
+    @Test
+    @DisplayName("Given the default dev profile, when a key row of a public RFC 8032 test key is judged, then it is accepted")
+    void should_accept_rfc_test_key_ids_when_judged_given_dev_profile() {
+        contexts.run(context -> assertThat(context.getBean(PublicTestKeyPolicy.class).refuses(new ReceiptSigningKeyId(Rfc8032Keys.TEST_3_KEY_ID))).isFalse());
     }
 
     @Test

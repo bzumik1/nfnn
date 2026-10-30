@@ -28,7 +28,9 @@ class ReceiptSigningKeysTest {
 
     private final List<ReceiptSigningKey> stored = new ArrayList<>();
     private final ReceiptSigner signer = mock(ReceiptSigner.class);
-    private final ReceiptSigningKeys keys = new ReceiptSigningKeys(new ListedKeys(stored), new PrefixSeals(), signer);
+    private boolean outsideDevelopment;
+    private final ReceiptSigningKeys keys = new ReceiptSigningKeys(new ListedKeys(stored), new PrefixSeals(), signer,
+            id -> outsideDevelopment && id.isPublicTestKey());
 
     @BeforeEach
     void ownKey() {
@@ -53,6 +55,17 @@ class ReceiptSigningKeysTest {
                 PrefixSeals.HERE));
 
         assertThat(keys.published()).extracting(key -> key.id().value()).containsExactly("21fe31df");
+    }
+
+    @Test
+    @DisplayName("Given a server outside development and rows of public RFC 8032 test keys sealed here, when the keys are listed, then none is published and the current key is flagged")
+    void should_publish_no_test_key_when_listed_given_a_server_outside_development() {
+        outsideDevelopment = true;
+        stored.add(ReceiptSigningKey.register(EARLIER_PUBLIC_KEY, EARLIER, content -> PrefixSeals.HERE));
+
+        assertThat(keys.published()).isEmpty();
+        assertThat(keys.overview().currentKeyPublished()).isFalse();
+        assertThat(keys.overview().keys()).hasSize(2).allSatisfy(key -> assertThat(key.published()).isFalse());
     }
 
     @Test
