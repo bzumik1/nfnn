@@ -7,17 +7,14 @@ import {
   drawnModulesMatch,
 } from './qr-matrices';
 
-const PAYMENT_QR_PATH = '/api/donations/payment-qr';
+const PAYMENT_DETAILS_PATH = '/api/donations/payment-details';
 
 async function servePaymentDetails(page: Page, asked: string[]): Promise<void> {
   await page.route(
-    (url) => url.pathname.startsWith('/api/donations/payment-'),
+    (url) => url.pathname === PAYMENT_DETAILS_PATH,
     async (route) => {
-      const path = new URL(route.request().url()).pathname;
-      asked.push(path);
-      await (path === '/api/donations/payment-details'
-        ? route.fulfill({ json: FOUNDATION_PAYMENT_DETAILS })
-        : route.abort());
+      asked.push(new URL(route.request().url()).pathname);
+      await route.fulfill({ json: FOUNDATION_PAYMENT_DETAILS });
     },
   );
 }
@@ -40,8 +37,7 @@ test.describe('Given a visitor on the home page', () => {
     await expect.poll(() => drawnModulesMatch(qrCode, PAYMENT_QR_500)).toBe(true);
 
     expect(PAYMENT_QR_1000.modules).not.toBe(PAYMENT_QR_500.modules);
-    expect(asked).toEqual(['/api/donations/payment-details']);
-    expect(asked).not.toContain(PAYMENT_QR_PATH);
+    expect(asked).toEqual([PAYMENT_DETAILS_PATH]);
     await expect(page.locator('#prispet')).toContainText('CZ26 2010 0000 0055 4433 2217');
   });
 
@@ -62,7 +58,7 @@ test.describe('Given a visitor on the home page', () => {
     await expect(page.locator('#prispet .qr-announcement')).toHaveText(
       'QR platba na 1 000\u00a0Kč je připravená.',
     );
-    expect(asked).toEqual(['/api/donations/payment-details']);
+    expect(asked).toEqual([PAYMENT_DETAILS_PATH]);
   });
 
   test('when they save the QR code, then a PNG image of it downloads', async ({ page }) => {

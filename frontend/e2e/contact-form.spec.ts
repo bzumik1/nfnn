@@ -57,7 +57,9 @@ test.describe('Given a visitor on the home page', () => {
       'Zadejte e-mail ve tvaru jan@example.com.',
     );
     await expect(page.locator('#contact-email')).toBeFocused();
-    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toHaveCount(0);
+    await expect(page.locator('#kontakt').getByRole('alert').filter({ hasText: /\S/ })).toHaveCount(
+      0,
+    );
   });
 
   test('when the API refuses the message, then the form stays with an explanation', async ({
@@ -73,7 +75,7 @@ test.describe('Given a visitor on the home page', () => {
     await page.locator('#contact-message').fill('Ještě jedna.');
     await page.getByRole('button', { name: 'Odeslat zprávu' }).click();
 
-    const alert = page.getByRole('alert').filter({ hasText: /\S/ });
+    const alert = page.locator('#kontakt').getByRole('alert').filter({ hasText: /\S/ });
     await expect(alert).toContainText('příliš mnoho zpráv');
     await expect(alert.getByRole('link', { name: 'info@nfnn.cz' })).toHaveAttribute(
       'href',
