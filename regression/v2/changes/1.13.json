@@ -1,0 +1,95 @@
+[
+  {
+    "path": "POST /api/admin/donations/receipt-signing-keys/{keyId}/withdrawal",
+    "scenario": "donations/admin_receipt_signing_key_withdrawal: *",
+    "kind": "added",
+    "reason": "1.13 lets an administrator in a browser session withdraw a leaked receipt signing key with a fresh second factor (status revoked, sealed, audited, e-mailed to the administrators, the backend restarts for a new seed when it is its own key); v2 had no such endpoint",
+    "contract": "docs/api-contract.md, Receipt verification proof and signing keys (Withdrawing a key); docs/security-overview.md, Receipt signing key"
+  },
+  {
+    "kind": "log-field",
+    "line": "donations.application.signing.ReceiptSigningKeyWithdrawal: Admin <id> withdrew the receipt signing key <key-id>",
+    "reason": "1.13 logs at WARN, besides the WITHDRAW_RECEIPT_SIGNING_KEY audit entry, who withdrew which key, so the withdrawal shows in backend.log",
+    "contract": "docs/api-contract.md, Receipt verification proof and signing keys (Withdrawing a key); docs/security-overview.md, Receipt signing key",
+    "security": {
+      "approvedIn": "PENDING",
+      "fields": {
+        "<id>": "the administrator's account id (a UUID), as every audit line names it; no name or e-mail",
+        "<key-id>": "the receipt signing key id: 8 hex digits of the SHA-256 of the public key, public (GET /api/donations/receipt-keys serves it to anyone); no personal data and no secret"
+      }
+    }
+  },
+  {
+    "kind": "log-field",
+    "line": "donations.application.signing.ReceiptSigningKeyWithdrawal: Admin <id> asked to withdraw a receipt signing key while it is paused after refused second factors",
+    "reason": "1.13 logs at WARN a withdrawal refused because the administrator's withdrawals are paused after five refused second factors within 15 minutes (as the backup key's reveal, security review 2026-10-29)",
+    "contract": "docs/api-contract.md, Receipt verification proof and signing keys (Withdrawing a key); docs/security-overview.md, Receipt signing key",
+    "security": {
+      "approvedIn": "PENDING",
+      "fields": {
+        "<id>": "the administrator's account id (a UUID), as every audit line names it; no name or e-mail"
+      }
+    }
+  },
+  {
+    "kind": "log-field",
+    "line": "donations.application.signing.ReceiptSigningKeyWithdrawalRefusals: Admin <id> was refused the withdrawal of the receipt signing key <key-id>: the second factor did not match",
+    "reason": "1.13 logs at WARN, besides the WITHDRAW_RECEIPT_SIGNING_KEY_REFUSED audit entry, a withdrawal whose fresh second factor was missing or did not match",
+    "contract": "docs/api-contract.md, Receipt verification proof and signing keys (Withdrawing a key); docs/security-overview.md, Receipt signing key",
+    "security": {
+      "approvedIn": "PENDING",
+      "fields": {
+        "<id>": "the administrator's account id (a UUID), as every audit line names it; no name or e-mail",
+        "<key-id>": "the receipt signing key id: 8 hex digits of the SHA-256 of the public key, public (GET /api/donations/receipt-keys serves it to anyone); no personal data and no secret"
+      }
+    }
+  },
+  {
+    "kind": "log-field",
+    "line": "donations.application.signing.ReceiptSigningKeyRegistration: Receipt signing key <key-id> of this server is withdrawn, so the server signs no receipt until it starts with a new seed",
+    "reason": "1.13 logs at ERROR at start when the server's own key is withdrawn (the entrypoint did not replace the seed), so the server signs no receipt",
+    "contract": "docs/api-contract.md, Receipt verification proof and signing keys (start: cross-check with the audit trail); docs/system-overview.md, donations (Receipt signing keys); docs/security-overview.md, Receipt signing key",
+    "security": {
+      "approvedIn": "PENDING",
+      "fields": {
+        "<key-id>": "the receipt signing key id: 8 hex digits of the SHA-256 of the public key, public (GET /api/donations/receipt-keys serves it to anyone); no personal data and no secret"
+      }
+    }
+  },
+  {
+    "kind": "log-field",
+    "line": "donations.application.signing.ReceiptSigningKeyRegistration: Receipt signing key <key-id> was withdrawn but its row is active again, so it is published as withdrawn",
+    "reason": "1.13 logs at ERROR at start, once per key, a key the audit trail withdrew whose row is active again (a row put back from before the withdrawal); it is published as revoked and flagged on /sprava and in nfnn_status",
+    "contract": "docs/api-contract.md, Receipt verification proof and signing keys (start: cross-check with the audit trail); docs/system-overview.md, donations (Receipt signing keys); docs/security-overview.md, Receipt signing key",
+    "security": {
+      "approvedIn": "PENDING",
+      "fields": {
+        "<key-id>": "the receipt signing key id: 8 hex digits of the SHA-256 of the public key, public (GET /api/donations/receipt-keys serves it to anyone); no personal data and no secret"
+      }
+    }
+  },
+  {
+    "kind": "log-field",
+    "line": "donations.application.signing.ReceiptSigningKeyRegistration: Receipt signing key <key-id> is in the audit trail but its row is missing",
+    "reason": "1.13 logs at ERROR at start, once per key, a key the audit trail registered, adopted or withdrew whose row is gone; flagged on /sprava and in nfnn_status",
+    "contract": "docs/api-contract.md, Receipt verification proof and signing keys (start: cross-check with the audit trail); docs/system-overview.md, donations (Receipt signing keys); docs/security-overview.md, Receipt signing key",
+    "security": {
+      "approvedIn": "PENDING",
+      "fields": {
+        "<key-id>": "the receipt signing key id: 8 hex digits of the SHA-256 of the public key, public (GET /api/donations/receipt-keys serves it to anyone); no personal data and no secret"
+      }
+    }
+  },
+  {
+    "kind": "log-field",
+    "line": "operations.infrastructure.backup.ReceiptSeedRenewal: The receipt signing key <key-id> of this server was withdrawn, so the backend restarts and its entrypoint generates a new seed",
+    "reason": "1.13 logs at WARN, after the withdrawal of the server's own key is committed, that the backend leaves the request for a new seed in the restore folder and restarts",
+    "contract": "docs/api-contract.md, Receipt verification proof and signing keys (Withdrawing a key); docs/system-overview.md, donations (Receipt signing keys); deploy/README.md",
+    "security": {
+      "approvedIn": "PENDING",
+      "fields": {
+        "<key-id>": "the receipt signing key id: 8 hex digits of the SHA-256 of the public key, public (GET /api/donations/receipt-keys serves it to anyone); no personal data and no secret"
+      }
+    }
+  }
+]

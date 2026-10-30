@@ -267,4 +267,11 @@ class TranscriptNormaliserTest {
         assertThat(TranscriptNormaliser.template("/api/admin/donors/" + FIRST_ID + "/payments/" + SECOND_ID + "?page=2"))
                 .isEqualTo("/api/admin/donors/{id}/payments/{id}");
     }
+
+    @Test
+    @DisplayName("Given a path naming a receipt signing key, when its template is taken, then the key id becomes {keyId}, because a key id is a masked value")
+    void should_replace_the_key_id_when_the_template_is_taken_given_a_path_naming_a_receipt_signing_key() {
+        assertThat(TranscriptNormaliser.template("/api/admin/donations/receipt-signing-keys/21fe31df/withdrawal"))
+                .isEqualTo("/api/admin/donations/receipt-signing-keys/{keyId}/withdrawal");
+    }
 }
