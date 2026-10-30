@@ -591,14 +591,22 @@
               aplikace ukáže.
             </p>
             <div class="account-enrolment">
-              @if (enrolment(); as current) {
+              @if (enrolmentQr(); as qr) {
                 <app-qr-code
                   class="account-qr"
                   variant="plain"
-                  [matrix]="current.qrCode"
+                  [matrix]="qr"
                   label="QR kód s nastavením pro ověřovací aplikaci"
                   i18n-label="@@donor.account.secondFactor.qrAlt"
                 />
+              } @else if (enrolment()) {
+                <p
+                  class="ui-field-error account-qr-failed"
+                  role="alert"
+                  i18n="@@donor.account.secondFactor.qrFailed"
+                >
+                  QR kód se nepodařilo vykreslit. Opište prosím klíč níže do ověřovací aplikace.
+                </p>
               }
               @if (enrolment(); as current) {
                 <a
