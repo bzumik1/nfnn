@@ -34,4 +34,40 @@ describe('Given the about section', () => {
     expect(paragraphs[1]).toMatch(/^Od svého počátku úzce spolupracujeme/);
     expect(paragraphs[2]).toMatch(/^Nová naděje – nadační fond byl zřízen/);
   });
+
+  describe('when it renders who runs the foundation today', () => {
+    function board(): HTMLElement {
+      return (fixture.nativeElement as HTMLElement).querySelector('.board')!;
+    }
+
+    function text(element: Element | null): string {
+      return element?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+    }
+
+    it('then a heading under the founding story names it and the chairman follows with his role', () => {
+      expect(text(board().querySelector('h3'))).toBe('Kdo fond vede');
+      expect(text(board().querySelector('.board-chair'))).toBe(
+        'Pavel Znamenáček, předseda správní rady',
+      );
+    });
+
+    it('then the whole board and the auditor are listed as in the registry', () => {
+      expect(Array.from(board().querySelectorAll('.board-members')).map(text)).toEqual([
+        'Správní rada: Pavel Znamenáček (předseda), Andrea Znamenáčková, Zdeňka Znamenáčková. Každý člen jedná za fond samostatně.',
+        'Revizor: Miroslav Hloucal.',
+      ]);
+    });
+
+    it('then his portrait stays out of the screen reader, since his name is beside it, and loads late in two widths', () => {
+      const portrait = board().querySelector('img')!;
+
+      expect(portrait.getAttribute('alt')).toBe('');
+      expect(portrait.getAttribute('loading')).toBe('lazy');
+      expect(portrait.getAttribute('srcset')).toBe(
+        '/images/pavel-znamenacek-160.webp 160w, /images/pavel-znamenacek-320.webp 320w',
+      );
+      expect(portrait.getAttribute('width')).toBe('160');
+      expect(portrait.getAttribute('height')).toBe('160');
+    });
+  });
 });
