@@ -689,9 +689,18 @@ A failure of the whole step logs ERROR `The receipt signing key could not be reg
 
 `publicKey` is the raw 32 bytes in unpadded base64url; a key that is not published is left out. Headers: `Cache-Control: public, max-age=3600` and `ETag: "<base64url of the first 12 bytes of SHA-256 over the body's values>"`; a request with that `If-None-Match` gets 304 with both headers and no body. A browser may keep the list for up to an hour, so the verification page `/overit` asks past the browser cache on every check while online: the app's HTTP backend is XHR, which has no fetch `cache` option, so it sends the request header `Cache-Control: no-cache` (Chromium then fetches the list whole, WebKit revalidates it by the ETag; fresh either way) and no `Authorization` header (`WITHOUT_ACCESS_TOKEN`). The page checks the entries one by one (`receipt-keys.ts`) and drops an entry with an unknown algorithm or status, a public key that is not 32 bytes of base64url, or a key id that is not the first 4 bytes of the SHA-256 of its public key; a key id listed twice is trusted for neither entry; the RFC 8032 test keys (ids `21fe31df`, `39f713d0`, `dac073e0`, `91384c41`, `5f9b247e`, and `c07ba992` of the Ed25519ctx vector), whose seeds are public, are accepted only on `localhost`, `127.0.0.1` and `[::1]`. What remains replaces the kept list whole, never merged, so a key the server now lists as revoked or no longer lists is gone at once; an answer that is no key list at all (no 8-digit IČO, no `keys` array) is never kept and counts as no answer from the foundation.
 
+`GET /api/admin/donations/receipt-signing-keys` (admin; a connected application with `admin:read` too, read only):
+
+```json
+{ "currentKeyId": "21fe31df", "currentKeyPublished": true,
+  "keys": [{ "keyId": "21fe31df", "algorithm": "Ed25519", "publicKey": "11qY…URo", "status": "active", "registeredAt": "2026-11-13T11:00:00Z", "published": true, "current": true }] }
+```
+
+Every key is listed, also one that is not published (`published: false`: its seal fails, its id is not its public key's, or it waits for an adoption no restore confirmed); `currentKeyPublished` is false also when the server's own row is missing. `/sprava`, the key card in `/sprava/nastaveni` and `nfnn_status` show either as an alarm. Cucumber: `features/donations/receipt_keys.feature`, `features/donations/admin_receipt_signing_keys.feature`.
+
 #### Receipt status
 
-Planned in plan v3 1.8 (A12); the backend part follows once 1.6 keeps `issued_receipt`. The page `/overit` calls it after a valid signature while online; until the endpoint exists the page shows "Stav potvrzení se teď u fondu nepodařilo zjistit…" with "Zkusit znovu".
+Planned in plan v3 1.8 (A12); the backend part follows once 1.6 keeps `issued_receipt`. The page `/overit` calls it after a valid signature while online; until the endpoint exists the page shows the caution "Podpis sedí, ale fond teď neodpověděl, zda potvrzení vede" with "Zkusit znovu".
 
 ```
 POST /api/donations/receipts/status
@@ -703,16 +712,7 @@ Content-Type: application/json
 - `digest`: the SHA-256 of the signed message (`nfnn.cz/receipt/v1`, a zero byte, the foundation's IČO, the body: "Format v1" above) followed by the 64-byte signature, 64 lowercase hex digits (`statusSha256` of the encoding cases in `shared-cases/verification/payload.json`); anything else answers 400 `validation`. The signature is in the hash so that only someone holding the proof can ask: the signed data alone (number, days, name, address, amounts) could be guessed, the signature cannot (lead 2026-10-30, 1.8 security review m5). 1.6 stores this digest with each issued receipt.
 - Answer 200 `{ "status": "active" | "replaced" | "withdrawn" | "unknown" }` and nothing else: `active` the foundation issued the receipt with exactly this proof and keeps it, `replaced` it issued a newer one in its place, `withdrawn` it withdrew it, `unknown` it has no receipt with this proof. `Cache-Control: no-store`.
 - Public (`permitAll`), no token is sent. `ReceiptStatusRateLimiter` per client address (an IPv6 address counted by its /64), checked before any work; 429 `donations/rate-limited`. No log line per request (only the limiter's 429 outcome), neither the address nor the digest is stored.
-- The page treats any other answer, a failure or a timeout as no answer.
-
-`GET /api/admin/donations/receipt-signing-keys` (admin; a connected application with `admin:read` too, read only):
-
-```json
-{ "currentKeyId": "21fe31df", "currentKeyPublished": true,
-  "keys": [{ "keyId": "21fe31df", "algorithm": "Ed25519", "publicKey": "11qY…URo", "status": "active", "registeredAt": "2026-11-13T11:00:00Z", "published": true, "current": true }] }
-```
-
-Every key is listed, also one that is not published (`published: false`: its seal fails, its id is not its public key's, or it waits for an adoption no restore confirmed); `currentKeyPublished` is false also when the server's own row is missing. `/sprava`, the key card in `/sprava/nastaveni` and `nfnn_status` show either as an alarm. Cucumber: `features/donations/receipt_keys.feature`, `features/donations/admin_receipt_signing_keys.feature`.
+- The page waits at most 5 seconds. A network failure with no response at all (status 0) counts as offline, as when the browser says it is offline: the result stays green with the sentence that a later replacement cannot be seen. Any other failure (429, 5xx, a timeout, an answer that is not one of the four statuses) counts as no answer from the foundation and is never green: a caution with "Zkusit znovu", because a 429 or an outage can be caused from outside, for example by flooding the limiter of a shared address to hide the `unknown` of a receipt forged with a leaked key (lead 2026-10-30, 1.8 reviews). The same holds for the key list: a 429, a 5xx, a timeout or a malformed list while the browser is online is no answer, never offline.
 
 #### `GET /api/donations/payment-qr`
 
