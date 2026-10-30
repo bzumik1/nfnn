@@ -16,9 +16,9 @@ public interface ProjectRepository {
 
     boolean isSlugTakenByAnother(Slug slug, ProjectId except);
 
-    List<Project> findAllDraftsFirst();
+    List<Project> findAllDraftsFirst(ProjectOrder order);
 
-    List<Project> findVisibleNewestFirst(LocalDate today, int offset, int limit);
+    List<Project> findVisible(LocalDate today, ProjectOrder order, int offset, int limit);
 
     long countVisible(LocalDate today);
 

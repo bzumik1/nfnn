@@ -5,6 +5,7 @@ import {
   answer,
   asRecord,
   plain,
+  PROJECT_ORDERS,
   text,
   ToolRefusal,
   withHint,
@@ -375,6 +376,19 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
         ]);
         return text({ news: withoutBodies(news), projects: withoutBodies(projects) });
       }),
+  );
+
+  server.registerTool(
+    'nfnn_project_order',
+    {
+      title: 'Řazení projektů',
+      description: `How the site orders the projects on the home page and the list of projects (the administration lists them the same way, drafts first), as \`order\`: ${PROJECT_ORDERS} Changed with nfnn_set_project_order.`,
+      annotations: READ_ONLY,
+    },
+    async (ctx) =>
+      answer(deps, ctx, 'nfnn_project_order', async ({ apiToken }) =>
+        text(await backend.get('/api/admin/content/project-order', apiToken)),
+      ),
   );
 
   server.registerTool(

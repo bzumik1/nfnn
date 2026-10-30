@@ -60,6 +60,7 @@ const ACTION_NAMES: Record<string, string> = {
   UPDATE_PROJECT: $localize`:@@admin.actions.action.updateProject:Úprava projektu`,
   PUBLISH_PROJECT: $localize`:@@admin.actions.action.publishProject:Zveřejnění projektu`,
   UNPUBLISH_PROJECT: $localize`:@@admin.actions.action.unpublishProject:Stažení projektu z webu`,
+  CHANGE_PROJECT_ORDER: $localize`:@@admin.actions.action.changeProjectOrder:Změna řazení projektů`,
   DELETE_PROJECT: $localize`:@@admin.actions.action.deleteProject:Smazání projektu`,
   CHANGE_BACKUP_SCHEDULE: $localize`:@@admin.actions.action.changeBackupSchedule:Změna plánu záloh`,
   REQUEST_BACKUP: $localize`:@@admin.actions.action.requestBackup:Spuštění zálohy databáze`,
