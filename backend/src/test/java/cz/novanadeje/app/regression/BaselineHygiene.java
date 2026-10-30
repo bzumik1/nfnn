@@ -65,7 +65,8 @@ final class BaselineHygiene {
     private static final Pattern HEX_LETTER = Pattern.compile("[a-fA-F]");
     private static final Pattern LABELLED_DIGEST = Pattern.compile("(?:\"[A-Za-z]*(?:sha256|Sha256)\"\\s*:\\s*\"|sha256=)$");
     private static final int LABEL_WINDOW = 40;
-    private static final String BASELINE_COMMIT_FILE = "BASELINE_COMMIT";
+    static final Path BASELINE_COMMIT = Path.of("v2", "BASELINE_COMMIT");
+    private static final Path REGRESSION_FOLDER = Path.of("regression");
     private static final Pattern COMMIT_ID = Pattern.compile("[0-9a-f]{40}");
     private static final Pattern STANDARD_BASE64 = Pattern.compile("(?<![A-Za-z0-9+/=_-])[A-Za-z0-9+/]{32,}={0,2}(?![A-Za-z0-9+/=_-])");
     private static final Pattern BASE64_ONLY_CHARACTER = Pattern.compile("[+/=]");
@@ -96,28 +97,31 @@ final class BaselineHygiene {
         try (Stream<Path> files = Files.walk(root)) {
             paths = files.filter(Files::isRegularFile).sorted().toList();
         }
-        Fixtures withBaselineCommits = withBaselineCommits(fixtures, paths);
+        boolean anchored = REGRESSION_FOLDER.equals(root.getFileName()) && Files.isRegularFile(root.resolve(BASELINE_COMMIT));
+        Fixtures withBaselineCommit = anchored ? withBaselineCommit(fixtures, root.resolve(BASELINE_COMMIT)) : fixtures;
         List<String> findings = new ArrayList<>();
         for (Path file : paths) {
-            findings.addAll(findings(root.relativize(file).toString(), Files.readString(file, StandardCharsets.UTF_8), withBaselineCommits));
+            Path relative = root.relativize(file);
+            findings.addAll(findings(relative.toString(), Files.readString(file, StandardCharsets.UTF_8), withBaselineCommit, anchored && relative.equals(BASELINE_COMMIT)));
         }
         return new Report(paths.size(), findings);
     }
 
-    private static Fixtures withBaselineCommits(Fixtures fixtures, List<Path> paths) throws IOException {
-        Set<String> values = new TreeSet<>(fixtures.values());
-        for (Path file : paths) {
-            if (file.getFileName().toString().equals(BASELINE_COMMIT_FILE)) {
-                String commit = Files.readString(file, StandardCharsets.UTF_8).strip();
-                if (COMMIT_ID.matcher(commit).matches()) {
-                    values.add(commit);
-                }
-            }
+    private static Fixtures withBaselineCommit(Fixtures fixtures, Path baselineCommit) throws IOException {
+        String commit = Files.readString(baselineCommit, StandardCharsets.UTF_8).strip();
+        if (!COMMIT_ID.matcher(commit).matches()) {
+            return fixtures;
         }
+        Set<String> values = new TreeSet<>(fixtures.values());
+        values.add(commit);
         return new Fixtures(fixtures.addresses(), values, fixtures.words());
     }
 
     static List<String> findings(String file, String text, Fixtures fixtures) {
+        return findings(file, text, fixtures, Path.of(file).equals(BASELINE_COMMIT));
+    }
+
+    private static List<String> findings(String file, String text, Fixtures fixtures, boolean baselineCommit) {
         List<String> findings = new ArrayList<>();
         UUID_TEXT.matcher(text).results().forEach(match -> findings.add(file + ": an id " + match.group()));
         BASE64URL_ID_FIELD.matcher(text).results().map(match -> match.group(1)).filter(BaselineHygiene::isBase64UrlId)
@@ -141,7 +145,7 @@ final class BaselineHygiene {
                 findings.add(file + ": a real surname of the family " + family + "*");
             }
         }
-        secretShapes(file, text, fixtures, findings);
+        secretShapes(file, text, fixtures, baselineCommit, findings);
         if (file.endsWith(JSON_FILE)) {
             try {
                 JsonNode json = JSON.readTree(text);
@@ -163,13 +167,13 @@ final class BaselineHygiene {
         return findings;
     }
 
-    private static void secretShapes(String file, String text, Fixtures fixtures, List<String> findings) {
+    private static void secretShapes(String file, String text, Fixtures fixtures, boolean baselineCommit, List<String> findings) {
         Predicate<String> spelled = candidate -> fixtures.values().contains(candidate);
         BACKUP_KEY_SHAPE.matcher(text).results().map(MatchResult::group)
                 .filter(key -> !key.equalsIgnoreCase(DEV_BACKUP_KEY) && fixtures.values().stream().noneMatch(key::equalsIgnoreCase))
                 .forEach(key -> findings.add(file + ": a backup key starting " + key.substring(0, 8).toUpperCase(Locale.ROOT)));
         BCRYPT.matcher(text).results().forEach(match -> findings.add(file + ": a BCrypt hash"));
-        if (!file.endsWith(BASELINE_COMMIT_FILE)) {
+        if (!baselineCommit) {
             HEX.matcher(text).results()
                     .filter(match -> DIGIT.matcher(match.group()).find() && HEX_LETTER.matcher(match.group()).find())
                     .filter(match -> !LABELLED_DIGEST.matcher(text.substring(Math.max(0, match.start() - LABEL_WINDOW), match.start())).find())
