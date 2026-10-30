@@ -11,11 +11,17 @@ import org.springframework.boot.test.context.ConfigDataApplicationContextInitial
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.StandardEnvironment;
+import org.springframework.core.io.UrlResource;
 import org.springframework.core.io.support.PropertiesLoaderUtils;
 
 import java.io.IOException;
+import java.net.URL;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static cz.novanadeje.app.operations.infrastructure.settings.PublicDevelopmentKeysTest.SERVER_BACKUP_KEY;
@@ -95,9 +101,13 @@ class DevelopmentKeysGuardTest {
     @Test
     @DisplayName("Given the backend's environment post-processors, when Spring Boot loads them, then the guard is registered and runs before the stored settings are read")
     void should_run_before_the_stored_settings_when_loaded_given_the_registered_post_processors() throws IOException {
-        String registered = PropertiesLoaderUtils.loadAllProperties("META-INF/spring.factories").getProperty(EnvironmentPostProcessor.class.getName());
+        List<String> registered = new ArrayList<>();
+        for (URL factories : Collections.list(getClass().getClassLoader().getResources("META-INF/spring.factories"))) {
+            Optional.ofNullable(PropertiesLoaderUtils.loadProperties(new UrlResource(factories)).getProperty(EnvironmentPostProcessor.class.getName()))
+                    .ifPresent(names -> Arrays.stream(names.split(",")).map(String::strip).forEach(registered::add));
+        }
 
-        assertThat(registered).contains(DevelopmentKeysGuard.class.getName());
+        assertThat(registered).contains(DevelopmentKeysGuard.class.getName(), DatabaseSettingsEnvironmentPostProcessor.class.getName());
         assertThat(guard.getOrder()).isLessThan(new DatabaseSettingsEnvironmentPostProcessor(new DeferredLogs()).getOrder());
     }
 
