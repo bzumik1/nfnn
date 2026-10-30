@@ -1,6 +1,7 @@
 package cz.novanadeje.app.regression;
 
 import cz.novanadeje.app.operations.domain.backup.BackupKey;
+import cz.novanadeje.app.sharedcases.SharedCases;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -29,10 +30,10 @@ class BaselineHygieneTest {
     @ValueSource(strings = {"regression", "shared-cases"})
     @DisplayName("Given a folder of public baseline artefacts, when it is scanned, then it holds files and none carries an id, a token or a foreign address")
     void should_hold_files_without_ids_tokens_or_foreign_addresses_when_a_public_artefact_folder_is_scanned(String folder) throws IOException {
-        Path root = GoldenFiles.repositoryRoot().resolve(folder);
+        Path root = SharedCases.repositoryRoot().resolve(folder);
 
-        BaselineHygiene.Report report = BaselineHygiene.scan(root, BaselineHygiene.fixtures(GoldenFiles.repositoryRoot().resolve("backend/src/test"),
-                GoldenFiles.repositoryRoot().resolve("test-cases")));
+        BaselineHygiene.Report report = BaselineHygiene.scan(root, BaselineHygiene.fixtures(SharedCases.repositoryRoot().resolve("backend/src/test"),
+                SharedCases.repositoryRoot().resolve("test-cases")));
 
         assertThat(report.filesScanned()).as("files in %s", folder).isPositive();
         assertThat(report.findings()).as("findings in %s", folder).isEmpty();
@@ -145,7 +146,7 @@ class BaselineHygieneTest {
     @Test
     @DisplayName("Given the dev default backup key the hygiene allows, when the dev configuration is read, then it is the key application-dev.yml falls back to")
     void should_allow_exactly_the_dev_default_backup_key_when_the_dev_configuration_is_read() throws IOException {
-        String devConfiguration = Files.readString(GoldenFiles.repositoryRoot().resolve("backend/src/main/resources/application-dev.yml"));
+        String devConfiguration = Files.readString(SharedCases.repositoryRoot().resolve("backend/src/main/resources/application-dev.yml"));
 
         assertThat(devConfiguration).contains("${BACKUP_KEY:" + BaselineHygiene.DEV_BACKUP_KEY + "}");
     }
@@ -234,7 +235,7 @@ class BaselineHygieneTest {
     @Test
     @DisplayName("Given the foundation's account the hygiene allows, when the configuration is read, then it is the account and IBAN application.yml falls back to")
     void should_allow_exactly_the_foundation_account_when_the_configuration_is_read() throws IOException {
-        String configuration = Files.readString(GoldenFiles.repositoryRoot().resolve("backend/src/main/resources/application.yml"));
+        String configuration = Files.readString(SharedCases.repositoryRoot().resolve("backend/src/main/resources/application.yml"));
 
         assertThat(configuration).contains("${BANK_ACCOUNT_NUMBER:" + BaselineHygiene.FOUNDATION_ACCOUNT + "}")
                 .contains("${BANK_IBAN:" + BaselineHygiene.FOUNDATION_IBAN + "}");
@@ -274,7 +275,7 @@ class BaselineHygieneTest {
     @Test
     @DisplayName("Given the TOTP golden cases, when their secrets are read, then they are exactly the test secrets the hygiene scan allows")
     void should_allow_exactly_the_secrets_of_the_totp_golden_cases() throws IOException {
-        JsonNode cases = JsonMapper.builder().build().readTree(GoldenFiles.repositoryRoot().resolve(QrGoldenCasesTest.TOTP_CASES).toFile()).get("cases");
+        JsonNode cases = JsonMapper.builder().build().readTree(SharedCases.repositoryRoot().resolve("shared-cases/totp/uri.json").toFile()).get("cases");
 
         assertThat(cases.valueStream().map(entry -> entry.get("input").get("secret").asString()).toList())
                 .containsExactlyInAnyOrderElementsOf(BaselineHygiene.TEST_TOTP_SECRETS);
@@ -283,7 +284,7 @@ class BaselineHygieneTest {
     @Test
     @DisplayName("Given the backend tests, when fixtures are collected, then the fictional donors, the foundation's address and the secrets the tests spell out are among them")
     void should_collect_fictional_addresses_and_spelled_out_secrets_when_fixtures_are_collected() throws IOException {
-        BaselineHygiene.Fixtures fixtures = BaselineHygiene.fixtures(GoldenFiles.repositoryRoot().resolve("backend/src/test"));
+        BaselineHygiene.Fixtures fixtures = BaselineHygiene.fixtures(SharedCases.repositoryRoot().resolve("backend/src/test"));
 
         assertThat(fixtures.addresses()).contains("info@nfnn.cz").anyMatch(address -> address.endsWith("@example.cz"));
         assertThat(fixtures.values()).contains(FIXTURE_SECRET);

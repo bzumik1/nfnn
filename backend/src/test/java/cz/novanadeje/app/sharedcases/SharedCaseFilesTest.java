@@ -1,6 +1,5 @@
 package cz.novanadeje.app.sharedcases;
 
-import cz.novanadeje.app.regression.GoldenFiles;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
@@ -107,7 +106,7 @@ class SharedCaseFilesTest {
     void should_hold_no_copy_of_a_case_file_an_expected_value_or_a_qr_matrix_when_the_repository_is_searched() {
         List<String> found = new ArrayList<>();
         for (Path file : searchedFiles()) {
-            String relative = GoldenFiles.repositoryRoot().relativize(file).toString().replace('\\', '/');
+            String relative = SharedCases.repositoryRoot().relativize(file).toString().replace('\\', '/');
             textOf(file).ifPresent(text -> found.addAll(copies.in(relative, text)));
         }
 
@@ -117,7 +116,7 @@ class SharedCaseFilesTest {
     private static List<Path> searchedFiles() {
         List<Path> files = new ArrayList<>();
         for (String folder : SEARCHED_FOLDERS) {
-            Path root = GoldenFiles.repositoryRoot().resolve(folder);
+            Path root = SharedCases.repositoryRoot().resolve(folder);
             if (!Files.isDirectory(root)) {
                 continue;
             }
