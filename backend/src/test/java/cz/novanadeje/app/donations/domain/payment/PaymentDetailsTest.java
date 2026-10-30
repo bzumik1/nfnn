@@ -69,6 +69,15 @@ class PaymentDetailsTest {
     }
 
     @Test
+    @DisplayName("Given a recipient's SPAYD text over 35 characters, when the payment details are created, then they are refused, since RN holds 35 at most")
+    void should_refuse_when_created_given_a_recipient_over_35_characters() {
+        SpaydText thirtySix = new SpaydText("A".repeat(SpaydText.RECIPIENT_NAME_LENGTH + 1));
+
+        assertThatIllegalArgumentException().isThrownBy(() -> new PaymentDetails(FOUNDATION, Currency.CZK, thirtySix,
+                details.donationMessage(), details.accountVerificationMessage(), details.accountVerificationAmount()));
+    }
+
+    @Test
     @DisplayName("Given a missing part, when the payment details are created, then they are refused")
     void should_refuse_when_created_given_a_missing_part() {
         assertThatIllegalArgumentException().isThrownBy(() -> new PaymentDetails(null, Currency.CZK, details.recipientName(),

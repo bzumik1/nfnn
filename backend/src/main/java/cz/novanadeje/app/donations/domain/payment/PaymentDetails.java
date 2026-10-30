@@ -13,6 +13,9 @@ public record PaymentDetails(BankAccount account, Currency currency, SpaydText r
                 || accountVerificationAmount == null) {
             throw new IllegalArgumentException("Payment details need the account, the currency, the recipient, both messages and the verification amount");
         }
+        if (recipientName.value().length() > SpaydText.RECIPIENT_NAME_LENGTH) {
+            throw new IllegalArgumentException("The recipient's SPAYD text holds at most " + SpaydText.RECIPIENT_NAME_LENGTH + " characters: " + recipientName);
+        }
         if (!accountVerificationAmount.isPositive() || accountVerificationAmount.currency() != currency) {
             throw new IllegalArgumentException("The verification amount must be positive and in the payments' currency: " + accountVerificationAmount);
         }
