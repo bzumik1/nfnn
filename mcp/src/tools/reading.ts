@@ -314,7 +314,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Podpis na potvrzeních',
       description:
-        'Whether a signature is uploaded for donation receipts, its kind (RASTER for a scan, VECTOR for an SVG of filled paths), its size in pixels and when it was uploaded (the image and the vector paths themselves are left out). Receipts issued after the upload carry it above the signatory; uploading and removing it stay on the web (/sprava/nastaveni, "Potvrzení o daru").',
+        'Whether a signature is uploaded for donation receipts, its kind (RASTER for a scan, VECTOR for an SVG of filled paths), its size in pixels and when it was uploaded (the image and the vector paths themselves are left out). Receipts issued after the upload carry a RASTER signature above the signatory, and a VECTOR signature only once receipts are drawn in the browser; until then they carry the line and the name. Uploading and removing it stay on the web (/sprava/nastaveni, "Potvrzení o daru").',
       annotations: READ_ONLY,
     },
     async (ctx) =>
