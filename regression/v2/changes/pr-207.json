@@ -26,5 +26,45 @@
     "kind": "body",
     "reason": "PR #207: a 1 Kč account verification gets no receipt of its own (Jakub 2026-10-29, decision 1: it is shown as a verification, not a gift), so its receiptAvailable is false; the yearly receipt still counts it",
     "contract": "docs/api-contract.md, GET /api/donations/me and GET /api/donations/me/summary"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the overview opens > then a donor with gifts can still open the standing order guide at the last gift",
+    "reason": "PR #207: the card Poslat dar (Jakub 2026-10-29, decision 6) replaces the symbol card on the overview and carries the standing order guide",
+    "replacement": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the overview opens > then a donor with gifts can still open the standing order guide in the card Poslat dar",
+    "contract": "docs/frontend-overview.md, donors/dashboard"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the overview opens > then the last gift comes first with its date, amount and state, then the symbol, the stats and the recent gifts",
+    "reason": "PR #207: the card Poslat dar (Jakub 2026-10-29, decision 6) replaces the symbol card on the overview and carries the standing order guide",
+    "replacement": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the overview opens > then the last gift comes first with its date, amount and state, then the card Poslat dar, the stats and the recent gifts",
+    "contract": "docs/frontend-overview.md, donors/dashboard"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the overview opens > then the variable symbol can be copied and the donor can give again with it",
+    "reason": "PR #207: the card Poslat dar (Jakub 2026-10-29, decision 6) replaces the symbol card on the overview and carries the standing order guide",
+    "replacement": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the overview opens > then a card Poslat dar offers the amounts, the account, the variable symbol and the IBAN with copy buttons and a QR carrying the symbol",
+    "contract": "docs/frontend-overview.md, donors/dashboard"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the overview opens > then while the donations load a loading line stands where the stat cards go and the symbol stays visible",
+    "reason": "PR #207: the card Poslat dar (Jakub 2026-10-29, decision 6) replaces the symbol card on the overview and carries the standing order guide",
+    "replacement": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the overview opens > then while the donations load a loading line stands where the stat cards go and the card Poslat dar is ready",
+    "contract": "docs/frontend-overview.md, donors/dashboard"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/standing-order/standing-order.spec.ts > Given the standing order guide of the donor area > when the donor opens it > and the account cannot be loaded, then an alert points to the account on the home page",
+    "reason": "PR #207: the card Poslat dar (Jakub 2026-10-29, decision 6) replaces the symbol card on the overview and carries the standing order guide",
+    "replacement": "src/app/features/donors/dashboard/standing-order/standing-order.spec.ts > Given the standing order guide of the donor area > when the donor opens it > and the account cannot be loaded, then an alert says so and trying again asks once more",
+    "contract": "docs/frontend-overview.md, donors/dashboard"
   }
 ]
