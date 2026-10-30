@@ -1,10 +1,10 @@
 import { createServer } from 'node:http';
-import { toNodeHandler } from '@modelcontextprotocol/node';
 import { createApp } from './app.js';
 import { AuthorizationServerDiscovery } from './authorization.js';
 import { BackendClient } from './backend.js';
 import { configFromEnv } from './config.js';
 import { createLogger } from './logger.js';
+import { nodeHandler } from './node-handler.js';
 import { PublicPhotoFetcher } from './photos.js';
 import { TokenExchangeVerifier, type Logger } from './token-exchange.js';
 
@@ -25,9 +25,7 @@ const app = createApp({
 });
 
 const server = createServer(
-  toNodeHandler(app, {
-    onerror: (error) => logger.warn(`Request failed: ${error.constructor.name}`),
-  }),
+  nodeHandler(app, (error) => logger.warn(`Request failed: ${error.constructor.name}`)),
 );
 server.listen(config.port, '0.0.0.0', () => {
   logger.info(
