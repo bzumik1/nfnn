@@ -92,4 +92,26 @@ class ProtectedLoggersTest {
         assertThat(ProtectedLoggers.PINS).containsEntry("org.apache.tomcat.util.http.parser.Cookie", LogLevel.WARN);
         assertThat(LogLevel.values()).allMatch(level -> ProtectedLoggers.refuses(new LoggerName("org.apache.tomcat.util.http.parser.Cookie"), level));
     }
+
+    @Test
+    @DisplayName("Given Tomcat's container logger, whose context loggers write a multipart field name a client chose at DEBUG, when its pin is looked up, then it is INFO and every level is refused")
+    void should_pin_at_info_and_refuse_every_level_when_looked_up_given_container_logger() {
+        assertThat(ProtectedLoggers.PINS).containsEntry("org.apache.catalina.core.ContainerBase", LogLevel.INFO);
+        assertThat(LogLevel.values()).allMatch(level -> ProtectedLoggers.refuses(new LoggerName("org.apache.catalina.core.ContainerBase"), level));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"org.apache.catalina.core.ContainerBase.[Tomcat].[localhost].[/]",
+            "org.apache.catalina.core.ContainerBase.[Tomcat].[localhost].[/].[dispatcherServlet]"})
+    @DisplayName("Given a context logger under Tomcat's container logger, when its name is checked, then it cannot be named, so only the pinned parent reaches it")
+    void should_refuse_name_when_checked_given_context_logger_under_container_logger(String name) {
+        assertThat(LoggerName.isValid(name)).isFalse();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"org.apache.catalina", "org.apache.catalina.core", "org.apache.catalina.core.ContainerBaseX"})
+    @DisplayName("Given a logger above or beside Tomcat's container logger, when it is checked, then it may be raised")
+    void should_allow_when_checked_given_logger_above_or_beside_container_logger(String name) {
+        assertThat(ProtectedLoggers.covers(new LoggerName(name))).isFalse();
+    }
 }

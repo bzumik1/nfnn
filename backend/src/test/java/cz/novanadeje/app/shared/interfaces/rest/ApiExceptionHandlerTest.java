@@ -1,12 +1,18 @@
 package cz.novanadeje.app.shared.interfaces.rest;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
 import org.apache.tomcat.util.http.InvalidParameterException;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.support.ResourceBundleMessageSource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
@@ -18,6 +24,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartException;
 
+import java.io.IOException;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
@@ -30,6 +39,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ApiExceptionHandlerTest {
 
     private MockMvc mockMvc;
+    private final ListAppender<ILoggingEvent> logged = new ListAppender<>();
 
     @RestController
     static class ProbeController {
@@ -48,10 +58,18 @@ class ApiExceptionHandlerTest {
         String malformedMultipart() {
             throw new MultipartException("Failed to parse multipart servlet request; boundary Qkzw1572");
         }
+
+        @GetMapping("/multipart-disk-full")
+        String multipartDiskFull() {
+            throw new MultipartException("Failed to parse multipart servlet request; field Qkzw1573",
+                    new IllegalStateException("Part Qkzw1574", new IOException("No space left on device writing Qkzw1575")));
+        }
     }
 
     @BeforeEach
     void setUp() {
+        logged.start();
+        handlerLogger().addAppender(logged);
         ResourceBundleMessageSource messages = new ResourceBundleMessageSource();
         messages.setBasename("i18n/messages");
         messages.setDefaultEncoding("UTF-8");
@@ -64,6 +82,12 @@ class ApiExceptionHandlerTest {
                 .setControllerAdvice(handler)
                 .setValidator(validator)
                 .build();
+    }
+
+    @AfterEach
+    void detachLog() {
+        handlerLogger().detachAppender(logged);
+        logged.stop();
     }
 
     @Test
@@ -114,6 +138,22 @@ class ApiExceptionHandlerTest {
         expectValidationProblem(mockMvc.perform(inCzech("/malformed-multipart")))
                 .andExpect(jsonPath("$.errors", hasSize(0)))
                 .andExpect(content().string(not(containsString("Qkzw1572"))));
+    }
+
+    @Test
+    @DisplayName("Given a multipart body the server fails to read, when requested, then one WARN line names the class of the root cause and none of the exception's text")
+    void should_log_one_warn_with_root_cause_class_only_when_multipart_body_cannot_be_read() throws Exception {
+        expectValidationProblem(mockMvc.perform(inCzech("/multipart-disk-full")));
+
+        assertThat(logged.list).singleElement().satisfies(line -> {
+            assertThat(line.getLevel()).isEqualTo(Level.WARN);
+            assertThat(line.getFormattedMessage()).isEqualTo("A multipart body could not be read (IOException)");
+            assertThat(line.getThrowableProxy()).isNull();
+        });
+    }
+
+    private static Logger handlerLogger() {
+        return (Logger) LoggerFactory.getLogger(ApiExceptionHandler.class);
     }
 
     private static MockHttpServletRequestBuilder inCzech(String path) {

@@ -18,6 +18,7 @@ public final class ProtectedLoggers {
             entry("org.springframework.security.web.FilterChainProxy", LogLevel.INFO),
             entry("org.springframework.security.web.firewall", LogLevel.INFO),
             entry("org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter", LogLevel.INFO),
+            entry("org.apache.catalina.core.ContainerBase", LogLevel.INFO),
             entry("org.apache.coyote", LogLevel.INFO),
             entry("org.apache.coyote.http11.Http11Processor", LogLevel.WARN),
             entry("org.apache.tomcat.util.http", LogLevel.INFO),

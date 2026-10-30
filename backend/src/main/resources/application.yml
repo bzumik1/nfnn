@@ -195,6 +195,7 @@ logging:
     org.springframework.security.web.FilterChainProxy: INFO
     org.springframework.security.web.firewall: INFO
     org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter: INFO
+    org.apache.catalina.core.ContainerBase: INFO
     org.apache.coyote: INFO
     org.apache.coyote.http11.Http11Processor: WARN
     org.apache.tomcat.util.http: INFO

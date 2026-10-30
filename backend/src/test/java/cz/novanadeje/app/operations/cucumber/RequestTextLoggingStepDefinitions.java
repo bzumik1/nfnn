@@ -103,6 +103,15 @@ public class RequestTextLoggingStepDefinitions {
         }
     }
 
+    @When("a client posts a file of {int} kB in a part named {string} to {string} while every logger an administrator can raise is at its loudest")
+    public void aClientPostsAFileInAPartNamedWhileEveryLoggerIsAtItsLoudest(int kilobytes, String part, String path) {
+        captureEveryLine();
+        api.forgetCredentials();
+        try (RaisedLogLevels raised = loudest()) {
+            api.postFile(path, part, "soubor.bin", "application/octet-stream", new byte[kilobytes * 1024]);
+        }
+    }
+
     @When("an anonymous client asks for {string} while every logger an administrator can raise is at its loudest")
     public void anAnonymousClientAsksForWhileEveryLoggerIsAtItsLoudest(String path) {
         api.forgetCredentials();

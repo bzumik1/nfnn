@@ -12,11 +12,13 @@ Feature: The request line, the query string and the parameters a client chose re
       """
     Then the response status is 400
     And the backend logged no line holding "<canary>"
+    And the backend logged no error
 
     Examples:
       | target                     | canary   |
       | /api/x?q=Qkzw1501{}^`"<>   | Qkzw1501 |
       | /api/x{Zxqv}?q=Qkzw1502    | Qkzw1502 |
+      | /api/x%ZZQkzw1610          | Qkzw1610 |
 
   Scenario Outline: The query string reaches no log line even while every logger an administrator can raise is at its loudest
     When a client sends this request target straight to the backend while every logger an administrator can raise is at its loudest
@@ -25,12 +27,43 @@ Feature: The request line, the query string and the parameters a client chose re
       """
     Then the response status is 400
     And the backend logged no line holding "<canary>"
+    And the backend logged no error
 
     Examples:
       | target                     | canary   |
       | /api/x?q=Qkzw1503{}^`"<>   | Qkzw1503 |
       | /api/x{Zxqv}?q=Qkzw1504    | Qkzw1504 |
       | /api/x;m=%ZZ?q=Qkzw1505    | Qkzw1505 |
+
+  Scenario Outline: A request target Tomcat refuses for an encoding it cannot decode is a validation problem, logs no error and reaches no log line
+    When a client sends this request target straight to the backend
+      """
+      <target>
+      """
+    Then the response status is 400
+    And the backend logged no line holding "<canary>"
+    And the backend logged no error
+    And the raw answer is a validation problem
+
+    Examples:
+      | case              | target                            | canary   |
+      | a bad encoding    | /api/x;m=%ZZQkzw1606              | Qkzw1606 |
+      | on a real path    | /api/content/news;m=%ZZQkzw1607   | Qkzw1607 |
+
+  Scenario Outline: A request target Tomcat refuses for an encoding it cannot decode logs no error and reaches no log line while every logger an administrator can raise is at its loudest
+    When a client sends this request target straight to the backend while every logger an administrator can raise is at its loudest
+      """
+      <target>
+      """
+    Then the response status is 400
+    And the backend logged no line holding "<canary>"
+    And the backend logged no error
+    And the raw answer is a validation problem
+
+    Examples:
+      | case              | target                            | canary   |
+      | a bad encoding    | /api/x;m=%ZZQkzw1608              | Qkzw1608 |
+      | on a real path    | /api/content/news;m=%ZZQkzw1609   | Qkzw1609 |
 
   Scenario Outline: A query parameter Tomcat cannot decode is a validation problem and reaches no log line
     When a client sends this request target straight to the backend
@@ -40,6 +73,7 @@ Feature: The request line, the query string and the parameters a client chose re
     Then the response status is 400
     And the backend logged no line holding "<canary>"
     And the raw answer is a validation problem
+    And the backend logged no error
 
     Examples:
       | case           | target                                                                       | canary   |
@@ -55,6 +89,7 @@ Feature: The request line, the query string and the parameters a client chose re
     Then the response status is 400
     And the backend logged no line holding "<canary>"
     And the raw answer is a validation problem
+    And the backend logged no error
 
     Examples:
       | case           | target                                                                       | canary   |
@@ -70,6 +105,7 @@ Feature: The request line, the query string and the parameters a client chose re
     Then the response status is 400
     And the backend logged no line holding "<canary>"
     And the raw answer is a validation problem
+    And the backend logged no error
 
     Examples:
       | case        | form                                  | canary   |
@@ -84,6 +120,7 @@ Feature: The request line, the query string and the parameters a client chose re
     Then the response status is 400
     And the backend logged no line holding "<canary>"
     And the raw answer is a validation problem
+    And the backend logged no error
 
     Examples:
       | case        | form                                  | canary   |
@@ -96,6 +133,7 @@ Feature: The request line, the query string and the parameters a client chose re
     Then the response status is <status>
     And the backend logged no line holding "<canary>"
     And the backend logged no line holding "203.0.113.214"
+    And the backend logged no error
 
     Examples:
       | path                              | status | canary   |
@@ -111,6 +149,7 @@ Feature: The request line, the query string and the parameters a client chose re
     And the backend logged no line holding "<canary>"
     And the backend logged no line holding the access token of "Jana"
     And the backend logged no line holding "203.0.113.215"
+    And the backend logged no error
 
     Examples:
       | path                                       | status | canary   |
@@ -127,6 +166,7 @@ Feature: The request line, the query string and the parameters a client chose re
     And the backend logged no line holding "Qkzw1551"
     And the backend logged no line holding the access token of "Jana"
     And the backend logged no line holding "203.0.113.216"
+    And the backend logged no error
 
   Scenario Outline: The method, the path, a value and a media type a client chose reach no log line while every logger an administrator can raise is at its loudest
     When a client sends this request straight to the backend while every logger an administrator can raise is at its loudest
@@ -232,6 +272,12 @@ Feature: The request line, the query string and the parameters a client chose re
     And the backend logged no line holding "Qkzw1598"
     And the backend logged no line holding "Qkzw1599"
     And the backend logged no line holding "Qkzw1600"
+    And the backend logged no error
+
+  Scenario: A part over the size limit is refused and no log line holds its field name while every logger an administrator can raise is at its loudest
+    When a client posts a file of 10700 kB in a part named "Qkzw1601" to "/api/contact/messages" while every logger an administrator can raise is at its loudest
+    Then the response status is 413
+    And the backend logged no line holding "Qkzw1601"
     And the backend logged no error
 
   Scenario: A method a client chose reaches no log line at the configured levels

@@ -7,8 +7,11 @@ import cz.novanadeje.app.shared.domain.error.DomainException;
 import cz.novanadeje.app.shared.domain.error.NotFound;
 import cz.novanadeje.app.shared.domain.error.RuleViolation;
 import org.apache.tomcat.util.http.InvalidParameterException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.core.NestedExceptionUtils;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -36,6 +39,8 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
 
     @Override
     protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
@@ -102,6 +107,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(MultipartException.class)
     ResponseEntity<Object> handleUnreadableMultipart(MultipartException ex, WebRequest request) {
+        log.warn("A multipart body could not be read ({})", NestedExceptionUtils.getMostSpecificCause(ex).getClass().getSimpleName());
         return validationProblem(ex, List.of(), new HttpHeaders(), request);
     }
 
