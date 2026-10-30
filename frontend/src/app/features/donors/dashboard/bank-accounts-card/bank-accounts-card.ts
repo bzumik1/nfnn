@@ -71,7 +71,8 @@ type QrState =
   | { readonly kind: 'loading' }
   | { readonly kind: 'ready'; readonly payment: VerificationPayment }
   | { readonly kind: 'unavailable' }
-  | { readonly kind: 'refused' };
+  | { readonly kind: 'refused' }
+  | { readonly kind: 'refusedSymbol' };
 
 type PaymentWatch = 'waiting' | 'stopped';
 
@@ -166,8 +167,7 @@ export class BankAccountsCard {
     if (state.kind === 'failed') {
       return { kind: 'unavailable' };
     }
-    const payment = verificationPayment(state.details, this.variableSymbol());
-    return payment === null ? { kind: 'refused' } : { kind: 'ready', payment };
+    return verificationQr(state.details, this.variableSymbol());
   });
   protected readonly qrResponse = computed(() => {
     const state = this.qr();
@@ -635,25 +635,27 @@ function dayAfter(isoDate: string): string {
   return new Date(Date.UTC(year, month - 1, day + 1)).toISOString().slice(0, 10);
 }
 
-function verificationPayment(
-  details: PaymentDetails,
-  variableSymbol: string | null,
-): VerificationPayment | null {
+function verificationQr(details: PaymentDetails, variableSymbol: string | null): QrState {
   const payment = spayd(details, {
     amountMinor: details.accountVerificationAmountMinor,
     variableSymbol,
     purpose: 'ACCOUNT_VERIFICATION',
   });
   if (!('spayd' in payment)) {
-    return null;
+    return payment.refused.fields.includes('variableSymbol')
+      ? { kind: 'refusedSymbol' }
+      : { kind: 'refused' };
   }
   try {
     return {
-      matrix: encodeText(payment.spayd, PAYMENT_QR_LEVEL),
-      account: details.account,
-      amountMinor: details.accountVerificationAmountMinor,
+      kind: 'ready',
+      payment: {
+        matrix: encodeText(payment.spayd, PAYMENT_QR_LEVEL),
+        account: details.account,
+        amountMinor: details.accountVerificationAmountMinor,
+      },
     };
   } catch {
-    return null;
+    return { kind: 'refused' };
   }
 }

@@ -531,14 +531,15 @@ describe('Given the donate section', () => {
     expect(element('.qr-error')).toBeNull();
   });
 
-  it('when the payment details fail to load, then an alert says so and the retry keeps the focus on the QR, then on the retry when it fails again', async () => {
+  it('when the payment details fail to load, then a polite status says so, and only a retry the visitor started that fails again is an alert, with the focus on the QR meanwhile and on the retry after', async () => {
     await settle();
     http
       .expectOne((request) => request.url === PAYMENT_DETAILS_URL)
       .flush(null, { status: 503, statusText: 'Service Unavailable' });
     await settle();
 
-    expect(element('.qr-error[role="alert"]')?.textContent).toContain(
+    expect(element('[role="alert"]')).toBeNull();
+    expect(element('[role="status"] .qr-error')?.textContent).toContain(
       'QR platbu se nepodařilo připravit. Zkuste to prosím znovu.',
     );
     button('Zkusit znovu').focus();
@@ -550,6 +551,10 @@ describe('Given the donate section', () => {
       .expectOne((request) => request.url === PAYMENT_DETAILS_URL)
       .flush(null, { status: 503, statusText: 'Service Unavailable' });
     await settle();
+    expect(element('.qr-error[role="alert"]')?.textContent).toContain(
+      'QR platbu se nepodařilo připravit. Zkuste to prosím znovu.',
+    );
+    expect(element('[role="status"] .qr-error')).toBeNull();
     expect(document.activeElement).toBe(button('Zkusit znovu'));
 
     button('Zkusit znovu').click();
@@ -576,7 +581,7 @@ describe('Given the donate section', () => {
     await settle();
 
     expect(qrCode()).toBeNull();
-    expect(squashed('.qr-error[role="alert"]')).toContain(
+    expect(squashed('[role="status"] .qr-error')).toContain(
       'QR kód teď nejde vytvořit. Zaplaťte prosím podle bankovního spojení.',
     );
     expect(text('.bank')).toContain('5544332217/2010');
@@ -584,7 +589,7 @@ describe('Given the donate section', () => {
     button('Zkusit znovu').click();
     await settle();
     const again = http.expectOne((request) => request.url === PAYMENT_DETAILS_URL);
-    expect(again.request.cache).toBe('no-cache');
+    expect(again.request.headers.get('Cache-Control')).toBe('no-cache');
     again.flush(details);
     await settle();
 
@@ -646,12 +651,27 @@ describe('Given the donate section', () => {
     expect(announcement()).toBe('');
   });
 
-  it('when the visitor types the amount whose QR was just announced, then it is not announced again', async () => {
+  it('when the visitor picks the amount whose QR was just announced once more, then it is not announced again', async () => {
+    await openWithQr();
+    button('1 000 Kč').click();
+    await settle(ANNOUNCE_MS);
+
+    button('1 000 Kč').click();
+    await settle(ANNOUNCE_MS);
+
+    expect(announcement()).toBe('');
+    button('500 Kč').click();
+    await settle(ANNOUNCE_MS);
+    expect(announcement()).toBe('QR platba na 500 Kč je připravená.');
+  });
+
+  it('when the visitor picks Jiná částka after 1 000 Kč was announced and types 1000, then the QR that comes back is announced again', async () => {
     await openWithQr();
     button('1 000 Kč').click();
     await settle(ANNOUNCE_MS);
     button('Jiná částka').click();
-    await settle();
+    await settle(REDRAW_MS);
+    expect(text('.qr-placeholder')).toContain('Nejprve zadejte částku');
 
     for (const typed of ['1', '10', '100', '1000']) {
       await type(typed);
@@ -659,10 +679,38 @@ describe('Given the donate section', () => {
     }
     await settle(ANNOUNCE_MS);
 
-    expect(announcement()).toBe('');
-    button('500 Kč').click();
+    expect(announcement()).toBe('QR platba na 1 000 Kč je připravená.');
+  });
+
+  it('when the visitor goes from 1 000 Kč to an amount that is not valid and back to 1 000 Kč, then the QR that comes back is announced again', async () => {
+    await openWithQr();
+    button('1 000 Kč').click();
     await settle(ANNOUNCE_MS);
-    expect(announcement()).toBe('QR platba na 500 Kč je připravená.');
+    button('Jiná částka').click();
+    await settle();
+    await type('0');
+    await settle(ANNOUNCE_MS);
+
+    button('1 000 Kč').click();
+    await settle(ANNOUNCE_MS);
+
+    expect(announcement()).toBe('QR platba na 1 000 Kč je připravená.');
+  });
+
+  it('when the IBAN of the payment details is not the IBAN of their account number, then neither the bank details nor a QR are shown, only the failure with a retry', async () => {
+    await settle();
+    const details = foundationPaymentDetails();
+    respondWithDetails({
+      ...details,
+      account: { ...details.account, iban: 'CZ6508000000192000145399' },
+    });
+    await settle();
+
+    expect(qrCode()).toBeNull();
+    expect(element('.bank')).toBeNull();
+    expect(fixture.nativeElement.textContent).not.toContain('5544332217/2010');
+    expect(text('.qr-error')).toContain('QR platbu se nepodařilo připravit');
+    expect(button('Zkusit znovu')).not.toBeNull();
   });
 
   it('when the visitor picks an amount five minutes after the details came, then the browser checks them again past its cache', async () => {
@@ -673,7 +721,7 @@ describe('Given the donate section', () => {
     await settle();
 
     const check = http.expectOne((request) => request.url === PAYMENT_DETAILS_URL);
-    expect(check.request.cache).toBe('no-cache');
+    expect(check.request.headers.get('Cache-Control')).toBe('no-cache');
     check.flush(foundationPaymentDetails());
     await settle();
     expect(drawnMatrixIs(QR_OF_1000)).toBe(true);

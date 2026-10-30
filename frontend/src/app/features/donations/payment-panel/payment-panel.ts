@@ -83,6 +83,7 @@ export class PaymentPanel {
   private readonly announced = signal<number | null>(null);
   private lastAnnounced: number | null = null;
   private retried = false;
+  protected readonly failureAlerts = signal(false);
   private readonly qrCode = viewChild(QrCode);
   private redrawTimer: ReturnType<typeof setTimeout> | undefined;
   private announceTimer: ReturnType<typeof setTimeout> | undefined;
@@ -187,6 +188,7 @@ export class PaymentPanel {
     this.customAmountLeft.set(false);
     this.customChosen.set(true);
     this.announced.set(null);
+    this.lastAnnounced = null;
     clearTimeout(this.announceTimer);
     this.redrawLater();
   }
@@ -208,6 +210,7 @@ export class PaymentPanel {
 
   retry(): void {
     this.retried = true;
+    this.failureAlerts.set(true);
     this.qrBox()?.nativeElement.focus();
     this.store.reload();
   }
@@ -238,7 +241,11 @@ export class PaymentPanel {
   private redrawNow(): void {
     clearTimeout(this.redrawTimer);
     this.redrawing.set(false);
-    this.drawnAmount.set(this.amount());
+    const amount = this.amount();
+    if (amount === null) {
+      this.lastAnnounced = null;
+    }
+    this.drawnAmount.set(amount);
     this.store.load();
   }
 
@@ -255,6 +262,9 @@ export class PaymentPanel {
   }
 
   private focusAfterRetry(kind: QrState['kind']): void {
+    if (kind === 'ready') {
+      this.failureAlerts.set(false);
+    }
     if (!this.retried || kind === 'loading') {
       return;
     }

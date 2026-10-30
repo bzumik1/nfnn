@@ -1038,7 +1038,7 @@ describe('Given the bank accounts card in the overview', () => {
       expect(texts('.add-account-bank dd .bank-value')[1]).toBe('2 Kč');
     });
 
-    it('and the browser refuses the payment details it got, then the dialog says the QR cannot be made now, and a retry asks the server again past the browser cache', async () => {
+    it("and the payment details name an IBAN that is not their account number's, then the dialog shows neither and says the QR payment failed, with a retry", async () => {
       const details = foundationPaymentDetails();
       http
         .expectOne(PAYMENT_DETAILS_URL)
@@ -1046,15 +1046,44 @@ describe('Given the bank accounts card in the overview', () => {
       await settle();
 
       expect(element('.add-account-qr svg[role="img"]')).toBeNull();
-      expect(text('.add-account-qr-error')).toContain('QR kód teď nejde vytvořit.');
+      expect(text('.add-account-qr-error')).toContain('QR platbu se nepodařilo připravit.');
+      expect(element('.add-account-bank')).toBeNull();
+      expect(element('.add-account-qr-retry')).not.toBeNull();
+    });
+
+    it('and the browser refuses the payment details it got, then the dialog says the QR cannot be made now, and a retry asks the server again past the browser cache', async () => {
+      const details = foundationPaymentDetails();
+      http.expectOne(PAYMENT_DETAILS_URL).flush({
+        ...details,
+        messages: { ...details.messages, accountVerification: 'OVERENI*AM:1' },
+      });
+      await settle();
+
+      expect(element('.add-account-qr svg[role="img"]')).toBeNull();
+      expect(text('.add-account-qr-error')).toContain(
+        'QR kód teď nejde vytvořit. Zkuste to prosím znovu za chvíli.',
+      );
 
       await click('.add-account-qr-retry');
       const again = http.expectOne(PAYMENT_DETAILS_URL);
-      expect(again.request.cache).toBe('no-cache');
+      expect(again.request.headers.get('Cache-Control')).toBe('no-cache');
       again.flush(details);
       await settle();
 
       expect(drawsText(element('.add-account-qr svg[role="img"]'), VERIFICATION_SPAYD)).toBe(true);
+    });
+
+    it('and the donor has no variable symbol the QR could carry, then the dialog says to write to the foundation and offers no retry that cannot help', async () => {
+      fixture.componentRef.setInput('variableSymbol', null);
+      http.expectOne(PAYMENT_DETAILS_URL).flush(foundationPaymentDetails());
+      await settle();
+
+      expect(element('.add-account-qr svg[role="img"]')).toBeNull();
+      expect(text('.add-account-qr-error').replace(/\s+/g, ' ').trim()).toBe(
+        'QR kód teď nejde vytvořit. Napište nám prosím na info@nfnn.cz.',
+      );
+      expect(element('.add-account-qr-error a')?.getAttribute('href')).toBe('mailto:info@nfnn.cz');
+      expect(element('.add-account-qr-retry')).toBeNull();
     });
 
     it('and closes the dialog, then it disappears and the focus returns to Přidat účet', async () => {

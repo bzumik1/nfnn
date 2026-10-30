@@ -398,23 +398,30 @@
             >
           } @else {
             <div class="add-account-qr-error" role="alert">
-              @if (qr().kind === 'refused') {
-                <p i18n="@@donor.bankAccounts.addDialog.qrRefused">
-                  QR kód teď nejde vytvořit. Zkuste to prosím znovu za chvíli.
+              @if (qr().kind === 'refusedSymbol') {
+                <p i18n="@@donor.bankAccounts.addDialog.qrRefusedSymbol">
+                  QR kód teď nejde vytvořit. Napište nám prosím na
+                  <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a>.
                 </p>
               } @else {
-                <p i18n="@@home.donate.qr.error">
-                  QR platbu se nepodařilo připravit. Zkuste to prosím znovu.
-                </p>
+                @if (qr().kind === 'refused') {
+                  <p i18n="@@donor.bankAccounts.addDialog.qrRefused">
+                    QR kód teď nejde vytvořit. Zkuste to prosím znovu za chvíli.
+                  </p>
+                } @else {
+                  <p i18n="@@home.donate.qr.error">
+                    QR platbu se nepodařilo připravit. Zkuste to prosím znovu.
+                  </p>
+                }
+                <button
+                  type="button"
+                  class="ui-button add-account-qr-retry"
+                  (click)="reloadQr()"
+                  i18n="@@home.donate.qr.retry"
+                >
+                  Zkusit znovu
+                </button>
               }
-              <button
-                type="button"
-                class="ui-button add-account-qr-retry"
-                (click)="reloadQr()"
-                i18n="@@home.donate.qr.retry"
-              >
-                Zkusit znovu
-              </button>
             </div>
           }
         </div>

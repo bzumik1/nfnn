@@ -164,28 +164,33 @@
         <span>{{ saved }}</span>
       }
     </p>
-    @if (failure(); as failure) {
-      <div class="ui-callout ui-callout--danger qr-error" role="alert">
-        @if (failure === 'refused') {
-          <p i18n="@@home.donate.qr.refused">
-            QR kód teď nejde vytvořit. Zaplaťte prosím podle bankovního spojení.
-          </p>
-        } @else {
-          <p i18n="@@home.donate.qr.error">
-            QR platbu se nepodařilo připravit. Zkuste to prosím znovu.
-          </p>
-        }
-        <button
-          #retryButton
-          type="button"
-          class="qr-retry"
-          (click)="retry()"
-          i18n="@@home.donate.qr.retry"
+    <div [attr.role]="failureAlerts() ? null : 'status'">
+      @if (failure(); as failure) {
+        <div
+          class="ui-callout ui-callout--danger qr-error"
+          [attr.role]="failureAlerts() ? 'alert' : null"
         >
-          Zkusit znovu
-        </button>
-      </div>
-    }
+          @if (failure === 'refused') {
+            <p i18n="@@home.donate.qr.refused">
+              QR kód teď nejde vytvořit. Zaplaťte prosím podle bankovního spojení.
+            </p>
+          } @else {
+            <p i18n="@@home.donate.qr.error">
+              QR platbu se nepodařilo připravit. Zkuste to prosím znovu.
+            </p>
+          }
+          <button
+            #retryButton
+            type="button"
+            class="qr-retry"
+            (click)="retry()"
+            i18n="@@home.donate.qr.retry"
+          >
+            Zkusit znovu
+          </button>
+        </div>
+      }
+    </div>
   </div>
   <p class="visually-hidden qr-announcement" role="status">
     @if (announcedAmount(); as announced) {
