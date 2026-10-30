@@ -16,6 +16,10 @@
 # key replaces the generated backup key only when it matches that record (the previous key is kept
 # as backup-key.replaced-<time>), so the backups made before and after the restore open with the
 # same key and the app user, who can write to /restore, cannot plant a key of its own.
+# After an administrator withdrew the server's own receipt signing key, the backend leaves its key id
+# as /restore/receipt-signing-key.renew and restarts; this start then keeps the withdrawn seed as
+# receipt-signing-key.withdrawn-<key id> and generates a new one, which the backend registers as its
+# new key. The marker only ever replaces the seed by a fresh random one, never by a seed of its own.
 # The superuser's password stays with the database and the backup.
 # Java starts only once the database named in DB_URL accepts TCP connections, for at most
 # DATABASE_PATIENCE_SECONDS (two minutes; then it starts anyway and fails as before): nfnn-postgres
@@ -36,6 +40,7 @@ REQUEST_PATIENCE_MINUTES=${REQUEST_PATIENCE_MINUTES:-5}
 BACKUP_KEY_FILE="$SECRETS_DIR/backup-key"
 ADOPTED_BACKUP_KEY="$RESTORE_DIR/backup-key.adopt"
 ADOPTED_KEY_RECORD=${ADOPTED_KEY_RECORD:-/backups/status/adopted-key}
+RECEIPT_SEED_RENEWAL="$RESTORE_DIR/receipt-signing-key.renew"
 DATABASE_PATIENCE_SECONDS=${DATABASE_PATIENCE_SECONDS:-120}
 
 generate_secret() {
@@ -80,6 +85,28 @@ adopt_backup_key() {
     echo "WARNING: the backup key entered with the restored backup is now the server's backup key; the previous one is kept as $replaced"
   fi
   rm -f "$candidate"
+}
+
+renew_receipt_signing_key() {
+  [ -f "$RECEIPT_SEED_RENEWAL" ] || return 0
+  key_id=$(head -c 16 "$RECEIPT_SEED_RENEWAL" 2>/dev/null | tr -d '\n' || true)
+  setpriv --reuid=app --regid=app --clear-groups rm -f "$RECEIPT_SEED_RENEWAL" 2>/dev/null || rm -f "$RECEIPT_SEED_RENEWAL" 2>/dev/null \
+    || echo "Could not remove $RECEIPT_SEED_RENEWAL; it is checked again at the next start"
+  case "$key_id" in
+    [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]) ;;
+    *)
+      echo "The request for a new receipt signing seed in $RESTORE_DIR names no key id; the server keeps its seed"
+      return 0
+      ;;
+  esac
+  [ -s "$SECRETS_DIR/receipt-signing-key" ] || return 0
+  withdrawn="$SECRETS_DIR/receipt-signing-key.withdrawn-$key_id"
+  if [ -e "$withdrawn" ]; then
+    withdrawn="$withdrawn-$(date -u +%Y%m%dT%H%M%SZ)"
+  fi
+  mv "$SECRETS_DIR/receipt-signing-key" "$withdrawn"
+  chmod 600 "$withdrawn"
+  echo "WARNING: the receipt signing key $key_id was withdrawn in the administration; its seed is kept as $withdrawn and a new one is generated"
 }
 
 restore_due() {
@@ -145,6 +172,7 @@ if [ "$(id -u)" = 0 ]; then
   if [ -d "$SECRETS_DIR" ]; then
     generate_secret jwt-secret
     generate_secret settings-key
+    renew_receipt_signing_key
     generate_secret receipt-signing-key
     generate_backup_key
   fi
