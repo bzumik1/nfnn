@@ -74,7 +74,8 @@
     text-align: left;
   }
 
-  .verify-gifts__amount {
+  thead th.verify-gifts__amount,
+  tbody td.verify-gifts__amount {
     padding-inline-start: var(--space-3);
     text-align: right;
     white-space: nowrap;
