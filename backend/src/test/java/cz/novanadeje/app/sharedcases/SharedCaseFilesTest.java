@@ -6,8 +6,6 @@ import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
 import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.node.ArrayNode;
-import tools.jackson.databind.node.ObjectNode;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -19,13 +17,8 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -35,22 +28,25 @@ class SharedCaseFilesTest {
     static final List<String> SEARCHED_FOLDERS = List.of(".github", "backend/src", "deploy", "docs", "frontend/e2e", "frontend/scripts", "frontend/src",
             "mcp/src", "mcp/test", "scripts", "test-cases");
     static final Set<String> SKIPPED_FOLDERS = Set.of("node_modules", "build", "dist", ".angular", "test-results", "playwright-report");
-    static final List<String> QR_CASE_FILES = List.of("qr/payment.json", "qr/totp.json");
-    static final String PAYMENT_CASES = "qr/payment.json";
-    static final Pattern MATRIX_NOISE = Pattern.compile("[\\s\"'`,+\\[\\]]");
 
-    private final SharedCaseSchemas schemas = new SharedCaseSchemas();
+    private final SharedCaseCopies copies = SharedCaseCopies.ofRepository();
 
     @TestFactory
-    @DisplayName("Given every shared case file, when it is checked against its JSON Schema, then it is valid and names each case once")
-    Stream<DynamicTest> should_be_valid_and_name_each_case_once_when_every_shared_case_file_is_checked_against_its_schema() {
+    @DisplayName("Given every shared case file, when it is read, then it holds its source, its logic and cases named once, each with an input and an expected value")
+    Stream<DynamicTest> should_hold_source_logic_and_cases_named_once_with_input_and_expected_when_every_shared_case_file_is_read() {
         assertThat(SharedCases.caseFiles()).as("shared case files").isNotEmpty();
         return SharedCases.caseFiles().stream().map(caseFile -> DynamicTest.dynamicTest(
-                "Given " + caseFile + ", when it is checked against " + SharedCases.schemaOf(caseFile) + ", then it is valid and names each case once", () -> {
-                    assertThat(schemas.violations(caseFile, SharedCases.tree(caseFile))).as("violations of %s", caseFile).isEmpty();
+                "Given " + caseFile + ", when it is read, then it holds its source, its logic and cases named once, each with an input and an expected value", () -> {
+                    JsonNode file = SharedCases.tree(caseFile);
+                    assertThat(file.propertyNames()).as("fields of %s", caseFile).containsExactly("source", "logic", "cases");
+                    assertThat(file.get("source").asString()).as("source of %s", caseFile).isIn(SharedCases.SOURCES);
+                    assertThat(file.get("logic").asString()).as("logic of %s", caseFile).isNotBlank();
+                    assertThat(file.get("cases").isArray() && !file.get("cases").isEmpty()).as("%s has cases", caseFile).isTrue();
                     Set<String> names = new HashSet<>();
-                    SharedCases.read(caseFile).cases().forEach(sharedCase -> assertThat(names.add(sharedCase.name()))
-                            .as("%s names %s once", caseFile, sharedCase.name()).isTrue());
+                    for (JsonNode sharedCase : file.get("cases")) {
+                        assertThat(sharedCase.propertyNames()).as("fields of a case in %s", caseFile).containsExactly("name", "input", "expected");
+                        assertThat(names.add(sharedCase.get("name").asString())).as("%s names %s once", caseFile, sharedCase.get("name").asString()).isTrue();
+                    }
                 }));
     }
 
@@ -62,64 +58,60 @@ class SharedCaseFilesTest {
     }
 
     @Test
-    @DisplayName("Given a payment case whose matrix holds a module other than 0 and 1, when it is checked against its schema, then it is refused")
-    void should_refuse_the_case_when_it_is_checked_against_its_schema_given_a_matrix_module_other_than_0_and_1() {
-        JsonNode file = SharedCases.tree(PAYMENT_CASES);
-        ArrayNode matrix = (ArrayNode) file.get("cases").get(0).get("expected").get("matrix");
-        matrix.set(0, matrix.get(0).asString().replaceFirst("1", "2"));
+    @DisplayName("Given a JSON file that holds a case file with its fields in another order and other spacing, when it is checked for copies, then it is reported")
+    void should_report_the_copy_when_a_json_file_is_checked_given_it_holds_a_case_file_reordered() {
+        String caseFile = "qr/totp.json";
+        JsonNode file = SharedCases.tree(caseFile);
+        String reordered = "{\"cases\":" + file.get("cases") + ",\"logic\":" + file.get("logic") + ",\"source\":" + file.get("source") + "}";
 
-        assertThat(schemas.violations(PAYMENT_CASES, file)).anyMatch(violation -> violation.startsWith("/cases/0/expected/matrix/0 "));
+        assertThat(copies.in("fixture.json", reordered)).containsExactly("fixture.json holds a copy of shared-cases/" + caseFile);
     }
 
     @Test
-    @DisplayName("Given a payment case with a field its schema does not know, when it is checked against its schema, then it is refused")
-    void should_refuse_the_case_when_it_is_checked_against_its_schema_given_a_field_the_schema_does_not_know() {
-        JsonNode file = SharedCases.tree(PAYMENT_CASES);
-        ((ObjectNode) file.get("cases").get(0).get("expected")).put("spaydText", "SPD*1.0");
+    @DisplayName("Given a JSON file that nests one case's expected value with its fields in another order, when it is checked for copies, then it is reported")
+    void should_report_the_copy_when_a_json_file_is_checked_given_it_nests_an_expected_value_reordered() {
+        SharedCase sharedCase = SharedCases.read("donor-summary/summary.json").cases().get(1);
+        List<String> fields = new ArrayList<>(sharedCase.expected().propertyNames());
+        StringBuilder reordered = new StringBuilder("{\"answers\":[{");
+        for (int index = fields.size() - 1; index >= 0; index--) {
+            reordered.append('"').append(fields.get(index)).append("\":").append(sharedCase.expected().get(fields.get(index))).append(index > 0 ? "," : "");
+        }
+        reordered.append("}]}");
 
-        assertThat(schemas.violations(PAYMENT_CASES, file)).anyMatch(violation -> violation.startsWith("/cases/0/expected ") && violation.contains("spaydText"));
+        assertThat(copies.in("mock.json", reordered.toString()))
+                .containsExactly("mock.json holds the expected value of \"" + sharedCase.name() + "\" from shared-cases/donor-summary/summary.json");
     }
 
     @Test
-    @DisplayName("Given a payment case without its expected value, when it is checked against its schema, then it is refused")
-    void should_refuse_the_case_when_it_is_checked_against_its_schema_given_no_expected_value() {
-        JsonNode file = SharedCases.tree(PAYMENT_CASES);
-        ((ObjectNode) file.get("cases").get(0)).remove("expected");
+    @DisplayName("Given a script that holds a case's QR matrix as quoted rows, when it is checked for copies, then it is reported")
+    void should_report_the_copy_when_a_script_is_checked_given_it_holds_a_qr_matrix_as_quoted_rows() {
+        JsonNode matrix = SharedCases.read("qr/payment.json").cases().getFirst().expected().get("matrix");
+        StringBuilder script = new StringBuilder("export const QR = [\n");
+        matrix.valueStream().forEach(row -> script.append("  '").append(row.asString()).append("',\n"));
+        script.append("];\n");
 
-        assertThat(schemas.violations(PAYMENT_CASES, file)).anyMatch(violation -> violation.startsWith("/cases/0 ") && violation.contains("expected"));
+        assertThat(copies.in("qr.ts", script.toString())).containsExactly("qr.ts holds the matrix of a QR case from shared-cases/qr");
     }
 
     @Test
-    @DisplayName("Given the shared case files, when the repository's sources, tests and scripts are searched, then none holds a copy of a case file or of a case's QR matrix")
-    void should_hold_no_copy_of_a_case_file_or_a_qr_matrix_when_the_repository_is_searched() {
-        Map<String, String> caseFiles = new TreeMap<>();
-        SharedCases.caseFiles().forEach(caseFile -> caseFiles.put(caseFile, SharedCases.text(caseFile).strip()));
-        Set<String> matrices = new TreeSet<>();
-        QR_CASE_FILES.forEach(caseFile -> SharedCases.read(caseFile).cases().stream()
-                .filter(sharedCase -> sharedCase.expected().has("matrix"))
-                .forEach(sharedCase -> matrices.add(sharedCase.expected().get("matrix").valueStream().map(JsonNode::asString).collect(Collectors.joining()))));
-        assertThat(matrices).as("matrices of the QR cases").isNotEmpty();
+    @DisplayName("Given a JSON file whose only shared value is a one-field object, when it is checked for copies, then nothing is reported")
+    void should_report_nothing_when_a_json_file_is_checked_given_its_only_shared_value_is_a_one_field_object() {
+        JsonNode expected = SharedCases.read("receipts/formatting.json").cases().getFirst().expected();
 
-        List<String> copies = new ArrayList<>();
+        assertThat(expected.size()).isEqualTo(1);
+        assertThat(copies.in("labels.json", "{\"label\":" + expected + "}")).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given the shared case files, when the repository's sources, tests and scripts are searched, then none holds a copy of a case file, an expected value or a QR matrix")
+    void should_hold_no_copy_of_a_case_file_an_expected_value_or_a_qr_matrix_when_the_repository_is_searched() {
+        List<String> found = new ArrayList<>();
         for (Path file : searchedFiles()) {
             String relative = GoldenFiles.repositoryRoot().relativize(file).toString().replace('\\', '/');
-            Optional<String> readable = textOf(file);
-            if (readable.isEmpty()) {
-                continue;
-            }
-            String text = readable.get();
-            caseFiles.forEach((caseFile, content) -> {
-                if (text.strip().equals(content)) {
-                    copies.add(relative + " is a copy of " + SharedCases.FOLDER + "/" + caseFile);
-                }
-            });
-            String modules = MATRIX_NOISE.matcher(text).replaceAll("");
-            if (matrices.stream().anyMatch(modules::contains)) {
-                copies.add(relative + " holds the matrix of a QR case from " + SharedCases.FOLDER + "/qr");
-            }
+            textOf(file).ifPresent(text -> found.addAll(copies.in(relative, text)));
         }
 
-        assertThat(copies).as("copies of shared cases; read the case file instead").isEmpty();
+        assertThat(found).as("copies of shared cases; read the case file instead").isEmpty();
     }
 
     private static List<Path> searchedFiles() {

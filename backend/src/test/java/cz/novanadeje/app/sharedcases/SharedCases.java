@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Stream;
 
 public final class SharedCases {
@@ -17,6 +18,9 @@ public final class SharedCases {
     public static final String FOLDER = "shared-cases";
     public static final String SCHEMAS = "schemas";
     public static final String DEFINITIONS = "defs";
+    public static final String BASELINE = "v2-baseline";
+    public static final String EDITED = "edited";
+    public static final Set<String> SOURCES = Set.of(BASELINE, EDITED);
     static final String CASE_SUFFIX = ".json";
     static final String SCHEMA_SUFFIX = ".schema.json";
     private static final JsonMapper JSON = JsonMapper.builder().build();

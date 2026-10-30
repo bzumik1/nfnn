@@ -25,7 +25,6 @@ extra["zxingVersion"] = "3.5.4"
 extra["fioApiVersion"] = "1.0.0"
 extra["webpImageioVersion"] = "0.3.3"
 extra["webauthn4jVersion"] = "0.31.11.RELEASE"
-extra["jsonSchemaValidatorVersion"] = "3.0.6"
 
 val mockitoAgent: Configuration = configurations.create("mockitoAgent")
 
@@ -69,7 +68,6 @@ dependencies {
 	testImplementation("org.testcontainers:testcontainers-postgresql")
 
 	testImplementation("com.google.zxing:javase:${property("zxingVersion")}")
-	testImplementation("com.networknt:json-schema-validator:${property("jsonSchemaValidatorVersion")}")
 	testImplementation("org.assertj:assertj-core")
 	testImplementation("org.awaitility:awaitility")
 	testImplementation("org.mockito:mockito-core")
