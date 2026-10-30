@@ -1,0 +1,7 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nfnn.cz/shared-cases/schemas/defs/otpauth-uri.schema.json",
+  "title": "An otpauth:// URI of a time-based one-time password: the label, then its query parameters",
+  "type": "string",
+  "pattern": "^otpauth://totp/[^?]+\\?[a-z]+=[^&]*(&[a-z]+=[^&]*)*$"
+}

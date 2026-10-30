@@ -1,0 +1,7 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nfnn.cz/shared-cases/schemas/defs/spayd.schema.json",
+  "title": "A SPAYD text: the SPD*1.0 header, then fields of SPAYD's upper-case characters",
+  "type": "string",
+  "pattern": "^SPD\\*1\\.0(\\*[A-Z-]+:[0-9A-Z $%+./:-]*)+$"
+}

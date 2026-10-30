@@ -7,6 +7,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 import java.nio.ByteBuffer;
 import java.util.Base64;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
@@ -18,6 +19,7 @@ class TranscriptNormaliserTest {
     private static final String SECOND_ID = "019a2b3c-4d5e-7f60-8a9b-0c1d2e3f4a5c";
     private static final String JWT = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ4In0.c2lnbmF0dXJlLXZhbHVlLWhlcmU";
     private static final String LINK_SECRET = "q3Yb7xP0aZ9mN2kLw8RtUv5sC1dE4fGhJiKoMnBvCxZ";
+    private static final String BACKUP_KEY = "AGE-SECRET-KEY-1R45A984EXXAFC85YZSYGY9R6XJTD4E9AKY65ZCRGPDQ89E7ANW8QKT6GWH";
 
     private final JsonMapper json = JsonMapper.builder().build();
 
@@ -206,6 +208,34 @@ class TranscriptNormaliserTest {
 
         assertThat(normaliser.json(raw)).isEqualTo(json.readTree("""
                 {"message":"OBNOVA <recovery-code>","spayd":"SPD*1.0*MSG:OBNOVA <recovery-code>","qrCode":{"size":49,"modules":"<qr-of-masked-text>"}}"""));
+    }
+
+    @Test
+    @DisplayName("Given a backup key in capitals and in lowercase inside a field and a sentence, when it is normalised, then each is masked and remembered for the leak check, and the bare prefix of a hint stays")
+    void should_mask_and_remember_backup_keys_when_normalised_given_a_key_in_any_case() {
+        TranscriptNormaliser normaliser = new TranscriptNormaliser(Map.of());
+
+        JsonNode body = normaliser.json(json.readTree("{\"key\":\"" + BACKUP_KEY + "\",\"detail\":\"Klíč začíná AGE-SECRET-KEY-1 a má 74 znaků\"}"));
+        String sentence = normaliser.text("restore with " + BACKUP_KEY.toLowerCase(Locale.ROOT) + ".");
+
+        assertThat(body.toString()).isEqualTo("{\"key\":\"<secret>\",\"detail\":\"Klíč začíná AGE-SECRET-KEY-1 a má 74 znaků\"}");
+        assertThat(sentence).isEqualTo("restore with <secret>.");
+        assertThat(normaliser.maskedValues()).contains(BACKUP_KEY, BACKUP_KEY.toLowerCase(Locale.ROOT));
+    }
+
+    @Test
+    @DisplayName("Given the backup key's words in a confirmation, in the first setup and as a list, when a body is normalised, then every word is masked and remembered and the positions stay")
+    void should_mask_backup_key_words_and_keep_positions_when_a_body_is_normalised() {
+        TranscriptNormaliser normaliser = new TranscriptNormaliser(Map.of());
+
+        JsonNode body = normaliser.json(json.readTree("""
+                {"words":[{"position":3,"word":"pokrokovy"}],"backupKeyWords":[{"position":24,"word":"VLAKOVKA"}],
+                 "list":{"words":["sledovat","branka"]}}"""));
+
+        assertThat(body).isEqualTo(json.readTree("""
+                {"words":[{"position":3,"word":"<secret>"}],"backupKeyWords":[{"position":24,"word":"<secret>"}],
+                 "list":{"words":["<secret>","<secret>"]}}"""));
+        assertThat(normaliser.maskedValues()).contains("pokrokovy", "VLAKOVKA", "sledovat");
     }
 
     private static String base64Url(String id) {

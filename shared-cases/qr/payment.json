@@ -1,19 +1,13 @@
 {
-  "source": "v2-baseline",
-  "logic": "The SPAYD text and its QR matrix (ZXing 3.5.4, level H, ISO-8859-1 hint) that GET /api/donations/payment-qr answers, and the refusals of its invalid parameters; the recipient cases come from GeneratePaymentQrService with another account",
+  "source": "edited",
+  "logic": "The QR symbol of each SPAYD text of payment/spayd.json, under the same case name, as GET /api/donations/payment-qr and GeneratePaymentQrService encode it (ZXing 3.5.4, level H, ISO-8859-1 hint): error correction, version, mode, ECI header, mask and matrix. The backend encodes each text through ZXing until slice 1.10; the browser's encoder runs every case from 1.3",
   "cases": [
     {
       "name": "1 Kč without a variable symbol",
       "input": {
-        "recipient": {
-          "accountNumber": "5544332217/2010",
-          "iban": "CZ2620100000005544332217",
-          "name": "Nadační fond Nová naděje"
-        },
-        "amount": "1"
+        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE"
       },
       "expected": {
-        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE",
         "errorCorrection": "H",
         "version": 8,
         "mode": "ALPHANUMERIC",
@@ -76,15 +70,9 @@
     {
       "name": "100 Kč without a variable symbol",
       "input": {
-        "recipient": {
-          "accountNumber": "5544332217/2010",
-          "iban": "CZ2620100000005544332217",
-          "name": "Nadační fond Nová naděje"
-        },
-        "amount": "100"
+        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:100.00*CC:CZK*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE"
       },
       "expected": {
-        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:100.00*CC:CZK*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE",
         "errorCorrection": "H",
         "version": 8,
         "mode": "ALPHANUMERIC",
@@ -147,15 +135,9 @@
     {
       "name": "500 Kč without a variable symbol",
       "input": {
-        "recipient": {
-          "accountNumber": "5544332217/2010",
-          "iban": "CZ2620100000005544332217",
-          "name": "Nadační fond Nová naděje"
-        },
-        "amount": "500"
+        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE"
       },
       "expected": {
-        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE",
         "errorCorrection": "H",
         "version": 8,
         "mode": "ALPHANUMERIC",
@@ -218,15 +200,9 @@
     {
       "name": "1 000 Kč without a variable symbol",
       "input": {
-        "recipient": {
-          "accountNumber": "5544332217/2010",
-          "iban": "CZ2620100000005544332217",
-          "name": "Nadační fond Nová naděje"
-        },
-        "amount": "1000"
+        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:1000.00*CC:CZK*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE"
       },
       "expected": {
-        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:1000.00*CC:CZK*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE",
         "errorCorrection": "H",
         "version": 8,
         "mode": "ALPHANUMERIC",
@@ -289,15 +265,9 @@
     {
       "name": "1 234 Kč without a variable symbol",
       "input": {
-        "recipient": {
-          "accountNumber": "5544332217/2010",
-          "iban": "CZ2620100000005544332217",
-          "name": "Nadační fond Nová naděje"
-        },
-        "amount": "1234"
+        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:1234.00*CC:CZK*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE"
       },
       "expected": {
-        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:1234.00*CC:CZK*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE",
         "errorCorrection": "H",
         "version": 8,
         "mode": "ALPHANUMERIC",
@@ -360,15 +330,9 @@
     {
       "name": "1 000 000 Kč, the largest amount, without a variable symbol",
       "input": {
-        "recipient": {
-          "accountNumber": "5544332217/2010",
-          "iban": "CZ2620100000005544332217",
-          "name": "Nadační fond Nová naděje"
-        },
-        "amount": "1000000"
+        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:1000000.00*CC:CZK*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE"
       },
       "expected": {
-        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:1000000.00*CC:CZK*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE",
         "errorCorrection": "H",
         "version": 8,
         "mode": "ALPHANUMERIC",
@@ -431,16 +395,9 @@
     {
       "name": "500 Kč with a one-digit variable symbol",
       "input": {
-        "recipient": {
-          "accountNumber": "5544332217/2010",
-          "iban": "CZ2620100000005544332217",
-          "name": "Nadační fond Nová naděje"
-        },
-        "amount": "500",
-        "variableSymbol": "7"
+        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*X-VS:7*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE"
       },
       "expected": {
-        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*X-VS:7*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE",
         "errorCorrection": "H",
         "version": 8,
         "mode": "ALPHANUMERIC",
@@ -503,16 +460,9 @@
     {
       "name": "500 Kč with a ten-digit variable symbol",
       "input": {
-        "recipient": {
-          "accountNumber": "5544332217/2010",
-          "iban": "CZ2620100000005544332217",
-          "name": "Nadační fond Nová naděje"
-        },
-        "amount": "500",
-        "variableSymbol": "1234567890"
+        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*X-VS:1234567890*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE"
       },
       "expected": {
-        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*X-VS:1234567890*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE",
         "errorCorrection": "H",
         "version": 9,
         "mode": "ALPHANUMERIC",
@@ -579,16 +529,9 @@
     {
       "name": "500 Kč with a variable symbol starting with zeros",
       "input": {
-        "recipient": {
-          "accountNumber": "5544332217/2010",
-          "iban": "CZ2620100000005544332217",
-          "name": "Nadační fond Nová naděje"
-        },
-        "amount": "500",
-        "variableSymbol": "0012345678"
+        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*X-VS:0012345678*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE"
       },
       "expected": {
-        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*X-VS:0012345678*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE",
         "errorCorrection": "H",
         "version": 9,
         "mode": "ALPHANUMERIC",
@@ -655,17 +598,9 @@
     {
       "name": "1 000 Kč as a donation named explicitly",
       "input": {
-        "recipient": {
-          "accountNumber": "5544332217/2010",
-          "iban": "CZ2620100000005544332217",
-          "name": "Nadační fond Nová naděje"
-        },
-        "amount": "1000",
-        "variableSymbol": "1234567890",
-        "purpose": "DONATION"
+        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:1000.00*CC:CZK*X-VS:1234567890*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE"
       },
       "expected": {
-        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:1000.00*CC:CZK*X-VS:1234567890*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE",
         "errorCorrection": "H",
         "version": 9,
         "mode": "ALPHANUMERIC",
@@ -732,17 +667,9 @@
     {
       "name": "1 Kč verifying a donor's account",
       "input": {
-        "recipient": {
-          "accountNumber": "5544332217/2010",
-          "iban": "CZ2620100000005544332217",
-          "name": "Nadační fond Nová naděje"
-        },
-        "amount": "1",
-        "variableSymbol": "1234567890",
-        "purpose": "ACCOUNT_VERIFICATION"
+        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*X-VS:1234567890*RN:NADACNI FOND NOVA NADEJE*MSG:OVERENI UCTU NADACNI FOND NOVA NADEJE"
       },
       "expected": {
-        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*X-VS:1234567890*RN:NADACNI FOND NOVA NADEJE*MSG:OVERENI UCTU NADACNI FOND NOVA NADEJE",
         "errorCorrection": "H",
         "version": 9,
         "mode": "ALPHANUMERIC",
@@ -809,17 +736,9 @@
     {
       "name": "1 234 Kč verifying a donor's account",
       "input": {
-        "recipient": {
-          "accountNumber": "5544332217/2010",
-          "iban": "CZ2620100000005544332217",
-          "name": "Nadační fond Nová naděje"
-        },
-        "amount": "1234",
-        "variableSymbol": "4815162342",
-        "purpose": "ACCOUNT_VERIFICATION"
+        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:1234.00*CC:CZK*X-VS:4815162342*RN:NADACNI FOND NOVA NADEJE*MSG:OVERENI UCTU NADACNI FOND NOVA NADEJE"
       },
       "expected": {
-        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:1234.00*CC:CZK*X-VS:4815162342*RN:NADACNI FOND NOVA NADEJE*MSG:OVERENI UCTU NADACNI FOND NOVA NADEJE",
         "errorCorrection": "H",
         "version": 9,
         "mode": "ALPHANUMERIC",
@@ -884,219 +803,11 @@
       }
     },
     {
-      "name": "amount 0 is refused",
-      "input": {
-        "recipient": {
-          "accountNumber": "5544332217/2010",
-          "iban": "CZ2620100000005544332217",
-          "name": "Nadační fond Nová naděje"
-        },
-        "amount": "0"
-      },
-      "expected": {
-        "refused": {
-          "status": 400,
-          "type": "https://nfnn.cz/problems/validation",
-          "fields": [
-            "amount"
-          ]
-        }
-      }
-    },
-    {
-      "name": "amount 1 000 001 is refused",
-      "input": {
-        "recipient": {
-          "accountNumber": "5544332217/2010",
-          "iban": "CZ2620100000005544332217",
-          "name": "Nadační fond Nová naděje"
-        },
-        "amount": "1000001"
-      },
-      "expected": {
-        "refused": {
-          "status": 400,
-          "type": "https://nfnn.cz/problems/validation",
-          "fields": [
-            "amount"
-          ]
-        }
-      }
-    },
-    {
-      "name": "a negative amount is refused",
-      "input": {
-        "recipient": {
-          "accountNumber": "5544332217/2010",
-          "iban": "CZ2620100000005544332217",
-          "name": "Nadační fond Nová naděje"
-        },
-        "amount": "-5"
-      },
-      "expected": {
-        "refused": {
-          "status": 400,
-          "type": "https://nfnn.cz/problems/validation",
-          "fields": [
-            "amount"
-          ]
-        }
-      }
-    },
-    {
-      "name": "an amount that is not a number is refused",
-      "input": {
-        "recipient": {
-          "accountNumber": "5544332217/2010",
-          "iban": "CZ2620100000005544332217",
-          "name": "Nadační fond Nová naděje"
-        },
-        "amount": "abc"
-      },
-      "expected": {
-        "refused": {
-          "status": 400,
-          "type": "https://nfnn.cz/problems/validation",
-          "fields": [
-            "amount"
-          ]
-        }
-      }
-    },
-    {
-      "name": "an amount with hellers is refused",
-      "input": {
-        "recipient": {
-          "accountNumber": "5544332217/2010",
-          "iban": "CZ2620100000005544332217",
-          "name": "Nadační fond Nová naděje"
-        },
-        "amount": "12.50"
-      },
-      "expected": {
-        "refused": {
-          "status": 400,
-          "type": "https://nfnn.cz/problems/validation",
-          "fields": [
-            "amount"
-          ]
-        }
-      }
-    },
-    {
-      "name": "a missing amount is refused",
-      "input": {
-        "recipient": {
-          "accountNumber": "5544332217/2010",
-          "iban": "CZ2620100000005544332217",
-          "name": "Nadační fond Nová naděje"
-        }
-      },
-      "expected": {
-        "refused": {
-          "status": 400,
-          "type": "https://nfnn.cz/problems/validation",
-          "fields": [
-            "amount"
-          ]
-        }
-      }
-    },
-    {
-      "name": "an eleven-digit variable symbol is refused",
-      "input": {
-        "recipient": {
-          "accountNumber": "5544332217/2010",
-          "iban": "CZ2620100000005544332217",
-          "name": "Nadační fond Nová naděje"
-        },
-        "amount": "500",
-        "variableSymbol": "12345678901"
-      },
-      "expected": {
-        "refused": {
-          "status": 400,
-          "type": "https://nfnn.cz/problems/validation",
-          "fields": [
-            "variableSymbol"
-          ]
-        }
-      }
-    },
-    {
-      "name": "a variable symbol with a letter is refused",
-      "input": {
-        "recipient": {
-          "accountNumber": "5544332217/2010",
-          "iban": "CZ2620100000005544332217",
-          "name": "Nadační fond Nová naděje"
-        },
-        "amount": "500",
-        "variableSymbol": "12a"
-      },
-      "expected": {
-        "refused": {
-          "status": 400,
-          "type": "https://nfnn.cz/problems/validation",
-          "fields": [
-            "variableSymbol"
-          ]
-        }
-      }
-    },
-    {
-      "name": "an account verification without a variable symbol is refused",
-      "input": {
-        "recipient": {
-          "accountNumber": "5544332217/2010",
-          "iban": "CZ2620100000005544332217",
-          "name": "Nadační fond Nová naděje"
-        },
-        "amount": "1",
-        "purpose": "ACCOUNT_VERIFICATION"
-      },
-      "expected": {
-        "refused": {
-          "status": 400,
-          "type": "https://nfnn.cz/problems/donations/verification-needs-variable-symbol",
-          "fields": []
-        }
-      }
-    },
-    {
-      "name": "an unknown purpose is refused",
-      "input": {
-        "recipient": {
-          "accountNumber": "5544332217/2010",
-          "iban": "CZ2620100000005544332217",
-          "name": "Nadační fond Nová naděje"
-        },
-        "amount": "1",
-        "purpose": "GIFT"
-      },
-      "expected": {
-        "refused": {
-          "status": 400,
-          "type": "https://nfnn.cz/problems/validation",
-          "fields": [
-            "purpose"
-          ]
-        }
-      }
-    },
-    {
       "name": "a recipient name of exactly 35 characters is kept whole",
       "input": {
-        "recipient": {
-          "accountNumber": "5544332217/2010",
-          "iban": "CZ2620100000005544332217",
-          "name": "Spolek přátel školy Tišnov 1234 ABC"
-        },
-        "amount": "500",
-        "variableSymbol": "1234567890"
+        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*X-VS:1234567890*RN:SPOLEK PRATEL SKOLY TISNOV 1234 ABC*MSG:DAR NADACNI FOND NOVA NADEJE"
       },
       "expected": {
-        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*X-VS:1234567890*RN:SPOLEK PRATEL SKOLY TISNOV 1234 ABC*MSG:DAR NADACNI FOND NOVA NADEJE",
         "errorCorrection": "H",
         "version": 9,
         "mode": "ALPHANUMERIC",
@@ -1163,16 +874,9 @@
     {
       "name": "a recipient name over 35 characters is cut at 35",
       "input": {
-        "recipient": {
-          "accountNumber": "5544332217/2010",
-          "iban": "CZ2620100000005544332217",
-          "name": "Nadační fond Nová naděje pro děti a mládež z Tišnova"
-        },
-        "amount": "500",
-        "variableSymbol": "1234567890"
+        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*X-VS:1234567890*RN:NADACNI FOND NOVA NADEJE PRO DETI A*MSG:DAR NADACNI FOND NOVA NADEJE"
       },
       "expected": {
-        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*X-VS:1234567890*RN:NADACNI FOND NOVA NADEJE PRO DETI A*MSG:DAR NADACNI FOND NOVA NADEJE",
         "errorCorrection": "H",
         "version": 9,
         "mode": "ALPHANUMERIC",
@@ -1239,16 +943,9 @@
     {
       "name": "lowercase, diacritics and symbols in a recipient name become SPAYD text",
       "input": {
-        "recipient": {
-          "accountNumber": "5544332217/2010",
-          "iban": "CZ2620100000005544332217",
-          "name": "Žluťoučký kůň 100% + *hvězda* & spol."
-        },
-        "amount": "500",
-        "variableSymbol": "1234567890"
+        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*X-VS:1234567890*RN:ZLUTOUCKY KUN 100% + HVEZDA SPOL.*MSG:DAR NADACNI FOND NOVA NADEJE"
       },
       "expected": {
-        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*X-VS:1234567890*RN:ZLUTOUCKY KUN 100% + HVEZDA SPOL.*MSG:DAR NADACNI FOND NOVA NADEJE",
         "errorCorrection": "H",
         "version": 9,
         "mode": "ALPHANUMERIC",
@@ -1315,16 +1012,9 @@
     {
       "name": "a recipient name whose cut at 35 ends in a space loses the space",
       "input": {
-        "recipient": {
-          "accountNumber": "5544332217/2010",
-          "iban": "CZ2620100000005544332217",
-          "name": "Spolek rodičů při škole Tišnov 123 Brno"
-        },
-        "amount": "500",
-        "variableSymbol": "1234567890"
+        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*X-VS:1234567890*RN:SPOLEK RODICU PRI SKOLE TISNOV 123*MSG:DAR NADACNI FOND NOVA NADEJE"
       },
       "expected": {
-        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*X-VS:1234567890*RN:SPOLEK RODICU PRI SKOLE TISNOV 123*MSG:DAR NADACNI FOND NOVA NADEJE",
         "errorCorrection": "H",
         "version": 9,
         "mode": "ALPHANUMERIC",
@@ -1391,16 +1081,9 @@
     {
       "name": "a recipient name of symbols only becomes empty and the RN field is left out",
       "input": {
-        "recipient": {
-          "accountNumber": "5544332217/2010",
-          "iban": "CZ2620100000005544332217",
-          "name": "*** & ***"
-        },
-        "amount": "500",
-        "variableSymbol": "1234567890"
+        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*X-VS:1234567890*MSG:DAR NADACNI FOND NOVA NADEJE"
       },
       "expected": {
-        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*X-VS:1234567890*MSG:DAR NADACNI FOND NOVA NADEJE",
         "errorCorrection": "H",
         "version": 8,
         "mode": "ALPHANUMERIC",

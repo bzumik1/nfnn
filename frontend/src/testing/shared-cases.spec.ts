@@ -20,8 +20,10 @@ interface EditableCaseFile {
   }[];
 }
 
+const SPAYD_CASES = 'payment/spayd.json';
 const PAYMENT_CASES = 'qr/payment.json';
 const TOTP_CASES = 'qr/totp.json';
+const TOTP_URI_CASES = 'totp/uri.json';
 const RECEIPT_CASES = 'receipts/formatting.json';
 const FINDER_SPAN = 17;
 const MODULES_PER_VERSION = 4;
@@ -48,11 +50,10 @@ function inconsistencies(symbol: QrSymbol): readonly string[] {
 
 function qrSymbols(): readonly { name: string; symbol: QrSymbol }[] {
   return [
-    ...sharedCases('qr/payment.json').flatMap((sharedCase) =>
-      'matrix' in sharedCase.expected
-        ? [{ name: sharedCase.name, symbol: sharedCase.expected }]
-        : [],
-    ),
+    ...sharedCases('qr/payment.json').map((sharedCase) => ({
+      name: sharedCase.name,
+      symbol: sharedCase.expected,
+    })),
     ...sharedCases('qr/totp.json').map((sharedCase) => ({
       name: sharedCase.name,
       symbol: sharedCase.expected,
@@ -157,8 +158,73 @@ describe('Given a case file whose source is neither v2-baseline nor edited', () 
   });
 });
 
-describe('Given a payment case whose matrix holds a module other than 0 and 1', () => {
-  it('when it is checked against its schema, then it is refused', () => {
+describe('Given the SPAYD cases and the payment QR cases', () => {
+  function textsOfSpaydCases(): Record<string, string> {
+    return Object.fromEntries(
+      sharedCases('payment/spayd.json').flatMap((sharedCase) =>
+        'spayd' in sharedCase.expected ? [[sharedCase.name, sharedCase.expected.spayd]] : [],
+      ),
+    );
+  }
+
+  it('when they are matched by case name, then every SPAYD text has its QR case and every QR case encodes the text of its SPAYD case', () => {
+    const encodedTexts = Object.fromEntries(
+      sharedCases('qr/payment.json').map((sharedCase) => [sharedCase.name, sharedCase.input.spayd]),
+    );
+
+    expect(Object.keys(encodedTexts).length).toBeGreaterThan(0);
+    expect(encodedTexts).toEqual(textsOfSpaydCases());
+  });
+});
+
+describe('Given a SPAYD case', () => {
+  it('when its expected text is not SPAYD text, then it is refused', () => {
+    const file = editable(SPAYD_CASES);
+    file.cases[0].expected['spayd'] = 'spd*1.0*acc:cz2620100000005544332217';
+
+    expect(schemaViolations(SPAYD_CASES, file)).toContain(
+      '/cases/0/expected/spayd must match pattern "^SPD\\*1\\.0(\\*[A-Z-]+:[0-9A-Z $%+./:-]*)+$"',
+    );
+  });
+
+  it('when it gives a text and a refusal at once, then it is refused', () => {
+    const file = editable(SPAYD_CASES);
+    file.cases[0].expected['refused'] = {
+      status: 400,
+      type: 'https://nfnn.cz/problems/validation',
+      fields: [],
+    };
+
+    expect(schemaViolations(SPAYD_CASES, file)).toContain(
+      '/cases/0/expected must match exactly one schema in oneOf',
+    );
+  });
+
+  it('when it has no expected value, then it is refused', () => {
+    const file = editable(SPAYD_CASES);
+    delete (file.cases[0] as Partial<EditableCaseFile['cases'][0]>).expected;
+
+    expect(schemaViolations(SPAYD_CASES, file)).toContain(
+      "/cases/0 must have required property 'expected'",
+    );
+  });
+
+  it('when its refusal names a problem type that is no problem type of the API, then it is refused', () => {
+    const file = editable(SPAYD_CASES);
+    const refusal = file.cases.find((sharedCase) => sharedCase.expected.refused !== undefined);
+    if (refusal?.expected.refused === undefined) {
+      throw new Error(`${SPAYD_CASES} holds no refusal`);
+    }
+    refusal.expected.refused['type'] = 'https://nfnn.cz/problems/anything/at all';
+
+    expect(schemaViolations(SPAYD_CASES, file).join('\n')).toMatch(
+      /\/cases\/\d+\/expected\/refused\/type must match pattern/,
+    );
+  });
+});
+
+describe('Given a payment QR case', () => {
+  it('when its matrix holds a module other than 0 and 1, then it is refused', () => {
     const file = editable(PAYMENT_CASES);
     const matrix = file.cases[0].expected.matrix ?? [];
     matrix[0] = matrix[0].replace('1', '2');
@@ -167,46 +233,70 @@ describe('Given a payment case whose matrix holds a module other than 0 and 1', 
       '/cases/0/expected/matrix/0 must match pattern "^[01]{21,177}$"',
     );
   });
-});
 
-describe('Given a payment case with a field its schema does not know', () => {
-  it('when it is checked against its schema, then it is refused', () => {
+  it('when its expected symbol still carries the SPAYD text, then it is refused', () => {
     const file = editable(PAYMENT_CASES);
-    file.cases[0].expected['spaydText'] = 'SPD*1.0';
+    file.cases[0].expected['spayd'] = file.cases[0].input['spayd'];
 
     expect(schemaViolations(PAYMENT_CASES, file)).toContain(
       '/cases/0/expected must NOT have unevaluated properties',
     );
   });
-});
 
-describe('Given a payment case without its expected value', () => {
-  it('when it is checked against its schema, then it is refused', () => {
+  it('when its input is not SPAYD text, then it is refused', () => {
     const file = editable(PAYMENT_CASES);
-    delete (file.cases[0] as Partial<EditableCaseFile['cases'][0]>).expected;
+    file.cases[0].input['spayd'] = 'otpauth://totp/Nadace';
+
+    expect(schemaViolations(PAYMENT_CASES, file).join('\n')).toMatch(
+      /\/cases\/0\/input\/spayd must match pattern/,
+    );
+  });
+
+  it('when its mode is not alphanumeric, then it is refused', () => {
+    const file = editable(PAYMENT_CASES);
+    file.cases[0].expected['mode'] = 'BYTE';
 
     expect(schemaViolations(PAYMENT_CASES, file)).toContain(
-      "/cases/0 must have required property 'expected'",
+      '/cases/0/expected/mode must be equal to constant',
     );
   });
 });
 
-describe('Given a payment refusal whose problem type is no problem type of the API', () => {
-  it('when it is checked against its schema, then it is refused', () => {
-    const file = editable(PAYMENT_CASES);
-    const refusal = file.cases.find((sharedCase) => sharedCase.expected.refused !== undefined);
-    if (refusal?.expected.refused === undefined) {
-      throw new Error(`${PAYMENT_CASES} holds no refusal`);
-    }
-    refusal.expected.refused['type'] = 'https://nfnn.cz/problems/anything/at all';
+describe('Given the TOTP URI cases and the TOTP QR cases', () => {
+  it('when they are matched by case name, then every URI has its QR case and every QR case encodes the URI of its URI case', () => {
+    const uris = Object.fromEntries(
+      sharedCases('totp/uri.json').map((sharedCase) => [sharedCase.name, sharedCase.expected.uri]),
+    );
+    const encodedUris = Object.fromEntries(
+      sharedCases('qr/totp.json').map((sharedCase) => [sharedCase.name, sharedCase.input.uri]),
+    );
 
-    expect(schemaViolations(PAYMENT_CASES, file).join('\n')).toMatch(
-      /\/cases\/\d+\/expected\/refused\/type must match pattern/,
+    expect(Object.keys(encodedUris).length).toBeGreaterThan(0);
+    expect(encodedUris).toEqual(uris);
+  });
+});
+
+describe('Given a TOTP URI case', () => {
+  it('when its expected URI is no otpauth URI, then it is refused', () => {
+    const file = editable(TOTP_URI_CASES);
+    file.cases[0].expected['uri'] = 'https://nfnn.cz/';
+
+    expect(schemaViolations(TOTP_URI_CASES, file).join('\n')).toMatch(
+      /\/cases\/0\/expected\/uri must match pattern/,
     );
   });
 });
 
 describe('Given a TOTP case', () => {
+  it('when its expected symbol still carries the URI, then it is refused', () => {
+    const file = editable(TOTP_CASES);
+    file.cases[0].expected['uri'] = file.cases[0].input['uri'];
+
+    expect(schemaViolations(TOTP_CASES, file)).toContain(
+      '/cases/0/expected must NOT have unevaluated properties',
+    );
+  });
+
   it('when its mode is not BYTE, then it is refused', () => {
     const file = editable(TOTP_CASES);
     file.cases[0].expected['mode'] = 'ALPHANUMERIC';
