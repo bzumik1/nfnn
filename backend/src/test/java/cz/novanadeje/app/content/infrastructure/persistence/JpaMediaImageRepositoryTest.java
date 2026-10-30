@@ -8,6 +8,11 @@ import cz.novanadeje.app.content.domain.media.MediaImage;
 import cz.novanadeje.app.content.domain.media.MediaImageRepository;
 import cz.novanadeje.app.content.domain.media.MediaSize;
 import cz.novanadeje.app.content.domain.media.MediaVariant;
+import cz.novanadeje.app.content.domain.people.Person;
+import cz.novanadeje.app.content.domain.people.PersonDetails;
+import cz.novanadeje.app.content.domain.people.PersonEmails;
+import cz.novanadeje.app.content.domain.people.PersonId;
+import cz.novanadeje.app.content.domain.people.PersonRepository;
 import cz.novanadeje.app.content.domain.Slug;
 import cz.novanadeje.app.content.domain.news.NewsArticle;
 import cz.novanadeje.app.content.domain.news.NewsArticleId;
@@ -47,6 +52,8 @@ class JpaMediaImageRepositoryTest {
     private ProjectRepository projects;
     @Autowired
     private AboutSectionRepository about;
+    @Autowired
+    private PersonRepository people;
     @Autowired
     private JdbcClient jdbc;
     @Autowired
@@ -145,6 +152,30 @@ class JpaMediaImageRepositoryTest {
         assertThat(deletedIfUnused).isFalse();
         assertThat(cleanedUp).isZero();
         assertThat(media.exists(shown.id())).isTrue();
+    }
+
+    @Test
+    @DisplayName("Given a portrait and a web signature a person of the foundation shows, when they are deleted only if unused or the old unused photos are cleaned up, then both stay")
+    void should_keep_the_portrait_and_the_signature_when_cleaned_up_given_a_person_shows_them() {
+        MediaImage portrait = image(640, 640, NOW.minusSeconds(864_000), 480);
+        MediaImage signature = image(600, 180, NOW.minusSeconds(864_000), 480);
+        media.save(portrait);
+        media.save(signature);
+        people.save(Person.add(PersonId.newId(NOW),
+                new PersonDetails("Eva Vzorová", Optional.empty(), true, Optional.empty(), true, Optional.of(portrait.id()), PersonEmails.NONE), 0, NOW)
+                .signWith(signature.id(), NOW));
+        flushAndClear();
+
+        boolean portraitDeleted = media.deleteIfUnused(portrait.id());
+        boolean signatureDeleted = media.deleteIfUnused(signature.id());
+        int cleanedUp = media.deleteUnusedUploadedBefore(NOW.minusSeconds(604_800));
+        flushAndClear();
+
+        assertThat(portraitDeleted).isFalse();
+        assertThat(signatureDeleted).isFalse();
+        assertThat(cleanedUp).isZero();
+        assertThat(media.exists(portrait.id())).isTrue();
+        assertThat(media.exists(signature.id())).isTrue();
     }
 
     @Test
