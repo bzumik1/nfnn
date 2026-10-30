@@ -148,7 +148,7 @@ export async function readReceiptProof(
     if (key === undefined) {
       throw new InvalidProof('unknown-key');
     }
-    if (key.status === 'revoked') {
+    if (key.status !== 'active') {
       throw new InvalidProof('revoked-key');
     }
     const signedMessage = messageOf(foundationCompanyIdentifier, body);

@@ -24,8 +24,9 @@ const PUBLIC_TEST_KEY_IDS: readonly string[] = [
   'dac073e0',
   '91384c41',
   '5f9b247e',
+  'c07ba992',
 ];
-const PRODUCTION_HOSTS: readonly string[] = ['nfnn.cz', 'www.nfnn.cz'];
+const LOCAL_HOSTS: readonly string[] = ['localhost', '127.0.0.1', '[::1]'];
 const ALGORITHM = 'Ed25519';
 const STATUSES: readonly string[] = ['active', 'revoked'];
 const KEY_ID = /^[0-9a-f]{8}$/;
@@ -42,19 +43,30 @@ export async function trustedKeys(list: unknown, hostname: string): Promise<Trus
   if (typeof companyIdentifier !== 'string' || !COMPANY_IDENTIFIER.test(companyIdentifier)) {
     return null;
   }
-  const production = PRODUCTION_HOSTS.includes(hostname);
+  const local = LOCAL_HOSTS.includes(hostname);
   const keys: ProofKey[] = [];
   for (const entry of list['keys'] as unknown[]) {
     const key = await trustedKey(entry);
-    if (key !== null && !(production && PUBLIC_TEST_KEY_IDS.includes(key.keyId))) {
+    if (key !== null && (local || !PUBLIC_TEST_KEY_IDS.includes(key.keyId))) {
       keys.push(key);
     }
   }
-  return { foundationCompanyIdentifier: companyIdentifier, keys };
+  return { foundationCompanyIdentifier: companyIdentifier, keys: withoutDuplicates(keys) };
 }
 
 export function keyLookup(trusted: TrustedKeys | null): (keyId: string) => ProofKey | undefined {
   return (keyId) => trusted?.keys.find((key) => key.keyId === keyId);
+}
+
+function withoutDuplicates(keys: readonly ProofKey[]): ProofKey[] {
+  const listed = keys.map((key) => key.keyId);
+  return keys
+    .filter((key, index) => listed.indexOf(key.keyId) === index)
+    .map((key) =>
+      listed.indexOf(key.keyId) === listed.lastIndexOf(key.keyId)
+        ? key
+        : { ...key, status: 'revoked' },
+    );
 }
 
 async function trustedKey(entry: unknown): Promise<ProofKey | null> {
