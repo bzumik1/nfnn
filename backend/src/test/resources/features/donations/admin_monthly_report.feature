@@ -148,7 +148,7 @@ Feature: An administrator sets up the monthly report, sends it again and reads t
   Scenario: A month outside the calendar is refused as a field without repeating it
     When "Jana" sends the monthly report for "2026-13" again
     Then the response status is 400
-    And the problem lists an error for field "month"
+    And the problem's error for field "month" says "Zadejte měsíc ve tvaru RRRR-MM, například 2026-03."
     And the problem does not repeat "2026-13"
 
   Scenario: The yearly overview counts everything received, new donors, paired and unpaired payments by month
