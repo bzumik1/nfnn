@@ -59,7 +59,14 @@
 
 .year-action {
   display: flex;
-  justify-content: flex-end;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.receipt-saved span {
+  margin-top: var(--space-1-5);
+  text-align: right;
+  overflow-wrap: anywhere;
 }
 
 .year-note {
@@ -112,7 +119,11 @@ a {
 
   .year-action {
     grid-area: action;
-    justify-content: flex-start;
+    align-items: flex-start;
+  }
+
+  .receipt-saved span {
+    text-align: left;
   }
 
   .year-note {

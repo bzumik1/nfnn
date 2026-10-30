@@ -81,6 +81,9 @@ test.describe('Given a visitor on the home page', () => {
       chunks.push(chunk as Buffer);
     }
     expect(Buffer.concat(chunks).subarray(1, 4).toString('ascii')).toBe('PNG');
+    await expect(page.locator('#prispet').getByRole('status').filter({ hasText: /\S/ })).toHaveText(
+      'QR kód qr-platba-nova-nadeje.png je uložený. Najdete ho ve stažených souborech.',
+    );
   });
 
   test('when they Tab past the amounts, then the line before paying, the copy buttons and then the QR follow in the order they see', async ({
@@ -127,6 +130,8 @@ test.describe('Given a visitor on the home page', () => {
       await expect(bank).toContainText('5544332217/2010');
 
       await page.getByRole('button', { name: 'Jiná částka' }).click();
+      await expect(page.locator('#donate-custom-amount')).toHaveValue('');
+      await expect(page.locator('#prispet .qr-placeholder')).toHaveText('Nejprve zadejte částku');
       await page.locator('#donate-custom-amount').fill('2 500');
       await expect(bank).toContainText('2 500 Kč');
       await page.getByRole('button', { name: 'Kopírovat částku' }).click();

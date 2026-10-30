@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CopyButton } from '../../../../shared/ui/copy-button/copy-button';
+import { formatCrowns } from '../../../donations/donation-amount';
 import { PaymentAccountState } from '../../../donations/payment-panel/payment-panel';
 import { PaymentQrApi } from '../../../donations/payment-qr-api';
 
@@ -32,6 +33,7 @@ export class StandingOrder {
 
   readonly variableSymbol = input.required<string>();
   readonly account = input<PaymentAccountState | null>(null);
+  readonly amount = input<number | null>(null);
   readonly retryRequested = output<void>();
 
   private readonly toggleButton = viewChild.required<ElementRef<HTMLButtonElement>>('toggleButton');
@@ -44,6 +46,10 @@ export class StandingOrder {
   protected readonly shownAccount = computed<OwnAccountState>(
     () => this.account() ?? this.ownAccount(),
   );
+  protected readonly chosenAmount = computed(() => {
+    const amount = this.amount();
+    return amount === null ? null : formatCrowns(amount);
+  });
 
   protected toggle(): void {
     this.open.update((open) => !open);

@@ -1,7 +1,9 @@
 <app-page-title i18n="@@donor.receipts.heading">Potvrzení o daru</app-page-title>
 <p class="receipts-intro" i18n="@@donor.receipts.intro">
-  Do daňového přiznání přiložte buď roční potvrzení, nebo potvrzení k jednotlivým darům, ne obojí.
-  Když změníte jméno nebo adresu, nově stažené potvrzení dostane nové číslo a nahradí to dřívější.
+  Potvrzení k jednotlivým darům stáhnete hned, roční potvrzení za celý rok od 1.&nbsp;ledna dalšího
+  roku a do daňového přiznání přiložíte buď jednotlivá, nebo roční, ne obojí, protože roční obsahuje
+  všechny dary roku. Když změníte jméno nebo adresu, nově stažené potvrzení dostane nové číslo a
+  nahradí to dřívější.
 </p>
 
 @if (donations.state() === 'ready') {
@@ -70,6 +72,11 @@
                       >
                     }
                   </button>
+                  <span class="ui-form-status receipt-saved" role="status">
+                    @if (donations.yearlySaved(row.year); as saved) {
+                      <span>{{ saved }}</span>
+                    }
+                  </span>
                 }
                 @case ('after-year-end') {
                   <span class="year-note" i18n="@@donor.receipts.year.afterYearEnd"

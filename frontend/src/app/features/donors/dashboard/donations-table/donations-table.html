@@ -81,6 +81,11 @@
                   >
                 }
               </button>
+              <p class="ui-form-status receipt-saved" role="status">
+                @if (donations.singleSaved(item); as saved) {
+                  <span>{{ saved }}</span>
+                }
+              </p>
             } @else {
               @switch (missingReceipt(item)) {
                 @case ('refunded') {

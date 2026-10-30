@@ -988,6 +988,20 @@ describe('Given the bank accounts card in the overview', () => {
       ]);
     });
 
+    it('then one line under the payment details says where the symbol goes when the bank has no field for it', async () => {
+      http.expectOne((request) => request.url === '/api/donations/payment-qr').flush(paymentQr());
+      await settle();
+
+      expect(text('.add-account-no-symbol-field')).toBe(
+        'Nemá vaše banka pole pro variabilní symbol? Napište ho do zprávy pro příjemce, třeba „Ověření účtu Nadační fond Nová naděje 9876543210“.',
+      );
+      expect(
+        (element('.add-account-payment') as HTMLElement).compareDocumentPosition(
+          element('.add-account-no-symbol-field') as HTMLElement,
+        ) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+
     it('then a closed disclosure explains when it works and that a standing order with an older symbol needs exactly 1 Kč with the message', async () => {
       http.expectOne((request) => request.url === '/api/donations/payment-qr').flush(paymentQr());
       await settle();
@@ -1135,6 +1149,49 @@ describe('Given the bank accounts card in the overview', () => {
       http.expectNone(BANK_CHECK_URL);
     });
 
+    it('and the new account brings earlier gifts without a symbol, then the result says how many were assigned and their sum', async () => {
+      await wait(30_000);
+      await answerCheck({ bankDataAsOf: LATER, checking: false }, [
+        { ...newAccount, donationCount: 2, totalAmountMinor: 250000 },
+        bankAccount(),
+      ]);
+
+      expect(text('.add-account-watch .watch-earlier')).toBe(
+        'Přiřadili jsme vám také 2 dřívější dary z tohoto účtu, celkem 2 500 Kč.',
+      );
+    });
+
+    it('and the new account brings one earlier gift, then the result uses the singular', async () => {
+      await wait(30_000);
+      await answerCheck({ bankDataAsOf: LATER, checking: false }, [
+        { ...newAccount, donationCount: 1, totalAmountMinor: 200000 },
+        bankAccount(),
+      ]);
+
+      expect(text('.add-account-watch .watch-earlier')).toBe(
+        'Přiřadili jsme vám také 1 dřívější dar z tohoto účtu, celkem 2 000 Kč.',
+      );
+    });
+
+    it('and the new account brings five earlier gifts, then the result uses the form for many', async () => {
+      await wait(30_000);
+      await answerCheck({ bankDataAsOf: LATER, checking: false }, [
+        { ...newAccount, donationCount: 5, totalAmountMinor: 500000 },
+        bankAccount(),
+      ]);
+
+      expect(text('.add-account-watch .watch-earlier')).toBe(
+        'Přiřadili jsme vám také 5 dřívějších darů z tohoto účtu, celkem 5 000 Kč.',
+      );
+    });
+
+    it('and the new account brings no earlier gift, then the result says nothing about earlier gifts', async () => {
+      await wait(30_000);
+      await answerCheck({ bankDataAsOf: LATER, checking: false }, [newAccount, bankAccount()]);
+
+      expect(element('.add-account-watch .watch-earlier')).toBeNull();
+    });
+
     it('and the account verified in the dialog is shared, then the verified box shows the warning, not a plain line', async () => {
       await wait(30_000);
       await answerCheck({ bankDataAsOf: LATER, checking: false }, [
@@ -1250,6 +1307,7 @@ describe('Given the bank accounts card in the overview', () => {
       expect(texts('.add-account-watch .watch-detail')).toEqual([
         'Platby bez variabilního symbolu z něj vám přiřazujeme automaticky.',
       ]);
+      expect(element('.add-account-watch .watch-earlier')).toBeNull();
 
       await wait(60_000);
       http.expectNone(BANK_CHECK_URL);

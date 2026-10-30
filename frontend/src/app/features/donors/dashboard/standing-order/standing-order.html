@@ -74,9 +74,15 @@
     <div class="standing-row">
       <dt i18n="@@home.donate.bank.amount">Částka</dt>
       <dd>
-        <span class="standing-value" i18n="@@donor.standingOrder.amount"
-          >Jakákoli, kterou chcete posílat</span
-        >
+        @if (chosenAmount(); as chosen) {
+          <span class="standing-value" i18n="@@donor.standingOrder.chosenAmount"
+            >{{ chosen }}&nbsp;Kč, nebo jiná, kterou chcete posílat</span
+          >
+        } @else {
+          <span class="standing-value" i18n="@@donor.standingOrder.amount"
+            >Jakákoli, kterou chcete posílat</span
+          >
+        }
       </dd>
     </div>
     <div class="standing-row">
@@ -90,6 +96,9 @@
   </dl>
   <p class="standing-after" i18n="@@donor.standingOrder.after">
     Každá platba se vám tu pak objeví sama a do ročního potvrzení se započítají všechny.
+  </p>
+  <p class="standing-bank-only" i18n="@@donor.standingOrder.bankOnly">
+    Částku i den platby pak měníte jen ve své bance. Na tomto webu nic nastavovat nemusíte.
   </p>
   <p class="standing-older">
     <span i18n="@@donor.standingOrder.older"

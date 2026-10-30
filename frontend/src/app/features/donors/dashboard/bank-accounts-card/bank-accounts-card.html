@@ -322,6 +322,9 @@
               <p class="watch-detail">{{ hint(account) }}</p>
             }
           }
+          @if (earlierGifts(account); as earlier) {
+            <p class="watch-detail watch-earlier">{{ earlier }}</p>
+          }
         </div>
       } @else if (paymentWatch() === 'waiting') {
         <svg class="watch-icon watch-icon--waiting" viewBox="0 0 32 32" aria-hidden="true">
@@ -460,6 +463,15 @@
           </dl>
         }
       </div>
+
+      @if (variableSymbol(); as symbol) {
+        <p class="add-account-no-symbol-field" i18n="@@donor.bankAccounts.addDialog.noSymbolField">
+          Nemá vaše banka pole pro variabilní symbol? Napište ho do zprávy pro příjemce, třeba „{{
+            verificationMessage
+          }}
+          {{ symbol }}“.
+        </p>
+      }
 
       <details class="add-account-more">
         <summary i18n="@@donor.bankAccounts.addDialog.more">

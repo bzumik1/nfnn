@@ -6,21 +6,28 @@
       <h2 id="receipt-ready-title" class="ui-card__title" i18n="@@donor.overview.receipt.title">
         Potvrzení o darech za rok {{ year }} je připravené
       </h2>
-      <button
-        type="button"
-        class="ui-button ui-button--primary receipt-ready-pdf"
-        [disabled]="donations.yearlyDownloading(year)"
-        [attr.aria-busy]="donations.yearlyDownloading(year)"
-        (click)="donations.downloadYearlyReceipt(year)"
-      >
-        @if (donations.yearlyDownloading(year)) {
-          <span i18n="@@donor.dashboard.receipt.preparing">Připravujeme PDF…</span>
-        } @else {
-          <span i18n="@@donor.overview.receipt.download"
-            >Stáhnout potvrzení za rok {{ year }} (PDF)</span
-          >
-        }
-      </button>
+      <div class="receipt-ready-action">
+        <button
+          type="button"
+          class="ui-button ui-button--primary receipt-ready-pdf"
+          [disabled]="donations.yearlyDownloading(year)"
+          [attr.aria-busy]="donations.yearlyDownloading(year)"
+          (click)="donations.downloadYearlyReceipt(year)"
+        >
+          @if (donations.yearlyDownloading(year)) {
+            <span i18n="@@donor.dashboard.receipt.preparing">Připravujeme PDF…</span>
+          } @else {
+            <span i18n="@@donor.overview.receipt.download"
+              >Stáhnout potvrzení za rok {{ year }} (PDF)</span
+            >
+          }
+        </button>
+        <p class="ui-form-status receipt-saved" role="status">
+          @if (donations.yearlySaved(year); as saved) {
+            <span>{{ saved }}</span>
+          }
+        </p>
+      </div>
       @if (donations.receiptError(); as error) {
         @if (error.scope === 'yearly') {
           <p class="ui-callout ui-callout--danger receipt-error" role="alert">
@@ -59,6 +66,7 @@
     >
       Jak poslat první dar
     </h2>
+    <app-missing-gift />
     <ol class="first-gift-steps">
       <li i18n="@@donor.overview.firstGift.chooseInCard">
         Zvolte částku v kartě Poslat dar níže a pošlete dar na účet nadačního fondu, převodem nebo
@@ -98,11 +106,7 @@
   <app-donations-pending />
 }
 
-<app-send-gift [variableSymbol]="donor()?.variableSymbol ?? null">
-  @if (donations.state() === 'ready' && !hasGift()) {
-    <app-missing-gift />
-  }
-</app-send-gift>
+<app-send-gift [variableSymbol]="donor()?.variableSymbol ?? null" />
 
 @if (donations.state() === 'ready' && hasGift()) {
   <dl class="ui-card overview-stats">

@@ -31,7 +31,7 @@ function outcomeText(outcome: BankCheckOutcome | null): string {
     case 'found':
       return foundText(outcome.count);
     case 'none':
-      return $localize`:@@donor.dashboard.bank.outcome.none:Žádný nový dar zatím nepřišel.`;
+      return $localize`:@@donor.dashboard.bank.outcome.none:Žádný nový dar zatím nepřišel. Banky se ptáme nejvýš jednou za 30 sekund, zkuste to proto za chvíli znovu.`;
     case 'unfinished':
       return $localize`:@@donor.dashboard.bank.outcome.unfinished:Banka zatím neodpověděla. Zkuste to prosím za chvíli znovu.`;
     default:

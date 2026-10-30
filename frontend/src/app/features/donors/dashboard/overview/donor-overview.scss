@@ -99,6 +99,11 @@
     flex-basis: 100%;
     margin-top: 0;
   }
+
+  .receipt-saved span {
+    margin-top: var(--space-1-5);
+    overflow-wrap: anywhere;
+  }
 }
 
 .first-gift-steps {

@@ -13,6 +13,13 @@
         </h2>
         <app-bank-check />
       </div>
+      @if (donations.items().length > 0) {
+        <p class="gifts-tax-note" i18n="@@donor.gifts.taxNote">
+          Potvrzení k jednotlivým darům stáhnete hned, roční potvrzení za celý rok od 1.&nbsp;ledna
+          dalšího roku a do daňového přiznání přiložíte buď jednotlivá, nebo roční, ne obojí,
+          protože roční obsahuje všechny dary roku.
+        </p>
+      }
       @if (donations.receiptError(); as error) {
         <p #receiptAlert class="ui-callout ui-callout--danger receipt-error" role="alert">
           {{ error.message }}
@@ -25,33 +32,59 @@
           <div class="gift-year-head">
             <h3 class="gift-year-title" [id]="yearHeadingId(group.year)">{{ group.year }}</h3>
             <p class="gift-year-sum">
-              <span i18n="@@donor.gifts.year.count">
-                {group.count, plural,
-                  one {{{ group.count }} dar}
-                  few {{{ group.count }} dary}
-                  other {{{ group.count }} darů}
+              @if (group.gifts > 0) {
+                <span i18n="@@donor.gifts.year.count">
+                  {group.gifts, plural,
+                    one {{{ group.gifts }} dar}
+                    few {{{ group.gifts }} dary}
+                    other {{{ group.gifts }} darů}
+                  }
+                </span>
+                @if (group.verifications > 0) {
+                  &ngsp;<span i18n="@@donor.gifts.year.andVerifications">
+                    {group.verifications, plural,
+                      one {a ověření účtu}
+                      few {a {{ group.verifications }} ověření účtu}
+                      other {a {{ group.verifications }} ověření účtu}
+                    }
+                  </span>
                 }
-              </span>
+              } @else {
+                <span i18n="@@donor.gifts.year.verificationsOnly">
+                  {group.verifications, plural,
+                    one {Ověření účtu}
+                    few {{{ group.verifications }} ověření účtu}
+                    other {{{ group.verifications }} ověření účtu}
+                  }
+                </span>
+              }
               ·
               <span class="gift-year-total">{{ crowns(group.totalAmountMinor) }}&nbsp;Kč</span>
             </p>
             @switch (group.receipt) {
               @case ('available') {
-                <button
-                  type="button"
-                  class="ui-button ui-button--small yearly-pdf"
-                  [disabled]="donations.yearlyDownloading(group.year)"
-                  [attr.aria-busy]="donations.yearlyDownloading(group.year)"
-                  (click)="donations.downloadYearlyReceipt(group.year)"
-                >
-                  @if (donations.yearlyDownloading(group.year)) {
-                    <span i18n="@@donor.dashboard.receipt.preparing">Připravujeme PDF…</span>
-                  } @else {
-                    <span i18n="@@donor.dashboard.yearly.pdf"
-                      >Stáhnout potvrzení za rok {{ group.year }} (PDF)</span
-                    >
-                  }
-                </button>
+                <div class="gift-year-action">
+                  <button
+                    type="button"
+                    class="ui-button ui-button--small yearly-pdf"
+                    [disabled]="donations.yearlyDownloading(group.year)"
+                    [attr.aria-busy]="donations.yearlyDownloading(group.year)"
+                    (click)="donations.downloadYearlyReceipt(group.year)"
+                  >
+                    @if (donations.yearlyDownloading(group.year)) {
+                      <span i18n="@@donor.dashboard.receipt.preparing">Připravujeme PDF…</span>
+                    } @else {
+                      <span i18n="@@donor.dashboard.yearly.pdf"
+                        >Stáhnout potvrzení za rok {{ group.year }} (PDF)</span
+                      >
+                    }
+                  </button>
+                  <p class="ui-form-status receipt-saved" role="status">
+                    @if (donations.yearlySaved(group.year); as saved) {
+                      <span>{{ saved }}</span>
+                    }
+                  </p>
+                </div>
               }
               @case ('after-year-end') {
                 <p class="gift-year-note" i18n="@@donor.gifts.year.afterYearEnd">

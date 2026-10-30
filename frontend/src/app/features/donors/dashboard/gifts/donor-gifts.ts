@@ -22,7 +22,8 @@ import { YearReceipt, yearReceipt } from '../yearly-receipt';
 interface GiftYear {
   readonly year: number;
   readonly items: readonly DonationItem[];
-  readonly count: number;
+  readonly gifts: number;
+  readonly verifications: number;
   readonly totalAmountMinor: number;
   readonly receipt: YearReceipt;
 }
@@ -60,10 +61,14 @@ export class DonorGifts {
     }
     return [...byYear.entries()].map(([year, items]) => {
       const total = summary.byYear.find((entry) => entry.year === year);
+      const verifications = items.filter(
+        (item) => item.status === 'RECEIVED' && item.accountVerification,
+      ).length;
       return {
         year,
         items,
-        count: total?.count ?? 0,
+        gifts: Math.max((total?.count ?? 0) - verifications, 0),
+        verifications,
         totalAmountMinor: total?.totalAmountMinor ?? 0,
         receipt: yearReceipt(year, summary),
       };
