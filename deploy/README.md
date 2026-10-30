@@ -241,7 +241,7 @@ Správce píše aktuality na `/sprava/aktuality` a projekty na `/sprava/projekty
 
 Limit 10 MB hlídá backend (`spring.servlet.multipart.max-file-size`, odpověď 413 „Soubor je příliš velký“) a nginx ve frontend kontejneru pouští na `/api/` 11 MB (`client_max_body_size` ve `frontend/nginx.conf`). Nginx Proxy Manager pouští 2000 MB a Cloudflare 100 MB, nic se v nich nenastavuje; kdyby nahrání velké fotky vracelo 413 dřív, než se objeví hláška webu, je limit tam.
 
-Převod do WebP dělá knihovna `webp-imageio` s nativní libwebp pro Linux x64 i arm64; backend proto startuje s `--enable-native-access=ALL-UNNAMED` (v Dockerfile), jinak Java 25 jen vypíše varování do logu. Smazaná aktualita nebo projekt smaže i svou fotku; fotka nahraná a nikdy nepřipojená k aktualitě ani projektu v tabulce zůstane (zatím se neuklízí).
+Převod do WebP dělá knihovna `webp-imageio` s nativní libwebp pro Linux x64 i arm64; backend proto startuje s `--enable-native-access=ALL-UNNAMED` (v Dockerfile), jinak Java 25 jen vypíše varování do logu. Knihovna by si libwebp rozbalila do `/tmp`, které je na serveru `tmpfs` bez práva spouštět (`noexec`), takže by se nenačetla a každé nahrání fotky by skončilo chybou 500 (`UnsatisfiedLinkError` v `backend.log`, tak to bylo do 30. 10. 2026). Obraz backendu ji proto rozbalí už při sestavení do `/app/native` (jen pro čtení) a Java ji načte odtud; v `docker logs nfnn-backend` po prvním nahrání zůstane jeden řádek `…/app/native/webp-imageio-…lck (Read-only file system)`, to je knihovna, která se marně pokusila rozbalit a pak vzala připravenou kopii. Smazaná aktualita nebo projekt smaže i svou fotku; fotka nahraná a nikdy nepřipojená k aktualitě ani projektu v tabulce zůstane (zatím se neuklízí).
 
 ## Obnova hesla
 
