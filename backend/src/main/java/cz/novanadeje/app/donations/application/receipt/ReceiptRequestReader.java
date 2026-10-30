@@ -10,6 +10,7 @@ import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.receipt.FirstReceiptYear;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptBeforeFirstYear;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNotAvailable;
+import cz.novanadeje.app.donations.domain.receipt.VerificationWithoutReceipt;
 import cz.novanadeje.app.donations.domain.receipt.YearlyReceiptNotAvailable;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
@@ -37,6 +38,9 @@ public class ReceiptRequestReader {
         Donation donation = donations.findByIdForDonor(donationId, donor).orElseThrow(() -> new DonationNotFound(donationId));
         if (!donation.isReceived()) {
             throw new ReceiptNotAvailable(donationId);
+        }
+        if (donation.isAccountVerification()) {
+            throw new VerificationWithoutReceipt(donationId);
         }
         if (!firstYear.admits(donation.receivedOn())) {
             throw new ReceiptBeforeFirstYear(firstYear);

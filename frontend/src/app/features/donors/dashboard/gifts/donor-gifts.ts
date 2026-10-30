@@ -41,7 +41,11 @@ export class DonorGifts {
   private readonly receiptAlert = viewChild<ElementRef<HTMLElement>>('receiptAlert');
 
   protected readonly receivedWithoutReceipt = computed(() =>
-    this.donations.items().some((item) => item.status === 'RECEIVED' && !item.receiptAvailable),
+    this.donations
+      .items()
+      .some(
+        (item) => item.status === 'RECEIVED' && !item.accountVerification && !item.receiptAvailable,
+      ),
   );
 
   protected readonly years = computed<readonly GiftYear[]>(() => {

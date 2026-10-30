@@ -407,7 +407,13 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     page,
   }) => {
     await signIn(page);
-    await expect(page.locator('.symbol-value')).toBeVisible();
+    await expect(page.locator('.send-gift app-qr-code')).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.locator('.send-gift').getByRole('button', { name: 'Jiná částka' }).click();
+    await page.locator('#send-gift-custom-amount').fill('2 500');
+    await expect(page.locator('.send-gift .bank-value').nth(1)).toHaveText('2 500 Kč');
 
     expect(await violations(page)).toEqual([]);
 

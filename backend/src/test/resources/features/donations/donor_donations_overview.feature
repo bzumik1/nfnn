@@ -68,6 +68,10 @@ Feature: A donor sees their own donations and their summary
       | 2026-01-14 | 20000       | CZK      | General contribution | RECEIVED | BANK_TRANSFER |
       | 2026-01-12 | 100         | CZK      | Account verification | RECEIVED | BANK_TRANSFER |
       | 2026-01-10 | 50000       | CZK      | General contribution | RECEIVED | BANK_TRANSFER |
+    And the donation received on 2026-01-12 is listed as an account verification
+    And the donation received on 2026-01-12 is listed without a receipt
+    And the donation received on 2026-01-14 is listed as a gift
+    And the donation received on 2026-01-14 is listed with a receipt
 
   Scenario: The summary adds up the donations per year, newest year first
     Given today is 2026-01-20

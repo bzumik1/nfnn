@@ -52,7 +52,7 @@ test.describe('Given a visitor who registered and received the confirmation e-ma
 
     await expect(page).toHaveURL(/\/darce\/prehled$/);
     await expect(page.locator('.topbar-donor')).toContainText('Jana Nováková');
-    await expect(page.locator('.symbol-value')).toHaveText('1234567890');
+    await expect(page.locator('.send-gift .bank-value').nth(2)).toHaveText('1234567890');
   });
 
   test('when they registered from the donate section and open the link, then they land back there signed in and the bank details carry their variable symbol', async ({

@@ -11,8 +11,7 @@ import { DonationsPending } from '../donations-pending/donations-pending';
 import { donationStatusLabel, DonationsTable } from '../donations-table/donations-table';
 import { DonorDonations } from '../donor-donations';
 import { PageTitle } from '../page-title/page-title';
-import { StandingOrder } from '../standing-order/standing-order';
-import { SymbolCard } from '../symbol-card/symbol-card';
+import { SendGift } from '../send-gift/send-gift';
 
 const RECENT_DONATIONS_SHOWN = 5;
 
@@ -24,8 +23,7 @@ const RECENT_DONATIONS_SHOWN = 5;
     PageTitle,
     BankCheck,
     MissingGift,
-    StandingOrder,
-    SymbolCard,
+    SendGift,
     DonationsPending,
     DonationsTable,
   ],
@@ -41,7 +39,13 @@ export class DonorOverview {
     this.donations.items().slice(0, RECENT_DONATIONS_SHOWN),
   );
 
-  protected readonly lastGift = computed(() => this.donations.items().at(0) ?? null);
+  private readonly gifts = computed(() =>
+    this.donations.items().filter((item) => !item.accountVerification),
+  );
+
+  protected readonly hasGift = computed(() => this.gifts().length > 0);
+
+  protected readonly lastGift = computed(() => this.gifts().at(0) ?? null);
 
   protected readonly currentYear = computed(() => {
     const summary = this.donations.summary();

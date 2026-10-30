@@ -3,6 +3,7 @@ package cz.novanadeje.app.donations.domain.receipt;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentId;
 import cz.novanadeje.app.donations.domain.donation.Donation;
 import cz.novanadeje.app.donations.domain.donation.DonationId;
+import cz.novanadeje.app.donations.domain.donation.DonationPurpose;
 import cz.novanadeje.app.donations.domain.donation.DonationSource;
 import cz.novanadeje.app.donations.domain.donation.DonationStatus;
 import cz.novanadeje.app.donations.domain.donation.PairingMethod;
@@ -63,6 +64,12 @@ public final class Receipts {
 
     public static Donation refundedToJana(LocalDate receivedOn, long amountMinor) {
         return donation(JANA, receivedOn, amountMinor, DonationStatus.REFUNDED);
+    }
+
+    public static Donation verificationFromJana(LocalDate receivedOn) {
+        return Donation.reconstitute(DonationId.newId(NOW), JANA, Optional.of(BankPaymentId.newId(NOW)), receivedOn, Money.czk(100),
+                DonationSource.BANK_TRANSFER, DonationStatus.RECEIVED, Optional.of(PairingMethod.VARIABLE_SYMBOL), Optional.empty(),
+                Optional.empty(), DonationPurpose.ACCOUNT_VERIFICATION, NOW);
     }
 
     public static Donation receivedFromAcme(LocalDate receivedOn, long amountMinor) {

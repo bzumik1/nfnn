@@ -73,6 +73,18 @@ class DonationTest {
     }
 
     @Test
+    @DisplayName("Given a donation verifying an account and an ordinary gift, when asked whether each is a verification, then only the first is")
+    void should_tell_verification_when_asked_given_verification_and_gift() {
+        BankPayment verification = payment(1001, RECEIVED_ON, Money.czk(100), SenderAccount.parse("2900233333", "2010"), "4821937560",
+                "OVERENI UCTU NADACNI FOND NOVA NADEJE");
+        BankPayment gift = payment(1002, RECEIVED_ON, Money.czk(100), SenderAccount.parse("2900233333", "2010"), "4821937560");
+
+        assertThat(Donation.fromBankPayment(DONATION_ID, DONOR, verification, PairingMethod.VARIABLE_SYMBOL, NOW).isAccountVerification())
+                .isTrue();
+        assertThat(Donation.fromBankPayment(DONATION_ID, DONOR, gift, PairingMethod.VARIABLE_SYMBOL, NOW).isAccountVerification()).isFalse();
+    }
+
+    @Test
     @DisplayName("Given a donation without a purpose, when reconstituted, then it is refused")
     void should_refuse_when_reconstituted_given_no_purpose() {
         assertThatIllegalArgumentException().isThrownBy(() -> Donation.reconstitute(DONATION_ID, DONOR, Optional.empty(), RECEIVED_ON,

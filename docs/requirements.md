@@ -53,6 +53,8 @@ Web představí fond a jeho pomoc dětem, usnadní darování a dárcům dá ú�
 
 - Celkem darováno, počet darů, poslední dar, tabulka plateb a souhrn po letech (rok, počet darů, částka).
 - Moje dary jsou seskupené po letech od nejnovějšího, každý rok s počtem darů, částkou a tlačítkem na roční potvrzení, jakmile je k dispozici (Jakub 24. 10. 2026).
+- Můj přehled má kartu „Poslat dar“ se stejnou volbou částky, číslem účtu, variabilním symbolem, IBAN a QR jako sekce Přispět a s návodem na trvalý příkaz; dárce kvůli číslu účtu nechodí na hlavní stránku (Jakub 29. 10. 2026).
+- Částky v přehledu, v Moje dary, v potvrzeních a v platbách a kartě dárce ve správě jsou tučné v barvě textu; modrá zůstává odkazům a tlačítkům (Jakub 29. 10. 2026).
 - Bankovní účty, ze kterých se dárci přiřazují platby bez symbolu (§5), s počtem a součtem darů z každého.
 
 ### Potvrzení o daru
@@ -73,7 +75,7 @@ Web představí fond a jeho pomoc dětem, usnadní darování a dárcům dá ú�
 - Sběrné účty (platební brány, účty fondu, Česká pošta) správce vyloučí z párování v nastavení.
 - Platba s neznámým symbolem zůstane nespárovaná, i když přišla ze známého účtu: překlep nesmí skončit jako cizí dar.
 - **Starší variabilní symbol**: dlouholetí dárci posílají se starým symbolem, který nikdo z registrovaných nemá. Když dárce prokáže účet platbou 1 Kč se zprávou „Ověření účtu“ a z toho účtu chodil právě jeden takový symbol, přehled se ho zeptá, jestli jsou to jeho dary (symbol, počet plateb a měsíce, nikdy částky). Po „Ano“ se mu tyto platby přiřadí i do budoucna. Otázka nepřijde u rodinných, sdílených nebo vyloučených účtů ani když jméno z banky neodpovídá typu dárce (firma a člověk). Odpověď dárce sám nezmění, omyl opraví správce.
-- Platba 1 Kč se zprávou „Ověření účtu“ je „Ověření účtu“, ostatní „Obecný příspěvek“; i ověřovací platba je dar a počítá se do potvrzení.
+- Platba 1 Kč se zprávou „Ověření účtu“ je „Ověření účtu“, ostatní „Obecný příspěvek“. Přehled a Moje dary ji ukazují jako „Ověření účtu“ s částkou, méně výrazně než dary; nikdy není „Poslední dar“ (dárce, který poslal jen ověření, ještě dar nemá) a nemá vlastní potvrzení o jednotlivém daru. Do ročních součtů a ročního potvrzení se dál počítá (Jakub 29. 10. 2026; dříve, 18. 10., byla obyčejným darem s vlastním potvrzením).
 - Co nejde přiřadit, přiřadí ručně správce. Ruční přiřazení nenaučí účet odesílatele a zrušené přiřazení se při dalším stažení samo nevrátí. Dar, ke kterému je vydané potvrzení o jednotlivém daru, odpárovat nejde; změna roku, za který už dárce stáhl roční potvrzení, se správci ohlásí.
 
 ## 6. Správa

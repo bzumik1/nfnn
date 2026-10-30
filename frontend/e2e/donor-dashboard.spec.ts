@@ -192,11 +192,15 @@ test.describe('Given a signed-in donor', () => {
     await expect(page.locator('.stat-value')).toHaveCount(0);
     await expect(page.locator('.last-gift')).toHaveCount(0);
     await expect(page.getByRole('heading', { name: 'Jak poslat první dar' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Zobrazit číslo účtu a QR kód' })).toHaveAttribute(
-      'href',
-      '/#prispet',
-    );
-    await expect(page.locator('.symbol-value')).toHaveText('1234567890');
+    await expect(page.getByRole('link', { name: 'Zobrazit číslo účtu a QR kód' })).toHaveCount(0);
+    const sendGift = page.getByRole('region', { name: 'Poslat dar' });
+    await expect(sendGift.locator('.bank-value')).toHaveText([
+      '5544332217/2010',
+      '500 Kč',
+      '1234567890',
+      'CZ26 2010 0000 0055 4433 2217',
+    ]);
+    await expect(sendGift.getByRole('img', { name: /QR platba/ })).toBeVisible();
 
     await openDonorSection(page, 'Moje dary');
 
