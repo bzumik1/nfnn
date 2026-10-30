@@ -78,16 +78,40 @@ public class DonationReceiptIssuer {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public DonationReceipt issueForDonationByAdministrator(UUID adminId, DonorReference donor, DonationId donation, LocalDate today) {
-        throw new UnsupportedOperationException("not yet");
+        receipts.lockDonor(donor);
+        requests.requireLiveRecord(donor);
+        return issueByAdministrator(adminId, requests.forDonation(donor, donation, today));
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public DonationReceipt issueForYearByAdministrator(UUID adminId, DonorReference donor, Year year, LocalDate today) {
-        throw new UnsupportedOperationException("not yet");
+        receipts.lockDonor(donor);
+        requests.requireLiveRecord(donor);
+        return issueByAdministrator(adminId, requests.forYear(donor, year, today));
+    }
+
+    private DonationReceipt issueByAdministrator(UUID adminId, ReceiptRequest request) {
+        Optional<DonationReceipt> active = activeReceipt(request);
+        DonationReceipt receipt = issue(request, active);
+        if (active.filter(previous -> previous.id().equals(receipt.id())).isEmpty()) {
+            events.publishEvent(new AdminActionPerformed(adminId, ISSUE_ACTION, Optional.of(receipt.id().value()), auditDetails(receipt, active),
+                    receipt.issuedAt()));
+        }
+        return receipt;
+    }
+
+    private static String auditDetails(DonationReceipt receipt, Optional<DonationReceipt> replaced) {
+        String subject = receipt.year().map(year -> "za rok " + year)
+                .orElseGet(() -> "za dar " + receipt.donation().map(donation -> donation.value().toString()).orElseThrow());
+        return "Potvrzení " + receipt.number() + " " + subject + " vystaveno dárci " + receipt.donor()
+                + replaced.map(old -> "; nahrazuje potvrzení " + old.number()).orElse("");
     }
 
     private DonationReceipt issue(ReceiptRequest request) {
-        Optional<DonationReceipt> active = activeReceipt(request);
+        return issue(request, activeReceipt(request));
+    }
+
+    private DonationReceipt issue(ReceiptRequest request, Optional<DonationReceipt> active) {
         ReceiptFingerprint fingerprint = request.fingerprint();
         if (active.isPresent() && active.get().certifies(fingerprint)) {
             LOG.debug("Returning issued receipt {} again for donor {}", active.get().number(), request.donor());

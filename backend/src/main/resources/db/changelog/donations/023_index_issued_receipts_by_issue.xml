@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="023-index-issued-receipts-by-issue" author="nfnn">
+        <createIndex tableName="issued_receipt" indexName="ix_issued_receipt_issued_at">
+            <column name="issued_at"/>
+            <column name="number"/>
+        </createIndex>
+        <createIndex tableName="issued_receipt" indexName="ix_issued_receipt_issued_on">
+            <column name="issued_on"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

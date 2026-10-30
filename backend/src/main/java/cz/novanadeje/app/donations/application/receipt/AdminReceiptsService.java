@@ -9,7 +9,9 @@ import cz.novanadeje.app.donations.domain.receipt.DonationReceiptId;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
 import cz.novanadeje.app.donations.domain.receipt.FirstReceiptYear;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptCalendar;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptImageNotFound;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptImageRepository;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptNotFound;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptPage;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptQuery;
 import cz.novanadeje.app.donations.domain.receipt.StoredReceiptImage;
@@ -17,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
+import java.time.LocalDate;
 import java.time.Year;
 import java.util.UUID;
 
@@ -39,26 +42,31 @@ public class AdminReceiptsService {
     }
 
     public DonationReceipt issueForDonation(UUID adminId, DonorReference donor, DonationId donation) {
-        throw new UnsupportedOperationException("not yet");
+        return issuer.issueForDonationByAdministrator(adminId, donor, donation, FoundationCalendar.today(clock));
     }
 
     public DonationReceipt issueForYear(UUID adminId, DonorReference donor, Year year) {
-        throw new UnsupportedOperationException("not yet");
+        LocalDate today = FoundationCalendar.today(clock);
+        DonationReceiptService.requireCompletedYear(firstYear, year, today);
+        return issuer.issueForYearByAdministrator(adminId, donor, year, today);
     }
 
     @Transactional(readOnly = true)
     public ReceiptPage receipts(ReceiptQuery query) {
-        throw new UnsupportedOperationException("not yet");
+        return receipts.findNewestFirst(query);
     }
 
     @Transactional(readOnly = true)
     public DonationReceipt receipt(DonationReceiptId id) {
-        throw new UnsupportedOperationException("not yet");
+        return receipts.findById(id).orElseThrow(() -> new ReceiptNotFound(id));
     }
 
     @Transactional(readOnly = true)
     public StoredReceiptImage signatureImage(ContentDigest digest) {
-        throw new UnsupportedOperationException("not yet");
+        if (!receipts.anyShowsSignatureImage(digest)) {
+            throw new ReceiptImageNotFound(digest);
+        }
+        return images.find(digest).orElseThrow(() -> new ReceiptImageNotFound(digest));
     }
 
     public ReceiptYears receiptYears() {

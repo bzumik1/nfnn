@@ -5,6 +5,8 @@ import cz.novanadeje.app.donations.domain.donation.DonationId;
 import cz.novanadeje.app.donations.domain.donation.DonationNotFound;
 import cz.novanadeje.app.donations.domain.donation.DonationRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
+import cz.novanadeje.app.donations.domain.donor.DonorRecordErased;
+import cz.novanadeje.app.donations.domain.donor.DonorRecordNotFound;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.receipt.FirstReceiptYear;
@@ -61,6 +63,9 @@ public class ReceiptRequestReader {
     }
 
     public void requireLiveRecord(DonorReference donor) {
+        if (donorRecords.findById(donor).orElseThrow(() -> new DonorRecordNotFound(donor)).isErased()) {
+            throw new DonorRecordErased(donor);
+        }
     }
 
     private DonorRecord record(DonorReference donor) {
