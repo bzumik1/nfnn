@@ -43,6 +43,7 @@ async function request({ method, path, headers = {}, body }) {
     cacheControl: response.headers.get('cache-control') ?? '',
     edge: response.headers.get(EDGE_HEADER) ?? '',
     setCookie: response.headers.get('set-cookie') ?? '',
+    etag: response.headers.get('etag') ?? '',
     text,
   };
 }
@@ -106,8 +107,25 @@ for (const [path, cacheControl] of OWN_CACHE_CONTROL) {
     path,
     headers: { Authorization: `Bearer ${ACCESS_TOKEN}` },
   });
-  if (signedIn.status !== 200 || signedIn.text !== answer.text) {
+  if (
+    signedIn.status !== 200 ||
+    signedIn.text !== answer.text ||
+    signedIn.cacheControl !== answer.cacheControl ||
+    signedIn.setCookie !== ''
+  ) {
     fail(`${label} answers a signed-in donor otherwise than an anonymous visitor`);
+  }
+  if (answer.etag !== '') {
+    const revalidated = await request({
+      method: 'GET',
+      path,
+      headers: { 'If-None-Match': answer.etag },
+    });
+    if (revalidated.status !== 304 || revalidated.cacheControl !== cacheControl) {
+      fail(
+        `${label} answered ${revalidated.status} with Cache-Control "${revalidated.cacheControl}" to If-None-Match ${answer.etag}, expected 304 with "${cacheControl}"`,
+      );
+    }
   }
 }
 

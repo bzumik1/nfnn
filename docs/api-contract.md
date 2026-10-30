@@ -16,7 +16,7 @@ When adding a new endpoint, update this file in the same change.
 - Lists answer an object with `items`: paged lists add `hasMore` (`{ "items": [...], "hasMore": true }`, offset or `before` paging), the public content pages also `page`, `size` and `total`; short lists are `{ "items": [...] }`. Each endpoint below gives its shape.
 - CORS: not configured. Production is same-origin via the nginx in `frontend/Dockerfile`; dev uses Angular's `proxy.conf.json`. Re-evaluate if a non-browser client appears.
 - Text bodies (news and projects) are stored as typed: plain text or a small Markdown subset (below), rendered by the site's own parser into Angular elements and bindings; HTML is never rendered, a tag shows as text.
-- Caching: media `Cache-Control: public, max-age=31536000, immutable`; receipt and backup downloads `private, no-store`; the OAuth answers `no-store`; the payment details `private, max-age=300` with a strong `ETag` (a request with `If-None-Match` of the current one gets 304, see "`GET /api/donations/payment-details`"); every other API answer carries Spring Security's default `no-cache, no-store, max-age=0, must-revalidate`. No other ETags. The frontend nginx adds `Cloudflare-CDN-Cache-Control: no-store` to every `/api`, `/mcp` and `/.well-known` answer, errors included, so Cloudflare never stores one (`docs/security-overview.md`, Browser and transport). The static files' caching is the frontend nginx's (`frontend/nginx.conf`).
+- Caching: media `Cache-Control: public, max-age=31536000, immutable`; receipt and backup downloads `private, no-store`; the OAuth answers `no-store`; the payment details `private, max-age=300` with an `ETag` (strong from the backend, weak `W/"…"` once the frontend nginx compresses it; a request with `If-None-Match` of the current one, either form, gets 304, see "`GET /api/donations/payment-details`"); every other API answer carries Spring Security's default `no-cache, no-store, max-age=0, must-revalidate`. No other ETags. The frontend nginx adds `Cloudflare-CDN-Cache-Control: no-store` to every `/api`, `/mcp` and `/.well-known` answer, errors included, so Cloudflare never stores one (`docs/security-overview.md`, Browser and transport). The static files' caching is the frontend nginx's (`frontend/nginx.conf`).
 
 ## Authentication
 
@@ -660,29 +660,24 @@ GET /api/donations/payment-details
 If-None-Match: "…"   (optional, the ETag of an earlier answer)
 ```
 
-Public and stateless, no parameters: it answers everyone alike, a signed-in donor as a visitor, and sets no cookie. The browser composes the SPAYD text of a payment QR from it (`SPD*1.0*ACC:<iban>*AM:<amount>*CC:<currency>[*X-VS:<symbol>]*RN:<recipientName>*MSG:<message>`, leaving `RN` out when it is empty), so it needs no text rules of its own; until slice 1.4 switches the browser over, the frontend still asks `GET /api/donations/payment-qr`, whose answers are unchanged.
+Public and stateless, no parameters: an anonymous request and a request with any valid donor token get the same answer, and none sets a cookie. A request whose bearer token is malformed gets 401 `auth/unauthenticated`, and one whose token has expired 401 `auth/expired-token`, as on every `/api` path: Spring Security checks a bearer token before `permitAll` applies, so a page that has no valid token sends none (`payment_details.feature`). The browser composes the SPAYD text of a payment QR from it (`SPD*1.0*ACC:<iban>*AM:<amount>*CC:<currency>[*X-VS:<symbol>]*RN:<recipientName>*MSG:<message>`, leaving `RN` out when it is empty), so it needs no text rules of its own; until slice 1.4 switches the browser over, the frontend still asks `GET /api/donations/payment-qr`, whose answers are unchanged.
 
-Response 200:
-```json
-{
-  "account": {
-    "number": "5544332217/2010",
-    "iban": "CZ2620100000005544332217",
-    "recipientName": "NADACNI FOND NOVA NADEJE"
-  },
-  "currency": "CZK",
-  "messages": {
-    "donation": "DAR NADACNI FOND NOVA NADEJE",
-    "accountVerification": "OVERENI UCTU NADACNI FOND NOVA NADEJE"
-  },
-  "accountVerificationAmountMinor": 100
-}
-```
+Response 200 (`application/json`), an object of exactly these fields; the expected answers for the foundation's account and for other recipient names are the cases in `shared-cases/payment/details.json` (schema `shared-cases/schemas/payment/details.schema.json`), which `PaymentDetailsSharedCasesTest` runs (the foundation's case through this endpoint, the others through the same response mapping):
+
+| Field | Type |
+|---|---|
+| `account.number` | string, the Czech account number `[prefix-]number/bank` |
+| `account.iban` | string, the IBAN of that account, without spaces |
+| `account.recipientName` | string, 0 to 35 characters of SPAYD text |
+| `currency` | string, `CZK` |
+| `messages.donation` | string, 1 to 60 characters of SPAYD text |
+| `messages.accountVerification` | string, 1 to 60 characters of SPAYD text |
+| `accountVerificationAmountMinor` | integer, hellers, positive |
 
 - `account.number` and `account.iban`: the foundation's account as configured (see below); the backend refuses at startup an IBAN that is not the IBAN of the account number, so the account the page shows is always the one the QR pays.
-- `account.recipientName`, `messages.donation`, `messages.accountVerification`: SPAYD text (`donations/domain/payment/SpaydText`), the `RN` and the two `MSG` values the QR sends: diacritics stripped, upper case, every character outside `0-9 A-Z $ + - . / :` written as a space (so `%` and `*` become spaces, which keeps the QR in alphanumeric mode and leaves no `%` that a URL-decoding reader takes for an escape), spaces collapsed and trimmed, then cut to 35 characters for the recipient and 60 for a message and trimmed again. The recipient may be empty (a name of symbols only), a message never is. They equal the `RN` and `MSG` of today's `payment-qr` answers for the foundation's name (`payment_details.feature`); `payment-qr` itself keeps its rules, `%` included, until 1.4 removes it. The cases are in `shared-cases/payment/details.json`, which only the backend runs.
+- `account.recipientName`, `messages.donation`, `messages.accountVerification`: SPAYD text (`donations/domain/payment/SpaydText`), the `RN` and the two `MSG` values the QR sends: diacritics stripped, upper case, every character outside `0-9 A-Z $ + - . / :` written as a space (so `%` and `*` become spaces, which keeps the QR in alphanumeric mode and leaves no `%` that a URL-decoding reader takes for an escape), spaces collapsed and trimmed, then cut to 35 characters for the recipient and 60 for a message and trimmed again. The recipient may be empty (a name of symbols only), a message never is (`PaymentDetails` refuses an empty one at startup). They equal the `RN` and `MSG` of today's `payment-qr` answers for the foundation's name (`payment_details.feature`); `payment-qr` itself keeps its rules, `%` included, until 1.4 removes it. The cases are in `shared-cases/payment/details.json`, which only the backend runs.
 - `messages.accountVerification` with `accountVerificationAmountMinor` (100 hellers, 1 Kč) is the payment that adds a donor's bank account (see "Donor's bank accounts"): the import recognises a payment of exactly that amount whose message contains `OVERENI UCTU` (`DonationPurpose`), so the browser takes both from here instead of knowing them.
-- Caching: `Cache-Control: private, max-age=300` (no `Pragma`, no `Expires`), so a browser keeps the answer five minutes and no shared cache keeps the bank details; the frontend nginx adds `Cloudflare-CDN-Cache-Control: no-store` as on every `/api` answer. `ETag` is the strong SHA-256 hex of the body, quoted; a request whose `If-None-Match` holds it answers 304 without a body, with the same `ETag` and `Cache-Control`; any other `If-None-Match` gets the 200.
+- Caching: `Cache-Control: private, max-age=300` (no `Pragma`, no `Expires`), so a browser keeps the answer five minutes and no shared cache keeps the bank details; the frontend nginx adds `Cloudflare-CDN-Cache-Control: no-store` as on every `/api` answer. The backend sends a strong `ETag`, the SHA-256 hex of the body, quoted. The frontend nginx compresses the answer (gzip for `application/json` from 256 bytes) and so turns it into the weak `W/"…"`, which is what a browser holds (checked against `nginx:1.30-alpine` with `frontend/nginx.conf`: nginx passes the browser's `If-None-Match: W/"…"` on unchanged and the 304 back). A request whose `If-None-Match` holds the ETag, strong or weak, answers 304 without a body, with the same `ETag` and `Cache-Control`, because Spring MVC compares `If-None-Match` weakly as RFC 9110 asks (`payment_details.feature`; the `stack` job's probe makes the round trip through the frontend nginx); any other `If-None-Match` gets the 200.
 - 429 `donations/rate-limited` after 120 requests per 15 minutes from one client address (`PaymentDetailsRateLimiter`, counted before any work, a 304 included); that answer carries Spring Security's `no-store`.
 
 #### Fio import and pairing

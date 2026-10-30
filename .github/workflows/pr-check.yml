@@ -859,7 +859,7 @@ jobs:
         run: |
           echo "A donor of the stack signs in, so the probe can show that the cacheable answers are the same for a signed-in donor"
           probe_donor='{"type":"PERSON","name":"Sonda Mezipaměti","address":{"street":"Zkušební 1","city":"Tišnov","postalCode":"666 01"},"email":"sonda-mezipameti@example.cz","password":"a probe of the stack only","preferredLocale":"cs"}'
-          curl -fsS --max-time 30 -o /dev/null -H 'X-Forwarded-For: 203.0.113.41' -H 'Content-Type: application/json' --data "$probe_donor" http://localhost:8089/api/donors/auth/register
+          curl -fsS --max-time 30 -o /dev/null -H 'X-Forwarded-For: 203.0.113.41' -H 'Content-Type: application/json' --data "$probe_donor" http://localhost:8089/api/donors/auth/register || { echo "::error::the probe donor's registration was refused"; exit 1; }
           docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "update donor set email_verified_at = now() where email = 'sonda-mezipameti@example.cz'" | grep -qx 'UPDATE 1' || { echo "::error::the probe donor was not registered"; exit 1; }
           token=$(curl -fsS --max-time 30 -H 'X-Forwarded-For: 203.0.113.41' -H 'Content-Type: application/json' --data '{"email":"sonda-mezipameti@example.cz","password":"a probe of the stack only"}' http://localhost:8089/api/donors/auth/login | jq -r '.accessToken')
           [ -n "$token" ] && [ "$token" != null ] || { echo "::error::the probe donor could not sign in"; exit 1; }
