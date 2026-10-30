@@ -102,5 +102,61 @@
     "field": "$.detail",
     "reason": "1.18 (security.md, Output): donors/donor-not-found gets its own detail instead of the exception's message with the requested id",
     "contract": "docs/api-contract.md, Conventions (Problem texts)"
+  },
+  {
+    "path": "POST /api/donors/oauth/token",
+    "scenario": "donors/connected_apps: An administrator approves the connection and the application gets tokens for the connector only*",
+    "kind": "body",
+    "field": "$.error_description",
+    "reason": "1.18 (security.md, Output): error_description is a fixed English sentence per error code (RFC 6749 allows only ASCII there) instead of the exception's text, which named the reason and, for invalid_target, repeated the client's resource",
+    "contract": "docs/api-contract.md, Connected applications (POST /api/donors/oauth/token)"
+  },
+  {
+    "path": "POST /api/donors/oauth/token",
+    "scenario": "donors/connected_apps: The code works once, only with its verifier, its client and its redirect address, and only for five minutes*",
+    "kind": "body",
+    "field": "$.error_description",
+    "reason": "1.18 (security.md, Output): error_description is a fixed English sentence per error code (RFC 6749 allows only ASCII there) instead of the exception's text, which named the reason and, for invalid_target, repeated the client's resource",
+    "contract": "docs/api-contract.md, Connected applications (POST /api/donors/oauth/token)"
+  },
+  {
+    "path": "POST /api/donors/oauth/token",
+    "scenario": "donors/connected_apps: The application refreshes its tokens and a replayed refresh token ends every session of the administrator*",
+    "kind": "body",
+    "field": "$.error_description",
+    "reason": "1.18 (security.md, Output): error_description is a fixed English sentence per error code (RFC 6749 allows only ASCII there) instead of the exception's text, which named the reason and, for invalid_target, repeated the client's resource",
+    "contract": "docs/api-contract.md, Connected applications (POST /api/donors/oauth/token)"
+  },
+  {
+    "path": "POST /api/donors/oauth/token",
+    "scenario": "donors/connected_apps: A refresh token is tied to its client and the connector's refresh token is no browser session*",
+    "kind": "body",
+    "field": "$.error_description",
+    "reason": "1.18 (security.md, Output): error_description is a fixed English sentence per error code (RFC 6749 allows only ASCII there) instead of the exception's text, which named the reason and, for invalid_target, repeated the client's resource",
+    "contract": "docs/api-contract.md, Connected applications (POST /api/donors/oauth/token)"
+  },
+  {
+    "path": "POST /api/donors/oauth/token",
+    "scenario": "donors/connected_apps: The administrator disconnects the application, which can no longer refresh*",
+    "kind": "body",
+    "field": "$.error_description",
+    "reason": "1.18 (security.md, Output): error_description is a fixed English sentence per error code (RFC 6749 allows only ASCII there) instead of the exception's text, which named the reason and, for invalid_target, repeated the client's resource",
+    "contract": "docs/api-contract.md, Connected applications (POST /api/donors/oauth/token)"
+  },
+  {
+    "path": "POST /api/donors/oauth/token",
+    "scenario": "donors/connected_apps: Only a connector token is exchanged, and only for the API*",
+    "kind": "body",
+    "field": "$.error_description",
+    "reason": "1.18 (security.md, Output): error_description is a fixed English sentence per error code (RFC 6749 allows only ASCII there) instead of the exception's text, which named the reason and, for invalid_target, repeated the client's resource",
+    "contract": "docs/api-contract.md, Connected applications (POST /api/donors/oauth/token)"
+  },
+  {
+    "path": "POST /api/donors/oauth/token",
+    "scenario": "donors/connected_apps: An administrator who loses the role loses the connection too*",
+    "kind": "body",
+    "field": "$.error_description",
+    "reason": "1.18 (security.md, Output): error_description is a fixed English sentence per error code (RFC 6749 allows only ASCII there) instead of the exception's text, which named the reason and, for invalid_target, repeated the client's resource",
+    "contract": "docs/api-contract.md, Connected applications (POST /api/donors/oauth/token)"
   }
 ]
