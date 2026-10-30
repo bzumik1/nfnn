@@ -35,6 +35,7 @@ export class FakeBackend {
   readonly requests: RecordedRequest[] = [];
   metadataAvailable = true;
   receiptSigningKeysAvailable = true;
+  receiptSigningKeysAnswer: Record<string, unknown> | undefined;
   previousSignInAt: string | null = '2026-10-28T20:14:00Z';
   private server: Server | undefined;
   url = '';
@@ -116,6 +117,13 @@ export class FakeBackend {
     ) {
       return [404, problem(404, 'not-found', 'Nenalezeno')];
     }
+    if (
+      this.receiptSigningKeysAnswer &&
+      request.method === 'GET' &&
+      url.pathname === '/api/admin/donations/receipt-signing-keys'
+    ) {
+      return [200, this.receiptSigningKeysAnswer];
+    }
     return adminRoute(request, url, body);
   }
 }
@@ -158,6 +166,7 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
               current: true,
             },
           ],
+          auditMismatches: [],
         },
       ];
     case 'GET /api/admin/operations/backups':
