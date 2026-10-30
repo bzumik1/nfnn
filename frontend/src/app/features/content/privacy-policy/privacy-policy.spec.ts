@@ -259,6 +259,12 @@ describe('Given the privacy policy page', () => {
     expect(erasure).not.toContain('zařízení');
   });
 
+  it('when it renders, then it says the backups on the server are deleted after about a month, so deleted data leave them by then', () => {
+    expect(texts('#uchovavani p')).toContain(
+      'Databázi webu každý den zálohujeme na náš server a zálohy na serveru mažeme přibližně po jednom měsíci. Smazané údaje proto ze záloh zmizí nejpozději po této době.',
+    );
+  });
+
   it('when it renders, then it names the e-mail and network providers and the transfer to the USA', () => {
     const recipients = sectionText('Komu údaje předáváme');
 

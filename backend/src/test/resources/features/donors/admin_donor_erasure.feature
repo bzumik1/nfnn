@@ -18,7 +18,7 @@ Feature: An administrator erases a donor's personal data
     And both parts of the last e-mail contain "po dobu, kterou stanoví účetní a daňové předpisy"
     And both parts of the last e-mail contain "včetně čísla účtu a jména plátce"
     And both parts of the last e-mail contain "Na serveru zůstává i záznam o tom, co správci webu udělali, včetně tohoto výmazu."
-    And both parts of the last e-mail contain "zálohy uchováváme přibližně jeden měsíc; vymazané údaje proto ze záloh zmizí nejpozději po této době."
+    And both parts of the last e-mail contain "Databázi webu každý den zálohujeme na náš server a zálohy na serveru mažeme přibližně po měsíci; vymazané údaje proto ze záloh zmizí nejpozději po této době."
     And neither part of the last e-mail contains "nejsou už ale spojené s vaším jménem"
     And neither part of the last e-mail contains "zařízení"
     When "Jana" opens the donor "Petr"
