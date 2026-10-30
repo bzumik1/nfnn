@@ -66,6 +66,7 @@ describe('Given an administrator connected with the reading permission only', ()
       'nfnn_people',
       'nfnn_photo_upload_link',
       'nfnn_project',
+      'nfnn_project_order',
       'nfnn_publish_news',
       'nfnn_publish_project',
       'nfnn_receipt_signature',
@@ -77,6 +78,7 @@ describe('Given an administrator connected with the reading permission only', ()
       'nfnn_send_report',
       'nfnn_send_test_email',
       'nfnn_set_log_level',
+      'nfnn_set_project_order',
       'nfnn_settings',
       'nfnn_since_last_sign_in',
       'nfnn_status',
@@ -98,6 +100,17 @@ describe('Given an administrator connected with the reading permission only', ()
     expect(
       tools.find((tool) => tool.name === 'nfnn_unpair_payment')?.annotations?.destructiveHint,
     ).toBe(true);
+  });
+
+  it('when the order of the projects is asked, then the chosen order comes with a description of every way of ordering', async () => {
+    const result = await client.callTool({ name: 'nfnn_project_order', arguments: {} });
+    expect(result.isError).toBeFalsy();
+    expect(textOf(result)).toContain('"order":"YEAR_THEN_CATEGORY"');
+    const { tools } = await client.listTools();
+    const description = tools.find((tool) => tool.name === 'nfnn_project_order')?.description;
+    expect(description).toContain('YEAR_THEN_CATEGORY');
+    expect(description).toContain('YEAR');
+    expect(description).toContain('CATEGORY_THEN_YEAR');
   });
 
   it('when the status is asked, then the version, the import state and the last backup come as compact JSON with Prague offsets', async () => {
@@ -587,6 +600,31 @@ describe('Given an administrator connected with the writing permission', () => {
     expect(put?.path).toBe('/api/admin/donations/report/settings');
     expect(JSON.parse(put?.body ?? '{}')).toEqual(settings);
     expect(put?.authorization).toBe('Bearer api-token-write');
+  });
+
+  it('when the order of the projects is set, then the chosen order reaches the administration under the writing token', async () => {
+    const result = await client.callTool({
+      name: 'nfnn_set_project_order',
+      arguments: { order: 'CATEGORY_THEN_YEAR' },
+    });
+    expect(result.isError).toBeFalsy();
+    expect(textOf(result)).toContain('"order":"CATEGORY_THEN_YEAR"');
+    const put = stack.backend.requests.find(
+      (request) => request.method === 'PUT' && request.path === '/api/admin/content/project-order',
+    );
+    expect(JSON.parse(put?.body ?? '{}')).toEqual({ order: 'CATEGORY_THEN_YEAR' });
+    expect(put?.authorization).toBe('Bearer api-token-write');
+  });
+
+  it('when the order of the projects is not one of the three, then the tool refuses it before the administration', async () => {
+    const result = await client.callTool({
+      name: 'nfnn_set_project_order',
+      arguments: { order: 'TITLE' },
+    });
+    expect(result.isError).toBe(true);
+    expect(
+      stack.backend.requests.some((request) => request.path === '/api/admin/content/project-order'),
+    ).toBe(false);
   });
 
   it('when the backup plan changes, then the plan reaches the administration and the answer names the plan still applied', async () => {

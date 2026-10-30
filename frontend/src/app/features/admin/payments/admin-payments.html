@@ -442,7 +442,10 @@
             Nalezení dárci
           </legend>
           @for (donor of donors; track donor.donorId) {
-            <label class="pair-result" [class.is-selected]="selectedDonor() === donor.donorId">
+            <label
+              class="ui-choice pair-result"
+              [class.is-selected]="selectedDonor() === donor.donorId"
+            >
               <input
                 type="radio"
                 name="pair-donor"
@@ -450,8 +453,8 @@
                 [checked]="selectedDonor() === donor.donorId"
                 (change)="select(donor.donorId)"
               />
-              <span class="pair-result-name">{{ donor.name }}</span>
-              <span class="pair-result-detail">
+              <span class="ui-choice__title">{{ donor.name }}</span>
+              <span class="ui-choice__detail">
                 <ng-container i18n="@@admin.payments.pair.result.symbol"
                   >VS {{ donor.variableSymbol }}</ng-container
                 >

@@ -136,6 +136,8 @@ public record AdminActionFacts(String summaryKey, Map<String, String> values) {
                 variant("removed", "Slovo zakladatelů odebráno")));
         shapes.put("CHANGE_WEB_SIGNATURE", List.of(full("Podpis " + ID + " na webu u osoby " + ID + " nastaven")));
         shapes.put("REMOVE_WEB_SIGNATURE", List.of(full("Podpis na webu u osoby " + ID + " odebrán")));
+        shapes.put("CHANGE_PROJECT_ORDER", List.of(
+                full("Řazení projektů na webu změněno z (?<fromOrder>[A-Z_]+) na (?<toOrder>[A-Z_]+)")));
         content(shapes, "NEWS", "Aktualita", "News article", List.of("napsána", "upravena", "zveřejněna od", "stažena z webu", "smazána"));
         content(shapes, "PROJECT", "Projekt", "Project", List.of("napsán", "upraven", "zveřejněn od", "stažen z webu", "smazán"));
         shapes.put("CHANGE_BACKUP_SCHEDULE", List.of(

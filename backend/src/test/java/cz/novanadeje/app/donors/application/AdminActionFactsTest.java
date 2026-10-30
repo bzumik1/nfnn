@@ -121,6 +121,8 @@ class AdminActionFactsTest {
                 arguments("CHANGE_FOUNDERS_NOTE", "Slovo zakladatelů odebráno", "CHANGE_FOUNDERS_NOTE.removed", Map.of()),
                 arguments("CHANGE_WEB_SIGNATURE", "Podpis " + OTHER + " na webu u osoby " + OTHER + " nastaven", "CHANGE_WEB_SIGNATURE", Map.of()),
                 arguments("REMOVE_WEB_SIGNATURE", "Podpis na webu u osoby " + OTHER + " odebrán", "REMOVE_WEB_SIGNATURE", Map.of()),
+                arguments("CHANGE_PROJECT_ORDER", "Řazení projektů na webu změněno z YEAR_THEN_CATEGORY na CATEGORY_THEN_YEAR", "CHANGE_PROJECT_ORDER",
+                        Map.of("fromOrder", "YEAR_THEN_CATEGORY", "toOrder", "CATEGORY_THEN_YEAR")),
                 arguments("CREATE_NEWS", "Aktualita " + OTHER + " „nove-kocarky“ napsána", "CREATE_NEWS", Map.of("slug", "nove-kocarky")),
                 arguments("CREATE_NEWS", "News article " + OTHER + " 'nove-kocarky' created", "CREATE_NEWS", Map.of("slug", "nove-kocarky")),
                 arguments("UPDATE_NEWS", "Aktualita " + OTHER + " „nove-kocarky“ upravena", "UPDATE_NEWS", Map.of("slug", "nove-kocarky")),
