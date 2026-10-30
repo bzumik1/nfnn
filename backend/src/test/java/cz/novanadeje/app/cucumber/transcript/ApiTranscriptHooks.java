@@ -12,9 +12,14 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.time.Duration;
+import java.util.Base64;
 import java.util.HashMap;
+import java.util.HexFormat;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class ApiTranscriptHooks {
 
@@ -24,6 +29,7 @@ public class ApiTranscriptHooks {
     private static final String SETUP_CODE = "<setup-code>";
     private static final String SIGNATORY_NAME = "<signatory-name>";
     private static final String SIGNATORY_NAME_PROPERTY = "app.donations.receipt.signatory-name";
+    private static final String SIGNING_KEY_PROPERTY = "app.donations.receipt.signing.key";
     private static final int AFTER_EVERY_OTHER_SET_UP = 100_000;
     private static final int AFTER_EVERY_OTHER_TEAR_DOWN = 0;
 
@@ -83,11 +89,19 @@ public class ApiTranscriptHooks {
         donors.everySecondFactorSecret().forEach(secret -> known.put(secret, TranscriptNormaliser.SECRET));
         Optional.ofNullable(context.getEnvironment().getProperty(SIGNATORY_NAME_PROPERTY)).filter(name -> !name.isBlank())
                 .ifPresent(name -> known.put(name, SIGNATORY_NAME));
+        Optional.ofNullable(context.getEnvironment().getProperty(SIGNING_KEY_PROPERTY)).filter(key -> !key.isBlank())
+                .ifPresent(key -> signingSeedSpellings(key).forEach(spelling -> known.put(spelling, TranscriptNormaliser.SECRET)));
         setupCodes.findAnnounced().ifPresent(code -> {
             known.put(code.value(), SETUP_CODE);
             known.put(code.display(), SETUP_CODE);
         });
         return known;
+    }
+
+    static Set<String> signingSeedSpellings(String configuredKey) {
+        byte[] seed = Base64.getDecoder().decode(configuredKey.strip());
+        return Stream.of(configuredKey.strip(), Base64.getEncoder().withoutPadding().encodeToString(seed),
+                Base64.getUrlEncoder().withoutPadding().encodeToString(seed), HexFormat.of().formatHex(seed)).collect(Collectors.toUnmodifiableSet());
     }
 
     static void awaitIdle(Object executor, Duration timeout) throws InterruptedException {

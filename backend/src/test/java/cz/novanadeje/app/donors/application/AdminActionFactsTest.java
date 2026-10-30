@@ -106,6 +106,8 @@ class AdminActionFactsTest {
                         "CHANGE_RECEIPT_SIGNATURE", Map.of("width", "600", "height", "200")),
                 arguments("CHANGE_RECEIPT_SIGNATURE", "Signature image for receipts uploaded: 600x200 px, SHA-256 ab12",
                         "CHANGE_RECEIPT_SIGNATURE", Map.of("width", "600", "height", "200")),
+                arguments("REGISTER_RECEIPT_SIGNING_KEY", "Server zaregistroval svůj klíč k ověřovacím QR na potvrzeních o daru: 9c1b2f7e",
+                        "REGISTER_RECEIPT_SIGNING_KEY", Map.of("key", "9c1b2f7e")),
                 arguments("REMOVE_RECEIPT_SIGNATURE", "Obrázek podpisu odebrán; nová potvrzení o daru mají jen čáru a jméno",
                         "REMOVE_RECEIPT_SIGNATURE", Map.of()),
                 arguments("REMOVE_RECEIPT_SIGNATURE", "Signature image for receipts removed; new receipts carry the line and the name only",

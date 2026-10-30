@@ -119,6 +119,8 @@ public record AdminActionFacts(String summaryKey, Map<String, String> values) {
         shapes.put("CHANGE_RECEIPT_SIGNATURE", List.of(
                 full("Nahrán obrázek podpisu na potvrzení o daru: (?<width>\\d+) × (?<height>\\d+) px, SHA-256 \\S+"),
                 full("Signature image for receipts uploaded: (?<width>\\d+)x(?<height>\\d+) px, SHA-256 \\S+")));
+        shapes.put("REGISTER_RECEIPT_SIGNING_KEY", List.of(
+                full("Server zaregistroval svůj klíč k ověřovacím QR na potvrzeních o daru: (?<key>[0-9a-f]{8})")));
         shapes.put("REMOVE_RECEIPT_SIGNATURE", List.of(
                 full("Obrázek podpisu odebrán; .*"),
                 full("Signature image for receipts removed; .*")));

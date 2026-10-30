@@ -13,6 +13,7 @@ import java.nio.file.Path;
 import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -65,6 +66,11 @@ final class BaselineHygiene {
     private static final Pattern HEX_LETTER = Pattern.compile("[a-fA-F]");
     private static final Pattern LABELLED_DIGEST = Pattern.compile("(?:\"[A-Za-z]*(?:sha256|Sha256)\"\\s*:\\s*\"|sha256=)$");
     private static final int LABEL_WINDOW = 40;
+    private static final String VERIFICATION_CASES = "verification/";
+    private static final Pattern LABELLED_PUBLIC_PROOF = Pattern.compile("\"(?:payloadHex|signatureHex|publicKeyHex)\"\\s*:\\s*\"$|\"qrText\"\\s*:\\s*\"https://nfnn\\.cz/overit#$");
+    static final Set<String> TEST_SIGNING_SEEDS = Set.of("9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60",
+            "4ccd089b28ff96da9db6c346ec114e0f5b8a319f35aba624da8cf6ed4fb8a6fb");
+    private static final Pattern SIGNING_SEED_FIELD = Pattern.compile("(?i)[a-z]*(?:seed|signingkey|privatekey)(?:hex|base64|base64url)?");
     static final Path BASELINE_COMMIT = Path.of("v2", "BASELINE_COMMIT");
     private static final Path REGRESSION_FOLDER = Path.of("regression");
     private static final Pattern COMMIT_ID = Pattern.compile("[0-9a-f]{40}");
@@ -150,6 +156,7 @@ final class BaselineHygiene {
             try {
                 JsonNode json = JSON.readTree(text);
                 unmaskedSecretSettings(json, findings, file);
+                unmaskedSigningKeyFields(json, findings, file);
                 unmaskedBackupKeyWords(json, allowedBackupKeyWords(fixtures), fixtures, findings, file);
             } catch (RuntimeException unparsable) {
                 findings.add(file + ": not valid JSON, so the secret-setting rule cannot run");
@@ -173,10 +180,18 @@ final class BaselineHygiene {
                 .filter(key -> !key.equalsIgnoreCase(DEV_BACKUP_KEY) && fixtures.values().stream().noneMatch(key::equalsIgnoreCase))
                 .forEach(key -> findings.add(file + ": a backup key starting " + key.substring(0, 8).toUpperCase(Locale.ROOT)));
         BCRYPT.matcher(text).results().forEach(match -> findings.add(file + ": a BCrypt hash"));
+        String lowercase = text.toLowerCase(Locale.ROOT);
+        signingSeedSpellings().stream().map(seed -> seed.toLowerCase(Locale.ROOT)).forEach(seed -> {
+            for (int at = lowercase.indexOf(seed); at >= 0; at = lowercase.indexOf(seed, at + seed.length())) {
+                findings.add(file + ": a receipt signing seed of the tests starting " + text.substring(at, at + 8));
+            }
+        });
         if (!baselineCommit) {
             HEX.matcher(text).results()
                     .filter(match -> DIGIT.matcher(match.group()).find() && HEX_LETTER.matcher(match.group()).find())
                     .filter(match -> !LABELLED_DIGEST.matcher(text.substring(Math.max(0, match.start() - LABEL_WINDOW), match.start())).find())
+                    .filter(match -> !(file.startsWith(VERIFICATION_CASES)
+                            && LABELLED_PUBLIC_PROOF.matcher(text.substring(Math.max(0, match.start() - LABEL_WINDOW), match.start())).find()))
                     .map(MatchResult::group).filter(spelled.negate())
                     .forEach(hex -> findings.add(file + ": a hex secret starting " + hex.substring(0, 8)));
         }
@@ -252,6 +267,27 @@ final class BaselineHygiene {
             node.values().forEach(child -> unmaskedSecretSettings(child, findings, file));
         } else if (node.isArray()) {
             node.values().forEach(child -> unmaskedSecretSettings(child, findings, file));
+        }
+    }
+
+    private static Set<String> signingSeedSpellings() {
+        return TEST_SIGNING_SEEDS.stream().map(HexFormat.of()::parseHex)
+                .flatMap(seed -> Stream.of(HexFormat.of().formatHex(seed), Base64.getEncoder().withoutPadding().encodeToString(seed),
+                        Base64.getUrlEncoder().withoutPadding().encodeToString(seed)))
+                .collect(Collectors.toUnmodifiableSet());
+    }
+
+    private static void unmaskedSigningKeyFields(JsonNode node, List<String> findings, String file) {
+        if (node.isObject()) {
+            for (var field : node.properties()) {
+                JsonNode value = field.getValue();
+                if (SIGNING_SEED_FIELD.matcher(field.getKey()).matches() && value.isString() && !value.asString().isEmpty() && !MASKED.equals(value.asString())) {
+                    findings.add(file + ": an unmasked signing key field " + field.getKey());
+                }
+                unmaskedSigningKeyFields(value, findings, file);
+            }
+        } else if (node.isArray()) {
+            node.values().forEach(child -> unmaskedSigningKeyFields(child, findings, file));
         }
     }
 
