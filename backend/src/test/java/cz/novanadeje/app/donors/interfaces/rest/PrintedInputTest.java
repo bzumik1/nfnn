@@ -10,9 +10,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class PrintedInputTest {
 
-    private static final String SPOOFED_NAME = "Jana ‮Nováková​";
-    private static final String SPOOFED_STREET = "Krátká­ 3⁦";
-    private static final String SPOOFED_CITY = "﻿Most‏";
+    private static final String SPOOFED_NAME = "Jana \u202eNova\u0301kova\u0301\u200b";
+    private static final String SPOOFED_STREET = "Kra\u0301tka\u0301\u00ad 3\u2066";
+    private static final String SPOOFED_CITY = "\ufeffMost\u200f";
 
     @Test
     @DisplayName("Given a registration whose name and address carry invisible characters and decomposed letters, when it becomes a command, then the command holds the text a receipt prints")

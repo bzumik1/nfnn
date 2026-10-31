@@ -26,7 +26,7 @@ class PrintableOnReceiptTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"​", "­", "​­⁠﻿", " ‮ "})
+    @ValueSource(strings = {"\u200b", "\u00ad", "\u200b\u00ad\u2060\ufeff", " \u202e ", "\u00a0", "\u2007\u200b"})
     @DisplayName("Given a registration whose name, street and city hold only characters a receipt drops, when it is validated, then each of them is refused")
     void should_refuse_each_field_when_validated_given_only_dropped_characters(String invisible) {
         RegisterDonorRequest request = new RegisterDonorRequest(DonorType.PERSON, invisible, null,
@@ -36,7 +36,7 @@ class PrintableOnReceiptTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"​", "­⁠"})
+    @ValueSource(strings = {"\u200b", "\u00ad\u2060"})
     @DisplayName("Given a profile change whose name holds only characters a receipt drops, when it is validated, then the name is refused")
     void should_refuse_name_when_profile_change_validated_given_only_dropped_characters(String invisible) {
         UpdateDonorProfileRequest request = new UpdateDonorProfileRequest(invisible, null, "cs");
