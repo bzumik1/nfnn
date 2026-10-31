@@ -91,5 +91,19 @@
         "<key-id>": "the receipt signing key id: 8 hex digits of the SHA-256 of the public key, public (GET /api/donations/receipt-keys serves it to anyone); no personal data and no secret"
       }
     }
+  },
+  {
+    "kind": "log-field",
+    "line": "donations.application.receipt.DonationReceiptIssuer: No receipt is issued to donor <id>: the receipt signing key <key-id> of this server is withdrawn and no new seed has replaced it",
+    "scenario": "donations/admin_receipt_signing_key_withdrawal: *",
+    "reason": "1.13 refuses to issue or return any receipt while the server's own signing key is withdrawn and logs at ERROR which donor asked and which key, so a server whose seed was not renewed shows in backend.log (review 1.13 r1, merge with 1.6)",
+    "contract": "docs/api-contract.md, Receipt verification proof and signing keys (Withdrawing a key); docs/system-overview.md, donations (Withdrawing a receipt signing key)",
+    "security": {
+      "approvedIn": "PENDING",
+      "fields": {
+        "<id>": "the donor's id in donations (a UUID), as the existing line Issued receipt … for donor <id> names it; no name, e-mail or address",
+        "<key-id>": "the receipt signing key id: 8 hex digits of the SHA-256 of the public key, public (GET /api/donations/receipt-keys serves it to anyone); no personal data and no secret"
+      }
+    }
   }
 ]
