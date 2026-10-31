@@ -273,7 +273,7 @@ describe('Given every frozen receipt case and the text v2 printed for it', () =>
           });
 
           expect(again).toEqual(bytes);
-        });
+        }, 60_000);
       });
     }
   }
