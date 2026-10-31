@@ -63,7 +63,7 @@ Feature: Donor registers an account
       | email      | jana@example.cz       |
       | password   | correct horse battery |
     Then the response status is 400
-    And the problem's error for field "<field>" says "Obsahuje znak, který na potvrzení o daru nevytiskneme, například emoji nebo čínské písmo. Napište ho prosím latinkou, cyrilicí nebo řeckým písmem."
+    And the problem's error for field "<field>" says "Obsahuje znak, který na potvrzení o daru nevytiskneme, například emoji nebo čínské písmo. Napište prosím tento údaj latinkou, cyrilicí nebo řeckým písmem."
 
     Examples:
       | name          | street       | city           | field          |
