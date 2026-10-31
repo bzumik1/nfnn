@@ -202,6 +202,12 @@ describe('Given the privacy policy page', () => {
     );
   });
 
+  it('when it renders, then it says a code read on the verification page through the camera, a file or a pasted link never leaves the browser', () => {
+    expect(purposeText('Evidence darů a potvrzení o daru')).toContain(
+      'Na stránce nfnn.cz/overit můžete kód načíst také fotoaparátem, z PDF potvrzení, z fotky kódu nebo vložením odkazu. Kód čte váš prohlížeč: obraz z fotoaparátu, soubor ani odkaz nám neposílá a nikam je neukládáme. Fotoaparát se zapne, až o to požádáte, a vypne se, jakmile kód přečte nebo skenování zastavíte.',
+    );
+  });
+
   it('when it renders, then it says the status request itself is logged like any other request and its address counted only in memory', () => {
     expect(purposeText('Evidence darů a potvrzení o daru')).toContain(
       'Samotný dotaz ale server zapíše do provozních záznamů jako každý jiný požadavek (IP adresu, čas a adresu stránky, bez otisku), jak popisujeme níže u IP adresy a záznamů serveru, a smaže ho s nimi. Kvůli ochraně před zneužitím počítáme tyto dotazy z každé IP adresy; adresu k tomu držíme jen v operační paměti serveru.',
