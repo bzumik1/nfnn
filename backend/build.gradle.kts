@@ -115,6 +115,7 @@ val acceptanceTest = tasks.register<Test>("acceptanceTest") {
 	}
 	include("**/*AcceptanceTests.class")
 	enabled = runsCucumber
+	systemProperty("org.apache.juli.logging.UserDataHelper.CONFIG", "INFO_ALL")
 	val transcripts = layout.buildDirectory.dir("api-transcripts")
 	val recording = providers.environmentVariable("API_TRANSCRIPTS").map { it == "record" }.orElse(false)
 	doFirst {

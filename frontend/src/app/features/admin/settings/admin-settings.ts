@@ -26,6 +26,7 @@ import { SETTING_LABELS, settingErrors } from '../../operations/setting-labels';
 import { SettingName, SettingValueRequest, SetupApi } from '../../operations/setup/setup-api';
 import { testEmailNotice } from '../../operations/test-email';
 import { ReceiptSignature } from './receipt-signature/receipt-signature';
+import { ReceiptSigningKey } from './receipt-signing-key/receipt-signing-key';
 import { AdminApi, AdminSettingResponse, AdminTestEmailRequest } from '../admin-api';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 
@@ -176,6 +177,7 @@ const INPUTS: Partial<Readonly<Record<SettingName, Input>>> = {
     FormControlDirective,
     PasswordReveal,
     ReceiptSignature,
+    ReceiptSigningKey,
   ],
   templateUrl: './admin-settings.html',
   styleUrl: './admin-settings.scss',

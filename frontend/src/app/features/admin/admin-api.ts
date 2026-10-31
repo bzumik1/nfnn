@@ -326,6 +326,24 @@ export interface ReceiptSignatureResponse {
   uploadedAt: string | null;
 }
 
+export type ReceiptSigningKeyStatus = 'active' | 'revoked';
+
+export interface ReceiptSigningKeyResponse {
+  keyId: string;
+  algorithm: 'Ed25519';
+  publicKey: string;
+  status: ReceiptSigningKeyStatus;
+  registeredAt: string;
+  published: boolean;
+  current: boolean;
+}
+
+export interface ReceiptSigningKeysResponse {
+  currentKeyId: string;
+  currentKeyPublished: boolean;
+  keys: ReceiptSigningKeyResponse[];
+}
+
 export type BackupKind = 'DAILY' | 'REQUESTED' | 'BEFORE_RESTORE' | 'OTHER';
 
 export type RunOutcome = 'OK' | 'FAILED';
@@ -731,6 +749,10 @@ export class AdminApi {
     return this.http.post<ReceiptSignatureResponse>(RECEIPT_SIGNATURE_URL, form);
   }
 
+  receiptSigningKeys(): Observable<ReceiptSigningKeysResponse> {
+    return this.http.get<ReceiptSigningKeysResponse>(RECEIPT_SIGNING_KEYS_URL);
+  }
+
   removeReceiptSignature(): Observable<void> {
     return this.http.delete<void>(RECEIPT_SIGNATURE_URL);
   }
@@ -794,6 +816,7 @@ export class AdminApi {
 
 const LOGS_URL = '/api/admin/operations/logs';
 const RECEIPT_SIGNATURE_URL = '/api/admin/donations/receipt-signature';
+const RECEIPT_SIGNING_KEYS_URL = '/api/admin/donations/receipt-signing-keys';
 const LOGGERS_URL = '/api/admin/operations/loggers';
 const DIAGNOSTICS_URL = '/api/admin/operations/diagnostics';
 

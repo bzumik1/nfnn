@@ -6,8 +6,12 @@ import cz.novanadeje.app.shared.domain.error.Conflict;
 import cz.novanadeje.app.shared.domain.error.DomainException;
 import cz.novanadeje.app.shared.domain.error.NotFound;
 import cz.novanadeje.app.shared.domain.error.RuleViolation;
+import org.apache.tomcat.util.http.InvalidParameterException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.core.NestedExceptionUtils;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -24,6 +28,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
@@ -34,6 +39,8 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
 
     @Override
     protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
@@ -91,6 +98,17 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         problem.setTitle(message("problem.validation.title", HttpStatus.BAD_REQUEST.getReasonPhrase()));
         problem.setDetail(ex.getMessage());
         return problem;
+    }
+
+    @ExceptionHandler(InvalidParameterException.class)
+    ResponseEntity<Object> handleUndecodableParameter(InvalidParameterException ex, WebRequest request) {
+        return validationProblem(ex, List.of(), new HttpHeaders(), request);
+    }
+
+    @ExceptionHandler(MultipartException.class)
+    ResponseEntity<Object> handleUnreadableMultipart(MultipartException ex, WebRequest request) {
+        log.warn("A multipart body could not be read ({})", NestedExceptionUtils.getMostSpecificCause(ex).getClass().getSimpleName());
+        return validationProblem(ex, List.of(), new HttpHeaders(), request);
     }
 
     @ExceptionHandler(AuthenticationException.class)

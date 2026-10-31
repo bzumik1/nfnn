@@ -76,6 +76,12 @@ public class TestSupportConfiguration {
     }
 
     @Bean
+    @Primary
+    public SwitchablePublicTestKeyPolicy switchablePublicTestKeyPolicy() {
+        return new SwitchablePublicTestKeyPolicy();
+    }
+
+    @Bean
     public static CachingPasswordHashers cachingPasswordHashers() {
         return new CachingPasswordHashers();
     }

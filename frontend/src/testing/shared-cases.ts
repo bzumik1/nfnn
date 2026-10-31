@@ -125,6 +125,56 @@ export type ReceiptFormattingExpected =
       };
     };
 
+export interface VerificationKey {
+  readonly keyId: string;
+  readonly publicKeyHex: string;
+  readonly status: 'active' | 'revoked';
+}
+
+export interface VerifiedReceipt {
+  readonly kind: 'single' | 'yearly';
+  readonly number: string;
+  readonly issuedOn: string;
+  readonly year: number | null;
+  readonly replaces: { readonly number: string; readonly issuedOn: string } | null;
+  readonly donor: {
+    readonly type: 'person' | 'company';
+    readonly name: string;
+    readonly street: string;
+    readonly city: string;
+    readonly postalCode: string;
+    readonly companyIdentifier: string | null;
+  };
+  readonly gifts: readonly { readonly receivedOn: string; readonly amountMinor: number }[];
+  readonly totalMinor: number;
+}
+
+export type VerificationInput =
+  | {
+      readonly receipt: VerifiedReceipt;
+      readonly signingKeyId: string;
+      readonly foundation: { readonly companyIdentifier: string };
+      readonly keys: readonly VerificationKey[];
+    }
+  | {
+      readonly qrText: string;
+      readonly foundation: { readonly companyIdentifier: string };
+      readonly keys: readonly VerificationKey[];
+    };
+
+export type VerificationExpected =
+  | {
+      readonly payloadHex: string;
+      readonly signatureHex: string;
+      readonly signedSha256: string;
+      readonly qrText: string;
+      readonly qr:
+        | { readonly version: number; readonly errorCorrection: 'M' | 'L' }
+        | { readonly refusal: 'donations/receipt-too-long' };
+    }
+  | { readonly verdict: 'valid'; readonly keyId: string; readonly receipt: VerifiedReceipt }
+  | { readonly verdict: 'rejected'; readonly reason: string };
+
 export type RowsInput = Readonly<Record<string, unknown>>;
 export type Answer = Readonly<Record<string, unknown>>;
 
@@ -144,6 +194,7 @@ export interface SharedCaseTopics {
     ReceiptFormattingExpected
   >;
   readonly 'totp/uri.json': SharedCase<TotpUriInput, { readonly uri: string }>;
+  readonly 'verification/payload.json': SharedCase<VerificationInput, VerificationExpected>;
 }
 
 export type SharedCaseTopic = keyof SharedCaseTopics;
@@ -161,6 +212,7 @@ const REGISTERED_TOPICS: Readonly<Record<SharedCaseTopic, true>> = {
   'qr/totp.json': true,
   'receipts/formatting.json': true,
   'totp/uri.json': true,
+  'verification/payload.json': true,
 };
 
 export const SHARED_CASE_TOPICS = Object.keys(REGISTERED_TOPICS) as readonly SharedCaseTopic[];
