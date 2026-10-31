@@ -10,5 +10,292 @@
     "caseFile": "shared-cases/schemas/receipts/v1/frozen.schema.json",
     "reason": "1.16: the schema of the frozen signatory requires portraitImage, null or {sha256}, beside signatureImage",
     "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "path": "GET /api/admin/donations/receipt-signature",
+    "scenario": "donations/admin_receipt_signature: *",
+    "kind": "removed",
+    "reason": "1.16 (Jakub 2026-10-30, layout 3B; lead's design 2026-10-31): the receipts are signed by a person of the foundation, so the singleton receipt signature moved to one per person at /api/admin/donations/receipt-signatures/{personId}, beside the signatory choice at /api/admin/donations/receipt-signatory",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "path": "POST /api/admin/donations/receipt-signature",
+    "scenario": "donations/admin_receipt_signature: *",
+    "kind": "removed",
+    "reason": "1.16 (Jakub 2026-10-30, layout 3B; lead's design 2026-10-31): the receipts are signed by a person of the foundation, so the singleton receipt signature moved to one per person at /api/admin/donations/receipt-signatures/{personId}, beside the signatory choice at /api/admin/donations/receipt-signatory",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "path": "DELETE /api/admin/donations/receipt-signature",
+    "scenario": "donations/admin_receipt_signature: *",
+    "kind": "removed",
+    "reason": "1.16 (Jakub 2026-10-30, layout 3B; lead's design 2026-10-31): the receipts are signed by a person of the foundation, so the singleton receipt signature moved to one per person at /api/admin/donations/receipt-signatures/{personId}, beside the signatory choice at /api/admin/donations/receipt-signatory",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "scenario": "donors/connected_apps: A dangerous or irreversible change is refused to a connected application even with the writing permission [POST | /api/admin/donations/receipt-signature]*",
+    "kind": "removed",
+    "reason": "1.16 (Jakub 2026-10-30, layout 3B; lead's design 2026-10-31): the receipts are signed by a person of the foundation, so the singleton receipt signature moved to one per person at /api/admin/donations/receipt-signatures/{personId}, beside the signatory choice at /api/admin/donations/receipt-signatory; the outline now has rows for POST and DELETE of receipt-signatures/{id} and PUT of receipt-signatory, still web-only",
+    "contract": "docs/security-overview.md, browser-session guard"
+  },
+  {
+    "scenario": "donors/connected_apps: A dangerous or irreversible change is refused to a connected application even with the writing permission [DELETE | /api/admin/donations/receipt-signature]*",
+    "kind": "removed",
+    "reason": "1.16 (Jakub 2026-10-30, layout 3B; lead's design 2026-10-31): the receipts are signed by a person of the foundation, so the singleton receipt signature moved to one per person at /api/admin/donations/receipt-signatures/{personId}, beside the signatory choice at /api/admin/donations/receipt-signatory; the outline now has rows for POST and DELETE of receipt-signatures/{id} and PUT of receipt-signatory, still web-only",
+    "contract": "docs/security-overview.md, browser-session guard"
+  },
+  {
+    "scenario": "donations/admin_receipt_signature: An uploaded scan is shown to administrators, audited and printed on receipts issued afterwards*",
+    "kind": "logs",
+    "line": "donations.application.pairing.PaymentPairingService: Donor * learned sender account link *",
+    "reason": "1.16: the person id now in the signature's path is numbered before the learned account link, so the link's masked id is <id:4> instead of <id:3>; the line is the same",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures",
+    "security": {
+      "approvedIn": "PENDING",
+      "fields": {
+        "<id>": "the donor id, then the learned account link id; the same line as in v2, only the masked numbering moves"
+      }
+    }
+  },
+  {
+    "path": "GET /api/admin/operations/settings",
+    "scenario": "operations/settings: *",
+    "kind": "body",
+    "field": "$.settings*",
+    "reason": "1.16: the settings RECEIPT_SIGNATORY_NAME and RECEIPT_SIGNATORY_ROLE are gone, because the signatory is chosen among the people of the foundation with the receipt role stored with the choice (Jakub 2026-10-31); the list has two settings fewer",
+    "contract": "docs/api-contract.md, Settings and the first setup"
+  },
+  {
+    "path": "PUT /api/admin/operations/settings",
+    "scenario": "operations/settings: An administrator changes settings, they are stored and audited by name and the backend restarts*",
+    "kind": "request",
+    "reason": "1.16: the settings RECEIPT_SIGNATORY_NAME and RECEIPT_SIGNATORY_ROLE are gone, because the signatory is chosen among the people of the foundation with the receipt role stored with the choice (Jakub 2026-10-31); the scenario changes MAIL_USERNAME (with MAIL_PASSWORD, as a mail user change requires) instead of the removed RECEIPT_SIGNATORY_NAME",
+    "contract": "docs/api-contract.md, Settings and the first setup"
+  },
+  {
+    "path": "PUT /api/admin/operations/settings",
+    "scenario": "operations/settings: An administrator changes settings, they are stored and audited by name and the backend restarts*",
+    "kind": "body",
+    "field": "$.changed*",
+    "reason": "1.16: the settings RECEIPT_SIGNATORY_NAME and RECEIPT_SIGNATORY_ROLE are gone, because the signatory is chosen among the people of the foundation with the receipt role stored with the choice (Jakub 2026-10-31); the answer names MAIL_USERNAME, the setting the scenario now changes",
+    "contract": "docs/api-contract.md, Settings and the first setup"
+  },
+  {
+    "scenario": "operations/settings: An administrator changes settings, they are stored and audited by name and the backend restarts*",
+    "kind": "logs",
+    "line": "operations.application.settings.SettingsService: Admin * changed the settings *",
+    "reason": "1.16: the settings RECEIPT_SIGNATORY_NAME and RECEIPT_SIGNATORY_ROLE are gone, because the signatory is chosen among the people of the foundation with the receipt role stored with the choice (Jakub 2026-10-31); the line names MAIL_USERNAME, the setting the scenario now changes",
+    "contract": "docs/api-contract.md, Settings and the first setup",
+    "security": {
+      "approvedIn": "PENDING",
+      "fields": {
+        "<id>": "the administrator's donor id; the setting names are the names of settings, never values"
+      }
+    }
+  },
+  {
+    "path": "GET /api/admin/donations/receipt-signatory",
+    "scenario": "donations/admin_receipt_signature: *",
+    "kind": "added",
+    "reason": "1.16: the connector's nfnn_receipt_signature and nfnn_status read the signatory here, a call v2 did not have",
+    "contract": "docs/api-contract.md, MCP connector"
+  },
+  {
+    "kind": "log-field",
+    "line": "donations.application.receipt.ReceiptSignatoryService: Admin <id> chose person <id> to sign the receipts",
+    "reason": "1.16: logs the outcome of choosing the receipt signatory or of deleting a removed person's receipt signature, with ids only",
+    "security": {
+      "approvedIn": "PENDING",
+      "fields": {
+        "<id>": "the administrator's donor id, then the chosen person's id"
+      }
+    }
+  },
+  {
+    "kind": "log-field",
+    "line": "donations.application.receipt.ReceiptSignatureService: Receipt signature of removed person <id> deleted",
+    "reason": "1.16: logs the outcome of choosing the receipt signatory or of deleting a removed person's receipt signature, with ids only",
+    "security": {
+      "approvedIn": "PENDING",
+      "fields": {
+        "<id>": "the removed person's id"
+      }
+    }
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.receipt.ReceiptSignatureServiceTest > Given a stored signature, when it is asked for, then the image and the time of its upload come back",
+    "replacement": "donations.application.receipt.ReceiptSignatureServiceTest > Given a stored signature of a person, when it is asked for, then the image and the time of its upload come back",
+    "reason": "1.16: the signature belongs to a person",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.pdf.ReceiptPropertiesTest > Given an empty signatory name, when the context starts, then it fails naming the environment variable",
+    "replacement": "donations.infrastructure.pdf.ReceiptPropertiesTest > Given only application.yml, when the context starts, then the foundation comes from the defaults",
+    "reason": "1.16: the signatory name is no property any more; the context test proves no signatory comes from the configuration",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.pdf.ReceiptPropertiesTest > Given only application.yml, when the context starts, then the foundation, and the signatory come from the defaults",
+    "replacement": "donations.infrastructure.pdf.ReceiptPropertiesTest > Given only application.yml, when the context starts, then the foundation comes from the defaults",
+    "reason": "1.16: the signatory no longer comes from the configuration",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.persistence.JpaReceiptSignatureRepositoryTest > Given the schema, when a second row is inserted, then the singleton constraint refuses it",
+    "replacement": "donations.infrastructure.persistence.JpaReceiptSignatureRepositoryTest > Given signatures of two people, when each is read, then each person has their own and the summaries list both by kind and size",
+    "reason": "1.16: the signature table is per person, no longer a singleton",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/admin_receipt_signature.feature > An administrator uploads the signature printed on donation receipts - A donor without the administrator role and a visitor without a token are refused",
+    "replacement": "feature_classpath_features/donations/admin_receipt_signature.feature > An administrator chooses who signs the donation receipts and uploads their signature - A donor without the administrator role and a visitor without a token are refused",
+    "reason": "1.16: the feature was renamed for choosing the signatory",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/admin_receipt_signature.feature > An administrator uploads the signature printed on donation receipts - A file that is not a JPEG, PNG or WebP image is refused and the signature stays",
+    "replacement": "feature_classpath_features/donations/admin_receipt_signature.feature > An administrator chooses who signs the donation receipts and uploads their signature - A file that is not a JPEG, PNG or WebP image is refused and the signature stays",
+    "reason": "1.16: the feature was renamed for choosing the signatory",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/admin_receipt_signature.feature > An administrator uploads the signature printed on donation receipts - A removed signature leaves the next receipts with the line and the name",
+    "replacement": "feature_classpath_features/donations/admin_receipt_signature.feature > An administrator chooses who signs the donation receipts and uploads their signature - A removed signature leaves the next receipts with the line and the name",
+    "reason": "1.16: the feature was renamed for choosing the signatory",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/admin_receipt_signature.feature > An administrator uploads the signature printed on donation receipts - An uploaded scan is shown to administrators, audited and printed on receipts issued afterwards",
+    "replacement": "feature_classpath_features/donations/admin_receipt_signature.feature > An administrator chooses who signs the donation receipts and uploads their signature - An uploaded scan is shown to administrators, audited and printed on receipts issued afterwards",
+    "reason": "1.16: the feature was renamed for choosing the signatory",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/admin_receipt_signature.feature > An administrator uploads the signature printed on donation receipts - Without an upload the receipts carry only the line and the signatory's name",
+    "replacement": "feature_classpath_features/donations/admin_receipt_signature.feature > An administrator chooses who signs the donation receipts and uploads their signature - Without an upload the receipts carry only the line and the signatory's name",
+    "reason": "1.16: the feature was renamed for choosing the signatory",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/settings/receipt-signature/receipt-signature.spec.ts > Given the signature section of the receipt settings > when a signature is uploaded, then it shows the scan with its size and upload time",
+    "replacement": "src/app/features/admin/receipt-signature/receipt-signature.spec.ts > Given the receipt signature part of a person of the foundation > when a signature is uploaded, then it shows the scan with its size and upload time",
+    "reason": "1.16: the component moved from the settings to the person's editor at /sprava/lide-fondu",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/settings/receipt-signature/receipt-signature.spec.ts > Given the signature section of the receipt settings > when it loads, then it says so until the signature arrives",
+    "replacement": "src/app/features/admin/receipt-signature/receipt-signature.spec.ts > Given the receipt signature part of a person of the foundation > when it loads, then it says so until the signature arrives",
+    "reason": "1.16: the component moved from the settings to the person's editor at /sprava/lide-fondu",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/settings/receipt-signature/receipt-signature.spec.ts > Given the signature section of the receipt settings > when no signature is uploaded, then it says receipts carry only the line and the name",
+    "replacement": "src/app/features/admin/receipt-signature/receipt-signature.spec.ts > Given the receipt signature part of a person of the foundation > when no signature is uploaded, then it says receipts carry only the line and the name",
+    "reason": "1.16: the component moved from the settings to the person's editor at /sprava/lide-fondu",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/settings/receipt-signature/receipt-signature.spec.ts > Given the signature section of the receipt settings > when the administrator chooses a scan > then a file of another type is refused before uploading",
+    "replacement": "src/app/features/admin/receipt-signature/receipt-signature.spec.ts > Given the receipt signature part of a person of the foundation > when the administrator chooses a scan > then a file of another type is refused before uploading",
+    "reason": "1.16: the component moved from the settings to the person's editor at /sprava/lide-fondu",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/settings/receipt-signature/receipt-signature.spec.ts > Given the signature section of the receipt settings > when the administrator chooses a scan > then a file over 10 MB is refused before uploading",
+    "replacement": "src/app/features/admin/receipt-signature/receipt-signature.spec.ts > Given the receipt signature part of a person of the foundation > when the administrator chooses a scan > then a file over 10 MB is refused before uploading",
+    "reason": "1.16: the component moved from the settings to the person's editor at /sprava/lide-fondu",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/settings/receipt-signature/receipt-signature.spec.ts > Given the signature section of the receipt settings > when the administrator chooses a scan > then a refusal of the server is shown with its explanation",
+    "replacement": "src/app/features/admin/receipt-signature/receipt-signature.spec.ts > Given the receipt signature part of a person of the foundation > when the administrator chooses a scan > then a refusal of the server is shown with its explanation",
+    "reason": "1.16: the component moved from the settings to the person's editor at /sprava/lide-fondu",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/settings/receipt-signature/receipt-signature.spec.ts > Given the signature section of the receipt settings > when the administrator chooses a scan > then it uploads the file, says the upload is running and shows the new scan",
+    "replacement": "src/app/features/admin/receipt-signature/receipt-signature.spec.ts > Given the receipt signature part of a person of the foundation > when the administrator chooses a scan > then it uploads the file, says the upload is running and shows the new scan",
+    "reason": "1.16: the component moved from the settings to the person's editor at /sprava/lide-fondu",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/settings/receipt-signature/receipt-signature.spec.ts > Given the signature section of the receipt settings > when the administrator removes the uploaded signature > then a failed removal says so and gives the focus back to the remove button",
+    "replacement": "src/app/features/admin/receipt-signature/receipt-signature.spec.ts > Given the receipt signature part of a person of the foundation > when the administrator removes the uploaded signature > then a failed removal says so and gives the focus back to the remove button",
+    "reason": "1.16: the component moved from the settings to the person's editor at /sprava/lide-fondu",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/settings/receipt-signature/receipt-signature.spec.ts > Given the signature section of the receipt settings > when the administrator removes the uploaded signature > then it asks first with the focus on calling it off, and nothing happens on cancel",
+    "replacement": "src/app/features/admin/receipt-signature/receipt-signature.spec.ts > Given the receipt signature part of a person of the foundation > when the administrator removes the uploaded signature > then it asks first with the focus on calling it off, and nothing happens on cancel",
+    "reason": "1.16: the component moved from the settings to the person's editor at /sprava/lide-fondu",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/settings/receipt-signature/receipt-signature.spec.ts > Given the signature section of the receipt settings > when the administrator removes the uploaded signature > then on confirming it removes the signature and says so",
+    "replacement": "src/app/features/admin/receipt-signature/receipt-signature.spec.ts > Given the receipt signature part of a person of the foundation > when the administrator removes the uploaded signature > then on confirming it removes the signature and says so",
+    "reason": "1.16: the component moved from the settings to the person's editor at /sprava/lide-fondu",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/settings/receipt-signature/receipt-signature.spec.ts > Given the signature section of the receipt settings > when the signature cannot be loaded, then it says so and loads again on request",
+    "replacement": "src/app/features/admin/receipt-signature/receipt-signature.spec.ts > Given the receipt signature part of a person of the foundation > when the signature cannot be loaded, then it says so and loads again on request",
+    "reason": "1.16: the component moved from the settings to the person's editor at /sprava/lide-fondu",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/admin-settings.spec.ts > Given an administrator on the settings page > when they upload a scan of the signature and remove it again, then the receipts card shows it and asks before removing",
+    "replacement": "e2e/admin-people.spec.ts > Given an administrator who chooses who signs the receipts > when they upload a scan of the receipt signature and remove it again, then the part shows it and asks before removing",
+    "reason": "1.16: the receipt signature is uploaded at the people of the foundation",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "kind": "retired",
+    "suite": "mcp-vitest",
+    "test": "test/tools.spec.ts > Given an administrator connected with the reading permission only > when the receipt signature is asked, then it says whether one is uploaded, its size and when, without the image itself",
+    "replacement": "test/tools.spec.ts > Given an administrator connected with the reading permission only > when the receipt signature is asked, then it names the signatory, their receipt role and the signatures uploaded per person, without any image",
+    "reason": "1.16: the tool reads the signatory and the signatures per person",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures"
   }
 ]
