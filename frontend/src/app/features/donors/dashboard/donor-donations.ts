@@ -401,7 +401,7 @@ export class DonorDonations {
       .draw(subject)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (event) => this.receiptProgressed(key, event),
+        next: (event) => this.receiptProgressed(key, scope, event),
         error: (failure: unknown) => {
           this.finishDownload(key);
           this.setTask(key, null);
@@ -411,7 +411,7 @@ export class DonorDonations {
     this.running.set(key, subscription);
   }
 
-  private receiptProgressed(key: string, event: ReceiptPdfEvent): void {
+  private receiptProgressed(key: string, scope: ReceiptScope, event: ReceiptPdfEvent): void {
     if (event.kind === 'phase') {
       const pages = Math.max(event.pages, 1);
       this.setTask(key, {
@@ -429,7 +429,7 @@ export class DonorDonations {
     this.restart.finished();
     const file = event.file;
     if (this.delivery.needsSecondTap(file)) {
-      this.setTask(key, { file, progress: finished('ready', readyText(file.fileName)) });
+      this.setTask(key, { file, progress: finished('ready', readyText(scope, file.fileName)) });
       this.focusDownloadButton(key);
       return;
     }
@@ -542,7 +542,10 @@ function savedText(fileName: string): string {
   return $localize`:@@donor.dashboard.receipt.saved:Potvrzení ${fileName}:fileName: je stažené. Najdete ho ve stažených souborech.`;
 }
 
-function readyText(fileName: string): string {
+function readyText(scope: ReceiptScope, fileName: string): string {
+  if (scope === 'single') {
+    return $localize`:@@donor.dashboard.receipt.readySingle:Potvrzení ${fileName}:fileName: je připravené. Otevřete ho tlačítkem Otevřít PDF.`;
+  }
   return $localize`:@@donor.dashboard.receipt.ready:Potvrzení ${fileName}:fileName: je připravené. Otevřete ho tlačítkem Otevřít potvrzení.`;
 }
 
