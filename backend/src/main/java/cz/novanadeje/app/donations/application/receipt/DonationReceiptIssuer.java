@@ -77,8 +77,8 @@ public class DonationReceiptIssuer {
     }
 
     private void refuseWhileOwnKeyIsWithdrawn(DonorReference donor) {
-        signingKeys.withdrawnCurrentKey().ifPresent(key -> {
-            LOG.error("No receipt is issued to donor {}: the receipt signing key {} of this server is withdrawn and no new seed has replaced it", donor, key);
+        signingKeys.withdrawnCurrentKeyHeldForIssuing().ifPresent(key -> {
+            LOG.warn("No receipt is issued to donor {}: the receipt signing key {} of this server is withdrawn and no new seed has replaced it", donor, key);
             throw new ReceiptSigningPaused(key);
         });
     }

@@ -8,6 +8,7 @@ import cz.novanadeje.app.shared.application.audit.AdminActionTrail;
 import cz.novanadeje.app.shared.application.seal.RecordSeals;
 import cz.novanadeje.app.shared.application.seal.SealVerdict;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Comparator;
@@ -47,10 +48,11 @@ public class ReceiptSigningKeys {
         return new ReceiptSigningKeysOverview(signer.keyId(), currentPublished, all, history.mismatches(rows));
     }
 
-    public Optional<ReceiptSigningKeyId> withdrawnCurrentKey() {
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Optional<ReceiptSigningKeyId> withdrawnCurrentKeyHeldForIssuing() {
         ReceiptSigningKeyId current = signer.keyId();
-        boolean withdrawn = history().isWithdrawn(current) || keys.findAll().stream().anyMatch(key -> key.id().equals(current) && key.isWithdrawn());
-        return withdrawn ? Optional.of(current) : Optional.empty();
+        boolean rowWithdrawn = keys.lockForIssuing(current).filter(ReceiptSigningKey::isWithdrawn).isPresent();
+        return rowWithdrawn || history().isWithdrawn(current) ? Optional.of(current) : Optional.empty();
     }
 
     public boolean isCurrent(ReceiptSigningKeyId id) {

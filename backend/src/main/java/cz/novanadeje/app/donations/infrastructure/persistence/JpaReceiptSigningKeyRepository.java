@@ -33,6 +33,11 @@ class JpaReceiptSigningKeyRepository implements ReceiptSigningKeyRepository {
         return keys.findForUpdate(id.value()).map(this::lockedState);
     }
 
+    @Override
+    public Optional<ReceiptSigningKey> lockForIssuing(ReceiptSigningKeyId id) {
+        return keys.findForShare(id.value()).map(this::lockedState);
+    }
+
     private ReceiptSigningKey lockedState(ReceiptSigningKeyJpaEntity locked) {
         entityManager.refresh(locked);
         return locked.toDomain();

@@ -10,6 +10,8 @@ public interface ReceiptSigningKeyRepository {
 
     Optional<ReceiptSigningKey> lockForWithdrawal(ReceiptSigningKeyId id);
 
+    Optional<ReceiptSigningKey> lockForIssuing(ReceiptSigningKeyId id);
+
     void save(ReceiptSigningKey key);
 
     boolean recordRestoreAdoption(String restoreId, Instant adoptedAt);

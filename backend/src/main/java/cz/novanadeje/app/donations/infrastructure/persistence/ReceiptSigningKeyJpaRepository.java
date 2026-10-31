@@ -13,4 +13,8 @@ interface ReceiptSigningKeyJpaRepository extends JpaRepository<ReceiptSigningKey
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select signingKey from ReceiptSigningKeyJpaEntity signingKey where signingKey.keyId = :keyId")
     Optional<ReceiptSigningKeyJpaEntity> findForUpdate(@Param("keyId") String keyId);
+
+    @Lock(LockModeType.PESSIMISTIC_READ)
+    @Query("select signingKey from ReceiptSigningKeyJpaEntity signingKey where signingKey.keyId = :keyId")
+    Optional<ReceiptSigningKeyJpaEntity> findForShare(@Param("keyId") String keyId);
 }
