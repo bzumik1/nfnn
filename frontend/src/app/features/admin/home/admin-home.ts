@@ -35,6 +35,10 @@ import { BACKUP_PROBLEM_HELP } from '../backups/backup-texts';
 import { needsTechnician, technicianMessage } from '../backups/backup-message';
 import { CopyButton } from '../../../shared/ui/copy-button/copy-button';
 import { formatReportMonth } from '../report/report-month';
+import {
+  unpublishedKeyIds,
+  unpublishedKeysSentence,
+} from '../settings/receipt-signing-key/unpublished-keys';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -131,6 +135,8 @@ export class AdminHome {
   protected readonly since = signal<SinceSignIn | null>(null);
   protected readonly backupsState = signal<LoadState>('loading');
   protected readonly backups = signal<AdminBackupsResponse | null>(null);
+  protected readonly signingKeysState = signal<LoadState>('loading');
+  protected readonly unpublishedSigningKeys = signal<readonly string[]>([]);
 
   protected readonly backupProblems = computed(() =>
     (this.backups()?.problems ?? []).map((problem) => BACKUP_PROBLEM_HELP[problem]),
@@ -253,10 +259,20 @@ export class AdminHome {
   protected readonly administratorsNeedAttention = computed(
     () => this.administratorsState() === 'error' || this.withoutSecondFactor().length > 0,
   );
+  protected readonly signingKeysNeedAttention = computed(
+    () => this.signingKeysState() === 'error' || this.unpublishedSigningKeys().length > 0,
+  );
+  protected readonly unpublishedSigningKeysText = computed(() =>
+    unpublishedKeysSentence(this.unpublishedSigningKeys()),
+  );
   protected readonly attentionLoading = computed(() =>
-    [this.state(), this.unpairedState(), this.backupsState(), this.administratorsState()].includes(
-      'loading',
-    ),
+    [
+      this.state(),
+      this.unpairedState(),
+      this.backupsState(),
+      this.administratorsState(),
+      this.signingKeysState(),
+    ].includes('loading'),
   );
   protected readonly needsAttention = computed(
     () =>
@@ -265,6 +281,7 @@ export class AdminHome {
       this.backupsNeedAttention() ||
       this.backupKeyUnconfirmed() ||
       this.administratorsNeedAttention() ||
+      this.signingKeysNeedAttention() ||
       this.signatureMissing(),
   );
   protected readonly unpairedText = computed(() => {
@@ -293,6 +310,7 @@ export class AdminHome {
     this.loadBackups();
     this.loadUnpaired();
     this.loadAdministrators();
+    this.loadSigningKeys();
     this.loadSignature();
     afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
   }
@@ -379,6 +397,20 @@ export class AdminHome {
           this.administratorsState.set('ready');
         },
         error: () => this.administratorsState.set('error'),
+      });
+  }
+
+  protected loadSigningKeys(): void {
+    this.signingKeysState.set('loading');
+    this.api
+      .receiptSigningKeys()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (keys) => {
+          this.unpublishedSigningKeys.set(unpublishedKeyIds(keys));
+          this.signingKeysState.set('ready');
+        },
+        error: () => this.signingKeysState.set('error'),
       });
   }
 

@@ -7,6 +7,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 import java.nio.ByteBuffer;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
@@ -208,6 +209,22 @@ class TranscriptNormaliserTest {
 
         assertThat(normaliser.json(raw)).isEqualTo(json.readTree("""
                 {"message":"OBNOVA <recovery-code>","spayd":"SPD*1.0*MSG:OBNOVA <recovery-code>","qrCode":{"size":49,"modules":"<qr-of-masked-text>"}}"""));
+    }
+
+    @Test
+    @DisplayName("Given the configured receipt signing seed in each of its spellings and fields named after a seed or a private key, when they are normalised, then each is masked and remembered")
+    void should_mask_and_remember_signing_seeds_when_normalised_given_spellings_and_seed_fields() {
+        String seed = "nWGxne/9WmC6hEr0kuwsxERJxWl7MmkZcDusAxyuf2A=";
+        Map<String, String> known = new HashMap<>();
+        ApiTranscriptHooks.signingSeedSpellings(seed).forEach(spelling -> known.put(spelling, TranscriptNormaliser.SECRET));
+        TranscriptNormaliser normaliser = new TranscriptNormaliser(known);
+
+        String sentence = normaliser.text("seed " + seed + " hex 9D61B19DEFFD5A60BA844AF492EC2CC44449C5697B326919703BAC031CAE7F60 url nWGxne_9WmC6hEr0kuwsxERJxWl7MmkZcDusAxyuf2A.");
+        JsonNode body = normaliser.json(json.readTree("{\"seed\":\"planted-seed-1\",\"signingKey\":\"planted-seed-2\",\"privateKey\":\"planted-seed-3\",\"receiptSigningKey\":\"planted-seed-4\",\"publicKey\":\"stays\"}"));
+
+        assertThat(sentence).isEqualTo("seed <secret> hex <secret> url <secret>.");
+        assertThat(body.toString()).isEqualTo("{\"seed\":\"<secret>\",\"signingKey\":\"<secret>\",\"privateKey\":\"<secret>\",\"receiptSigningKey\":\"<secret>\",\"publicKey\":\"stays\"}");
+        assertThat(normaliser.maskedValues()).contains(seed, "planted-seed-1", "planted-seed-2", "planted-seed-3", "planted-seed-4");
     }
 
     @Test

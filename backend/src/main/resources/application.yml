@@ -130,6 +130,8 @@ app:
       signatory-role: ${RECEIPT_SIGNATORY_ROLE:předseda správní rady}
       concurrent-renders: 3
       first-year: ${RECEIPT_FIRST_YEAR:2026}
+      signing:
+        key: ${RECEIPT_SIGNING_KEY:}
   operations:
     backups:
       directory: /backups

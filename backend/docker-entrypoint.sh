@@ -5,9 +5,11 @@
 # the first setup, or the backup container's restore.running marker. A request the backup container
 # has not taken within five minutes is dropped, so the site comes back with the data it had.
 # With the secrets folder mounted, it generates the access-token signing key, the key that encrypts
-# stored settings and the age key that encrypts the backups on the first start, waits until
-# nfnn-postgres has the password of the application role novanadeje_app ready and hands them to Java
-# as JWT_SECRET, SETTINGS_KEY, BACKUP_KEY and DB_PASSWORD (variables set by the environment win).
+# stored settings, the age key that encrypts the backups and the Ed25519 seed that signs the
+# verification QR codes on receipts on the first start, waits until nfnn-postgres has the password
+# of the application role novanadeje_app ready and hands them to Java as JWT_SECRET, SETTINGS_KEY,
+# BACKUP_KEY, RECEIPT_SIGNING_KEY and DB_PASSWORD (variables set by the environment win). The seed
+# never leaves secrets/, which no backup holds: a new server signs with a new key of its own.
 # After a restore of a backup uploaded in the first setup with its own key, the backup container
 # leaves that key as /restore/backup-key.adopt and records its public recipient in
 # /backups/status/adopted-key, which this container mounts read-only; once the restore is over the
@@ -143,6 +145,7 @@ if [ "$(id -u)" = 0 ]; then
   if [ -d "$SECRETS_DIR" ]; then
     generate_secret jwt-secret
     generate_secret settings-key
+    generate_secret receipt-signing-key
     generate_backup_key
   fi
   wait_while_restore_due
@@ -151,7 +154,8 @@ if [ "$(id -u)" = 0 ]; then
     JWT_SECRET=${JWT_SECRET:-$(cat "$SECRETS_DIR/jwt-secret")}
     SETTINGS_KEY=${SETTINGS_KEY:-$(cat "$SECRETS_DIR/settings-key")}
     BACKUP_KEY=${BACKUP_KEY:-$(grep -m 1 '^AGE-SECRET-KEY-' "$BACKUP_KEY_FILE" || true)}
-    export JWT_SECRET SETTINGS_KEY BACKUP_KEY
+    RECEIPT_SIGNING_KEY=${RECEIPT_SIGNING_KEY:-$(cat "$SECRETS_DIR/receipt-signing-key")}
+    export JWT_SECRET SETTINGS_KEY BACKUP_KEY RECEIPT_SIGNING_KEY
     if [ -z "${DB_PASSWORD:-}" ]; then
       waited=0
       until [ -f "$SECRETS_DIR/db-password.ready" ] && [ -s "$SECRETS_DIR/db-app-password" ]; do

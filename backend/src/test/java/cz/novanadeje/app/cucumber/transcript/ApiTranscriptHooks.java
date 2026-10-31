@@ -12,17 +12,24 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 import java.time.Duration;
+import java.util.Base64;
 import java.util.HashMap;
+import java.util.HexFormat;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class ApiTranscriptHooks {
 
     private static final Duration ASYNC_WAIT = Duration.ofSeconds(15);
     private static final String NUMBERED_VARIABLE_SYMBOL = "<vs:#>";
     private static final String SETUP_CODE = "<setup-code>";
+    private static final String RECEIPT_SIGNING_KEY_ID = "<key-id>";
     private static final String SIGNATORY_NAME = "<signatory-name>";
     private static final String SIGNATORY_NAME_PROPERTY = "app.donations.receipt.signatory-name";
+    private static final String SIGNING_KEY_PROPERTY = "app.donations.receipt.signing.key";
     private static final int AFTER_EVERY_OTHER_SET_UP = 100_000;
     private static final int AFTER_EVERY_OTHER_TEAR_DOWN = 0;
 
@@ -82,14 +89,23 @@ public class ApiTranscriptHooks {
                 .query(String.class).list()
                 .forEach(symbol -> known.put(symbol, NUMBERED_VARIABLE_SYMBOL));
         donors.variableSymbolsByAlias().forEach((alias, symbol) -> known.put(symbol, "<vs:" + alias + ">"));
+        jdbc.sql("select key_id from receipt_signing_key").query(String.class).list().forEach(keyId -> known.put(keyId, RECEIPT_SIGNING_KEY_ID));
         donors.everySecondFactorSecret().forEach(secret -> known.put(secret, TranscriptNormaliser.SECRET));
         Optional.ofNullable(context.getEnvironment().getProperty(SIGNATORY_NAME_PROPERTY)).filter(name -> !name.isBlank())
                 .ifPresent(name -> known.put(name, SIGNATORY_NAME));
+        Optional.ofNullable(context.getEnvironment().getProperty(SIGNING_KEY_PROPERTY)).filter(key -> !key.isBlank())
+                .ifPresent(key -> signingSeedSpellings(key).forEach(spelling -> known.put(spelling, TranscriptNormaliser.SECRET)));
         setupCodes.findAnnounced().ifPresent(code -> {
             known.put(code.value(), SETUP_CODE);
             known.put(code.display(), SETUP_CODE);
         });
         return known;
+    }
+
+    static Set<String> signingSeedSpellings(String configuredKey) {
+        byte[] seed = Base64.getDecoder().decode(configuredKey.strip());
+        return Stream.of(configuredKey.strip(), Base64.getEncoder().withoutPadding().encodeToString(seed),
+                Base64.getUrlEncoder().withoutPadding().encodeToString(seed), HexFormat.of().formatHex(seed)).collect(Collectors.toUnmodifiableSet());
     }
 
     static void awaitAsynchronousWork(AsyncTaskTracker asyncTasks) {

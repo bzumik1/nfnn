@@ -6,6 +6,7 @@ import java.util.UUID;
 
 public record AdminActionPerformed(UUID adminId, String action, Optional<UUID> subjectId, String details, Instant performedAt) {
 
+    public static final UUID SERVER = new UUID(0, 0);
     public static final int MAX_ACTION_LENGTH = 64;
     public static final int MAX_DETAILS_LENGTH = 2000;
 

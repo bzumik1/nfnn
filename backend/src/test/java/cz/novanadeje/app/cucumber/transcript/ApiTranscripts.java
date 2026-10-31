@@ -32,7 +32,7 @@ public final class ApiTranscripts {
     private static final String SPRING_PROPERTIES = "SPRING_";
     private static final String SPRING_APPLICATION_JSON = "SPRING_APPLICATION_JSON";
     private static final Pattern SECRET_NAME = Pattern.compile("[A-Z0-9_]*(?:PASSWORD|TOKEN|SECRET|KEY)[A-Z0-9_]*");
-    private static final Set<String> SERVER_SECRETS = Set.of("JWT_SECRET", "SETTINGS_KEY", "BACKUP_KEY", "DB_PASSWORD");
+    private static final Set<String> SERVER_SECRETS = Set.of("JWT_SECRET", "SETTINGS_KEY", "BACKUP_KEY", "DB_PASSWORD", "RECEIPT_SIGNING_KEY");
     private static final Set<String> SECRET_VARIABLES = Stream.concat(SERVER_SECRETS.stream(), Setting.secrets().stream().map(Setting::name))
             .collect(Collectors.toUnmodifiableSet());
     private static final String TABLE_ROW = "|";

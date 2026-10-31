@@ -1,0 +1,101 @@
+[
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/verification/payload.json",
+    "reason": "1.5 specifies the receipt verification proof v1 (plan v3 D6, D7): encoding cases with exact payload hex, Ed25519 signature under the RFC 8032 test 1 key, signed digest, QR text and the symbol each needs (or the refusal donations/receipt-too-long above version 40), and reading cases with their verdicts; written by hand (source edited), run by the backend from 1.5 and by the browser from 1.8",
+    "contract": "docs/api-contract.md, Receipt verification proof and signing keys; .claude/rules/testing.md, Logic on both sides"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/schemas/verification/payload.schema.json",
+    "reason": "1.5 adds the JSON Schema of the verification proof cases, checked by Vitest with ajv",
+    "contract": ".claude/rules/testing.md, Logic on both sides"
+  },
+  {
+    "path": "GET /api/donations/receipt-keys",
+    "scenario": "donations/receipt_keys: *",
+    "kind": "added",
+    "reason": "1.5 publishes the receipt signing keys whose seal holds (plan v3 D9, D15: public, 60 per 15 minutes, Cache-Control public, max-age=3600, ETag); v2 had no such endpoint",
+    "contract": "docs/api-contract.md, Receipt verification proof and signing keys"
+  },
+  {
+    "path": "GET /api/admin/donations/receipt-signing-keys",
+    "scenario": "donations/admin_receipt_signing_keys: *",
+    "kind": "added",
+    "reason": "1.5 shows the administrator, and the connector's nfnn_status, the server's key, its registration time and whether every key is published (plan v3 1.5, read only); v2 had no such endpoint",
+    "contract": "docs/api-contract.md, Receipt verification proof and signing keys; MCP connector"
+  },
+  {
+    "kind": "log-field",
+    "line": "donations.application.signing.ReceiptSigningKeyRegistration: Receipt signing key <key-id> registered and published",
+    "reason": "1.5 logs at WARN, after the commit, when the server registers and publishes its own receipt signing key at start (plan v3 D9), so an unexpected new key shows in backend.log",
+    "contract": "docs/api-contract.md, Receipt verification proof and signing keys; docs/security-overview.md, Receipt signing key",
+    "security": {
+      "approvedIn": "PR #231, Jakub 2026-10-30",
+      "fields": {
+        "<key-id>": "the receipt signing key id: 8 hex digits of the SHA-256 of the public key, public (GET /api/donations/receipt-keys serves it to anyone); no personal data and no secret"
+      }
+    }
+  },
+  {
+    "kind": "log-field",
+    "line": "donations.application.signing.ReceiptSigningKeyRegistration: Receipt signing key <key-id> fails its seal, so it is not published",
+    "reason": "1.5 logs at ERROR, once per key row, a row whose seal fails or whose id is not the hash of its public key (plan v3 1.5: a tampered row is never published and raises the alarm)",
+    "contract": "docs/api-contract.md, Receipt verification proof and signing keys; docs/security-overview.md, Receipt signing key",
+    "security": {
+      "approvedIn": "PR #231, Jakub 2026-10-30",
+      "fields": {
+        "<key-id>": "the receipt signing key id: 8 hex digits of the SHA-256 of the public key, public (GET /api/donations/receipt-keys serves it to anyone); no personal data and no secret"
+      }
+    }
+  },
+  {
+    "kind": "log-field",
+    "line": "donations.application.signing.ReceiptSigningKeyRegistration: Receipt signing key <key-id> is sealed by the settings key of another server and no restore confirms it, so it is not published",
+    "reason": "1.5 logs at ERROR, once per key row, a row sealed under a carried settings key when no restore finished by the backup container within the hour confirms it (1.5 security review M1)",
+    "contract": "docs/api-contract.md, Receipt verification proof and signing keys; docs/security-overview.md, Receipt signing key",
+    "security": {
+      "approvedIn": "PR #231, Jakub 2026-10-30",
+      "fields": {
+        "<key-id>": "the receipt signing key id: 8 hex digits of the SHA-256 of the public key, public (GET /api/donations/receipt-keys serves it to anyone); no personal data and no secret"
+      }
+    }
+  },
+  {
+    "kind": "log-field",
+    "line": "donations.application.signing.ReceiptSigningKeyRegistration: Receipt signing key <key-id> from a restored backup is sealed again and published",
+    "reason": "1.5 logs at WARN, once per key row and after the commit, a key adopted from a restore the backup container confirmed, besides the ADOPT_RECEIPT_SIGNING_KEY audit entry (1.5 security review M1)",
+    "contract": "docs/api-contract.md, Receipt verification proof and signing keys; docs/security-overview.md, Receipt signing key",
+    "security": {
+      "approvedIn": "PR #231, Jakub 2026-10-30",
+      "fields": {
+        "<key-id>": "the receipt signing key id: 8 hex digits of the SHA-256 of the public key, public (GET /api/donations/receipt-keys serves it to anyone); no personal data and no secret"
+      }
+    }
+  },
+  {
+    "kind": "log-field",
+    "line": "donations.application.signing.ReceiptSigningKeyRegistration: Receipt signing key <key-id> is a public test key of RFC <n>, so it is not published",
+    "reason": "1.5 logs at ERROR, once per key row and after the commit, a row whose key id is one of the public RFC 8032 test keys when the server runs outside development; it is never published or adopted (1.5 security review round 2, N2)",
+    "contract": "docs/api-contract.md, Receipt verification proof and signing keys; docs/security-overview.md, Receipt signing key",
+    "security": {
+      "approvedIn": "PR #231, Jakub 2026-10-30",
+      "fields": {
+        "<key-id>": "the receipt signing key id: 8 hex digits of the SHA-256 of the public key, public (GET /api/donations/receipt-keys serves it to anyone); no personal data and no secret",
+        "<n>": "8032, the number of the RFC that publishes the test keys (a constant)"
+      }
+    }
+  },
+  {
+    "kind": "log-field",
+    "line": "operations.infrastructure.backup.BackupStoreFinishedRestores: The last restore names a request id of <n> characters, more than <n>, so it confirms no receipt signing key",
+    "reason": "1.5 logs at WARN when the backup container's restore status names a request id longer than the 40 characters a restore id may have, so that restore confirms no key adoption (1.5 testing review round 2, n3)",
+    "contract": "docs/api-contract.md, Receipt verification proof and signing keys; docs/system-overview.md, donations (Receipt signing keys)",
+    "security": {
+      "approvedIn": "PR #231, Jakub 2026-10-30",
+      "fields": {
+        "<n>": "the length of the request id and the limit of 40; the id itself, which comes from a file, is not logged"
+      }
+    }
+  }
+]
