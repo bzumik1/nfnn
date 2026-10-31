@@ -69,6 +69,16 @@ export interface ReceiptDocument {
   readonly footer: string;
 }
 
+export class ReceiptUnprintable extends Error {
+  constructor(readonly outside: readonly number[]) {
+    super(
+      `The frozen receipt holds characters no receipt can print: ${outside
+        .map((codePoint) => `U+${codePoint.toString(16).toUpperCase().padStart(4, '0')}`)
+        .join(', ')}.`,
+    );
+  }
+}
+
 export interface ReceiptCaptions {
   readonly verificationHeading: Bilingual;
   readonly verificationText: Bilingual;

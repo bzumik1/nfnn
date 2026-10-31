@@ -1,4 +1,4 @@
-import { receiptDocument } from './receipt-document';
+import { receiptDocument, ReceiptUnprintable } from './receipt-document';
 import {
   COMPANY_REPLACEMENT,
   frozenCase,
@@ -176,5 +176,52 @@ describe('Given a frozen receipt whose issue text is changed to the typographer 
     );
 
     expect(document.signature.issuedAt.cs).toBe('V Novém Boru dne 15. 01. 2027');
+  });
+});
+
+describe('Given a frozen receipt whose donor name carries invisible format characters and a decomposed letter', () => {
+  const frozen = frozenCase(SINGLE_PERSON_CS);
+  const document = receiptDocument(
+    {
+      ...frozen,
+      donor: {
+        ...frozen.donor,
+        name: '\ufeffJana\u200b \u202eNova\u0301kova\u0301\u202c',
+        address: { ...frozen.donor.address, street: 'Dlouha\u0301\u00ad 12' },
+      },
+    },
+    ISSUED_AT,
+    TEST_CAPTIONS,
+  );
+
+  it('when it is mapped, then the lines print the name and street without them and with the letters composed', () => {
+    expect(document.donor.lines.map((line) => line.cs).slice(0, 2)).toEqual([
+      'Jméno a příjmení: Jana Nováková',
+      'Bydliště: Dlouhá 12, 400 01 Ústí nad Labem',
+    ]);
+  });
+});
+
+describe('Given a frozen receipt with characters no receipt can print', () => {
+  it('when it is mapped, then it is refused naming each of them once, before anything is drawn', () => {
+    const frozen = frozenCase(SINGLE_PERSON_CS);
+
+    let refused: unknown;
+    try {
+      receiptDocument(
+        {
+          ...frozen,
+          donor: { ...frozen.donor, name: 'Jana 中 Nováková 中' },
+          signatory: { ...frozen.signatory, role: 'předseda 😀' },
+        },
+        ISSUED_AT,
+        TEST_CAPTIONS,
+      );
+    } catch (failure: unknown) {
+      refused = failure;
+    }
+
+    expect(refused).toBeInstanceOf(ReceiptUnprintable);
+    expect((refused as ReceiptUnprintable).outside).toEqual([0x4e2d, 0x1f600]);
   });
 });

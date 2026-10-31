@@ -173,6 +173,18 @@ describe('Given the browser receipt PDF', () => {
     expect(environment.workers).toEqual([]);
   });
 
+  it('when the frozen receipt holds a character no receipt can print, then the drawing fails as unprintable and no worker starts', () => {
+    const frozen = frozenCase(SINGLE_PERSON_CS);
+    draw({ donationId: 'd-1' });
+    http
+      .expectOne('/api/donations/me/receipts')
+      .flush(issued({ ...frozen, donor: { ...frozen.donor, name: 'Jana 中 Nováková' } }));
+
+    expect(failure).toBeInstanceOf(ReceiptPdfFailure);
+    expect((failure as ReceiptPdfFailure).reason).toBe('unprintable');
+    expect(environment.workers).toHaveLength(0);
+  });
+
   describe('when the receipt names a signature image', () => {
     let bytes: Uint8Array;
     let receipt: FrozenReceipt;

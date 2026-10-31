@@ -2126,6 +2126,48 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(savedFiles).toEqual([]);
     });
 
+    it('then a receipt the server cannot print shows the title and detail of that problem, which say whom to write to', async () => {
+      await open('/darce/potvrzeni');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      await downloadYear(2025);
+      receiptRequest({ year: 2025 }).flush(
+        {
+          ...problemBody(
+            'donations/receipt-unprintable',
+            'Potvrzení s těmito údaji nejde vytisknout',
+            409,
+          ),
+          detail: 'Napište nám prosím na info@nfnn.cz.',
+        },
+        { status: 409, statusText: 'Conflict' },
+      );
+      await settleBlobFailure();
+
+      expect(text('.yearly-card [role="alert"]')).toBe(
+        'Potvrzení s těmito údaji nejde vytisknout. Napište nám prosím na info@nfnn.cz.',
+      );
+      expect(savedFiles).toEqual([]);
+    });
+
+    it('then an issued receipt with a character no receipt can print asks the donor to write to the foundation, not to try another browser', async () => {
+      await open('/darce/potvrzeni');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      await downloadYear(2025);
+      const receipt = issuedYearly(2025);
+      receiptRequest({ year: 2025 }).flush({
+        ...receipt,
+        receipt: { ...receipt.receipt, donor: { ...receipt.receipt.donor, name: 'Jana 中' } },
+      });
+      await settle();
+
+      expect(text('.yearly-card [role="alert"]')).toBe(
+        'Údaje potvrzení obsahují znak, který v PDF neumíme vytisknout, a tak jsme PDF nevytvořili. Napište nám prosím na info@nfnn.cz.',
+      );
+      expect(receiptEnvironment.workers).toHaveLength(0);
+    });
+
     it('then an access token that expires during a download is refreshed and the PDF is still saved', async () => {
       await open('/darce/potvrzeni');
       await respond(twoYearSummary(), twoYearDonations());

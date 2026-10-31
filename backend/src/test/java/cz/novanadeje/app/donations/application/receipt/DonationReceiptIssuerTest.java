@@ -21,11 +21,15 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptKind;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatureRepository;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptStatus;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptUnprintable;
+import cz.novanadeje.app.donations.domain.receipt.Signatory;
 import cz.novanadeje.app.donations.domain.receipt.Receipts;
 import cz.novanadeje.app.donations.domain.receipt.ReplacedReceipt;
 import cz.novanadeje.app.donations.domain.receipt.SignatureImage;
 import cz.novanadeje.app.donations.domain.receipt.proof.ReceiptTooLong;
 import cz.novanadeje.app.shared.domain.LocaleCode;
+import cz.novanadeje.app.shared.domain.PostalAddress;
+import cz.novanadeje.app.shared.domain.VariableSymbol;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
@@ -351,6 +355,41 @@ class DonationReceiptIssuerTest {
         ReceiptDocument document = ReceiptDocumentFactory.forYear(jana(), YEAR_2026, List.of(MARCH), FOUNDATION, SIGNATORY,
                 new ReceiptNumber("2027-000001"), EARLIER, locale, Optional.empty());
         return DonationReceipt.issue(DonationReceiptId.newId(EARLIER_AT), JANA, EARLIER_AT, fingerprint, Receipts.frozen(document), Optional.empty());
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @CsvSource(delimiter = '|', value = {
+            "the name | 王 Wang | Dlouhá 12 | Ústí nad Labem",
+            "the street | Jana Nováková | Dlouhá\t12 | Ústí nad Labem",
+            "the city | Jana Nováková | Dlouhá 12 | Ústí 😀"
+    })
+    @DisplayName("Given a donor record whose printed data has a character outside the printable set, when a receipt is issued, then it is refused before a number is taken and nothing is frozen or saved")
+    void should_refuse_before_numbering_when_issued_given_an_unprintable_character_in_the_donor_record(String part, String name, String street, String city) {
+        DonorRecord record = DonorRecord.registerPerson(JANA, name, new PostalAddress(street, city, "400 01"), new VariableSymbol("4821937560"), LocaleCode.CS, NOW);
+        givenDonationsOfJana(record, MARCH);
+
+        assertThatThrownBy(() -> issuer.issueForYear(JANA, YEAR_2026, TODAY))
+                .as(part)
+                .isInstanceOfSatisfying(ReceiptUnprintable.class, refused -> assertThat(refused.code()).isEqualTo("donations/receipt-unprintable"));
+
+        verify(receipts).lockDonor(JANA);
+        verify(receipts, never()).nextSerial();
+        verify(receipts, never()).save(any());
+        verifyNoInteractions(freezer);
+    }
+
+    @Test
+    @DisplayName("Given a signatory whose name has a character outside the printable set, when a receipt is issued, then it is refused before a number is taken")
+    void should_refuse_before_numbering_when_issued_given_an_unprintable_signatory() {
+        DonationReceiptIssuer unprintable = new DonationReceiptIssuer(receipts,
+                new ReceiptRequestReader(donations, donorRecords, new FirstReceiptYear(YEAR_2026)), freezer, signatures, FOUNDATION,
+                new Signatory("Pavel\u0007Vzorový", "předseda správní rady"), Clock.fixed(NOW, ZoneOffset.UTC));
+        givenDonationsOfJana(jana(), MARCH);
+
+        assertThatThrownBy(() -> unprintable.issueForYear(JANA, YEAR_2026, TODAY)).isInstanceOf(ReceiptUnprintable.class);
+
+        verify(receipts, never()).nextSerial();
+        verifyNoInteractions(freezer);
     }
 
     private void givenDonationsOfJana(DonorRecord record, Donation... newestFirst) {

@@ -628,3 +628,26 @@ Feature: A donor issues receipts of their donations as frozen, signed data
     When someone without a token fetches the receipt image "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
     Then the response status is 401
     And the problem type ends with "auth/unauthenticated"
+
+  Scenario: A receipt whose printed data has a character no receipt can print is refused before a number is taken, and is issued once the data is corrected
+    Given today is 2026-12-20
+    And a person "Jana" is registered
+    And the bank account has these movements:
+      | id   | date       | amount  | account    | bankCode | name          | variableSymbol |
+      | 2001 | 2026-10-01 | 1000.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
+    And the application starts the import
+    And today is 2027-01-15
+    And the donation records keep the street of "Jana" as "Dlouhá 12 王", saved before receipts checked their characters
+    When "Jana" issues her yearly receipt for 2026
+    Then the response status is 409
+    And the problem type ends with "donations/receipt-unprintable"
+    And the problem has the title "Potvrzení s těmito údaji nejde vytisknout"
+    When "Jana" issues the receipt of her donation received on 2026-10-01
+    Then the response status is 409
+    And the problem type ends with "donations/receipt-unprintable"
+    And 0 receipts are stored
+    When "Jana" changes her address to street "Dlouhá 12", postal code "400 01" and city "Ústí nad Labem"
+    And "Jana" issues her yearly receipt for 2026
+    Then the response status is 200
+    And the issued receipt has number "2027-000001"
+    And 1 receipt is stored

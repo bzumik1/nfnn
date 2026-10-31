@@ -3,6 +3,7 @@ import { FrozenReceipt } from './frozen-receipt';
 import { ReceiptArt } from './receipt-art';
 import { receiptDocument, ReceiptDocument } from './receipt-document';
 import { drawReceipt, ReceiptAssets } from './receipt-layout';
+import { RECEIPT_PRINTABLE_RANGES } from './receipt-characters';
 import { parseVectorArt } from './vector-art';
 import { verificationSymbol, qrPlacement } from './verification-qr';
 import {
@@ -32,6 +33,7 @@ import {
 } from './testing/synthetic-art';
 
 const ISSUED_AT = '2027-01-15T09:30:00Z';
+const RECEIPT_THEMES = ['nova-nadeje', 'control'] as const;
 const A4 = { width: 595.28, height: 841.89 };
 const CAPTION_PHRASES = [
   TEST_CAPTIONS.verificationHeading.cs,
@@ -187,15 +189,71 @@ describe('Given every frozen receipt case and the text v2 printed for it', () =>
 
 describe('Given a document with a character the receipt fonts lack', () => {
   it('when it is drawn, then it is refused rather than printed as an empty box', async () => {
-    const frozen = frozenCase(SINGLE_PERSON_CS);
-    const document = documentOf({
-      ...frozen,
-      donor: { ...frozen.donor, name: 'Jana 中 Nováková' },
-    });
+    const document = documentOf(frozenCase(SINGLE_PERSON_CS));
+    const unprintable: ReceiptDocument = {
+      ...document,
+      donor: {
+        ...document.donor,
+        lines: [
+          { cs: 'Jméno a příjmení: Jana 中 Nováková', en: null },
+          ...document.donor.lines.slice(1),
+        ],
+      },
+    };
 
-    await expect(drawReceipt(document, TEST_STYLE, NO_ART)).rejects.toThrow(/U\+4E2D/);
+    await expect(drawReceipt(unprintable, TEST_STYLE, NO_ART)).rejects.toThrow(/U\+4E2D/);
   });
 });
+
+const EVERY_PRINTABLE_CHARACTER = RECEIPT_PRINTABLE_RANGES.flatMap(([first, last]) =>
+  Array.from({ length: last - first + 1 }, (_, offset) => String.fromCodePoint(first + offset)),
+).join('');
+
+const NAMES_IN_OTHER_SCRIPTS: readonly { script: string; name: string }[] = [
+  { script: 'Romanian', name: 'Ștefan Țurcanu' },
+  { script: 'Vietnamese', name: 'Nguyễn Văn An' },
+  { script: 'Ukrainian Cyrillic', name: 'Марʼяна Ковальчук' },
+  { script: 'Greek', name: 'Γιώργος Παπαδόπουλος' },
+];
+
+for (const theme of RECEIPT_THEMES) {
+  describe(`Given the receipt fonts of the ${theme} theme`, () => {
+    it('when a receipt whose title, bold headings and lines hold every printable character is drawn, then every character has its glyph in every font', async () => {
+      const frozen = frozenCase(SINGLE_PERSON_CS);
+      const document = documentOf({
+        ...frozen,
+        donor: { ...frozen.donor, name: EVERY_PRINTABLE_CHARACTER },
+        texts: {
+          ...frozen.texts,
+          cs: {
+            ...frozen.texts.cs,
+            'receipt.title.single': EVERY_PRINTABLE_CHARACTER,
+            'receipt.donor': EVERY_PRINTABLE_CHARACTER,
+          },
+        },
+      });
+
+      await expect(
+        drawReceipt(document, TEST_STYLE, { ...NO_ART, fonts: themeFonts(theme) }),
+      ).resolves.toBeInstanceOf(Uint8Array);
+    }, 60_000);
+
+    for (const { script, name } of NAMES_IN_OTHER_SCRIPTS) {
+      it(`when the receipt of a donor named in ${script} is drawn, then the name reads back from the PDF`, async () => {
+        const frozen = frozenCase(SINGLE_PERSON_CS);
+        const read = await readPdf(
+          await drawReceipt(
+            documentOf({ ...frozen, donor: { ...frozen.donor, name } }),
+            TEST_STYLE,
+            { ...NO_ART, fonts: themeFonts(theme) },
+          ),
+        );
+
+        expect(read.pages[0].text.normalize('NFC')).toContain(`Jméno a příjmení: ${name}`);
+      });
+    }
+  });
+}
 
 const QR_SAMPLES: readonly { gifts: number; name: string }[] = [
   { gifts: 1, name: SINGLE_PERSON_CS },

@@ -54,6 +54,37 @@ Feature: Donor registers an account
     Then the response status is 400
     And the problem lists an error for field "companyIdentifier"
 
+  Scenario Outline: A name or address with a character no receipt can print is refused, so every receipt of the donor can be drawn
+    When a person registers
+      | name       | <name>                |
+      | street     | <street>              |
+      | city       | <city>                |
+      | postalCode | 400 01                |
+      | email      | jana@example.cz       |
+      | password   | correct horse battery |
+    Then the response status is 400
+    And the problem's error for field "<field>" says "Obsahuje znak, který na potvrzení o daru nevytiskneme, například emoji nebo čínské písmo. Napište ho prosím latinkou, cyrilicí nebo řeckým písmem."
+
+    Examples:
+      | name          | street       | city           | field          |
+      | 王 Wang        | Dlouhá 12    | Ústí nad Labem | name           |
+      | Jana Nováková | Dlouhá 😀 12 | Ústí nad Labem | address.street |
+      | Jana Nováková | Dlouhá 12    | Ústí ★         | address.city   |
+
+  Scenario: A name and address in Romanian, Vietnamese, Cyrillic or Greek letters are accepted, because every receipt prints them
+    When a person registers
+      | name       | Ștefan Nguyễn Văn Ţepeş   |
+      | street     | вул. Січових Стрільців 5 |
+      | city       | Αθήνα                    |
+      | postalCode | 104 31                   |
+      | email      | stefan@example.cz        |
+      | password   | correct horse battery    |
+    Then the response status is 202
+    When the donor confirms the e-mail with the link from the e-mail
+    Then the response status is 200
+    And the response carries an access token and a refresh cookie
+    And the donor profile shows type "PERSON", name "Ștefan Nguyễn Văn Ţepeş" and email "stefan@example.cz"
+
   Scenario: The same email is not registered twice, whatever its case, and the answer does not say so
     Given a person registered with email "jana@example.cz" and password "correct horse battery"
     When a person registers

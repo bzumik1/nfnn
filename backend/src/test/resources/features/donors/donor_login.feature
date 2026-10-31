@@ -59,6 +59,24 @@ Feature: Donor signs in and keeps a session
     And the donor profile shows type "PERSON", name "Jana Svobodová" and email "jana@example.cz"
     And the donor profile shows street "Krátká 3"
 
+  Scenario: The donor cannot change the name or the address to one no receipt can print
+    Given the donor signed in with email "jana@example.cz" and password "correct horse battery"
+    When the donor updates the profile
+      | name       | Jana 中 Svobodová |
+      | street     | Krátká 3          |
+      | city       | Most              |
+      | postalCode | 434 01            |
+    Then the response status is 400
+    And the problem lists an error for field "name"
+    When the donor updates the profile
+      | name       | Jana Svobodová |
+      | street     | Krátká ☃ 3     |
+      | city       | Most           |
+      | postalCode | 434 01         |
+    Then the response status is 400
+    And the problem lists an error for field "address.street"
+    And the donor profile shows type "PERSON", name "Jana Nováková" and email "jana@example.cz"
+
   Scenario: The eleventh sign-in within 15 minutes from one address is refused, even with the right password
     Given 10 sign-in attempts were made with email "jana@example.cz" and password "wrong horse battery"
     When the donor signs in with email "jana@example.cz" and password "correct horse battery"
