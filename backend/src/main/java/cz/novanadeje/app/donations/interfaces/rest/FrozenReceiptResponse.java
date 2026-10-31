@@ -28,7 +28,7 @@ public record FrozenReceiptResponse(int schemaVersion, ReceiptKind kind, String 
                 document.lines().stream().map(line -> new GiftResponse(line.receivedOn(), line.amount().amountMinor(), line.source())).toList(),
                 new AmountResponse(document.total().amountMinor(), document.total().currency().name()),
                 new SignatoryResponse(document.signatory().name(), document.signatory().role(),
-                        frozen.signatureImage().map(ImageResponse::of).orElse(null)),
+                        frozen.signatureImage().map(ImageResponse::of).orElse(null), frozen.portraitImage().map(ImageResponse::of).orElse(null)),
                 new TextsResponse(frozen.texts().czech(), frozen.texts().english().orElse(null)),
                 new VerificationResponse(frozen.verification().keyId().value(), frozen.verification().qrText()));
     }
@@ -74,7 +74,7 @@ public record FrozenReceiptResponse(int schemaVersion, ReceiptKind kind, String 
         }
     }
 
-    public record SignatoryResponse(String name, String role, ImageResponse signatureImage) {
+    public record SignatoryResponse(String name, String role, ImageResponse signatureImage, ImageResponse portraitImage) {
     }
 
     public record TextsResponse(SortedMap<String, String> cs, SortedMap<String, String> en) {

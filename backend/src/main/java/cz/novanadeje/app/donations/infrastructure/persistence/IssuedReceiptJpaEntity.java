@@ -76,6 +76,9 @@ class IssuedReceiptJpaEntity {
     @Column(name = "signature_image_sha256", length = 64)
     private String signatureImageSha256;
 
+    @Column(name = "portrait_image_sha256", length = 64)
+    private String portraitImageSha256;
+
     @Column(name = "signing_key_id", nullable = false, length = 8)
     private String signingKeyId;
 
@@ -111,6 +114,7 @@ class IssuedReceiptJpaEntity {
         entity.schemaVersion = (short) frozen.schemaVersion();
         entity.frozen = FrozenReceiptColumn.write(frozen);
         entity.signatureImageSha256 = frozen.signatureImage().map(ContentDigest::value).orElse(null);
+        entity.portraitImageSha256 = frozen.portraitImage().map(ContentDigest::value).orElse(null);
         entity.signingKeyId = frozen.verification().keyId().value();
         entity.proof = frozen.verification().proof().bytes();
         entity.statusSha256 = frozen.statusDigest().value();
@@ -134,7 +138,7 @@ class IssuedReceiptJpaEntity {
 
     DonationReceipt toDomain() {
         FrozenReceipt frozenReceipt = new FrozenReceipt(FrozenReceiptColumn.document(frozen), FrozenReceiptColumn.texts(frozen),
-                Optional.ofNullable(signatureImageSha256).map(ContentDigest::new),
+                Optional.ofNullable(signatureImageSha256).map(ContentDigest::new), Optional.ofNullable(portraitImageSha256).map(ContentDigest::new),
                 new ReceiptVerification(new ReceiptSigningKeyId(signingKeyId), proof()));
         DonationReceipt receipt = DonationReceipt.reconstitute(
                 new DonationReceiptId(id),

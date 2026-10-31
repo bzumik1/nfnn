@@ -1,0 +1,110 @@
+package cz.novanadeje.app.donations.application.receipt;
+
+import cz.novanadeje.app.donations.domain.receipt.PersonReference;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptPersonNotFound;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatory;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatoryRepository;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatureRepository;
+import cz.novanadeje.app.donations.domain.receipt.SignatureKind;
+import cz.novanadeje.app.donations.domain.receipt.SignatureSummary;
+import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.shared.application.people.FoundationPeople;
+import cz.novanadeje.app.shared.application.people.FoundationPerson;
+import cz.novanadeje.app.support.MutableClock;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.springframework.context.ApplicationEventPublisher;
+
+import java.time.Instant;
+import java.time.ZoneId;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
+class ReceiptSignatoryServiceTest {
+
+    private static final Instant NOW = Instant.parse("2026-10-31T09:00:00Z");
+    private static final Instant EARLIER = Instant.parse("2026-10-01T09:00:00Z");
+    private static final UUID ADMIN = UUID.fromString("01a18e56-bdb0-775a-bd0a-a60756831369");
+    private static final PersonReference CHAIR = new PersonReference(UUID.fromString("019a3a00-0000-7000-8000-00000000f001"));
+    private static final PersonReference OTHER = new PersonReference(UUID.fromString("019a3a00-0000-7000-8000-00000000f002"));
+
+    private final ReceiptSignatoryRepository signatories = mock(ReceiptSignatoryRepository.class);
+    private final ReceiptSignatureRepository signatures = mock(ReceiptSignatureRepository.class);
+    private final FoundationPeople people = mock(FoundationPeople.class);
+    private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
+    private final ReceiptSignatoryService service = new ReceiptSignatoryService(signatories, signatures, people, events,
+            new MutableClock(NOW, ZoneId.of("Europe/Prague")));
+
+    @Test
+    @DisplayName("Given no signatory chosen, when the signatory is viewed, then none is chosen and the uploaded signatures are listed")
+    void should_answer_no_signatory_when_viewed_given_none_chosen() {
+        SignatureSummary summary = new SignatureSummary(OTHER, SignatureKind.VECTOR, 1200, 400, EARLIER);
+        when(signatories.current()).thenReturn(Optional.empty());
+        when(signatures.summaries()).thenReturn(List.of(summary));
+
+        assertThat(service.view()).isEqualTo(new ReceiptSignatoryView(Optional.empty(), List.of(summary)));
+    }
+
+    @Test
+    @DisplayName("Given a signatory chosen who has a portrait and a signature, when viewed, then their name, receipt role and both images are named")
+    void should_name_person_role_and_images_when_viewed_given_chosen_signatory() {
+        when(signatories.current()).thenReturn(Optional.of(new ReceiptSignatory(CHAIR, "předseda správní rady", EARLIER)));
+        when(signatures.summaries()).thenReturn(List.of(new SignatureSummary(CHAIR, SignatureKind.RASTER, 600, 200, EARLIER)));
+        when(people.find(CHAIR.value())).thenReturn(Optional.of(new FoundationPerson(CHAIR.value(), "Josef Vzorový", true)));
+
+        assertThat(service.view().chosen())
+                .contains(new ChosenSignatoryView(CHAIR, "Josef Vzorový", "předseda správní rady", EARLIER, true, true));
+    }
+
+    @Test
+    @DisplayName("Given a signatory chosen whose person is gone, when viewed, then none is chosen")
+    void should_answer_no_signatory_when_viewed_given_person_gone() {
+        when(signatories.current()).thenReturn(Optional.of(new ReceiptSignatory(CHAIR, "předseda správní rady", EARLIER)));
+        when(signatures.summaries()).thenReturn(List.of());
+        when(people.find(CHAIR.value())).thenReturn(Optional.empty());
+
+        assertThat(service.view().chosen()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a person of the foundation, when an administrator chooses them with a receipt role, then the choice is stored, audited and returned")
+    void should_store_and_audit_when_chosen_given_person() {
+        when(people.find(CHAIR.value())).thenReturn(Optional.of(new FoundationPerson(CHAIR.value(), "Josef Vzorový", false)));
+        when(signatures.digestOf(CHAIR)).thenReturn(Optional.empty());
+
+        ChosenSignatoryView chosen = service.choose(ADMIN, CHAIR, "  předseda správní rady ");
+
+        assertThat(chosen).isEqualTo(new ChosenSignatoryView(CHAIR, "Josef Vzorový", "předseda správní rady", NOW, false, false));
+        verify(signatories).choose(new ReceiptSignatory(CHAIR, "předseda správní rady", NOW));
+        ArgumentCaptor<AdminActionPerformed> published = ArgumentCaptor.forClass(AdminActionPerformed.class);
+        verify(events).publishEvent(published.capture());
+        assertThat(published.getValue().action()).isEqualTo("CHOOSE_RECEIPT_SIGNATORY");
+        assertThat(published.getValue().adminId()).isEqualTo(ADMIN);
+        assertThat(published.getValue().details())
+                .isEqualTo("Potvrzení o daru podepisuje osoba " + CHAIR + ", funkce na potvrzení: předseda správní rady")
+                .doesNotContain("Josef");
+        assertThat(published.getValue().performedAt()).isEqualTo(NOW);
+    }
+
+    @Test
+    @DisplayName("Given a person the foundation does not have, when an administrator chooses them, then it is refused as not found and nothing changes")
+    void should_refuse_as_not_found_when_chosen_given_unknown_person() {
+        when(people.find(OTHER.value())).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.choose(ADMIN, OTHER, "předseda")).isInstanceOf(ReceiptPersonNotFound.class);
+
+        verify(signatories, never()).choose(any());
+        verifyNoInteractions(events);
+    }
+}

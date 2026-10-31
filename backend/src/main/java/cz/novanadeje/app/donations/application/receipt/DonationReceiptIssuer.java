@@ -2,7 +2,6 @@ package cz.novanadeje.app.donations.application.receipt;
 
 import cz.novanadeje.app.donations.domain.donation.DonationId;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
-import cz.novanadeje.app.donations.domain.receipt.CurrentSignature;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptId;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
@@ -12,10 +11,7 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptDocument;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptFingerprint;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptIssueLimitReached;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
-import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatureRepository;
 import cz.novanadeje.app.donations.domain.receipt.ReplacedReceipt;
-import cz.novanadeje.app.donations.domain.receipt.Signatory;
-import cz.novanadeje.app.donations.domain.receipt.SignatureArtwork;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,19 +37,17 @@ public class DonationReceiptIssuer {
     private final DonationReceiptRepository receipts;
     private final ReceiptRequestReader requests;
     private final ReceiptFreezer freezer;
-    private final ReceiptSignatureRepository signatures;
+    private final IssuingSignatory signatories;
     private final FoundationIdentity foundation;
-    private final Signatory signatory;
     private final Clock clock;
 
     public DonationReceiptIssuer(DonationReceiptRepository receipts, ReceiptRequestReader requests, ReceiptFreezer freezer,
-                                 ReceiptSignatureRepository signatures, FoundationIdentity foundation, Signatory signatory, Clock clock) {
+                                 IssuingSignatory signatories, FoundationIdentity foundation, Clock clock) {
         this.receipts = receipts;
         this.requests = requests;
         this.freezer = freezer;
-        this.signatures = signatures;
+        this.signatories = signatories;
         this.foundation = foundation;
-        this.signatory = signatory;
         this.clock = clock;
     }
 
@@ -83,16 +77,17 @@ public class DonationReceiptIssuer {
         if (replaced.isPresent() && receipts.countReplacementsIssuedAfter(request.donor(), clock.instant().minus(ISSUE_LIMIT_WINDOW)) >= REPLACEMENTS_PER_DONOR_A_DAY) {
             throw new ReceiptIssueLimitReached(request.donor(), REPLACEMENTS_PER_DONOR_A_DAY);
         }
+        Instant issuedAt = clock.instant();
+        SignatoryAtIssue signatory = signatories.resolve(issuedAt);
         long serial = receipts.nextSerial();
         ReceiptNumber number = ReceiptNumber.of(Year.from(request.today()), serial);
         if (serial >= SERIAL_WORTH_A_WARNING) {
             LOG.warn("Receipt serial {} has passed 90 % of the numbering, which ends at {}", serial, ReceiptNumber.LAST_SERIAL);
         }
-        Instant issuedAt = clock.instant();
         LocaleCode locale = replaced.map(DonationReceipt::locale).orElse(request.record().preferredLocale());
-        ReceiptDocument document = request.document(foundation, signatory, number, locale,
+        ReceiptDocument document = request.document(foundation, signatory.signatory(), number, locale,
                 replaced.map(old -> new ReplacedReceipt(old.number(), old.issuedOn())));
-        FrozenReceipt frozen = freezer.freeze(document, signatures.current().map(CurrentSignature::artwork).map(SignatureArtwork::digest));
+        FrozenReceipt frozen = freezer.freeze(document, signatory.signatureImage(), signatory.portraitImage());
         DonationReceipt issued = DonationReceipt.issue(DonationReceiptId.newId(issuedAt), request.donor(), issuedAt, fingerprint, frozen,
                 replaced.map(DonationReceipt::id));
         replaced.ifPresent(old -> {

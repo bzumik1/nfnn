@@ -34,7 +34,8 @@ interface IssuedReceiptJpaRepository extends JpaRepository<IssuedReceiptJpaEntit
 
     List<IssuedReceiptJpaEntity> findByDonorIdOrderByIssuedAtDescNumberDesc(UUID donorId);
 
-    boolean existsByDonorIdAndSignatureImageSha256(UUID donorId, String signatureImageSha256);
+    @Query("select count(r) > 0 from IssuedReceiptJpaEntity r where r.donorId = :donorId and (r.signatureImageSha256 = :image or r.portraitImageSha256 = :image)")
+    boolean showsImage(@Param("donorId") UUID donorId, @Param("image") String image);
 
     @Transactional
     @Query(nativeQuery = true, value = "select nextval('donation_receipt_number_seq')")

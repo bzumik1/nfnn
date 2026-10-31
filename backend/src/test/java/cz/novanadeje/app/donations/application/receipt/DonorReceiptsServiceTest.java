@@ -68,10 +68,10 @@ class DonorReceiptsServiceTest {
     @Test
     @DisplayName("Given an image one of the donor's receipts shows, when it is asked for, then its bytes and media type come")
     void should_give_image_when_asked_given_donor_receipt_shows_it() {
-        when(receipts.showsSignatureImage(JANA, SIGNATURE.digest())).thenReturn(true);
+        when(receipts.showsImage(JANA, SIGNATURE.digest())).thenReturn(true);
         when(images.find(SIGNATURE.digest())).thenReturn(Optional.of(SIGNATURE));
 
-        StoredReceiptImage image = service.signatureImageOf(JANA, SIGNATURE.digest());
+        StoredReceiptImage image = service.imageOf(JANA, SIGNATURE.digest());
 
         assertThat(image.content()).isEqualTo(SIGNATURE.content());
         assertThat(image.mediaType()).isEqualTo("image/png");
@@ -80,9 +80,9 @@ class DonorReceiptsServiceTest {
     @Test
     @DisplayName("Given an image none of the donor's receipts shows, when it is asked for, then it is not found and the image is not even read")
     void should_not_find_without_reading_image_when_asked_given_no_donor_receipt_shows_it() {
-        when(receipts.showsSignatureImage(JANA, SIGNATURE.digest())).thenReturn(false);
+        when(receipts.showsImage(JANA, SIGNATURE.digest())).thenReturn(false);
 
-        assertThatThrownBy(() -> service.signatureImageOf(JANA, SIGNATURE.digest())).isInstanceOfSatisfying(ReceiptImageNotFound.class,
+        assertThatThrownBy(() -> service.imageOf(JANA, SIGNATURE.digest())).isInstanceOfSatisfying(ReceiptImageNotFound.class,
                 refused -> assertThat(refused.code()).isEqualTo("donations/receipt-image-not-found"));
         verifyNoInteractions(images);
     }
@@ -91,9 +91,9 @@ class DonorReceiptsServiceTest {
     @DisplayName("Given an image a receipt names but the store no longer holds, when it is asked for, then it is not found")
     void should_not_find_when_asked_given_image_missing_from_store() {
         ContentDigest missing = new ContentDigest("e".repeat(64));
-        when(receipts.showsSignatureImage(JANA, missing)).thenReturn(true);
+        when(receipts.showsImage(JANA, missing)).thenReturn(true);
         when(images.find(missing)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.signatureImageOf(JANA, missing)).isInstanceOf(ReceiptImageNotFound.class);
+        assertThatThrownBy(() -> service.imageOf(JANA, missing)).isInstanceOf(ReceiptImageNotFound.class);
     }
 }

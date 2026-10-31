@@ -5,6 +5,7 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptImageRepository;
 import cz.novanadeje.app.donations.domain.receipt.StoredReceiptImage;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.Optional;
 
 @Repository
@@ -19,5 +20,10 @@ class JpaReceiptImageRepository implements ReceiptImageRepository {
     @Override
     public Optional<StoredReceiptImage> find(ContentDigest digest) {
         return images.findById(digest.value()).map(stored -> new StoredReceiptImage(stored.content(), stored.mediaType()));
+    }
+
+    @Override
+    public void storeIfAbsent(StoredReceiptImage image, Instant firstUsedAt) {
+        images.insertIfAbsent(image.digest().value(), image.mediaType(), image.content(), firstUsedAt);
     }
 }

@@ -51,7 +51,7 @@ class FrozenReceiptCasesTest {
                     ReceiptCorpusTest.Sample sample = samples.get(sharedCase.input().get("v2Sample").asString());
                     ReceiptDocument document = sample.document();
                     FrozenReceipt frozen = new FrozenReceipt(document,
-                            RecordedReceiptTextSource.of(sharedCase.input().get("textsSha256").asString()).textsFor(document.locale()), sample.signature().map(SignatureImage::digest),
+                            RecordedReceiptTextSource.of(sharedCase.input().get("textsSha256").asString()).textsFor(document.locale()), sample.signature().map(SignatureImage::digest), FrozenReceiptCases.portraitImageOf(sharedCase.input()),
                             new ReceiptVerification(signer.keyId(), proofs.prove(SignedReceipt.of(document))));
                     ObjectNode putTogether = (ObjectNode) JSON.readTree(JSON.writeValueAsString(FrozenReceiptResponse.from(frozen)));
                     putTogether.remove(NOT_INPUT);

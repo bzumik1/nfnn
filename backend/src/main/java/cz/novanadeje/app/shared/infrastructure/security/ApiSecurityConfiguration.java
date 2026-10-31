@@ -30,15 +30,17 @@ class ApiSecurityConfiguration {
             "/api/admin/content/people/*/web-signature",
             "/api/admin/donations/donors/*/bank-accounts/*",
             "/api/admin/donations/symbol-claims/*",
-            "/api/admin/donations/receipt-signature"};
+            "/api/admin/donations/receipt-signatures/*"};
     private static final String[] BROWSER_ONLY_POSTS = {
             "/api/admin/donors/administrators",
             "/api/admin/donors/*/second-factor/reset",
             "/api/admin/donations/symbol-claims/*/reverse",
-            "/api/admin/donations/receipt-signature",
+            "/api/admin/donations/receipt-signatures/*",
             "/api/admin/content/people/*/web-signature",
             "/api/admin/operations/backups/key/reveal",
             "/api/admin/operations/backups/key/confirmation"};
+    private static final String[] BROWSER_ONLY_PUTS = {
+            "/api/admin/donations/receipt-signatory"};
 
     @Bean
     SecurityFilterChain apiSecurityFilterChain(HttpSecurity http, ProblemDetailSecurityErrorHandler errorHandler,
@@ -65,6 +67,7 @@ class ApiSecurityConfiguration {
                         .requestMatchers(HttpMethod.POST, BACKUP_RESTORE).access(administratorInBrowser())
                         .requestMatchers(HttpMethod.DELETE, BROWSER_ONLY_DELETES).access(administratorInBrowser())
                         .requestMatchers(HttpMethod.POST, BROWSER_ONLY_POSTS).access(administratorInBrowser())
+                        .requestMatchers(HttpMethod.PUT, BROWSER_ONLY_PUTS).access(administratorInBrowser())
                         .requestMatchers(HttpMethod.GET, "/api/admin/**").hasRole(ADMIN_ROLE)
                         .requestMatchers(HttpMethod.HEAD, "/api/admin/**").hasRole(ADMIN_ROLE)
                         .requestMatchers("/api/admin/**").access(new AdminWriteAuthorizationManager())

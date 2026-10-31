@@ -61,6 +61,7 @@ import static cz.novanadeje.app.donations.domain.receipt.Receipts.receivedFromAc
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.receivedFromJana;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.verificationOf;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -219,7 +220,7 @@ class ThymeleafPdfReceiptRendererTest {
                 List.of(new SignaturePath(SignaturePathData.parse("M10 80 C40 10 65 10 95 80 Z"), "#1d2a5c", BigDecimal.ONE)));
         resources.storeOther(vector.digest(), "application/json");
         ReceiptDocument document = Receipts.singleDocument(jana(), MARCH);
-        FrozenReceipt frozen = new FrozenReceipt(document, TEXTS.textsFor(LocaleCode.CS), Optional.of(vector.digest()),
+        FrozenReceipt frozen = new FrozenReceipt(document, TEXTS.textsFor(LocaleCode.CS), Optional.of(vector.digest()), Optional.empty(),
                 verificationOf(document.number()));
 
         byte[] pdf = renderer().render(frozen, NOW);
@@ -232,13 +233,13 @@ class ThymeleafPdfReceiptRendererTest {
     @DisplayName("Given a current signature that cannot be read as a scan, when a receipt is frozen, then only the current scan is asked for and the receipt carries no signature")
     void should_ask_only_for_current_scan_when_frozen_given_signature_that_is_no_scan() {
         ReceiptSignatureRepository signatures = mock(ReceiptSignatureRepository.class);
-        when(signatures.current()).thenThrow(new IllegalStateException("The stored signature vector cannot be read"));
+        when(signatures.currentOf(any())).thenThrow(new IllegalStateException("The stored signature vector cannot be read"));
         when(signatures.currentScan()).thenReturn(Optional.empty());
         ThymeleafPdfReceiptRenderer renderer = new ThymeleafPdfReceiptRenderer(resources, ReceiptTemplate.fromClasspath(), signatures,
                 Clock.fixed(NOW, ZoneOffset.UTC));
 
         assertThat(renderer.freeze(Receipts.singleDocument(jana(), MARCH)).signature()).isEmpty();
-        verify(signatures, never()).current();
+        verify(signatures, never()).currentOf(any());
     }
 
     @Test
@@ -284,7 +285,7 @@ class ThymeleafPdfReceiptRendererTest {
         ReceiptDocument document = Receipts.singleDocument(jana(), MARCH);
         SortedMap<String, String> czech = new TreeMap<>(TEXTS.textsFor(LocaleCode.CS).czech());
         czech.put("receipt.title.single", "Potvrzení o daru, jak znělo při vystavení");
-        FrozenReceipt frozen = new FrozenReceipt(document, ReceiptTextSet.czechOnly(czech), Optional.empty(), verificationOf(document.number()));
+        FrozenReceipt frozen = new FrozenReceipt(document, ReceiptTextSet.czechOnly(czech), Optional.empty(), Optional.empty(), verificationOf(document.number()));
 
         assertThat(text(renderer().render(frozen, NOW)))
                 .contains("Potvrzení o daru, jak znělo při vystavení")
@@ -306,7 +307,7 @@ class ThymeleafPdfReceiptRendererTest {
     @DisplayName("Given a frozen receipt naming a signature image that is not stored, when rendered, then rendering fails instead of leaving the signature out")
     void should_fail_when_rendered_given_unknown_signature_image() {
         ReceiptDocument document = Receipts.singleDocument(jana(), MARCH);
-        FrozenReceipt frozen = new FrozenReceipt(document, TEXTS.textsFor(LocaleCode.CS), Optional.of(new ContentDigest("f".repeat(64))),
+        FrozenReceipt frozen = new FrozenReceipt(document, TEXTS.textsFor(LocaleCode.CS), Optional.of(new ContentDigest("f".repeat(64))), Optional.empty(),
                 verificationOf(document.number()));
 
         assertThatThrownBy(() -> renderer().render(frozen, NOW))
@@ -335,7 +336,7 @@ class ThymeleafPdfReceiptRendererTest {
 
     private byte[] issue(Optional<SignatureImage> signature, ReceiptDocument document) {
         signature.ifPresent(image -> resources.storeImage(image.digest(), new ReceiptImage(image.png(), "image/png"), NOW));
-        FrozenReceipt frozen = new FrozenReceipt(document, TEXTS.textsFor(document.locale()), signature.map(SignatureImage::digest),
+        FrozenReceipt frozen = new FrozenReceipt(document, TEXTS.textsFor(document.locale()), signature.map(SignatureImage::digest), Optional.empty(),
                 verificationOf(document.number()));
         byte[] pdf = renderer().render(frozen, NOW);
         assertThat(new String(pdf, 0, 5, StandardCharsets.US_ASCII)).isEqualTo("%PDF-");

@@ -106,7 +106,7 @@ class ReceiptSnapshotRenderingTest {
         ThymeleafPdfReceiptRenderer renderer = new ThymeleafPdfReceiptRenderer(resources, current, signatures, Clock.fixed(NOW, ZoneOffset.UTC));
         ReceiptSnapshot issuedEarlier = renderer.freeze(SINGLE);
 
-        signatures.replace(ThymeleafPdfReceiptRendererTest.signature(200, 50), NOW);
+        signatures.replace(InMemoryReceiptSignatures.SIGNATORY, ThymeleafPdfReceiptRendererTest.signature(200, 50), NOW);
 
         assertThat(imageWidths(renderer.render(issuedEarlier, FIRST_NUMBER, NOW))).contains(300).doesNotContain(200);
         assertThat(imageWidths(renderer.render(renderer.freeze(SINGLE), FIRST_NUMBER, NOW))).contains(200).doesNotContain(300);
@@ -119,7 +119,7 @@ class ReceiptSnapshotRenderingTest {
         ThymeleafPdfReceiptRenderer renderer = new ThymeleafPdfReceiptRenderer(resources, current, signatures, Clock.fixed(NOW, ZoneOffset.UTC));
         ReceiptSnapshot issuedEarlier = renderer.freeze(SINGLE);
 
-        signatures.remove();
+        signatures.remove(InMemoryReceiptSignatures.SIGNATORY);
         ReceiptSnapshot issuedLater = renderer.freeze(SINGLE);
 
         assertThat(issuedEarlier.signature()).isPresent();

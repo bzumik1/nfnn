@@ -33,7 +33,7 @@ public interface DonationReceiptRepository {
 
     List<DonationReceipt> findByDonorNewestFirst(DonorReference donor);
 
-    boolean showsSignatureImage(DonorReference donor, ContentDigest image);
+    boolean showsImage(DonorReference donor, ContentDigest image);
 
     long nextSerial();
 

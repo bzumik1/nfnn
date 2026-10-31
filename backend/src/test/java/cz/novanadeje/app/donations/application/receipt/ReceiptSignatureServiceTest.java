@@ -1,6 +1,8 @@
 package cz.novanadeje.app.donations.application.receipt;
 
 import cz.novanadeje.app.donations.domain.receipt.CurrentSignature;
+import cz.novanadeje.app.donations.domain.receipt.PersonReference;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptPersonNotFound;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatureRepository;
 import cz.novanadeje.app.donations.domain.receipt.SignatureImage;
 import cz.novanadeje.app.donations.domain.receipt.SignaturePath;
@@ -11,7 +13,10 @@ import cz.novanadeje.app.donations.domain.receipt.SignatureViewBox;
 import cz.novanadeje.app.donations.domain.receipt.UnsupportedSignatureImage;
 import cz.novanadeje.app.donations.domain.receipt.UnsupportedSignatureVector;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.shared.application.people.FoundationPeople;
+import cz.novanadeje.app.shared.application.people.FoundationPerson;
 import cz.novanadeje.app.support.MutableClock;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -47,6 +52,7 @@ class ReceiptSignatureServiceTest {
 
     private static final Instant NOW = Instant.parse("2026-10-23T19:30:00Z");
     private static final UUID ADMIN = UUID.fromString("01a18e56-bdb0-775a-bd0a-a60756831369");
+    private static final PersonReference PERSON = new PersonReference(UUID.fromString("019a3a00-0000-7000-8000-00000000e001"));
     private static final byte[] UPLOAD = {1, 2, 3};
     private static final byte[] PNG = {(byte) 0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n', 0, 0, 0, 13};
     private static final SignatureImage IMAGE = new SignatureImage(PNG, 600, 200);
@@ -57,18 +63,48 @@ class ReceiptSignatureServiceTest {
     private final SignatureImageProcessor processor = mock(SignatureImageProcessor.class);
     private final SignatureVectorParser vectors = mock(SignatureVectorParser.class);
     private final ReceiptSignatureRepository signatures = mock(ReceiptSignatureRepository.class);
+    private final FoundationPeople people = mock(FoundationPeople.class);
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
     private final PlatformTransactionManager transactions = mock(PlatformTransactionManager.class);
     private final MutableClock clock = new MutableClock(NOW, ZoneId.of("Europe/Prague"));
-    private final ReceiptSignatureService service = new ReceiptSignatureService(processor, vectors, signatures, events,
+    private final ReceiptSignatureService service = new ReceiptSignatureService(processor, vectors, signatures, people, events,
             new TransactionTemplate(transactions), clock);
 
-    @Test
-    @DisplayName("Given a stored signature, when it is asked for, then the image and the time of its upload come back")
-    void should_answer_current_when_asked_given_stored_signature() {
-        when(signatures.current()).thenReturn(Optional.of(new CurrentSignature(IMAGE, NOW)));
+    @BeforeEach
+    void givenPersonOfFoundation() {
+        when(people.find(PERSON.value())).thenReturn(Optional.of(new FoundationPerson(PERSON.value(), "Josef Vzorový", true)));
+    }
 
-        assertThat(service.current()).contains(new CurrentSignature(IMAGE, NOW));
+    @Test
+    @DisplayName("Given a stored signature of a person, when it is asked for, then the image and the time of its upload come back")
+    void should_answer_current_when_asked_given_stored_signature() {
+        when(signatures.currentOf(PERSON)).thenReturn(Optional.of(new CurrentSignature(IMAGE, NOW)));
+
+        assertThat(service.currentOf(PERSON)).contains(new CurrentSignature(IMAGE, NOW));
+    }
+
+    @Test
+    @DisplayName("Given a person the foundation does not have, when their signature is asked for, uploaded or removed, then each is refused as not found before any work")
+    void should_refuse_as_not_found_when_asked_uploaded_or_removed_given_unknown_person() {
+        PersonReference unknown = new PersonReference(UUID.fromString("019a3a00-0000-7000-8000-00000000e002"));
+        when(people.find(unknown.value())).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.currentOf(unknown)).isInstanceOf(ReceiptPersonNotFound.class);
+        assertThatThrownBy(() -> service.upload(ADMIN, unknown, UPLOAD)).isInstanceOf(ReceiptPersonNotFound.class);
+        assertThatThrownBy(() -> service.remove(ADMIN, unknown)).isInstanceOf(ReceiptPersonNotFound.class);
+
+        verifyNoInteractions(processor, vectors, signatures, events, transactions);
+    }
+
+    @Test
+    @DisplayName("Given a stored signature of a removed person, when it is forgotten, then it is removed without an audit of its own")
+    void should_remove_without_audit_when_forgotten_given_stored_signature() {
+        when(signatures.remove(PERSON)).thenReturn(true);
+
+        service.forget(PERSON);
+
+        verify(signatures).remove(PERSON);
+        verifyNoInteractions(events, people);
     }
 
     @Test
@@ -76,15 +112,15 @@ class ReceiptSignatureServiceTest {
     void should_replace_and_audit_when_uploaded_given_image() {
         when(processor.process(UPLOAD)).thenReturn(IMAGE);
 
-        CurrentSignature uploaded = service.upload(ADMIN, UPLOAD);
+        CurrentSignature uploaded = service.upload(ADMIN, PERSON, UPLOAD);
 
         assertThat(uploaded).isEqualTo(new CurrentSignature(IMAGE, NOW));
-        verify(signatures).replace(IMAGE, NOW);
+        verify(signatures).replace(PERSON, IMAGE, NOW);
         AdminActionPerformed action = publishedAction();
         assertThat(action.adminId()).isEqualTo(ADMIN);
         assertThat(action.action()).isEqualTo("CHANGE_RECEIPT_SIGNATURE");
         assertThat(action.subjectId()).isEmpty();
-        assertThat(action.details()).isEqualTo("Nahrán obrázek podpisu na potvrzení o daru: 600 × 200 px, SHA-256 " + IMAGE.digest());
+        assertThat(action.details()).isEqualTo("Nahrán obrázek podpisu na potvrzení o daru u osoby " + PERSON + ": 600 × 200 px, SHA-256 " + IMAGE.digest());
         assertThat(action.performedAt()).isEqualTo(NOW);
     }
 
@@ -93,14 +129,14 @@ class ReceiptSignatureServiceTest {
     void should_replace_with_vector_and_audit_when_uploaded_given_svg() {
         when(vectors.parse(SVG)).thenReturn(VECTOR);
 
-        CurrentSignature uploaded = service.upload(ADMIN, SVG);
+        CurrentSignature uploaded = service.upload(ADMIN, PERSON, SVG);
 
         assertThat(uploaded).isEqualTo(new CurrentSignature(VECTOR, NOW));
-        verify(signatures).replace(VECTOR, NOW);
+        verify(signatures).replace(PERSON, VECTOR, NOW);
         verifyNoInteractions(processor);
         AdminActionPerformed action = publishedAction();
         assertThat(action.action()).isEqualTo("CHANGE_RECEIPT_SIGNATURE");
-        assertThat(action.details()).isEqualTo("Nahrán vektorový podpis (SVG) na potvrzení o daru, SHA-256 " + VECTOR.digest());
+        assertThat(action.details()).isEqualTo("Nahrán vektorový podpis (SVG) na potvrzení o daru u osoby " + PERSON + ", SHA-256 " + VECTOR.digest());
     }
 
     @Test
@@ -108,12 +144,12 @@ class ReceiptSignatureServiceTest {
     void should_parse_outside_transaction_when_uploaded_given_svg() {
         when(vectors.parse(SVG)).thenReturn(VECTOR);
 
-        service.upload(ADMIN, SVG);
+        service.upload(ADMIN, PERSON, SVG);
 
         InOrder order = inOrder(vectors, transactions, signatures, events);
         order.verify(vectors).parse(SVG);
         order.verify(transactions).getTransaction(any());
-        order.verify(signatures).replace(VECTOR, NOW);
+        order.verify(signatures).replace(PERSON, VECTOR, NOW);
         order.verify(events).publishEvent(any(AdminActionPerformed.class));
         order.verify(transactions).commit(any());
     }
@@ -123,12 +159,12 @@ class ReceiptSignatureServiceTest {
     void should_process_outside_transaction_when_uploaded_given_image() {
         when(processor.process(UPLOAD)).thenReturn(IMAGE);
 
-        service.upload(ADMIN, UPLOAD);
+        service.upload(ADMIN, PERSON, UPLOAD);
 
         InOrder order = inOrder(processor, transactions, signatures);
         order.verify(processor).process(UPLOAD);
         order.verify(transactions).getTransaction(any());
-        order.verify(signatures).replace(IMAGE, NOW);
+        order.verify(signatures).replace(PERSON, IMAGE, NOW);
     }
 
     @Test
@@ -136,7 +172,7 @@ class ReceiptSignatureServiceTest {
     void should_open_no_transaction_when_uploaded_given_refused_svg() {
         when(vectors.parse(SVG)).thenThrow(new UnsupportedSignatureVector(SignatureVectorProblem.ELEMENT, "script"));
 
-        assertThatThrownBy(() -> service.upload(ADMIN, SVG)).isInstanceOf(UnsupportedSignatureVector.class);
+        assertThatThrownBy(() -> service.upload(ADMIN, PERSON, SVG)).isInstanceOf(UnsupportedSignatureVector.class);
 
         verifyNoInteractions(transactions, signatures, events);
     }
@@ -148,7 +184,7 @@ class ReceiptSignatureServiceTest {
         byte[] utf16 = HexFormat.of().parseHex(byteOrderMark + HexFormat.of().formatHex("<svg/>".getBytes(Charset.forName(charset))));
         when(vectors.parse(utf16)).thenThrow(new UnsupportedSignatureVector(SignatureVectorProblem.MALFORMED));
 
-        assertThatThrownBy(() -> service.upload(ADMIN, utf16))
+        assertThatThrownBy(() -> service.upload(ADMIN, PERSON, utf16))
                 .isInstanceOfSatisfying(UnsupportedSignatureVector.class,
                         refused -> assertThat(refused.problem()).isEqualTo(SignatureVectorProblem.MALFORMED));
 
@@ -162,12 +198,12 @@ class ReceiptSignatureServiceTest {
         Arrays.fill(oversized, (byte) ' ');
         oversized[0] = '<';
 
-        assertThatThrownBy(() -> service.upload(ADMIN, oversized))
+        assertThatThrownBy(() -> service.upload(ADMIN, PERSON, oversized))
                 .isInstanceOfSatisfying(UnsupportedSignatureVector.class,
                         refused -> assertThat(refused.problem()).isEqualTo(SignatureVectorProblem.TOO_LARGE));
 
         verifyNoInteractions(vectors, processor, events);
-        verify(signatures, never()).replace(any(), any());
+        verify(signatures, never()).replace(any(), any(), any());
     }
 
     @Test
@@ -175,30 +211,30 @@ class ReceiptSignatureServiceTest {
     void should_change_nothing_when_uploaded_given_unusable_image() {
         when(processor.process(UPLOAD)).thenThrow(new UnsupportedSignatureImage("it is not an image"));
 
-        assertThatThrownBy(() -> service.upload(ADMIN, UPLOAD)).isInstanceOf(UnsupportedSignatureImage.class);
+        assertThatThrownBy(() -> service.upload(ADMIN, PERSON, UPLOAD)).isInstanceOf(UnsupportedSignatureImage.class);
 
-        verify(signatures, never()).replace(any(), any());
+        verify(signatures, never()).replace(any(), any(), any());
         verifyNoInteractions(events, vectors);
     }
 
     @Test
     @DisplayName("Given a stored signature, when an administrator removes it, then it is gone and the removal is audited")
     void should_remove_and_audit_when_removed_given_stored_signature() {
-        when(signatures.remove()).thenReturn(true);
+        when(signatures.remove(PERSON)).thenReturn(true);
 
-        service.remove(ADMIN);
+        service.remove(ADMIN, PERSON);
 
         AdminActionPerformed action = publishedAction();
         assertThat(action.action()).isEqualTo("REMOVE_RECEIPT_SIGNATURE");
-        assertThat(action.details()).isEqualTo("Obrázek podpisu odebrán; nová potvrzení o daru mají jen čáru a jméno");
+        assertThat(action.details()).isEqualTo("Obrázek podpisu na potvrzení o daru u osoby " + PERSON + " odebrán");
     }
 
     @Test
     @DisplayName("Given no stored signature, when an administrator removes it, then nothing is audited")
     void should_audit_nothing_when_removed_given_no_signature() {
-        when(signatures.remove()).thenReturn(false);
+        when(signatures.remove(PERSON)).thenReturn(false);
 
-        service.remove(ADMIN);
+        service.remove(ADMIN, PERSON);
 
         verifyNoInteractions(events);
     }

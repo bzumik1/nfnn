@@ -94,6 +94,7 @@ class JpaDonationReceiptRepositoryTest {
             Map.of("receipt.title.single", "Confirmation of a donation received"));
     private static final ReceiptImage SIGNATURE = new ReceiptImage(new byte[] {(byte) 0x89, 'P', 'N', 'G', 2}, "image/png");
     private static final ReceiptImage OTHER_SIGNATURE = new ReceiptImage(new byte[] {(byte) 0x89, 'P', 'N', 'G', 3}, "image/png");
+    private static final ReceiptImage PORTRAIT = new ReceiptImage(new byte[] {(byte) 0xff, (byte) 0xd8, (byte) 0xff, 4}, "image/jpeg");
 
     @Autowired
     private DonationReceiptRepository receipts;
@@ -120,6 +121,7 @@ class JpaDonationReceiptRepositoryTest {
     void storeSignatureImagesAndTheSigningKey() {
         resources.storeImage(SIGNATURE.digest(), SIGNATURE, NOW);
         resources.storeImage(OTHER_SIGNATURE.digest(), OTHER_SIGNATURE, NOW);
+        resources.storeImage(PORTRAIT.digest(), PORTRAIT, NOW);
         jdbc.sql("insert into receipt_signing_key (key_id, public_key, registered_at, status, seal) values (?, ?, ?, 'active', 'seal')")
                 .params(KEY_ID.value(), new byte[32], Timestamp.from(NOW)).update();
     }
@@ -148,6 +150,7 @@ class JpaDonationReceiptRepositoryTest {
             assertThat(stored.status()).isEqualTo(ReceiptStatus.ACTIVE);
             assertThat(stored.frozen()).isEqualTo(receipt.frozen());
             assertThat(stored.frozen().signatureImage()).contains(SIGNATURE.digest());
+            assertThat(stored.frozen().portraitImage()).contains(PORTRAIT.digest());
             assertThat(stored.supersedes()).isEmpty();
             assertThat(stored.supersededAt()).isEmpty();
         });
@@ -240,7 +243,7 @@ class JpaDonationReceiptRepositoryTest {
         flushAndClear();
         String frozenBefore = frozenColumn(stored);
         Instant replacedAt = NOW.plusSeconds(3600);
-        FrozenReceipt other = new FrozenReceipt(stored.frozen().document(), CZECH, Optional.of(OTHER_SIGNATURE.digest()),
+        FrozenReceipt other = new FrozenReceipt(stored.frozen().document(), CZECH, Optional.of(OTHER_SIGNATURE.digest()), Optional.empty(),
                 stored.frozen().verification());
         DonationReceipt copy = DonationReceipt.reconstitute(stored.id(), jana, NOW, FINGERPRINT, other, Optional.empty(), ReceiptStatus.REPLACED,
                 Optional.of(replacedAt));
@@ -383,7 +386,7 @@ class JpaDonationReceiptRepositoryTest {
         flushAndClear();
         ReceiptDocument document = yearlyDocument(YEAR_2026, "2026-000002", Optional.empty());
         DonationReceipt copied = DonationReceipt.issue(DonationReceiptId.newId(NOW), jana, NOW, FINGERPRINT,
-                new FrozenReceipt(document, CZECH, Optional.empty(), first.frozen().verification()), Optional.empty());
+                new FrozenReceipt(document, CZECH, Optional.empty(), Optional.empty(), first.frozen().verification()), Optional.empty());
 
         assertThatThrownBy(() -> receipts.save(copied))
                 .isInstanceOf(DataIntegrityViolationException.class)
@@ -397,7 +400,7 @@ class JpaDonationReceiptRepositoryTest {
         ReceiptDocument document = yearlyDocument(YEAR_2025, "2026-000013", Optional.empty());
         ReceiptVerification unregistered = new ReceiptVerification(new ReceiptSigningKeyId("0a0b0c0d"), verificationOf("2026-000013").proof());
         DonationReceipt receipt = DonationReceipt.issue(DonationReceiptId.newId(NOW), jana, NOW, FINGERPRINT,
-                new FrozenReceipt(document, CZECH, Optional.empty(), unregistered), Optional.empty());
+                new FrozenReceipt(document, CZECH, Optional.empty(), Optional.empty(), unregistered), Optional.empty());
 
         assertThatThrownBy(() -> receipts.save(receipt))
                 .isInstanceOf(DataIntegrityViolationException.class)
@@ -410,7 +413,7 @@ class JpaDonationReceiptRepositoryTest {
         DonorReference jana = storedDonor("4821937560");
         ReceiptDocument document = yearlyDocument(YEAR_2025, "2026-000012", Optional.empty());
         DonationReceipt receipt = DonationReceipt.issue(DonationReceiptId.newId(NOW), jana, NOW, FINGERPRINT,
-                new FrozenReceipt(document, CZECH, Optional.of(new ContentDigest("f".repeat(64))), verificationOf("2026-000012")), Optional.empty());
+                new FrozenReceipt(document, CZECH, Optional.of(new ContentDigest("f".repeat(64))), Optional.empty(), verificationOf("2026-000012")), Optional.empty());
 
         assertThatThrownBy(() -> receipts.save(receipt))
                 .isInstanceOf(DataIntegrityViolationException.class)
@@ -540,7 +543,7 @@ class JpaDonationReceiptRepositoryTest {
     }
 
     @Test
-    @DisplayName("Given a donor whose replaced receipt shows a signature image, when asked whether a receipt of theirs shows an image, then that image does and another image or donor does not")
+    @DisplayName("Given a donor whose replaced receipt shows a signature image and a portrait, when asked whether a receipt of theirs shows an image, then those images do and another image or donor does not")
     void should_tell_whether_donor_receipt_shows_image_when_asked_given_replaced_signed_receipt() {
         DonorReference jana = storedDonor("4821937560");
         DonorReference petr = storedDonor("7310945528");
@@ -551,9 +554,11 @@ class JpaDonationReceiptRepositoryTest {
         receipts.save(replaced);
         flushAndClear();
 
-        assertThat(receipts.showsSignatureImage(jana, SIGNATURE.digest())).isTrue();
-        assertThat(receipts.showsSignatureImage(jana, OTHER_SIGNATURE.digest())).isFalse();
-        assertThat(receipts.showsSignatureImage(petr, SIGNATURE.digest())).isFalse();
+        assertThat(receipts.showsImage(jana, SIGNATURE.digest())).isTrue();
+        assertThat(receipts.showsImage(jana, OTHER_SIGNATURE.digest())).isFalse();
+        assertThat(receipts.showsImage(petr, SIGNATURE.digest())).isFalse();
+        assertThat(receipts.showsImage(jana, PORTRAIT.digest())).isTrue();
+        assertThat(receipts.showsImage(petr, PORTRAIT.digest())).isFalse();
     }
 
     @Test
@@ -594,6 +599,7 @@ class JpaDonationReceiptRepositoryTest {
     private DonationReceipt issued(DonorReference donor, Instant at, ReceiptDocument document, Optional<DonationReceiptId> supersedes) {
         boolean english = document.locale() == LocaleCode.EN;
         FrozenReceipt frozen = new FrozenReceipt(document, english ? BILINGUAL : CZECH, english ? Optional.of(SIGNATURE.digest()) : Optional.empty(),
+                english ? Optional.of(PORTRAIT.digest()) : Optional.empty(),
                 verificationOf(document.number().value()));
         return DonationReceipt.issue(DonationReceiptId.newId(at), donor, at, FINGERPRINT, frozen, supersedes);
     }

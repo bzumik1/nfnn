@@ -8,8 +8,7 @@ import java.util.regex.Pattern;
 @ConfigurationProperties("app.donations.receipt")
 public record ReceiptProperties(String foundationName, String foundationCompanyIdentifier, String foundationStreet, String foundationCity,
                                 String foundationPostalCode, String registryCourt, String registryFile, String issuePlace,
-                                String issuePlaceEn, String signatoryName, String signatoryRole,
-                                Integer concurrentRenders, Integer firstYear) {
+                                String issuePlaceEn, Integer concurrentRenders, Integer firstYear) {
 
     private static final String PREFIX = "app.donations.receipt.";
     private static final Pattern COMPANY_IDENTIFIER = Pattern.compile("[0-9]{8}");
@@ -32,8 +31,6 @@ public record ReceiptProperties(String foundationName, String foundationCompanyI
         registryFile = required(registryFile, PREFIX + "registry-file");
         issuePlace = required(issuePlace, PREFIX + "issue-place");
         issuePlaceEn = required(issuePlaceEn, PREFIX + "issue-place-en");
-        signatoryName = required(signatoryName, "RECEIPT_SIGNATORY_NAME (" + PREFIX + "signatory-name)");
-        signatoryRole = required(signatoryRole, "RECEIPT_SIGNATORY_ROLE (" + PREFIX + "signatory-role)");
         concurrentRenders = concurrentRenders == null ? DEFAULT_CONCURRENT_RENDERS : concurrentRenders;
         if (concurrentRenders < 1) {
             throw new IllegalArgumentException(PREFIX + "concurrent-renders must be at least 1, but is " + concurrentRenders);

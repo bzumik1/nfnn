@@ -2587,7 +2587,7 @@
       }
     },
     {
-      "name": "One gift of a person on a receipt that carries the signature image and the portrait of the signatory",
+      "name": "One gift of a person on a receipt that carries the signature image",
       "input": {
         "v2Sample": "single-signature-cs",
         "textsSha256": "b1d6acedd40747fa898f64d385b34c01ab0be04a61f5f398efac6414f4f77662",

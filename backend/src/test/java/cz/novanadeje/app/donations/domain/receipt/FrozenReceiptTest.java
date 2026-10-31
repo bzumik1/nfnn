@@ -32,7 +32,7 @@ class FrozenReceiptTest {
     @Test
     @DisplayName("Given a Czech receipt, when it is frozen with the Czech texts only, then it keeps them in schema version 1")
     void should_keep_czech_texts_in_schema_version_one_when_frozen_given_czech_receipt() {
-        FrozenReceipt frozen = new FrozenReceipt(singleDocument(jana(), MARCH), CZECH_TEXTS, Optional.empty(), verificationOf(FIRST_NUMBER));
+        FrozenReceipt frozen = new FrozenReceipt(singleDocument(jana(), MARCH), CZECH_TEXTS, Optional.empty(), Optional.empty(), verificationOf(FIRST_NUMBER));
 
         assertThat(frozen.schemaVersion()).isEqualTo(1);
         assertThat(frozen.texts().czech()).containsEntry("receipt.title.single", "Potvrzení o přijetí daru");
@@ -42,11 +42,11 @@ class FrozenReceiptTest {
     @Test
     @DisplayName("Given a receipt, when its texts do not match its locale, then freezing it is refused")
     void should_refuse_when_frozen_given_texts_not_matching_locale() {
-        assertThatIllegalArgumentException().isThrownBy(() -> new FrozenReceipt(singleDocument(jana(), MARCH), BILINGUAL_TEXTS, Optional.empty(),
+        assertThatIllegalArgumentException().isThrownBy(() -> new FrozenReceipt(singleDocument(jana(), MARCH), BILINGUAL_TEXTS, Optional.empty(), Optional.empty(),
                 verificationOf(FIRST_NUMBER)));
         assertThatIllegalArgumentException().isThrownBy(() -> new FrozenReceipt(singleDocument(janaSpeakingEnglish(), MARCH), CZECH_TEXTS,
-                Optional.empty(), verificationOf(FIRST_NUMBER)));
-        assertThat(new FrozenReceipt(singleDocument(janaSpeakingEnglish(), MARCH), BILINGUAL_TEXTS, Optional.empty(), verificationOf(FIRST_NUMBER))
+                Optional.empty(), Optional.empty(), verificationOf(FIRST_NUMBER)));
+        assertThat(new FrozenReceipt(singleDocument(janaSpeakingEnglish(), MARCH), BILINGUAL_TEXTS, Optional.empty(), Optional.empty(), verificationOf(FIRST_NUMBER))
                 .document().locale()).isEqualTo(LocaleCode.EN);
     }
 
@@ -88,7 +88,7 @@ class FrozenReceiptTest {
     @Test
     @DisplayName("Given a frozen receipt, when its status digest is read, then it is its verification's digest under the frozen foundation's IČO")
     void should_digest_under_frozen_foundation_when_status_digest_read_given_frozen_receipt() {
-        FrozenReceipt frozen = new FrozenReceipt(singleDocument(jana(), MARCH), CZECH_TEXTS, Optional.empty(), verificationOf(FIRST_NUMBER));
+        FrozenReceipt frozen = new FrozenReceipt(singleDocument(jana(), MARCH), CZECH_TEXTS, Optional.empty(), Optional.empty(), verificationOf(FIRST_NUMBER));
 
         assertThat(frozen.statusDigest()).isEqualTo(frozen.verification().statusDigest(frozen.document().foundation().companyIdentifier()));
     }

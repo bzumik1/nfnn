@@ -18,7 +18,7 @@ class SettingTest {
         assertThat(Setting.ADMIN_EMAILS.check("pavel@example.cz, jakub@example.cz")).isEmpty();
         assertThat(Setting.FIO_HISTORY_FROM.check("2025-01-01")).isEmpty();
         assertThat(Setting.RECEIPT_FIRST_YEAR.check("2026")).isEmpty();
-        assertThat(Setting.RECEIPT_SIGNATORY_NAME.check("Josef Dvořáček")).isEmpty();
+        assertThat(Setting.MAIL_USERNAME.check("Josef Dvořáček")).isEmpty();
         assertThat(Setting.MAIL_PASSWORD.check("xsmtpsib-abc$123")).isEmpty();
     }
 
@@ -40,10 +40,10 @@ class SettingTest {
     @Test
     @DisplayName("Given a placeholder, a line break or an overlong value, when it is checked, then it is refused for any setting")
     void should_refuse_value_when_checked_given_placeholder_control_character_or_length() {
-        assertThat(Setting.RECEIPT_SIGNATORY_NAME.check("${JWT_SECRET}")).contains(SettingProblem.PLACEHOLDER);
+        assertThat(Setting.MAIL_USERNAME.check("${JWT_SECRET}")).contains(SettingProblem.PLACEHOLDER);
         assertThat(Setting.MAIL_PASSWORD.check("abc${x}")).contains(SettingProblem.PLACEHOLDER);
         assertThat(Setting.FIO_TOKEN.check("abc\ndef")).contains(SettingProblem.INVALID_TEXT);
-        assertThat(Setting.RECEIPT_SIGNATORY_ROLE.check("x".repeat(Setting.RECEIPT_SIGNATORY_ROLE.maxLength() + 1)))
+        assertThat(Setting.PAIRING_EXCLUDED_ACCOUNTS.check("x".repeat(Setting.PAIRING_EXCLUDED_ACCOUNTS.maxLength() + 1)))
                 .contains(SettingProblem.TOO_LONG);
     }
 

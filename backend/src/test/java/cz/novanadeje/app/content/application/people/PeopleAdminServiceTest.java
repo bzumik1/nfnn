@@ -13,7 +13,11 @@ import cz.novanadeje.app.content.domain.people.PersonNotFound;
 import cz.novanadeje.app.content.domain.people.PersonRepository;
 import cz.novanadeje.app.content.domain.people.TooManyPeople;
 import cz.novanadeje.app.content.domain.people.WebSignatureInBrowserOnly;
+import cz.novanadeje.app.content.domain.people.PersonSignsReceipts;
+import cz.novanadeje.app.content.domain.people.ReceiptPortraitInBrowserOnly;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.shared.application.event.FoundationPersonRemoved;
+import cz.novanadeje.app.shared.application.people.ReceiptSignatoryLookup;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -35,6 +39,7 @@ import java.util.stream.IntStream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
@@ -60,9 +65,11 @@ class PeopleAdminServiceTest {
     private MediaImageRepository media;
     @Mock
     private ApplicationEventPublisher events;
+    @Mock
+    private ReceiptSignatoryLookup signatories;
 
     private PeopleAdminService service() {
-        return new PeopleAdminService(people, media, events, Clock.fixed(NOW, ZoneOffset.UTC));
+        return new PeopleAdminService(people, media, signatories, events, Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
     @Test
@@ -162,6 +169,67 @@ class PeopleAdminServiceTest {
         AdminActionPerformed action = audited();
         assertThat(action.action()).isEqualTo("REMOVE_PERSON");
         assertThat(action.details()).isEqualTo("Osoba " + current.id() + " odebrána z lidí fondu");
+        assertThat(published(FoundationPersonRemoved.class)).containsExactly(new FoundationPersonRemoved(current.id().value(), NOW));
+    }
+
+    @Test
+    @DisplayName("Given the person who signs the receipts, when they are removed from a browser or by a connected application, then it is refused and nothing changes")
+    void should_refuse_the_removal_when_removed_given_the_person_signs_receipts() {
+        Person current = stored(0, Optional.of(PORTRAIT));
+        when(people.findByIdForUpdate(current.id())).thenReturn(Optional.of(current));
+        when(signatories.signsReceipts(current.id().value())).thenReturn(true);
+
+        assertThatThrownBy(() -> service().remove(ADMIN, current.id(), true)).isInstanceOf(PersonSignsReceipts.class)
+                .hasFieldOrPropertyWithValue("code", "content/person-signs-receipts");
+        assertThatThrownBy(() -> service().remove(ADMIN, current.id(), false)).isInstanceOf(PersonSignsReceipts.class);
+        verify(people, never()).delete(any());
+        verify(media, never()).deleteIfUnused(any());
+        verify(events, never()).publishEvent(any(Object.class));
+    }
+
+    @Test
+    @DisplayName("Given the person who signs the receipts, when a connected application changes their portrait, then it is refused and nothing changes")
+    void should_refuse_the_portrait_change_when_changed_by_a_connection_given_the_person_signs_receipts() {
+        Person current = stored(0, Optional.of(PORTRAIT));
+        when(people.findByIdForUpdate(current.id())).thenReturn(Optional.of(current));
+        when(signatories.signsReceipts(current.id().value())).thenReturn(true);
+        lenient().when(media.findSize(OTHER_PORTRAIT)).thenReturn(Optional.of(SQUARE));
+
+        assertThatThrownBy(() -> service().update(ADMIN, current.id(), command(Optional.of(OTHER_PORTRAIT)), false))
+                .isInstanceOf(ReceiptPortraitInBrowserOnly.class)
+                .hasFieldOrPropertyWithValue("code", "content/receipt-portrait-in-browser-only");
+        assertThatThrownBy(() -> service().update(ADMIN, current.id(), command(Optional.empty()), false))
+                .isInstanceOf(ReceiptPortraitInBrowserOnly.class);
+        verify(people, never()).save(any());
+        verify(media, never()).deleteIfUnused(any());
+        verify(events, never()).publishEvent(any(Object.class));
+    }
+
+    @Test
+    @DisplayName("Given the person who signs the receipts, when a connected application renames them keeping the portrait or a browser changes the portrait, then both pass")
+    void should_rename_and_change_the_portrait_when_allowed_given_the_person_signs_receipts() {
+        Person current = stored(0, Optional.of(PORTRAIT));
+        when(people.findByIdForUpdate(current.id())).thenReturn(Optional.of(current));
+        lenient().when(signatories.signsReceipts(current.id().value())).thenReturn(true);
+        when(media.findSize(PORTRAIT)).thenReturn(Optional.of(SQUARE));
+        when(media.findSize(OTHER_PORTRAIT)).thenReturn(Optional.of(SQUARE));
+
+        assertThat(service().update(ADMIN, current.id(), command(Optional.of(PORTRAIT)), false).name()).isEqualTo("Eva Vzorová");
+        assertThat(service().update(ADMIN, current.id(), command(Optional.of(OTHER_PORTRAIT)), true).portrait())
+                .contains(new PersonImageView(OTHER_PORTRAIT, 640, 640));
+    }
+
+    @Test
+    @DisplayName("Given a person who does not sign the receipts, when a connected application changes their portrait, then it passes")
+    void should_change_the_portrait_when_changed_by_a_connection_given_the_person_does_not_sign() {
+        Person current = stored(0, Optional.of(PORTRAIT));
+        when(people.findByIdForUpdate(current.id())).thenReturn(Optional.of(current));
+        when(signatories.signsReceipts(current.id().value())).thenReturn(false);
+        when(media.findSize(OTHER_PORTRAIT)).thenReturn(Optional.of(SQUARE));
+
+        assertThat(service().update(ADMIN, current.id(), command(Optional.of(OTHER_PORTRAIT)), false).portrait())
+                .contains(new PersonImageView(OTHER_PORTRAIT, 640, 640));
+        verify(media).deleteIfUnused(PORTRAIT);
     }
 
     @Test
@@ -299,11 +367,17 @@ class PeopleAdminServiceTest {
     }
 
     private AdminActionPerformed audited() {
-        ArgumentCaptor<AdminActionPerformed> action = ArgumentCaptor.forClass(AdminActionPerformed.class);
-        verify(events).publishEvent(action.capture());
-        assertThat(action.getValue().adminId()).isEqualTo(ADMIN);
-        assertThat(action.getValue().performedAt()).isEqualTo(NOW);
-        return action.getValue();
+        List<AdminActionPerformed> actions = published(AdminActionPerformed.class);
+        assertThat(actions).hasSize(1);
+        assertThat(actions.getFirst().adminId()).isEqualTo(ADMIN);
+        assertThat(actions.getFirst().performedAt()).isEqualTo(NOW);
+        return actions.getFirst();
+    }
+
+    private <T> List<T> published(Class<T> type) {
+        ArgumentCaptor<Object> events = ArgumentCaptor.forClass(Object.class);
+        verify(this.events, atLeastOnce()).publishEvent(events.capture());
+        return events.getAllValues().stream().filter(type::isInstance).map(type::cast).toList();
     }
 
     private static Person stored(int position, Optional<MediaId> portrait) {
