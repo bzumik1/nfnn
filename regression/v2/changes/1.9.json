@@ -112,6 +112,181 @@
     "replacement": "src/app/features/donors/dashboard/profile-card/profile-card.spec.ts > Given the donor data card in the overview > when a person opens the overview > and the server refuses a field, then the form stays, the message stands at that field, which takes the focus, and the form line gives only the title"
   },
   {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > Given every QR version, when its data capacity at L and M is compared with ZXing's tables, then they agree",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > Given every QR version, when its data capacity at L and H is compared with ZXing's tables, then they agree"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > Given proofs around the last medium version, when their symbols are chosen, then up to version 13 they keep M and above it switch to L",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > Given proofs around what H holds at version 40, when their symbols are chosen, then up to it they take H, so the receipt can draw its star, and above it L"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"10\" at \"M\" holds \"185\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"10\" at \"H\" holds \"92\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"11\" at \"M\" holds \"223\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"11\" at \"H\" holds \"110\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"12\" at \"M\" holds \"259\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"12\" at \"H\" holds \"128\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"13\" at \"M\" holds \"302\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"13\" at \"H\" holds \"150\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"14\" at \"L\" holds \"427\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"14\" at \"H\" holds \"166\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"15\" at \"L\" holds \"489\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"15\" at \"H\" holds \"192\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"16\" at \"L\" holds \"554\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"16\" at \"H\" holds \"222\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"17\" at \"L\" holds \"611\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"17\" at \"H\" holds \"252\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"18\" at \"L\" holds \"684\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"18\" at \"H\" holds \"281\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"19\" at \"L\" holds \"758\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"19\" at \"H\" holds \"309\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"2\" at \"M\" holds \"1\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"4\" at \"H\" holds \"9\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"20\" at \"L\" holds \"823\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"20\" at \"H\" holds \"352\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"21\" at \"L\" holds \"893\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"21\" at \"H\" holds \"373\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"22\" at \"L\" holds \"966\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"22\" at \"H\" holds \"408\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"23\" at \"L\" holds \"1053\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"23\" at \"H\" holds \"430\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"24\" at \"L\" holds \"1132\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"24\" at \"H\" holds \"480\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"3\" at \"M\" holds \"16\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"4\" at \"H\" holds \"9\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"4\" at \"M\" holds \"36\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"4\" at \"H\" holds \"9\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"5\" at \"M\" holds \"58\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"5\" at \"H\" holds \"18\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"6\" at \"M\" holds \"80\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"6\" at \"H\" holds \"32\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"7\" at \"M\" holds \"95\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"7\" at \"H\" holds \"38\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"8\" at \"M\" holds \"125\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"8\" at \"H\" holds \"58\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"9\" at \"M\" holds \"153\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"9\" at \"H\" holds \"72\" bytes"
+  },
+  {
     "path": "GET /api/donations/me/{id}/receipt",
     "scenario": "donations/admin_donor_accounts: *",
     "kind": "body",
@@ -190,6 +365,94 @@
     "field": "$.text[*]",
     "reason": "Jakub 2026-10-31 (look sheet of 1.9, question 1; the site is not live, so no backward compatibility): a receipt issued from now on prints its place and day without a comma, \"V Novém Boru dne 15. 1. 2027\" (receipt.issuedAt \"{0} dne {1}\" in the Czech and default bundles, the English \"In {0}, on {1}\" stays); the bundle is a new receipt template b4d2173… with the text set 74c43fa…, while every receipt already issued keeps the texts it was frozen with, and the v2 corpus still renders with the template v2 issued with (7b30974…)",
     "contract": "docs/system-overview.md, receipts; .claude/skills/receipt-template"
+  },
+  {
+    "path": "POST /api/donations/me/receipts",
+    "scenario": "donations/donation_receipts_frozen: *",
+    "kind": "body",
+    "field": "$.receipt.texts.cs.receipt.issuedAt",
+    "reason": "1.9 drops the comma before \"dne\" in the issue line of a receipt (\"Vystaveno v Novém Boru dne …\", Jakub 2026-10-31), so the receipt texts frozen with every receipt issued from now on carry \"{0} dne {1}\"",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "path": "GET /api/donations/me/receipts/{id}",
+    "scenario": "donations/donation_receipts_frozen: *",
+    "kind": "body",
+    "field": "$.receipt.texts.cs.receipt.issuedAt",
+    "reason": "1.9 drops the comma before \"dne\" in the issue line of a receipt (\"Vystaveno v Novém Boru dne …\", Jakub 2026-10-31), so the receipt texts frozen with every receipt issued from now on carry \"{0} dne {1}\"",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "path": "GET /api/donations/me/receipts",
+    "scenario": "donations/donation_receipts_frozen: *",
+    "kind": "body",
+    "field": "$.items[*].receipt.texts.cs.receipt.issuedAt",
+    "reason": "1.9 drops the comma before \"dne\" in the issue line of a receipt (\"Vystaveno v Novém Boru dne …\", Jakub 2026-10-31), so the receipt texts frozen with every receipt issued from now on carry \"{0} dne {1}\"",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "path": "POST /api/donations/me/receipts",
+    "scenario": "donations/admin_receipts: *",
+    "kind": "body",
+    "field": "$.receipt.texts.cs.receipt.issuedAt",
+    "reason": "1.9 drops the comma before \"dne\" in the issue line of a receipt (\"Vystaveno v Novém Boru dne …\", Jakub 2026-10-31), so the receipt texts frozen with every receipt issued from now on carry \"{0} dne {1}\"",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "path": "POST /api/admin/donations/donors/{id}/receipts",
+    "scenario": "donations/admin_receipts: *",
+    "kind": "body",
+    "field": "$.receipt.texts.cs.receipt.issuedAt",
+    "reason": "1.9 drops the comma before \"dne\" in the issue line of a receipt (\"Vystaveno v Novém Boru dne …\", Jakub 2026-10-31), so the receipt texts frozen with every receipt issued from now on carry \"{0} dne {1}\"",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "path": "GET /api/admin/donations/receipts/{id}",
+    "scenario": "donations/admin_receipts: *",
+    "kind": "body",
+    "field": "$.receipt.texts.cs.receipt.issuedAt",
+    "reason": "1.9 drops the comma before \"dne\" in the issue line of a receipt (\"Vystaveno v Novém Boru dne …\", Jakub 2026-10-31), so the receipt texts frozen with every receipt issued from now on carry \"{0} dne {1}\"",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "path": "GET /api/donations/me/receipts",
+    "scenario": "donations/admin_receipts: *",
+    "kind": "body",
+    "field": "$.items[*].receipt.texts.cs.receipt.issuedAt",
+    "reason": "1.9 drops the comma before \"dne\" in the issue line of a receipt (\"Vystaveno v Novém Boru dne …\", Jakub 2026-10-31), so the receipt texts frozen with every receipt issued from now on carry \"{0} dne {1}\"",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "path": "POST /api/donations/me/receipts",
+    "scenario": "donations/receipt_status: *",
+    "kind": "body",
+    "field": "$.receipt.texts.cs.receipt.issuedAt",
+    "reason": "1.9 drops the comma before \"dne\" in the issue line of a receipt (\"Vystaveno v Novém Boru dne …\", Jakub 2026-10-31), so the receipt texts frozen with every receipt issued from now on carry \"{0} dne {1}\"",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "path": "POST /api/admin/donations/donors/{id}/receipts",
+    "scenario": "donors/connected_apps: *",
+    "kind": "body",
+    "field": "$.receipt.texts.cs.receipt.issuedAt",
+    "reason": "1.9 drops the comma before \"dne\" in the issue line of a receipt (\"Vystaveno v Novém Boru dne …\", Jakub 2026-10-31), so the receipt texts frozen with every receipt issued from now on carry \"{0} dne {1}\"",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "path": "POST /api/donations/me/receipts",
+    "scenario": "donations/admin_receipt_signing_key_withdrawal: *",
+    "kind": "body",
+    "field": "$.receipt.texts.cs.receipt.issuedAt",
+    "reason": "1.9 drops the comma before \"dne\" in the issue line of a receipt (\"Vystaveno v Novém Boru dne …\", Jakub 2026-10-31), so the receipt texts frozen with every receipt issued from now on carry \"{0} dne {1}\"",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "path": "GET /api/donations/me/receipts/yearly",
+    "scenario": "donations/donation_receipts_frozen: *",
+    "kind": "body",
+    "field": "$.text[*]",
+    "reason": "1.9 drops the comma before \"dne\" in the issue line of a receipt (Jakub 2026-10-31), so the PDF the server still draws until 1.10 prints \"… dne …\"",
+    "contract": "docs/api-contract.md, PDF receipts"
   },
   {
     "kind": "log-field",
