@@ -58,7 +58,7 @@ describe('Given an address the site does not know', () => {
       'Tento projekt už na webu není.',
     );
     expect(root.querySelector('a')?.getAttribute('href')).toBe('/projekty');
-    expect(root.querySelector('a')?.textContent?.trim()).toBe('Všechny projekty');
+    expect(root.querySelector('a')?.textContent?.trim()).toBe('Kde všude pomáháme');
   });
 
   it('when the page opens, then search engines are asked not to index it, and leaving it lifts that', () => {

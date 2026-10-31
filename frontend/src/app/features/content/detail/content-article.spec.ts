@@ -116,6 +116,6 @@ describe('Given the page of a project', () => {
     await fixture.whenStable();
 
     expect(text(fixture, '.ui-eyebrow')).toBe('Projekt · 2024');
-    expect(text(fixture, '.crumbs a')).toBe('← Všechny projekty');
+    expect(text(fixture, '.crumbs a')).toBe('← Kde pomáháme');
   });
 });

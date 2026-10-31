@@ -222,7 +222,7 @@ test.describe('Given a visitor whose browser shows text twice as large on a comp
     );
     expect(items.map((item) => item.text)).toEqual([
       'O nás',
-      'Projekty',
+      'Kde pomáháme',
       'Aktuality',
       'Kontakt',
       'Přispět',

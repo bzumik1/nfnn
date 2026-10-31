@@ -20,7 +20,7 @@ export const contentRoutes: Routes = [
   },
   {
     path: 'projekty',
-    title: $localize`:@@content.projectList.pageTitle:Projekty | Nová naděje – nadační fond`,
+    title: $localize`:@@content.projectList.pageTitle:Kde pomáháme | Nová naděje – nadační fond`,
     data: { kind: 'project' },
     loadComponent: () => import('./list/content-list').then((m) => m.ContentList),
   },
