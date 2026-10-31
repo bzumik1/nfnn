@@ -100,6 +100,7 @@ describe('Given the privacy policy page', () => {
       'Dárcovský účet',
       'Evidence darů a potvrzení o daru',
       'Kontaktní formulář',
+      'Hlášení chyb z prohlížeče',
       'IP adresa a záznamy serveru',
     ]);
   });
@@ -215,12 +216,45 @@ describe('Given the privacy policy page', () => {
   it('when it renders, then it names the sign-in and registration limits next to the contact form and password reset', () => {
     const ipAddress = purposeText('IP adresa a záznamy serveru');
 
-    expect(ipAddress).toContain('přihlášení, registraci, kontaktní formulář a obnovu hesla');
     expect(ipAddress).toContain(
-      'během 15 minut od prvního pokusu z ní přijmeme nejvýš deset pokusů o přihlášení',
+      'přihlášení, registraci, kontaktní formulář, obnovu hesla a hlášení chyb z prohlížeče',
+    );
+    expect(ipAddress).toContain(
+      'během 15 minut od prvního pokusu z ní přijmeme nejvýš deset pokusů o přihlášení a 30 hlášení chyb',
     );
     expect(ipAddress).toContain(
       'nejvýš pět registrací, pět zpráv z formuláře a pět žádostí o obnovu hesla',
+    );
+  });
+
+  it('when it renders, then it says an IPv6 address is counted by its /64 network, the block of one connection', () => {
+    expect(purposeText('IP adresa a záznamy serveru')).toContain(
+      'U adresy IPv6 počítáme celou síť /64, tedy blok adres, který poskytovatel připojení přiděluje jedné přípojce.',
+    );
+  });
+
+  it('when it renders, then it lists the only values a browser error report holds and what it never holds', () => {
+    const reports = purposeText('Hlášení chyb z prohlížeče');
+
+    expect(reports).toContain(
+      'druh chyby, místo v aplikaci, kde nastala, obecný název chyby (například TypeError), verzi webu, druh prohlížeče a číslo jeho hlavní verze, druh operačního systému, zda web běží v prohlížeči, nebo jako aplikace na ploše, a kolikrát se chyba opakovala',
+    );
+    expect(reports).toContain(
+      'nikdy neobsahuje text chybové zprávy, adresu stránky, vaše jméno, e‑mail, částky, čísla potvrzení',
+    );
+    expect(reports).toContain(
+      'Hlášení nenese váš účet ani IP adresu; podle času by šlo přiřadit k ostatním záznamům serveru z téže chvíle, a to děláme jen při hledání konkrétní chyby.',
+    );
+    expect(reports).not.toContain('nespojíme');
+    expect(reports).toContain('nejpozději po 14 dnech');
+    expect(reports).toContain(
+      'kopii v záznamu kontejneru na serveru, kterou čte jen jeho správce, mažeme, jakmile překročí nastavený objem',
+    );
+  });
+
+  it('when it renders, then the retention of browser error reports is listed with the rest', () => {
+    expect(sectionText('Jak dlouho údaje uchováváme')).toContain(
+      'hlášení chyb z prohlížeče v provozním záznamu aplikace nejdéle 14 dní, v záznamu kontejneru na serveru do jeho automatického smazání podle objemu,',
     );
   });
 
