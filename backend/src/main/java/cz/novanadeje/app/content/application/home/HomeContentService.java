@@ -2,6 +2,7 @@ package cz.novanadeje.app.content.application.home;
 
 import cz.novanadeje.app.content.application.about.AboutService;
 import cz.novanadeje.app.content.application.news.NewsArticleView;
+import cz.novanadeje.app.content.application.people.PublicPeopleService;
 import cz.novanadeje.app.content.application.project.ProjectView;
 import cz.novanadeje.app.content.domain.news.NewsArticleRepository;
 import cz.novanadeje.app.content.domain.project.ProjectRepository;
@@ -22,12 +23,14 @@ public class HomeContentService {
     private final NewsArticleRepository news;
     private final ProjectRepository projects;
     private final AboutService about;
+    private final PublicPeopleService people;
     private final Clock clock;
 
-    public HomeContentService(NewsArticleRepository news, ProjectRepository projects, AboutService about, Clock clock) {
+    public HomeContentService(NewsArticleRepository news, ProjectRepository projects, AboutService about, PublicPeopleService people, Clock clock) {
         this.news = news;
         this.projects = projects;
         this.about = about;
+        this.people = people;
         this.clock = clock;
     }
 
@@ -36,6 +39,7 @@ public class HomeContentService {
         return new HomeContent(
                 news.findVisibleNewestFirst(today, 0, NEWS_ON_HOME).stream().map(article -> NewsArticleView.from(article, today)).toList(),
                 projects.findVisibleNewestFirst(today, 0, PROJECTS_ON_HOME).stream().map(project -> ProjectView.from(project, today)).toList(),
-                about.read());
+                about.read(),
+                people.read());
     }
 }

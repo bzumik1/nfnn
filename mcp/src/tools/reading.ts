@@ -431,7 +431,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Aktuality a projekty',
       description:
-        'Every news article and project of the site, drafts included, with id, slug, title, tag, perex, photo, published date, live (whether the site shows it today: published and the published date not after today in Prague) and the length of the text, but not the text itself: read one whole with nfnn_news_article or nfnn_project.',
+        'Every news article and project of the site, drafts included, with id, slug, title, tag, perex, the year and category of a project, photo, published date, live (whether the site shows it today: published and the published date not after today in Prague) and the length of the text, but not the text itself: read one whole with nfnn_news_article or nfnn_project.',
       annotations: READ_ONLY,
     },
     async (ctx) =>
@@ -468,7 +468,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Projekt',
       description:
-        'One project whole, draft or published: every field nfnn_update_project takes, with its text, year and photo, and live (whether the site shows it today; false for a draft and before its published date).',
+        'One project whole, draft or published: every field nfnn_update_project takes, with its text, year, category and photo, and live (whether the site shows it today; false for a draft and before its published date).',
       inputSchema: z.object({ id: UUID }),
       annotations: READ_ONLY,
     },
@@ -494,6 +494,20 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     async (ctx) =>
       answer(deps, ctx, 'nfnn_about', async ({ apiToken }) =>
         text(await backend.get('/api/admin/content/about', apiToken)),
+      ),
+  );
+
+  server.registerTool(
+    'nfnn_people',
+    {
+      title: 'Lidé fondu',
+      description:
+        'The people of the foundation (Lidé fondu) the home page shows in "Kdo fond vede", in their order: id, name, role, position, onBoard with boardNote, featured, portrait and webSignature (id, url, size, or null), personalEmail and fundEmail (administration data only, never on the site), and the founders note under the cards (null when none). With no people the home page shows its own block. Change them with nfnn_add_person, nfnn_update_person, nfnn_remove_person, nfnn_order_people and nfnn_update_founders_note; a web signature is set and removed only on the web at /sprava/lide-fondu.',
+      annotations: READ_ONLY,
+    },
+    async (ctx) =>
+      answer(deps, ctx, 'nfnn_people', async ({ apiToken }) =>
+        text(await backend.get('/api/admin/content/people', apiToken)),
       ),
   );
 

@@ -42,6 +42,7 @@ const SIGNED_IN_PAGES = [
   '/sprava/projekty',
   '/sprava/projekty/nova',
   '/sprava/o-nas',
+  '/sprava/lide-fondu',
   '/sprava/zalohy',
   '/sprava/logy',
   '/sprava/nastaveni',

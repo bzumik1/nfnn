@@ -86,6 +86,76 @@ Feature: An administrator writes projects, the stories of the children the found
       | Eliška, 6 let  |
       | Dominik, 7 let |
 
+  Scenario: Within a year, projects for children come first, then adults, animals and the others
+    When "Jana" creates a project:
+      | title    | Plná miska pro útulek |
+      | year     | 2025                  |
+      | category | ANIMALS               |
+      | perex    | Perex.                |
+      | body     | Text.                 |
+    Then the response status is 201
+    And the project says:
+      | category | ANIMALS |
+    When "Jana" creates a project:
+      | title | Sbírka pro nemocnici |
+      | year  | 2025                 |
+      | perex | Perex.               |
+      | body  | Text.                |
+    Then the project says:
+      | category | OTHER |
+    And "Jana" creates a project:
+      | title    | Dominik, 7 let |
+      | year     | 2025           |
+      | category | CHILDREN       |
+      | perex    | Perex.         |
+      | body     | Text.          |
+    And "Jana" creates a project:
+      | title    | Eliška, 6 let |
+      | year     | 2026          |
+      | category | ANIMALS       |
+      | perex    | Perex.        |
+      | body     | Text.         |
+    And "Jana" publishes the project "plna-miska-pro-utulek" on 2026-10-01
+    And "Jana" publishes the project "sbirka-pro-nemocnici" on 2026-10-01
+    And "Jana" publishes the project "dominik-7-let" on 2026-10-01
+    And "Jana" publishes the project "eliska-6-let" on 2026-10-01
+    When someone without a token asks for the projects
+    Then the project list titles are:
+      | Eliška, 6 let         |
+      | Dominik, 7 let        |
+      | Plná miska pro útulek |
+      | Sbírka pro nemocnici  |
+    When "Jana" changes the project "sbirka-pro-nemocnici":
+      | title    | Sbírka pro nemocnici |
+      | year     | 2025                 |
+      | category | ADULTS               |
+      | perex    | Perex.               |
+      | body     | Text.                |
+    Then the response status is 200
+    And the project says:
+      | category | ADULTS |
+    When someone without a token asks for the projects
+    Then the project list titles are:
+      | Eliška, 6 let         |
+      | Dominik, 7 let        |
+      | Sbírka pro nemocnici  |
+      | Plná miska pro útulek |
+    And the project list says:
+      | items.1.category | CHILDREN |
+    When "Jana" asks for the projects
+    Then the project list titles are:
+      | Eliška, 6 let         |
+      | Dominik, 7 let        |
+      | Sbírka pro nemocnici  |
+      | Plná miska pro útulek |
+    When "Jana" creates a project:
+      | title    | Titulek |
+      | category | PLANTS  |
+      | perex    | Perex.  |
+      | body     | Text.   |
+    Then the response status is 400
+    And the problem lists an error for field "category"
+
   Scenario: A project published with a future date appears on the site on that day, and the administration says when it is live
     Given "Jana" creates a project:
       | title | Klára, 4 roky |

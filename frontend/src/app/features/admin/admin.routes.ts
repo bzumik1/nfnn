@@ -88,6 +88,11 @@ export const adminRoutes: Routes = [
         loadComponent: () => import('./about/admin-about').then((m) => m.AdminAbout),
       },
       {
+        path: 'lide-fondu',
+        title: $localize`:@@admin.people.pageTitle:Lidé fondu | Správa | Nová naděje – nadační fond`,
+        loadComponent: () => import('./people/admin-people').then((m) => m.AdminPeople),
+      },
+      {
         path: 'zalohy',
         title: $localize`:@@admin.backups.pageTitle:Zálohy | Správa | Nová naděje – nadační fond`,
         loadComponent: () => import('./backups/admin-backups').then((m) => m.AdminBackups),

@@ -122,6 +122,29 @@ class ProjectTest {
                 Optional.of("x".repeat(201)))).hasMessageContaining("description");
     }
 
+    @Test
+    @DisplayName("Given content built without a category, when it is read, then it counts among the others")
+    void should_fall_among_the_others_when_built_given_no_category() {
+        assertThat(content().category()).isEqualTo(ProjectCategory.OTHER);
+    }
+
+    @Test
+    @DisplayName("Given content built for children, when it is read, then it keeps its category")
+    void should_keep_the_category_when_built_given_one() {
+        ProjectContent content = new ProjectContent(new Slug("dominik"), "Dominik", 2024, ProjectCategory.CHILDREN, Optional.empty(), "Perex", "Text",
+                Optional.empty(), Optional.empty());
+
+        assertThat(content.category()).isEqualTo(ProjectCategory.CHILDREN);
+    }
+
+    @Test
+    @DisplayName("Given content without a category, when it is built, then it is refused")
+    void should_refuse_when_built_given_a_missing_category() {
+        assertThatThrownBy(() -> new ProjectContent(new Slug("dominik"), "Dominik", 2024, null, Optional.empty(), "Perex", "Text",
+                Optional.empty(), Optional.empty()))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
     private static ProjectContent content() {
         return new ProjectContent(new Slug("dominik"), "Pomohli jsme Dominikovi", 2024, Optional.of("Projekt"), "Perex o Dominikovi.", "Celý text.", Optional.empty());
     }
