@@ -26,6 +26,7 @@ export interface PersonResponse {
 export interface PeopleResponse {
   members: PersonResponse[];
   note: string | null;
+  footnote: string | null;
 }
 
 export interface PersonRequest {
@@ -40,6 +41,10 @@ export interface PersonRequest {
 }
 
 export interface FoundersNoteResponse {
+  text: string | null;
+}
+
+export interface PeopleFootnoteResponse {
   text: string | null;
 }
 
@@ -70,12 +75,14 @@ export interface PublicPeopleResponse {
   featured: PublicPersonCard[];
   board: PublicBoardMember[];
   note: PublicFoundersNote | null;
+  footnote: string | null;
 }
 
 export const MAX_PERSON_NAME_LENGTH = 100;
 export const MAX_PERSON_ROLE_LENGTH = 120;
 export const MAX_BOARD_NOTE_LENGTH = 60;
 export const MAX_FOUNDERS_NOTE_LENGTH = 600;
+export const MAX_PEOPLE_FOOTNOTE_LENGTH = 200;
 export const MAX_PEOPLE = 30;
 export const MAX_EMAIL_LENGTH = 254;
 export const EMAIL_SHAPE = '^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$';
@@ -108,6 +115,10 @@ export class PeopleApi {
 
   saveNote(text: string | null): Observable<FoundersNoteResponse> {
     return this.http.put<FoundersNoteResponse>(`${ADMIN_PEOPLE}/note`, { text });
+  }
+
+  saveFootnote(text: string | null): Observable<PeopleFootnoteResponse> {
+    return this.http.put<PeopleFootnoteResponse>(`${ADMIN_PEOPLE}/footnote`, { text });
   }
 
   setWebSignature(id: string, imageId: string): Observable<PersonResponse> {

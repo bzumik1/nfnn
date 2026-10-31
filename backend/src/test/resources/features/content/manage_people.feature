@@ -3,7 +3,8 @@ Feature: An administrator keeps the people of the foundation that the About sect
 
   The block "Kdo fond vede" of the home page shows the people an administrator keeps at
   /sprava/lide-fondu (Jakub 2026-10-30): cards with a portrait for the featured people, the line
-  of the board, and the founders' note with the web signatures of the featured people under it.
+  of the board, the founders' note with the web signatures of the featured people under it, and
+  one line under the board (Jakub 2026-10-30: the volunteer who runs the site).
   A web signature is a separate public image for the site only, never the signature on receipts,
   and a connected application may set and remove it too (Jakub 2026-10-30). A member's personal
   and fund e-mails are administration data only and never reach the home page.
@@ -233,6 +234,35 @@ Feature: An administrator keeps the people of the foundation that the About sect
       | CHANGE_FOUNDERS_NOTE | Odebráno slovo zakladatelů. |
       | CHANGE_FOUNDERS_NOTE | Upraveno slovo zakladatelů. |
 
+  Scenario: The line under the board shows on the home page as one line, and emptying it removes it
+    Given "Jana" adds a person:
+      | name    | Eva Vzorová |
+      | onBoard | true        |
+    And 1 seconds pass
+    When "Jana" writes the line under the board:
+      """
+        Web zajišťuje   bez nároku na odměnu
+      Petr Vzor.
+      """
+    Then the response status is 200
+    And the line under the board is "Web zajišťuje bez nároku na odměnu Petr Vzor."
+    When "Jana" asks for the people of the foundation
+    Then the line under the board is "Web zajišťuje bez nároku na odměnu Petr Vzor."
+    When someone without a token asks for the home content
+    Then the home line under the board is "Web zajišťuje bez nároku na odměnu Petr Vzor."
+    When 1 seconds pass
+    And "Jana" empties the line under the board
+    Then the response status is 200
+    And the line under the board is empty
+    When someone without a token asks for the home content
+    Then the home content has no line under the board
+    When "Jana" asks for the admin actions
+    Then the admin actions are:
+      | action                 | summary                          |
+      | CHANGE_PEOPLE_FOOTNOTE | Odebrán řádek pod správní radou. |
+      | CHANGE_PEOPLE_FOOTNOTE | Upraven řádek pod správní radou. |
+      | ADD_PERSON             | Přidána osoba mezi lidi fondu.   |
+
   Scenario: Removing a person deletes their portrait and their web signature, and removing a web signature deletes it
     Given "Jana" uploads a 640 by 640 pixel PNG image named "eva.png"
     And "Jana" adds a person:
@@ -323,6 +353,11 @@ Feature: An administrator keeps the people of the foundation that the About sect
     And the problem lists an error for field "text"
     When "Jana" writes a founders note of 600 characters
     Then the response status is 200
+    When "Jana" writes a line under the board of 201 characters
+    Then the response status is 400
+    And the problem lists an error for field "text"
+    When "Jana" writes a line under the board of 200 characters
+    Then the response status is 200
     Given "Jana" adds a person:
       | name | Eva Vzorová |
     When "Jana" sets the web signature of "Eva Vzorová" to an image that was never uploaded
@@ -401,6 +436,11 @@ Feature: An administrator keeps the people of the foundation that the About sect
       Děkujeme.
       """
     Then the response status is 200
+    When the exchanged API token writes the line under the board:
+      """
+      Web zajišťuje Petr Vzor.
+      """
+    Then the response status is 200
     When the exchanged API token updates the person "Eva Vzorová":
       | name     | Eva Nová |
       | featured | true     |
@@ -429,17 +469,18 @@ Feature: An administrator keeps the people of the foundation that the About sect
       | name     | webSignature |
       | Eva Nová |              |
     And these admin actions were recorded:
-      | action               | client    |
-      | REMOVE_PERSON        | claude.ai |
-      | REMOVE_WEB_SIGNATURE | claude.ai |
-      | CHANGE_WEB_SIGNATURE | claude.ai |
-      | UPDATE_PERSON        | claude.ai |
-      | CHANGE_FOUNDERS_NOTE | claude.ai |
-      | ORDER_PEOPLE         | claude.ai |
-      | UPDATE_PERSON        | claude.ai |
-      | ADD_PERSON           | claude.ai |
-      | CHANGE_WEB_SIGNATURE |           |
-      | ADD_PERSON           |           |
+      | action                 | client    |
+      | REMOVE_PERSON          | claude.ai |
+      | REMOVE_WEB_SIGNATURE   | claude.ai |
+      | CHANGE_WEB_SIGNATURE   | claude.ai |
+      | UPDATE_PERSON          | claude.ai |
+      | CHANGE_PEOPLE_FOOTNOTE | claude.ai |
+      | CHANGE_FOUNDERS_NOTE   | claude.ai |
+      | ORDER_PEOPLE           | claude.ai |
+      | UPDATE_PERSON          | claude.ai |
+      | ADD_PERSON             | claude.ai |
+      | CHANGE_WEB_SIGNATURE   |           |
+      | ADD_PERSON             |           |
 
   Scenario: A connected application with the reading permission only reads the people but cannot change them
     Given "Jana" adds a person:
@@ -459,5 +500,11 @@ Feature: An administrator keeps the people of the foundation that the About sect
     Then the response status is 403
     And the problem type ends with "auth/forbidden"
     When the exchanged API token removes the web signature of "Eva Vzorová"
+    Then the response status is 403
+    And the problem type ends with "auth/forbidden"
+    When the exchanged API token writes the line under the board:
+      """
+      Web zajišťuje Petr Vzor.
+      """
     Then the response status is 403
     And the problem type ends with "auth/forbidden"

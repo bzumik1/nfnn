@@ -23,7 +23,7 @@ public class PeopleStepDefinitions {
     private static final String PEOPLE = "/api/admin/content/people";
     private static final String ACCESS_TOKEN = "access_token";
     private static final List<String> PEOPLE_ACTIONS = List.of("ADD_PERSON", "UPDATE_PERSON", "REMOVE_PERSON", "ORDER_PEOPLE",
-            "CHANGE_FOUNDERS_NOTE", "CHANGE_WEB_SIGNATURE", "REMOVE_WEB_SIGNATURE");
+            "CHANGE_FOUNDERS_NOTE", "CHANGE_PEOPLE_FOOTNOTE", "CHANGE_WEB_SIGNATURE", "REMOVE_WEB_SIGNATURE");
 
     private final ApiClient api;
     private final DonorSessions sessions;
@@ -152,6 +152,30 @@ public class PeopleStepDefinitions {
         api.put(PEOPLE + "/note", note(text));
     }
 
+    @When("{string} writes the line under the board:")
+    public void writesTheLineUnderTheBoard(String alias, String text) {
+        sessions.actAs(alias);
+        api.put(PEOPLE + "/footnote", note(text));
+    }
+
+    @When("{string} writes a line under the board of {int} characters")
+    public void writesALineUnderTheBoardOfCharacters(String alias, int length) {
+        sessions.actAs(alias);
+        api.put(PEOPLE + "/footnote", note("x".repeat(length)));
+    }
+
+    @When("{string} empties the line under the board")
+    public void emptiesTheLineUnderTheBoard(String alias) {
+        sessions.actAs(alias);
+        api.put(PEOPLE + "/footnote", note(null));
+    }
+
+    @When("the exchanged API token writes the line under the board:")
+    public void theExchangedApiTokenWritesTheLineUnderTheBoard(String text) {
+        actAsExchangedApiToken();
+        api.put(PEOPLE + "/footnote", note(text));
+    }
+
     @Given("{string} sets the web signature of {string} to the image uploaded as {string}")
     public void setsTheWebSignature(String alias, String name, String fileName) {
         sessions.actAs(alias);
@@ -209,6 +233,26 @@ public class PeopleStepDefinitions {
     @Then("the founders note is empty")
     public void theFoundersNoteIsEmpty() {
         assertThat(api.lastResponseJson().get(api.lastResponseJson().has("members") ? "note" : "text").isNull()).isTrue();
+    }
+
+    @Then("the line under the board is {string}")
+    public void theLineUnderTheBoardIs(String text) {
+        assertThat(footnote(api.lastResponseJson()).asString()).isEqualTo(text);
+    }
+
+    @Then("the line under the board is empty")
+    public void theLineUnderTheBoardIsEmpty() {
+        assertThat(footnote(api.lastResponseJson()).isNull()).isTrue();
+    }
+
+    @Then("the home line under the board is {string}")
+    public void theHomeLineUnderTheBoardIs(String text) {
+        assertThat(api.lastResponseJson().get("people").get("footnote").asString()).isEqualTo(text);
+    }
+
+    @Then("the home content has no line under the board")
+    public void theHomeContentHasNoLineUnderTheBoard() {
+        assertThat(api.lastResponseJson().get("people").get("footnote").isNull()).isTrue();
     }
 
     @Then("the home content has no people of the foundation")
@@ -315,6 +359,10 @@ public class PeopleStepDefinitions {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("text", text);
         return body;
+    }
+
+    private static JsonNode footnote(JsonNode response) {
+        return response.has("members") ? response.get("footnote") : response.get("text");
     }
 
     private static String noteText(JsonNode response) {

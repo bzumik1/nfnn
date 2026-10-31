@@ -93,6 +93,7 @@ describe('Given an administrator connected with the reading permission only', ()
       'nfnn_update_backup_schedule',
       'nfnn_update_founders_note',
       'nfnn_update_news',
+      'nfnn_update_people_footnote',
       'nfnn_update_person',
       'nfnn_update_project',
       'nfnn_update_report_settings',
@@ -327,7 +328,7 @@ describe('Given an administrator connected with the reading permission only', ()
     ).toBe(false);
   });
 
-  it('when the people of the foundation are asked, then they come in order with their portraits, web signatures and the founders note', async () => {
+  it('when the people of the foundation are asked, then they come in order with their portraits, web signatures, the founders note and the line under the board', async () => {
     const result = await client.callTool({ name: 'nfnn_people', arguments: {} });
     expect(result.isError).toBeFalsy();
     const text = textOf(result);
@@ -335,6 +336,7 @@ describe('Given an administrator connected with the reading permission only', ()
     expect(text).toContain('"boardNote":"předsedkyně"');
     expect(text).toContain('"fundEmail":"eva@nfnn.cz"');
     expect(text).toContain('"note":"Děkujeme všem, kdo pomáhají s námi."');
+    expect(text).toContain('"footnote":"Web zajišťuje bez nároku na odměnu Petr Vzor."');
     expect(stack.backend.requests.map((request) => request.path)).toContain(
       '/api/admin/content/people',
     );
@@ -924,7 +926,7 @@ describe('Given an administrator connected with the writing permission', () => {
     );
   });
 
-  it('when the people are ordered and the founders note is written and emptied, then the administration gets the order and the text, an empty one as none', async () => {
+  it('when the people are ordered and the founders note and the line under the board are written and emptied, then the administration gets the order and the texts, an empty one as none', async () => {
     const ordered = await client.callTool({
       name: 'nfnn_order_people',
       arguments: { memberIds: [PERSON_ID, SIGNED_PERSON_ID] },
@@ -936,6 +938,15 @@ describe('Given an administrator connected with the writing permission', () => {
       arguments: { text: '  ' },
     });
     expect(textOf(emptied)).toContain('"text":null');
+    await client.callTool({
+      name: 'nfnn_update_people_footnote',
+      arguments: { text: 'Web zajišťuje Petr Vzor.' },
+    });
+    const footnoteEmptied = await client.callTool({
+      name: 'nfnn_update_people_footnote',
+      arguments: { text: ' ' },
+    });
+    expect(textOf(footnoteEmptied)).toContain('"text":null');
 
     const writes = stack.backend.requests
       .filter((request) => request.path.startsWith('/api/admin/content/people'))
@@ -944,6 +955,8 @@ describe('Given an administrator connected with the writing permission', () => {
       ['PUT', '/api/admin/content/people/order', { memberIds: [PERSON_ID, SIGNED_PERSON_ID] }],
       ['PUT', '/api/admin/content/people/note', { text: 'Děkujeme.' }],
       ['PUT', '/api/admin/content/people/note', { text: null }],
+      ['PUT', '/api/admin/content/people/footnote', { text: 'Web zajišťuje Petr Vzor.' }],
+      ['PUT', '/api/admin/content/people/footnote', { text: null }],
     ]);
   });
 

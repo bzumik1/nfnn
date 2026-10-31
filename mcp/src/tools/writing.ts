@@ -636,6 +636,25 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
   );
 
   server.registerTool(
+    'nfnn_update_people_footnote',
+    {
+      title: 'Řádek pod správní radou',
+      description:
+        'Writes the one line shown under the board line of "Kdo fond vede" on the home page, after the founders note (for example who runs the site as a volunteer), plain Czech text on one line (line breaks become spaces), at most 200 characters; an empty text removes it. Audited as CHANGE_PEOPLE_FOOTNOTE.',
+      inputSchema: z.object({ text: z.string().max(200) }),
+      annotations: { ...WRITING, idempotentHint: true },
+    },
+    async ({ text: footnote }, ctx) =>
+      answerChange(deps, ctx, 'nfnn_update_people_footnote', async ({ apiToken }) =>
+        text(
+          await backend.put('/api/admin/content/people/footnote', apiToken, {
+            text: footnote.trim() === '' ? null : footnote,
+          }),
+        ),
+      ),
+  );
+
+  server.registerTool(
     'nfnn_disconnect_bank_account',
     {
       title: 'Vypnout párování z účtu dárce',
