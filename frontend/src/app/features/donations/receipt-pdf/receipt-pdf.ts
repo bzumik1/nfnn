@@ -1,16 +1,10 @@
-/// <reference types="@angular/localize" />
-
 import { inject, Injectable, InjectionToken } from '@angular/core';
 import { defer, from, Observable, of, switchMap, timeout } from 'rxjs';
 import { DownloadedFile } from '../donations-api';
 import { ReceiptSubject } from './frozen-receipt';
 import { ReceiptArt, receiptArt } from './receipt-art';
-import {
-  ReceiptCaptions,
-  ReceiptDocument,
-  receiptDocument,
-  ReceiptUnprintable,
-} from './receipt-document';
+import { receiptCaptions } from './receipt-captions';
+import { ReceiptDocument, receiptDocument, ReceiptUnprintable } from './receipt-document';
 import { resolveReceiptStyle, ReceiptStyle, ReceiptStyleRefused } from './receipt-style';
 import { ReceiptWorker } from './receipt-worker-messages';
 import { ReceiptsApi } from './receipts-api';
@@ -51,22 +45,6 @@ export const RECEIPT_PDF_ENVIRONMENT = new InjectionToken<ReceiptPdfEnvironment>
 
 export const RECEIPT_DRAWING_TIMEOUT_MS = 120_000;
 
-function captions(): ReceiptCaptions {
-  return {
-    verificationHeading: {
-      cs: $localize`:@@donor.receipt.pdf.verificationHeading:Ověření potvrzení`,
-      en: 'Verification',
-    },
-    verificationText: {
-      cs: $localize`:@@donor.receipt.pdf.verificationText:Načtěte kód telefonem nebo na něj klikněte. Ukáže, zda potvrzení platí.`,
-      en: 'Scan the code or click it to see whether this confirmation is valid.',
-    },
-    verificationAlt: $localize`:@@donor.receipt.pdf.verificationAlt:QR kód pro ověření potvrzení na nfnn.cz/overit`,
-    signatureAlt: $localize`:@@donor.receipt.pdf.signatureAlt:Podpis`,
-    portraitAlt: $localize`:@@donor.receipt.pdf.portraitAlt:Fotografie podepisujícího`,
-  };
-}
-
 @Injectable({ providedIn: 'root' })
 export class ReceiptPdf {
   private readonly api = inject(ReceiptsApi);
@@ -94,7 +72,7 @@ export class ReceiptPdf {
             subscriber.next({ kind: 'phase', phase: 'tools', page: 0 });
             let document: ReceiptDocument;
             try {
-              document = receiptDocument(issued.receipt, issued.issuedAt, captions());
+              document = receiptDocument(issued.receipt, issued.issuedAt, receiptCaptions());
             } catch (failure: unknown) {
               subscriber.error(
                 new ReceiptPdfFailure(

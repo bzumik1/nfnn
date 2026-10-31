@@ -78,15 +78,17 @@ const PAGE = '#ffffff';
 const MINIMUM_CONTRAST = 4.5;
 const READ_ON_THE_PAGE = ['text', 'muted', 'english', 'code'] as const;
 
-function tokenValue(style: CSSStyleDeclaration, token: string): string {
-  const value = style.getPropertyValue(token).trim();
+type TokenReader = (token: string) => string;
+
+function tokenValue(style: TokenReader, token: string): string {
+  const value = style(token).trim();
   if (value === '') {
     throw new ReceiptStyleRefused(`The theme does not set the receipt token ${token}.`);
   }
   return value;
 }
 
-function measured(style: CSSStyleDeclaration, token: string, unit: 'pt' | 'mm'): number {
+function measured(style: TokenReader, token: string, unit: 'pt' | 'mm'): number {
   const value = tokenValue(style, token);
   const match = new RegExp(`^(\\d+(?:\\.\\d+)?)${unit}$`).exec(value);
   if (match === null) {
@@ -97,7 +99,7 @@ function measured(style: CSSStyleDeclaration, token: string, unit: 'pt' | 'mm'):
   return Number(match[1]);
 }
 
-function color(style: CSSStyleDeclaration, token: string): string {
+function color(style: TokenReader, token: string): string {
   const value = tokenValue(style, token);
   if (!HEX.test(value)) {
     throw new ReceiptStyleRefused(
@@ -107,7 +109,7 @@ function color(style: CSSStyleDeclaration, token: string): string {
   return value.toLowerCase();
 }
 
-function fontFile(style: CSSStyleDeclaration, token: string): string {
+function fontFile(style: TokenReader, token: string): string {
   const value = tokenValue(style, token);
   const file = QUOTED.exec(value)?.[2] ?? value;
   if (!FONT_FILE.test(file)) {
@@ -160,8 +162,7 @@ export function checkedReceiptStyle(style: ReceiptStyle): ReceiptStyle {
   return style;
 }
 
-export function resolveReceiptStyle(element: Element): ReceiptStyle {
-  const style = getComputedStyle(element);
+export function receiptStyleFrom(style: TokenReader): ReceiptStyle {
   const leading = tokenValue(style, RECEIPT_LEADING_TOKEN);
   if (!/^\d+(\.\d+)?$/.test(leading)) {
     throw new ReceiptStyleRefused(
@@ -175,4 +176,9 @@ export function resolveReceiptStyle(element: Element): ReceiptStyle {
     fonts: mapped(RECEIPT_FONT_TOKENS, (token) => fontFile(style, token)),
     margins: mapped(RECEIPT_MARGIN_TOKENS, (token) => measured(style, token, 'mm') * POINTS_PER_MM),
   });
+}
+
+export function resolveReceiptStyle(element: Element): ReceiptStyle {
+  const computed = getComputedStyle(element);
+  return receiptStyleFrom((token) => computed.getPropertyValue(token));
 }

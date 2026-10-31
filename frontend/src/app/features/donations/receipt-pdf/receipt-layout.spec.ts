@@ -1,6 +1,9 @@
+// @vitest-environment node
+
 import { sharedCases } from '../../../../testing/shared-cases';
 import { FrozenReceipt } from './frozen-receipt';
 import { ReceiptArt } from './receipt-art';
+import { receiptCaptions } from './receipt-captions';
 import { receiptDocument, ReceiptDocument } from './receipt-document';
 import { drawReceipt, ReceiptAssets } from './receipt-layout';
 import { RECEIPT_PRINTABLE_RANGES } from './receipt-characters';
@@ -15,17 +18,18 @@ import {
   rasterPage,
   readPdf,
   ReadPdf,
+  readXmp,
 } from './testing/pdf-reader';
 import {
   frozenCase,
   SINGLE_PERSON_CS,
   SINGLE_SIGNATURE,
-  TEST_CAPTIONS,
   YEARLY_120,
+  YEARLY_BILINGUAL,
   YEARLY_366,
   YEARLY_40,
 } from './testing/receipt-fixtures';
-import { TEST_STYLE, themeFonts } from './testing/receipt-style-fixture';
+import { TEST_STYLE, themeFonts, themeStyle } from './testing/receipt-style-fixture';
 import {
   base64Bytes,
   SYNTHETIC_PORTRAIT_PNG_BASE64,
@@ -35,12 +39,16 @@ import {
 const ISSUED_AT = '2027-01-15T09:30:00Z';
 const RECEIPT_THEMES = ['nova-nadeje', 'control'] as const;
 const A4 = { width: 595.28, height: 841.89 };
-const CAPTION_PHRASES = [
-  TEST_CAPTIONS.verificationHeading.cs,
-  TEST_CAPTIONS.verificationText.cs,
-  TEST_CAPTIONS.verificationHeading.en ?? '',
-  TEST_CAPTIONS.verificationText.en ?? '',
+const MM = 72 / 25.4;
+const FOOTER_RULE_BELOW_MARGIN = 3 * MM;
+const QUIET_ZONE_MODULES = 4;
+const CAPTIONS = receiptCaptions();
+const CZECH_CAPTION_PHRASES = [CAPTIONS.verificationHeading.cs, CAPTIONS.verificationText.cs];
+const ENGLISH_CAPTION_PHRASES = [
+  CAPTIONS.verificationHeading.en ?? '',
+  CAPTIONS.verificationText.en ?? '',
 ];
+const PAGES_BEYOND_V2: Readonly<Record<string, number>> = { [YEARLY_120]: 1 };
 
 const NO_ART: ReceiptAssets = { fonts: themeFonts(), signature: null, portrait: null };
 const VECTOR_SIGNATURE: ReceiptArt = {
@@ -50,12 +58,52 @@ const VECTOR_SIGNATURE: ReceiptArt = {
 const PORTRAIT: ReceiptArt = { kind: 'raster', bytes: base64Bytes(SYNTHETIC_PORTRAIT_PNG_BASE64) };
 
 function documentOf(frozen: FrozenReceipt): ReceiptDocument {
-  return receiptDocument(frozen, ISSUED_AT, TEST_CAPTIONS);
+  return receiptDocument(frozen, ISSUED_AT, CAPTIONS);
 }
 
 function withoutOnce(text: string, phrase: string): string {
   const at = text.indexOf(phrase);
   return at < 0 ? text : normalised(text.slice(0, at) + ' ' + text.slice(at + phrase.length));
+}
+
+function textBelowTheMargin(read: ReadPdf, bottomMarginPt: number): readonly string[] {
+  return read.pages.flatMap((page) =>
+    page.placed
+      .filter((placed) => placed.baselinePt < bottomMarginPt)
+      .map(
+        (placed) =>
+          `page ${page.number}: "${placed.text}" ${((bottomMarginPt - placed.baselinePt) / MM).toFixed(1)} mm below the margin`,
+      ),
+  );
+}
+
+function quietZonesOverTheFooterRule(
+  read: ReadPdf,
+  frozen: FrozenReceipt,
+  bottomMarginPt: number,
+): readonly string[] {
+  const modules = verificationSymbol(frozen.verification.qrText).size;
+  return read.pages.flatMap((page) =>
+    page.links
+      .filter((link) => {
+        const [left, bottom, right] = link.rect;
+        const quietZone = (QUIET_ZONE_MODULES * (right - left)) / modules;
+        return bottom - quietZone < bottomMarginPt - FOOTER_RULE_BELOW_MARGIN + 0.01;
+      })
+      .map(
+        (link) =>
+          `page ${page.number}: the QR code ends ${(link.rect[1] / MM).toFixed(1)} mm above the page edge`,
+      ),
+  );
+}
+
+function yearOf(base: FrozenReceipt, gifts: number): FrozenReceipt {
+  const many = Array.from({ length: gifts }, (_, index) => base.gifts[index % base.gifts.length]);
+  return {
+    ...base,
+    gifts: many,
+    total: { ...base.total, amountMinor: many.reduce((sum, gift) => sum + gift.amountMinor, 0) },
+  };
 }
 
 function occurrences(text: string, phrase: string): number {
@@ -87,104 +135,217 @@ describe('Given every frozen receipt case and the text v2 printed for it', () =>
     ]),
   );
 
-  for (const sharedCase of sharedCases('receipts/v1/frozen.json')) {
-    describe(`Given the shared case ${sharedCase.name}`, () => {
-      const expected = printed.get(sharedCase.name);
-      const frozen = structuredClone(sharedCase.expected) as FrozenReceipt;
-      let bytes: Uint8Array;
-      let read: ReadPdf;
+  for (const theme of RECEIPT_THEMES) {
+    for (const sharedCase of sharedCases('receipts/v1/frozen.json')) {
+      describe(`Given the shared case ${sharedCase.name}, drawn in the ${theme} theme with the captions the site prints`, () => {
+        const expected = printed.get(sharedCase.name);
+        const frozen = structuredClone(sharedCase.expected) as FrozenReceipt;
+        let style: ReturnType<typeof themeStyle>;
+        let bytes: Uint8Array;
+        let read: ReadPdf;
 
-      beforeAll(async () => {
-        bytes = await drawReceipt(documentOf(frozen), TEST_STYLE, NO_ART);
-        read = await readPdf(bytes);
-      }, 60_000);
+        beforeAll(async () => {
+          style = themeStyle(theme);
+          bytes = await drawReceipt(documentOf(frozen), style, {
+            ...NO_ART,
+            fonts: themeFonts(theme),
+          });
+          read = await readPdf(bytes);
+        }, 60_000);
 
-      it('when it is drawn, then its printed text is that case', () => {
-        expect(expected).toBeDefined();
+        it('when it is drawn, then its printed text is that case', () => {
+          expect(expected).toBeDefined();
+        });
+
+        it('when it is drawn, then the text outside the page artifacts is v2 text word for word, with the D11 dates and only the listed additions', () => {
+          let body = normalised(read.pages.map((page) => page.text).join(' '));
+          if (expected?.tableHeader) {
+            expect(occurrences(body, expected.tableHeader)).toBe(1);
+            body = withoutOnce(body, expected.tableHeader);
+          }
+          for (const phrase of [...CZECH_CAPTION_PHRASES, ...ENGLISH_CAPTION_PHRASES]) {
+            body = withoutOnce(body, phrase);
+          }
+
+          expect(body).toBe(expected?.body);
+        });
+
+        it('when it is drawn, then each caption beside the QR code is printed exactly once, its English half only on a bilingual receipt', () => {
+          const body = normalised(read.pages.map((page) => page.text).join(' '));
+          const bilingual = frozen.locale === 'en';
+
+          expect(CZECH_CAPTION_PHRASES.map((phrase) => occurrences(body, phrase))).toEqual([1, 1]);
+          expect(ENGLISH_CAPTION_PHRASES.map((phrase) => occurrences(body, phrase))).toEqual(
+            bilingual ? [1, 1] : [0, 0],
+          );
+        });
+
+        it('when it is drawn, then no text outside the page artifacts lies below the bottom margin, so nothing reaches the footer rule', () => {
+          expect(textBelowTheMargin(read, style.margins.bottom)).toEqual([]);
+        });
+
+        it('when it is drawn, then the QR code and its quiet zone of four modules end above the footer rule', () => {
+          expect(quietZonesOverTheFooterRule(read, frozen, style.margins.bottom)).toEqual([]);
+        });
+
+        it('when it is drawn, then its XMP metadata is well-formed XML naming PDF/UA part 1, the Czech title and the issue time', () => {
+          const xmp = readXmp(read.raw);
+
+          expect(xmp.wellFormed).toBe(true);
+          expect(xmp.values['pdfuaid:part']).toBe('1');
+          expect(xmp.values['dc:title']).toBe(documentOf(frozen).title.cs);
+          expect(xmp.values['dc:creator']).toBe(frozen.foundation.name);
+          expect(xmp.values['xmp:CreateDate']).toBe(ISSUED_AT);
+        });
+
+        it('when it is drawn, then every page is A4 and carries the footer with its number as a pagination artifact', () => {
+          const count = read.pages.length;
+          for (const page of read.pages) {
+            expect(page.widthPt).toBeCloseTo(A4.width, 1);
+            expect(page.heightPt).toBeCloseTo(A4.height, 1);
+            expect(page.artifacts).toContain(`${expected?.footer} ${page.number} / ${count}`);
+          }
+        });
+
+        it('when it is drawn, then it has exactly as many pages as v2 had, plus only the listed differences', () => {
+          expect(read.pages.length).toBe(
+            (expected?.v2Pages ?? 0) + (PAGES_BEYOND_V2[sharedCase.name] ?? 0),
+          );
+        });
+
+        it('when a yearly receipt runs onto further pages, then each of them repeats the column headers as an artifact', () => {
+          if (!expected?.tableHeader) {
+            return;
+          }
+          const tablePages = read.pages.filter((page) =>
+            /\d{2}\. \d{2}\. \d{4}( \([^)]*\))? [\d ]+(,\d\d)? Kč/.test(page.text),
+          );
+          for (const page of tablePages.slice(1)) {
+            expect(page.artifacts).toContain(expected.tableHeader);
+          }
+        });
+
+        it('when it is drawn, then every link on it opens the proof of its QR code', () => {
+          const links = read.pages.flatMap((page) => page.links);
+
+          expect(links.length).toBeGreaterThan(0);
+          for (const link of links) {
+            expect(link.url).toBe(frozen.verification.qrText);
+          }
+        });
+
+        it('when it is drawn, then it is a tagged PDF in Czech with headings, paragraphs, a described QR figure and its link', () => {
+          expect(read.raw).toContain('/StructTreeRoot');
+          expect(read.raw).toMatch(/\/MarkInfo \d+ 0 R/);
+          expect(read.raw).toMatch(/<<\s*\/Marked true\s*>>/);
+          expect(read.raw).toMatch(/\/Lang \(cs\)/);
+          expect(read.roles).toEqual(
+            expect.arrayContaining(['Document', 'H1', 'H2', 'P', 'Figure', 'Link']),
+          );
+          expect(read.figureAlts).toContain(CAPTIONS.verificationAlt);
+          if (frozen.kind === 'YEARLY') {
+            expect(read.roles).toEqual(expect.arrayContaining(['Table', 'TR', 'TH', 'TD']));
+          }
+          if (frozen.locale === 'en') {
+            expect(read.raw).toMatch(/\/Lang \(en\)/);
+          }
+        });
+
+        it('when it is drawn, then its fonts are embedded subsets with a ToUnicode map and no character came out unreadable', () => {
+          const embedded = read.raw.match(/\/FontFile2/g) ?? [];
+          const unicodeMaps = read.raw.match(/\/ToUnicode/g) ?? [];
+          const names = read.raw.match(/\/BaseFont \/[A-Z]{6}\+[A-Za-z-]+/g) ?? [];
+
+          expect(embedded.length).toBeGreaterThanOrEqual(2);
+          expect(unicodeMaps.length).toBe(embedded.length);
+          expect(names.length).toBeGreaterThanOrEqual(embedded.length);
+          expect(read.pages.map((page) => page.text + page.artifacts).join(' ')).not.toMatch(/�/);
+        });
+
+        it('when it is drawn twice, then the bytes are the same', async () => {
+          const again = await drawReceipt(documentOf(frozen), style, {
+            ...NO_ART,
+            fonts: themeFonts(theme),
+          });
+
+          expect(again).toEqual(bytes);
+        });
       });
-
-      it('when it is drawn, then the text outside the page artifacts is v2 text word for word, with the D11 dates and only the listed additions', () => {
-        let body = normalised(read.pages.map((page) => page.text).join(' '));
-        if (expected?.tableHeader) {
-          expect(occurrences(body, expected.tableHeader)).toBe(1);
-          body = withoutOnce(body, expected.tableHeader);
-        }
-        for (const phrase of CAPTION_PHRASES) {
-          body = withoutOnce(body, phrase);
-        }
-
-        expect(body).toBe(expected?.body);
-      });
-
-      it('when it is drawn, then every page is A4 and carries the footer with its number as a pagination artifact', () => {
-        const count = read.pages.length;
-        for (const page of read.pages) {
-          expect(page.widthPt).toBeCloseTo(A4.width, 1);
-          expect(page.heightPt).toBeCloseTo(A4.height, 1);
-          expect(page.artifacts).toContain(`${expected?.footer} ${page.number} / ${count}`);
-        }
-      });
-
-      it('when it is drawn, then it has at most one page more than v2 had', () => {
-        expect(read.pages.length).toBeLessThanOrEqual((expected?.v2Pages ?? 0) + 1);
-      });
-
-      it('when a yearly receipt runs onto further pages, then each of them repeats the column headers as an artifact', () => {
-        if (!expected?.tableHeader) {
-          return;
-        }
-        const tablePages = read.pages.filter((page) =>
-          /\d{2}\. \d{2}\. \d{4}( \([^)]*\))? [\d ]+(,\d\d)? Kč/.test(page.text),
-        );
-        for (const page of tablePages.slice(1)) {
-          expect(page.artifacts).toContain(expected.tableHeader);
-        }
-      });
-
-      it('when it is drawn, then every link on it opens the proof of its QR code', () => {
-        const links = read.pages.flatMap((page) => page.links);
-
-        expect(links.length).toBeGreaterThan(0);
-        for (const link of links) {
-          expect(link.url).toBe(frozen.verification.qrText);
-        }
-      });
-
-      it('when it is drawn, then it is a tagged PDF in Czech with headings, paragraphs, a described QR figure and its link', () => {
-        expect(read.raw).toContain('/StructTreeRoot');
-        expect(read.raw).toMatch(/\/MarkInfo \d+ 0 R/);
-        expect(read.raw).toMatch(/<<\s*\/Marked true\s*>>/);
-        expect(read.raw).toMatch(/\/Lang \(cs\)/);
-        expect(read.roles).toEqual(
-          expect.arrayContaining(['Document', 'H1', 'H2', 'P', 'Figure', 'Link']),
-        );
-        expect(read.figureAlts).toContain(TEST_CAPTIONS.verificationAlt);
-        if (frozen.kind === 'YEARLY') {
-          expect(read.roles).toEqual(expect.arrayContaining(['Table', 'TR', 'TH', 'TD']));
-        }
-        if (frozen.locale === 'en') {
-          expect(read.raw).toMatch(/\/Lang \(en\)/);
-        }
-      });
-
-      it('when it is drawn, then its fonts are embedded subsets with a ToUnicode map and no character came out unreadable', () => {
-        const embedded = read.raw.match(/\/FontFile2/g) ?? [];
-        const unicodeMaps = read.raw.match(/\/ToUnicode/g) ?? [];
-        const names = read.raw.match(/\/BaseFont \/[A-Z]{6}\+[A-Za-z-]+/g) ?? [];
-
-        expect(embedded.length).toBeGreaterThanOrEqual(2);
-        expect(unicodeMaps.length).toBe(embedded.length);
-        expect(names.length).toBeGreaterThanOrEqual(embedded.length);
-        expect(read.pages.map((page) => page.text + page.artifacts).join(' ')).not.toMatch(/�/);
-      });
-
-      it('when it is drawn twice, then the bytes are the same', async () => {
-        const again = await drawReceipt(documentOf(frozen), TEST_STYLE, NO_ART);
-
-        expect(again).toEqual(bytes);
-      });
-    });
+    }
   }
+});
+
+describe('Given the default theme and the style the specs draw with', () => {
+  it("when the theme's receipt tokens are read, then they give that style, the font file names aside", () => {
+    expect({ ...themeStyle('nova-nadeje'), fonts: TEST_STYLE.fonts }).toEqual(TEST_STYLE);
+  });
+});
+
+describe('Given a bilingual year of 1 to 12 gifts, drawn with the captions the site prints', () => {
+  for (const theme of RECEIPT_THEMES) {
+    it(`when each is drawn in the ${theme} theme, then no text lies below the bottom margin and the QR code clears the footer rule`, async () => {
+      const style = themeStyle(theme);
+      const problems: string[] = [];
+      for (let gifts = 1; gifts <= 12; gifts++) {
+        const frozen = yearOf(frozenCase(YEARLY_BILINGUAL), gifts);
+        const read = await readPdf(
+          await drawReceipt(documentOf(frozen), style, { ...NO_ART, fonts: themeFonts(theme) }),
+        );
+        problems.push(
+          ...[
+            ...textBelowTheMargin(read, style.margins.bottom),
+            ...quietZonesOverTheFooterRule(read, frozen, style.margins.bottom),
+          ].map((problem) => `${gifts} gifts, ${problem}`),
+        );
+      }
+
+      expect(problems).toEqual([]);
+    }, 120_000);
+  }
+});
+
+describe('Given a year whose QR code needs an area of its own', () => {
+  it('when it is drawn with 13 to 60 gifts, then on every draw the QR code with its quiet zone ends above the bottom margin', async () => {
+    const problems: string[] = [];
+    const base = frozenCase(YEARLY_120);
+    const modules = verificationSymbol(base.verification.qrText).size;
+    for (let gifts = 13; gifts <= 60; gifts++) {
+      const read = await readPdf(
+        await drawReceipt(documentOf(yearOf(base, gifts)), TEST_STYLE, NO_ART),
+      );
+      for (const page of read.pages) {
+        for (const link of page.links) {
+          const [left, bottom, right] = link.rect;
+          const quietZone = (QUIET_ZONE_MODULES * (right - left)) / modules;
+          if (bottom - quietZone < TEST_STYLE.margins.bottom - 0.01) {
+            problems.push(
+              `${gifts} gifts: the quiet zone ends ${((TEST_STYLE.margins.bottom - bottom + quietZone) / MM).toFixed(1)} mm below the margin`,
+            );
+          }
+        }
+      }
+    }
+
+    expect(problems).toEqual([]);
+  }, 180_000);
+});
+
+describe('Given a foundation name with the characters XML reserves', () => {
+  it('when a receipt is drawn, then its XMP stays well-formed and still names the foundation as written', async () => {
+    const frozen = frozenCase(SINGLE_PERSON_CS);
+    const name = 'Fond A & B <x> "C"';
+    const read = await readPdf(
+      await drawReceipt(
+        documentOf({ ...frozen, foundation: { ...frozen.foundation, name } }),
+        TEST_STYLE,
+        NO_ART,
+      ),
+    );
+    const xmp = readXmp(read.raw);
+
+    expect(xmp.wellFormed).toBe(true);
+    expect(xmp.values['dc:creator']).toBe(name);
+  });
 });
 
 describe('Given a document with a character the receipt fonts lack', () => {
@@ -332,7 +493,7 @@ describe('Given a single receipt with a vector signature and a portrait', () => 
     expect(withArt.raw.match(/\/Subtype \/Image/g) ?? []).toHaveLength(1);
     expect(withVectorOnly.raw.match(/\/Subtype \/Image/g) ?? []).toHaveLength(0);
     expect(withArt.figureAlts).toEqual(
-      expect.arrayContaining([TEST_CAPTIONS.signatureAlt, TEST_CAPTIONS.portraitAlt]),
+      expect.arrayContaining([CAPTIONS.signatureAlt, CAPTIONS.portraitAlt]),
     );
   });
 
@@ -356,6 +517,46 @@ describe('Given a single receipt with a vector signature and a portrait', () => 
       expect(differing).toBeGreaterThan(((dpi / 25.4) * 2) ** 2);
     }, 60_000);
   }
+});
+
+describe('Given a vector signature whose paths reach far outside its view box', () => {
+  it('when it is drawn, then its ink stays inside the 60 × 18 mm signature area', async () => {
+    const dpi = 100;
+    const pixelsPerMm = dpi / 25.4;
+    const sprawling: ReceiptArt = {
+      kind: 'vector',
+      art: parseVectorArt(
+        '{"viewBox":[0,0,100,30],"paths":[{"d":"M-900 -900 L900 -900 L900 900 L-900 900 Z","fill":"#000000","opacity":1}]}',
+      ),
+    };
+    const document = documentOf(frozenCase(SINGLE_SIGNATURE));
+    const signed = await rasterPage(
+      await drawReceipt(document, TEST_STYLE, { ...NO_ART, signature: sprawling }),
+      1,
+      dpi,
+    );
+    const unsigned = await rasterPage(
+      await drawReceipt(document, TEST_STYLE, { ...NO_ART, signature: VECTOR_SIGNATURE }),
+      1,
+      dpi,
+    );
+    let [minX, minY, maxX, maxY] = [Infinity, Infinity, -Infinity, -Infinity];
+    for (let pixel = 0; pixel < signed.data.length; pixel += 4) {
+      if (Math.abs(signed.data[pixel] - unsigned.data[pixel]) > 64) {
+        const x = (pixel / 4) % signed.width;
+        const y = Math.floor(pixel / 4 / signed.width);
+        [minX, minY, maxX, maxY] = [
+          Math.min(minX, x),
+          Math.min(minY, y),
+          Math.max(maxX, x),
+          Math.max(maxY, y),
+        ];
+      }
+    }
+
+    expect((maxX - minX + 1) / pixelsPerMm).toBeLessThanOrEqual(60.5);
+    expect((maxY - minY + 1) / pixelsPerMm).toBeLessThanOrEqual(18.5);
+  }, 60_000);
 });
 
 describe('Given a year of 12 gifts with the 3B signature block and a portrait', () => {

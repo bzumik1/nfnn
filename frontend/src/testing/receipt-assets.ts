@@ -20,6 +20,7 @@ export interface V2ReceiptSample {
 
 export interface ReceiptAssetLibrary {
   readonly fonts: Readonly<Record<string, Readonly<Record<string, string>>>>;
+  readonly tokens: Readonly<Record<string, Readonly<Record<string, string>>>>;
   readonly v2Receipts: Readonly<Record<string, V2ReceiptSample>>;
   readonly logoSvg: string;
 }
@@ -38,6 +39,14 @@ export function themeFont(theme: string, name: ReceiptFontName): Uint8Array {
     throw new Error(`The theme ${theme} has no receipt font ${name}`);
   }
   return Uint8Array.from(atob(encoded), (character) => character.charCodeAt(0));
+}
+
+export function themeTokens(theme: string): Readonly<Record<string, string>> {
+  const tokens = inject('receiptAssets').tokens[theme];
+  if (tokens === undefined) {
+    throw new Error(`The theme ${theme} sets no receipt tokens`);
+  }
+  return tokens;
 }
 
 export function v2Receipt(sample: string): V2ReceiptSample {

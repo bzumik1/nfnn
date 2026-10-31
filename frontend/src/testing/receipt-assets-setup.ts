@@ -23,9 +23,20 @@ function receiptFonts(theme: string): Record<string, string> {
   );
 }
 
+function receiptTokens(theme: string): Record<string, string> {
+  const tokens = readFileSync(join(THEMES, theme, '_theme.scss'), 'utf8');
+  return Object.fromEntries(
+    [...tokens.matchAll(/(--receipt-[a-z0-9-]+)\s*:\s*([^;]+);/g)].map((match) => [
+      match[1],
+      match[2].trim(),
+    ]),
+  );
+}
+
 export default function provideReceiptAssets(project: TestProject): void {
   const library: ReceiptAssetLibrary = {
     fonts: Object.fromEntries(readdirSync(THEMES).map((theme) => [theme, receiptFonts(theme)])),
+    tokens: Object.fromEntries(readdirSync(THEMES).map((theme) => [theme, receiptTokens(theme)])),
     v2Receipts: Object.fromEntries(
       readdirSync(V2_RECEIPTS)
         .filter((file) => SAMPLE.test(file))

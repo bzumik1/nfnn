@@ -9,6 +9,12 @@ export interface ReadLink {
   readonly rect: readonly [number, number, number, number];
 }
 
+export interface PlacedText {
+  readonly text: string;
+  readonly baselinePt: number;
+  readonly sizePt: number;
+}
+
 export interface ReadPage {
   readonly number: number;
   readonly widthPt: number;
@@ -16,6 +22,12 @@ export interface ReadPage {
   readonly text: string;
   readonly artifacts: string;
   readonly links: readonly ReadLink[];
+  readonly placed: readonly PlacedText[];
+}
+
+export interface ReadXmp {
+  readonly wellFormed: boolean;
+  readonly values: Readonly<Record<string, string>>;
 }
 
 export interface StructNode {
@@ -43,6 +55,8 @@ interface TextPiece {
   readonly hasEOL?: boolean;
   readonly type?: string;
   readonly tag?: string;
+  readonly transform?: readonly number[];
+  readonly height?: number;
 }
 
 interface CanvasLike {
@@ -95,6 +109,7 @@ export async function readPdf(bytes: Uint8Array): Promise<ReadPdf> {
     let depth = 0;
     const text: string[] = [];
     const artifacts: string[] = [];
+    const placed: PlacedText[] = [];
     const into = () => (artifactDepth > 0 ? artifacts : text);
     for (const item of content.items as TextPiece[]) {
       if (item.type === 'beginMarkedContent' || item.type === 'beginMarkedContentProps') {
@@ -111,6 +126,13 @@ export async function readPdf(bytes: Uint8Array): Promise<ReadPdf> {
         depth--;
       } else if (item.str !== undefined) {
         const brokenWord = HYPHEN_AFTER_LETTER.test(item.str);
+        if (artifactDepth === 0 && item.str.trim() !== '' && item.transform !== undefined) {
+          placed.push({
+            text: item.str,
+            baselinePt: item.transform[5],
+            sizePt: Math.hypot(item.transform[2], item.transform[3]),
+          });
+        }
         into().push(item.str, item.hasEOL && !brokenWord ? ' ' : '');
       }
     }
@@ -133,6 +155,7 @@ export async function readPdf(bytes: Uint8Array): Promise<ReadPdf> {
       links: annotations
         .filter((annotation) => annotation.subtype === 'Link')
         .map((annotation) => ({ url: annotation.url ?? '', rect: annotation.rect })),
+      placed,
     });
   }
   await close();
@@ -141,6 +164,69 @@ export async function readPdf(bytes: Uint8Array): Promise<ReadPdf> {
     roles: [...new Set(structure.map((node) => node.role))],
     figureAlts: structure.filter((node) => node.role === 'Figure').map((node) => node.alt ?? ''),
     raw: latin1(bytes),
+  };
+}
+
+const XML_ENTITIES: Readonly<Record<string, string>> = {
+  amp: '&',
+  lt: '<',
+  gt: '>',
+  quot: '"',
+  apos: "'",
+};
+
+function unescapedXml(text: string): string {
+  return text.replace(/&(amp|lt|gt|quot|apos);/g, (_, name: string) => XML_ENTITIES[name]);
+}
+
+function wellFormedXml(xml: string): boolean {
+  const open: string[] = [];
+  for (const [token] of xml.matchAll(/<[^<>]*>|[^<>]+|[<>]/g)) {
+    if (token === '<' || token === '>') {
+      return false;
+    }
+    if (!token.startsWith('<')) {
+      if (/&(?!(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)/.test(token)) {
+        return false;
+      }
+      continue;
+    }
+    if (token.startsWith('<?') || token.startsWith('<!')) {
+      continue;
+    }
+    const name = /^<\/?([^\s/>]+)/.exec(token)?.[1];
+    if (name === undefined) {
+      return false;
+    }
+    if (token.startsWith('</')) {
+      if (open.pop() !== name) {
+        return false;
+      }
+    } else if (!token.endsWith('/>')) {
+      open.push(name);
+    }
+  }
+  return open.length === 0;
+}
+
+export function readXmp(raw: string): ReadXmp {
+  const start = raw.indexOf('<x:xmpmeta');
+  const end = raw.indexOf('</x:xmpmeta>');
+  if (start < 0 || end < 0) {
+    return { wellFormed: false, values: {} };
+  }
+  const xml = raw.slice(start, end + '</x:xmpmeta>'.length);
+  const decoded = new TextDecoder().decode(Uint8Array.from(xml, (c) => c.charCodeAt(0)));
+  const value = (pattern: RegExp): string => unescapedXml(pattern.exec(decoded)?.[1] ?? '').trim();
+  return {
+    wellFormed: wellFormedXml(decoded),
+    values: {
+      'pdfuaid:part': value(/<pdfuaid:part>([^<]*)<\/pdfuaid:part>/),
+      'xmp:CreateDate': value(/<xmp:CreateDate>([^<]*)<\/xmp:CreateDate>/),
+      'dc:title': value(/<dc:title>\s*<rdf:Alt>\s*<rdf:li[^>]*>([^<]*)<\/rdf:li>/),
+      'dc:creator': value(/<dc:creator>\s*<rdf:Seq>\s*<rdf:li>([^<]*)<\/rdf:li>/),
+      'dc:description': value(/<dc:description>\s*<rdf:Alt>\s*<rdf:li[^>]*>([^<]*)<\/rdf:li>/),
+    },
   };
 }
 

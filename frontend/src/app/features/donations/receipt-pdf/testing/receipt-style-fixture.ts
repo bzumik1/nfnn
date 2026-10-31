@@ -1,6 +1,6 @@
-import { themeFont } from '../../../../../testing/receipt-assets';
+import { themeFont, themeTokens } from '../../../../../testing/receipt-assets';
 import { ReceiptFonts } from '../receipt-layout';
-import { ReceiptStyle } from '../receipt-style';
+import { receiptStyleFrom, ReceiptStyle } from '../receipt-style';
 
 const POINTS_PER_MM = 72 / 25.4;
 
@@ -39,4 +39,9 @@ export function themeFonts(theme = 'nova-nadeje'): ReceiptFonts {
     bold: themeFont(theme, 'body-bold'),
     heading: themeFont(theme, 'heading'),
   };
+}
+
+export function themeStyle(theme = 'nova-nadeje'): ReceiptStyle {
+  const tokens = themeTokens(theme);
+  return receiptStyleFrom((token) => tokens[token] ?? '');
 }
