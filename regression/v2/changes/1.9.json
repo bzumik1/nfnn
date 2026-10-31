@@ -2,13 +2,55 @@
   {
     "kind": "shared-case",
     "caseFile": "shared-cases/receipts/v1/printed.json",
-    "reason": "1.9 adds what a receipt drawn in the browser from its frozen data prints, one case per case of receipts/v1/frozen.json: v2's printed text of the same sample (regression/v2/receipts/) with the dates of D11 and nothing else, the column headers of a yearly table, the footer line without its page number and v2's page count; lines are joined by one space except after a hyphen right after a letter, where v2 broke a hyphenated word (Úlehlová-Ěrová); the browser (receipt-layout.spec.ts) reads its drawn PDF back with pdf.js against every case, and the backend (FrozenReceiptCasesTest) derives each case from the v2 sample again, so neither side nor the file can drift from what v2 printed; the source is edited",
+    "reason": "1.9 adds what a receipt drawn in the browser from its frozen data prints, one case per case of receipts/v1/frozen.json: v2's printed text of the same sample (regression/v2/receipts/) with the dates of D11 and nothing else, the column headers of a yearly table, the footer line without its page number and v2's page count; lines are joined by one space except after a hyphen right after a letter, where v2 broke a hyphenated word (Úlehlová-Ěrová); the browser (receipt-layout.spec.ts) reads its drawn PDF back with pdf.js against every case, and the backend (FrozenReceiptCasesTest) derives each case from the v2 sample again, so neither side nor the file can drift from what v2 printed; its schema is schemas/receipts/v1/printed.schema.json (the v2 sample as input, body, tableHeader, footer and v2Pages as the expected value), which the schemas/* declaration of 1.3.json already covers; the source is edited",
     "contract": "docs/frontend-overview.md, receipt-pdf; .claude/rules/testing.md, Logic on both sides"
   },
   {
-    "kind": "shared-case",
-    "caseFile": "shared-cases/schemas/*",
-    "reason": "1.9 adds schemas/receipts/v1/printed.schema.json for receipts/v1/printed.json: the v2 sample as its input (the case name chains it to frozen.json), body, tableHeader (null for a single receipt), footer and v2Pages as its expected value",
-    "contract": ".claude/rules/testing.md, Logic on both sides"
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/donations-api.spec.ts > Given the donations API > when the receipt of one donation is requested, then it downloads that donation's PDF under the file name from the server",
+    "reason": "1.9 draws the donor's receipts in the browser from the frozen data of POST /api/donations/me/receipts, so DonationsApi no longer fetches the PDF of a donation or a year (singleReceipt and yearlyReceipt are gone); the file-name reading from Content-Disposition stays for the administration's downloads as downloadedFile",
+    "replacement": "src/app/features/donations/receipt-pdf/receipt-pdf.spec.ts > Given the browser receipt PDF > when a single receipt is drawn, then it issues it for that donation and names the file by its number",
+    "contract": "docs/frontend-overview.md, donations-api.ts and receipt-pdf"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/donations-api.spec.ts > Given the donations API > when the yearly receipt is requested, then it downloads the PDF of that year",
+    "reason": "1.9 draws the donor's receipts in the browser from the frozen data of POST /api/donations/me/receipts, so DonationsApi no longer fetches the PDF of a donation or a year (singleReceipt and yearlyReceipt are gone); the file-name reading from Content-Disposition stays for the administration's downloads as downloadedFile",
+    "replacement": "src/app/features/donations/receipt-pdf/receipt-pdf.spec.ts > Given the browser receipt PDF > when a yearly receipt is drawn > then each page it draws is a step, and the finished bytes become the PDF under the receipt file name",
+    "contract": "docs/frontend-overview.md, donations-api.ts and receipt-pdf"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/donations-api.spec.ts > Given the donations API > when the server names the file in both forms, then the UTF-8 form wins",
+    "reason": "1.9 draws the donor's receipts in the browser from the frozen data of POST /api/donations/me/receipts, so DonationsApi no longer fetches the PDF of a donation or a year (singleReceipt and yearlyReceipt are gone); the file-name reading from Content-Disposition stays for the administration's downloads as downloadedFile",
+    "replacement": "src/app/features/donations/donations-api.spec.ts > Given a file the server sends for download > when the server names the file in both forms, then the UTF-8 form wins",
+    "contract": "docs/frontend-overview.md, donations-api.ts and receipt-pdf"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/donations-api.spec.ts > Given the donations API > when the server names the file only in the UTF-8 form, then that name is used",
+    "reason": "1.9 draws the donor's receipts in the browser from the frozen data of POST /api/donations/me/receipts, so DonationsApi no longer fetches the PDF of a donation or a year (singleReceipt and yearlyReceipt are gone); the file-name reading from Content-Disposition stays for the administration's downloads as downloadedFile",
+    "replacement": "src/app/features/donations/donations-api.spec.ts > Given a file the server sends for download > when the server names the file only in the UTF-8 form, then that name is used",
+    "contract": "docs/frontend-overview.md, donations-api.ts and receipt-pdf"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/donations-api.spec.ts > Given the donations API > when the server sends no file name, then the single receipt is saved under a generic name",
+    "reason": "1.9 draws the donor's receipts in the browser from the frozen data of POST /api/donations/me/receipts, so DonationsApi no longer fetches the PDF of a donation or a year (singleReceipt and yearlyReceipt are gone); the file-name reading from Content-Disposition stays for the administration's downloads as downloadedFile",
+    "replacement": "src/app/features/donations/donations-api.spec.ts > Given a file the server sends for download > when the server sends no file name, then the name the caller gives is used",
+    "contract": "docs/frontend-overview.md, donations-api.ts and receipt-pdf"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/donations-api.spec.ts > Given the donations API > when the server sends no file name, then the yearly receipt is saved under a name with the year",
+    "reason": "1.9 draws the donor's receipts in the browser from the frozen data of POST /api/donations/me/receipts, so DonationsApi no longer fetches the PDF of a donation or a year (singleReceipt and yearlyReceipt are gone); the file-name reading from Content-Disposition stays for the administration's downloads as downloadedFile",
+    "replacement": "src/app/features/donations/donations-api.spec.ts > Given a file the server sends for download > when the server sends no file name, then the name the caller gives is used",
+    "contract": "docs/frontend-overview.md, donations-api.ts and receipt-pdf"
   }
 ]
