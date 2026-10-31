@@ -438,44 +438,10 @@
   },
   {
     "kind": "retired",
-    "suite": "frontend-playwright",
-    "test": "e2e/accessibility.spec.ts > Given a visitor who relies on WCAG 2.2 AA > when an administrator sees a vector signature and an SVG is refused, then the settings page breaks no rule",
-    "replacement": "e2e/accessibility.spec.ts > Given a visitor who relies on WCAG 2.2 AA > when an administrator sees a vector receipt signature of a person and an SVG is refused, then the people page breaks no rule",
-    "reason": "1.16 (Jakub 2026-10-30, layout 3B): the 1.14 receipt signature moved from the settings card to the people of the foundation, one per person, and #247 keeps names from the file out of every answer; this 1.14 test was rewritten for that"
-  },
-  {
-    "kind": "retired",
-    "suite": "frontend-playwright",
-    "test": "e2e/admin-settings.spec.ts > Given an administrator on the settings page > when they upload a vector signature, then the card draws it, a refused SVG keeps it with the reason first, and a scan and an SVG replace each other",
-    "replacement": "e2e/admin-people.spec.ts > Given an administrator who chooses who signs the receipts > when they upload a vector receipt signature, then the part draws it, a refused SVG keeps it with the reason first, and a scan and an SVG replace each other",
-    "reason": "1.16 (Jakub 2026-10-30, layout 3B): the 1.14 receipt signature moved from the settings card to the people of the foundation, one per person, and #247 keeps names from the file out of every answer; this 1.14 test was rewritten for that"
-  },
-  {
-    "kind": "retired",
-    "suite": "frontend-vitest",
-    "test": "src/app/features/admin/settings/receipt-signature/receipt-signature.spec.ts > Given the signature section of the receipt settings > when the hint is read, then it says a handwritten SVG signature is fine as filled shapes and only strokes and effects are refused, before the scan",
-    "replacement": "src/app/features/admin/receipt-signature/receipt-signature.spec.ts > Given the receipt signature part of a person of the foundation > when the hint is read, then it says the signature is not public, a handwritten SVG is fine as filled shapes and only strokes and effects are refused, before the scan",
-    "reason": "1.16 (Jakub 2026-10-30, layout 3B): the 1.14 receipt signature moved from the settings card to the people of the foundation, one per person, and #247 keeps names from the file out of every answer; this 1.14 test was rewritten for that"
-  },
-  {
-    "kind": "retired",
-    "suite": "mcp-vitest",
-    "test": "test/tools.spec.ts > Given an administrator connected with the reading permission only > when the receipt signature is a vector, then it says so without its paths",
-    "replacement": "test/tools.spec.ts > Given an administrator connected with the reading permission only > when the receipt signature is asked, then it names the signatory, their receipt role and the signatures uploaded per person, without any image",
-    "reason": "1.16 (Jakub 2026-10-30, layout 3B): the 1.14 receipt signature moved from the settings card to the people of the foundation, one per person, and #247 keeps names from the file out of every answer; this 1.14 test was rewritten for that"
-  },
-  {
-    "kind": "retired",
     "suite": "backend-junit",
-    "test": "donations.infrastructure.persistence.JpaReceiptSignatureRepositoryTest > Given a scan uploaded, when the current scan is asked for, then the scan comes back",
-    "replacement": "donations.infrastructure.persistence.JpaReceiptSignatureRepositoryTest > Given a scan uploaded for the chosen signatory, when the current scan is asked for, then the scan comes back",
-    "reason": "1.16 (Jakub 2026-10-30, layout 3B): the 1.14 receipt signature moved from the settings card to the people of the foundation, one per person, and #247 keeps names from the file out of every answer; this 1.14 test was rewritten for that"
-  },
-  {
-    "kind": "retired",
-    "suite": "backend-junit",
-    "test": "donations.domain.receipt.SignatureVectorTest > Given a refusal naming an overlong element, when it is made, then the name is cut to forty characters",
-    "replacement": "donations.interfaces.rest.ReceiptSignatureProblemHandlerTest > Given a refused element, when it is answered, then the problem names the file field and the problem's code but repeats no name the file chose",
-    "reason": "1.16 (Jakub 2026-10-30, layout 3B): the 1.14 receipt signature moved from the settings card to the people of the foundation, one per person, and #247 keeps names from the file out of every answer; this 1.14 test was rewritten for that"
+    "test": "shared.infrastructure.security.AdminHandlerClassificationTest > Given the classification, when the security chain decides for a browser administrator and for connected applications, then a browser-only handler refuses every connected application, a connector-reachable one admits the writing permission, and a change needs it",
+    "replacement": "shared.infrastructure.security.AdminHandlerClassificationTest > Given the classification, when the security chain decides for a browser administrator and for connected applications, then a browser-only handler refuses every connected application, also asked with HEAD for a GET, a connector-reachable one admits the writing permission, and a change needs it",
+    "reason": "1.16 round 2 (R2-m1): a browser-only GET is matched for HEAD as well, and the classification test also asks every GET handler with HEAD",
+    "contract": "docs/security-overview.md, Connected applications (OAuth 2.1 for the MCP connector)"
   }
 ]
