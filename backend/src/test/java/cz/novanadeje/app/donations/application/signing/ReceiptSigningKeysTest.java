@@ -119,13 +119,13 @@ class ReceiptSigningKeysTest {
     }
 
     @Test
-    @DisplayName("Given the server's own key withdrawn, when the keys are asked whether the server may sign, then they say no, and yes for an active own key")
-    void should_refuse_signing_when_asked_given_own_key_withdrawn() {
-        assertThat(keys.currentKeyWithdrawn()).isFalse();
+    @DisplayName("Given the server's own key withdrawn in the trail, when the keys are asked for a withdrawn current key, then they name it, and none for an active own key")
+    void should_name_withdrawn_current_key_when_asked_given_own_key_withdrawn() {
+        assertThat(keys.withdrawnCurrentKey()).isEmpty();
 
         trail.entries.add(ReceiptSigningKeyHistoryTest.withdrawn("21fe31df"));
 
-        assertThat(keys.currentKeyWithdrawn()).isTrue();
+        assertThat(keys.withdrawnCurrentKey()).contains(new ReceiptSigningKeyId("21fe31df"));
     }
 
     @Test
@@ -133,7 +133,7 @@ class ReceiptSigningKeysTest {
     void should_show_current_key_revoked_when_overview_is_read_given_own_row_withdrawn() {
         stored.set(0, stored.getFirst().withdrawn(content -> PrefixSeals.HERE));
 
-        assertThat(keys.currentKeyWithdrawn()).isTrue();
+        assertThat(keys.withdrawnCurrentKey()).contains(new ReceiptSigningKeyId("21fe31df"));
         assertThat(keys.overview().keys()).singleElement().satisfies(key -> {
             assertThat(key.status()).isEqualTo(ReceiptSigningKeyStatus.REVOKED);
             assertThat(key.published()).isTrue();

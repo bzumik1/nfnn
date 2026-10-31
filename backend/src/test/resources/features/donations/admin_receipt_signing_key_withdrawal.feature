@@ -30,6 +30,21 @@ Feature: An administrator withdraws a leaked receipt signing key from the web, w
     Then the server logged the error "Receipt signing key 21fe31df of this server is withdrawn, so the server signs no receipt until it starts with a new seed"
     And the server's admin action "REGISTER_RECEIPT_SIGNING_KEY" is recorded 1 time with details containing "21fe31df"
 
+  Scenario: Until the server starts with a new seed, no receipt is issued or downloaded, not even one issued before the withdrawal
+    Given the bank account has these movements:
+      | id   | date       | amount | account    | bankCode | name          | variableSymbol |
+      | 3001 | 2026-11-02 | 500.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
+    And the application starts the import
+    And "Jana" issues the receipt of her donation received on 2026-11-02
+    And the response status is 200
+    And "Jana" withdrew the receipt signing key "21fe31df" with a fresh code
+    When "Jana" issues the receipt of her donation received on 2026-11-02
+    Then the response status is 409
+    And the problem type ends with "donations/receipt-signing-paused"
+    When "Jana" downloads the receipt of her donation received on 2026-11-02
+    Then the response status is 409
+    And the problem type ends with "donations/receipt-signing-paused"
+
   Scenario: Withdrawing a key of an earlier server revokes it and keeps the backend running with its own key
     Given a backup of an earlier server with its receipt signing key registered at "2026-11-01T07:00:00Z" was restored
     And the backup container finished that restore 3 minutes ago under the request "019a1b2c-0000-7000-8000-000000000009"
