@@ -21,14 +21,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class PaymentDetailsStepDefinitions {
 
     private static final String PAYMENT_DETAILS_PATH = "/api/donations/payment-details";
-    private static final String PAYMENT_QR_PATH = "/api/donations/payment-qr";
 
     private final ApiClient api;
     private final DonorSessions sessions;
     private final ScenarioDonors donors;
     private ResponseEntity<String> visitorsAnswer;
-    private JsonNode paymentDetails;
-    private String paymentQr;
 
     public PaymentDetailsStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors donors) {
         this.api = api;
@@ -48,7 +45,6 @@ public class PaymentDetailsStepDefinitions {
     public void aVisitorAsksForThePaymentDetails() {
         api.forgetCredentials();
         visitorsAnswer = api.get(PAYMENT_DETAILS_PATH);
-        paymentDetails = visitorsAnswer.getStatusCode().value() == 200 ? api.lastResponseJson() : null;
     }
 
     @When("{string} asks for the payment details")
@@ -89,20 +85,6 @@ public class PaymentDetailsStepDefinitions {
         api.sendHeader(HttpHeaders.IF_NONE_MATCH, etag);
         api.get(PAYMENT_DETAILS_PATH);
         api.forgetCredentials();
-    }
-
-    @When("the visitor also asks for a QR payment of {int} CZK")
-    public void theVisitorAsksForAQrPaymentOf(int amount) {
-        api.get(PAYMENT_QR_PATH + "?amount=" + amount);
-        paymentQr = api.lastResponseJson().get("spayd").asString();
-    }
-
-    @When("the visitor asks for a QR payment that verifies an account with variable symbol {string} for the verification amount of the payment details")
-    public void theVisitorAsksForAVerificationQrPayment(String variableSymbol) {
-        long amountMinor = paymentDetails().get("accountVerificationAmountMinor").asLong();
-        assertThat(amountMinor % 100).as("the verification amount in whole crowns, as payment-qr takes it").isZero();
-        api.get(PAYMENT_QR_PATH + "?amount=" + amountMinor / 100 + "&variableSymbol=" + variableSymbol + "&purpose=ACCOUNT_VERIFICATION");
-        paymentQr = api.lastResponseJson().get("spayd").asString();
     }
 
     @Then("the payment details name the account {string} with IBAN {string} in {string}")
@@ -170,36 +152,10 @@ public class PaymentDetailsStepDefinitions {
         assertThat(api.lastResponse().getHeaders().getETag()).isNotNull().isEqualTo(visitorsAnswer.getHeaders().getETag());
     }
 
-    @Then("the recipient and the donation message of the payment details are the RN and MSG of that QR payment")
-    public void theRecipientAndTheDonationMessageAreTheRnAndMsg() {
-        assertThat(paymentQr).endsWith("*RN:" + recipientName() + "*MSG:" + paymentDetails().get("messages").get("donation").asString());
-    }
-
-    @Then("the recipient and the account verification message of the payment details are the RN and MSG of that QR payment")
-    public void theRecipientAndTheVerificationMessageAreTheRnAndMsg() {
-        assertThat(paymentQr).endsWith("*RN:" + recipientName() + "*MSG:" + paymentDetails().get("messages").get("accountVerification").asString());
-    }
-
-    @And("that QR payment's amount is the verification amount of the payment details")
-    public void thatQrPaymentsAmountIsTheVerificationAmount() {
-        long amountMinor = paymentDetails().get("accountVerificationAmountMinor").asLong();
-        assertThat(paymentQr).contains("*AM:" + amountMinor / 100 + "." + String.format("%02d", amountMinor % 100) + "*");
-    }
-
-    private JsonNode paymentDetails() {
-        assertThat(visitorsAnswer).as("the visitor's answer to the payment details").isNotNull();
-        assertThat(visitorsAnswer.getStatusCode().value()).as("the status of the visitor's answer to the payment details").isEqualTo(200);
-        return paymentDetails;
-    }
-
     private String visitorsEtag() {
         assertThat(visitorsAnswer).as("an earlier answer to the visitor").isNotNull();
         assertThat(visitorsAnswer.getHeaders().getETag()).as("the ETag of the visitor's earlier answer").isNotNull();
         return visitorsAnswer.getHeaders().getETag();
-    }
-
-    private String recipientName() {
-        return paymentDetails().get("account").get("recipientName").asString();
     }
 
     private static String sha256(String body) {

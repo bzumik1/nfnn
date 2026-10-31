@@ -6,10 +6,13 @@ import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.donor.ExcludedSenderAccounts;
+import cz.novanadeje.app.donations.domain.payment.PaymentDetails;
+import cz.novanadeje.app.donations.domain.payment.SpaydText;
 import cz.novanadeje.app.donations.domain.recovery.RecoveryDecision;
 import cz.novanadeje.app.donations.domain.recovery.SecondFactorRecoveryPolicy;
 import cz.novanadeje.app.shared.application.event.SecondFactorRecoveryPaid;
 import cz.novanadeje.app.shared.application.recovery.SecondFactorRecoveryTarget;
+import cz.novanadeje.app.shared.domain.SecondFactorRecoveryCode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -61,5 +64,10 @@ public class SecondFactorRecoveryPayments {
                 .flatMap(policy::usableFrom)
                 .map(usableFrom -> new SecondFactorRecoveryTarget(foundationAccount.accountNumber(), foundationAccount.iban().value(),
                         SecondFactorRecoveryPolicy.AMOUNT, usableFrom));
+    }
+
+    public String spaydFor(SecondFactorRecoveryCode code) {
+        return PaymentDetails.of(foundationAccount)
+                .spaydWithoutVariableSymbol(SecondFactorRecoveryPolicy.AMOUNT, SpaydText.message(code.message()));
     }
 }

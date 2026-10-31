@@ -2,7 +2,8 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { PaymentQrApi } from '../../donations/payment-qr-api';
+import { PaymentDetailsStore } from '../../donations/payment-details-store';
+import { foundationPaymentDetails } from '../../donations/testing/payment-details-fixtures';
 import { AccountingDetails } from './accounting-details';
 
 describe('Given the details an accountant needs in the contact section', () => {
@@ -29,16 +30,8 @@ describe('Given the details an accountant needs in the contact section', () => {
   }
 
   function receiveFoundationAccount(): void {
-    TestBed.inject(PaymentQrApi).paymentQr(500, null).subscribe();
-    http.expectOne('/api/donations/payment-qr?amount=500').flush({
-      spayd: 'SPD*1.0',
-      qrCode: { size: 0, modules: '' },
-      bankAccount: {
-        accountNumber: '5544332217/2010',
-        iban: 'CZ2620100000005544332217',
-        recipientName: 'Nadační fond Nová naděje',
-      },
-    });
+    TestBed.inject(PaymentDetailsStore).load();
+    http.expectOne('/api/donations/payment-details').flush(foundationPaymentDetails());
   }
 
   function text(element: Element | null): string {

@@ -46,8 +46,6 @@ dependencies {
 	implementation("io.github.openhtmltopdf:openhtmltopdf-core:${property("openhtmltopdfVersion")}")
 	implementation("io.github.openhtmltopdf:openhtmltopdf-pdfbox:${property("openhtmltopdfVersion")}")
 
-	implementation("com.google.zxing:core:${property("zxingVersion")}")
-
 	implementation("io.github.darkxanter:webp-imageio:${property("webpImageioVersion")}")
 
 	implementation("com.webauthn4j:webauthn4j-core:${property("webauthn4jVersion")}")
@@ -67,6 +65,7 @@ dependencies {
 	testImplementation("org.testcontainers:testcontainers-junit-jupiter")
 	testImplementation("org.testcontainers:testcontainers-postgresql")
 
+	testImplementation("com.google.zxing:core:${property("zxingVersion")}")
 	testImplementation("com.google.zxing:javase:${property("zxingVersion")}")
 	testImplementation("org.assertj:assertj-core")
 	testImplementation("org.awaitility:awaitility")

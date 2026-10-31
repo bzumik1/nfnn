@@ -8,12 +8,10 @@ import com.google.zxing.qrcode.encoder.Encoder;
 import cz.novanadeje.app.shared.application.qr.QrCodeEncoder;
 import cz.novanadeje.app.shared.application.qr.QrErrorCorrection;
 import cz.novanadeje.app.shared.application.qr.QrMatrix;
-import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
-@Component
 class ZxingQrCodeEncoder implements QrCodeEncoder {
 
     private static final Map<EncodeHintType, Object> HINTS = Map.of(EncodeHintType.CHARACTER_SET, StandardCharsets.ISO_8859_1.name());
