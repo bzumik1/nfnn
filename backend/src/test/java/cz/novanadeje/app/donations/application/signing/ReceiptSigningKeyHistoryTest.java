@@ -23,17 +23,16 @@ class ReceiptSigningKeyHistoryTest {
     private static final UUID ADMIN = UUID.fromString("019a1c00-0000-7000-8000-00000000a001");
 
     static AdminActionEntry registered(String keyId) {
-        return entry(AdminActionPerformed.SERVER, ReceiptSigningKeyRegistration.ACTION,
-                "Server zaregistroval svůj klíč k ověřovacím QR na potvrzeních o daru: " + keyId);
+        return entry(AdminActionPerformed.SERVER, ReceiptSigningKeyRegistration.ACTION, ReceiptSigningKeyAuditDetails.registered(new ReceiptSigningKeyId(keyId)));
     }
 
     static AdminActionEntry adopted(String keyId) {
         return entry(AdminActionPerformed.SERVER, ReceiptSigningKeyRegistration.ADOPT_ACTION,
-                "Server převzal klíč k ověřovacím QR " + keyId + " z obnovené zálohy (obnova 019a1b2c-0000-7000-8000-000000000001)");
+                ReceiptSigningKeyAuditDetails.adopted(new ReceiptSigningKeyId(keyId), "019a1b2c-0000-7000-8000-000000000001"));
     }
 
     static AdminActionEntry withdrawn(String keyId) {
-        return entry(ADMIN, ReceiptSigningKeyWithdrawal.ACTION, ReceiptSigningKeyWithdrawal.details(new ReceiptSigningKeyId(keyId)));
+        return entry(ADMIN, ReceiptSigningKeyWithdrawal.ACTION, ReceiptSigningKeyAuditDetails.withdrawn(new ReceiptSigningKeyId(keyId)));
     }
 
     static AdminActionEntry entryOf(AdminActionPerformed performed) {

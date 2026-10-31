@@ -49,10 +49,6 @@ public class ReceiptSigningKeyWithdrawal {
         this.clock = clock;
     }
 
-    public static String details(ReceiptSigningKeyId id) {
-        return "Stažen klíč k ověřovacím QR " + id + " (ověřeno druhým faktorem)";
-    }
-
     @Transactional
     public WithdrawnReceiptSigningKey withdraw(UUID adminId, ReceiptSigningKeyId keyId, FreshSecondFactorProof proof) {
         ReceiptSigningKey key = keys.findAll().stream()
@@ -75,7 +71,7 @@ public class ReceiptSigningKeyWithdrawal {
         }
         boolean current = published.isCurrent(keyId);
         keys.save(key.withdrawn(content -> seals.seal(ReceiptSigningKey.SEAL_PURPOSE, content)));
-        events.publishEvent(new AdminActionPerformed(adminId, ACTION, Optional.empty(), details(keyId), now));
+        events.publishEvent(new AdminActionPerformed(adminId, ACTION, Optional.empty(), ReceiptSigningKeyAuditDetails.withdrawn(keyId), now));
         events.publishEvent(new ReceiptSigningKeyWithdrawn(adminId, keyId.value(), current, now));
         log.warn("Admin {} withdrew the receipt signing key {}", adminId, keyId);
         return new WithdrawnReceiptSigningKey(keyId, current);

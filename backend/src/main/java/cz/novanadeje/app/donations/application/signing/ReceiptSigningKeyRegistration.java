@@ -117,14 +117,14 @@ public class ReceiptSigningKeyRegistration {
     private void adopt(ReceiptSigningKey key, FinishedRestore restore, Instant now) {
         keys.save(key.sealedAgain(seals.seal(ReceiptSigningKey.SEAL_PURPOSE, key.sealedContent())));
         events.publishEvent(new AdminActionPerformed(AdminActionPerformed.SERVER, ADOPT_ACTION, Optional.empty(),
-                "Server převzal klíč k ověřovacím QR " + key.id() + " z obnovené zálohy (obnova " + restore.id() + ")", now));
+                ReceiptSigningKeyAuditDetails.adopted(key.id(), restore.id()), now));
     }
 
     private ReceiptSigningKeyId registerOwn(Instant now) {
         ReceiptSigningKey key = ReceiptSigningKey.register(signer.publicKey(), now, content -> seals.seal(ReceiptSigningKey.SEAL_PURPOSE, content));
         keys.save(key);
         events.publishEvent(new AdminActionPerformed(AdminActionPerformed.SERVER, ACTION, Optional.empty(),
-                "Server zaregistroval svůj klíč k ověřovacím QR na potvrzeních o daru: " + key.id(), now));
+                ReceiptSigningKeyAuditDetails.registered(key.id()), now));
         return key.id();
     }
 
