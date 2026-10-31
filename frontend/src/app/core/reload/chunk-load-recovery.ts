@@ -1,6 +1,7 @@
 import { DestroyRef, inject, Injectable, signal } from '@angular/core';
 import { NavigationEnd, NavigationError, NavigationStart, Router } from '@angular/router';
 
+import { ErrorReporter } from '../errors/error-reporter';
 import { Connectivity } from '../navigation/connectivity';
 import { ExternalNavigation } from '../navigation/external-navigation';
 import { ChunkProbe } from './chunk-probe';
@@ -31,6 +32,7 @@ export class ChunkLoadRecovery {
   private readonly navigation = inject(ExternalNavigation);
   private readonly connectivity = inject(Connectivity);
   private readonly probe = inject(ChunkProbe);
+  private readonly reporter = inject(ErrorReporter);
   private readonly failed = signal<ChunkLoadFailure | null>(null);
   private navigationsStarted = 0;
 
@@ -52,6 +54,7 @@ export class ChunkLoadRecovery {
     if (!isChunkLoadError(error.error)) {
       return;
     }
+    this.reporter.report('chunk-load', 'navigation', error.error);
     this.failed.set({ url: error.url, initial: !this.router.navigated });
     if (this.connectivity.isOffline()) {
       return;
