@@ -258,6 +258,18 @@ describe('Given pdfkit, which draws the receipts', () => {
     ]);
   });
 
+  it("when the table is read, then pdfkit's own dependencies are confined with it, except the hashes the Ed25519 fallback also uses", () => {
+    assert.deepEqual([...pdfkit.examples].sort(), [
+      '@noble/ciphers',
+      'fflate',
+      'fontkit',
+      'linebreak',
+      'pdfkit',
+      'pdfkit/js/pdfkit.standalone.js',
+      'png-js',
+    ]);
+  });
+
   it('when the table is read, then only the receipt worker and tests load the receipt layout', () => {
     assert.ok(layout, 'an entry for the receipt layout');
     assert.deepEqual(layout.allowedIn, [
