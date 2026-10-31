@@ -209,7 +209,7 @@ public class ApiClient {
             String responseBody = new String(rawBody.getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.UTF_8);
             lastResponse = ResponseEntity.status(status).headers(responseHeaders).body(responseBody);
             lastResponseBytes = null;
-            recordBytes(method, target, sent, content.length > 0 ? JsonNodeFactory.instance.stringNode(body) : null, status, responseHeaders,
+            completeExchange(method, target, sent, content.length > 0 ? JsonNodeFactory.instance.stringNode(body) : null, status, responseHeaders,
                     responseBody.getBytes(StandardCharsets.UTF_8));
             return lastResponse;
         } catch (IOException unreachable) {
