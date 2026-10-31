@@ -1276,6 +1276,9 @@ describe('Given a signed-in donor in the donor area', () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
 
       expect(text(secondRowButton)).toBe('Otevřít PDF, dar z 10. 01. 2026, 1 000 Kč');
+      expect(text(`${yearSection(2026)} tbody tr:nth-child(2) .receipt-saved`)).toBe(
+        'Potvrzení potvrzeni-o-daru-2026-000017.pdf je připravené. Otevřete ho tlačítkem Otevřít PDF.',
+      );
       expect(document.activeElement).toBe(element(secondRowButton));
       await click(secondRowButton);
       await settleBlobFailure();
