@@ -240,15 +240,47 @@
         </div>
 
         <div class="purpose">
+          <h3 i18n="@@content.privacy.clientErrors.title">Hlášení chyb z prohlížeče</h3>
+          <p i18n="@@content.privacy.clientErrors.intro">
+            Když se ve vašem prohlížeči na webu něco nepovede, například se nepodaří vytvořit PDF
+            nebo kód QR, nenačte se část stránky nebo nevyjde ověření potvrzení, prohlížeč nám o tom
+            pošle krátké hlášení, abychom chybu mohli najít a opravit. Hlášení obsahuje jen hodnoty
+            z pevného seznamu: druh chyby, místo v aplikaci, kde nastala, obecný název chyby
+            (například TypeError), verzi webu, druh prohlížeče a číslo jeho hlavní verze, druh
+            operačního systému, zda web běží v prohlížeči, nebo jako aplikace na ploše, a kolikrát
+            se chyba opakovala.
+          </p>
+          <p i18n="@@content.privacy.clientErrors.never">
+            Hlášení nikdy neobsahuje text chybové zprávy, adresu stránky, vaše jméno, e&#8209;mail,
+            částky, čísla potvrzení ani jiné údaje, které jste zadali nebo které na stránce vidíte.
+            Prohlížeč ho posílá bez přihlašovacích údajů. Hlášení nenese váš účet ani IP adresu;
+            podle času by šlo přiřadit k ostatním záznamům serveru z téže chvíle, a to děláme jen
+            při hledání konkrétní chyby. Server ho zapíše jako jeden řádek do provozního záznamu
+            (logu) aplikace, který se automaticky maže nejpozději po 14 dnech; kopii v záznamu
+            kontejneru na serveru, kterou čte jen jeho správce, mažeme, jakmile překročí nastavený
+            objem.
+          </p>
+          <dl class="basis">
+            <dt i18n="@@content.privacy.data.basisLabel">Právní základ</dt>
+            <dd i18n="@@content.privacy.clientErrors.basis">
+              Náš oprávněný zájem na tom, aby web spolehlivě fungoval a abychom jeho chyby mohli
+              opravit (čl.&nbsp;6 odst.&nbsp;1 písm.&nbsp;f) GDPR).
+            </dd>
+          </dl>
+        </div>
+
+        <div class="purpose">
           <h3 i18n="@@content.privacy.ipAddress.title">IP adresa a záznamy serveru</h3>
           <p i18n="@@content.privacy.ipAddress.limits">
-            Abychom přihlášení, registraci, kontaktní formulář a obnovu hesla ochránili před
-            zneužitím, počítáme žádosti z každé IP adresy: během 15 minut od prvního pokusu z ní
-            přijmeme nejvýš deset pokusů o přihlášení a během jedné hodiny od první žádosti nejvýš
-            pět registrací, pět zpráv z formuláře a pět žádostí o obnovu hesla. Adresu k tomu držíme
-            jen v operační paměti serveru a do databáze ji neukládáme. Nejpozději hodinu po první
-            žádosti ji k tomu přestaneme používat a server ji pak z paměti odstraní při průběžném
-            úklidu, nejpozději při svém restartu.
+            Abychom přihlášení, registraci, kontaktní formulář, obnovu hesla a hlášení chyb z
+            prohlížeče ochránili před zneužitím, počítáme žádosti z každé IP adresy: během 15 minut
+            od prvního pokusu z ní přijmeme nejvýš deset pokusů o přihlášení a 30 hlášení chyb a
+            během jedné hodiny od první žádosti nejvýš pět registrací, pět zpráv z formuláře a pět
+            žádostí o obnovu hesla. U adresy IPv6 počítáme celou síť /64, tedy blok adres, který
+            poskytovatel připojení přiděluje jedné přípojce. Adresu k tomu držíme jen v operační
+            paměti serveru a do databáze ji neukládáme. Nejpozději hodinu po první žádosti ji k tomu
+            přestaneme používat a server ji pak z paměti odstraní při průběžném úklidu, nejpozději
+            při svém restartu.
           </p>
           <p i18n="@@content.privacy.ipAddress.logs">
             Na serveru, na kterém web běží, zapisují každý požadavek do svého provozního záznamu
@@ -323,6 +355,10 @@
           <li i18n="@@content.privacy.retention.contactForm">
             zprávy z kontaktního formuláře v databázi webu jeden rok od odeslání, kopii doručenou
             e&#8209;mailem jen po dobu potřebnou k vyřízení dotazu,
+          </li>
+          <li i18n="@@content.privacy.retention.clientErrors">
+            hlášení chyb z prohlížeče v provozním záznamu aplikace nejdéle 14 dní, v záznamu
+            kontejneru na serveru do jeho automatického smazání podle objemu,
           </li>
           <li i18n="@@content.privacy.retention.ipAddress">
             IP adresu pro omezení počtu žádostí hodinu od první žádosti (v operační paměti nejdéle

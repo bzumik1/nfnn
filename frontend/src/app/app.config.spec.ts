@@ -1,8 +1,10 @@
 import { HttpBackend, HttpXhrBackend } from '@angular/common/http';
+import { ErrorHandler } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 
-import { appHttpClient, chunkLoadRecoveryFeature } from './app.config';
+import { appConfig, appErrorHandler, appHttpClient, chunkLoadRecoveryFeature } from './app.config';
+import { ReportingErrorHandler } from './core/errors/reporting-error-handler';
 import { ExternalNavigation } from './core/navigation/external-navigation';
 import { ChunkProbe } from './core/reload/chunk-probe';
 import { ReloadGuard } from './core/reload/reload-guard';
@@ -12,6 +14,18 @@ describe('Given the HTTP client of the app', () => {
     TestBed.configureTestingModule({ providers: [appHttpClient] });
 
     expect(TestBed.inject(HttpBackend)).toBeInstanceOf(HttpXhrBackend);
+  });
+});
+
+describe('Given the error handler of the app', () => {
+  it('when an error escapes, then the handler that reports it to the server takes it', () => {
+    TestBed.configureTestingModule({ providers: [appErrorHandler] });
+
+    expect(TestBed.inject(ErrorHandler)).toBeInstanceOf(ReportingErrorHandler);
+  });
+
+  it('when the app starts, then its providers install that handler', () => {
+    expect(appConfig.providers).toContain(appErrorHandler);
   });
 });
 

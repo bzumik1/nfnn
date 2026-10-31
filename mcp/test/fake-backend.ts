@@ -660,10 +660,30 @@ const PETR = {
   registeredAt: '2026-10-01T08:00:00Z',
 };
 
+const BROWSER_ERROR_LINES = [
+  '2026-11-04T10:00:01.000Z  WARN 1 --- [nova-nadeje] [exec-1] c.n.app.operations.clienterrors          : Browser error kind=pdf-render place=global name=TypeError version=1a2b3c4 browser=safari/18 os=ios display=standalone count=2',
+  '2026-11-04T11:00:00.000Z  WARN 1 --- [nova-nadeje] [scheduling-1] c.n.app.operations.clienterrors          : Browser error reports over the hourly cap bucket=general dropped=2',
+];
+
 function logSearch(name: string, params: URLSearchParams): [number, unknown] {
   const offsets = LOG_MATCHES[name];
   if (offsets === undefined) {
     return [404, problem(404, 'operations/log-not-found', 'Log nenalezen')];
+  }
+  if (params.get('pattern') === 'Browser error') {
+    return [
+      200,
+      {
+        name,
+        sizeBytes: 400,
+        matches: BROWSER_ERROR_LINES.map((line, index) => ({
+          offset: index * 200,
+          line,
+        })).reverse(),
+        moreOlder: false,
+        scannedFrom: 0,
+      },
+    ];
   }
   const before = params.has('before') ? Number(params.get('before')) : Infinity;
   const limit = Number(params.get('limit') ?? 50);

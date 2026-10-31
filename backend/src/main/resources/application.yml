@@ -185,6 +185,7 @@ logging:
     org.hibernate.orm.jdbc.bind: INFO
     org.hibernate.orm.jdbc.extract: INFO
     org.hibernate.internal.util.EntityPrinter: INFO
+    org.springframework.web.method: INFO
     org.springframework.web.servlet.mvc.method.annotation: INFO
     org.springframework.web.client: INFO
     org.apache.coyote: INFO
