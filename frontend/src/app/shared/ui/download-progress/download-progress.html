@@ -15,7 +15,11 @@
         [max]="progress.steps"
         [value]="progress.step"
         [attr.aria-label]="progress.text"
+        [attr.aria-valuetext]="progress.detail ?? null"
       ></progress>
+      @if (progress.detail) {
+        <span class="download-progress-detail" aria-hidden="true">{{ progress.detail }}</span>
+      }
       @if (slow()) {
         <button
           type="button"

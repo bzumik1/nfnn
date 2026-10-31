@@ -4,22 +4,30 @@ import { inject, Injectable } from '@angular/core';
 export const RECEIPT_RESTART_PARAM = 'stahnout';
 const RESTART_KEY = 'nfnn.receipt-restart';
 
+export type ReceiptRestartOutcome = 'reloading' | 'reloaded-already' | 'unavailable';
+
 @Injectable({ providedIn: 'root' })
 export class ReceiptRestart {
   private readonly document = inject(DOCUMENT);
 
-  tryRestart(download: string): boolean {
+  tryRestart(download: string): ReceiptRestartOutcome {
     if (this.read() === download) {
       this.finished();
-      return false;
+      return 'reloaded-already';
     }
     if (!this.write(download)) {
-      return false;
+      return 'unavailable';
     }
     const url = new URL(this.document.location.href);
     url.searchParams.set(RECEIPT_RESTART_PARAM, download);
     this.document.location.assign(url.toString());
-    return true;
+    return 'reloading';
+  }
+
+  abandoned(download: string): void {
+    if (this.read() === download) {
+      this.finished();
+    }
   }
 
   resumes(download: string): boolean {

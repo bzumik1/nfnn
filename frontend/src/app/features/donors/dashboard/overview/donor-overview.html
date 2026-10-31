@@ -34,7 +34,7 @@
           type="button"
           class="ui-button ui-button--primary receipt-ready-pdf"
           [attr.data-receipt-download]="donations.yearlyTarget(year)"
-          [disabled]="donations.yearlyDownloading(year)"
+          [attr.aria-disabled]="donations.yearlyDownloading(year) ? 'true' : null"
           [attr.aria-busy]="donations.yearlyDownloading(year)"
           (click)="donations.downloadYearlyReceipt(year)"
         >

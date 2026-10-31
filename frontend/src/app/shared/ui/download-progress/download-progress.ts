@@ -1,10 +1,11 @@
 import { Component, computed, effect, input, output, signal } from '@angular/core';
 
 export interface DownloadProgressState {
-  readonly kind: 'running' | 'ready' | 'done';
+  readonly kind: 'running' | 'ready' | 'done' | 'cancelled';
   readonly step: number;
   readonly steps: number;
   readonly text: string;
+  readonly detail?: string;
 }
 
 export const CANCEL_OFFERED_AFTER_MS = 8000;

@@ -33,6 +33,11 @@
   inline-size: 100%;
 }
 
+.download-progress-detail {
+  font-size: var(--text-xs);
+  color: var(--color-text-soft);
+}
+
 .download-progress-meter {
   inline-size: 12rem;
   max-inline-size: 100%;

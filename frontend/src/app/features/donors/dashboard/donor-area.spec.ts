@@ -41,6 +41,8 @@ import {
 } from '../../donations/receipt-pdf/testing/receipt-fixtures';
 import { donorsRoutes } from '../donors.routes';
 import { BankAccountsCard } from './bank-accounts-card/bank-accounts-card';
+import { DonorArea } from './donor-area';
+import { DonorDonations } from './donor-donations';
 
 const OBJECT_URL = 'blob:http://localhost/receipt';
 const RECEIPTS_URL = '/api/donations/me/receipts';
@@ -1246,7 +1248,8 @@ describe('Given a signed-in donor in the donor area', () => {
       await settle();
       await click(secondRowButton);
 
-      expect(text(yearlyLine)).toBe('Vytváříme PDF, strana 1…');
+      expect(text(`${yearlyLine} [role="status"]`)).toBe('Vytváříme PDF…');
+      expect(text(`${yearlyLine} .download-progress-detail`)).toBe('Strana 1');
       expect(text(singleLine)).toBe('Připravujeme údaje potvrzení…');
       receiptRequest({ donationId: 'd-3' }).flush(issuedSingle('2026-000017'));
       await settle();
@@ -1256,7 +1259,7 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(text(singleLine)).toBe(
         'Potvrzení potvrzeni-o-daru-2026-000017.pdf je stažené. Najdete ho ve stažených souborech.',
       );
-      expect(text(yearlyLine)).toBe('Vytváříme PDF, strana 1…');
+      expect(text(`${yearlyLine} [role="status"]`)).toBe('Vytváříme PDF…');
       yearly.drawAll();
       await settle();
       expect(text(yearlyLine)).toBe(
@@ -1978,7 +1981,9 @@ describe('Given a signed-in donor in the donor area', () => {
       const line = (year: number): string =>
         normalized(yearRow(year).querySelector('.receipt-saved')?.textContent ?? '');
       const status = (year: number): string =>
-        normalized(yearRow(year).querySelector('.receipt-saved [role="status"]')?.textContent ?? '');
+        normalized(
+          yearRow(year).querySelector('.receipt-saved [role="status"]')?.textContent ?? '',
+        );
       const pdfButton = (year: number): HTMLButtonElement =>
         yearRow(year).querySelector('.yearly-pdf') as HTMLButtonElement;
 
@@ -2004,7 +2009,9 @@ describe('Given a signed-in donor in the donor area', () => {
         receiptEnvironment.last().say({ kind: 'page', page: 2 });
         await settle();
         expect(status(2025)).toBe('Vytváříme PDF…');
-        expect(line(2025)).toBe('Vytváříme PDF… Strana 2');
+        expect(
+          normalized(yearRow(2025).querySelector('.download-progress-detail')?.textContent ?? ''),
+        ).toBe('Strana 2');
         expect(yearRow(2025).querySelector('progress')?.getAttribute('aria-valuetext')).toBe(
           'Strana 2',
         );
@@ -2092,7 +2099,9 @@ describe('Given a signed-in donor in the donor area', () => {
         receiptEnvironment.last().say({ kind: 'failed', reason: 'drawing' });
         await settleBlobFailure();
 
-        expect(element('.yearly-card [role="alert"]')?.textContent).toContain('PDF se v prohlížeči');
+        expect(element('.yearly-card [role="alert"]')?.textContent).toContain(
+          'PDF se v prohlížeči',
+        );
         expect(pdfButton(2025).disabled).toBe(false);
         expect(pdfButton(2025).getAttribute('aria-disabled')).toBeNull();
         expect(document.activeElement).toBe(pdfButton(2025));
@@ -2341,15 +2350,16 @@ describe('Given a signed-in donor in the donor area', () => {
       sessionStorage.setItem('nfnn.receipt-restart', 'rok-2025');
       await open('/darce/potvrzeni?stahnout=rok-2025');
       await respond(twoYearSummary(), twoYearDonations());
-      vi.useFakeTimers();
       receiptRequest({ year: 2025 }).flush(issuedYearly(2025));
       await settle();
 
-      await vi.advanceTimersByTimeAsync(8000);
-      await settle();
-      (yearRow(2025).querySelector('.download-progress-cancel') as HTMLButtonElement).click();
+      harness.fixture.debugElement
+        .query(By.directive(DonorArea))
+        .injector.get(DonorDonations)
+        .cancelYearlyReceipt(2025);
       await settle();
 
+      expect(receiptEnvironment.last().terminated).toBe(true);
       expect(sessionStorage.getItem('nfnn.receipt-restart')).toBeNull();
     });
 

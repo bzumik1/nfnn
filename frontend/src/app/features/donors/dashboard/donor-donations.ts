@@ -3,6 +3,7 @@ import {
   afterNextRender,
   computed,
   DestroyRef,
+  effect,
   inject,
   Injectable,
   Injector,
@@ -63,6 +64,7 @@ const RECEIPT_FAILED = $localize`:@@donor.dashboard.receipt.error:Potvrzení se 
 const RECEIPT_DRAWING_FAILED = $localize`:@@donor.dashboard.receipt.drawingFailed:PDF se v prohlížeči nepodařilo vytvořit. Zkuste to prosím znovu; když to nepomůže, zkuste jiný prohlížeč nebo nám napište na info@nfnn.cz.`;
 const RECEIPT_IMAGE_FAILED = $localize`:@@donor.dashboard.receipt.imageFailed:Podpis na potvrzení se nepodařilo ověřit, a tak jsme PDF nevytvořili. Zkuste to prosím znovu; když to nepomůže, napište nám na info@nfnn.cz.`;
 const RECEIPT_TOOLS_MISSING = $localize`:@@donor.dashboard.receipt.toolsMissing:Web se mezitím aktualizoval. Obnovte prosím stránku a stáhněte potvrzení znovu.`;
+const RECEIPT_TOOLS_STILL_MISSING = $localize`:@@donor.dashboard.receipt.toolsStillMissing:Nástroje pro PDF se nepodařilo načíst ani po obnovení stránky. Zkontrolujte prosím připojení nebo blokování skriptů, zkuste jiný prohlížeč, nebo nám napište na info@nfnn.cz.`;
 const RECEIPT_UNPRINTABLE = $localize`:@@donor.dashboard.receipt.unprintable:Údaje potvrzení obsahují znak, který v PDF neumíme vytisknout, a tak jsme PDF nevytvořili. Napište nám prosím na info@nfnn.cz.`;
 const RECEIPT_STYLE_FAILED = $localize`:@@donor.dashboard.receipt.styleFailed:PDF teď kvůli chybě na webu nejde vytvořit. Napište nám prosím na info@nfnn.cz, opravíme ji.`;
 const RECEIPT_CANCELLED = $localize`:@@donor.dashboard.receipt.cancelled:Přípravu potvrzení jste zrušili.`;
@@ -128,11 +130,31 @@ export class DonorDonations {
   private readonly downloads = signal<ReadonlySet<string>>(new Set());
   private readonly receiptTasks = signal<ReadonlyMap<string, ReceiptTask>>(new Map());
   private readonly running = new Map<string, Subscription>();
+  private readonly focusedAtStart = new Map<string, Element | null>();
   private pendingStarted = false;
   private latestDonationsRequest = 0;
   private bankCheckEndedAt: number | null = null;
+  private readonly printedDonor = computed(() => {
+    const donor = this.auth.donor();
+    return donor === null
+      ? null
+      : JSON.stringify([
+          donor.name,
+          donor.address.street,
+          donor.address.postalCode,
+          donor.address.city,
+        ]);
+  });
 
   constructor() {
+    let printedBefore: string | null | undefined;
+    effect(() => {
+      const printed = this.printedDonor();
+      if (printedBefore !== undefined && printed !== printedBefore) {
+        this.dropReadyFiles();
+      }
+      printedBefore = printed;
+    });
     this.load();
     this.checkBank(false);
     this.bankAccountsApi
@@ -277,17 +299,36 @@ export class DonorDonations {
 
   private dropFinishedTasks(): void {
     this.receiptTasks.update(
-      (tasks) => new Map([...tasks].filter(([, task]) => task.progress.kind !== 'done')),
+      (tasks) =>
+        new Map(
+          [...tasks].filter(
+            ([, task]) => task.progress.kind !== 'done' && task.progress.kind !== 'cancelled',
+          ),
+        ),
     );
   }
 
-  private focusDownloadButton(key: string): void {
+  private dropReadyFiles(): void {
+    this.receiptTasks.update(
+      (tasks) =>
+        new Map(
+          [...tasks].filter(([, task]) => task.progress.kind === 'running' && task.file === null),
+        ),
+    );
+  }
+
+  private focusDownloadButtonIfLost(key: string): void {
     afterNextRender(
       () => {
-        const target = this.document.querySelector<HTMLButtonElement>(
-          `[data-receipt-download="${downloadName(key)}"]`,
-        );
-        target?.focus();
+        const focused = this.document.activeElement;
+        const unmoved = focused === this.focusedAtStart.get(key);
+        this.focusedAtStart.delete(key);
+        if (focused !== null && focused !== this.document.body && !unmoved) {
+          return;
+        }
+        this.document
+          .querySelector<HTMLButtonElement>(`[data-receipt-download="${downloadName(key)}"]`)
+          ?.focus();
       },
       { injector: this.injector },
     );
@@ -397,6 +438,7 @@ export class DonorDonations {
     this.receiptError.set(null);
     this.dropFinishedTasks();
     this.downloads.update((running) => new Set(running).add(key));
+    this.focusedAtStart.set(key, this.document.activeElement);
     const subscription = this.receiptPdf
       .draw(subject)
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -406,6 +448,7 @@ export class DonorDonations {
           this.finishDownload(key);
           this.setTask(key, null);
           this.receiptFailed(scope, failure, key);
+          this.focusDownloadButtonIfLost(key);
         },
       });
     this.running.set(key, subscription);
@@ -420,7 +463,8 @@ export class DonorDonations {
           kind: 'running',
           step: PHASE_STEPS[event.phase] + Math.min(event.page, pages),
           steps: STEPS_BEFORE_DRAWING + pages + STEPS_AFTER_DRAWING,
-          text: phaseText(event.phase, event.page),
+          text: phaseText(event.phase),
+          ...(event.phase === 'drawing' && event.page > 0 ? { detail: pageText(event.page) } : {}),
         },
       });
       return;
@@ -430,11 +474,12 @@ export class DonorDonations {
     const file = event.file;
     if (this.delivery.needsSecondTap(file)) {
       this.setTask(key, { file, progress: finished('ready', readyText(scope, file.fileName)) });
-      this.focusDownloadButton(key);
+      this.focusDownloadButtonIfLost(key);
       return;
     }
     this.delivery.save(file);
     this.setTask(key, { file: null, progress: finished('done', savedText(file.fileName)) });
+    this.focusDownloadButtonIfLost(key);
   }
 
   private open(key: string): void {
@@ -465,8 +510,9 @@ export class DonorDonations {
     }
     subscription.unsubscribe();
     this.finishDownload(key);
-    this.setTask(key, { file: null, progress: finished('done', RECEIPT_CANCELLED) });
-    this.focusDownloadButton(key);
+    this.restart.abandoned(downloadName(key));
+    this.setTask(key, { file: null, progress: finished('cancelled', RECEIPT_CANCELLED) });
+    this.focusDownloadButtonIfLost(key);
   }
 
   private finishDownload(key: string): void {
@@ -480,11 +526,17 @@ export class DonorDonations {
 
   private drawingFailed(scope: ReceiptScope, failure: ReceiptPdfFailure, key: string): void {
     if (failure.reason === 'tools-missing') {
-      if (!this.restart.tryRestart(downloadName(key))) {
-        this.receiptError.set({ scope, message: RECEIPT_TOOLS_MISSING });
+      const restart = this.restart.tryRestart(downloadName(key));
+      if (restart !== 'reloading') {
+        this.receiptError.set({
+          scope,
+          message:
+            restart === 'reloaded-already' ? RECEIPT_TOOLS_STILL_MISSING : RECEIPT_TOOLS_MISSING,
+        });
       }
       return;
     }
+    this.restart.abandoned(downloadName(key));
     this.receiptError.set({ scope, message: DRAWING_FAILURE_TEXTS[failure.reason] });
   }
 
@@ -493,6 +545,7 @@ export class DonorDonations {
       this.drawingFailed(scope, failure, key);
       return;
     }
+    this.restart.abandoned(downloadName(key));
     if (this.sessionEnded(failure)) {
       this.sendToSignIn();
       return;
@@ -523,18 +576,22 @@ export class DonorDonations {
   }
 }
 
-function phaseText(phase: ReceiptPdfPhase, page: number): string {
+function phaseText(phase: ReceiptPdfPhase): string {
   switch (phase) {
     case 'data':
       return $localize`:@@donor.dashboard.receipt.phase.data:Připravujeme údaje potvrzení…`;
     case 'tools':
       return $localize`:@@donor.dashboard.receipt.phase.tools:Načítáme nástroje pro PDF…`;
     case 'drawing':
-      return $localize`:@@donor.dashboard.receipt.phase.drawing:Vytváříme PDF, strana ${page}:page:…`;
+      return $localize`:@@donor.dashboard.receipt.phase.drawingPdf:Vytváříme PDF…`;
   }
 }
 
-function finished(kind: 'ready' | 'done', text: string): DownloadProgressState {
+function pageText(page: number): string {
+  return $localize`:@@donor.dashboard.receipt.phase.page:Strana ${page}:page:`;
+}
+
+function finished(kind: 'ready' | 'done' | 'cancelled', text: string): DownloadProgressState {
   return { kind, step: 1, steps: 1, text };
 }
 

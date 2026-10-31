@@ -83,7 +83,13 @@ describe('Given a download progress line', () => {
     );
 
     it('then the status names only the phase, while the page shows beside the bar and in its value text', async () => {
-      await show({ kind: 'running', step: 3, steps: 5, text: 'Vytváříme PDF…', detail: 'Strana 2' });
+      await show({
+        kind: 'running',
+        step: 3,
+        steps: 5,
+        text: 'Vytváříme PDF…',
+        detail: 'Strana 2',
+      });
 
       expect(status()).toBe('Vytváříme PDF…');
       const bar = element('progress') as HTMLProgressElement;

@@ -106,7 +106,8 @@ tr.is-verification td.amount {
   cursor: pointer;
   font-family: var(--font-sans);
 
-  &:disabled {
+  &:disabled,
+  &[aria-disabled='true'] {
     cursor: not-allowed;
     opacity: 0.6;
   }

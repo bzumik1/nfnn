@@ -68,7 +68,7 @@
                 type="button"
                 class="download-btn"
                 [attr.data-receipt-download]="donations.singleTarget(item)"
-                [disabled]="donations.singleDownloading(item)"
+                [attr.aria-disabled]="donations.singleDownloading(item) ? 'true' : null"
                 [attr.aria-busy]="donations.singleDownloading(item)"
                 (click)="donations.downloadSingleReceipt(item)"
               >
