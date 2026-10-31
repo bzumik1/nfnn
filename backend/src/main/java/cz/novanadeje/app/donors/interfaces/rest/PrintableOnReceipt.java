@@ -24,9 +24,23 @@ import java.lang.annotation.Target;
 
     class Validator implements ConstraintValidator<PrintableOnReceipt, String> {
 
+        private static final String BLANK_MESSAGE = "{jakarta.validation.constraints.NotBlank.message}";
+
         @Override
         public boolean isValid(String value, ConstraintValidatorContext context) {
-            return value == null || PrintableText.prints(value);
+            if (value == null) {
+                return true;
+            }
+            PrintableText printed = PrintableText.of(value);
+            if (!printed.prints()) {
+                return false;
+            }
+            if (value.isBlank() || !printed.text().isBlank()) {
+                return true;
+            }
+            context.disableDefaultConstraintViolation();
+            context.buildConstraintViolationWithTemplate(BLANK_MESSAGE).addConstraintViolation();
+            return false;
         }
     }
 }

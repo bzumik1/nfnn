@@ -9,9 +9,13 @@ import { printedText } from '../donations/receipt-pdf/receipt-characters';
 export class PrintableOnReceiptValidator implements Validator {
   validate(control: AbstractControl<string | null>): ValidationErrors | null {
     const value = control.value ?? '';
-    if (value === '' || printedText(value).outside.length === 0) {
+    if (value === '') {
       return null;
     }
-    return { printableOnReceipt: true };
+    const printed = printedText(value);
+    if (printed.outside.length > 0) {
+      return { printableOnReceipt: true };
+    }
+    return printed.text.trim() === '' ? { required: true } : null;
   }
 }
