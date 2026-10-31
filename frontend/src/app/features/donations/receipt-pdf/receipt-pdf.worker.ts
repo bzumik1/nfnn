@@ -1,48 +1,30 @@
 /// <reference lib="webworker" />
 
-import { drawReceipt, ReceiptFonts } from './receipt-layout';
-import { ReceiptStyle } from './receipt-style';
+import { errorNameOf } from '../../../core/errors/error-vocabulary';
+import { loadReceiptFonts } from './receipt-fonts';
+import { drawReceipt } from './receipt-layout';
 import { ReceiptDrawingRequest, ReceiptWorkerMessage } from './receipt-worker-messages';
 
 function post(message: ReceiptWorkerMessage, transfer: Transferable[] = []): void {
   postMessage(message, transfer);
 }
 
-async function font(file: string): Promise<Uint8Array> {
-  const response = await fetch(`/receipt-fonts/${file}`);
-  if (!response.ok) {
-    throw new Error(`The receipt font ${file} answered ${response.status}.`);
-  }
-  return new Uint8Array(await response.arrayBuffer());
-}
-
-async function fonts(files: ReceiptStyle['fonts']): Promise<ReceiptFonts> {
-  const [body, bold, heading] = await Promise.all([
-    font(files.body),
-    font(files.bold),
-    font(files.heading),
-  ]);
-  return { body, bold, heading };
-}
-
 async function draw(request: ReceiptDrawingRequest): Promise<void> {
-  let loaded: ReceiptFonts;
-  try {
-    loaded = await fonts(request.style.fonts);
-  } catch {
-    post({ kind: 'failed', reason: 'fonts' });
+  const load = await loadReceiptFonts(request.style.fonts);
+  if (!load.loaded) {
+    post({ kind: 'failed', reason: load.reason, name: load.name });
     return;
   }
   try {
     const bytes = await drawReceipt(
       request.document,
       request.style,
-      { fonts: loaded, signature: request.signature, portrait: request.portrait },
+      { fonts: load.fonts, signature: request.signature, portrait: request.portrait },
       (page) => post({ kind: 'page', page }),
     );
     post({ kind: 'done', bytes }, [bytes.buffer]);
-  } catch {
-    post({ kind: 'failed', reason: 'drawing' });
+  } catch (failure: unknown) {
+    post({ kind: 'failed', reason: 'drawing', name: errorNameOf(failure) });
   }
 }
 
