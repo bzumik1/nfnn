@@ -55,6 +55,28 @@ export type SpaydExpected =
       };
     };
 
+export interface PaymentDetailsInput {
+  readonly recipient: {
+    readonly accountNumber: string;
+    readonly iban: string;
+    readonly name: string;
+  };
+}
+
+export interface PaymentDetailsExpected {
+  readonly account: {
+    readonly number: string;
+    readonly iban: string;
+    readonly recipientName: string;
+  };
+  readonly currency: 'CZK';
+  readonly messages: {
+    readonly donation: string;
+    readonly accountVerification: string;
+  };
+  readonly accountVerificationAmountMinor: number;
+}
+
 export interface PaymentQrInput {
   readonly spayd: string;
 }
@@ -106,6 +128,7 @@ export interface SharedCaseTopics {
   readonly 'donor-summary/summary.json': SharedCase<RowsInput, Answer>;
   readonly 'monthly-report/formatting.json': SharedCase<Answer, { readonly text: string }>;
   readonly 'monthly-report/report.json': SharedCase<RowsInput, Answer>;
+  readonly 'payment/details.json': SharedCase<PaymentDetailsInput, PaymentDetailsExpected>;
   readonly 'payment/spayd.json': SharedCase<SpaydInput, SpaydExpected>;
   readonly 'qr/encoder.json': SharedCase<EncoderQrInput, QrSymbol>;
   readonly 'qr/payment.json': SharedCase<PaymentQrInput, QrSymbol>;
@@ -124,6 +147,7 @@ const REGISTERED_TOPICS: Readonly<Record<SharedCaseTopic, true>> = {
   'donor-summary/summary.json': true,
   'monthly-report/formatting.json': true,
   'monthly-report/report.json': true,
+  'payment/details.json': true,
   'payment/spayd.json': true,
   'qr/encoder.json': true,
   'qr/payment.json': true,

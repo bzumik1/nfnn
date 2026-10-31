@@ -15,7 +15,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class QrPaymentTest {
 
     private static final BankAccount FOUNDATION = new BankAccount(
-            "123456789/0800",
+            "19-2000145399/0800",
             new Iban("CZ65 0800 0000 1920 0014 5399"),
             "Nadační fond Nová naděje"
     );
@@ -78,7 +78,7 @@ class QrPaymentTest {
     @Test
     @DisplayName("Given a recipient name with diacritics and punctuation, when the payment is rendered, then the name is uppercase ASCII")
     void should_write_recipient_name_in_uppercase_ascii_when_it_has_diacritics_and_punctuation() {
-        BankAccount account = new BankAccount("123456789/0800", FOUNDATION.iban(), "Žluťoučký kůň, z. ú. *Ostrava*");
+        BankAccount account = new BankAccount("19-2000145399/0800", FOUNDATION.iban(), "Žluťoučký kůň, z. ú. *Ostrava*");
 
         assertThat(QrPayment.donation(account, Money.czk(100)).toSpayd()).contains("*RN:ZLUTOUCKY KUN Z. U. OSTRAVA*");
     }
@@ -86,7 +86,7 @@ class QrPaymentTest {
     @Test
     @DisplayName("Given a longer recipient name, when the payment is rendered, then the name is shortened to 35 characters")
     void should_shorten_recipient_name_to_35_characters_when_it_is_longer() {
-        BankAccount account = new BankAccount("123456789/0800", FOUNDATION.iban(), "Nadační fond Nová naděje pro děti a mládež v nouzi");
+        BankAccount account = new BankAccount("19-2000145399/0800", FOUNDATION.iban(), "Nadační fond Nová naděje pro děti a mládež v nouzi");
 
         assertThat(QrPayment.donation(account, Money.czk(100)).toSpayd()).contains("*RN:NADACNI FOND NOVA NADEJE PRO DETI A*");
     }
