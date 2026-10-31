@@ -108,7 +108,7 @@ test.describe('Given a visitor on the home page', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Dominik, 7 let' })).toBeFocused();
     await expect(page.locator('.ui-eyebrow')).toHaveText('Kompenzační pomůcky · 2024');
     await expect(page.locator('.photo')).toHaveCount(0);
-    await expect(page.getByRole('link', { name: 'Zpět na projekty' })).toHaveAttribute(
+    await expect(page.getByRole('link', { name: 'Kde všude pomáháme' })).toHaveAttribute(
       'href',
       '/projekty',
     );
@@ -131,10 +131,10 @@ test.describe('Given a visitor on the home page', () => {
     await publishedContent(page);
 
     await page.goto('/');
-    await page.getByRole('link', { name: 'Všechny projekty' }).click();
+    await page.getByRole('link', { name: 'Kde všude pomáháme' }).click();
 
     await expect(page).toHaveURL('/projekty');
-    await expect(page).toHaveTitle('Projekty | Nová naděje – nadační fond');
+    await expect(page).toHaveTitle('Kde pomáháme | Nová naděje – nadační fond');
     await expect(page.locator('app-project-card')).toHaveCount(1);
     await page.goto('/');
     await page.getByRole('link', { name: 'Všechny aktuality' }).click();
@@ -197,7 +197,7 @@ test.describe('Given a visitor reading a news article', () => {
     await expect(page).toHaveURL(/\/aktuality$/);
     await expect(page.getByRole('heading', { level: 1, name: 'Aktuality' })).toBeVisible();
     await expect(
-      page.locator('.desktop-nav').getByRole('link', { name: 'Projekty' }),
+      page.locator('.desktop-nav').getByRole('link', { name: 'Kde pomáháme' }),
     ).toHaveAttribute('href', '/#projekty');
   });
 });

@@ -207,14 +207,18 @@ test.describe('Given a visitor in a window too narrow for the header links', () 
 });
 
 test.describe('Given a visitor whose browser shows text twice as large on a computer', () => {
-  test('when they open the home page, then every header link stays on one line inside the header', async ({
+  test('when they open the home page, then the header links that no longer fit move into the menu, which shows every one of them on screen', async ({
     page,
   }) => {
     await page.goto('/');
     await page.addStyleTag({ content: 'html { font-size: 200%; }' });
 
-    const header = await page.locator('nav.nav').boundingBox();
-    const items = await page.locator('.desktop-nav > *').evaluateAll((elements) =>
+    await expect(page.locator('.desktop-nav')).toBeHidden();
+    await page.getByRole('button', { name: 'Otevřít menu' }).click();
+
+    const menu = page.locator('#mobile-menu');
+    await expect(menu).toBeVisible();
+    const items = await menu.locator('a, button').evaluateAll((elements) =>
       elements.map((element) => ({
         text: element.textContent!.trim(),
         ...element.getBoundingClientRect().toJSON(),
@@ -222,19 +226,39 @@ test.describe('Given a visitor whose browser shows text twice as large on a comp
     );
     expect(items.map((item) => item.text)).toEqual([
       'O nás',
-      'Projekty',
+      'Kde pomáháme',
       'Aktuality',
       'Kontakt',
       'Přispět',
-      'Založit účet',
       'Přihlásit se',
+      'Založit účet',
     ]);
+    for (const item of items) {
+      expect(item.left, item.text).toBeGreaterThanOrEqual(0);
+      expect(item.right, item.text).toBeLessThanOrEqual(1280);
+    }
+    expect(await widerThanScreen(page)).toBe(0);
+  });
+
+  test('when they open the home page with the usual text size, then the header keeps every link in one line', async ({
+    page,
+  }) => {
+    await page.goto('/');
+
+    await expect(page.getByRole('button', { name: 'Otevřít menu' })).toBeHidden();
+    const header = await page.locator('nav.nav').boundingBox();
+    const items = await page.locator('.desktop-nav > *').evaluateAll((elements) =>
+      elements.map((element) => ({
+        text: element.textContent!.trim(),
+        ...element.getBoundingClientRect().toJSON(),
+      })),
+    );
+    expect(items).toHaveLength(7);
     for (const item of items) {
       expect(item.top, item.text).toBeGreaterThanOrEqual(header!.y);
       expect(item.bottom, item.text).toBeLessThanOrEqual(header!.y + header!.height);
       expect(item.right, item.text).toBeLessThanOrEqual(1280);
     }
-    expect(await widerThanScreen(page)).toBe(0);
   });
 });
 

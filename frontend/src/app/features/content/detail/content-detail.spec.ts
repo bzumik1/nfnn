@@ -179,7 +179,7 @@ describe('Given a visitor opening a project', () => {
 
     expect(text(fixture, '.ui-eyebrow')).toBe('Projekt · 2024');
     expect(text(fixture, 'h1')).toBe('Zahrada pro děti');
-    expect(text(fixture, '.crumbs a')).toBe('← Všechny projekty');
+    expect(text(fixture, '.crumbs a')).toBe('← Kde pomáháme');
     expect(fixture.nativeElement.querySelector('.crumbs a').getAttribute('href')).toBe('/projekty');
     expect(
       Array.from(fixture.nativeElement.querySelectorAll('.actions a') as NodeListOf<Element>).map(
@@ -187,7 +187,7 @@ describe('Given a visitor opening a project', () => {
       ),
     ).toEqual([
       ['/#prispet', 'Přispět'],
-      ['/projekty', 'Zpět na projekty'],
+      ['/projekty', 'Kde všude pomáháme'],
     ]);
     expect(text(fixture, '.actions-lead')).toBe(
       'Chcete pomoct dalším dětem? Přispějte na jejich pomůcky.',
@@ -200,6 +200,6 @@ describe('Given a visitor opening a project', () => {
     await settle(fixture);
 
     expect(fixture.nativeElement.querySelector('app-not-found')).not.toBeNull();
-    expect(text(fixture, 'app-not-found a')).toBe('Všechny projekty');
+    expect(text(fixture, 'app-not-found a')).toBe('Kde všude pomáháme');
   });
 });

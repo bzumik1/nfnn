@@ -120,7 +120,7 @@ describe('Given the site header on a phone', () => {
     const links = Array.from(menu()!.querySelectorAll('a') as NodeListOf<HTMLAnchorElement>).map(
       (link) => link.textContent?.trim(),
     );
-    expect(links).toEqual(['O nás', 'Projekty', 'Aktuality', 'Kontakt', 'Přispět']);
+    expect(links).toEqual(['O nás', 'Kde pomáháme', 'Aktuality', 'Kontakt', 'Přispět']);
   });
 
   it('when the visitor signs in from the menu, then the menu closes and the sign-in dialog opens', () => {
@@ -184,7 +184,7 @@ describe('Given the site header on a computer', () => {
       fixture.nativeElement.querySelectorAll('.desktop-nav a') as NodeListOf<HTMLAnchorElement>,
     ).map((link) => link.textContent?.trim());
 
-    expect(links).toEqual(['O nás', 'Projekty', 'Aktuality', 'Kontakt', 'Přispět']);
+    expect(links).toEqual(['O nás', 'Kde pomáháme', 'Aktuality', 'Kontakt', 'Přispět']);
     expect(fixture.nativeElement.querySelector('.brand').getAttribute('href')).toBe('/#uvod');
   });
 
@@ -275,16 +275,16 @@ describe('Given the site header on the pages of news and projects', () => {
     await open('/aktuality/zahrada-pro-deti');
 
     expect(links('.desktop-nav')).toContainEqual(['Aktuality', '/aktuality', 'page']);
-    expect(links('.desktop-nav')).toContainEqual(['Projekty', '/#projekty', null]);
+    expect(links('.desktop-nav')).toContainEqual(['Kde pomáháme', '/#projekty', null]);
   });
 
-  it('when the list of projects is open, then Projekty leads to the list and is marked, also in the phone menu', async () => {
+  it('when the list of projects is open, then Kde pomáháme leads to the list and is marked, also in the phone menu', async () => {
     await open('/projekty?strana=2');
     (fixture.nativeElement.querySelector('.mobile-menu-btn') as HTMLButtonElement).click();
     fixture.detectChanges();
 
-    expect(links('.desktop-nav')).toContainEqual(['Projekty', '/projekty', 'page']);
-    expect(links('#mobile-menu')).toContainEqual(['Projekty', '/projekty', 'page']);
+    expect(links('.desktop-nav')).toContainEqual(['Kde pomáháme', '/projekty', 'page']);
+    expect(links('#mobile-menu')).toContainEqual(['Kde pomáháme', '/projekty', 'page']);
     expect(links('#mobile-menu')).toContainEqual(['Aktuality', '/#aktuality', null]);
   });
 
