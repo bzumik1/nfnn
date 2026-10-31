@@ -251,5 +251,149 @@
         "<n>": "the line number of the throwing frame in the source"
       }
     }
+  },
+  {
+    "path": "POST /api/operations/client-errors",
+    "scenario": "operations/client_error_reports: *",
+    "kind": "body",
+    "field": "$.title",
+    "reason": "1.18 (security.md, Output): Spring's own refusal no longer answers its English text, which named the Content-Type, the path or the parser's failure; the title and detail come from the bundle in the client's language (here Czech)",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "POST /api/operations/client-errors",
+    "scenario": "operations/client_error_reports: *",
+    "kind": "body",
+    "field": "$.detail",
+    "reason": "1.18 (security.md, Output): Spring's own refusal no longer answers its English text, which named the Content-Type, the path or the parser's failure; the title and detail come from the bundle in the client's language (here Czech)",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "GET /api/donors/nowhere",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "body",
+    "field": "$.title",
+    "reason": "1.18 (security.md, Output): Spring's own refusal no longer answers its English text, which named the Content-Type, the path or the parser's failure; the title and detail come from the bundle in the client's language (here Czech)",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "GET /api/donors/nowhere",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "body",
+    "field": "$.detail",
+    "reason": "1.18 (security.md, Output): Spring's own refusal no longer answers its English text, which named the Content-Type, the path or the parser's failure; the title and detail come from the bundle in the client's language (here Czech)",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "POST /api/contact/messages",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "body",
+    "field": "$.title",
+    "reason": "1.18 (security.md, Output): Spring's own refusal no longer answers its English text, which named the Content-Type, the path or the parser's failure; the title and detail come from the bundle in the client's language (here Czech)",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "POST /api/contact/messages",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "body",
+    "field": "$.detail",
+    "reason": "1.18 (security.md, Output): Spring's own refusal no longer answers its English text, which named the Content-Type, the path or the parser's failure; the title and detail come from the bundle in the client's language (here Czech)",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "PATCH /api/donors/me",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "body",
+    "field": "$.title",
+    "reason": "1.18 (security.md, Output): Spring's own refusal no longer answers its English text, which named the Content-Type, the path or the parser's failure; the title and detail come from the bundle in the client's language (here Czech)",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "PATCH /api/donors/me",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "body",
+    "field": "$.detail",
+    "reason": "1.18 (security.md, Output): Spring's own refusal no longer answers its English text, which named the Content-Type, the path or the parser's failure; the title and detail come from the bundle in the client's language (here Czech)",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "QKZW156* /api/content/news",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "headers",
+    "field": "content-type",
+    "reason": "1.18 (security.md, Output): a request with a method the server does not know is answered as problem+json by the site's handler instead of Spring Boot's error page, which echoed the path, so its type is application/problem+json",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "QKZW156* /api/content/news",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "body",
+    "field": "$.error",
+    "reason": "1.18 (security.md, Output): a request with a method the server does not know is answered as problem+json by the site's handler instead of Spring Boot's error page, which echoed the path: the error page's fields (with the path) are gone",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "QKZW156* /api/content/news",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "body",
+    "field": "$.path",
+    "reason": "1.18 (security.md, Output): a request with a method the server does not know is answered as problem+json by the site's handler instead of Spring Boot's error page, which echoed the path: the error page's fields (with the path) are gone",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "QKZW156* /api/content/news",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "body",
+    "field": "$.timestamp",
+    "reason": "1.18 (security.md, Output): a request with a method the server does not know is answered as problem+json by the site's handler instead of Spring Boot's error page, which echoed the path: the error page's fields (with the path) are gone",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "QKZW156* /api/content/news",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "added",
+    "field": "$.title",
+    "reason": "1.18 (security.md, Output): a request with a method the server does not know is answered as problem+json by the site's handler instead of Spring Boot's error page, which echoed the path: the problem carries the bundle's title and detail",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "QKZW156* /api/content/news",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "added",
+    "field": "$.detail",
+    "reason": "1.18 (security.md, Output): a request with a method the server does not know is answered as problem+json by the site's handler instead of Spring Boot's error page, which echoed the path: the problem carries the bundle's title and detail",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "QKZW156* /api/content/news",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "added",
+    "field": "cache-control",
+    "reason": "1.18 (security.md, Output): a request with a method the server does not know is answered as problem+json by the site's handler instead of Spring Boot's error page, which echoed the path: the answer now passes the security chain's headers (no-store, nosniff) like every other problem",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "QKZW156* /api/content/news",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "added",
+    "field": "expires",
+    "reason": "1.18 (security.md, Output): a request with a method the server does not know is answered as problem+json by the site's handler instead of Spring Boot's error page, which echoed the path: the answer now passes the security chain's headers (no-store, nosniff) like every other problem",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "QKZW156* /api/content/news",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "added",
+    "field": "pragma",
+    "reason": "1.18 (security.md, Output): a request with a method the server does not know is answered as problem+json by the site's handler instead of Spring Boot's error page, which echoed the path: the answer now passes the security chain's headers (no-store, nosniff) like every other problem",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "QKZW156* /api/content/news",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "added",
+    "field": "x-content-type-options",
+    "reason": "1.18 (security.md, Output): a request with a method the server does not know is answered as problem+json by the site's handler instead of Spring Boot's error page, which echoed the path: the answer now passes the security chain's headers (no-store, nosniff) like every other problem",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
   }
 ]
