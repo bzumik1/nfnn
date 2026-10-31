@@ -277,6 +277,7 @@ export function issuedReceipt(
     year: null,
     issuedAt: '2026-10-17T09:00:00Z',
     supersededAt: null,
+    donorErased: false,
     receipt: {
       number: '2026-000002',
       issuedOn: '2026-10-17',

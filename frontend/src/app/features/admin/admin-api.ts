@@ -236,6 +236,7 @@ export interface AdminIssuedReceiptResponse {
   year: number | null;
   issuedAt: string;
   supersededAt: string | null;
+  donorErased: boolean;
   receipt: AdminFrozenReceiptResponse;
 }
 

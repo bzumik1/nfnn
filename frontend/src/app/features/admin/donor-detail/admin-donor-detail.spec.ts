@@ -678,7 +678,7 @@ describe('Given an administrator on a donor card', () => {
     );
   });
 
-  it('when the donor is erased or has no gift to certify, then no receipt is offered and the card says why', async () => {
+  it('when the donor has no gift to certify, then no receipt is offered and the card says why', async () => {
     await loaded(
       donorAccount(),
       donorDetail({ donations: { items: [], totalAmountMinor: 0, currency: 'CZK', count: 0 } }),
@@ -690,15 +690,48 @@ describe('Given an administrator on a donor card', () => {
     );
   });
 
-  it('when the donor is erased, then the receipts card offers no issuing', async () => {
+  it('when the donor is erased, then the receipts card keeps the receipts issued before and its notice line but offers no issuing for gifts a donor on record would get', async () => {
     const erased = donorDetail();
     await loaded(donorAccount({ erasedAt: '2026-10-20T08:00:00Z' }), {
       ...erased,
       donor: { ...erased.donor, erasedAt: '2026-10-20T08:00:00Z' },
     });
-    expect(section('Vydaná potvrzení').querySelector('select')).toBeNull();
-    expect(buttonNames(section('Vydaná potvrzení'))).not.toContain('Vystavit potvrzení');
+    const receipts = section('Vydaná potvrzení');
+    expect(receipts.querySelector('app-live-notice [role="status"]')).not.toBeNull();
+    expect(receipts.querySelector('app-live-notice [role="alert"]')).not.toBeNull();
+    expect(sectionText('Vydaná potvrzení')).toContain('2026-000001');
+    expect(receipts.querySelector('select')).toBeNull();
+    expect(buttonNames(receipts)).not.toContain('Vystavit potvrzení');
     expect(sectionText('Vydaná potvrzení')).not.toContain('za který by šlo');
+  });
+
+  it('when gifts lie in the year after the last completed one, then that year is not offered as a yearly receipt while its gifts are offered singly', async () => {
+    await loaded(
+      donorAccount(),
+      donorDetail({
+        yearlyReceiptsAvailableThrough: 2026,
+        receiptsAvailableFrom: 2026,
+        donations: {
+          items: [
+            adminDonation({
+              id: '0192f0f1-0000-7000-8000-000000000007',
+              receivedAt: '2027-01-05',
+              amountMinor: 70000,
+            }),
+            adminDonation(),
+          ],
+          totalAmountMinor: 100000,
+          currency: 'CZK',
+          count: 2,
+        },
+      }),
+    );
+
+    expect(optionLabels()).toEqual([
+      'Roční potvrzení za rok 2026',
+      'Dar z 05. 01. 2027, 700 Kč',
+      'Dar z 12. 10. 2026, 300 Kč',
+    ]);
   });
 
   it('when the second factor is turned off after the confirmation, then the account reloads and the status says what happened', async () => {

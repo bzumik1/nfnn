@@ -376,6 +376,7 @@ test.describe('Given an administrator on the donors page', () => {
             year: null,
             issuedAt: newReceipt.issuedAt,
             supersededAt: null,
+            donorErased: false,
             receipt: {
               number: '2026-000002',
               issuedOn: '2026-10-20',
