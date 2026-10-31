@@ -45,6 +45,20 @@ describe('Given the administration API', () => {
     expect(received).toEqual(receiptSigningKeys());
   });
 
+  it('when a receipt signing key is withdrawn, then the fresh second factor is posted to the withdrawal of that key and the answer says whether the backend restarts', () => {
+    let received: boolean | undefined;
+    api
+      .withdrawReceiptSigningKey('21fe31df', { secondFactorCode: '123456' })
+      .subscribe((response) => (received = response.restarting));
+
+    const request = http.expectOne('/api/admin/donations/receipt-signing-keys/21fe31df/withdrawal');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ secondFactorCode: '123456' });
+    request.flush({ ...receiptSigningKeys(), restarting: true });
+
+    expect(received).toBe(true);
+  });
+
   it('when the previous sign-in is requested, then it asks the endpoint of the signed-in administrator', () => {
     let received: string | null | undefined;
     api.previousSignIn().subscribe((response) => (received = response.previousSignInAt));

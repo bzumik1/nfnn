@@ -222,6 +222,19 @@
             >
           </li>
         }
+        @if (signingKeysState() === 'ready' && signingKeyWarnings().length > 0) {
+          <li class="attention-item attention-item--danger attention-signing-key-warnings">
+            <span>{{ signingKeyWarningsText() }}</span
+            >&ngsp;
+            <a
+              class="ui-button ui-button--small"
+              routerLink="/sprava/nastaveni"
+              fragment="klic-k-overovacim-qr"
+              i18n="@@admin.home.attention.signingKey.open"
+              >Otevřít nastavení</a
+            >
+          </li>
+        }
         @if (administratorsState() === 'error') {
           <li class="attention-item">
             <span role="alert" i18n="@@admin.home.attention.secondFactor.failed"

@@ -11,6 +11,7 @@ import cz.novanadeje.app.support.CompanyLookupPause;
 import cz.novanadeje.app.support.DatabaseCleaner;
 import cz.novanadeje.app.support.FakeCompanyRegistry;
 import cz.novanadeje.app.support.FakeFioClient;
+import cz.novanadeje.app.support.KeptAsideWithdrawnSeeds;
 import cz.novanadeje.app.support.MutableClock;
 import cz.novanadeje.app.support.RateLimiterWindows;
 import cz.novanadeje.app.support.RecordingMailSender;
@@ -79,14 +80,15 @@ public class CommonStepDefinitions {
         BackupKeyWordDraws.reseed(context.getBean(BackupKeyWordChallenges.class));
         context.getBean(SwitchablePublicBackupKeyPolicy.class).reset();
         context.getBean(SwitchablePublicTestKeyPolicy.class).reset();
+        context.getBean(KeptAsideWithdrawnSeeds.class).reset();
     }
 
-    @When("{int} seconds pass")
+    @When("{int} second(s) pass(es)")
     public void secondsPass(int seconds) {
         clock.advance(Duration.ofSeconds(seconds));
     }
 
-    @When("{int} minutes pass")
+    @When("{int} minute(s) pass(es)")
     public void minutesPass(int minutes) {
         clock.advance(Duration.ofMinutes(minutes));
     }
@@ -112,6 +114,11 @@ public class CommonStepDefinitions {
     public void theProblemTypeEndsWith(String suffix) {
         assertThat(api.lastResponse().getHeaders().getContentType().toString()).startsWith("application/problem+json");
         assertThat(api.lastResponseJson().get("type").asString()).endsWith(suffix);
+    }
+
+    @Then("the problem detail contains {string}")
+    public void theProblemDetailContains(String text) {
+        assertThat(api.lastResponseJson().get("detail").asString()).contains(text);
     }
 
     @Then("the problem lists errors for fields {string} and {string}")

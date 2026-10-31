@@ -25,7 +25,10 @@ const EDGE_ONLY = [
   { method: 'GET', path: '/.well-known/oauth-authorization-server' },
   { method: 'GET', path: '/.well-known/oauth-protected-resource/mcp' },
 ];
+const STATUS_PATH = '/api/donations/receipts/status';
+const STATUS_BODY_LIMIT = 1024;
 const APP_SHELL = ['/', '/overit'];
+const NOT_INDEXED = ['/overit', '/overit/'];
 const CLIENT_ERRORS = '/api/operations/client-errors';
 const CLIENT_ERROR_BODY_LIMIT = 4096;
 const CLIENT_ERROR_REPORT = {
@@ -55,6 +58,7 @@ async function request({ method, path, headers = {}, body }) {
     cacheControl: response.headers.get('cache-control') ?? '',
     edge: response.headers.get(EDGE_HEADER) ?? '',
     setCookie: response.headers.get('set-cookie') ?? '',
+    robots: response.headers.get('x-robots-tag') ?? '',
     etag: response.headers.get('etag') ?? '',
     text,
   };
@@ -161,6 +165,31 @@ if (limited) {
   fail(`POST ${signIn.path} never answered 429 within ${SIGN_IN_ATTEMPTS} sign-ins`);
 }
 
+const statusQuestion = {
+  method: 'POST',
+  path: STATUS_PATH,
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ digest: '0'.repeat(64) }),
+};
+const statusAnswer = await request(statusQuestion);
+seen.add(statusAnswer.status);
+if (statusAnswer.status !== 200 || statusAnswer.cacheControl !== 'no-store') {
+  fail(
+    `POST ${STATUS_PATH} answered ${statusAnswer.status} with Cache-Control "${statusAnswer.cacheControl}", expected 200 and "no-store"`,
+  );
+}
+expectEdgeNoStore(`POST ${STATUS_PATH}`, statusAnswer);
+const oversized = await request({
+  ...statusQuestion,
+  body: JSON.stringify({ digest: '0'.repeat(STATUS_BODY_LIMIT) }),
+});
+if (oversized.status !== 413) {
+  fail(
+    `POST ${STATUS_PATH} with a body over ${STATUS_BODY_LIMIT} bytes answered ${oversized.status}, expected 413 from nginx`,
+  );
+}
+expectEdgeNoStore(`POST ${STATUS_PATH} over ${STATUS_BODY_LIMIT} bytes`, oversized);
+
 const clientError = (body) => ({
   method: 'POST',
   path: CLIENT_ERRORS,
@@ -173,15 +202,15 @@ if (report.status !== 204) {
   fail(`POST ${CLIENT_ERRORS} answered ${report.status} to a valid report, expected 204`);
 }
 expectApiNoStore(`POST ${CLIENT_ERRORS}`, report);
-const oversized = await request(
+const oversizedReport = await request(
   clientError({ ...CLIENT_ERROR_REPORT, padding: 'x'.repeat(CLIENT_ERROR_BODY_LIMIT) }),
 );
-if (oversized.status !== 413) {
+if (oversizedReport.status !== 413) {
   fail(
-    `POST ${CLIENT_ERRORS} answered ${oversized.status} to a body over ${CLIENT_ERROR_BODY_LIMIT} bytes, expected 413 from nginx`,
+    `POST ${CLIENT_ERRORS} answered ${oversizedReport.status} to a body over ${CLIENT_ERROR_BODY_LIMIT} bytes, expected 413 from nginx`,
   );
 }
-expectEdgeNoStore(`POST ${CLIENT_ERRORS} over the body limit`, oversized);
+expectEdgeNoStore(`POST ${CLIENT_ERRORS} over the body limit`, oversizedReport);
 
 for (const probe of EDGE_ONLY) {
   expectEdgeNoStore(`${probe.method} ${probe.path}`, await request(probe));
@@ -193,6 +222,14 @@ for (const path of APP_SHELL) {
     fail(
       `GET ${path} answered ${answer.status} with Cache-Control "${answer.cacheControl}", expected 200 and "no-cache"`,
     );
+  }
+}
+
+for (const path of [...APP_SHELL, '/overit/']) {
+  const answer = await request({ method: 'GET', path });
+  const expected = NOT_INDEXED.includes(path) ? 'noindex' : '';
+  if (answer.robots !== expected) {
+    fail(`GET ${path} answered X-Robots-Tag "${answer.robots}", expected "${expected}"`);
   }
 }
 

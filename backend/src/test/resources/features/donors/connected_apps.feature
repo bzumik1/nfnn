@@ -132,6 +132,7 @@ Feature: An administrator connects an application such as Claude to the administ
       | PUT    | /api/admin/donations/receipt-signatory                              |
       | GET    | /api/admin/donations/receipt-signatures/{id}                        |
       | GET    | /api/admin/donations/receipt-images/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee |
+      | POST   | /api/admin/donations/receipt-signing-keys/21fe31df/withdrawal       |
 
   Scenario: A connected application issues a first receipt and gets it again, but replacing an issued receipt is left to the browser
     Given today is 2026-12-20

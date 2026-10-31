@@ -269,6 +269,13 @@ class TranscriptNormaliserTest {
     }
 
     @Test
+    @DisplayName("Given a path naming a receipt signing key, when its template is taken, then the key id becomes {keyId}, because a key id is a masked value")
+    void should_replace_the_key_id_when_the_template_is_taken_given_a_path_naming_a_receipt_signing_key() {
+        assertThat(TranscriptNormaliser.template("/api/admin/donations/receipt-signing-keys/21fe31df/withdrawal"))
+                .isEqualTo("/api/admin/donations/receipt-signing-keys/{keyId}/withdrawal");
+    }
+
+    @Test
     @DisplayName("Given Spring Boot's error answer, when it is normalised, then its timestamp from the real clock is masked and a timestamp of another object stays")
     void should_mask_the_timestamp_of_boot_error_answer_when_json_is_normalised() {
         TranscriptNormaliser normaliser = new TranscriptNormaliser(Map.of());

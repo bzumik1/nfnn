@@ -16,9 +16,12 @@ import java.time.Duration;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.MatchResult;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -29,6 +32,7 @@ public class ApiTranscriptHooks {
     private static final String SETUP_CODE = "<setup-code>";
     private static final String RECEIPT_SIGNING_KEY_ID = "<key-id>";
     private static final String SIGNATORY_NAME = "<signatory-name>";
+    private static final Pattern KEY_ID_IN_DETAILS = Pattern.compile("(?<![0-9A-Za-z-])[0-9a-f]{8}(?![0-9A-Za-z-])");
     private static final String SIGNING_KEY_PROPERTY = "app.donations.receipt.signing.key";
     private static final int AFTER_EVERY_OTHER_SET_UP = 100_000;
     private static final int AFTER_EVERY_OTHER_TEAR_DOWN = 0;
@@ -90,6 +94,8 @@ public class ApiTranscriptHooks {
                 .forEach(symbol -> known.put(symbol, NUMBERED_VARIABLE_SYMBOL));
         donors.variableSymbolsByAlias().forEach((alias, symbol) -> known.put(symbol, "<vs:" + alias + ">"));
         jdbc.sql("select key_id from receipt_signing_key").query(String.class).list().forEach(keyId -> known.put(keyId, RECEIPT_SIGNING_KEY_ID));
+        receiptSigningKeyIdsIn(jdbc.sql("select details from admin_action where action like '%RECEIPT_SIGNING_KEY%'").query(String.class).list())
+                .forEach(keyId -> known.put(keyId, RECEIPT_SIGNING_KEY_ID));
         donors.everySecondFactorSecret().forEach(secret -> known.put(secret, TranscriptNormaliser.SECRET));
         known.put(ReceiptSignatories.NAME, SIGNATORY_NAME);
         jdbc.sql("select p.name from content_person p join donation_receipt_signatory s on s.person_id = p.id").query(String.class).optional()
@@ -101,6 +107,11 @@ public class ApiTranscriptHooks {
             known.put(code.display(), SETUP_CODE);
         });
         return known;
+    }
+
+    static Set<String> receiptSigningKeyIdsIn(List<String> details) {
+        return details.stream().flatMap(text -> KEY_ID_IN_DETAILS.matcher(text).results().map(MatchResult::group))
+                .collect(Collectors.toUnmodifiableSet());
     }
 
     static Set<String> signingSeedSpellings(String configuredKey) {

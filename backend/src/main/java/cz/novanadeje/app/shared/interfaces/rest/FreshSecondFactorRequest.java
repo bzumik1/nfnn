@@ -1,4 +1,4 @@
-package cz.novanadeje.app.operations.interfaces.rest;
+package cz.novanadeje.app.shared.interfaces.rest;
 
 import cz.novanadeje.app.shared.application.secondfactor.FreshSecondFactorProof;
 import cz.novanadeje.app.shared.application.secondfactor.FreshSecondFactorProof.PasskeyEvidence;
@@ -10,17 +10,17 @@ import jakarta.validation.constraints.Size;
 
 import java.util.Optional;
 
-record BackupKeyRevealRequest(@Pattern(regexp = CODE_SHAPE) String secondFactorCode, @Valid Passkey passkey) {
+public record FreshSecondFactorRequest(@Pattern(regexp = CODE_SHAPE) String secondFactorCode, @Valid Passkey passkey) {
 
-    static final String CODE_SHAPE = "^[0-9]{6}$";
+    public static final String CODE_SHAPE = "^[0-9]{6}$";
 
-    record Passkey(@NotBlank @Size(max = 43) String challenge, @NotNull @Valid Credential credential) {
+    public record Passkey(@NotBlank @Size(max = 43) String challenge, @NotNull @Valid Credential credential) {
     }
 
-    record Credential(@NotBlank @Size(max = 1366) String id, @NotNull @Valid Response response) {
+    public record Credential(@NotBlank @Size(max = 1366) String id, @NotNull @Valid Response response) {
     }
 
-    record Response(
+    public record Response(
             @NotBlank @Size(max = 4096) String clientDataJSON,
             @NotBlank @Size(max = 4096) String authenticatorData,
             @NotBlank @Size(max = 1024) String signature,
@@ -28,11 +28,7 @@ record BackupKeyRevealRequest(@Pattern(regexp = CODE_SHAPE) String secondFactorC
     ) {
     }
 
-    boolean carriesCode() {
-        return secondFactorCode != null;
-    }
-
-    FreshSecondFactorProof toProof() {
+    public FreshSecondFactorProof toProof() {
         Optional<PasskeyEvidence> evidence = Optional.ofNullable(passkey).map(given -> new PasskeyEvidence(given.challenge(), given.credential().id(),
                 given.credential().response().clientDataJSON(), given.credential().response().authenticatorData(),
                 given.credential().response().signature(), given.credential().response().userHandle()));
@@ -41,6 +37,6 @@ record BackupKeyRevealRequest(@Pattern(regexp = CODE_SHAPE) String secondFactorC
 
     @Override
     public String toString() {
-        return "BackupKeyRevealRequest[secondFactorCode=***, passkey=***]";
+        return "FreshSecondFactorRequest[secondFactorCode=***, passkey=***]";
     }
 }

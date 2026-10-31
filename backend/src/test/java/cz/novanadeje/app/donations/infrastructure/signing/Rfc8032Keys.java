@@ -24,6 +24,8 @@ public final class Rfc8032Keys {
     static final String TEST_SHA_ABC_PUBLIC_KEY = "ec172b93ad5e563bf4932c70e1245034c35467ef2efd4d64ebf819683467e2bf";
     static final String TEST_SHA_ABC_KEY_ID = "5f9b247e";
     static final String TEST_SHA_ABC_MESSAGE = "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f";
+    static final String TEST_CTX_SEED = "0305334e381af78f141cb666f6199f57bc3495335a256a95bd2a55bf546663f6";
+    static final String TEST_CTX_KEY_ID = "c07ba992";
     static final String TEST_SHA_ABC_SIGNATURE = "dc2a4459e7369633a52b1bf277839a00201009a3efbf3ecb69bea2186c26b58909351fc9ac90b3ecfdfbc7c66431e0303dca179c138ac17ad9bef1177331a704";
 
     private Rfc8032Keys() {

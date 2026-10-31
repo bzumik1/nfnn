@@ -14,6 +14,7 @@ const TEST_SUPPORT = [
 ];
 const SHARED_CASE_LOADER = 'src/testing/shared-cases.ts';
 const SHARED_CASE_SETUP = 'src/testing/shared-cases-setup.ts';
+const ED25519_FALLBACK = 'src/app/features/donations/verification/noble-ed25519.ts';
 const COMPUTED_IMPORTS_ALLOWED_IN = ['routes'];
 
 const SCOPES = {
@@ -22,6 +23,7 @@ const SCOPES = {
   routes: { files: ['src/**/*.routes.ts'], within: 'app' },
   sharedCaseLoader: { files: [SHARED_CASE_LOADER], within: 'testSupport' },
   sharedCaseSetup: { files: [SHARED_CASE_SETUP], within: 'testSupport' },
+  ed25519Fallback: { files: [ED25519_FALLBACK], within: 'app' },
 };
 
 const TEST_SCOPES = ['testSupport', 'sharedCaseLoader', 'sharedCaseSetup'];
@@ -33,6 +35,15 @@ const CONFINED_IMPORTS = [
     allowedIn: ['sharedCaseLoader'],
     examples: ['ajv', 'ajv/dist/2020'],
     message: 'Read and validate shared cases through src/testing/shared-cases.ts.',
+  },
+  {
+    patterns: ['@noble/curves', '@noble/curves/*', '@noble/hashes', '@noble/hashes/*'],
+    dynamic: '^@noble/(?:curves|hashes)(?:/.*)?$',
+    allowedIn: ['ed25519Fallback'],
+    lazyOnly: true,
+    examples: ['@noble/curves', '@noble/curves/ed25519.js', '@noble/hashes/sha2.js'],
+    message:
+      'The Ed25519 fallback for browsers without it in WebCrypto lives in src/app/features/donations/verification/noble-ed25519.ts.',
   },
   {
     names: NODE_BUILTINS,

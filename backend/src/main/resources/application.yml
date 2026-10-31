@@ -130,6 +130,7 @@ app:
       first-year: ${RECEIPT_FIRST_YEAR:2026}
       signing:
         key: ${RECEIPT_SIGNING_KEY:}
+        withdrawn-key-ids: ${RECEIPT_SIGNING_KEYS_WITHDRAWN:}
   operations:
     backups:
       directory: /backups

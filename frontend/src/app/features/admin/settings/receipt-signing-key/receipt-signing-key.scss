@@ -34,3 +34,25 @@
   gap: var(--space-2) var(--space-3);
   color: var(--color-danger);
 }
+
+.signing-key-warning + .signing-key-warning {
+  margin-top: var(--space-2);
+}
+
+.signing-key-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.signing-key-slow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin-top: var(--space-3);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--color-danger);
+}

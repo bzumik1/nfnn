@@ -119,6 +119,15 @@ class ApiTranscriptsTest {
     }
 
     @Test
+    @DisplayName("Given audit details naming receipt signing keys and a restore id, when the recorder looks for key ids, then it finds the keys and not the first part of the restore id, so a key whose row is gone stays masked")
+    void should_find_the_key_ids_when_audit_details_are_read_given_keys_and_a_restore_id() {
+        assertThat(ApiTranscriptHooks.receiptSigningKeyIdsIn(List.of(
+                "Server převzal klíč k ověřovacím QR 39f713d0 z obnovené zálohy (obnova 019a1b2c-0000-7000-8000-000000000010)",
+                "Server zaregistroval svůj klíč k ověřovacím QR na potvrzeních o daru: 21fe31df")))
+                .containsExactlyInAnyOrder("39f713d0", "21fe31df");
+    }
+
+    @Test
     @DisplayName("Given the baseline, when its source is named, then it is the tag the regeneration checks out")
     void should_name_the_tag_when_the_source_is_named() {
         assertThat(ApiTranscripts.SOURCE).isEqualTo("v2-baseline");

@@ -68,9 +68,20 @@
   font-weight: var(--weight-bold);
 }
 
-.ui-status__icon--warning {
+.ui-status__icon--warning,
+.ui-status__icon--danger {
   background: var(--color-danger-bg);
   color: var(--color-danger);
+}
+
+.ui-status__icon--success {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.ui-status__icon--caution {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
 }
 
 .ui-status__icon--spinner {

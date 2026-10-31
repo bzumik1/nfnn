@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donations.application.receipt;
 
+import cz.novanadeje.app.donations.application.signing.ReceiptSigningKeys;
 import cz.novanadeje.app.donations.domain.donation.Donation;
 import cz.novanadeje.app.donations.domain.donation.DonationId;
 import cz.novanadeje.app.donations.domain.donation.DonationNotFound;
@@ -27,6 +28,8 @@ import cz.novanadeje.app.donations.domain.receipt.Receipts;
 import cz.novanadeje.app.donations.domain.receipt.ReplacedReceipt;
 import cz.novanadeje.app.donations.domain.receipt.Signatory;
 import cz.novanadeje.app.donations.domain.receipt.proof.ReceiptTooLong;
+import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyId;
+import cz.novanadeje.app.donations.domain.signing.ReceiptSigningPaused;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import ch.qos.logback.classic.Level;
@@ -89,9 +92,10 @@ class DonationReceiptIssuerTest {
     private final DonorRecordRepository donorRecords = mock(DonorRecordRepository.class);
     private final ReceiptFreezer freezer = mock(ReceiptFreezer.class);
     private final IssuingSignatory signatories = mock(IssuingSignatory.class);
+    private final ReceiptSigningKeys signingKeys = mock(ReceiptSigningKeys.class);
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
     private final DonationReceiptIssuer issuer = new DonationReceiptIssuer(receipts,
-            new ReceiptRequestReader(donations, donorRecords, new FirstReceiptYear(YEAR_2026)), freezer, signatories, FOUNDATION, events,
+            new ReceiptRequestReader(donations, donorRecords, new FirstReceiptYear(YEAR_2026)), freezer, signatories, signingKeys, FOUNDATION, events,
             Clock.fixed(NOW, ZoneOffset.UTC));
 
     @BeforeEach
@@ -135,6 +139,41 @@ class DonationReceiptIssuerTest {
         assertThat(frozenDocument().number()).isEqualTo(new ReceiptNumber("2027-000001"));
         assertThat(frozenDocument().signatory()).isEqualTo(SIGNATORY);
         assertThat(frozenDocument().foundation()).isEqualTo(FOUNDATION);
+    }
+
+    @Test
+    @DisplayName("Given the server's own signing key withdrawn and not yet replaced, when a single receipt is issued, then it is refused as paused before the donor is locked, nothing is read, numbered or saved and a WARN names the donor and the key")
+    void should_refuse_before_lock_and_warn_when_issued_given_own_key_withdrawn() {
+        when(signingKeys.withdrawnCurrentKeyHeldForIssuing()).thenReturn(Optional.of(new ReceiptSigningKeyId("21fe31df")));
+        ListAppender<ILoggingEvent> lines = issuerLog();
+        try {
+            assertThatThrownBy(() -> issuer.issueForDonation(JANA, MARCH.id(), TODAY)).isInstanceOf(ReceiptSigningPaused.class)
+                    .hasFieldOrPropertyWithValue("code", "donations/receipt-signing-paused");
+        } finally {
+            ((Logger) LoggerFactory.getLogger(DonationReceiptIssuer.class)).detachAppender(lines);
+        }
+
+        verifyNoInteractions(receipts, donations, donorRecords, freezer, signatories);
+        assertThat(lines.list).singleElement().satisfies(line -> {
+            assertThat(line.getLevel()).isEqualTo(Level.WARN);
+            assertThat(line.getFormattedMessage()).isEqualTo("No receipt is issued to donor " + JANA
+                    + ": the receipt signing key 21fe31df of this server is withdrawn and no new seed has replaced it");
+        });
+    }
+
+    @Test
+    @DisplayName("Given the server's own signing key withdrawn and an active receipt certifying the same data, when the yearly receipt is issued again, then it is refused as paused instead of being returned")
+    void should_refuse_returning_active_receipt_when_issued_again_given_own_key_withdrawn() {
+        ReceiptFingerprint same = ReceiptDocumentFactory.fingerprintForYear(jana(), YEAR_2026, List.of(MARCH, JUNE));
+        givenDonationsOfJana(jana(), JUNE, MARCH);
+        when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.of(yearlyReceipt(same, LocaleCode.CS)));
+        when(signingKeys.withdrawnCurrentKeyHeldForIssuing()).thenReturn(Optional.of(new ReceiptSigningKeyId("21fe31df")));
+
+        assertThatThrownBy(() -> issuer.issueForYear(JANA, YEAR_2026, TODAY)).isInstanceOf(ReceiptSigningPaused.class);
+
+        verify(receipts, never()).lockDonor(any());
+        verify(receipts, never()).findActiveForYear(any(), any());
+        verify(receipts, never()).save(any());
     }
 
     @Test
@@ -464,6 +503,18 @@ class DonationReceiptIssuerTest {
         }
 
         @Test
+        @DisplayName("when the server's own signing key is withdrawn and not yet replaced, then both kinds of receipt are refused as paused before the donor is locked and nothing is read, numbered, saved or audited")
+        void should_refuse_before_lock_when_issued_by_administrator_given_own_key_withdrawn() {
+            when(signingKeys.withdrawnCurrentKeyHeldForIssuing()).thenReturn(Optional.of(new ReceiptSigningKeyId("21fe31df")));
+
+            assertThatThrownBy(() -> issuer.issueForYearByAdministrator(petr, BROWSER, JANA, YEAR_2026, TODAY)).isInstanceOf(ReceiptSigningPaused.class);
+            assertThatThrownBy(() -> issuer.issueForDonationByAdministrator(petr, CONNECTED_APPLICATION, JANA, MARCH.id(), TODAY))
+                    .isInstanceOf(ReceiptSigningPaused.class);
+
+            verifyNoInteractions(receipts, donations, donorRecords, freezer, signatories, events);
+        }
+
+        @Test
         @DisplayName("when the donor's record is erased, then it is refused under the lock and nothing is numbered, saved or audited")
         void should_refuse_erased_donor_under_lock_when_issued_by_administrator() {
             DonorRecord erased = jana();
@@ -567,6 +618,13 @@ class DonationReceiptIssuerTest {
             FrozenReceipt frozen = Receipts.frozen(document, signature, portrait);
             return frozen;
         });
+    }
+
+    private static ListAppender<ILoggingEvent> issuerLog() {
+        ListAppender<ILoggingEvent> lines = new ListAppender<>();
+        lines.start();
+        ((Logger) LoggerFactory.getLogger(DonationReceiptIssuer.class)).addAppender(lines);
+        return lines;
     }
 
     private DonationReceipt savedReceipt() {

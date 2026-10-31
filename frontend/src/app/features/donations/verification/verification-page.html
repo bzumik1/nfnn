@@ -1,0 +1,56 @@
+<section class="ui-panel-page" aria-labelledby="verify-title">
+  <div class="ui-panel verify-panel">
+    @switch (page().state) {
+      @case ('checking') {
+        <div class="ui-status">
+          <div class="ui-status__icon ui-status__icon--spinner" aria-hidden="true"></div>
+          <h1
+            id="verify-title"
+            class="ui-panel__title"
+            tabindex="-1"
+            i18n="@@donor.verify.checking.title"
+          >
+            Ověřujeme potvrzení…
+          </h1>
+          <p class="ui-panel__lead" role="status">
+            @if (step() === 'asking-status') {
+              <span i18n="@@donor.verify.checking.askingStatus"
+                >Podpis sedí, ptáme se fondu na stav potvrzení…</span
+              >
+            } @else {
+              <span i18n="@@donor.verify.checking.text"
+                >Kontrolujeme podpis fondu v kódu z potvrzení.</span
+              >
+            }
+          </p>
+        </div>
+      }
+      @case ('empty') {
+        <div class="ui-status">
+          <h1
+            id="verify-title"
+            class="ui-panel__title"
+            tabindex="-1"
+            i18n="@@donor.verify.empty.title"
+          >
+            Ověření potvrzení o daru
+          </h1>
+          <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.empty.text">
+            Každé potvrzení o daru od fondu Nová naděje nese QR kód. Naskenujte ho fotoaparátem
+            telefonu: otevře se tato stránka a ukáže, jaké údaje v kódu fond podepsal. Porovnejte je
+            pak s papírem.
+          </p>
+        </div>
+      }
+      @default {
+        @if (outcome(); as final) {
+          <app-verification-result [outcome]="final" (retry)="retry()" />
+        }
+      }
+    }
+    <p class="verify-domain" i18n="@@donor.verify.domain">
+      Fond ověřuje potvrzení jen na adrese nfnn.cz/overit. Zkontrolujte, že ji máte v adresním řádku
+      prohlížeče.
+    </p>
+  </div>
+</section>

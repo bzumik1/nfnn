@@ -39,6 +39,7 @@ import {
   unpublishedKeyIds,
   unpublishedKeysSentence,
 } from '../settings/receipt-signing-key/unpublished-keys';
+import { signingKeyWarnings } from '../settings/receipt-signing-key/key-warnings';
 
 type SignatoryState = 'loading' | 'ok' | 'missing' | 'unsigned' | 'error';
 type LoadState = 'loading' | 'ready' | 'error';
@@ -138,6 +139,7 @@ export class AdminHome {
   protected readonly backups = signal<AdminBackupsResponse | null>(null);
   protected readonly signingKeysState = signal<LoadState>('loading');
   protected readonly unpublishedSigningKeys = signal<readonly string[]>([]);
+  protected readonly signingKeyWarnings = signal<readonly string[]>([]);
 
   protected readonly backupProblems = computed(() =>
     (this.backups()?.problems ?? []).map((problem) => BACKUP_PROBLEM_HELP[problem]),
@@ -264,8 +266,12 @@ export class AdminHome {
     ['error', 'missing', 'unsigned'].includes(this.signatoryState()),
   );
   protected readonly signingKeysNeedAttention = computed(
-    () => this.signingKeysState() === 'error' || this.unpublishedSigningKeys().length > 0,
+    () =>
+      this.signingKeysState() === 'error' ||
+      this.unpublishedSigningKeys().length > 0 ||
+      this.signingKeyWarnings().length > 0,
   );
+  protected readonly signingKeyWarningsText = computed(() => this.signingKeyWarnings().join(' '));
   protected readonly unpublishedSigningKeysText = computed(() =>
     unpublishedKeysSentence(this.unpublishedSigningKeys()),
   );
@@ -412,6 +418,7 @@ export class AdminHome {
       .subscribe({
         next: (keys) => {
           this.unpublishedSigningKeys.set(unpublishedKeyIds(keys));
+          this.signingKeyWarnings.set(signingKeyWarnings(keys));
           this.signingKeysState.set('ready');
         },
         error: () => this.signingKeysState.set('error'),

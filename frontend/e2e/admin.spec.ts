@@ -411,7 +411,9 @@ test.describe('Given an administrator', () => {
     ).toBeFocused();
     const card = page.getByRole('region', { name: 'Klíč k ověřovacím QR kódům' });
     await expect(card.locator('dd')).toHaveText(['21fe31df', '13. 11. 2026 12:00', 'Nezveřejněný']);
-    await expect(card.getByRole('alert')).toContainText('Klíč 21fe31df není zveřejněný');
+    await expect(card.getByRole('alert').filter({ hasText: /\S/ })).toContainText(
+      'Klíč 21fe31df není zveřejněný',
+    );
   });
 
   test('when the state cannot be loaded, then a retry asks again', async ({ page }) => {

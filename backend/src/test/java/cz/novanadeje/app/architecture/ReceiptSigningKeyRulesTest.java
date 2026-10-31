@@ -11,6 +11,7 @@ import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
 import cz.novanadeje.app.AppApplication;
 import cz.novanadeje.app.donations.application.signing.ReceiptSigningKeyRegistration;
+import cz.novanadeje.app.donations.application.signing.ReceiptSigningKeyWithdrawal;
 import cz.novanadeje.app.donations.application.signing.ReceiptSigningKeys;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKey;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyRepository;
@@ -31,6 +32,7 @@ import java.security.Signature;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.stream.Stream;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
@@ -42,7 +44,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 )
 class ReceiptSigningKeyRulesTest {
 
-    private static final String READ = "findAll";
+    private static final Set<String> READS = Set.of("findAll", "lockForIssuing");
     private static final String PERSISTENCE = "cz.novanadeje.app.donations.infrastructure.persistence.";
     private static final String KEY_ADAPTER = PERSISTENCE + "JpaReceiptSigningKeyRepository";
     private static final Set<String> KEY_PERSISTENCE = Set.of(
@@ -61,8 +63,8 @@ class ReceiptSigningKeyRulesTest {
             .as("the JDK's signing classes");
 
     private static final DescribedPredicate<JavaMethodCall> A_WRITE_OF_THE_KEY_REPOSITORY = DescribedPredicate.describe(
-            "a method of " + ReceiptSigningKeyRepository.class.getSimpleName() + " other than " + READ,
-            call -> !call.getTarget().getName().equals(READ) && call.getTargetOwner().isAssignableTo(ReceiptSigningKeyRepository.class));
+            "a method of " + ReceiptSigningKeyRepository.class.getSimpleName() + " other than " + String.join(" and ", new TreeSet<>(READS)),
+            call -> !READS.contains(call.getTarget().getName()) && call.getTargetOwner().isAssignableTo(ReceiptSigningKeyRepository.class));
 
     private static final DescribedPredicate<JavaClass> THE_KEY_PERSISTENCE = DescribedPredicate.describe(
             "the JPA entities and Spring Data repositories of the receipt signing keys", javaClass -> KEY_PERSISTENCE.contains(javaClass.getName()));
@@ -73,8 +75,9 @@ class ReceiptSigningKeyRulesTest {
             .should().dependOnClassesThat(SIGNING_CRYPTOGRAPHY);
 
     @ArchTest
-    static final ArchRule receipt_signing_keys_are_written_only_by_the_startup_registrar = noClasses()
+    static final ArchRule receipt_signing_keys_are_written_only_by_the_startup_registrar_and_the_web_only_withdrawal = noClasses()
             .that().doNotHaveFullyQualifiedName(ReceiptSigningKeyRegistration.class.getName())
+            .and().doNotHaveFullyQualifiedName(ReceiptSigningKeyWithdrawal.class.getName())
             .should().callMethodWhere(A_WRITE_OF_THE_KEY_REPOSITORY);
 
     @ArchTest
@@ -104,7 +107,7 @@ class ReceiptSigningKeyRulesTest {
         JavaClasses classes = new ClassFileImporter().importClasses(PlantedAdoptionRecorder.class, ReceiptSigningKeyRegistration.class,
                 ReceiptSigningKeys.class, ReceiptSigningKeyRepository.class);
 
-        var result = receipt_signing_keys_are_written_only_by_the_startup_registrar.evaluate(classes);
+        var result = receipt_signing_keys_are_written_only_by_the_startup_registrar_and_the_web_only_withdrawal.evaluate(classes);
 
         assertThat(result.getFailureReport().getDetails()).singleElement().asString().contains(PlantedAdoptionRecorder.class.getSimpleName());
     }
@@ -127,9 +130,20 @@ class ReceiptSigningKeyRulesTest {
         JavaClasses classes = new ClassFileImporter().importClasses(PlantedKeyWriter.class, ReceiptSigningKeyRegistration.class,
                 ReceiptSigningKeyRepository.class);
 
-        var result = receipt_signing_keys_are_written_only_by_the_startup_registrar.evaluate(classes);
+        var result = receipt_signing_keys_are_written_only_by_the_startup_registrar_and_the_web_only_withdrawal.evaluate(classes);
 
         assertThat(result.hasViolation()).isTrue();
+        assertThat(result.getFailureReport().getDetails()).singleElement().asString().contains(PlantedKeyWriter.class.getSimpleName());
+    }
+
+    @Test
+    @DisplayName("Given the registrar and the web-only withdrawal, which both save keys, when the writer rule checks them beside a planted writer, then only the planted writer is reported")
+    void should_admit_registrar_and_withdrawal_when_rule_checks_given_both_save_keys() {
+        JavaClasses classes = new ClassFileImporter().importClasses(PlantedKeyWriter.class, ReceiptSigningKeyRegistration.class,
+                ReceiptSigningKeyWithdrawal.class, ReceiptSigningKeyRepository.class);
+
+        var result = receipt_signing_keys_are_written_only_by_the_startup_registrar_and_the_web_only_withdrawal.evaluate(classes);
+
         assertThat(result.getFailureReport().getDetails()).singleElement().asString().contains(PlantedKeyWriter.class.getSimpleName());
     }
 

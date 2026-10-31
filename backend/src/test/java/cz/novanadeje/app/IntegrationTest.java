@@ -13,7 +13,7 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@SpringBootTest(properties = {"spring.mail.host=localhost", "spring.mail.port=1", "app.build.revision=f00ba12", "app.donations.receipt.first-year=2025"})
+@SpringBootTest(properties = {"spring.jpa.show-sql=false", "spring.mail.host=localhost", "spring.mail.port=1", "app.build.revision=f00ba12", "app.donations.receipt.first-year=2025"})
 @AutoConfigureMockMvc
 @ScheduledWorkOff
 @Import(TestcontainersConfiguration.class)

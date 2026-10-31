@@ -35,6 +35,7 @@ class ApiSecurityConfiguration {
             "/api/admin/donors/*/second-factor/reset",
             "/api/admin/donations/symbol-claims/*/reverse",
             "/api/admin/donations/receipt-signatures/*",
+            "/api/admin/donations/receipt-signing-keys/*/withdrawal",
             "/api/admin/operations/backups/key/reveal",
             "/api/admin/operations/backups/key/confirmation"};
     private static final String[] BROWSER_ONLY_PUTS = {
@@ -56,6 +57,7 @@ class ApiSecurityConfiguration {
                         .requestMatchers(HttpMethod.POST, "/api/operations/client-errors").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/donations/payment-details").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/donations/receipt-keys").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/donations/receipts/status").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/content/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/donors/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/donors/company-lookup").permitAll()
