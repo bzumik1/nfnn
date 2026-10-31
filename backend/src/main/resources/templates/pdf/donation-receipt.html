@@ -312,7 +312,7 @@
 </div>
 
 <div class="signature">
-    <p th:text="${cs.text('receipt.issuedAt', issuePlace, issuedOnCs)}">V Novém Boru, dne</p>
+    <p th:text="${cs.text('receipt.issuedAt', issuePlace, issuedOnCs)}">V Novém Boru dne</p>
     <p class="en" th:if="${bilingual}" th:text="${en.text('receipt.issuedAt', issuePlaceEn, issuedOnEn)}">In Nový Bor, on</p>
     <p th:text="${cs.text('receipt.signature.for', foundationName)}">Za</p>
     <p class="en" th:if="${bilingual}" th:text="${en.text('receipt.signature.for', foundationName)}">For</p>
