@@ -102,7 +102,11 @@ describe('Given the ways to read a receipt code on the verification page', () =>
   }
 
   function statusText(): string {
-    return element().querySelector('[role="status"]')?.textContent?.trim() ?? '';
+    return Array.from(element().querySelectorAll('[role="status"]'), (line) =>
+      line.textContent?.trim(),
+    )
+      .filter(Boolean)
+      .join(' ');
   }
 
   async function settle(): Promise<void> {
@@ -204,6 +208,9 @@ describe('Given the ways to read a receipt code on the verification page', () =>
         'Tento QR kód nepatří k potvrzení fondu Nová naděje. Načtěte kód z potvrzení o daru.',
       );
       expect(device.track.stopped).toBe(false);
+      expect(
+        element().querySelector('[aria-labelledby="proof-camera-title"] [role="alert"]'),
+      ).not.toBeNull();
 
       reader.answers = [[FOREIGN, LINK]];
       await vi.advanceTimersByTimeAsync(SCAN_INTERVAL_MS);
@@ -299,6 +306,9 @@ describe('Given the ways to read a receipt code on the verification page', () =>
       await choose(pdfFile('https://example.org'));
 
       expect(found).toEqual([]);
+      expect(
+        element().querySelector('[aria-labelledby="proof-file-title"] [role="alert"]'),
+      ).not.toBeNull();
       expect(alertText()).toBe(
         'V tomto PDF jsme ověřovací kód nenašli. Nahrajte PDF potvrzení tak, jak jste ho stáhli z webu fondu, nebo načtěte jeho QR kód.',
       );

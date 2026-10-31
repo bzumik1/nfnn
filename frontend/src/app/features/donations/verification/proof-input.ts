@@ -30,6 +30,13 @@ export const LARGEST_FILE_BYTES = 20 * 1024 * 1024;
 
 type Scan = 'idle' | 'starting' | 'scanning';
 
+type Way = 'camera' | 'file';
+
+interface Problem {
+  readonly way: Way;
+  readonly text: string;
+}
+
 const PDF_TYPE = 'application/pdf';
 const PDF_NAME = /\.pdf$/i;
 
@@ -75,7 +82,7 @@ export class ProofInput {
   protected readonly hasCamera = this.device.hasCamera();
   protected readonly scan = signal<Scan>('idle');
   protected readonly reading = signal(false);
-  protected readonly problem = signal<string | null>(null);
+  protected readonly problem = signal<Problem | null>(null);
   protected link = '';
   protected readonly linkMessages: FieldMessages = {
     required: $localize`:@@donor.verify.input.linkRequired:Vložte odkaz z QR kódu potvrzení.`,
@@ -102,7 +109,7 @@ export class ProofInput {
     } catch (failure: unknown) {
       if (run === this.scanRun) {
         this.scan.set('idle');
-        this.problem.set(cameraProblem(failure));
+        this.problem.set({ way: 'camera', text: cameraProblem(failure) });
       }
       return;
     }
@@ -125,6 +132,11 @@ export class ProofInput {
     );
   }
 
+  protected problemOf(way: Way): string | null {
+    const problem = this.problem();
+    return problem?.way === way ? problem.text : null;
+  }
+
   protected stopScan(): void {
     this.stopCamera();
     this.focusScanButton();
@@ -133,7 +145,7 @@ export class ProofInput {
   protected async readFile(file: File): Promise<void> {
     this.problem.set(null);
     if (file.size > LARGEST_FILE_BYTES) {
-      this.problem.set(FILE_TOO_LARGE);
+      this.problem.set({ way: 'file', text: FILE_TOO_LARGE });
       return;
     }
     this.reading.set(true);
@@ -147,12 +159,12 @@ export class ProofInput {
       try {
         image = await this.device.picture(file);
       } catch {
-        this.problem.set(FILE_UNREADABLE);
+        this.problem.set({ way: 'file', text: FILE_UNREADABLE });
         return;
       }
       this.handOverCodes(await this.reader.read(image), PICTURE_WITHOUT_CODE);
     } catch {
-      this.problem.set(FILE_UNREADABLE);
+      this.problem.set({ way: 'file', text: FILE_UNREADABLE });
     } finally {
       this.reading.set(false);
     }
@@ -191,11 +203,11 @@ export class ProofInput {
       return;
     }
     if (codes.length > 0) {
-      this.problem.set(FOREIGN_CODE);
+      this.problem.set({ way: 'camera', text: FOREIGN_CODE });
     }
     if (attempt >= SCAN_ATTEMPTS) {
       this.stopCamera();
-      this.problem.set(SCAN_GAVE_UP);
+      this.problem.set({ way: 'camera', text: SCAN_GAVE_UP });
       return;
     }
     this.nextFrame(run, attempt);
@@ -208,7 +220,7 @@ export class ProofInput {
 
   private handOver(fragment: string | null, otherwise: string): void {
     if (fragment === null) {
-      this.problem.set(otherwise);
+      this.problem.set({ way: 'file', text: otherwise });
       return;
     }
     this.found.emit(fragment);

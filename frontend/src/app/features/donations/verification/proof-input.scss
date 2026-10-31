@@ -47,16 +47,11 @@
   justify-self: stretch;
 }
 
-.proof-status:empty {
-  display: none;
-}
-
 .proof-status {
-  margin-top: var(--space-4);
   color: var(--color-text-soft);
   font-size: var(--text-sm);
 }
 
-.proof-problem {
-  margin-top: var(--space-4);
+.proof-status:empty {
+  display: none;
 }

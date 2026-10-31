@@ -35,6 +35,18 @@
           Naskenovat QR kód
         </button>
       }
+      <p class="proof-status" role="status">
+        @if (scan() === 'scanning') {
+          <span i18n="@@donor.verify.input.scanning"
+            >Namiřte fotoaparát na QR kód z potvrzení.</span
+          >
+        } @else if (scan() === 'starting') {
+          <span i18n="@@donor.verify.input.starting">Spouštíme fotoaparát…</span>
+        }
+      </p>
+      @if (problemOf('camera'); as text) {
+        <p class="ui-callout ui-callout--warning proof-problem" role="alert">{{ text }}</p>
+      }
     </section>
   }
 
@@ -54,6 +66,14 @@
       (chosen)="readFile($event)"
       ><span i18n="@@donor.verify.input.file">Nahrát PDF nebo fotku</span></app-file-button
     >
+    <p class="proof-status" role="status">
+      @if (reading()) {
+        <span i18n="@@donor.verify.input.reading">Čteme kód ze souboru…</span>
+      }
+    </p>
+    @if (problemOf('file'); as text) {
+      <p class="ui-callout ui-callout--warning proof-problem" role="alert">{{ text }}</p>
+    }
   </section>
 
   <section class="proof-way" aria-labelledby="proof-link-title">
@@ -99,16 +119,3 @@
     </form>
   </section>
 </div>
-
-<p class="proof-status" role="status">
-  @if (scan() === 'scanning') {
-    <span i18n="@@donor.verify.input.scanning">Namiřte fotoaparát na QR kód z potvrzení.</span>
-  } @else if (scan() === 'starting') {
-    <span i18n="@@donor.verify.input.starting">Spouštíme fotoaparát…</span>
-  } @else if (reading()) {
-    <span i18n="@@donor.verify.input.reading">Čteme kód ze souboru…</span>
-  }
-</p>
-@if (problem(); as text) {
-  <p class="ui-callout ui-callout--warning proof-problem" role="alert">{{ text }}</p>
-}
