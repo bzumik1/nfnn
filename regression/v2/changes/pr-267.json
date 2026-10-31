@@ -5,5 +5,12 @@
     "test": "src/app/layout/site-header/site-header.spec.ts > Given the site header on the pages of news and projects > when the list of projects is open, then Projekty leads to the list and is marked, also in the phone menu",
     "reason": "Jakub 2026-10-31 (\"Přejmenuj to všude, projekty zní hůř než Kde pomáháme\"): the menu item of the projects reads Kde pomáháme, so the test names it so",
     "replacement": "src/app/layout/site-header/site-header.spec.ts > Given the site header on the pages of news and projects > when the list of projects is open, then Kde pomáháme leads to the list and is marked, also in the phone menu"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/accessibility-keyboard.spec.ts > Given a visitor whose browser shows text twice as large on a computer > when they open the home page, then every header link stays on one line inside the header",
+    "reason": "Jakub 2026-10-31 renamed the menu item Projekty to Kde pomáháme; at twice the text size the header links no longer fit 1 280 px, so the header now gives way to its menu button by the root text size (bp.container-down), and the test checks that the menu shows every link on screen, with the one-line header kept at the usual text size",
+    "replacement": "e2e/accessibility-keyboard.spec.ts > Given a visitor whose browser shows text twice as large on a computer > when they open the home page, then the header links that no longer fit move into the menu, which shows every one of them on screen"
   }
 ]
