@@ -111,6 +111,28 @@ Feature: The database is restored from a backup in the browser: by an administra
     And the uploaded backup waits in the restore folder beside the key "AGE-SECRET-KEY-1R45A984EXXAFC85YZSYGY9R6XJTD4E9AKY65ZCRGPDQ89E7ANW8QKT6GWH"
     And the backend restarts once
 
+  Scenario: Outside development a backup that comes with the public development key is refused, also as its 24 words, and nothing is kept
+    Given the backend runs outside development
+    And the requests come directly from the home network
+    When an encrypted backup is uploaded in the first setup with the public development backup key
+    Then the response status is 400
+    And the problem type ends with "operations/public-backup-key"
+    When an encrypted backup is uploaded in the first setup with the 24 words of the public development backup key
+    Then the response status is 400
+    And the problem type ends with "operations/public-backup-key"
+    And the restore folder holds no upload
+    And no restore request waits for the backup container
+    And the backend does not restart
+    When an encrypted backup is uploaded in the first setup with the key "AGE-SECRET-KEY-1R45A984EXXAFC85YZSYGY9R6XJTD4E9AKY65ZCRGPDQ89E7ANW8QKT6GWH"
+    Then the response status is 202
+    And the uploaded backup waits in the restore folder beside the key "AGE-SECRET-KEY-1R45A984EXXAFC85YZSYGY9R6XJTD4E9AKY65ZCRGPDQ89E7ANW8QKT6GWH"
+
+  Scenario: In development a backup that comes with the public development key is taken like any other
+    Given the requests come directly from the home network
+    When an encrypted backup is uploaded in the first setup with the public development backup key
+    Then the response status is 202
+    And the uploaded backup waits in the restore folder beside the public development backup key
+
   Scenario: Through the proxy the upload needs the code from the container log, and after the setup it is closed
     Given the requests come through the proxy
     When a backup of 4096 bytes is uploaded in the first setup

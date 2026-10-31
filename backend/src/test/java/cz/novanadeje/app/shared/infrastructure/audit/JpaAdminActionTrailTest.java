@@ -13,6 +13,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Instant;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -75,5 +76,18 @@ class JpaAdminActionTrailTest {
         assertThat(trail.countPerformedSince(admin, "PAIR_PAYMENT", AT.plusSeconds(1))).isEqualTo(1);
         assertThat(trail.countPerformedSince(admin, "UNPAIR_PAYMENT", AT.plusSeconds(61))).isZero();
         assertThat(trail.countPerformedSince(UUID.randomUUID(), "PAIR_PAYMENT", AT)).isZero();
+    }
+
+    @Test
+    @DisplayName("Given stored actions of several kinds, when the actions of some kinds are read, then all of those kinds come oldest first and no other")
+    void should_list_oldest_first_when_read_by_actions_given_several_kinds() {
+        transactions.executeWithoutResult(status ->
+                events.publishEvent(new AdminActionPerformed(admin, "PAIR_PAYMENT", Optional.empty(), "fourth", AT.plusSeconds(180))));
+
+        var entries = trail.findByActions(Set.of("PAIR_PAYMENT", "GRANT_ADMINISTRATION")).stream()
+                .filter(entry -> entry.adminId().equals(admin)).toList();
+
+        assertThat(entries).extracting(AdminActionEntry::details).containsExactly("first", "third", "fourth");
+        assertThat(trail.findByActions(Set.of("NO_SUCH_ACTION"))).isEmpty();
     }
 }

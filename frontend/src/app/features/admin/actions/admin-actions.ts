@@ -42,6 +42,7 @@ const ACTION_NAMES: Record<string, string> = {
   SEND_MONTHLY_REPORT: $localize`:@@admin.actions.action.sendMonthlyReport:Ruční odeslání měsíčního přehledu`,
   CHANGE_RECEIPT_SIGNATURE: $localize`:@@admin.actions.action.changeReceiptSignature:Nahrání podpisu na potvrzení o daru`,
   REMOVE_RECEIPT_SIGNATURE: $localize`:@@admin.actions.action.removeReceiptSignature:Odebrání podpisu z potvrzení o daru`,
+  ISSUE_RECEIPT: $localize`:@@admin.actions.action.issueReceipt:Vystavení potvrzení o daru`,
   CHANGE_ABOUT_PHOTO: $localize`:@@admin.actions.action.changeAboutPhoto:Nastavení fotky v sekci O nás`,
   REMOVE_ABOUT_PHOTO: $localize`:@@admin.actions.action.removeAboutPhoto:Odebrání fotky ze sekce O nás`,
   ADD_PERSON: $localize`:@@admin.actions.action.addPerson:Přidání osoby mezi lidi fondu`,
@@ -49,6 +50,7 @@ const ACTION_NAMES: Record<string, string> = {
   REMOVE_PERSON: $localize`:@@admin.actions.action.removePerson:Odebrání osoby z lidí fondu`,
   ORDER_PEOPLE: $localize`:@@admin.actions.action.orderPeople:Změna pořadí lidí fondu`,
   CHANGE_FOUNDERS_NOTE: $localize`:@@admin.actions.action.changeFoundersNote:Úprava slova zakladatelů`,
+  CHANGE_PEOPLE_FOOTNOTE: $localize`:@@admin.actions.action.changePeopleFootnote:Úprava řádku pod správní radou`,
   CHANGE_WEB_SIGNATURE: $localize`:@@admin.actions.action.changeWebSignature:Nahrání podpisu pro web`,
   REMOVE_WEB_SIGNATURE: $localize`:@@admin.actions.action.removeWebSignature:Odebrání podpisu z webu`,
   CREATE_NEWS: $localize`:@@admin.actions.action.createNews:Napsání aktuality`,
@@ -60,6 +62,7 @@ const ACTION_NAMES: Record<string, string> = {
   UPDATE_PROJECT: $localize`:@@admin.actions.action.updateProject:Úprava projektu`,
   PUBLISH_PROJECT: $localize`:@@admin.actions.action.publishProject:Zveřejnění projektu`,
   UNPUBLISH_PROJECT: $localize`:@@admin.actions.action.unpublishProject:Stažení projektu z webu`,
+  CHANGE_PROJECT_ORDER: $localize`:@@admin.actions.action.changeProjectOrder:Změna řazení projektů`,
   DELETE_PROJECT: $localize`:@@admin.actions.action.deleteProject:Smazání projektu`,
   CHANGE_BACKUP_SCHEDULE: $localize`:@@admin.actions.action.changeBackupSchedule:Změna plánu záloh`,
   REQUEST_BACKUP: $localize`:@@admin.actions.action.requestBackup:Spuštění zálohy databáze`,
@@ -71,7 +74,13 @@ const ACTION_NAMES: Record<string, string> = {
   CHANGE_LOG_LEVEL: $localize`:@@admin.actions.action.changeLogLevel:Dočasná změna úrovně logování`,
   RESET_LOG_LEVEL: $localize`:@@admin.actions.action.resetLogLevel:Vrácení úrovně logování`,
   CHANGE_SETTINGS: $localize`:@@admin.actions.action.changeSettings:Změna nastavení webu`,
+  REGISTER_RECEIPT_SIGNING_KEY: $localize`:@@admin.actions.action.registerReceiptSigningKey:Registrace klíče k ověřovacím QR kódům`,
+  ADOPT_RECEIPT_SIGNING_KEY: $localize`:@@admin.actions.action.adoptReceiptSigningKey:Převzetí klíče k ověřovacím QR kódům ze zálohy`,
+  WITHDRAW_RECEIPT_SIGNING_KEY: $localize`:@@admin.actions.action.withdrawReceiptSigningKey:Stažení klíče k ověřovacím QR kódům`,
+  WITHDRAW_RECEIPT_SIGNING_KEY_REFUSED: $localize`:@@admin.actions.action.withdrawReceiptSigningKeyRefused:Odmítnuté stažení klíče k ověřovacím QR kódům`,
 };
+
+const SERVER_ACTOR = '00000000-0000-0000-0000-000000000000';
 
 @Component({
   selector: 'app-admin-actions',
@@ -150,6 +159,10 @@ export class AdminActions {
 
   protected performedAt(item: AdminActionResponse): string {
     return formatBankTime(item.performedAt);
+  }
+
+  protected byServer(item: AdminActionResponse): boolean {
+    return item.adminId === SERVER_ACTOR;
   }
 
   protected actionName(item: AdminActionResponse): string {

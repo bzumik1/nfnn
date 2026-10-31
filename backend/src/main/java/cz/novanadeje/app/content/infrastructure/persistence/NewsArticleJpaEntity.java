@@ -4,6 +4,7 @@ import cz.novanadeje.app.content.domain.media.MediaId;
 import cz.novanadeje.app.content.domain.news.NewsArticle;
 import cz.novanadeje.app.content.domain.news.NewsArticleId;
 import cz.novanadeje.app.content.domain.news.NewsContent;
+import cz.novanadeje.app.content.domain.people.PersonId;
 import cz.novanadeje.app.content.domain.Slug;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -43,6 +44,9 @@ class NewsArticleJpaEntity {
     @Column(name = "cover_image_alt", length = NewsContent.MAX_COVER_IMAGE_ALT_LENGTH)
     private String coverImageAlt;
 
+    @Column(name = "signer_person_id")
+    private UUID signerPersonId;
+
     @Column(name = "published_on")
     private LocalDate publishedOn;
 
@@ -65,6 +69,7 @@ class NewsArticleJpaEntity {
         entity.body = article.content().body();
         entity.coverMediaId = article.content().coverImage().map(MediaId::value).orElse(null);
         entity.coverImageAlt = article.content().coverImageAlt().orElse(null);
+        entity.signerPersonId = article.content().signer().map(PersonId::value).orElse(null);
         entity.publishedOn = article.publishedOn().orElse(null);
         entity.createdAt = article.createdAt();
         entity.updatedAt = article.updatedAt();
@@ -73,7 +78,7 @@ class NewsArticleJpaEntity {
 
     NewsArticle toDomain() {
         NewsContent content = new NewsContent(new Slug(slug), title, Optional.ofNullable(tag), perex, body,
-                Optional.ofNullable(coverMediaId).map(MediaId::new), Optional.ofNullable(coverImageAlt));
+                Optional.ofNullable(coverMediaId).map(MediaId::new), Optional.ofNullable(coverImageAlt), Optional.ofNullable(signerPersonId).map(PersonId::new));
         return new NewsArticle(new NewsArticleId(id), content, Optional.ofNullable(publishedOn), createdAt, updatedAt);
     }
 }

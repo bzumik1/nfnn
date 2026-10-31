@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donations.interfaces.rest;
 
 import cz.novanadeje.app.donations.application.admin.AdminDonorView;
+import cz.novanadeje.app.donations.application.receipt.ReceiptYears;
 import cz.novanadeje.app.donations.domain.donation.DonationId;
 import cz.novanadeje.app.donations.domain.donation.DonationPurpose;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
@@ -16,13 +17,15 @@ import java.util.UUID;
 import java.util.function.Function;
 
 record AdminDonorDetailResponse(AdminDonorRecordResponse donor, List<BankAccountListResponse.BankAccountItemResponse> bankAccounts,
-                                DonationListResponse donations, List<ReceiptItemResponse> receipts) {
+                                DonationListResponse donations, List<ReceiptItemResponse> receipts, int yearlyReceiptsAvailableThrough,
+                                int receiptsAvailableFrom) {
 
-    static AdminDonorDetailResponse from(AdminDonorView view, Function<DonationPurpose, String> purposeText) {
+    static AdminDonorDetailResponse from(AdminDonorView view, ReceiptYears receiptYears, Function<DonationPurpose, String> purposeText) {
         return new AdminDonorDetailResponse(AdminDonorRecordResponse.from(view.record()),
                 view.bankAccounts().stream().map(BankAccountListResponse.BankAccountItemResponse::from).toList(),
                 DonationListResponse.from(view.donations(), purposeText),
-                view.receipts().stream().map(receipt -> ReceiptItemResponse.from(receipt, view.receivedOn(receipt).orElse(null))).toList());
+                view.receipts().stream().map(receipt -> ReceiptItemResponse.from(receipt, view.receivedOn(receipt).orElse(null))).toList(),
+                receiptYears.lastCompleted().getValue(), receiptYears.first().getValue());
     }
 
     record AdminDonorRecordResponse(UUID donorId, String name, DonorType type, String variableSymbol, String companyIdentifier,

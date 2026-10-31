@@ -77,7 +77,11 @@ final class BackupKeySettingsKeyCarrier implements SettingsKeyCarrier {
         return unwrap(carried).map(key -> AesGcmSecretSealer.fromKey(Base64.getEncoder().encodeToString(key)));
     }
 
-    private Optional<byte[]> unwrap(CarriedSettingsKey carried) {
+    Optional<byte[]> settingsKey() {
+        return settingsKey.map(byte[]::clone);
+    }
+
+    Optional<byte[]> unwrap(CarriedSettingsKey carried) {
         if (wrappingKey.isEmpty() || !carried.wrapped().startsWith(VERSION)) {
             return Optional.empty();
         }

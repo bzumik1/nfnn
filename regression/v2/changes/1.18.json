@@ -1,0 +1,495 @@
+[
+  {
+    "path": "PUT /api/admin/donations/report/settings #1",
+    "scenario": "donations/admin_monthly_report: Settings with a malformed address, a day outside every month, an hour outside the day or no section are refused*",
+    "kind": "body",
+    "field": "$.type",
+    "reason": "1.18 (security.md, Output): a recipient that is no e-mail address is a domain problem of its own (donations/report-recipient-invalid) instead of an IllegalArgumentException answered as validation",
+    "contract": "docs/api-contract.md, Monthly report settings and overview"
+  },
+  {
+    "path": "PUT /api/admin/donations/report/settings #1",
+    "scenario": "donations/admin_monthly_report: Settings with a malformed address, a day outside every month, an hour outside the day or no section are refused*",
+    "kind": "body",
+    "field": "$.title",
+    "reason": "1.18: the title of donations/report-recipient-invalid (Příjemce přehledu není e-mailová adresa) replaces the generic Neplatné údaje",
+    "contract": "docs/api-contract.md, Monthly report settings and overview"
+  },
+  {
+    "path": "PUT /api/admin/donations/report/settings #1",
+    "scenario": "donations/admin_monthly_report: Settings with a malformed address, a day outside every month, an hour outside the day or no section are refused*",
+    "kind": "body",
+    "field": "$.detail",
+    "reason": "1.18 (security.md, Output): v2 answered the exception's English text with the client's own value (Email address is not valid: pavel); the detail is now the problem's Czech text",
+    "contract": "docs/api-contract.md, Conventions (Problem texts)"
+  },
+  {
+    "path": "PUT /api/admin/donations/report/settings #5",
+    "scenario": "donations/admin_monthly_report: Settings with a malformed address, a day outside every month, an hour outside the day or no section are refused*",
+    "kind": "body",
+    "field": "$.type",
+    "reason": "1.18 (security.md, Output): a report without a section is a domain problem of its own (donations/report-section-required) instead of an IllegalArgumentException answered as validation",
+    "contract": "docs/api-contract.md, Monthly report settings and overview"
+  },
+  {
+    "path": "PUT /api/admin/donations/report/settings #5",
+    "scenario": "donations/admin_monthly_report: Settings with a malformed address, a day outside every month, an hour outside the day or no section are refused*",
+    "kind": "body",
+    "field": "$.title",
+    "reason": "1.18: the title of donations/report-section-required (Přehled nemá žádnou část) replaces the generic Neplatné údaje",
+    "contract": "docs/api-contract.md, Monthly report settings and overview"
+  },
+  {
+    "path": "PUT /api/admin/donations/report/settings #5",
+    "scenario": "donations/admin_monthly_report: Settings with a malformed address, a day outside every month, an hour outside the day or no section are refused*",
+    "kind": "body",
+    "field": "$.detail",
+    "reason": "1.18 (security.md, Output): v2 answered the exception's English text (The report has at least one section); the detail is now the problem's Czech text",
+    "contract": "docs/api-contract.md, Conventions (Problem texts)"
+  },
+  {
+    "path": "POST /api/operations/setup",
+    "scenario": "operations/first_setup: Settings that belong only to the administration are refused in the setup*",
+    "kind": "body",
+    "field": "$.type",
+    "reason": "1.18 (security.md, Output): a setting the first setup does not take answers operations/invalid-settings instead of an IllegalArgumentException answered as validation",
+    "contract": "docs/api-contract.md, Settings and the first setup"
+  },
+  {
+    "path": "POST /api/operations/setup",
+    "scenario": "operations/first_setup: Settings that belong only to the administration are refused in the setup*",
+    "kind": "body",
+    "field": "$.title",
+    "reason": "1.18: the title of operations/invalid-settings (Nastavení nejde uložit) replaces the generic Neplatné údaje",
+    "contract": "docs/api-contract.md, Settings and the first setup"
+  },
+  {
+    "path": "POST /api/operations/setup",
+    "scenario": "operations/first_setup: Settings that belong only to the administration are refused in the setup*",
+    "kind": "body",
+    "field": "$.detail",
+    "reason": "1.18 (security.md, Output): v2 answered the exception's English text (Only settings of the first setup are set here); the detail is now the problem's Czech text",
+    "contract": "docs/api-contract.md, Settings and the first setup"
+  },
+  {
+    "path": "POST /api/operations/setup",
+    "scenario": "operations/first_setup: Settings that belong only to the administration are refused in the setup*",
+    "kind": "added",
+    "field": "$.errors",
+    "reason": "1.18: the refusal names the setting as an operations/invalid-settings error not-in-setup",
+    "contract": "docs/api-contract.md, Settings and the first setup"
+  },
+  {
+    "path": "DELETE /api/admin/donors/administrators/{id}",
+    "scenario": "donors/admin_administrators: An unknown donor cannot be removed*",
+    "kind": "body",
+    "field": "$.detail",
+    "reason": "1.18 (security.md, Output): donors/donor-not-found had no detail text, so v2 answered the exception's message with the requested id (Donor <id> does not exist); it now has its Czech and English detail, and a code without texts never falls back to the exception's message",
+    "contract": "docs/api-contract.md, Conventions (Problem texts)"
+  },
+  {
+    "path": "DELETE /api/admin/donors/{id}",
+    "scenario": "donors/admin_donor_erasure: An unknown donor cannot be erased*",
+    "kind": "body",
+    "field": "$.detail",
+    "reason": "1.18 (security.md, Output): donors/donor-not-found gets its own detail instead of the exception's message with the requested id",
+    "contract": "docs/api-contract.md, Conventions (Problem texts)"
+  },
+  {
+    "path": "GET /api/admin/donors/{id}",
+    "scenario": "donors/admin_donors: An unknown donor has no card*",
+    "kind": "body",
+    "field": "$.detail",
+    "reason": "1.18 (security.md, Output): donors/donor-not-found gets its own detail instead of the exception's message with the requested id",
+    "contract": "docs/api-contract.md, Conventions (Problem texts)"
+  },
+  {
+    "path": "POST /api/donors/oauth/token",
+    "scenario": "donors/connected_apps: An administrator approves the connection and the application gets tokens for the connector only*",
+    "kind": "body",
+    "field": "$.error_description",
+    "reason": "1.18 (security.md, Output): error_description is a fixed English sentence per error code (RFC 6749 allows only ASCII there) instead of the exception's text, which named the reason and, for invalid_target, repeated the client's resource",
+    "contract": "docs/api-contract.md, Connected applications (POST /api/donors/oauth/token)"
+  },
+  {
+    "path": "POST /api/donors/oauth/token",
+    "scenario": "donors/connected_apps: The code works once, only with its verifier, its client and its redirect address, and only for five minutes*",
+    "kind": "body",
+    "field": "$.error_description",
+    "reason": "1.18 (security.md, Output): error_description is a fixed English sentence per error code (RFC 6749 allows only ASCII there) instead of the exception's text, which named the reason and, for invalid_target, repeated the client's resource",
+    "contract": "docs/api-contract.md, Connected applications (POST /api/donors/oauth/token)"
+  },
+  {
+    "path": "POST /api/donors/oauth/token",
+    "scenario": "donors/connected_apps: The application refreshes its tokens and a replayed refresh token ends every session of the administrator*",
+    "kind": "body",
+    "field": "$.error_description",
+    "reason": "1.18 (security.md, Output): error_description is a fixed English sentence per error code (RFC 6749 allows only ASCII there) instead of the exception's text, which named the reason and, for invalid_target, repeated the client's resource",
+    "contract": "docs/api-contract.md, Connected applications (POST /api/donors/oauth/token)"
+  },
+  {
+    "path": "POST /api/donors/oauth/token",
+    "scenario": "donors/connected_apps: A refresh token is tied to its client and the connector's refresh token is no browser session*",
+    "kind": "body",
+    "field": "$.error_description",
+    "reason": "1.18 (security.md, Output): error_description is a fixed English sentence per error code (RFC 6749 allows only ASCII there) instead of the exception's text, which named the reason and, for invalid_target, repeated the client's resource",
+    "contract": "docs/api-contract.md, Connected applications (POST /api/donors/oauth/token)"
+  },
+  {
+    "path": "POST /api/donors/oauth/token",
+    "scenario": "donors/connected_apps: The administrator disconnects the application, which can no longer refresh*",
+    "kind": "body",
+    "field": "$.error_description",
+    "reason": "1.18 (security.md, Output): error_description is a fixed English sentence per error code (RFC 6749 allows only ASCII there) instead of the exception's text, which named the reason and, for invalid_target, repeated the client's resource",
+    "contract": "docs/api-contract.md, Connected applications (POST /api/donors/oauth/token)"
+  },
+  {
+    "path": "POST /api/donors/oauth/token",
+    "scenario": "donors/connected_apps: Only a connector token is exchanged, and only for the API*",
+    "kind": "body",
+    "field": "$.error_description",
+    "reason": "1.18 (security.md, Output): error_description is a fixed English sentence per error code (RFC 6749 allows only ASCII there) instead of the exception's text, which named the reason and, for invalid_target, repeated the client's resource",
+    "contract": "docs/api-contract.md, Connected applications (POST /api/donors/oauth/token)"
+  },
+  {
+    "path": "POST /api/donors/oauth/token",
+    "scenario": "donors/connected_apps: An administrator who loses the role loses the connection too*",
+    "kind": "body",
+    "field": "$.error_description",
+    "reason": "1.18 (security.md, Output): error_description is a fixed English sentence per error code (RFC 6749 allows only ASCII there) instead of the exception's text, which named the reason and, for invalid_target, repeated the client's resource",
+    "contract": "docs/api-contract.md, Connected applications (POST /api/donors/oauth/token)"
+  },
+  {
+    "path": "POST /api/admin/donors/administrators #1",
+    "scenario": "donors/admin_administrators: A blank e-mail is refused before any lookup*",
+    "kind": "body",
+    "field": "$.errors[0].message",
+    "reason": "1.18 (frontend.md, error at the field in its own words): the e-mail shape of EmailAddress names the site's message {donors.email.invalid} (Zadejte e-mail ve tvaru jmeno@domena.cz.) instead of the validator's text with the regular expression, as the registration e-mail does",
+    "contract": "docs/api-contract.md, Conventions (Problem texts)"
+  },
+  {
+    "path": "POST /api/donors/me/email-change #3",
+    "scenario": "donors/donor_credentials: The current address, a wrong password and a malformed address are refused without sending anything*",
+    "kind": "body",
+    "field": "$.errors[0].message",
+    "reason": "1.18 (frontend.md, error at the field in its own words): the e-mail shape of EmailAddress names the site's message {donors.email.invalid} (Zadejte e-mail ve tvaru jmeno@domena.cz.) instead of the validator's text with the regular expression, as the registration e-mail does",
+    "contract": "docs/api-contract.md, Conventions (Problem texts)"
+  },
+  {
+    "path": "POST /api/donors/me/email-change #3",
+    "scenario": "donors/donor_credentials: The current address, a wrong password and a malformed address are refused without sending anything*",
+    "kind": "body",
+    "field": "$.errors",
+    "reason": "1.18 (frontend.md, error at the field in its own words): the address fails both @Email and the EmailAddress shape, which now name the same message {donors.email.invalid}, and the answer lists a field's message once, so the two errors of v2 (the validator's @Email text and its @Pattern text with the regular expression) become one",
+    "contract": "docs/api-contract.md, Conventions (Problem texts)"
+  },
+  {
+    "path": "POST /api/donors/auth/email-verification/request #3",
+    "scenario": "donors/donor_email_verification: A confirmed account, an unknown address and a malformed address get no new link*",
+    "kind": "body",
+    "field": "$.errors[0].message",
+    "reason": "1.18 (frontend.md, error at the field in its own words): the e-mail shape of EmailAddress names the site's message {donors.email.invalid} (Zadejte e-mail ve tvaru jmeno@domena.cz.) instead of the validator's text with the regular expression, as the registration e-mail does",
+    "contract": "docs/api-contract.md, Conventions (Problem texts)"
+  },
+  {
+    "path": "POST /api/donors/auth/email-verification/request #3",
+    "scenario": "donors/donor_email_verification: A confirmed account, an unknown address and a malformed address get no new link*",
+    "kind": "body",
+    "field": "$.errors",
+    "reason": "1.18 (frontend.md, error at the field in its own words): the address fails both @Email and the EmailAddress shape, which now name the same message {donors.email.invalid}, and the answer lists a field's message once, so the two errors of v2 (the validator's @Email text and its @Pattern text with the regular expression) become one",
+    "contract": "docs/api-contract.md, Conventions (Problem texts)"
+  },
+  {
+    "path": "POST /api/donors/auth/password-reset/request #1",
+    "scenario": "donors/donor_password_reset: A malformed address is refused with a field error [not-an-email]*",
+    "kind": "body",
+    "field": "$.errors[0].message",
+    "reason": "1.18 (frontend.md, error at the field in its own words): the e-mail shape of EmailAddress names the site's message {donors.email.invalid} (Zadejte e-mail ve tvaru jmeno@domena.cz.) instead of the validator's text with the regular expression, as the registration e-mail does",
+    "contract": "docs/api-contract.md, Conventions (Problem texts)"
+  },
+  {
+    "path": "POST /api/donors/auth/password-reset/request #1",
+    "scenario": "donors/donor_password_reset: A malformed address is refused with a field error [not-an-email]*",
+    "kind": "body",
+    "field": "$.errors",
+    "reason": "1.18 (frontend.md, error at the field in its own words): the address fails both @Email and the EmailAddress shape, which now name the same message {donors.email.invalid}, and the answer lists a field's message once, so the two errors of v2 (the validator's @Email text and its @Pattern text with the regular expression) become one",
+    "contract": "docs/api-contract.md, Conventions (Problem texts)"
+  },
+  {
+    "path": "POST /api/donors/auth/password-reset/request #1",
+    "scenario": "donors/donor_password_reset: A malformed address is refused with a field error [jana@localhost]*",
+    "kind": "body",
+    "field": "$.errors[0].message",
+    "reason": "1.18 (frontend.md, error at the field in its own words): the e-mail shape of EmailAddress names the site's message {donors.email.invalid} (Zadejte e-mail ve tvaru jmeno@domena.cz.) instead of the validator's text with the regular expression, as the registration e-mail does",
+    "contract": "docs/api-contract.md, Conventions (Problem texts)"
+  },
+  {
+    "path": "POST /api/donors/auth/password-reset/request #1",
+    "scenario": "donors/donor_password_reset: A malformed address is refused with a field error [jana@]*",
+    "kind": "body",
+    "field": "$.errors[0].message",
+    "reason": "1.18 (frontend.md, error at the field in its own words): the e-mail shape of EmailAddress names the site's message {donors.email.invalid} (Zadejte e-mail ve tvaru jmeno@domena.cz.) instead of the validator's text with the regular expression, as the registration e-mail does",
+    "contract": "docs/api-contract.md, Conventions (Problem texts)"
+  },
+  {
+    "path": "POST /api/donors/auth/password-reset/request #1",
+    "scenario": "donors/donor_password_reset: A malformed address is refused with a field error [jana@]*",
+    "kind": "body",
+    "field": "$.errors",
+    "reason": "1.18 (frontend.md, error at the field in its own words): the address fails both @Email and the EmailAddress shape, which now name the same message {donors.email.invalid}, and the answer lists a field's message once, so the two errors of v2 (the validator's @Email text and its @Pattern text with the regular expression) become one",
+    "contract": "docs/api-contract.md, Conventions (Problem texts)"
+  },
+  {
+    "kind": "log-field",
+    "line": "shared.interfaces.rest.ApiExceptionHandler: Refused a value as validation (IllegalArgumentException thrown at cz.novanadeje.app.donors.domain.Passkey.validName:<n>)",
+    "scenario": "donors/donor_passkeys: A passkey name with a control character is refused with the site's own text, without the name*",
+    "reason": "1.18 (security m2, reliability.md): an IllegalArgumentException answered as validation logs one WARN with its class and the frame that threw it (class, method, line), never its message, so a server bug answered as a refusal leaves a trace; the frame differs by where the value was refused, the recording holds the passkey name",
+    "contract": "docs/system-overview.md, Problem answers; docs/security-overview.md, Error answers",
+    "security": {
+      "approvedIn": "PR #247, Jakub 2026-10-30",
+      "fields": {
+        "<n>": "the line number of the throwing frame in the source"
+      }
+    }
+  },
+  {
+    "path": "POST /api/operations/client-errors",
+    "scenario": "operations/client_error_reports: *",
+    "kind": "body",
+    "field": "$.title",
+    "reason": "1.18 (security.md, Output): Spring's own refusal no longer answers its English text, which named the Content-Type, the path or the parser's failure; the title and detail come from the bundle in the client's language (here Czech)",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "POST /api/operations/client-errors",
+    "scenario": "operations/client_error_reports: *",
+    "kind": "body",
+    "field": "$.detail",
+    "reason": "1.18 (security.md, Output): Spring's own refusal no longer answers its English text, which named the Content-Type, the path or the parser's failure; the title and detail come from the bundle in the client's language (here Czech)",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "GET /api/donors/nowhere",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "body",
+    "field": "$.title",
+    "reason": "1.18 (security.md, Output): Spring's own refusal no longer answers its English text, which named the Content-Type, the path or the parser's failure; the title and detail come from the bundle in the client's language (here Czech)",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "GET /api/donors/nowhere",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "body",
+    "field": "$.detail",
+    "reason": "1.18 (security.md, Output): Spring's own refusal no longer answers its English text, which named the Content-Type, the path or the parser's failure; the title and detail come from the bundle in the client's language (here Czech)",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "POST /api/contact/messages",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "body",
+    "field": "$.title",
+    "reason": "1.18 (security.md, Output): Spring's own refusal no longer answers its English text, which named the Content-Type, the path or the parser's failure; the title and detail come from the bundle in the client's language (here Czech)",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "POST /api/contact/messages",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "body",
+    "field": "$.detail",
+    "reason": "1.18 (security.md, Output): Spring's own refusal no longer answers its English text, which named the Content-Type, the path or the parser's failure; the title and detail come from the bundle in the client's language (here Czech)",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "PATCH /api/donors/me",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "body",
+    "field": "$.title",
+    "reason": "1.18 (security.md, Output): Spring's own refusal no longer answers its English text, which named the Content-Type, the path or the parser's failure; the title and detail come from the bundle in the client's language (here Czech)",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "PATCH /api/donors/me",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "body",
+    "field": "$.detail",
+    "reason": "1.18 (security.md, Output): Spring's own refusal no longer answers its English text, which named the Content-Type, the path or the parser's failure; the title and detail come from the bundle in the client's language (here Czech)",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "QKZW1561 /api/content/news",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "headers",
+    "field": "content-type",
+    "reason": "1.18 (security.md, Output): a request with a method the server does not know is answered as problem+json by the site's handler instead of Spring Boot's error page, which echoed the path, so its type is application/problem+json",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "QKZW1561 /api/content/news",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "body",
+    "field": "$.error",
+    "reason": "1.18 (security.md, Output): a request with a method the server does not know is answered as problem+json by the site's handler instead of Spring Boot's error page, which echoed the path: the error page's fields (with the path) are gone",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "QKZW1561 /api/content/news",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "body",
+    "field": "$.path",
+    "reason": "1.18 (security.md, Output): a request with a method the server does not know is answered as problem+json by the site's handler instead of Spring Boot's error page, which echoed the path: the error page's fields (with the path) are gone",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "QKZW1561 /api/content/news",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "body",
+    "field": "$.timestamp",
+    "reason": "1.18 (security.md, Output): a request with a method the server does not know is answered as problem+json by the site's handler instead of Spring Boot's error page, which echoed the path: the error page's fields (with the path) are gone",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "QKZW1561 /api/content/news",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "added",
+    "field": "$.title",
+    "reason": "1.18 (security.md, Output): a request with a method the server does not know is answered as problem+json by the site's handler instead of Spring Boot's error page, which echoed the path: the problem carries the bundle's title and detail",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "QKZW1561 /api/content/news",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "added",
+    "field": "$.detail",
+    "reason": "1.18 (security.md, Output): a request with a method the server does not know is answered as problem+json by the site's handler instead of Spring Boot's error page, which echoed the path: the problem carries the bundle's title and detail",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "QKZW1561 /api/content/news",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "added",
+    "field": "cache-control",
+    "reason": "1.18 (security.md, Output): a request with a method the server does not know is answered as problem+json by the site's handler instead of Spring Boot's error page, which echoed the path: the answer now passes the security chain's headers (no-store, nosniff) like every other problem",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "QKZW1561 /api/content/news",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "added",
+    "field": "expires",
+    "reason": "1.18 (security.md, Output): a request with a method the server does not know is answered as problem+json by the site's handler instead of Spring Boot's error page, which echoed the path: the answer now passes the security chain's headers (no-store, nosniff) like every other problem",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "QKZW1561 /api/content/news",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "added",
+    "field": "pragma",
+    "reason": "1.18 (security.md, Output): a request with a method the server does not know is answered as problem+json by the site's handler instead of Spring Boot's error page, which echoed the path: the answer now passes the security chain's headers (no-store, nosniff) like every other problem",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "QKZW1561 /api/content/news",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "added",
+    "field": "x-content-type-options",
+    "reason": "1.18 (security.md, Output): a request with a method the server does not know is answered as problem+json by the site's handler instead of Spring Boot's error page, which echoed the path: the answer now passes the security chain's headers (no-store, nosniff) like every other problem",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "QKZW1561 /api/content/news",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "added",
+    "field": "$.type",
+    "reason": "1.18 (security.md, Output): a request with a method the server does not know is answered as problem+json by the site's handler instead of Spring Boot's error page, which echoed the path: the problem carries the bundle's title and detail",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "QKZW1565 /api/content/news",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "headers",
+    "field": "content-type",
+    "reason": "1.18 (security.md, Output): a request with a method the server does not know is answered as problem+json by the site's handler instead of Spring Boot's error page, which echoed the path, so its type is application/problem+json",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "QKZW1565 /api/content/news",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "body",
+    "field": "$.error",
+    "reason": "1.18 (security.md, Output): a request with a method the server does not know is answered as problem+json by the site's handler instead of Spring Boot's error page, which echoed the path: the error page's fields (with the path) are gone",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "QKZW1565 /api/content/news",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "body",
+    "field": "$.path",
+    "reason": "1.18 (security.md, Output): a request with a method the server does not know is answered as problem+json by the site's handler instead of Spring Boot's error page, which echoed the path: the error page's fields (with the path) are gone",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "QKZW1565 /api/content/news",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "body",
+    "field": "$.timestamp",
+    "reason": "1.18 (security.md, Output): a request with a method the server does not know is answered as problem+json by the site's handler instead of Spring Boot's error page, which echoed the path: the error page's fields (with the path) are gone",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "QKZW1565 /api/content/news",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "added",
+    "field": "$.title",
+    "reason": "1.18 (security.md, Output): a request with a method the server does not know is answered as problem+json by the site's handler instead of Spring Boot's error page, which echoed the path: the problem carries the bundle's title and detail",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "QKZW1565 /api/content/news",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "added",
+    "field": "$.detail",
+    "reason": "1.18 (security.md, Output): a request with a method the server does not know is answered as problem+json by the site's handler instead of Spring Boot's error page, which echoed the path: the problem carries the bundle's title and detail",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "QKZW1565 /api/content/news",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "added",
+    "field": "cache-control",
+    "reason": "1.18 (security.md, Output): a request with a method the server does not know is answered as problem+json by the site's handler instead of Spring Boot's error page, which echoed the path: the answer now passes the security chain's headers (no-store, nosniff) like every other problem",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "QKZW1565 /api/content/news",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "added",
+    "field": "expires",
+    "reason": "1.18 (security.md, Output): a request with a method the server does not know is answered as problem+json by the site's handler instead of Spring Boot's error page, which echoed the path: the answer now passes the security chain's headers (no-store, nosniff) like every other problem",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "QKZW1565 /api/content/news",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "added",
+    "field": "pragma",
+    "reason": "1.18 (security.md, Output): a request with a method the server does not know is answered as problem+json by the site's handler instead of Spring Boot's error page, which echoed the path: the answer now passes the security chain's headers (no-store, nosniff) like every other problem",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "QKZW1565 /api/content/news",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "added",
+    "field": "x-content-type-options",
+    "reason": "1.18 (security.md, Output): a request with a method the server does not know is answered as problem+json by the site's handler instead of Spring Boot's error page, which echoed the path: the answer now passes the security chain's headers (no-store, nosniff) like every other problem",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  },
+  {
+    "path": "QKZW1565 /api/content/news",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "added",
+    "field": "$.type",
+    "reason": "1.18 (security.md, Output): a request with a method the server does not know is answered as problem+json by the site's handler instead of Spring Boot's error page, which echoed the path: the problem carries the bundle's title and detail",
+    "contract": "docs/api-contract.md, Conventions (problem texts)"
+  }
+]

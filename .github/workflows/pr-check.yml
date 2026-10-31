@@ -149,6 +149,9 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Only the receipt worker carries the PDF library
+        run: node scripts/check-receipt-chunks.mjs dist/frontend/browser
+
       - name: Playwright's Chromium headless shell is installed
         run: |
           for _ in $(seq 300); do
@@ -422,7 +425,7 @@ jobs:
 
       - name: Compose file names no secret
         run: |
-          if grep -noE '\b(POSTGRES_PASSWORD|PGPASSWORD|DB_PASSWORD|JWT_SECRET|SETTINGS_KEY|BACKUP_KEY|MAIL_PASSWORD|FIO_TOKEN)\b' deploy/compose.yml; then
+          if grep -noE '\b(POSTGRES_PASSWORD|PGPASSWORD|DB_PASSWORD|JWT_SECRET|SETTINGS_KEY|BACKUP_KEY|RECEIPT_SIGNING_KEY|MAIL_PASSWORD|FIO_TOKEN)\b' deploy/compose.yml; then
             echo "::error::Secrets are generated into secrets/ or entered in the first setup, never written into deploy/compose.yml"
             exit 1
           fi
@@ -474,6 +477,10 @@ jobs:
           fi
           if [ "$(yq '.services.backend.environment.DB_USERNAME' deploy/compose.yml)" != novanadeje_app ]; then
             echo "::error::the backend logs in to the database as the application role novanadeje_app, never as the superuser"
+            exit 1
+          fi
+          if [ "$(yq '.services.backend.environment.SPRING_PROFILES_ACTIVE' deploy/compose.yml)" != prod ]; then
+            echo "::error::the backend runs with exactly the prod profile: without one it would start as dev, which accepts the public development keys and reads no stored settings"
             exit 1
           fi
 
@@ -541,9 +548,19 @@ jobs:
       - name: First setup
         run: |
           secrets="$RUNNER_TEMP/nfnn/secrets"
-          for file in db-password db-app-password jwt-secret settings-key backup-key; do
+          for file in db-password db-app-password jwt-secret settings-key receipt-signing-key backup-key; do
             [ "$(sudo stat -c '%a %U' "$secrets/$file")" = '600 root' ] || { echo "::error::secrets/$file must exist, owned by root with mode 600"; sudo ls -la "$secrets"; exit 1; }
           done
+          [ "$(sudo cat "$secrets/receipt-signing-key" | base64 -d | wc -c)" = 32 ] || { echo "::error::secrets/receipt-signing-key must hold a 32-byte Ed25519 seed in base64"; exit 1; }
+          grep -qE 'Receipt signing key [0-9a-f]{8} registered and published' "$RUNNER_TEMP/nfnn/logs/backend.log" || { echo "::error::the backend did not register its receipt signing key at its first start"; exit 1; }
+          seed=$(sudo cat "$secrets/receipt-signing-key" | tr -d '\n')
+          seed_spellings="$RUNNER_TEMP/receipt-seed-spellings"
+          { echo "$seed"; echo "${seed%%=*}"; echo "${seed%%=*}" | tr '+/' '-_'; echo "$seed" | base64 -d | od -An -tx1 | tr -d ' \n'; } > "$seed_spellings"
+          if grep -qiF -f "$seed_spellings" "$RUNNER_TEMP/nfnn/logs/backend.log"; then
+            echo "::error::the receipt signing seed must never reach backend.log (Base64, unpadded, Base64url or hex)"
+            exit 1
+          fi
+          rm -f "$seed_spellings"
           status=$(curl -fsS --max-time 10 http://localhost:8089/api/operations/setup)
           [ "$status" = '{"required":true,"codeRequired":false,"lastRestore":null}' ] || { echo "::error::a fresh install opened directly must ask for the setup without a code (got $status)"; exit 1; }
           proxied=$(curl -fsS --max-time 10 -H 'X-Forwarded-For: 203.0.113.7' http://localhost:8089/api/operations/setup)
@@ -667,7 +684,7 @@ jobs:
           for container in nfnn-postgres nfnn-backup nfnn-mcp nfnn-frontend; do
             main_environment=$(docker exec --privileged "$container" sh -c "tr '\\0' '\\n' < /proc/1/environ")
             [ "$container" = nfnn-frontend ] || echo "$main_environment" | grep -q '^PATH=' || { echo "::error::could not read the environment of $container's main process (nginx alone writes its title over it)"; exit 1; }
-            for key in JWT_SECRET SETTINGS_KEY BACKUP_KEY DB_PASSWORD FIO_TOKEN MAIL_PASSWORD; do
+            for key in JWT_SECRET SETTINGS_KEY BACKUP_KEY RECEIPT_SIGNING_KEY DB_PASSWORD FIO_TOKEN MAIL_PASSWORD; do
               if docker exec "$container" printenv "$key" > /dev/null || echo "$main_environment" | grep -q "^$key="; then
                 echo "::error::$container must not receive $key, neither in its configuration nor in its main process"
                 exit 1
@@ -711,12 +728,15 @@ jobs:
           grep -q 'Authorization server discovered' "$logs/mcp.log" || { echo "::error::the MCP connector did not write its log file"; ls -la "$logs"; exit 1; }
           grep -qE ' GET / 200 ' "$logs/nginx-access.log" || { echo "::error::nginx did not write its access log"; ls -la "$logs"; exit 1; }
           grep -qE ' POST /mcp 401 ' "$logs/nginx-access.log" || { echo "::error::the access log misses the connector's 401"; cat "$logs/nginx-access.log"; exit 1; }
+          curl -fsS -o /dev/null --max-time 10 -X POST -H 'Content-Type: application/json' --data "{\"digest\":\"$(printf '%064d' 0)\"}" http://localhost:8089/api/donations/receipts/status
+          grep -qE ' POST /api/donations/receipts/status 200 [0-9]+\.[0-9]{3} ' "$logs/nginx-access.log" || { echo "::error::the access log misses the receipt status question or still records the size of its answer, which tells the four answers apart"; grep 'receipts/status' "$logs/nginx-access.log"; exit 1; }
           if grep -nE 'not-in-the-log|([0-9]{1,3}\.){3}[0-9]{1,3}' "$logs/nginx-access.log"; then
             echo "::error::the access log must name no client address, no query string and no healthcheck from inside the container"
             exit 1
           fi
           docker logs nfnn-frontend > "$RUNNER_TEMP/frontend-console.log" 2>&1
           grep -qE ' GET / 200 ' "$RUNNER_TEMP/frontend-console.log" || { echo "::error::nginx no longer writes its access log to the console"; exit 1; }
+          grep -qE ' POST /api/donations/receipts/status 200 [0-9]+\.[0-9]{3} ' "$RUNNER_TEMP/frontend-console.log" || { echo "::error::the console access log misses the receipt status question or still records the size of its answer"; exit 1; }
           if grep -E '^[0-9]{4}-[0-9]{2}-[0-9]{2}T' "$RUNNER_TEMP/frontend-console.log" | grep -nE 'not-in-the-log|([0-9]{1,3}\.){3}[0-9]{1,3}'; then
             echo "::error::the console access log (docker logs) must name no client address and no query string either"
             exit 1
@@ -822,6 +842,24 @@ jobs:
           [ ! -e "$restore/ci-4.upload" ] || { echo "::error::the upload was left in the restore folder"; exit 1; }
           curl -fsS --max-time 10 http://localhost:8089/ | grep -q '<app-root'
 
+          echo "A backup taken before receipts moved to the browser is refused once this server has given out a receipt number, so the numbering never starts at 1 again below numbers already issued"
+          switch_changeset="024-delete-test-receipts-and-drop-the-server-drawing"
+          docker exec nfnn-postgres psql -U novanadeje -d novanadeje -v ON_ERROR_STOP=1 -c "create table ci_switch_row as select * from databasechangelog where id = '$switch_changeset'" -c "delete from databasechangelog where id = '$switch_changeset'"
+          docker exec nfnn-backend sh -c 'touch /backups/requests/ci-pre-switch.backup'
+          wait_for "grep -q '^request=ci-pre-switch$' $backups/status/backup" 60 "the backup without the switch changeset did not run"
+          pre_switch_dump=$(sed -n 's/^file=//p' "$backups/status/backup")
+          docker exec nfnn-postgres psql -U novanadeje -d novanadeje -v ON_ERROR_STOP=1 -c "insert into databasechangelog select * from ci_switch_row" -c "drop table ci_switch_row"
+          [ "$(docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select is_called from donation_receipt_number_seq")" = t ] || { echo "::error::the probe needs a receipt number given out since the switch"; exit 1; }
+          docker exec nfnn-backend sh -c "printf 'source=backup\nfile=%s\nadmin=019a0000-0000-7000-8000-000000000002\n' '$pre_switch_dump' > /backups/requests/ci-pre-switch.restore"
+          docker restart nfnn-backend
+          wait_for "grep -q '^request=ci-pre-switch$' $backups/status/restore" 60 "the restore of the backup from before the switch did not run"
+          grep -q '^outcome=failed$' "$backups/status/restore" || { echo "::error::a backup from before the switch was restored although receipt numbers were given out since"; cat "$backups/status/restore"; exit 1; }
+          grep -q 'taken before receipts moved to the browser' "$backups/status/restore" || { echo "::error::the refusal does not say why"; cat "$backups/status/restore"; exit 1; }
+          docker compose up -d --wait --wait-timeout 300 backend
+          [ "$(count_rows "action = 'CI_MARKER'")" = 1 ] || { echo "::error::the refused restore changed the data"; exit 1; }
+          [ "$(docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select last_value from donation_receipt_number_seq")" = 41 ] || { echo "::error::the refused restore moved the receipt numbers"; exit 1; }
+          [ "$(docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select count(*) from databasechangelog where id = '$switch_changeset'")" = 1 ] || { echo "::error::the switch changeset is no longer recorded"; exit 1; }
+
           echo "A key planted in the restore folder is not adopted, and a backup uploaded with its own key is restored and its key becomes the server's"
           secrets="$RUNNER_TEMP/nfnn/secrets"
           server_key() {
@@ -850,7 +888,18 @@ jobs:
           [ -z "$(sudo find "$backups" \( -name '*.dump' -o -name work \))" ] || { echo "::error::a backup, a restore or a test restore left an unencrypted copy in the backups folder"; sudo find "$backups"; exit 1; }
           curl -fsS --max-time 10 http://localhost:8089/ | grep -q '<app-root'
 
-      - name: An administrator signed in with the second factor uploads a JPEG and a WebP photo, which the read-only backend stores as WebP
+          echo "A request for a new receipt signing seed that names another key than the seed's, planted by the app user, is removed and changes nothing"
+          kept_seed=$(sudo cat "$secrets/receipt-signing-key")
+          docker exec -u app nfnn-backend sh -c "printf '%s' '00000000' > /restore/receipt-signing-key.renew"
+          docker restart nfnn-backend
+          docker compose up -d --wait --wait-timeout 300 backend
+          [ ! -e "$restore/receipt-signing-key.renew" ] || { echo "::error::the request for a new receipt signing seed was left in the restore folder"; exit 1; }
+          [ "$(sudo cat "$secrets/receipt-signing-key")" = "$kept_seed" ] || { echo "::error::a request naming another key replaced the receipt signing seed"; exit 1; }
+          [ -z "$(sudo find "$secrets" -maxdepth 1 -name 'receipt-signing-key.withdrawn-*')" ] || { echo "::error::a request naming another key kept a seed aside"; sudo ls -la "$secrets"; exit 1; }
+          docker logs nfnn-backend 2>&1 | grep -q "names the key 00000000, which is not the key of the seed" || { echo "::error::the entrypoint did not say that it ignored the request naming another key"; exit 1; }
+          curl -fsS --max-time 10 http://localhost:8089/ | grep -q '<app-root'
+
+      - name: An administrator signed in with the second factor uploads a JPEG and a WebP photo, which the read-only backend stores as WebP, and withdraws the server's receipt signing key, which the next start replaces
         run: |
           echo "Mail goes to the probe's own mail catcher, the MAIL_HOST of the first setup, on the stack's network"
           docker run -d --name nfnn-probe-mail --network nfnn-edge -p 127.0.0.1:8025:8025 axllent/mailpit:v1.31.5 > /dev/null
@@ -874,11 +923,15 @@ jobs:
           [ -n "$token" ] || { echo "::error::no verification e-mail reached the mail catcher"; exit 1; }
           session=$(curl -fsS --max-time 30 -H "$client" -H 'Content-Type: application/json' --data "{\"token\":\"$token\"}" "$api/donors/auth/email-verification/confirm" | jq -r '.accessToken')
           enrolment=$(curl -fsS --max-time 30 -H "$client" -H "Authorization: Bearer $session" -H 'Content-Type: application/json' --data "{\"password\":\"$password\"}" "$api/donors/me/second-factor/setup")
-          code=$(TOTP_SECRET="$(echo "$enrolment" | jq -r '.secret')" python3 -c '
+          totp() {
+            TOTP_SECRET="$(echo "$enrolment" | jq -r '.secret')" TOTP_STEPS_AHEAD="$1" python3 -c '
           import base64, hashlib, hmac, os, struct, time
-          digest = hmac.new(base64.b32decode(os.environ["TOTP_SECRET"]), struct.pack(">Q", int(time.time()) // 30), hashlib.sha1).digest()
+          step = int(time.time()) // 30 + int(os.environ["TOTP_STEPS_AHEAD"])
+          digest = hmac.new(base64.b32decode(os.environ["TOTP_SECRET"]), struct.pack(">Q", step), hashlib.sha1).digest()
           offset = digest[-1] & 15
-          print("%06d" % ((struct.unpack(">I", digest[offset:offset + 4])[0] & 0x7FFFFFFF) % 1000000))')
+          print("%06d" % ((struct.unpack(">I", digest[offset:offset + 4])[0] & 0x7FFFFFFF) % 1000000))'
+          }
+          code=$(totp 0)
           admin=$(curl -fsS --max-time 30 -H "$client" -H "Authorization: Bearer $session" -H 'Content-Type: application/json' --data "{\"code\":\"$code\"}" "$api/donors/me/second-factor/confirm" | jq -r '.accessToken')
           ACCESS_TOKEN="$admin" python3 -c 'import base64, json, os, sys; payload = os.environ["ACCESS_TOKEN"].split(".")[1]; sys.exit("ADMIN" not in json.loads(base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4)))["roles"])' || { echo "::error::the session opened with the second factor does not carry ADMIN"; exit 1; }
           for photo in frontend/public/images/og-image.jpg:image/jpeg frontend/public/images/news-1.webp:image/webp; do
@@ -896,13 +949,67 @@ jobs:
             exit 1
           fi
 
+          echo "Withdrawing the server's own receipt signing key with a fresh code tells the administrator, restarts the backend, keeps the seed aside, registers a new key and passes the withdrawn id to Java"
+          secrets="$RUNNER_TEMP/nfnn/secrets"
+          restore="$RUNNER_TEMP/nfnn/restore"
+          withdrawn_seed=$(sudo cat "$secrets/receipt-signing-key" | tr -d '\n')
+          withdrawn_key=$(curl -fsS --max-time 10 -H "$client" -H "Authorization: Bearer $admin" "$api/admin/donations/receipt-signing-keys" | jq -r '.currentKeyId')
+          echo "$withdrawn_key" | grep -qxE '[0-9a-f]{8}' || { echo "::error::the administration names no current receipt signing key (got $withdrawn_key)"; exit 1; }
+          restarts=$(docker inspect -f '{{.RestartCount}}' nfnn-backend)
+          withdrawal=$(curl -sS -w '\n%{http_code}' --max-time 30 -H "$client" -H "Authorization: Bearer $admin" -H 'Content-Type: application/json' --data "{\"secondFactorCode\":\"$(totp 1)\"}" "$api/admin/donations/receipt-signing-keys/$withdrawn_key/withdrawal")
+          [ "$(echo "$withdrawal" | tail -n 1)" = 200 ] || { echo "::error::withdrawing the receipt signing key $withdrawn_key answered $(echo "$withdrawal" | tail -n 1): $(echo "$withdrawal" | head -n -1)"; exit 1; }
+          [ "$(echo "$withdrawal" | head -n -1 | jq -r '.restarting')" = true ] || { echo "::error::withdrawing the server's own key must restart the backend"; exit 1; }
+          notice=
+          for _ in $(seq 60); do
+            notice=$(curl -fsS --max-time 5 'http://127.0.0.1:8025/api/v1/search?query=to%3Aspravce%40example.cz%20subject%3A%22Kl%C3%AD%C4%8D%20k%20ov%C4%9B%C5%99ovac%C3%ADm%22' | jq -r '.messages_count')
+            [ "$notice" = 1 ] && break
+            sleep 1
+          done
+          [ "$notice" = 1 ] || { echo "::error::the administrator got no notice of the withdrawn receipt signing key"; exit 1; }
+          for _ in $(seq 120); do
+            [ "$(docker inspect -f '{{.RestartCount}}' nfnn-backend)" -gt "$restarts" ] && break
+            sleep 1
+          done
+          [ "$(docker inspect -f '{{.RestartCount}}' nfnn-backend)" -gt "$restarts" ] || { echo "::error::the backend did not restart after the withdrawal of its own receipt signing key"; exit 1; }
+          docker compose up -d --wait --wait-timeout 300 backend
+          [ ! -e "$restore/receipt-signing-key.renew" ] || { echo "::error::the request for a new receipt signing seed was left in the restore folder"; exit 1; }
+          [ "$(sudo stat -c '%a %U' "$secrets/receipt-signing-key.withdrawn-$withdrawn_key")" = '600 root' ] || { echo "::error::the withdrawn seed must be kept as secrets/receipt-signing-key.withdrawn-$withdrawn_key, owned by root with mode 600"; sudo ls -la "$secrets"; exit 1; }
+          [ "$(sudo cat "$secrets/receipt-signing-key.withdrawn-$withdrawn_key" | tr -d '\n')" = "$withdrawn_seed" ] || { echo "::error::the kept withdrawn seed is not the seed the server signed with"; exit 1; }
+          [ "$(sudo stat -c '%a %U' "$secrets/receipt-signing-key")" = '600 root' ] || { echo "::error::secrets/receipt-signing-key must be generated again, owned by root with mode 600"; exit 1; }
+          renewed_seed=$(sudo cat "$secrets/receipt-signing-key" | tr -d '\n')
+          [ "$renewed_seed" != "$withdrawn_seed" ] || { echo "::error::the receipt signing seed was not replaced after the withdrawal"; exit 1; }
+          [ "$(echo "$renewed_seed" | base64 -d | wc -c)" = 32 ] || { echo "::error::the new receipt signing seed must be a 32-byte Ed25519 seed in base64"; exit 1; }
+          docker logs nfnn-backend 2>&1 | grep -q "the receipt signing key $withdrawn_key was withdrawn in the administration" || { echo "::error::the entrypoint did not say that it replaced the withdrawn seed"; exit 1; }
+          renewed_key=$(grep -oE 'Receipt signing key [0-9a-f]{8} registered and published' "$RUNNER_TEMP/nfnn/logs/backend.log" | tail -n 1 | cut -d' ' -f4)
+          [ -n "$renewed_key" ] && [ "$renewed_key" != "$withdrawn_key" ] || { echo "::error::the backend did not register a new receipt signing key after the seed was replaced"; exit 1; }
+          docker exec --privileged nfnn-backend sh -c 'tr "\0" "\n" < /proc/1/environ' | grep -qxE "RECEIPT_SIGNING_KEYS_WITHDRAWN=([0-9a-f]{8},)*$withdrawn_key(,[0-9a-f]{8})*" || { echo "::error::the entrypoint did not pass the withdrawn key $withdrawn_key to Java as RECEIPT_SIGNING_KEYS_WITHDRAWN"; exit 1; }
+          listed=$(curl -fsS --max-time 10 http://localhost:8089/api/donations/receipt-keys | jq -r '.keys[] | .keyId + " " + .status' | sort)
+          [ "$listed" = "$(printf '%s\n%s\n' "$withdrawn_key revoked" "$renewed_key active" | sort)" ] || { echo "::error::the receipt keys must list $withdrawn_key as revoked and $renewed_key as active (got $listed)"; exit 1; }
+          seed_spellings="$RUNNER_TEMP/receipt-seed-spellings"
+          for seed in "$withdrawn_seed" "$renewed_seed"; do
+            echo "$seed"; echo "${seed%%=*}"; echo "${seed%%=*}" | tr '+/' '-_'; echo "$seed" | base64 -d | od -An -tx1 | tr -d ' \n'; echo
+          done > "$seed_spellings"
+          if grep -qiF -f "$seed_spellings" "$RUNNER_TEMP/nfnn/logs/backend.log" || docker logs nfnn-backend 2>&1 | grep -qiF -f "$seed_spellings"; then
+            echo "::error::neither the withdrawn nor the new receipt signing seed may reach backend.log or the container log (Base64, unpadded, Base64url or hex)"
+            exit 1
+          fi
+          rm -f "$seed_spellings"
+
       - name: Hashed bundles are cached for good and a missing file answers 404, never the app
         run: |
           docker cp nfnn-frontend:/usr/share/nginx/html "$RUNNER_TEMP/frontend-html"
           node frontend/scripts/probe-asset-caching.mjs http://localhost:8089 "$RUNNER_TEMP/frontend-html" frontend/nginx.conf
 
       - name: API, connector and discovery answers stay out of the browser's and Cloudflare's caches
-        run: node frontend/scripts/probe-edge-caching.mjs http://localhost:8089
+        run: |
+          echo "A donor of the stack signs in, so the probe can show that the cacheable answers are the same for a signed-in donor"
+          probe_donor='{"type":"PERSON","name":"Sonda Mezipaměti","address":{"street":"Zkušební 1","city":"Tišnov","postalCode":"666 01"},"email":"sonda-mezipameti@example.cz","password":"a probe of the stack only","preferredLocale":"cs"}'
+          curl -fsS --max-time 30 -o /dev/null -H 'X-Forwarded-For: 203.0.113.41' -H 'Content-Type: application/json' --data "$probe_donor" http://localhost:8089/api/donors/auth/register || { echo "::error::the probe donor's registration was refused"; exit 1; }
+          docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "update donor set email_verified_at = now() where email = 'sonda-mezipameti@example.cz'" | grep -qx 'UPDATE 1' || { echo "::error::the probe donor was not registered"; exit 1; }
+          token=$(curl -fsS --max-time 30 -H 'X-Forwarded-For: 203.0.113.41' -H 'Content-Type: application/json' --data '{"email":"sonda-mezipameti@example.cz","password":"a probe of the stack only"}' http://localhost:8089/api/donors/auth/login | jq -r '.accessToken')
+          [ -n "$token" ] && [ "$token" != null ] || { echo "::error::the probe donor could not sign in"; exit 1; }
+          echo "::add-mask::$token"
+          PROBE_ACCESS_TOKEN="$token" node frontend/scripts/probe-edge-caching.mjs http://localhost:8089
 
       - name: Logs
         if: failure()

@@ -2,10 +2,19 @@ package cz.novanadeje.app.donations.infrastructure.persistence;
 
 import cz.novanadeje.app.donations.domain.donation.DonationId;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
+import cz.novanadeje.app.donations.domain.receipt.ContentDigest;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
+import cz.novanadeje.app.donations.domain.receipt.DonationReceiptId;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptKind;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptPage;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptQuery;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
@@ -20,27 +29,35 @@ import java.util.stream.Collectors;
 @Repository
 class JpaDonationReceiptRepository implements DonationReceiptRepository {
 
-    private final DonationReceiptJpaRepository jpa;
+    private static final Sort NEWEST_ISSUE_FIRST = Sort.by(Sort.Order.desc("issuedAt"), Sort.Order.desc("number"));
 
-    JpaDonationReceiptRepository(DonationReceiptJpaRepository jpa) {
+    private final IssuedReceiptJpaRepository jpa;
+
+    JpaDonationReceiptRepository(IssuedReceiptJpaRepository jpa) {
         this.jpa = jpa;
     }
 
     @Override
+    public Optional<DonationReceipt> findById(DonationReceiptId id) {
+        return jpa.findById(id.value()).map(IssuedReceiptJpaEntity::toDomain);
+    }
+
+    @Override
     public Optional<DonationReceipt> findActiveForDonation(DonationId donation) {
-        return jpa.findByDonationIdAndSupersededAtIsNull(donation.value()).map(DonationReceiptJpaEntity::toDomain);
+        return jpa.findByDonationIdAndStatus(donation.value(), ReceiptStatus.ACTIVE).map(IssuedReceiptJpaEntity::toDomain);
     }
 
     @Override
     public Optional<DonationReceipt> findActiveForYear(DonorReference donor, Year year) {
-        return jpa.findByDonorIdAndReceiptYearAndSupersededAtIsNull(donor.value(), year.getValue()).map(DonationReceiptJpaEntity::toDomain);
+        return jpa.findByDonorIdAndReceiptYearAndStatus(donor.value(), year.getValue(), ReceiptStatus.ACTIVE)
+                .map(IssuedReceiptJpaEntity::toDomain);
     }
 
     @Override
     public void save(DonationReceipt receipt) {
         jpa.findById(receipt.id().value()).ifPresentOrElse(
-                stored -> stored.supersededAs(receipt),
-                () -> jpa.save(DonationReceiptJpaEntity.fromDomain(receipt)));
+                stored -> stored.changedAs(receipt),
+                () -> jpa.save(IssuedReceiptJpaEntity.fromDomain(receipt)));
         jpa.flush();
     }
 
@@ -55,6 +72,11 @@ class JpaDonationReceiptRepository implements DonationReceiptRepository {
     }
 
     @Override
+    public long countReplacementsIssuedAfter(DonorReference donor, Instant after) {
+        return jpa.countByDonorIdAndSupersedesIdIsNotNullAndIssuedAtAfter(donor.value(), after);
+    }
+
+    @Override
     public Set<DonationId> findDonationsWithReceipt(Collection<DonationId> donations) {
         if (donations.isEmpty()) {
             return Set.of();
@@ -66,13 +88,39 @@ class JpaDonationReceiptRepository implements DonationReceiptRepository {
 
     @Override
     public Map<DonationId, ReceiptNumber> findActiveSingleNumbersFor(DonorReference donor) {
-        return jpa.findByDonorIdAndKindAndSupersededAtIsNull(donor.value(), ReceiptKind.SINGLE).stream()
+        return jpa.findByDonorIdAndKindAndStatus(donor.value(), ReceiptKind.SINGLE, ReceiptStatus.ACTIVE).stream()
                 .collect(Collectors.toUnmodifiableMap(row -> new DonationId(row.getDonationId()), row -> new ReceiptNumber(row.getNumber())));
     }
 
     @Override
     public List<DonationReceipt> findByDonorNewestFirst(DonorReference donor) {
-        return jpa.findByDonorIdOrderByIssuedAtDescIdDesc(donor.value()).stream().map(DonationReceiptJpaEntity::toDomain).toList();
+        return jpa.findByDonorIdOrderByIssuedAtDescNumberDesc(donor.value()).stream().map(IssuedReceiptJpaEntity::toDomain).toList();
+    }
+
+    @Override
+    public boolean showsSignatureImage(DonorReference donor, ContentDigest image) {
+        return jpa.existsByDonorIdAndSignatureImageSha256(donor.value(), image.value());
+    }
+
+    @Override
+    public Optional<ReceiptStatus> findStatusByStatusDigest(ContentDigest statusDigest) {
+        return jpa.findStatusByStatusSha256(statusDigest.value());
+    }
+
+    @Override
+    public boolean anyShowsSignatureImage(ContentDigest image) {
+        return jpa.existsBySignatureImageSha256(image.value());
+    }
+
+    @Override
+    public ReceiptPage findNewestFirst(ReceiptQuery query) {
+        Pageable page = PageRequest.of(query.page(), query.limit(), NEWEST_ISSUE_FIRST);
+        Page<IssuedReceiptJpaEntity> found = query.issuedIn()
+                .map(year -> query.donor()
+                        .map(donor -> jpa.findByDonorIdAndIssuedOnBetween(donor.value(), year.atDay(1), year.atMonth(12).atEndOfMonth(), page))
+                        .orElseGet(() -> jpa.findByIssuedOnBetween(year.atDay(1), year.atMonth(12).atEndOfMonth(), page)))
+                .orElseGet(() -> query.donor().map(donor -> jpa.findByDonorId(donor.value(), page)).orElseGet(() -> jpa.findAllBy(page)));
+        return new ReceiptPage(found.stream().map(IssuedReceiptJpaEntity::toDomain).toList(), found.getTotalElements());
     }
 
     @Override

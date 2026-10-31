@@ -57,6 +57,7 @@ Feature: An administrator manages who administers the site
     When "Jana" makes the e-mail " " an administrator
     Then the response status is 400
     And the problem type ends with "validation"
+    And the problem's error for field "email" says "Zadejte e-mail ve tvaru jmeno@domena.cz."
 
   Scenario: An administrator takes the role from another administrator, whose sessions end
     Given "Petr" is an administrator

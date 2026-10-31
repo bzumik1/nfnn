@@ -394,7 +394,7 @@
           @if (qrResponse(); as response) {
             <app-qr-code
               class="add-account-qr-image"
-              [matrix]="response.qrCode"
+              [matrix]="response.matrix"
               label="QR platba 1 Kč s vaším variabilním symbolem"
               i18n-label="@@donor.bankAccounts.addDialog.qrAlt"
             />
@@ -404,17 +404,30 @@
             >
           } @else {
             <div class="add-account-qr-error" role="alert">
-              <p i18n="@@home.donate.qr.error">
-                QR platbu se nepodařilo připravit. Zkuste to prosím znovu.
-              </p>
-              <button
-                type="button"
-                class="ui-button add-account-qr-retry"
-                (click)="loadQr()"
-                i18n="@@home.donate.qr.retry"
-              >
-                Zkusit znovu
-              </button>
+              @if (qr().kind === 'refusedSymbol') {
+                <p i18n="@@donor.bankAccounts.addDialog.qrRefusedSymbol">
+                  QR kód teď nejde vytvořit. Napište nám prosím na
+                  <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a>.
+                </p>
+              } @else {
+                @if (qr().kind === 'refused') {
+                  <p i18n="@@donor.bankAccounts.addDialog.qrRefused">
+                    QR kód teď nejde vytvořit. Zkuste to prosím znovu za chvíli.
+                  </p>
+                } @else {
+                  <p i18n="@@home.donate.qr.error">
+                    QR platbu se nepodařilo připravit. Zkuste to prosím znovu.
+                  </p>
+                }
+                <button
+                  type="button"
+                  class="ui-button add-account-qr-retry"
+                  (click)="reloadQr()"
+                  i18n="@@home.donate.qr.retry"
+                >
+                  Zkusit znovu
+                </button>
+              }
             </div>
           }
         </div>
@@ -424,9 +437,9 @@
             <div class="add-account-row">
               <dt i18n="@@home.donate.bank.account">Číslo účtu</dt>
               <dd>
-                <span class="bank-value">{{ response.bankAccount.accountNumber }}</span>
+                <span class="bank-value">{{ response.account.number }}</span>
                 <app-copy-button
-                  [value]="response.bankAccount.accountNumber"
+                  [value]="response.account.number"
                   what="číslo účtu"
                   i18n-what="@@home.donate.bank.copyAccount"
                 />
@@ -436,7 +449,8 @@
               <dt i18n="@@home.donate.bank.amount">Částka</dt>
               <dd>
                 <span class="bank-value"
-                  >{{ verificationAmount }}&nbsp;<ng-container i18n="@@home.donate.amount.currency"
+                  >{{ amountOf(response.amountMinor) }}&nbsp;<ng-container
+                    i18n="@@home.donate.amount.currency"
                     >Kč</ng-container
                   ></span
                 >

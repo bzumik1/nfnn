@@ -1,6 +1,7 @@
 package cz.novanadeje.app.content.application.news;
 
 import cz.novanadeje.app.content.domain.media.MediaId;
+import cz.novanadeje.app.content.domain.media.MediaSize;
 import cz.novanadeje.app.content.domain.media.MediaImageRepository;
 import cz.novanadeje.app.content.domain.media.MediaNotFound;
 import cz.novanadeje.app.content.domain.news.NewsArticle;
@@ -8,6 +9,12 @@ import cz.novanadeje.app.content.domain.news.NewsArticleId;
 import cz.novanadeje.app.content.domain.news.NewsArticleNotFound;
 import cz.novanadeje.app.content.domain.news.NewsArticleRepository;
 import cz.novanadeje.app.content.domain.news.NewsContent;
+import cz.novanadeje.app.content.domain.people.Person;
+import cz.novanadeje.app.content.domain.people.PersonDetails;
+import cz.novanadeje.app.content.domain.people.PersonEmails;
+import cz.novanadeje.app.content.domain.people.PersonId;
+import cz.novanadeje.app.content.domain.people.PersonNotFound;
+import cz.novanadeje.app.content.domain.people.PersonRepository;
 import cz.novanadeje.app.content.domain.FormerSlugs;
 import cz.novanadeje.app.content.domain.Slug;
 import cz.novanadeje.app.content.domain.SlugTaken;
@@ -24,6 +31,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -48,6 +56,8 @@ class NewsAdminServiceTest {
     @Mock
     private FormerSlugs formerSlugs;
     @Mock
+    private PersonRepository people;
+    @Mock
     private ApplicationEventPublisher events;
 
     private NewsAdminService service() {
@@ -55,7 +65,7 @@ class NewsAdminServiceTest {
     }
 
     private NewsAdminService service(Instant now) {
-        return new NewsAdminService(news, media, formerSlugs, events, Clock.fixed(now, ZoneOffset.UTC));
+        return new NewsAdminService(news, media, formerSlugs, new NewsSigners(people, media), events, Clock.fixed(now, ZoneOffset.UTC));
     }
 
     @Test
@@ -235,8 +245,61 @@ class NewsAdminServiceTest {
         assertThat(service().publish(ADMIN, article.id(), LocalDate.parse("2026-10-23")).live()).isTrue();
     }
 
+    @Test
+    @DisplayName("Given a person of the foundation, when an article is created signed by them, then the article carries their name, role and portrait")
+    void should_carry_the_signer_when_created_given_a_person_of_the_foundation() {
+        Person pavel = person("Pavel Vzorový", Optional.of("Předseda správní rady"), Optional.of(IMAGE));
+        when(news.isSlugTakenByAnother(any(), any())).thenReturn(false);
+        when(people.findById(pavel.id())).thenReturn(Optional.of(pavel));
+        when(people.findAllInOrder()).thenReturn(List.of(pavel));
+        when(media.findSize(IMAGE)).thenReturn(Optional.of(new MediaSize(600, 800)));
+
+        NewsArticleView view = service().create(ADMIN, signed("Dominik", pavel.id()));
+
+        assertThat(view.signer()).hasValueSatisfying(signer -> {
+            assertThat(signer.id()).isEqualTo(pavel.id());
+            assertThat(signer.name()).isEqualTo("Pavel Vzorový");
+            assertThat(signer.role()).contains("Předseda správní rady");
+            assertThat(signer.portrait()).hasValueSatisfying(portrait -> assertThat(portrait.id()).isEqualTo(IMAGE));
+        });
+        ArgumentCaptor<NewsArticle> saved = ArgumentCaptor.forClass(NewsArticle.class);
+        verify(news).save(saved.capture());
+        assertThat(saved.getValue().content().signer()).contains(pavel.id());
+    }
+
+    @Test
+    @DisplayName("Given no such person of the foundation, when an article is created signed by them, then it is refused as not found and nothing is saved")
+    void should_refuse_the_article_when_created_given_an_unknown_signer() {
+        PersonId unknown = PersonId.newId(NOW);
+        when(news.isSlugTakenByAnother(any(), any())).thenReturn(false);
+        when(people.findById(unknown)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service().create(ADMIN, signed("Dominik", unknown))).isInstanceOf(PersonNotFound.class);
+
+        verify(news, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Given articles without a signer, when they are listed, then the people of the foundation are not read at all")
+    void should_not_read_the_people_when_listed_given_no_signer() {
+        NewsArticle article = NewsArticle.create(NewsArticleId.newId(NOW), content("dominik", Optional.empty()), NOW);
+        when(news.findAllDraftsFirst()).thenReturn(List.of(article));
+
+        assertThat(service().list()).singleElement().satisfies(view -> assertThat(view.signer()).isEmpty());
+
+        verify(people, never()).findAllInOrder();
+    }
+
     private static NewsArticleCommand command(String title, Optional<String> slug, Optional<MediaId> image) {
-        return new NewsArticleCommand(title, slug, Optional.of("Projekt"), "Perex", "Text", image, Optional.empty());
+        return new NewsArticleCommand(title, slug, Optional.of("Projekt"), "Perex", "Text", image, Optional.empty(), Optional.empty());
+    }
+
+    private static NewsArticleCommand signed(String title, PersonId signer) {
+        return new NewsArticleCommand(title, Optional.empty(), Optional.empty(), "Perex", "Text", Optional.empty(), Optional.empty(), Optional.of(signer));
+    }
+
+    private static Person person(String name, Optional<String> role, Optional<MediaId> portrait) {
+        return Person.add(PersonId.newId(NOW), new PersonDetails(name, role, true, Optional.empty(), true, portrait, PersonEmails.NONE), 0, NOW);
     }
 
     private static NewsContent content(String slug, Optional<MediaId> image) {

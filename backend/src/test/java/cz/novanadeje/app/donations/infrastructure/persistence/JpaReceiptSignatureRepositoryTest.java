@@ -133,28 +133,28 @@ class JpaReceiptSignatureRepositoryTest {
     }
 
     @Test
-    @DisplayName("Given a scan uploaded, when the current scan is asked for, then the scan comes back")
-    void should_answer_scan_when_current_scan_asked_given_scan() {
+    @DisplayName("Given a scan uploaded, when the current digest is asked for, then the digest of the scan comes back")
+    void should_answer_scan_digest_when_current_digest_asked_given_scan() {
         signatures.replace(FIRST, NOW);
         flushAndClear();
 
-        assertThat(signatures.currentScan()).contains(FIRST);
+        assertThat(signatures.currentDigest()).contains(FIRST.digest());
     }
 
     @Test
-    @DisplayName("Given a vector signature whose content no longer reads, when the current scan is asked for, then there is none and the vector is not read")
-    void should_answer_no_scan_without_reading_vector_when_current_scan_asked_given_unreadable_vector() {
+    @DisplayName("Given a vector signature whose content no longer reads, when the current digest is asked for, then its digest comes back without reading the vector")
+    void should_answer_vector_digest_without_reading_it_when_current_digest_asked_given_unreadable_vector() {
         signatures.replace(VECTOR, NOW);
         flushAndClear();
         jdbc.sql("update receipt_image set content = ? where sha256 = ?").params("garbage".getBytes(StandardCharsets.UTF_8), VECTOR.digest().value()).update();
 
-        assertThat(signatures.currentScan()).isEmpty();
+        assertThat(signatures.currentDigest()).contains(VECTOR.digest());
     }
 
     @Test
-    @DisplayName("Given nothing uploaded, when the current scan is asked for, then there is none")
-    void should_answer_no_scan_when_current_scan_asked_given_nothing_uploaded() {
-        assertThat(signatures.currentScan()).isEmpty();
+    @DisplayName("Given nothing uploaded, when the current digest is asked for, then there is none")
+    void should_answer_no_digest_when_current_digest_asked_given_nothing_uploaded() {
+        assertThat(signatures.currentDigest()).isEmpty();
     }
 
     @Test
@@ -185,6 +185,21 @@ class JpaReceiptSignatureRepositoryTest {
         assertThat(jdbc.sql("select count(*) from donation_receipt_signature").query(Long.class).single()).isEqualTo(1L);
         assertThat(jdbc.sql("select count(*) from receipt_image where sha256 in (?, ?)").params(FIRST.digest().value(), SECOND.digest().value())
                 .query(Long.class).single()).isEqualTo(2L);
+    }
+
+    @Test
+    @DisplayName("Given a signature uploaded, when the same image is uploaded again later, then its receipt image is stored once and keeps the time it was first used")
+    void should_store_the_image_once_and_keep_its_first_use_when_uploaded_again_given_the_same_image() {
+        signatures.replace(FIRST, NOW);
+        flushAndClear();
+
+        signatures.replace(FIRST, NOW.plusSeconds(60));
+        flushAndClear();
+
+        assertThat(jdbc.sql("select count(*) from receipt_image where sha256 = ?").param(FIRST.digest().value()).query(Long.class).single())
+                .isEqualTo(1L);
+        assertThat(jdbc.sql("select first_used_at from receipt_image where sha256 = ?").param(FIRST.digest().value()).query(Instant.class).single())
+                .isEqualTo(NOW);
     }
 
     @Test

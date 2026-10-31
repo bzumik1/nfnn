@@ -1,10 +1,17 @@
 import { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
-import { administrator, adminSettings, mockDonorApi, session } from './donor-session';
+import {
+  administrator,
+  adminSettings,
+  mockDonorApi,
+  receiptSigningKeys,
+  session,
+} from './donor-session';
 import { noSignature, refusedVector, uploadedSignature, vectorSignature } from './signature-image';
 
 const SETTINGS = '/api/admin/operations/settings';
 const SIGNATURE = '/api/admin/donations/receipt-signature';
+const SIGNING_KEYS = '/api/admin/donations/receipt-signing-keys';
 
 async function rememberedSession(page: Page): Promise<void> {
   await page.route('**/api/donors/auth/refresh', (route) =>
@@ -100,6 +107,7 @@ test.describe('Given an administrator on the settings page', () => {
     await expect(page.getByRole('heading', { level: 2 })).toHaveText([
       'Potvrzení o daru',
       'Podpis na potvrzeních',
+      'Klíč k ověřovacím QR kódům',
       'Kontaktní formulář',
       'Odesílatel e-mailů',
       'Technické nastavení (pro správce serveru)',
@@ -256,7 +264,7 @@ test.describe('Given an administrator on the settings page', () => {
     });
 
     await expect(alert).toHaveText(
-      'SVG nejde použít jako podpis. Soubor obsahuje nepovolený prvek „script“. Ručně psaný podpis v SVG jde, když jsou jeho tahy převedené na vyplněné tvary (path); obrysy s nastavenou tloušťkou čáry (stroke) a efekty web nepřijme a soubor smí mít nejvýš 200 kB. Místo něj můžete nahrát sken JPEG, PNG nebo WebP.',
+      'SVG nejde použít jako podpis. Soubor obsahuje nepovolený prvek. Ručně psaný podpis v SVG jde, když jsou jeho tahy převedené na vyplněné tvary (path); obrysy s nastavenou tloušťkou čáry (stroke) a efekty web nepřijme a soubor smí mít nejvýš 200 kB. Místo něj můžete nahrát sken JPEG, PNG nebo WebP.',
     );
     await expect(drawing.locator('path')).toHaveCount(2);
 
@@ -311,5 +319,107 @@ test.describe('Given an administrator on the settings page', () => {
     expect(colours.adjust).toBe('none');
     expect(colours.paper).not.toBe('rgb(0, 0, 0)');
     expect(colours.ink).toBe('rgb(29, 42, 92)');
+  });
+});
+
+test.describe('Given an administrator whose receipt signing key may have leaked', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+    await rememberedSession(page);
+    await page.route(
+      (url) => url.pathname === SETTINGS,
+      (route) => route.fulfill({ json: adminSettings }),
+    );
+  });
+
+  test('when they withdraw the key of the server with a fresh code, then the key shows as withdrawn, the web goes down and comes back and the card shows the new key', async ({
+    page,
+  }) => {
+    const withdrawals: unknown[] = [];
+    let restarted = false;
+    const newKey = {
+      ...receiptSigningKeys.keys[0],
+      keyId: 'b7e1c2d4',
+      registeredAt: '2026-11-20T09:31:00Z',
+    };
+    await page.route(
+      (url) => url.pathname === SIGNING_KEYS,
+      (route) => {
+        if (withdrawals.length > 0 && !restarted) {
+          restarted = true;
+          return route.fulfill({ status: 502, body: '' });
+        }
+        return route.fulfill({
+          json: restarted
+            ? {
+                ...receiptSigningKeys,
+                currentKeyId: 'b7e1c2d4',
+                keys: [
+                  { ...receiptSigningKeys.keys[0], status: 'revoked', current: false },
+                  newKey,
+                ],
+              }
+            : receiptSigningKeys,
+        });
+      },
+    );
+    await page.route(
+      (url) => url.pathname === `${SIGNING_KEYS}/21fe31df/withdrawal`,
+      (route) => {
+        withdrawals.push(route.request().postDataJSON());
+        return route.fulfill({
+          json: {
+            ...receiptSigningKeys,
+            keys: receiptSigningKeys.keys.map((key) => ({ ...key, status: 'revoked' })),
+            restarting: true,
+          },
+        });
+      },
+    );
+
+    await page.goto('/sprava/nastaveni');
+    const card = page.getByRole('region', { name: 'Klíč k ověřovacím QR kódům' });
+    await card.getByRole('button', { name: 'Stáhnout klíč serveru…' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Stáhnout klíč 21fe31df?' });
+    await expect(dialog).toContainText('Web se hned restartuje');
+    await expect(dialog.getByLabel('Kód z aplikace')).toBeFocused();
+    await dialog.getByLabel('Kód z aplikace').fill('123456');
+    await dialog.getByRole('button', { name: 'Stáhnout klíč', exact: true }).click();
+
+    await expect(dialog).toBeHidden();
+    await expect(card.locator('dd')).toHaveText(['21fe31df', '13. 11. 2026 12:00', 'Stažený']);
+    await expect(card.getByRole('status').filter({ hasText: /\S/ })).toHaveText(
+      'Klíč 21fe31df je stažený. Web se restartuje a vytvoří si nový klíč, obvykle do minuty.',
+    );
+    await expect(card.getByRole('status').filter({ hasText: /\S/ })).toHaveText(
+      'Klíč 21fe31df je stažený a web po restartu podepisuje novým klíčem.',
+      { timeout: 15_000 },
+    );
+    await expect(card.locator('dd').first()).toHaveText('b7e1c2d4');
+    expect(withdrawals).toEqual([{ secondFactorCode: '123456' }]);
+  });
+
+  test('when they cancel the withdrawal, then nothing is sent and focus returns to the button', async ({
+    page,
+  }) => {
+    let sent = false;
+    await page.route(
+      (url) => url.pathname === `${SIGNING_KEYS}/21fe31df/withdrawal`,
+      (route) => {
+        sent = true;
+        return route.fulfill({ status: 500, body: '' });
+      },
+    );
+
+    await page.goto('/sprava/nastaveni');
+    const opener = page.getByRole('button', { name: 'Stáhnout klíč serveru…' });
+    await opener.click();
+    const dialog = page.getByRole('dialog', { name: 'Stáhnout klíč 21fe31df?' });
+    await expect(dialog.getByLabel('Kód z aplikace')).toBeFocused();
+    await page.keyboard.press('Escape');
+
+    await expect(dialog).toHaveCount(0);
+    await expect(opener).toBeFocused();
+    expect(sent).toBe(false);
   });
 });

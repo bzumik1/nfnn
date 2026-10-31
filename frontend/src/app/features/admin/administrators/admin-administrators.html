@@ -36,151 +36,159 @@
         </div>
       }
       @case ('ready') {
-        <table class="ui-table">
-          <thead>
-            <tr>
-              <th i18n="@@admin.administrators.col.name">Jméno</th>
-              <th i18n="@@admin.administrators.col.email">E-mail</th>
-              <th i18n="@@admin.administrators.col.secondFactor">Dvoufaktorové ověření</th>
-              <th class="action">
-                <span class="visually-hidden" i18n="@@admin.administrators.col.action">Akce</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
+        <div class="ui-card__body">
+          <ul class="ui-person-list">
             @for (item of items(); track item.donorId) {
-              <tr>
-                <td data-label="Jméno" i18n-data-label="@@admin.administrators.col.name">
-                  <a class="admin-name" [routerLink]="['/sprava/darci', item.donorId]">{{
-                    item.name
-                  }}</a>
-                  @if (isSelf(item)) {
-                    <span class="self-tag" i18n="@@admin.administrators.selfTag">to jste vy</span>
+              <li class="ui-person-row administrator-row">
+                <app-avatar
+                  class="ui-person-row__avatar"
+                  [name]="item.name"
+                  [src]="portraitOf(item)"
+                  [size]="48"
+                />
+                <div>
+                  <p class="ui-person-row__name">
+                    <a class="admin-name" [routerLink]="['/sprava/darci', item.donorId]">{{
+                      item.name
+                    }}</a>
+                  </p>
+                  <p class="ui-person-row__meta">{{ item.email }}</p>
+                  <ul class="ui-person-row__badges">
+                    @if (isSelf(item)) {
+                      <li class="ui-badge ui-badge--accent" i18n="@@admin.administrators.selfTag">
+                        To jste vy
+                      </li>
+                    }
+                    @if (item.secondFactorEnabled) {
+                      <li
+                        class="ui-badge ui-badge--success"
+                        i18n="@@admin.administrators.badge.factorOn"
+                      >
+                        Dvoufaktorové ověření zapnuté
+                      </li>
+                    } @else {
+                      <li
+                        class="ui-badge ui-badge--warning"
+                        i18n="@@admin.administrators.badge.factorOff"
+                      >
+                        Dvoufaktorové ověření vypnuté
+                      </li>
+                    }
+                  </ul>
+                  @if (!item.secondFactorEnabled) {
+                    <p class="ui-person-row__note" i18n="@@admin.administrators.factorOff.hint">
+                      Správa se mu otevře jen přístupovým klíčem.
+                    </p>
                   }
-                </td>
-                <td data-label="E-mail" i18n-data-label="@@admin.administrators.col.email">
-                  {{ item.email }}
-                </td>
-                <td
-                  data-label="Dvoufaktorové ověření"
-                  i18n-data-label="@@admin.administrators.col.secondFactor"
-                >
-                  @if (item.secondFactorEnabled) {
-                    <span class="factor-tag factor-tag--on" i18n="@@admin.administrators.factor.on"
-                      >zapnuté</span
-                    >
-                  } @else {
-                    <span
-                      class="factor-tag factor-tag--off"
-                      i18n="@@admin.administrators.factor.off"
-                      >vypnuté, správa se mu otevře jen přístupovým klíčem</span
-                    >
-                  }
-                </td>
-                <td class="action">
                   @if (isSelf(item)) {
-                    <span class="muted" i18n="@@admin.administrators.self.hint"
-                      >Svůj účet spravujete v
-                      <a routerLink="/darce/udaje">Údajích a zabezpečení</a>.</span
+                    <p class="ui-person-row__note" i18n="@@admin.administrators.self.hint">
+                      Svůj účet spravujete v <a routerLink="/darce/udaje">Údajích a zabezpečení</a>.
+                    </p>
+                  }
+                </div>
+                @if (isPending('revoke', item)) {
+                  <div
+                    class="ui-person-row__detail confirm"
+                    role="group"
+                    [attr.aria-label]="revokeLabel(item)"
+                  >
+                    <span class="confirm-question">{{ revokeQuestion(item) }}</span>
+                    <button
+                      type="button"
+                      class="ui-button ui-button--small ui-button--danger"
+                      [disabled]="busy()"
+                      (click)="revoke(item)"
                     >
-                  } @else if (isPending('revoke', item)) {
-                    <span class="confirm" role="group" [attr.aria-label]="revokeLabel(item)">
-                      <span>{{ revokeQuestion(item) }}</span>
-                      <button
-                        type="button"
-                        class="ui-button ui-button--small ui-button--danger"
-                        [disabled]="busy()"
-                        (click)="revoke(item)"
-                      >
-                        @if (busy()) {
-                          <ng-container i18n="@@admin.administrators.revoke.busy"
-                            >Odebíráme…</ng-container
-                          >
-                        } @else {
-                          <ng-container i18n="@@admin.administrators.revoke.yes"
-                            >Ano, odebrat</ng-container
-                          >
-                        }
-                      </button>
-                      <button
-                        #confirmCancel
-                        type="button"
-                        class="ui-link-button"
-                        [disabled]="busy()"
-                        (click)="cancel()"
-                        i18n="@@admin.administrators.confirm.no"
-                      >
-                        Ponechat
-                      </button>
-                    </span>
-                  } @else if (isPending('reset', item)) {
-                    <span
-                      class="confirm"
-                      role="group"
-                      aria-label="Vypnout dvoufaktorové ověření?"
-                      i18n-aria-label="@@admin.administrators.reset.confirm.label"
-                    >
-                      <span i18n="@@admin.administrators.reset.confirm.question"
-                        >Ověřili jste, že žádá majitel účtu (například odpověděl z registrovaného
-                        e-mailu)? Správce se pak přihlásí jen heslem a všechna jeho přihlášení
-                        skončí.</span
-                      >
-                      <button
-                        type="button"
-                        class="ui-button ui-button--small ui-button--danger"
-                        [disabled]="busy()"
-                        (click)="reset(item)"
-                      >
-                        @if (busy()) {
-                          <ng-container i18n="@@admin.administrators.reset.busy"
-                            >Vypínáme…</ng-container
-                          >
-                        } @else {
-                          <ng-container i18n="@@admin.administrators.reset.yes"
-                            >Ano, vypnout</ng-container
-                          >
-                        }
-                      </button>
-                      <button
-                        #confirmCancel
-                        type="button"
-                        class="ui-link-button"
-                        [disabled]="busy()"
-                        (click)="cancel()"
-                        i18n="@@admin.administrators.confirm.no"
-                      >
-                        Ponechat
-                      </button>
-                    </span>
-                  } @else {
-                    <span class="actions">
-                      @if (item.secondFactorEnabled) {
-                        <button
-                          [id]="openerId('reset', item)"
-                          type="button"
-                          class="ui-button ui-button--small ui-button--quiet"
-                          (click)="ask('reset', item)"
-                          i18n="@@admin.administrators.reset.open"
+                      @if (busy()) {
+                        <ng-container i18n="@@admin.administrators.revoke.busy"
+                          >Odebíráme…</ng-container
                         >
-                          Vypnout dvoufaktorové ověření
-                        </button>
+                      } @else {
+                        <ng-container i18n="@@admin.administrators.revoke.yes"
+                          >Ano, odebrat</ng-container
+                        >
                       }
+                    </button>
+                    <button
+                      #confirmCancel
+                      type="button"
+                      class="ui-link-button"
+                      [disabled]="busy()"
+                      (click)="cancel()"
+                      i18n="@@admin.administrators.confirm.no"
+                    >
+                      Ponechat
+                    </button>
+                  </div>
+                } @else if (isPending('reset', item)) {
+                  <div
+                    class="ui-person-row__detail confirm"
+                    role="group"
+                    aria-label="Vypnout dvoufaktorové ověření?"
+                    i18n-aria-label="@@admin.administrators.reset.confirm.label"
+                  >
+                    <span
+                      class="confirm-question"
+                      i18n="@@admin.administrators.reset.confirm.question"
+                      >Ověřili jste, že žádá majitel účtu (například odpověděl z registrovaného
+                      e-mailu)? Správce se pak přihlásí jen heslem a všechna jeho přihlášení
+                      skončí.</span
+                    >
+                    <button
+                      type="button"
+                      class="ui-button ui-button--small ui-button--danger"
+                      [disabled]="busy()"
+                      (click)="reset(item)"
+                    >
+                      @if (busy()) {
+                        <ng-container i18n="@@admin.administrators.reset.busy"
+                          >Vypínáme…</ng-container
+                        >
+                      } @else {
+                        <ng-container i18n="@@admin.administrators.reset.yes"
+                          >Ano, vypnout</ng-container
+                        >
+                      }
+                    </button>
+                    <button
+                      #confirmCancel
+                      type="button"
+                      class="ui-link-button"
+                      [disabled]="busy()"
+                      (click)="cancel()"
+                      i18n="@@admin.administrators.confirm.no"
+                    >
+                      Ponechat
+                    </button>
+                  </div>
+                } @else if (!isSelf(item)) {
+                  <div class="ui-person-row__actions">
+                    @if (item.secondFactorEnabled) {
                       <button
-                        [id]="openerId('revoke', item)"
+                        [id]="openerId('reset', item)"
                         type="button"
-                        class="ui-button ui-button--small ui-button--danger-outline"
-                        (click)="ask('revoke', item)"
-                        i18n="@@admin.administrators.revoke.open"
+                        class="ui-button ui-button--small ui-button--quiet"
+                        (click)="ask('reset', item)"
+                        i18n="@@admin.administrators.reset.open"
                       >
-                        Odebrat roli správce
+                        Vypnout dvoufaktorové ověření
                       </button>
-                    </span>
-                  }
-                </td>
-              </tr>
+                    }
+                    <button
+                      [id]="openerId('revoke', item)"
+                      type="button"
+                      class="ui-button ui-button--small ui-button--danger-outline"
+                      (click)="ask('revoke', item)"
+                      i18n="@@admin.administrators.revoke.open"
+                    >
+                      Odebrat roli správce
+                    </button>
+                  </div>
+                }
+              </li>
             }
-          </tbody>
-        </table>
+          </ul>
+        </div>
       }
     }
   </section>

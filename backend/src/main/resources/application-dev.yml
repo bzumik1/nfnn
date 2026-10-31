@@ -13,6 +13,10 @@ app:
       value: ${BACKUP_KEY:AGE-SECRET-KEY-1CZSEH9JWJ74WWUA7EFSLLS5DFA24G5NE59ZHTVN0505ACQH8CSYQVPZ2PD}
     settings:
       key: ${SETTINGS_KEY:ZGV2LW9ubHktc2V0dGluZ3Mta2V5LTMyLWJ5dGVzLSE=}
+  donations:
+    receipt:
+      signing:
+        key: ${RECEIPT_SIGNING_KEY:nWGxne/9WmC6hEr0kuwsxERJxWl7MmkZcDusAxyuf2A=}
   security:
     jwt:
       secret: ${JWT_SECRET:change-me-in-production-this-is-only-for-local-development-32chars-min}

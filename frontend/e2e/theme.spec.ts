@@ -4,6 +4,14 @@ import { join } from 'node:path';
 import { administrator, mockDonorApi, openSignInDialog, session } from './donor-session';
 import { expect, test } from './fixtures';
 import {
+  CHANGED_AMOUNT,
+  scanAfterLoad,
+  serveReceiptKeys,
+  serveReceiptStatus,
+  SINGLE_RECEIPT,
+  YEARLY_RECEIPT,
+} from './receipt-verification';
+import {
   chunkLoadNotice,
   chunkLoadPageHeading,
   openHomeThenLoseNewChunks,
@@ -23,6 +31,7 @@ const PUBLIC_PAGES = [
   '/obnova-hesla',
   '/potvrzeni-emailu',
   '/pripojeni',
+  '/overit',
 ];
 
 const SIGNED_IN_PAGES = [
@@ -133,6 +142,29 @@ test.describe('Given the site built with another theme', () => {
 
         expect(await lookOfTheReferenceTheme(page), path).toEqual([]);
       }
+    });
+  }
+
+  for (const width of [390, 1280]) {
+    test(`when a visitor verifies a signed, a doubtful and a changed receipt code ${width} px wide, then none of the results shows a colour or font of the default theme`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await serveReceiptKeys(page);
+      await serveReceiptStatus(page, 'active');
+      await page.goto(`/overit#${YEARLY_RECEIPT.fragment}`);
+      const heading = page.getByRole('heading', { level: 1 });
+      await expect(heading).toHaveText('Podepsáno fondem Nová naděje');
+      expect(await lookOfTheReferenceTheme(page), 'signed').toEqual([]);
+
+      await serveReceiptStatus(page, 'unknown');
+      await scanAfterLoad(page, SINGLE_RECEIPT);
+      await expect(heading).toHaveText('Fond toto potvrzení ve své evidenci nevede');
+      expect(await lookOfTheReferenceTheme(page), 'unrecorded').toEqual([]);
+
+      await scanAfterLoad(page, CHANGED_AMOUNT);
+      await expect(heading).toHaveText('Neověřeno: podpis neodpovídá údajům');
+      expect(await lookOfTheReferenceTheme(page), 'invalid').toEqual([]);
     });
   }
 

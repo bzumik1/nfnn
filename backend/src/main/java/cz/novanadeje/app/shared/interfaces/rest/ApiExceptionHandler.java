@@ -6,8 +6,13 @@ import cz.novanadeje.app.shared.domain.error.Conflict;
 import cz.novanadeje.app.shared.domain.error.DomainException;
 import cz.novanadeje.app.shared.domain.error.NotFound;
 import cz.novanadeje.app.shared.domain.error.RuleViolation;
+import org.apache.tomcat.util.http.InvalidParameterException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.TypeMismatchException;
+import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.core.NestedExceptionUtils;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -18,28 +23,42 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.method.ParameterErrors;
+import org.springframework.web.ErrorResponseException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 import java.net.URI;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 @RestControllerAdvice
 public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
+    private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
+    private static final String SITE_PACKAGE = "cz.novanadeje.app.";
+
+    private ProblemMessages texts;
+
+    @Override
+    public void setMessageSource(MessageSource messageSource) {
+        super.setMessageSource(messageSource);
+        this.texts = new ProblemMessages(messageSource);
+    }
+
     @Override
     protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
         ProblemDetail problem = ex.updateAndGetBody(getMessageSource(), LocaleContextHolder.getLocale());
         problem.setType(ProblemTypes.VALIDATION);
-        problem.setProperty("errors", fieldErrors(ex.getFieldErrors()));
+        problem.setProperty("errors", listed(fieldErrors(ex.getFieldErrors())));
         return handleExceptionInternal(ex, problem, headers, status, request);
     }
 
@@ -67,6 +86,15 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         return handleExceptionInternal(ex, problem, headers, HttpStatus.CONTENT_TOO_LARGE, request);
     }
 
+    @Override
+    protected ResponseEntity<Object> handleErrorResponseException(ErrorResponseException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+        ProblemDetail problem = ProblemDetail.forStatus(status);
+        problem.setType(ex.getBody().getType());
+        texts.find("problemDetail.title." + ex.getClass().getName()).ifPresent(problem::setTitle);
+        texts.find("problemDetail." + ex.getClass().getName()).ifPresent(problem::setDetail);
+        return handleExceptionInternal(ex, problem, headers, status, request);
+    }
+
     @ExceptionHandler(DomainException.class)
     ProblemDetail handleDomainException(DomainException ex) {
         HttpStatus status = switch (ex) {
@@ -78,19 +106,31 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         };
         ProblemDetail problem = ProblemDetail.forStatus(status);
         problem.setType(ProblemTypes.of(ex.code()));
-        problem.setTitle(message("problem." + ex.code() + ".title", ex.getMessage()));
-        problem.setDetail(message("problem." + ex.code() + ".detail", ex.getMessage()));
+        problem.setTitle(message("problem." + ex.code() + ".title", status.getReasonPhrase()));
+        problem.setDetail(texts.find("problem." + ex.code() + ".detail").orElse(null));
         ex.extensions().forEach(problem::setProperty);
         return problem;
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
     ProblemDetail handleIllegalArgument(IllegalArgumentException ex) {
+        log.warn("Refused a value as validation ({} thrown at {})", ex.getClass().getSimpleName(), thrownAt(ex));
         ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
         problem.setType(ProblemTypes.VALIDATION);
         problem.setTitle(message("problem.validation.title", HttpStatus.BAD_REQUEST.getReasonPhrase()));
-        problem.setDetail(ex.getMessage());
+        problem.setDetail(message("problem.validation.refused-value"));
         return problem;
+    }
+
+    @ExceptionHandler(InvalidParameterException.class)
+    ResponseEntity<Object> handleUndecodableParameter(InvalidParameterException ex, WebRequest request) {
+        return validationProblem(ex, List.of(), new HttpHeaders(), request);
+    }
+
+    @ExceptionHandler(MultipartException.class)
+    ResponseEntity<Object> handleUnreadableMultipart(MultipartException ex, WebRequest request) {
+        log.warn("A multipart body could not be read ({})", NestedExceptionUtils.getMostSpecificCause(ex).getClass().getSimpleName());
+        return validationProblem(ex, List.of(), new HttpHeaders(), request);
     }
 
     @ExceptionHandler(AuthenticationException.class)
@@ -104,6 +144,26 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     ProblemDetail handleAccessDenied(AccessDeniedException ex) {
         return problem(HttpStatus.FORBIDDEN, ProblemTypes.FORBIDDEN, "problem.forbidden.title");
+    }
+
+    private static String thrownAt(Throwable ex) {
+        StackTraceElement[] frames = ex.getStackTrace();
+        if (frames.length == 0) {
+            return "an unknown frame";
+        }
+        if (isSiteFrame(frames[0])) {
+            return frameName(frames[0]);
+        }
+        return frameName(frames[0]) + ", called from " + Arrays.stream(frames).filter(ApiExceptionHandler::isSiteFrame).findFirst()
+                .map(ApiExceptionHandler::frameName).orElse("no frame of the site");
+    }
+
+    private static boolean isSiteFrame(StackTraceElement frame) {
+        return frame.getClassName().startsWith(SITE_PACKAGE);
+    }
+
+    private static String frameName(StackTraceElement frame) {
+        return frame.getClassName() + "." + frame.getMethodName() + ":" + frame.getLineNumber();
     }
 
     private static boolean isExpiredToken(AuthenticationException ex) {
@@ -124,17 +184,16 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         problem.setType(ProblemTypes.VALIDATION);
         problem.setTitle(message("problem.validation.title"));
         problem.setDetail(message("problem.validation.detail"));
-        problem.setProperty("errors", errors);
+        problem.setProperty("errors", listed(errors));
         return handleExceptionInternal(ex, problem, headers, HttpStatus.BAD_REQUEST, request);
     }
 
     private String message(String key) {
-        return message(key, key);
+        return texts.text(key);
     }
 
     private String message(String key, String fallback) {
-        Locale locale = LocaleContextHolder.getLocale();
-        return getMessageSource().getMessage(key, null, fallback, locale);
+        return texts.text(key, LocaleContextHolder.getLocale(), fallback);
     }
 
     private static List<Map<String, String>> parameterErrors(HandlerMethodValidationException ex) {
@@ -142,6 +201,13 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
                 .flatMap(result -> result instanceof ParameterErrors beanErrors
                         ? beanErrors.getFieldErrors().stream().map(error -> fieldError(error.getField(), error.getDefaultMessage()))
                         : result.getResolvableErrors().stream().map(error -> fieldError(result.getMethodParameter().getParameterName(), error.getDefaultMessage())))
+                .toList();
+    }
+
+    private static List<Map<String, String>> listed(List<Map<String, String>> errors) {
+        return errors.stream()
+                .distinct()
+                .sorted(Comparator.comparing((Map<String, String> error) -> error.get("field")).thenComparing(error -> error.get("message")))
                 .toList();
     }
 

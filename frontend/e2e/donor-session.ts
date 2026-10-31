@@ -1,5 +1,6 @@
 import { expect, Page } from '@playwright/test';
-import { PAYMENT_QR_500, SECOND_FACTOR_QR } from './qr-matrices';
+import { FOUNDATION_PAYMENT_DETAILS } from './qr-matrices';
+import { mockReceiptIssuing, ReceiptIssuing } from './receipt-issuing';
 import { noSignature } from './signature-image';
 
 export const donor = {
@@ -51,15 +52,14 @@ export const secondFactorRecovery = {
   amountMinor: 100,
   currency: 'CZK',
   usableFrom: '2026-10-27',
-  spayd: 'SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*MSG:OBNOVA K7MP4RXA',
-  qrCode: PAYMENT_QR_500,
+  spayd:
+    'SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*RN:NADACNI FOND NOVA NADEJE*MSG:OBNOVA K7MP4RXA',
 };
 
 export const secondFactorEnrolment = {
   secret: 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ',
   otpauthUri:
     'otpauth://totp/Nov%C3%A1%20nad%C4%9Bje:jana%40example.cz?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&issuer=Nov%C3%A1%20nad%C4%9Bje&algorithm=SHA1&digits=6&period=30',
-  qrCode: SECOND_FACTOR_QR,
 };
 
 export function session(status: number, user: typeof donor = donor) {
@@ -85,7 +85,7 @@ export function problem(status: number, type: string, title: string, detail: str
 export interface DonorApiMock {
   summary: unknown;
   list: unknown;
-  receipts?: { singleFileName: string };
+  receipts?: ReceiptIssuing;
 }
 
 export const noDonations: DonorApiMock = {
@@ -141,49 +141,34 @@ export function bankAccountItem(overrides: Record<string, unknown> = {}) {
   };
 }
 
-export function receiptPdf(fileName: string) {
-  return {
-    status: 200,
-    headers: {
-      'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="${fileName}"; filename*=UTF-8''${fileName}`,
-    },
-    body: Buffer.from('%PDF-1.4\n%%EOF'),
-  };
-}
-
 export const samplePngBase64 =
   'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAEElEQVR4nGNQTX4NRwzEcQBO0hcxU+9NfQAAAABJRU5ErkJggg==';
 
-export const paymentQr = {
-  spayd: 'SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK',
-  qrCode: PAYMENT_QR_500,
-  bankAccount: {
-    accountNumber: '5544332217/2010',
-    iban: 'CZ2620100000005544332217',
-    recipientName: 'Nadační fond Nová naděje',
-  },
+export const paymentDetails = FOUNDATION_PAYMENT_DETAILS;
+
+export const receiptSigningKeys = {
+  currentKeyId: '21fe31df',
+  currentKeyPublished: true,
+  keys: [
+    {
+      keyId: '21fe31df',
+      algorithm: 'Ed25519',
+      publicKey: '11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo',
+      status: 'active',
+      registeredAt: '2026-11-13T11:00:00Z',
+      published: true,
+      current: true,
+    },
+  ],
+  auditMismatches: [],
 };
 
 export async function mockDonorApi(
   page: Page,
   donations: DonorApiMock = noDonations,
 ): Promise<void> {
-  const receipts = donations.receipts;
-  if (receipts) {
-    await page.route(
-      (url) => url.pathname === '/api/donations/me/receipts/yearly',
-      (route) =>
-        route.fulfill(
-          receiptPdf(
-            `potvrzeni-o-darech-${new URL(route.request().url()).searchParams.get('year')}.pdf`,
-          ),
-        ),
-    );
-    await page.route(
-      (url) => /^\/api\/donations\/me\/[^/]+\/receipt$/.test(url.pathname),
-      (route) => route.fulfill(receiptPdf(receipts.singleFileName)),
-    );
+  if (donations.receipts) {
+    await mockReceiptIssuing(page, donations.receipts);
   }
   await page.route(
     (url) => url.pathname === '/api/operations/setup',
@@ -194,12 +179,16 @@ export async function mockDonorApi(
     (route) => route.fulfill({ json: noSignature }),
   );
   await page.route(
+    (url) => url.pathname === '/api/admin/donations/receipt-signing-keys',
+    (route) => route.fulfill({ json: receiptSigningKeys }),
+  );
+  await page.route(
     (url) => url.pathname === '/api/content/home',
     (route) => route.fulfill({ json: { news: [], projects: [] } }),
   );
   await page.route(
-    (url) => url.pathname === '/api/donations/payment-qr',
-    (route) => route.fulfill({ json: paymentQr }),
+    (url) => url.pathname === '/api/donations/payment-details',
+    (route) => route.fulfill({ json: paymentDetails }),
   );
   await page.route(
     (url) => url.pathname === '/api/donations/me/summary',

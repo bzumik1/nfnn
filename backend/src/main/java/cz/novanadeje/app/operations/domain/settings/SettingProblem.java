@@ -17,7 +17,10 @@ public enum SettingProblem {
     INVALID_DATE,
     INVALID_YEAR,
     REJECTED_AT_STARTUP,
-    PASSWORD_FOR_NEW_MAIL_SERVER;
+    PASSWORD_FOR_NEW_MAIL_SERVER,
+    NOT_IN_SETUP,
+    NOT_IN_ADMINISTRATION,
+    UNKNOWN_SETTING;
 
     public String code() {
         return name().toLowerCase(Locale.ROOT).replace('_', '-');

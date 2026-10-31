@@ -11,6 +11,7 @@ import { MissingGift } from '../missing-gift/missing-gift';
 import { DonationsPending } from '../donations-pending/donations-pending';
 import { donationStatusLabel, DonationsTable } from '../donations-table/donations-table';
 import { DonorDonations } from '../donor-donations';
+import { DownloadProgress } from '../../../../shared/ui/download-progress/download-progress';
 import { receivedVerifications } from '../gift-count/gift-count';
 import { PageTitle } from '../page-title/page-title';
 import { SendGift } from '../send-gift/send-gift';
@@ -20,6 +21,7 @@ const RECENT_DONATIONS_SHOWN = 5;
 @Component({
   selector: 'app-donor-overview',
   imports: [
+    DownloadProgress,
     NgTemplateOutlet,
     RouterLink,
     PageTitle,

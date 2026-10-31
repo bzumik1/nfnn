@@ -41,6 +41,7 @@ SECRETS=${SECRETS_DIR:-/secrets}
 KEY_FILE=${BACKUP_KEY_FILE:-$SECRETS/backup-key}
 POLL_SECONDS=${POLL_SECONDS:-10}
 AGE_HEADER="age-encryption.org/v1"
+RECEIPT_SWITCH_CHANGESET="024-delete-test-receipts-and-drop-the-server-drawing"
 
 STATUS="$BACKUPS/status"
 REQUESTS="$BACKUPS/requests"
@@ -286,6 +287,18 @@ applied_changesets() {
   psql --dbname="$1" --tuples-only --no-align --command="select count(*) from public.databasechangelog" 2>> "$2" | tr -d '[:space:]'
 }
 
+receipt_switch_applied() {
+  [ "$(psql --dbname="$1" --tuples-only --no-align --command="select count(*) from public.databasechangelog where id = '$RECEIPT_SWITCH_CHANGESET'" 2> /dev/null | tr -d '[:space:]')" = 1 ]
+}
+
+receipt_number_taken() {
+  [ "$(psql --dbname="$1" --tuples-only --no-align --command="select case when to_regclass('public.donation_receipt_number_seq') is null then 'f' else (select is_called::text from public.donation_receipt_number_seq) end" 2> /dev/null | tr -d '[:space:]')" = true ]
+}
+
+rewinds_receipt_numbers() {
+  receipt_switch_applied "$PGDATABASE" && receipt_number_taken "$PGDATABASE" && ! receipt_switch_applied "$1"
+}
+
 recover_interrupted_restore() {
   rm -f "$RUNNING"
   if ! database_exists "$PGDATABASE" && database_exists "$RETIRED_DATABASE"; then
@@ -355,7 +368,9 @@ restore_dump() {
       && restore_into "$STAGING_DATABASE" "$r_dump" "$r_identity" "$STATUS/restore.err"; then
     r_tables=$(psql --dbname="$STAGING_DATABASE" --tuples-only --no-align --command="select count(*) from information_schema.tables where table_schema = 'public'" 2>> "$STATUS/restore.err" | tr -d '[:space:]')
     r_changesets=$(applied_changesets "$STAGING_DATABASE" "$STATUS/restore.err")
-    if [ "${r_tables:-0}" -gt 0 ] 2>/dev/null && [ "${r_changesets:-0}" -gt 0 ] 2>/dev/null; then
+    if [ "${r_tables:-0}" -gt 0 ] 2>/dev/null && [ "${r_changesets:-0}" -gt 0 ] 2>/dev/null && rewinds_receipt_numbers "$STAGING_DATABASE"; then
+      r_error="the backup was taken before receipts moved to the browser, and this server has given out receipt numbers since; the backend would delete the backup's test receipts and number from 1 again, so nothing was restored"
+    elif [ "${r_tables:-0}" -gt 0 ] 2>/dev/null && [ "${r_changesets:-0}" -gt 0 ] 2>/dev/null; then
       if release_liquibase_lock "$STAGING_DATABASE" "$STATUS/restore.err" \
           && hand_to_app_role "$STAGING_DATABASE" "$STATUS/restore.err" \
           && swap_in_staging; then

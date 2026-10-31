@@ -207,7 +207,7 @@ describe('Given a library that its adapter may load only lazily', () => {
 describe('Given the libraries only tests may use', () => {
   const devOnly = CONFINED_IMPORTS.find((entry) => entry.examples.includes('vitest'));
 
-  it('when the table is read, then it confines vitest, fast-check, fake-indexeddb, pdfjs-dist and Playwright to test support', () => {
+  it('when the table is read, then it confines vitest, fast-check, fake-indexeddb, pdfjs-dist, jsQR and Playwright to test support', () => {
     assert.ok(devOnly, 'an entry for the dev-only libraries');
     assert.deepEqual(
       [...devOnly.examples].sort(),
@@ -217,11 +217,70 @@ describe('Given the libraries only tests may use', () => {
         'fake-indexeddb',
         'fake-indexeddb/auto',
         'fast-check',
+        'jsqr',
+        'jsqr/dist/jsQR.js',
         'pdfjs-dist',
         'pdfjs-dist/legacy/build/pdf.mjs',
         'vitest',
       ].sort(),
     );
-    assert.deepEqual(devOnly.allowedIn, ['testSupport', 'sharedCaseLoader', 'sharedCaseSetup']);
+    assert.deepEqual(devOnly.allowedIn, [
+      'testSupport',
+      'sharedCaseLoader',
+      'sharedCaseSetup',
+      'receiptAssetsSetup',
+    ]);
+  });
+});
+
+describe('Given the fallback Ed25519 library of the verification page', () => {
+  const noble = CONFINED_IMPORTS.find((entry) => entry.examples.includes('@noble/curves'));
+
+  it('when the table is read, then @noble/curves and its hashes load only lazily in their one adapter', () => {
+    assert.ok(noble, 'an entry for @noble/curves');
+    assert.deepEqual(noble.allowedIn, ['ed25519Fallback']);
+    assert.equal(noble.lazyOnly, true);
+    assert.deepEqual(SCOPES.ed25519Fallback.files, [
+      'src/app/features/donations/verification/noble-ed25519.ts',
+    ]);
+  });
+});
+
+describe('Given pdfkit, which draws the receipts', () => {
+  const pdfkit = CONFINED_IMPORTS.find((entry) => entry.examples.includes('pdfkit'));
+  const layout = CONFINED_IMPORTS.find((entry) => entry.examples.includes('./receipt-layout'));
+
+  it('when the table is read, then pdfkit and its font and line-break libraries load only in the receipt layout', () => {
+    assert.ok(pdfkit, 'an entry for pdfkit');
+    assert.deepEqual(pdfkit.allowedIn, ['receiptLayout']);
+    assert.deepEqual(SCOPES.receiptLayout.files, [
+      'src/app/features/donations/receipt-pdf/receipt-layout.ts',
+    ]);
+  });
+
+  it("when the table is read, then pdfkit's own dependencies are confined with it, except the hashes the Ed25519 fallback also uses", () => {
+    assert.deepEqual([...pdfkit.examples].sort(), [
+      '@noble/ciphers',
+      'fflate',
+      'fontkit',
+      'linebreak',
+      'pdfkit',
+      'pdfkit/js/pdfkit.standalone.js',
+      'png-js',
+    ]);
+  });
+
+  it('when the table is read, then only the receipt worker and tests load the receipt layout', () => {
+    assert.ok(layout, 'an entry for the receipt layout');
+    assert.deepEqual(layout.allowedIn, [
+      'receiptWorker',
+      'testSupport',
+      'sharedCaseLoader',
+      'sharedCaseSetup',
+      'receiptAssetsSetup',
+    ]);
+    assert.deepEqual(SCOPES.receiptWorker.files, [
+      'src/app/features/donations/receipt-pdf/receipt-pdf.worker.ts',
+    ]);
   });
 });

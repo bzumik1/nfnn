@@ -1,5 +1,5 @@
 @donations
-Feature: Donations keep an erased donor's gifts and receipts without personal data
+Feature: Donations keep an erased donor's gifts and issued receipts, and drop the record's personal data
 
   Background:
     Given today is 2026-10-17
@@ -16,7 +16,9 @@ Feature: Donations keep an erased donor's gifts and receipts without personal da
       | 1004 | 2026-10-14 | 1.00   | 2900233333 | 2010     | Svoboda Petr | {Petr}         | OVERENI UCTU NADACNI FOND NOVA NADEJE |
     And the application starts the import
     And "Petr" confirms symbol "6123456789" at bank account "2900233333/2010"
-    And "Petr" downloads the receipt of his donation received on 2026-10-10
+    And "Petr" issues the receipt of his donation received on 2026-10-10
+    And the issued receipt is the single receipt of the donation of "Petr" received on 2026-10-10
+    And the issued receipt has number "2026-000001"
     And "Petr" has 4 donations
     When "Jana" erases the donor "Petr"
     Then the response status is 204
@@ -31,6 +33,14 @@ Feature: Donations keep an erased donor's gifts and receipts without personal da
     And the donor's receipts are:
       | number      | kind   | donationReceivedOn | year | issuedOn   | active |
       | 2026-000001 | SINGLE | 2026-10-10         |      | 2026-10-17 | true   |
+    And the stored data of receipt "2026-000001" still names the donor as issued:
+      | donorName       | Petr Svoboda                     |
+      | donorAddress    | Dlouhá 12, 400 01 Ústí nad Labem |
+      | donorIdentifier |                                  |
+    And bank payment 1004 still keeps what the bank statement says:
+      | counterpartyName    | Svoboda Petr                          |
+      | counterpartyAccount | 2900233333/2010                       |
+      | message             | OVERENI UCTU NADACNI FOND NOVA NADEJE |
 
   Scenario: Payments of an erased donor are not paired any more, by symbol or by account
     Given the bank account has these movements:

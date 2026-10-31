@@ -1,0 +1,8 @@
+[
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/verification/payload.json",
+    "reason": "1.8 corrects the logic text on the order of the body checks (1.5 testing review round 3, n6: a serial is checked once its issue day is read and a gift once its day and amount are read, as ReceiptProofBody does) and adds two signed reading cases that pin that order, so the browser reader of the verification page follows the backend's; the status digest (statusSha256, the SHA-256 of the signed message followed by the signature) that the page sends to POST /api/donations/receipts/status came in with 1.6, which stores it as issued_receipt.status_sha256",
+    "contract": "docs/api-contract.md, Receipt status; .claude/rules/testing.md, Logic on both sides"
+  }
+]

@@ -1,6 +1,6 @@
-import { HttpClient, HttpParams, HttpResponse } from '@angular/common/http';
+import { HttpClient, HttpResponse } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { EMPTY, expand, map, Observable, switchMap, take, timer } from 'rxjs';
+import { EMPTY, expand, Observable, switchMap, take, timer } from 'rxjs';
 
 export type DonationStatus = 'RECEIVED' | 'REFUNDED';
 
@@ -90,32 +90,6 @@ export class DonationsApi {
       ),
       take(BANK_CHECK_MAX_POLLS + 1),
     );
-  }
-
-  singleReceipt(id: string): Observable<DownloadedFile> {
-    return this.download(
-      `/api/donations/me/${encodeURIComponent(id)}/receipt`,
-      new HttpParams(),
-      'potvrzeni-o-daru.pdf',
-    );
-  }
-
-  yearlyReceipt(year: number): Observable<DownloadedFile> {
-    return this.download(
-      '/api/donations/me/receipts/yearly',
-      new HttpParams().set('year', year),
-      `potvrzeni-o-darech-${year}.pdf`,
-    );
-  }
-
-  private download(
-    url: string,
-    params: HttpParams,
-    fallbackFileName: string,
-  ): Observable<DownloadedFile> {
-    return this.http
-      .get(url, { params, responseType: 'blob', observe: 'response' })
-      .pipe(map((response) => downloadedFile(response, fallbackFileName)));
   }
 }
 

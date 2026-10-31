@@ -1,12 +1,13 @@
 import {
   HttpClient,
+  HttpContext,
   HttpErrorResponse,
   provideHttpClient,
   withInterceptors,
 } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { authInterceptor } from './auth-interceptor';
+import { authInterceptor, WITHOUT_ACCESS_TOKEN } from './auth-interceptor';
 import { AuthStore } from './auth-store';
 import { Donor } from './donor';
 import { authResponse, problem, sampleDonor } from './testing/donor-fixtures';
@@ -52,6 +53,43 @@ describe('Given the auth interceptor', () => {
     const request = http.expectOne('/api/contact/messages');
     expect(request.request.headers.has('Authorization')).toBe(false);
     request.flush(null, { status: 202, statusText: 'Accepted' });
+  });
+
+  it('when a call is marked as one without the access token, then it carries none although a donor is signed in', () => {
+    signIn('token-1');
+
+    client
+      .get('/api/donations/payment-details', {
+        context: new HttpContext().set(WITHOUT_ACCESS_TOKEN, true),
+      })
+      .subscribe();
+
+    const request = http.expectOne('/api/donations/payment-details');
+    expect(request.request.headers.has('Authorization')).toBe(false);
+    request.flush({});
+  });
+
+  it('when a call without the access token is refused with a problem file, then the caller gets the problem as a parsed body and no refresh happens', async () => {
+    signIn('token-1');
+    let failure: unknown;
+    client
+      .get('/api/donations/payment-details', {
+        context: new HttpContext().set(WITHOUT_ACCESS_TOKEN, true),
+        responseType: 'blob',
+      })
+      .subscribe({ error: (error: unknown) => (failure = error) });
+
+    http.expectOne('/api/donations/payment-details').flush(
+      new Blob([JSON.stringify(problem('donations/rate-limited'))], {
+        type: 'application/problem+json',
+      }),
+      { status: 429, statusText: 'Too Many Requests' },
+    );
+    await vi.waitFor(() => expect(failure).toBeInstanceOf(HttpErrorResponse));
+
+    expect((failure as HttpErrorResponse).error).toEqual(problem('donations/rate-limited'));
+    http.expectNone('/api/donors/auth/refresh');
+    expect(store.currentAccessToken()).toBe('token-1');
   });
 
   it('when the access token expired, then the session is refreshed and the call is retried with the new token', () => {
@@ -118,16 +156,16 @@ describe('Given the auth interceptor', () => {
     signIn('token-1');
     let received: Blob | undefined;
     client
-      .get('/api/donations/me/receipts/yearly', { responseType: 'blob' })
+      .get('/api/admin/operations/backups/nfnn-2026-10-31_03-00.dump.age', { responseType: 'blob' })
       .subscribe((file) => (received = file));
 
     http
-      .expectOne('/api/donations/me/receipts/yearly')
+      .expectOne('/api/admin/operations/backups/nfnn-2026-10-31_03-00.dump.age')
       .flush(problemBlob('auth/expired-token'), { status: 401, statusText: 'Unauthorized' });
     await blobSettled();
 
     http.expectOne('/api/donors/auth/refresh').flush(authResponse('token-2'));
-    const retried = http.expectOne('/api/donations/me/receipts/yearly');
+    const retried = http.expectOne('/api/admin/operations/backups/nfnn-2026-10-31_03-00.dump.age');
     expect(retried.request.headers.get('Authorization')).toBe('Bearer token-2');
     retried.flush(new Blob(['%PDF-1.4'], { type: 'application/pdf' }));
 
@@ -138,11 +176,11 @@ describe('Given the auth interceptor', () => {
     signIn('token-1');
     let failure: unknown;
     client
-      .get('/api/donations/me/receipts/yearly', { responseType: 'blob' })
+      .get('/api/admin/operations/backups/nfnn-2026-10-31_03-00.dump.age', { responseType: 'blob' })
       .subscribe({ error: (reason: unknown) => (failure = reason) });
 
     http
-      .expectOne('/api/donations/me/receipts/yearly')
+      .expectOne('/api/admin/operations/backups/nfnn-2026-10-31_03-00.dump.age')
       .flush(problemBlob('auth/unauthenticated', 'Přihlaste se'), {
         status: 401,
         statusText: 'Unauthorized',
@@ -162,11 +200,11 @@ describe('Given the auth interceptor', () => {
     let failure: unknown;
     const body = new Blob(['Bad Gateway'], { type: 'text/html' });
     client
-      .get('/api/donations/me/receipts/yearly', { responseType: 'blob' })
+      .get('/api/admin/operations/backups/nfnn-2026-10-31_03-00.dump.age', { responseType: 'blob' })
       .subscribe({ error: (reason: unknown) => (failure = reason) });
 
     http
-      .expectOne('/api/donations/me/receipts/yearly')
+      .expectOne('/api/admin/operations/backups/nfnn-2026-10-31_03-00.dump.age')
       .flush(body, { status: 502, statusText: 'Bad Gateway' });
     await blobSettled();
 

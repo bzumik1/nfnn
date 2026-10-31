@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nfnn.cz/shared-cases/schemas/payment/account.schema.json",
+  "title": "Account cases: a Czech account number and an IBAN as payment-details serves them give the IBAN of the number and whether the two match",
+  "description": "The backend runs every case through CzechAccountNumber.toIban and BankAccount (with Iban), the browser through czech-account.ts, which spayd() uses to refuse payment details whose IBAN is not the IBAN of the shown account number.",
+  "type": "object",
+  "required": ["source", "logic", "cases"],
+  "additionalProperties": false,
+  "properties": {
+    "source": {
+      "$ref": "../defs/source.schema.json"
+    },
+    "logic": {
+      "type": "string",
+      "minLength": 1
+    },
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/case"
+      }
+    }
+  },
+  "$defs": {
+    "case": {
+      "type": "object",
+      "required": ["name", "input", "expected"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "input": {
+          "type": "object",
+          "required": ["accountNumber", "iban"],
+          "additionalProperties": false,
+          "properties": {
+            "accountNumber": {
+              "type": "string"
+            },
+            "iban": {
+              "type": "string"
+            }
+          }
+        },
+        "expected": {
+          "type": "object",
+          "required": ["ibanOfNumber", "matches"],
+          "additionalProperties": false,
+          "properties": {
+            "ibanOfNumber": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "pattern": "^CZ[0-9]{22}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "matches": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    }
+  }
+}

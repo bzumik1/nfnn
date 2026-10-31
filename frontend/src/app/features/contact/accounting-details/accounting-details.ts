@@ -4,7 +4,7 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { RouterLink } from '@angular/router';
 import { CopyButton } from '../../../shared/ui/copy-button/copy-button';
 import { formatIban } from '../../donations/iban-format';
-import { PaymentQrApi } from '../../donations/payment-qr-api';
+import { PaymentDetailsStore } from '../../donations/payment-details-store';
 
 @Component({
   selector: 'app-accounting-details',
@@ -16,7 +16,11 @@ import { PaymentQrApi } from '../../donations/payment-qr-api';
 export class AccountingDetails {
   protected readonly companyId = '27278794';
   protected readonly seat = $localize`:@@home.contact.accounting.seatValue:Jiráskova 436, 473 01 Nový Bor`;
-  protected readonly account = inject(PaymentQrApi).foundationAccount;
+  private readonly paymentDetails = inject(PaymentDetailsStore);
+  protected readonly account = computed(() => {
+    const state = this.paymentDetails.state();
+    return state.kind === 'ready' ? state.details.account : null;
+  });
   protected readonly iban = computed(() => {
     const account = this.account();
     return account ? formatIban(account.iban) : '';

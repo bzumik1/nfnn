@@ -11,6 +11,7 @@ import {
   BackupRunResponse,
   BackupScheduleResponse,
   AdminDonorDetailResponse,
+  AdminIssuedReceiptResponse,
   AdminOverviewResponse,
   AdminReportResponse,
   AdminSettingResponse,
@@ -26,6 +27,8 @@ import {
   PairedDonationResponse,
   ReceiptSignatureResponse,
   SignatureVectorResponse,
+  ReceiptSigningKeyResponse,
+  ReceiptSigningKeysResponse,
   SymbolClaimResponse,
 } from '../admin-api';
 import { BankAccountItem } from '../../donations/bank-accounts-api';
@@ -256,6 +259,32 @@ export function donorDetail(
         donationReceivedOn: '2026-10-10',
       }),
     ],
+    yearlyReceiptsAvailableThrough: 2025,
+    receiptsAvailableFrom: 2026,
+    ...overrides,
+  };
+}
+
+export function issuedReceipt(
+  overrides: Partial<AdminIssuedReceiptResponse> = {},
+): AdminIssuedReceiptResponse {
+  return {
+    id: '019a1c00-0000-7000-8000-00000000f002',
+    donorId: '01a18e56-bdb0-775a-bd0a-a60756831369',
+    status: 'ACTIVE',
+    kind: 'SINGLE',
+    number: '2026-000002',
+    donationId: '0192f0f1-0000-7000-8000-000000000001',
+    year: null,
+    issuedAt: '2026-10-17T09:00:00Z',
+    supersededAt: null,
+    donorErased: false,
+    receipt: {
+      number: '2026-000002',
+      issuedOn: '2026-10-17',
+      replaces: null,
+      verification: { keyId: '21fe31df', qrText: 'https://nfnn.cz/overit#1003188506188208' },
+    },
     ...overrides,
   };
 }
@@ -453,6 +482,33 @@ export function noReceiptSignature(): ReceiptSignatureResponse {
     width: null,
     height: null,
     uploadedAt: null,
+  };
+}
+
+export function receiptSigningKey(
+  overrides: Partial<ReceiptSigningKeyResponse> = {},
+): ReceiptSigningKeyResponse {
+  return {
+    keyId: '21fe31df',
+    algorithm: 'Ed25519',
+    publicKey: '11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo',
+    status: 'active',
+    registeredAt: '2026-11-13T11:00:00Z',
+    published: true,
+    current: true,
+    ...overrides,
+  };
+}
+
+export function receiptSigningKeys(
+  keys: ReceiptSigningKeyResponse[] = [receiptSigningKey()],
+): ReceiptSigningKeysResponse {
+  const current = keys.find((key) => key.current);
+  return {
+    currentKeyId: current?.keyId ?? '21fe31df',
+    currentKeyPublished: current?.published ?? false,
+    keys,
+    auditMismatches: [],
   };
 }
 

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="010-choose-the-project-order" author="nfnn">
+        <createTable tableName="content_project_order">
+            <column name="id" type="smallint">
+                <constraints primaryKey="true" primaryKeyName="pk_content_project_order" nullable="false"/>
+            </column>
+            <column name="project_order" type="varchar(32)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <sql>alter table content_project_order add constraint ck_content_project_order_singleton check (id = 1)</sql>
+        <sql>alter table content_project_order add constraint ck_content_project_order_known
+            check (project_order in ('YEAR_THEN_CATEGORY', 'YEAR', 'CATEGORY_THEN_YEAR'))</sql>
+    </changeSet>
+</databaseChangeLog>

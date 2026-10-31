@@ -54,6 +54,37 @@ Feature: Donor registers an account
     Then the response status is 400
     And the problem lists an error for field "companyIdentifier"
 
+  Scenario Outline: A name or address with a character no receipt can print is refused, so every receipt of the donor can be drawn
+    When a person registers
+      | name       | <name>                |
+      | street     | <street>              |
+      | city       | <city>                |
+      | postalCode | 400 01                |
+      | email      | jana@example.cz       |
+      | password   | correct horse battery |
+    Then the response status is 400
+    And the problem's error for field "<field>" says "Obsahuje znak, který na potvrzení o daru nevytiskneme, například emoji nebo čínské písmo. Napište prosím tento údaj latinkou, cyrilicí nebo řeckým písmem."
+
+    Examples:
+      | name          | street       | city           | field          |
+      | 王 Wang        | Dlouhá 12    | Ústí nad Labem | name           |
+      | Jana Nováková | Dlouhá 😀 12 | Ústí nad Labem | address.street |
+      | Jana Nováková | Dlouhá 12    | Ústí ★         | address.city   |
+
+  Scenario: A name and address in Romanian, Vietnamese, Cyrillic or Greek letters are accepted, because every receipt prints them
+    When a person registers
+      | name       | Ștefan Nguyễn Văn Ţepeş   |
+      | street     | вул. Січових Стрільців 5 |
+      | city       | Αθήνα                    |
+      | postalCode | 104 31                   |
+      | email      | stefan@example.cz        |
+      | password   | correct horse battery    |
+    Then the response status is 202
+    When the donor confirms the e-mail with the link from the e-mail
+    Then the response status is 200
+    And the response carries an access token and a refresh cookie
+    And the donor profile shows type "PERSON", name "Ștefan Nguyễn Văn Ţepeş" and email "stefan@example.cz"
+
   Scenario: The same email is not registered twice, whatever its case, and the answer does not say so
     Given a person registered with email "jana@example.cz" and password "correct horse battery"
     When a person registers
@@ -67,6 +98,26 @@ Feature: Donor registers an account
     And 0 verification links are stored
     And donations keeps 1 donor record
 
+  Scenario Outline: A name or street made only of invisible characters is refused as empty for a registered and an unknown address alike
+    Given a person registered with email "jana@example.cz" and password "correct horse battery"
+    When a person registers
+      | name       | <name>                |
+      | street     | <street>              |
+      | city       | Ústí nad Labem        |
+      | postalCode | 400 01                |
+      | email      | <email>               |
+      | password   | correct horse battery |
+    Then the response status is 400
+    And the problem lists an error for field "<field>"
+    And 0 verification links are stored
+
+    Examples:
+      | name          | street    | email            | field          |
+      | ​­        | Dlouhá 12 | jana@example.cz  | name           |
+      | ​­        | Dlouhá 12 | nova@example.cz  | name           |
+      | Jana Nováková | ⁠﻿     | jana@example.cz  | address.street |
+      | Jana Nováková | ⁠﻿     | nova@example.cz  | address.street |
+
   Scenario: A short password is refused
     When a person registers
       | name       | Jana Nováková   |
@@ -78,6 +129,18 @@ Feature: Donor registers an account
     Then the response status is 400
     And the problem lists an error for field "password"
 
+  Scenario: An e-mail address without a dot in its domain is refused as a field without repeating it
+    When a person registers
+      | name       | Jana Nováková  |
+      | street     | Dlouhá 12      |
+      | city       | Ústí nad Labem |
+      | postalCode | 400 01         |
+      | email      | jana@example   |
+      | password   | dlouhe-heslo-1 |
+    Then the response status is 400
+    And the problem's only error for field "email" says "Zadejte e-mail ve tvaru jmeno@domena.cz."
+    And the problem does not repeat "jana@example"
+
   Scenario: A password everyone uses is refused
     When a person registers
       | name       | Jana Nováková   |
@@ -88,6 +151,30 @@ Feature: Donor registers an account
       | password   | password1234    |
     Then the response status is 400
     And the problem type ends with "donors/password-too-common"
+
+  Scenario Outline: A refused registration answers alike for a registered and an unknown address, so it does not reveal which addresses have an account
+    Given a person registered with email "jana@example.cz" and password "correct horse battery"
+    When a <type> registers
+      | name              | <name>              |
+      | companyIdentifier | <companyIdentifier> |
+      | street            | Dlouhá 12           |
+      | city              | Ústí nad Labem      |
+      | postalCode        | 400 01              |
+      | email             | <email>             |
+      | password          | <password>          |
+    Then the response status is 400
+    And the problem type ends with "<problem>"
+    And 0 verification links are stored
+    And donations keeps 1 donor record
+
+    Examples:
+      | address    | email           | type    | name                | companyIdentifier | password              | problem                               |
+      | registered | jana@example.cz | person  | Jana Nováková       |                   | password1234          | donors/password-too-common            |
+      | unknown    | eva@example.cz  | person  | Jana Nováková       |                   | password1234          | donors/password-too-common            |
+      | registered | jana@example.cz | company | Stavby Novák s.r.o. |                   | correct horse battery | donors/company-identifier-required    |
+      | unknown    | eva@example.cz  | company | Stavby Novák s.r.o. |                   | correct horse battery | donors/company-identifier-required    |
+      | registered | jana@example.cz | person  | Jana Nováková       | 45274649          | correct horse battery | donors/company-identifier-not-allowed |
+      | unknown    | eva@example.cz  | person  | Jana Nováková       | 45274649          | correct horse battery | donors/company-identifier-not-allowed |
 
   Scenario: The sixth registration within an hour from one address is refused, a repeated one counts too, and no account is created
     Given people registered with these emails:

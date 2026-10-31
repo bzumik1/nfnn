@@ -1,19 +1,30 @@
 package cz.novanadeje.app.operations.domain.loggers;
 
-import java.util.List;
+import java.util.Map;
+
+import static java.util.Map.entry;
 
 public final class ProtectedLoggers {
 
-    public static final List<String> NAMES = List.of(
-            "org.hibernate.orm.jdbc.bind",
-            "org.hibernate.orm.jdbc.extract",
-            "org.hibernate.internal.util.EntityPrinter",
-            "org.springframework.web.servlet.mvc.method.annotation",
-            "org.springframework.web.client",
-            "org.apache.coyote",
-            "org.apache.tomcat.util.http",
-            "org.postgresql",
-            "jakarta.mail");
+    public static final Map<String, LogLevel> PINS = Map.ofEntries(
+            entry("org.hibernate.orm.jdbc.bind", LogLevel.INFO),
+            entry("org.hibernate.orm.jdbc.extract", LogLevel.INFO),
+            entry("org.hibernate.internal.util.EntityPrinter", LogLevel.INFO),
+            entry("org.springframework.web.method", LogLevel.INFO),
+            entry("org.springframework.web.servlet.mvc.method.annotation", LogLevel.INFO),
+            entry("org.springframework.web.client", LogLevel.INFO),
+            entry("org.springframework.web.servlet.DispatcherServlet", LogLevel.INFO),
+            entry("org.springframework.web.filter.ForwardedHeaderFilter", LogLevel.INFO),
+            entry("org.springframework.security.web.FilterChainProxy", LogLevel.INFO),
+            entry("org.springframework.security.web.firewall", LogLevel.INFO),
+            entry("org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter", LogLevel.INFO),
+            entry("org.apache.catalina.core.ContainerBase", LogLevel.INFO),
+            entry("org.apache.coyote", LogLevel.INFO),
+            entry("org.apache.coyote.http11.Http11Processor", LogLevel.WARN),
+            entry("org.apache.tomcat.util.http", LogLevel.INFO),
+            entry("org.apache.tomcat.util.http.parser.Cookie", LogLevel.WARN),
+            entry("org.postgresql", LogLevel.INFO),
+            entry("jakarta.mail", LogLevel.INFO));
 
     private ProtectedLoggers() {
     }
@@ -25,7 +36,7 @@ public final class ProtectedLoggers {
     }
 
     public static boolean covers(LoggerName logger) {
-        return NAMES.stream().anyMatch(name -> isAtOrBelow(logger, name));
+        return PINS.keySet().stream().anyMatch(name -> isAtOrBelow(logger, name));
     }
 
     private static boolean isOwnCode(LoggerName logger) {

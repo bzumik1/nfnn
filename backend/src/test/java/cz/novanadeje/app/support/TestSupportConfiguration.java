@@ -4,6 +4,7 @@ import cz.novanadeje.app.donations.application.importing.BankImportProperties;
 import cz.novanadeje.app.donations.application.importing.ImportBankPaymentsService;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
@@ -11,6 +12,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 
 @TestConfiguration(proxyBeanMethods = false)
+@Import(AsyncTaskTrackingConfiguration.class)
 public class TestSupportConfiguration {
 
     @Bean
@@ -71,6 +73,24 @@ public class TestSupportConfiguration {
     @Primary
     public FakeMailServerProbe fakeMailServerProbe() {
         return new FakeMailServerProbe();
+    }
+
+    @Bean
+    @Primary
+    public SwitchablePublicBackupKeyPolicy switchablePublicBackupKeyPolicy() {
+        return new SwitchablePublicBackupKeyPolicy();
+    }
+
+    @Bean
+    @Primary
+    public SwitchablePublicTestKeyPolicy switchablePublicTestKeyPolicy() {
+        return new SwitchablePublicTestKeyPolicy();
+    }
+
+    @Bean
+    @Primary
+    public KeptAsideWithdrawnSeeds keptAsideWithdrawnSeeds() {
+        return new KeptAsideWithdrawnSeeds();
     }
 
     @Bean

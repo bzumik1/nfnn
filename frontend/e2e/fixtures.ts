@@ -1,4 +1,5 @@
 import { expect, test as base } from '@playwright/test';
+import { FOUNDATION_PAYMENT_DETAILS } from './qr-matrices';
 
 export const unmockedApi = {
   status: 404,
@@ -10,6 +11,9 @@ export const unmockedApi = {
     status: 404,
   }),
 };
+
+const SERVER_PAYMENT_PATHS = '/api/donations/payment-';
+const PAYMENT_DETAILS_PATH = '/api/donations/payment-details';
 
 export const test = base.extend<{ offlineApi: void }>({
   offlineApi: [
@@ -26,7 +30,24 @@ export const test = base.extend<{ offlineApi: void }>({
         (url) => url.pathname === '/api/content/home',
         (route) => route.fulfill({ json: { news: [], projects: [] } }),
       );
+      await page.route(
+        (url) => url.pathname === PAYMENT_DETAILS_PATH,
+        (route) => route.fulfill({ json: FOUNDATION_PAYMENT_DETAILS }),
+      );
+      const askedForServerPayment: string[] = [];
+      await page.route(
+        (url) =>
+          url.pathname.startsWith(SERVER_PAYMENT_PATHS) && url.pathname !== PAYMENT_DETAILS_PATH,
+        (route) => {
+          askedForServerPayment.push(new URL(route.request().url()).pathname);
+          return route.fulfill(unmockedApi);
+        },
+      );
       await use();
+      expect(
+        askedForServerPayment,
+        'the browser draws every QR payment from the payment details and asks the server for nothing else under /api/donations/payment-',
+      ).toEqual([]);
     },
     { auto: true },
   ],

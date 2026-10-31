@@ -1,4 +1,5 @@
 @use 'sass:map';
+@use 'sass:math';
 
 $widths: (
   tiny: 360px,
@@ -24,6 +25,22 @@ $widths: (
 
 @mixin up($name) {
   @media (min-width: width($name) + 1px) {
+    @content;
+  }
+}
+
+@function relative-width($width) {
+  @return math.div($width, 16px) * 1rem;
+}
+
+@mixin container-down($container, $name) {
+  @container #{$container} (max-width: #{relative-width(width($name))}) {
+    @content;
+  }
+}
+
+@mixin container-up($container, $name) {
+  @container #{$container} (min-width: #{relative-width(width($name) + 1px)}) {
     @content;
   }
 }

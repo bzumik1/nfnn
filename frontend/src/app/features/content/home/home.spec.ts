@@ -15,10 +15,11 @@ import { newsArticle } from '../testing/news-fixtures';
 import { publicPeople } from '../testing/people-fixtures';
 import { draftProject, project } from '../testing/project-fixtures';
 import { Home } from './home';
-import { checkerboard } from '../../../shared/ui/qr-code/testing/qr-matrices';
+import { foundationPaymentDetails } from '../../donations/testing/payment-details-fixtures';
+import { spayd } from '../../donations/spayd';
+import { drawsText } from '../../../shared/ui/qr-code/testing/branded-qr';
 
-const PAYMENT_QR_URL = '/api/donations/payment-qr';
-const DEBOUNCE_MS = 300;
+const PAYMENT_DETAILS_URL = '/api/donations/payment-details';
 
 describe('Given the home page', () => {
   const donor = signal<Donor | null>(null);
@@ -48,7 +49,7 @@ describe('Given the home page', () => {
 
   async function settle(): Promise<void> {
     fixture.detectChanges();
-    await vi.advanceTimersByTimeAsync(DEBOUNCE_MS);
+    await vi.advanceTimersByTimeAsync(0);
     fixture.detectChanges();
   }
 
@@ -58,37 +59,36 @@ describe('Given the home page', () => {
     return request;
   }
 
-  function qrPayment(amount: string | null): object {
-    return {
-      spayd: `SPD*1.0*ACC:CZ2620100000005544332217*AM:${amount}.00*CC:CZK`,
-      qrCode: checkerboard(25),
-      bankAccount: {
-        accountNumber: '5544332217/2010',
-        iban: 'CZ2620100000005544332217',
-        recipientName: 'Nadační fond Nová naděje',
-      },
-    };
-  }
-
-  function expectQrRequest(): TestRequest {
-    const request = http.expectOne((candidate) => candidate.url === PAYMENT_QR_URL);
-    request.flush(qrPayment(request.request.params.get('amount')));
-    http
-      .match((candidate) => candidate.url === PAYMENT_QR_URL)
-      .forEach((prefetch) => prefetch.flush(qrPayment(prefetch.request.params.get('amount'))));
+  function expectDetailsRequest(): TestRequest {
+    const request = http.expectOne(PAYMENT_DETAILS_URL);
+    request.flush(foundationPaymentDetails());
     return request;
   }
 
-  it('when nobody is signed in, then the QR payment is asked for without a variable symbol', async () => {
+  async function drawsPayment(variableSymbol?: string): Promise<boolean> {
+    await vi.advanceTimersByTimeAsync(0);
+    fixture.detectChanges();
+    const payment = spayd(foundationPaymentDetails(), { amountMinor: 50000, variableSymbol });
+    return (
+      'spayd' in payment &&
+      drawsText(
+        (fixture.nativeElement as HTMLElement).querySelector('.qr-image svg[role="img"]'),
+        payment.spayd,
+      )
+    );
+  }
+
+  it('when nobody is signed in, then the payment details are asked for once and the drawn QR payment carries no variable symbol', async () => {
     await settle();
 
     expectHomeRequest();
-    expect(expectQrRequest().request.params.has('variableSymbol')).toBe(false);
+    expectDetailsRequest();
+    expect(await drawsPayment()).toBe(true);
   });
 
   it('when the home content arrives, then the news and the projects show it and link to their pages', async () => {
     await settle();
-    expectQrRequest();
+    expectDetailsRequest();
     http.expectOne('/api/content/home').flush({
       news: [newsArticle()],
       projects: [project(), draftProject({ publishedOn: '2026-10-01' })],
@@ -113,7 +113,7 @@ describe('Given the home page', () => {
 
   it('when the home content is empty or cannot be loaded, then the placeholder cards stay', async () => {
     await settle();
-    expectQrRequest();
+    expectDetailsRequest();
     http.expectOne('/api/content/home').flush(null, { status: 500, statusText: 'Error' });
     fixture.detectChanges();
 
@@ -125,7 +125,7 @@ describe('Given the home page', () => {
 
   it('when the home content carries a photo for the About section, then the section shows it instead of the placeholder', async () => {
     await settle();
-    expectQrRequest();
+    expectDetailsRequest();
     http
       .expectOne('/api/content/home')
       .flush({ news: [], projects: [], about: { photo: aboutPhoto() } });
@@ -140,7 +140,7 @@ describe('Given the home page', () => {
 
   it('when the home content carries the people of the foundation, then the block of who runs it shows them instead of its own cards', async () => {
     await settle();
-    expectQrRequest();
+    expectDetailsRequest();
     http
       .expectOne('/api/content/home')
       .flush({ news: [], projects: [], about: { photo: null }, people: publicPeople() });
@@ -154,7 +154,7 @@ describe('Given the home page', () => {
 
   it('when the home content keeps no people of the foundation, then the block of who runs it keeps its own cards', async () => {
     await settle();
-    expectQrRequest();
+    expectDetailsRequest();
     http
       .expectOne('/api/content/home')
       .flush({ news: [], projects: [], about: { photo: null }, people: null });
@@ -167,7 +167,7 @@ describe('Given the home page', () => {
 
   it('when the home content has no About photo or cannot be loaded, then the About section keeps its placeholder photo', async () => {
     await settle();
-    expectQrRequest();
+    expectDetailsRequest();
     http.expectOne('/api/content/home').flush(null, { status: 500, statusText: 'Error' });
     fixture.detectChanges();
 
@@ -177,13 +177,14 @@ describe('Given the home page', () => {
   });
 
   describe('Given a signed-in donor', () => {
-    it('when the page opens, then the QR payment carries their variable symbol', async () => {
+    it('when the page opens, then the drawn QR payment carries their variable symbol', async () => {
       donor.set(sampleDonor({ variableSymbol: '4242424242' }));
 
       await settle();
 
       expectHomeRequest();
-      expect(expectQrRequest().request.params.get('variableSymbol')).toBe('4242424242');
+      expectDetailsRequest();
+      expect(await drawsPayment('4242424242')).toBe(true);
     });
 
     it('when the page opens, then the donate section says who pays and with which symbol', async () => {
@@ -192,7 +193,7 @@ describe('Given the home page', () => {
       await settle();
 
       expectHomeRequest();
-      expectQrRequest();
+      expectDetailsRequest();
       fixture.detectChanges();
       expect(
         (fixture.nativeElement as HTMLElement)

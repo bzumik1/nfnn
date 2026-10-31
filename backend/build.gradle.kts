@@ -20,8 +20,6 @@ repositories {
 
 extra["cucumberVersion"] = "7.34.9"
 extra["archunitVersion"] = "1.5.1"
-extra["openhtmltopdfVersion"] = "1.1.100"
-extra["zxingVersion"] = "3.5.4"
 extra["fioApiVersion"] = "1.0.0"
 extra["webpImageioVersion"] = "0.3.3"
 extra["webauthn4jVersion"] = "0.31.11.RELEASE"
@@ -43,11 +41,6 @@ dependencies {
 
 	implementation("com.github.ben-manes.caffeine:caffeine")
 
-	implementation("io.github.openhtmltopdf:openhtmltopdf-core:${property("openhtmltopdfVersion")}")
-	implementation("io.github.openhtmltopdf:openhtmltopdf-pdfbox:${property("openhtmltopdfVersion")}")
-
-	implementation("com.google.zxing:core:${property("zxingVersion")}")
-
 	implementation("io.github.darkxanter:webp-imageio:${property("webpImageioVersion")}")
 
 	implementation("com.webauthn4j:webauthn4j-core:${property("webauthn4jVersion")}")
@@ -67,7 +60,6 @@ dependencies {
 	testImplementation("org.testcontainers:testcontainers-junit-jupiter")
 	testImplementation("org.testcontainers:testcontainers-postgresql")
 
-	testImplementation("com.google.zxing:javase:${property("zxingVersion")}")
 	testImplementation("org.assertj:assertj-core")
 	testImplementation("org.awaitility:awaitility")
 	testImplementation("org.mockito:mockito-core")
@@ -94,13 +86,14 @@ tasks.withType<Test> {
 	systemProperty("cucumber.junit-platform.naming-strategy", "long")
 	System.getenv("CUCUMBER_FILTER_TAGS")?.let { systemProperty("cucumber.filter.tags", it) }
 	System.getenv("API_TRANSCRIPTS")?.let { systemProperty("api.transcripts", it) }
-	System.getenv("GOLDEN_FILES")?.let { systemProperty("golden.files", it) }
 	maxHeapSize = "1g"
 	maxParallelForks = 2
 	jvmArgs("--enable-native-access=ALL-UNNAMED", "-Duser.timezone=Etc/UTC", "-Duser.language=en", "-Duser.country=US", "-Dfile.encoding=UTF-8", "-Xshare:off")
 	jvmArgumentProviders.add(JavaAgent(mockitoAgent))
 	environment("TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE", "/var/run/docker.sock")
 	inputs.file("../frontend/src/themes/nova-nadeje/_theme.scss").withPropertyName("siteTheme").withPathSensitivity(PathSensitivity.NONE)
+	inputs.file("../frontend/src/app/core/errors/error-vocabulary.json").withPropertyName("clientErrorVocabulary").withPathSensitivity(PathSensitivity.NONE)
+	inputs.file("../frontend/src/app/features/donations/receipt-pdf/receipt-document.ts").withPropertyName("browserReceiptTextKeys").withPathSensitivity(PathSensitivity.NONE)
 	inputs.files(fileTree("../shared-cases")).withPropertyName("sharedCases").withPathSensitivity(PathSensitivity.RELATIVE)
 	inputs.files(fileTree("../regression")).withPropertyName("baselineArtefacts").withPathSensitivity(PathSensitivity.RELATIVE)
 }
@@ -115,6 +108,7 @@ val acceptanceTest = tasks.register<Test>("acceptanceTest") {
 	}
 	include("**/*AcceptanceTests.class")
 	enabled = runsCucumber
+	systemProperty("org.apache.juli.logging.UserDataHelper.CONFIG", "INFO_ALL")
 	val transcripts = layout.buildDirectory.dir("api-transcripts")
 	val recording = providers.environmentVariable("API_TRANSCRIPTS").map { it == "record" }.orElse(false)
 	doFirst {

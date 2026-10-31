@@ -45,16 +45,6 @@ public class DonorRegistrationService {
     @Transactional
     public void register(RegisterDonorCommand command) {
         EmailAddress email = new EmailAddress(command.email());
-        Donor existing = donors.findByEmail(email).orElse(null);
-        if (existing != null && existing.isEmailVerified()) {
-            events.publishEvent(new DonorRegistrationRepeated(existing.id().value(), existing.email(), existing.preferredLocale()));
-            log.info("Registration repeated for verified donor {}", existing.id());
-            return;
-        }
-        if (existing != null) {
-            donors.delete(existing.id());
-            log.info("Unverified donor {} replaced by a new registration", existing.id());
-        }
         Instant now = clock.instant();
         Donor donor = Donor.register(
                 DonorId.newId(now),
@@ -68,6 +58,16 @@ public class DonorRegistrationService {
                 LocaleCode.fromTag(command.preferredLocale()),
                 now
         );
+        Donor existing = donors.findByEmail(email).orElse(null);
+        if (existing != null && existing.isEmailVerified()) {
+            events.publishEvent(new DonorRegistrationRepeated(existing.id().value(), existing.email(), existing.preferredLocale()));
+            log.info("Registration repeated for verified donor {}", existing.id());
+            return;
+        }
+        if (existing != null) {
+            donors.delete(existing.id());
+            log.info("Unverified donor {} replaced by a new registration", existing.id());
+        }
         donors.save(donor);
         command.returnTo().ifPresentOrElse(returnTo -> emailVerification.issueLink(donor, returnTo), () -> emailVerification.issueLink(donor));
     }

@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { immutableLocations } from './immutable-locations.mjs';
 
 const [baseUrl, distDir, nginxConf] = process.argv.slice(2);
 if (!baseUrl || !distDir || !nginxConf) {
@@ -8,7 +9,8 @@ if (!baseUrl || !distDir || !nginxConf) {
 }
 
 const IMMUTABLE = 'public, max-age=31536000, immutable';
-const HASHED_BUNDLE = /^(?:chunk|main|polyfills|styles)-[A-Za-z0-9_-]{8}\.(?:js|css)$/;
+const HASHED_BUNDLE = /^(?:chunk|main|polyfills|styles|worker)-[A-Za-z0-9_-]{8}\.(?:js|css)$/;
+const HASHED_RECEIPT_FONT = /^receipt-fonts\/(?:body|body-bold|heading)\.[0-9a-f]{16}\.ttf$/;
 const NEVER_IMMUTABLE = [
   'index.html',
   'ngsw.json',
@@ -22,7 +24,12 @@ const NEVER_IMMUTABLE = [
   'nested/chunk-ABCDEFGH.js',
   'ngsw-ABCDEFGH.js',
 ];
-const MISSING_HASHED = ['/chunk-Zz_-9aBc.js', '/chunk-ZZZZZZZZ.js', '/styles-Ab-c_D12.css'];
+const MISSING_HASHED = [
+  '/chunk-Zz_-9aBc.js',
+  '/chunk-ZZZZZZZZ.js',
+  '/styles-Ab-c_D12.css',
+  '/worker-Zz_-9aBc.js',
+];
 const MISSING_ASSETS = [
   '/missing-probe.js',
   '/favicon-missing.png',
@@ -32,8 +39,10 @@ const MISSING_ASSETS = [
   '/fonts/missing-probe.woff2',
   '/images/missing-probe.webp',
   '/media/missing-probe.woff2',
+  '/receipt-fonts/missing-probe.ttf',
+  '/receipt-fonts/body.0123456789abcdef.ttf',
+  '/receipt-fonts/body.ttf',
 ];
-const IMMUTABLE_RULE = 'add_header Cache-Control $immutable_cache_control always;';
 const UNCACHED_ERROR = new Set(['no-store', 'no-cache']);
 const APP_ROUTES = ['/', '/darce/prehled', '/sprava', '/aktuality/nejaka-zprava'];
 
@@ -48,19 +57,17 @@ function files(dir) {
 }
 
 function expectedCacheControl(file) {
-  if (file.startsWith('media/') || HASHED_BUNDLE.test(file)) {
+  if (file.startsWith('media/') || HASHED_BUNDLE.test(file) || HASHED_RECEIPT_FONT.test(file)) {
     return IMMUTABLE;
   }
-  if (file.startsWith('images/')) {
+  if (file.startsWith('images/') || file.startsWith('receipt-fonts/')) {
     return 'public, max-age=3600';
   }
   return 'no-cache';
 }
 
-function immutableLocationPatterns(conf) {
-  return [...conf.matchAll(/location\s+~\*?\s+"([^"]+)"\s*\{([^{}]*)\}/g)]
-    .filter((match) => match[2].split('\n').some((line) => line.trim() === IMMUTABLE_RULE))
-    .map((match) => new RegExp(match[1]));
+function expectedContentType(file) {
+  return file.endsWith('.ttf') ? 'font/ttf' : null;
 }
 
 async function request(path) {
@@ -70,6 +77,7 @@ async function request(path) {
     status: response.status,
     cacheControl: response.headers.get('cache-control') ?? '',
     contentType: response.headers.get('content-type') ?? '',
+    contentEncoding: response.headers.get('content-encoding') ?? '',
     csp: response.headers.get('content-security-policy') ?? '',
     server: response.headers.get('server') ?? '',
     body,
@@ -82,7 +90,37 @@ if (hashed.length === 0) {
   fail(`no hashed bundle found in ${distDir}`);
 }
 
-const patterns = immutableLocationPatterns(readFileSync(nginxConf, 'utf8'));
+const { bundles: patterns, receiptFonts: fontPatterns } = immutableLocations(
+  readFileSync(nginxConf, 'utf8'),
+);
+const receiptFonts = built.filter(
+  (file) => file.startsWith('receipt-fonts/') && file.endsWith('.ttf'),
+);
+if (receiptFonts.length === 0) {
+  fail(`no receipt font found in ${distDir}`);
+}
+for (const file of receiptFonts) {
+  if (!HASHED_RECEIPT_FONT.test(file)) {
+    fail(`the receipt font /${file} carries no content hash in its name`);
+  }
+}
+if (fontPatterns.length !== 1) {
+  fail(
+    `expected one regex location with the immutable rule for /receipt-fonts/, found ${fontPatterns.length}`,
+  );
+} else {
+  const [pattern] = fontPatterns;
+  for (const file of receiptFonts) {
+    if (!pattern.test(`/${file}`)) {
+      fail(`the receipt font rule ${pattern} does not match the built file /${file}`);
+    }
+  }
+  for (const path of ['/receipt-fonts/body.ttf', '/receipt-fonts/OFL-inter.txt']) {
+    if (pattern.test(path)) {
+      fail(`the receipt font rule ${pattern} matches ${path}, which must not be immutable`);
+    }
+  }
+}
 if (patterns.length !== 1) {
   fail(
     `expected one regex location with the immutable rule in ${nginxConf}, found ${patterns.length}`,
@@ -109,6 +147,13 @@ for (const file of built) {
   }
   if (answer.cacheControl !== expected) {
     fail(`/${file} has Cache-Control "${answer.cacheControl}", expected "${expected}"`);
+  }
+  const contentType = expectedContentType(file);
+  if (contentType !== null && answer.contentType !== contentType) {
+    fail(`/${file} has Content-Type "${answer.contentType}", expected "${contentType}"`);
+  }
+  if (contentType !== null && answer.contentEncoding !== 'gzip') {
+    fail(`/${file} is sent without gzip ("${answer.contentEncoding}")`);
   }
   if (!answer.csp) {
     fail(`/${file} carries no Content-Security-Policy`);
@@ -160,5 +205,5 @@ if (failures.length > 0) {
   process.exit(1);
 }
 console.log(
-  `asset caching: ${hashed.length} hashed bundles immutable, ${built.length} built files checked, missing files answer 404`,
+  `asset caching: ${hashed.length} hashed bundles and ${receiptFonts.length} receipt fonts immutable, ${built.length} built files checked, missing files answer 404`,
 );

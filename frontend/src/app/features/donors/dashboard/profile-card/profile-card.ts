@@ -13,12 +13,18 @@ import {
   viewChild,
 } from '@angular/core';
 import { FormsModule, NgForm } from '@angular/forms';
-import { describeProblem, problemTypeEndsWith } from '../../../../core/auth/api-problem';
+import {
+  describeProblemWithoutFields,
+  problemOf,
+  problemTypeEndsWith,
+} from '../../../../core/auth/api-problem';
 import { AuthStore } from '../../../../core/auth/auth-store';
 import { Donor, DonorLocale } from '../../../../core/auth/donor';
 import { FocusFirstInvalid } from '../../../../shared/ui/form-field/focus-first-invalid';
 import { FormControlDirective } from '../../../../shared/ui/form-field/form-control';
 import { FormField } from '../../../../shared/ui/form-field/form-field';
+import { placeServerErrors } from '../../../../shared/ui/form-field/server-errors';
+import { PrintableOnReceiptValidator } from '../../printable-on-receipt';
 import {
   CITY_MESSAGES,
   COMPANY_NAME_MESSAGES,
@@ -41,10 +47,23 @@ const LOCALE_LABELS: Record<DonorLocale, string> = {
 };
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
+const PROFILE_FIELDS: Readonly<Record<string, string>> = {
+  name: 'name',
+  'address.street': 'street',
+  'address.city': 'city',
+  'address.postalCode': 'postalCode',
+  preferredLocale: 'preferredLocale',
+};
 
 @Component({
   selector: 'app-profile-card',
-  imports: [FormsModule, FormField, FormControlDirective, FocusFirstInvalid],
+  imports: [
+    FormsModule,
+    FormField,
+    FormControlDirective,
+    FocusFirstInvalid,
+    PrintableOnReceiptValidator,
+  ],
   templateUrl: './profile-card.html',
   styleUrl: './profile-card.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -52,6 +71,7 @@ const UNAUTHENTICATED = 'auth/unauthenticated';
 export class ProfileCard {
   private readonly auth = inject(AuthStore);
   private readonly injector = inject(Injector);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
 
   readonly sessionEnded = output<void>();
 
@@ -119,14 +139,26 @@ export class ProfileCard {
             this.sessionEnded.emit();
             return;
           }
-          this.error.set(
-            describeProblem(
-              failure,
-              $localize`:@@donor.profile.error.generic:Údaje se nepodařilo uložit. Zkuste to prosím znovu.`,
-            ),
-          );
+          this.refuse(form, failure);
         },
       });
+  }
+
+  private refuse(form: NgForm, failure: unknown): void {
+    const errors = problemOf(failure)?.errors ?? [];
+    const unplaced = placeServerErrors(form, errors, PROFILE_FIELDS);
+    const generic = $localize`:@@donor.profile.error.generic:Údaje se nepodařilo uložit. Zkuste to prosím znovu.`;
+    this.error.set(
+      [describeProblemWithoutFields(failure, generic), ...unplaced.map((error) => error.message)]
+        .filter((part) => part !== '')
+        .join(' '),
+    );
+    if (unplaced.length < errors.length) {
+      afterNextRender(
+        () => this.host.querySelector<HTMLElement>('.profile-form .ng-invalid[id]')?.focus(),
+        { injector: this.injector },
+      );
+    }
   }
 
   private close(): void {

@@ -50,9 +50,9 @@
   white-space: nowrap;
 }
 
-.receipt-saved span {
-  margin-top: var(--space-1-5);
-  overflow-wrap: anywhere;
+.year-receipt-error {
+  flex-basis: 100%;
+  margin-top: 0;
 }
 
 .gift-year-note {

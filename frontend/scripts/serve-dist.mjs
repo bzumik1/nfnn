@@ -79,6 +79,7 @@ createServer((request, response) => {
   response.writeHead(200, {
     'Content-Type': contentTypes[extname(file).toLowerCase()] ?? 'application/octet-stream',
     'Cache-Control': 'no-cache',
+    ...(/^\/overit\/?$/.test(pathname) ? { 'X-Robots-Tag': 'noindex' } : {}),
   });
   if (request.method === 'HEAD') {
     response.end();

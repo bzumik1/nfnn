@@ -3,6 +3,8 @@ package cz.novanadeje.app.content.application.people;
 import cz.novanadeje.app.content.domain.media.MediaImageRepository;
 import cz.novanadeje.app.content.domain.people.FoundersNote;
 import cz.novanadeje.app.content.domain.people.FoundersNoteRepository;
+import cz.novanadeje.app.content.domain.people.PeopleFootnote;
+import cz.novanadeje.app.content.domain.people.PeopleFootnoteRepository;
 import cz.novanadeje.app.content.domain.people.Person;
 import cz.novanadeje.app.content.domain.people.PersonRepository;
 import org.springframework.stereotype.Service;
@@ -17,11 +19,13 @@ public class PublicPeopleService {
 
     private final PersonRepository people;
     private final FoundersNoteRepository notes;
+    private final PeopleFootnoteRepository footnotes;
     private final MediaImageRepository media;
 
-    public PublicPeopleService(PersonRepository people, FoundersNoteRepository notes, MediaImageRepository media) {
+    public PublicPeopleService(PersonRepository people, FoundersNoteRepository notes, PeopleFootnoteRepository footnotes, MediaImageRepository media) {
         this.people = people;
         this.notes = notes;
+        this.footnotes = footnotes;
         this.media = media;
     }
 
@@ -35,7 +39,8 @@ public class PublicPeopleService {
                 featured.stream().map(this::card).toList(),
                 all.stream().filter(person -> person.details().onBoard())
                         .map(person -> new BoardMemberView(person.details().name(), person.details().boardNote())).toList(),
-                notes.find().flatMap(FoundersNote::text).map(text -> new FoundersNoteView(text, signatures(featured)))));
+                notes.find().flatMap(FoundersNote::text).map(text -> new FoundersNoteView(text, signatures(featured))),
+                footnotes.find().flatMap(PeopleFootnote::text)));
     }
 
     private FeaturedPersonView card(Person person) {

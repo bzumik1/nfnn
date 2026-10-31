@@ -156,7 +156,7 @@ describe('Given a visitor opening the list of projects', () => {
     http.expectOne('/api/content/projects?page=0&size=10').flush(page([project()], 0, 11));
     await settle(fixture);
 
-    expect(text(fixture, 'h1')).toBe('Projekty');
+    expect(text(fixture, 'h1')).toBe('Kde pomáháme');
     expect(fixture.nativeElement.querySelector('app-project-card a').getAttribute('href')).toBe(
       '/projekty/zahrada-pro-deti',
     );

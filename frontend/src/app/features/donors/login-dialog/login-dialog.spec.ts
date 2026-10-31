@@ -19,7 +19,7 @@ import {
   secondFactorRequired,
 } from '../../../core/auth/testing/donor-fixtures';
 import { DialogHistory } from '../../../shared/ui/dialog/dialog-history';
-import { checkerboard } from '../../../shared/ui/qr-code/testing/qr-matrices';
+import { drawsText } from '../../../shared/ui/qr-code/testing/branded-qr';
 import { FakeDialogHistory } from '../../../shared/ui/dialog/testing/fake-dialog-history';
 import { LoginDialog } from './login-dialog';
 
@@ -386,7 +386,6 @@ describe('Given the sign-in dialog', () => {
           currency: 'CZK',
           usableFrom: '2026-10-27',
           spayd: 'SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*MSG:OBNOVA K7MP4RXA',
-          qrCode: checkerboard(25),
         };
 
         async function askForRecovery(): Promise<ReturnType<HttpTestingController['expectOne']>> {
@@ -456,6 +455,25 @@ describe('Given the sign-in dialog', () => {
           expect(element('.recovery-details').compareDocumentPosition(qr)).toBe(
             Node.DOCUMENT_POSITION_FOLLOWING,
           );
+        });
+
+        it('then the QR code is drawn in the browser and carries the payment text the server gave', async () => {
+          (await askForRecovery()).flush(instructions);
+          await settle();
+
+          expect(drawsText(element('.recovery-qr svg[role="img"]'), instructions.spayd)).toBe(true);
+          expect(element('.recovery-qr-failed')).toBeNull();
+        });
+
+        it('and the payment text is too long for a QR code, then an alert says to pay by the details shown', async () => {
+          (await askForRecovery()).flush({ ...instructions, spayd: 'X'.repeat(4000) });
+          await settle();
+
+          expect(element('.recovery-qr svg')).toBeNull();
+          expect(element('.recovery-qr-failed').textContent?.replace(/\s+/g, ' ').trim()).toBe(
+            'QR kód se nepodařilo vykreslit. Zaplaťte prosím podle uvedených údajů.',
+          );
+          expect(element('.recovery-details').textContent).toContain('OBNOVA K7MP4RXA');
         });
 
         it('again while the earlier recovery is open, then the dialog says when it started and asks to pay with that message', async () => {
@@ -948,6 +966,22 @@ describe('Given the sign-in dialog', () => {
       expect(element('#register-company-identifier-error').textContent).toContain(
         'Toto IČO neexistuje, zkontrolujte prosím číslice.',
       );
+    });
+
+    it('with a character no receipt can print in the name or the city, then nothing is sent and those fields say so', async () => {
+      await fillInPerson();
+      await fillIn('#register-name', 'Jana 中 Nováková');
+      await fillIn('#register-city', 'Ústí 🙂');
+
+      await submit('.register-form');
+
+      http.expectNone('/api/donors/auth/register');
+      const refusal =
+        'Obsahuje znak, který na potvrzení o daru nevytiskneme, například emoji nebo čínské písmo. Napište prosím tento údaj latinkou, cyrilicí nebo řeckým písmem.';
+      expect(element('#register-name-error').textContent?.trim()).toBe(refusal);
+      expect(element('#register-city-error').textContent?.trim()).toBe(refusal);
+      expect(element('#register-street-error')).toBeNull();
+      expect(document.activeElement).toBe(element('#register-name'));
     });
 
     it('and the server refuses a field, then the message stands at that field, which takes the focus', async () => {

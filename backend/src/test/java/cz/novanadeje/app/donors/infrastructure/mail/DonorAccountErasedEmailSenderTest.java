@@ -86,7 +86,9 @@ class DonorAccountErasedEmailSenderTest {
 
                     na vaši žádost jsme vymazali osobní údaje z vašeho dárcovského účtu Nová naděje: jméno, adresu, e-mail, heslo a bankovní účty. Účet už nejde použít a všechna přihlášení jsme ukončili.
 
-                    Záznamy o přijatých darech a vydaná potvrzení o daru musíme podle účetních předpisů uchovat; nejsou už ale spojené s vaším jménem.
+                    Vydaná potvrzení o daru jsou účetní doklady, a proto je po dobu, kterou stanoví účetní a daňové předpisy, uchováváme na našem serveru beze změny, tedy i s vaším jménem a adresou (u firmy i s IČO), jak na nich stojí. Stejně dlouho uchováváme záznamy o přijatých platbách a darech s tím, co o platbě uvádí výpis z banky, včetně čísla účtu a jména plátce. Na serveru zůstává i záznam o tom, co správci webu udělali, včetně tohoto výmazu.
+
+                    Databázi webu každý den zálohujeme na náš server a zálohy na serveru mažeme přibližně po měsíci; vymazané údaje proto ze záloh zmizí nejpozději po této době.
 
                     Kdybyste se k nám chtěli někdy vrátit, stačí se znovu zaregistrovat. Děkujeme za vaši podporu.
 
@@ -116,6 +118,14 @@ class DonorAccountErasedEmailSenderTest {
             assertThat(MailContents.plainText(email))
                     .startsWith("Hello,")
                     .contains("we have erased the personal data of your Nová naděje donor account")
+                    .contains("The donation receipts issued are accounting documents, so we keep them on our server unchanged for as long as the"
+                            + " accounting and tax rules require, with your name and address (for a company, also its company ID) as they stand on them.")
+                    .contains("including the account number and the payer's name")
+                    .contains("The record of what the site's administrators did, this erasure included, also stays on the server.")
+                    .contains("We back up the site's database to our server every day and delete the backups on the server after about a month,"
+                            + " so the erased data leave the backups within that time at the latest.")
+                    .doesNotContain("no longer linked to your name")
+                    .doesNotContain("device")
                     .contains("simply register again");
             assertThat(MailContents.html(email)).contains("lang=\"en\"").contains(">Personal data erased</h1>");
         });

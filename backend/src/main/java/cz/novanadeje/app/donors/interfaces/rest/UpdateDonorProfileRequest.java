@@ -7,16 +7,16 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 record UpdateDonorProfileRequest(
-        @Size(min = 1, max = Donor.MAX_NAME_LENGTH) String name,
+        @Size(min = 1, max = Donor.MAX_NAME_LENGTH) @Pattern(regexp = Donor.NOT_BLANK_NAME, message = "{donors.profile.name.blank}") @PrintableOnReceipt String name,
         @Valid AddressRequest address,
         @Pattern(regexp = "cs|en") String preferredLocale
 ) {
 
     UpdateDonorProfileCommand toCommand() {
         return new UpdateDonorProfileCommand(
-                name,
-                address == null ? null : address.street(),
-                address == null ? null : address.city(),
+                PrintedInput.of(name),
+                address == null ? null : PrintedInput.of(address.street()),
+                address == null ? null : PrintedInput.of(address.city()),
                 address == null ? null : address.postalCode(),
                 preferredLocale
         );

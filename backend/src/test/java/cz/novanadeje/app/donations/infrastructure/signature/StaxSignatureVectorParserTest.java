@@ -99,55 +99,50 @@ class StaxSignatureVectorParserTest {
 
     @ParameterizedTest(name = "{0}")
     @CsvSource(delimiter = '|', value = {
-            "script element|<svg viewBox='0 0 10 10'><script>alert(1)</script><path d='M0 0 L1 1'/></svg>|ELEMENT|script",
-            "style element|<svg viewBox='0 0 10 10'><style>path{fill:red}</style><path d='M0 0 L1 1'/></svg>|ELEMENT|style",
-            "image element|<svg viewBox='0 0 10 10'><image href='https://example.com/a.png'/></svg>|ELEMENT|image",
-            "use element|<svg viewBox='0 0 10 10'><use href='#a'/></svg>|ELEMENT|use",
-            "foreign object|<svg viewBox='0 0 10 10'><foreignObject><div xmlns='http://www.w3.org/1999/xhtml'>x</div></foreignObject></svg>|ELEMENT|foreignObject",
-            "filter element|<svg viewBox='0 0 10 10'><defs><filter id='f'><feGaussianBlur stdDeviation='2'/></filter></defs></svg>|ELEMENT|defs",
-            "bare filter element|<svg viewBox='0 0 10 10'><filter id='f'/><path d='M0 0 L1 1'/></svg>|ELEMENT|filter",
-            "text element|<svg viewBox='0 0 10 10'><text>Josef</text></svg>|ELEMENT|text",
-            "circle element|<svg viewBox='0 0 10 10'><circle r='5'/></svg>|ELEMENT|circle",
-            "element of another namespace|<svg viewBox='0 0 10 10' xmlns:i='urn:x'><i:layer/></svg>|NAMESPACE|i:layer",
-            "root in another default namespace|<svg xmlns='urn:evil' viewBox='0 0 10 10'><path d='M0 0 L1 1'/></svg>|NAMESPACE|svg",
-            "path in the XHTML namespace|<svg viewBox='0 0 10 10'><path xmlns='http://www.w3.org/1999/xhtml' d='M0 0 L1 1'/></svg>|NAMESPACE|path",
-            "dropped element of another namespace|<svg viewBox='0 0 10 10' xmlns:i='urn:x'><i:metadata/><path d='M0 0 L1 1'/></svg>|NAMESPACE|i:metadata",
-            "XML 1.1|<?xml version='1.1'?><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'><path d='M0 0 L1 1'/></svg>|MALFORMED|",
-            "child of a path|<svg viewBox='0 0 10 10'><path d='M0 0 L1 1'><animate attributeName='d'/></path></svg>|ELEMENT|animate",
-            "root other than svg|<html><path d='M0 0 L1 1'/></html>|ELEMENT|html",
-            "processing instruction|<?xml-stylesheet href='https://example.com/a.css'?><svg viewBox='0 0 10 10'><path d='M0 0 L1 1'/></svg>|ELEMENT|?xml-stylesheet",
-            "href attribute|<svg viewBox='0 0 10 10'><path href='https://example.com' d='M0 0 L1 1'/></svg>|ATTRIBUTE|href",
-            "xlink href attribute|<svg viewBox='0 0 10 10' xmlns:xlink='http://www.w3.org/1999/xlink'><path xlink:href='#a' d='M0 0 L1 1'/></svg>|ATTRIBUTE|xlink:href",
-            "style attribute|<svg viewBox='0 0 10 10'><path style='fill:url(https://example.com/x)' d='M0 0 L1 1'/></svg>|ATTRIBUTE|style",
-            "event attribute|<svg viewBox='0 0 10 10' onload='alert(1)'><path d='M0 0 L1 1'/></svg>|ATTRIBUTE|onload",
-            "transform attribute|<svg viewBox='0 0 10 10'><g transform='scale(2)'><path d='M0 0 L1 1'/></g></svg>|ATTRIBUTE|transform",
-            "filter attribute|<svg viewBox='0 0 10 10'><path filter='url(#f)' d='M0 0 L1 1'/></svg>|ATTRIBUTE|filter",
-            "class attribute|<svg viewBox='0 0 10 10'><path class='a' d='M0 0 L1 1'/></svg>|ATTRIBUTE|class",
-            "opacity on a group|<svg viewBox='0 0 10 10'><g opacity='0.5'><path d='M0 0 L1 1'/></g></svg>|ATTRIBUTE|opacity",
-            "fill from a URL|<svg viewBox='0 0 10 10'><path fill='url(#gradient)' d='M0 0 L1 1'/></svg>|FILL|",
-            "named colour|<svg viewBox='0 0 10 10'><g fill='red'><path d='M0 0 L1 1'/></g></svg>|FILL|",
-            "opacity above one|<svg viewBox='0 0 10 10'><path fill-opacity='2' d='M0 0 L1 1'/></svg>|OPACITY|",
-            "text in a group|<svg viewBox='0 0 10 10'><g>Josef<path d='M0 0 L1 1'/></g></svg>|TEXT|",
-            "character data|<svg viewBox='0 0 10 10'><![CDATA[<script>alert(1)</script>]]><path d='M0 0 L1 1'/></svg>|TEXT|",
-            "missing view box|<svg width='10' height='10'><path d='M0 0 L1 1'/></svg>|VIEW_BOX|",
-            "broken view box|<svg viewBox='0 0 10'><path d='M0 0 L1 1'/></svg>|VIEW_BOX|",
-            "path without data|<svg viewBox='0 0 10 10'><path fill='#000'/></svg>|PATH_DATA|",
-            "malformed path data|<svg viewBox='0 0 10 10'><path d='M0 0 L1'/></svg>|PATH_DATA|",
-            "no paths|<svg viewBox='0 0 10 10'><g fill='#000'/></svg>|NO_PATHS|",
-            "unclosed element|<svg viewBox='0 0 10 10'><path d='M0 0 L1 1'>|MALFORMED|",
-            "not XML|<<<|MALFORMED|",
-            "two roots|<svg viewBox='0 0 10 10'><path d='M0 0 L1 1'/></svg><svg viewBox='0 0 10 10'/>|MALFORMED|",
-            "undeclared entity|<svg viewBox='0 0 10 10'><path d='M0 0 L1 1'/>&ext;</svg>|MALFORMED|"
+            "script element|<svg viewBox='0 0 10 10'><script>alert(1)</script><path d='M0 0 L1 1'/></svg>|ELEMENT",
+            "style element|<svg viewBox='0 0 10 10'><style>path{fill:red}</style><path d='M0 0 L1 1'/></svg>|ELEMENT",
+            "image element|<svg viewBox='0 0 10 10'><image href='https://example.com/a.png'/></svg>|ELEMENT",
+            "use element|<svg viewBox='0 0 10 10'><use href='#a'/></svg>|ELEMENT",
+            "foreign object|<svg viewBox='0 0 10 10'><foreignObject><div xmlns='http://www.w3.org/1999/xhtml'>x</div></foreignObject></svg>|ELEMENT",
+            "filter element|<svg viewBox='0 0 10 10'><defs><filter id='f'><feGaussianBlur stdDeviation='2'/></filter></defs></svg>|ELEMENT",
+            "bare filter element|<svg viewBox='0 0 10 10'><filter id='f'/><path d='M0 0 L1 1'/></svg>|ELEMENT",
+            "text element|<svg viewBox='0 0 10 10'><text>Josef</text></svg>|ELEMENT",
+            "circle element|<svg viewBox='0 0 10 10'><circle r='5'/></svg>|ELEMENT",
+            "element of another namespace|<svg viewBox='0 0 10 10' xmlns:i='urn:x'><i:layer/></svg>|NAMESPACE",
+            "root in another default namespace|<svg xmlns='urn:evil' viewBox='0 0 10 10'><path d='M0 0 L1 1'/></svg>|NAMESPACE",
+            "path in the XHTML namespace|<svg viewBox='0 0 10 10'><path xmlns='http://www.w3.org/1999/xhtml' d='M0 0 L1 1'/></svg>|NAMESPACE",
+            "dropped element of another namespace|<svg viewBox='0 0 10 10' xmlns:i='urn:x'><i:metadata/><path d='M0 0 L1 1'/></svg>|NAMESPACE",
+            "XML 1.1|<?xml version='1.1'?><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'><path d='M0 0 L1 1'/></svg>|MALFORMED",
+            "child of a path|<svg viewBox='0 0 10 10'><path d='M0 0 L1 1'><animate attributeName='d'/></path></svg>|ELEMENT",
+            "root other than svg|<html><path d='M0 0 L1 1'/></html>|ELEMENT",
+            "processing instruction|<?xml-stylesheet href='https://example.com/a.css'?><svg viewBox='0 0 10 10'><path d='M0 0 L1 1'/></svg>|ELEMENT",
+            "href attribute|<svg viewBox='0 0 10 10'><path href='https://example.com' d='M0 0 L1 1'/></svg>|ATTRIBUTE",
+            "xlink href attribute|<svg viewBox='0 0 10 10' xmlns:xlink='http://www.w3.org/1999/xlink'><path xlink:href='#a' d='M0 0 L1 1'/></svg>|ATTRIBUTE",
+            "style attribute|<svg viewBox='0 0 10 10'><path style='fill:url(https://example.com/x)' d='M0 0 L1 1'/></svg>|ATTRIBUTE",
+            "event attribute|<svg viewBox='0 0 10 10' onload='alert(1)'><path d='M0 0 L1 1'/></svg>|ATTRIBUTE",
+            "transform attribute|<svg viewBox='0 0 10 10'><g transform='scale(2)'><path d='M0 0 L1 1'/></g></svg>|ATTRIBUTE",
+            "filter attribute|<svg viewBox='0 0 10 10'><path filter='url(#f)' d='M0 0 L1 1'/></svg>|ATTRIBUTE",
+            "class attribute|<svg viewBox='0 0 10 10'><path class='a' d='M0 0 L1 1'/></svg>|ATTRIBUTE",
+            "opacity on a group|<svg viewBox='0 0 10 10'><g opacity='0.5'><path d='M0 0 L1 1'/></g></svg>|ATTRIBUTE",
+            "fill from a URL|<svg viewBox='0 0 10 10'><path fill='url(#gradient)' d='M0 0 L1 1'/></svg>|FILL",
+            "named colour|<svg viewBox='0 0 10 10'><g fill='red'><path d='M0 0 L1 1'/></g></svg>|FILL",
+            "opacity above one|<svg viewBox='0 0 10 10'><path fill-opacity='2' d='M0 0 L1 1'/></svg>|OPACITY",
+            "text in a group|<svg viewBox='0 0 10 10'><g>Josef<path d='M0 0 L1 1'/></g></svg>|TEXT",
+            "character data|<svg viewBox='0 0 10 10'><![CDATA[<script>alert(1)</script>]]><path d='M0 0 L1 1'/></svg>|TEXT",
+            "missing view box|<svg width='10' height='10'><path d='M0 0 L1 1'/></svg>|VIEW_BOX",
+            "broken view box|<svg viewBox='0 0 10'><path d='M0 0 L1 1'/></svg>|VIEW_BOX",
+            "path without data|<svg viewBox='0 0 10 10'><path fill='#000'/></svg>|PATH_DATA",
+            "malformed path data|<svg viewBox='0 0 10 10'><path d='M0 0 L1'/></svg>|PATH_DATA",
+            "no paths|<svg viewBox='0 0 10 10'><g fill='#000'/></svg>|NO_PATHS",
+            "unclosed element|<svg viewBox='0 0 10 10'><path d='M0 0 L1 1'>|MALFORMED",
+            "not XML|<<<|MALFORMED",
+            "two roots|<svg viewBox='0 0 10 10'><path d='M0 0 L1 1'/></svg><svg viewBox='0 0 10 10'/>|MALFORMED",
+            "undeclared entity|<svg viewBox='0 0 10 10'><path d='M0 0 L1 1'/>&ext;</svg>|MALFORMED"
     })
     @DisplayName("Given an SVG with something outside the allow-list, when it is parsed, then it is refused naming the problem")
-    void should_refuse_when_parsed_given_construct_outside_allow_list(String name, String svg, SignatureVectorProblem problem, String refusedName) {
+    void should_refuse_when_parsed_given_construct_outside_allow_list(String name, String svg, SignatureVectorProblem problem) {
         assertThatThrownBy(() -> parser.parse(bytes(svg)))
-                .isInstanceOfSatisfying(UnsupportedSignatureVector.class, refused -> {
-                    assertThat(refused.problem()).isEqualTo(problem);
-                    if (refusedName != null) {
-                        assertThat(refused.name()).contains(refusedName);
-                    }
-                });
+                .isInstanceOfSatisfying(UnsupportedSignatureVector.class, refused -> assertThat(refused.problem()).isEqualTo(problem));
     }
 
     @Test

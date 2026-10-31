@@ -50,17 +50,29 @@ import {
 import { formatMinorUnits } from '../../../donations/donation-amount';
 import { formatDonationDate } from '../../../donations/donation-date';
 import { BankCheckResponse, DonationsApi } from '../../../donations/donations-api';
-import { PaymentQrApi, PaymentQrResponse } from '../../../donations/payment-qr-api';
+import { PaymentAccount, PaymentDetails } from '../../../donations/payment-details-api';
+import { PaymentDetailsStore } from '../../../donations/payment-details-store';
+import { spayd } from '../../../donations/spayd';
 import { QrCode } from '../../../../shared/ui/qr-code/qr-code';
+import { encodeText } from '../../../../shared/ui/qr-code/qr-encoder';
+import { QrMatrix } from '../../../../shared/ui/qr-code/qr-matrix';
 import { PairingHelp } from './pairing-help/pairing-help';
 import { SymbolClaim, SymbolClaimAnswer } from './symbol-claim/symbol-claim';
 
 type ListState = 'loading' | 'ready' | 'error';
 
+interface VerificationPayment {
+  readonly matrix: QrMatrix;
+  readonly account: PaymentAccount;
+  readonly amountMinor: number;
+}
+
 type QrState =
   | { readonly kind: 'loading' }
-  | { readonly kind: 'ready'; readonly qr: PaymentQrResponse }
-  | { readonly kind: 'failed' };
+  | { readonly kind: 'ready'; readonly payment: VerificationPayment }
+  | { readonly kind: 'unavailable' }
+  | { readonly kind: 'refused' }
+  | { readonly kind: 'refusedSymbol' };
 
 type PaymentWatch = 'waiting' | 'stopped';
 
@@ -100,7 +112,7 @@ const VERIFICATION_MESSAGE = $localize`:@@donor.bankAccounts.addDialog.messageVa
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const STALE_LIST_STATUSES = [404, 409];
-const VERIFICATION_AMOUNT = 1;
+const PAYMENT_QR_LEVEL = 'H';
 const PAYMENT_WATCH_INTERVAL_MS = 30_000;
 const PAYMENT_WATCH_CHECKS = 20;
 
@@ -113,7 +125,7 @@ const PAYMENT_WATCH_CHECKS = 20;
 })
 export class BankAccountsCard {
   private readonly api = inject(BankAccountsApi);
-  private readonly paymentQr = inject(PaymentQrApi);
+  private readonly paymentDetails = inject(PaymentDetailsStore);
   private readonly donations = inject(DonationsApi);
   private readonly document = inject(DOCUMENT);
   private readonly auth = inject(AuthStore);
@@ -147,12 +159,21 @@ export class BankAccountsCard {
   protected readonly actionDone = signal('');
 
   protected readonly adding = signal(false);
-  protected readonly qr = signal<QrState>({ kind: 'loading' });
+  protected readonly qr = computed<QrState>(() => {
+    const state = this.paymentDetails.state();
+    if (state.kind === 'loading') {
+      return state;
+    }
+    if (state.kind === 'failed') {
+      return { kind: 'unavailable' };
+    }
+    return verificationQr(state.details, this.variableSymbol());
+  });
   protected readonly qrResponse = computed(() => {
     const state = this.qr();
-    return state.kind === 'ready' ? state.qr : null;
+    return state.kind === 'ready' ? state.payment : null;
   });
-  protected readonly verificationAmount = VERIFICATION_AMOUNT;
+  protected readonly amountOf = formatMinorUnits;
   protected readonly verificationMessage = VERIFICATION_MESSAGE;
   protected readonly nudgesStandingOrder = computed(
     () =>
@@ -160,7 +181,6 @@ export class BankAccountsCard {
         (account) => account.status === 'ACTIVE' || account.symbolOffer !== null,
       ),
   );
-  private qrRequest: Subscription | undefined;
 
   protected readonly paymentWatch = signal<PaymentWatch>('waiting');
   private readonly accountsWhenOpened = signal<AccountsWhenOpened | null>(null);
@@ -198,7 +218,6 @@ export class BankAccountsCard {
       }
     });
     this.destroyRef.onDestroy(() => {
-      this.qrRequest?.unsubscribe();
       this.watchRequest?.unsubscribe();
     });
   }
@@ -454,7 +473,6 @@ export class BankAccountsCard {
   }
 
   protected closeAdd(): void {
-    this.qrRequest?.unsubscribe();
     this.watchRequest?.unsubscribe();
     this.adding.set(false);
     this.accountsWhenOpened.set(null);
@@ -516,14 +534,11 @@ export class BankAccountsCard {
   }
 
   protected loadQr(): void {
-    this.qrRequest?.unsubscribe();
-    this.qr.set({ kind: 'loading' });
-    this.qrRequest = this.paymentQr
-      .paymentQr(VERIFICATION_AMOUNT, this.variableSymbol(), 'ACCOUNT_VERIFICATION')
-      .subscribe({
-        next: (qr) => this.qr.set({ kind: 'ready', qr }),
-        error: () => this.qr.set({ kind: 'failed' }),
-      });
+    this.paymentDetails.load();
+  }
+
+  protected reloadQr(): void {
+    this.paymentDetails.reload();
   }
 
   private actionButtonOf(account: BankAccountItem): HTMLButtonElement | null {
@@ -635,4 +650,29 @@ function actionButtonId(account: BankAccountItem): string {
 function dayAfter(isoDate: string): string {
   const [year, month, day] = isoDate.slice(0, 10).split('-').map(Number);
   return new Date(Date.UTC(year, month - 1, day + 1)).toISOString().slice(0, 10);
+}
+
+function verificationQr(details: PaymentDetails, variableSymbol: string | null): QrState {
+  const payment = spayd(details, {
+    amountMinor: details.accountVerificationAmountMinor,
+    variableSymbol,
+    purpose: 'ACCOUNT_VERIFICATION',
+  });
+  if (!('spayd' in payment)) {
+    return payment.refused.fields.includes('variableSymbol')
+      ? { kind: 'refusedSymbol' }
+      : { kind: 'refused' };
+  }
+  try {
+    return {
+      kind: 'ready',
+      payment: {
+        matrix: encodeText(payment.spayd, PAYMENT_QR_LEVEL),
+        account: details.account,
+        amountMinor: details.accountVerificationAmountMinor,
+      },
+    };
+  } catch {
+    return { kind: 'refused' };
+  }
 }

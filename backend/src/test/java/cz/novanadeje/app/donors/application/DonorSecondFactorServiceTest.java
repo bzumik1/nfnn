@@ -24,9 +24,6 @@ import cz.novanadeje.app.donors.domain.SecondFactorSessionRequired;
 import cz.novanadeje.app.donors.domain.Totp;
 import cz.novanadeje.app.donors.domain.TotpSecret;
 import cz.novanadeje.app.donors.domain.WrongPassword;
-import cz.novanadeje.app.shared.application.qr.QrCodeEncoder;
-import cz.novanadeje.app.shared.application.qr.QrErrorCorrection;
-import cz.novanadeje.app.shared.application.qr.QrMatrix;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -53,7 +50,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -68,7 +64,6 @@ class DonorSecondFactorServiceTest {
     private static final PasswordHash HASH = new PasswordHash("$hash");
     private static final String PASSWORD = "correct horse battery";
     private static final TotpSecret SECRET = new TotpSecret("GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ");
-    private static final QrMatrix MODULES = new QrMatrix(21, "0".repeat(21 * 21));
     private static final IssuedTokens TOKENS = new IssuedTokens("access", NOW.plus(Duration.ofMinutes(15)), "refresh", NOW.plus(Duration.ofDays(14)),
             Set.of(Role.DONOR));
 
@@ -85,8 +80,6 @@ class DonorSecondFactorServiceTest {
     @Mock
     private DonorSessionService sessions;
     @Mock
-    private QrCodeEncoder qrCodes;
-    @Mock
     private PasskeyRepository passkeys;
     @Mock
     private PasskeyChallengeRepository challenges;
@@ -100,18 +93,17 @@ class DonorSecondFactorServiceTest {
     @BeforeEach
     void setUp() {
         service = new DonorSecondFactorService(donors, secondFactors, refreshTokens,
-                new DonorConfirmations(passwordHasher, passkeys, challenges, ceremonies, Clock.fixed(NOW, ZoneOffset.UTC)), sessions, new DonorViews(secondFactors, verificationTokens, Clock.fixed(NOW, ZoneOffset.UTC)), qrCodes,
+                new DonorConfirmations(passwordHasher, passkeys, challenges, ceremonies, Clock.fixed(NOW, ZoneOffset.UTC)), sessions, new DonorViews(secondFactors, verificationTokens, Clock.fixed(NOW, ZoneOffset.UTC)),
                 new SecondFactorSessionGuard(secondFactors, passkeys),
                 new DonorSecondFactorProperties(Duration.ofMinutes(5), 5, "Nová naděje", Duration.ofDays(14)), events, Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
     @Test
-    @DisplayName("Given the right password and no factor yet, when the set-up begins, then a pending factor is stored and the secret comes back as text, URI and QR code")
+    @DisplayName("Given the right password and no factor yet, when the set-up begins, then a pending factor is stored and the secret comes back as text and URI")
     void should_store_pending_factor_and_return_secret_when_setup_begun_given_right_password() {
         when(donors.findById(DONOR)).thenReturn(Optional.of(donor()));
         when(passwordHasher.matches(new RawPassword(PASSWORD), HASH)).thenReturn(true);
         when(secondFactors.findByDonor(DONOR)).thenReturn(Optional.empty());
-        when(qrCodes.encode(anyString(), any())).thenReturn(MODULES);
 
         SecondFactorEnrolment enrolment = service.begin(DONOR, false, Confirmation.withPassword(PASSWORD));
 
@@ -123,8 +115,6 @@ class DonorSecondFactorServiceTest {
         assertThat(enrolment.otpauthUri())
                 .isEqualTo("otpauth://totp/Nov%C3%A1%20nad%C4%9Bje:jana%40example.cz?secret=" + enrolment.secret()
                         + "&issuer=Nov%C3%A1%20nad%C4%9Bje&algorithm=SHA1&digits=6&period=30");
-        assertThat(enrolment.qrModules()).isEqualTo(MODULES);
-        verify(qrCodes).encode(enrolment.otpauthUri(), QrErrorCorrection.MEDIUM);
         verifyNoInteractions(sessions, refreshTokens, events);
     }
 
@@ -141,7 +131,6 @@ class DonorSecondFactorServiceTest {
         assertThatThrownBy(() -> service.begin(DONOR, false, Confirmation.withPassword(PASSWORD))).isInstanceOf(SecondFactorSessionRequired.class);
 
         verify(secondFactors, never()).save(any());
-        verifyNoInteractions(qrCodes);
     }
 
     @Test
@@ -150,7 +139,6 @@ class DonorSecondFactorServiceTest {
         when(donors.findById(DONOR)).thenReturn(Optional.of(donor()));
         when(passwordHasher.matches(new RawPassword(PASSWORD), HASH)).thenReturn(true);
         when(secondFactors.findByDonor(DONOR)).thenReturn(Optional.of(SecondFactor.enrol(DONOR, SECRET, NOW.minusSeconds(600))));
-        when(qrCodes.encode(anyString(), any())).thenReturn(MODULES);
 
         SecondFactorEnrolment enrolment = service.begin(DONOR, false, Confirmation.withPassword(PASSWORD));
 
@@ -168,7 +156,6 @@ class DonorSecondFactorServiceTest {
         assertThatThrownBy(() -> service.begin(DONOR, false, Confirmation.withPassword(PASSWORD))).isInstanceOf(SecondFactorAlreadyEnabled.class);
 
         verify(secondFactors, never()).save(any());
-        verifyNoInteractions(qrCodes);
     }
 
     @Test
@@ -180,7 +167,7 @@ class DonorSecondFactorServiceTest {
         assertThatThrownBy(() -> service.begin(DONOR, false, Confirmation.withPassword("wrong horse battery"))).isInstanceOf(WrongPassword.class);
         assertThatThrownBy(() -> service.begin(DONOR, false, Confirmation.withPassword("short"))).isInstanceOf(WrongPassword.class);
 
-        verifyNoInteractions(secondFactors, qrCodes);
+        verifyNoInteractions(secondFactors);
     }
 
     @Test

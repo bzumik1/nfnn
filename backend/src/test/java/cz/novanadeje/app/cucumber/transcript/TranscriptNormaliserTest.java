@@ -7,6 +7,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 import java.nio.ByteBuffer;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
@@ -211,6 +212,22 @@ class TranscriptNormaliserTest {
     }
 
     @Test
+    @DisplayName("Given the configured receipt signing seed in each of its spellings and fields named after a seed or a private key, when they are normalised, then each is masked and remembered")
+    void should_mask_and_remember_signing_seeds_when_normalised_given_spellings_and_seed_fields() {
+        String seed = "nWGxne/9WmC6hEr0kuwsxERJxWl7MmkZcDusAxyuf2A=";
+        Map<String, String> known = new HashMap<>();
+        ApiTranscriptHooks.signingSeedSpellings(seed).forEach(spelling -> known.put(spelling, TranscriptNormaliser.SECRET));
+        TranscriptNormaliser normaliser = new TranscriptNormaliser(known);
+
+        String sentence = normaliser.text("seed " + seed + " hex 9D61B19DEFFD5A60BA844AF492EC2CC44449C5697B326919703BAC031CAE7F60 url nWGxne_9WmC6hEr0kuwsxERJxWl7MmkZcDusAxyuf2A.");
+        JsonNode body = normaliser.json(json.readTree("{\"seed\":\"planted-seed-1\",\"signingKey\":\"planted-seed-2\",\"privateKey\":\"planted-seed-3\",\"receiptSigningKey\":\"planted-seed-4\",\"publicKey\":\"stays\"}"));
+
+        assertThat(sentence).isEqualTo("seed <secret> hex <secret> url <secret>.");
+        assertThat(body.toString()).isEqualTo("{\"seed\":\"<secret>\",\"signingKey\":\"<secret>\",\"privateKey\":\"<secret>\",\"receiptSigningKey\":\"<secret>\",\"publicKey\":\"stays\"}");
+        assertThat(normaliser.maskedValues()).contains(seed, "planted-seed-1", "planted-seed-2", "planted-seed-3", "planted-seed-4");
+    }
+
+    @Test
     @DisplayName("Given a backup key in capitals and in lowercase inside a field and a sentence, when it is normalised, then each is masked and remembered for the leak check, and the bare prefix of a hint stays")
     void should_mask_and_remember_backup_keys_when_normalised_given_a_key_in_any_case() {
         TranscriptNormaliser normaliser = new TranscriptNormaliser(Map.of());
@@ -249,5 +266,24 @@ class TranscriptNormaliserTest {
     void should_replace_ids_and_drop_the_query_when_the_template_is_taken_given_a_path_with_ids_and_a_query() {
         assertThat(TranscriptNormaliser.template("/api/admin/donors/" + FIRST_ID + "/payments/" + SECOND_ID + "?page=2"))
                 .isEqualTo("/api/admin/donors/{id}/payments/{id}");
+    }
+
+    @Test
+    @DisplayName("Given a path naming a receipt signing key, when its template is taken, then the key id becomes {keyId}, because a key id is a masked value")
+    void should_replace_the_key_id_when_the_template_is_taken_given_a_path_naming_a_receipt_signing_key() {
+        assertThat(TranscriptNormaliser.template("/api/admin/donations/receipt-signing-keys/21fe31df/withdrawal"))
+                .isEqualTo("/api/admin/donations/receipt-signing-keys/{keyId}/withdrawal");
+    }
+
+    @Test
+    @DisplayName("Given Spring Boot's error answer, when it is normalised, then its timestamp from the real clock is masked and a timestamp of another object stays")
+    void should_mask_the_timestamp_of_boot_error_answer_when_json_is_normalised() {
+        TranscriptNormaliser normaliser = new TranscriptNormaliser(Map.of());
+
+        JsonNode error = normaliser.json(json.readTree("{\"timestamp\":\"2026-10-30T16:17:30.569Z\",\"status\":400,\"error\":\"Bad Request\",\"path\":\"/api/content/news\"}"));
+        JsonNode other = normaliser.json(json.readTree("{\"timestamp\":\"2026-10-30T16:17:30.569Z\",\"status\":400}"));
+
+        assertThat(error.toString()).isEqualTo("{\"timestamp\":\"<time>\",\"status\":400,\"error\":\"Bad Request\",\"path\":\"/api/content/news\"}");
+        assertThat(other.path("timestamp").asString()).isEqualTo("2026-10-30T16:17:30.569Z");
     }
 }

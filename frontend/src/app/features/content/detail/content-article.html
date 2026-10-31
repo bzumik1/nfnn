@@ -6,7 +6,7 @@
           @if (kind() === 'news') {
             <ng-container i18n="@@content.detail.back.news">← Všechny aktuality</ng-container>
           } @else {
-            <ng-container i18n="@@content.detail.back.projects">← Všechny projekty</ng-container>
+            <ng-container i18n="@@content.detail.back.projects">← Kde pomáháme</ng-container>
           }
         </a>
       </p>
@@ -37,6 +37,23 @@
       </figure>
     }
     <app-markdown class="prose" [text]="page().body" />
+    @if (page().signer; as signer) {
+      <footer class="signer">
+        <app-avatar
+          class="signer-photo"
+          [name]="signer.name"
+          [src]="signerPortrait()"
+          [size]="64"
+          loading="lazy"
+        />
+        <div>
+          <p class="signer-name">{{ signer.name }}</p>
+          @if (signer.role) {
+            <p class="signer-role">{{ signer.role }}</p>
+          }
+        </div>
+      </footer>
+    }
     <p class="actions-lead" i18n="@@content.detail.donateLead">
       Chcete pomoct dalším dětem? Přispějte na jejich pomůcky.
     </p>
@@ -46,7 +63,9 @@
         @if (kind() === 'news') {
           <ng-container i18n="@@content.detail.back.news.again">Zpět na aktuality</ng-container>
         } @else {
-          <ng-container i18n="@@content.detail.back.projects.again">Zpět na projekty</ng-container>
+          <ng-container i18n="@@content.detail.back.projects.again"
+            >Kde všude pomáháme</ng-container
+          >
         }
       </a>
     </p>

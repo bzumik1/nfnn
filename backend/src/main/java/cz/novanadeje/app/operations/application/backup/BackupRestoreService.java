@@ -5,6 +5,7 @@ import cz.novanadeje.app.operations.domain.backup.BackupFile;
 import cz.novanadeje.app.operations.domain.backup.BackupKey;
 import cz.novanadeje.app.operations.domain.backup.BackupNotFound;
 import cz.novanadeje.app.operations.domain.backup.BackupRun;
+import cz.novanadeje.app.operations.domain.backup.PublicBackupKey;
 import cz.novanadeje.app.operations.domain.backup.RestorePending;
 import cz.novanadeje.app.operations.domain.backup.RestoreRecordRepository;
 import cz.novanadeje.app.operations.domain.backup.RestoreSource;
@@ -37,14 +38,16 @@ public class BackupRestoreService {
     private final RestoreRecordRepository records;
     private final ApplicationRestarter restarter;
     private final ApplicationEventPublisher events;
+    private final PublicBackupKeyPolicy publicKeys;
     private final Clock clock;
 
     public BackupRestoreService(BackupStore store, RestoreRecordRepository records, ApplicationRestarter restarter, ApplicationEventPublisher events,
-                                Clock clock) {
+                                PublicBackupKeyPolicy publicKeys, Clock clock) {
         this.store = store;
         this.records = records;
         this.restarter = restarter;
         this.events = events;
+        this.publicKeys = publicKeys;
         this.clock = clock;
     }
 
@@ -65,6 +68,9 @@ public class BackupRestoreService {
     }
 
     public RestoreRequest restoreUpload(InputStream content, Optional<BackupKey> key) {
+        if (key.filter(publicKeys::refuses).isPresent()) {
+            throw new PublicBackupKey();
+        }
         requireNoRestorePending();
         Instant now = clock.instant();
         String id = UuidV7.generate(now).toString();

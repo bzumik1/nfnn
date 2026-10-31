@@ -83,7 +83,7 @@ public class SecondFactorRecoveryService {
         LocalDate today = LocalDate.ofInstant(now, FoundationZone.ZONE);
         return new SecondFactorRecoveryInstructions(code.message(), recovery.createdAt(), recovery.expiresAt(), open.isPresent(),
                 target.accountNumber(), target.iban(), target.amount(), Optional.of(target.usableFrom()).filter(from -> from.isAfter(today)),
-                targets.paymentQrFor(code));
+                targets.spaydFor(code));
     }
 
     private SecondFactorRecovery openNew(Donor donor, Instant now) {

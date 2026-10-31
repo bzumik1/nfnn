@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { mockDonorApi, signIn } from './donor-session';
+import { mockDonorApi, session, signIn } from './donor-session';
 import { expect, test } from './fixtures';
 
 const SAMPLE_INSET = 4;
@@ -60,8 +60,11 @@ test.describe('Given a visitor on an iPhone, whose Safari tints its status bar f
     await page.setViewportSize({ width: 1280, height: 800 });
     await mockDonorApi(page);
     await signIn(page);
+    await page.route('**/api/donors/auth/refresh', (route) => route.fulfill(session(200)));
     await page.setViewportSize({ width: 390, height: 844 });
     await page.reload();
+    await expect(page.getByRole('heading', { level: 1, name: 'Můj přehled' })).toBeVisible();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
 
     await expectSafariTintsTheStatusBarBlue(page);
   });
@@ -84,5 +87,17 @@ test.describe('Given a visitor on an iPhone, whose Safari tints its status bar f
     expect(visible.height).toBeLessThanOrEqual(5);
     expect(visible.opacity).toBeLessThanOrEqual(0.12);
     expect(visible.taps).toBe('none');
+  });
+
+  test('when a page opens in Chrome on Android or an older Safari, then the theme-color it reads is the same blue', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await page.goto('/projekty');
+
+    await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute(
+      'content',
+      'rgb(37, 99, 235)',
+    );
   });
 });

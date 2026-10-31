@@ -24,6 +24,8 @@ class BaselineHygieneTest {
     private static final String FIXTURE_SECRET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJ0123-_QQ";
     private static final String TEST_BACKUP_KEY = "AGE-SECRET-KEY-1R45A984EXXAFC85YZSYGY9R6XJTD4E9AKY65ZCRGPDQ89E7ANW8QKT6GWH";
     private static final String OTHER_BACKUP_KEY = "AGE-SECRET-KEY-1ARXU2VF0GAFA8YLTUXNPDZE0UV33WNCJJEUWM3C2RKSR7A829JTS8HRKXT";
+    private static final String V2_RECEIPT_TEMPLATE_DIGEST = "7b30974aef2fdaf01f6e4990c8c4b526a0de8d8371452023be783677b69bf7e7";
+    private static final JsonMapper RECEIPT_CORPUS_JSON = JsonMapper.builder().build();
     private static final BaselineHygiene.Fixtures NO_FIXTURES = new BaselineHygiene.Fixtures(Set.of(), Set.of());
 
     @ParameterizedTest
@@ -37,6 +39,24 @@ class BaselineHygieneTest {
 
         assertThat(report.filesScanned()).as("files in %s", folder).isPositive();
         assertThat(report.findings()).as("findings in %s", folder).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given v2's receipt corpus, when the template each sample names is read, then it is the one public bundle v2 issued from, which its retired history test spelled out until slice 1.10")
+    void should_name_the_one_public_template_bundle_when_read_given_v2_receipt_corpus() throws IOException {
+        Path corpus = SharedCases.repositoryRoot().resolve("regression/v2/receipts");
+        List<Path> samples;
+        try (var files = Files.list(corpus)) {
+            samples = files.filter(file -> file.getFileName().toString().endsWith(".json"))
+                    .filter(file -> !Set.of("digests.json", "refusals.json").contains(file.getFileName().toString()))
+                    .sorted().toList();
+        }
+
+        assertThat(samples).isNotEmpty();
+        for (Path sample : samples) {
+            JsonNode receipt = RECEIPT_CORPUS_JSON.readTree(Files.readString(sample));
+            assertThat(receipt.findValue("template").asString()).as("template of %s", sample.getFileName()).isEqualTo(V2_RECEIPT_TEMPLATE_DIGEST);
+        }
     }
 
     @Test
@@ -175,6 +195,53 @@ class BaselineHygieneTest {
 
         assertThat(findings).hasSize(2).allMatch(finding -> finding.contains("a hex secret starting"));
         assertThat(BaselineHygiene.findings("v2/BASELINE_COMMIT", "0123456789abcdef0123456789abcdef01234567\n", NO_FIXTURES)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given the seeds of RFC 8032, the dev default and the prod test in hex, base64 or base64url, when text is checked, then each is reported as a signing seed even though the tests spell them out")
+    void should_report_signing_seeds_when_text_is_checked_given_rfc_and_dev_seeds_spelled_out_by_tests() {
+        String hex = "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60";
+        String base64 = "nWGxne/9WmC6hEr0kuwsxERJxWl7MmkZcDusAxyuf2A=";
+        String otherHex = "4ccd089b28ff96da9db6c346ec114e0f5b8a319f35aba624da8cf6ed4fb8a6fb";
+        String oddXHex = "833fe62409237b9d62ec77587520911e9a759cec1d19755b7da901b96dca3d42";
+        String prodTestBase64 = "bmZubi1wcm9kLXRlc3Qtc2VlZC1ub3QtcmZjLTgwMzI=";
+        String test3Hex = "c5aa8df43f9f837bedb7442f31dcb7b166d38535076f094b85ce3a2e0b4458f7";
+        String test1024Base64 = "9eV2fPFTMZUXYw8iaHa4bIFgzFg7wBN0TGvyVfXMDuU=";
+        String text = "dev %s, upper %s, base64url %s, test 2 %s, test SHA(abc) %s, prod test %s, test 3 %s, test 1024 %s".formatted(base64,
+                hex.toUpperCase(Locale.ROOT), "nWGxne_9WmC6hEr0kuwsxERJxWl7MmkZcDusAxyuf2A", otherHex, oddXHex, prodTestBase64, test3Hex, test1024Base64);
+        BaselineHygiene.Fixtures spelled = new BaselineHygiene.Fixtures(Set.of(), Set.of(hex, base64, otherHex, hex.toUpperCase(Locale.ROOT),
+                "nWGxne_9WmC6hEr0kuwsxERJxWl7MmkZcDusAxyuf2A", oddXHex, prodTestBase64, test3Hex, test1024Base64));
+
+        List<String> findings = BaselineHygiene.findings("seeds.txt", text, spelled);
+
+        assertThat(findings).filteredOn(finding -> finding.contains("a receipt signing seed")).hasSize(8);
+    }
+
+    @Test
+    @DisplayName("Given JSON fields named after a seed, a signing key or a private key, when a JSON file is checked, then a value other than <secret> or empty is reported and the public key is not")
+    void should_report_unmasked_seed_fields_when_a_json_file_is_checked() {
+        String text = """
+                {"seed":"planted", "receipt":{"signingKey":"planted", "privateKeyHex":"planted", "seedBase64":"<secret>", "publicKeyHex":"planted", "signingKeyId":"21fe31df"}}
+                """;
+
+        List<String> findings = BaselineHygiene.findings("keys.json", text, NO_FIXTURES);
+
+        assertThat(findings).containsExactlyInAnyOrder("keys.json: an unmasked signing key field seed", "keys.json: an unmasked signing key field signingKey",
+                "keys.json: an unmasked signing key field privateKeyHex");
+    }
+
+    @Test
+    @DisplayName("Given proof hex labelled payloadHex, signatureHex or publicKeyHex and a proof text with a stray letter, when a verification case file is checked, then they are not reported, and the same hex unlabelled or in another folder is")
+    void should_allow_labelled_proof_hex_only_in_verification_cases_when_text_is_checked() {
+        String hex = "3f2a9c41d07be65f8a1c29e0b4d7f3a6";
+        String labelled = """
+                {"payloadHex":"%s", "signatureHex": "%s", "keys":[{"publicKeyHex":"%s"}], "qrText": "https://nfnn.cz/overit#%s"}
+                """.formatted(hex, hex, hex, hex);
+
+        assertThat(BaselineHygiene.findings("verification/payload.json", labelled, NO_FIXTURES)).isEmpty();
+        assertThat(BaselineHygiene.findings("verification/payload.json", "{\"other\":\"" + hex + "\"}", NO_FIXTURES))
+                .singleElement().asString().contains("a hex secret starting 3f2a9c41");
+        assertThat(BaselineHygiene.findings("qr/payment.json", labelled, NO_FIXTURES)).hasSize(4).allMatch(finding -> finding.contains("a hex secret starting"));
     }
 
     @Test

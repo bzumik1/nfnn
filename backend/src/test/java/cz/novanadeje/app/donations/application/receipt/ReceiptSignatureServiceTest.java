@@ -134,7 +134,7 @@ class ReceiptSignatureServiceTest {
     @Test
     @DisplayName("Given an SVG the parser refuses, when an administrator uploads it, then no transaction opens")
     void should_open_no_transaction_when_uploaded_given_refused_svg() {
-        when(vectors.parse(SVG)).thenThrow(new UnsupportedSignatureVector(SignatureVectorProblem.ELEMENT, "script"));
+        when(vectors.parse(SVG)).thenThrow(new UnsupportedSignatureVector(SignatureVectorProblem.ELEMENT));
 
         assertThatThrownBy(() -> service.upload(ADMIN, SVG)).isInstanceOf(UnsupportedSignatureVector.class);
 

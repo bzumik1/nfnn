@@ -5,6 +5,8 @@ import {
   answer,
   asRecord,
   plain,
+  receiptView,
+  PROJECT_ORDERS,
   text,
   ToolRefusal,
   withHint,
@@ -34,16 +36,19 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Stav serveru',
       description:
-        'The running backend version and health, the Fio bank import state (covered period, last attempt and success, failures, reported outage) and the last backup and test restore.',
+        'The running backend version and health, the Fio bank import state (covered period, last attempt and success, failures, reported outage), the last backup and test restore, and the key that signs the verification QR codes on receipts (its id, when the server registered it, whether it is published and whether an administrator withdrew it, and the keys whose row disagrees with the audit trail: missing when the trail registered, adopted or withdrew a key that has no row, reverted when the row of a withdrawn key is active again; attention is true when a key fails its seal and is not published, when the current key is withdrawn and the server has not yet started with a new seed, when a row disagrees with the audit trail, and when that part is unavailable, which leaves the rest of the status as it is).',
       annotations: READ_ONLY,
     },
     async (ctx) =>
       answer(deps, ctx, 'nfnn_status', async ({ apiToken }) => {
-        const [info, health, importState, backups] = await Promise.all([
+        const [info, health, importState, backups, signingKeys] = await Promise.all([
           backend.get('/actuator/info'),
           backend.get('/actuator/health'),
           backend.get('/api/admin/donations/import-state', apiToken),
           backend.get('/api/admin/operations/backups', apiToken),
+          backend
+            .get('/api/admin/donations/receipt-signing-keys', apiToken)
+            .then(receiptSigningKeys, unavailableReceiptSigningKeys),
         ]);
         const backupView = asRecord(backups);
         return text({
@@ -53,6 +58,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
           lastBackup: backupView['lastBackup'],
           lastTestRestore: backupView['lastTestRestore'],
           backupProblems: backupView['problems'],
+          receiptSigningKeys: signingKeys,
         });
       }),
   );
@@ -230,6 +236,72 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
   );
 
   server.registerTool(
+    'nfnn_receipts',
+    {
+      title: 'Vystavená potvrzení',
+      description:
+        'The issued donation receipts, newest issue first, a page at a time: of every donor or of one (`donorId`), and of every year of issue or of one (`issuedIn`: the year the receipt was issued, which its number starts with, so the yearly receipt for 2026 is issued in 2027). Each item has its id, donorId, number, status (ACTIVE; REPLACED by a newer receipt of the same donation or year; or WITHDRAWN by the foundation), kind (YEARLY or SINGLE), the donation or year it certifies, when it was issued and replaced, its language, the number of gifts and their total, but no name or address: read one whole with nfnn_receipt.',
+      inputSchema: z.object({
+        donorId: UUID.optional().describe('Only the receipts of this donor.'),
+        issuedIn: YEAR.optional().describe('Only the receipts issued in this year.'),
+        page: z.number().int().min(0).max(100_000).default(0),
+        limit: z.number().int().min(1).max(100).default(50),
+      }),
+      annotations: READ_ONLY,
+    },
+    async ({ donorId, issuedIn, page, limit }, ctx) =>
+      answer(
+        deps,
+        ctx,
+        'nfnn_receipts',
+        async ({ apiToken }) => {
+          const params = new URLSearchParams();
+          if (donorId !== undefined) {
+            params.set('donorId', donorId);
+          }
+          if (issuedIn !== undefined) {
+            params.set('issuedIn', String(issuedIn));
+          }
+          params.set('page', String(page));
+          params.set('limit', String(limit));
+          const found = asRecord(
+            await backend.get(`/api/admin/donations/receipts?${params}`, apiToken),
+          );
+          const total = typeof found['total'] === 'number' ? found['total'] : 0;
+          return withHint(
+            text(found),
+            (page + 1) * limit < total
+              ? `More receipts (${total} in all): call nfnn_receipts again with page ${page + 1}.`
+              : undefined,
+          );
+        },
+        donorId === undefined ? undefined : `donor ${donorId}`,
+      ),
+  );
+
+  server.registerTool(
+    'nfnn_receipt',
+    {
+      title: 'Potvrzení o daru',
+      description:
+        "One issued donation receipt whole: its id, donorId, status, kind, number, the donation or year it certifies, when it was issued and replaced, and `receipt`, the data it certifies as they were frozen and signed when it was issued (the foundation, the donor with name, address and variable symbol, the gifts, the total, the signatory and the digest of the signature image on it, the receipt it replaces, the signing key), with `verificationLink`, the address its verification QR code carries. When the donor's personal data were erased (`donorErased`), the receipt stays as issued, but a connection gets it without the donor's name, company identifier and address, which read as the erasure placeholders, and without the verification link, which carries them; only an administrator on the web at /sprava sees them. The PDF is drawn only in a browser (the donor's receipts and /sprava), so this answer is data; the receipt texts frozen with it (the wording of the PDF) are left out.",
+      inputSchema: z.object({ receiptId: UUID }),
+      annotations: READ_ONLY,
+    },
+    async ({ receiptId }, ctx) =>
+      answer(
+        deps,
+        ctx,
+        'nfnn_receipt',
+        async ({ apiToken }) =>
+          text(
+            receiptView(await backend.get(`/api/admin/donations/receipts/${receiptId}`, apiToken)),
+          ),
+        `receipt ${receiptId}`,
+      ),
+  );
+
+  server.registerTool(
     'nfnn_backups',
     {
       title: 'Zálohy',
@@ -314,7 +386,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Podpis na potvrzeních',
       description:
-        'Whether a signature is uploaded for donation receipts, its kind (RASTER for a scan, VECTOR for an SVG of filled paths), its size in pixels and when it was uploaded (the image and the vector paths themselves are left out). Receipts issued after the upload carry a RASTER signature above the signatory, and a VECTOR signature only once receipts are drawn in the browser; until then they carry the line and the name. Uploading and removing it stay on the web (/sprava/nastaveni, "Potvrzení o daru").',
+        'Whether a signature is uploaded for donation receipts, its kind (RASTER for a scan, VECTOR for an SVG of filled paths), its size in pixels and when it was uploaded (the image and the vector paths themselves are left out). Receipts issued after the upload carry it above the signatory, a scan and a vector alike; uploading and removing it stay on the web (/sprava/nastaveni, "Potvrzení o daru").',
       annotations: READ_ONLY,
     },
     async (ctx) =>
@@ -378,6 +450,19 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
   );
 
   server.registerTool(
+    'nfnn_project_order',
+    {
+      title: 'Řazení projektů',
+      description: `How the site orders the projects on the home page and the list of projects (the administration lists them the same way, drafts first), as \`order\`: ${PROJECT_ORDERS} Changed with nfnn_set_project_order.`,
+      annotations: READ_ONLY,
+    },
+    async (ctx) =>
+      answer(deps, ctx, 'nfnn_project_order', async ({ apiToken }) =>
+        text(await backend.get('/api/admin/content/project-order', apiToken)),
+      ),
+  );
+
+  server.registerTool(
     'nfnn_news_article',
     {
       title: 'Aktualita',
@@ -435,7 +520,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Lidé fondu',
       description:
-        'The people of the foundation (Lidé fondu) the home page shows in "Kdo fond vede", in their order: id, name, role, position, onBoard with boardNote, featured, portrait and webSignature (id, url, size, or null), personalEmail and fundEmail (administration data only, never on the site), and the founders note under the cards (null when none). With no people the home page shows its own block. Change them with nfnn_add_person, nfnn_update_person, nfnn_remove_person, nfnn_order_people and nfnn_update_founders_note; a web signature is set and removed only on the web at /sprava/lide-fondu.',
+        'The people of the foundation (Lidé fondu) the home page shows in "Kdo fond vede", in their order: id, name, role, position, onBoard with boardNote, featured, portrait and webSignature (id, url, size, or null), personalEmail and fundEmail (administration data only, never on the site), linkedToAccount (true when one of those e-mails is the confirmed e-mail of an account on the site; the link only shows the portrait at that account and grants nothing), the founders note under the cards and the footnote, the one line under the board line (each null when none). With no people the home page shows its own block. Change them with nfnn_add_person, nfnn_update_person, nfnn_remove_person, nfnn_order_people, nfnn_update_founders_note, nfnn_update_people_footnote, nfnn_set_web_signature and nfnn_remove_web_signature.',
       annotations: READ_ONLY,
     },
     async (ctx) =>
@@ -675,4 +760,35 @@ function searchOrder(files: readonly LogFile[], series: string, start: string): 
   const order = [series, ...copies];
   const from = order.indexOf(start);
   return from < 0 ? [start] : order.slice(from);
+}
+
+function unavailableReceiptSigningKeys(failure: unknown): Record<string, unknown> {
+  return {
+    unavailable: failure instanceof BackendProblem ? failure.message : 'the backend did not answer',
+    attention: true,
+  };
+}
+
+function receiptSigningKeys(answer: unknown): Record<string, unknown> {
+  const view = asRecord(answer);
+  const keys = Array.isArray(view['keys']) ? view['keys'].map(asRecord) : [];
+  const current = keys.find((key) => key['current'] === true);
+  const unpublished = keys.filter((key) => key['published'] !== true).map((key) => key['keyId']);
+  const currentKeyWithdrawn = current?.['status'] === 'revoked';
+  const auditMismatches = Array.isArray(view['auditMismatches'])
+    ? view['auditMismatches'].map(asRecord)
+    : [];
+  return {
+    currentKeyId: view['currentKeyId'],
+    currentKeyRegisteredAt: current?.['registeredAt'] ?? null,
+    currentKeyPublished: view['currentKeyPublished'],
+    currentKeyWithdrawn,
+    unpublishedKeyIds: unpublished,
+    auditMismatches,
+    attention:
+      view['currentKeyPublished'] !== true ||
+      unpublished.length > 0 ||
+      currentKeyWithdrawn ||
+      auditMismatches.length > 0,
+  };
 }

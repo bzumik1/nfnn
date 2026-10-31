@@ -28,6 +28,16 @@ class ContentDigestTest {
     }
 
     @Test
+    @DisplayName("Given a value that is not a digest, when a digest is made of it, then the refusal's message does not repeat the value")
+    void should_not_repeat_value_when_refused_given_malformed_value() {
+        String submitted = "Z" + "5ca1ab1e".repeat(8);
+
+        assertThatIllegalArgumentException().isThrownBy(() -> new ContentDigest(submitted))
+                .withMessageNotContaining(submitted)
+                .withMessageNotContaining("5ca1ab1e");
+    }
+
+    @Test
     @DisplayName("Given a snapshot without data, template, logo or a valid profile, when it is made, then it is refused")
     void should_refuse_when_made_given_incomplete_snapshot() {
         ContentDigest digest = new ContentDigest("a".repeat(64));

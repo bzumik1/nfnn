@@ -155,15 +155,6 @@ class SignatureVectorTest {
     }
 
     @Test
-    @DisplayName("Given a refusal naming an overlong element, when it is made, then the name is cut to forty characters")
-    void should_cut_name_when_refused_given_overlong_name() {
-        UnsupportedSignatureVector refused = new UnsupportedSignatureVector(SignatureVectorProblem.ELEMENT, "x".repeat(100));
-
-        assertThat(refused.name()).contains("x".repeat(40));
-        assertThat(refused.code()).isEqualTo("donations/unsupported-signature-vector");
-    }
-
-    @Test
     @DisplayName("Given a vector signature, when it is printed, then only its path count and digest show")
     void should_print_count_and_digest_when_printed_given_vector() {
         assertThat(SIGNATURE).hasToString("SignatureVector[2 paths, " + SIGNATURE.digest() + "]");

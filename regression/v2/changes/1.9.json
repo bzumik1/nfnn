@@ -1,0 +1,495 @@
+[
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/receipts/v1/printed.json",
+    "reason": "1.9 adds what a receipt drawn in the browser from its frozen data prints, one case per case of receipts/v1/frozen.json: v2's printed text of the same sample (regression/v2/receipts/) with the dates of D11 and nothing else, the column headers of a yearly table, the footer line without its page number and v2's page count; lines are joined by one space except after a hyphen right after a letter, where v2 broke a hyphenated word (Úlehlová-Ěrová); the browser (receipt-layout.spec.ts) reads its drawn PDF back with pdf.js against every case, and the backend (FrozenReceiptCasesTest) derives each case from the v2 sample again, so neither side nor the file can drift from what v2 printed; its schema is schemas/receipts/v1/printed.schema.json (the v2 sample as input, body, tableHeader, footer and v2Pages as the expected value), which the schemas/* declaration of 1.3.json already covers; the source is edited",
+    "contract": "docs/frontend-overview.md, receipt-pdf; .claude/rules/testing.md, Logic on both sides"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/receipts/printable.json",
+    "reason": "1.9 round 1 (S-M1, T-M3): the characters a receipt can print, specified once for both sides. A text is printed with its invisible format characters dropped and composed to NFC; every code point of the result must lie in the printable set (Latin with Extended-B and Extended Additional, Greek, Cyrillic and the typographic punctuation the receipt fonts carry). The backend (PrintableTextSharedCasesTest over shared/domain/PrintableText) refuses a name or address outside the set at registration and profile change and refuses to issue such a receipt before a number is taken; the browser (receipt-characters.spec.ts) prints the text it gives and refuses to draw an outside character. A new file with its schema schemas/receipts/printable.schema.json (input.text, expected.text and expected.outside as U+XXXX code points, each once), which the schemas/* declaration of 1.3.json already covers; the source is edited",
+    "contract": "docs/api-contract.md, donations/receipt-unprintable and the registration and profile validation; docs/security-overview.md and docs/system-overview.md, the receipt drawn in the browser"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/verification/payload.json",
+    "reason": "Jakub 2026-10-31 (look sheet of 1.9, the verification QR in the look of the payment QR, variant b3): the proof's symbol takes error correction H at the smallest version that holds it, so the receipt draws the foundation's star in its middle as the payment QR does; H holds a proof of up to 1 232 bytes (about 220 gifts; Jakub: a receipt has rarely more than 20), and a larger proof keeps L without the star. Eleven encoding cases now name H and their version (one gift 12, twelve gifts 15, forty 20, fifty-two 22, 120 gifts 31); 366 and 553 gifts keep L; the refusal above version 40 at L (2 893 bytes) is unchanged. The backend (VerificationQrSymbol through ReceiptProofSharedCasesTest) and the browser (verification-qr.spec.ts) choose the same symbol for every case",
+    "contract": "docs/frontend-overview.md, verification-qr.ts and receipt-layout.ts; docs/system-overview.md, receipts"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/schemas/verification/payload.schema.json",
+    "reason": "Jakub 2026-10-31 (look sheet of 1.9, variant b3): a case's symbol names error correction H or L; M is no longer chosen",
+    "contract": "docs/frontend-overview.md, verification-qr.ts"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/schemas/receipts/printable.schema.json",
+    "reason": "1.9 adds the schema of shared-cases/receipts/printable.json: a text, the text a receipt prints for it and the code points of it outside the printable set, so Vitest checks every case's shape",
+    "contract": ".claude/rules/testing.md, Logic on both sides"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/schemas/receipts/v1/printed.schema.json",
+    "reason": "1.9 adds the schema of shared-cases/receipts/v1/printed.json: per frozen case the printed lines, the yearly table's column headers, the footer line and the page count, so Vitest checks every case's shape",
+    "contract": ".claude/rules/testing.md, Logic on both sides"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/donations-api.spec.ts > Given the donations API > when the receipt of one donation is requested, then it downloads that donation's PDF under the file name from the server",
+    "reason": "1.9 draws the donor's receipts in the browser from the frozen data of POST /api/donations/me/receipts, so DonationsApi no longer fetches the PDF of a donation or a year (singleReceipt and yearlyReceipt are gone); the file-name reading from Content-Disposition stays for the administration's downloads as downloadedFile",
+    "replacement": "src/app/features/donations/receipt-pdf/receipt-pdf.spec.ts > Given the browser receipt PDF > when a single receipt is drawn, then it issues it for that donation and names the file by its number",
+    "contract": "docs/frontend-overview.md, donations-api.ts and receipt-pdf"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/donations-api.spec.ts > Given the donations API > when the yearly receipt is requested, then it downloads the PDF of that year",
+    "reason": "1.9 draws the donor's receipts in the browser from the frozen data of POST /api/donations/me/receipts, so DonationsApi no longer fetches the PDF of a donation or a year (singleReceipt and yearlyReceipt are gone); the file-name reading from Content-Disposition stays for the administration's downloads as downloadedFile",
+    "replacement": "src/app/features/donations/receipt-pdf/receipt-pdf.spec.ts > Given the browser receipt PDF > when a yearly receipt is drawn > then each page it draws is a step, and the finished bytes become the PDF under the receipt file name",
+    "contract": "docs/frontend-overview.md, donations-api.ts and receipt-pdf"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/donations-api.spec.ts > Given the donations API > when the server names the file in both forms, then the UTF-8 form wins",
+    "reason": "1.9 draws the donor's receipts in the browser from the frozen data of POST /api/donations/me/receipts, so DonationsApi no longer fetches the PDF of a donation or a year (singleReceipt and yearlyReceipt are gone); the file-name reading from Content-Disposition stays for the administration's downloads as downloadedFile",
+    "replacement": "src/app/features/donations/donations-api.spec.ts > Given a file the server sends for download > when the server names the file in both forms, then the UTF-8 form wins",
+    "contract": "docs/frontend-overview.md, donations-api.ts and receipt-pdf"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/donations-api.spec.ts > Given the donations API > when the server names the file only in the UTF-8 form, then that name is used",
+    "reason": "1.9 draws the donor's receipts in the browser from the frozen data of POST /api/donations/me/receipts, so DonationsApi no longer fetches the PDF of a donation or a year (singleReceipt and yearlyReceipt are gone); the file-name reading from Content-Disposition stays for the administration's downloads as downloadedFile",
+    "replacement": "src/app/features/donations/donations-api.spec.ts > Given a file the server sends for download > when the server names the file only in the UTF-8 form, then that name is used",
+    "contract": "docs/frontend-overview.md, donations-api.ts and receipt-pdf"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/donations-api.spec.ts > Given the donations API > when the server sends no file name, then the single receipt is saved under a generic name",
+    "reason": "1.9 draws the donor's receipts in the browser from the frozen data of POST /api/donations/me/receipts, so DonationsApi no longer fetches the PDF of a donation or a year (singleReceipt and yearlyReceipt are gone); the file-name reading from Content-Disposition stays for the administration's downloads as downloadedFile",
+    "replacement": "src/app/features/donations/donations-api.spec.ts > Given a file the server sends for download > when the server sends no file name, then the name the caller gives is used",
+    "contract": "docs/frontend-overview.md, donations-api.ts and receipt-pdf"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/donations-api.spec.ts > Given the donations API > when the server sends no file name, then the yearly receipt is saved under a name with the year",
+    "reason": "1.9 draws the donor's receipts in the browser from the frozen data of POST /api/donations/me/receipts, so DonationsApi no longer fetches the PDF of a donation or a year (singleReceipt and yearlyReceipt are gone); the file-name reading from Content-Disposition stays for the administration's downloads as downloadedFile",
+    "replacement": "src/app/features/donations/donations-api.spec.ts > Given a file the server sends for download > when the server sends no file name, then the name the caller gives is used",
+    "contract": "docs/frontend-overview.md, donations-api.ts and receipt-pdf"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.pdf.ReceiptCorpusTest > Given the template on the classpath, when the corpus is rendered, then it is the template the history recorded",
+    "reason": "1.9 changes the receipt template on the classpath (the issue date without a comma, Jakub 2026-10-31), so the v2 corpus renders with the template v2 issued with, read from the recorded history, and the test checks that recorded template instead of the classpath's",
+    "replacement": "donations.infrastructure.pdf.ReceiptCorpusTest > Given the template v2 issued with, when the corpus is rendered, then it renders with that recorded template whatever the classpath holds"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the donations page opens > then a running download disables its button and says the PDF is being prepared until it arrives",
+    "reason": "1.9 keeps a running download's button focusable with aria-disabled instead of disabled, so the focus stays on it through the drawing and the save",
+    "replacement": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the donations page opens > then a running download marks its button unavailable, keeps it focusable and says the PDF is being prepared until it arrives"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the receipts page opens > then a running download disables its button and says the PDF is being prepared until it arrives",
+    "reason": "1.9 keeps a running download's button focusable with aria-disabled instead of disabled, so the focus stays on it through the drawing and the save",
+    "replacement": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the receipts page opens > then a running download marks its button unavailable, keeps it focusable and says the PDF is being prepared until it arrives"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/profile-card/profile-card.spec.ts > Given the donor data card in the overview > when a person opens the overview > and the server refuses the data, then the form stays and says why",
+    "reason": "1.9 refuses an unprintable name, street or city at its field, so a field error from the server stands at that field and takes the focus while the form line keeps only the title",
+    "replacement": "src/app/features/donors/dashboard/profile-card/profile-card.spec.ts > Given the donor data card in the overview > when a person opens the overview > and the server refuses a field, then the form stays, the message stands at that field, which takes the focus, and the form line gives only the title"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > Given every QR version, when its data capacity at L and M is compared with ZXing's tables, then they agree",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > Given every QR version, when its data capacity at L and H is compared with ZXing's tables, then they agree"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > Given proofs around the last medium version, when their symbols are chosen, then up to version 13 they keep M and above it switch to L",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > Given proofs around what H holds at version 40, when their symbols are chosen, then up to it they take H, so the receipt can draw its star, and above it L"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"10\" at \"M\" holds \"185\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"10\" at \"H\" holds \"92\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"11\" at \"M\" holds \"223\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"11\" at \"H\" holds \"110\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"12\" at \"M\" holds \"259\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"12\" at \"H\" holds \"128\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"13\" at \"M\" holds \"302\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"13\" at \"H\" holds \"150\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"14\" at \"L\" holds \"427\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"14\" at \"H\" holds \"166\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"15\" at \"L\" holds \"489\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"15\" at \"H\" holds \"192\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"16\" at \"L\" holds \"554\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"16\" at \"H\" holds \"222\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"17\" at \"L\" holds \"611\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"17\" at \"H\" holds \"252\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"18\" at \"L\" holds \"684\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"18\" at \"H\" holds \"281\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"19\" at \"L\" holds \"758\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"19\" at \"H\" holds \"309\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"2\" at \"M\" holds \"1\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"4\" at \"H\" holds \"9\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"20\" at \"L\" holds \"823\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"20\" at \"H\" holds \"352\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"21\" at \"L\" holds \"893\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"21\" at \"H\" holds \"373\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"22\" at \"L\" holds \"966\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"22\" at \"H\" holds \"408\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"23\" at \"L\" holds \"1053\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"23\" at \"H\" holds \"430\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"24\" at \"L\" holds \"1132\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"24\" at \"H\" holds \"480\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"3\" at \"M\" holds \"16\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"4\" at \"H\" holds \"9\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"4\" at \"M\" holds \"36\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"4\" at \"H\" holds \"9\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"5\" at \"M\" holds \"58\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"5\" at \"H\" holds \"18\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"6\" at \"M\" holds \"80\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"6\" at \"H\" holds \"32\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"7\" at \"M\" holds \"95\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"7\" at \"H\" holds \"38\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"8\" at \"M\" holds \"125\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"8\" at \"H\" holds \"58\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"9\" at \"M\" holds \"153\" bytes",
+    "reason": "1.9 draws the verification QR in the payment QR's look with the foundation's star (Jakub 2026-10-31), so a proof takes level H wherever H holds it (up to 1 232 bytes at version 40) and L above, instead of M up to version 13 and L above; the capacity table checks H and L",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"9\" at \"H\" holds \"72\" bytes"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the donations page opens > then a yearly receipt the server refuses shows the reason on the donations page",
+    "reason": "1.9 shows a failed download in Moje dary where it was started, a yearly one under its year's heading and a single one in the gift's row, instead of above the years (Jakub 2026-10-31)",
+    "replacement": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the donations page opens > then a yearly receipt the server refuses shows the reason at that year, not above the years"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the donations page opens > then a receipt no longer available shows the problem title and loads the payments again",
+    "reason": "1.9 shows a failed download in Moje dary where it was started, a yearly one under its year's heading and a single one in the gift's row, instead of above the years (Jakub 2026-10-31)",
+    "replacement": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the donations page opens > then a receipt no longer available shows the problem title in its row and loads the payments again"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the donations page opens > then a payment from before the first receipt year shows the problem title and loads the payments again",
+    "reason": "1.9 shows a failed download in Moje dary where it was started, a yearly one under its year's heading and a single one in the gift's row, instead of above the years (Jakub 2026-10-31)",
+    "replacement": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the donations page opens > then a payment from before the first receipt year shows the problem title in its row and loads the payments again"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the donations page opens > then a download failing for any other reason asks to try again and a successful retry clears it",
+    "reason": "1.9 shows a failed download in Moje dary where it was started, a yearly one under its year's heading and a single one in the gift's row, instead of above the years (Jakub 2026-10-31)",
+    "replacement": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the donations page opens > then a download failing for any other reason asks to try again in its row without moving the page, and a successful retry clears it"
+  },
+  {
+    "path": "GET /api/donations/me/{id}/receipt",
+    "scenario": "donations/admin_donor_accounts: *",
+    "kind": "body",
+    "field": "$.text[*]",
+    "reason": "Jakub 2026-10-31 (look sheet of 1.9, question 1; the site is not live, so no backward compatibility): a receipt issued from now on prints its place and day without a comma, \"V Novém Boru dne 15. 1. 2027\" (receipt.issuedAt \"{0} dne {1}\" in the Czech and default bundles, the English \"In {0}, on {1}\" stays); the bundle is a new receipt template b4d2173… with the text set 74c43fa…, while every receipt already issued keeps the texts it was frozen with, and the v2 corpus still renders with the template v2 issued with (7b30974…)",
+    "contract": "docs/system-overview.md, receipts; .claude/skills/receipt-template"
+  },
+  {
+    "path": "GET /api/donations/me/{id}/receipt",
+    "scenario": "donations/admin_donor_erasure: *",
+    "kind": "body",
+    "field": "$.text[*]",
+    "reason": "Jakub 2026-10-31 (look sheet of 1.9, question 1; the site is not live, so no backward compatibility): a receipt issued from now on prints its place and day without a comma, \"V Novém Boru dne 15. 1. 2027\" (receipt.issuedAt \"{0} dne {1}\" in the Czech and default bundles, the English \"In {0}, on {1}\" stays); the bundle is a new receipt template b4d2173… with the text set 74c43fa…, while every receipt already issued keeps the texts it was frozen with, and the v2 corpus still renders with the template v2 issued with (7b30974…)",
+    "contract": "docs/system-overview.md, receipts; .claude/skills/receipt-template"
+  },
+  {
+    "path": "GET /api/donations/me/receipts/yearly",
+    "scenario": "donations/admin_payments: *",
+    "kind": "body",
+    "field": "$.text[*]",
+    "reason": "Jakub 2026-10-31 (look sheet of 1.9, question 1; the site is not live, so no backward compatibility): a receipt issued from now on prints its place and day without a comma, \"V Novém Boru dne 15. 1. 2027\" (receipt.issuedAt \"{0} dne {1}\" in the Czech and default bundles, the English \"In {0}, on {1}\" stays); the bundle is a new receipt template b4d2173… with the text set 74c43fa…, while every receipt already issued keeps the texts it was frozen with, and the v2 corpus still renders with the template v2 issued with (7b30974…)",
+    "contract": "docs/system-overview.md, receipts; .claude/skills/receipt-template"
+  },
+  {
+    "path": "GET /api/donations/me/{id}/receipt",
+    "scenario": "donations/admin_payments: *",
+    "kind": "body",
+    "field": "$.text[*]",
+    "reason": "Jakub 2026-10-31 (look sheet of 1.9, question 1; the site is not live, so no backward compatibility): a receipt issued from now on prints its place and day without a comma, \"V Novém Boru dne 15. 1. 2027\" (receipt.issuedAt \"{0} dne {1}\" in the Czech and default bundles, the English \"In {0}, on {1}\" stays); the bundle is a new receipt template b4d2173… with the text set 74c43fa…, while every receipt already issued keeps the texts it was frozen with, and the v2 corpus still renders with the template v2 issued with (7b30974…)",
+    "contract": "docs/system-overview.md, receipts; .claude/skills/receipt-template"
+  },
+  {
+    "path": "GET /api/donations/me/receipts/yearly",
+    "scenario": "donations/admin_receipt_signature: *",
+    "kind": "body",
+    "field": "$.text[*]",
+    "reason": "Jakub 2026-10-31 (look sheet of 1.9, question 1; the site is not live, so no backward compatibility): a receipt issued from now on prints its place and day without a comma, \"V Novém Boru dne 15. 1. 2027\" (receipt.issuedAt \"{0} dne {1}\" in the Czech and default bundles, the English \"In {0}, on {1}\" stays); the bundle is a new receipt template b4d2173… with the text set 74c43fa…, while every receipt already issued keeps the texts it was frozen with, and the v2 corpus still renders with the template v2 issued with (7b30974…)",
+    "contract": "docs/system-overview.md, receipts; .claude/skills/receipt-template"
+  },
+  {
+    "path": "GET /api/donations/me/{id}/receipt",
+    "scenario": "donations/admin_receipt_signature: *",
+    "kind": "body",
+    "field": "$.text[*]",
+    "reason": "Jakub 2026-10-31 (look sheet of 1.9, question 1; the site is not live, so no backward compatibility): a receipt issued from now on prints its place and day without a comma, \"V Novém Boru dne 15. 1. 2027\" (receipt.issuedAt \"{0} dne {1}\" in the Czech and default bundles, the English \"In {0}, on {1}\" stays); the bundle is a new receipt template b4d2173… with the text set 74c43fa…, while every receipt already issued keeps the texts it was frozen with, and the v2 corpus still renders with the template v2 issued with (7b30974…)",
+    "contract": "docs/system-overview.md, receipts; .claude/skills/receipt-template"
+  },
+  {
+    "path": "GET /api/donations/me/{id}/receipt",
+    "scenario": "donations/admin_symbol_claims: *",
+    "kind": "body",
+    "field": "$.text[*]",
+    "reason": "Jakub 2026-10-31 (look sheet of 1.9, question 1; the site is not live, so no backward compatibility): a receipt issued from now on prints its place and day without a comma, \"V Novém Boru dne 15. 1. 2027\" (receipt.issuedAt \"{0} dne {1}\" in the Czech and default bundles, the English \"In {0}, on {1}\" stays); the bundle is a new receipt template b4d2173… with the text set 74c43fa…, while every receipt already issued keeps the texts it was frozen with, and the v2 corpus still renders with the template v2 issued with (7b30974…)",
+    "contract": "docs/system-overview.md, receipts; .claude/skills/receipt-template"
+  },
+  {
+    "path": "GET /api/donations/me/receipts/yearly",
+    "scenario": "donations/donation_receipts: *",
+    "kind": "body",
+    "field": "$.text[*]",
+    "reason": "Jakub 2026-10-31 (look sheet of 1.9, question 1; the site is not live, so no backward compatibility): a receipt issued from now on prints its place and day without a comma, \"V Novém Boru dne 15. 1. 2027\" (receipt.issuedAt \"{0} dne {1}\" in the Czech and default bundles, the English \"In {0}, on {1}\" stays); the bundle is a new receipt template b4d2173… with the text set 74c43fa…, while every receipt already issued keeps the texts it was frozen with, and the v2 corpus still renders with the template v2 issued with (7b30974…)",
+    "contract": "docs/system-overview.md, receipts; .claude/skills/receipt-template"
+  },
+  {
+    "path": "GET /api/donations/me/{id}/receipt",
+    "scenario": "donations/donation_receipts: *",
+    "kind": "body",
+    "field": "$.text[*]",
+    "reason": "Jakub 2026-10-31 (look sheet of 1.9, question 1; the site is not live, so no backward compatibility): a receipt issued from now on prints its place and day without a comma, \"V Novém Boru dne 15. 1. 2027\" (receipt.issuedAt \"{0} dne {1}\" in the Czech and default bundles, the English \"In {0}, on {1}\" stays); the bundle is a new receipt template b4d2173… with the text set 74c43fa…, while every receipt already issued keeps the texts it was frozen with, and the v2 corpus still renders with the template v2 issued with (7b30974…)",
+    "contract": "docs/system-overview.md, receipts; .claude/skills/receipt-template"
+  },
+  {
+    "path": "GET /api/donations/me/receipts/yearly",
+    "scenario": "donations/symbol_claims: *",
+    "kind": "body",
+    "field": "$.text[*]",
+    "reason": "Jakub 2026-10-31 (look sheet of 1.9, question 1; the site is not live, so no backward compatibility): a receipt issued from now on prints its place and day without a comma, \"V Novém Boru dne 15. 1. 2027\" (receipt.issuedAt \"{0} dne {1}\" in the Czech and default bundles, the English \"In {0}, on {1}\" stays); the bundle is a new receipt template b4d2173… with the text set 74c43fa…, while every receipt already issued keeps the texts it was frozen with, and the v2 corpus still renders with the template v2 issued with (7b30974…)",
+    "contract": "docs/system-overview.md, receipts; .claude/skills/receipt-template"
+  },
+  {
+    "path": "POST /api/donations/me/receipts",
+    "scenario": "donations/donation_receipts_frozen: *",
+    "kind": "body",
+    "field": "$.receipt.texts.cs.receipt.issuedAt",
+    "reason": "1.9 drops the comma before \"dne\" in the issue line of a receipt (\"Vystaveno v Novém Boru dne …\", Jakub 2026-10-31), so the receipt texts frozen with every receipt issued from now on carry \"{0} dne {1}\"",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "path": "GET /api/donations/me/receipts/{id}",
+    "scenario": "donations/donation_receipts_frozen: *",
+    "kind": "body",
+    "field": "$.receipt.texts.cs.receipt.issuedAt",
+    "reason": "1.9 drops the comma before \"dne\" in the issue line of a receipt (\"Vystaveno v Novém Boru dne …\", Jakub 2026-10-31), so the receipt texts frozen with every receipt issued from now on carry \"{0} dne {1}\"",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "path": "GET /api/donations/me/receipts",
+    "scenario": "donations/donation_receipts_frozen: *",
+    "kind": "body",
+    "field": "$.items[*].receipt.texts.cs.receipt.issuedAt",
+    "reason": "1.9 drops the comma before \"dne\" in the issue line of a receipt (\"Vystaveno v Novém Boru dne …\", Jakub 2026-10-31), so the receipt texts frozen with every receipt issued from now on carry \"{0} dne {1}\"",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "path": "POST /api/donations/me/receipts",
+    "scenario": "donations/admin_receipts: *",
+    "kind": "body",
+    "field": "$.receipt.texts.cs.receipt.issuedAt",
+    "reason": "1.9 drops the comma before \"dne\" in the issue line of a receipt (\"Vystaveno v Novém Boru dne …\", Jakub 2026-10-31), so the receipt texts frozen with every receipt issued from now on carry \"{0} dne {1}\"",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "path": "POST /api/admin/donations/donors/{id}/receipts",
+    "scenario": "donations/admin_receipts: *",
+    "kind": "body",
+    "field": "$.receipt.texts.cs.receipt.issuedAt",
+    "reason": "1.9 drops the comma before \"dne\" in the issue line of a receipt (\"Vystaveno v Novém Boru dne …\", Jakub 2026-10-31), so the receipt texts frozen with every receipt issued from now on carry \"{0} dne {1}\"",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "path": "GET /api/admin/donations/receipts/{id}",
+    "scenario": "donations/admin_receipts: *",
+    "kind": "body",
+    "field": "$.receipt.texts.cs.receipt.issuedAt",
+    "reason": "1.9 drops the comma before \"dne\" in the issue line of a receipt (\"Vystaveno v Novém Boru dne …\", Jakub 2026-10-31), so the receipt texts frozen with every receipt issued from now on carry \"{0} dne {1}\"",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "path": "GET /api/donations/me/receipts",
+    "scenario": "donations/admin_receipts: *",
+    "kind": "body",
+    "field": "$.items[*].receipt.texts.cs.receipt.issuedAt",
+    "reason": "1.9 drops the comma before \"dne\" in the issue line of a receipt (\"Vystaveno v Novém Boru dne …\", Jakub 2026-10-31), so the receipt texts frozen with every receipt issued from now on carry \"{0} dne {1}\"",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "path": "POST /api/donations/me/receipts",
+    "scenario": "donations/receipt_status: *",
+    "kind": "body",
+    "field": "$.receipt.texts.cs.receipt.issuedAt",
+    "reason": "1.9 drops the comma before \"dne\" in the issue line of a receipt (\"Vystaveno v Novém Boru dne …\", Jakub 2026-10-31), so the receipt texts frozen with every receipt issued from now on carry \"{0} dne {1}\"",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "path": "POST /api/admin/donations/donors/{id}/receipts",
+    "scenario": "donors/connected_apps: *",
+    "kind": "body",
+    "field": "$.receipt.texts.cs.receipt.issuedAt",
+    "reason": "1.9 drops the comma before \"dne\" in the issue line of a receipt (\"Vystaveno v Novém Boru dne …\", Jakub 2026-10-31), so the receipt texts frozen with every receipt issued from now on carry \"{0} dne {1}\"",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "path": "POST /api/donations/me/receipts",
+    "scenario": "donations/admin_receipt_signing_key_withdrawal: *",
+    "kind": "body",
+    "field": "$.receipt.texts.cs.receipt.issuedAt",
+    "reason": "1.9 drops the comma before \"dne\" in the issue line of a receipt (\"Vystaveno v Novém Boru dne …\", Jakub 2026-10-31), so the receipt texts frozen with every receipt issued from now on carry \"{0} dne {1}\"",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "path": "GET /api/donations/me/receipts/yearly",
+    "scenario": "donations/donation_receipts_frozen: *",
+    "kind": "body",
+    "field": "$.text[*]",
+    "reason": "1.9 drops the comma before \"dne\" in the issue line of a receipt (Jakub 2026-10-31), so the PDF the server still draws until 1.10 prints \"… dne …\"",
+    "contract": "docs/api-contract.md, PDF receipts"
+  },
+  {
+    "kind": "log-field",
+    "line": "operations.infrastructure.settings.StartupBindingSettingsValidator: Candidate settings refused by app.donations.receipt: BindException",
+    "reason": "1.9 refuses a receipt signatory with a character no receipt can print before anything is stored (operations/settings.feature); the existing settings validator logs at WARN which settings group refused the candidate and the exception class, so an administrator's failed save can be traced in backend.log",
+    "contract": "docs/system-overview.md, operations settings; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #264, Jakub 2026-10-31",
+      "fields": {}
+    }
+  }
+]

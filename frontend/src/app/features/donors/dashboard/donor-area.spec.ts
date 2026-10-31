@@ -1,3 +1,4 @@
+import type { MockInstance } from 'vitest';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import {
   HttpTestingController,
@@ -14,8 +15,9 @@ import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
 import { DonationListResponse, DonationSummaryResponse } from '../../donations/donations-api';
-import { PaymentQrResponse } from '../../donations/payment-qr-api';
-import { checkerboard } from '../../../shared/ui/qr-code/testing/qr-matrices';
+import { foundationPaymentDetails } from '../../donations/testing/payment-details-fixtures';
+import { spayd } from '../../donations/spayd';
+import { drawsText } from '../../../shared/ui/qr-code/testing/branded-qr';
 import { BankAccountItem } from '../../donations/bank-accounts-api';
 import { bankAccount, symbolOffer } from '../../donations/testing/bank-account-fixtures';
 import {
@@ -26,31 +28,34 @@ import {
   twoYearDonations,
   twoYearSummary,
 } from '../../donations/testing/donation-fixtures';
+import { IssuedReceipt, ReceiptSubject } from '../../donations/receipt-pdf/frozen-receipt';
+import { ReceiptStyleRefused } from '../../donations/receipt-pdf/receipt-style';
+import { PdfDelivery } from '../../donations/receipt-pdf/pdf-delivery';
+import { RECEIPT_PDF_ENVIRONMENT } from '../../donations/receipt-pdf/receipt-pdf';
+import { ReceiptRestart } from '../../donations/receipt-pdf/receipt-restart';
+import { FakeReceiptPdfEnvironment } from '../../donations/receipt-pdf/testing/fake-receipt-worker';
+import {
+  frozenCase,
+  SINGLE_PERSON_CS,
+  YEARLY_120,
+  YEARLY_ONE,
+} from '../../donations/receipt-pdf/testing/receipt-fixtures';
 import { donorsRoutes } from '../donors.routes';
 import { BankAccountsCard } from './bank-accounts-card/bank-accounts-card';
+import { DonorArea } from './donor-area';
+import { DonorDonations } from './donor-donations';
 
 const OBJECT_URL = 'blob:http://localhost/receipt';
+const RECEIPTS_URL = '/api/donations/me/receipts';
 const BANK_CHECK_URL = '/api/donations/me/bank-check';
 const BANK_ACCOUNTS_URL = '/api/donations/me/bank-accounts';
 const PASSKEYS_URL = '/api/donors/me/passkeys';
-const PAYMENT_QR_URL = '/api/donations/payment-qr';
+const PAYMENT_DETAILS_URL = '/api/donations/payment-details';
 const EARLIER = '2026-10-18T08:05:30Z';
 const LATER = '2026-10-18T08:07:10Z';
 
-const PAYMENT_QR_URL_MATCH = (request: { url: string }): boolean => request.url === PAYMENT_QR_URL;
-
-function paymentQr(request: TestRequest): PaymentQrResponse {
-  const amount = request.request.params.get('amount') ?? '500';
-  return {
-    spayd: `SPD*1.0*ACC:CZ2620100000005544332217*AM:${amount}.00*CC:CZK`,
-    qrCode: checkerboard(25),
-    bankAccount: {
-      accountNumber: '5544332217/2010',
-      iban: 'CZ2620100000005544332217',
-      recipientName: 'Nadační fond Nová naděje',
-    },
-  };
-}
+const PAYMENT_DETAILS_URL_MATCH = (request: { url: string }): boolean =>
+  request.url === PAYMENT_DETAILS_URL;
 
 describe('Given a signed-in donor in the donor area', () => {
   let harness: RouterTestingHarness;
@@ -61,9 +66,11 @@ describe('Given a signed-in donor in the donor area', () => {
   let bankCheck: TestRequest;
   let areaAccounts: BankAccountItem[];
   let sectionAccountRequests: TestRequest[];
-  let qrRequests: string[];
+  let receiptEnvironment: FakeReceiptPdfEnvironment;
 
   beforeEach(async () => {
+    receiptEnvironment = new FakeReceiptPdfEnvironment();
+    receiptEnvironment.autoDraw = true;
     localStorage.clear();
     areaAccounts = [];
     savedFiles = [];
@@ -87,6 +94,7 @@ describe('Given a signed-in donor in the donor area', () => {
       providers: [
         provideHttpClient(withInterceptors([authInterceptor])),
         provideHttpClientTesting(),
+        { provide: RECEIPT_PDF_ENVIRONMENT, useValue: receiptEnvironment },
         provideRouter([
           { path: 'darce', children: donorsRoutes },
           { path: '', children: [] },
@@ -104,9 +112,9 @@ describe('Given a signed-in donor in the donor area', () => {
 
   afterEach(() => {
     vi.useRealTimers();
-    for (let round = 0; round < 3; round++) {
-      http.match(PAYMENT_QR_URL_MATCH).forEach((request) => request.flush(paymentQr(request)));
-    }
+    http
+      .match(PAYMENT_DETAILS_URL_MATCH)
+      .forEach((request) => request.flush(foundationPaymentDetails()));
     http.verify();
     vi.restoreAllMocks();
     Reflect.deleteProperty(URL, 'createObjectURL');
@@ -121,24 +129,18 @@ describe('Given a signed-in donor in the donor area', () => {
     sectionAccountRequests = sectionRequests;
     await settle();
     if (url.startsWith('/darce/prehled')) {
-      qrRequests = await answerPaymentQr();
+      await answerPaymentDetails();
     }
   }
 
-  async function answerPaymentQr(): Promise<string[]> {
-    const asked: string[] = [];
-    for (let round = 0; round < 3; round++) {
-      const requests = http.match(PAYMENT_QR_URL_MATCH);
-      if (requests.length === 0) {
-        break;
-      }
-      for (const request of requests) {
-        asked.push(request.request.urlWithParams);
-        request.flush(paymentQr(request));
-      }
-      await settle();
-    }
-    return asked;
+  async function answerPaymentDetails(): Promise<void> {
+    http.expectOne(PAYMENT_DETAILS_URL_MATCH).flush(foundationPaymentDetails());
+    await settle();
+  }
+
+  function drawsDonation(selector: string, amountMinor: number, variableSymbol: string): boolean {
+    const payment = spayd(foundationPaymentDetails(), { amountMinor, variableSymbol });
+    return 'spayd' in payment && drawsText(element(`${selector} svg[role="img"]`), payment.spayd);
   }
 
   async function go(url: string): Promise<void> {
@@ -238,24 +240,36 @@ describe('Given a signed-in donor in the donor area', () => {
     await settle();
   }
 
-  function pdf(): Blob {
-    return new Blob(['%PDF-1.4\n%%EOF'], { type: 'application/pdf' });
-  }
-
-  function attachment(fileName: string): { headers: Record<string, string> } {
+  function issued(receipt: IssuedReceipt['receipt']): IssuedReceipt {
     return {
-      headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="${fileName}"; filename*=UTF-8''${fileName}`,
-      },
+      id: `r-${receipt.number}`,
+      status: 'ACTIVE',
+      kind: receipt.kind,
+      number: receipt.number,
+      donationId: receipt.kind === 'SINGLE' ? 'd-1' : null,
+      year: receipt.year,
+      issuedAt: '2027-01-15T09:30:00Z',
+      supersededAt: null,
+      receipt,
     };
   }
 
-  function problemBlob(type: string, title: string, status: number): Blob {
-    return new Blob(
-      [JSON.stringify({ type: `https://nfnn.cz/problems/${type}`, title, detail: '', status })],
-      { type: 'application/problem+json' },
-    );
+  function issuedYearly(year: number): IssuedReceipt {
+    return issued({ ...frozenCase(YEARLY_ONE), year, number: `${year + 1}-000001` });
+  }
+
+  function issuedSingle(number: string): IssuedReceipt {
+    return issued({ ...frozenCase(SINGLE_PERSON_CS), number });
+  }
+
+  function receiptRequest(subject: ReceiptSubject): TestRequest {
+    const request = http.expectOne({ method: 'POST', url: RECEIPTS_URL });
+    expect(request.request.body).toEqual(subject);
+    return request;
+  }
+
+  function problemBody(type: string, title: string, status: number): object {
+    return { type: `https://nfnn.cz/problems/${type}`, title, detail: '', status };
   }
 
   function summaryWithReceiptsFrom2026(): DonationSummaryResponse {
@@ -284,7 +298,6 @@ describe('Given a signed-in donor in the donor area', () => {
     expect(link.getAttribute('href')).toBe('/darce/ucty?pridat=ucet');
   }
 
-  const yearlyUrl = (year: number): string => `/api/donations/me/receipts/yearly?year=${year}`;
   const yearSection = (year: number): string =>
     `.payments-card section[aria-labelledby="gifts-year-${year}"]`;
   const secondRowButton = `${yearSection(2026)} tbody tr:nth-child(2) .download-btn`;
@@ -612,7 +625,7 @@ describe('Given a signed-in donor in the donor area', () => {
 
     async function checkedOnOpening(url: string): Promise<void> {
       await go(url);
-      await answerPaymentQr();
+      await settle();
       const check = http.expectOne({ method: 'POST', url: BANK_CHECK_URL });
       expect(check.request.headers.get('Authorization')).toBe('Bearer token-1');
       check.flush({ bankDataAsOf: LATER, checking: false });
@@ -644,7 +657,7 @@ describe('Given a signed-in donor in the donor area', () => {
       await vi.advanceTimersByTimeAsync(29_000);
 
       await go('/darce/prehled');
-      await answerPaymentQr();
+      await settle();
 
       http.expectNone({ method: 'POST', url: BANK_CHECK_URL });
       http.expectNone('/api/donations/me/summary');
@@ -677,13 +690,12 @@ describe('Given a signed-in donor in the donor area', () => {
       await respond(twoYearSummary(), twoYearDonations());
       [...root().querySelectorAll<HTMLButtonElement>('.send-gift .amount-option')][0].click();
       await settle();
-      await answerPaymentQr();
 
       await go('/darce/dary');
       await go('/darce/prehled');
-      const asked = await answerPaymentQr();
 
-      expect(asked[0]).toBe(`${PAYMENT_QR_URL}?amount=1000&variableSymbol=9876543210`);
+      http.expectNone(PAYMENT_DETAILS_URL_MATCH);
+      expect(drawsDonation('.send-gift', 100_000, '9876543210')).toBe(true);
       const thousand = [
         ...root().querySelectorAll<HTMLButtonElement>('.send-gift .amount-option'),
       ][0];
@@ -738,8 +750,7 @@ describe('Given a signed-in donor in the donor area', () => {
       ]);
       expect(element('.send-gift app-qr-code')).not.toBeNull();
       expect(text('.send-gift .qr-save')).toBe('Uložit QR kód');
-      expect(qrRequests[0]).toBe(`${PAYMENT_QR_URL}?amount=500&variableSymbol=9876543210`);
-      expect(qrRequests.every((asked) => asked.includes('variableSymbol=9876543210'))).toBe(true);
+      expect(drawsDonation('.send-gift .qr-image', 50000, '9876543210')).toBe(true);
     });
 
     it('then choosing another amount there shows that amount in the bank details at once', async () => {
@@ -766,8 +777,7 @@ describe('Given a signed-in donor in the donor area', () => {
         '5544332217/2010',
         '9876543210',
       ]);
-      http.expectNone(PAYMENT_QR_URL_MATCH);
-      expect(qrRequests.some((asked) => !asked.includes('variableSymbol'))).toBe(false);
+      http.expectNone(PAYMENT_DETAILS_URL_MATCH);
     });
 
     it('then the standing order guide in the card names the amount chosen there', async () => {
@@ -776,7 +786,6 @@ describe('Given a signed-in donor in the donor area', () => {
 
       [...root().querySelectorAll<HTMLButtonElement>('.send-gift .amount-option')][0].click();
       await settle();
-      await answerPaymentQr();
       await click('.send-gift app-standing-order .standing-toggle');
 
       expect(texts('.send-gift .standing-details dd .standing-value')[2]).toBe(
@@ -801,7 +810,7 @@ describe('Given a signed-in donor in the donor area', () => {
       await respond(twoYearSummary(), twoYearDonations());
 
       expect(element('.dashboard-loading')).toBeNull();
-      http.expectNone(PAYMENT_QR_URL_MATCH);
+      http.expectNone(PAYMENT_DETAILS_URL_MATCH);
     });
 
     it('then one row of stats shows the total, the count and the sum of the current year from the summary', async () => {
@@ -895,7 +904,7 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(text('.receipt-ready .receipt-saved')).toBe('');
       await click('.receipt-ready-pdf');
       expect(text('.receipt-ready-pdf')).toBe('Připravujeme PDF…');
-      http.expectOne(yearlyUrl(2025)).flush(pdf(), attachment('potvrzeni-o-darech-2025.pdf'));
+      receiptRequest({ year: 2025 }).flush(issuedYearly(2025));
       await settle();
 
       expect(savedFiles).toEqual([{ fileName: 'potvrzeni-o-darech-2025.pdf', href: OBJECT_URL }]);
@@ -1192,7 +1201,7 @@ describe('Given a signed-in donor in the donor area', () => {
 
       await click(`${yearSection(2025)} .yearly-pdf`);
       expect(text(`${yearSection(2025)} .yearly-pdf`)).toBe('Připravujeme PDF…');
-      http.expectOne(yearlyUrl(2025)).flush(pdf(), attachment('potvrzeni-o-darech-2025.pdf'));
+      receiptRequest({ year: 2025 }).flush(issuedYearly(2025));
       await settle();
 
       expect(savedFiles).toEqual([{ fileName: 'potvrzeni-o-darech-2025.pdf', href: OBJECT_URL }]);
@@ -1201,20 +1210,81 @@ describe('Given a signed-in donor in the donor area', () => {
       );
     });
 
-    it('then a yearly receipt the server refuses shows the reason on the donations page', async () => {
+    it('then a single receipt started while the yearly one is drawn keeps its own line, and neither takes the other one away', async () => {
+      receiptEnvironment.autoDraw = false;
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+      const yearlyLine = `${yearSection(2025)} .gift-year-head .receipt-saved`;
+      const singleLine = `${yearSection(2026)} tbody tr:nth-child(2) .receipt-saved`;
+
+      await click(`${yearSection(2025)} .yearly-pdf`);
+      receiptRequest({ year: 2025 }).flush(issuedYearly(2025));
+      await settle();
+      const yearly = receiptEnvironment.last();
+      yearly.say({ kind: 'ready' });
+      yearly.say({ kind: 'page', page: 1 });
+      await settle();
+      await click(secondRowButton);
+
+      expect(text(`${yearlyLine} [role="status"]`)).toBe('Vytváříme PDF…');
+      expect(text(`${yearlyLine} .download-progress-detail`)).toBe('Strana 1');
+      expect(text(singleLine)).toBe('Připravujeme údaje potvrzení…');
+      receiptRequest({ donationId: 'd-3' }).flush(issuedSingle('2026-000017'));
+      await settle();
+      receiptEnvironment.last().drawAll();
+      await settle();
+
+      expect(text(singleLine)).toBe(
+        'Potvrzení potvrzeni-o-daru-2026-000017.pdf je stažené. Najdete ho ve stažených souborech.',
+      );
+      expect(text(`${yearlyLine} [role="status"]`)).toBe('Vytváříme PDF…');
+      yearly.drawAll();
+      await settle();
+      expect(text(yearlyLine)).toBe(
+        'Potvrzení potvrzeni-o-darech-2025.pdf je stažené. Najdete ho ve stažených souborech.',
+      );
+    });
+
+    it('then on an iPhone the receipt of one payment is opened by a second tap on the button of its row', async () => {
+      vi.spyOn(PdfDelivery.prototype, 'needsSecondTap').mockReturnValue(true);
+      const share = vi.spyOn(PdfDelivery.prototype, 'share').mockResolvedValue('shared');
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      await click(secondRowButton);
+      receiptRequest({ donationId: 'd-3' }).flush(issuedSingle('2026-000017'));
+      await settle();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(text(secondRowButton)).toBe('Otevřít PDF, dar z 10. 01. 2026, 1 000 Kč');
+      expect(text(`${yearSection(2026)} tbody tr:nth-child(2) .receipt-saved`)).toBe(
+        'Potvrzení potvrzeni-o-daru-2026-000017.pdf je připravené. Otevřete ho tlačítkem Otevřít PDF.',
+      );
+      expect(document.activeElement).toBe(element(secondRowButton));
+      await click(secondRowButton);
+      await settleBlobFailure();
+
+      http.expectNone({ method: 'POST', url: RECEIPTS_URL });
+      expect(share).toHaveBeenCalledTimes(1);
+      expect(text(secondRowButton)).toBe('Stáhnout PDF, dar z 10. 01. 2026, 1 000 Kč');
+    });
+
+    it('then a yearly receipt the server refuses shows the reason at that year, not above the years', async () => {
       await open('/darce/dary');
       await respond(twoYearSummary(), twoYearDonations());
 
       await click(`${yearSection(2025)} .yearly-pdf`);
-      http
-        .expectOne(yearlyUrl(2025))
-        .flush(problemBlob('donations/yearly-receipt-not-available', 'Za rok 2025 nic', 404), {
+      receiptRequest({ year: 2025 }).flush(
+        problemBody('donations/yearly-receipt-not-available', 'Za rok 2025 nic', 404),
+        {
           status: 404,
           statusText: 'Not Found',
-        });
+        },
+      );
       await settleBlobFailure();
 
-      expect(text('.payments-card [role="alert"]')).toBe('Za rok 2025 nic');
+      expect(text(`${yearSection(2025)} .gift-year-head [role="alert"]`)).toBe('Za rok 2025 nic');
+      expect(element('.payments-card > .ui-card__bar [role="alert"]')).toBeNull();
     });
 
     it('then a year before the first receipt year offers no yearly receipt at its heading', async () => {
@@ -1557,14 +1627,13 @@ describe('Given a signed-in donor in the donor area', () => {
       await respond(twoYearSummary(), twoYearDonations());
 
       await click(secondRowButton);
-      const request = http.expectOne('/api/donations/me/d-3/receipt');
-      expect(request.request.responseType).toBe('blob');
+      const request = receiptRequest({ donationId: 'd-3' });
       expect(request.request.headers.get('Authorization')).toBe('Bearer token-1');
-      const file = pdf();
-      request.flush(file, attachment('potvrzeni-o-daru-2026-000017.pdf'));
+      request.flush(issuedSingle('2026-000017'));
       await settle();
 
-      expect(createObjectURL).toHaveBeenCalledWith(file);
+      expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob));
+      expect((createObjectURL.mock.calls[0][0] as Blob).type).toBe('application/pdf');
       expect(savedFiles).toEqual([
         { fileName: 'potvrzeni-o-daru-2026-000017.pdf', href: OBJECT_URL },
       ]);
@@ -1575,13 +1644,11 @@ describe('Given a signed-in donor in the donor area', () => {
       await open('/darce/dary');
       await respond(twoYearSummary(), twoYearDonations());
       const row = `${yearSection(2026)} tbody tr:nth-child(2)`;
-      expect(element(`${row} .receipt-saved`)?.getAttribute('role')).toBe('status');
+      expect(element(`${row} .receipt-saved [role="status"]`)).not.toBeNull();
       expect(text(`${row} .receipt-saved`)).toBe('');
 
       await click(secondRowButton);
-      http
-        .expectOne('/api/donations/me/d-3/receipt')
-        .flush(pdf(), attachment('potvrzeni-o-daru-2026-000017.pdf'));
+      receiptRequest({ donationId: 'd-3' }).flush(issuedSingle('2026-000017'));
       await settle();
 
       expect(text(`${row} .receipt-saved`)).toBe(
@@ -1594,17 +1661,15 @@ describe('Given a signed-in donor in the donor area', () => {
       await open('/darce/dary');
       await respond(twoYearSummary(), twoYearDonations());
       await click(secondRowButton);
-      http
-        .expectOne('/api/donations/me/d-3/receipt')
-        .flush(pdf(), attachment('potvrzeni-o-daru-2026-000017.pdf'));
+      receiptRequest({ donationId: 'd-3' }).flush(issuedSingle('2026-000017'));
       await settle();
 
       await click(thirdRowButton);
 
-      expect(texts('.payments-card .receipt-saved').filter((line) => line !== '')).toEqual([]);
-      http
-        .expectOne('/api/donations/me/d-2/receipt')
-        .flush(pdf(), attachment('potvrzeni-o-daru-2025-000003.pdf'));
+      expect(texts('.payments-card .receipt-saved').filter((line) => line !== '')).toEqual([
+        'Připravujeme údaje potvrzení…',
+      ]);
+      receiptRequest({ donationId: 'd-2' }).flush(issuedSingle('2025-000003'));
       await settle();
       expect(text(`${yearSection(2025)} tbody tr:nth-child(1) .receipt-saved`)).toBe(
         'Potvrzení potvrzeni-o-daru-2025-000003.pdf je stažené. Najdete ho ve stažených souborech.',
@@ -1671,40 +1736,37 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(element('.receipts-from')).toBeNull();
     });
 
-    it('then a running download disables its button and says the PDF is being prepared until it arrives', async () => {
+    it('then a running download marks its button unavailable, keeps it focusable and says the PDF is being prepared until it arrives', async () => {
       await open('/darce/dary');
       await respond(twoYearSummary(), twoYearDonations());
 
       await click(secondRowButton);
-      expect(button(secondRowButton).disabled).toBe(true);
+      expect(button(secondRowButton).disabled).toBe(false);
+      expect(button(secondRowButton).getAttribute('aria-disabled')).toBe('true');
       expect(text(secondRowButton)).toBe('Připravujeme PDF…');
       expect(text('.payments-card tbody tr:first-child .download-btn')).toBe(
         'Stáhnout PDF, dar z 15. 03. 2026, 500 Kč',
       );
 
-      http
-        .expectOne('/api/donations/me/d-3/receipt')
-        .flush(pdf(), attachment('potvrzeni-o-daru-2026-000017.pdf'));
+      receiptRequest({ donationId: 'd-3' }).flush(issuedSingle('2026-000017'));
       await settle();
-      expect(button(secondRowButton).disabled).toBe(false);
+      expect(button(secondRowButton).getAttribute('aria-disabled')).toBeNull();
       expect(text(secondRowButton)).toBe('Stáhnout PDF, dar z 10. 01. 2026, 1 000 Kč');
     });
 
-    it('then a receipt no longer available shows the problem title and loads the payments again', async () => {
+    it('then a receipt no longer available shows the problem title in its row and loads the payments again', async () => {
       await open('/darce/dary');
       await respond(twoYearSummary(), twoYearDonations());
 
       await click(secondRowButton);
-      http
-        .expectOne('/api/donations/me/d-3/receipt')
-        .flush(
-          problemBlob(
-            'donations/receipt-not-available',
-            'Potvrzení k tomuto daru nelze vystavit',
-            404,
-          ),
-          { status: 404, statusText: 'Not Found' },
-        );
+      receiptRequest({ donationId: 'd-3' }).flush(
+        problemBody(
+          'donations/receipt-not-available',
+          'Potvrzení k tomuto daru nelze vystavit',
+          404,
+        ),
+        { status: 404, statusText: 'Not Found' },
+      );
       await settleBlobFailure();
       const refunded = twoYearDonations();
       refunded.items[1] = donationItem({
@@ -1716,30 +1778,55 @@ describe('Given a signed-in donor in the donor area', () => {
       });
       await respond(twoYearSummary(), refunded);
 
-      expect(text('.payments-card [role="alert"]')).toBe('Potvrzení k tomuto daru nelze vystavit');
+      expect(text(`${yearSection(2026)} tbody tr:nth-child(2) [role="alert"]`)).toBe(
+        'Potvrzení k tomuto daru nelze vystavit',
+      );
+      expect(element('.payments-card > .ui-card__bar [role="alert"]')).toBeNull();
       expect(text('.payments-card tbody tr:nth-child(2)')).toContain('Vráceno');
       expect(element(secondRowButton)).toBeNull();
     });
 
-    it('then a payment from before the first receipt year shows the problem title and loads the payments again', async () => {
+    it('then a refused receipt whose gift is gone after the payments load again shows the problem title above the years', async () => {
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      await click(secondRowButton);
+      receiptRequest({ donationId: 'd-3' }).flush(
+        problemBody(
+          'donations/receipt-not-available',
+          'Potvrzení k tomuto daru nelze vystavit',
+          404,
+        ),
+        { status: 404, statusText: 'Not Found' },
+      );
+      await settleBlobFailure();
+      const without = twoYearDonations();
+      without.items.splice(1, 1);
+      await respond(twoYearSummary(), without);
+
+      expect(text('.payments-card > .ui-card__bar [role="alert"]')).toBe(
+        'Potvrzení k tomuto daru nelze vystavit',
+      );
+      expect(element('.payments-card tbody [role="alert"]')).toBeNull();
+    });
+
+    it('then a payment from before the first receipt year shows the problem title in its row and loads the payments again', async () => {
       await open('/darce/dary');
       await respond(twoYearSummary(), twoYearDonations());
 
       await click(thirdRowButton);
-      http
-        .expectOne('/api/donations/me/d-2/receipt')
-        .flush(
-          problemBlob(
-            'donations/receipt-before-first-year',
-            'Za dary z této doby potvrzení na webu nevystavujeme',
-            400,
-          ),
-          { status: 400, statusText: 'Bad Request' },
-        );
+      receiptRequest({ donationId: 'd-2' }).flush(
+        problemBody(
+          'donations/receipt-before-first-year',
+          'Za dary z této doby potvrzení na webu nevystavujeme',
+          400,
+        ),
+        { status: 400, statusText: 'Bad Request' },
+      );
       await settleBlobFailure();
       await respond(summaryWithReceiptsFrom2026(), donationsWithoutReceiptsBefore2026());
 
-      expect(text('.payments-card [role="alert"]')).toBe(
+      expect(text(`${yearSection(2025)} tbody tr:nth-child(1) [role="alert"]`)).toBe(
         'Za dary z této doby potvrzení na webu nevystavujeme',
       );
       expect(element(thirdRowButton)).toBeNull();
@@ -1747,7 +1834,7 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(savedFiles).toEqual([]);
     });
 
-    it('then a download failing for any other reason asks to try again and a successful retry clears it', async () => {
+    it('then a download failing for any other reason asks to try again in its row without moving the page, and a successful retry clears it', async () => {
       const scrolled: Element[] = [];
       Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
         configurable: true,
@@ -1760,24 +1847,21 @@ describe('Given a signed-in donor in the donor area', () => {
       await respond(twoYearSummary(), twoYearDonations());
 
       await click(secondRowButton);
-      http
-        .expectOne('/api/donations/me/d-3/receipt')
-        .flush(new Blob(['Bad Gateway'], { type: 'text/html' }), {
-          status: 502,
-          statusText: 'Bad Gateway',
-        });
+      receiptRequest({ donationId: 'd-3' }).flush('Bad Gateway', {
+        status: 502,
+        statusText: 'Bad Gateway',
+      });
       await settleBlobFailure();
 
-      expect(text('.payments-card [role="alert"]')).toBe(
+      expect(text(`${yearSection(2026)} tbody tr:nth-child(2) [role="alert"]`)).toBe(
         'Potvrzení se nepodařilo stáhnout. Zkuste to prosím znovu.',
       );
-      expect(scrolled).toEqual([element('.payments-card [role="alert"]')]);
+      expect(element('.payments-card > .ui-card__bar [role="alert"]')).toBeNull();
+      expect(scrolled).toEqual([]);
       Reflect.deleteProperty(HTMLElement.prototype, 'scrollIntoView');
 
       await click(secondRowButton);
-      http
-        .expectOne('/api/donations/me/d-3/receipt')
-        .flush(pdf(), attachment('potvrzeni-o-daru-2026-000017.pdf'));
+      receiptRequest({ donationId: 'd-3' }).flush(issuedSingle('2026-000017'));
       await settle();
 
       expect(element('[role="alert"]')).toBeNull();
@@ -1790,12 +1874,13 @@ describe('Given a signed-in donor in the donor area', () => {
       const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
 
       await click(secondRowButton);
-      http
-        .expectOne('/api/donations/me/d-3/receipt')
-        .flush(problemBlob('auth/unauthenticated', 'Přihlaste se', 401), {
+      receiptRequest({ donationId: 'd-3' }).flush(
+        problemBody('auth/unauthenticated', 'Přihlaste se', 401),
+        {
           status: 401,
           statusText: 'Unauthorized',
-        });
+        },
+      );
       await settleBlobFailure();
 
       expect(element('[role="alert"]')).toBeNull();
@@ -1889,14 +1974,416 @@ describe('Given a signed-in donor in the donor area', () => {
       await respond(twoYearSummary(), twoYearDonations());
 
       await downloadYear(2025);
-      http.expectOne(yearlyUrl(2025)).flush(pdf(), attachment('potvrzeni-o-darech-2025.pdf'));
+      receiptRequest({ year: 2025 }).flush(issuedYearly(2025));
       await settle();
 
       expect(savedFiles).toEqual([{ fileName: 'potvrzeni-o-darech-2025.pdf', href: OBJECT_URL }]);
-      expect(yearRow(2025).querySelector('.receipt-saved')?.getAttribute('role')).toBe('status');
+      expect(yearRow(2025).querySelector('.receipt-saved [role="status"]')).not.toBeNull();
       expect(normalized(yearRow(2025).querySelector('.receipt-saved')?.textContent ?? '')).toBe(
         'Potvrzení potvrzeni-o-darech-2025.pdf je stažené. Najdete ho ve stažených souborech.',
       );
+    });
+
+    describe('and the receipt is drawn in the browser', () => {
+      const line = (year: number): string =>
+        normalized(yearRow(year).querySelector('.receipt-saved')?.textContent ?? '');
+      const status = (year: number): string =>
+        normalized(
+          yearRow(year).querySelector('.receipt-saved [role="status"]')?.textContent ?? '',
+        );
+      const pdfButton = (year: number): HTMLButtonElement =>
+        yearRow(year).querySelector('.yearly-pdf') as HTMLButtonElement;
+
+      beforeEach(async () => {
+        receiptEnvironment.autoDraw = false;
+        await open('/darce/potvrzeni');
+        await respond(twoYearSummary(), twoYearDonations());
+      });
+
+      it('then the line at the button names each phase with a progress bar until the PDF is saved', async () => {
+        await downloadYear(2025);
+        expect(line(2025)).toBe('Připravujeme údaje potvrzení…');
+        expect(yearRow(2025).querySelector('progress')?.getAttribute('value')).toBe('1');
+
+        receiptRequest({ year: 2025 }).flush(issuedYearly(2025));
+        await settle();
+        expect(line(2025)).toBe('Načítáme nástroje pro PDF…');
+
+        receiptEnvironment.last().say({ kind: 'ready' });
+        receiptEnvironment.last().say({ kind: 'page', page: 1 });
+        await settle();
+        expect(status(2025)).toBe('Vytváříme PDF…');
+        receiptEnvironment.last().say({ kind: 'page', page: 2 });
+        await settle();
+        expect(status(2025)).toBe('Vytváříme PDF…');
+        expect(
+          normalized(yearRow(2025).querySelector('.download-progress-detail')?.textContent ?? ''),
+        ).toBe('Strana 2');
+        expect(yearRow(2025).querySelector('progress')?.getAttribute('aria-valuetext')).toBe(
+          'Strana 2',
+        );
+        expect(yearRow(2025).querySelector('progress')?.getAttribute('value')).toBe('3');
+        expect(yearRow(2025).querySelector('progress')?.getAttribute('max')).toBe('4');
+
+        receiptEnvironment.last().drawAll();
+        await settle();
+        expect(line(2025)).toBe(
+          'Potvrzení potvrzeni-o-darech-2025.pdf je stažené. Najdete ho ve stažených souborech.',
+        );
+        expect(yearRow(2025).querySelector('progress')).toBeNull();
+        expect(savedFiles).toEqual([{ fileName: 'potvrzeni-o-darech-2025.pdf', href: OBJECT_URL }]);
+      });
+
+      it('then each page drawn moves the bar on, against the pages a year of that many gifts takes', async () => {
+        await downloadYear(2025);
+        receiptRequest({ year: 2025 }).flush(
+          issued({ ...frozenCase(YEARLY_120), year: 2025, number: '2026-000001' }),
+        );
+        await settle();
+        receiptEnvironment.last().say({ kind: 'ready' });
+        const bar = (): string[] => {
+          const progress = yearRow(2025).querySelector('progress');
+          return [progress?.getAttribute('value') ?? '', progress?.getAttribute('max') ?? ''];
+        };
+
+        receiptEnvironment.last().say({ kind: 'page', page: 1 });
+        await settle();
+        expect(bar()).toEqual(['3', '7']);
+        receiptEnvironment.last().say({ kind: 'page', page: 3 });
+        await settle();
+        expect(bar()).toEqual(['5', '7']);
+        receiptEnvironment.last().say({ kind: 'page', page: 7 });
+        await settle();
+        expect(bar()).toEqual(['6', '7']);
+      });
+
+      it('then a drawing that takes longer than eight seconds can be cancelled, which stops it and frees the button', async () => {
+        vi.useFakeTimers();
+        await downloadYear(2025);
+        receiptRequest({ year: 2025 }).flush(issuedYearly(2025));
+        await settle();
+        expect(yearRow(2025).querySelector('.download-progress-cancel')).toBeNull();
+
+        await vi.advanceTimersByTimeAsync(8000);
+        await settle();
+        (yearRow(2025).querySelector('.download-progress-cancel') as HTMLButtonElement).click();
+        await settle();
+
+        expect(receiptEnvironment.last().terminated).toBe(true);
+        expect(line(2025)).toBe('Přípravu potvrzení jste zrušili.');
+        expect(yearRow(2025).querySelector('.download-progress-line--done')).toBeNull();
+        expect(button('.yearly-pdf').disabled).toBe(false);
+        expect(savedFiles).toEqual([]);
+        await vi.advanceTimersByTimeAsync(0);
+        expect(document.activeElement).toBe(yearRow(2025).querySelector('.yearly-pdf'));
+      });
+
+      it('then the pressed button keeps the keyboard focus while the PDF is drawn and once it is saved, and a press meanwhile starts nothing', async () => {
+        pdfButton(2025).focus();
+        await downloadYear(2025);
+
+        expect(pdfButton(2025).disabled).toBe(false);
+        expect(pdfButton(2025).getAttribute('aria-disabled')).toBe('true');
+        expect(document.activeElement).toBe(pdfButton(2025));
+        await downloadYear(2025);
+        receiptRequest({ year: 2025 }).flush(issuedYearly(2025));
+        await settle();
+        receiptEnvironment.last().drawAll();
+        await settleBlobFailure();
+
+        expect(receiptEnvironment.workers).toHaveLength(1);
+        expect(savedFiles).toHaveLength(1);
+        expect(pdfButton(2025).getAttribute('aria-disabled')).toBeNull();
+        expect(document.activeElement).toBe(pdfButton(2025));
+      });
+
+      it('then the pressed button keeps the keyboard focus when the drawing fails', async () => {
+        pdfButton(2025).focus();
+        await downloadYear(2025);
+        receiptRequest({ year: 2025 }).flush(issuedYearly(2025));
+        await settle();
+        receiptEnvironment.last().say({ kind: 'ready' });
+        receiptEnvironment.last().say({ kind: 'failed', reason: 'drawing' });
+        await settleBlobFailure();
+
+        expect(element('.yearly-card [role="alert"]')?.textContent).toContain(
+          'PDF se v prohlížeči',
+        );
+        expect(pdfButton(2025).disabled).toBe(false);
+        expect(pdfButton(2025).getAttribute('aria-disabled')).toBeNull();
+        expect(document.activeElement).toBe(pdfButton(2025));
+      });
+
+      it('then a PDF ready for a second tap leaves the focus where the donor moved it while it was drawn', async () => {
+        vi.spyOn(PdfDelivery.prototype, 'needsSecondTap').mockReturnValue(true);
+        pdfButton(2025).focus();
+        await downloadYear(2025);
+        receiptRequest({ year: 2025 }).flush(issuedYearly(2025));
+        await settle();
+        const elsewhere = root().querySelector<HTMLElement>('a[href]')!;
+        elsewhere.focus();
+        receiptEnvironment.last().drawAll();
+        await settleBlobFailure();
+
+        expect(normalized(pdfButton(2025).textContent ?? '')).toBe(
+          'Otevřít potvrzení za rok 2025 (PDF)',
+        );
+        expect(document.activeElement).toBe(elsewhere);
+      });
+
+      it('then a drawing that fails says what to do next', async () => {
+        await downloadYear(2025);
+        receiptRequest({ year: 2025 }).flush(issuedYearly(2025));
+        await settle();
+        receiptEnvironment.last().say({ kind: 'ready' });
+        receiptEnvironment.last().say({ kind: 'failed', reason: 'drawing' });
+        await settle();
+
+        expect(text('.yearly-card [role="alert"]')).toBe(
+          'PDF se v prohlížeči nepodařilo vytvořit. Zkuste to prosím znovu; když to nepomůže, zkuste jiný prohlížeč nebo nám napište na info@nfnn.cz.',
+        );
+        expect(button('.yearly-pdf').disabled).toBe(false);
+      });
+
+      it('then a theme whose receipt colours would not show stops the drawing with a line that says whom to tell', async () => {
+        vi.spyOn(receiptEnvironment, 'style').mockImplementation(() => {
+          throw new ReceiptStyleRefused('--receipt-color-text has too little contrast');
+        });
+        await downloadYear(2025);
+        receiptRequest({ year: 2025 }).flush(issuedYearly(2025));
+        await settle();
+        receiptEnvironment.last().say({ kind: 'ready' });
+        await settle();
+
+        expect(text('.yearly-card [role="alert"]')).toBe(
+          'PDF teď kvůli chybě na webu nejde vytvořit. Napište nám prosím na info@nfnn.cz, opravíme ji.',
+        );
+        expect(button('.yearly-pdf').disabled).toBe(false);
+      });
+
+      it('then drawing tools missing after a new release reload the page once to finish the download', async () => {
+        const restart = vi
+          .spyOn(ReceiptRestart.prototype, 'tryRestart')
+          .mockReturnValue('reloading');
+        await downloadYear(2025);
+        receiptRequest({ year: 2025 }).flush(issuedYearly(2025));
+        await settle();
+        receiptEnvironment.last().fail();
+        await settle();
+
+        expect(restart).toHaveBeenCalledWith('rok-2025');
+        expect(element('.yearly-card [role="alert"]')?.textContent?.trim() ?? '').toBe('');
+      });
+
+      it('then drawing tools still missing after that reload say that they could not be loaded and what to try next', async () => {
+        vi.spyOn(ReceiptRestart.prototype, 'tryRestart').mockReturnValue('reloaded-already');
+        await downloadYear(2025);
+        receiptRequest({ year: 2025 }).flush(issuedYearly(2025));
+        await settle();
+        receiptEnvironment.last().fail();
+        await settle();
+
+        expect(text('.yearly-card [role="alert"]')).toBe(
+          'Nástroje pro PDF se nepodařilo načíst ani po obnovení stránky. Zkontrolujte prosím připojení nebo blokování skriptů, zkuste jiný prohlížeč, nebo nám napište na info@nfnn.cz.',
+        );
+      });
+
+      it('then drawing tools missing in a browser that cannot reload the page for the download ask the donor to reload it', async () => {
+        vi.spyOn(ReceiptRestart.prototype, 'tryRestart').mockReturnValue('unavailable');
+        await downloadYear(2025);
+        receiptRequest({ year: 2025 }).flush(issuedYearly(2025));
+        await settle();
+        receiptEnvironment.last().fail();
+        await settle();
+
+        expect(text('.yearly-card [role="alert"]')).toBe(
+          'Web se mezitím aktualizoval. Obnovte prosím stránku a stáhněte potvrzení znovu.',
+        );
+      });
+
+      describe('and it is finished on an iPhone, where the PDF waits for a second tap', () => {
+        let share: MockInstance<PdfDelivery['share']>;
+
+        beforeEach(async () => {
+          vi.spyOn(PdfDelivery.prototype, 'needsSecondTap').mockReturnValue(true);
+          share = vi.spyOn(PdfDelivery.prototype, 'share').mockResolvedValue('shared');
+          await downloadYear(2025);
+          receiptRequest({ year: 2025 }).flush(issuedYearly(2025));
+          await settle();
+          receiptEnvironment.last().drawAll();
+          await settle();
+          await new Promise((resolve) => setTimeout(resolve, 0));
+        });
+
+        it('then nothing is saved yet, the line says it is ready and the same button now opens it, with the focus on it', () => {
+          expect(savedFiles).toEqual([]);
+          expect(line(2025)).toBe(
+            'Potvrzení potvrzeni-o-darech-2025.pdf je připravené. Otevřete ho tlačítkem Otevřít potvrzení.',
+          );
+          const open = yearRow(2025).querySelector('.yearly-pdf') as HTMLButtonElement;
+          expect(normalized(open.textContent ?? '')).toBe('Otevřít potvrzení za rok 2025 (PDF)');
+          expect(open.disabled).toBe(false);
+          expect(document.activeElement).toBe(open);
+          expect(yearRow(2025).querySelectorAll('button')).toHaveLength(1);
+        });
+
+        it('then the second tap on that button opens the share sheet and issues nothing again', async () => {
+          await downloadYear(2025);
+          await settleBlobFailure();
+
+          http.expectNone({ method: 'POST', url: RECEIPTS_URL });
+          expect(share).toHaveBeenCalledTimes(1);
+          expect(share).toHaveBeenCalledWith(
+            expect.objectContaining({ fileName: 'potvrzeni-o-darech-2025.pdf' }),
+          );
+          expect(receiptEnvironment.workers).toHaveLength(1);
+          expect(line(2025)).toBe(
+            'Potvrzení potvrzeni-o-darech-2025.pdf jste předali z nabídky sdílení.',
+          );
+          expect(normalized(yearRow(2025).querySelector('.yearly-pdf')?.textContent ?? '')).toBe(
+            'Stáhnout potvrzení za rok 2025 (PDF)',
+          );
+        });
+
+        it('then a share sheet the browser cannot open saves the file and says it is saved', async () => {
+          share.mockResolvedValue('saved');
+
+          await downloadYear(2025);
+          await settleBlobFailure();
+
+          expect(line(2025)).toBe(
+            'Potvrzení potvrzeni-o-darech-2025.pdf je stažené. Najdete ho ve stažených souborech.',
+          );
+        });
+
+        it('then a change of the name or address in the same visit drops the ready file, so the next tap issues the receipt again', async () => {
+          const donor = store.donor()!;
+          store
+            .updateProfile({
+              name: donor.name,
+              address: { ...donor.address, street: 'Krátká 3' },
+              preferredLocale: donor.preferredLocale,
+            })
+            .subscribe();
+          http
+            .expectOne({ method: 'PATCH', url: '/api/donors/me' })
+            .flush({ ...donor, address: { ...donor.address, street: 'Krátká 3' } });
+          await settle();
+
+          expect(normalized(yearRow(2025).querySelector('.yearly-pdf')?.textContent ?? '')).toBe(
+            'Stáhnout potvrzení za rok 2025 (PDF)',
+          );
+          expect(line(2025)).toBe('');
+          await downloadYear(2025);
+          receiptRequest({ year: 2025 });
+          expect(share).not.toHaveBeenCalled();
+        });
+
+        it('then a change of only the language keeps the ready file, which the new language does not replace', async () => {
+          const donor = store.donor()!;
+          store
+            .updateProfile({ name: donor.name, address: donor.address, preferredLocale: 'en' })
+            .subscribe();
+          http
+            .expectOne({ method: 'PATCH', url: '/api/donors/me' })
+            .flush({ ...donor, preferredLocale: 'en' });
+          await settle();
+
+          expect(normalized(yearRow(2025).querySelector('.yearly-pdf')?.textContent ?? '')).toBe(
+            'Otevřít potvrzení za rok 2025 (PDF)',
+          );
+        });
+
+        it('then a share sheet the donor closes keeps the file ready for another tap', async () => {
+          share.mockResolvedValue('dismissed');
+
+          await downloadYear(2025);
+          await settleBlobFailure();
+
+          expect(normalized(yearRow(2025).querySelector('.yearly-pdf')?.textContent ?? '')).toBe(
+            'Otevřít potvrzení za rok 2025 (PDF)',
+          );
+        });
+      });
+    });
+
+    it('then an address naming a download that no reload of this tab asked for issues nothing and drops it from the address', async () => {
+      sessionStorage.clear();
+      vi.spyOn(ReceiptRestart.prototype, 'finished');
+      await open('/darce/potvrzeni?stahnout=rok-2025');
+      await respond(twoYearSummary(), twoYearDonations());
+      await settle();
+
+      http.expectNone({ method: 'POST', url: RECEIPTS_URL });
+      expect(savedFiles).toEqual([]);
+      expect(TestBed.inject(Router).url).toBe('/darce/potvrzeni');
+      expect(ReceiptRestart.prototype.finished).toHaveBeenCalled();
+    });
+
+    it('then an address naming a download after a reload starts it once the gifts are loaded and drops it from the address', async () => {
+      sessionStorage.setItem('nfnn.receipt-restart', 'rok-2025');
+      vi.spyOn(ReceiptRestart.prototype, 'finished');
+      await open('/darce/potvrzeni?stahnout=rok-2025');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      receiptRequest({ year: 2025 }).flush(issuedYearly(2025));
+      await settleBlobFailure();
+      await settle();
+
+      expect(savedFiles).toEqual([{ fileName: 'potvrzeni-o-darech-2025.pdf', href: OBJECT_URL }]);
+      expect(TestBed.inject(Router).url).toBe('/darce/potvrzeni');
+      expect(ReceiptRestart.prototype.finished).toHaveBeenCalled();
+    });
+
+    it('then a resumed download that fails for another reason clears the mark of its reload, so the address cannot start it again', async () => {
+      sessionStorage.setItem('nfnn.receipt-restart', 'rok-2025');
+      await open('/darce/potvrzeni?stahnout=rok-2025');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      receiptRequest({ year: 2025 }).flush(problemBody('internal', 'Chyba', 500), {
+        status: 500,
+        statusText: 'Internal Server Error',
+      });
+      await settleBlobFailure();
+
+      expect(text('.yearly-card [role="alert"]')).toBe(
+        'Potvrzení se nepodařilo stáhnout. Zkuste to prosím znovu.',
+      );
+      expect(sessionStorage.getItem('nfnn.receipt-restart')).toBeNull();
+    });
+
+    it('then a resumed download the donor cancels clears the mark of its reload', async () => {
+      receiptEnvironment.autoDraw = false;
+      sessionStorage.setItem('nfnn.receipt-restart', 'rok-2025');
+      await open('/darce/potvrzeni?stahnout=rok-2025');
+      await respond(twoYearSummary(), twoYearDonations());
+      receiptRequest({ year: 2025 }).flush(issuedYearly(2025));
+      await settle();
+
+      harness.fixture.debugElement
+        .query(By.directive(DonorArea))
+        .injector.get(DonorDonations)
+        .cancelYearlyReceipt(2025);
+      await settle();
+
+      expect(receiptEnvironment.last().terminated).toBe(true);
+      expect(sessionStorage.getItem('nfnn.receipt-restart')).toBeNull();
+    });
+
+    it('then a resumed download keeps the mark of its reload while another download fails', async () => {
+      sessionStorage.setItem('nfnn.receipt-restart', 'rok-2024');
+      await open('/darce/potvrzeni');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      await downloadYear(2025);
+      receiptRequest({ year: 2025 }).flush(problemBody('internal', 'Chyba', 500), {
+        status: 500,
+        statusText: 'Internal Server Error',
+      });
+      await settleBlobFailure();
+
+      expect(sessionStorage.getItem('nfnn.receipt-restart')).toBe('rok-2024');
+      sessionStorage.clear();
     });
 
     it('then a year before the first receipt year offers no PDF and a line says from which year receipts are issued', async () => {
@@ -1913,17 +2400,18 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(text('.yearly-hint')).toBe('Potvrzení za rok tu vystavujeme za dary od roku 2026.');
     });
 
-    it('then a running download disables its button and says the PDF is being prepared until it arrives', async () => {
+    it('then a running download marks its button unavailable, keeps it focusable and says the PDF is being prepared until it arrives', async () => {
       await open('/darce/potvrzeni');
       await respond(twoYearSummary(), twoYearDonations());
 
       await downloadYear(2025);
-      expect(button('.yearly-pdf').disabled).toBe(true);
+      expect(button('.yearly-pdf').disabled).toBe(false);
+      expect(button('.yearly-pdf').getAttribute('aria-disabled')).toBe('true');
       expect(text('.yearly-pdf')).toBe('Připravujeme PDF…');
 
-      http.expectOne(yearlyUrl(2025)).flush(pdf(), attachment('potvrzeni-o-darech-2025.pdf'));
+      receiptRequest({ year: 2025 }).flush(issuedYearly(2025));
       await settle();
-      expect(button('.yearly-pdf').disabled).toBe(false);
+      expect(button('.yearly-pdf').getAttribute('aria-disabled')).toBeNull();
       expect(text('.yearly-pdf')).toBe('Stáhnout potvrzení za rok 2025 (PDF)');
     });
 
@@ -1934,12 +2422,13 @@ describe('Given a signed-in donor in the donor area', () => {
       await respond(summary, twoYearDonations());
 
       await downloadYear(2026);
-      http
-        .expectOne(yearlyUrl(2026))
-        .flush(problemBlob('donations/year-not-yet-completed', 'Rok ještě neskončil', 400), {
+      receiptRequest({ year: 2026 }).flush(
+        problemBody('donations/year-not-yet-completed', 'Rok ještě neskončil', 400),
+        {
           status: 400,
           statusText: 'Bad Request',
-        });
+        },
+      );
       await settleBlobFailure();
 
       expect(text('.yearly-card [role="alert"]')).toBe('Rok ještě neskončil');
@@ -1951,16 +2440,10 @@ describe('Given a signed-in donor in the donor area', () => {
       await respond(twoYearSummary(), twoYearDonations());
 
       await downloadYear(2025);
-      http
-        .expectOne(yearlyUrl(2025))
-        .flush(
-          problemBlob(
-            'donations/yearly-receipt-not-available',
-            'Za tento rok nemáme žádný dar',
-            404,
-          ),
-          { status: 404, statusText: 'Not Found' },
-        );
+      receiptRequest({ year: 2025 }).flush(
+        problemBody('donations/yearly-receipt-not-available', 'Za tento rok nemáme žádný dar', 404),
+        { status: 404, statusText: 'Not Found' },
+      );
       await settleBlobFailure();
 
       expect(text('.yearly-card [role="alert"]')).toBe('Za tento rok nemáme žádný dar');
@@ -1971,16 +2454,14 @@ describe('Given a signed-in donor in the donor area', () => {
       await respond(twoYearSummary(), twoYearDonations());
 
       await downloadYear(2025);
-      http
-        .expectOne(yearlyUrl(2025))
-        .flush(
-          problemBlob(
-            'donations/receipt-before-first-year',
-            'Za dary z této doby potvrzení na webu nevystavujeme',
-            400,
-          ),
-          { status: 400, statusText: 'Bad Request' },
-        );
+      receiptRequest({ year: 2025 }).flush(
+        problemBody(
+          'donations/receipt-before-first-year',
+          'Za dary z této doby potvrzení na webu nevystavujeme',
+          400,
+        ),
+        { status: 400, statusText: 'Bad Request' },
+      );
       await settleBlobFailure();
 
       expect(text('.yearly-card [role="alert"]')).toBe(
@@ -1989,22 +2470,85 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(savedFiles).toEqual([]);
     });
 
+    it('then a receipt the server cannot print shows the title and detail of that problem, which say whom to write to', async () => {
+      await open('/darce/potvrzeni');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      await downloadYear(2025);
+      receiptRequest({ year: 2025 }).flush(
+        {
+          ...problemBody(
+            'donations/receipt-unprintable',
+            'Potvrzení s těmito údaji nejde vytisknout',
+            409,
+          ),
+          detail: 'Napište nám prosím na info@nfnn.cz.',
+        },
+        { status: 409, statusText: 'Conflict' },
+      );
+      await settleBlobFailure();
+
+      expect(text('.yearly-card [role="alert"]')).toBe(
+        'Potvrzení s těmito údaji nejde vytisknout. Napište nám prosím na info@nfnn.cz.',
+      );
+      expect(savedFiles).toEqual([]);
+    });
+
+    it('then a receipt refused while the signing key is withdrawn shows the title and detail of that problem, which say when to try again', async () => {
+      await open('/darce/potvrzeni');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      await downloadYear(2025);
+      receiptRequest({ year: 2025 }).flush(
+        {
+          ...problemBody('donations/receipt-signing-paused', 'Potvrzení teď nejde vystavit', 409),
+          detail: 'Zkuste to prosím za pár minut.',
+        },
+        { status: 409, statusText: 'Conflict' },
+      );
+      await settleBlobFailure();
+
+      expect(text('.yearly-card [role="alert"]')).toBe(
+        'Potvrzení teď nejde vystavit. Zkuste to prosím za pár minut.',
+      );
+      expect(savedFiles).toEqual([]);
+    });
+
+    it('then an issued receipt with a character no receipt can print asks the donor to write to the foundation, not to try another browser', async () => {
+      await open('/darce/potvrzeni');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      await downloadYear(2025);
+      const receipt = issuedYearly(2025);
+      receiptRequest({ year: 2025 }).flush({
+        ...receipt,
+        receipt: { ...receipt.receipt, donor: { ...receipt.receipt.donor, name: 'Jana 中' } },
+      });
+      await settle();
+
+      expect(text('.yearly-card [role="alert"]')).toBe(
+        'Údaje potvrzení obsahují znak, který v PDF neumíme vytisknout, a tak jsme PDF nevytvořili. Napište nám prosím na info@nfnn.cz.',
+      );
+      expect(receiptEnvironment.workers).toHaveLength(0);
+    });
+
     it('then an access token that expires during a download is refreshed and the PDF is still saved', async () => {
       await open('/darce/potvrzeni');
       await respond(twoYearSummary(), twoYearDonations());
 
       await downloadYear(2025);
-      http
-        .expectOne(yearlyUrl(2025))
-        .flush(problemBlob('auth/expired-token', 'Platnost přihlášení vypršela', 401), {
+      receiptRequest({ year: 2025 }).flush(
+        problemBody('auth/expired-token', 'Platnost přihlášení vypršela', 401),
+        {
           status: 401,
           statusText: 'Unauthorized',
-        });
+        },
+      );
       await settleBlobFailure();
       http.expectOne('/api/donors/auth/refresh').flush(authResponse('token-2'));
-      const retried = http.expectOne(yearlyUrl(2025));
+      const retried = receiptRequest({ year: 2025 });
       expect(retried.request.headers.get('Authorization')).toBe('Bearer token-2');
-      retried.flush(pdf(), attachment('potvrzeni-o-darech-2025.pdf'));
+      retried.flush(issuedYearly(2025));
       await settle();
 
       expect(savedFiles).toEqual([{ fileName: 'potvrzeni-o-darech-2025.pdf', href: OBJECT_URL }]);
@@ -2046,9 +2590,7 @@ describe('Given a signed-in donor in the donor area', () => {
       const row = root().querySelectorAll<HTMLElement>('.single-card tbody tr')[1];
       (row.querySelector('.download-btn') as HTMLButtonElement).click();
       await settle();
-      http
-        .expectOne('/api/donations/me/d-3/receipt')
-        .flush(pdf(), attachment('potvrzeni-o-daru-2026-000017.pdf'));
+      receiptRequest({ donationId: 'd-3' }).flush(issuedSingle('2026-000017'));
       await settle();
 
       expect(savedFiles).toEqual([
@@ -2065,9 +2607,10 @@ describe('Given a signed-in donor in the donor area', () => {
 
       (root().querySelector('.single-card .download-btn') as HTMLButtonElement).click();
       await settle();
-      http
-        .expectOne('/api/donations/me/d-4/receipt')
-        .flush(null, { status: 500, statusText: 'Server Error' });
+      receiptRequest({ donationId: 'd-4' }).flush(null, {
+        status: 500,
+        statusText: 'Server Error',
+      });
       await settleBlobFailure();
 
       expect(text('.single-card [role="alert"]')).toBe(
@@ -2122,17 +2665,7 @@ describe('Given a signed-in donor in the donor area', () => {
       await respond(emptySummary(), emptyDonations());
       await settle();
 
-      http
-        .expectOne((request) => request.url === '/api/donations/payment-qr')
-        .flush({
-          spayd: 'SPD*1.0',
-          qrCode: { size: 1, modules: '1' },
-          bankAccount: {
-            accountNumber: '5544332217/2010',
-            iban: 'CZ2620100000005544332217',
-            recipientName: 'Nadační fond Nová naděje',
-          },
-        });
+      http.expectOne(PAYMENT_DETAILS_URL_MATCH).flush(foundationPaymentDetails());
       await settle();
 
       expect((element('dialog') as HTMLDialogElement).open).toBe(true);

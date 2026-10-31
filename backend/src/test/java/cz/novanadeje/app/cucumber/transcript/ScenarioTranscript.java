@@ -9,9 +9,6 @@ import jakarta.mail.Multipart;
 import jakarta.mail.Part;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
-import org.apache.pdfbox.Loader;
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.text.PDFTextStripper;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.web.util.HtmlUtils;
@@ -243,9 +240,6 @@ public final class ScenarioTranscript {
                 return NODES.stringNode(normaliser.text(new String(bytes, StandardCharsets.UTF_8)));
             }
         }
-        if (type != null && MediaType.APPLICATION_PDF.isCompatibleWith(type)) {
-            return pdf(bytes, normaliser);
-        }
         if (type == null || "text".equals(type.getType()) || type.getSubtype().endsWith("xml")) {
             return NODES.stringNode(normaliser.text(new String(bytes, StandardCharsets.UTF_8)));
         }
@@ -320,23 +314,6 @@ public final class ScenarioTranscript {
         }
     }
 
-    private static ObjectNode pdf(byte[] bytes, TranscriptNormaliser normaliser) {
-        ObjectNode pdf = NODES.objectNode();
-        try (PDDocument document = Loader.loadPDF(bytes)) {
-            pdf.put("pages", document.getNumberOfPages());
-            ArrayNode texts = pdf.putArray("text");
-            for (int page = 1; page <= document.getNumberOfPages(); page++) {
-                PDFTextStripper stripper = new PDFTextStripper();
-                stripper.setStartPage(page);
-                stripper.setEndPage(page);
-                texts.add(normaliser.text(stripper.getText(document).replace(' ', ' ').strip()));
-            }
-        } catch (IOException unreadable) {
-            pdf.put("unreadable", unreadable.getClass().getSimpleName());
-        }
-        return pdf;
-    }
-
     private static ObjectNode binary(byte[] bytes) {
         ObjectNode binary = NODES.objectNode();
         binary.put("size", bytes.length);
@@ -366,9 +343,7 @@ public final class ScenarioTranscript {
                 described.put("fileName", normaliser.text(attachment.getFileName()));
                 described.put("contentType", attachment.getContentType().split(";")[0].trim().toLowerCase(Locale.ROOT));
                 byte[] bytes = bytes(attachment);
-                if (attachment.isMimeType("application/pdf")) {
-                    described.set("pdf", pdf(bytes, normaliser));
-                } else if (attachment.isMimeType("text/*")) {
+                if (attachment.isMimeType("text/*")) {
                     described.put("text", normaliser.text(new String(bytes, StandardCharsets.UTF_8).replace("\r\n", "\n")));
                 } else {
                     described.setAll(binary(bytes));

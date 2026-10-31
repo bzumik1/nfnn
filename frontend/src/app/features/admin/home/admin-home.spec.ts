@@ -16,6 +16,8 @@ import {
   monthOverview,
   overview,
   paymentList,
+  receiptSigningKey,
+  receiptSigningKeys,
   unpairedPayment,
 } from '../testing/admin-fixtures';
 import { AdminHome } from './admin-home';
@@ -27,6 +29,7 @@ const UNPAIRED_URL = '/api/admin/donations/payments?pairing=unpaired';
 const ADMINISTRATORS_URL = '/api/admin/donors/administrators';
 const PREVIOUS_SIGN_IN_URL = '/api/admin/donors/me/previous-sign-in';
 const SINCE_URL = '/api/admin/donations/overview/since';
+const SIGNING_KEYS_URL = '/api/admin/donations/receipt-signing-keys';
 const SIGNATURE_URL = '/api/admin/donations/receipt-signature';
 const SIGNATURE = { configured: true, image: null, width: 400, height: 120, uploadedAt: null };
 const NO_SIGNATURE = {
@@ -76,6 +79,7 @@ describe('Given an administrator on the administration home', () => {
     http
       .match((request) => request.url === SINCE_URL)
       .forEach((pending) => pending.flush(activitySince()));
+    http.match(SIGNING_KEYS_URL).forEach((pending) => pending.flush(receiptSigningKeys()));
     http.match(SIGNATURE_URL).forEach((pending) => pending.flush(SIGNATURE));
     http.verify();
   });
@@ -599,11 +603,13 @@ describe('Given an administrator on the administration home', () => {
       administrators = [administrator()],
       backups = backupsView(),
       state = importState({ lastSucceededAt: '2026-10-18T08:05:30Z' }),
+      signingKeys = receiptSigningKeys(),
     ): Promise<void> {
       http.expectOne(IMPORT_STATE_URL).flush(state);
       http.expectOne(BACKUPS_URL).flush(backups);
       http.expectOne(UNPAIRED_URL).flush(unpaired);
       http.expectOne(ADMINISTRATORS_URL).flush({ items: administrators });
+      http.expectOne(SIGNING_KEYS_URL).flush(signingKeys);
       await fixture.whenStable();
       fixture.detectChanges();
     }
@@ -702,6 +708,61 @@ describe('Given an administrator on the administration home', () => {
       );
     });
 
+    it('then a receipt signing key that fails its seal gets a red row leading to the settings', async () => {
+      await sources(
+        paymentList([]),
+        [administrator()],
+        backupsView(),
+        importState({ lastSucceededAt: '2026-10-18T08:05:30Z' }),
+        receiptSigningKeys([receiptSigningKey({ published: false })]),
+      );
+
+      expect(items()).toEqual([
+        'Klíč 21fe31df není zveřejněný, proto se QR kódy jím podepsané neověří. Jeho záznam v databázi chybí nebo neprošel kontrolou pečeti (změna mimo web nebo záloha jiného serveru, kterou server nepřevzal); obraťte se na technika serveru. Otevřít nastavení',
+      ]);
+      const row = attention().querySelector('.attention-list > li') as HTMLElement;
+      expect(row.classList).toContain('attention-item--danger');
+      expect(row.querySelector('a')?.getAttribute('href')).toBe(
+        '/sprava/nastaveni#klic-k-overovacim-qr',
+      );
+    });
+
+    it('then a current receipt signing key missing from the list gets the same red row', async () => {
+      await sources(
+        paymentList([]),
+        [administrator()],
+        backupsView(),
+        importState({ lastSucceededAt: '2026-10-18T08:05:30Z' }),
+        { currentKeyId: '21fe31df', currentKeyPublished: false, keys: [], auditMismatches: [] },
+      );
+
+      expect(items()).toEqual([
+        'Klíč 21fe31df není zveřejněný, proto se QR kódy jím podepsané neověří. Jeho záznam v databázi chybí nebo neprošel kontrolou pečeti (změna mimo web nebo záloha jiného serveru, kterou server nepřevzal); obraťte se na technika serveru. Otevřít nastavení',
+      ]);
+    });
+
+    it('then a withdrawn key of the server and key rows that disagree with the audit trail get a red row leading to the settings', async () => {
+      await sources(
+        paymentList([]),
+        [administrator()],
+        backupsView(),
+        importState({ lastSucceededAt: '2026-10-18T08:05:30Z' }),
+        {
+          ...receiptSigningKeys([receiptSigningKey({ status: 'revoked' })]),
+          auditMismatches: [{ keyId: '39f713d0', kind: 'missing' }],
+        },
+      );
+
+      expect(items()).toEqual([
+        'Klíč serveru 21fe31df je stažený a server zatím nemá nový, takže se potvrzení o daru teď nestáhnou. Nový klíč si server vytvoří při startu; když se to nestane do pár minut, obraťte se na technika serveru. Klíč 39f713d0 je v historii správy, ale jeho záznam v databázi chybí (změna mimo web). QR kódy jím podepsané se neověří; obraťte se na technika serveru. Otevřít nastavení',
+      ]);
+      const row = attention().querySelector('.attention-list > li') as HTMLElement;
+      expect(row.classList).toContain('attention-item--danger');
+      expect(row.querySelector('a')?.getAttribute('href')).toBe(
+        '/sprava/nastaveni#klic-k-overovacim-qr',
+      );
+    });
+
     it('then receipts without an uploaded signature get a row leading to the receipt settings', async () => {
       await sources();
       http.expectOne(SIGNATURE_URL).flush(NO_SIGNATURE);
@@ -732,6 +793,7 @@ describe('Given an administrator on the administration home', () => {
       http.expectOne(BACKUPS_URL).flush(backupsView());
       http.expectOne(UNPAIRED_URL).flush(paymentList([unpairedPayment()]));
       http.expectOne(ADMINISTRATORS_URL).flush(null, { status: 500, statusText: 'Error' });
+      http.expectOne(SIGNING_KEYS_URL).flush(receiptSigningKeys());
       await fixture.whenStable();
       fixture.detectChanges();
 
@@ -748,6 +810,33 @@ describe('Given an administrator on the administration home', () => {
       fixture.detectChanges();
 
       expect(items()).toEqual(['1 platba čeká na přiřazení dárci (500 Kč). Přiřadit platby']);
+    });
+
+    it('then receipt signing keys that cannot be checked say so with a retry that asks again', async () => {
+      http
+        .expectOne(IMPORT_STATE_URL)
+        .flush(importState({ lastSucceededAt: '2026-10-18T08:05:30Z' }));
+      http.expectOne(BACKUPS_URL).flush(backupsView());
+      http.expectOne(UNPAIRED_URL).flush(paymentList([]));
+      http.expectOne(ADMINISTRATORS_URL).flush({ items: [administrator()] });
+      http.expectOne(SIGNING_KEYS_URL).flush(null, { status: 500, statusText: 'Error' });
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(items()).toEqual([
+        'Klíč k ověřovacím QR kódům se nepodařilo zkontrolovat. Zkusit znovu',
+      ]);
+      expect(text('.attention [role="alert"]')).toContain(
+        'Klíč k ověřovacím QR kódům se nepodařilo zkontrolovat.',
+      );
+
+      (attention().querySelector('.attention-list button') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      http.expectOne(SIGNING_KEYS_URL).flush(receiptSigningKeys());
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(text('.attention .healthy')).toContain('Vše je v pořádku.');
     });
   });
 });

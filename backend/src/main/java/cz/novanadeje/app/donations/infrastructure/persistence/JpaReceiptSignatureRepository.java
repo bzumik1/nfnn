@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donations.infrastructure.persistence;
 
+import cz.novanadeje.app.donations.domain.receipt.ContentDigest;
 import cz.novanadeje.app.donations.domain.receipt.CurrentSignature;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatureRepository;
 import cz.novanadeje.app.donations.domain.receipt.SignatureArtwork;
@@ -32,11 +33,8 @@ class JpaReceiptSignatureRepository implements ReceiptSignatureRepository {
     }
 
     @Override
-    public Optional<SignatureImage> currentScan() {
-        return signatures.findById(ReceiptSignatureJpaEntity.SINGLETON_ID)
-                .map(stored -> new StoredSignature(stored, image(stored)))
-                .filter(signature -> PNG.equals(signature.image().mediaType()))
-                .map(signature -> new SignatureImage(signature.image().content(), signature.stored().width(), signature.stored().height()));
+    public Optional<ContentDigest> currentDigest() {
+        return signatures.findById(ReceiptSignatureJpaEntity.SINGLETON_ID).map(stored -> new ContentDigest(stored.imageSha256()));
     }
 
     @Override
@@ -59,9 +57,6 @@ class JpaReceiptSignatureRepository implements ReceiptSignatureRepository {
             return CanonicalSignatureVectors.read(stored.imageSha256(), image.content());
         }
         return new SignatureImage(image.content(), stored.width(), stored.height());
-    }
-
-    private record StoredSignature(ReceiptSignatureJpaEntity stored, ReceiptImageJpaEntity image) {
     }
 
     @Override

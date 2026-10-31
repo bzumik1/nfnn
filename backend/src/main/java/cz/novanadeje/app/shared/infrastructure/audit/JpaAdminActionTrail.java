@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Component
@@ -23,6 +24,14 @@ class JpaAdminActionTrail implements AdminActionTrail {
         return actions.findByPerformedAtLessThanOrderByPerformedAtDescIdDesc(before, Limit.of(limit)).stream()
                 .map(AdminActionJpaEntity::toEntry)
                 .toList();
+    }
+
+    @Override
+    public List<AdminActionEntry> findByActions(Set<String> names) {
+        if (names.isEmpty()) {
+            return List.of();
+        }
+        return actions.findByActionInOrderByPerformedAtAscIdAsc(names).stream().map(AdminActionJpaEntity::toEntry).toList();
     }
 
     @Override
