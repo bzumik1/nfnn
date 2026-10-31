@@ -2465,6 +2465,26 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(savedFiles).toEqual([]);
     });
 
+    it('then a receipt refused while the signing key is withdrawn shows the title and detail of that problem, which say when to try again', async () => {
+      await open('/darce/potvrzeni');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      await downloadYear(2025);
+      receiptRequest({ year: 2025 }).flush(
+        {
+          ...problemBody('donations/receipt-signing-paused', 'Potvrzení teď nejde vystavit', 409),
+          detail: 'Zkuste to prosím za pár minut.',
+        },
+        { status: 409, statusText: 'Conflict' },
+      );
+      await settleBlobFailure();
+
+      expect(text('.yearly-card [role="alert"]')).toBe(
+        'Potvrzení teď nejde vystavit. Zkuste to prosím za pár minut.',
+      );
+      expect(savedFiles).toEqual([]);
+    });
+
     it('then an issued receipt with a character no receipt can print asks the donor to write to the foundation, not to try another browser', async () => {
       await open('/darce/potvrzeni');
       await respond(twoYearSummary(), twoYearDonations());
