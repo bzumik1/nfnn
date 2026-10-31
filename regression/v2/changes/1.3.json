@@ -1,0 +1,14 @@
+[
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/qr/encoder.json",
+    "reason": "1.3 draws the authenticator QR in the browser with its own encoder module (review round 1): 112 cases ZXing 3.5.4 encoded with the production ISO-8859-1 hint, at every level, at versions 1, 2, 6, 7, 9, 10, 26, 27 and 40, in numeric, alphanumeric and byte mode with ECI 1, plus mask ties and the edges of the finder-like rule; the browser's encoder and ZXing on the backend run every case, so neither side can pass with its own idea of a symbol; the source is edited",
+    "contract": ".claude/rules/testing.md, Logic on both sides"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/schemas/*",
+    "reason": "1.3 adds schemas/qr/encoder.schema.json for qr/encoder.json: a text of at most 7089 ISO-8859-1 characters and a level as its input, the shared QR symbol as its expected value",
+    "contract": ".claude/rules/testing.md, Logic on both sides"
+  }
+]
