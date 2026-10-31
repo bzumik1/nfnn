@@ -1,8 +1,10 @@
 package cz.novanadeje.app.donations.infrastructure.pdf;
 
+import cz.novanadeje.app.shared.domain.PrintableText;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.time.Year;
+import java.util.stream.Collectors;
 import java.util.regex.Pattern;
 
 @ConfigurationProperties("app.donations.receipt")
@@ -19,21 +21,21 @@ public record ReceiptProperties(String foundationName, String foundationCompanyI
     private static final int LAST_FOUR_DIGIT_YEAR = 9999;
 
     public ReceiptProperties {
-        foundationName = required(foundationName, PREFIX + "foundation-name");
+        foundationName = printed(foundationName, PREFIX + "foundation-name");
         foundationCompanyIdentifier = required(foundationCompanyIdentifier, PREFIX + "foundation-company-identifier");
         if (!COMPANY_IDENTIFIER.matcher(foundationCompanyIdentifier).matches()) {
             throw new IllegalArgumentException(PREFIX + "foundation-company-identifier must be eight digits, but is '"
                     + foundationCompanyIdentifier + "'");
         }
-        foundationStreet = required(foundationStreet, PREFIX + "foundation-street");
-        foundationCity = required(foundationCity, PREFIX + "foundation-city");
+        foundationStreet = printed(foundationStreet, PREFIX + "foundation-street");
+        foundationCity = printed(foundationCity, PREFIX + "foundation-city");
         foundationPostalCode = required(foundationPostalCode, PREFIX + "foundation-postal-code");
-        registryCourt = required(registryCourt, PREFIX + "registry-court");
-        registryFile = required(registryFile, PREFIX + "registry-file");
-        issuePlace = required(issuePlace, PREFIX + "issue-place");
-        issuePlaceEn = required(issuePlaceEn, PREFIX + "issue-place-en");
-        signatoryName = required(signatoryName, "RECEIPT_SIGNATORY_NAME (" + PREFIX + "signatory-name)");
-        signatoryRole = required(signatoryRole, "RECEIPT_SIGNATORY_ROLE (" + PREFIX + "signatory-role)");
+        registryCourt = printed(registryCourt, PREFIX + "registry-court");
+        registryFile = printed(registryFile, PREFIX + "registry-file");
+        issuePlace = printed(issuePlace, PREFIX + "issue-place");
+        issuePlaceEn = printed(issuePlaceEn, PREFIX + "issue-place-en");
+        signatoryName = printed(signatoryName, "RECEIPT_SIGNATORY_NAME (" + PREFIX + "signatory-name)");
+        signatoryRole = printed(signatoryRole, "RECEIPT_SIGNATORY_ROLE (" + PREFIX + "signatory-role)");
         concurrentRenders = concurrentRenders == null ? DEFAULT_CONCURRENT_RENDERS : concurrentRenders;
         if (concurrentRenders < 1) {
             throw new IllegalArgumentException(PREFIX + "concurrent-renders must be at least 1, but is " + concurrentRenders);
@@ -46,6 +48,15 @@ public record ReceiptProperties(String foundationName, String foundationCompanyI
 
     public Year firstReceiptYear() {
         return Year.of(firstYear);
+    }
+
+    private static String printed(String value, String name) {
+        PrintableText text = PrintableText.of(required(value, name));
+        if (!text.prints()) {
+            throw new IllegalArgumentException(name + " holds characters a receipt cannot print: " + text.outside().stream()
+                    .map(codePoint -> String.format("U+%04X", codePoint)).collect(Collectors.joining(", ")));
+        }
+        return text.text();
     }
 
     private static String required(String value, String name) {
