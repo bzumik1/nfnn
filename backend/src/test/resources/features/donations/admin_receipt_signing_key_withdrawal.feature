@@ -168,6 +168,8 @@ Feature: An administrator withdraws a leaked receipt signing key from the web, w
     Then the response status is 409
     And the problem type ends with "donations/receipt-signing-key-withdrawal-paused"
     And the backend is not restarted for a new receipt signing seed
+    And the problem detail contains "nesouhlasil pětkrát během čtvrt hodiny, proto teď žádný klíč k ověřovacím QR nestáhneme"
+    And the problem detail contains "změňte si heslo (tím se ukončí všechna ostatní přihlášení)"
     When 14 minutes pass
     And "Jana" withdraws the receipt signing key "21fe31df" with the passkey "iPhone"
     Then the response status is 409

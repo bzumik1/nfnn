@@ -118,6 +118,11 @@ public class CommonStepDefinitions {
         assertThat(api.lastResponseJson().get("type").asString()).endsWith(suffix);
     }
 
+    @Then("the problem detail contains {string}")
+    public void theProblemDetailContains(String text) {
+        assertThat(api.lastResponseJson().get("detail").asString()).contains(text);
+    }
+
     @Then("the problem lists errors for fields {string} and {string}")
     public void theProblemListsErrorsForFields(String first, String second) {
         assertThat(errorFields()).contains(first, second);

@@ -96,13 +96,13 @@ class ReceiptSigningKeyWithdrawnEmailSenderTest {
             assertThat(MailContents.plainText(czech).replace("\r\n", "\n")).isEqualTo("""
                     Dobrý den,
 
-                    správce jana@example.cz 20. 11. 2026 v 10:30 stáhl ve správě webu Nová naděje klíč 21fe31df, kterým server podepisuje ověřovací QR kódy na potvrzeních o daru. QR kódy podepsané tímto klíčem se na stránce pro ověření potvrzení už neukážou jako ověřené. Potvrzení samotná dál platí.
+                    správce jana@example.cz 20. 11. 2026 v 10:30 stáhl ve správě webu Nová naděje klíč 21fe31df, kterým server podepisuje ověřovací QR kódy na potvrzeních o daru. Web tento klíč dál zveřejňuje, ale jako stažený, takže QR kódům jím podepsaným už nikdo nemá věřit. Potvrzení samotná dál platí.
 
                     Server se restartuje a vytvoří si nový klíč. Potvrzení vydaná potom podepíše novým klíčem.
 
                     Pokud o tom víte, nemusíte nic dělat.
 
-                    Pokud ne, změňte si prosím hned heslo i druhý faktor, ověřte v Historii změn ve správě, kdo se přihlásil, a napište ostatním správcům a na info@nfnn.cz.
+                    Pokud ne, změňte si prosím hned heslo i druhý faktor, podívejte se do Historie změn ve správě, co se v ní v poslední době změnilo, a napište ostatním správcům a na info@nfnn.cz.
 
                     Nová naděje – nadační fond
 
@@ -119,6 +119,8 @@ class ReceiptSigningKeyWithdrawnEmailSenderTest {
             assertThat(MailContents.plainText(english))
                     .startsWith("Hello,")
                     .contains("the administrator jana@example.cz withdrew the key 21fe31df in the administration of the Nová naděje site on 20 Nov 2026 at 10:30")
+                    .contains("The site keeps publishing this key, but as withdrawn, so nobody is to trust the QR codes signed with it.")
+                    .contains("look in the administration history at what changed there lately")
                     .contains("The server restarts and makes a new key of its own.");
             assertThat(MailContents.html(english)).contains("lang=\"en\"");
             assertThat(logged.list).noneMatch(line -> line.getLevel() == Level.ERROR);
