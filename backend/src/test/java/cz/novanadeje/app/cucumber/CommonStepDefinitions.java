@@ -14,6 +14,7 @@ import cz.novanadeje.app.support.FakeFioClient;
 import cz.novanadeje.app.support.MutableClock;
 import cz.novanadeje.app.support.RateLimiterWindows;
 import cz.novanadeje.app.support.RecordingMailSender;
+import cz.novanadeje.app.support.SwitchablePublicBackupKeyPolicy;
 import cz.novanadeje.app.support.SwitchablePublicTestKeyPolicy;
 import io.cucumber.java.Before;
 import io.cucumber.java.BeforeAll;
@@ -74,6 +75,7 @@ public class CommonStepDefinitions {
         CompanyLookupPause.reset(context.getBean(CompanyLookupService.class));
         ClientErrorCapWindows.reset(context.getBean(ClientErrorCap.class));
         BackupKeyWordDraws.reseed(context.getBean(BackupKeyWordChallenges.class));
+        context.getBean(SwitchablePublicBackupKeyPolicy.class).reset();
         context.getBean(SwitchablePublicTestKeyPolicy.class).reset();
     }
 

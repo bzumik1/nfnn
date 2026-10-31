@@ -77,6 +77,12 @@ public class TestSupportConfiguration {
 
     @Bean
     @Primary
+    public SwitchablePublicBackupKeyPolicy switchablePublicBackupKeyPolicy() {
+        return new SwitchablePublicBackupKeyPolicy();
+    }
+
+    @Bean
+    @Primary
     public SwitchablePublicTestKeyPolicy switchablePublicTestKeyPolicy() {
         return new SwitchablePublicTestKeyPolicy();
     }
