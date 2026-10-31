@@ -17,13 +17,13 @@ import { AuthStore } from '../../../../core/auth/auth-store';
 import { PasskeyAuthenticator } from '../../../../core/auth/passkey-authenticator';
 import { LiveNotice, Notice } from '../../../../shared/ui/live-notice/live-notice';
 import { formatBankTime } from '../../../donations/donation-date';
-import { SetupApi } from '../../../operations/setup/setup-api';
 import {
   AdminApi,
   ReceiptSigningKeyResponse,
   ReceiptSigningKeysResponse,
   ReceiptSigningKeyWithdrawalResponse,
 } from '../../admin-api';
+import { watchKeyRenewal } from './key-renewal';
 import { KeyWithdrawalDialog } from './key-withdrawal-dialog';
 import {
   mismatchSentence,
@@ -55,7 +55,6 @@ interface WithdrawalOffer {
 export class ReceiptSigningKey {
   private readonly api = inject(AdminApi);
   private readonly auth = inject(AuthStore);
-  private readonly setupApi = inject(SetupApi);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
   private readonly passkeySupported = inject(PasskeyAuthenticator).supported();
@@ -137,23 +136,12 @@ export class ReceiptSigningKey {
       });
   }
 
-  private loadAfterRestart(keyId: string): void {
-    this.state.set('loading');
-    this.api
-      .receiptSigningKeys()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (keys) => {
-          const same = keys.currentKeyId === keyId;
-          this.stillWithdrawnAfterRestart.set(same);
-          this.keys.set(keys);
-          this.state.set('ready');
-          this.notice.set(
-            this.afterRestartNotice(keyId, same, withdrawnCurrentKeyId(keys) === null),
-          );
-        },
-        error: () => this.state.set('error'),
-      });
+  private showAfterRestart(keyId: string, keys: ReceiptSigningKeysResponse): void {
+    const same = keys.currentKeyId === keyId;
+    this.stillWithdrawnAfterRestart.set(same);
+    this.keys.set(keys);
+    this.state.set('ready');
+    this.notice.set(this.afterRestartNotice(keyId, keys));
   }
 
   protected ask(keyId: string): void {
@@ -187,10 +175,6 @@ export class ReceiptSigningKey {
     this.state.set('ready');
     if (response.restarting) {
       this.restartingFor.set(keyId);
-      this.notice.set({
-        kind: 'status',
-        text: $localize`:@@admin.signingKey.restarting:Klíč ${keyId}:key: je stažený. Web se restartuje a vytvoří si nový klíč, obvykle do minuty.`,
-      });
       this.watchRestart();
     } else {
       this.notice.set({
@@ -202,30 +186,39 @@ export class ReceiptSigningKey {
   }
 
   protected watchRestart(): void {
+    const keyId = this.restartingFor() ?? '';
     this.restartSlow.set(false);
-    this.setupApi
-      .watchRestart()
+    this.notice.set({
+      kind: 'status',
+      text: $localize`:@@admin.signingKey.restarting:Klíč ${keyId}:key: je stažený. Web se restartuje a vytvoří si nový klíč, obvykle do minuty.`,
+    });
+    watchKeyRenewal(() => this.api.receiptSigningKeys(), keyId)
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((outcome) => {
-        if (outcome === 'slow') {
+      .subscribe((keys) => {
+        if (keys === null) {
+          this.notice.set(null);
           this.restartSlow.set(true);
           return;
         }
-        const keyId = this.restartingFor() ?? '';
         this.restartingFor.set(null);
-        this.notice.set(null);
-        this.loadAfterRestart(keyId);
+        this.showAfterRestart(keyId, keys);
       });
   }
 
-  private afterRestartNotice(keyId: string, same: boolean, signs: boolean): Notice | null {
-    if (same) {
+  private afterRestartNotice(keyId: string, keys: ReceiptSigningKeysResponse): Notice | null {
+    if (keys.currentKeyId === keyId) {
       return {
         kind: 'alert',
-        text: $localize`:@@admin.signingKey.notRenewed:Klíč ${keyId}:key: je stažený, ale web po restartu podepisuje pořád jím a nový klíč nemá. Do té doby se potvrzení o daru nestáhnou; obraťte se prosím na technika serveru.`,
+        text: $localize`:@@admin.signingKey.notRenewed:Klíč ${keyId}:key: je stažený, ale web po restartu nový klíč nemá, takže se potvrzení o daru nestáhnou; obraťte se prosím na technika serveru.`,
       };
     }
-    return signs
+    if (!keys.currentKeyPublished) {
+      return {
+        kind: 'alert',
+        text: $localize`:@@admin.signingKey.renewedUnpublished:Klíč ${keyId}:key: je stažený a web po restartu má nový klíč ${keys.currentKeyId}:newKey:, který ale zatím není zveřejněný.`,
+      };
+    }
+    return withdrawnCurrentKeyId(keys) === null
       ? {
           kind: 'status',
           text: $localize`:@@admin.signingKey.renewed:Klíč ${keyId}:key: je stažený a web po restartu podepisuje novým klíčem.`,
