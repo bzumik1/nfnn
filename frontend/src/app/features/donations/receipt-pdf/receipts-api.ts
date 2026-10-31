@@ -8,6 +8,15 @@ export interface ReceiptImageBytes {
   readonly mediaType: string;
 }
 
+export interface ReceiptSource {
+  receipt(): Observable<IssuedReceipt>;
+  image(sha256: string): Observable<ReceiptImageBytes>;
+}
+
+const DONOR_IMAGES = '/api/donations/me/receipt-images';
+const ADMINISTRATION_RECEIPTS = '/api/admin/donations/receipts';
+const ADMINISTRATION_IMAGES = '/api/admin/donations/receipt-images';
+
 @Injectable({ providedIn: 'root' })
 export class ReceiptsApi {
   private readonly http = inject(HttpClient);
@@ -17,8 +26,27 @@ export class ReceiptsApi {
   }
 
   image(sha256: string): Observable<ReceiptImageBytes> {
+    return this.imageAt(DONOR_IMAGES, sha256);
+  }
+
+  donorSource(subject: ReceiptSubject): ReceiptSource {
+    return {
+      receipt: () => this.issue(subject),
+      image: (sha256) => this.image(sha256),
+    };
+  }
+
+  administrationSource(receiptId: string): ReceiptSource {
+    return {
+      receipt: () =>
+        this.http.get<IssuedReceipt>(`${ADMINISTRATION_RECEIPTS}/${encodeURIComponent(receiptId)}`),
+      image: (sha256) => this.imageAt(ADMINISTRATION_IMAGES, sha256),
+    };
+  }
+
+  private imageAt(base: string, sha256: string): Observable<ReceiptImageBytes> {
     return this.http
-      .get(`/api/donations/me/receipt-images/${encodeURIComponent(sha256)}`, {
+      .get(`${base}/${encodeURIComponent(sha256)}`, {
         responseType: 'arraybuffer',
         observe: 'response',
       })

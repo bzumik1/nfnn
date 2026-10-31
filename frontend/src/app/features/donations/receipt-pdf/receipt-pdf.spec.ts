@@ -11,9 +11,14 @@ import {
   ReceiptPdfFailure,
 } from './receipt-pdf';
 import { ReceiptStyleRefused } from './receipt-style';
+import { ReceiptsApi } from './receipts-api';
 import { FakeReceiptPdfEnvironment } from './testing/fake-receipt-worker';
 import { frozenCase, SINGLE_PERSON_CS, YEARLY_BILINGUAL } from './testing/receipt-fixtures';
-import { SYNTHETIC_SIGNATURE_JSON } from './testing/synthetic-art';
+import {
+  base64Bytes,
+  SYNTHETIC_PORTRAIT_PNG_BASE64,
+  SYNTHETIC_SIGNATURE_JSON,
+} from './testing/synthetic-art';
 import {
   closedReport,
   recordClientErrors,
@@ -80,14 +85,18 @@ describe('Given the browser receipt PDF', () => {
     vi.useRealTimers();
   });
 
-  function draw(subject: { year: number } | { donationId: string }): void {
+  function drawFrom(source: ReturnType<ReceiptsApi['donorSource']>): void {
     subscription = TestBed.inject(ReceiptPdf)
-      .draw(subject)
+      .draw(source)
       .subscribe({
         next: (event) => events.push(event),
         error: (error: unknown) => (failure = error),
         complete: () => (completed = true),
       });
+  }
+
+  function draw(subject: { year: number } | { donationId: string }): void {
+    drawFrom(TestBed.inject(ReceiptsApi).donorSource(subject));
   }
 
   function issue(receipt: FrozenReceipt, body: unknown): void {
@@ -353,6 +362,67 @@ describe('Given the browser receipt PDF', () => {
       expect((failure as ReceiptPdfFailure).reason).toBe('image');
       expect(environment.workers).toEqual([]);
       expect(reports.bodies()).toEqual([closedReport('pdf-render', 'Error')]);
+    });
+  });
+
+  describe('when the administration draws a receipt already issued', () => {
+    const RECEIPT_ID = '019a1c00-0000-7000-8000-00000000f001';
+    let signature: Uint8Array;
+    let portrait: Uint8Array;
+    let receipt: FrozenReceipt;
+
+    beforeEach(async () => {
+      signature = new TextEncoder().encode(SYNTHETIC_SIGNATURE_JSON);
+      portrait = base64Bytes(SYNTHETIC_PORTRAIT_PNG_BASE64);
+      const frozen = frozenCase(SINGLE_PERSON_CS);
+      receipt = {
+        ...frozen,
+        signatory: {
+          ...frozen.signatory,
+          signatureImage: { sha256: await sha256(signature) },
+          portraitImage: { sha256: await sha256(portrait) },
+        },
+      };
+      drawFrom(TestBed.inject(ReceiptsApi).administrationSource(RECEIPT_ID));
+    });
+
+    it('then it reads the receipt by its id without issuing anything, fetches its signature and portrait from the administration and draws it under its file name', async () => {
+      const read = http.expectOne(`/api/admin/donations/receipts/${RECEIPT_ID}`);
+      expect(read.request.method).toBe('GET');
+      read.flush({ ...issued(receipt), donorId: 'd-9', donorErased: false });
+      http
+        .expectOne(
+          `/api/admin/donations/receipt-images/${receipt.signatory.signatureImage?.sha256}`,
+        )
+        .flush(arrayBuffer(signature), { headers: { 'Content-Type': 'application/json' } });
+      await vi.waitFor(() =>
+        http
+          .expectOne(
+            `/api/admin/donations/receipt-images/${receipt.signatory.portraitImage?.sha256}`,
+          )
+          .flush(arrayBuffer(portrait), { headers: { 'Content-Type': 'image/png' } }),
+      );
+      await vi.waitFor(() => expect(environment.workers).toHaveLength(1));
+      http.expectNone('/api/donations/me/receipts');
+      environment.last().drawAll();
+
+      expect(environment.last().requests[0].signature?.kind).toBe('vector');
+      expect(environment.last().requests[0].portrait).not.toBeNull();
+      const done = events.at(-1);
+      expect(done?.kind === 'done' && done.file.fileName).toBe('potvrzeni-o-daru-2027-000001.pdf');
+      expect(completed).toBe(true);
+    });
+
+    it('then a receipt the administration does not find comes through as its problem and no worker starts', () => {
+      http
+        .expectOne(`/api/admin/donations/receipts/${RECEIPT_ID}`)
+        .flush(
+          { type: 'https://nfnn.cz/problems/donations/receipt-not-found', title: 'Nenalezeno' },
+          { status: 404, statusText: 'Not Found' },
+        );
+
+      expect(failure).toBeInstanceOf(HttpErrorResponse);
+      expect(environment.workers).toEqual([]);
     });
   });
 });

@@ -37,7 +37,7 @@ public interface DonationReceiptRepository {
 
     Optional<ReceiptStatus> findStatusByStatusDigest(ContentDigest statusDigest);
 
-    boolean anyShowsSignatureImage(ContentDigest image);
+    boolean anyShowsImage(ContentDigest image);
 
     ReceiptPage findNewestFirst(ReceiptQuery query);
 

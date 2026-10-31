@@ -1218,6 +1218,18 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
             },
             receipts: [
               {
+                id: '019a1c00-0000-7000-8000-00000000f002',
+                number: '2027-000001',
+                kind: 'YEARLY',
+                donationId: null,
+                donationReceivedOn: null,
+                year: 2026,
+                issuedOn: '2027-01-15',
+                issuedAt: '2027-01-15T09:00:00Z',
+                locale: 'cs',
+                active: true,
+              },
+              {
                 id: '019a1c00-0000-7000-8000-00000000f001',
                 number: '2026-000001',
                 kind: 'SINGLE',
@@ -1251,6 +1263,15 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await expect(page.getByRole('region', { name: 'Vydaná potvrzení' })).toContainText(
       '2026-000001',
     );
+    expect(await violations(page)).toEqual([]);
+
+    await page.getByRole('button', { name: 'Stáhnout PDF potvrzení 2027-000001' }).click();
+    await expect(
+      page
+        .getByRole('region', { name: 'Vydaná potvrzení' })
+        .getByRole('alert')
+        .filter({ hasText: /\S/ }),
+    ).toBeVisible();
     expect(await violations(page)).toEqual([]);
 
     await page.getByRole('button', { name: 'Vypnout dvoufaktorové ověření' }).click();

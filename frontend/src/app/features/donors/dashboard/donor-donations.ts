@@ -34,9 +34,16 @@ import {
   ReceiptPdfEvent,
   ReceiptPdfFailure,
   ReceiptPdfFailureReason,
-  ReceiptPdfPhase,
 } from '../../donations/receipt-pdf/receipt-pdf';
+import {
+  finishedReceiptProgress as finished,
+  readySingleReceiptText,
+  receiptPhaseProgress,
+  savedReceiptText as savedText,
+  sharedReceiptText as sharedText,
+} from '../../donations/receipt-pdf/receipt-progress';
 import { RECEIPT_RESTART_PARAM, ReceiptRestart } from '../../donations/receipt-pdf/receipt-restart';
+import { ReceiptsApi } from '../../donations/receipt-pdf/receipts-api';
 import { DownloadProgressState } from '../../../shared/ui/download-progress/download-progress';
 
 export type DonationsState = 'loading' | 'ready' | 'error';
@@ -77,9 +84,6 @@ const DRAWING_FAILURE_TEXTS: Readonly<Record<ReceiptPdfFailureReason, string>> =
   unprintable: RECEIPT_UNPRINTABLE,
   style: RECEIPT_STYLE_FAILED,
 };
-const STEPS_BEFORE_DRAWING = 2;
-const STEPS_AFTER_DRAWING = 1;
-const PHASE_STEPS: Readonly<Record<ReceiptPdfPhase, number>> = { data: 1, tools: 2, drawing: 2 };
 const YEARLY_DOWNLOAD = /^rok-(\d{4})$/;
 const SINGLE_DOWNLOAD = /^dar-([0-9a-zA-Z-]{1,64})$/;
 
@@ -113,6 +117,7 @@ export class DonorDonations {
   private readonly bankAccountsApi = inject(BankAccountsApi);
   private readonly destroyRef = inject(DestroyRef);
   private readonly receiptPdf = inject(ReceiptPdf);
+  private readonly receiptsApi = inject(ReceiptsApi);
   private readonly delivery = inject(PdfDelivery);
   private readonly restart = inject(ReceiptRestart);
   private readonly document = inject(DOCUMENT);
@@ -464,7 +469,7 @@ export class DonorDonations {
     this.downloads.update((running) => new Set(running).add(key));
     this.focusedAtStart.set(key, this.document.activeElement);
     const subscription = this.receiptPdf
-      .draw(subject)
+      .draw(this.receiptsApi.donorSource(subject))
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (event) => this.receiptProgressed(key, scope, event),
@@ -480,17 +485,7 @@ export class DonorDonations {
 
   private receiptProgressed(key: string, scope: ReceiptScope, event: ReceiptPdfEvent): void {
     if (event.kind === 'phase') {
-      const pages = Math.max(event.pages, 1);
-      this.setTask(key, {
-        file: null,
-        progress: {
-          kind: 'running',
-          step: PHASE_STEPS[event.phase] + Math.min(event.page, pages),
-          steps: STEPS_BEFORE_DRAWING + pages + STEPS_AFTER_DRAWING,
-          text: phaseText(event.phase),
-          ...(event.phase === 'drawing' && event.page > 0 ? { detail: pageText(event.page) } : {}),
-        },
-      });
+      this.setTask(key, { file: null, progress: receiptPhaseProgress(event) });
       return;
     }
     this.finishDownload(key);
@@ -605,38 +600,11 @@ export class DonorDonations {
   }
 }
 
-function phaseText(phase: ReceiptPdfPhase): string {
-  switch (phase) {
-    case 'data':
-      return $localize`:@@donor.dashboard.receipt.phase.data:Připravujeme údaje potvrzení…`;
-    case 'tools':
-      return $localize`:@@donor.dashboard.receipt.phase.tools:Načítáme nástroje pro PDF…`;
-    case 'drawing':
-      return $localize`:@@donor.dashboard.receipt.phase.drawingPdf:Vytváříme PDF…`;
-  }
-}
-
-function pageText(page: number): string {
-  return $localize`:@@donor.dashboard.receipt.phase.page:Strana ${page}:page:`;
-}
-
-function finished(kind: 'ready' | 'done' | 'cancelled', text: string): DownloadProgressState {
-  return { kind, step: 1, steps: 1, text };
-}
-
-function savedText(fileName: string): string {
-  return $localize`:@@donor.dashboard.receipt.saved:Potvrzení ${fileName}:fileName: je stažené. Najdete ho ve stažených souborech.`;
-}
-
 function readyText(scope: ReceiptScope, fileName: string): string {
   if (scope === 'single') {
-    return $localize`:@@donor.dashboard.receipt.readySingle:Potvrzení ${fileName}:fileName: je připravené. Otevřete ho tlačítkem Otevřít PDF.`;
+    return readySingleReceiptText(fileName);
   }
   return $localize`:@@donor.dashboard.receipt.ready:Potvrzení ${fileName}:fileName: je připravené. Otevřete ho tlačítkem Otevřít potvrzení.`;
-}
-
-function sharedText(fileName: string): string {
-  return $localize`:@@donor.dashboard.receipt.shared:Potvrzení ${fileName}:fileName: jste předali z nabídky sdílení.`;
 }
 
 function downloadName(key: string): string {

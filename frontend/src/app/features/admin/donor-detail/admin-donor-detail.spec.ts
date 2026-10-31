@@ -1,3 +1,4 @@
+import type { MockInstance } from 'vitest';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
@@ -13,6 +14,10 @@ import {
   donorDetail,
   issuedReceipt,
 } from '../testing/admin-fixtures';
+import { PdfDelivery } from '../../donations/receipt-pdf/pdf-delivery';
+import { RECEIPT_PDF_ENVIRONMENT } from '../../donations/receipt-pdf/receipt-pdf';
+import { FakeReceiptPdfEnvironment } from '../../donations/receipt-pdf/testing/fake-receipt-worker';
+import { frozenCase, SINGLE_PERSON_CS } from '../../donations/receipt-pdf/testing/receipt-fixtures';
 import { AdminDonorDetail } from './admin-donor-detail';
 
 const DONOR_ID = '01a18e56-bdb0-775a-bd0a-a60756831369';
@@ -36,9 +41,11 @@ function problem(status: number, type: string, title: string, detail: string) {
 describe('Given an administrator on a donor card', () => {
   let fixture: ComponentFixture<AdminDonorDetail>;
   let http: HttpTestingController;
+  let receiptEnvironment: FakeReceiptPdfEnvironment;
 
   beforeEach(async () => {
     localStorage.clear();
+    receiptEnvironment = new FakeReceiptPdfEnvironment();
     await TestBed.configureTestingModule({
       imports: [AdminDonorDetail],
       providers: [
@@ -49,6 +56,7 @@ describe('Given an administrator on a donor card', () => {
           provide: ActivatedRoute,
           useValue: { snapshot: { paramMap: convertToParamMap({ id: DONOR_ID }) } },
         },
+        { provide: RECEIPT_PDF_ENVIRONMENT, useValue: receiptEnvironment },
       ],
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);
@@ -1036,5 +1044,186 @@ describe('Given an administrator on a donor card', () => {
     fixture.detectChanges();
 
     expect(navigate).toHaveBeenCalledWith('/darce/prehled');
+  });
+  describe('when the receipts card lists a valid receipt and a replaced one', () => {
+    const VALID_ID = '019a1c00-0000-7000-8000-00000000f001';
+    const REPLACED_ID = '019a1c00-0000-7000-8000-00000000f003';
+    const READ_URL = `/api/admin/donations/receipts/${VALID_ID}`;
+    let save: MockInstance<PdfDelivery['save']>;
+
+    function readAnswer() {
+      return {
+        ...issuedReceipt({ id: VALID_ID, number: '2027-000001' }),
+        receipt: frozenCase(SINGLE_PERSON_CS),
+      };
+    }
+
+    function receiptRow(number: string): HTMLTableRowElement {
+      const row = Array.from(
+        section('Vydaná potvrzení').querySelectorAll('tbody tr') as NodeListOf<HTMLTableRowElement>,
+      ).find((candidate) => candidate.textContent?.includes(number));
+      if (row === undefined) {
+        throw new Error(`No receipt row ${number}`);
+      }
+      return row;
+    }
+
+    function rowLine(number: string): string {
+      return (receiptRow(number).querySelector('[role="status"]')?.textContent ?? '')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    function rowAlert(number: string): string {
+      return (receiptRow(number).querySelector('[role="alert"]')?.textContent ?? '')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    function downloadButton(number: string): HTMLButtonElement {
+      const found = receiptRow(number).querySelector<HTMLButtonElement>('button.receipt-pdf');
+      if (found === null) {
+        throw new Error(`No download button in receipt row ${number}`);
+      }
+      return found;
+    }
+
+    beforeEach(async () => {
+      save = vi.spyOn(PdfDelivery.prototype, 'save').mockImplementation(() => undefined);
+      await loaded(
+        donorAccount(),
+        donorDetail({
+          receipts: [
+            adminReceipt({ id: VALID_ID, number: '2027-000001' }),
+            adminReceipt({ id: REPLACED_ID, number: '2026-000001', active: false }),
+          ],
+        }),
+      );
+    });
+
+    it('then only the valid receipt offers its PDF, named by its number', () => {
+      expect(downloadButton('2027-000001').textContent?.trim()).toBe('Stáhnout PDF');
+      expect(downloadButton('2027-000001').getAttribute('aria-label')).toBe(
+        'Stáhnout PDF potvrzení 2027-000001',
+      );
+      expect(receiptRow('2026-000001').querySelector('button.receipt-pdf')).toBeNull();
+    });
+
+    it('then pressing it reads that receipt from the administration, names each step at the row and saves the PDF drawn in the browser', async () => {
+      downloadButton('2027-000001').click();
+      await settle();
+
+      expect(rowLine('2027-000001')).toBe('Připravujeme údaje potvrzení…');
+      expect(downloadButton('2027-000001').getAttribute('aria-disabled')).toBe('true');
+      expect(downloadButton('2027-000001').textContent?.trim()).toBe('Připravujeme PDF…');
+      const read = http.expectOne(READ_URL);
+      expect(read.request.method).toBe('GET');
+      read.flush(readAnswer());
+      await settle();
+      expect(rowLine('2027-000001')).toBe('Načítáme nástroje pro PDF…');
+
+      receiptEnvironment.last().drawAll();
+      await settle();
+
+      expect(save).toHaveBeenCalledTimes(1);
+      expect(save.mock.calls[0][0].fileName).toBe('potvrzeni-o-daru-2027-000001.pdf');
+      expect(rowLine('2027-000001')).toBe(
+        'Potvrzení potvrzeni-o-daru-2027-000001.pdf je stažené. Najdete ho ve stažených souborech.',
+      );
+      expect(downloadButton('2027-000001').getAttribute('aria-disabled')).toBeNull();
+      http.expectNone(ISSUE_URL);
+    });
+
+    it('then a second press while it is drawn starts nothing more', async () => {
+      downloadButton('2027-000001').click();
+      downloadButton('2027-000001').click();
+      await settle();
+
+      expect(http.match(READ_URL)).toHaveLength(1);
+    });
+
+    it('then a receipt that cannot be read shows its reason at the row and the button can try again', async () => {
+      downloadButton('2027-000001').click();
+      await settle();
+      const missing = problem(
+        404,
+        'donations/receipt-not-found',
+        'Potvrzení nenalezeno',
+        'Potvrzení s tímto číslem neexistuje.',
+      );
+      http.expectOne(READ_URL).flush(missing.body, missing.options);
+      await settle();
+
+      expect(rowAlert('2027-000001')).toBe(
+        'Potvrzení nenalezeno. Potvrzení s tímto číslem neexistuje.',
+      );
+      expect(rowLine('2027-000001')).toBe('');
+      expect(receiptEnvironment.workers).toEqual([]);
+      expect(downloadButton('2027-000001').getAttribute('aria-disabled')).toBeNull();
+    });
+
+    it('then drawing tools that do not load are named at the row with what to do', async () => {
+      downloadButton('2027-000001').click();
+      await settle();
+      http.expectOne(READ_URL).flush(readAnswer());
+      await settle();
+      receiptEnvironment.last().fail();
+      await settle();
+
+      expect(rowAlert('2027-000001')).toBe(
+        'Nástroje pro PDF se nepodařilo načíst. Obnovte prosím stránku a stáhněte potvrzení znovu.',
+      );
+      expect(save).not.toHaveBeenCalled();
+    });
+
+    it('then a drawing that breaks says so at the row', async () => {
+      downloadButton('2027-000001').click();
+      await settle();
+      http.expectOne(READ_URL).flush(readAnswer());
+      await settle();
+      receiptEnvironment.last().say({ kind: 'ready' });
+      receiptEnvironment.last().say({ kind: 'failed', reason: 'fonts' });
+      await settle();
+
+      expect(rowAlert('2027-000001')).toBe(
+        'PDF se v prohlížeči nepodařilo vytvořit. Zkuste to prosím znovu, případně v jiném prohlížeči.',
+      );
+    });
+
+    it('then on an iPhone that shares files the same button, now Otevřít PDF, hands the PDF to the share sheet without reading the receipt again', async () => {
+      vi.spyOn(PdfDelivery.prototype, 'needsSecondTap').mockReturnValue(true);
+      const share = vi.spyOn(PdfDelivery.prototype, 'share').mockResolvedValue('shared');
+      downloadButton('2027-000001').click();
+      await settle();
+      http.expectOne(READ_URL).flush(readAnswer());
+      await settle();
+      receiptEnvironment.last().drawAll();
+      await settle();
+
+      expect(downloadButton('2027-000001').textContent?.trim()).toBe('Otevřít PDF');
+      expect(rowLine('2027-000001')).toBe(
+        'Potvrzení potvrzeni-o-daru-2027-000001.pdf je připravené. Otevřete ho tlačítkem Otevřít PDF.',
+      );
+      downloadButton('2027-000001').click();
+      await settle();
+
+      expect(share).toHaveBeenCalledTimes(1);
+      expect(rowLine('2027-000001')).toBe(
+        'Potvrzení potvrzeni-o-daru-2027-000001.pdf jste předali z nabídky sdílení.',
+      );
+      expect(downloadButton('2027-000001').textContent?.trim()).toBe('Stáhnout PDF');
+      http.expectNone(READ_URL);
+      expect(save).not.toHaveBeenCalled();
+    });
+  });
+
+  it('when the donor is erased, then the receipts issued before can still be downloaded', async () => {
+    const erased = donorDetail();
+    await loaded(donorAccount({ erasedAt: '2026-10-20T08:00:00Z' }), {
+      ...erased,
+      donor: { ...erased.donor, erasedAt: '2026-10-20T08:00:00Z' },
+    });
+
+    expect(buttonNames(section('Vydaná potvrzení'))).toContain('Stáhnout PDF');
   });
 });

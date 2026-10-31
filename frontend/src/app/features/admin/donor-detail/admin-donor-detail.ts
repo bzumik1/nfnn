@@ -35,7 +35,9 @@ import { CopyButton } from '../../../shared/ui/copy-button/copy-button';
 import { Dialog } from '../../../shared/ui/dialog/dialog';
 import { FormControlDirective } from '../../../shared/ui/form-field/form-control';
 import { FormField } from '../../../shared/ui/form-field/form-field';
+import { DownloadProgress } from '../../../shared/ui/download-progress/download-progress';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
+import { AdminReceiptDownloads } from './admin-receipt-downloads';
 
 type LoadState = 'loading' | 'ready' | 'missing' | 'error';
 
@@ -89,18 +91,21 @@ const PAIRING_LABELS: Record<NonNullable<DonationItem['pairedBy']>, string> = {
   imports: [
     CopyButton,
     Dialog,
+    DownloadProgress,
     FormControlDirective,
     FormField,
     FormsModule,
     LiveNotice,
     RouterLink,
   ],
+  providers: [AdminReceiptDownloads],
   templateUrl: './admin-donor-detail.html',
   styleUrl: './admin-donor-detail.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminDonorDetail {
   private readonly api = inject(AdminApi);
+  protected readonly pdfs = inject(AdminReceiptDownloads);
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -165,6 +170,7 @@ export class AdminDonorDetail {
   });
 
   constructor() {
+    this.pdfs.whenSessionEnds(() => this.sendToSignIn());
     this.loadAccount();
     this.loadDonations();
     afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
@@ -293,6 +299,12 @@ export class AdminDonorDetail {
     const day =
       receipt.donationReceivedOn === null ? '' : formatDonationDate(receipt.donationReceivedOn);
     return $localize`:@@admin.donorDetail.receipts.single:Dar z ${day}:day:`;
+  }
+
+  protected receiptPdfLabel(receipt: AdminReceiptResponse): string {
+    return this.pdfs.ready(receipt.id)
+      ? $localize`:@@admin.donorDetail.receiptPdf.openLabel:Otevřít PDF potvrzení ${receipt.number}:number:`
+      : $localize`:@@admin.donorDetail.receiptPdf.downloadLabel:Stáhnout PDF potvrzení ${receipt.number}:number:`;
   }
 
   protected donationsCount(count: number): string {

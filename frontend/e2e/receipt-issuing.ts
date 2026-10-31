@@ -109,3 +109,38 @@ export async function mockReceiptIssuing(page: Page, issuing: ReceiptIssuing): P
     );
   }
 }
+
+export const ADMINISTRATION_RECEIPTS_URL = '/api/admin/donations/receipts';
+
+export async function mockAdministrationReceiptReading(
+  page: Page,
+  receipt: { readonly id: string; readonly donationId: string; readonly donorId: string },
+  issuing: ReceiptIssuing,
+): Promise<string[]> {
+  const asked: string[] = [];
+  await page.route(
+    (url) => url.pathname === `${ADMINISTRATION_RECEIPTS_URL}/${receipt.id}`,
+    (route) => {
+      asked.push(new URL(route.request().url()).pathname);
+      return route.fulfill({
+        status: 200,
+        json: {
+          ...issuedReceipt({ donationId: receipt.donationId }, issuing),
+          id: receipt.id,
+          donorId: receipt.donorId,
+          donorErased: false,
+        },
+      });
+    },
+  );
+  for (const art of [syntheticSignature, syntheticPortrait]) {
+    await page.route(
+      (url) => url.pathname === `/api/admin/donations/receipt-images/${art.sha256}`,
+      (route) => {
+        asked.push(new URL(route.request().url()).pathname);
+        return route.fulfill({ status: 200, contentType: art.mediaType, body: art.bytes });
+      },
+    );
+  }
+  return asked;
+}

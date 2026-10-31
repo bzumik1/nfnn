@@ -169,6 +169,12 @@ public class AdminReceiptsStepDefinitions {
         api.getBytes(IMAGES_PATH + signatureImageOf(number));
     }
 
+    @When("{string} fetches in the administration the portrait image of receipt {string}")
+    public void fetchesInTheAdministrationThePortraitImageOfReceipt(String alias, String number) {
+        sessions.actAs(alias);
+        api.getBytes(IMAGES_PATH + portraitImageOf(number));
+    }
+
     @When("{string} fetches in the administration the receipt image {string}")
     public void fetchesInTheAdministrationTheReceiptImage(String alias, String digest) {
         sessions.actAs(alias);
@@ -238,5 +244,9 @@ public class AdminReceiptsStepDefinitions {
 
     private String signatureImageOf(String number) {
         return jdbc.sql("select signature_image_sha256 from issued_receipt where number = ?").param(number).query(String.class).single();
+    }
+
+    private String portraitImageOf(String number) {
+        return jdbc.sql("select portrait_image_sha256 from issued_receipt where number = ?").param(number).query(String.class).single();
     }
 }

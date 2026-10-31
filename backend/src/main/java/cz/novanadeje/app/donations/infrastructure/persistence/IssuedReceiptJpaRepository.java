@@ -43,7 +43,8 @@ interface IssuedReceiptJpaRepository extends JpaRepository<IssuedReceiptJpaEntit
     @Query("select r.status from IssuedReceiptJpaEntity r where r.statusSha256 = :statusSha256")
     Optional<ReceiptStatus> findStatusByStatusSha256(@Param("statusSha256") String statusSha256);
 
-    boolean existsBySignatureImageSha256(String signatureImageSha256);
+    @Query("select count(r) > 0 from IssuedReceiptJpaEntity r where r.signatureImageSha256 = :image or r.portraitImageSha256 = :image")
+    boolean anyShowsImage(@Param("image") String image);
 
     Page<IssuedReceiptJpaEntity> findAllBy(Pageable page);
 

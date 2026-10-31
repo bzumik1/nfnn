@@ -31,7 +31,6 @@ import java.util.UUID;
 class DonorReceiptsController {
 
     private static final String NOT_STORED_BY_ANY_CACHE = "private, no-store";
-    private static final String KEPT_BY_THE_BROWSER = "private, max-age=31536000, immutable";
 
     private final DonationReceiptService issuance;
     private final DonorReceiptsService receipts;
@@ -71,7 +70,7 @@ class DonorReceiptsController {
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(image.mediaType()))
                 .contentLength(content.length)
-                .header(HttpHeaders.CACHE_CONTROL, KEPT_BY_THE_BROWSER)
+                .header(HttpHeaders.CACHE_CONTROL, NOT_STORED_BY_ANY_CACHE)
                 .body(content);
     }
 

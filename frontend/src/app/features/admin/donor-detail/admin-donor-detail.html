@@ -860,6 +860,11 @@
                 <th i18n="@@admin.donorDetail.receipts.col.subject">Potvrzuje</th>
                 <th i18n="@@admin.donorDetail.receipts.col.issued">Vystaveno</th>
                 <th i18n="@@admin.donorDetail.receipts.col.state">Stav</th>
+                <th class="action">
+                  <span class="visually-hidden" i18n="@@admin.donorDetail.receipts.col.pdf"
+                    >PDF</span
+                  >
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -890,6 +895,37 @@
                       <span class="tag tag--off" i18n="@@admin.donorDetail.receipts.superseded"
                         >nahrazeno novějším</span
                       >
+                    }
+                  </td>
+                  <td class="action receipt-pdf-cell">
+                    @if (receipt.active) {
+                      <button
+                        type="button"
+                        class="ui-button ui-button--small receipt-pdf"
+                        [attr.aria-label]="receiptPdfLabel(receipt)"
+                        [attr.aria-disabled]="pdfs.drawing(receipt.id) ? 'true' : null"
+                        [attr.aria-busy]="pdfs.drawing(receipt.id)"
+                        (click)="pdfs.press(receipt.id)"
+                      >
+                        @if (pdfs.drawing(receipt.id)) {
+                          <span i18n="@@admin.donorDetail.receiptPdf.preparing"
+                            >Připravujeme PDF…</span
+                          >
+                        } @else if (pdfs.ready(receipt.id)) {
+                          <span i18n="@@admin.donorDetail.receiptPdf.open">Otevřít PDF</span>
+                        } @else {
+                          <span i18n="@@admin.donorDetail.receiptPdf.download">Stáhnout PDF</span>
+                        }
+                      </button>
+                      <app-download-progress
+                        class="receipt-pdf-progress"
+                        [compact]="true"
+                        [progress]="pdfs.progress(receipt.id)"
+                        (cancelled)="pdfs.cancel(receipt.id)"
+                      />
+                      @if (pdfs.failure(receipt.id); as failure) {
+                        <p class="ui-field-error receipt-pdf-error" role="alert">{{ failure }}</p>
+                      }
                     }
                   </td>
                 </tr>

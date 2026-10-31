@@ -108,8 +108,8 @@ class JpaDonationReceiptRepository implements DonationReceiptRepository {
     }
 
     @Override
-    public boolean anyShowsSignatureImage(ContentDigest image) {
-        return jpa.existsBySignatureImageSha256(image.value());
+    public boolean anyShowsImage(ContentDigest image) {
+        return jpa.anyShowsImage(image.value());
     }
 
     @Override

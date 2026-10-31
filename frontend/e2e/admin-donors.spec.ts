@@ -1,4 +1,6 @@
 import { Page } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
+import { readPdf } from '../src/app/features/donations/receipt-pdf/testing/pdf-reader';
 import { expect, test } from './fixtures';
 import {
   administrator,
@@ -8,6 +10,11 @@ import {
   problem,
   session,
 } from './donor-session';
+import {
+  mockAdministrationReceiptReading,
+  syntheticPortrait,
+  syntheticSignature,
+} from './receipt-issuing';
 
 const PETR_ID = '019a1c00-0000-7000-8000-00000000a002';
 const LINK_ID = '0192f0c4-0000-7000-8000-000000000001';
@@ -406,6 +413,50 @@ test.describe('Given an administrator on the donors page', () => {
       'Dar z 12. 10. 2026',
     );
     expect(issued).toEqual([{ donationId: '0192f0f1-0000-7000-8000-000000000001' }]);
+  });
+
+  test('when they download a valid receipt from the donor card, then the PDF drawn in the browser is saved with the signature and portrait the receipt shows, and the row says where it is', async ({
+    page,
+  }) => {
+    const receipt = petrDetail.receipts[0];
+    await page.route(
+      (url) => url.pathname === PETR_ACCOUNT,
+      (route) => route.fulfill({ json: petrAccount }),
+    );
+    await page.route(
+      (url) => url.pathname === PETR_DONATIONS,
+      (route) => route.fulfill({ json: petrDetail }),
+    );
+    const asked = await mockAdministrationReceiptReading(
+      page,
+      { id: receipt.id, donationId: receipt.donationId, donorId: PETR_ID },
+      { singleNumber: receipt.number, withArt: true },
+    );
+    await page.goto(`/sprava/darci/${PETR_ID}`);
+    const row = page
+      .getByRole('region', { name: 'Vydaná potvrzení' })
+      .getByRole('row')
+      .filter({ hasText: receipt.number });
+    const download = row.getByRole('button', { name: `Stáhnout PDF potvrzení ${receipt.number}` });
+
+    const [saved] = await Promise.all([page.waitForEvent('download'), download.click()]);
+
+    expect(saved.suggestedFilename()).toBe(`potvrzeni-o-daru-${receipt.number}.pdf`);
+    await expect(row.getByRole('status').filter({ hasText: /\S/ })).toHaveText(
+      `Potvrzení potvrzeni-o-daru-${receipt.number}.pdf je stažené. Najdete ho ve stažených souborech.`,
+    );
+    await expect(download).toBeFocused();
+    expect(asked).toEqual([
+      `/api/admin/donations/receipts/${receipt.id}`,
+      `/api/admin/donations/receipt-images/${syntheticSignature.sha256}`,
+      `/api/admin/donations/receipt-images/${syntheticPortrait.sha256}`,
+    ]);
+    const pdf = await readPdf(new Uint8Array(await readFile(await saved.path())));
+    expect(pdf.pages[0].text).toContain(receipt.number);
+    expect(pdf.raw.match(/\/Subtype \/Image/g) ?? []).toHaveLength(1);
+    expect(pdf.pages[0].links.map((link) => link.url)).toEqual([
+      expect.stringMatching(/^https:\/\/nfnn\.cz\/overit#/),
+    ]);
   });
 
   test('when removing an account is refused because of a receipt, then the alert shows the reason and the account stays', async ({
