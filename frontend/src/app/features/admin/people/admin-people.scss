@@ -43,6 +43,13 @@
   background: var(--color-surface-alt);
 }
 
+.person-thumb--initials {
+  display: grid;
+  place-items: center;
+  color: var(--color-text-muted);
+  font: var(--weight-bold) var(--text-2xl) var(--font-serif);
+}
+
 .person-name {
   font-weight: var(--weight-semibold);
   color: var(--color-text);

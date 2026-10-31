@@ -41,7 +41,9 @@
                       height="48"
                     />
                   } @else {
-                    <span class="person-thumb person-thumb--empty" aria-hidden="true"></span>
+                    <span class="person-thumb person-thumb--initials" aria-hidden="true">{{
+                      initials(member.name)
+                    }}</span>
                   }
                   <div class="person-text">
                     <p class="person-name">{{ member.name }}</p>

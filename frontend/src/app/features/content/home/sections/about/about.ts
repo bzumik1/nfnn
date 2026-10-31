@@ -5,7 +5,7 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 import { RouterLink } from '@angular/router';
 import { AboutPhotoResponse } from '../../../about-api';
 import { mediaUrl } from '../../../news-api';
-import { PublicPeopleResponse } from '../../../people-api';
+import { personInitials, PublicPeopleResponse } from '../../../people-api';
 
 const PHOTO_WIDTHS = [480, 960, 1440];
 const LARGEST_WIDTH = PHOTO_WIDTHS[PHOTO_WIDTHS.length - 1];
@@ -72,12 +72,5 @@ export class About {
       .filter((paragraph) => paragraph !== '');
   }
 
-  protected initials(name: string): string {
-    return name
-      .split(/\s+/)
-      .filter((part) => part !== '')
-      .map((part) => part.charAt(0).toLocaleUpperCase('cs'))
-      .slice(0, 2)
-      .join('');
-  }
+  protected readonly initials = personInitials;
 }

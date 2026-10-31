@@ -293,6 +293,16 @@ describe('Given an administrator and two people of the foundation', () => {
     expect(element<HTMLTextAreaElement>(fixture, '#founders-note').value).toBe('Děkujeme.');
   });
 
+  it('when the page opens, then a person without a portrait shows their initials in its place, hidden from the screen reader', () => {
+    const thumbs = fixture.nativeElement.querySelectorAll(
+      '.person-thumb',
+    ) as NodeListOf<HTMLElement>;
+
+    expect(thumbs[0].tagName).toBe('IMG');
+    expect(thumbs[1].textContent?.trim()).toBe('AV');
+    expect(thumbs[1].getAttribute('aria-hidden')).toBe('true');
+  });
+
   it('when they move the first person down, then the new order is saved and focus stays on the moved person', async () => {
     await click(fixture, `#person-down-${PERSON_ID}`);
 

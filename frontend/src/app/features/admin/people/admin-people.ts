@@ -37,6 +37,7 @@ import {
   PersonImageResponse,
   PersonRequest,
   PersonResponse,
+  personInitials,
 } from '../../content/people-api';
 
 type LoadState = 'loading' | 'ready' | 'error';
@@ -90,6 +91,7 @@ export class AdminPeople {
   protected readonly maxNoteLength = MAX_FOUNDERS_NOTE_LENGTH;
   protected readonly maxEmailLength = MAX_EMAIL_LENGTH;
   protected readonly emailShape = EMAIL_SHAPE;
+  protected readonly initials = personInitials;
 
   protected readonly state = signal<LoadState>('loading');
   protected readonly members = signal<PersonResponse[]>([]);

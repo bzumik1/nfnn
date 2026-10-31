@@ -80,6 +80,15 @@ export const MAX_PEOPLE = 30;
 export const MAX_EMAIL_LENGTH = 254;
 export const EMAIL_SHAPE = '^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$';
 
+export function personInitials(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter((part) => part !== '')
+    .map((part) => part.charAt(0).toLocaleUpperCase('cs'))
+    .slice(0, 2)
+    .join('');
+}
+
 const ADMIN_PEOPLE = '/api/admin/content/people';
 
 @Injectable({ providedIn: 'root' })
