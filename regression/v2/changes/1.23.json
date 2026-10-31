@@ -4,5 +4,13 @@
     "caseFile": "shared-cases/receipts/formatting.json",
     "reason": "1.23 states the Czech receipt dates with a two-digit day and month (01. 01. 2026), as plan v3 D11 decided and the browser prints since 1.9; the runner padded the v2 text instead, so the case file no longer said what receipts print (Phase 1 gate, testovani.md M1)",
     "contract": ".claude/rules/testing.md, Logic on both sides; docs/frontend-overview.md, receipt PDF"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/receipt-format.spec.ts > Given the shared receipt formatting cases of Czech dates > when *",
+    "reason": "1.23 compares the formatted date with the case as written, now that the cases state the two-digit day and month; the six tests keep their cases and change only the name, which no longer says the runner pads v2's text",
+    "replacement": "src/app/features/donations/receipt-format.spec.ts > Given the shared receipt formatting cases of Czech dates > when 2026-01-01 in Czech is formatted, then it reads with a two-digit day and month as the receipt prints it",
+    "contract": ".claude/rules/testing.md, Logic on both sides"
   }
 ]
