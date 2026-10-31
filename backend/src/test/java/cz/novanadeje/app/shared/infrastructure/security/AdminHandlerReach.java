@@ -12,6 +12,7 @@ enum AdminHandlerReach {
     CONNECTOR,
     CONNECTOR_SECRETS_IN_BROWSER_ONLY,
     CONNECTOR_REPLACEMENTS_IN_BROWSER_ONLY,
+    CONNECTOR_WEB_SIGNATURES_IN_BROWSER_ONLY,
     BROWSER_ONLY;
 
     static final Map<String, AdminHandlerReach> CLASSIFIED = classified();
@@ -50,6 +51,16 @@ enum AdminHandlerReach {
         table.put("DELETE /api/admin/content/news/{id}", BROWSER_ONLY);
         table.put("POST /api/admin/content/news/{id}/publish", CONNECTOR);
         table.put("POST /api/admin/content/news/{id}/unpublish", CONNECTOR);
+        table.put("GET /api/admin/content/people", CONNECTOR);
+        table.put("POST /api/admin/content/people", CONNECTOR);
+        table.put("PUT /api/admin/content/people/order", CONNECTOR);
+        table.put("PUT /api/admin/content/people/note", CONNECTOR);
+        table.put("PUT /api/admin/content/people/{id}", CONNECTOR_WEB_SIGNATURES_IN_BROWSER_ONLY);
+        table.put("DELETE /api/admin/content/people/{id}", CONNECTOR_WEB_SIGNATURES_IN_BROWSER_ONLY);
+        table.put("POST /api/admin/content/people/{id}/web-signature", BROWSER_ONLY);
+        table.put("DELETE /api/admin/content/people/{id}/web-signature", BROWSER_ONLY);
+        table.put("GET /api/admin/content/project-order", CONNECTOR);
+        table.put("PUT /api/admin/content/project-order", CONNECTOR);
         table.put("GET /api/admin/content/projects", CONNECTOR);
         table.put("POST /api/admin/content/projects", CONNECTOR);
         table.put("GET /api/admin/content/projects/{id}", CONNECTOR);
