@@ -110,6 +110,9 @@
         @if (boardLine(); as line) {
           <p class="board-members">{{ line }}</p>
         }
+        @if (people.footnote; as footnote) {
+          <p class="board-footnote">{{ footnote }}</p>
+        }
       } @else {
         <ul class="board-people">
           <li class="board-person">

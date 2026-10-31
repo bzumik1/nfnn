@@ -30,6 +30,7 @@ import {
   MAX_BOARD_NOTE_LENGTH,
   MAX_EMAIL_LENGTH,
   MAX_FOUNDERS_NOTE_LENGTH,
+  MAX_PEOPLE_FOOTNOTE_LENGTH,
   MAX_PEOPLE,
   MAX_PERSON_NAME_LENGTH,
   MAX_PERSON_ROLE_LENGTH,
@@ -90,6 +91,7 @@ export class AdminPeople {
   protected readonly maxRoleLength = MAX_PERSON_ROLE_LENGTH;
   protected readonly maxBoardNoteLength = MAX_BOARD_NOTE_LENGTH;
   protected readonly maxNoteLength = MAX_FOUNDERS_NOTE_LENGTH;
+  protected readonly maxFootnoteLength = MAX_PEOPLE_FOOTNOTE_LENGTH;
   protected readonly maxEmailLength = MAX_EMAIL_LENGTH;
   protected readonly emailShape = EMAIL_SHAPE;
 
@@ -106,12 +108,15 @@ export class AdminPeople {
   protected readonly confirmingRemoval = signal(false);
   protected readonly removing = signal(false);
   protected readonly savingNote = signal(false);
+  protected readonly savingFootnote = signal(false);
   protected readonly listNotice = signal<Notice | null>(null);
   protected readonly editorNotice = signal<Notice | null>(null);
   protected readonly noteNotice = signal<Notice | null>(null);
+  protected readonly footnoteNotice = signal<Notice | null>(null);
 
   protected draft: Draft = emptyDraft();
   protected noteText = '';
+  protected footnoteText = '';
 
   protected readonly nameMessages = {
     required: $localize`:@@admin.people.name.required:Vyplňte prosím jméno.`,
@@ -129,6 +134,9 @@ export class AdminPeople {
   };
   protected readonly noteMessages = {
     maxlength: $localize`:@@admin.people.note.tooLong:Slovo zakladatelů může mít nejvíc ${MAX_FOUNDERS_NOTE_LENGTH}:max: znaků.`,
+  };
+  protected readonly footnoteMessages = {
+    maxlength: $localize`:@@admin.people.footnote.tooLong:Řádek může mít nejvíc ${MAX_PEOPLE_FOOTNOTE_LENGTH}:max: znaků.`,
   };
 
   protected readonly current = computed(() => {
@@ -168,6 +176,7 @@ export class AdminPeople {
         next: (people) => {
           this.members.set(people.members);
           this.noteText = people.note ?? '';
+          this.footnoteText = people.footnote ?? '';
           this.state.set('ready');
         },
         error: (failure: unknown) => {
@@ -434,6 +443,43 @@ export class AdminPeople {
             text: describeProblem(
               failure,
               $localize`:@@admin.people.note.failed:Slovo zakladatelů se nepodařilo uložit. Zkuste to prosím znovu.`,
+            ),
+          });
+        },
+      });
+  }
+
+  protected saveFootnote(form: NgForm): void {
+    if (this.savingFootnote()) {
+      return;
+    }
+    this.footnoteNotice.set(null);
+    if (form.invalid) {
+      return;
+    }
+    this.savingFootnote.set(true);
+    this.api
+      .saveFootnote(text(this.footnoteText))
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (footnote) => {
+          this.savingFootnote.set(false);
+          this.footnoteText = footnote.text ?? '';
+          form.form.markAsPristine();
+          this.footnoteNotice.set({
+            kind: 'status',
+            text: footnote.text
+              ? $localize`:@@admin.people.footnote.saved:Řádek pod správní radou je uložený a na webu.`
+              : $localize`:@@admin.people.footnote.removed:Řádek pod správní radou jsme z webu odebrali.`,
+          });
+        },
+        error: (failure: unknown) => {
+          this.savingFootnote.set(false);
+          this.footnoteNotice.set({
+            kind: 'alert',
+            text: describeProblem(
+              failure,
+              $localize`:@@admin.people.footnote.failed:Řádek pod správní radou se nepodařilo uložit. Zkuste to prosím znovu.`,
             ),
           });
         },
