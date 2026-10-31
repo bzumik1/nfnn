@@ -300,6 +300,8 @@ describe('Given the receipt signing key section of the receipt settings', () => 
         'Je to klíč, kterým server teď podepisuje. Web se hned restartuje',
       );
       expect(document.activeElement).toBe(root().querySelector('#withdrawal-code'));
+      expect(root().querySelectorAll('dialog [autofocus]')).toHaveLength(1);
+      expect(buttons()).not.toContain('Potvrdit přístupovým klíčem');
 
       await submit();
 
@@ -439,6 +441,7 @@ describe('Given the receipt signing key section of the receipt settings', () => 
 
     it('then the passkey is offered first, its answer goes with the request and the web keeps running', async () => {
       expect(root().querySelector('#withdrawal-code')).toBeNull();
+      expect(document.activeElement?.textContent?.trim()).toBe('Zrušit');
       expect(text('dialog .withdrawal-points')).toContain(
         'Tímto klíčem server už nepodepisuje, takže web poběží dál beze změny.',
       );
@@ -488,6 +491,7 @@ describe('Given the receipt signing key section of the receipt settings', () => 
       await click('Zadat kód z aplikace');
 
       expect(document.activeElement).toBe(root().querySelector('#withdrawal-code'));
+      expect(buttons()).toContain('Potvrdit přístupovým klíčem');
     });
   });
 });
