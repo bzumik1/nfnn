@@ -751,6 +751,22 @@ describe('Given an administrator on the administration home', () => {
       expect(attention().querySelector('.healthy')).toBeNull();
     });
 
+    it('then receipts nobody signs lead the rows, ahead of another problem', async () => {
+      await sources(
+        paymentList([]),
+        [administrator()],
+        backupsView({ key: { available: true, confirmed: false, confirmedAt: null } }),
+      );
+      http.expectOne(SIGNATORY_URL).flush(noReceiptSignatory());
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(items()).toEqual([
+        'Potvrzení o daru nikdo nepodepisuje, a tak je web dárcům nevystaví. Vybrat podepisujícího',
+        'Klíč k zálohám si zatím nikdo neuložil. Bez něj žádnou zálohu neobnovíte. Uložit ho má někdo ze správní rady, ne technik. Uložit klíč',
+      ]);
+    });
+
     it('then a signatory without an uploaded signature gets a row leading to the people of the foundation', async () => {
       await sources();
       http.expectOne(SIGNATORY_URL).flush(receiptSignatory({ signature: false }));

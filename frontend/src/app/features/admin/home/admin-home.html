@@ -60,6 +60,20 @@
     }
     @if (needsAttention()) {
       <ul class="attention-list">
+        @if (signatoryState() === 'missing') {
+          <li class="attention-item attention-item--danger attention-signatory">
+            <span i18n="@@admin.home.attention.signatory"
+              >Potvrzení o daru nikdo nepodepisuje, a tak je web dárcům nevystaví.</span
+            >
+            &ngsp;
+            <a
+              class="ui-button ui-button--small"
+              routerLink="/sprava/lide-fondu"
+              i18n="@@admin.home.attention.signatory.open"
+              >Vybrat podepisujícího</a
+            >
+          </li>
+        }
         @if (state() === 'error') {
           <li class="attention-item" i18n="@@admin.home.attention.import.failed">
             Stav stahování plateb se nepodařilo zjistit; zkuste to znovu v kartě níže.
@@ -247,19 +261,6 @@
             >
               Zkusit znovu
             </button>
-          </li>
-        } @else if (signatoryState() === 'missing') {
-          <li class="attention-item attention-item--danger attention-signatory">
-            <span i18n="@@admin.home.attention.signatory"
-              >Potvrzení o daru nikdo nepodepisuje, a tak je web dárcům nevystaví.</span
-            >
-            &ngsp;
-            <a
-              class="ui-button ui-button--small"
-              routerLink="/sprava/lide-fondu"
-              i18n="@@admin.home.attention.signatory.open"
-              >Vybrat podepisujícího</a
-            >
           </li>
         } @else if (signatoryState() === 'unsigned') {
           <li class="attention-item attention-signature">
