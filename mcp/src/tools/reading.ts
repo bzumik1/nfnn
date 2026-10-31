@@ -323,7 +323,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Podpis na potvrzeních',
       description:
-        'Who signs the donation receipts: the person of the foundation chosen for it (personId, name, receiptRole, the role printed under the name on receipts, chosenAt, and whether that person has a portrait and a receipt signature), or signatory null when none is chosen, in which case no receipt can be issued. Also the receipt signatures uploaded per person: personId, kind (RASTER for a scan, VECTOR for an SVG of filled paths), size in pixels and when it was uploaded; the images themselves are left out. Choosing the signatory and uploading or removing a receipt signature stay on the web (/sprava/lide-fondu).',
+        'Who signs the donation receipts: the person of the foundation chosen for it (personId, name, receiptRole, the role printed under the name on receipts, chosenAt, and whether that person has a portrait and a receipt signature), or signatory null when none is chosen, in which case no receipt can be issued. Also the receipt signatures uploaded per person: personId, kind (RASTER for a scan, VECTOR for an SVG of filled paths), size in pixels and when it was uploaded; the images themselves are left out. Receipts issued after a change carry the name, the receipt role and a RASTER signature above them; the portrait and a VECTOR signature only once receipts are drawn in the browser; until then they carry the line and the name. Choosing the signatory and uploading or removing a receipt signature stay on the web (/sprava/lide-fondu).',
       annotations: READ_ONLY,
     },
     async (ctx) =>
