@@ -1,0 +1,30 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.receipt.DonationReceiptIssuerConcurrencyTest > Given the server's signing key is not registered, when a receipt is issued, then the database refuses it, nothing is stored and its number stays a gap",
+    "reason": "Slice 1.22 (Phase 1 gate, backend m2): an issue while the server's own key is not published is refused with 409 donations/receipt-signing-key-unpublished before a number is taken, instead of failing on the key's foreign key after taking one",
+    "replacement": "donations.application.receipt.DonationReceiptIssuerConcurrencyTest > Given the server's signing key is not registered, when a receipt is issued, then it is refused as unpublished before a number is taken and nothing is stored, and once the key is registered the receipt takes the first number"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.signing.ReceiptSigningKeysTest > Given the server's own key withdrawn in the trail, when the keys are asked for a withdrawn current key while issuing, then they name it, and none for an active own key",
+    "reason": "Slice 1.22 (Phase 1 gate, backend m2): ReceiptSigningKeys answers the state of the current key while issuing (published, withdrawn or not published) instead of only a withdrawn one",
+    "replacement": "donations.application.signing.ReceiptSigningKeysTest > Given the server's own key withdrawn in the trail, when the keys are asked for the current key while issuing, then they name it withdrawn, and published for an active own key"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.signing.ReceiptSigningKeysTest > Given the server's own row, when the keys are asked for a withdrawn current key while issuing, then the own row is locked for issuing, so a withdrawal committing meanwhile is waited for",
+    "reason": "Slice 1.22 (Phase 1 gate, backend m2): the method asked is now the current key's state while issuing, which locks the own row as before",
+    "replacement": "donations.application.signing.ReceiptSigningKeysTest > Given the server's own row, when the keys are asked for the current key while issuing, then the own row is locked for issuing, so a withdrawal committing meanwhile is waited for"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "content.application.people.PeopleAdminServiceTest > Given the person who signs the receipts, when a connected application renames them keeping the portrait or a browser changes the portrait, then both pass",
+    "reason": "Slice 1.22 (Phase 1 security gate m1): a connected application may no longer rename the person who signs the receipts (403 content/receipt-signatory-name-in-browser-only); the test now keeps the name through the connection and renames in the browser",
+    "replacement": "content.application.people.PeopleAdminServiceTest > Given the person who signs the receipts, when a connected application changes their other details keeping the name and the portrait or a browser renames them and changes the portrait, then both pass"
+  }
+]

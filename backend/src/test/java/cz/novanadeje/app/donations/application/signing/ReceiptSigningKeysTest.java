@@ -135,19 +135,56 @@ class ReceiptSigningKeysTest {
     }
 
     @Test
-    @DisplayName("Given the server's own key withdrawn in the trail, when the keys are asked for a withdrawn current key while issuing, then they name it, and none for an active own key")
+    @DisplayName("Given the server's own key withdrawn in the trail, when the keys are asked for the current key while issuing, then they name it withdrawn, and published for an active own key")
     void should_name_withdrawn_current_key_when_asked_given_own_key_withdrawn() {
-        assertThat(keys.withdrawnCurrentKeyHeldForIssuing()).isEmpty();
+        assertThat(keys.currentKeyHeldForIssuing()).isEqualTo(currentKey(CurrentKeyForIssuing.State.PUBLISHED));
 
         trail.entries.add(ReceiptSigningKeyHistoryTest.withdrawn("21fe31df"));
 
-        assertThat(keys.withdrawnCurrentKeyHeldForIssuing()).contains(new ReceiptSigningKeyId("21fe31df"));
+        assertThat(keys.currentKeyHeldForIssuing()).isEqualTo(currentKey(CurrentKeyForIssuing.State.WITHDRAWN));
     }
 
     @Test
-    @DisplayName("Given the server's own row, when the keys are asked for a withdrawn current key while issuing, then the own row is locked for issuing, so a withdrawal committing meanwhile is waited for")
+    @DisplayName("Given the server's own row missing, when the keys are asked for the current key while issuing, then they name it not published")
+    void should_name_current_key_unpublished_when_asked_given_no_own_row() {
+        stored.clear();
+
+        assertThat(keys.currentKeyHeldForIssuing()).isEqualTo(currentKey(CurrentKeyForIssuing.State.UNPUBLISHED));
+    }
+
+    @Test
+    @DisplayName("Given the server's own active row failing its seal, when the keys are asked for the current key while issuing, then they name it not published, as the overview does")
+    void should_name_current_key_unpublished_when_asked_given_own_row_broken() {
+        stored.set(0, stored.getFirst().sealedAgain("broken"));
+
+        assertThat(keys.currentKeyHeldForIssuing()).isEqualTo(currentKey(CurrentKeyForIssuing.State.UNPUBLISHED));
+        assertThat(keys.overview().currentKeyPublished()).isFalse();
+    }
+
+    @Test
+    @DisplayName("Given the server's own key a public test key of RFC 8032 outside development, when the keys are asked for the current key while issuing, then they name it not published")
+    void should_name_current_key_unpublished_when_asked_given_public_test_key_outside_development() {
+        outsideDevelopment = true;
+
+        assertThat(keys.currentKeyHeldForIssuing()).isEqualTo(currentKey(CurrentKeyForIssuing.State.UNPUBLISHED));
+    }
+
+    @Test
+    @DisplayName("Given the server's own row withdrawn and failing its seal, when the keys are asked for the current key while issuing, then they name it withdrawn, so the pause wins")
+    void should_name_current_key_withdrawn_when_asked_given_own_row_withdrawn_and_broken() {
+        stored.set(0, stored.getFirst().withdrawn(content -> "broken"));
+
+        assertThat(keys.currentKeyHeldForIssuing()).isEqualTo(currentKey(CurrentKeyForIssuing.State.WITHDRAWN));
+    }
+
+    private static CurrentKeyForIssuing currentKey(CurrentKeyForIssuing.State state) {
+        return new CurrentKeyForIssuing(new ReceiptSigningKeyId("21fe31df"), state);
+    }
+
+    @Test
+    @DisplayName("Given the server's own row, when the keys are asked for the current key while issuing, then the own row is locked for issuing, so a withdrawal committing meanwhile is waited for")
     void should_lock_the_own_row_for_issuing_when_asked_given_the_own_row() {
-        keys.withdrawnCurrentKeyHeldForIssuing();
+        keys.currentKeyHeldForIssuing();
 
         assertThat(lockedForIssuing).containsExactly(new ReceiptSigningKeyId("21fe31df"));
     }
@@ -157,7 +194,7 @@ class ReceiptSigningKeysTest {
     void should_show_current_key_revoked_when_overview_is_read_given_own_row_withdrawn() {
         stored.set(0, stored.getFirst().withdrawn(content -> PrefixSeals.HERE));
 
-        assertThat(keys.withdrawnCurrentKeyHeldForIssuing()).contains(new ReceiptSigningKeyId("21fe31df"));
+        assertThat(keys.currentKeyHeldForIssuing()).isEqualTo(currentKey(CurrentKeyForIssuing.State.WITHDRAWN));
         assertThat(keys.overview().keys()).singleElement().satisfies(key -> {
             assertThat(key.status()).isEqualTo(ReceiptSigningKeyStatus.REVOKED);
             assertThat(key.published()).isTrue();

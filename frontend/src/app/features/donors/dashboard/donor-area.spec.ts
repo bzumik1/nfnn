@@ -2535,6 +2535,26 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(savedFiles).toEqual([]);
     });
 
+    it('then a receipt refused while the server has no published signing key shows the title and detail of that problem, which say whom to write to', async () => {
+      await open('/darce/potvrzeni');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      await downloadYear(2025);
+      receiptRequest({ year: 2025 }).flush(
+        {
+          ...problemBody('donations/receipt-signing-key-unpublished', 'Potvrzení teď nejde vystavit', 409),
+          detail: 'Napište nám prosím na info@nfnn.cz.',
+        },
+        { status: 409, statusText: 'Conflict' },
+      );
+      await settleBlobFailure();
+
+      expect(text('.yearly-card [role="alert"]')).toBe(
+        'Potvrzení teď nejde vystavit. Napište nám prosím na info@nfnn.cz.',
+      );
+      expect(savedFiles).toEqual([]);
+    });
+
     it('then an issued receipt with a character no receipt can print asks the donor to write to the foundation, not to try another browser', async () => {
       await open('/darce/potvrzeni');
       await respond(twoYearSummary(), twoYearDonations());

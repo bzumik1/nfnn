@@ -59,7 +59,9 @@ public class ReceiptSigningKeyWithdrawal {
             throw new ReceiptSigningKeyWithdrawalPaused();
         }
         try {
-            return transactions.execute(status -> withdrawLocked(adminId, keyId, proof, now));
+            WithdrawnReceiptSigningKey withdrawn = transactions.execute(status -> withdrawLocked(adminId, keyId, proof, now));
+            log.warn("Admin {} withdrew the receipt signing key {}", adminId, keyId);
+            return withdrawn;
         } catch (RefusedSecondFactor refusal) {
             if (withdrawnByNow(keyId)) {
                 throw new ReceiptSigningKeyAlreadyWithdrawn(keyId);
@@ -80,7 +82,6 @@ public class ReceiptSigningKeyWithdrawal {
         keys.save(key.withdrawn(content -> seals.seal(ReceiptSigningKey.SEAL_PURPOSE, content)));
         events.publishEvent(new AdminActionPerformed(adminId, ACTION, Optional.empty(), ReceiptSigningKeyAuditDetails.withdrawn(keyId), now));
         events.publishEvent(new ReceiptSigningKeyWithdrawn(adminId, keyId.value(), current, now));
-        log.warn("Admin {} withdrew the receipt signing key {}", adminId, keyId);
         return new WithdrawnReceiptSigningKey(keyId, current);
     }
 
