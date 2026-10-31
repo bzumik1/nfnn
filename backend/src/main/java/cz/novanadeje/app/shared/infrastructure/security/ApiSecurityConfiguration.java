@@ -40,6 +40,9 @@ class ApiSecurityConfiguration {
     private static final String[] BROWSER_ONLY_PUTS = {
             "/api/admin/donations/receipt-signatory"};
 
+    private static final String[] BROWSER_ONLY_GETS = {
+            "/api/admin/donations/receipt-signatures/*"};
+
     @Bean
     SecurityFilterChain apiSecurityFilterChain(HttpSecurity http, ProblemDetailSecurityErrorHandler errorHandler,
                                                JwtAuthenticationConverter jwtAuthenticationConverter) throws Exception {
@@ -67,6 +70,7 @@ class ApiSecurityConfiguration {
                         .requestMatchers(HttpMethod.DELETE, BROWSER_ONLY_DELETES).access(administratorInBrowser())
                         .requestMatchers(HttpMethod.POST, BROWSER_ONLY_POSTS).access(administratorInBrowser())
                         .requestMatchers(HttpMethod.PUT, BROWSER_ONLY_PUTS).access(administratorInBrowser())
+                        .requestMatchers(HttpMethod.GET, BROWSER_ONLY_GETS).access(administratorInBrowser())
                         .requestMatchers(HttpMethod.GET, "/api/admin/**").hasRole(ADMIN_ROLE)
                         .requestMatchers(HttpMethod.HEAD, "/api/admin/**").hasRole(ADMIN_ROLE)
                         .requestMatchers("/api/admin/**").access(new AdminWriteAuthorizationManager())
