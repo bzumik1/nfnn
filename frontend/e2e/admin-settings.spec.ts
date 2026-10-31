@@ -220,7 +220,7 @@ test.describe('Given an administrator whose receipt signing key may have leaked'
     );
   });
 
-  test('when they withdraw the key of the server with a fresh code, then the key shows as withdrawn, the web restarts and the card shows the new key', async ({
+  test('when they withdraw the key of the server with a fresh code, then the key shows as withdrawn, the web goes down and comes back and the card shows the new key', async ({
     page,
   }) => {
     const withdrawals: unknown[] = [];
@@ -231,19 +231,13 @@ test.describe('Given an administrator whose receipt signing key may have leaked'
       registeredAt: '2026-11-20T09:31:00Z',
     };
     await page.route(
-      (url) => url.pathname === '/api/operations/setup',
+      (url) => url.pathname === SIGNING_KEYS,
       (route) => {
         if (withdrawals.length > 0 && !restarted) {
           restarted = true;
           return route.fulfill({ status: 502, body: '' });
         }
-        return route.fulfill({ json: { required: false, codeRequired: true } });
-      },
-    );
-    await page.route(
-      (url) => url.pathname === SIGNING_KEYS,
-      (route) =>
-        route.fulfill({
+        return route.fulfill({
           json: restarted
             ? {
                 ...receiptSigningKeys,
@@ -254,7 +248,8 @@ test.describe('Given an administrator whose receipt signing key may have leaked'
                 ],
               }
             : receiptSigningKeys,
-        }),
+        });
+      },
     );
     await page.route(
       (url) => url.pathname === `${SIGNING_KEYS}/21fe31df/withdrawal`,
