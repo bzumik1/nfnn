@@ -6,6 +6,18 @@
     "contract": "docs/frontend-overview.md, receipt-pdf; .claude/rules/testing.md, Logic on both sides"
   },
   {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/receipts/printable.json",
+    "reason": "1.9 round 1 (S-M1, T-M3): the characters a receipt can print, specified once for both sides. A text is printed with its invisible format characters dropped and composed to NFC; every code point of the result must lie in the printable set (Latin with Extended-B and Extended Additional, Greek, Cyrillic and the typographic punctuation the receipt fonts carry). The backend (PrintableTextSharedCasesTest over shared/domain/PrintableText) refuses a name or address outside the set at registration and profile change and refuses to issue such a receipt before a number is taken; the browser (receipt-characters.spec.ts) prints the text it gives and refuses to draw an outside character. A new file with its schema schemas/receipts/printable.schema.json; the source is edited",
+    "contract": "docs/api-contract.md, donations/receipt-unprintable and the registration and profile validation; docs/security-overview.md and docs/system-overview.md, the receipt drawn in the browser"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/schemas/receipts/printable.schema.json",
+    "reason": "The schema of the new shared-cases/receipts/printable.json: input.text, expected.text and expected.outside (U+XXXX code points, each once)",
+    "contract": ".claude/rules/testing.md, Logic on both sides"
+  },
+  {
     "kind": "retired",
     "suite": "frontend-vitest",
     "test": "src/app/features/donations/donations-api.spec.ts > Given the donations API > when the receipt of one donation is requested, then it downloads that donation's PDF under the file name from the server",

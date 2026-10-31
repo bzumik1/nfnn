@@ -1,0 +1,310 @@
+{
+  "source": "edited",
+  "logic": "What a receipt can print (plan v3 slice 1.9, lead decision after round 1, S-M1 and T-M3): the characters the receipt fonts of every theme carry, so that nothing is issued and frozen that no browser can draw. A text is printed as follows: first every invisible format character is dropped (U+00AD, U+061C, U+180E, U+200B-U+200F, U+202A-U+202E, U+2060-U+2064, U+2066-U+206F, U+FEFF: soft hyphen, zero-width characters, bidi marks and controls, word joiners, the byte order mark), then the rest is composed to Unicode NFC, and the result is the printed text; this is the only way the drawn text may differ from the frozen one. Every code point of the printed text must then lie in the printable set: U+0020-007E, U+00A0-00AC, U+00AE-0148, U+014A-01C3, U+01C5-024F, U+0259, U+02BB-02BC, U+02C6-02C7, U+02DA, U+02DC-02DD, U+0375-0376, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03D7, U+03DC-03DD, U+03F0-03F6, U+03F9-03FA, U+03FC-0479, U+0480-0482, U+048A-049D, U+04A0-04FF, U+1E00-1E9B, U+1E9D-1EFB, U+2013-2014, U+2018-201A, U+201C-201E, U+2020, U+2022, U+2026, U+2032-2033, U+2039-203A, U+20AC, U+2116, U+2122, U+2212 (Latin with Latin-1, Extended-A, Extended-B and Extended Additional, so Romanian and Vietnamese too, the schwa, the modifier apostrophes, Greek, Cyrillic, the typographic punctuation, euro, numero, trade mark and minus: every one of them that Inter, regular and bold, and DejaVu Sans, regular and bold, both carry, less the characters NFC never leaves as they are). expected.text is the printed text and expected.outside names each code point of it outside the set once, as U+XXXX (at least four upper-case hex digits), in the order of first appearance; an empty list means the text prints. The backend (shared/domain/PrintableText, runner PrintableTextSharedCasesTest) refuses a name or address with an outside character at registration and profile change, and refuses to issue a receipt whose printed data has one, before a number is taken; the browser (receipt-pdf/receipt-characters.ts, runner receipt-characters.spec.ts) prints the text it gives and refuses to draw a receipt with an outside character, and every receipt font of every theme carries every character of the set (receipt-layout.spec.ts).",
+  "cases": [
+    {
+      "name": "A Czech name and address print as they are",
+      "input": {
+        "text": "Jana Nováková, Dlouhá 12, 400 01 Ústí nad Labem"
+      },
+      "expected": {
+        "text": "Jana Nováková, Dlouhá 12, 400 01 Ústí nad Labem",
+        "outside": []
+      }
+    },
+    {
+      "name": "The first and the last character of every printable range print",
+      "input": {
+        "text": " ~\u00a0¬®ňŊǃǅɏəʻʼˆˇ˚˜˝͵ͶͺͿ΄ΊΌΎΡΣϗϜϝϰ϶ϹϺϼѹҀ҂ҊҝҠӿḀẛẝỻ–—‘‚“„†•…′″‹›€№™−"
+      },
+      "expected": {
+        "text": " ~\u00a0¬®ňŊǃǅɏəʻʼˆˇ˚˜˝͵ͶͺͿ΄ΊΌΎΡΣϗϜϝϰ϶ϹϺϼѹҀ҂ҊҝҠӿḀẛẝỻ–—‘‚“„†•…′″‹›€№™−",
+        "outside": []
+      }
+    },
+    {
+      "name": "The characters next to every printable range, dropped ones aside, are outside the set, each named once in the order they appear",
+      "input": {
+        "text": "\u001f\u007f\u009fŉǄɐɘɚʺʽ˅ˈ˙˛˞ͷ\u0379\u0380\u0383\u038b\u038d\u03a2ϘϛϞϯϷϸϻѺѿ\u0483\u0489ҞҟԀ\u1dffẜỼ‒―‗‛‟‡‣‥‧‱‴‸※₫₭ℕ℗℡℣∑∓"
+      },
+      "expected": {
+        "text": "\u001f\u007f\u009fŉǄɐɘɚʺʽ˅ˈ˙˛˞ͷ\u0379\u0380\u0383\u038b\u038d\u03a2ϘϛϞϯϷϸϻѺѿ\u0483\u0489ҞҟԀ\u1dffẜỼ‒―‗‛‟‡‣‥‧‱‴‸※₫₭ℕ℗℡℣∑∓",
+        "outside": [
+          "U+001F",
+          "U+007F",
+          "U+009F",
+          "U+0149",
+          "U+01C4",
+          "U+0250",
+          "U+0258",
+          "U+025A",
+          "U+02BA",
+          "U+02BD",
+          "U+02C5",
+          "U+02C8",
+          "U+02D9",
+          "U+02DB",
+          "U+02DE",
+          "U+0377",
+          "U+0379",
+          "U+0380",
+          "U+0383",
+          "U+038B",
+          "U+038D",
+          "U+03A2",
+          "U+03D8",
+          "U+03DB",
+          "U+03DE",
+          "U+03EF",
+          "U+03F7",
+          "U+03F8",
+          "U+03FB",
+          "U+047A",
+          "U+047F",
+          "U+0483",
+          "U+0489",
+          "U+049E",
+          "U+049F",
+          "U+0500",
+          "U+1DFF",
+          "U+1E9C",
+          "U+1EFC",
+          "U+2012",
+          "U+2015",
+          "U+2017",
+          "U+201B",
+          "U+201F",
+          "U+2021",
+          "U+2023",
+          "U+2025",
+          "U+2027",
+          "U+2031",
+          "U+2034",
+          "U+2038",
+          "U+203B",
+          "U+20AB",
+          "U+20AD",
+          "U+2115",
+          "U+2117",
+          "U+2121",
+          "U+2123",
+          "U+2211",
+          "U+2213"
+        ]
+      }
+    },
+    {
+      "name": "Every invisible format character that drawing drops, first and last of each dropped range, leaves nothing to print",
+      "input": {
+        "text": "A\u00ad\u061c\u180e\u200b\u200f\u202a\u202e\u2060\u2064\u2066\u206f\ufeffB"
+      },
+      "expected": {
+        "text": "AB",
+        "outside": []
+      }
+    },
+    {
+      "name": "A character that composition maps to another is judged by what it becomes: the Greek question mark and the Kelvin and ohm signs print, the Greek numeral sign does not",
+      "input": {
+        "text": "; K Ω ʹ"
+      },
+      "expected": {
+        "text": "; K Ω ʹ",
+        "outside": [
+          "U+02B9"
+        ]
+      }
+    },
+    {
+      "name": "A Romanian name with comma below prints",
+      "input": {
+        "text": "Ștefan Țurcanu, Strada Mihai Viteazu 7, Iași"
+      },
+      "expected": {
+        "text": "Ștefan Țurcanu, Strada Mihai Viteazu 7, Iași",
+        "outside": []
+      }
+    },
+    {
+      "name": "A Romanian name with the older cedilla letters prints",
+      "input": {
+        "text": "Şerban Ţepeş"
+      },
+      "expected": {
+        "text": "Şerban Ţepeş",
+        "outside": []
+      }
+    },
+    {
+      "name": "A Vietnamese name in composed letters prints",
+      "input": {
+        "text": "Nguyễn Văn An, Phường Bến Nghé"
+      },
+      "expected": {
+        "text": "Nguyễn Văn An, Phường Bến Nghé",
+        "outside": []
+      }
+    },
+    {
+      "name": "A Vietnamese name in decomposed letters is composed and prints",
+      "input": {
+        "text": "Nguye\u0302\u0303n Thi\u0323 Ho\u0302\u0300ng"
+      },
+      "expected": {
+        "text": "Nguyễn Thị Hồng",
+        "outside": []
+      }
+    },
+    {
+      "name": "A Ukrainian name with the modifier apostrophe prints",
+      "input": {
+        "text": "Марʼяна Ковальчук, вул. Січових Стрільців 5, Київ"
+      },
+      "expected": {
+        "text": "Марʼяна Ковальчук, вул. Січових Стрільців 5, Київ",
+        "outside": []
+      }
+    },
+    {
+      "name": "A Russian address with the numero sign prints",
+      "input": {
+        "text": "Иван Петров, ул. Ленина, д. 5, № 12"
+      },
+      "expected": {
+        "text": "Иван Петров, ул. Ленина, д. 5, № 12",
+        "outside": []
+      }
+    },
+    {
+      "name": "A Greek name prints",
+      "input": {
+        "text": "Γιώργος Παπαδόπουλος, Αθήνα"
+      },
+      "expected": {
+        "text": "Γιώργος Παπαδόπουλος, Αθήνα",
+        "outside": []
+      }
+    },
+    {
+      "name": "A Polish name prints",
+      "input": {
+        "text": "Łukasz Żółć, Gdańsk"
+      },
+      "expected": {
+        "text": "Łukasz Żółć, Gdańsk",
+        "outside": []
+      }
+    },
+    {
+      "name": "A Turkish and an Azerbaijani name print",
+      "input": {
+        "text": "Şükrü Öztürk, İlkay Gündoğan, Əli Məmmədov"
+      },
+      "expected": {
+        "text": "Şükrü Öztürk, İlkay Gündoğan, Əli Məmmədov",
+        "outside": []
+      }
+    },
+    {
+      "name": "A zero-width space, bidi marks, a word joiner and a byte order mark in a name are dropped",
+      "input": {
+        "text": "\ufeffJana\u200b \u202eNováková\u202c\u2060 \u200e\u200f"
+      },
+      "expected": {
+        "text": "Jana Nováková ",
+        "outside": []
+      }
+    },
+    {
+      "name": "A soft hyphen is dropped",
+      "input": {
+        "text": "Nová\u00adková"
+      },
+      "expected": {
+        "text": "Nováková",
+        "outside": []
+      }
+    },
+    {
+      "name": "A format character between a letter and its combining accent is dropped, and the two compose",
+      "input": {
+        "text": "Jose\u200b\u0301 Garci\u0301a"
+      },
+      "expected": {
+        "text": "José García",
+        "outside": []
+      }
+    },
+    {
+      "name": "A combining accent with no composed letter is outside the set",
+      "input": {
+        "text": "q\u0301"
+      },
+      "expected": {
+        "text": "q\u0301",
+        "outside": [
+          "U+0301"
+        ]
+      }
+    },
+    {
+      "name": "A tab and a line break are outside the set",
+      "input": {
+        "text": "Jana\tNováková\nDlouhá 12"
+      },
+      "expected": {
+        "text": "Jana\tNováková\nDlouhá 12",
+        "outside": [
+          "U+0009",
+          "U+000A"
+        ]
+      }
+    },
+    {
+      "name": "A Chinese character is outside the set, named once however often it appears",
+      "input": {
+        "text": "王 王 Wang"
+      },
+      "expected": {
+        "text": "王 王 Wang",
+        "outside": [
+          "U+738B"
+        ]
+      }
+    },
+    {
+      "name": "An emoji outside the basic plane is named by its code point",
+      "input": {
+        "text": "Jana 😀 Nováková"
+      },
+      "expected": {
+        "text": "Jana 😀 Nováková",
+        "outside": [
+          "U+1F600"
+        ]
+      }
+    },
+    {
+      "name": "A ligature character is outside the set",
+      "input": {
+        "text": "ﬁlip"
+      },
+      "expected": {
+        "text": "ﬁlip",
+        "outside": [
+          "U+FB01"
+        ]
+      }
+    },
+    {
+      "name": "An empty text prints as empty",
+      "input": {
+        "text": ""
+      },
+      "expected": {
+        "text": "",
+        "outside": []
+      }
+    }
+  ]
+}

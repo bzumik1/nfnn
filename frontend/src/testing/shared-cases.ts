@@ -212,6 +212,11 @@ export type VerificationExpected =
   | { readonly verdict: 'valid'; readonly keyId: string; readonly receipt: VerifiedReceipt }
   | { readonly verdict: 'rejected'; readonly reason: string };
 
+export interface PrintableText {
+  readonly text: string;
+  readonly outside: readonly string[];
+}
+
 export type RowsInput = Readonly<Record<string, unknown>>;
 export type Answer = Readonly<Record<string, unknown>>;
 
@@ -228,6 +233,7 @@ export interface SharedCaseTopics {
     ReceiptFormattingInput,
     ReceiptFormattingExpected
   >;
+  readonly 'receipts/printable.json': SharedCase<{ readonly text: string }, PrintableText>;
   readonly 'receipts/v1/frozen.json': SharedCase<FrozenReceiptInput, FrozenReceipt>;
   readonly 'receipts/v1/printed.json': SharedCase<{ readonly v2Sample: string }, PrintedReceipt>;
   readonly 'totp/uri.json': SharedCase<TotpUriInput, { readonly uri: string }>;
@@ -246,6 +252,7 @@ const REGISTERED_TOPICS: Readonly<Record<SharedCaseTopic, true>> = {
   'qr/payment.json': true,
   'qr/totp.json': true,
   'receipts/formatting.json': true,
+  'receipts/printable.json': true,
   'receipts/v1/frozen.json': true,
   'receipts/v1/printed.json': true,
   'totp/uri.json': true,
