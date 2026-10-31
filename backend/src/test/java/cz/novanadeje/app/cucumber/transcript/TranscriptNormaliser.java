@@ -58,6 +58,9 @@ public final class TranscriptNormaliser {
     private static final String SPAYD_FIELD = "spayd";
     private static final String QR_MODULES_FIELD = "modules";
     private static final String QR_OF_MASKED_TEXT = "<qr-of-masked-text>";
+    private static final String TIMESTAMP_FIELD = "timestamp";
+    private static final Set<String> BOOT_ERROR_FIELDS = Set.of(TIMESTAMP_FIELD, "status", "error", "path");
+    private static final String TIME = "<time>";
 
     private final Map<String, String> knownValues;
     private final Pattern knownValuePattern;
@@ -154,7 +157,12 @@ public final class TranscriptNormaliser {
             boolean totpEnrolment = raw.has(TOTP_URI_FIELD);
             boolean qrOfRecoveryCode = raw.path(SPAYD_FIELD).isString() && RECOVERY_CODE.matcher(raw.path(SPAYD_FIELD).asString()).find();
             boolean secretSetting = raw.path(SETTING_NAME_FIELD).isString() && SECRET_SETTING.matcher(raw.path(SETTING_NAME_FIELD).asString()).matches();
+            boolean bootError = BOOT_ERROR_FIELDS.stream().allMatch(raw::has);
             for (Map.Entry<String, JsonNode> field : raw.properties()) {
+                if (bootError && TIMESTAMP_FIELD.equals(field.getKey())) {
+                    normalised.put(TIMESTAMP_FIELD, TIME);
+                    continue;
+                }
                 boolean secret = isSecretField(field.getKey(), field.getValue(), totpEnrolment)
                         || secretSetting && SETTING_VALUE_FIELD.equals(field.getKey()) && !field.getValue().isNull();
                 if (qrOfRecoveryCode && TOTP_QR_FIELD.equals(field.getKey()) && field.getValue().isObject()) {
