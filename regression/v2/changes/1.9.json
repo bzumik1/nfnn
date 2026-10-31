@@ -150,5 +150,15 @@
     "field": "$.text[*]",
     "reason": "Jakub 2026-10-31 (look sheet of 1.9, question 1; the site is not live, so no backward compatibility): a receipt issued from now on prints its place and day without a comma, \"V Novém Boru dne 15. 1. 2027\" (receipt.issuedAt \"{0} dne {1}\" in the Czech and default bundles, the English \"In {0}, on {1}\" stays); the bundle is a new receipt template b4d2173… with the text set 74c43fa…, while every receipt already issued keeps the texts it was frozen with, and the v2 corpus still renders with the template v2 issued with (7b30974…)",
     "contract": "docs/system-overview.md, receipts; .claude/skills/receipt-template"
+  },
+  {
+    "kind": "log-field",
+    "line": "operations.infrastructure.settings.StartupBindingSettingsValidator: Candidate settings refused by app.donations.receipt: BindException",
+    "reason": "1.9 refuses a receipt signatory with a character no receipt can print before anything is stored (operations/settings.feature); the existing settings validator logs at WARN which settings group refused the candidate and the exception class, so an administrator's failed save can be traced in backend.log",
+    "contract": "docs/system-overview.md, operations settings; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #264, Jakub 2026-10-31",
+      "fields": {}
+    }
   }
 ]
