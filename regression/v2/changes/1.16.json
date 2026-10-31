@@ -51,7 +51,7 @@
     "reason": "1.16: the person who signs and their signature are numbered before the learned account link, so the link's masked id moves by one or two (<id:3> to <id:4> against v2, <id:5> to <id:6> against main); the line is the same",
     "contract": "docs/api-contract.md, Receipt signatory and signatures",
     "security": {
-      "approvedIn": "PENDING",
+      "approvedIn": "PR #272, Jakub 2026-10-31",
       "fields": {
         "<id>": "the donor id, then the learned account link id; the same line as in v2, only the masked numbering moves",
         "<n>": "the bank transaction id of the fixture's payment, as in v2"
@@ -88,7 +88,7 @@
     "reason": "1.16: the settings RECEIPT_SIGNATORY_NAME and RECEIPT_SIGNATORY_ROLE are gone, because the signatory is chosen among the people of the foundation with the receipt role stored with the choice (Jakub 2026-10-31); the line names MAIL_USERNAME, the setting the scenario now changes",
     "contract": "docs/api-contract.md, Settings and the first setup",
     "security": {
-      "approvedIn": "PENDING",
+      "approvedIn": "PR #272, Jakub 2026-10-31",
       "fields": {
         "<id>": "the administrator's donor id; the setting names are the names of settings, never values",
         "<enum>": "the names of the settings changed, never their values"
@@ -107,7 +107,7 @@
     "line": "donations.application.receipt.ReceiptSignatoryService: Admin <id> chose person <id> to sign the receipts",
     "reason": "1.16: logs the outcome of choosing the receipt signatory or of deleting a removed person's receipt signature, with ids only",
     "security": {
-      "approvedIn": "PENDING",
+      "approvedIn": "PR #272, Jakub 2026-10-31",
       "fields": {
         "<id>": "the administrator's donor id, then the chosen person's id"
       }
@@ -118,7 +118,7 @@
     "line": "donations.application.receipt.ReceiptSignatureService: Receipt signature of removed person <id> deleted",
     "reason": "1.16: logs the outcome of choosing the receipt signatory or of deleting a removed person's receipt signature, with ids only",
     "security": {
-      "approvedIn": "PENDING",
+      "approvedIn": "PR #272, Jakub 2026-10-31",
       "fields": {
         "<id>": "the removed person's id"
       }
@@ -289,7 +289,7 @@
     "line": "content.infrastructure.people.ContentFoundationPeople: Portrait <id> cannot be prepared for print, the receipt is issued without it",
     "reason": "1.16 round 1 (S-m2): a portrait whose stored image cannot be decoded freezes the receipt without it, and the warning names only the media id",
     "security": {
-      "approvedIn": "PENDING",
+      "approvedIn": "PR #272, Jakub 2026-10-31",
       "fields": {
         "<id>": "the media id of the portrait"
       }
