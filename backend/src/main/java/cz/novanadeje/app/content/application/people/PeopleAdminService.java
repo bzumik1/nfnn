@@ -11,8 +11,9 @@ import cz.novanadeje.app.content.domain.people.PersonImageInUse;
 import cz.novanadeje.app.content.domain.people.PersonNotFound;
 import cz.novanadeje.app.content.domain.people.PersonRepository;
 import cz.novanadeje.app.content.domain.people.TooManyPeople;
-import cz.novanadeje.app.content.domain.people.WebSignatureInBrowserOnly;
+import cz.novanadeje.app.shared.application.account.VerifiedAccountEmails;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.shared.domain.EmailAddress;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +23,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 @Service
 @Transactional
@@ -37,18 +39,28 @@ public class PeopleAdminService {
     private final PersonRepository people;
     private final MediaImageRepository media;
     private final ApplicationEventPublisher events;
+    private final VerifiedAccountEmails accounts;
     private final Clock clock;
 
-    public PeopleAdminService(PersonRepository people, MediaImageRepository media, ApplicationEventPublisher events, Clock clock) {
+    public PeopleAdminService(PersonRepository people, MediaImageRepository media, ApplicationEventPublisher events, VerifiedAccountEmails accounts,
+                              Clock clock) {
         this.people = people;
         this.media = media;
         this.events = events;
+        this.accounts = accounts;
         this.clock = clock;
     }
 
     @Transactional(readOnly = true)
     public List<PersonView> list() {
         return people.findAllInOrder().stream().map(this::view).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<PersonView> mine(UUID accountId) {
+        return accounts.verifiedEmailOf(accountId)
+                .flatMap(email -> people.findAllInOrder().stream().filter(person -> emailsOf(person).anyMatch(email::equals)).findFirst())
+                .map(this::view);
     }
 
     public PersonView add(UUID adminId, PersonCommand command) {
@@ -65,13 +77,10 @@ public class PeopleAdminService {
         return view(added);
     }
 
-    public PersonView update(UUID adminId, PersonId id, PersonCommand command, boolean webSignatureMayChange) {
+    public PersonView update(UUID adminId, PersonId id, PersonCommand command) {
         Instant now = clock.instant();
         Person current = find(id);
         PersonDetails details = checked(command.toDetails());
-        if (current.webSignature().isPresent() && !webSignatureMayChange && !details.name().equals(current.details().name())) {
-            throw new WebSignatureInBrowserOnly();
-        }
         Person edited = current.edit(details, now);
         people.save(edited);
         current.imagesLeftBy(edited).forEach(media::deleteIfUnused);
@@ -79,12 +88,9 @@ public class PeopleAdminService {
         return view(edited);
     }
 
-    public void remove(UUID adminId, PersonId id, boolean webSignatureMayGo) {
+    public void remove(UUID adminId, PersonId id) {
         Instant now = clock.instant();
         Person current = find(id);
-        if (current.webSignature().isPresent() && !webSignatureMayGo) {
-            throw new WebSignatureInBrowserOnly();
-        }
         people.delete(id);
         current.images().forEach(media::deleteIfUnused);
         publish(adminId, REMOVE_ACTION, "Osoba " + id + " odebrána z lidí fondu", now);
@@ -142,7 +148,11 @@ public class PeopleAdminService {
     }
 
     private PersonView view(Person person) {
-        return PersonView.of(person, media);
+        return PersonView.of(person, media, emailsOf(person).anyMatch(accounts::belongsToVerifiedAccount));
+    }
+
+    private static Stream<EmailAddress> emailsOf(Person person) {
+        return Stream.concat(person.details().emails().personal().stream(), person.details().emails().fund().stream());
     }
 
     private void publish(UUID adminId, String action, String details, Instant now) {

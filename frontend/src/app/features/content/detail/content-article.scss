@@ -34,6 +34,30 @@
   aspect-ratio: 8 / 5;
 }
 
+.signer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-10);
+}
+
+.signer-photo {
+  flex-shrink: 0;
+  width: var(--space-16);
+  height: var(--space-16);
+  font-size: var(--text-xl);
+}
+
+.signer-name {
+  color: var(--color-text);
+  font-weight: var(--weight-semibold);
+}
+
+.signer-role {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
 .actions-lead {
   margin-top: var(--space-14);
   color: var(--color-text);

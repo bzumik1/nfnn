@@ -27,7 +27,6 @@ class ApiSecurityConfiguration {
             "/api/admin/donors/*/passkeys",
             "/api/admin/content/news/*",
             "/api/admin/content/projects/*",
-            "/api/admin/content/people/*/web-signature",
             "/api/admin/donations/donors/*/bank-accounts/*",
             "/api/admin/donations/symbol-claims/*",
             "/api/admin/donations/receipt-signature"};
@@ -37,7 +36,6 @@ class ApiSecurityConfiguration {
             "/api/admin/donations/symbol-claims/*/reverse",
             "/api/admin/donations/receipt-signature",
             "/api/admin/donations/receipt-signing-keys/*/withdrawal",
-            "/api/admin/content/people/*/web-signature",
             "/api/admin/operations/backups/key/reveal",
             "/api/admin/operations/backups/key/confirmation"};
 

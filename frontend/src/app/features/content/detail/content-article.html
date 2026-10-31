@@ -37,6 +37,23 @@
       </figure>
     }
     <app-markdown class="prose" [text]="page().body" />
+    @if (page().signer; as signer) {
+      <footer class="signer">
+        <app-avatar
+          class="signer-photo"
+          [name]="signer.name"
+          [src]="signerPortrait()"
+          [size]="64"
+          loading="lazy"
+        />
+        <div>
+          <p class="signer-name">{{ signer.name }}</p>
+          @if (signer.role) {
+            <p class="signer-role">{{ signer.role }}</p>
+          }
+        </div>
+      </footer>
+    }
     <p class="actions-lead" i18n="@@content.detail.donateLead">
       Chcete pomoct dalším dětem? Přispějte na jejich pomůcky.
     </p>

@@ -1,7 +1,13 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { ProjectsApi, ProjectResponse, slugFromText, UploadedImageResponse } from './projects-api';
+import {
+  ProjectOrderResponse,
+  ProjectsApi,
+  ProjectResponse,
+  slugFromText,
+  UploadedImageResponse,
+} from './projects-api';
 import { project, uploadedImage } from './testing/project-fixtures';
 
 describe('Given the projects API', () => {
@@ -51,6 +57,18 @@ describe('Given the projects API', () => {
     const request = http.expectOne('/api/content/projects?page=1&size=10');
     expect(request.request.method).toBe('GET');
     request.flush({ items: [], page: 1, size: 10, total: 0, hasMore: false });
+  });
+
+  it('when the order of the projects is changed, then it puts the chosen order and hands the saved one on', () => {
+    let received: ProjectOrderResponse | undefined;
+    api.changeOrder('CATEGORY_THEN_YEAR').subscribe((response) => (received = response));
+
+    const request = http.expectOne('/api/admin/content/project-order');
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toEqual({ order: 'CATEGORY_THEN_YEAR' });
+    request.flush({ order: 'CATEGORY_THEN_YEAR' });
+
+    expect(received).toEqual({ order: 'CATEGORY_THEN_YEAR' });
   });
 });
 
