@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donations.application.receipt;
 
+import cz.novanadeje.app.donations.application.signing.ReceiptSigningKeys;
 import cz.novanadeje.app.donations.domain.donation.DonationId;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.receipt.CurrentSignature;
@@ -17,6 +18,7 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatureRepository;
 import cz.novanadeje.app.donations.domain.receipt.ReplacedReceipt;
 import cz.novanadeje.app.donations.domain.receipt.Signatory;
 import cz.novanadeje.app.donations.domain.receipt.SignatureImage;
+import cz.novanadeje.app.donations.domain.signing.ReceiptSigningPaused;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import org.slf4j.Logger;
@@ -47,18 +49,20 @@ public class DonationReceiptIssuer {
     private final ReceiptRequestReader requests;
     private final ReceiptFreezer freezer;
     private final ReceiptSignatureRepository signatures;
+    private final ReceiptSigningKeys signingKeys;
     private final FoundationIdentity foundation;
     private final Signatory signatory;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public DonationReceiptIssuer(DonationReceiptRepository receipts, ReceiptRequestReader requests, ReceiptFreezer freezer,
-                                 ReceiptSignatureRepository signatures, FoundationIdentity foundation, Signatory signatory,
-                                 ApplicationEventPublisher events, Clock clock) {
+                                 ReceiptSignatureRepository signatures, ReceiptSigningKeys signingKeys, FoundationIdentity foundation,
+                                 Signatory signatory, ApplicationEventPublisher events, Clock clock) {
         this.receipts = receipts;
         this.requests = requests;
         this.freezer = freezer;
         this.signatures = signatures;
+        this.signingKeys = signingKeys;
         this.foundation = foundation;
         this.signatory = signatory;
         this.events = events;
@@ -67,12 +71,14 @@ public class DonationReceiptIssuer {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public DonationReceipt issueForDonation(DonorReference donor, DonationId donation, LocalDate today) {
+        refuseWhileOwnKeyIsWithdrawn(donor);
         receipts.lockDonor(donor);
         return issue(requests.forDonation(donor, donation, today));
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public DonationReceipt issueForYear(DonorReference donor, Year year, LocalDate today) {
+        refuseWhileOwnKeyIsWithdrawn(donor);
         receipts.lockDonor(donor);
         return issue(requests.forYear(donor, year, today));
     }
@@ -80,6 +86,7 @@ public class DonationReceiptIssuer {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public DonationReceipt issueForDonationByAdministrator(UUID adminId, AdministrationChannel channel, DonorReference donor, DonationId donation,
                                                           LocalDate today) {
+        refuseWhileOwnKeyIsWithdrawn(donor);
         receipts.lockDonor(donor);
         requests.requireLiveRecord(donor);
         return issueByAdministrator(adminId, channel, requests.forDonation(donor, donation, today));
@@ -87,9 +94,17 @@ public class DonationReceiptIssuer {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public DonationReceipt issueForYearByAdministrator(UUID adminId, AdministrationChannel channel, DonorReference donor, Year year, LocalDate today) {
+        refuseWhileOwnKeyIsWithdrawn(donor);
         receipts.lockDonor(donor);
         requests.requireLiveRecord(donor);
         return issueByAdministrator(adminId, channel, requests.forYear(donor, year, today));
+    }
+
+    private void refuseWhileOwnKeyIsWithdrawn(DonorReference donor) {
+        signingKeys.withdrawnCurrentKeyHeldForIssuing().ifPresent(key -> {
+            LOG.warn("No receipt is issued to donor {}: the receipt signing key {} of this server is withdrawn and no new seed has replaced it", donor, key);
+            throw new ReceiptSigningPaused(key);
+        });
     }
 
     private DonationReceipt issueByAdministrator(UUID adminId, AdministrationChannel channel, ReceiptRequest request) {

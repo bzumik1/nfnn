@@ -36,7 +36,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Stav serveru',
       description:
-        'The running backend version and health, the Fio bank import state (covered period, last attempt and success, failures, reported outage), the last backup and test restore, and the key that signs the verification QR codes on receipts (its id, when the server registered it, whether it is published; attention is true when a key fails its seal and is not published, and when that part is unavailable, which leaves the rest of the status as it is).',
+        'The running backend version and health, the Fio bank import state (covered period, last attempt and success, failures, reported outage), the last backup and test restore, and the key that signs the verification QR codes on receipts (its id, when the server registered it, whether it is published and whether an administrator withdrew it, and the keys whose row disagrees with the audit trail: missing when the trail registered, adopted or withdrew a key that has no row, reverted when the row of a withdrawn key is active again; attention is true when a key fails its seal and is not published, when the current key is withdrawn and the server has not yet started with a new seed, when a row disagrees with the audit trail, and when that part is unavailable, which leaves the rest of the status as it is).',
       annotations: READ_ONLY,
     },
     async (ctx) =>
@@ -770,11 +770,21 @@ function receiptSigningKeys(answer: unknown): Record<string, unknown> {
   const keys = Array.isArray(view['keys']) ? view['keys'].map(asRecord) : [];
   const current = keys.find((key) => key['current'] === true);
   const unpublished = keys.filter((key) => key['published'] !== true).map((key) => key['keyId']);
+  const currentKeyWithdrawn = current?.['status'] === 'revoked';
+  const auditMismatches = Array.isArray(view['auditMismatches'])
+    ? view['auditMismatches'].map(asRecord)
+    : [];
   return {
     currentKeyId: view['currentKeyId'],
     currentKeyRegisteredAt: current?.['registeredAt'] ?? null,
     currentKeyPublished: view['currentKeyPublished'],
+    currentKeyWithdrawn,
     unpublishedKeyIds: unpublished,
-    attention: view['currentKeyPublished'] !== true || unpublished.length > 0,
+    auditMismatches,
+    attention:
+      view['currentKeyPublished'] !== true ||
+      unpublished.length > 0 ||
+      currentKeyWithdrawn ||
+      auditMismatches.length > 0,
   };
 }

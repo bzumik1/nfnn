@@ -76,6 +76,8 @@ const ACTION_NAMES: Record<string, string> = {
   CHANGE_SETTINGS: $localize`:@@admin.actions.action.changeSettings:Změna nastavení webu`,
   REGISTER_RECEIPT_SIGNING_KEY: $localize`:@@admin.actions.action.registerReceiptSigningKey:Registrace klíče k ověřovacím QR kódům`,
   ADOPT_RECEIPT_SIGNING_KEY: $localize`:@@admin.actions.action.adoptReceiptSigningKey:Převzetí klíče k ověřovacím QR kódům ze zálohy`,
+  WITHDRAW_RECEIPT_SIGNING_KEY: $localize`:@@admin.actions.action.withdrawReceiptSigningKey:Stažení klíče k ověřovacím QR kódům`,
+  WITHDRAW_RECEIPT_SIGNING_KEY_REFUSED: $localize`:@@admin.actions.action.withdrawReceiptSigningKeyRefused:Odmítnuté stažení klíče k ověřovacím QR kódům`,
 };
 
 const SERVER_ACTOR = '00000000-0000-0000-0000-000000000000';

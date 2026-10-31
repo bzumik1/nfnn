@@ -154,8 +154,56 @@ describe('Given an administrator connected with the reading permission only', ()
       '/api/admin/donations/receipt-signing-keys',
     );
     expect(textOf(result)).toContain(
-      '"receiptSigningKeys":{"currentKeyId":"21fe31df","currentKeyRegisteredAt":"2026-11-13T12:00:00+01:00","currentKeyPublished":true,"unpublishedKeyIds":["39f713d0"],"attention":true}',
+      '"receiptSigningKeys":{"currentKeyId":"21fe31df","currentKeyRegisteredAt":"2026-11-13T12:00:00+01:00","currentKeyPublished":true,"currentKeyWithdrawn":false,"unpublishedKeyIds":["39f713d0"],"auditMismatches":[],"attention":true}',
     );
+  });
+
+  it('when the status is asked after the current key was withdrawn and a key row disagrees with the audit trail, then both are named and need attention', async () => {
+    stack.backend.receiptSigningKeysAnswer = {
+      currentKeyId: '21fe31df',
+      currentKeyPublished: true,
+      keys: [
+        {
+          keyId: '21fe31df',
+          status: 'revoked',
+          registeredAt: '2026-11-13T11:00:00Z',
+          published: true,
+          current: true,
+        },
+      ],
+      auditMismatches: [{ keyId: '39f713d0', kind: 'missing' }],
+    };
+    try {
+      const result = await client.callTool({ name: 'nfnn_status', arguments: {} });
+      expect(textOf(result)).toContain(
+        '"receiptSigningKeys":{"currentKeyId":"21fe31df","currentKeyRegisteredAt":"2026-11-13T12:00:00+01:00","currentKeyPublished":true,"currentKeyWithdrawn":true,"unpublishedKeyIds":[],"auditMismatches":[{"keyId":"39f713d0","kind":"missing"}],"attention":true}',
+      );
+    } finally {
+      stack.backend.receiptSigningKeysAnswer = undefined;
+    }
+  });
+
+  it('when the status is asked of keys that are all published, active and agree with the audit trail, then they need no attention', async () => {
+    stack.backend.receiptSigningKeysAnswer = {
+      currentKeyId: '21fe31df',
+      currentKeyPublished: true,
+      keys: [
+        {
+          keyId: '21fe31df',
+          status: 'active',
+          registeredAt: '2026-11-13T11:00:00Z',
+          published: true,
+          current: true,
+        },
+      ],
+      auditMismatches: [],
+    };
+    try {
+      const result = await client.callTool({ name: 'nfnn_status', arguments: {} });
+      expect(textOf(result)).toContain('"auditMismatches":[],"attention":false}');
+    } finally {
+      stack.backend.receiptSigningKeysAnswer = undefined;
+    }
   });
 
   it('when the status is asked of a backend without the receipt signing keys, then the rest still comes and the key part says it is unavailable', async () => {

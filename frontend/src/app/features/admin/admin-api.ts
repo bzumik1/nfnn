@@ -365,10 +365,22 @@ export interface ReceiptSigningKeyResponse {
   current: boolean;
 }
 
+export type ReceiptSigningKeyMismatchKind = 'missing' | 'reverted';
+
+export interface ReceiptSigningKeyMismatch {
+  keyId: string;
+  kind: ReceiptSigningKeyMismatchKind;
+}
+
 export interface ReceiptSigningKeysResponse {
   currentKeyId: string;
   currentKeyPublished: boolean;
   keys: ReceiptSigningKeyResponse[];
+  auditMismatches: ReceiptSigningKeyMismatch[];
+}
+
+export interface ReceiptSigningKeyWithdrawalResponse extends ReceiptSigningKeysResponse {
+  restarting: boolean;
 }
 
 export type BackupKind = 'DAILY' | 'REQUESTED' | 'BEFORE_RESTORE' | 'OTHER';
@@ -432,10 +444,12 @@ export interface BackupKeyStatus {
   confirmedAt: string | null;
 }
 
-export interface BackupKeyRevealRequest {
+export interface FreshSecondFactorRequest {
   secondFactorCode?: string;
   passkey?: PasskeyConfirmation;
 }
+
+export type BackupKeyRevealRequest = FreshSecondFactorRequest;
 
 export interface BackupKeyResponse {
   key: string;
@@ -788,6 +802,16 @@ export class AdminApi {
 
   receiptSigningKeys(): Observable<ReceiptSigningKeysResponse> {
     return this.http.get<ReceiptSigningKeysResponse>(RECEIPT_SIGNING_KEYS_URL);
+  }
+
+  withdrawReceiptSigningKey(
+    keyId: string,
+    proof: FreshSecondFactorRequest,
+  ): Observable<ReceiptSigningKeyWithdrawalResponse> {
+    return this.http.post<ReceiptSigningKeyWithdrawalResponse>(
+      `${RECEIPT_SIGNING_KEYS_URL}/${encodeURIComponent(keyId)}/withdrawal`,
+      proof,
+    );
   }
 
   removeReceiptSignature(): Observable<void> {

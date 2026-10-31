@@ -3,6 +3,7 @@ package cz.novanadeje.app.donations.application.signing;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKey;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyId;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyRepository;
+import cz.novanadeje.app.shared.application.audit.AdminActionTrail;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.restore.FinishedRestore;
 import cz.novanadeje.app.shared.application.restore.FinishedRestores;
@@ -34,18 +35,22 @@ public class ReceiptSigningKeyRegistration {
     private final RecordSeals seals;
     private final FinishedRestores restores;
     private final PublicTestKeyPolicy testKeys;
+    private final AdminActionTrail trail;
+    private final WithdrawnSeeds withdrawnSeeds;
     private final ApplicationEventPublisher events;
     private final TransactionOperations transactions;
     private final Clock clock;
 
     public ReceiptSigningKeyRegistration(ReceiptSigner signer, ReceiptSigningKeyRepository keys, RecordSeals seals, FinishedRestores restores,
-                                         PublicTestKeyPolicy testKeys, ApplicationEventPublisher events, TransactionOperations transactions,
-                                         Clock clock) {
+                                         PublicTestKeyPolicy testKeys, AdminActionTrail trail, WithdrawnSeeds withdrawnSeeds,
+                                         ApplicationEventPublisher events, TransactionOperations transactions, Clock clock) {
         this.signer = signer;
         this.keys = keys;
         this.seals = seals;
         this.restores = restores;
         this.testKeys = testKeys;
+        this.trail = trail;
+        this.withdrawnSeeds = withdrawnSeeds;
         this.events = events;
         this.transactions = transactions;
         this.clock = clock;
@@ -59,11 +64,22 @@ public class ReceiptSigningKeyRegistration {
                 log.error("Receipt signing key {} is sealed by the settings key of another server and no restore confirms it, so it is not published", id));
         outcome.adopted().forEach(id -> log.warn("Receipt signing key {} from a restored backup is sealed again and published", id));
         outcome.registered().ifPresent(id -> log.warn("Receipt signing key {} registered and published", id));
+        outcome.mismatches().forEach(mismatch -> {
+            switch (mismatch.kind()) {
+                case MISSING -> log.error("Receipt signing key {} is in the audit trail but its row is missing", mismatch.keyId());
+                case REVERTED -> log.error("Receipt signing key {} was withdrawn but its row is active again, so it is published as withdrawn",
+                        mismatch.keyId());
+            }
+        });
+        if (outcome.ownKeyWithdrawn()) {
+            log.error("Receipt signing key {} of this server is withdrawn, so the server signs no receipt until it starts with a new seed", signer.keyId());
+        }
     }
 
     private Registration register() {
         Instant now = clock.instant();
         Optional<FinishedRestore> restore = restoreToAdoptFrom(now);
+        ReceiptSigningKeyHistory history = ReceiptSigningKeyHistory.of(trail.findByActions(ReceiptSigningKeyHistory.ACTIONS), withdrawnSeeds.keyIds());
         List<ReceiptSigningKey> stored = keys.findAll();
         List<ReceiptSigningKeyId> testKeyRows = new ArrayList<>();
         List<ReceiptSigningKeyId> broken = new ArrayList<>();
@@ -86,9 +102,10 @@ public class ReceiptSigningKeyRegistration {
             }
         }
         ReceiptSigningKeyId own = signer.keyId();
-        Optional<ReceiptSigningKeyId> registered = stored.stream().anyMatch(key -> key.id().equals(own)) ? Optional.empty()
-                : Optional.of(registerOwn(now));
-        return new Registration(testKeyRows, broken, unconfirmed, adopted, registered);
+        Optional<ReceiptSigningKey> ownRow = stored.stream().filter(key -> key.id().equals(own)).findFirst();
+        boolean ownKeyWithdrawn = history.isWithdrawn(own) || ownRow.filter(ReceiptSigningKey::isWithdrawn).isPresent();
+        Optional<ReceiptSigningKeyId> registered = ownRow.isPresent() || ownKeyWithdrawn ? Optional.empty() : Optional.of(registerOwn(now));
+        return new Registration(testKeyRows, broken, unconfirmed, adopted, registered, history.mismatches(keys.findAll()), ownKeyWithdrawn);
     }
 
     private Optional<FinishedRestore> restoreToAdoptFrom(Instant now) {
@@ -102,18 +119,18 @@ public class ReceiptSigningKeyRegistration {
     private void adopt(ReceiptSigningKey key, FinishedRestore restore, Instant now) {
         keys.save(key.sealedAgain(seals.seal(ReceiptSigningKey.SEAL_PURPOSE, key.sealedContent())));
         events.publishEvent(new AdminActionPerformed(AdminActionPerformed.SERVER, ADOPT_ACTION, Optional.empty(),
-                "Server převzal klíč k ověřovacím QR " + key.id() + " z obnovené zálohy (obnova " + restore.id() + ")", now));
+                ReceiptSigningKeyAuditDetails.adopted(key.id(), restore.id()), now));
     }
 
     private ReceiptSigningKeyId registerOwn(Instant now) {
         ReceiptSigningKey key = ReceiptSigningKey.register(signer.publicKey(), now, content -> seals.seal(ReceiptSigningKey.SEAL_PURPOSE, content));
         keys.save(key);
         events.publishEvent(new AdminActionPerformed(AdminActionPerformed.SERVER, ACTION, Optional.empty(),
-                "Server zaregistroval svůj klíč k ověřovacím QR na potvrzeních o daru: " + key.id(), now));
+                ReceiptSigningKeyAuditDetails.registered(key.id()), now));
         return key.id();
     }
 
     private record Registration(List<ReceiptSigningKeyId> testKeys, List<ReceiptSigningKeyId> broken, List<ReceiptSigningKeyId> unconfirmed, List<ReceiptSigningKeyId> adopted,
-                                Optional<ReceiptSigningKeyId> registered) {
+                                Optional<ReceiptSigningKeyId> registered, List<ReceiptSigningKeyMismatch> mismatches, boolean ownKeyWithdrawn) {
     }
 }

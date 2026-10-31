@@ -15,6 +15,7 @@ import {
   openDonorSection,
   openSignInDialog,
   problem,
+  receiptSigningKeys,
   samplePngBase64,
   secondFactorEnrolment,
   secondFactorRecovery,
@@ -1380,7 +1381,14 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.route(
       (url) => url.pathname === '/api/admin/donations/receipt-signing-keys',
       (route) =>
-        route.fulfill({ json: { currentKeyId: '21fe31df', currentKeyPublished: false, keys: [] } }),
+        route.fulfill({
+          json: {
+            currentKeyId: '21fe31df',
+            currentKeyPublished: false,
+            keys: [],
+            auditMismatches: [],
+          },
+        }),
     );
     await page.route(
       (url) => url.pathname === '/api/admin/operations/settings',
@@ -1399,7 +1407,49 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
     await page.goto('/sprava/nastaveni');
     const card = page.getByRole('region', { name: 'Klíč k ověřovacím QR kódům' });
-    await expect(card.getByRole('alert')).toContainText('Klíč 21fe31df není zveřejněný');
+    await expect(card.getByRole('alert').filter({ hasText: /\S/ })).toContainText(
+      'Klíč 21fe31df není zveřejněný',
+    );
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when an administrator withdraws the receipt signing key of the server, then the dialog and the line that waits for the restart break no rule', async ({
+    page,
+  }) => {
+    const withdrawn = {
+      ...receiptSigningKeys,
+      keys: receiptSigningKeys.keys.map((key) => ({ ...key, status: 'revoked' })),
+      restarting: true,
+    };
+    await page.route(
+      (url) => url.pathname === '/api/admin/donations/receipt-signing-keys/21fe31df/withdrawal',
+      (route) => route.fulfill({ json: withdrawn }),
+    );
+    await page.route(
+      (url) => url.pathname === '/api/admin/operations/settings',
+      (route) => route.fulfill({ json: adminSettings }),
+    );
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.goto('/');
+    await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
+    await page.goto('/sprava/nastaveni');
+    await page.getByRole('button', { name: 'Stáhnout klíč serveru…' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Stáhnout klíč 21fe31df?' });
+    await expect(dialog).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+
+    await dialog.getByRole('button', { name: 'Stáhnout klíč', exact: true }).click();
+    await expect(dialog.getByText('Opište prosím kód z aplikace.')).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+
+    await dialog.getByLabel('Kód z aplikace').fill('123456');
+    await dialog.getByRole('button', { name: 'Stáhnout klíč', exact: true }).click();
+    const card = page.getByRole('region', { name: 'Klíč k ověřovacím QR kódům' });
+    await expect(card.getByRole('status').filter({ hasText: /\S/ })).toContainText(
+      'Web se restartuje',
+    );
     expect(await violations(page)).toEqual([]);
   });
 

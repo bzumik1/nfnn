@@ -1,0 +1,23 @@
+.withdrawal-form {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.withdrawal-note,
+.withdrawal-alternative {
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.withdrawal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2-5);
+  margin-top: var(--space-1);
+}
+
+.withdrawal-form > p {
+  margin: 0;
+}

@@ -88,6 +88,12 @@ public class TestSupportConfiguration {
     }
 
     @Bean
+    @Primary
+    public KeptAsideWithdrawnSeeds keptAsideWithdrawnSeeds() {
+        return new KeptAsideWithdrawnSeeds();
+    }
+
+    @Bean
     public static CachingPasswordHashers cachingPasswordHashers() {
         return new CachingPasswordHashers();
     }

@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="cs" th:lang="${#locale.language}" xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="content">
+    <p style="margin: 0 0 16px;" th:text="#{donors.receiptSigningKeyWithdrawn.email.greeting}">Dobrý den,</p>
+    <p style="margin: 0 0 16px;" th:text="${intro}">správce jana@example.cz 20. 11. 2026 v 10:30 stáhl ve správě webu Nová naděje klíč 21fe31df, kterým server podepisuje ověřovací QR kódy na potvrzeních o daru.</p>
+    <p style="margin: 0 0 16px;" th:if="${newKey}" th:text="${newKey}">Server se restartuje a vytvoří si nový klíč. Potvrzení vydaná potom podepíše novým klíčem.</p>
+    <p style="margin: 0 0 28px;" th:text="#{donors.receiptSigningKeyWithdrawn.email.expected}">Pokud o tom víte, nemusíte nic dělat.</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 28px;">
+        <tr>
+            <td style="background: #fffbeb; border: 1px solid #d97706; border-radius: 12px; padding: 14px 18px; font-size: 14px; color: #92400e;">
+                <span th:text="#{donors.receiptSigningKeyWithdrawn.email.warning(${senderEmail})}">Pokud ne, změňte si prosím hned heslo i druhý faktor a napište ostatním správcům a na info@nfnn.cz.</span>
+            </td>
+        </tr>
+    </table>
+    <p style="margin: 0;">
+        <span th:text="#{donors.receiptSigningKeyWithdrawn.email.regards}">S pozdravem</span><br>
+        <span style="font-family: 'Playfair Display', Georgia, serif; font-size: 17px; font-style: italic; color: #1a1a2e;" th:text="#{donors.receiptSigningKeyWithdrawn.email.signature}">Nová naděje – nadační fond</span>
+    </p>
+</th:block>
+</body>
+</html>
