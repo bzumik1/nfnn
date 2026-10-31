@@ -13,10 +13,20 @@ import {
   newsArticle,
   uploadedImage,
 } from '../../content/testing/news-fixtures';
+import { OTHER_PERSON_ID, person, PERSON_ID } from '../../content/testing/people-fixtures';
+import { PersonResponse } from '../../content/people-api';
 import { AdminNewsEditor } from './admin-news-editor';
 
 const NEWS_URL = '/api/admin/content/news';
 const MEDIA_URL = '/api/admin/content/media';
+const PEOPLE_URL = '/api/admin/content/people';
+const PAVEL = person({ id: PERSON_ID, name: 'Pavel Vzorový', role: 'Předseda správní rady' });
+const EVA = person({ id: OTHER_PERSON_ID, name: 'Eva Vzorová', role: null, portrait: null });
+
+interface Signers {
+  members?: PersonResponse[] | 'fails';
+  own?: PersonResponse | null;
+}
 
 function problem(status: number, type: string, title: string, detail: string) {
   return {
@@ -29,7 +39,10 @@ function problem(status: number, type: string, title: string, detail: string) {
   };
 }
 
-async function setUp(id: string | null): Promise<{
+async function setUp(
+  id: string | null,
+  signers: Signers = {},
+): Promise<{
   fixture: ComponentFixture<AdminNewsEditor>;
   http: HttpTestingController;
 }> {
@@ -52,6 +65,19 @@ async function setUp(id: string | null): Promise<{
     .expectOne('/api/donors/auth/login')
     .flush(authResponse('token-1', sampleDonor({ roles: ['DONOR', 'ADMIN'] })));
   const fixture = TestBed.createComponent(AdminNewsEditor);
+  fixture.detectChanges();
+  const members = signers.members ?? [PAVEL, EVA];
+  const people = http.expectOne(PEOPLE_URL);
+  if (members === 'fails') {
+    const failure = problem(500, 'internal', 'Chyba', 'Chyba');
+    people.flush(failure.body, failure.options);
+  } else {
+    people.flush({ members, note: null, footnote: null });
+  }
+  if (id === null) {
+    http.expectOne(`${PEOPLE_URL}/me`).flush({ member: signers.own ?? null });
+  }
+  await fixture.whenStable();
   fixture.detectChanges();
   return { fixture, http };
 }
@@ -163,6 +189,7 @@ describe('Given an administrator writing a new news article', () => {
       body: 'Text o koncertu.',
       coverImageId: null,
       coverImageAlt: null,
+      signerId: null,
     });
     request.flush(draftArticle());
     await settle(fixture);
@@ -446,6 +473,7 @@ describe('Given an administrator writing a new news article', () => {
     expect(request.request.body).toMatchObject({
       coverImageId: IMAGE_ID,
       coverImageAlt: 'Děti sázejí stromek',
+      signerId: null,
     });
     request.flush(newsArticle());
     await settle(fixture);
@@ -610,6 +638,7 @@ describe('Given an administrator editing a published news article', () => {
       body: newsArticle().body,
       coverImageId: null,
       coverImageAlt: null,
+      signerId: null,
     });
     request.flush(newsArticle({ coverImage: null }));
     await settle(fixture);
@@ -815,5 +844,86 @@ describe('Given an administrator editing a published news article', () => {
     await settle(fixture);
 
     expect(navigated).toHaveBeenCalledWith('/sprava/aktuality');
+  });
+});
+
+describe('Given an administrator linked to a person of the foundation writing a new news article', () => {
+  let fixture: ComponentFixture<AdminNewsEditor>;
+  let http: HttpTestingController;
+
+  beforeEach(async () => {
+    ({ fixture, http } = await setUp(null, { own: PAVEL }));
+  });
+
+  afterEach(() => http.verify());
+
+  async function write(): Promise<void> {
+    await type(fixture, '#news-title', 'Poděkování dárcům');
+    await type(fixture, '#news-perex', 'Krátce.');
+    await type(fixture, '#news-body', 'Text.');
+  }
+
+  it('when the editor opens, then the person linked to them signs it and every person of the foundation can be chosen', async () => {
+    const signer = element<HTMLSelectElement>(fixture, '#news-signer');
+
+    expect(signer.value).toBe(PERSON_ID);
+    expect(Array.from(signer.options).map((option) => option.textContent?.trim())).toEqual([
+      'Bez podpisu',
+      'Pavel Vzorový',
+      'Eva Vzorová',
+    ]);
+
+    await write();
+    await submit(fixture);
+    const request = http.expectOne(NEWS_URL);
+    expect(request.request.body.signerId).toBe(PERSON_ID);
+    request.flush(draftArticle({ signer: PAVEL }));
+  });
+
+  it('when they choose no signature, then the article is saved unsigned', async () => {
+    const signer = element<HTMLSelectElement>(fixture, '#news-signer');
+    signer.value = '';
+    signer.dispatchEvent(new Event('change'));
+    await settle(fixture);
+
+    await write();
+    await submit(fixture);
+    const request = http.expectOne(NEWS_URL);
+    expect(request.request.body.signerId).toBeNull();
+    request.flush(draftArticle());
+  });
+
+  it('when they switch to the preview, then the signer shows under the article', async () => {
+    await write();
+    button(fixture, 'Náhled').click();
+    await settle(fixture);
+
+    expect(text(fixture, '.signer-name')).toBe('Pavel Vzorový');
+    expect(text(fixture, '.signer-role')).toBe('Předseda správní rady');
+  });
+});
+
+describe('Given an administrator editing a signed news article while the people of the foundation cannot be read', () => {
+  let fixture: ComponentFixture<AdminNewsEditor>;
+  let http: HttpTestingController;
+  const signed = newsArticle({ signer: EVA });
+
+  beforeEach(async () => {
+    ({ fixture, http } = await setUp(signed.id, { members: 'fails' }));
+    http.expectOne(`${NEWS_URL}/${signed.id}`).flush(signed);
+    await settle(fixture);
+  });
+
+  afterEach(() => http.verify());
+
+  it('when they save it, then it keeps its signer', async () => {
+    expect(element<HTMLSelectElement>(fixture, '#news-signer').value).toBe(OTHER_PERSON_ID);
+
+    await type(fixture, '#news-perex', 'Nový souhrn.');
+    await submit(fixture);
+
+    const request = http.expectOne(`${NEWS_URL}/${signed.id}`);
+    expect(request.request.body.signerId).toBe(OTHER_PERSON_ID);
+    request.flush(signed);
   });
 });

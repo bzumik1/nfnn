@@ -62,6 +62,7 @@ class AdminActionSummaries {
             case "sections" -> labels("section.", value, locale);
             case "settings" -> labels("setting.", value, locale);
             case "previous" -> messages.getMessage(PREFIX + "level." + value, null, value, locale);
+            case "fromOrder", "toOrder" -> labels("projectOrder.", value, locale);
             default -> value;
         };
     }

@@ -86,6 +86,8 @@ describe('Given an administrator anywhere in the administration', () => {
       {
         label: 'Občas',
         links: [
+          ['Fotka v sekci O nás', '/sprava/o-nas'],
+          ['Lidé fondu', '/sprava/lide-fondu'],
           ['Správci', '/sprava/spravci'],
           ['Měsíční e-mail', '/sprava/prehledy'],
           ['Zálohy', '/sprava/zalohy'],

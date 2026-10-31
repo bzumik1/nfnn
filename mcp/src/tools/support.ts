@@ -133,3 +133,6 @@ export function describeProblem(problem: BackendProblem): string {
   const fields = errors.length > 0 ? ` ${errors.join(' ')}` : '';
   return `${sentence.endsWith('.') ? sentence : `${sentence}.`}${fields}${hint}`;
 }
+
+export const PROJECT_ORDERS =
+  'YEAR_THEN_CATEGORY (the default): the newest year first, within a year the projects for children, then adults, animals and the others, within a category the one published last first. YEAR: the newest year first, within a year the one published last first whatever its category. CATEGORY_THEN_YEAR: every project for children first, then adults, animals and the others, within a category the newest year first and within a year the one published last first.';

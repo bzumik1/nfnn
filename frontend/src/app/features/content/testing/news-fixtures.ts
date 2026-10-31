@@ -15,6 +15,7 @@ export function newsArticle(overrides: Partial<NewsArticleResponse> = {}): NewsA
     live: true,
     createdAt: '2026-10-19T09:00:00Z',
     updatedAt: '2026-10-20T07:30:00Z',
+    signer: null,
     ...overrides,
   };
 }

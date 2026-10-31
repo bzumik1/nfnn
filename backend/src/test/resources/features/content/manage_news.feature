@@ -257,6 +257,13 @@ Feature: An administrator writes news articles with photos and publishes them on
       | coverImage | 0199f3e0-0000-7000-8000-000000000000 |
     Then the response status is 404
     And the problem type ends with "content/media-not-found"
+    When "Jana" creates a news article:
+      | title  | Titulek                              |
+      | perex  | Perex.                               |
+      | body   | Text.                                |
+      | signer | 0199f3e0-0000-7000-8000-000000000000 |
+    Then the response status is 404
+    And the problem type ends with "content/person-not-found"
     When "Jana" publishes the news article "neexistuje" on 2026-10-23
     Then the response status is 404
     And the problem type ends with "content/news-not-found"
@@ -323,3 +330,50 @@ Feature: An administrator writes news articles with photos and publishes them on
     When someone without a token asks for the news article "beneficni-koncert"
     Then the response status is 404
     And the problem type ends with "content/news-not-found"
+
+  Scenario: An article signed by a person of the foundation shows their name, role and portrait, and stays unsigned once the person is removed
+    Given "Jana" uploads a 640 by 640 pixel PNG image named "pavel.png"
+    And "Jana" adds a person:
+      | name     | Pavel Vzorový         |
+      | role     | Předseda správní rady |
+      | portrait | pavel.png             |
+    When "Jana" creates a news article:
+      | title  | Poděkování dárcům |
+      | perex  | Krátký souhrn.    |
+      | body   | Text.             |
+      | signer | Pavel Vzorový     |
+    Then the response status is 201
+    And the news article says:
+      | signer.name        | Pavel Vzorový         |
+      | signer.role        | Předseda správní rady |
+      | signer.portrait.id | {uploaded}            |
+    When "Jana" publishes the news article "podekovani-darcum" on 2026-10-23
+    And someone without a token asks for the news article "podekovani-darcum"
+    Then the response status is 200
+    And the news article says:
+      | signer.name         | Pavel Vzorový                 |
+      | signer.role         | Předseda správní rady         |
+      | signer.portrait.url | /api/content/media/{uploaded} |
+    When someone without a token asks for the news articles
+    Then the news list says:
+      | items.0.signer.name | Pavel Vzorový |
+    When "Jana" changes the news article "podekovani-darcum":
+      | title | Poděkování dárcům |
+      | perex | Krátký souhrn.    |
+      | body  | Text.             |
+    Then the response status is 200
+    And the news article says:
+      | signer |  |
+    When "Jana" changes the news article "podekovani-darcum":
+      | title  | Poděkování dárcům |
+      | perex  | Krátký souhrn.    |
+      | body   | Text.             |
+      | signer | Pavel Vzorový     |
+    Then the response status is 200
+    When "Jana" removes the person "Pavel Vzorový"
+    Then the response status is 204
+    When someone without a token asks for the news article "podekovani-darcum"
+    Then the response status is 200
+    And the news article says:
+      | title  | Poděkování dárcům |
+      | signer |                   |

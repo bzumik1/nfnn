@@ -10,7 +10,9 @@ import { provideRouter } from '@angular/router';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { Donor } from '../../../core/auth/donor';
 import { sampleDonor } from '../../../core/auth/testing/donor-fixtures';
+import { aboutPhoto } from '../testing/about-fixtures';
 import { newsArticle } from '../testing/news-fixtures';
+import { publicPeople } from '../testing/people-fixtures';
 import { draftProject, project } from '../testing/project-fixtures';
 import { Home } from './home';
 import { checkerboard } from '../../../shared/ui/qr-code/testing/qr-matrices';
@@ -119,6 +121,59 @@ describe('Given the home page', () => {
     expect(root.querySelectorAll('#aktuality .news-card')).toHaveLength(3);
     expect(root.querySelectorAll('#projekty app-project-card')).toHaveLength(3);
     expect(root.querySelector('#aktuality a, #projekty a')).toBeNull();
+  });
+
+  it('when the home content carries a photo for the About section, then the section shows it instead of the placeholder', async () => {
+    await settle();
+    expectQrRequest();
+    http
+      .expectOne('/api/content/home')
+      .flush({ news: [], projects: [], about: { photo: aboutPhoto() } });
+    fixture.detectChanges();
+
+    const section = (fixture.nativeElement as HTMLElement).querySelector('#o-nas')!;
+    expect(section.querySelector('figure img')?.getAttribute('alt')).toBe(
+      'Malý chlapec v náručí dvou dospělých',
+    );
+    expect(section.querySelector('img[src^="/images/about-"]')).toBeNull();
+  });
+
+  it('when the home content carries the people of the foundation, then the block of who runs it shows them instead of its own cards', async () => {
+    await settle();
+    expectQrRequest();
+    http
+      .expectOne('/api/content/home')
+      .flush({ news: [], projects: [], about: { photo: null }, people: publicPeople() });
+    fixture.detectChanges();
+
+    const board = (fixture.nativeElement as HTMLElement).querySelector('#o-nas .board')!;
+    expect(board.querySelector('.board-name')?.textContent?.trim()).toBe('Eva Vzorová');
+    expect(board.querySelector('.founders-note')).not.toBeNull();
+    expect(board.querySelector('img[src^="/images/"]')).toBeNull();
+  });
+
+  it('when the home content keeps no people of the foundation, then the block of who runs it keeps its own cards', async () => {
+    await settle();
+    expectQrRequest();
+    http
+      .expectOne('/api/content/home')
+      .flush({ news: [], projects: [], about: { photo: null }, people: null });
+    fixture.detectChanges();
+
+    const board = (fixture.nativeElement as HTMLElement).querySelector('#o-nas .board')!;
+    expect(board.querySelectorAll('.board-person img[src^="/images/"]').length).toBe(2);
+    expect(board.querySelector('.founders-note')).toBeNull();
+  });
+
+  it('when the home content has no About photo or cannot be loaded, then the About section keeps its placeholder photo', async () => {
+    await settle();
+    expectQrRequest();
+    http.expectOne('/api/content/home').flush(null, { status: 500, statusText: 'Error' });
+    fixture.detectChanges();
+
+    const section = (fixture.nativeElement as HTMLElement).querySelector('#o-nas')!;
+    expect(section.querySelector('figure')).toBeNull();
+    expect(section.querySelector('img')?.getAttribute('src')).toBe('/images/about-720.webp');
   });
 
   describe('Given a signed-in donor', () => {

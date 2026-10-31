@@ -3,6 +3,7 @@ import { expect, test } from './fixtures';
 import { administrator, mockDonorApi, problem, session } from './donor-session';
 
 const PROJECTS = '/api/admin/content/projects';
+const PROJECT_ORDER = '/api/admin/content/project-order';
 const MEDIA = '/api/admin/content/media';
 const IMAGE_ID = '0199f3e0-0000-7000-8000-00000000a001';
 const PROJECT_ID = '0199f3e0-0000-7000-8000-00000000c001';
@@ -18,6 +19,7 @@ function project(overrides: Record<string, unknown> = {}) {
     slug: 'zahrada-pro-deti',
     title: 'Zahrada pro děti',
     year: 2024,
+    category: 'CHILDREN',
     tag: 'Projekt',
     perex: 'Stavíme zahradu, kde si děti budou hrát.',
     body: 'První odstavec.\n\nDruhý odstavec.',
@@ -36,6 +38,7 @@ function draft(overrides: Record<string, unknown> = {}) {
     slug: 'beneficni-koncert',
     title: 'Benefiční koncert',
     year: 2026,
+    category: 'OTHER',
     tag: null,
     perex: 'Zveme vás na koncert.',
     body: 'Text o koncertu.',
@@ -85,6 +88,7 @@ test.describe('Given an administrator managing the projects', () => {
     await expect(page.locator('tbody tr').nth(0).locator('td')).toHaveText([
       'Benefiční koncert',
       '2026',
+      'Ostatní',
       'bez štítku',
       'Koncept',
       '22. 10. 2026 11:00',
@@ -92,6 +96,7 @@ test.describe('Given an administrator managing the projects', () => {
     await expect(page.locator('tbody tr').nth(1).locator('td')).toHaveText([
       'Zahrada pro děti',
       '2024',
+      'Děti',
       'Projekt',
       'Na webu od 20. 10. 2026',
       '20. 10. 2026 09:30',
@@ -108,6 +113,78 @@ test.describe('Given an administrator managing the projects', () => {
     await expect(
       page.getByRole('link', { name: 'Otevřít na webu (v novém okně)' }),
     ).toHaveAttribute('href', '/projekty/zahrada-pro-deti');
+  });
+
+  test('when they choose to order the projects by category first, then each choice says how it orders and the list follows the saved one', async ({
+    page,
+  }) => {
+    const sent: unknown[] = [];
+    let order = 'YEAR_THEN_CATEGORY';
+    await page.route(
+      (url) => url.pathname === PROJECT_ORDER,
+      async (route) => {
+        if (route.request().method() === 'PUT') {
+          const body = route.request().postDataJSON() as { order: string };
+          sent.push(body);
+          order = body.order;
+        }
+        await route.fulfill({ json: { order } });
+      },
+    );
+    await page.route(
+      (url) => url.pathname === PROJECTS,
+      (route) =>
+        route.fulfill({
+          json: {
+            items:
+              order === 'CATEGORY_THEN_YEAR'
+                ? [
+                    project(),
+                    project({
+                      id: 'x',
+                      slug: 'kamna',
+                      title: 'Kamna',
+                      year: 2026,
+                      category: 'OTHER',
+                    }),
+                  ]
+                : [
+                    project({
+                      id: 'x',
+                      slug: 'kamna',
+                      title: 'Kamna',
+                      year: 2026,
+                      category: 'OTHER',
+                    }),
+                    project(),
+                  ],
+          },
+        }),
+    );
+
+    await page.goto('/sprava/projekty');
+
+    const card = page.getByRole('region', { name: 'Řazení na webu' });
+    await expect(
+      card.getByRole('radio', { name: 'Podle roku, v něm podle kategorie', exact: true }),
+    ).toBeChecked();
+    const byCategory = card.getByRole('radio', {
+      name: 'Podle kategorie, v ní podle roku',
+      exact: true,
+    });
+    await expect(byCategory).toHaveAccessibleDescription(
+      'Nahoře jsou všechny projekty pro děti, pak pro dospělé, zvířata a ostatní. V každé kategorii od nejnovějšího roku a v roce od naposledy zveřejněného.',
+    );
+    await expect(page.locator('tbody tr td:first-child')).toHaveText(['Kamna', 'Zahrada pro děti']);
+
+    await byCategory.check();
+    await card.getByRole('button', { name: 'Uložit řazení' }).click();
+
+    await expect(card.getByRole('status').filter({ hasText: /\S/ })).toHaveText(
+      'Řazení jsme uložili. Web už projekty ukazuje v tomto pořadí.',
+    );
+    expect(sent).toEqual([{ order: 'CATEGORY_THEN_YEAR' }]);
+    await expect(page.locator('tbody tr td:first-child')).toHaveText(['Zahrada pro děti', 'Kamna']);
   });
 
   test('when they write a new project with a photo and publish it, then each step is confirmed and the requests carry what they typed', async ({
@@ -157,6 +234,7 @@ test.describe('Given an administrator managing the projects', () => {
       page.getByText('Projekt bude na nfnn.cz/projekty/beneficni-koncert.'),
     ).toBeVisible();
     await page.getByLabel('Rok').fill('2026');
+    await page.getByLabel('Kategorie').selectOption({ label: 'Dospělí' });
     await page.getByLabel('Krátký souhrn').fill('Zveme vás na koncert.');
     await page.getByLabel('Text', { exact: true }).fill('Text o koncertu.');
     await page.getByLabel('Nahrát fotku').setInputFiles({
@@ -182,6 +260,7 @@ test.describe('Given an administrator managing the projects', () => {
       {
         title: 'Benefiční koncert',
         year: 2026,
+        category: 'ADULTS',
         slug: 'beneficni-koncert',
         tag: null,
         perex: 'Zveme vás na koncert.',
