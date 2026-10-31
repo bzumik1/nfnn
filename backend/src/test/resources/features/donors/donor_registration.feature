@@ -98,6 +98,26 @@ Feature: Donor registers an account
     And 0 verification links are stored
     And donations keeps 1 donor record
 
+  Scenario Outline: A name or street made only of invisible characters is refused as empty for a registered and an unknown address alike
+    Given a person registered with email "jana@example.cz" and password "correct horse battery"
+    When a person registers
+      | name       | <name>                |
+      | street     | <street>              |
+      | city       | Ústí nad Labem        |
+      | postalCode | 400 01                |
+      | email      | <email>               |
+      | password   | correct horse battery |
+    Then the response status is 400
+    And the problem lists an error for field "<field>"
+    And 0 verification links are stored
+
+    Examples:
+      | name          | street    | email            | field          |
+      | ​­        | Dlouhá 12 | jana@example.cz  | name           |
+      | ​­        | Dlouhá 12 | nova@example.cz  | name           |
+      | Jana Nováková | ⁠﻿     | jana@example.cz  | address.street |
+      | Jana Nováková | ⁠﻿     | nova@example.cz  | address.street |
+
   Scenario: A short password is refused
     When a person registers
       | name       | Jana Nováková   |

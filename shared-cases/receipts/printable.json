@@ -305,6 +305,16 @@
         "text": "",
         "outside": []
       }
+    },
+    {
+      "name": "A text of only invisible format characters prints as empty, so it counts as blank",
+      "input": {
+        "text": "\u200b\u00ad\u2060\ufeff\u202e"
+      },
+      "expected": {
+        "text": "",
+        "outside": []
+      }
     }
   ]
 }
