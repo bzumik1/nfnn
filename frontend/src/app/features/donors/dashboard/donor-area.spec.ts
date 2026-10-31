@@ -2542,7 +2542,11 @@ describe('Given a signed-in donor in the donor area', () => {
       await downloadYear(2025);
       receiptRequest({ year: 2025 }).flush(
         {
-          ...problemBody('donations/receipt-signing-key-unpublished', 'Potvrzení teď nejde vystavit', 409),
+          ...problemBody(
+            'donations/receipt-signing-key-unpublished',
+            'Potvrzení teď nejde vystavit',
+            409,
+          ),
           detail: 'Napište nám prosím na info@nfnn.cz.',
         },
         { status: 409, statusText: 'Conflict' },
