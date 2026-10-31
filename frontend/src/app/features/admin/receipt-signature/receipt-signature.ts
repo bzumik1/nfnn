@@ -15,7 +15,7 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Subscription } from 'rxjs';
 import {
   describeProblem,
   describeProblemWithoutFields,
@@ -52,7 +52,9 @@ export class ReceiptSignature {
   private readonly removeCancel = viewChild<ElementRef<HTMLButtonElement>>('removeCancel');
 
   readonly personId = input.required<string>();
+  readonly signs = input(false);
   readonly changed = output<ReceiptSignatureResponse>();
+  readonly busyChange = output<boolean>();
 
   protected readonly state = signal<LoadState>('loading');
   protected readonly signature = signal<ReceiptSignatureResponse | null>(null);
@@ -61,29 +63,51 @@ export class ReceiptSignature {
   protected readonly confirmingRemoval = signal(false);
   protected readonly notice = signal<Notice | null>(null);
 
+  private pending = new Subscription();
+
   constructor() {
     effect(() => {
       this.personId();
       untracked(() => {
+        this.cancelPending();
         this.notice.set(null);
         this.confirmingRemoval.set(false);
+        this.signature.set(null);
         this.load();
       });
     });
+    this.destroyRef.onDestroy(() => this.pending.unsubscribe());
   }
 
   protected load(): void {
     this.state.set('loading');
-    this.api
-      .receiptSignature(this.personId())
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
+    this.track(
+      this.api.receiptSignature(this.personId()).subscribe({
         next: (signature) => {
           this.signature.set(signature);
           this.state.set('ready');
         },
         error: () => this.state.set('error'),
-      });
+      }),
+    );
+  }
+
+  private track(subscription: Subscription): void {
+    this.pending.add(subscription);
+  }
+
+  private cancelPending(): void {
+    this.pending.unsubscribe();
+    this.pending = new Subscription();
+    this.setUploading(false);
+    this.removing.set(false);
+  }
+
+  private setUploading(uploading: boolean): void {
+    if (this.uploading() !== uploading) {
+      this.uploading.set(uploading);
+      this.busyChange.emit(uploading);
+    }
   }
 
   protected uploadedLine(signature: ReceiptSignatureResponse): string {
@@ -124,22 +148,22 @@ export class ReceiptSignature {
       });
       return;
     }
-    this.uploading.set(true);
-    this.api
-      .uploadReceiptSignature(this.personId(), file)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
+    this.setUploading(true);
+    this.track(
+      this.api.uploadReceiptSignature(this.personId(), file).subscribe({
         next: (signature) => {
-          this.uploading.set(false);
+          this.setUploading(false);
           this.signature.set(signature);
           this.changed.emit(signature);
           this.notice.set({
             kind: 'status',
-            text: $localize`:@@admin.signature.saved:Podpis je uložený. Ponesou ho potvrzení vystavená od teď.`,
+            text: this.signs()
+              ? $localize`:@@admin.signature.saved:Podpis je uložený. Ponesou ho potvrzení vystavená od teď.`
+              : $localize`:@@admin.signature.savedNotSigning:Podpis je uložený. Potvrzení ho ponesou, až je bude tato osoba podepisovat.`,
           });
         },
         error: (failure: unknown) => {
-          this.uploading.set(false);
+          this.setUploading(false);
           const describe = problemTypeEndsWith(failure, UNSUPPORTED_VECTOR)
             ? describeProblemWithoutFields
             : describeProblem;
@@ -151,7 +175,8 @@ export class ReceiptSignature {
             ),
           });
         },
-      });
+      }),
+    );
   }
 
   protected askRemoval(): void {
@@ -170,10 +195,8 @@ export class ReceiptSignature {
       return;
     }
     this.removing.set(true);
-    this.api
-      .removeReceiptSignature(this.personId())
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
+    this.track(
+      this.api.removeReceiptSignature(this.personId()).subscribe({
         next: () => {
           const removed: ReceiptSignatureResponse = {
             configured: false,
@@ -190,7 +213,9 @@ export class ReceiptSignature {
           this.changed.emit(removed);
           this.notice.set({
             kind: 'status',
-            text: $localize`:@@admin.signature.removed:Podpis je odebraný. Potvrzení vystavená od teď ho nebudou mít.`,
+            text: this.signs()
+              ? $localize`:@@admin.signature.removed:Podpis je odebraný. Potvrzení vystavená od teď ho nebudou mít.`
+              : $localize`:@@admin.signature.removedNotSigning:Podpis je odebraný.`,
           });
           afterNextRender(
             () =>
@@ -212,7 +237,8 @@ export class ReceiptSignature {
           });
           this.focusRemoveButton();
         },
-      });
+      }),
+    );
   }
 
   private focusRemoveButton(): void {

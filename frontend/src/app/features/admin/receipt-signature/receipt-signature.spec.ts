@@ -26,6 +26,7 @@ describe('Given the receipt signature part of a person of the foundation', () =>
     http = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(ReceiptSignature);
     fixture.componentRef.setInput('personId', SIGNATORY_ID);
+    fixture.componentRef.setInput('signs', true);
     fixture.detectChanges();
   });
 
@@ -174,6 +175,61 @@ describe('Given the receipt signature part of a person of the foundation', () =>
       .flush(noReceiptSignature());
     await settle();
     expect(text('.signature-state')).toContain('Podpis není nahraný.');
+  });
+
+  it('when the next person is shown before the first answer arrives, then the late answer of the first is never shown', async () => {
+    const first = http.expectOne({ method: 'GET', url: SIGNATURE_URL });
+
+    fixture.componentRef.setInput('personId', 'other-person');
+    await settle();
+    http
+      .expectOne({ method: 'GET', url: '/api/admin/donations/receipt-signatures/other-person' })
+      .flush(noReceiptSignature());
+    await settle();
+    if (!first.cancelled) {
+      first.flush(receiptSignature());
+    }
+    await settle();
+
+    expect(preview()).toBeNull();
+    expect(text('.signature-state')).toContain('Podpis není nahraný.');
+    expect(fixture.nativeElement.textContent).not.toContain('Odebrat podpis z potvrzení');
+  });
+
+  it('when another person is shown while an upload runs, then its answer is not shown under them and the part is no longer busy', async () => {
+    const busy: boolean[] = [];
+    fixture.componentInstance.busyChange.subscribe((value) => busy.push(value));
+    await load(noReceiptSignature());
+    await choose(scan());
+    const upload = http.expectOne({ method: 'POST', url: SIGNATURE_URL });
+
+    fixture.componentRef.setInput('personId', 'other-person');
+    await settle();
+    http
+      .expectOne({ method: 'GET', url: '/api/admin/donations/receipt-signatures/other-person' })
+      .flush(noReceiptSignature());
+    await settle();
+    if (!upload.cancelled) {
+      upload.flush(receiptSignature());
+    }
+    await settle();
+
+    expect(preview()).toBeNull();
+    expect(text('[role="status"]:not(:empty)')).toBe('');
+    expect(busy).toEqual([true, false]);
+  });
+
+  it('when an upload runs, then the part says it is busy until the answer arrives', async () => {
+    const busy: boolean[] = [];
+    fixture.componentInstance.busyChange.subscribe((value) => busy.push(value));
+    await load(noReceiptSignature());
+
+    await choose(scan());
+    expect(busy).toEqual([true]);
+    http.expectOne({ method: 'POST', url: SIGNATURE_URL }).flush(receiptSignature());
+    await settle();
+
+    expect(busy).toEqual([true, false]);
   });
 
   it('when the signature cannot be loaded, then it says so and loads again on request', async () => {
@@ -389,6 +445,42 @@ describe('Given the receipt signature part of a person of the foundation', () =>
       expect(document.activeElement).toBe(
         fixture.nativeElement.querySelector('#receipt-signature-file'),
       );
+    });
+  });
+
+  describe('when the person does not sign the receipts', () => {
+    beforeEach(async () => {
+      fixture.componentRef.setInput('signs', false);
+      await settle();
+    });
+
+    it('then a saved signature says receipts carry it once this person signs them', async () => {
+      await load(noReceiptSignature());
+      await choose(scan());
+      http.expectOne({ method: 'POST', url: SIGNATURE_URL }).flush(receiptSignature());
+      await settle();
+
+      expect(text('[role="status"]:not(:empty)')).toBe(
+        'Podpis je uložený. Potvrzení ho ponesou, až je bude tato osoba podepisovat.',
+      );
+    });
+
+    it('then removing the signature asks without promising anything about the next receipts, and says it is removed', async () => {
+      await load(receiptSignature());
+      button('Odebrat podpis z potvrzení').click();
+      await settle();
+
+      expect(text('.signature-confirm')).toContain(
+        'Tato osoba potvrzení teď nepodepisuje. Odebrat její podpis?',
+      );
+      (
+        fixture.nativeElement.querySelector('.signature-confirm .ui-button--danger') as HTMLElement
+      ).click();
+      await settle();
+      http.expectOne({ method: 'DELETE', url: SIGNATURE_URL }).flush(null);
+      await settle();
+
+      expect(text('[role="status"]:not(:empty)')).toBe('Podpis je odebraný.');
     });
   });
 });

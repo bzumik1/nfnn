@@ -123,6 +123,8 @@ export class AdminPeople {
   protected readonly editorNotice = signal<Notice | null>(null);
   protected readonly noteNotice = signal<Notice | null>(null);
   protected readonly signatory = signal<ReceiptSignatoryResponse | null>(null);
+  protected readonly signatoryState = signal<LoadState>('loading');
+  protected readonly signatureBusy = signal(false);
   protected readonly savingReceipt = signal(false);
   protected readonly receiptNotice = signal<Notice | null>(null);
   protected readonly footnoteNotice = signal<Notice | null>(null);
@@ -179,6 +181,7 @@ export class AdminPeople {
       this.removing() ||
       this.uploadingPortrait() ||
       this.uploadingSignature() ||
+      this.signatureBusy() ||
       this.moving(),
   );
 
@@ -219,13 +222,31 @@ export class AdminPeople {
   }
 
   protected loadSignatory(): void {
+    if (this.signatoryState() !== 'ready') {
+      this.signatoryState.set('loading');
+    }
     this.admin
       .receiptSignatory()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (view) => this.signatory.set(view),
-        error: () => this.signatory.set(null),
+        next: (view) => {
+          this.signatory.set(view);
+          this.signatoryState.set('ready');
+          this.fillReceiptRole();
+        },
+        error: () => {
+          if (this.signatoryState() !== 'ready') {
+            this.signatoryState.set('error');
+          }
+        },
       });
+  }
+
+  private fillReceiptRole(): void {
+    const member = this.current();
+    if (member !== null && this.signs(member) && this.receiptDraft.role === '') {
+      this.receiptDraft = { signs: false, role: this.signatory()?.signatory?.receiptRole ?? '' };
+    }
   }
 
   protected saveReceipt(form: NgForm): void {
@@ -272,6 +293,9 @@ export class AdminPeople {
   }
 
   protected edit(member: PersonResponse): void {
+    if (this.busy()) {
+      return;
+    }
     this.open(member.id, member);
   }
 
@@ -440,6 +464,9 @@ export class AdminPeople {
   }
 
   protected askRemoval(): void {
+    if (this.signatoryState() !== 'ready') {
+      return;
+    }
     this.editorNotice.set(null);
     this.confirmingRemoval.set(true);
     this.focusLater('#person-remove-cancel');

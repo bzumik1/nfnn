@@ -76,9 +76,15 @@
               aria-label="Odebrat podpis z potvrzení?"
               i18n-aria-label="@@admin.signature.confirm.label"
             >
-              <span i18n="@@admin.signature.confirm.question"
-                >Potvrzení vystavená potom budou bez podpisu. Odebrat?</span
-              >
+              @if (signs()) {
+                <span i18n="@@admin.signature.confirm.question"
+                  >Potvrzení vystavená potom budou bez podpisu. Odebrat?</span
+                >
+              } @else {
+                <span i18n="@@admin.signature.confirm.questionNotSigning"
+                  >Tato osoba potvrzení teď nepodepisuje. Odebrat její podpis?</span
+                >
+              }
               <button
                 type="button"
                 class="ui-button ui-button--danger"
