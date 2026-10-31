@@ -4,6 +4,7 @@ import cz.novanadeje.app.cucumber.ApiClient;
 import cz.novanadeje.app.cucumber.DonorSessions;
 import cz.novanadeje.app.operations.application.backup.BackupWatchService;
 import cz.novanadeje.app.operations.infrastructure.backup.BackupProperties;
+import cz.novanadeje.app.support.AsyncTaskTracker;
 import io.cucumber.java.Before;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
@@ -34,13 +35,16 @@ public class BackupStepDefinitions {
     private final ApiClient api;
     private final DonorSessions sessions;
     private final BackupWatchService watch;
+    private final AsyncTaskTracker asyncTasks;
     private final Path backups;
     private final Path restore;
 
-    public BackupStepDefinitions(ApiClient api, DonorSessions sessions, BackupWatchService watch, BackupProperties properties) {
+    public BackupStepDefinitions(ApiClient api, DonorSessions sessions, BackupWatchService watch, BackupProperties properties,
+                                 AsyncTaskTracker asyncTasks) {
         this.api = api;
         this.sessions = sessions;
         this.watch = watch;
+        this.asyncTasks = asyncTasks;
         this.backups = properties.directory();
         this.restore = properties.restoreDirectory();
     }
@@ -129,6 +133,7 @@ public class BackupStepDefinitions {
     @When("the backup check runs")
     public void theBackupCheckRuns() {
         watch.check();
+        asyncTasks.awaitIdleAfter("the backup check");
     }
 
     @Then("the backups answer says:")

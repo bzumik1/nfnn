@@ -11,7 +11,7 @@ public enum DonationPurpose {
     ACCOUNT_VERIFICATION;
 
     private static final String VERIFICATION_MARK = "OVERENI UCTU";
-    private static final Money VERIFICATION_AMOUNT = Money.czk(100);
+    public static final Money VERIFICATION_AMOUNT = Money.czk(100);
 
     public static DonationPurpose of(BankPayment payment) {
         if (!payment.amount().equals(VERIFICATION_AMOUNT)) {

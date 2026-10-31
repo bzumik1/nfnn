@@ -105,7 +105,8 @@ Feature: An administrator sets up the monthly report, sends it again and reads t
       | sendDay    | 1                |
       | sections   | donations        |
     Then the response status is 400
-    And the problem type ends with "validation"
+    And the problem type ends with "donations/report-recipient-invalid"
+    And the problem does not repeat "pavel"
     When "Jana" changes the monthly report settings:
       | recipients | pavel@example.cz |
       | sendDay    | 29               |
@@ -131,8 +132,24 @@ Feature: An administrator sets up the monthly report, sends it again and reads t
       | sendDay    | 1                |
       | sections   |                  |
     Then the response status is 400
-    And the problem type ends with "validation"
+    And the problem type ends with "donations/report-section-required"
     And no admin action "CHANGE_REPORT_SETTINGS" is recorded
+
+  Scenario: The same recipient twice is refused, whatever its case
+    When "Jana" changes the monthly report settings:
+      | recipients | pavel@example.cz, Pavel@Example.cz |
+      | sendDay    | 1                                  |
+      | sections   | donations                          |
+    Then the response status is 400
+    And the problem type ends with "donations/report-recipient-repeated"
+    And the problem does not repeat "example.cz"
+    And no admin action "CHANGE_REPORT_SETTINGS" is recorded
+
+  Scenario: A month outside the calendar is refused as a field without repeating it
+    When "Jana" sends the monthly report for "2026-13" again
+    Then the response status is 400
+    And the problem's error for field "month" says "Zadejte měsíc ve tvaru RRRR-MM, například 2026-03."
+    And the problem does not repeat "2026-13"
 
   Scenario: The yearly overview counts everything received, new donors, paired and unpaired payments by month
     Given today is 2026-08-20

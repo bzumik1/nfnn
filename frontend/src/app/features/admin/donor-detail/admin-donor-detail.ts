@@ -427,7 +427,7 @@ export class AdminDonorDetail {
             card: 'erasure',
             notice: {
               kind: 'status',
-              text: $localize`:@@admin.donorDetail.erase.done:Osobní údaje dárce jsme vymazali a na jeho dosavadní e-mail poslali potvrzení. Účet už nejde použít; dary a vydaná potvrzení zůstávají bez jména.`,
+              text: $localize`:@@admin.donorDetail.erase.done:Osobní údaje dárce jsme vymazali a na jeho dosavadní e-mail poslali potvrzení. Účet už nejde použít. Dary a vydaná potvrzení zůstávají kvůli účetnictví; potvrzení zůstávají beze změny, i se jménem a adresou.`,
             },
           });
           this.refreshAccount();

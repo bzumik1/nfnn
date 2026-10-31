@@ -134,7 +134,7 @@ Feature: Donor changes the password or the e-mail while signed in
     And the problem type ends with "donors/wrong-password"
     When the donor asks to change the e-mail to "not-an-email" with password "correct horse battery"
     Then the response status is 400
-    And the problem lists an error for field "newEmail"
+    And the problem's only error for field "newEmail" says "Zadejte e-mail ve tvaru jmeno@domena.cz."
     And no email is sent
     And 0 verification links are stored
 
@@ -191,6 +191,7 @@ Feature: Donor changes the password or the e-mail while signed in
     Given a person registered with email "jana@example.cz" and password "correct horse battery"
     And the donor signed in with email "jana@example.cz" and password "correct horse battery"
     When the donor asks to change the e-mail to "jana.nova@example.cz" with password "correct horse battery"
+    And e-mail 1 goes to "jana.nova@example.cz" with the subject "Potvrďte novou e-mailovou adresu – Nová naděje"
     And the donor asks to send the e-mail change link again
     Then the response status is 202
     And e-mail 2 goes to "jana.nova@example.cz" with the subject "Potvrďte novou e-mailovou adresu – Nová naděje"

@@ -259,6 +259,13 @@ public class SettingsStepDefinitions {
         api.put(SETTINGS, Map.of("changes", values(changes)));
     }
 
+    @When("{string} changes the settings in {string}:")
+    public void changesTheSettingsIn(String alias, String language, DataTable changes) {
+        sessions.actAs(alias);
+        api.acceptLanguage(language);
+        api.put(SETTINGS, Map.of("changes", values(changes)));
+    }
+
     @Then("the setting {string} reads {string}")
     public void theSettingReads(String name, String expected) {
         JsonNode setting = setting(name);

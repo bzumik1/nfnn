@@ -55,7 +55,7 @@ const PERSON = {
     ),
 };
 const DAY = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
-const MONTH = z.string().regex(/^\d{4}-\d{2}$/);
+const MONTH = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
 const PLAN_TIME = /^([01][0-9]|2[0-3]):[0-5][0-9]$/;
 const PLAIN_SETTING = z.enum([
   'MAIL_HOST',
@@ -99,6 +99,12 @@ const ARTICLE = {
     .describe(
       'One sentence saying what the photo shows, for screen readers and when it does not load; kept only with a photo.',
     ),
+};
+const NEWS = {
+  ...ARTICLE,
+  signerId: UUID.optional().describe(
+    'Id of the person of the foundation who signs the article (nfnn_people): the site shows their portrait, name and role under it. Left out means unsigned. On the web the default is the person linked to the writing administrator; here choose it yourself.',
+  ),
 };
 const PROJECT_CATEGORY = z
   .enum(['CHILDREN', 'ADULTS', 'ANIMALS', 'OTHER'])
@@ -390,8 +396,8 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Napsat aktualitu',
       description:
-        'Creates a news article as a draft (not on the site until nfnn_publish_news); audited as CREATE_NEWS. Texts are Czech, sentence case.',
-      inputSchema: z.object(ARTICLE),
+        'Creates a news article as a draft (not on the site until nfnn_publish_news), signed by a person of the foundation when signerId is given; audited as CREATE_NEWS. Texts are Czech, sentence case; the signature is not written into the body.',
+      inputSchema: z.object(NEWS),
       annotations: WRITING,
     },
     async (article, ctx) =>
@@ -405,8 +411,8 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Upravit aktualitu',
       description:
-        'Replaces the texts and the photo of a news article, draft or published (the published date stays); send every field, read them with nfnn_news_article first. Audited as UPDATE_NEWS.',
-      inputSchema: z.object({ id: UUID, ...ARTICLE }),
+        'Replaces the texts, the photo and the signer of a news article, draft or published (the published date stays); send every field (signerId is signer.id of nfnn_news_article; left out removes the signer), read them with nfnn_news_article first. Audited as UPDATE_NEWS.',
+      inputSchema: z.object({ id: UUID, ...NEWS }),
       annotations: { ...WRITING, idempotentHint: true },
     },
     async ({ id, ...article }, ctx) =>
@@ -682,6 +688,25 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
   );
 
   server.registerTool(
+    'nfnn_update_people_footnote',
+    {
+      title: 'Řádek pod správní radou',
+      description:
+        'Writes the one line shown under the board line of "Kdo fond vede" on the home page, after the founders note (for example who runs the site as a volunteer), plain Czech text on one line (line breaks become spaces), at most 200 characters; an empty text removes it. Audited as CHANGE_PEOPLE_FOOTNOTE.',
+      inputSchema: z.object({ text: z.string().max(200) }),
+      annotations: { ...WRITING, idempotentHint: true },
+    },
+    async ({ text: footnote }, ctx) =>
+      answerChange(deps, ctx, 'nfnn_update_people_footnote', async ({ apiToken }) =>
+        text(
+          await backend.put('/api/admin/content/people/footnote', apiToken, {
+            text: footnote.trim() === '' ? null : footnote,
+          }),
+        ),
+      ),
+  );
+
+  server.registerTool(
     'nfnn_disconnect_bank_account',
     {
       title: 'Vypnout párování z účtu dárce',
@@ -789,7 +814,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Dočasně změnit úroveň logování',
       description:
-        'Sets a logger (ROOT or a dotted package or class name, e.g. cz.novanadeje.app, io.github.bzumik1.fio, org.hibernate.SQL) to TRACE, DEBUG, INFO, WARN, ERROR or OFF for `minutes` (30 by default, at most 1440); the level goes back by itself when the time is up. Loggers that would write SQL values, bodies or raw requests (org.hibernate.orm.jdbc.bind, org.apache.coyote, org.postgresql and the like) keep their level and are refused, and TRACE is refused for every logger outside cz.novanadeje.app (use DEBUG there). Audited as CHANGE_LOG_LEVEL. Read the result with nfnn_log or nfnn_log_search.',
+        'Sets a logger (ROOT or a dotted package or class name, e.g. cz.novanadeje.app, io.github.bzumik1.fio, org.hibernate.SQL) to TRACE, DEBUG, INFO, WARN, ERROR or OFF for `minutes` (30 by default, at most 1440); the level goes back by itself when the time is up. Loggers that would write SQL values, bodies, raw requests, request lines with their query strings or client addresses (org.hibernate.orm.jdbc.bind, org.apache.coyote, org.springframework.security.web.FilterChainProxy, org.springframework.web.servlet.DispatcherServlet, org.postgresql and the like) keep their level and are refused, and TRACE is refused for every logger outside cz.novanadeje.app (use DEBUG there). Audited as CHANGE_LOG_LEVEL. Read the result with nfnn_log or nfnn_log_search.',
       inputSchema: z.object({
         logger: z.string().min(1).max(200),
         level: z.enum(['TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR', 'OFF']),

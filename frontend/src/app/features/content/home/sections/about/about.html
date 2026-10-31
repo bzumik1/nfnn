@@ -18,7 +18,7 @@
         v Ústí nad Labem.
       </p>
       <a class="link-arrow" routerLink="/" fragment="projekty" i18n="@@home.about.link"
-        >Naše projekty →</a
+        >Kde pomáháme →</a
       >
     </div>
     @if (photo(); as photo) {
@@ -109,6 +109,9 @@
         }
         @if (boardLine(); as line) {
           <p class="board-members">{{ line }}</p>
+        }
+        @if (people.footnote; as footnote) {
+          <p class="board-footnote">{{ footnote }}</p>
         }
       } @else {
         <ul class="board-people">

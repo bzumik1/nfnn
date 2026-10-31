@@ -204,11 +204,16 @@
   font-size: var(--text-sm);
 }
 
-.board-members {
+.board-members,
+.board-footnote {
   margin-top: var(--space-8);
   color: var(--color-text-muted);
   font-size: var(--text-xl);
   line-height: var(--leading-relaxed);
+}
+
+.board-members + .board-footnote {
+  margin-top: var(--space-2);
 }
 
 @include bp.down(tablet) {

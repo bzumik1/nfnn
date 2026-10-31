@@ -1,0 +1,190 @@
+{
+  "source": "edited",
+  "logic": "What GET /api/donations/payment-details serves for the foundation's account (PaymentDetails.of, SpaydText): the account number and IBAN as configured, CZK, the recipient name as SPAYD text of at most 35 characters, the donation and account-verification messages as SPAYD text of at most 60 characters, and the 1 Kč of an account verification in hellers. SPAYD text strips diacritics, writes upper case, turns every character outside 0-9, A-Z, space, $, +, -, ., / and : into a space (so % and * become spaces), collapses spaces, trims, cuts and trims again. Only the backend computes it: the backend runs every case through the endpoint for the foundation's account and through PaymentDetailsService for another recipient, and the browser takes the texts as they come; from slice 1.4 spayd() composes the SPAYD text from them, which payment/spayd.json specifies",
+  "cases": [
+    {
+      "name": "the foundation's account",
+      "input": {
+        "recipient": {
+          "accountNumber": "5544332217/2010",
+          "iban": "CZ2620100000005544332217",
+          "name": "Nadační fond Nová naděje"
+        }
+      },
+      "expected": {
+        "account": {
+          "number": "5544332217/2010",
+          "iban": "CZ2620100000005544332217",
+          "recipientName": "NADACNI FOND NOVA NADEJE"
+        },
+        "currency": "CZK",
+        "messages": {
+          "donation": "DAR NADACNI FOND NOVA NADEJE",
+          "accountVerification": "OVERENI UCTU NADACNI FOND NOVA NADEJE"
+        },
+        "accountVerificationAmountMinor": 100
+      }
+    },
+    {
+      "name": "an account with a prefix",
+      "input": {
+        "recipient": {
+          "accountNumber": "19-2000145399/0800",
+          "iban": "CZ6508000000192000145399",
+          "name": "Nadační fond Nová naděje"
+        }
+      },
+      "expected": {
+        "account": {
+          "number": "19-2000145399/0800",
+          "iban": "CZ6508000000192000145399",
+          "recipientName": "NADACNI FOND NOVA NADEJE"
+        },
+        "currency": "CZK",
+        "messages": {
+          "donation": "DAR NADACNI FOND NOVA NADEJE",
+          "accountVerification": "OVERENI UCTU NADACNI FOND NOVA NADEJE"
+        },
+        "accountVerificationAmountMinor": 100
+      }
+    },
+    {
+      "name": "a percent sign, a star, a plus, lowercase and diacritics in the recipient name",
+      "input": {
+        "recipient": {
+          "accountNumber": "5544332217/2010",
+          "iban": "CZ2620100000005544332217",
+          "name": "Žluťoučký kůň 100% + *hvězda* & spol."
+        }
+      },
+      "expected": {
+        "account": {
+          "number": "5544332217/2010",
+          "iban": "CZ2620100000005544332217",
+          "recipientName": "ZLUTOUCKY KUN 100 + HVEZDA SPOL."
+        },
+        "currency": "CZK",
+        "messages": {
+          "donation": "DAR NADACNI FOND NOVA NADEJE",
+          "accountVerification": "OVERENI UCTU NADACNI FOND NOVA NADEJE"
+        },
+        "accountVerificationAmountMinor": 100
+      }
+    },
+    {
+      "name": "a percent sign between two words of the recipient name",
+      "input": {
+        "recipient": {
+          "accountNumber": "5544332217/2010",
+          "iban": "CZ2620100000005544332217",
+          "name": "Fond%20dětí"
+        }
+      },
+      "expected": {
+        "account": {
+          "number": "5544332217/2010",
+          "iban": "CZ2620100000005544332217",
+          "recipientName": "FOND 20DETI"
+        },
+        "currency": "CZK",
+        "messages": {
+          "donation": "DAR NADACNI FOND NOVA NADEJE",
+          "accountVerification": "OVERENI UCTU NADACNI FOND NOVA NADEJE"
+        },
+        "accountVerificationAmountMinor": 100
+      }
+    },
+    {
+      "name": "a recipient name of exactly 35 characters is kept whole",
+      "input": {
+        "recipient": {
+          "accountNumber": "5544332217/2010",
+          "iban": "CZ2620100000005544332217",
+          "name": "Spolek přátel školy Tišnov 1234 ABC"
+        }
+      },
+      "expected": {
+        "account": {
+          "number": "5544332217/2010",
+          "iban": "CZ2620100000005544332217",
+          "recipientName": "SPOLEK PRATEL SKOLY TISNOV 1234 ABC"
+        },
+        "currency": "CZK",
+        "messages": {
+          "donation": "DAR NADACNI FOND NOVA NADEJE",
+          "accountVerification": "OVERENI UCTU NADACNI FOND NOVA NADEJE"
+        },
+        "accountVerificationAmountMinor": 100
+      }
+    },
+    {
+      "name": "a recipient name over 35 characters is cut at 35",
+      "input": {
+        "recipient": {
+          "accountNumber": "5544332217/2010",
+          "iban": "CZ2620100000005544332217",
+          "name": "Nadační fond Nová naděje pro děti a mládež z Tišnova"
+        }
+      },
+      "expected": {
+        "account": {
+          "number": "5544332217/2010",
+          "iban": "CZ2620100000005544332217",
+          "recipientName": "NADACNI FOND NOVA NADEJE PRO DETI A"
+        },
+        "currency": "CZK",
+        "messages": {
+          "donation": "DAR NADACNI FOND NOVA NADEJE",
+          "accountVerification": "OVERENI UCTU NADACNI FOND NOVA NADEJE"
+        },
+        "accountVerificationAmountMinor": 100
+      }
+    },
+    {
+      "name": "a recipient name whose cut at 35 ends in a space loses the space",
+      "input": {
+        "recipient": {
+          "accountNumber": "5544332217/2010",
+          "iban": "CZ2620100000005544332217",
+          "name": "Spolek rodičů při škole Tišnov 123 Brno"
+        }
+      },
+      "expected": {
+        "account": {
+          "number": "5544332217/2010",
+          "iban": "CZ2620100000005544332217",
+          "recipientName": "SPOLEK RODICU PRI SKOLE TISNOV 123"
+        },
+        "currency": "CZK",
+        "messages": {
+          "donation": "DAR NADACNI FOND NOVA NADEJE",
+          "accountVerification": "OVERENI UCTU NADACNI FOND NOVA NADEJE"
+        },
+        "accountVerificationAmountMinor": 100
+      }
+    },
+    {
+      "name": "a recipient name of symbols only becomes empty",
+      "input": {
+        "recipient": {
+          "accountNumber": "5544332217/2010",
+          "iban": "CZ2620100000005544332217",
+          "name": "*** & %%%"
+        }
+      },
+      "expected": {
+        "account": {
+          "number": "5544332217/2010",
+          "iban": "CZ2620100000005544332217",
+          "recipientName": ""
+        },
+        "currency": "CZK",
+        "messages": {
+          "donation": "DAR NADACNI FOND NOVA NADEJE",
+          "accountVerification": "OVERENI UCTU NADACNI FOND NOVA NADEJE"
+        },
+        "accountVerificationAmountMinor": 100
+      }
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donations.domain.report;
 
 import cz.novanadeje.app.shared.domain.EmailAddress;
+import cz.novanadeje.app.shared.domain.error.RuleViolation;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -75,11 +76,13 @@ class ReportSettingsTest {
     void should_refuse_when_recipients_made_given_none_duplicate_or_too_many() {
         assertThatThrownBy(() -> new ReportRecipients(List.of())).isInstanceOf(IllegalArgumentException.class).hasMessageContaining("at least one");
         assertThatThrownBy(() -> ReportRecipients.parse(List.of("info@nfnn.cz", "INFO@nfnn.cz")))
-                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("once");
+                .isInstanceOf(RuleViolation.class).hasFieldOrPropertyWithValue("code", "donations/report-recipient-repeated");
         assertThatThrownBy(() -> new ReportRecipients(IntStream.rangeClosed(1, 11)
                 .mapToObj(number -> new EmailAddress("donor" + number + "@example.cz")).toList()))
                 .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("at most 10");
-        assertThatThrownBy(() -> ReportRecipients.parse(List.of("pavel"))).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> ReportRecipients.parse(List.of("pavel")))
+                .isInstanceOf(RuleViolation.class).hasFieldOrPropertyWithValue("code", "donations/report-recipient-invalid")
+                .message().doesNotContain("pavel");
     }
 
     @Test
@@ -96,7 +99,7 @@ class ReportSettingsTest {
     @DisplayName("Given every section switched off, when the sections are made, then they are refused")
     void should_refuse_when_sections_made_given_none() {
         assertThatThrownBy(() -> new ReportSections(false, false, false, false))
-                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("at least one section");
+                .isInstanceOf(RuleViolation.class).hasFieldOrPropertyWithValue("code", "donations/report-section-required");
         assertThat(new ReportSections(false, true, false, true).names()).containsExactly("donations", "bank import");
     }
 }

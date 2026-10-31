@@ -516,7 +516,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Lidé fondu',
       description:
-        'The people of the foundation (Lidé fondu) the home page shows in "Kdo fond vede", in their order: id, name, role, position, onBoard with boardNote, featured, portrait and webSignature (id, url, size, or null), personalEmail and fundEmail (administration data only, never on the site), and the founders note under the cards (null when none). With no people the home page shows its own block. Change them with nfnn_add_person, nfnn_update_person, nfnn_remove_person, nfnn_order_people, nfnn_update_founders_note, nfnn_set_web_signature and nfnn_remove_web_signature.',
+        'The people of the foundation (Lidé fondu) the home page shows in "Kdo fond vede", in their order: id, name, role, position, onBoard with boardNote, featured, portrait and webSignature (id, url, size, or null), personalEmail and fundEmail (administration data only, never on the site), linkedToAccount (true when one of those e-mails is the confirmed e-mail of an account on the site; the link only shows the portrait at that account and grants nothing), the founders note under the cards and the footnote, the one line under the board line (each null when none). With no people the home page shows its own block. Change them with nfnn_add_person, nfnn_update_person, nfnn_remove_person, nfnn_order_people, nfnn_update_founders_note, nfnn_update_people_footnote, nfnn_set_web_signature and nfnn_remove_web_signature.',
       annotations: READ_ONLY,
     },
     async (ctx) =>

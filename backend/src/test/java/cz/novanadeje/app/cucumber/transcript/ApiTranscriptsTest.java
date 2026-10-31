@@ -1,14 +1,13 @@
 package cz.novanadeje.app.cucumber.transcript;
 
 import cz.novanadeje.app.operations.domain.settings.Setting;
+import cz.novanadeje.app.support.AsyncTaskTracker;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.core.task.SimpleAsyncTaskExecutor;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -115,7 +114,7 @@ class ApiTranscriptsTest {
     @Test
     @DisplayName("Given an executor that cannot report its work, when the recorder waits for asynchronous work, then it fails instead of skipping the wait")
     void should_fail_when_the_recorder_cannot_wait_for_asynchronous_work() {
-        assertThatThrownBy(() -> ApiTranscriptHooks.awaitIdle(new SimpleAsyncTaskExecutor(), Duration.ofSeconds(1)))
+        assertThatThrownBy(() -> ApiTranscriptHooks.awaitAsynchronousWork(new AsyncTaskTracker()))
                 .isInstanceOf(IllegalStateException.class);
     }
 

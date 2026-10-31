@@ -15,7 +15,7 @@ class SecretResponsesTest {
         assertThat(new TokenResponse("access-secret", "Bearer", 900, "refresh-secret", "admin:read", null).toString())
                 .doesNotContain("access-secret", "refresh-secret").contains("admin:read");
         assertThat(new AuthResponse(null, "access-secret", Instant.EPOCH).toString()).doesNotContain("access-secret");
-        assertThat(new SecondFactorEnrolmentResponse("TOTPSECRET", "otpauth://totp/x?secret=TOTPSECRET",
-                new SecondFactorEnrolmentResponse.QrCodeResponse(1, "1")).toString()).doesNotContain("TOTPSECRET");
+        assertThat(new SecondFactorEnrolmentResponse("TOTPSECRET", "otpauth://totp/x?secret=TOTPSECRET").toString())
+                .doesNotContain("TOTPSECRET");
     }
 }
