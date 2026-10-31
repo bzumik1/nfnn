@@ -51,12 +51,7 @@ public class ReceiptSigningKeyWithdrawal {
 
     @Transactional
     public WithdrawnReceiptSigningKey withdraw(UUID adminId, ReceiptSigningKeyId keyId, FreshSecondFactorProof proof) {
-        ReceiptSigningKey key = keys.lockForWithdrawal(keyId)
-                .filter(published::publishable)
-                .orElseThrow(() -> new ReceiptSigningKeyNotFound(keyId));
-        if (key.isWithdrawn()) {
-            throw new ReceiptSigningKeyAlreadyWithdrawn(keyId);
-        }
+        refuseUnlessWithdrawable(published(keyId, keys.findAll().stream().filter(key -> key.id().equals(keyId)).findFirst()));
         Instant now = clock.instant();
         if (refusals.paused(adminId, now)) {
             log.warn("Admin {} asked to withdraw a receipt signing key while it is paused after refused second factors", adminId);
@@ -68,11 +63,23 @@ public class ReceiptSigningKeyWithdrawal {
             refusals.record(adminId, keyId, now);
             throw refused;
         }
+        ReceiptSigningKey key = refuseUnlessWithdrawable(published(keyId, keys.lockForWithdrawal(keyId)));
         boolean current = published.isCurrent(keyId);
         keys.save(key.withdrawn(content -> seals.seal(ReceiptSigningKey.SEAL_PURPOSE, content)));
         events.publishEvent(new AdminActionPerformed(adminId, ACTION, Optional.empty(), ReceiptSigningKeyAuditDetails.withdrawn(keyId), now));
         events.publishEvent(new ReceiptSigningKeyWithdrawn(adminId, keyId.value(), current, now));
         log.warn("Admin {} withdrew the receipt signing key {}", adminId, keyId);
         return new WithdrawnReceiptSigningKey(keyId, current);
+    }
+
+    private ReceiptSigningKey published(ReceiptSigningKeyId keyId, Optional<ReceiptSigningKey> row) {
+        return row.filter(published::publishable).orElseThrow(() -> new ReceiptSigningKeyNotFound(keyId));
+    }
+
+    private static ReceiptSigningKey refuseUnlessWithdrawable(ReceiptSigningKey key) {
+        if (key.isWithdrawn()) {
+            throw new ReceiptSigningKeyAlreadyWithdrawn(key.id());
+        }
+        return key;
     }
 }

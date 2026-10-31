@@ -3,6 +3,7 @@ package cz.novanadeje.app.donations.infrastructure.persistence;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKey;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyId;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyRepository;
+import jakarta.persistence.EntityManager;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
@@ -14,10 +15,12 @@ class JpaReceiptSigningKeyRepository implements ReceiptSigningKeyRepository {
 
     private final ReceiptSigningKeyJpaRepository keys;
     private final ReceiptSigningKeyAdoptionJpaRepository adoptions;
+    private final EntityManager entityManager;
 
-    JpaReceiptSigningKeyRepository(ReceiptSigningKeyJpaRepository keys, ReceiptSigningKeyAdoptionJpaRepository adoptions) {
+    JpaReceiptSigningKeyRepository(ReceiptSigningKeyJpaRepository keys, ReceiptSigningKeyAdoptionJpaRepository adoptions, EntityManager entityManager) {
         this.keys = keys;
         this.adoptions = adoptions;
+        this.entityManager = entityManager;
     }
 
     @Override
@@ -27,7 +30,12 @@ class JpaReceiptSigningKeyRepository implements ReceiptSigningKeyRepository {
 
     @Override
     public Optional<ReceiptSigningKey> lockForWithdrawal(ReceiptSigningKeyId id) {
-        return keys.findForUpdate(id.value()).map(ReceiptSigningKeyJpaEntity::toDomain);
+        return keys.findForUpdate(id.value()).map(this::lockedState);
+    }
+
+    private ReceiptSigningKey lockedState(ReceiptSigningKeyJpaEntity locked) {
+        entityManager.refresh(locked);
+        return locked.toDomain();
     }
 
     @Override
