@@ -170,12 +170,18 @@ public class ApiClient {
             out.write(body);
             out.flush();
             InputStream in = socket.getInputStream();
-            String raw = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+            String raw = new String(in.readAllBytes(), StandardCharsets.ISO_8859_1);
             int status = Integer.parseInt(raw.split(" ", 3)[1]);
             int bodyStart = raw.indexOf("\r\n\r\n");
-            lastResponse = ResponseEntity.status(status).body(bodyStart < 0 ? "" : raw.substring(bodyStart + 4));
+            HttpHeaders responseHeaders = rawHeaders(raw, bodyStart);
+            String rawBody = bodyStart < 0 ? "" : raw.substring(bodyStart + 4);
+            if ("chunked".equalsIgnoreCase(responseHeaders.getFirst(HttpHeaders.TRANSFER_ENCODING))) {
+                rawBody = unchunked(rawBody);
+            }
+            String responseBody = new String(rawBody.getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.UTF_8);
+            lastResponse = ResponseEntity.status(status).headers(responseHeaders).body(responseBody);
             lastResponseBytes = null;
-            completeExchange("POST", path, sent, rawBody(json), status, rawHeaders(raw, bodyStart), lastResponse.getBody().getBytes(StandardCharsets.UTF_8));
+            completeExchange("POST", path, sent, rawBody(json), status, responseHeaders, responseBody.getBytes(StandardCharsets.UTF_8));
             return lastResponse;
         } catch (IOException unreachable) {
             throw new IllegalStateException("The raw request to " + path + " failed", unreachable);

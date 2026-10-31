@@ -11,5 +11,13 @@
         "MalformedStreamException": "the simple class name of the deepest cause of the MultipartException, here Tomcat's fileupload refusing a malformed body; another class name in production, such as IOException when a part cannot be written to /tmp; never the exception's message"
       }
     }
+  },
+  {
+    "path": "POST /api/operations/client-errors",
+    "scenario": "operations/client_error_reports: *",
+    "kind": "body",
+    "field": "$",
+    "reason": "The test client's raw POST now decodes a chunked answer as its raw GET already does in 1.15, so the transcript records the problem as JSON instead of its chunk framing; main recorded the framing, whose chunk sizes vary from run to run (the push check's second recording of main failed on it). Nothing the server sends changes",
+    "contract": "docs/api-contract.md, POST /api/operations/client-errors"
   }
 ]
