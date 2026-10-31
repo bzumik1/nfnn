@@ -145,16 +145,7 @@
 .board-photo {
   width: 160px;
   height: 160px;
-  border-radius: var(--radius-round);
-  object-fit: cover;
-}
-
-.board-photo--initials {
-  display: grid;
-  place-items: center;
-  background: var(--color-surface-alt);
-  color: var(--color-text-muted);
-  font: var(--weight-bold) var(--text-4xl) var(--font-serif);
+  font-size: var(--text-4xl);
 }
 
 .board-name {
@@ -213,11 +204,16 @@
   font-size: var(--text-sm);
 }
 
-.board-members {
+.board-members,
+.board-footnote {
   margin-top: var(--space-8);
   color: var(--color-text-muted);
   font-size: var(--text-xl);
   line-height: var(--leading-relaxed);
+}
+
+.board-members + .board-footnote {
+  margin-top: var(--space-2);
 }
 
 @include bp.down(tablet) {

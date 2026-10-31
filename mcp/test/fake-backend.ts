@@ -322,20 +322,36 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
     case `DELETE /api/admin/content/people/${PERSON_ID}`:
       return [204, undefined];
     case `DELETE /api/admin/content/people/${SIGNED_PERSON_ID}`:
+      return [204, undefined];
+    case `POST /api/admin/content/people/${PERSON_ID}/web-signature`: {
+      const imageId = (JSON.parse(body) as Record<string, unknown>)['imageId'];
       return [
-        403,
-        problem(
-          403,
-          'content/web-signature-in-browser-only',
-          'Podpis jen v prohlížeči',
-          'Podpis na webu se nahrává a odebírá jen ve Správě webu v prohlížeči.',
-        ),
+        200,
+        {
+          ...person(PERSON_ID, 1, { name: 'Adam Vzor', onBoard: true, featured: false }),
+          webSignature: {
+            id: imageId,
+            url: `/api/content/media/${String(imageId)}`,
+            width: 600,
+            height: 180,
+          },
+        },
+      ];
+    }
+    case `DELETE /api/admin/content/people/${SIGNED_PERSON_ID}/web-signature`:
+      return [
+        200,
+        person(SIGNED_PERSON_ID, 0, { name: 'Eva Vzorová', onBoard: true, featured: true }),
       ];
     case 'PUT /api/admin/content/people/order':
       return [200, people()];
     case 'PUT /api/admin/content/people/note': {
       const note = JSON.parse(body) as Record<string, unknown>;
       return [200, { text: note['text'] ?? null }];
+    }
+    case 'PUT /api/admin/content/people/footnote': {
+      const footnote = JSON.parse(body) as Record<string, unknown>;
+      return [200, { text: footnote['text'] ?? null }];
     }
     case 'GET /api/admin/content/about':
       return [
@@ -432,6 +448,10 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
       ];
     case 'GET /api/admin/content/projects':
       return [200, { items: [] }];
+    case 'GET /api/admin/content/project-order':
+      return [200, { order: 'YEAR_THEN_CATEGORY' }];
+    case 'PUT /api/admin/content/project-order':
+      return [200, { order: (JSON.parse(body) as Record<string, unknown>)['order'] }];
     case `GET /api/admin/content/news/${UNKNOWN_ID}`:
       return [200, { id: UNKNOWN_ID, title: 'Koncept', body: 'Dlouhý text aktuality.' }];
     case `GET /api/admin/content/projects/${UNKNOWN_ID}`:
@@ -601,9 +621,27 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
 }
 
 function content(body: string): Record<string, unknown> {
-  const { coverImageId, coverImageAlt, ...fields } = JSON.parse(body) as Record<string, unknown>;
+  const { coverImageId, coverImageAlt, signerId, ...fields } = JSON.parse(body) as Record<
+    string,
+    unknown
+  >;
   return {
     ...fields,
+    ...(typeof signerId === 'string'
+      ? {
+          signer: {
+            id: signerId,
+            name: 'Pavel Vzorový',
+            role: 'Předseda správní rady',
+            portrait: {
+              id: MEDIA_ID,
+              url: `/api/content/media/${MEDIA_ID}`,
+              width: 640,
+              height: 640,
+            },
+          },
+        }
+      : {}),
     coverImage:
       typeof coverImageId === 'string'
         ? {
@@ -740,6 +778,7 @@ function people(): Record<string, unknown> {
       person(PERSON_ID, 1, { name: 'Adam Vzor', onBoard: true, featured: false }),
     ],
     note: 'Děkujeme všem, kdo pomáhají s námi.',
+    footnote: 'Web zajišťuje bez nároku na odměnu Petr Vzor.',
   };
 }
 
@@ -764,5 +803,6 @@ function person(
     webSignature: null,
     personalEmail: fields['personalEmail'] ?? null,
     fundEmail: fields['fundEmail'] ?? null,
+    linkedToAccount: false,
   };
 }

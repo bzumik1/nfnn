@@ -3,10 +3,11 @@ Feature: An administrator keeps the people of the foundation that the About sect
 
   The block "Kdo fond vede" of the home page shows the people an administrator keeps at
   /sprava/lide-fondu (Jakub 2026-10-30): cards with a portrait for the featured people, the line
-  of the board, and the founders' note with the web signatures of the featured people under it.
+  of the board, the founders' note with the web signatures of the featured people under it, and
+  one line under the board (Jakub 2026-10-30: the volunteer who runs the site).
   A web signature is a separate public image for the site only, never the signature on receipts,
-  and it is set and removed only from a browser. A member's personal and fund e-mails are
-  administration data only and never reach the home page.
+  and a connected application may set and remove it too (Jakub 2026-10-30). A member's personal
+  and fund e-mails are administration data only and never reach the home page.
 
   Background:
     Given today is 2026-10-30
@@ -233,6 +234,59 @@ Feature: An administrator keeps the people of the foundation that the About sect
       | CHANGE_FOUNDERS_NOTE | Odebráno slovo zakladatelů. |
       | CHANGE_FOUNDERS_NOTE | Upraveno slovo zakladatelů. |
 
+  Scenario: The line under the board shows on the home page as one line, and emptying it removes it
+    Given "Jana" adds a person:
+      | name    | Eva Vzorová |
+      | onBoard | true        |
+    And 1 seconds pass
+    When "Jana" writes the line under the board:
+      """
+        Web zajišťuje   bez nároku na odměnu
+      Petr Vzor.
+      """
+    Then the response status is 200
+    And the line under the board is "Web zajišťuje bez nároku na odměnu Petr Vzor."
+    When "Jana" asks for the people of the foundation
+    Then the line under the board is "Web zajišťuje bez nároku na odměnu Petr Vzor."
+    When someone without a token asks for the home content
+    Then the home line under the board is "Web zajišťuje bez nároku na odměnu Petr Vzor."
+    When 1 seconds pass
+    And "Jana" empties the line under the board
+    Then the response status is 200
+    And the line under the board is empty
+    When someone without a token asks for the home content
+    Then the home content has no line under the board
+    When "Jana" asks for the admin actions
+    Then the admin actions are:
+      | action                 | summary                          |
+      | CHANGE_PEOPLE_FOOTNOTE | Odebrán řádek pod správní radou. |
+      | CHANGE_PEOPLE_FOOTNOTE | Upraven řádek pod správní radou. |
+      | ADD_PERSON             | Přidána osoba mezi lidi fondu.   |
+
+  Scenario: A person whose e-mail is the confirmed e-mail of an account is linked to it, which grants nothing
+    Given a person registered with email "petr@example.cz" and password "correct horse battery" but has not confirmed the e-mail
+    And "Jana" adds a person:
+      | name      | Eva Vzorová     |
+      | fundEmail | jana@example.cz |
+    And "Jana" adds a person:
+      | name          | Petr Vzor       |
+      | personalEmail | petr@example.cz |
+    When "Jana" asks for the people of the foundation
+    Then the people of the foundation are:
+      | name        | linkedToAccount |
+      | Eva Vzorová | true            |
+      | Petr Vzor   | false           |
+    When "Jana" asks for her own person of the foundation
+    Then the response status is 200
+    And her own person of the foundation is "Eva Vzorová"
+    Given a person "Hana" is registered
+    And "Hana" is an administrator
+    When "Hana" asks for her own person of the foundation
+    Then the response status is 200
+    And she has no own person of the foundation
+    When someone without a token asks for the home content
+    Then the people on the home page carry no e-mail address
+
   Scenario: Removing a person deletes their portrait and their web signature, and removing a web signature deletes it
     Given "Jana" uploads a 640 by 640 pixel PNG image named "eva.png"
     And "Jana" adds a person:
@@ -323,6 +377,11 @@ Feature: An administrator keeps the people of the foundation that the About sect
     And the problem lists an error for field "text"
     When "Jana" writes a founders note of 600 characters
     Then the response status is 200
+    When "Jana" writes a line under the board of 201 characters
+    Then the response status is 400
+    And the problem lists an error for field "text"
+    When "Jana" writes a line under the board of 200 characters
+    Then the response status is 200
     Given "Jana" adds a person:
       | name | Eva Vzorová |
     When "Jana" sets the web signature of "Eva Vzorová" to an image that was never uploaded
@@ -363,6 +422,9 @@ Feature: An administrator keeps the people of the foundation that the About sect
     When "Petr" removes the person "Eva Vzorová"
     Then the response status is 403
     And the problem type ends with "auth/forbidden"
+    When "Petr" asks for her own person of the foundation
+    Then the response status is 403
+    And the problem type ends with "auth/forbidden"
     When someone without a token asks for the people of the foundation
     Then the response status is 401
     And the problem type ends with "auth/unauthenticated"
@@ -370,12 +432,13 @@ Feature: An administrator keeps the people of the foundation that the About sect
     Then the response status is 401
     And the problem type ends with "auth/unauthenticated"
 
-  Scenario: A connected application with the writing permission keeps the people and the note but never touches a web signature
+  Scenario: A connected application with the writing permission keeps the people, the note and the web signatures
     Given "Jana" adds a person:
       | name     | Eva Vzorová |
       | featured | true        |
     And "Jana" uploads a 600 by 180 pixel PNG image named "podpis-eva.png"
     And "Jana" sets the web signature of "Eva Vzorová" to the image uploaded as "podpis-eva.png"
+    And "Jana" uploads a 600 by 180 pixel PNG image named "podpis-adam.png"
     And "Jana" connected the application "https://claude.ai/.well-known/oauth-client" with scope "admin:read admin:write"
     When the connector exchanges the connector token for an API token
     And the exchanged API token adds a person:
@@ -391,6 +454,11 @@ Feature: An administrator keeps the people of the foundation that the About sect
     And the person says:
       | fundEmail     | adam@nfnn.cz |
       | personalEmail |              |
+    When the exchanged API token writes the line under the board:
+      """
+      Web zajišťuje Petr Vzor.
+      """
+    Then the response status is 200
     When the exchanged API token orders the people:
       | Adam Vzor   |
       | Eva Vzorová |
@@ -403,46 +471,48 @@ Feature: An administrator keeps the people of the foundation that the About sect
     When the exchanged API token updates the person "Eva Vzorová":
       | name     | Eva Nová |
       | featured | true     |
-    Then the response status is 403
-    And the problem type ends with "content/web-signature-in-browser-only"
-    When the exchanged API token updates the person "Eva Vzorová":
-      | name     | Eva Vzorová  |
-      | role     | Zakladatelka |
-      | featured | true         |
     Then the response status is 200
     And the person says:
-      | name            | Eva Vzorová            |
-      | role            | Zakladatelka           |
+      | name            | Eva Nová               |
       | webSignature.id | {image:podpis-eva.png} |
+    When the exchanged API token sets the web signature of "Adam Vzor" to the image uploaded as "podpis-adam.png"
+    Then the response status is 200
+    And the person says:
+      | webSignature.id     | {image:podpis-adam.png} |
+      | webSignature.width  | 600                     |
+      | webSignature.height | 180                     |
     When the exchanged API token removes the web signature of "Eva Vzorová"
-    Then the response status is 403
-    And the problem type ends with "auth/forbidden"
-    When the exchanged API token sets the web signature of "Eva Vzorová" to the image uploaded as "podpis-eva.png"
-    Then the response status is 403
-    And the problem type ends with "auth/forbidden"
-    When the exchanged API token removes the person "Eva Vzorová"
-    Then the response status is 403
-    And the problem type ends with "content/web-signature-in-browser-only"
+    Then the response status is 200
+    And the person says:
+      | webSignature |  |
+    When someone without a token asks for the image uploaded as "podpis-eva.png"
+    Then the response status is 404
     When the exchanged API token removes the person "Adam Vzor"
     Then the response status is 204
+    When someone without a token asks for the image uploaded as "podpis-adam.png"
+    Then the response status is 404
     When "Jana" asks for the people of the foundation
     Then the people of the foundation are:
-      | name        | webSignature.id           |
-      | Eva Vzorová | {image:podpis-eva.png}    |
+      | name     | webSignature |
+      | Eva Nová |              |
     And these admin actions were recorded:
-      | action               | client    |
-      | REMOVE_PERSON        | claude.ai |
-      | UPDATE_PERSON        | claude.ai |
-      | CHANGE_FOUNDERS_NOTE | claude.ai |
-      | ORDER_PEOPLE         | claude.ai |
-      | UPDATE_PERSON        | claude.ai |
-      | ADD_PERSON           | claude.ai |
-      | CHANGE_WEB_SIGNATURE |           |
-      | ADD_PERSON           |           |
+      | action                 | client    |
+      | REMOVE_PERSON          | claude.ai |
+      | REMOVE_WEB_SIGNATURE   | claude.ai |
+      | CHANGE_WEB_SIGNATURE   | claude.ai |
+      | UPDATE_PERSON          | claude.ai |
+      | CHANGE_FOUNDERS_NOTE   | claude.ai |
+      | ORDER_PEOPLE           | claude.ai |
+      | CHANGE_PEOPLE_FOOTNOTE | claude.ai |
+      | UPDATE_PERSON          | claude.ai |
+      | ADD_PERSON             | claude.ai |
+      | CHANGE_WEB_SIGNATURE   |           |
+      | ADD_PERSON             |           |
 
   Scenario: A connected application with the reading permission only reads the people but cannot change them
     Given "Jana" adds a person:
       | name | Eva Vzorová |
+    And "Jana" uploads a 600 by 180 pixel PNG image named "podpis-eva.png"
     And "Jana" connected the application "https://claude.ai/.well-known/oauth-client"
     When the connector exchanges the connector token for an API token
     And the exchanged API token asks for the people of the foundation
@@ -451,5 +521,17 @@ Feature: An administrator keeps the people of the foundation that the About sect
       | name        |
       | Eva Vzorová |
     When the exchanged API token removes the person "Eva Vzorová"
+    Then the response status is 403
+    And the problem type ends with "auth/forbidden"
+    When the exchanged API token sets the web signature of "Eva Vzorová" to the image uploaded as "podpis-eva.png"
+    Then the response status is 403
+    And the problem type ends with "auth/forbidden"
+    When the exchanged API token removes the web signature of "Eva Vzorová"
+    Then the response status is 403
+    And the problem type ends with "auth/forbidden"
+    When the exchanged API token writes the line under the board:
+      """
+      Web zajišťuje Petr Vzor.
+      """
     Then the response status is 403
     And the problem type ends with "auth/forbidden"

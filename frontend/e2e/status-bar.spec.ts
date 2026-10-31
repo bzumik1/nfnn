@@ -85,4 +85,16 @@ test.describe('Given a visitor on an iPhone, whose Safari tints its status bar f
     expect(visible.opacity).toBeLessThanOrEqual(0.12);
     expect(visible.taps).toBe('none');
   });
+
+  test('when a page opens in Chrome on Android or an older Safari, then the theme-color it reads is the same blue', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await page.goto('/projekty');
+
+    await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute(
+      'content',
+      'rgb(37, 99, 235)',
+    );
+  });
 });

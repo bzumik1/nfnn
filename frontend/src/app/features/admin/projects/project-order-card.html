@@ -1,0 +1,71 @@
+<section class="ui-card" aria-labelledby="project-order-title">
+  <h2 id="project-order-title" class="ui-card__title" i18n="@@admin.projects.order.title">
+    Řazení na webu
+  </h2>
+  <div class="ui-card__body">
+    <p class="ui-card__intro" i18n="@@admin.projects.order.intro">
+      Vyberte, v jakém pořadí web ukazuje projekty na úvodní stránce a v přehledu projektů. Ve
+      stejném pořadí jsou i v seznamu nahoře, jen koncepty v něm stojí vždy první.
+    </p>
+    @switch (state()) {
+      @case ('loading') {
+        <p
+          class="ui-load-state ui-load-state--inset"
+          role="status"
+          i18n="@@admin.projects.order.loading"
+        >
+          Načítáme řazení…
+        </p>
+      }
+      @case ('error') {
+        <div class="ui-load-state ui-load-state--inset ui-load-state--error" role="alert">
+          <p i18n="@@admin.projects.order.error">Řazení se nepodařilo načíst.</p>
+          <button
+            type="button"
+            class="ui-button"
+            (click)="load()"
+            i18n="@@admin.projects.order.error.retry"
+          >
+            Zkusit znovu
+          </button>
+        </div>
+      }
+      @case ('ready') {
+        <form class="order-form" (submit)="save($event)" novalidate>
+          <fieldset class="orders">
+            <legend class="visually-hidden" i18n="@@admin.projects.order.legend">
+              Pořadí projektů na webu
+            </legend>
+            @for (order of orders; track order) {
+              <label class="ui-choice" [class.is-selected]="chosen() === order">
+                <input
+                  type="radio"
+                  name="project-order"
+                  [value]="order"
+                  [checked]="chosen() === order"
+                  [attr.aria-labelledby]="'project-order-' + order + '-title'"
+                  [attr.aria-describedby]="'project-order-' + order + '-description'"
+                  (change)="choose(order)"
+                />
+                <span class="ui-choice__title" [id]="'project-order-' + order + '-title'">{{
+                  label(order)
+                }}</span>
+                <span class="ui-choice__detail" [id]="'project-order-' + order + '-description'">{{
+                  description(order)
+                }}</span>
+              </label>
+            }
+          </fieldset>
+          <button type="submit" class="ui-button ui-button--primary" [disabled]="saving()">
+            @if (saving()) {
+              <span i18n="@@admin.projects.order.saving">Ukládáme…</span>
+            } @else {
+              <span i18n="@@admin.projects.order.save">Uložit řazení</span>
+            }
+          </button>
+        </form>
+      }
+    }
+    <app-live-notice [notice]="notice()" />
+  </div>
+</section>

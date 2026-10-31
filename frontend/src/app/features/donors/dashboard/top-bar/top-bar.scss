@@ -91,6 +91,13 @@
   font-weight: var(--weight-medium);
 }
 
+.topbar-portrait {
+  flex-shrink: 0;
+  width: var(--space-6);
+  height: var(--space-6);
+  font-size: var(--text-2xs);
+}
+
 .topbar-logout {
   background: var(--color-danger-bg);
   color: var(--color-danger);
