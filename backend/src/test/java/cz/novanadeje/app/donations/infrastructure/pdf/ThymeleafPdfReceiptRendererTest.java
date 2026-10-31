@@ -89,7 +89,7 @@ class ThymeleafPdfReceiptRendererTest {
                 .contains("Nová naděje - nadační fond potvrzuje, že od výše uvedeného dárce přijal dne 15. 3. 2026 peněžitý dar ve výši 500 Kč,"
                         + " poukázaný bankovním převodem na účet nadačního fondu č. 5544332217/2010.")
                 .contains("§ 15 odst. 1 a § 20 odst. 8 zákona č. 586/1992 Sb., o daních z příjmů")
-                .contains("V Novém Boru, dne 15. 1. 2027")
+                .contains("V Novém Boru dne 15. 1. 2027")
                 .contains("Za Nová naděje - nadační fond:")
                 .contains("Pavel Znamenáček")
                 .contains("předseda správní rady")
