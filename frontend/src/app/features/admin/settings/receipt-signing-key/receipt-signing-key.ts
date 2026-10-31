@@ -67,6 +67,7 @@ export class ReceiptSigningKey {
   protected readonly opening = signal(false);
   protected readonly restartingFor = signal<string | null>(null);
   protected readonly restartSlow = signal(false);
+  private readonly stillWithdrawnAfterRestart = signal(false);
   protected readonly notice = signal<Notice | null>(null);
 
   protected readonly current = computed(() => this.keys()?.keys.find((key) => key.current) ?? null);
@@ -82,7 +83,10 @@ export class ReceiptSigningKey {
       return [];
     }
     const ids = unpublishedKeyIds(keys);
-    const withdrawn = this.restartingFor() === null ? withdrawnCurrentKeyId(keys) : null;
+    const withdrawn =
+      this.restartingFor() === null && !this.stillWithdrawnAfterRestart()
+        ? withdrawnCurrentKeyId(keys)
+        : null;
     return [
       ...(ids.length === 0 ? [] : [unpublishedKeysSentence(ids)]),
       ...(withdrawn === null ? [] : [withdrawnCurrentKeySentence(withdrawn)]),
@@ -125,8 +129,26 @@ export class ReceiptSigningKey {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (keys) => {
+          this.stillWithdrawnAfterRestart.set(false);
           this.keys.set(keys);
           this.state.set('ready');
+        },
+        error: () => this.state.set('error'),
+      });
+  }
+
+  private loadAfterRestart(keyId: string): void {
+    this.state.set('loading');
+    this.api
+      .receiptSigningKeys()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (keys) => {
+          const same = keys.currentKeyId === keyId;
+          this.stillWithdrawnAfterRestart.set(same);
+          this.keys.set(keys);
+          this.state.set('ready');
+          this.notice.set(this.afterRestartNotice(keyId, same, withdrawnCurrentKeyId(keys) === null));
         },
         error: () => this.state.set('error'),
       });
@@ -189,12 +211,24 @@ export class ReceiptSigningKey {
         }
         const keyId = this.restartingFor() ?? '';
         this.restartingFor.set(null);
-        this.notice.set({
+        this.notice.set(null);
+        this.loadAfterRestart(keyId);
+      });
+  }
+
+  private afterRestartNotice(keyId: string, same: boolean, signs: boolean): Notice | null {
+    if (same) {
+      return {
+        kind: 'alert',
+        text: $localize`:@@admin.signingKey.notRenewed:Klíč ${keyId}:key: je stažený, ale web po restartu podepisuje pořád jím a nový klíč nemá. Do té doby se potvrzení o daru nestáhnou; obraťte se prosím na technika serveru.`,
+      };
+    }
+    return signs
+      ? {
           kind: 'status',
           text: $localize`:@@admin.signingKey.renewed:Klíč ${keyId}:key: je stažený a web po restartu podepisuje novým klíčem.`,
-        });
-        this.load();
-      });
+        }
+      : null;
   }
 
   private withdrawable(key: ReceiptSigningKeyResponse): boolean {
