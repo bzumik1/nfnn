@@ -85,12 +85,20 @@
             }
           </div>
         }
-        @if (restartSlow()) {
+        @if (unfinishedRenewal(); as unfinished) {
           <div class="signing-key-slow" role="alert">
-            <p i18n="@@admin.signingKey.slow">
-              Klíč je stažený, ale web se po restartu zatím nespustil. Počkejte pár minut a zkuste
-              to znovu.
-            </p>
+            @if (unfinished === 'notRestarted') {
+              <p i18n="@@admin.signingKey.notRestarted">
+                Klíč {{ restartingFor() }} je stažený, ale web se zatím nerestartoval a nový klíč
+                nemá, takže se potvrzení o daru nestáhnou. Počkejte pár minut a zkuste to znovu;
+                když se nic nezmění, obraťte se prosím na technika serveru.
+              </p>
+            } @else {
+              <p i18n="@@admin.signingKey.slow">
+                Klíč je stažený, ale web se po restartu zatím nespustil. Počkejte pár minut a zkuste
+                to znovu.
+              </p>
+            }
             <button
               type="button"
               class="ui-button"

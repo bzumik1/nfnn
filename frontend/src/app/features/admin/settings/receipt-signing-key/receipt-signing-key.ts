@@ -23,7 +23,7 @@ import {
   ReceiptSigningKeysResponse,
   ReceiptSigningKeyWithdrawalResponse,
 } from '../../admin-api';
-import { watchKeyRenewal } from './key-renewal';
+import { KeyRenewal, watchKeyRenewal } from './key-renewal';
 import { KeyWithdrawalDialog } from './key-withdrawal-dialog';
 import {
   mismatchSentence,
@@ -33,6 +33,8 @@ import {
 import { unpublishedKeyIds, unpublishedKeysSentence } from './unpublished-keys';
 
 type LoadState = 'loading' | 'ready' | 'error';
+
+type UnfinishedRenewal = Exclude<KeyRenewal['outcome'], 'answered'>;
 
 interface Withdrawal {
   keyId: string;
@@ -65,7 +67,7 @@ export class ReceiptSigningKey {
   protected readonly withdrawal = signal<Withdrawal | null>(null);
   protected readonly opening = signal(false);
   protected readonly restartingFor = signal<string | null>(null);
-  protected readonly restartSlow = signal(false);
+  protected readonly unfinishedRenewal = signal<UnfinishedRenewal | null>(null);
   private readonly stillWithdrawnAfterRestart = signal(false);
   protected readonly notice = signal<Notice | null>(null);
 
@@ -187,21 +189,21 @@ export class ReceiptSigningKey {
 
   protected watchRestart(): void {
     const keyId = this.restartingFor() ?? '';
-    this.restartSlow.set(false);
+    this.unfinishedRenewal.set(null);
     this.notice.set({
       kind: 'status',
       text: $localize`:@@admin.signingKey.restarting:Klíč ${keyId}:key: je stažený. Web se restartuje a vytvoří si nový klíč, obvykle do minuty.`,
     });
     watchKeyRenewal(() => this.api.receiptSigningKeys(), keyId)
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((keys) => {
-        if (keys === null) {
+      .subscribe((renewal) => {
+        if (renewal.outcome !== 'answered') {
           this.notice.set(null);
-          this.restartSlow.set(true);
+          this.unfinishedRenewal.set(renewal.outcome);
           return;
         }
         this.restartingFor.set(null);
-        this.showAfterRestart(keyId, keys);
+        this.showAfterRestart(keyId, renewal.keys);
       });
   }
 
