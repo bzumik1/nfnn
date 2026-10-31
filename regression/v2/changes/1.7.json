@@ -58,7 +58,7 @@
     "reason": "1.7: a connected application issues a receipt, so the existing audit line, unchanged in code, now names both a subject and the connected application (v2 recorded a subject only for browser changes and a connected application only with CHANGE_LOG_LEVEL, which has no subject: on nothing through claude.ai)",
     "contract": "docs/api-contract.md, Audit trail; Issued receipts in the administration",
     "security": {
-      "approvedIn": "PENDING",
+      "approvedIn": "PR #253, Jakub 2026-10-31",
       "fields": {
         "<id>": "first the administrator's donor id (UUID), then the subject's id, here the issued receipt's id (UUID)",
         "<enum>": "the action code, here ISSUE_RECEIPT",
