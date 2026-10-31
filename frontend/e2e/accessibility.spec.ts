@@ -1019,16 +1019,16 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
     await page.goto('/sprava/spravci');
     await expect(page.getByRole('heading', { level: 1, name: 'Správci' })).toBeFocused();
-    await expect(page.locator('tbody tr')).toHaveCount(2);
+    await expect(page.locator('.administrator-row')).toHaveCount(2);
 
     expect(await violations(page)).toEqual([]);
 
     await page
-      .locator('tbody tr')
+      .locator('.administrator-row')
       .nth(1)
       .getByRole('button', { name: 'Odebrat roli správce' })
       .click();
-    await expect(page.locator('tbody tr').nth(1)).toContainText('Odebrat roli správce?');
+    await expect(page.locator('.administrator-row').nth(1)).toContainText('Odebrat roli správce?');
     await page.getByRole('button', { name: 'Přidat správce' }).click();
     await expect(page.getByLabel('E-mail dárce')).toBeFocused();
 

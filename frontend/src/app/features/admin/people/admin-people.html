@@ -29,21 +29,21 @@
               Zatím tu nikdo není, web ukazuje svůj vlastní blok „Kdo fond vede“.
             </p>
           } @else {
-            <ol class="people-list">
+            <ol class="ui-person-list">
               @for (member of members(); track member.id; let first = $first, last = $last) {
-                <li class="person-row">
+                <li class="ui-person-row person-row">
                   <app-avatar
-                    class="person-thumb"
+                    class="ui-person-row__avatar person-thumb"
                     [name]="member.name"
                     [src]="member.portrait ? member.portrait.url + '?w=480' : null"
                     [size]="48"
                   />
-                  <div class="person-text">
-                    <p class="person-name">{{ member.name }}</p>
+                  <div>
+                    <p class="ui-person-row__name person-name">{{ member.name }}</p>
                     @if (member.role) {
-                      <p class="person-role">{{ member.role }}</p>
+                      <p class="ui-person-row__meta">{{ member.role }}</p>
                     }
-                    <ul class="person-badges">
+                    <ul class="ui-person-row__badges person-badges">
                       @if (member.featured) {
                         <li class="ui-badge ui-badge--accent" i18n="@@admin.people.badge.featured">
                           Karta s portrétem
@@ -64,7 +64,7 @@
                       }
                     </ul>
                   </div>
-                  <div class="person-actions">
+                  <div class="ui-person-row__actions">
                     <button
                       type="button"
                       class="ui-button ui-button--small ui-button--quiet"

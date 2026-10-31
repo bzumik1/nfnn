@@ -1,0 +1,73 @@
+@use 'breakpoints' as bp;
+
+.ui-person-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.ui-person-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--space-3) var(--space-4);
+  align-items: center;
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-divider);
+
+  @include bp.down(cards) {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+}
+
+.ui-person-row__avatar {
+  width: var(--space-12);
+  height: var(--space-12);
+  font-size: var(--text-2xl);
+}
+
+.ui-person-row__name {
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+}
+
+.ui-person-row__meta {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.ui-person-row__badges {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1-5);
+  margin-top: var(--space-1-5);
+
+  .ui-badge {
+    white-space: normal;
+  }
+}
+
+.ui-person-row__note {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  line-height: var(--leading-normal);
+  margin-top: var(--space-1-5);
+}
+
+.ui-person-row__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: flex-end;
+
+  @include bp.down(cards) {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}
+
+.ui-person-row__detail {
+  grid-column: 1 / -1;
+}
