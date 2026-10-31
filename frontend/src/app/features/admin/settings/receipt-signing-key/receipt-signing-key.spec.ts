@@ -367,6 +367,44 @@ describe('Given the receipt signing key section of the receipt settings', () => 
       );
     });
 
+    it('and the web comes back still signing with the withdrawn key, then an alert says so and no new key is claimed', async () => {
+      await type('withdrawal-code', '123456');
+      await submit();
+      http
+        .expectOne(WITHDRAW_OWN_URL)
+        .flush(withdrawn(receiptSigningKeys([receiptSigningKey({ status: 'revoked' })]), true));
+      await settle();
+
+      restarts.next('restarted');
+      restarts.complete();
+      await settle();
+      await load(receiptSigningKeys([receiptSigningKey({ status: 'revoked' })]));
+
+      expect(rows()['Klíč serveru']).toBe('21fe31df');
+      expect(text('[role="status"]:not(:empty)')).toBe('');
+      expect(text('app-live-notice [role="alert"]')).toBe(
+        'Klíč 21fe31df je stažený, ale web po restartu podepisuje pořád jím a nový klíč nemá. Do té doby se potvrzení o daru nestáhnou; obraťte se prosím na technika serveru.',
+      );
+      expect(text('.signing-key-warning')).toBe('');
+    });
+
+    it('and the keys cannot be loaded after the restart, then no new key is claimed and a retry is offered', async () => {
+      await type('withdrawal-code', '123456');
+      await submit();
+      http
+        .expectOne(WITHDRAW_OWN_URL)
+        .flush(withdrawn(receiptSigningKeys([receiptSigningKey({ status: 'revoked' })]), true));
+      await settle();
+
+      restarts.next('restarted');
+      restarts.complete();
+      await settle();
+      await load({}, 503);
+
+      expect(text('[role="status"]:not(:empty)')).toBe('');
+      expect(text('.signing-key-error')).toContain('Klíč se nepodařilo načíst.');
+    });
+
     it('and the web does not come back in time, then an alert says so and a retry watches again', async () => {
       await type('withdrawal-code', '123456');
       await submit();
