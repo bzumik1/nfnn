@@ -39,6 +39,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.groups.Tuple.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -347,7 +348,7 @@ class ReceiptSigningKeyRegistrationTest {
         registration.registerOwnKey();
 
         assertThat(keys.saves).isZero();
-        assertThat(lines.written).extracting(Line::level, Line::message).containsExactly(org.assertj.core.groups.Tuple.tuple(Level.ERROR,
+        assertThat(lines.written).extracting(Line::level, Line::message).containsExactly(tuple(Level.ERROR,
                 "Receipt signing key 39f713d0 was withdrawn but its row is active again, so it is published as withdrawn"));
     }
 
@@ -376,8 +377,8 @@ class ReceiptSigningKeyRegistrationTest {
         assertThat(keys.stored).isEmpty();
         verify(events, never()).publishEvent(any(AdminActionPerformed.class));
         assertThat(lines.written).extracting(Line::level, Line::message).containsExactlyInAnyOrder(
-                org.assertj.core.groups.Tuple.tuple(Level.ERROR, "Receipt signing key 21fe31df is in the audit trail but its row is missing"),
-                org.assertj.core.groups.Tuple.tuple(Level.ERROR,
+                tuple(Level.ERROR, "Receipt signing key 21fe31df is in the audit trail but its row is missing"),
+                tuple(Level.ERROR,
                         "Receipt signing key 21fe31df of this server is withdrawn, so the server signs no receipt until it starts with a new seed"));
     }
 
@@ -391,7 +392,7 @@ class ReceiptSigningKeyRegistrationTest {
         registration.registerOwnKey();
 
         assertThat(keys.saves).isZero();
-        assertThat(lines.written).extracting(Line::level, Line::message).containsExactly(org.assertj.core.groups.Tuple.tuple(Level.ERROR,
+        assertThat(lines.written).extracting(Line::level, Line::message).containsExactly(tuple(Level.ERROR,
                 "Receipt signing key 21fe31df of this server is withdrawn, so the server signs no receipt until it starts with a new seed"));
     }
 
