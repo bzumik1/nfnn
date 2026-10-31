@@ -35,12 +35,9 @@
 }
 
 .person-thumb {
-  display: block;
   width: var(--space-12);
   height: var(--space-12);
-  border-radius: var(--radius-round);
-  object-fit: cover;
-  background: var(--color-surface-alt);
+  font-size: var(--text-2xl);
 }
 
 .person-name {
@@ -123,13 +120,9 @@
 }
 
 .portrait-preview {
-  display: block;
   width: 120px;
   height: 120px;
-  border-radius: var(--radius-round);
-  object-fit: cover;
   margin-bottom: var(--space-2-5);
-  background: var(--color-surface-alt);
 }
 
 .signature-preview {

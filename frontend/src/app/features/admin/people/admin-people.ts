@@ -38,6 +38,7 @@ import {
   PersonRequest,
   PersonResponse,
 } from '../../content/people-api';
+import { Avatar } from '../../../shared/ui/avatar/avatar';
 
 type LoadState = 'loading' | 'ready' | 'error';
 type Direction = 'up' | 'down';
@@ -61,6 +62,7 @@ const NEW_PERSON = 'new';
 @Component({
   selector: 'app-admin-people',
   imports: [
+    Avatar,
     FormsModule,
     FormField,
     FormControlDirective,

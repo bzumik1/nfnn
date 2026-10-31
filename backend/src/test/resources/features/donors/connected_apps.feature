@@ -129,8 +129,6 @@ Feature: An administrator connects an application such as Claude to the administ
       | POST   | /api/admin/operations/backups/key/reveal                            |
       | POST   | /api/admin/operations/backups/key/confirmation                      |
       | DELETE | /api/admin/donations/receipt-signature                              |
-      | POST   | /api/admin/content/people/{id}/web-signature                        |
-      | DELETE | /api/admin/content/people/{id}/web-signature                        |
 
   Scenario: A connected application issues a first receipt and gets it again, but replacing an issued receipt is left to the browser
     Given today is 2026-12-20

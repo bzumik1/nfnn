@@ -326,14 +326,26 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
     case `DELETE /api/admin/content/people/${PERSON_ID}`:
       return [204, undefined];
     case `DELETE /api/admin/content/people/${SIGNED_PERSON_ID}`:
+      return [204, undefined];
+    case `POST /api/admin/content/people/${PERSON_ID}/web-signature`: {
+      const imageId = (JSON.parse(body) as Record<string, unknown>)['imageId'];
       return [
-        403,
-        problem(
-          403,
-          'content/web-signature-in-browser-only',
-          'Podpis jen v prohlížeči',
-          'Podpis na webu se nahrává a odebírá jen ve Správě webu v prohlížeči.',
-        ),
+        200,
+        {
+          ...person(PERSON_ID, 1, { name: 'Adam Vzor', onBoard: true, featured: false }),
+          webSignature: {
+            id: imageId,
+            url: `/api/content/media/${String(imageId)}`,
+            width: 600,
+            height: 180,
+          },
+        },
+      ];
+    }
+    case `DELETE /api/admin/content/people/${SIGNED_PERSON_ID}/web-signature`:
+      return [
+        200,
+        person(SIGNED_PERSON_ID, 0, { name: 'Eva Vzorová', onBoard: true, featured: true }),
       ];
     case 'PUT /api/admin/content/people/order':
       return [200, people()];

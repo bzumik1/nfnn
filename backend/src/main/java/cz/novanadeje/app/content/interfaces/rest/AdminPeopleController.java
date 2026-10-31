@@ -25,8 +25,6 @@ import java.util.UUID;
 @RequestMapping("/api/admin/content/people")
 class AdminPeopleController {
 
-    private static final String SCOPE_CLAIM = "scope";
-
     private final PeopleAdminService people;
     private final FoundersNoteService notes;
 
@@ -58,13 +56,13 @@ class AdminPeopleController {
 
     @PutMapping("/{id}")
     PersonResponse update(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody PersonRequest request) {
-        return PersonResponse.from(people.update(admin(jwt), new PersonId(id), request.toCommand(), !jwt.hasClaim(SCOPE_CLAIM)));
+        return PersonResponse.from(people.update(admin(jwt), new PersonId(id), request.toCommand()));
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     void remove(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
-        people.remove(admin(jwt), new PersonId(id), !jwt.hasClaim(SCOPE_CLAIM));
+        people.remove(admin(jwt), new PersonId(id));
     }
 
     @PostMapping("/{id}/web-signature")

@@ -11,7 +11,6 @@ import cz.novanadeje.app.content.domain.people.PersonImageInUse;
 import cz.novanadeje.app.content.domain.people.PersonNotFound;
 import cz.novanadeje.app.content.domain.people.PersonRepository;
 import cz.novanadeje.app.content.domain.people.TooManyPeople;
-import cz.novanadeje.app.content.domain.people.WebSignatureInBrowserOnly;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -65,13 +64,10 @@ public class PeopleAdminService {
         return view(added);
     }
 
-    public PersonView update(UUID adminId, PersonId id, PersonCommand command, boolean webSignatureMayChange) {
+    public PersonView update(UUID adminId, PersonId id, PersonCommand command) {
         Instant now = clock.instant();
         Person current = find(id);
         PersonDetails details = checked(command.toDetails());
-        if (current.webSignature().isPresent() && !webSignatureMayChange && !details.name().equals(current.details().name())) {
-            throw new WebSignatureInBrowserOnly();
-        }
         Person edited = current.edit(details, now);
         people.save(edited);
         current.imagesLeftBy(edited).forEach(media::deleteIfUnused);
@@ -79,12 +75,9 @@ public class PeopleAdminService {
         return view(edited);
     }
 
-    public void remove(UUID adminId, PersonId id, boolean webSignatureMayGo) {
+    public void remove(UUID adminId, PersonId id) {
         Instant now = clock.instant();
         Person current = find(id);
-        if (current.webSignature().isPresent() && !webSignatureMayGo) {
-            throw new WebSignatureInBrowserOnly();
-        }
         people.delete(id);
         current.images().forEach(media::deleteIfUnused);
         publish(adminId, REMOVE_ACTION, "Osoba " + id + " odebrána z lidí fondu", now);

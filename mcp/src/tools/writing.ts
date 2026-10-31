@@ -546,7 +546,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Přidat osobu mezi lidi fondu',
       description:
-        'Adds a person to the people of the foundation (Lidé fondu), last in the order; the home page then shows its block "Kdo fond vede" from these people instead of its own. Featured people get a card with their portrait and role, people on the board are named in the board line with their note in parentheses. Answers the person with their id. A portrait of a person goes up through nfnn_photo_upload_link (or the web), never from a public address, and only with their consent. The web signature is set and removed only on the web at /sprava/lide-fondu. Audited as ADD_PERSON.',
+        'Adds a person to the people of the foundation (Lidé fondu), last in the order; the home page then shows its block "Kdo fond vede" from these people instead of its own. Featured people get a card with their portrait and role, people on the board are named in the board line with their note in parentheses. Answers the person with their id. A portrait of a person goes up through nfnn_photo_upload_link (or the web), never from a public address, and only with their consent. Their web signature is set afterwards with nfnn_set_web_signature. Audited as ADD_PERSON.',
       inputSchema: z.object(PERSON),
       annotations: WRITING,
     },
@@ -561,7 +561,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Upravit osobu mezi lidmi fondu',
       description:
-        'Replaces the name, role, board membership, board note, featured flag, portrait and the two e-mails of a person of the foundation; send every field, read them with nfnn_people first. A replaced or removed portrait is deleted unless a news article or project still uses it. The web signature stays as it is: it is set and removed only on the web at /sprava/lide-fondu, and the name of a person who has one changes only there too (the backend refuses it here). A portrait cannot be an image that is a web signature. Audited as UPDATE_PERSON.',
+        'Replaces the name, role, board membership, board note, featured flag, portrait and the two e-mails of a person of the foundation; send every field, read them with nfnn_people first. A replaced or removed portrait is deleted unless a news article or project still uses it. The web signature stays as it is (nfnn_set_web_signature and nfnn_remove_web_signature change it). A portrait cannot be an image that is a web signature. Audited as UPDATE_PERSON.',
       inputSchema: z.object({ id: UUID, ...PERSON }),
       annotations: { ...WRITING, destructiveHint: true, idempotentHint: true },
     },
@@ -581,7 +581,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Odebrat osobu z lidí fondu',
       description:
-        'Removes a person from the people of the foundation and deletes their portrait unless a news article or project still uses it. A person with a web signature is removed only on the web at /sprava/lide-fondu, because the signature is web-only; the backend refuses it here. When the last person goes, the home page shows its own block again. Audited as REMOVE_PERSON.',
+        'Removes a person from the people of the foundation and deletes their portrait and web signature unless a news article or project still uses them. When the last person goes, the home page shows its own block again. Audited as REMOVE_PERSON.',
       inputSchema: z.object({ id: UUID }),
       annotations: { ...WRITING, destructiveHint: true, idempotentHint: true },
     },
@@ -594,6 +594,55 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
           await backend.delete(`/api/admin/content/people/${id}`, apiToken);
           return plain('The person is removed from the people of the foundation.');
         },
+        `person ${id}`,
+      ),
+  );
+
+  server.registerTool(
+    'nfnn_set_web_signature',
+    {
+      title: 'Nastavit podpis na webu',
+      description:
+        'Sets the web signature of a person of the foundation: the public image of their handwritten signature that the home page shows under the founders note of "Kdo fond vede" when the person is featured. It is never the receipt signature (the signature on donation receipts stays on the web, /sprava/nastaveni). The image goes up only as a file through nfnn_photo_upload_link (or the web), never from a public address, and only with the person\'s consent; it cannot be anyone\'s portrait. A replaced signature is deleted unless a news article or project still uses it. Answers the person. Audited as CHANGE_WEB_SIGNATURE.',
+      inputSchema: z.object({
+        id: UUID.describe('Id of the person, as nfnn_people shows it.'),
+        imageId: UUID.describe(
+          'Id of the uploaded signature image, as the PUT of nfnn_photo_upload_link answers it.',
+        ),
+      }),
+      annotations: { ...WRITING, idempotentHint: true },
+    },
+    async ({ id, imageId }, ctx) =>
+      answerChange(
+        deps,
+        ctx,
+        'nfnn_set_web_signature',
+        async ({ apiToken }) =>
+          text(
+            await backend.post(`/api/admin/content/people/${id}/web-signature`, apiToken, {
+              imageId,
+            }),
+          ),
+        `person ${id}`,
+      ),
+  );
+
+  server.registerTool(
+    'nfnn_remove_web_signature',
+    {
+      title: 'Odebrat podpis z webu',
+      description:
+        'Removes the web signature of a person of the foundation, the public image under the founders note of "Kdo fond vede", and deletes the image unless a news article or project still uses it; a person without one stays as they are. It is never the receipt signature, which stays on the web (/sprava/nastaveni). Answers the person. Audited as REMOVE_WEB_SIGNATURE.',
+      inputSchema: z.object({ id: UUID.describe('Id of the person, as nfnn_people shows it.') }),
+      annotations: { ...WRITING, destructiveHint: true, idempotentHint: true },
+    },
+    async ({ id }, ctx) =>
+      answerChange(
+        deps,
+        ctx,
+        'nfnn_remove_web_signature',
+        async ({ apiToken }) =>
+          text(await backend.delete(`/api/admin/content/people/${id}/web-signature`, apiToken)),
         `person ${id}`,
       ),
   );
@@ -618,7 +667,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Slovo zakladatelů',
       description:
-        'Writes the founders note shown under the cards of "Kdo fond vede" on the home page, plain Czech text (no Markdown) with paragraphs split by an empty line, at most 600 characters; an empty text removes it. The web signatures of the featured people show under the note only, and they are set only on the web at /sprava/lide-fondu. Audited as CHANGE_FOUNDERS_NOTE.',
+        'Writes the founders note shown under the cards of "Kdo fond vede" on the home page, plain Czech text (no Markdown) with paragraphs split by an empty line, at most 600 characters; an empty text removes it. The web signatures of the featured people show under the note only (nfnn_set_web_signature). Audited as CHANGE_FOUNDERS_NOTE.',
       inputSchema: z.object({ text: z.string().max(600) }),
       annotations: { ...WRITING, idempotentHint: true },
     },
@@ -688,7 +737,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     'nfnn_upload_photo',
     {
       title: 'Nahrát fotku z adresy',
-      description: `Downloads a photo from a public https address (the image file itself: JPEG, PNG, WebP or GIF, at most ${MAX_PHOTO_BYTES / 1024 / 1024} MB, 3 redirects, 15 s) and uploads it to the site as the web does: turned upright, converted to WebP in sizes for every screen. Answers the photo id for coverImageId of nfnn_create_news, nfnn_update_news, nfnn_create_project or nfnn_update_project, or for photoId of nfnn_update_about; the photo shows nowhere until one of them uses it. Never use it for a photo of a person (the About photo, a portrait for nfnn_add_person or nfnn_update_person): those go through nfnn_photo_upload_link. Addresses in private networks are refused. For a file on this computer use nfnn_photo_upload_link.`,
+      description: `Downloads a photo from a public https address (the image file itself: JPEG, PNG, WebP or GIF, at most ${MAX_PHOTO_BYTES / 1024 / 1024} MB, 3 redirects, 15 s) and uploads it to the site as the web does: turned upright, converted to WebP in sizes for every screen. Answers the photo id for coverImageId of nfnn_create_news, nfnn_update_news, nfnn_create_project or nfnn_update_project, or for photoId of nfnn_update_about; the photo shows nowhere until one of them uses it. Never use it for a photo of a person (the About photo, a portrait for nfnn_add_person or nfnn_update_person) or a web signature for nfnn_set_web_signature: those go through nfnn_photo_upload_link. Addresses in private networks are refused. For a file on this computer use nfnn_photo_upload_link.`,
       inputSchema: z.object({ url: z.string().min(1).max(2000) }),
       annotations: { ...WRITING, openWorldHint: true },
     },
@@ -707,7 +756,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     'nfnn_photo_upload_link',
     {
       title: 'Odkaz pro nahrání fotky',
-      description: `A one-time address to upload a photo file from a computer, e.g. from a shell with curl: PUT the file there with the ticket header and the image's Content-Type (at most ${MAX_PHOTO_BYTES / 1024 / 1024} MB). The ticket works once, for at most 10 minutes; the answer of the PUT is the photo id (and its size) for coverImageId, photoId of nfnn_update_about or portraitId of nfnn_add_person and nfnn_update_person, as nfnn_upload_photo answers it. Photos of people go up only this way.`,
+      description: `A one-time address to upload a photo file from a computer, e.g. from a shell with curl: PUT the file there with the ticket header and the image's Content-Type (at most ${MAX_PHOTO_BYTES / 1024 / 1024} MB). The ticket works once, for at most 10 minutes; the answer of the PUT is the photo id (and its size) for coverImageId, photoId of nfnn_update_about, portraitId of nfnn_add_person and nfnn_update_person or imageId of nfnn_set_web_signature, as nfnn_upload_photo answers it. Photos of people and web signatures go up only this way.`,
       annotations: WRITING,
     },
     async (ctx) =>
