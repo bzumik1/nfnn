@@ -93,6 +93,63 @@ export type ReceiptFormattingExpected =
       };
     };
 
+export interface FrozenReceiptAddress {
+  readonly street: string;
+  readonly city: string;
+  readonly postalCode: string;
+}
+
+export interface FrozenReceiptDocument {
+  readonly kind: 'SINGLE' | 'YEARLY';
+  readonly number: string;
+  readonly issuedOn: string;
+  readonly locale: 'cs' | 'en';
+  readonly year: number | null;
+  readonly replaces: { readonly number: string; readonly issuedOn: string } | null;
+  readonly foundation: {
+    readonly name: string;
+    readonly companyIdentifier: string;
+    readonly address: FrozenReceiptAddress;
+    readonly registryCourt: string;
+    readonly registryFile: string;
+    readonly bankAccountNumber: string;
+    readonly issuePlace: string;
+    readonly issuePlaceEn: string;
+  };
+  readonly donor: {
+    readonly type: 'PERSON' | 'COMPANY';
+    readonly name: string;
+    readonly companyIdentifier: string | null;
+    readonly address: FrozenReceiptAddress;
+    readonly variableSymbol: string;
+  };
+  readonly gifts: readonly {
+    readonly receivedOn: string;
+    readonly amountMinor: number;
+    readonly source: 'BANK_TRANSFER' | 'MANUAL';
+  }[];
+  readonly total: { readonly amountMinor: number; readonly currency: 'CZK' };
+  readonly signatory: {
+    readonly name: string;
+    readonly role: string;
+    readonly signatureImage: { readonly sha256: string } | null;
+  };
+}
+
+export type FrozenReceiptInput = FrozenReceiptDocument & {
+  readonly v2Sample: string;
+  readonly textsSha256: string;
+};
+
+export type FrozenReceipt = FrozenReceiptDocument & {
+  readonly schemaVersion: 1;
+  readonly texts: {
+    readonly cs: Readonly<Record<string, string>>;
+    readonly en: Readonly<Record<string, string>> | null;
+  };
+  readonly verification: { readonly keyId: string; readonly qrText: string };
+};
+
 export interface VerificationKey {
   readonly keyId: string;
   readonly publicKeyHex: string;
@@ -134,7 +191,7 @@ export type VerificationExpected =
   | {
       readonly payloadHex: string;
       readonly signatureHex: string;
-      readonly signedSha256: string;
+      readonly statusSha256: string;
       readonly qrText: string;
       readonly qr:
         | { readonly version: number; readonly errorCorrection: 'M' | 'L' }
@@ -158,6 +215,7 @@ export interface SharedCaseTopics {
     ReceiptFormattingInput,
     ReceiptFormattingExpected
   >;
+  readonly 'receipts/v1/frozen.json': SharedCase<FrozenReceiptInput, FrozenReceipt>;
   readonly 'totp/uri.json': SharedCase<TotpUriInput, { readonly uri: string }>;
   readonly 'verification/payload.json': SharedCase<VerificationInput, VerificationExpected>;
 }
@@ -173,6 +231,7 @@ const REGISTERED_TOPICS: Readonly<Record<SharedCaseTopic, true>> = {
   'qr/payment.json': true,
   'qr/totp.json': true,
   'receipts/formatting.json': true,
+  'receipts/v1/frozen.json': true,
   'totp/uri.json': true,
   'verification/payload.json': true,
 };

@@ -15,6 +15,7 @@ import { problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { ProjectsApi, ProjectResponse } from '../../content/projects-api';
+import { projectCategoryLabel } from '../../content/project-category';
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 
@@ -39,6 +40,7 @@ export class AdminProjects {
   private readonly injector = inject(Injector);
   private readonly title = viewChild.required<ElementRef<HTMLHeadingElement>>('title');
 
+  protected readonly categoryLabel = projectCategoryLabel;
   protected readonly state = signal<LoadState>('loading');
   protected readonly items = signal<ProjectResponse[]>([]);
   protected readonly notice = signal<Notice | null>(null);

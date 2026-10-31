@@ -334,7 +334,7 @@ class ReceiptCorpusTest {
         }
     }
 
-    private static List<Sample> samples() {
+    static List<Sample> samples() {
         LocalDate march = LocalDate.of(2026, 3, 15);
         LocalDate june = LocalDate.of(2026, 6, 1);
         List<Sample> samples = new ArrayList<>();
@@ -445,7 +445,7 @@ class ReceiptCorpusTest {
         }
     }
 
-    private record Sample(String name, String description, ReceiptDocument document, Optional<SignatureImage> signature) {
+    record Sample(String name, String description, ReceiptDocument document, Optional<SignatureImage> signature) {
     }
 
     private record Rendered(ReceiptSnapshot snapshot, String sha256, List<String> fonts, List<Page> pages) {

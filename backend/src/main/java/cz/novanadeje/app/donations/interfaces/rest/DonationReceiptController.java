@@ -4,6 +4,7 @@ import cz.novanadeje.app.donations.application.receipt.DonationReceiptService;
 import cz.novanadeje.app.donations.application.receipt.IssuedReceipt;
 import cz.novanadeje.app.donations.domain.donation.DonationId;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import org.springframework.context.MessageSource;
@@ -36,14 +37,17 @@ class DonationReceiptController {
 
     private final DonationReceiptService receipts;
     private final MessageSource messages;
+    private final ReceiptIssuanceRateLimiter rateLimiter;
 
-    DonationReceiptController(DonationReceiptService receipts, MessageSource messages) {
+    DonationReceiptController(DonationReceiptService receipts, MessageSource messages, ReceiptIssuanceRateLimiter rateLimiter) {
         this.receipts = receipts;
         this.messages = messages;
+        this.rateLimiter = rateLimiter;
     }
 
     @GetMapping("/{id}/receipt")
-    ResponseEntity<byte[]> singleReceipt(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
+    ResponseEntity<byte[]> singleReceipt(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, HttpServletRequest http) {
+        rateLimiter.check(http.getRemoteAddr());
         IssuedReceipt receipt = receipts.singleReceipt(caller(jwt), new DonationId(id));
         return pdf(receipt, fileName(SINGLE_FILE_NAME_KEY, receipt.number().value(), receipt));
     }
@@ -51,8 +55,10 @@ class DonationReceiptController {
     @GetMapping("/receipts/yearly")
     ResponseEntity<byte[]> yearlyReceipt(
             @AuthenticationPrincipal Jwt jwt,
-            @RequestParam @Min(FIRST_FOUR_DIGIT_YEAR) @Max(LAST_FOUR_DIGIT_YEAR) int year
+            @RequestParam @Min(FIRST_FOUR_DIGIT_YEAR) @Max(LAST_FOUR_DIGIT_YEAR) int year,
+            HttpServletRequest http
     ) {
+        rateLimiter.check(http.getRemoteAddr());
         IssuedReceipt receipt = receipts.yearlyReceipt(caller(jwt), Year.of(year));
         return pdf(receipt, fileName(YEARLY_FILE_NAME_KEY, String.valueOf(year), receipt));
     }

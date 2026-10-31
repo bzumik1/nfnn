@@ -18,12 +18,9 @@ import tools.jackson.databind.JsonNode;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -73,6 +70,14 @@ public class DonorReceiptStepDefinitions {
     @When("{string} downloads her/his/its yearly receipt for {int}")
     public void downloadsTheYearlyReceipt(String alias, int year) {
         downloadAs(alias, YEARLY_RECEIPT_PATH + year);
+    }
+
+    @When("{string} downloaded her/his/its yearly receipt for {int} {int} times")
+    public void downloadedTheYearlyReceiptTimes(String alias, int year, int times) {
+        for (int request = 0; request < times; request++) {
+            downloadsTheYearlyReceipt(alias, year);
+            assertThat(api.lastResponse().getStatusCode().value()).isEqualTo(200);
+        }
     }
 
     @When("{string} downloads her/his yearly receipt for year {string}")
@@ -152,28 +157,18 @@ public class DonorReceiptStepDefinitions {
 
     @Then("{int} receipt(s) is/are stored")
     public void receiptsAreStored(int count) {
-        assertThat(jdbc.sql("select count(*) from donation_receipt").query(Long.class).single()).isEqualTo(count);
-    }
-
-    @Then("receipt {string} is kept as its template and data")
-    public void receiptIsKeptAsTemplateAndData(String number) {
-        Map<String, Object> row = jdbc.sql("select template_sha256, data, logo_sha256, render_profile, pdf_sha256"
-                + " from donation_receipt where number = ?").param(number).query().singleRow();
-        assertThat(row.get("template_sha256")).isNotNull();
-        assertThat((String) row.get("data")).contains("\"number\":\"" + number + "\"").doesNotContain("data:image");
-        assertThat(row.get("logo_sha256")).isNotNull();
-        assertThat(((Number) row.get("render_profile")).intValue()).isEqualTo(1);
-        assertThat(row.get("pdf_sha256")).isEqualTo(sha256(downloads.getLast()));
+        assertThat(jdbc.sql("select count(*) from issued_receipt").query(Long.class).single()).isEqualTo(count);
     }
 
     @Then("{int} receipt(s) is/are active")
     public void receiptsAreActive(int count) {
-        assertThat(jdbc.sql("select count(*) from donation_receipt where superseded_at is null").query(Long.class).single()).isEqualTo(count);
+        assertThat(jdbc.sql("select count(*) from issued_receipt where status = 'ACTIVE'").query(Long.class).single()).isEqualTo(count);
     }
 
     @Then("receipt {string} is superseded")
     public void receiptIsSuperseded(String number) {
-        assertThat(jdbc.sql("select superseded_at is not null from donation_receipt where number = ?").param(number).query(Boolean.class).single())
+        assertThat(jdbc.sql("select status from issued_receipt where number = ?").param(number).query(String.class).single()).isEqualTo("REPLACED");
+        assertThat(jdbc.sql("select superseded_at is not null from issued_receipt where number = ?").param(number).query(Boolean.class).single())
                 .isTrue();
     }
 
@@ -222,14 +217,6 @@ public class DonorReceiptStepDefinitions {
         JsonNode json = api.lastResponseJson();
         assertThat(json.get("yearlyReceiptsAvailableThrough").isInt()).withFailMessage("No integer year in %s", json).isTrue();
         assertThat(json.get("yearlyReceiptsAvailableThrough").asInt()).isEqualTo(year);
-    }
-
-    private static String sha256(byte[] bytes) {
-        try {
-            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException(e);
-        }
     }
 
     private void downloadAs(String alias, String path) {

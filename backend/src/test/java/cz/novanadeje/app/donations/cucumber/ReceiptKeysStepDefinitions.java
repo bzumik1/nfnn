@@ -78,6 +78,7 @@ public class ReceiptKeysStepDefinitions {
 
     @Given("the server has started and registered its receipt signing key")
     public void theServerHasStarted() {
+        jdbc.sql("delete from receipt_signing_key").update();
         theServerStartsAgain();
     }
 

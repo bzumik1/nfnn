@@ -1,8 +1,10 @@
 package cz.novanadeje.app.donations.infrastructure.signing;
 
+import cz.novanadeje.app.donations.application.signing.ReceiptSigner;
+
 import java.util.HexFormat;
 
-final class Rfc8032Keys {
+public final class Rfc8032Keys {
 
     static final String TEST_1_SEED = "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60";
     static final String TEST_1_SEED_BASE64 = "nWGxne/9WmC6hEr0kuwsxERJxWl7MmkZcDusAxyuf2A=";
@@ -31,6 +33,10 @@ final class Rfc8032Keys {
 
     static Ed25519ReceiptSigner test1() {
         return Ed25519ReceiptSigner.fromSeed(HexFormat.of().parseHex(TEST_1_SEED));
+    }
+
+    public static ReceiptSigner test1Signer() {
+        return test1();
     }
 
     static Ed25519ReceiptSigner test2() {
