@@ -1,0 +1,58 @@
+[
+  {
+    "path": "GET /api/admin/content/projects*",
+    "scenario": "content/manage_projects: *",
+    "kind": "added",
+    "field": "$*.category",
+    "reason": "Jakub 2026-10-30: every project says whom it helped (children, adults, animals or others), and within a year the site lists children first; a project saved without one is among the others, so every project answer carries its category",
+    "contract": "docs/api-contract.md, content — public CMS (projects)"
+  },
+  {
+    "path": "POST /api/admin/content/projects*",
+    "scenario": "content/manage_projects: *",
+    "kind": "added",
+    "field": "$*.category",
+    "reason": "Jakub 2026-10-30: every project says whom it helped (children, adults, animals or others), and within a year the site lists children first; a project saved without one is among the others, so every project answer carries its category",
+    "contract": "docs/api-contract.md, content — public CMS (projects)"
+  },
+  {
+    "path": "PUT /api/admin/content/projects*",
+    "scenario": "content/manage_projects: *",
+    "kind": "added",
+    "field": "$*.category",
+    "reason": "Jakub 2026-10-30: every project says whom it helped (children, adults, animals or others), and within a year the site lists children first; a project saved without one is among the others, so every project answer carries its category",
+    "contract": "docs/api-contract.md, content — public CMS (projects)"
+  },
+  {
+    "path": "GET /api/content/projects*",
+    "scenario": "content/manage_projects: *",
+    "kind": "added",
+    "field": "$*.category",
+    "reason": "Jakub 2026-10-30: every project says whom it helped (children, adults, animals or others), and within a year the site lists children first; a project saved without one is among the others, so every project answer carries its category",
+    "contract": "docs/api-contract.md, content — public CMS (projects)"
+  },
+  {
+    "path": "POST /api/admin/content/projects*",
+    "scenario": "content/home_content: *",
+    "kind": "added",
+    "field": "$*.category",
+    "reason": "Jakub 2026-10-30: every project says whom it helped (children, adults, animals or others), and within a year the site lists children first; a project saved without one is among the others, so every project answer carries its category",
+    "contract": "docs/api-contract.md, content — public CMS (projects)"
+  },
+  {
+    "path": "GET /api/content/home",
+    "scenario": "content/home_content: *",
+    "kind": "added",
+    "field": "$*.category",
+    "reason": "Jakub 2026-10-30: every project says whom it helped (children, adults, animals or others), and within a year the site lists children first; a project saved without one is among the others, so every project answer carries its category",
+    "contract": "docs/api-contract.md, content — public CMS (projects)"
+  },
+  {
+    "path": "POST /api/admin/content/projects*",
+    "scenario": "content/clean_up_unused_photos: *",
+    "kind": "added",
+    "field": "$*.category",
+    "reason": "Jakub 2026-10-30: every project says whom it helped (children, adults, animals or others), and within a year the site lists children first; a project saved without one is among the others, so every project answer carries its category",
+    "contract": "docs/api-contract.md, content — public CMS (projects)"
+  }
+]

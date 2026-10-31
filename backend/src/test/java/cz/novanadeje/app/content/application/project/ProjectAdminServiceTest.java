@@ -4,8 +4,11 @@ import cz.novanadeje.app.content.domain.media.MediaId;
 import cz.novanadeje.app.content.domain.media.MediaImageRepository;
 import cz.novanadeje.app.content.domain.media.MediaNotFound;
 import cz.novanadeje.app.content.domain.project.Project;
+import cz.novanadeje.app.content.domain.project.ProjectCategory;
 import cz.novanadeje.app.content.domain.project.ProjectId;
 import cz.novanadeje.app.content.domain.project.ProjectNotFound;
+import cz.novanadeje.app.content.domain.project.ProjectOrder;
+import cz.novanadeje.app.content.domain.project.ProjectOrderRepository;
 import cz.novanadeje.app.content.domain.project.ProjectRepository;
 import cz.novanadeje.app.content.domain.project.ProjectContent;
 import cz.novanadeje.app.content.domain.FormerSlugs;
@@ -24,6 +27,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -44,6 +48,8 @@ class ProjectAdminServiceTest {
     @Mock
     private ProjectRepository projects;
     @Mock
+    private ProjectOrderRepository orders;
+    @Mock
     private MediaImageRepository media;
     @Mock
     private FormerSlugs formerSlugs;
@@ -55,7 +61,17 @@ class ProjectAdminServiceTest {
     }
 
     private ProjectAdminService service(Instant now) {
-        return new ProjectAdminService(projects, media, formerSlugs, events, Clock.fixed(now, ZoneOffset.UTC));
+        return new ProjectAdminService(projects, orders, media, formerSlugs, events, Clock.fixed(now, ZoneOffset.UTC));
+    }
+
+    @Test
+    @DisplayName("Given an order chosen for the site, when the administration lists the projects, then it lists them in that order")
+    void should_list_in_the_chosen_order_when_listed_given_a_chosen_order() {
+        Project project = Project.create(ProjectId.newId(NOW), new ProjectContent(new Slug("dominik"), "Dominik", 2024, Optional.empty(), "Perex", "Text", Optional.empty()), NOW);
+        when(orders.current()).thenReturn(ProjectOrder.YEAR);
+        when(projects.findAllDraftsFirst(ProjectOrder.YEAR)).thenReturn(List.of(project));
+
+        assertThat(service().list()).extracting(ProjectView::slug).containsExactly("dominik");
     }
 
     @Test
@@ -66,6 +82,7 @@ class ProjectAdminServiceTest {
         ProjectView view = service().create(ADMIN, command("Pomohli jsme Dominikovi", Optional.empty(), Optional.empty()));
 
         assertThat(view.slug()).isEqualTo("pomohli-jsme-dominikovi");
+        assertThat(view.category()).isEqualTo(ProjectCategory.CHILDREN);
         assertThat(view.publishedOn()).isEmpty();
         ArgumentCaptor<Project> saved = ArgumentCaptor.forClass(Project.class);
         verify(projects).save(saved.capture());
@@ -236,7 +253,7 @@ class ProjectAdminServiceTest {
     }
 
     private static ProjectCommand command(String title, Optional<String> slug, Optional<MediaId> image) {
-        return new ProjectCommand(title, 2024, slug, Optional.of("Projekt"), "Perex", "Text", image, Optional.empty());
+        return new ProjectCommand(title, 2024, ProjectCategory.CHILDREN, slug, Optional.of("Projekt"), "Perex", "Text", image, Optional.empty());
     }
 
     private static ProjectContent content(String slug, Optional<MediaId> image) {

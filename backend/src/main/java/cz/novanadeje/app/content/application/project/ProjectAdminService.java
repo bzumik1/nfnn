@@ -6,6 +6,7 @@ import cz.novanadeje.app.content.domain.media.MediaNotFound;
 import cz.novanadeje.app.content.domain.project.Project;
 import cz.novanadeje.app.content.domain.project.ProjectId;
 import cz.novanadeje.app.content.domain.project.ProjectNotFound;
+import cz.novanadeje.app.content.domain.project.ProjectOrderRepository;
 import cz.novanadeje.app.content.domain.project.ProjectRepository;
 import cz.novanadeje.app.content.domain.project.ProjectContent;
 import cz.novanadeje.app.content.domain.FormerSlugs;
@@ -38,14 +39,16 @@ public class ProjectAdminService {
     private static final Logger log = LoggerFactory.getLogger(ProjectAdminService.class);
 
     private final ProjectRepository projects;
+    private final ProjectOrderRepository orders;
     private final MediaImageRepository media;
     private final FormerSlugs formerSlugs;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
-    public ProjectAdminService(ProjectRepository projects, MediaImageRepository media, FormerSlugs formerSlugs, ApplicationEventPublisher events,
-                               Clock clock) {
+    public ProjectAdminService(ProjectRepository projects, ProjectOrderRepository orders, MediaImageRepository media, FormerSlugs formerSlugs,
+                               ApplicationEventPublisher events, Clock clock) {
         this.projects = projects;
+        this.orders = orders;
         this.media = media;
         this.formerSlugs = formerSlugs;
         this.events = events;
@@ -55,7 +58,7 @@ public class ProjectAdminService {
     @Transactional(readOnly = true)
     public List<ProjectView> list() {
         LocalDate today = today(clock.instant());
-        return projects.findAllDraftsFirst().stream().map(project -> ProjectView.from(project, today)).toList();
+        return projects.findAllDraftsFirst(orders.current()).stream().map(project -> ProjectView.from(project, today)).toList();
     }
 
     @Transactional(readOnly = true)

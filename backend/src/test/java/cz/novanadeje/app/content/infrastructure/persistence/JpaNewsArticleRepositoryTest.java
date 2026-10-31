@@ -8,6 +8,11 @@ import cz.novanadeje.app.content.domain.news.NewsArticle;
 import cz.novanadeje.app.content.domain.news.NewsArticleId;
 import cz.novanadeje.app.content.domain.news.NewsArticleRepository;
 import cz.novanadeje.app.content.domain.news.NewsContent;
+import cz.novanadeje.app.content.domain.people.Person;
+import cz.novanadeje.app.content.domain.people.PersonDetails;
+import cz.novanadeje.app.content.domain.people.PersonEmails;
+import cz.novanadeje.app.content.domain.people.PersonId;
+import cz.novanadeje.app.content.domain.people.PersonRepository;
 import cz.novanadeje.app.content.domain.Slug;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
@@ -36,6 +41,8 @@ class JpaNewsArticleRepositoryTest {
     private NewsArticleRepository news;
     @Autowired
     private MediaImageRepository media;
+    @Autowired
+    private PersonRepository people;
     @Autowired
     private EntityManager entityManager;
 
@@ -96,6 +103,24 @@ class JpaNewsArticleRepositoryTest {
         flushAndClear();
 
         assertThat(news.findById(article.id())).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given an article signed by a person of the foundation, when the person is removed, then the article stays without a signer")
+    void should_keep_the_article_without_a_signer_when_the_person_is_removed_given_a_signed_article() {
+        Person signer = Person.add(PersonId.newId(NOW), new PersonDetails("Pavel Vzorový", Optional.empty(), true, Optional.empty(), true, Optional.empty(),
+                PersonEmails.NONE), 0, NOW);
+        people.save(signer);
+        NewsArticle article = NewsArticle.create(NewsArticleId.newId(NOW), new NewsContent(new Slug("podepsana"), "Podepsaná", Optional.empty(), "Perex", "Text",
+                Optional.empty(), Optional.empty(), Optional.of(signer.id())), NOW);
+        news.save(article);
+        flushAndClear();
+        assertThat(news.findById(article.id())).contains(article);
+
+        people.delete(signer.id());
+        flushAndClear();
+
+        assertThat(news.findById(article.id())).hasValueSatisfying(found -> assertThat(found.content().signer()).isEmpty());
     }
 
     private NewsArticle save(NewsArticle article, Optional<LocalDate> publishedOn) {

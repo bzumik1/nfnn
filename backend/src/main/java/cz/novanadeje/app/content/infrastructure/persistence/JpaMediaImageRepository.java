@@ -3,6 +3,7 @@ package cz.novanadeje.app.content.infrastructure.persistence;
 import cz.novanadeje.app.content.domain.media.MediaId;
 import cz.novanadeje.app.content.domain.media.MediaImage;
 import cz.novanadeje.app.content.domain.media.MediaImageRepository;
+import cz.novanadeje.app.content.domain.media.MediaSize;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
@@ -25,6 +26,11 @@ class JpaMediaImageRepository implements MediaImageRepository {
     @Override
     public Optional<MediaImage> findById(MediaId id) {
         return jpa.findById(id.value()).map(MediaImageJpaEntity::toDomain);
+    }
+
+    @Override
+    public Optional<MediaSize> findSize(MediaId id) {
+        return jpa.findSizeById(id.value());
     }
 
     @Override

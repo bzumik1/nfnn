@@ -37,12 +37,15 @@ import {
   MAX_YEAR,
   mediaUrl,
   MIN_YEAR,
+  PROJECT_CATEGORIES,
+  ProjectCategory,
   ProjectsApi,
   ProjectRequest,
   ProjectResponse,
   SLUG_PATTERN,
   slugFromText,
 } from '../../content/projects-api';
+import { projectCategoryLabel } from '../../content/project-category';
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 import { ContentPreview, PreviewContent } from '../content-preview/content-preview';
@@ -111,6 +114,8 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
   protected readonly slugPattern = SLUG_PATTERN;
   protected readonly minYear = MIN_YEAR;
   protected readonly maxYear = MAX_YEAR;
+  protected readonly categories = PROJECT_CATEGORIES;
+  protected readonly categoryLabel = projectCategoryLabel;
 
   protected readonly state = signal<LoadState>('loading');
   protected readonly project = signal<ProjectResponse | null>(null);
@@ -165,6 +170,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
 
   protected projectTitle = '';
   protected year: number | null = new Date().getFullYear();
+  protected category: ProjectCategory = 'CHILDREN';
   protected slug = '';
   protected tag = '';
   protected perex = '';
@@ -203,9 +209,9 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
   protected readonly publishDateHint = computed(() => {
     switch (this.publishState()) {
       case 'live':
-        return $localize`:@@admin.projectEditor.publishDate.hint.live:Projekt je na webu, změny se ukážou hned. Web řadí projekty podle roku a pak podle data zveřejnění.`;
+        return $localize`:@@admin.projectEditor.publishDate.hint.live:Projekt je na webu, změny se ukážou hned. Projekty na stejném místě řazení ukazuje web od naposledy zveřejněného.`;
       case 'scheduled':
-        return $localize`:@@admin.projectEditor.publishDate.hint.scheduled:Na web se projekt dostane ${this.publishedOn()}:date:, do té doby ho vidíte jen vy. Web řadí projekty podle roku a pak podle data zveřejnění.`;
+        return $localize`:@@admin.projectEditor.publishDate.hint.scheduled:Na web se projekt dostane ${this.publishedOn()}:date:, do té doby ho vidíte jen vy. Projekty na stejném místě řazení ukazuje web od naposledy zveřejněného.`;
       default:
         return $localize`:@@admin.projectEditor.publishDate.hint.draft:Projekt zatím vidíte jen vy. Tlačítko Uložit a zveřejnit ho pustí na web s tímto datem, s pozdějším datem až ten den.`;
     }
@@ -616,6 +622,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
       slug: request.slug ?? slugFromText(request.title),
       title: request.title,
       year: request.year,
+      category: request.category,
       tag: request.tag,
       perex: request.perex,
       body: request.body,
@@ -631,6 +638,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
     this.project.set(project);
     this.projectTitle = project.title;
     this.year = project.year;
+    this.category = project.category;
     this.slug = project.slug;
     this.slugEdited = true;
     this.slugOrDraft.set(project.slug);
@@ -649,6 +657,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
     return {
       title: this.projectTitle.trim(),
       year: this.year ?? 0,
+      category: this.category,
       slug: slug === '' ? null : slug,
       tag: tag === '' ? null : tag,
       perex: this.perex.trim(),

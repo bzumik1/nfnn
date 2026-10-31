@@ -100,7 +100,7 @@
               <app-form-field
                 label="Rok"
                 i18n-label="@@admin.projectEditor.year"
-                hint="Rok, do kterého projekt patří. Web řadí projekty od nejnovějšího roku."
+                hint="Rok, do kterého projekt patří. Jak web řadí projekty podle roku a kategorie, vyberete v seznamu projektů."
                 i18n-hint="@@admin.projectEditor.year.hint"
                 [messages]="yearMessages"
               >
@@ -115,6 +115,24 @@
                   [min]="minYear"
                   [max]="maxYear"
                 />
+              </app-form-field>
+
+              <app-form-field
+                label="Kategorie"
+                i18n-label="@@admin.projectEditor.category"
+                hint="Komu projekt pomohl. Jak web řadí projekty podle kategorie a roku, vyberete v seznamu projektů."
+                i18n-hint="@@admin.projectEditor.category.hint"
+              >
+                <select
+                  appFormControl
+                  id="projects-category"
+                  name="category"
+                  [(ngModel)]="category"
+                >
+                  @for (option of categories; track option) {
+                    <option [ngValue]="option">{{ categoryLabel(option) }}</option>
+                  }
+                </select>
               </app-form-field>
 
               <app-form-field
