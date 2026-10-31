@@ -125,6 +125,15 @@ export type ReceiptFormattingExpected =
       };
     };
 
+export interface SignatureVectorInput {
+  readonly svg: string;
+}
+
+export interface SignatureVectorExpected {
+  readonly canonical: string;
+  readonly sha256: string;
+}
+
 export interface FrozenReceiptAddress {
   readonly street: string;
   readonly city: string;
@@ -262,6 +271,7 @@ export interface SharedCaseTopics {
     ReceiptFormattingInput,
     ReceiptFormattingExpected
   >;
+  readonly 'signature/vector.json': SharedCase<SignatureVectorInput, SignatureVectorExpected>;
   readonly 'receipts/printable.json': SharedCase<{ readonly text: string }, PrintableText>;
   readonly 'receipts/v1/frozen.json': SharedCase<FrozenReceiptInput, FrozenReceipt>;
   readonly 'receipts/v1/printed.json': SharedCase<{ readonly v2Sample: string }, PrintedReceipt>;
@@ -283,6 +293,7 @@ const REGISTERED_TOPICS: Readonly<Record<SharedCaseTopic, true>> = {
   'qr/payment.json': true,
   'qr/totp.json': true,
   'receipts/formatting.json': true,
+  'signature/vector.json': true,
   'receipts/printable.json': true,
   'receipts/v1/frozen.json': true,
   'receipts/v1/printed.json': true,

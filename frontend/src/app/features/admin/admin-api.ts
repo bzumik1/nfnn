@@ -345,9 +345,24 @@ export interface AdminSettingsResponse {
   secretsCanBeStored: boolean;
 }
 
+export type ReceiptSignatureKind = 'RASTER' | 'VECTOR';
+
+export interface SignatureVectorPath {
+  d: string;
+  fill: string;
+  opacity: number;
+}
+
+export interface SignatureVectorResponse {
+  viewBox: number[];
+  paths: SignatureVectorPath[];
+}
+
 export interface ReceiptSignatureResponse {
   configured: boolean;
+  kind: ReceiptSignatureKind | null;
   image: string | null;
+  vector: SignatureVectorResponse | null;
   width: number | null;
   height: number | null;
   uploadedAt: string | null;

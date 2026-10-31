@@ -7,7 +7,9 @@ public interface ReceiptSignatureRepository {
 
     Optional<CurrentSignature> current();
 
-    void replace(SignatureImage image, Instant uploadedAt);
+    Optional<ContentDigest> currentDigest();
+
+    void replace(SignatureArtwork artwork, Instant uploadedAt);
 
     boolean remove();
 }

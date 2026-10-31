@@ -36,6 +36,11 @@ class AdapterLibraryRulesTest {
             .resideInAnyPackage("io.github.darkxanter..", "com.luciad.imageio.webp..", "javax.imageio..", "java.awt.image..");
 
     @ArchTest
+    static final ArchRule xml_parsers_are_used_only_by_the_receipt_signature_adapter = noClasses()
+            .that().resideOutsideOfPackage("cz.novanadeje.app.donations.infrastructure.signature..")
+            .should().dependOnClassesThat().resideInAnyPackage("javax.xml..", "org.xml.sax..", "org.w3c.dom..");
+
+    @ArchTest
     static final ArchRule logging_system_pool_and_jvm_management_are_used_only_by_the_operations_adapters = noClasses()
             .that().resideOutsideOfPackage("cz.novanadeje.app.operations.infrastructure..")
             .should().dependOnClassesThat()

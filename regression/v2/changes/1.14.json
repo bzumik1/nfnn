@@ -1,0 +1,78 @@
+[
+  {
+    "path": "GET /api/admin/donations/receipt-signature",
+    "scenario": "donations/admin_receipt_signature: *",
+    "kind": "added",
+    "field": "$.kind",
+    "reason": "1.14 accepts a vector signature (SVG) beside the scan (Jakub 2026-10-30, \"Chtěl bych všude používat podpis jako SVG\"); the answer's kind says whether the signature is a scan (RASTER) or an SVG of filled paths (VECTOR), null when none is set",
+    "contract": "docs/api-contract.md, Receipt signature"
+  },
+  {
+    "path": "GET /api/admin/donations/receipt-signature",
+    "scenario": "donations/admin_receipt_signature: *",
+    "kind": "added",
+    "field": "$.vector",
+    "reason": "1.14 accepts a vector signature (SVG) beside the scan (Jakub 2026-10-30, \"Chtěl bych všude používat podpis jako SVG\"); the answer's vector carries an SVG signature as closed JSON (viewBox and paths[{d, fill, opacity}]) for the administration's preview, null for a scan or none",
+    "contract": "docs/api-contract.md, Receipt signature"
+  },
+  {
+    "path": "POST /api/admin/donations/receipt-signature",
+    "scenario": "donations/admin_receipt_signature: *",
+    "kind": "added",
+    "field": "$.kind",
+    "reason": "1.14 accepts a vector signature (SVG) beside the scan (Jakub 2026-10-30, \"Chtěl bych všude používat podpis jako SVG\"); the answer's kind says whether the signature is a scan (RASTER) or an SVG of filled paths (VECTOR), null when none is set",
+    "contract": "docs/api-contract.md, Receipt signature"
+  },
+  {
+    "path": "POST /api/admin/donations/receipt-signature",
+    "scenario": "donations/admin_receipt_signature: *",
+    "kind": "added",
+    "field": "$.vector",
+    "reason": "1.14 accepts a vector signature (SVG) beside the scan (Jakub 2026-10-30, \"Chtěl bych všude používat podpis jako SVG\"); the answer's vector carries an SVG signature as closed JSON (viewBox and paths[{d, fill, opacity}]) for the administration's preview, null for a scan or none",
+    "contract": "docs/api-contract.md, Receipt signature"
+  },
+  {
+    "path": "POST /api/admin/donations/receipt-signature",
+    "scenario": "donations/admin_receipts: *",
+    "kind": "added",
+    "field": "$.kind",
+    "reason": "1.14 accepts a vector signature (SVG) beside the scan (Jakub 2026-10-30, \"Chtěl bych všude používat podpis jako SVG\"); the answer's kind says whether the signature is a scan (RASTER) or an SVG of filled paths (VECTOR), null when none is set; the receipt scenarios 1.6 and 1.7 brought to main upload a scan the same way, so their answers carry the field too",
+    "contract": "docs/api-contract.md, Receipt signature"
+  },
+  {
+    "path": "POST /api/admin/donations/receipt-signature",
+    "scenario": "donations/admin_receipts: *",
+    "kind": "added",
+    "field": "$.vector",
+    "reason": "1.14 accepts a vector signature (SVG) beside the scan (Jakub 2026-10-30, \"Chtěl bych všude používat podpis jako SVG\"); the answer's vector carries an SVG signature as closed JSON (viewBox and paths[{d, fill, opacity}]) for the administration's preview, null for a scan or none; the receipt scenarios 1.6 and 1.7 brought to main upload a scan the same way, so their answers carry the field too",
+    "contract": "docs/api-contract.md, Receipt signature"
+  },
+  {
+    "path": "POST /api/admin/donations/receipt-signature",
+    "scenario": "donations/donation_receipts_frozen: *",
+    "kind": "added",
+    "field": "$.kind",
+    "reason": "1.14 accepts a vector signature (SVG) beside the scan (Jakub 2026-10-30, \"Chtěl bych všude používat podpis jako SVG\"); the answer's kind says whether the signature is a scan (RASTER) or an SVG of filled paths (VECTOR), null when none is set; the receipt scenarios 1.6 and 1.7 brought to main upload a scan the same way, so their answers carry the field too",
+    "contract": "docs/api-contract.md, Receipt signature"
+  },
+  {
+    "path": "POST /api/admin/donations/receipt-signature",
+    "scenario": "donations/donation_receipts_frozen: *",
+    "kind": "added",
+    "field": "$.vector",
+    "reason": "1.14 accepts a vector signature (SVG) beside the scan (Jakub 2026-10-30, \"Chtěl bych všude používat podpis jako SVG\"); the answer's vector carries an SVG signature as closed JSON (viewBox and paths[{d, fill, opacity}]) for the administration's preview, null for a scan or none; the receipt scenarios 1.6 and 1.7 brought to main upload a scan the same way, so their answers carry the field too",
+    "contract": "docs/api-contract.md, Receipt signature"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/signature/vector.json",
+    "reason": "1.14 stores an SVG signature as canonical JSON, the exact bytes the browser will be served and hash against the digest a receipt names (S/B review M2, lead 2026-10-30): the new file pins an uploaded SVG to those bytes and their SHA-256, with absolute coordinates, every number read at 12 decimals, summed exactly at that precision and written rounded once to three (review m5, n9); the backend runs every case through StaxSignatureVectorParser and SignatureVector (SignatureVectorSharedCasesTest), the browser's suite checks the SHA-256 half now and draws the JSON from 1.9",
+    "contract": ".claude/rules/testing.md, Logic on both sides"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/schemas/signature/vector.schema.json",
+    "reason": "1.14 adds the schema of signature/vector.json: an input SVG text, and the canonical JSON (an object of viewBox and paths without whitespace) with its SHA-256 in 64 lowercase hex characters as the expected value",
+    "contract": ".claude/rules/testing.md, Logic on both sides"
+  }
+]

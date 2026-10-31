@@ -54,7 +54,7 @@ import {
   yearlyLine,
 } from './receipt-donations';
 import { answerReceiptIssuing, RECEIPT_ISSUING_URL } from './receipt-issuing';
-import { uploadedSignature } from './signature-image';
+import { refusedVector, uploadedSignature, vectorSignature } from './signature-image';
 
 const WCAG_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
@@ -1537,6 +1537,45 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
     await page.getByRole('button', { name: 'Odebrat podpis' }).click();
     await expect(page.getByRole('group', { name: 'Odebrat podpis?' })).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when an administrator sees a vector signature and an SVG is refused, then the settings page breaks no rule', async ({
+    page,
+  }) => {
+    await page.route(
+      (url) => url.pathname === '/api/admin/operations/settings',
+      (route) => route.fulfill({ json: adminSettings }),
+    );
+    await page.route(
+      (url) => url.pathname === '/api/admin/donations/receipt-signature',
+      (route) =>
+        route.request().method() === 'POST'
+          ? route.fulfill({
+              status: 400,
+              contentType: 'application/problem+json',
+              body: JSON.stringify(refusedVector),
+            })
+          : route.fulfill({ json: vectorSignature }),
+    );
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.goto('/');
+    await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
+    await page.goto('/sprava/nastaveni');
+    const card = page.getByRole('region', { name: 'Podpis na potvrzeních' });
+    await expect(card.getByRole('img', { name: 'Nahraný podpis' })).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+
+    await card.getByLabel('Nahrát jiný podpis').setInputFiles({
+      name: 'podpis.svg',
+      mimeType: 'image/svg+xml',
+      buffer: Buffer.from('<svg/>'),
+    });
+    await expect(card.getByRole('alert').filter({ hasText: /\S/ })).toContainText(
+      'nepovolený prvek',
+    );
     expect(await violations(page)).toEqual([]);
   });
 

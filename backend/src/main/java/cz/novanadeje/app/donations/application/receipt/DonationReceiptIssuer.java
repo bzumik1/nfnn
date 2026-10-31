@@ -3,7 +3,6 @@ package cz.novanadeje.app.donations.application.receipt;
 import cz.novanadeje.app.donations.application.signing.ReceiptSigningKeys;
 import cz.novanadeje.app.donations.domain.donation.DonationId;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
-import cz.novanadeje.app.donations.domain.receipt.CurrentSignature;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptId;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
@@ -18,7 +17,6 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatureRepository;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptUnprintable;
 import cz.novanadeje.app.donations.domain.receipt.ReplacedReceipt;
 import cz.novanadeje.app.donations.domain.receipt.Signatory;
-import cz.novanadeje.app.donations.domain.receipt.SignatureImage;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningPaused;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -156,7 +154,7 @@ public class DonationReceiptIssuer {
         LocaleCode locale = replaced.map(DonationReceipt::locale).orElse(request.record().preferredLocale());
         ReceiptDocument document = request.document(foundation, signatory, number, locale,
                 replaced.map(old -> new ReplacedReceipt(old.number(), old.issuedOn())));
-        FrozenReceipt frozen = freezer.freeze(document, signatures.current().map(CurrentSignature::image).map(SignatureImage::digest));
+        FrozenReceipt frozen = freezer.freeze(document, signatures.currentDigest());
         DonationReceipt issued = DonationReceipt.issue(DonationReceiptId.newId(issuedAt), request.donor(), issuedAt, fingerprint, frozen,
                 replaced.map(DonationReceipt::id));
         replaced.ifPresent(old -> {

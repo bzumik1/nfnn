@@ -140,6 +140,12 @@ public class CommonStepDefinitions {
                 .contains(message);
     }
 
+    @Then("the problem's detail starts with {string}")
+    public void theProblemsDetailStartsWith(String start) {
+        assertThat(api.lastResponse().getHeaders().getContentType().toString()).startsWith("application/problem+json");
+        assertThat(api.lastResponseJson().get("detail").asString()).startsWith(start);
+    }
+
     @Then("the problem's only error for field {string} says {string}")
     public void theProblemsOnlyErrorForFieldSays(String field, String message) {
         assertThat(errorFields()).contains(field);

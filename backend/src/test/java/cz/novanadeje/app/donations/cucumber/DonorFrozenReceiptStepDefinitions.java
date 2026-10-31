@@ -19,6 +19,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDate;
@@ -332,6 +333,22 @@ public class DonorFrozenReceiptStepDefinitions {
         assertThat(sha256(api.lastResponseBytes())).isEqualTo(currentSignatureImage());
     }
 
+    @Then("the image is the current vector signature as its canonical JSON, kept by the browser and never sniffed")
+    public void theImageIsTheCurrentVectorSignature() {
+        assertCanonicalVectorAnswer(currentSignatureImage());
+    }
+
+    @Then("the frozen receipt shows the vector signature it was issued with, not the current scan")
+    public void theFrozenReceiptShowsTheVectorItWasIssuedWith() {
+        String frozen = answeredReceipt().get("receipt").get("signatory").get("signatureImage").get("sha256").asString();
+        assertThat(frozen).isEqualTo(storedVectorSignature()).isNotEqualTo(currentSignatureImage());
+    }
+
+    @Then("the image is the vector signature the receipt was issued with")
+    public void theImageIsTheVectorSignatureTheReceiptWasIssuedWith() {
+        assertCanonicalVectorAnswer(storedVectorSignature());
+    }
+
     @Then("the receipt list shows:")
     public void theReceiptListShows(DataTable table) {
         JsonNode items = api.lastResponseJson().get("items");
@@ -411,6 +428,22 @@ public class DonorFrozenReceiptStepDefinitions {
 
     private String signatureImageOf(String number) {
         return jdbc.sql("select signature_image_sha256 from issued_receipt where number = ?").param(number).query(String.class).single();
+    }
+
+    private void assertCanonicalVectorAnswer(String digest) {
+        HttpHeaders headers = api.lastResponse().getHeaders();
+        assertThat(headers.getContentType()).hasToString("application/json");
+        assertThat(headers.getFirst("X-Content-Type-Options")).isEqualTo("nosniff");
+        assertThat(headers.getCacheControl()).isEqualTo("private, max-age=31536000, immutable");
+        byte[] body = api.lastResponseBytes();
+        assertThat(sha256(body)).isEqualTo(digest);
+        assertThat(new String(body, StandardCharsets.UTF_8)).startsWith("{\"viewBox\":[").contains("\"paths\":[{\"d\":\"M").doesNotContain("\n", "<");
+    }
+
+    private String storedVectorSignature() {
+        List<String> vectors = jdbc.sql("select sha256 from receipt_image where media_type = 'application/json'").query(String.class).list();
+        assertThat(vectors).hasSize(1);
+        return vectors.getFirst();
     }
 
     private String currentSignatureImage() {

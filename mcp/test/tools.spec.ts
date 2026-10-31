@@ -569,6 +569,29 @@ describe('Given an administrator connected with the reading permission only', ()
     );
   });
 
+  it('when the tools are listed, then the receipt signature tool says receipts issued after the upload carry a scan and a vector alike', async () => {
+    const { tools } = await client.listTools();
+    const description =
+      tools.find((tool) => tool.name === 'nfnn_receipt_signature')?.description ?? '';
+    expect(description).toContain(
+      'Receipts issued after the upload carry it above the signatory, a scan and a vector alike;',
+    );
+    expect(description).not.toContain('until then');
+  });
+
+  it('when the receipt signature is a vector, then it says so without its paths', async () => {
+    stack.backend.signatureIsVector = true;
+    try {
+      const text = textOf(await client.callTool({ name: 'nfnn_receipt_signature', arguments: {} }));
+      expect(text).toContain('"kind":"VECTOR"');
+      expect(text).toContain('"configured":true');
+      expect(text).not.toContain('viewBox');
+      expect(text).not.toContain('M10 80');
+    } finally {
+      stack.backend.signatureIsVector = false;
+    }
+  });
+
   it('when the administrators and the older-symbol answers are asked, then they come from the administration', async () => {
     const administrators = textOf(
       await client.callTool({ name: 'nfnn_administrators', arguments: {} }),

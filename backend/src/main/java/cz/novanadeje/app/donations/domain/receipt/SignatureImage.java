@@ -2,7 +2,7 @@ package cz.novanadeje.app.donations.domain.receipt;
 
 import java.util.Arrays;
 
-public record SignatureImage(byte[] png, int width, int height) {
+public record SignatureImage(byte[] png, int width, int height) implements SignatureArtwork {
 
     public static final int MAX_WIDTH = 1200;
     public static final int MAX_HEIGHT = 600;

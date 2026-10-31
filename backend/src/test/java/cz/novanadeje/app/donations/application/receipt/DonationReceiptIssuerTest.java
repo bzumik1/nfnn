@@ -10,7 +10,6 @@ import cz.novanadeje.app.donations.domain.donor.DonorRecordErased;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordNotFound;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.receipt.ContentDigest;
-import cz.novanadeje.app.donations.domain.receipt.CurrentSignature;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptId;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
@@ -51,6 +50,7 @@ import org.mockito.InOrder;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -252,7 +252,7 @@ class DonationReceiptIssuerTest {
     @DisplayName("Given an uploaded signature, when a receipt is issued, then the frozen receipt names the digest of the signature image")
     void should_freeze_signature_image_digest_when_issued_given_uploaded_signature() {
         SignatureImage image = new SignatureImage(new byte[]{(byte) 0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n', 1, 2, 3}, 600, 200);
-        when(signatures.current()).thenReturn(Optional.of(new CurrentSignature(image, NOW.minusSeconds(3600))));
+        when(signatures.currentDigest()).thenReturn(Optional.of(image.digest()));
         givenDonationsOfJana(jana(), MARCH);
         when(receipts.findActiveForDonation(MARCH.id())).thenReturn(Optional.empty());
         when(receipts.nextSerial()).thenReturn(1L);
@@ -262,6 +262,23 @@ class DonationReceiptIssuerTest {
 
         verify(freezer).freeze(any(), eq(Optional.of(image.digest())));
         assertThat(issued.frozen().signatureImage()).contains(image.digest());
+    }
+
+    @Test
+    @DisplayName("Given an uploaded vector signature, when a receipt is issued, then the frozen receipt names the digest of its canonical JSON without the vector being read")
+    void should_freeze_vector_digest_without_reading_it_when_issued_given_uploaded_vector_signature() {
+        ContentDigest vector = ContentDigest.of("{\"viewBox\":[0,0,300,100],\"paths\":[]}".getBytes(StandardCharsets.UTF_8));
+        when(signatures.currentDigest()).thenReturn(Optional.of(vector));
+        givenDonationsOfJana(jana(), MARCH);
+        when(receipts.findActiveForDonation(MARCH.id())).thenReturn(Optional.empty());
+        when(receipts.nextSerial()).thenReturn(1L);
+        givenFreezer();
+
+        DonationReceipt issued = issuer.issueForDonation(JANA, MARCH.id(), TODAY);
+
+        verify(freezer).freeze(any(), eq(Optional.of(vector)));
+        verify(signatures, never()).current();
+        assertThat(issued.frozen().signatureImage()).contains(vector);
     }
 
     @Test

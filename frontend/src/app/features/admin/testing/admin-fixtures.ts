@@ -26,6 +26,7 @@ import {
   MonthOverviewResponse,
   PairedDonationResponse,
   ReceiptSignatureResponse,
+  SignatureVectorResponse,
   ReceiptSigningKeyResponse,
   ReceiptSigningKeysResponse,
   SymbolClaimResponse,
@@ -448,7 +449,9 @@ export function receiptSignature(
 ): ReceiptSignatureResponse {
   return {
     configured: true,
+    kind: 'RASTER',
     image: SIGNATURE_IMAGE,
+    vector: null,
     width: 1200,
     height: 400,
     uploadedAt: '2026-10-23T19:30:00Z',
@@ -456,8 +459,30 @@ export function receiptSignature(
   };
 }
 
+export const SIGNATURE_VECTOR: SignatureVectorResponse = {
+  viewBox: [0, 0, 300, 100],
+  paths: [
+    { d: 'M10 80 C40 10 65 10 95 80 S150 150 180 80 Z', fill: '#1d2a5c', opacity: 0.9 },
+    { d: 'M250 50 L290 90 Z', fill: '#c0392b', opacity: 1 },
+  ],
+};
+
+export function vectorReceiptSignature(
+  overrides: Partial<ReceiptSignatureResponse> = {},
+): ReceiptSignatureResponse {
+  return receiptSignature({ kind: 'VECTOR', image: null, vector: SIGNATURE_VECTOR, ...overrides });
+}
+
 export function noReceiptSignature(): ReceiptSignatureResponse {
-  return { configured: false, image: null, width: null, height: null, uploadedAt: null };
+  return {
+    configured: false,
+    kind: null,
+    image: null,
+    vector: null,
+    width: null,
+    height: null,
+    uploadedAt: null,
+  };
 }
 
 export function receiptSigningKey(
