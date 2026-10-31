@@ -1,0 +1,147 @@
+[
+  {
+    "path": "GET /api/donations/me/{id}/receipt",
+    "scenario": "donations/admin_donor_accounts: *",
+    "kind": "removed",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, D12, A2): v2's PDF downloads GET /api/donations/me/{id}/receipt and GET /api/donations/me/receipts/yearly are removed with the server drawing, so the guard scenario issues its receipt with POST /api/donations/me/receipts (an added request) and asserts the frozen receipt it issued instead of downloading the PDF",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "path": "DELETE /api/admin/donations/donors/{id}/bank-accounts/{id}",
+    "scenario": "donations/admin_donor_accounts: *",
+    "kind": "request",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, lead note 1): the guard scenario issues its receipt with POST /api/donations/me/receipts, whose answer names the new receipt's id, so every id first seen after it is numbered one higher (<id:n>); the request and the answer are otherwise unchanged",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "path": "DELETE /api/admin/donations/donors/{id}/bank-accounts/{id}",
+    "scenario": "donations/admin_donor_accounts: *",
+    "kind": "body",
+    "field": "$.instance",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, lead note 1): the guard scenario issues its receipt with POST /api/donations/me/receipts, whose answer names the new receipt's id, so every id first seen after it is numbered one higher (<id:n>); the request and the answer are otherwise unchanged",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "path": "GET /api/donations/me/{id}/receipt",
+    "scenario": "donations/admin_donor_erasure: *",
+    "kind": "removed",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, D12, A2): v2's PDF downloads GET /api/donations/me/{id}/receipt and GET /api/donations/me/receipts/yearly are removed with the server drawing, so the guard scenario issues its receipt with POST /api/donations/me/receipts (an added request) and asserts the frozen receipt it issued instead of downloading the PDF",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "path": "GET /api/donations/me/{id}/receipt",
+    "scenario": "donations/admin_payments: *",
+    "kind": "removed",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, D12, A2): v2's PDF downloads GET /api/donations/me/{id}/receipt and GET /api/donations/me/receipts/yearly are removed with the server drawing, so the guard scenario issues its receipt with POST /api/donations/me/receipts (an added request) and asserts the frozen receipt it issued instead of downloading the PDF",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "path": "POST /api/admin/donations/payments/{id}/unpair",
+    "scenario": "donations/admin_payments: *",
+    "kind": "request",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, lead note 1): the guard scenario issues its receipt with POST /api/donations/me/receipts, whose answer names the new receipt's id, so every id first seen after it is numbered one higher (<id:n>); the request and the answer are otherwise unchanged",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "path": "POST /api/admin/donations/payments/{id}/unpair",
+    "scenario": "donations/admin_payments: *",
+    "kind": "body",
+    "field": "$.instance",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, lead note 1): the guard scenario issues its receipt with POST /api/donations/me/receipts, whose answer names the new receipt's id, so every id first seen after it is numbered one higher (<id:n>); the request and the answer are otherwise unchanged",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "path": "GET /api/admin/donations/payments",
+    "scenario": "donations/admin_payments: *",
+    "kind": "body",
+    "field": "$.items[*].id",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, lead note 1): the guard scenario issues its receipt with POST /api/donations/me/receipts, whose answer names the new receipt's id, so every id first seen after it is numbered one higher (<id:n>); the request and the answer are otherwise unchanged",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "path": "GET /api/donations/me/receipts/yearly",
+    "scenario": "donations/admin_payments: *",
+    "kind": "removed",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, D12, A2): v2's PDF downloads GET /api/donations/me/{id}/receipt and GET /api/donations/me/receipts/yearly are removed with the server drawing, so the guard scenario issues its receipt with POST /api/donations/me/receipts (an added request) and asserts the frozen receipt it issued instead of downloading the PDF",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "path": "POST /api/admin/donations/payments/{id}/pair",
+    "scenario": "donations/admin_payments: *",
+    "kind": "request",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, lead note 1): the guard scenario issues its receipt with POST /api/donations/me/receipts, whose answer names the new receipt's id, so every id first seen after it is numbered one higher (<id:n>); the request and the answer are otherwise unchanged",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "path": "POST /api/admin/donations/payments/{id}/pair",
+    "scenario": "donations/admin_payments: *",
+    "kind": "body",
+    "field": "$.donationId",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, lead note 1): the guard scenario issues its receipt with POST /api/donations/me/receipts, whose answer names the new receipt's id, so every id first seen after it is numbered one higher (<id:n>); the request and the answer are otherwise unchanged",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "path": "GET /api/donations/me/{id}/receipt",
+    "scenario": "donations/admin_receipt_signature: *",
+    "kind": "removed",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, D12, A2): v2's PDF downloads GET /api/donations/me/{id}/receipt and GET /api/donations/me/receipts/yearly are removed with the server drawing, so the guard scenario issues its receipt with POST /api/donations/me/receipts (an added request) and asserts the frozen receipt it issued instead of downloading the PDF",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "path": "GET /api/donations/me/receipts/yearly",
+    "scenario": "donations/admin_receipt_signature: *",
+    "kind": "removed",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, D12, A2): v2's PDF downloads GET /api/donations/me/{id}/receipt and GET /api/donations/me/receipts/yearly are removed with the server drawing, so the guard scenario issues its receipt with POST /api/donations/me/receipts (an added request) and asserts the frozen receipt it issued instead of downloading the PDF",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "path": "GET /api/donations/me/{id}/receipt",
+    "scenario": "donations/admin_symbol_claims: *",
+    "kind": "removed",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, D12, A2): v2's PDF downloads GET /api/donations/me/{id}/receipt and GET /api/donations/me/receipts/yearly are removed with the server drawing, so the guard scenario issues its receipt with POST /api/donations/me/receipts (an added request) and asserts the frozen receipt it issued instead of downloading the PDF",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "path": "POST /api/admin/donations/symbol-claims/{id}/reverse",
+    "scenario": "donations/admin_symbol_claims: *",
+    "kind": "request",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, lead note 1): the guard scenario issues its receipt with POST /api/donations/me/receipts, whose answer names the new receipt's id, so every id first seen after it is numbered one higher (<id:n>); the request and the answer are otherwise unchanged",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "path": "POST /api/admin/donations/symbol-claims/{id}/reverse",
+    "scenario": "donations/admin_symbol_claims: *",
+    "kind": "body",
+    "field": "$.instance",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, lead note 1): the guard scenario issues its receipt with POST /api/donations/me/receipts, whose answer names the new receipt's id, so every id first seen after it is numbered one higher (<id:n>); the request and the answer are otherwise unchanged",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "scenario": "donations/donation_receipts: *",
+    "kind": "removed",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, D12, A2): v2's PDF downloads are removed with the server drawing (DonationReceiptController, ThymeleafPdfReceiptRenderer, templates/pdf, the DejaVu fonts, openhtmltopdf and PDFBox), so their feature goes; every rule it covered is covered through POST and GET /api/donations/me/receipts in donation_receipts_frozen.feature since 1.6, the summary scenario moved to donor_donations_overview.feature, and the browser draws the PDF (1.9)",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "path": "GET /api/donations/me/receipts/yearly",
+    "scenario": "donations/symbol_claims: *",
+    "kind": "removed",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, D12, A2): v2's PDF downloads GET /api/donations/me/{id}/receipt and GET /api/donations/me/receipts/yearly are removed with the server drawing, so the guard scenario issues its receipt with POST /api/donations/me/receipts (an added request) and asserts the frozen receipt it issued instead of downloading the PDF",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "path": "GET /api/donations/me/bank-accounts",
+    "scenario": "donations/symbol_claims: *",
+    "kind": "body",
+    "field": "$.items[*].id",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, lead note 1): the guard scenario issues its receipt with POST /api/donations/me/receipts, whose answer names the new receipt's id, so every id first seen after it is numbered one higher (<id:n>); the request and the answer are otherwise unchanged",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "path": "POST /api/donations/me/bank-accounts/{id}/symbol-claim/confirm",
+    "scenario": "donations/symbol_claims: *",
+    "kind": "request",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, lead note 1): the guard scenario issues its receipt with POST /api/donations/me/receipts, whose answer names the new receipt's id, so every id first seen after it is numbered one higher (<id:n>); the request and the answer are otherwise unchanged",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  }
+]

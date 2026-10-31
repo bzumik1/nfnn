@@ -593,7 +593,7 @@ Feature: A donor issues receipts of their donations as frozen, signed data
     And the issued receipt has number "2027-000022"
     And 22 receipts are stored
 
-  Scenario: Issuing receipts is limited per client address, counting the old downloads too
+  Scenario: Issuing receipts is limited per client address, a yearly and a single receipt alike
     Given today is 2026-12-20
     And a person "Jana" is registered
     And the bank account has these movements:
@@ -601,14 +601,11 @@ Feature: A donor issues receipts of their donations as frozen, signed data
       | 2001 | 2026-10-01 | 1000.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
     And the application starts the import
     And today is 2027-01-15
-    And "Jana" issued her yearly receipt for 2026 25 times
-    And "Jana" downloaded her yearly receipt for 2026 5 times
+    And "Jana" issued her yearly receipt for 2026 30 times
     When "Jana" issues her yearly receipt for 2026
     Then the response status is 429
     And the problem type ends with "donations/rate-limited"
-    When "Jana" downloads her yearly receipt for 2026
-    Then the response status is 429
-    When "Jana" downloads the receipt of her donation received on 2026-10-01
+    When "Jana" issues the receipt of her donation received on 2026-10-01
     Then the response status is 429
     And 1 receipt is stored
     When the following requests come from another client address
@@ -628,6 +625,20 @@ Feature: A donor issues receipts of their donations as frozen, signed data
     When someone without a token fetches the receipt image "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
     Then the response status is 401
     And the problem type ends with "auth/unauthenticated"
+
+  Scenario: The addresses of v2's PDF downloads are gone, since only the browser draws a receipt, and they issue nothing
+    Given today is 2026-12-20
+    And a person "Jana" is registered
+    And the bank account has these movements:
+      | id   | date       | amount  | account    | bankCode | name          | variableSymbol |
+      | 2001 | 2026-10-01 | 1000.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
+    And the application starts the import
+    And today is 2027-01-15
+    When "Jana" asks the address of v2's PDF of her yearly receipt for 2026
+    Then the response status is 400
+    When "Jana" asks the address of v2's PDF of the receipt of her donation received on 2026-10-01
+    Then the response status is 404
+    And 0 receipts are stored
 
   Scenario: A receipt whose printed data has a character no receipt can print is refused before a number is taken, and is issued once the data is corrected
     Given today is 2026-12-20

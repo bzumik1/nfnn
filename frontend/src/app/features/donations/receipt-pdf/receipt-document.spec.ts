@@ -163,6 +163,77 @@ describe('Given a frozen receipt that names a signature image and a portrait', (
   });
 });
 
+const FROZEN_CAPTIONS_CS = {
+  'receipt.verification.heading': 'Ověření tohoto potvrzení',
+  'receipt.verification.text': 'Kód načtěte telefonem.',
+  'receipt.verification.alt': 'QR kód k ověření',
+  'receipt.signature.alt': 'Podpis předsedy',
+  'receipt.portrait.alt': 'Fotografie předsedy',
+};
+const FROZEN_CAPTIONS_EN = {
+  'receipt.verification.heading': 'Verifying this confirmation',
+  'receipt.verification.text': 'Scan the code with a phone.',
+  'receipt.verification.alt': 'QR code to verify',
+  'receipt.signature.alt': 'Signature of the chair',
+  'receipt.portrait.alt': 'Photograph of the chair',
+};
+
+describe('Given a frozen receipt whose texts carry the verification caption and the descriptions of its images', () => {
+  it('when it is mapped, then the caption and the descriptions are the frozen ones, not those of the app', () => {
+    const frozen = frozenCase(SINGLE_SIGNATURE);
+    const document = receiptDocument(
+      { ...frozen, texts: { ...frozen.texts, cs: { ...frozen.texts.cs, ...FROZEN_CAPTIONS_CS } } },
+      ISSUED_AT,
+      TEST_CAPTIONS,
+    );
+
+    expect(document.verification.heading).toEqual({ cs: 'Ověření tohoto potvrzení', en: null });
+    expect(document.verification.text).toEqual({ cs: 'Kód načtěte telefonem.', en: null });
+    expect(document.verification.alt).toBe('QR kód k ověření');
+    expect(document.signature.signatureAlt).toBe('Podpis předsedy');
+    expect(document.signature.portraitAlt).toBe('Fotografie předsedy');
+  });
+
+  it('when a bilingual one is mapped, then the caption has its frozen English twin and the descriptions stay Czech', () => {
+    const frozen = frozenCase(YEARLY_BILINGUAL);
+    const document = receiptDocument(
+      {
+        ...frozen,
+        texts: {
+          cs: { ...frozen.texts.cs, ...FROZEN_CAPTIONS_CS },
+          en: { ...frozen.texts.en, ...FROZEN_CAPTIONS_EN },
+        },
+      },
+      ISSUED_AT,
+      TEST_CAPTIONS,
+    );
+
+    expect(document.verification.heading).toEqual({
+      cs: 'Ověření tohoto potvrzení',
+      en: 'Verifying this confirmation',
+    });
+    expect(document.verification.text).toEqual({
+      cs: 'Kód načtěte telefonem.',
+      en: 'Scan the code with a phone.',
+    });
+    expect(document.verification.alt).toBe('QR kód k ověření');
+  });
+});
+
+describe('Given a frozen receipt whose texts were recorded before the captions were frozen', () => {
+  it('when it is mapped, then the caption and the descriptions are those of the app', () => {
+    const document = receiptDocument(frozenCase(SINGLE_PERSON_CS), ISSUED_AT, TEST_CAPTIONS);
+
+    expect(document.verification.text).toEqual({
+      cs: 'Naskenujte kód nebo na něj klikněte.',
+      en: null,
+    });
+    expect(document.verification.alt).toBe('Ověřovací QR kód');
+    expect(document.signature.signatureAlt).toBe('Podpis');
+    expect(document.signature.portraitAlt).toBe('Portrét');
+  });
+});
+
 describe('Given a frozen receipt whose issue text is changed to the typographer variant', () => {
   it('when it is mapped, then the place and date read without the comma', () => {
     const frozen = frozenCase(SINGLE_PERSON_CS);

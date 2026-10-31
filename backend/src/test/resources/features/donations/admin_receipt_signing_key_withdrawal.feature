@@ -41,9 +41,6 @@ Feature: An administrator withdraws a leaked receipt signing key from the web, w
     When "Jana" issues the receipt of her donation received on 2026-11-02
     Then the response status is 409
     And the problem type ends with "donations/receipt-signing-paused"
-    When "Jana" downloads the receipt of her donation received on 2026-11-02
-    Then the response status is 409
-    And the problem type ends with "donations/receipt-signing-paused"
     When "Jana" issues in the administration the receipt of the donation of "Jana" received on 2026-11-02
     Then the response status is 409
     And the problem type ends with "donations/receipt-signing-paused"

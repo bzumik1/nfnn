@@ -4,16 +4,12 @@ import cz.novanadeje.app.cucumber.ApiClient;
 import cz.novanadeje.app.cucumber.DonorSessions;
 import cz.novanadeje.app.cucumber.ScenarioDonors;
 import cz.novanadeje.app.donations.application.signing.ReceiptSigner;
-import cz.novanadeje.app.donations.domain.donor.DonorReference;
-import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
-import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
 import cz.novanadeje.app.donations.domain.receipt.FrozenReceiptCases;
 import cz.novanadeje.app.donations.domain.receipt.proof.ReceiptProof;
 import cz.novanadeje.app.donations.domain.receipt.proof.ReceiptProofMessage;
 import cz.novanadeje.app.donations.domain.receipt.proof.ReceiptProofReader;
 import cz.novanadeje.app.donations.domain.receipt.proof.ReceiptProofText;
 import cz.novanadeje.app.donations.domain.receipt.proof.SignedReceipt;
-import cz.novanadeje.app.donations.interfaces.rest.FrozenReceiptResponse;
 import io.cucumber.datatable.DataTable;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
@@ -22,7 +18,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
-import tools.jackson.databind.node.ObjectNode;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -44,25 +39,20 @@ public class DonorFrozenReceiptStepDefinitions {
     private static final String RECEIPTS_PATH = "/api/donations/me/receipts";
     private static final String IMAGES_PATH = "/api/donations/me/receipt-images/";
     private static final String QR_PREFIX = "https://nfnn.cz/overit#1";
-    private static final JsonMapper JSON = JsonMapper.builder().build();
 
     private final ApiClient api;
     private final DonorSessions sessions;
     private final ScenarioDonors scenarioDonors;
     private final JdbcClient jdbc;
     private final ReceiptSigner signer;
-    private final DonationReceiptRepository receipts;
     private final List<JsonNode> issued = new ArrayList<>();
-    private Optional<Downloaded> downloaded = Optional.empty();
 
-    public DonorFrozenReceiptStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors scenarioDonors, JdbcClient jdbc, ReceiptSigner signer,
-                                             DonationReceiptRepository receipts) {
+    public DonorFrozenReceiptStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors scenarioDonors, JdbcClient jdbc, ReceiptSigner signer) {
         this.api = api;
         this.sessions = sessions;
         this.scenarioDonors = scenarioDonors;
         this.jdbc = jdbc;
         this.signer = signer;
-        this.receipts = receipts;
     }
 
     @When("{string} issues her/his/its yearly receipt for {int}")
@@ -199,19 +189,6 @@ public class DonorFrozenReceiptStepDefinitions {
     public void someoneWithoutATokenFetchesTheReceiptImage(String digest) {
         api.forgetCredentials();
         api.getBytes(IMAGES_PATH + digest);
-    }
-
-    @Then("the receipt {string} downloaded is the frozen receipt issued to her/him/it last")
-    public void theReceiptDownloadedIsTheFrozenReceiptIssuedLast(String alias) {
-        assertThat(api.lastResponse().getHeaders().getContentType()).hasToString("application/pdf");
-        DonationReceipt receipt = receipts.findByDonorNewestFirst(new DonorReference(scenarioDonors.idOf(alias))).getFirst();
-        ObjectNode answer = JSON.createObjectNode()
-                .put("id", receipt.id().value().toString())
-                .put("status", receipt.status().name())
-                .put("kind", receipt.kind().name())
-                .put("number", receipt.number().value());
-        answer.set("receipt", JSON.valueToTree(FrozenReceiptResponse.from(receipt.frozen())));
-        downloaded = Optional.of(new Downloaded(api.lastResponse(), answer));
     }
 
     @Then("the answer is JSON that must not be cached")
@@ -392,9 +369,6 @@ public class DonorFrozenReceiptStepDefinitions {
     }
 
     private JsonNode answeredReceipt() {
-        if (downloaded.isPresent() && downloaded.get().response() == api.lastResponse()) {
-            return downloaded.get().receipt();
-        }
         JsonNode answer = api.lastResponseJson();
         assertThat(answer.get("receipt")).withFailMessage("No frozen receipt in %s", api.lastResponse().getBody()).isNotNull();
         return answer;
@@ -435,8 +409,5 @@ public class DonorFrozenReceiptStepDefinitions {
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException(e);
         }
-    }
-
-    private record Downloaded(Object response, JsonNode receipt) {
     }
 }

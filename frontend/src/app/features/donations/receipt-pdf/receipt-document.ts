@@ -93,6 +93,8 @@ type ReceiptTexts = Readonly<Record<string, string>>;
 interface Texts {
   readonly bilingual: boolean;
   line(key: string, cs: readonly string[], en?: readonly string[]): Bilingual;
+  frozenOr(key: string, fallback: Bilingual): Bilingual;
+  frozenCzechOr(key: string, fallback: string): string;
 }
 
 function textsOf(receipt: FrozenReceipt): Texts {
@@ -104,12 +106,19 @@ function textsOf(receipt: FrozenReceipt): Texts {
     }
     return fillReceiptText(template, ...values);
   };
+  const frozen = (texts: ReceiptTexts | null, key: string): string | undefined =>
+    texts === null ? undefined : texts[key];
   return {
     bilingual: english !== null,
     line: (key, cs, en = cs) => ({
       cs: text(receipt.texts.cs, key, cs),
       en: english === null ? null : text(english, key, en),
     }),
+    frozenOr: (key, fallback) => ({
+      cs: frozen(receipt.texts.cs, key) ?? fallback.cs,
+      en: english === null ? null : (frozen(english, key) ?? fallback.en),
+    }),
+    frozenCzechOr: (key, fallback) => frozen(receipt.texts.cs, key) ?? fallback,
   };
 }
 
@@ -192,10 +201,6 @@ export function receiptDocument(
   const issuedOnCs = formatReceiptDate(receipt.issuedOn);
   const issuedOnEn = formatReceiptDateEn(receipt.issuedOn);
   const account = texts.line('receipt.gift.account', [foundation.bankAccountNumber]);
-  const caption = (value: Bilingual): Bilingual => ({
-    cs: value.cs,
-    en: texts.bilingual ? value.en : null,
-  });
   return {
     bilingual: texts.bilingual,
     number: receipt.number,
@@ -277,14 +282,14 @@ export function receiptDocument(
       role: receipt.signatory.role,
       signatureImage: receipt.signatory.signatureImage?.sha256 ?? null,
       portraitImage: receipt.signatory.portraitImage?.sha256 ?? null,
-      signatureAlt: captions.signatureAlt,
-      portraitAlt: captions.portraitAlt,
+      signatureAlt: texts.frozenCzechOr('receipt.signature.alt', captions.signatureAlt),
+      portraitAlt: texts.frozenCzechOr('receipt.portrait.alt', captions.portraitAlt),
     },
     verification: {
       qrText: receipt.verification.qrText,
-      heading: caption(captions.verificationHeading),
-      text: caption(captions.verificationText),
-      alt: captions.verificationAlt,
+      heading: texts.frozenOr('receipt.verification.heading', captions.verificationHeading),
+      text: texts.frozenOr('receipt.verification.text', captions.verificationText),
+      alt: texts.frozenCzechOr('receipt.verification.alt', captions.verificationAlt),
     },
     footer: texts.line('receipt.footer', [
       foundation.name,

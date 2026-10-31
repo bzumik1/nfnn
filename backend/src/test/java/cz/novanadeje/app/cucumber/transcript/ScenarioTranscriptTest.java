@@ -3,8 +3,6 @@ package cz.novanadeje.app.cucumber.transcript;
 import jakarta.mail.Session;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.pdmodel.PDPage;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -14,7 +12,6 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.JsonNodeFactory;
 
-import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
@@ -264,18 +261,18 @@ class ScenarioTranscriptTest {
     }
 
     @Test
-    @DisplayName("Given a PDF answer, when the transcript is written, then its page count and text are kept and its bytes, which differ per run, are not")
-    void should_keep_page_count_and_text_but_not_the_bytes_when_written_given_a_pdf_answer() throws Exception {
+    @DisplayName("Given a binary answer, when the transcript is written, then only its size and SHA-256 are kept")
+    void should_keep_only_size_and_digest_when_written_given_a_binary_answer() {
         HttpHeaders headers = new HttpHeaders();
-        headers.add("Content-Type", "application/pdf");
+        headers.add("Content-Type", "application/octet-stream");
         ScenarioTranscript transcript = new ScenarioTranscript();
-        transcript.exchange(new RecordedExchange("GET", "/api/donations/me/receipts/yearly?year=2025", Map.of(), null, 200, headers, onePagePdf()));
+        transcript.exchange(new RecordedExchange("GET", "/api/admin/operations/backups/nfnn.dump.age", Map.of(), null, 200, headers, new byte[]{1, 2, 3}));
 
-        JsonNode body = transcript.toJson(Map.of()).get("requests").get("GET /api/donations/me/receipts/yearly #1").get("response").get("body");
+        JsonNode body = transcript.toJson(Map.of()).get("requests").get("GET /api/admin/operations/backups/nfnn.dump.age #1").get("response").get("body");
 
-        assertThat(body.get("pages").asInt()).isEqualTo(1);
-        assertThat(body.get("text").get(0).asString()).isEmpty();
-        assertThat(body.has("sha256")).isFalse();
+        assertThat(body.get("size").asInt()).isEqualTo(3);
+        assertThat(body.get("sha256").asString()).isEqualTo("039058c6f2c0cb492c533b0a4d14ef77cc0f78abccced5287d84a1a2011cfb81");
+        assertThat(body.properties()).hasSize(2);
     }
 
     @Test
@@ -352,14 +349,6 @@ class ScenarioTranscriptTest {
             headers.add("Content-Type", "application/json");
         }
         return new RecordedExchange(method, uri, Map.of(), null, status, headers, body == null ? new byte[0] : body.getBytes(StandardCharsets.UTF_8));
-    }
-
-    private static byte[] onePagePdf() throws Exception {
-        try (PDDocument document = new PDDocument(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-            document.addPage(new PDPage());
-            document.save(out);
-            return out.toByteArray();
-        }
     }
 
     private static HttpHeaders textHeaders() {
