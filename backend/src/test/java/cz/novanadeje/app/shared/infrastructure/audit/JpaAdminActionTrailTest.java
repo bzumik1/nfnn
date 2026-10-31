@@ -13,6 +13,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Instant;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -83,10 +84,10 @@ class JpaAdminActionTrailTest {
         transactions.executeWithoutResult(status ->
                 events.publishEvent(new AdminActionPerformed(admin, "PAIR_PAYMENT", Optional.empty(), "fourth", AT.plusSeconds(180))));
 
-        var entries = trail.findByActions(java.util.Set.of("PAIR_PAYMENT", "GRANT_ADMINISTRATION")).stream()
+        var entries = trail.findByActions(Set.of("PAIR_PAYMENT", "GRANT_ADMINISTRATION")).stream()
                 .filter(entry -> entry.adminId().equals(admin)).toList();
 
         assertThat(entries).extracting(AdminActionEntry::details).containsExactly("first", "third", "fourth");
-        assertThat(trail.findByActions(java.util.Set.of("NO_SUCH_ACTION"))).isEmpty();
+        assertThat(trail.findByActions(Set.of("NO_SUCH_ACTION"))).isEmpty();
     }
 }

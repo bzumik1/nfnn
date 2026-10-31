@@ -38,9 +38,11 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -94,7 +96,7 @@ class ReceiptSigningKeyWithdrawalTest {
             assertThat(seals.check(ReceiptSigningKey.SEAL_PURPOSE, key.sealedContent(), key.seal())).isEqualTo(SealVerdict.SEALED_HERE);
         });
         ArgumentCaptor<Object> published = ArgumentCaptor.forClass(Object.class);
-        verify(events, org.mockito.Mockito.times(2)).publishEvent(published.capture());
+        verify(events, times(2)).publishEvent(published.capture());
         assertThat(published.getAllValues()).containsExactly(
                 new AdminActionPerformed(ADMIN, "WITHDRAW_RECEIPT_SIGNING_KEY", Optional.empty(),
                         "Stažen klíč k ověřovacím QR 21fe31df (ověřeno druhým faktorem)", NOW),
@@ -103,6 +105,20 @@ class ReceiptSigningKeyWithdrawalTest {
             assertThat(line.getLevel()).isEqualTo(Level.WARN);
             assertThat(line.getFormattedMessage()).isEqualTo("Admin " + ADMIN + " withdrew the receipt signing key 21fe31df");
         });
+    }
+
+    @Test
+    @DisplayName("Given the server's own published key, when an administrator withdraws it, then the history read back from that audit entry records it as withdrawn")
+    void should_record_withdrawal_in_history_read_back_when_withdrawn_given_the_current_key() {
+        withdrawal.withdraw(ADMIN, OWN, CODE);
+
+        ArgumentCaptor<Object> published = ArgumentCaptor.forClass(Object.class);
+        verify(events, times(2)).publishEvent(published.capture());
+        AdminActionPerformed audited = published.getAllValues().stream().filter(AdminActionPerformed.class::isInstance).map(AdminActionPerformed.class::cast)
+                .findFirst().orElseThrow();
+        ReceiptSigningKeyHistory history = ReceiptSigningKeyHistory.of(List.of(ReceiptSigningKeyHistoryTest.entryOf(audited)));
+        assertThat(history.isWithdrawn(OWN)).isTrue();
+        assertThat(history.recorded()).containsExactly(OWN);
     }
 
     @Test
@@ -170,7 +186,7 @@ class ReceiptSigningKeyWithdrawalTest {
     @DisplayName("Given a key already withdrawn, when an administrator withdraws it again, then it is refused as already withdrawn and nothing is announced")
     void should_refuse_when_withdrawn_given_a_key_already_withdrawn() {
         withdrawal.withdraw(ADMIN, EARLIER_ID, CODE);
-        org.mockito.Mockito.clearInvocations(events, freshSecondFactor);
+        clearInvocations(events, freshSecondFactor);
 
         assertThatThrownBy(() -> withdrawal.withdraw(ADMIN, EARLIER_ID, CODE)).isInstanceOf(ReceiptSigningKeyAlreadyWithdrawn.class)
                 .hasFieldOrPropertyWithValue("code", "donations/receipt-signing-key-already-withdrawn");

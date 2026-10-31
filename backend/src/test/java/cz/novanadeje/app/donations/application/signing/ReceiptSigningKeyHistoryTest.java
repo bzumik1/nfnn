@@ -36,6 +36,11 @@ class ReceiptSigningKeyHistoryTest {
         return entry(ADMIN, ReceiptSigningKeyWithdrawal.ACTION, ReceiptSigningKeyWithdrawal.details(new ReceiptSigningKeyId(keyId)));
     }
 
+    static AdminActionEntry entryOf(AdminActionPerformed performed) {
+        return new AdminActionEntry(UUID.randomUUID(), performed.adminId(), performed.action(), performed.subjectId(), performed.details(),
+                performed.performedAt(), Optional.empty());
+    }
+
     private static AdminActionEntry entry(UUID adminId, String action, String details) {
         return new AdminActionEntry(UUID.randomUUID(), adminId, action, Optional.empty(), details, NOW, Optional.empty());
     }

@@ -99,6 +99,17 @@ class ReceiptSigningKeyRegistrationTest {
     }
 
     @Test
+    @DisplayName("Given no registered key, when the server registers its own, then the history read back from that audit entry records the key")
+    void should_record_key_in_history_read_back_when_registering_given_no_registered_key() {
+        registration.registerOwnKey();
+
+        ArgumentCaptor<AdminActionPerformed> audited = ArgumentCaptor.forClass(AdminActionPerformed.class);
+        verify(events).publishEvent(audited.capture());
+        assertThat(ReceiptSigningKeyHistory.of(List.of(ReceiptSigningKeyHistoryTest.entryOf(audited.getValue()))).recorded())
+                .containsExactly(new ReceiptSigningKeyId("21fe31df"));
+    }
+
+    @Test
     @DisplayName("Given no registered key, when the server registers its own, then the WARN line is written once the transaction is over")
     void should_warn_after_the_transaction_when_registering_given_no_registered_key() {
         registration.registerOwnKey();
@@ -150,6 +161,22 @@ class ReceiptSigningKeyRegistrationTest {
             assertThat(line.message()).isEqualTo("Receipt signing key 39f713d0 from a restored backup is sealed again and published");
             assertThat(line.insideTransaction()).isFalse();
         });
+    }
+
+    @Test
+    @DisplayName("Given a key sealed under the settings key the backup carried and a fresh restore, when the server adopts it, then the history read back from that audit entry records the key")
+    void should_record_key_in_history_read_back_when_adopting_given_carried_key_and_a_fresh_restore() {
+        keys.stored.add(ReceiptSigningKey.register(EARLIER_PUBLIC_KEY, EARLIER, content -> seals.carried(content)));
+        lastRestore = Optional.of(new FinishedRestore(RESTORE, NOW.minus(Duration.ofMinutes(3))));
+
+        registration.registerOwnKey();
+
+        ArgumentCaptor<AdminActionPerformed> audited = ArgumentCaptor.forClass(AdminActionPerformed.class);
+        verify(events, times(2)).publishEvent(audited.capture());
+        AdminActionPerformed adoption = audited.getAllValues().stream().filter(action -> action.action().equals(ReceiptSigningKeyRegistration.ADOPT_ACTION))
+                .findFirst().orElseThrow();
+        assertThat(ReceiptSigningKeyHistory.of(List.of(ReceiptSigningKeyHistoryTest.entryOf(adoption))).recorded())
+                .containsExactly(new ReceiptSigningKeyId("39f713d0"));
     }
 
     @ParameterizedTest
