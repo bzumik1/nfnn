@@ -30,6 +30,7 @@ import { CopyButton } from '../../../../shared/ui/copy-button/copy-button';
 import { FocusFirstInvalid } from '../../../../shared/ui/form-field/focus-first-invalid';
 import { FormControlDirective } from '../../../../shared/ui/form-field/form-control';
 import { FormField } from '../../../../shared/ui/form-field/form-field';
+import { AccountUsername } from '../../../../shared/ui/account-username/account-username';
 import { PasswordReveal } from '../../../../shared/ui/password-reveal/password-reveal';
 import { QrCode } from '../../../../shared/ui/qr-code/qr-code';
 import { encodeText } from '../../../../shared/ui/qr-code/qr-encoder';
@@ -59,6 +60,7 @@ const SECRET_GROUP = 4;
     CopyButton,
     QrCode,
     PasskeysPanel,
+    AccountUsername,
   ],
   templateUrl: './account-card.html',
   styleUrl: './account-card.scss',
@@ -89,6 +91,7 @@ export class AccountCard {
     () => this.donor()?.secondFactor ?? { enabled: false, neededForAdministration: false },
   );
   protected readonly hasPassword = computed(() => this.donor()?.hasPassword ?? true);
+  protected readonly accountEmail = computed(() => this.donor()?.email ?? '');
   protected readonly withoutSignInMethod = computed(
     () => !this.hasPassword() && this.passkeyCount() === 0,
   );

@@ -31,6 +31,7 @@ import { formatDonationDate } from '../../../donations/donation-date';
 import { FocusFirstInvalid } from '../../../../shared/ui/form-field/focus-first-invalid';
 import { FormControlDirective } from '../../../../shared/ui/form-field/form-control';
 import { FormField } from '../../../../shared/ui/form-field/form-field';
+import { AccountUsername } from '../../../../shared/ui/account-username/account-username';
 import { PasswordReveal } from '../../../../shared/ui/password-reveal/password-reveal';
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
@@ -38,7 +39,14 @@ const PASSKEY_NAME_MAX_LENGTH = 64;
 
 @Component({
   selector: 'app-passkeys-panel',
-  imports: [FormsModule, FormField, FormControlDirective, FocusFirstInvalid, PasswordReveal],
+  imports: [
+    FormsModule,
+    FormField,
+    FormControlDirective,
+    FocusFirstInvalid,
+    PasswordReveal,
+    AccountUsername,
+  ],
   templateUrl: './passkeys-panel.html',
   styleUrl: './passkeys-panel.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -62,6 +70,7 @@ export class PasskeysPanel {
   protected readonly supported = this.authenticator.supported();
   protected readonly passkeys = signal<Passkey[] | null>(null);
   protected readonly hasPassword = computed(() => this.auth.donor()?.hasPassword ?? true);
+  protected readonly accountEmail = computed(() => this.auth.donor()?.email ?? '');
   protected readonly confirmation = computed<'password' | 'passkey' | 'none'>(() => {
     if (this.hasPassword()) {
       return 'password';

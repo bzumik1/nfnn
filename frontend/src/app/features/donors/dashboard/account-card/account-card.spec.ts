@@ -109,6 +109,17 @@ class CardDriver {
   }
 }
 
+function expectAccountUserNameBefore(field: HTMLElement): void {
+  const form = field.closest('form') as HTMLFormElement;
+  const inputs = Array.from(form.querySelectorAll('input'));
+  const userName = inputs.find((input) => input.autocomplete === 'username');
+  expect(userName?.value).toBe('jana@example.cz');
+  expect(userName?.hidden).toBe(true);
+  expect(inputs.indexOf(userName as HTMLInputElement)).toBeLessThan(
+    inputs.indexOf(field as HTMLInputElement),
+  );
+}
+
 describe('Given the sign-in and security card of the details page', () => {
   let fixture: ComponentFixture<AccountCard>;
   let http: HttpTestingController;
@@ -165,6 +176,19 @@ describe('Given the sign-in and security card of the details page', () => {
       expect(card.element('.account-hint')).toBeNull();
       expect(card.element('.account-pending')).toBeNull();
     });
+
+    it.each([
+      ['Změnit e-mail', '#account-new-email'],
+      ['Změnit heslo', '#account-current-password'],
+      ['Zapnout dvoufaktorové ověření', '#account-second-factor-password'],
+    ])(
+      'then the form of %s carries the account e-mail as a hidden user name before %s, so a password manager fills nothing else',
+      async (action, field) => {
+        await card.clickButton(action);
+
+        expectAccountUserNameBefore(card.element(field));
+      },
+    );
 
     it('then every action is a closed disclosure of the panel under its own row', () => {
       for (const action of Array.from(card.root().querySelectorAll('.account-action'))) {
@@ -491,6 +515,10 @@ describe('Given the sign-in and security card of the details page', () => {
       await card.clickButton('Vypnout dvoufaktorové ověření');
     });
 
+    it('then the form carries the account e-mail as a hidden user name before the password', () => {
+      expectAccountUserNameBefore(card.element('#account-second-factor-off-password'));
+    });
+
     it('then the password field has the focus and the form says the password will do', () => {
       expect(document.activeElement).toBe(card.element('#account-second-factor-off-password'));
       expect(card.element('.account-form-intro').textContent).toContain(
@@ -730,6 +758,10 @@ describe('Given the sign-in and security card of the details page', () => {
     beforeEach(async () => {
       await render([IPHONE]);
       await card.clickButton('Odebrat heslo');
+    });
+
+    it('then the form carries the account e-mail as a hidden user name before the password', () => {
+      expectAccountUserNameBefore(card.element('#account-remove-password'));
     });
 
     it('then the form opens under the password row and the password confirms it, the new session is adopted and the row offers to set one again', async () => {
