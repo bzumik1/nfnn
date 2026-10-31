@@ -27,11 +27,12 @@
             <figcaption class="signature-block-caption" i18n="@@admin.signatory.preview">
               Náhled podpisu na potvrzení
             </figcaption>
-            <div class="signature-block-body">
+            <div
+              class="signature-block-body"
+              [class.signature-block-body--portrait]="block.portraitUrl"
+            >
               @if (block.portraitUrl; as url) {
                 <img class="signature-block-portrait" [src]="url" alt="" width="96" height="96" />
-              } @else {
-                <span class="signature-block-portrait signature-block-portrait--empty"></span>
               }
               <div class="signature-block-text">
                 <p class="signature-block-for" i18n="@@admin.signatory.for">
@@ -67,7 +68,7 @@
             </p>
           }
         } @else {
-          <p class="ui-callout ui-callout--danger signatory-missing" role="alert">
+          <p class="ui-callout ui-callout--danger signatory-missing">
             <ng-container i18n="@@admin.signatory.missing"
               >Potvrzení o daru teď nikdo nepodepisuje, a tak je web dárcům nevystaví. Vyberte u
               lidí fondu, kdo je podepisuje, a jeho funkci na potvrzení.</ng-container

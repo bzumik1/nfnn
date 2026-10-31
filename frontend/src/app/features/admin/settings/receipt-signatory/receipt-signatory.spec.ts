@@ -51,9 +51,13 @@ describe('Given the receipt settings card that shows who signs the receipts', ()
     http.expectOne(SIGNATORY_URL).flush(noReceiptSignatory());
     await settle();
 
-    expect(text('[role="alert"]')).toBe(
+    expect(text('.signatory-missing')).toBe(
       'Potvrzení o daru teď nikdo nepodepisuje, a tak je web dárcům nevystaví. Vyberte u lidí fondu, kdo je podepisuje, a jeho funkci na potvrzení.',
     );
+    expect(
+      fixture.nativeElement.querySelector('.signatory-missing')?.getAttribute('role'),
+    ).toBeNull();
+    expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeNull();
     expect(fixture.nativeElement.querySelector('figure')).toBeNull();
     const link = fixture.nativeElement.querySelector('a.signatory-open') as HTMLAnchorElement;
     expect(link.textContent?.trim()).toBe('Otevřít lidi fondu');
@@ -86,7 +90,7 @@ describe('Given the receipt settings card that shows who signs the receipts', ()
     http.expectOne(SIGNATORY_URL).flush(receiptSignatory({ portrait: false, signature: false }));
     await settle();
 
-    expect(fixture.nativeElement.querySelector('img.signature-block-portrait')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.signature-block-portrait')).toBeNull();
     expect(fixture.nativeElement.querySelector('.signature-artwork')).toBeNull();
     expect(text('.signature-block-name')).toBe('Eva Vzorová');
     expect(text('.signatory-gaps')).toBe(
@@ -102,6 +106,6 @@ describe('Given the receipt settings card that shows who signs the receipts', ()
     (fixture.nativeElement.querySelector('[role="alert"] button') as HTMLButtonElement).click();
     http.expectOne(SIGNATORY_URL).flush(noReceiptSignatory());
     await settle();
-    expect(text('[role="alert"]')).toContain('nikdo nepodepisuje');
+    expect(text('.signatory-missing')).toContain('nikdo nepodepisuje');
   });
 });
