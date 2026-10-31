@@ -34,12 +34,12 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Stav serveru',
       description:
-        'The running backend version and health, the Fio bank import state (covered period, last attempt and success, failures, reported outage), the last backup and test restore, and the key that signs the verification QR codes on receipts (its id, when the server registered it, whether it is published; attention is true when a key fails its seal and is not published, and when that part is unavailable, which leaves the rest of the status as it is).',
+        'The running backend version and health, the Fio bank import state (covered period, last attempt and success, failures, reported outage), the last backup and test restore, the key that signs the verification QR codes on receipts (its id, when the server registered it, whether it is published; attention is true when a key fails its seal and is not published, and when that part is unavailable, which leaves the rest of the status as it is), and receiptSignatory: ok when a person of the foundation is chosen to sign the receipts, missing when none is, so no receipt can be issued until an administrator chooses one at /sprava/lide-fondu, or unavailable when the backend did not say.',
       annotations: READ_ONLY,
     },
     async (ctx) =>
       answer(deps, ctx, 'nfnn_status', async ({ apiToken }) => {
-        const [info, health, importState, backups, signingKeys] = await Promise.all([
+        const [info, health, importState, backups, signingKeys, signatory] = await Promise.all([
           backend.get('/actuator/info'),
           backend.get('/actuator/health'),
           backend.get('/api/admin/donations/import-state', apiToken),
@@ -47,6 +47,9 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
           backend
             .get('/api/admin/donations/receipt-signing-keys', apiToken)
             .then(receiptSigningKeys, unavailableReceiptSigningKeys),
+          backend
+            .get('/api/admin/donations/receipt-signatory', apiToken)
+            .then(receiptSignatoryState, () => 'unavailable'),
         ]);
         const backupView = asRecord(backups);
         return text({
@@ -57,6 +60,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
           lastTestRestore: backupView['lastTestRestore'],
           backupProblems: backupView['problems'],
           receiptSigningKeys: signingKeys,
+          receiptSignatory: signatory,
         });
       }),
   );
@@ -318,21 +322,13 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Podpis na potvrzeních',
       description:
-        'Whether a signature is uploaded for donation receipts, its kind (RASTER for a scan, VECTOR for an SVG of filled paths), its size in pixels and when it was uploaded (the image and the vector paths themselves are left out). Receipts issued after the upload carry a RASTER signature above the signatory, and a VECTOR signature only once receipts are drawn in the browser; until then they carry the line and the name. Uploading and removing it stay on the web (/sprava/nastaveni, "Potvrzení o daru").',
+        'Who signs the donation receipts: the person of the foundation chosen for it (personId, name, receiptRole, the role printed under the name on receipts, chosenAt, and whether that person has a portrait and a receipt signature), or signatory null when none is chosen, in which case no receipt can be issued. Also the receipt signatures uploaded per person: personId, kind (RASTER for a scan, VECTOR for an SVG of filled paths), size in pixels and when it was uploaded; the images themselves are left out. Choosing the signatory and uploading or removing a receipt signature stay on the web (/sprava/lide-fondu).',
       annotations: READ_ONLY,
     },
     async (ctx) =>
-      answer(deps, ctx, 'nfnn_receipt_signature', async ({ apiToken }) => {
-        const {
-          image: _image,
-          vector: _vector,
-          ...signature
-        } = (await backend.get('/api/admin/donations/receipt-signature', apiToken)) as Record<
-          string,
-          unknown
-        >;
-        return text(signature);
-      }),
+      answer(deps, ctx, 'nfnn_receipt_signature', async ({ apiToken }) =>
+        text(await backend.get('/api/admin/donations/receipt-signatory', apiToken)),
+      ),
   );
 
   server.registerTool(
@@ -686,6 +682,11 @@ function unavailableReceiptSigningKeys(failure: unknown): Record<string, unknown
     unavailable: failure instanceof BackendProblem ? failure.message : 'the backend did not answer',
     attention: true,
   };
+}
+
+function receiptSignatoryState(answer: unknown): 'ok' | 'missing' {
+  const signatory = asRecord(answer)['signatory'];
+  return signatory !== null && signatory !== undefined ? 'ok' : 'missing';
 }
 
 function receiptSigningKeys(answer: unknown): Record<string, unknown> {

@@ -23,18 +23,7 @@ const LOG_MATCHES: Record<string, number[]> = {
   'backend.log.2026-10-21.0.gz': [5],
 };
 
-const VECTOR_SIGNATURE = {
-  configured: true,
-  kind: 'VECTOR',
-  image: null,
-  vector: {
-    viewBox: [0, 0, 300, 100],
-    paths: [{ d: 'M10 80 C40 10 65 10 95 80 Z', fill: '#1d2a5c', opacity: 0.9 }],
-  },
-  width: 1200,
-  height: 400,
-  uploadedAt: '2026-10-23T19:30:00Z',
-};
+const NO_SIGNATORY = { signatory: null, signatures: [] };
 
 export interface RecordedRequest {
   readonly method: string;
@@ -51,7 +40,7 @@ export class FakeBackend {
   metadataAvailable = true;
   receiptSigningKeysAvailable = true;
   previousSignInAt: string | null = '2026-10-28T20:14:00Z';
-  signatureIsVector = false;
+  signatoryChosen = true;
   private server: Server | undefined;
   url = '';
 
@@ -127,11 +116,11 @@ export class FakeBackend {
       return [200, { previousSignInAt: this.previousSignInAt }];
     }
     if (
-      this.signatureIsVector &&
+      !this.signatoryChosen &&
       request.method === 'GET' &&
-      url.pathname === '/api/admin/donations/receipt-signature'
+      url.pathname === '/api/admin/donations/receipt-signatory'
     ) {
-      return [200, VECTOR_SIGNATURE];
+      return [200, NO_SIGNATORY];
     }
     if (
       !this.receiptSigningKeysAvailable &&
@@ -389,15 +378,27 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
       return [204, undefined];
     case 'GET /api/admin/donations/report':
       return [200, { settings: { recipients: ['info@nfnn.cz'], sendDay: 1 }, sentReports: [] }];
-    case 'GET /api/admin/donations/receipt-signature':
+    case 'GET /api/admin/donations/receipt-signatory':
       return [
         200,
         {
-          configured: true,
-          image: 'data:image/png;base64,iVBORw0KGgo=',
-          width: 1200,
-          height: 400,
-          uploadedAt: '2026-10-23T19:30:00Z',
+          signatory: {
+            personId: SIGNED_PERSON_ID,
+            name: 'Eva Vzorová',
+            receiptRole: 'předsedkyně správní rady',
+            chosenAt: '2026-10-31T08:00:00Z',
+            portrait: true,
+            signature: true,
+          },
+          signatures: [
+            {
+              personId: SIGNED_PERSON_ID,
+              kind: 'VECTOR',
+              width: 1200,
+              height: 400,
+              uploadedAt: '2026-10-23T19:30:00Z',
+            },
+          ],
         },
       ];
     case 'GET /api/admin/operations/settings':
