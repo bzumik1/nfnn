@@ -39,7 +39,7 @@ class FrozenReceiptCasesTest {
     private static final List<String> NOT_INPUT = List.of("schemaVersion", "texts", "verification");
     private static final List<String> CASE_ONLY = List.of("v2Sample", "textsSha256");
     private final ReceiptSigner signer = Rfc8032Keys.test1Signer();
-    private final ReceiptProofs proofs = new ReceiptProofs(signer, Receipts.FOUNDATION, () -> false);
+    private final ReceiptProofs proofs = new ReceiptProofs(signer, Receipts.FOUNDATION);
 
     @TestFactory
     @DisplayName("Given every frozen receipt case, when its v2 sample is put together as the issuer does, then the case's name and input are that sample's")

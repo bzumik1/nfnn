@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donations.application.receipt;
 
+import cz.novanadeje.app.donations.application.signing.ReceiptSigningKeys;
 import cz.novanadeje.app.donations.domain.donation.DonationId;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.receipt.CurrentSignature;
@@ -16,6 +17,7 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatureRepository;
 import cz.novanadeje.app.donations.domain.receipt.ReplacedReceipt;
 import cz.novanadeje.app.donations.domain.receipt.Signatory;
 import cz.novanadeje.app.donations.domain.receipt.SignatureImage;
+import cz.novanadeje.app.donations.domain.signing.ReceiptSigningPaused;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,16 +44,19 @@ public class DonationReceiptIssuer {
     private final ReceiptRequestReader requests;
     private final ReceiptFreezer freezer;
     private final ReceiptSignatureRepository signatures;
+    private final ReceiptSigningKeys signingKeys;
     private final FoundationIdentity foundation;
     private final Signatory signatory;
     private final Clock clock;
 
     public DonationReceiptIssuer(DonationReceiptRepository receipts, ReceiptRequestReader requests, ReceiptFreezer freezer,
-                                 ReceiptSignatureRepository signatures, FoundationIdentity foundation, Signatory signatory, Clock clock) {
+                                 ReceiptSignatureRepository signatures, ReceiptSigningKeys signingKeys, FoundationIdentity foundation,
+                                 Signatory signatory, Clock clock) {
         this.receipts = receipts;
         this.requests = requests;
         this.freezer = freezer;
         this.signatures = signatures;
+        this.signingKeys = signingKeys;
         this.foundation = foundation;
         this.signatory = signatory;
         this.clock = clock;
@@ -59,14 +64,23 @@ public class DonationReceiptIssuer {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public DonationReceipt issueForDonation(DonorReference donor, DonationId donation, LocalDate today) {
+        refuseWhileOwnKeyIsWithdrawn(donor);
         receipts.lockDonor(donor);
         return issue(requests.forDonation(donor, donation, today));
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public DonationReceipt issueForYear(DonorReference donor, Year year, LocalDate today) {
+        refuseWhileOwnKeyIsWithdrawn(donor);
         receipts.lockDonor(donor);
         return issue(requests.forYear(donor, year, today));
+    }
+
+    private void refuseWhileOwnKeyIsWithdrawn(DonorReference donor) {
+        signingKeys.withdrawnCurrentKey().ifPresent(key -> {
+            LOG.error("No receipt is issued to donor {}: the receipt signing key {} of this server is withdrawn and no new seed has replaced it", donor, key);
+            throw new ReceiptSigningPaused(key);
+        });
     }
 
     private DonationReceipt issue(ReceiptRequest request) {

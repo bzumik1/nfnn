@@ -12,10 +12,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @Transactional(readOnly = true)
-public class ReceiptSigningKeys implements CurrentKeyWithdrawal {
+public class ReceiptSigningKeys {
 
     private final ReceiptSigningKeyRepository keys;
     private final RecordSeals seals;
@@ -44,10 +45,10 @@ public class ReceiptSigningKeys implements CurrentKeyWithdrawal {
         return new ReceiptSigningKeysOverview(signer.keyId(), currentPublished, all, history.mismatches(rows));
     }
 
-    @Override
-    public boolean currentKeyWithdrawn() {
-        return history().isWithdrawn(signer.keyId())
-                || keys.findAll().stream().anyMatch(key -> key.id().equals(signer.keyId()) && key.isWithdrawn());
+    public Optional<ReceiptSigningKeyId> withdrawnCurrentKey() {
+        ReceiptSigningKeyId current = signer.keyId();
+        boolean withdrawn = history().isWithdrawn(current) || keys.findAll().stream().anyMatch(key -> key.id().equals(current) && key.isWithdrawn());
+        return withdrawn ? Optional.of(current) : Optional.empty();
     }
 
     public boolean isCurrent(ReceiptSigningKeyId id) {

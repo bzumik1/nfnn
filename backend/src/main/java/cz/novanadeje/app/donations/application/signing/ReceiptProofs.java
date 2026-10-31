@@ -8,7 +8,6 @@ import cz.novanadeje.app.donations.domain.receipt.proof.ReceiptProofReader;
 import cz.novanadeje.app.donations.domain.receipt.proof.ReceiptTooLong;
 import cz.novanadeje.app.donations.domain.receipt.proof.SignedReceipt;
 import cz.novanadeje.app.donations.domain.receipt.proof.VerificationQrSymbol;
-import cz.novanadeje.app.donations.domain.signing.ReceiptSigningPaused;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -22,20 +21,13 @@ public class ReceiptProofs {
 
     private final ReceiptSigner signer;
     private final FoundationIdentity foundation;
-    private final CurrentKeyWithdrawal currentKey;
 
-    public ReceiptProofs(ReceiptSigner signer, FoundationIdentity foundation, CurrentKeyWithdrawal currentKey) {
+    public ReceiptProofs(ReceiptSigner signer, FoundationIdentity foundation) {
         this.signer = signer;
         this.foundation = foundation;
-        this.currentKey = currentKey;
     }
 
     public ReceiptProof prove(SignedReceipt receipt) {
-        if (currentKey.currentKeyWithdrawn()) {
-            log.error("Receipt {} is not signed: the receipt signing key {} of this server is withdrawn and no new seed has replaced it", receipt.number(),
-                    signer.keyId());
-            throw new ReceiptSigningPaused(signer.keyId());
-        }
         byte[] body = ReceiptProofBody.encode(receipt, signer.keyId());
         ReceiptProof proof = new ReceiptProof(body, signer.sign(ReceiptProofMessage.of(foundation.companyIdentifier(), body)));
         if (VerificationQrSymbol.of(proof.text()).isEmpty()) {

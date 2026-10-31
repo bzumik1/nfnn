@@ -18,7 +18,7 @@ class FrozenReceiptHistoryTest extends SharedCaseRunner {
     private static final JsonMapper JSON = JsonMapper.builder().build();
 
     private final ReceiptSigner signer = Rfc8032Keys.test1Signer();
-    private final ReceiptProofs proofs = new ReceiptProofs(signer, Receipts.FOUNDATION, () -> false);
+    private final ReceiptProofs proofs = new ReceiptProofs(signer, Receipts.FOUNDATION);
 
     @Override
     protected String caseFile() {
