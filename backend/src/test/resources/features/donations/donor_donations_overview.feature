@@ -186,3 +186,15 @@ Feature: A donor sees their own donations and their summary
     When someone without a token asks for the donation summary
     Then the response status is 401
     And the problem type ends with "auth/unauthenticated"
+
+  Scenario: The summary says up to which year the yearly receipts can be issued
+    Given today is 2026-12-20
+    And a person "Jana" is registered
+    When "Jana" asks for her donation summary
+    Then the response status is 200
+    And the summary makes yearly receipts available through 2025
+    And the summary makes receipts available from 2026
+    Given today is 2027-01-15
+    When "Jana" asks for her donation summary
+    Then the response status is 200
+    And the summary makes yearly receipts available through 2026

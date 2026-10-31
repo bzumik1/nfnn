@@ -84,7 +84,7 @@ class AdminSymbolClaimsServiceIntegrationTest {
     @DisplayName("Given a confirmed claim whose donations only a yearly receipt issued before them could cover, when an administrator reverses it, then its donations are deleted, the answer becomes DECLINED, a pairing run pairs nothing, the account asks nothing, the earlier yearly receipt is served again and the action is recorded")
     void should_delete_claimed_donations_and_decline_when_reversed_given_yearly_receipt_issued_before_them() {
         DonorReference jana = janaWithVerifiedAccountAndOldSymbolPayments();
-        ReceiptNumber issuedBefore = receipts.yearlyReceipt(jana, YEAR_2025).number();
+        ReceiptNumber issuedBefore = receipts.issueForYear(jana, YEAR_2025).number();
         SymbolClaimConfirmation confirmation = confirmOldSymbol(jana);
         assertThat(confirmation.pairedCount()).isEqualTo(3);
         assertThat(confirmation.changedYearlyReceipts()).containsExactly(YEAR_2025);
@@ -102,7 +102,7 @@ class AdminSymbolClaimsServiceIntegrationTest {
             assertThat(row.symbolOffer()).isEmpty();
             assertThat(row.confirmedSymbols()).isEmpty();
         });
-        assertThat(receipts.yearlyReceipt(jana, YEAR_2025).number()).isEqualTo(issuedBefore);
+        assertThat(receipts.issueForYear(jana, YEAR_2025).number()).isEqualTo(issuedBefore);
         assertThat(jdbc.sql("select details from admin_action where admin_id = ? and action = 'REVERSE_SYMBOL_CLAIM' and subject_id = ?")
                 .param(ADMIN).param(claim.value()).query(String.class).single()).contains(OLD_SYMBOL.value(), "smazané dary spárované přes ni: 3");
     }
@@ -113,7 +113,7 @@ class AdminSymbolClaimsServiceIntegrationTest {
         DonorReference jana = janaWithVerifiedAccountAndOldSymbolPayments();
         confirmOldSymbol(jana);
         SymbolClaimId claim = claimOf(jana);
-        receipts.singleReceipt(jana, new DonationId(jdbc.sql("select id from donation where symbol_claim_id = ? order by received_on desc limit 1")
+        receipts.issueForDonation(jana, new DonationId(jdbc.sql("select id from donation where symbol_claim_id = ? order by received_on desc limit 1")
                 .param(claim.value()).query(UUID.class).single()));
 
         assertThatThrownBy(() -> adminClaims.reverse(ADMIN, claim)).isInstanceOf(SymbolClaimHasReceipt.class);
@@ -129,7 +129,7 @@ class AdminSymbolClaimsServiceIntegrationTest {
         DonorReference jana = janaWithVerifiedAccountAndOldSymbolPayments();
         confirmOldSymbol(jana);
         SymbolClaimId claim = claimOf(jana);
-        receipts.yearlyReceipt(jana, YEAR_2025);
+        receipts.issueForYear(jana, YEAR_2025);
 
         assertThatThrownBy(() -> adminClaims.reverse(ADMIN, claim)).isInstanceOf(SymbolClaimHasReceipt.class);
 

@@ -1,6 +1,5 @@
-package cz.novanadeje.app.donations.infrastructure.pdf;
+package cz.novanadeje.app.donations.infrastructure.receipt;
 
-import cz.novanadeje.app.donations.application.receipt.ReceiptRenderingLimit;
 import cz.novanadeje.app.donations.domain.BankAccount;
 import cz.novanadeje.app.donations.domain.receipt.FirstReceiptYear;
 import cz.novanadeje.app.donations.domain.receipt.FoundationIdentity;
@@ -8,7 +7,6 @@ import cz.novanadeje.app.donations.domain.receipt.Signatory;
 import cz.novanadeje.app.shared.domain.PostalAddress;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
 
 @Configuration(proxyBeanMethods = false)
 class ReceiptConfiguration {
@@ -29,15 +27,5 @@ class ReceiptConfiguration {
     @Bean
     FirstReceiptYear firstReceiptYear(ReceiptProperties properties) {
         return new FirstReceiptYear(properties.firstReceiptYear());
-    }
-
-    @Bean
-    ReceiptTemplate currentReceiptTemplate() {
-        return ReceiptTemplate.fromClasspath();
-    }
-
-    @Bean
-    ReceiptRenderingLimit receiptRenderingLimit(ReceiptProperties properties) {
-        return new ReceiptRenderingLimit(properties.concurrentRenders());
     }
 }

@@ -1,28 +1,61 @@
 package cz.novanadeje.app.donations.domain.receipt.proof;
 
-import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
-import com.google.zxing.qrcode.decoder.Version;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-import java.util.stream.IntStream;
-
 import static org.assertj.core.api.Assertions.assertThat;
 
 class VerificationQrSymbolTest {
 
-    @Test
-    @DisplayName("Given every QR version, when its data capacity at L and H is compared with ZXing's tables, then they agree")
-    void should_agree_with_zxing_when_capacity_is_compared_given_every_version() {
-        IntStream.rangeClosed(1, VerificationQrSymbol.MAX_VERSION).forEach(number -> {
-            Version version = Version.getVersionForNumber(number);
-            assertThat(VerificationQrSymbol.dataCodewords(number, VerificationQrSymbol.ErrorCorrection.L)).as("version %d at L", number)
-                    .isEqualTo(version.getTotalCodewords() - version.getECBlocksForLevel(ErrorCorrectionLevel.L).getTotalECCodewords());
-            assertThat(VerificationQrSymbol.dataCodewords(number, VerificationQrSymbol.ErrorCorrection.H)).as("version %d at H", number)
-                    .isEqualTo(version.getTotalCodewords() - version.getECBlocksForLevel(ErrorCorrectionLevel.H).getTotalECCodewords());
-        });
+    @ParameterizedTest(name = "version {0} holds {1} data codewords at L and {2} at H")
+    @CsvSource({
+            "1, 19, 9",
+            "2, 34, 16",
+            "3, 55, 26",
+            "4, 80, 36",
+            "5, 108, 46",
+            "6, 136, 60",
+            "7, 156, 66",
+            "8, 194, 86",
+            "9, 232, 100",
+            "10, 274, 122",
+            "11, 324, 140",
+            "12, 370, 158",
+            "13, 428, 180",
+            "14, 461, 197",
+            "15, 523, 223",
+            "16, 589, 253",
+            "17, 647, 283",
+            "18, 721, 313",
+            "19, 795, 341",
+            "20, 861, 385",
+            "21, 932, 406",
+            "22, 1006, 442",
+            "23, 1094, 464",
+            "24, 1174, 514",
+            "25, 1276, 538",
+            "26, 1370, 596",
+            "27, 1468, 628",
+            "28, 1531, 661",
+            "29, 1631, 701",
+            "30, 1735, 745",
+            "31, 1843, 793",
+            "32, 1955, 845",
+            "33, 2071, 901",
+            "34, 2191, 961",
+            "35, 2306, 986",
+            "36, 2434, 1054",
+            "37, 2566, 1096",
+            "38, 2702, 1142",
+            "39, 2812, 1222",
+            "40, 2956, 1276"
+    })
+    @DisplayName("Given every QR version, when its data capacity at L and H is compared with ISO/IEC 18004 table 7, then they agree")
+    void should_agree_with_the_standard_when_capacity_is_compared_given_every_version(int version, int atL, int atH) {
+        assertThat(VerificationQrSymbol.dataCodewords(version, VerificationQrSymbol.ErrorCorrection.L)).isEqualTo(atL);
+        assertThat(VerificationQrSymbol.dataCodewords(version, VerificationQrSymbol.ErrorCorrection.H)).isEqualTo(atH);
     }
 
     @Test

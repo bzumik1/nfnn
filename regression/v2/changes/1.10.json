@@ -1,0 +1,889 @@
+[
+  {
+    "path": "GET /api/donations/me/{id}/receipt",
+    "scenario": "donations/admin_donor_accounts: *",
+    "kind": "removed",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, D12, A2): v2's PDF downloads GET /api/donations/me/{id}/receipt and GET /api/donations/me/receipts/yearly are removed with the server drawing, so the guard scenario issues its receipt with POST /api/donations/me/receipts (an added request) and asserts the frozen receipt it issued instead of downloading the PDF",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "path": "DELETE /api/admin/donations/donors/{id}/bank-accounts/{id}",
+    "scenario": "donations/admin_donor_accounts: *",
+    "kind": "request",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, lead note 1): the guard scenario issues its receipt with POST /api/donations/me/receipts, whose answer names the new receipt's id, so every id first seen after it is numbered one higher (<id:n>); the request and the answer are otherwise unchanged",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "path": "DELETE /api/admin/donations/donors/{id}/bank-accounts/{id}",
+    "scenario": "donations/admin_donor_accounts: *",
+    "kind": "body",
+    "field": "$.instance",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, lead note 1): the guard scenario issues its receipt with POST /api/donations/me/receipts, whose answer names the new receipt's id, so every id first seen after it is numbered one higher (<id:n>); the request and the answer are otherwise unchanged",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "path": "GET /api/donations/me/{id}/receipt",
+    "scenario": "donations/admin_donor_erasure: *",
+    "kind": "removed",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, D12, A2): v2's PDF downloads GET /api/donations/me/{id}/receipt and GET /api/donations/me/receipts/yearly are removed with the server drawing, so the guard scenario issues its receipt with POST /api/donations/me/receipts (an added request) and asserts the frozen receipt it issued instead of downloading the PDF",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "path": "GET /api/donations/me/{id}/receipt",
+    "scenario": "donations/admin_payments: *",
+    "kind": "removed",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, D12, A2): v2's PDF downloads GET /api/donations/me/{id}/receipt and GET /api/donations/me/receipts/yearly are removed with the server drawing, so the guard scenario issues its receipt with POST /api/donations/me/receipts (an added request) and asserts the frozen receipt it issued instead of downloading the PDF",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "path": "POST /api/admin/donations/payments/{id}/unpair",
+    "scenario": "donations/admin_payments: *",
+    "kind": "request",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, lead note 1): the guard scenario issues its receipt with POST /api/donations/me/receipts, whose answer names the new receipt's id, so every id first seen after it is numbered one higher (<id:n>); the request and the answer are otherwise unchanged",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "path": "POST /api/admin/donations/payments/{id}/unpair",
+    "scenario": "donations/admin_payments: *",
+    "kind": "body",
+    "field": "$.instance",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, lead note 1): the guard scenario issues its receipt with POST /api/donations/me/receipts, whose answer names the new receipt's id, so every id first seen after it is numbered one higher (<id:n>); the request and the answer are otherwise unchanged",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "path": "GET /api/admin/donations/payments",
+    "scenario": "donations/admin_payments: *",
+    "kind": "body",
+    "field": "$.items[*].id",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, lead note 1): the guard scenario issues its receipt with POST /api/donations/me/receipts, whose answer names the new receipt's id, so every id first seen after it is numbered one higher (<id:n>); the request and the answer are otherwise unchanged",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "path": "GET /api/donations/me/receipts/yearly",
+    "scenario": "donations/admin_payments: *",
+    "kind": "removed",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, D12, A2): v2's PDF downloads GET /api/donations/me/{id}/receipt and GET /api/donations/me/receipts/yearly are removed with the server drawing, so the guard scenario issues its receipt with POST /api/donations/me/receipts (an added request) and asserts the frozen receipt it issued instead of downloading the PDF",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "path": "POST /api/admin/donations/payments/{id}/pair",
+    "scenario": "donations/admin_payments: *",
+    "kind": "request",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, lead note 1): the guard scenario issues its receipt with POST /api/donations/me/receipts, whose answer names the new receipt's id, so every id first seen after it is numbered one higher (<id:n>); the request and the answer are otherwise unchanged",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "path": "POST /api/admin/donations/payments/{id}/pair",
+    "scenario": "donations/admin_payments: *",
+    "kind": "body",
+    "field": "$.donationId",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, lead note 1): the guard scenario issues its receipt with POST /api/donations/me/receipts, whose answer names the new receipt's id, so every id first seen after it is numbered one higher (<id:n>); the request and the answer are otherwise unchanged",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "path": "GET /api/donations/me/{id}/receipt",
+    "scenario": "donations/admin_receipt_signature: *",
+    "kind": "removed",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, D12, A2): v2's PDF downloads GET /api/donations/me/{id}/receipt and GET /api/donations/me/receipts/yearly are removed with the server drawing, so the guard scenario issues its receipt with POST /api/donations/me/receipts (an added request) and asserts the frozen receipt it issued instead of downloading the PDF",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "path": "GET /api/donations/me/receipts/yearly",
+    "scenario": "donations/admin_receipt_signature: *",
+    "kind": "removed",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, D12, A2): v2's PDF downloads GET /api/donations/me/{id}/receipt and GET /api/donations/me/receipts/yearly are removed with the server drawing, so the guard scenario issues its receipt with POST /api/donations/me/receipts (an added request) and asserts the frozen receipt it issued instead of downloading the PDF",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "path": "GET /api/donations/me/{id}/receipt",
+    "scenario": "donations/admin_symbol_claims: *",
+    "kind": "removed",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, D12, A2): v2's PDF downloads GET /api/donations/me/{id}/receipt and GET /api/donations/me/receipts/yearly are removed with the server drawing, so the guard scenario issues its receipt with POST /api/donations/me/receipts (an added request) and asserts the frozen receipt it issued instead of downloading the PDF",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "path": "POST /api/admin/donations/symbol-claims/{id}/reverse",
+    "scenario": "donations/admin_symbol_claims: *",
+    "kind": "request",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, lead note 1): the guard scenario issues its receipt with POST /api/donations/me/receipts, whose answer names the new receipt's id, so every id first seen after it is numbered one higher (<id:n>); the request and the answer are otherwise unchanged",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "path": "POST /api/admin/donations/symbol-claims/{id}/reverse",
+    "scenario": "donations/admin_symbol_claims: *",
+    "kind": "body",
+    "field": "$.instance",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, lead note 1): the guard scenario issues its receipt with POST /api/donations/me/receipts, whose answer names the new receipt's id, so every id first seen after it is numbered one higher (<id:n>); the request and the answer are otherwise unchanged",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "scenario": "donations/donation_receipts: *",
+    "kind": "removed",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, D12, A2): v2's PDF downloads are removed with the server drawing (DonationReceiptController, ThymeleafPdfReceiptRenderer, templates/pdf, the DejaVu fonts, openhtmltopdf and PDFBox), so their feature goes; every rule it covered is covered through POST and GET /api/donations/me/receipts in donation_receipts_frozen.feature since 1.6, the summary scenario moved to donor_donations_overview.feature, and the browser draws the PDF (1.9)",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "path": "GET /api/donations/me/receipts/yearly",
+    "scenario": "donations/symbol_claims: *",
+    "kind": "removed",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, D12, A2): v2's PDF downloads GET /api/donations/me/{id}/receipt and GET /api/donations/me/receipts/yearly are removed with the server drawing, so the guard scenario issues its receipt with POST /api/donations/me/receipts (an added request) and asserts the frozen receipt it issued instead of downloading the PDF",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "path": "GET /api/donations/me/bank-accounts",
+    "scenario": "donations/symbol_claims: *",
+    "kind": "body",
+    "field": "$.items[*].id",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, lead note 1): the guard scenario issues its receipt with POST /api/donations/me/receipts, whose answer names the new receipt's id, so every id first seen after it is numbered one higher (<id:n>); the request and the answer are otherwise unchanged",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "path": "POST /api/donations/me/bank-accounts/{id}/symbol-claim/confirm",
+    "scenario": "donations/symbol_claims: *",
+    "kind": "request",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, lead note 1): the guard scenario issues its receipt with POST /api/donations/me/receipts, whose answer names the new receipt's id, so every id first seen after it is numbered one higher (<id:n>); the request and the answer are otherwise unchanged",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "architecture.AdapterLibraryRulesTest > pdf_and_template_libraries_are_used_only_by_infrastructure_adapters",
+    "replacement": "architecture.AdapterLibraryRulesTest > template_library_is_used_only_by_infrastructure_adapters",
+    "reason": "1.10 removes openhtmltopdf and PDFBox (plan v3 1.10): the rule confines only the template library now, and no_class_draws_a_pdf_or_a_qr_code_since_the_browser_draws_both refuses the PDF libraries everywhere"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "architecture.AdapterLibraryRulesTest > qr_code_library_is_used_only_by_the_shared_qr_adapter",
+    "replacement": "architecture.AdapterLibraryRulesTest > no_class_draws_a_pdf_or_a_qr_code_since_the_browser_draws_both",
+    "reason": "1.10 removes ZXing and the shared QR adapter (plan v3 1.10): no class may use it at all now"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "cucumber.transcript.ScenarioTranscriptTest > Given a PDF answer*",
+    "replacement": "cucumber.transcript.ScenarioTranscriptTest > Given a binary answer, when the transcript is written, then only its size and SHA-256 are kept",
+    "reason": "1.10: no endpoint answers a PDF any more, so the transcript keeps no PDF text and writes such an answer as any binary, its size and SHA-256"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.receipt.DonationReceiptServiceTest > Given receipts from 2026 and today in 2026, when the yearly receipt of 2026 is asked for, then it is not completed yet",
+    "replacement": "donations.application.receipt.DonationReceiptServiceTest > Given receipts from 2026 and today in 2026, when the yearly receipt of 2026 is issued, then it is not completed yet",
+    "reason": "1.10 removes the download that rendered a yearly receipt, so the service only issues it and the same rule is checked under its name"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.receipt.DonationReceiptServiceTest > Given receipts from 2026, when the yearly receipt of 2025 is asked for, then it is before the first receipt year and nothing is read",
+    "replacement": "donations.application.receipt.DonationReceiptServiceTest > Given receipts from 2026, when the yearly receipt of 2025 is issued, then it is before the first receipt year and nothing is read",
+    "reason": "1.10 removes the download that rendered a yearly receipt, so the service only issues it and the same rule is checked under its name"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.receipt.DonationReceiptServiceTest > Given receipts from 2028, when the yearly receipt of the current year 2027 is asked for, then the first receipt year is checked before completion",
+    "replacement": "donations.application.receipt.DonationReceiptServiceTest > Given receipts from 2028, when the yearly receipt of the current year 2027 is issued, then the first receipt year is checked before completion",
+    "reason": "1.10 removes the download that rendered a yearly receipt, so the service only issues it and the same rule is checked under its name"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.receipt.DonationReceiptServiceTest > Given the current or a future year, when its yearly receipt is asked for, then the year is not completed yet and nothing is read",
+    "replacement": "donations.application.receipt.DonationReceiptServiceTest > Given the current or a future year, when its yearly receipt is issued, then the year is not completed yet and nothing is read",
+    "reason": "1.10 removes the download that rendered a yearly receipt, so the service only issues it and the same rule is checked under its name"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.receipt.ReceiptRenderingLimitTest > *",
+    "replacement": "architecture.AdapterLibraryRulesTest > no_class_draws_a_pdf_or_a_qr_code_since_the_browser_draws_both",
+    "reason": "1.10: the server renders no receipt, so the limit on concurrent renders (app.donations.receipt.concurrent-renders) is gone with nothing to bound; the rule that no class draws a PDF keeps it so"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.pdf.ReceiptFormatsTest > *",
+    "replacement": "src/app/features/donations/receipt-format.spec.ts > Given the shared receipt formatting cases of English amounts > when 100000 hellers in English are formatted, then they read as the bilingual receipt prints them",
+    "reason": "1.10 removes ReceiptFormats with the server drawing (plan v3 1.10): the browser formats the receipt's amounts and dates, checked against shared-cases/receipts/formatting.json"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.pdf.ReceiptFormattingCasesTest > *",
+    "replacement": "src/app/features/donations/receipt-format.spec.ts > Given the shared receipt formatting cases of Czech dates > when 2026-03-15 in Czech is formatted, then it reads as v2 printed it with two-digit day and month (plan v3 D11, the listed difference)",
+    "reason": "1.10 retires the backend runner of shared-cases/receipts/formatting.json with ReceiptFormats; only the browser formats a receipt now"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.pdf.ReceiptPropertiesTest > Given a company identifier that is not eight digits, when the context starts, then it fails naming the property",
+    "replacement": "donations.infrastructure.receipt.ReceiptPropertiesTest > Given a company identifier that is not eight digits, when the context starts, then it fails naming the property",
+    "reason": "1.10 removes the pdf package, so ReceiptProperties moves to donations.infrastructure.receipt and its test with it, unchanged"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.pdf.ReceiptPropertiesTest > Given an empty first receipt year, when the context starts, then receipts are issued from 2026",
+    "replacement": "donations.infrastructure.receipt.ReceiptPropertiesTest > Given an empty first receipt year, when the context starts, then receipts are issued from 2026",
+    "reason": "1.10 removes the pdf package, so ReceiptProperties moves to donations.infrastructure.receipt and its test with it, unchanged"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.pdf.ReceiptPropertiesTest > Given an empty signatory name, when the context starts, then it fails naming the environment variable",
+    "replacement": "donations.infrastructure.receipt.ReceiptPropertiesTest > Given an empty signatory name, when the context starts, then it fails naming the environment variable",
+    "reason": "1.10 removes the pdf package, so ReceiptProperties moves to donations.infrastructure.receipt and its test with it, unchanged"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.pdf.ReceiptPropertiesTest > Given another first receipt year, when the context starts, then receipts are issued from that year",
+    "replacement": "donations.infrastructure.receipt.ReceiptPropertiesTest > Given another first receipt year, when the context starts, then receipts are issued from that year",
+    "reason": "1.10 removes the pdf package, so ReceiptProperties moves to donations.infrastructure.receipt and its test with it, unchanged"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.pdf.ReceiptPropertiesTest > Given only application.yml, when the context starts, then receipts are issued for donations from 2026",
+    "replacement": "donations.infrastructure.receipt.ReceiptPropertiesTest > Given only application.yml, when the context starts, then receipts are issued for donations from 2026",
+    "reason": "1.10 removes the pdf package, so ReceiptProperties moves to donations.infrastructure.receipt and its test with it, unchanged"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.pdf.ReceiptPropertiesTest > Given only application.yml, when the context starts, then the foundation, and the signatory come from the defaults",
+    "replacement": "donations.infrastructure.receipt.ReceiptPropertiesTest > Given only application.yml, when the context starts, then the foundation, and the signatory come from the defaults",
+    "reason": "1.10 removes the pdf package, so ReceiptProperties moves to donations.infrastructure.receipt and its test with it, unchanged"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.pdf.ReceiptPropertiesTest > [1] year = \"999\"",
+    "replacement": "donations.infrastructure.receipt.ReceiptPropertiesTest > [1] year = \"999\"",
+    "reason": "1.10 removes the pdf package, so ReceiptProperties moves to donations.infrastructure.receipt and its test with it, unchanged"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.pdf.ReceiptPropertiesTest > [2] year = \"10000\"",
+    "replacement": "donations.infrastructure.receipt.ReceiptPropertiesTest > [2] year = \"10000\"",
+    "reason": "1.10 removes the pdf package, so ReceiptProperties moves to donations.infrastructure.receipt and its test with it, unchanged"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.pdf.ReceiptPropertiesTest > [3] year = \"0\"",
+    "replacement": "donations.infrastructure.receipt.ReceiptPropertiesTest > [3] year = \"0\"",
+    "reason": "1.10 removes the pdf package, so ReceiptProperties moves to donations.infrastructure.receipt and its test with it, unchanged"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.pdf.ReceiptPropertiesTest > [4] year = \"-2026\"",
+    "replacement": "donations.infrastructure.receipt.ReceiptPropertiesTest > [4] year = \"-2026\"",
+    "reason": "1.10 removes the pdf package, so ReceiptProperties moves to donations.infrastructure.receipt and its test with it, unchanged"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "shared.application.qr.QrMatrixTest > *",
+    "replacement": "src/app/shared/ui/qr-code/qr-matrix.spec.ts > Given QR code sizes of known versions > when the alignment centres are worked out, then they match the QR code standard",
+    "reason": "1.10 drops ZXing and QrCodeEncoder (plan v3 1.10): the server draws no QR code, the browser's encoder and its decoding checks take over"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "shared.infrastructure.qr.ZxingQrCodeEncoderTest > *",
+    "replacement": "src/app/shared/ui/qr-code/qr-code.spec.ts > Given a verification link of a prefix in bytes and a payload in digits > when the plain QR code of its symbol is decoded from its SVG, then it gives both segments back as they were written",
+    "reason": "1.10 drops ZXing and QrCodeEncoder (plan v3 1.10): the server draws no QR code, the browser's encoder and its decoding checks take over"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "shared.infrastructure.schema.MigrationOverDataTest > Given a database migrated to the baseline with a row in every table, when the current changelogs run, then they apply and every row is still there",
+    "replacement": "shared.infrastructure.schema.MigrationOverDataTest > Given a database migrated to the baseline with a row in every table, when the current changelogs run, then they apply and every row is still there but those a reviewed row loss names",
+    "reason": "1.10's changelog donations/024 deletes the test receipts on purpose (plan v3 1.10), so the test keeps every row but those a reviewed row loss (ReviewedRowLoss) names"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.pdf.ReceiptTemplateHistoryTest > *",
+    "replacement": "donations.infrastructure.texts.ReceiptTextsHistoryTest > Given the receipt texts of the bundle, when the history is read, then they are recorded under their digest",
+    "reason": "1.10 drops receipt_template and the server's template (plan v3 1.10): what a receipt says is its frozen text set, recorded by ReceiptTextsHistoryTest"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.pdf.ReceiptCorpusTest > *",
+    "replacement": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case A company's year with the largest single amount, hellers and a total over a million, Czech, drawn in the control theme with the captions the site prints > when a yearly receipt runs onto further pages, then each of them repeats the column headers as an artifact",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10): the server keeps no PDF drawing, so the test of what it drew is gone and the browser's test of the same receipt takes over"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.pdf.ThymeleafPdfReceiptRendererTest > *",
+    "replacement": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case A company's year with the largest single amount, hellers and a total over a million, Czech, drawn in the control theme with the captions the site prints > when a yearly receipt runs onto further pages, then each of them repeats the column headers as an artifact",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10): the server keeps no PDF drawing, so the test of what it drew is gone and the browser's test of the same receipt takes over"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.pdf.ReceiptSnapshotRenderingTest > *",
+    "replacement": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case A company's year with the largest single amount, hellers and a total over a million, Czech, drawn in the control theme with the captions the site prints > when a yearly receipt runs onto further pages, then each of them repeats the column headers as an artifact",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10): the server keeps no PDF drawing, so the test of what it drew is gone and the browser's test of the same receipt takes over"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/donation_receipts.feature > A donor downloads PDF receipts of their donations - A changed address brings replacements of the yearly and the single receipt",
+    "replacement": "feature_classpath_features/donations/donation_receipts_frozen.feature > A donor issues receipts of their donations as frozen, signed data - A changed address brings replacements of the yearly and the single receipt",
+    "reason": "1.10 removes v2's PDF downloads (plan v3 1.10, lead note 1): donation_receipts.feature asked the old GET addresses, so its scenarios go and the scenario of donation_receipts_frozen.feature that checks the same rule through POST /api/donations/me/receipts and the frozen receipt takes over"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/donation_receipts.feature > A donor downloads PDF receipts of their donations - A company's receipt names its seat and identification number, a person's the name and residence",
+    "replacement": "feature_classpath_features/donations/donation_receipts_frozen.feature > A donor issues receipts of their donations as frozen, signed data - A company's receipt freezes its seat and identification number",
+    "reason": "1.10 removes v2's PDF downloads (plan v3 1.10, lead note 1): donation_receipts.feature asked the old GET addresses, so its scenarios go and the scenario of donation_receipts_frozen.feature that checks the same rule through POST /api/donations/me/receipts and the frozen receipt takes over"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/donation_receipts.feature > A donor downloads PDF receipts of their donations - A completed year without donations has no yearly receipt",
+    "replacement": "feature_classpath_features/donations/donation_receipts_frozen.feature > A donor issues receipts of their donations as frozen, signed data - A completed year without donations has no yearly receipt",
+    "reason": "1.10 removes v2's PDF downloads (plan v3 1.10, lead note 1): donation_receipts.feature asked the old GET addresses, so its scenarios go and the scenario of donation_receipts_frozen.feature that checks the same rule through POST /api/donations/me/receipts and the frozen receipt takes over"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/donation_receipts.feature > A donor downloads PDF receipts of their donations - A donor who prefers English gets bilingual receipts with English file names",
+    "replacement": "feature_classpath_features/donations/donation_receipts_frozen.feature > A donor issues receipts of their donations as frozen, signed data - A donor who prefers English gets bilingual receipts",
+    "reason": "1.10 removes v2's PDF downloads (plan v3 1.10, lead note 1): donation_receipts.feature asked the old GET addresses, so its scenarios go and the scenario of donation_receipts_frozen.feature that checks the same rule through POST /api/donations/me/receipts and the frozen receipt takes over"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/donation_receipts.feature > A donor downloads PDF receipts of their donations - A payment of the year imported after the yearly receipt was issued brings a replacement with a new number",
+    "replacement": "feature_classpath_features/donations/donation_receipts_frozen.feature > A donor issues receipts of their donations as frozen, signed data - A payment of the year imported after the yearly receipt was issued brings a replacement with a new number and a new proof",
+    "reason": "1.10 removes v2's PDF downloads (plan v3 1.10, lead note 1): donation_receipts.feature asked the old GET addresses, so its scenarios go and the scenario of donation_receipts_frozen.feature that checks the same rule through POST /api/donations/me/receipts and the frozen receipt takes over"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/donation_receipts.feature > A donor downloads PDF receipts of their donations - A receipt keeps its language when the donor switches to English afterwards",
+    "replacement": "feature_classpath_features/donations/donation_receipts_frozen.feature > A donor issues receipts of their donations as frozen, signed data - A receipt keeps its language when the donor switches to English afterwards",
+    "reason": "1.10 removes v2's PDF downloads (plan v3 1.10, lead note 1): donation_receipts.feature asked the old GET addresses, so its scenarios go and the scenario of donation_receipts_frozen.feature that checks the same rule through POST /api/donations/me/receipts and the frozen receipt takes over"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/donation_receipts.feature > A donor downloads PDF receipts of their donations - A refunded donation has no receipt and drops out of the yearly receipt",
+    "replacement": "feature_classpath_features/donations/donation_receipts_frozen.feature > A donor issues receipts of their donations as frozen, signed data - A refunded donation has no receipt and drops out of the yearly receipt",
+    "reason": "1.10 removes v2's PDF downloads (plan v3 1.10, lead note 1): donation_receipts.feature asked the old GET addresses, so its scenarios go and the scenario of donation_receipts_frozen.feature that checks the same rule through POST /api/donations/me/receipts and the frozen receipt takes over"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/donation_receipts.feature > A donor downloads PDF receipts of their donations - Donations received before the first receipt year are listed without a receipt and have none",
+    "replacement": "feature_classpath_features/donations/donation_receipts_frozen.feature > A donor issues receipts of their donations as frozen, signed data - Donations received before the first receipt year have no receipt",
+    "reason": "1.10 removes v2's PDF downloads (plan v3 1.10, lead note 1): donation_receipts.feature asked the old GET addresses, so its scenarios go and the scenario of donation_receipts_frozen.feature that checks the same rule through POST /api/donations/me/receipts and the frozen receipt takes over"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/donation_receipts.feature > A donor downloads PDF receipts of their donations - Downloading the yearly receipt again serves the same document",
+    "replacement": "feature_classpath_features/donations/donation_receipts_frozen.feature > A donor issues receipts of their donations as frozen, signed data - Issuing the yearly receipt again returns the same receipt",
+    "reason": "1.10 removes v2's PDF downloads (plan v3 1.10, lead note 1): donation_receipts.feature asked the old GET addresses, so its scenarios go and the scenario of donation_receipts_frozen.feature that checks the same rule through POST /api/donations/me/receipts and the frozen receipt takes over"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/donation_receipts.feature > A donor downloads PDF receipts of their donations - Half an hour before midnight UTC on New Year's Eve the Prague year has already ended",
+    "replacement": "feature_classpath_features/donations/donation_receipts_frozen.feature > A donor issues receipts of their donations as frozen, signed data - Half an hour before midnight UTC on New Year's Eve the Prague year has already ended",
+    "reason": "1.10 removes v2's PDF downloads (plan v3 1.10, lead note 1): donation_receipts.feature asked the old GET addresses, so its scenarios go and the scenario of donation_receipts_frozen.feature that checks the same rule through POST /api/donations/me/receipts and the frozen receipt takes over"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/donation_receipts.feature > A donor downloads PDF receipts of their donations - Only the donor's own existing donation has a receipt",
+    "replacement": "feature_classpath_features/donations/donation_receipts_frozen.feature > A donor issues receipts of their donations as frozen, signed data - Only the donor's own existing donation has a receipt",
+    "reason": "1.10 removes v2's PDF downloads (plan v3 1.10, lead note 1): donation_receipts.feature asked the old GET addresses, so its scenarios go and the scenario of donation_receipts_frozen.feature that checks the same rule through POST /api/donations/me/receipts and the frozen receipt takes over"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/donation_receipts.feature > A donor downloads PDF receipts of their donations - The receipt of one donation carries its own number, which the donation list then shows",
+    "replacement": "feature_classpath_features/donations/donation_receipts_frozen.feature > A donor issues receipts of their donations as frozen, signed data - The receipt of one donation carries its own number, which the donation list then shows",
+    "reason": "1.10 removes v2's PDF downloads (plan v3 1.10, lead note 1): donation_receipts.feature asked the old GET addresses, so its scenarios go and the scenario of donation_receipts_frozen.feature that checks the same rule through POST /api/donations/me/receipts and the frozen receipt takes over"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/donation_receipts.feature > A donor downloads PDF receipts of their donations - The summary says up to which year the yearly receipts can be downloaded",
+    "replacement": "feature_classpath_features/donations/donor_donations_overview.feature > A donor sees their own donations and their summary - The summary says up to which year the yearly receipts can be issued",
+    "reason": "1.10 removes v2's PDF downloads (plan v3 1.10, lead note 1): donation_receipts.feature asked the old GET addresses, so its scenarios go and the scenario of donation_receipts_frozen.feature that checks the same rule through POST /api/donations/me/receipts and the frozen receipt takes over"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/donation_receipts.feature > A donor downloads PDF receipts of their donations - The yearly receipt is not available before the year ends, nor for a year that is not a four-digit number",
+    "replacement": "feature_classpath_features/donations/donation_receipts_frozen.feature > A donor issues receipts of their donations as frozen, signed data - The yearly receipt is not issued before the year ends, nor for a year that is not a four-digit number, nor without saying what to issue",
+    "reason": "1.10 removes v2's PDF downloads (plan v3 1.10, lead note 1): donation_receipts.feature asked the old GET addresses, so its scenarios go and the scenario of donation_receipts_frozen.feature that checks the same rule through POST /api/donations/me/receipts and the frozen receipt takes over"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/donation_receipts.feature > A donor downloads PDF receipts of their donations - The yearly receipt lists only that year's donations, oldest first",
+    "replacement": "feature_classpath_features/donations/donation_receipts_frozen.feature > A donor issues receipts of their donations as frozen, signed data - The yearly receipt freezes only that year's donations, oldest first",
+    "reason": "1.10 removes v2's PDF downloads (plan v3 1.10, lead note 1): donation_receipts.feature asked the old GET addresses, so its scenarios go and the scenario of donation_receipts_frozen.feature that checks the same rule through POST /api/donations/me/receipts and the frozen receipt takes over"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/donation_receipts.feature > A donor downloads PDF receipts of their donations - The yearly receipt of a completed year lists the year's donations with their total",
+    "replacement": "feature_classpath_features/donations/donation_receipts_frozen.feature > A donor issues receipts of their donations as frozen, signed data - The yearly receipt of a completed year freezes the year's donations with their total, the texts and a signed proof",
+    "reason": "1.10 removes v2's PDF downloads (plan v3 1.10, lead note 1): donation_receipts.feature asked the old GET addresses, so its scenarios go and the scenario of donation_receipts_frozen.feature that checks the same rule through POST /api/donations/me/receipts and the frozen receipt takes over"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/donation_receipts.feature > A donor downloads PDF receipts of their donations - Without a token neither receipt answers",
+    "replacement": "feature_classpath_features/donations/donation_receipts_frozen.feature > A donor issues receipts of their donations as frozen, signed data - Without a token no receipt endpoint answers",
+    "reason": "1.10 removes v2's PDF downloads (plan v3 1.10, lead note 1): donation_receipts.feature asked the old GET addresses, so its scenarios go and the scenario of donation_receipts_frozen.feature that checks the same rule through POST /api/donations/me/receipts and the frozen receipt takes over"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.receipt.DonationReceiptServiceTest > Given a donation of the caller, when it is issued, then the issuer freezes it with today's Prague date and nothing is rendered",
+    "replacement": "donations.application.receipt.DonationReceiptServiceTest > Given a donation of the caller, when it is issued, then the issuer freezes it with today's Prague date",
+    "reason": "1.10: the service renders nothing at all, so the test no longer says nothing is rendered"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.receipt.DonationReceiptServiceTest > Given a completed year, when its yearly receipt is issued, then the issuer freezes it with today's Prague date and nothing is rendered",
+    "replacement": "donations.application.receipt.DonationReceiptServiceTest > Given a completed year, when its yearly receipt is issued, then the issuer freezes it with today's Prague date",
+    "reason": "1.10: the service renders nothing at all, so the test no longer says nothing is rendered"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.receipt.DonationReceiptServiceTest > Given a donation the issuer does not find, when its PDF is asked for*",
+    "replacement": "donations.application.receipt.DonationReceiptServiceTest > Given a donation the issuer does not find, when its receipt is issued, then it is not found",
+    "reason": "1.10 removes the PDF download and its rendering slot, so a donation the issuer does not find is checked when its receipt is issued"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.receipt.DonationReceiptServiceTest > Given a donation of the caller, when its PDF is asked for*",
+    "replacement": "architecture.AdapterLibraryRulesTest > no_class_draws_a_pdf_or_a_qr_code_since_the_browser_draws_both",
+    "reason": "1.10 removes the server's PDF download (plan v3 1.10): the server renders no receipt, which the rule that no class draws a PDF keeps so"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.receipt.DonationReceiptServiceTest > Given a completed year, when its yearly PDF is asked for*",
+    "replacement": "architecture.AdapterLibraryRulesTest > no_class_draws_a_pdf_or_a_qr_code_since_the_browser_draws_both",
+    "reason": "1.10 removes the server's PDF download (plan v3 1.10): the server renders no receipt, which the rule that no class draws a PDF keeps so"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.receipt.DonationReceiptServiceTest > Given the only rendering slot held by another PDF*",
+    "replacement": "architecture.AdapterLibraryRulesTest > no_class_draws_a_pdf_or_a_qr_code_since_the_browser_draws_both",
+    "reason": "1.10 removes the server's PDF download (plan v3 1.10): the server renders no receipt, which the rule that no class draws a PDF keeps so"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.proof.VerificationQrSymbolTest > Given every QR version, when its data capacity at L and H is compared with ZXing*",
+    "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"1\" holds \"19\" data codewords at L and \"9\" at H",
+    "reason": "1.10 drops ZXing, so the capacity of every version is compared with ISO/IEC 18004 table 7 written into the test"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.persistence.JpaDonationReceiptRepositoryTest > Given a stored image, when it is stored again*",
+    "replacement": "donations.infrastructure.persistence.JpaReceiptSignatureRepositoryTest > Given a signature uploaded, when the same image is uploaded again later, then its receipt image is stored once and keeps the time it was first used",
+    "reason": "1.10 drops receipt_template, so the receipt image is stored only by the signature upload, which checks the same once-only storing"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.texts.BundleReceiptTextSourceTest > Given the bundle, when receipt texts are read, then only receipt texts come and never the download file names",
+    "replacement": "donations.infrastructure.texts.BundleReceiptTextSourceTest > Given the bundle, when receipt texts are read, then only receipt texts come, the same keys in Czech and in English",
+    "reason": "1.10 removes the download file names with the PDF downloads, so the bundle has none to leave out and the test checks the same keys in both languages"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.pdf.ReceiptPropertiesTest > [*",
+    "replacement": "donations.infrastructure.receipt.ReceiptPropertiesTest > [1] property = \"foundation-name\"",
+    "reason": "1.10 removes the pdf package, so ReceiptProperties moves to donations.infrastructure.receipt and its test with it, unchanged"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.pdf.FrozenReceiptCasesTest > *",
+    "replacement": "donations.interfaces.rest.FrozenReceiptHistoryTest > Given A company's year with the largest single amount, hellers and a total over a million, Czech, when the issuer freezes it with its recorded texts and signs it and the donor's receipt endpoints write it, then the frozen receipt has the values, the texts and the verification of schema version 1",
+    "reason": "1.10 retires the server drawing with ReceiptData (plan v3 1.10): what proved the frozen cases to be v2's samples went with ReceiptCorpusTest, FrozenReceiptHistoryTest keeps checking the frozen cases and receipt-layout.spec.ts the printed ones"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.pdf.ReceiptFormattingSharedCasesTest > *",
+    "replacement": "src/app/features/donations/receipt-format.spec.ts > Given the shared receipt formatting cases of Czech amounts > when 100000 hellers in Czech are formatted, then they read as the receipt prints them",
+    "reason": "1.10 removes ReceiptFormats (plan v3 1.10): only the browser formats a receipt, and it runs every case of shared-cases/receipts/formatting.json"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "regression.GoldenFilesTest > *",
+    "replacement": "regression.BaselineDataSetsTest > Given the receipt corpus, the data sets and the screens manifest, when they are read, then none carries a real-looking fixture value",
+    "reason": "1.10 removes GoldenFiles with ReceiptCorpusTest, its last user on main: the corpus is written only on a checkout of the baseline commit, whose GoldenFiles still refuses to rewrite it, and compare-v2-baseline.mjs keeps it as recorded"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "shared.infrastructure.qr.EncoderQrSharedCasesTest > *",
+    "replacement": "src/app/shared/ui/qr-code/qr-encoder.spec.ts > Given the shared case 1 000 Kč without a variable symbol > when its SPAYD text is encoded at level H, then the symbol is the one ZXing drew, bit for bit",
+    "reason": "1.10 drops ZXing (plan v3 1.10), so the backend runners of the QR cases go; the browser's encoder runs every case of shared-cases/qr/ as a whole and decodes it back"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "shared.infrastructure.qr.PaymentQrSharedCasesTest > *",
+    "replacement": "src/app/shared/ui/qr-code/qr-encoder.spec.ts > Given the shared case 1 000 Kč without a variable symbol > when its SPAYD text is encoded at level H, then the symbol is the one ZXing drew, bit for bit",
+    "reason": "1.10 drops ZXing (plan v3 1.10), so the backend runners of the QR cases go; the browser's encoder runs every case of shared-cases/qr/ as a whole and decodes it back"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "shared.infrastructure.qr.QrSymbolsTest > *",
+    "replacement": "src/app/shared/ui/qr-code/qr-encoder.spec.ts > Given the shared case 1 000 Kč without a variable symbol > when its SPAYD text is encoded at level H, then the symbol is the one ZXing drew, bit for bit",
+    "reason": "1.10 drops ZXing (plan v3 1.10), so the backend runners of the QR cases go; the browser's encoder runs every case of shared-cases/qr/ as a whole and decodes it back"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "shared.infrastructure.qr.TotpQrSharedCasesTest > *",
+    "replacement": "src/app/shared/ui/qr-code/qr-code.spec.ts > Given the plain QR code the encoder draws for the authenticator case a short address > when it is decoded from its SVG, then it gives the URI back behind the ECI 1 header",
+    "reason": "1.10 drops ZXing (plan v3 1.10), so the backend runners of the QR cases go; the browser's encoder runs every case of shared-cases/qr/ as a whole and decodes it back"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/donation_receipts_frozen.feature > A donor issues receipts of their donations as frozen, signed data - Issuing receipts is limited per client address, counting the old downloads too",
+    "replacement": "feature_classpath_features/donations/donation_receipts_frozen.feature > A donor issues receipts of their donations as frozen, signed data - Issuing receipts is limited per client address, a yearly and a single receipt alike",
+    "reason": "1.10 removes the old downloads, so the limit counts a yearly and a single receipt issued alike"
+  },
+  {
+    "kind": "added",
+    "path": "GET /api/admin/donations/receipts/{id}",
+    "scenario": "donations/admin_receipts: *",
+    "field": "$*.texts.*.receipt.verification.*",
+    "reason": "1.10 freezes the caption beside the verification QR code and the descriptions of the receipt's images into the receipt texts (plan v3 1.10, lead note 2; text set 5bcf759…), so a receipt issued from now on carries them and the browser prints the frozen words",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "kind": "added",
+    "path": "GET /api/admin/donations/receipts/{id}",
+    "scenario": "donations/admin_receipts: *",
+    "field": "$*.texts.*.receipt.*.alt",
+    "reason": "1.10 freezes the caption beside the verification QR code and the descriptions of the receipt's images into the receipt texts (plan v3 1.10, lead note 2; text set 5bcf759…), so a receipt issued from now on carries them and the browser prints the frozen words",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "kind": "added",
+    "path": "GET /api/donations/me/receipts",
+    "scenario": "donations/admin_receipts: *",
+    "field": "$*.texts.*.receipt.verification.*",
+    "reason": "1.10 freezes the caption beside the verification QR code and the descriptions of the receipt's images into the receipt texts (plan v3 1.10, lead note 2; text set 5bcf759…), so a receipt issued from now on carries them and the browser prints the frozen words",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "kind": "added",
+    "path": "GET /api/donations/me/receipts",
+    "scenario": "donations/admin_receipts: *",
+    "field": "$*.texts.*.receipt.*.alt",
+    "reason": "1.10 freezes the caption beside the verification QR code and the descriptions of the receipt's images into the receipt texts (plan v3 1.10, lead note 2; text set 5bcf759…), so a receipt issued from now on carries them and the browser prints the frozen words",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "kind": "added",
+    "path": "POST /api/admin/donations/donors/{id}/receipts",
+    "scenario": "donations/admin_receipts: *",
+    "field": "$*.texts.*.receipt.verification.*",
+    "reason": "1.10 freezes the caption beside the verification QR code and the descriptions of the receipt's images into the receipt texts (plan v3 1.10, lead note 2; text set 5bcf759…), so a receipt issued from now on carries them and the browser prints the frozen words",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "kind": "added",
+    "path": "POST /api/admin/donations/donors/{id}/receipts",
+    "scenario": "donations/admin_receipts: *",
+    "field": "$*.texts.*.receipt.*.alt",
+    "reason": "1.10 freezes the caption beside the verification QR code and the descriptions of the receipt's images into the receipt texts (plan v3 1.10, lead note 2; text set 5bcf759…), so a receipt issued from now on carries them and the browser prints the frozen words",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "kind": "added",
+    "path": "POST /api/donations/me/receipts",
+    "scenario": "donations/admin_receipts: *",
+    "field": "$*.texts.*.receipt.verification.*",
+    "reason": "1.10 freezes the caption beside the verification QR code and the descriptions of the receipt's images into the receipt texts (plan v3 1.10, lead note 2; text set 5bcf759…), so a receipt issued from now on carries them and the browser prints the frozen words",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "kind": "added",
+    "path": "POST /api/donations/me/receipts",
+    "scenario": "donations/admin_receipts: *",
+    "field": "$*.texts.*.receipt.*.alt",
+    "reason": "1.10 freezes the caption beside the verification QR code and the descriptions of the receipt's images into the receipt texts (plan v3 1.10, lead note 2; text set 5bcf759…), so a receipt issued from now on carries them and the browser prints the frozen words",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "kind": "added",
+    "path": "GET /api/donations/me/receipts",
+    "scenario": "donations/donation_receipts_frozen: *",
+    "field": "$*.texts.*.receipt.verification.*",
+    "reason": "1.10 freezes the caption beside the verification QR code and the descriptions of the receipt's images into the receipt texts (plan v3 1.10, lead note 2; text set 5bcf759…), so a receipt issued from now on carries them and the browser prints the frozen words",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "kind": "added",
+    "path": "GET /api/donations/me/receipts",
+    "scenario": "donations/donation_receipts_frozen: *",
+    "field": "$*.texts.*.receipt.*.alt",
+    "reason": "1.10 freezes the caption beside the verification QR code and the descriptions of the receipt's images into the receipt texts (plan v3 1.10, lead note 2; text set 5bcf759…), so a receipt issued from now on carries them and the browser prints the frozen words",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "kind": "added",
+    "path": "GET /api/donations/me/receipts/{id}",
+    "scenario": "donations/donation_receipts_frozen: *",
+    "field": "$*.texts.*.receipt.verification.*",
+    "reason": "1.10 freezes the caption beside the verification QR code and the descriptions of the receipt's images into the receipt texts (plan v3 1.10, lead note 2; text set 5bcf759…), so a receipt issued from now on carries them and the browser prints the frozen words",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "kind": "added",
+    "path": "GET /api/donations/me/receipts/{id}",
+    "scenario": "donations/donation_receipts_frozen: *",
+    "field": "$*.texts.*.receipt.*.alt",
+    "reason": "1.10 freezes the caption beside the verification QR code and the descriptions of the receipt's images into the receipt texts (plan v3 1.10, lead note 2; text set 5bcf759…), so a receipt issued from now on carries them and the browser prints the frozen words",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "kind": "added",
+    "path": "POST /api/donations/me/receipts",
+    "scenario": "donations/donation_receipts_frozen: *",
+    "field": "$*.texts.*.receipt.verification.*",
+    "reason": "1.10 freezes the caption beside the verification QR code and the descriptions of the receipt's images into the receipt texts (plan v3 1.10, lead note 2; text set 5bcf759…), so a receipt issued from now on carries them and the browser prints the frozen words",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "kind": "added",
+    "path": "POST /api/donations/me/receipts",
+    "scenario": "donations/donation_receipts_frozen: *",
+    "field": "$*.texts.*.receipt.*.alt",
+    "reason": "1.10 freezes the caption beside the verification QR code and the descriptions of the receipt's images into the receipt texts (plan v3 1.10, lead note 2; text set 5bcf759…), so a receipt issued from now on carries them and the browser prints the frozen words",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "kind": "added",
+    "path": "POST /api/donations/me/receipts",
+    "scenario": "donations/receipt_status: *",
+    "field": "$*.texts.*.receipt.verification.*",
+    "reason": "1.10 freezes the caption beside the verification QR code and the descriptions of the receipt's images into the receipt texts (plan v3 1.10, lead note 2; text set 5bcf759…), so a receipt issued from now on carries them and the browser prints the frozen words",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "kind": "added",
+    "path": "POST /api/donations/me/receipts",
+    "scenario": "donations/receipt_status: *",
+    "field": "$*.texts.*.receipt.*.alt",
+    "reason": "1.10 freezes the caption beside the verification QR code and the descriptions of the receipt's images into the receipt texts (plan v3 1.10, lead note 2; text set 5bcf759…), so a receipt issued from now on carries them and the browser prints the frozen words",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "kind": "added",
+    "path": "POST /api/admin/donations/donors/{id}/receipts",
+    "scenario": "donors/connected_apps: *",
+    "field": "$*.texts.*.receipt.verification.*",
+    "reason": "1.10 freezes the caption beside the verification QR code and the descriptions of the receipt's images into the receipt texts (plan v3 1.10, lead note 2; text set 5bcf759…), so a receipt issued from now on carries them and the browser prints the frozen words",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "kind": "added",
+    "path": "POST /api/admin/donations/donors/{id}/receipts",
+    "scenario": "donors/connected_apps: *",
+    "field": "$*.texts.*.receipt.*.alt",
+    "reason": "1.10 freezes the caption beside the verification QR code and the descriptions of the receipt's images into the receipt texts (plan v3 1.10, lead note 2; text set 5bcf759…), so a receipt issued from now on carries them and the browser prints the frozen words",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "kind": "body",
+    "path": "GET /api/admin/donations/donors/{id}",
+    "scenario": "donations/admin_donor_accounts: *",
+    "field": "$.bankAccounts[*].id",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, lead note 1): the guard scenario issues its receipt with POST /api/donations/me/receipts, whose answer names the new receipt's id first, so every id first seen after it is numbered one higher (<id:n>) and the receipt's own id comes earlier; the answer is the same",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "kind": "body",
+    "path": "GET /api/admin/donations/donors/{id}",
+    "scenario": "donations/admin_donor_accounts: *",
+    "field": "$.donations.items[*].id",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, lead note 1): the guard scenario issues its receipt with POST /api/donations/me/receipts, whose answer names the new receipt's id first, so every id first seen after it is numbered one higher (<id:n>) and the receipt's own id comes earlier; the answer is the same",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "kind": "body",
+    "path": "GET /api/admin/donations/donors/{id}",
+    "scenario": "donations/admin_donor_accounts: *",
+    "field": "$.receipts[*].id",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, lead note 1): the guard scenario issues its receipt with POST /api/donations/me/receipts, whose answer names the new receipt's id first, so every id first seen after it is numbered one higher (<id:n>) and the receipt's own id comes earlier; the answer is the same",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "kind": "body",
+    "path": "GET /api/admin/donations/donors/{id}",
+    "scenario": "donations/admin_donor_erasure: *",
+    "field": "$.donations.items[*].id",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, lead note 1): the guard scenario issues its receipt with POST /api/donations/me/receipts, whose answer names the new receipt's id first, so every id first seen after it is numbered one higher (<id:n>) and the receipt's own id comes earlier; the answer is the same",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "kind": "body",
+    "path": "GET /api/admin/donations/donors/{id}",
+    "scenario": "donations/admin_donor_erasure: *",
+    "field": "$.receipts[*].id",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, lead note 1): the guard scenario issues its receipt with POST /api/donations/me/receipts, whose answer names the new receipt's id first, so every id first seen after it is numbered one higher (<id:n>) and the receipt's own id comes earlier; the answer is the same",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "kind": "removed",
+    "scenario": "donations/donation_receipts_frozen: Issuing receipts is limited per client address, counting the old downloads too*",
+    "reason": "1.10 removes the old downloads, so the scenario that counted them in the limit is now the one that counts a yearly and a single receipt issued alike",
+    "contract": "docs/api-contract.md, Receipts; docs/security-overview.md, rate limits"
+  },
+  {
+    "scenario": "donations/admin_donor_accounts: *",
+    "kind": "logs",
+    "line": "donations.application.pairing.PaymentPairingService: Donor * learned sender account link * from bank payment *",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, lead note 1): the guard scenario issues its receipt with POST /api/donations/me/receipts, whose answer names the new receipt's id first, so every id first seen after it is numbered one higher (<id:n>); the log line is the same line of the same shape, only the masked numbering in the transcript shifts",
+    "contract": "docs/api-contract.md, Receipts; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #270, Jakub 2026-10-31",
+      "fields": {
+        "<id>": "first the donor's id, then the learned sender account link's id, both UUIDs as before",
+        "<n>": "the bank payment's transaction id from Fio, as before"
+      }
+    }
+  },
+  {
+    "scenario": "donations/admin_payments: *",
+    "kind": "logs",
+    "line": "donations.application.pairing.PaymentPairingService: Donor * learned sender account link * from bank payment *",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, lead note 1): the guard scenario issues its receipt with POST /api/donations/me/receipts, whose answer names the new receipt's id first, so every id first seen after it is numbered one higher (<id:n>); the log line is the same line of the same shape, only the masked numbering in the transcript shifts",
+    "contract": "docs/api-contract.md, Receipts; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #270, Jakub 2026-10-31",
+      "fields": {
+        "<id>": "first the donor's id, then the learned sender account link's id, both UUIDs as before",
+        "<n>": "the bank payment's transaction id from Fio, as before"
+      }
+    }
+  },
+  {
+    "scenario": "donations/admin_receipt_signature: *",
+    "kind": "logs",
+    "line": "donations.application.pairing.PaymentPairingService: Donor * learned sender account link * from bank payment *",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, lead note 1): the guard scenario issues its receipt with POST /api/donations/me/receipts, whose answer names the new receipt's id first, so every id first seen after it is numbered one higher (<id:n>); the log line is the same line of the same shape, only the masked numbering in the transcript shifts",
+    "contract": "docs/api-contract.md, Receipts; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #270, Jakub 2026-10-31",
+      "fields": {
+        "<id>": "first the donor's id, then the learned sender account link's id, both UUIDs as before",
+        "<n>": "the bank payment's transaction id from Fio, as before"
+      }
+    }
+  },
+  {
+    "scenario": "donations/symbol_claims: *",
+    "kind": "logs",
+    "line": "donations.application.pairing.PaymentPairingService: Donor * learned sender account link * from bank payment *",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, lead note 1): the guard scenario issues its receipt with POST /api/donations/me/receipts, whose answer names the new receipt's id first, so every id first seen after it is numbered one higher (<id:n>); the log line is the same line of the same shape, only the masked numbering in the transcript shifts",
+    "contract": "docs/api-contract.md, Receipts; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #270, Jakub 2026-10-31",
+      "fields": {
+        "<id>": "first the donor's id, then the learned sender account link's id, both UUIDs as before",
+        "<n>": "the bank payment's transaction id from Fio, as before"
+      }
+    }
+  },
+  {
+    "scenario": "donations/admin_payments: *",
+    "kind": "logs",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin * performed *_PAYMENT on *",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, lead note 1): the guard scenario issues its receipt with POST /api/donations/me/receipts, whose answer names the new receipt's id first, so every id first seen after it is numbered one higher (<id:n>); the log line is the same line of the same shape, only the masked numbering in the transcript shifts",
+    "contract": "docs/api-contract.md, Receipts; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #270, Jakub 2026-10-31",
+      "fields": {
+        "<id>": "first the administrator's donor id, then the bank payment's id, both UUIDs as before",
+        "<enum>": "PAIR_PAYMENT or UNPAIR_PAYMENT, as before"
+      }
+    }
+  },
+  {
+    "scenario": "donations/admin_symbol_claims: *",
+    "kind": "logs",
+    "line": "donations.application.bankaccount.SymbolClaimService: Donor * confirmed symbol claim * at sender account link *: * payments paired",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, lead note 1): the guard scenario issues its receipt with POST /api/donations/me/receipts, whose answer names the new receipt's id first, so every id first seen after it is numbered one higher (<id:n>); the log line is the same line of the same shape, only the masked numbering in the transcript shifts",
+    "contract": "docs/api-contract.md, Receipts; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #270, Jakub 2026-10-31",
+      "fields": {
+        "<id>": "the donor's id, the symbol claim's id and the sender account link's id, UUIDs as before",
+        "<n>": "how many payments the confirmation paired, as before"
+      }
+    }
+  },
+  {
+    "scenario": "donations/symbol_claims: *",
+    "kind": "logs",
+    "line": "donations.application.bankaccount.SymbolClaimService: Donor * confirmed symbol claim * at sender account link *: * payments paired",
+    "reason": "1.10 switches receipts to the browser (plan v3 1.10, lead note 1): the guard scenario issues its receipt with POST /api/donations/me/receipts, whose answer names the new receipt's id first, so every id first seen after it is numbered one higher (<id:n>); the log line is the same line of the same shape, only the masked numbering in the transcript shifts",
+    "contract": "docs/api-contract.md, Receipts; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #270, Jakub 2026-10-31",
+      "fields": {
+        "<id>": "the donor's id, the symbol claim's id and the sender account link's id, UUIDs as before",
+        "<n>": "how many payments the confirmation paired, as before"
+      }
+    }
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/donation_receipts.feature > A donor downloads PDF receipts of their donations - A payment that verified an account has no receipt of its own and counts in the yearly receipt",
+    "replacement": "feature_classpath_features/donations/donation_receipts_frozen.feature > A donor issues receipts of their donations as frozen, signed data - A payment that verified an account has no receipt of its own and counts in the yearly receipt",
+    "reason": "1.10 removes v2's PDF downloads (plan v3 1.10, lead note 1): donation_receipts.feature asked the old GET addresses, so its scenarios go and the scenario of donation_receipts_frozen.feature that checks the same rule through POST /api/donations/me/receipts and the frozen receipt takes over"
+  },
+  {
+    "kind": "removed",
+    "scenario": "donations/admin_receipt_signing_key_withdrawal: Until the server starts with a new seed, no receipt is issued or downloaded, not even one issued before the withdrawal, and the administration issues none either*",
+    "reason": "1.10 removes v2's PDF download of a single receipt (plan v3 1.10), which the scenario asked while signing was paused, so the scenario is renamed: issuing stays refused, and it now also pins that the receipt issued before the withdrawal still reads back with its key (review 1.10 r1, tests m4, security m3)",
+    "contract": "docs/api-contract.md, Receipt verification proof and signing keys"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/admin_receipt_signing_key_withdrawal.feature > An administrator withdraws a leaked receipt signing key from the web, with a fresh second factor - Until the server starts with a new seed, no receipt is issued or downloaded, not even one issued before the withdrawal, and the administration issues none either",
+    "replacement": "feature_classpath_features/donations/admin_receipt_signing_key_withdrawal.feature > An administrator withdraws a leaked receipt signing key from the web, with a fresh second factor - Until the server starts with a new seed, no receipt is issued, not even once more one issued before the withdrawal, which still reads back, and the administration issues none either",
+    "reason": "1.10 removes v2's PDF download, so the scenario no longer asks it and is renamed after what it checks now"
+  }
+]

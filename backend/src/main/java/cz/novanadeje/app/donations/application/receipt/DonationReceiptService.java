@@ -18,16 +18,11 @@ import java.time.Year;
 public class DonationReceiptService {
 
     private final DonationReceiptIssuer issuer;
-    private final DonationReceiptRenderer renderer;
-    private final ReceiptRenderingLimit renderingLimit;
     private final Clock clock;
     private final FirstReceiptYear firstYear;
 
-    public DonationReceiptService(DonationReceiptIssuer issuer, DonationReceiptRenderer renderer, ReceiptRenderingLimit renderingLimit,
-                                  Clock clock, FirstReceiptYear firstYear) {
+    public DonationReceiptService(DonationReceiptIssuer issuer, Clock clock, FirstReceiptYear firstYear) {
         this.issuer = issuer;
-        this.renderer = renderer;
-        this.renderingLimit = renderingLimit;
         this.clock = clock;
         this.firstYear = firstYear;
     }
@@ -40,23 +35,6 @@ public class DonationReceiptService {
         LocalDate today = FoundationCalendar.today(clock);
         requireCompletedYear(firstYear, year, today);
         return issuer.issueForYear(donor, year, today);
-    }
-
-    public IssuedReceipt singleReceipt(DonorReference donor, DonationId donationId) {
-        LocalDate today = FoundationCalendar.today(clock);
-        DonationReceipt receipt = issuer.issueForDonation(donor, donationId, today);
-        return renderingLimit.withinLimit(() -> pdf(receipt));
-    }
-
-    public IssuedReceipt yearlyReceipt(DonorReference donor, Year year) {
-        LocalDate today = FoundationCalendar.today(clock);
-        requireCompletedYear(firstYear, year, today);
-        DonationReceipt receipt = issuer.issueForYear(donor, year, today);
-        return renderingLimit.withinLimit(() -> pdf(receipt));
-    }
-
-    private IssuedReceipt pdf(DonationReceipt receipt) {
-        return IssuedReceipt.of(receipt, renderer.render(receipt.frozen(), receipt.issuedAt()));
     }
 
     static void requireCompletedYear(FirstReceiptYear firstYear, Year year, LocalDate today) {
