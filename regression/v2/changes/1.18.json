@@ -317,7 +317,7 @@
     "contract": "docs/api-contract.md, Conventions (problem texts)"
   },
   {
-    "path": "QKZW156* /api/content/news",
+    "path": "QKZW1561 /api/content/news",
     "scenario": "operations/request_text_in_logs: *",
     "kind": "headers",
     "field": "content-type",
@@ -325,7 +325,7 @@
     "contract": "docs/api-contract.md, Conventions (problem texts)"
   },
   {
-    "path": "QKZW156* /api/content/news",
+    "path": "QKZW1561 /api/content/news",
     "scenario": "operations/request_text_in_logs: *",
     "kind": "body",
     "field": "$.error",
@@ -333,7 +333,7 @@
     "contract": "docs/api-contract.md, Conventions (problem texts)"
   },
   {
-    "path": "QKZW156* /api/content/news",
+    "path": "QKZW1561 /api/content/news",
     "scenario": "operations/request_text_in_logs: *",
     "kind": "body",
     "field": "$.path",
@@ -341,7 +341,7 @@
     "contract": "docs/api-contract.md, Conventions (problem texts)"
   },
   {
-    "path": "QKZW156* /api/content/news",
+    "path": "QKZW1561 /api/content/news",
     "scenario": "operations/request_text_in_logs: *",
     "kind": "body",
     "field": "$.timestamp",
@@ -349,7 +349,7 @@
     "contract": "docs/api-contract.md, Conventions (problem texts)"
   },
   {
-    "path": "QKZW156* /api/content/news",
+    "path": "QKZW1561 /api/content/news",
     "scenario": "operations/request_text_in_logs: *",
     "kind": "added",
     "field": "$.title",
@@ -357,7 +357,7 @@
     "contract": "docs/api-contract.md, Conventions (problem texts)"
   },
   {
-    "path": "QKZW156* /api/content/news",
+    "path": "QKZW1561 /api/content/news",
     "scenario": "operations/request_text_in_logs: *",
     "kind": "added",
     "field": "$.detail",
@@ -365,7 +365,7 @@
     "contract": "docs/api-contract.md, Conventions (problem texts)"
   },
   {
-    "path": "QKZW156* /api/content/news",
+    "path": "QKZW1561 /api/content/news",
     "scenario": "operations/request_text_in_logs: *",
     "kind": "added",
     "field": "cache-control",
@@ -373,7 +373,7 @@
     "contract": "docs/api-contract.md, Conventions (problem texts)"
   },
   {
-    "path": "QKZW156* /api/content/news",
+    "path": "QKZW1561 /api/content/news",
     "scenario": "operations/request_text_in_logs: *",
     "kind": "added",
     "field": "expires",
@@ -381,7 +381,7 @@
     "contract": "docs/api-contract.md, Conventions (problem texts)"
   },
   {
-    "path": "QKZW156* /api/content/news",
+    "path": "QKZW1561 /api/content/news",
     "scenario": "operations/request_text_in_logs: *",
     "kind": "added",
     "field": "pragma",
@@ -389,7 +389,7 @@
     "contract": "docs/api-contract.md, Conventions (problem texts)"
   },
   {
-    "path": "QKZW156* /api/content/news",
+    "path": "QKZW1561 /api/content/news",
     "scenario": "operations/request_text_in_logs: *",
     "kind": "added",
     "field": "x-content-type-options",
