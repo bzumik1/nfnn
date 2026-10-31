@@ -156,16 +156,16 @@ describe('Given the auth interceptor', () => {
     signIn('token-1');
     let received: Blob | undefined;
     client
-      .get('/api/donations/me/receipts/yearly', { responseType: 'blob' })
+      .get('/api/admin/operations/backups/nfnn-2026-10-31_03-00.dump.age', { responseType: 'blob' })
       .subscribe((file) => (received = file));
 
     http
-      .expectOne('/api/donations/me/receipts/yearly')
+      .expectOne('/api/admin/operations/backups/nfnn-2026-10-31_03-00.dump.age')
       .flush(problemBlob('auth/expired-token'), { status: 401, statusText: 'Unauthorized' });
     await blobSettled();
 
     http.expectOne('/api/donors/auth/refresh').flush(authResponse('token-2'));
-    const retried = http.expectOne('/api/donations/me/receipts/yearly');
+    const retried = http.expectOne('/api/admin/operations/backups/nfnn-2026-10-31_03-00.dump.age');
     expect(retried.request.headers.get('Authorization')).toBe('Bearer token-2');
     retried.flush(new Blob(['%PDF-1.4'], { type: 'application/pdf' }));
 
@@ -176,11 +176,11 @@ describe('Given the auth interceptor', () => {
     signIn('token-1');
     let failure: unknown;
     client
-      .get('/api/donations/me/receipts/yearly', { responseType: 'blob' })
+      .get('/api/admin/operations/backups/nfnn-2026-10-31_03-00.dump.age', { responseType: 'blob' })
       .subscribe({ error: (reason: unknown) => (failure = reason) });
 
     http
-      .expectOne('/api/donations/me/receipts/yearly')
+      .expectOne('/api/admin/operations/backups/nfnn-2026-10-31_03-00.dump.age')
       .flush(problemBlob('auth/unauthenticated', 'Přihlaste se'), {
         status: 401,
         statusText: 'Unauthorized',
@@ -200,11 +200,11 @@ describe('Given the auth interceptor', () => {
     let failure: unknown;
     const body = new Blob(['Bad Gateway'], { type: 'text/html' });
     client
-      .get('/api/donations/me/receipts/yearly', { responseType: 'blob' })
+      .get('/api/admin/operations/backups/nfnn-2026-10-31_03-00.dump.age', { responseType: 'blob' })
       .subscribe({ error: (reason: unknown) => (failure = reason) });
 
     http
-      .expectOne('/api/donations/me/receipts/yearly')
+      .expectOne('/api/admin/operations/backups/nfnn-2026-10-31_03-00.dump.age')
       .flush(body, { status: 502, statusText: 'Bad Gateway' });
     await blobSettled();
 

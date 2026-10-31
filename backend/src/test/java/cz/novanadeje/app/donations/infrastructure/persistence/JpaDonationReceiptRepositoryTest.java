@@ -31,10 +31,9 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptTextSet;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptVerification;
 import cz.novanadeje.app.donations.domain.receipt.ReplacedReceipt;
 import cz.novanadeje.app.donations.domain.receipt.Signatory;
+import cz.novanadeje.app.donations.domain.receipt.StoredReceiptImage;
 import cz.novanadeje.app.donations.domain.receipt.proof.ReceiptProof;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyId;
-import cz.novanadeje.app.donations.infrastructure.pdf.ReceiptImage;
-import cz.novanadeje.app.donations.infrastructure.pdf.ReceiptResources;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.Money;
@@ -95,8 +94,8 @@ class JpaDonationReceiptRepositoryTest {
     private static final ReceiptTextSet CZECH = ReceiptTextSet.czechOnly(Map.of("receipt.title.single", "Potvrzení o přijetí daru"));
     private static final ReceiptTextSet BILINGUAL = ReceiptTextSet.bilingual(Map.of("receipt.title.single", "Potvrzení o přijetí daru"),
             Map.of("receipt.title.single", "Confirmation of a donation received"));
-    private static final ReceiptImage SIGNATURE = new ReceiptImage(new byte[] {(byte) 0x89, 'P', 'N', 'G', 2}, "image/png");
-    private static final ReceiptImage OTHER_SIGNATURE = new ReceiptImage(new byte[] {(byte) 0x89, 'P', 'N', 'G', 3}, "image/png");
+    private static final StoredReceiptImage SIGNATURE = new StoredReceiptImage(new byte[] {(byte) 0x89, 'P', 'N', 'G', 2}, "image/png");
+    private static final StoredReceiptImage OTHER_SIGNATURE = new StoredReceiptImage(new byte[] {(byte) 0x89, 'P', 'N', 'G', 3}, "image/png");
 
     @Autowired
     private DonationReceiptRepository receipts;
@@ -114,15 +113,13 @@ class JpaDonationReceiptRepositoryTest {
     private JdbcClient jdbc;
     @Autowired
     private PlatformTransactionManager transactionManager;
-    @Autowired
-    private ReceiptResources resources;
 
     private long transactionIds = 5000;
 
     @BeforeEach
     void storeSignatureImagesAndTheSigningKey() {
-        resources.storeImage(SIGNATURE.digest(), SIGNATURE, NOW);
-        resources.storeImage(OTHER_SIGNATURE.digest(), OTHER_SIGNATURE, NOW);
+        storeImage(SIGNATURE);
+        storeImage(OTHER_SIGNATURE);
         jdbc.sql("insert into receipt_signing_key (key_id, public_key, registered_at, status, seal) values (?, ?, ?, 'active', 'seal')")
                 .params(KEY_ID.value(), new byte[32], Timestamp.from(NOW)).update();
     }
@@ -585,26 +582,11 @@ class JpaDonationReceiptRepositoryTest {
     @DisplayName("Given a stored receipt image, when it is found by its digest, then its bytes and media type come back, and an unknown digest finds nothing")
     void should_find_stored_image_when_found_given_digest() {
         assertThat(images.find(SIGNATURE.digest())).hasValueSatisfying(image -> {
-            assertThat(image.content()).isEqualTo(SIGNATURE.bytes());
+            assertThat(image.content()).isEqualTo(SIGNATURE.content());
             assertThat(image.mediaType()).isEqualTo("image/png");
             assertThat(image.digest()).isEqualTo(SIGNATURE.digest());
         });
         assertThat(images.find(new ContentDigest("e".repeat(64)))).isEmpty();
-    }
-
-    @Test
-    @DisplayName("Given a stored image, when it is stored again, then nothing changes and it reads back unchanged")
-    void should_keep_first_copy_when_stored_again_given_stored_image() {
-        resources.storeImage(SIGNATURE.digest(), SIGNATURE, NOW.plusSeconds(60));
-        flushAndClear();
-
-        assertThat(resources.image(SIGNATURE.digest())).hasValueSatisfying(image -> {
-            assertThat(image.bytes()).isEqualTo(SIGNATURE.bytes());
-            assertThat(image.mediaType()).isEqualTo("image/png");
-        });
-        assertThat(jdbc.sql("select first_used_at from receipt_image where sha256 = ?").param(SIGNATURE.digest().value()).query(Instant.class).single())
-                .isEqualTo(NOW);
-        assertThat(resources.image(new ContentDigest("e".repeat(64)))).isEmpty();
     }
 
     @Test
@@ -735,5 +717,10 @@ class JpaDonationReceiptRepositoryTest {
     private void flushAndClear() {
         entityManager.flush();
         entityManager.clear();
+    }
+
+    private void storeImage(StoredReceiptImage image) {
+        jdbc.sql("insert into receipt_image (sha256, media_type, content, first_used_at) values (?, ?, ?, ?)")
+                .params(image.digest().value(), image.mediaType(), image.content(), Timestamp.from(NOW)).update();
     }
 }

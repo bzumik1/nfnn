@@ -37,6 +37,12 @@
     <include file="db/changelog/donations/015_configure_monthly_report.xml" relativeToChangelogFile="false"/>
     <include file="db/changelog/donations/016_upload_receipt_signature.xml" relativeToChangelogFile="false"/>
     <include file="db/changelog/donations/017_queue_import_alerts.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donations/018_index_foreign_keys.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donations/019_choose_report_send_hour.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donations/020_index_activity_since.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donations/021_register_receipt_signing_keys.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donations/022_issue_receipts_as_frozen_data.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donations/023_index_issued_receipts_by_issue.xml" relativeToChangelogFile="false"/>
     <include file="db/changelog/contact/001_create_contact_message.xml" relativeToChangelogFile="false"/>
     <include file="db/changelog/operations/001_track_backup_alerts.xml" relativeToChangelogFile="false"/>
     <include file="db/changelog/operations/002_store_settings.xml" relativeToChangelogFile="false"/>

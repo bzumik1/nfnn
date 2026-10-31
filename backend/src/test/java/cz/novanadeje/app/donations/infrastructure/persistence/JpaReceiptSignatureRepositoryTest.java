@@ -69,6 +69,21 @@ class JpaReceiptSignatureRepositoryTest {
     }
 
     @Test
+    @DisplayName("Given a signature uploaded, when the same image is uploaded again later, then its receipt image is stored once and keeps the time it was first used")
+    void should_store_the_image_once_and_keep_its_first_use_when_uploaded_again_given_the_same_image() {
+        signatures.replace(FIRST, NOW);
+        flushAndClear();
+
+        signatures.replace(FIRST, NOW.plusSeconds(60));
+        flushAndClear();
+
+        assertThat(jdbc.sql("select count(*) from receipt_image where sha256 = ?").param(FIRST.digest().value()).query(Long.class).single())
+                .isEqualTo(1L);
+        assertThat(jdbc.sql("select first_used_at from receipt_image where sha256 = ?").param(FIRST.digest().value()).query(Instant.class).single())
+                .isEqualTo(NOW);
+    }
+
+    @Test
     @DisplayName("Given a signature uploaded, when it is removed, then none is current and the image stays for issued receipts")
     void should_remove_row_and_keep_image_when_removed_given_signature() {
         signatures.replace(FIRST, NOW);

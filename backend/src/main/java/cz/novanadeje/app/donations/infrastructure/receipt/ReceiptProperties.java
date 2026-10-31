@@ -1,4 +1,4 @@
-package cz.novanadeje.app.donations.infrastructure.pdf;
+package cz.novanadeje.app.donations.infrastructure.receipt;
 
 import cz.novanadeje.app.shared.domain.PrintableText;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -10,12 +10,10 @@ import java.util.regex.Pattern;
 @ConfigurationProperties("app.donations.receipt")
 public record ReceiptProperties(String foundationName, String foundationCompanyIdentifier, String foundationStreet, String foundationCity,
                                 String foundationPostalCode, String registryCourt, String registryFile, String issuePlace,
-                                String issuePlaceEn, String signatoryName, String signatoryRole,
-                                Integer concurrentRenders, Integer firstYear) {
+                                String issuePlaceEn, String signatoryName, String signatoryRole, Integer firstYear) {
 
     private static final String PREFIX = "app.donations.receipt.";
     private static final Pattern COMPANY_IDENTIFIER = Pattern.compile("[0-9]{8}");
-    private static final int DEFAULT_CONCURRENT_RENDERS = 3;
     private static final int DEFAULT_FIRST_YEAR = 2026;
     private static final int FIRST_FOUR_DIGIT_YEAR = 1000;
     private static final int LAST_FOUR_DIGIT_YEAR = 9999;
@@ -36,10 +34,6 @@ public record ReceiptProperties(String foundationName, String foundationCompanyI
         issuePlaceEn = printed(issuePlaceEn, PREFIX + "issue-place-en");
         signatoryName = printed(signatoryName, "RECEIPT_SIGNATORY_NAME (" + PREFIX + "signatory-name)");
         signatoryRole = printed(signatoryRole, "RECEIPT_SIGNATORY_ROLE (" + PREFIX + "signatory-role)");
-        concurrentRenders = concurrentRenders == null ? DEFAULT_CONCURRENT_RENDERS : concurrentRenders;
-        if (concurrentRenders < 1) {
-            throw new IllegalArgumentException(PREFIX + "concurrent-renders must be at least 1, but is " + concurrentRenders);
-        }
         firstYear = firstYear == null ? DEFAULT_FIRST_YEAR : firstYear;
         if (firstYear < FIRST_FOUR_DIGIT_YEAR || firstYear > LAST_FOUR_DIGIT_YEAR) {
             throw new IllegalArgumentException("RECEIPT_FIRST_YEAR (" + PREFIX + "first-year) must be a four-digit year, but is " + firstYear);

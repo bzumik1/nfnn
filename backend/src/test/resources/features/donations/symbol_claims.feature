@@ -423,8 +423,8 @@ Feature: A donor is asked whether an old variable symbol from their verified acc
       | 1003 | 2026-09-01 | 1000.00 | 1234567 | 0800     | Nováková Jana | {Jana}         |                                       |
       | 1004 | 2027-01-12 | 1.00    | 1234567 | 0800     | Nováková Jana | {Jana}         | OVERENI UCTU NADACNI FOND NOVA NADEJE |
     And the application starts the import
-    And "Jana" downloads her yearly receipt for 2026
-    And the receipt "Jana" downloaded is the frozen receipt issued to her last
+    And "Jana" issues her yearly receipt for 2026
+    And the issued receipt is the yearly receipt for 2026
     And the issued receipt has number "2027-000001"
     And the frozen receipt lists the gifts:
       | receivedOn | amountMinor |
@@ -432,9 +432,9 @@ Feature: A donor is asked whether an old variable symbol from their verified acc
     When "Jana" confirms symbol "6123456789" at bank account "1234567/0800"
     Then the response status is 200
     And the confirmation paired 2 payments and changed the yearly receipt for 2026
-    When "Jana" downloads her yearly receipt for 2026
+    When "Jana" issues her yearly receipt for 2026
     Then the response status is 200
-    And the receipt "Jana" downloaded is the frozen receipt issued to her last
+    And the issued receipt is the yearly receipt for 2026
     And the issued receipt has number "2027-000002"
     And the frozen receipt holds:
       | field             | value       |

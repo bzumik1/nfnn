@@ -1,4 +1,4 @@
-package cz.novanadeje.app.donations.infrastructure.pdf;
+package cz.novanadeje.app.donations.infrastructure.receipt;
 
 import cz.novanadeje.app.donations.domain.BankAccount;
 import cz.novanadeje.app.donations.domain.receipt.FirstReceiptYear;

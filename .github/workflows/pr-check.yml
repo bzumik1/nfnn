@@ -842,6 +842,24 @@ jobs:
           [ ! -e "$restore/ci-4.upload" ] || { echo "::error::the upload was left in the restore folder"; exit 1; }
           curl -fsS --max-time 10 http://localhost:8089/ | grep -q '<app-root'
 
+          echo "A backup taken before receipts moved to the browser is refused once this server has given out a receipt number, so the numbering never starts at 1 again below numbers already issued"
+          switch_changeset="024-delete-test-receipts-and-drop-the-server-drawing"
+          docker exec nfnn-postgres psql -U novanadeje -d novanadeje -v ON_ERROR_STOP=1 -c "create table ci_switch_row as select * from databasechangelog where id = '$switch_changeset'" -c "delete from databasechangelog where id = '$switch_changeset'"
+          docker exec nfnn-backend sh -c 'touch /backups/requests/ci-pre-switch.backup'
+          wait_for "grep -q '^request=ci-pre-switch$' $backups/status/backup" 60 "the backup without the switch changeset did not run"
+          pre_switch_dump=$(sed -n 's/^file=//p' "$backups/status/backup")
+          docker exec nfnn-postgres psql -U novanadeje -d novanadeje -v ON_ERROR_STOP=1 -c "insert into databasechangelog select * from ci_switch_row" -c "drop table ci_switch_row"
+          [ "$(docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select is_called from donation_receipt_number_seq")" = t ] || { echo "::error::the probe needs a receipt number given out since the switch"; exit 1; }
+          docker exec nfnn-backend sh -c "printf 'source=backup\nfile=%s\nadmin=019a0000-0000-7000-8000-000000000002\n' '$pre_switch_dump' > /backups/requests/ci-pre-switch.restore"
+          docker restart nfnn-backend
+          wait_for "grep -q '^request=ci-pre-switch$' $backups/status/restore" 60 "the restore of the backup from before the switch did not run"
+          grep -q '^outcome=failed$' "$backups/status/restore" || { echo "::error::a backup from before the switch was restored although receipt numbers were given out since"; cat "$backups/status/restore"; exit 1; }
+          grep -q 'taken before receipts moved to the browser' "$backups/status/restore" || { echo "::error::the refusal does not say why"; cat "$backups/status/restore"; exit 1; }
+          docker compose up -d --wait --wait-timeout 300 backend
+          [ "$(count_rows "action = 'CI_MARKER'")" = 1 ] || { echo "::error::the refused restore changed the data"; exit 1; }
+          [ "$(docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select last_value from donation_receipt_number_seq")" = 41 ] || { echo "::error::the refused restore moved the receipt numbers"; exit 1; }
+          [ "$(docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select count(*) from databasechangelog where id = '$switch_changeset'")" = 1 ] || { echo "::error::the switch changeset is no longer recorded"; exit 1; }
+
           echo "A key planted in the restore folder is not adopted, and a backup uploaded with its own key is restored and its key becomes the server's"
           secrets="$RUNNER_TEMP/nfnn/secrets"
           server_key() {
