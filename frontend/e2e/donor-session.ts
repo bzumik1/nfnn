@@ -317,22 +317,17 @@ function sectionName(name: string): RegExp {
 }
 
 export async function openDonorSection(page: Page, name: string): Promise<void> {
-  const nav = page.getByRole('navigation', { name: 'Můj účet' });
-  const link = nav.getByRole('link', { name: sectionName(name) });
+  const nav = page.getByRole('navigation', { name: 'Můj účet', includeHidden: true });
+  const link = nav.getByRole('link', { name: sectionName(name), includeHidden: true });
   const menu = page.getByRole('button', { name: /^Menu účtu/ });
   await expect(nav.or(menu).filter({ visible: true }).first()).toBeVisible();
-  if (!(await menu.isVisible())) {
-    await link.click();
-    await expect(link).toHaveAttribute('aria-current', 'page');
-    return;
+  if (await menu.isVisible()) {
+    await menu.click();
+    await expect(menu).toHaveAttribute('aria-expanded', 'true');
   }
-  await expect(async () => {
-    if ((await menu.getAttribute('aria-expanded')) !== 'true') {
-      await menu.click();
-    }
-    await expect(link).toBeVisible({ timeout: 1_000 });
-  }).toPass();
   await link.click();
-  await expect(menu).toHaveAttribute('aria-expanded', 'false');
-  await expect(page.locator('.side-nav-current')).toHaveText(sectionName(name));
+  await expect(link).toHaveAttribute('aria-current', 'page');
+  if (await menu.isVisible()) {
+    await expect(menu).toHaveAttribute('aria-expanded', 'false');
+  }
 }

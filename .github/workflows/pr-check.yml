@@ -128,7 +128,7 @@ jobs:
 
       - run: npm ci
 
-      - name: Start installing Playwright's Chromium headless shell while the checks run
+      - name: Start installing Playwright's Chromium headless shell and WebKit while the checks run
         run: |
           (npx playwright install --with-deps --only-shell chromium webkit > "$RUNNER_TEMP/playwright-install.log" 2>&1; echo $? > "$RUNNER_TEMP/playwright-install.status") &
 
@@ -152,7 +152,7 @@ jobs:
       - name: Only the receipt worker carries the PDF library
         run: node scripts/check-receipt-chunks.mjs dist/frontend/browser
 
-      - name: Playwright's Chromium headless shell is installed
+      - name: Playwright's Chromium headless shell and WebKit are installed
         run: |
           for _ in $(seq 300); do
             [ -s "$RUNNER_TEMP/playwright-install.status" ] && break

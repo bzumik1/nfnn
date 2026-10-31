@@ -138,35 +138,48 @@ test.describe('Given a visitor on the home page', () => {
   });
 
   test.describe('on a phone', () => {
-    test.use({
-      viewport: { width: 390, height: 844 },
-      permissions: ['clipboard-read', 'clipboard-write'],
-    });
-    test.skip(
-      ({ browserName }) => browserName !== 'chromium',
-      'Only Chromium grants the clipboard permissions; the device checklist copies on the iPhone',
-    );
+    test.use({ viewport: { width: 390, height: 844 } });
 
-    test('when they copy the amount, then the clipboard holds it and the bank details come before the QR code', async ({
-      page,
-    }) => {
+    test('when the bank details show, then they come before the QR code', async ({ page }) => {
       await servePaymentDetails(page, []);
       await page.goto('/');
       const bank = page.locator('#prispet .bank');
       await expect(bank).toContainText('5544332217/2010');
+      await expect(page.locator('#prispet .qr')).toBeVisible();
 
-      await page.getByRole('button', { name: 'Jiná částka' }).click();
-      await expect(page.locator('#donate-custom-amount')).toHaveValue('');
-      await expect(page.locator('#prispet .qr-placeholder')).toHaveText('Nejprve zadejte částku');
-      await page.locator('#donate-custom-amount').fill('2 500');
-      await expect(bank).toContainText('2 500 Kč');
-      await page.getByRole('button', { name: 'Kopírovat částku' }).click();
-
-      await expect(page.getByRole('button', { name: 'Zkopírováno' })).toBeVisible();
-      expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('2500');
       const bankTop = (await bank.boundingBox())!.y;
       const qrTop = (await page.locator('#prispet .qr').boundingBox())!.y;
       expect(bankTop).toBeLessThan(qrTop);
+    });
+
+    test.describe('with the clipboard allowed', () => {
+      test.use({ permissions: ['clipboard-read', 'clipboard-write'] });
+      test.skip(
+        ({ browserName }) => browserName !== 'chromium',
+        'Only Chromium grants the clipboard permissions; the device checklist copies on the iPhone',
+      );
+
+      test('when they copy the amount, then the clipboard holds it and the bank details come before the QR code', async ({
+        page,
+      }) => {
+        await servePaymentDetails(page, []);
+        await page.goto('/');
+        const bank = page.locator('#prispet .bank');
+        await expect(bank).toContainText('5544332217/2010');
+
+        await page.getByRole('button', { name: 'Jiná částka' }).click();
+        await expect(page.locator('#donate-custom-amount')).toHaveValue('');
+        await expect(page.locator('#prispet .qr-placeholder')).toHaveText('Nejprve zadejte částku');
+        await page.locator('#donate-custom-amount').fill('2 500');
+        await expect(bank).toContainText('2 500 Kč');
+        await page.getByRole('button', { name: 'Kopírovat částku' }).click();
+
+        await expect(page.getByRole('button', { name: 'Zkopírováno' })).toBeVisible();
+        expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('2500');
+        const bankTop = (await bank.boundingBox())!.y;
+        const qrTop = (await page.locator('#prispet .qr').boundingBox())!.y;
+        expect(bankTop).toBeLessThan(qrTop);
+      });
     });
   });
 });
