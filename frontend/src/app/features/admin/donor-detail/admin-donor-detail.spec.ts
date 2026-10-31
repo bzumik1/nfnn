@@ -237,7 +237,13 @@ describe('Given an administrator on a donor card', () => {
     expect(dialogText).toContain('Smažeme');
     expect(dialogText).toContain('jméno, adresu, e-mail a heslo');
     expect(dialogText).toContain('Zůstane');
-    expect(dialogText).toContain('dary a vydaná potvrzení, bez jména');
+    expect(dialogText).toContain(
+      'dary a vydaná potvrzení kvůli účetnictví; potvrzení na serveru beze změny, i se jménem a adresou dárce',
+    );
+    expect(dialogText).toContain(
+      'platby z banky, jak je uvádí výpis (číslo účtu a jméno plátce), a záznamy v Historii změn',
+    );
+    expect(dialogText).not.toContain('bez jména');
     expect(dialogText).toContain('Dárce dostane na dosavadní e-mail potvrzení o výmazu.');
     expect(dialogText).toContain('Dárce o výmaz požádal a ověřil(a) jsem, že jde o majitele účtu');
     expect(document.activeElement).toBe(button(dialog, 'Zrušit'));
@@ -270,7 +276,7 @@ describe('Given an administrator on a donor card', () => {
       'app-live-notice',
     ) as HTMLElement;
     expect(text('.ui-notice--status')).toBe(
-      'Osobní údaje dárce jsme vymazali a na jeho dosavadní e-mail poslali potvrzení. Účet už nejde použít; dary a vydaná potvrzení zůstávají bez jména.',
+      'Osobní údaje dárce jsme vymazali a na jeho dosavadní e-mail poslali potvrzení. Účet už nejde použít. Dary a vydaná potvrzení zůstávají kvůli účetnictví; potvrzení zůstávají beze změny, i se jménem a adresou.',
     );
     expect(document.activeElement).toBe(notice);
     const erased = donorAccount({
@@ -291,7 +297,7 @@ describe('Given an administrator on a donor card', () => {
 
     expect(text('h1')).toBe('Vymazaný dárce');
     expect(text('.admin-erased')).toBe(
-      'Osobní údaje tohoto dárce jsme vymazali 23. 10. 2026 11:00. Účet už nejde použít; dary a vydaná potvrzení zůstávají kvůli účetnictví, bez jména.',
+      'Osobní údaje tohoto dárce jsme vymazali 23. 10. 2026 11:00. Účet už nejde použít. Dary a vydaná potvrzení zůstávají kvůli účetnictví; potvrzení zůstávají na serveru beze změny, i se jménem a adresou dárce.',
     );
     expect(facts('Údaje')).toContain('E-mail vymazán |');
     expect(facts('Údaje')).toContain('Adresa vymazána');

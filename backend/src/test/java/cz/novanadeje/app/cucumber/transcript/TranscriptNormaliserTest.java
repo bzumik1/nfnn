@@ -274,4 +274,16 @@ class TranscriptNormaliserTest {
         assertThat(TranscriptNormaliser.template("/api/admin/donations/receipt-signing-keys/21fe31df/withdrawal"))
                 .isEqualTo("/api/admin/donations/receipt-signing-keys/{keyId}/withdrawal");
     }
+
+    @Test
+    @DisplayName("Given Spring Boot's error answer, when it is normalised, then its timestamp from the real clock is masked and a timestamp of another object stays")
+    void should_mask_the_timestamp_of_boot_error_answer_when_json_is_normalised() {
+        TranscriptNormaliser normaliser = new TranscriptNormaliser(Map.of());
+
+        JsonNode error = normaliser.json(json.readTree("{\"timestamp\":\"2026-10-30T16:17:30.569Z\",\"status\":400,\"error\":\"Bad Request\",\"path\":\"/api/content/news\"}"));
+        JsonNode other = normaliser.json(json.readTree("{\"timestamp\":\"2026-10-30T16:17:30.569Z\",\"status\":400}"));
+
+        assertThat(error.toString()).isEqualTo("{\"timestamp\":\"<time>\",\"status\":400,\"error\":\"Bad Request\",\"path\":\"/api/content/news\"}");
+        assertThat(other.path("timestamp").asString()).isEqualTo("2026-10-30T16:17:30.569Z");
+    }
 }

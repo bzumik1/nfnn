@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { NavigationError, provideRouter, Router } from '@angular/router';
 
+import { ErrorReporter } from '../errors/error-reporter';
 import { Connectivity } from '../navigation/connectivity';
 import { ExternalNavigation } from '../navigation/external-navigation';
 import { ChunkLoadRecovery, isChunkLoadError } from './chunk-load-recovery';
@@ -52,6 +53,7 @@ describe('Given the chunk-load recovery', () => {
   let loadFromServer: ReturnType<typeof vi.fn>;
   let isOffline: ReturnType<typeof vi.fn>;
   let reloadWouldLand: ReturnType<typeof vi.fn>;
+  let report: ReturnType<typeof vi.fn>;
   let recovery: ChunkLoadRecovery;
 
   beforeEach(() => {
@@ -59,6 +61,7 @@ describe('Given the chunk-load recovery', () => {
     loadFromServer = vi.fn();
     isOffline = vi.fn(() => false);
     reloadWouldLand = vi.fn(() => Promise.resolve(true));
+    report = vi.fn();
     TestBed.configureTestingModule({
       providers: [
         provideRouter([
@@ -69,6 +72,7 @@ describe('Given the chunk-load recovery', () => {
         { provide: ExternalNavigation, useValue: { loadFromServer } },
         { provide: Connectivity, useValue: { isOffline } },
         { provide: ChunkProbe, useValue: { reloadWouldLand } },
+        { provide: ErrorReporter, useValue: { report } },
       ],
     });
     recovery = TestBed.inject(ChunkLoadRecovery);
@@ -79,6 +83,10 @@ describe('Given the chunk-load recovery', () => {
 
   describe('when a lazy page fails to load and the guard allows a reload', () => {
     beforeEach(() => recovery.handleNavigationError(failure(CHROME, '/#prispet')));
+
+    it('then it reports the lost chunk to the server as chunk-load at the navigation', () => {
+      expect(report).toHaveBeenCalledExactlyOnceWith('chunk-load', 'navigation', CHROME);
+    });
 
     it('then it asks the server about the failed chunk first', () => {
       expect(reloadWouldLand).toHaveBeenCalledExactlyOnceWith(CHROME);
@@ -210,5 +218,6 @@ describe('Given the chunk-load recovery', () => {
     expect(claim).not.toHaveBeenCalled();
     expect(loadFromServer).not.toHaveBeenCalled();
     expect(recovery.failure()).toBeNull();
+    expect(report).not.toHaveBeenCalled();
   });
 });

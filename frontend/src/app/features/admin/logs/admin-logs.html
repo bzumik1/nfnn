@@ -119,6 +119,15 @@
                   <ng-container i18n="@@admin.logs.search.submit">Hledat</ng-container>
                 }
               </button>
+              <button
+                type="button"
+                class="ui-button ui-button--quiet browser-errors"
+                [disabled]="searchState() === 'loading'"
+                (click)="findBrowserErrors()"
+                i18n="@@admin.logs.search.browserErrors"
+              >
+                Chyby z prohlížečů
+              </button>
             </form>
             @if (searchState() === 'error') {
               <p class="ui-notice ui-notice--alert" role="alert">{{ searchError() }}</p>

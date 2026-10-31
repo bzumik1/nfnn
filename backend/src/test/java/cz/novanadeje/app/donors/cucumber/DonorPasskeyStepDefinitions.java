@@ -366,6 +366,11 @@ public class DonorPasskeyStepDefinitions {
         api.patch(PASSKEYS_PATH + "/" + id, Map.of("name", newName));
     }
 
+    @When("{string} renames the passkey {string} of {string} to a name with a control character")
+    public void renamesThePasskeyToANameWithAControlCharacter(String alias, String name, String owner) {
+        renamesThePasskeyOf(alias, name, owner, "nfnn-client-value\u0007");
+    }
+
     @When("someone without a token renames the passkey {string} of {string} to {string}")
     public void someoneWithoutATokenRenamesThePasskey(String name, String owner, String newName) {
         String id = passkey(owner, name).id();

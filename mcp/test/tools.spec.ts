@@ -512,6 +512,25 @@ describe('Given an administrator connected with the reading permission only', ()
     ).toBe('/api/admin/operations/logs/backend.log/search?pattern=fio&limit=5');
   });
 
+  it('when the browser error reports are searched for, then their lines come from the administration as the backend wrote them', async () => {
+    const search = textOf(
+      await client.callTool({
+        name: 'nfnn_log_search',
+        arguments: { pattern: 'Browser error' },
+      }),
+    );
+
+    expect(search).toContain(
+      'Browser error kind=pdf-render place=global name=TypeError version=1a2b3c4 browser=safari/18 os=ios display=standalone count=2',
+    );
+    expect(search).toContain('Browser error reports over the hourly cap bucket=general dropped=2');
+    expect(
+      stack.backend.requests.find((request) =>
+        request.path.startsWith('/api/admin/operations/logs/backend.log/search'),
+      )?.path,
+    ).toBe('/api/admin/operations/logs/backend.log/search?pattern=Browser+error&limit=50');
+  });
+
   it('when a log name is not one of the files, then the tool lists the files and asks the administration for no window', async () => {
     for (const file of ['missing.log', '../etc/passwd']) {
       const missing = await client.callTool({ name: 'nfnn_log', arguments: { file } });
@@ -1075,6 +1094,16 @@ describe('Given an administrator connected with the writing permission', () => {
       arguments: { month: 'září' },
     });
     expect(result.isError).toBe(true);
+    expect(
+      stack.backend.requests.filter((request) => request.path.includes('/report/send')),
+    ).toHaveLength(0);
+  });
+
+  it('when a month outside the calendar is given, then the tool refuses it before calling the administration', async () => {
+    for (const month of ['2026-13', '2026-00']) {
+      const result = await client.callTool({ name: 'nfnn_send_report', arguments: { month } });
+      expect(result.isError).toBe(true);
+    }
     expect(
       stack.backend.requests.filter((request) => request.path.includes('/report/send')),
     ).toHaveLength(0);

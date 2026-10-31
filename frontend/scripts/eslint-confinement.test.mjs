@@ -207,7 +207,7 @@ describe('Given a library that its adapter may load only lazily', () => {
 describe('Given the libraries only tests may use', () => {
   const devOnly = CONFINED_IMPORTS.find((entry) => entry.examples.includes('vitest'));
 
-  it('when the table is read, then it confines vitest, fast-check, fake-indexeddb, pdfjs-dist and Playwright to test support', () => {
+  it('when the table is read, then it confines vitest, fast-check, fake-indexeddb, pdfjs-dist, jsQR and Playwright to test support', () => {
     assert.ok(devOnly, 'an entry for the dev-only libraries');
     assert.deepEqual(
       [...devOnly.examples].sort(),
@@ -217,6 +217,8 @@ describe('Given the libraries only tests may use', () => {
         'fake-indexeddb',
         'fake-indexeddb/auto',
         'fast-check',
+        'jsqr',
+        'jsqr/dist/jsQR.js',
         'pdfjs-dist',
         'pdfjs-dist/legacy/build/pdf.mjs',
         'vitest',

@@ -15,11 +15,9 @@ import { RouterLink } from '@angular/router';
 import { CopyButton } from '../../../../shared/ui/copy-button/copy-button';
 import { formatCrowns } from '../../../donations/donation-amount';
 import { PaymentAccountState } from '../../../donations/payment-panel/payment-panel';
-import { PaymentQrApi } from '../../../donations/payment-qr-api';
+import { PaymentDetailsStore } from '../../../donations/payment-details-store';
 
 type OwnAccountState = PaymentAccountState | { readonly kind: 'idle' };
-
-const SAMPLE_AMOUNT = 100;
 
 let nextId = 0;
 
@@ -31,7 +29,7 @@ let nextId = 0;
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StandingOrder {
-  private readonly paymentQr = inject(PaymentQrApi);
+  private readonly paymentDetails = inject(PaymentDetailsStore);
   private readonly injector = inject(Injector);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
@@ -46,7 +44,14 @@ export class StandingOrder {
   protected readonly toggleId = `standing-order-toggle-${this.id}`;
   protected readonly panelId = `standing-order-${this.id}`;
   protected readonly open = signal(false);
-  private readonly ownAccount = signal<OwnAccountState>({ kind: 'idle' });
+  private readonly ownAccountWanted = signal(false);
+  private readonly ownAccount = computed<OwnAccountState>(() => {
+    if (!this.ownAccountWanted()) {
+      return { kind: 'idle' };
+    }
+    const state = this.paymentDetails.state();
+    return state.kind === 'ready' ? { kind: 'ready', account: state.details.account } : state;
+  });
   protected readonly shownAccount = computed<OwnAccountState>(
     () => this.account() ?? this.ownAccount(),
   );
@@ -82,10 +87,7 @@ export class StandingOrder {
   }
 
   private loadAccount(): void {
-    this.ownAccount.set({ kind: 'loading' });
-    this.paymentQr.paymentQr(SAMPLE_AMOUNT, null).subscribe({
-      next: ({ bankAccount }) => this.ownAccount.set({ kind: 'ready', account: bankAccount }),
-      error: () => this.ownAccount.set({ kind: 'failed' }),
-    });
+    this.ownAccountWanted.set(true);
+    this.paymentDetails.load();
   }
 }

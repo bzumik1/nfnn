@@ -1,0 +1,149 @@
+{
+  "source": "edited",
+  "logic": "Whether the account number and the IBAN that GET /api/donations/payment-details serves name one Czech account, in the compact upper-case form the server stores. The account number is [prefix-]number/bank code with a prefix of at most 6 and a number of at most 10 digits, each passing the Czech modulo 11 check (weights 6 3 7 9 10 5 8 4 2 1 over the zero-padded digits), and the number not zero; its IBAN is CZ, the check digits 98 minus the remainder of the bank code, the prefix padded to 6, the number padded to 10 and 123500 divided by 97, and the bank code, prefix and number. ibanOfNumber is that IBAN, or null when the number is refused; matches is true only when the number is accepted and the served IBAN is exactly its IBAN, which also proves the IBAN's own modulo 97 check. The backend refuses a mismatch at startup (BankAccount, CzechAccountNumber.toIban, Iban) and runs every case through them; from slice 1.4 the browser's spayd() refuses payment details whose account does not match (features/donations/czech-account.ts), so a stale or corrupted copy can never encode an account other than the number people read",
+  "cases": [
+    {
+      "name": "the foundation's account",
+      "input": {
+        "accountNumber": "5544332217/2010",
+        "iban": "CZ2620100000005544332217"
+      },
+      "expected": {
+        "ibanOfNumber": "CZ2620100000005544332217",
+        "matches": true
+      }
+    },
+    {
+      "name": "an account with a prefix",
+      "input": {
+        "accountNumber": "19-2000145399/0800",
+        "iban": "CZ6508000000192000145399"
+      },
+      "expected": {
+        "ibanOfNumber": "CZ6508000000192000145399",
+        "matches": true
+      }
+    },
+    {
+      "name": "the same number without its prefix is another account",
+      "input": {
+        "accountNumber": "2000145399/0800",
+        "iban": "CZ7908000000002000145399"
+      },
+      "expected": {
+        "ibanOfNumber": "CZ7908000000002000145399",
+        "matches": true
+      }
+    },
+    {
+      "name": "a short number is padded with zeros",
+      "input": {
+        "accountNumber": "19/0100",
+        "iban": "CZ7301000000000000000019"
+      },
+      "expected": {
+        "ibanOfNumber": "CZ7301000000000000000019",
+        "matches": true
+      }
+    },
+    {
+      "name": "the IBAN of another account is refused",
+      "input": {
+        "accountNumber": "5544332217/2010",
+        "iban": "CZ6508000000192000145399"
+      },
+      "expected": {
+        "ibanOfNumber": "CZ2620100000005544332217",
+        "matches": false
+      }
+    },
+    {
+      "name": "the IBAN of the number without its prefix is refused",
+      "input": {
+        "accountNumber": "19-2000145399/0800",
+        "iban": "CZ7908000000002000145399"
+      },
+      "expected": {
+        "ibanOfNumber": "CZ6508000000192000145399",
+        "matches": false
+      }
+    },
+    {
+      "name": "an IBAN with wrong check digits is refused",
+      "input": {
+        "accountNumber": "19-2000145399/0800",
+        "iban": "CZ6608000000192000145399"
+      },
+      "expected": {
+        "ibanOfNumber": "CZ6508000000192000145399",
+        "matches": false
+      }
+    },
+    {
+      "name": "a foreign IBAN is refused for a Czech account number",
+      "input": {
+        "accountNumber": "5544332217/2010",
+        "iban": "SK3112000000198742637541"
+      },
+      "expected": {
+        "ibanOfNumber": "CZ2620100000005544332217",
+        "matches": false
+      }
+    },
+    {
+      "name": "a mistyped digit in the account number fails its modulo 11 check, so even the IBAN of the right number is refused",
+      "input": {
+        "accountNumber": "2000145398/0800",
+        "iban": "CZ7908000000002000145399"
+      },
+      "expected": {
+        "ibanOfNumber": null,
+        "matches": false
+      }
+    },
+    {
+      "name": "a prefix that fails the modulo 11 check is refused",
+      "input": {
+        "accountNumber": "18-2000145399/0800",
+        "iban": "CZ6508000000192000145399"
+      },
+      "expected": {
+        "ibanOfNumber": null,
+        "matches": false
+      }
+    },
+    {
+      "name": "a number of zeros is refused although zero passes the modulo 11 check",
+      "input": {
+        "accountNumber": "0/0800",
+        "iban": "CZ6508000000192000145399"
+      },
+      "expected": {
+        "ibanOfNumber": null,
+        "matches": false
+      }
+    },
+    {
+      "name": "a number without its bank code is refused",
+      "input": {
+        "accountNumber": "5544332217",
+        "iban": "CZ2620100000005544332217"
+      },
+      "expected": {
+        "ibanOfNumber": null,
+        "matches": false
+      }
+    },
+    {
+      "name": "a number of eleven digits is refused",
+      "input": {
+        "accountNumber": "12345678901/0800",
+        "iban": "CZ2620100000005544332217"
+      },
+      "expected": {
+        "ibanOfNumber": null,
+        "matches": false
+      }
+    }
+  ]
+}

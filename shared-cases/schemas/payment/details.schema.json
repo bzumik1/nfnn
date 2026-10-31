@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nfnn.cz/shared-cases/schemas/payment/details.schema.json",
+  "title": "Payment details cases: the foundation's account gives what GET /api/donations/payment-details serves, the account, the currency, the SPAYD texts of the recipient and both messages, and the verification amount",
+  "description": "Only the backend computes these values (PaymentDetails, SpaydText): the browser takes the texts as they come and composes the SPAYD text from them with spayd() from slice 1.4, which payment/spayd.json specifies. Every text is SPAYD text: upper-case ASCII of the QR alphanumeric set without the SPAYD separator * and without %, single spaces, no space at either end, at most 35 characters for the recipient and 60 for a message.",
+  "type": "object",
+  "required": ["source", "logic", "cases"],
+  "additionalProperties": false,
+  "properties": {
+    "source": { "$ref": "../defs/source.schema.json" },
+    "logic": { "type": "string", "minLength": 1 },
+    "cases": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/case" } }
+  },
+  "$defs": {
+    "case": {
+      "type": "object",
+      "required": ["name", "input", "expected"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "input": { "$ref": "#/$defs/input" },
+        "expected": { "$ref": "#/$defs/details" }
+      }
+    },
+    "input": {
+      "type": "object",
+      "required": ["recipient"],
+      "additionalProperties": false,
+      "properties": {
+        "recipient": {
+          "type": "object",
+          "required": ["accountNumber", "iban", "name"],
+          "additionalProperties": false,
+          "properties": {
+            "accountNumber": { "type": "string", "pattern": "^([0-9]{1,6}-)?[0-9]{1,10}/[0-9]{4}$" },
+            "iban": { "type": "string", "pattern": "^CZ[0-9]{22}$" },
+            "name": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+    "spaydText": {
+      "type": "string",
+      "maxLength": 60,
+      "pattern": "^([0-9A-Z$+./:-]+( [0-9A-Z$+./:-]+)*)?$"
+    },
+    "details": {
+      "type": "object",
+      "required": ["account", "currency", "messages", "accountVerificationAmountMinor"],
+      "additionalProperties": false,
+      "properties": {
+        "account": {
+          "type": "object",
+          "required": ["number", "iban", "recipientName"],
+          "additionalProperties": false,
+          "properties": {
+            "number": { "type": "string", "pattern": "^([0-9]{1,6}-)?[0-9]{1,10}/[0-9]{4}$" },
+            "iban": { "type": "string", "pattern": "^CZ[0-9]{22}$" },
+            "recipientName": { "allOf": [{ "$ref": "#/$defs/spaydText" }, { "type": "string", "maxLength": 35 }] }
+          }
+        },
+        "currency": { "const": "CZK" },
+        "messages": {
+          "type": "object",
+          "required": ["donation", "accountVerification"],
+          "additionalProperties": false,
+          "properties": {
+            "donation": { "allOf": [{ "$ref": "#/$defs/spaydText" }, { "type": "string", "minLength": 1 }] },
+            "accountVerification": { "allOf": [{ "$ref": "#/$defs/spaydText" }, { "type": "string", "minLength": 1 }] }
+          }
+        },
+        "accountVerificationAmountMinor": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}

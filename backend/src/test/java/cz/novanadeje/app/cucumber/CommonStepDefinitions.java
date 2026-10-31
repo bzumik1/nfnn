@@ -3,7 +3,10 @@ package cz.novanadeje.app.cucumber;
 import cz.novanadeje.app.cucumber.transcript.ApiTranscripts;
 import cz.novanadeje.app.donors.application.CompanyLookupService;
 import cz.novanadeje.app.operations.application.backup.BackupKeyWordChallenges;
+import cz.novanadeje.app.operations.application.clienterrors.ClientErrorCap;
+import cz.novanadeje.app.support.AsyncTaskTracker;
 import cz.novanadeje.app.support.BackupKeyWordDraws;
+import cz.novanadeje.app.support.ClientErrorCapWindows;
 import cz.novanadeje.app.support.CompanyLookupPause;
 import cz.novanadeje.app.support.DatabaseCleaner;
 import cz.novanadeje.app.support.FakeCompanyRegistry;
@@ -13,6 +16,7 @@ import cz.novanadeje.app.support.MutableClock;
 import cz.novanadeje.app.support.RateLimiterWindows;
 import cz.novanadeje.app.support.RecordingMailSender;
 import cz.novanadeje.app.support.ServerReceiptSigningKey;
+import cz.novanadeje.app.support.SwitchablePublicBackupKeyPolicy;
 import cz.novanadeje.app.support.SwitchablePublicTestKeyPolicy;
 import io.cucumber.java.Before;
 import io.cucumber.java.BeforeAll;
@@ -20,15 +24,12 @@ import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import org.awaitility.Awaitility;
 import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import tools.jackson.databind.JsonNode;
 
 import java.time.Duration;
 import java.util.List;
-import java.util.concurrent.ThreadPoolExecutor;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
 
 public class CommonStepDefinitions {
 
@@ -42,11 +43,11 @@ public class CommonStepDefinitions {
     private final FakeFioClient fioClient;
     private final FakeCompanyRegistry companyRegistry;
     private final ConfigurableApplicationContext context;
-    private final ThreadPoolTaskExecutor asyncWork;
+    private final AsyncTaskTracker asyncTasks;
 
     public CommonStepDefinitions(ApiClient api, RecordingMailSender mailSender, MutableClock clock, DatabaseCleaner database,
                                  FakeFioClient fioClient, FakeCompanyRegistry companyRegistry, ConfigurableApplicationContext context,
-                                 ThreadPoolTaskExecutor asyncWork) {
+                                 AsyncTaskTracker asyncTasks) {
         this.api = api;
         this.mailSender = mailSender;
         this.clock = clock;
@@ -54,7 +55,7 @@ public class CommonStepDefinitions {
         this.fioClient = fioClient;
         this.companyRegistry = companyRegistry;
         this.context = context;
-        this.asyncWork = asyncWork;
+        this.asyncTasks = asyncTasks;
     }
 
     @BeforeAll
@@ -65,7 +66,7 @@ public class CommonStepDefinitions {
 
     @Before
     public void isolateScenario() {
-        await().atMost(ASYNC_WORK_WAIT).until(this::asyncWorkIsDone);
+        asyncTasks.awaitIdleAfter("the previous scenario", ASYNC_WORK_WAIT);
         database.emptyAllTables();
         mailSender.clear();
         mailSender.startScenario();
@@ -75,14 +76,11 @@ public class CommonStepDefinitions {
         ServerReceiptSigningKey.storeAfterEmptyTables(context);
         RateLimiterWindows.reset(context);
         CompanyLookupPause.reset(context.getBean(CompanyLookupService.class));
+        ClientErrorCapWindows.reset(context.getBean(ClientErrorCap.class));
         BackupKeyWordDraws.reseed(context.getBean(BackupKeyWordChallenges.class));
+        context.getBean(SwitchablePublicBackupKeyPolicy.class).reset();
         context.getBean(SwitchablePublicTestKeyPolicy.class).reset();
         context.getBean(KeptAsideWithdrawnSeeds.class).reset();
-    }
-
-    private boolean asyncWorkIsDone() {
-        ThreadPoolExecutor executor = asyncWork.getThreadPoolExecutor();
-        return executor.getCompletedTaskCount() == executor.getTaskCount();
     }
 
     @When("{int} second(s) pass(es)")
@@ -140,6 +138,15 @@ public class CommonStepDefinitions {
                 .filter(error -> error.get("field").asString().equals(field))
                 .map(error -> error.get("message").asString()))
                 .contains(message);
+    }
+
+    @Then("the problem's only error for field {string} says {string}")
+    public void theProblemsOnlyErrorForFieldSays(String field, String message) {
+        assertThat(errorFields()).contains(field);
+        assertThat(api.lastResponseJson().get("errors").valueStream()
+                .filter(error -> error.get("field").asString().equals(field))
+                .map(error -> error.get("message").asString()))
+                .containsExactly(message);
     }
 
     private List<String> errorFields() {

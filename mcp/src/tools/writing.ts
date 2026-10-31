@@ -54,7 +54,7 @@ const PERSON = {
     ),
 };
 const DAY = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
-const MONTH = z.string().regex(/^\d{4}-\d{2}$/);
+const MONTH = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
 const PLAN_TIME = /^([01][0-9]|2[0-3]):[0-5][0-9]$/;
 const PLAIN_SETTING = z.enum([
   'MAIL_HOST',
@@ -768,7 +768,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Dočasně změnit úroveň logování',
       description:
-        'Sets a logger (ROOT or a dotted package or class name, e.g. cz.novanadeje.app, io.github.bzumik1.fio, org.hibernate.SQL) to TRACE, DEBUG, INFO, WARN, ERROR or OFF for `minutes` (30 by default, at most 1440); the level goes back by itself when the time is up. Loggers that would write SQL values, bodies or raw requests (org.hibernate.orm.jdbc.bind, org.apache.coyote, org.postgresql and the like) keep their level and are refused, and TRACE is refused for every logger outside cz.novanadeje.app (use DEBUG there). Audited as CHANGE_LOG_LEVEL. Read the result with nfnn_log or nfnn_log_search.',
+        'Sets a logger (ROOT or a dotted package or class name, e.g. cz.novanadeje.app, io.github.bzumik1.fio, org.hibernate.SQL) to TRACE, DEBUG, INFO, WARN, ERROR or OFF for `minutes` (30 by default, at most 1440); the level goes back by itself when the time is up. Loggers that would write SQL values, bodies, raw requests, request lines with their query strings or client addresses (org.hibernate.orm.jdbc.bind, org.apache.coyote, org.springframework.security.web.FilterChainProxy, org.springframework.web.servlet.DispatcherServlet, org.postgresql and the like) keep their level and are refused, and TRACE is refused for every logger outside cz.novanadeje.app (use DEBUG there). Audited as CHANGE_LOG_LEVEL. Read the result with nfnn_log or nfnn_log_search.',
       inputSchema: z.object({
         logger: z.string().min(1).max(200),
         level: z.enum(['TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR', 'OFF']),

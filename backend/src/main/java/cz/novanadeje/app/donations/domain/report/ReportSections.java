@@ -7,7 +7,7 @@ public record ReportSections(boolean donors, boolean donations, boolean unpaired
 
     public ReportSections {
         if (!donors && !donations && !unpairedPayments && !bankImport) {
-            throw new IllegalArgumentException("The report has at least one section");
+            throw new ReportWithoutSections();
         }
     }
 
