@@ -105,5 +105,27 @@
         "<key-id>": "the receipt signing key id: 8 hex digits of the SHA-256 of the public key, public (GET /api/donations/receipt-keys serves it to anyone); no personal data and no secret"
       }
     }
+  },
+  {
+    "path": "GET /api/admin/donations/receipt-signing-keys",
+    "scenario": "donations/admin_receipt_signing_keys: *",
+    "kind": "added",
+    "field": "$.auditMismatches",
+    "reason": "1.13 compares the key rows with the audit trail at start and lists every key whose row disagrees (withdrawn but active again, or missing) in auditMismatches, so /sprava and nfnn_status can flag it; the scenarios of 1.17 now show the field, empty",
+    "contract": "docs/api-contract.md, Receipt verification proof and signing keys (Withdrawing a key); docs/security-overview.md, Receipt signing key"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "architecture.ReceiptSigningKeyRulesTest > receipt_signing_keys_are_written_only_by_the_startup_registrar",
+    "reason": "1.13 adds the web-only withdrawal as the second writer of receipt_signing_key, so the writer rule names both the startup registrar and the withdrawal",
+    "replacement": "architecture.ReceiptSigningKeyRulesTest > receipt_signing_keys_are_written_only_by_the_startup_registrar_and_the_web_only_withdrawal"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/settings/receipt-signing-key/receipt-signing-key.spec.ts > Given the receipt signing key section of the receipt settings > when the published key arrives, then its id, its registration time in Prague and that it is published are shown, read only",
+    "reason": "1.13 offers the withdrawal of a published key, so the key section is no longer read only",
+    "replacement": "src/app/features/admin/settings/receipt-signing-key/receipt-signing-key.spec.ts > Given the receipt signing key section of the receipt settings > when the published key arrives, then its id, its registration time in Prague and that it is published are shown, with only the withdrawal to offer"
   }
 ]
