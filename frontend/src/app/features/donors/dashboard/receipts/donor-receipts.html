@@ -68,11 +68,13 @@
                       >
                     }
                   </button>
-                  <span class="ui-form-status receipt-saved" role="status">
-                    @if (donations.yearlySaved(row.year); as saved) {
-                      <span>{{ saved }}</span>
-                    }
-                  </span>
+                  <app-download-progress
+                    class="receipt-saved"
+                    [progress]="donations.yearlyProgress(row.year)"
+                    [openLabel]="donations.openReceiptLabel"
+                    (cancelled)="donations.cancelYearlyReceipt(row.year)"
+                    (opened)="donations.openYearlyReceipt(row.year)"
+                  />
                 }
                 @case ('after-year-end') {
                   <span class="year-note" i18n="@@donor.receipts.year.afterYearEnd"

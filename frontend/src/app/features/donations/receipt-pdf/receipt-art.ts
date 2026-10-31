@@ -22,6 +22,9 @@ export async function receiptArt(image: ReceiptImageBytes, sha256: string): Prom
     throw new Error('The receipt image does not match the digest its receipt names.');
   }
   return image.mediaType === VECTOR_TYPE
-    ? { kind: 'vector', art: parseVectorArt(new TextDecoder('utf-8', { fatal: true }).decode(bytes)) }
+    ? {
+        kind: 'vector',
+        art: parseVectorArt(new TextDecoder('utf-8', { fatal: true }).decode(bytes)),
+      }
     : { kind: 'raster', bytes };
 }

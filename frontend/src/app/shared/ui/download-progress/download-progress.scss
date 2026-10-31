@@ -1,0 +1,17 @@
+:host {
+  display: grid;
+  gap: var(--space-1);
+  justify-items: start;
+}
+
+.download-progress-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.download-progress-meter {
+  inline-size: min(100%, 12rem);
+  accent-color: var(--color-accent);
+}

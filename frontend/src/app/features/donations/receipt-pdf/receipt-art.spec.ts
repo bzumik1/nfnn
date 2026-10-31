@@ -30,7 +30,10 @@ describe('Given the bytes the server serves for a receipt image', () => {
   it('when a PNG matches the digest, then it is kept as raster bytes', async () => {
     const bytes = base64Bytes(SYNTHETIC_PORTRAIT_PNG_BASE64);
 
-    const art = await receiptArt({ bytes: buffer(bytes), mediaType: 'image/png' }, await sha256(bytes));
+    const art = await receiptArt(
+      { bytes: buffer(bytes), mediaType: 'image/png' },
+      await sha256(bytes),
+    );
 
     expect(art).toEqual({ kind: 'raster', bytes });
   });

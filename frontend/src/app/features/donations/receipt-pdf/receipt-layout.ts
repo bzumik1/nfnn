@@ -90,7 +90,12 @@ class ReceiptLayout {
     const issuedAt = new Date(document.issuedAt);
     this.doc = new PDFDocument({
       size: [A4_WIDTH, A4_HEIGHT],
-      margins: { top: style.margins.top, right: style.margins.right, bottom: 0, left: style.margins.left },
+      margins: {
+        top: style.margins.top,
+        right: style.margins.right,
+        bottom: 0,
+        left: style.margins.left,
+      },
       font: assets.fonts.body,
       bufferPages: true,
       tagged: true,
@@ -251,7 +256,12 @@ class ReceiptLayout {
     });
   }
 
-  private lineHeight(value: Bilingual, width: number, font: FontName = 'body', size = this.sizes.body) {
+  private lineHeight(
+    value: Bilingual,
+    width: number,
+    font: FontName = 'body',
+    size = this.sizes.body,
+  ) {
     return (
       this.measure(value.cs, font, size, width) +
       (value.en === null ? 0 : this.measure(value.en, 'body', this.sizes.small, width))
@@ -292,9 +302,14 @@ class ReceiptLayout {
   private header(): void {
     const top = this.y;
     const logoHeight = (LOGO_WIDTH * RECEIPT_LOGO.viewBox[3]) / RECEIPT_LOGO.viewBox[2];
-    this.tagged('Figure', () => this.vector(RECEIPT_LOGO, this.left, top, LOGO_WIDTH, logoHeight), this.root, {
-      alt: this.document.logoAlt,
-    });
+    this.tagged(
+      'Figure',
+      () => this.vector(RECEIPT_LOGO, this.left, top, LOGO_WIDTH, logoHeight),
+      this.root,
+      {
+        alt: this.document.logoAlt,
+      },
+    );
     const x = this.left + LOGO_COLUMN;
     const width = this.width - LOGO_COLUMN;
     const title = this.document.title;
@@ -327,7 +342,10 @@ class ReceiptLayout {
     const top = this.y;
     this.artifact(() => {
       this.doc.rect(this.left, top, this.width, height).fill(this.colors.notice);
-      this.doc.lineWidth(STRONG_RULE).rect(this.left, top, this.width, height).stroke(this.colors.noticeBorder);
+      this.doc
+        .lineWidth(STRONG_RULE)
+        .rect(this.left, top, this.width, height)
+        .stroke(this.colors.noticeBorder);
     });
     this.y = top + NOTICE_PADDING;
     this.line(replaces, this.left + NOTICE_PADDING, inner, this.root, 'bold');
@@ -365,12 +383,7 @@ class ReceiptLayout {
     this.y += TITLE_GAP;
   }
 
-  private party(
-    party: ReceiptDocument['donee'],
-    x: number,
-    width: number,
-    top: number,
-  ): number {
+  private party(party: ReceiptDocument['donee'], x: number, width: number, top: number): number {
     this.y = top;
     this.partyHeading(party.heading, x, width);
     for (const value of party.lines) {
@@ -435,7 +448,15 @@ class ReceiptLayout {
     const inner = this.width - 2 * CELL_PADDING_X;
     const cell = (value: Bilingual, align: 'left' | 'right') => () => {
       this.y = top + HEAD_PADDING_Y;
-      this.write(value.cs, 'bold', this.sizes.body, this.colors.text, this.left + CELL_PADDING_X, inner, align);
+      this.write(
+        value.cs,
+        'bold',
+        this.sizes.body,
+        this.colors.text,
+        this.left + CELL_PADDING_X,
+        inner,
+        align,
+      );
       if (value.en !== null) {
         this.write(
           value.en,
@@ -469,7 +490,14 @@ class ReceiptLayout {
       { text: value.cs, font: 'body', size: this.sizes.body, color: this.colors.text },
       ...(value.en === null
         ? []
-        : [{ text: value.en, font: 'body' as const, size: this.sizes.small, color: this.colors.english }]),
+        : [
+            {
+              text: value.en,
+              font: 'body' as const,
+              size: this.sizes.small,
+              color: this.colors.english,
+            },
+          ]),
     ];
     const space = (piece: Piece) => this.widthOf({ ...piece, text: ' ' });
     const cell = (value: Bilingual, start: number) => {
@@ -512,7 +540,8 @@ class ReceiptLayout {
     }
     element.end();
     this.y += TABLE_GAP;
-    const totals = this.lineHeight(table.count, this.width) + this.lineHeight(table.total, this.width, 'bold');
+    const totals =
+      this.lineHeight(table.count, this.width) + this.lineHeight(table.total, this.width, 'bold');
     this.keep(totals);
     this.line(table.count, this.left, this.width);
     this.line(table.total, this.left, this.width, this.root, 'bold');
@@ -567,7 +596,10 @@ class ReceiptLayout {
   }
 
   private declarationHeight(): number {
-    return this.lineHeight(this.document.declaration, this.width) + (this.document.bilingual ? TITLE_GAP : 0);
+    return (
+      this.lineHeight(this.document.declaration, this.width) +
+      (this.document.bilingual ? TITLE_GAP : 0)
+    );
   }
 
   private closing(): void {
@@ -577,7 +609,15 @@ class ReceiptLayout {
     this.bilingual(
       'P',
       declaration,
-      () => this.write(declaration.cs, 'body', this.sizes.body, this.colors.text, this.left, this.width),
+      () =>
+        this.write(
+          declaration.cs,
+          'body',
+          this.sizes.body,
+          this.colors.text,
+          this.left,
+          this.width,
+        ),
       (en) => {
         this.y += TITLE_GAP;
         this.write(en, 'body', this.sizes.small, this.colors.english, this.left, this.width);
@@ -599,7 +639,9 @@ class ReceiptLayout {
     const qrTop = this.y + QR_GAP;
     const cardHeight = this.cardHeight();
     this.artifact(() => {
-      this.doc.roundedRect(columns.card, top, CARD_WIDTH, cardHeight, CARD_RADIUS).fill(this.colors.card);
+      this.doc
+        .roundedRect(columns.card, top, CARD_WIDTH, cardHeight, CARD_RADIUS)
+        .fill(this.colors.card);
     });
     const portrait = this.assets.portrait;
     if (portrait !== null) {
@@ -618,7 +660,14 @@ class ReceiptLayout {
     if (art !== null) {
       this.tagged(
         'Figure',
-        () => this.art(art, columns.text, area, Math.min(SIGNATURE_WIDTH, columns.textWidth), SIGNATURE_HEIGHT),
+        () =>
+          this.art(
+            art,
+            columns.text,
+            area,
+            Math.min(SIGNATURE_WIDTH, columns.textWidth),
+            SIGNATURE_HEIGHT,
+          ),
         this.root,
         { alt: signature.signatureAlt },
       );
@@ -627,10 +676,24 @@ class ReceiptLayout {
     this.rule(columns.text, this.y, columns.textWidth, this.colors.cardRule);
     this.y += LINE_GAP;
     this.tagged('P', () =>
-      this.write(signature.name, 'bold', this.sizes.body, this.colors.text, columns.text, columns.textWidth),
+      this.write(
+        signature.name,
+        'bold',
+        this.sizes.body,
+        this.colors.text,
+        columns.text,
+        columns.textWidth,
+      ),
     );
     this.tagged('P', () =>
-      this.write(signature.role, 'body', this.sizes.body, this.colors.muted, columns.text, columns.textWidth),
+      this.write(
+        signature.role,
+        'body',
+        this.sizes.body,
+        this.colors.muted,
+        columns.text,
+        columns.textWidth,
+      ),
     );
     if (this.inlineQr()) {
       const placement = qrPlacement(this.symbol);
@@ -653,7 +716,12 @@ class ReceiptLayout {
     this.keep(size);
     const top = this.y;
     this.qr(this.left, top, placement.moduleMm * MM);
-    this.caption(this.left + size + QR_CAPTION_GAP, top, this.width - size - QR_CAPTION_GAP, this.sizes.body);
+    this.caption(
+      this.left + size + QR_CAPTION_GAP,
+      top,
+      this.width - size - QR_CAPTION_GAP,
+      this.sizes.body,
+    );
     this.y = top + size;
   }
 
@@ -763,7 +831,15 @@ class ReceiptLayout {
           this.width - numberWidth - PARTY_GAP,
         );
         this.y = this.bottom + FOOTER_TEXT;
-        this.write(number, 'body', this.sizes.small, this.colors.muted, this.left, this.width, 'right');
+        this.write(
+          number,
+          'body',
+          this.sizes.small,
+          this.colors.muted,
+          this.left,
+          this.width,
+          'right',
+        );
       }, 'Pagination');
     }
   }

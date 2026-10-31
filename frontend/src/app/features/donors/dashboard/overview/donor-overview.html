@@ -45,11 +45,13 @@
             >
           }
         </button>
-        <p class="ui-form-status receipt-saved" role="status">
-          @if (donations.yearlySaved(year); as saved) {
-            <span>{{ saved }}</span>
-          }
-        </p>
+        <app-download-progress
+          class="receipt-saved"
+          [progress]="donations.yearlyProgress(year)"
+          [openLabel]="donations.openReceiptLabel"
+          (cancelled)="donations.cancelYearlyReceipt(year)"
+          (opened)="donations.openYearlyReceipt(year)"
+        />
       </div>
       @if (donations.receiptError(); as error) {
         @if (error.scope === 'yearly') {

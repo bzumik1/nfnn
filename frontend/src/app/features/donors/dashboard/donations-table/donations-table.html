@@ -81,11 +81,13 @@
                   >
                 }
               </button>
-              <p class="ui-form-status receipt-saved" role="status">
-                @if (donations.singleSaved(item); as saved) {
-                  <span>{{ saved }}</span>
-                }
-              </p>
+              <app-download-progress
+                class="receipt-saved"
+                [progress]="donations.singleProgress(item)"
+                [openLabel]="donations.openReceiptLabel"
+                (cancelled)="donations.cancelSingleReceipt(item)"
+                (opened)="donations.openSingleReceipt(item)"
+              />
             } @else {
               @switch (missingReceipt(item)) {
                 @case ('refunded') {

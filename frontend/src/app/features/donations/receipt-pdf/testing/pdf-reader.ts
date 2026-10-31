@@ -208,7 +208,13 @@ export function noisy(raster: Raster, amplitude: number, seed: number): Raster {
   return { ...raster, data };
 }
 
-export function cropped(raster: Raster, x: number, y: number, width: number, height: number): Raster {
+export function cropped(
+  raster: Raster,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+): Raster {
   const left = Math.max(0, Math.floor(x));
   const top = Math.max(0, Math.floor(y));
   const right = Math.min(raster.width, Math.ceil(x + width));
@@ -224,5 +230,8 @@ export function cropped(raster: Raster, x: number, y: number, width: number, hei
 }
 
 export function decodedQr(raster: Raster): string | null {
-  return jsQR(raster.data, raster.width, raster.height, { inversionAttempts: 'dontInvert' })?.data ?? null;
+  return (
+    jsQR(raster.data, raster.width, raster.height, { inversionAttempts: 'dontInvert' })?.data ??
+    null
+  );
 }

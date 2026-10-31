@@ -47,7 +47,9 @@ describe('Given the frozen single receipt of a person in Czech', () => {
       'Částka: 500\u00a0Kč',
       'Účet příjemce: 5544332217/2010',
     ]);
-    expect(document.declaration.cs).toContain('přijal dne 15. 03. 2026 peněžitý dar ve výši 500\u00a0Kč');
+    expect(document.declaration.cs).toContain(
+      'přijal dne 15. 03. 2026 peněžitý dar ve výši 500\u00a0Kč',
+    );
     expect(document.signature.issuedAt.cs).toBe('V Novém Boru, dne 15. 01. 2027');
     expect(document.signature.forFoundation.cs).toBe('Za Nová naděje - nadační fond:');
     expect(document.signature.name).toBe('Petr Vzorový');
@@ -63,9 +65,7 @@ describe('Given the frozen single receipt of a person in Czech', () => {
     expect(document.fileName).toBe('potvrzeni-o-daru-2027-000001.pdf');
     expect(document.author).toBe('Nová naděje - nadační fond');
     expect(document.issuedAt).toBe(ISSUED_AT);
-    expect(document.verification.qrText).toBe(
-      frozenCase(SINGLE_PERSON_CS).verification.qrText,
-    );
+    expect(document.verification.qrText).toBe(frozenCase(SINGLE_PERSON_CS).verification.qrText);
     expect(document.verification.heading).toEqual({ cs: 'Ověření potvrzení', en: null });
   });
 
@@ -129,7 +129,9 @@ describe('Given the frozen yearly receipt with 120 gifts', () => {
       amount: { cs: '100\u00a0Kč', en: null },
     });
     expect(document.giftTable?.count.cs).toBe('Počet darů: 120');
-    expect(document.giftTable?.total.cs).toMatch(/^Celkem darováno v roce 2026: [\d\u00a0]+(,\d\d)?\u00a0Kč$/);
+    expect(document.giftTable?.total.cs).toMatch(
+      /^Celkem darováno v roce 2026: [\d\u00a0]+(,\d\d)?\u00a0Kč$/,
+    );
     expect(document.fileName).toBe('potvrzeni-o-darech-2026.pdf');
   });
 });

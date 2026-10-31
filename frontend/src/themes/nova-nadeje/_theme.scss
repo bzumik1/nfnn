@@ -232,6 +232,27 @@
   --side-nav-width: 240px;
   --top-bar-height: 65px;
   --floating-notice-height: 0rem;
+
+  --receipt-color-text: #1a1a2e;
+  --receipt-color-muted: #555555;
+  --receipt-color-english: #6b7280;
+  --receipt-color-rule: #b8bec6;
+  --receipt-color-row-rule: #dde1e6;
+  --receipt-color-table-head: #f1f3f5;
+  --receipt-color-card: #f1f3f5;
+  --receipt-color-card-rule: #b8bec6;
+  --receipt-color-notice: #fdf1e3;
+  --receipt-color-notice-border: #e0a458;
+  --receipt-color-code: #000000;
+  --receipt-size-body: 9.5pt;
+  --receipt-size-small: 7.5pt;
+  --receipt-size-title: 13pt;
+  --receipt-size-heading: 10.5pt;
+  --receipt-leading: 1.3;
+  --receipt-margin-top: 15mm;
+  --receipt-margin-right: 18mm;
+  --receipt-margin-bottom: 20mm;
+  --receipt-margin-left: 18mm;
 }
 
 @media (prefers-contrast: more) {

@@ -108,7 +108,14 @@ declare module 'pdfkit' {
     scale(x: number, y?: number): this;
     roundedRect(x: number, y: number, width: number, height: number, radius: number): this;
     image(source: Uint8Array | ArrayBuffer, x: number, y: number, options: PdfImageOptions): this;
-    link(x: number, y: number, width: number, height: number, url: string, options?: { structParent?: PdfStructureElement; Contents?: PdfString }): this;
+    link(
+      x: number,
+      y: number,
+      width: number,
+      height: number,
+      url: string,
+      options?: { structParent?: PdfStructureElement; Contents?: PdfString },
+    ): this;
     struct(type: string, options?: PdfStructureOptions, children?: () => void): PdfStructureElement;
     struct(type: string, children: () => void): PdfStructureElement;
     addStructure(element: PdfStructureElement): this;

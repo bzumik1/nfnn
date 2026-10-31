@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
 const root = new URL('..', import.meta.url).pathname;
@@ -40,7 +40,26 @@ for (const file of scssFiles(join(root, 'src'))) {
   }
 }
 
+const receiptStyle = 'src/app/features/donations/receipt-pdf/receipt-style.ts';
+for (const [, token] of readFileSync(join(root, receiptStyle), 'utf8').matchAll(
+  /'(--receipt-[a-z0-9-]+)'/g,
+)) {
+  needed.set(token, receiptStyle);
+}
+const receiptFonts = ['body.ttf', 'body-bold.ttf', 'heading.ttf'];
+
 const problems = [];
+for (const theme of themes.keys()) {
+  const folder = join(themesDir, theme, 'receipt');
+  for (const font of receiptFonts) {
+    if (!existsSync(join(folder, font))) {
+      problems.push(`theme ${theme} has no receipt font src/themes/${theme}/receipt/${font}`);
+    }
+  }
+  if (!existsSync(folder) || !readdirSync(folder).some((name) => name.endsWith('.txt'))) {
+    problems.push(`theme ${theme} has no licence beside its receipt fonts`);
+  }
+}
 const expected = themes.get(reference);
 if (!expected) {
   problems.push(`the reference theme src/themes/${reference}/_theme.scss is missing`);
@@ -67,4 +86,6 @@ if (problems.length > 0) {
   console.error([...new Set(problems)].join('\n'));
   process.exit(1);
 }
-console.log(`${themes.size} themes set all ${needed.size} tokens the styles use.`);
+console.log(
+  `${themes.size} themes set all ${needed.size} tokens the styles and the receipt use, and carry the receipt fonts.`,
+);

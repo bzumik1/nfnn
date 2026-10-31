@@ -26,10 +26,21 @@ import {
   twoYearDonations,
   twoYearSummary,
 } from '../../donations/testing/donation-fixtures';
+import { IssuedReceipt, ReceiptSubject } from '../../donations/receipt-pdf/frozen-receipt';
+import { PdfDelivery } from '../../donations/receipt-pdf/pdf-delivery';
+import { RECEIPT_PDF_ENVIRONMENT } from '../../donations/receipt-pdf/receipt-pdf';
+import { ReceiptRestart } from '../../donations/receipt-pdf/receipt-restart';
+import { FakeReceiptPdfEnvironment } from '../../donations/receipt-pdf/testing/fake-receipt-worker';
+import {
+  frozenCase,
+  SINGLE_PERSON_CS,
+  YEARLY_ONE,
+} from '../../donations/receipt-pdf/testing/receipt-fixtures';
 import { donorsRoutes } from '../donors.routes';
 import { BankAccountsCard } from './bank-accounts-card/bank-accounts-card';
 
 const OBJECT_URL = 'blob:http://localhost/receipt';
+const RECEIPTS_URL = '/api/donations/me/receipts';
 const BANK_CHECK_URL = '/api/donations/me/bank-check';
 const BANK_ACCOUNTS_URL = '/api/donations/me/bank-accounts';
 const PASSKEYS_URL = '/api/donors/me/passkeys';
@@ -62,8 +73,11 @@ describe('Given a signed-in donor in the donor area', () => {
   let areaAccounts: BankAccountItem[];
   let sectionAccountRequests: TestRequest[];
   let qrRequests: string[];
+  let receiptEnvironment: FakeReceiptPdfEnvironment;
 
   beforeEach(async () => {
+    receiptEnvironment = new FakeReceiptPdfEnvironment();
+    receiptEnvironment.autoDraw = true;
     localStorage.clear();
     areaAccounts = [];
     savedFiles = [];
@@ -87,6 +101,7 @@ describe('Given a signed-in donor in the donor area', () => {
       providers: [
         provideHttpClient(withInterceptors([authInterceptor])),
         provideHttpClientTesting(),
+        { provide: RECEIPT_PDF_ENVIRONMENT, useValue: receiptEnvironment },
         provideRouter([
           { path: 'darce', children: donorsRoutes },
           { path: '', children: [] },
@@ -238,24 +253,36 @@ describe('Given a signed-in donor in the donor area', () => {
     await settle();
   }
 
-  function pdf(): Blob {
-    return new Blob(['%PDF-1.4\n%%EOF'], { type: 'application/pdf' });
-  }
-
-  function attachment(fileName: string): { headers: Record<string, string> } {
+  function issued(receipt: IssuedReceipt['receipt']): IssuedReceipt {
     return {
-      headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="${fileName}"; filename*=UTF-8''${fileName}`,
-      },
+      id: `r-${receipt.number}`,
+      status: 'ACTIVE',
+      kind: receipt.kind,
+      number: receipt.number,
+      donationId: receipt.kind === 'SINGLE' ? 'd-1' : null,
+      year: receipt.year,
+      issuedAt: '2027-01-15T09:30:00Z',
+      supersededAt: null,
+      receipt,
     };
   }
 
-  function problemBlob(type: string, title: string, status: number): Blob {
-    return new Blob(
-      [JSON.stringify({ type: `https://nfnn.cz/problems/${type}`, title, detail: '', status })],
-      { type: 'application/problem+json' },
-    );
+  function issuedYearly(year: number): IssuedReceipt {
+    return issued({ ...frozenCase(YEARLY_ONE), year, number: `${year + 1}-000001` });
+  }
+
+  function issuedSingle(number: string): IssuedReceipt {
+    return issued({ ...frozenCase(SINGLE_PERSON_CS), number });
+  }
+
+  function receiptRequest(subject: ReceiptSubject): TestRequest {
+    const request = http.expectOne({ method: 'POST', url: RECEIPTS_URL });
+    expect(request.request.body).toEqual(subject);
+    return request;
+  }
+
+  function problemBody(type: string, title: string, status: number): object {
+    return { type: `https://nfnn.cz/problems/${type}`, title, detail: '', status };
   }
 
   function summaryWithReceiptsFrom2026(): DonationSummaryResponse {
@@ -284,7 +311,6 @@ describe('Given a signed-in donor in the donor area', () => {
     expect(link.getAttribute('href')).toBe('/darce/ucty?pridat=ucet');
   }
 
-  const yearlyUrl = (year: number): string => `/api/donations/me/receipts/yearly?year=${year}`;
   const yearSection = (year: number): string =>
     `.payments-card section[aria-labelledby="gifts-year-${year}"]`;
   const secondRowButton = `${yearSection(2026)} tbody tr:nth-child(2) .download-btn`;
@@ -895,7 +921,7 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(text('.receipt-ready .receipt-saved')).toBe('');
       await click('.receipt-ready-pdf');
       expect(text('.receipt-ready-pdf')).toBe('Připravujeme PDF…');
-      http.expectOne(yearlyUrl(2025)).flush(pdf(), attachment('potvrzeni-o-darech-2025.pdf'));
+      receiptRequest({ year: 2025 }).flush(issuedYearly(2025));
       await settle();
 
       expect(savedFiles).toEqual([{ fileName: 'potvrzeni-o-darech-2025.pdf', href: OBJECT_URL }]);
@@ -1192,7 +1218,7 @@ describe('Given a signed-in donor in the donor area', () => {
 
       await click(`${yearSection(2025)} .yearly-pdf`);
       expect(text(`${yearSection(2025)} .yearly-pdf`)).toBe('Připravujeme PDF…');
-      http.expectOne(yearlyUrl(2025)).flush(pdf(), attachment('potvrzeni-o-darech-2025.pdf'));
+      receiptRequest({ year: 2025 }).flush(issuedYearly(2025));
       await settle();
 
       expect(savedFiles).toEqual([{ fileName: 'potvrzeni-o-darech-2025.pdf', href: OBJECT_URL }]);
@@ -1206,12 +1232,13 @@ describe('Given a signed-in donor in the donor area', () => {
       await respond(twoYearSummary(), twoYearDonations());
 
       await click(`${yearSection(2025)} .yearly-pdf`);
-      http
-        .expectOne(yearlyUrl(2025))
-        .flush(problemBlob('donations/yearly-receipt-not-available', 'Za rok 2025 nic', 404), {
+      receiptRequest({ year: 2025 }).flush(
+        problemBody('donations/yearly-receipt-not-available', 'Za rok 2025 nic', 404),
+        {
           status: 404,
           statusText: 'Not Found',
-        });
+        },
+      );
       await settleBlobFailure();
 
       expect(text('.payments-card [role="alert"]')).toBe('Za rok 2025 nic');
@@ -1557,14 +1584,13 @@ describe('Given a signed-in donor in the donor area', () => {
       await respond(twoYearSummary(), twoYearDonations());
 
       await click(secondRowButton);
-      const request = http.expectOne('/api/donations/me/d-3/receipt');
-      expect(request.request.responseType).toBe('blob');
+      const request = receiptRequest({ donationId: 'd-3' });
       expect(request.request.headers.get('Authorization')).toBe('Bearer token-1');
-      const file = pdf();
-      request.flush(file, attachment('potvrzeni-o-daru-2026-000017.pdf'));
+      request.flush(issuedSingle('2026-000017'));
       await settle();
 
-      expect(createObjectURL).toHaveBeenCalledWith(file);
+      expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob));
+      expect((createObjectURL.mock.calls[0][0] as Blob).type).toBe('application/pdf');
       expect(savedFiles).toEqual([
         { fileName: 'potvrzeni-o-daru-2026-000017.pdf', href: OBJECT_URL },
       ]);
@@ -1575,13 +1601,11 @@ describe('Given a signed-in donor in the donor area', () => {
       await open('/darce/dary');
       await respond(twoYearSummary(), twoYearDonations());
       const row = `${yearSection(2026)} tbody tr:nth-child(2)`;
-      expect(element(`${row} .receipt-saved`)?.getAttribute('role')).toBe('status');
+      expect(element(`${row} .receipt-saved [role="status"]`)).not.toBeNull();
       expect(text(`${row} .receipt-saved`)).toBe('');
 
       await click(secondRowButton);
-      http
-        .expectOne('/api/donations/me/d-3/receipt')
-        .flush(pdf(), attachment('potvrzeni-o-daru-2026-000017.pdf'));
+      receiptRequest({ donationId: 'd-3' }).flush(issuedSingle('2026-000017'));
       await settle();
 
       expect(text(`${row} .receipt-saved`)).toBe(
@@ -1594,17 +1618,15 @@ describe('Given a signed-in donor in the donor area', () => {
       await open('/darce/dary');
       await respond(twoYearSummary(), twoYearDonations());
       await click(secondRowButton);
-      http
-        .expectOne('/api/donations/me/d-3/receipt')
-        .flush(pdf(), attachment('potvrzeni-o-daru-2026-000017.pdf'));
+      receiptRequest({ donationId: 'd-3' }).flush(issuedSingle('2026-000017'));
       await settle();
 
       await click(thirdRowButton);
 
-      expect(texts('.payments-card .receipt-saved').filter((line) => line !== '')).toEqual([]);
-      http
-        .expectOne('/api/donations/me/d-2/receipt')
-        .flush(pdf(), attachment('potvrzeni-o-daru-2025-000003.pdf'));
+      expect(texts('.payments-card .receipt-saved').filter((line) => line !== '')).toEqual([
+        'Připravujeme údaje potvrzení…',
+      ]);
+      receiptRequest({ donationId: 'd-2' }).flush(issuedSingle('2025-000003'));
       await settle();
       expect(text(`${yearSection(2025)} tbody tr:nth-child(1) .receipt-saved`)).toBe(
         'Potvrzení potvrzeni-o-daru-2025-000003.pdf je stažené. Najdete ho ve stažených souborech.',
@@ -1682,9 +1704,7 @@ describe('Given a signed-in donor in the donor area', () => {
         'Stáhnout PDF, dar z 15. 03. 2026, 500 Kč',
       );
 
-      http
-        .expectOne('/api/donations/me/d-3/receipt')
-        .flush(pdf(), attachment('potvrzeni-o-daru-2026-000017.pdf'));
+      receiptRequest({ donationId: 'd-3' }).flush(issuedSingle('2026-000017'));
       await settle();
       expect(button(secondRowButton).disabled).toBe(false);
       expect(text(secondRowButton)).toBe('Stáhnout PDF, dar z 10. 01. 2026, 1 000 Kč');
@@ -1695,16 +1715,14 @@ describe('Given a signed-in donor in the donor area', () => {
       await respond(twoYearSummary(), twoYearDonations());
 
       await click(secondRowButton);
-      http
-        .expectOne('/api/donations/me/d-3/receipt')
-        .flush(
-          problemBlob(
-            'donations/receipt-not-available',
-            'Potvrzení k tomuto daru nelze vystavit',
-            404,
-          ),
-          { status: 404, statusText: 'Not Found' },
-        );
+      receiptRequest({ donationId: 'd-3' }).flush(
+        problemBody(
+          'donations/receipt-not-available',
+          'Potvrzení k tomuto daru nelze vystavit',
+          404,
+        ),
+        { status: 404, statusText: 'Not Found' },
+      );
       await settleBlobFailure();
       const refunded = twoYearDonations();
       refunded.items[1] = donationItem({
@@ -1726,16 +1744,14 @@ describe('Given a signed-in donor in the donor area', () => {
       await respond(twoYearSummary(), twoYearDonations());
 
       await click(thirdRowButton);
-      http
-        .expectOne('/api/donations/me/d-2/receipt')
-        .flush(
-          problemBlob(
-            'donations/receipt-before-first-year',
-            'Za dary z této doby potvrzení na webu nevystavujeme',
-            400,
-          ),
-          { status: 400, statusText: 'Bad Request' },
-        );
+      receiptRequest({ donationId: 'd-2' }).flush(
+        problemBody(
+          'donations/receipt-before-first-year',
+          'Za dary z této doby potvrzení na webu nevystavujeme',
+          400,
+        ),
+        { status: 400, statusText: 'Bad Request' },
+      );
       await settleBlobFailure();
       await respond(summaryWithReceiptsFrom2026(), donationsWithoutReceiptsBefore2026());
 
@@ -1760,12 +1776,10 @@ describe('Given a signed-in donor in the donor area', () => {
       await respond(twoYearSummary(), twoYearDonations());
 
       await click(secondRowButton);
-      http
-        .expectOne('/api/donations/me/d-3/receipt')
-        .flush(new Blob(['Bad Gateway'], { type: 'text/html' }), {
-          status: 502,
-          statusText: 'Bad Gateway',
-        });
+      receiptRequest({ donationId: 'd-3' }).flush('Bad Gateway', {
+        status: 502,
+        statusText: 'Bad Gateway',
+      });
       await settleBlobFailure();
 
       expect(text('.payments-card [role="alert"]')).toBe(
@@ -1775,9 +1789,7 @@ describe('Given a signed-in donor in the donor area', () => {
       Reflect.deleteProperty(HTMLElement.prototype, 'scrollIntoView');
 
       await click(secondRowButton);
-      http
-        .expectOne('/api/donations/me/d-3/receipt')
-        .flush(pdf(), attachment('potvrzeni-o-daru-2026-000017.pdf'));
+      receiptRequest({ donationId: 'd-3' }).flush(issuedSingle('2026-000017'));
       await settle();
 
       expect(element('[role="alert"]')).toBeNull();
@@ -1790,12 +1802,13 @@ describe('Given a signed-in donor in the donor area', () => {
       const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
 
       await click(secondRowButton);
-      http
-        .expectOne('/api/donations/me/d-3/receipt')
-        .flush(problemBlob('auth/unauthenticated', 'Přihlaste se', 401), {
+      receiptRequest({ donationId: 'd-3' }).flush(
+        problemBody('auth/unauthenticated', 'Přihlaste se', 401),
+        {
           status: 401,
           statusText: 'Unauthorized',
-        });
+        },
+      );
       await settleBlobFailure();
 
       expect(element('[role="alert"]')).toBeNull();
@@ -1889,14 +1902,145 @@ describe('Given a signed-in donor in the donor area', () => {
       await respond(twoYearSummary(), twoYearDonations());
 
       await downloadYear(2025);
-      http.expectOne(yearlyUrl(2025)).flush(pdf(), attachment('potvrzeni-o-darech-2025.pdf'));
+      receiptRequest({ year: 2025 }).flush(issuedYearly(2025));
       await settle();
 
       expect(savedFiles).toEqual([{ fileName: 'potvrzeni-o-darech-2025.pdf', href: OBJECT_URL }]);
-      expect(yearRow(2025).querySelector('.receipt-saved')?.getAttribute('role')).toBe('status');
+      expect(yearRow(2025).querySelector('.receipt-saved [role="status"]')).not.toBeNull();
       expect(normalized(yearRow(2025).querySelector('.receipt-saved')?.textContent ?? '')).toBe(
         'Potvrzení potvrzeni-o-darech-2025.pdf je stažené. Najdete ho ve stažených souborech.',
       );
+    });
+
+    describe('and the receipt is drawn in the browser', () => {
+      const line = (year: number): string =>
+        normalized(yearRow(year).querySelector('.receipt-saved')?.textContent ?? '');
+
+      beforeEach(async () => {
+        receiptEnvironment.autoDraw = false;
+        await open('/darce/potvrzeni');
+        await respond(twoYearSummary(), twoYearDonations());
+      });
+
+      it('then the line at the button names each phase with a progress bar until the PDF is saved', async () => {
+        await downloadYear(2025);
+        expect(line(2025)).toBe('Připravujeme údaje potvrzení…');
+        expect(yearRow(2025).querySelector('progress')?.getAttribute('value')).toBe('1');
+
+        receiptRequest({ year: 2025 }).flush(issuedYearly(2025));
+        await settle();
+        expect(line(2025)).toBe('Načítáme nástroje pro PDF…');
+
+        receiptEnvironment.last().say({ kind: 'ready' });
+        receiptEnvironment.last().say({ kind: 'page', page: 1 });
+        receiptEnvironment.last().say({ kind: 'page', page: 2 });
+        await settle();
+        expect(line(2025)).toBe('Kreslíme PDF, strana 2…');
+        expect(yearRow(2025).querySelector('progress')?.getAttribute('value')).toBe('3');
+
+        receiptEnvironment.last().drawAll();
+        await settle();
+        expect(line(2025)).toBe(
+          'Potvrzení potvrzeni-o-darech-2025.pdf je stažené. Najdete ho ve stažených souborech.',
+        );
+        expect(yearRow(2025).querySelector('progress')).toBeNull();
+        expect(savedFiles).toEqual([{ fileName: 'potvrzeni-o-darech-2025.pdf', href: OBJECT_URL }]);
+      });
+
+      it('then a drawing that takes longer than eight seconds can be cancelled, which stops it and frees the button', async () => {
+        vi.useFakeTimers();
+        await downloadYear(2025);
+        receiptRequest({ year: 2025 }).flush(issuedYearly(2025));
+        await settle();
+        expect(yearRow(2025).querySelector('.download-progress-cancel')).toBeNull();
+
+        await vi.advanceTimersByTimeAsync(8000);
+        await settle();
+        (yearRow(2025).querySelector('.download-progress-cancel') as HTMLButtonElement).click();
+        await settle();
+
+        expect(receiptEnvironment.last().terminated).toBe(true);
+        expect(line(2025)).toBe('Přípravu potvrzení jste zrušili.');
+        expect(button('.yearly-pdf').disabled).toBe(false);
+        expect(savedFiles).toEqual([]);
+      });
+
+      it('then a drawing that fails says what to do next', async () => {
+        await downloadYear(2025);
+        receiptRequest({ year: 2025 }).flush(issuedYearly(2025));
+        await settle();
+        receiptEnvironment.last().say({ kind: 'ready' });
+        receiptEnvironment.last().say({ kind: 'failed', reason: 'drawing' });
+        await settle();
+
+        expect(text('.yearly-card [role="alert"]')).toBe(
+          'PDF se v prohlížeči nepodařilo vytvořit. Zkuste to prosím znovu; když to nepomůže, zkuste jiný prohlížeč nebo nám napište na info@nfnn.cz.',
+        );
+        expect(button('.yearly-pdf').disabled).toBe(false);
+      });
+
+      it('then drawing tools missing after a new release reload the page once to finish the download', async () => {
+        const restart = vi.spyOn(ReceiptRestart.prototype, 'tryRestart').mockReturnValue(true);
+        await downloadYear(2025);
+        receiptRequest({ year: 2025 }).flush(issuedYearly(2025));
+        await settle();
+        receiptEnvironment.last().fail();
+        await settle();
+
+        expect(restart).toHaveBeenCalledWith('rok-2025');
+        expect(element('.yearly-card [role="alert"]')?.textContent?.trim() ?? '').toBe('');
+      });
+
+      it('then drawing tools still missing after that reload ask the donor to reload the page', async () => {
+        vi.spyOn(ReceiptRestart.prototype, 'tryRestart').mockReturnValue(false);
+        await downloadYear(2025);
+        receiptRequest({ year: 2025 }).flush(issuedYearly(2025));
+        await settle();
+        receiptEnvironment.last().fail();
+        await settle();
+
+        expect(text('.yearly-card [role="alert"]')).toBe(
+          'Web se mezitím aktualizoval. Obnovte prosím stránku a stáhněte potvrzení znovu.',
+        );
+      });
+
+      it('then on an iPhone the finished PDF waits for a second tap, which opens the share sheet', async () => {
+        vi.spyOn(PdfDelivery.prototype, 'needsSecondTap').mockReturnValue(true);
+        const share = vi.spyOn(PdfDelivery.prototype, 'share').mockResolvedValue('shared');
+        await downloadYear(2025);
+        receiptRequest({ year: 2025 }).flush(issuedYearly(2025));
+        await settle();
+        receiptEnvironment.last().drawAll();
+        await settle();
+
+        expect(savedFiles).toEqual([]);
+        expect(line(2025)).toBe(
+          'Potvrzení potvrzeni-o-darech-2025.pdf je připravené. Otevřete ho tlačítkem Otevřít potvrzení. Otevřít potvrzení',
+        );
+        (yearRow(2025).querySelector('.download-progress-open') as HTMLButtonElement).click();
+        await settleBlobFailure();
+
+        expect(share).toHaveBeenCalledWith(
+          expect.objectContaining({ fileName: 'potvrzeni-o-darech-2025.pdf' }),
+        );
+        expect(line(2025)).toBe(
+          'Potvrzení potvrzeni-o-darech-2025.pdf je otevřené. Uložte ho nebo ho pošlete, kam potřebujete.',
+        );
+      });
+    });
+
+    it('then an address naming a download after a reload starts it once the gifts are loaded and drops it from the address', async () => {
+      vi.spyOn(ReceiptRestart.prototype, 'finished');
+      await open('/darce/potvrzeni?stahnout=rok-2025');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      receiptRequest({ year: 2025 }).flush(issuedYearly(2025));
+      await settleBlobFailure();
+      await settle();
+
+      expect(savedFiles).toEqual([{ fileName: 'potvrzeni-o-darech-2025.pdf', href: OBJECT_URL }]);
+      expect(TestBed.inject(Router).url).toBe('/darce/potvrzeni');
+      expect(ReceiptRestart.prototype.finished).toHaveBeenCalled();
     });
 
     it('then a year before the first receipt year offers no PDF and a line says from which year receipts are issued', async () => {
@@ -1921,7 +2065,7 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(button('.yearly-pdf').disabled).toBe(true);
       expect(text('.yearly-pdf')).toBe('Připravujeme PDF…');
 
-      http.expectOne(yearlyUrl(2025)).flush(pdf(), attachment('potvrzeni-o-darech-2025.pdf'));
+      receiptRequest({ year: 2025 }).flush(issuedYearly(2025));
       await settle();
       expect(button('.yearly-pdf').disabled).toBe(false);
       expect(text('.yearly-pdf')).toBe('Stáhnout potvrzení za rok 2025 (PDF)');
@@ -1934,12 +2078,13 @@ describe('Given a signed-in donor in the donor area', () => {
       await respond(summary, twoYearDonations());
 
       await downloadYear(2026);
-      http
-        .expectOne(yearlyUrl(2026))
-        .flush(problemBlob('donations/year-not-yet-completed', 'Rok ještě neskončil', 400), {
+      receiptRequest({ year: 2026 }).flush(
+        problemBody('donations/year-not-yet-completed', 'Rok ještě neskončil', 400),
+        {
           status: 400,
           statusText: 'Bad Request',
-        });
+        },
+      );
       await settleBlobFailure();
 
       expect(text('.yearly-card [role="alert"]')).toBe('Rok ještě neskončil');
@@ -1951,16 +2096,10 @@ describe('Given a signed-in donor in the donor area', () => {
       await respond(twoYearSummary(), twoYearDonations());
 
       await downloadYear(2025);
-      http
-        .expectOne(yearlyUrl(2025))
-        .flush(
-          problemBlob(
-            'donations/yearly-receipt-not-available',
-            'Za tento rok nemáme žádný dar',
-            404,
-          ),
-          { status: 404, statusText: 'Not Found' },
-        );
+      receiptRequest({ year: 2025 }).flush(
+        problemBody('donations/yearly-receipt-not-available', 'Za tento rok nemáme žádný dar', 404),
+        { status: 404, statusText: 'Not Found' },
+      );
       await settleBlobFailure();
 
       expect(text('.yearly-card [role="alert"]')).toBe('Za tento rok nemáme žádný dar');
@@ -1971,16 +2110,14 @@ describe('Given a signed-in donor in the donor area', () => {
       await respond(twoYearSummary(), twoYearDonations());
 
       await downloadYear(2025);
-      http
-        .expectOne(yearlyUrl(2025))
-        .flush(
-          problemBlob(
-            'donations/receipt-before-first-year',
-            'Za dary z této doby potvrzení na webu nevystavujeme',
-            400,
-          ),
-          { status: 400, statusText: 'Bad Request' },
-        );
+      receiptRequest({ year: 2025 }).flush(
+        problemBody(
+          'donations/receipt-before-first-year',
+          'Za dary z této doby potvrzení na webu nevystavujeme',
+          400,
+        ),
+        { status: 400, statusText: 'Bad Request' },
+      );
       await settleBlobFailure();
 
       expect(text('.yearly-card [role="alert"]')).toBe(
@@ -1994,17 +2131,18 @@ describe('Given a signed-in donor in the donor area', () => {
       await respond(twoYearSummary(), twoYearDonations());
 
       await downloadYear(2025);
-      http
-        .expectOne(yearlyUrl(2025))
-        .flush(problemBlob('auth/expired-token', 'Platnost přihlášení vypršela', 401), {
+      receiptRequest({ year: 2025 }).flush(
+        problemBody('auth/expired-token', 'Platnost přihlášení vypršela', 401),
+        {
           status: 401,
           statusText: 'Unauthorized',
-        });
+        },
+      );
       await settleBlobFailure();
       http.expectOne('/api/donors/auth/refresh').flush(authResponse('token-2'));
-      const retried = http.expectOne(yearlyUrl(2025));
+      const retried = receiptRequest({ year: 2025 });
       expect(retried.request.headers.get('Authorization')).toBe('Bearer token-2');
-      retried.flush(pdf(), attachment('potvrzeni-o-darech-2025.pdf'));
+      retried.flush(issuedYearly(2025));
       await settle();
 
       expect(savedFiles).toEqual([{ fileName: 'potvrzeni-o-darech-2025.pdf', href: OBJECT_URL }]);
@@ -2046,9 +2184,7 @@ describe('Given a signed-in donor in the donor area', () => {
       const row = root().querySelectorAll<HTMLElement>('.single-card tbody tr')[1];
       (row.querySelector('.download-btn') as HTMLButtonElement).click();
       await settle();
-      http
-        .expectOne('/api/donations/me/d-3/receipt')
-        .flush(pdf(), attachment('potvrzeni-o-daru-2026-000017.pdf'));
+      receiptRequest({ donationId: 'd-3' }).flush(issuedSingle('2026-000017'));
       await settle();
 
       expect(savedFiles).toEqual([
@@ -2065,9 +2201,10 @@ describe('Given a signed-in donor in the donor area', () => {
 
       (root().querySelector('.single-card .download-btn') as HTMLButtonElement).click();
       await settle();
-      http
-        .expectOne('/api/donations/me/d-4/receipt')
-        .flush(null, { status: 500, statusText: 'Server Error' });
+      receiptRequest({ donationId: 'd-4' }).flush(null, {
+        status: 500,
+        statusText: 'Server Error',
+      });
       await settleBlobFailure();
 
       expect(text('.single-card [role="alert"]')).toBe(

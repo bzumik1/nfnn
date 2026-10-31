@@ -29,14 +29,17 @@ describe('Given JSON that is no canonical vector signature', () => {
     'an array': '[]',
     'no view box': '{"paths":[]}',
     'a view box of three numbers': '{"viewBox":[0,0,1],"paths":[]}',
-    'a view box without width': '{"viewBox":[0,0,0,10],"paths":[{"d":"M0 0","fill":"#000000","opacity":1}]}',
+    'a view box without width':
+      '{"viewBox":[0,0,0,10],"paths":[{"d":"M0 0","fill":"#000000","opacity":1}]}',
     'no paths': '{"viewBox":[0,0,1,1],"paths":[]}',
     'a path with a command outside the canonical set':
       '{"viewBox":[0,0,1,1],"paths":[{"d":"M0 0 url(x)","fill":"#000000","opacity":1}]}',
     'a short colour': '{"viewBox":[0,0,1,1],"paths":[{"d":"M0 0","fill":"#000","opacity":1}]}',
     'a named colour': '{"viewBox":[0,0,1,1],"paths":[{"d":"M0 0","fill":"red","opacity":1}]}',
-    'an opacity above one': '{"viewBox":[0,0,1,1],"paths":[{"d":"M0 0","fill":"#000000","opacity":2}]}',
-    'a field of its own': '{"viewBox":[0,0,1,1],"paths":[{"d":"M0 0","fill":"#000000","opacity":1,"href":"x"}]}',
+    'an opacity above one':
+      '{"viewBox":[0,0,1,1],"paths":[{"d":"M0 0","fill":"#000000","opacity":2}]}',
+    'a field of its own':
+      '{"viewBox":[0,0,1,1],"paths":[{"d":"M0 0","fill":"#000000","opacity":1,"href":"x"}]}',
     'a field of its own at the top':
       '{"viewBox":[0,0,1,1],"paths":[{"d":"M0 0","fill":"#000000","opacity":1}],"script":"x"}',
   };

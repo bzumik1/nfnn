@@ -79,7 +79,10 @@ function twelveGiftYear(): FrozenReceipt {
 
 describe('Given every frozen receipt case and the text v2 printed for it', () => {
   const printed = new Map(
-    sharedCases('receipts/v1/printed.json').map((sharedCase) => [sharedCase.name, sharedCase.expected]),
+    sharedCases('receipts/v1/printed.json').map((sharedCase) => [
+      sharedCase.name,
+      sharedCase.expected,
+    ]),
   );
 
   for (const sharedCase of sharedCases('receipts/v1/frozen.json')) {
@@ -150,7 +153,9 @@ describe('Given every frozen receipt case and the text v2 printed for it', () =>
         expect(read.raw).toMatch(/\/MarkInfo \d+ 0 R/);
         expect(read.raw).toMatch(/<<\s*\/Marked true\s*>>/);
         expect(read.raw).toMatch(/\/Lang \(cs\)/);
-        expect(read.roles).toEqual(expect.arrayContaining(['Document', 'H1', 'H2', 'P', 'Figure', 'Link']));
+        expect(read.roles).toEqual(
+          expect.arrayContaining(['Document', 'H1', 'H2', 'P', 'Figure', 'Link']),
+        );
         expect(read.figureAlts).toContain(TEST_CAPTIONS.verificationAlt);
         if (frozen.kind === 'YEARLY') {
           expect(read.roles).toEqual(expect.arrayContaining(['Table', 'TR', 'TH', 'TD']));
@@ -183,7 +188,10 @@ describe('Given every frozen receipt case and the text v2 printed for it', () =>
 describe('Given a document with a character the receipt fonts lack', () => {
   it('when it is drawn, then it is refused rather than printed as an empty box', async () => {
     const frozen = frozenCase(SINGLE_PERSON_CS);
-    const document = documentOf({ ...frozen, donor: { ...frozen.donor, name: 'Jana 中 Nováková' } });
+    const document = documentOf({
+      ...frozen,
+      donor: { ...frozen.donor, name: 'Jana 中 Nováková' },
+    });
 
     await expect(drawReceipt(document, TEST_STYLE, NO_ART)).rejects.toThrow(/U\+4E2D/);
   });

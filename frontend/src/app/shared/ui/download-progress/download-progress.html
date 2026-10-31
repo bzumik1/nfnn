@@ -1,0 +1,35 @@
+<p class="ui-form-status download-progress-line" role="status">
+  @if (progress(); as progress) {
+    <span>{{ progress.text }}</span>
+  }
+</p>
+@if (progress(); as progress) {
+  @if (progress.kind === 'running') {
+    <div class="download-progress-bar">
+      <progress
+        class="download-progress-meter"
+        [max]="progress.steps"
+        [value]="progress.step"
+        [attr.aria-label]="progress.text"
+      ></progress>
+      @if (slow()) {
+        <button
+          type="button"
+          class="ui-button ui-button--small ui-button--quiet download-progress-cancel"
+          (click)="cancelled.emit()"
+          i18n="@@ui.downloadProgress.cancel"
+        >
+          Zrušit
+        </button>
+      }
+    </div>
+  } @else if (progress.kind === 'ready') {
+    <button
+      type="button"
+      class="ui-button ui-button--primary ui-button--small download-progress-open"
+      (click)="opened.emit()"
+    >
+      {{ openLabel() }}
+    </button>
+  }
+}
