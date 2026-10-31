@@ -199,6 +199,10 @@ function median(values: readonly number[]): number {
 }
 
 test.describe('Given a donor whose year holds 120 gifts', () => {
+  test.skip(
+    ({ browserName }) => browserName !== 'chromium',
+    'The drawing time is bounded for Chromium at full speed; the iPhone itself is timed on the device checklist',
+  );
   test('when they download its receipt again and again, then the median drawing in the worker stays within a second at full speed, and the cold and warm times are reported', async ({
     page,
   }) => {
