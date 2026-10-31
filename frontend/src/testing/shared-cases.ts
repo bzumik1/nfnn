@@ -192,6 +192,13 @@ export type FrozenReceipt = FrozenReceiptDocument & {
   readonly verification: { readonly keyId: string; readonly qrText: string };
 };
 
+export interface PrintedReceipt {
+  readonly body: string;
+  readonly tableHeader: string | null;
+  readonly footer: string;
+  readonly v2Pages: number;
+}
+
 export interface VerificationKey {
   readonly keyId: string;
   readonly publicKeyHex: string;
@@ -242,6 +249,11 @@ export type VerificationExpected =
   | { readonly verdict: 'valid'; readonly keyId: string; readonly receipt: VerifiedReceipt }
   | { readonly verdict: 'rejected'; readonly reason: string };
 
+export interface PrintableText {
+  readonly text: string;
+  readonly outside: readonly string[];
+}
+
 export type RowsInput = Readonly<Record<string, unknown>>;
 export type Answer = Readonly<Record<string, unknown>>;
 
@@ -261,7 +273,9 @@ export interface SharedCaseTopics {
     ReceiptFormattingExpected
   >;
   readonly 'signature/vector.json': SharedCase<SignatureVectorInput, SignatureVectorExpected>;
+  readonly 'receipts/printable.json': SharedCase<{ readonly text: string }, PrintableText>;
   readonly 'receipts/v1/frozen.json': SharedCase<FrozenReceiptInput, FrozenReceipt>;
+  readonly 'receipts/v1/printed.json': SharedCase<{ readonly v2Sample: string }, PrintedReceipt>;
   readonly 'totp/uri.json': SharedCase<TotpUriInput, { readonly uri: string }>;
   readonly 'verification/payload.json': SharedCase<VerificationInput, VerificationExpected>;
 }
@@ -281,7 +295,9 @@ const REGISTERED_TOPICS: Readonly<Record<SharedCaseTopic, true>> = {
   'qr/totp.json': true,
   'receipts/formatting.json': true,
   'signature/vector.json': true,
+  'receipts/printable.json': true,
   'receipts/v1/frozen.json': true,
+  'receipts/v1/printed.json': true,
   'totp/uri.json': true,
   'verification/payload.json': true,
 };

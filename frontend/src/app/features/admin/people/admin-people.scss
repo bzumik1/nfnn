@@ -1,5 +1,3 @@
-@use 'breakpoints' as bp;
-
 :host {
   display: block;
 }
@@ -13,54 +11,6 @@
 #person-editor + .ui-card,
 #person-editor > .ui-card {
   margin-top: var(--space-6);
-}
-
-.people-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.person-row {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: var(--space-3) var(--space-4);
-  align-items: center;
-  padding: var(--space-3) 0;
-  border-bottom: 1px solid var(--color-divider);
-
-  @include bp.down(cards) {
-    grid-template-columns: auto minmax(0, 1fr);
-  }
-}
-
-.person-thumb {
-  width: var(--space-12);
-  height: var(--space-12);
-  font-size: var(--text-2xl);
-}
-
-.person-name {
-  font-weight: var(--weight-semibold);
-  color: var(--color-text);
-}
-
-.person-role {
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-}
-
-.person-badges {
-  list-style: none;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1-5);
-  margin-top: var(--space-1-5);
-
-  .ui-badge {
-    white-space: normal;
-  }
 }
 
 .person-signatures {
@@ -98,18 +48,6 @@
 .person-signature-note {
   font-size: var(--text-sm);
   color: var(--color-text-muted);
-}
-
-.person-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  justify-content: flex-end;
-
-  @include bp.down(cards) {
-    grid-column: 1 / -1;
-    justify-content: flex-start;
-  }
 }
 
 .list-actions {

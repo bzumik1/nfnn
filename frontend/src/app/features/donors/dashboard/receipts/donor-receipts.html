@@ -40,12 +40,17 @@
                   <button
                     type="button"
                     class="ui-button ui-button--primary yearly-pdf"
-                    [disabled]="donations.yearlyDownloading(row.year)"
+                    [attr.data-receipt-download]="donations.yearlyTarget(row.year)"
+                    [attr.aria-disabled]="donations.yearlyDownloading(row.year) ? 'true' : null"
                     [attr.aria-busy]="donations.yearlyDownloading(row.year)"
                     (click)="donations.downloadYearlyReceipt(row.year)"
                   >
                     @if (donations.yearlyDownloading(row.year)) {
                       <span i18n="@@donor.dashboard.receipt.preparing">Připravujeme PDF…</span>
+                    } @else if (donations.yearlyReady(row.year)) {
+                      <span i18n="@@donor.dashboard.yearly.open"
+                        >Otevřít potvrzení za rok {{ row.year }} (PDF)</span
+                      >
                     } @else {
                       <svg
                         class="yearly-pdf-icon"
@@ -68,11 +73,11 @@
                       >
                     }
                   </button>
-                  <span class="ui-form-status receipt-saved" role="status">
-                    @if (donations.yearlySaved(row.year); as saved) {
-                      <span>{{ saved }}</span>
-                    }
-                  </span>
+                  <app-download-progress
+                    class="receipt-saved"
+                    [progress]="donations.yearlyProgress(row.year)"
+                    (cancelled)="donations.cancelYearlyReceipt(row.year)"
+                  />
                 }
                 @case ('after-year-end') {
                   <span class="year-note" i18n="@@donor.receipts.year.afterYearEnd"
@@ -147,3 +152,20 @@
 } @else {
   <app-donations-pending />
 }
+
+<section class="ui-card ui-card--padded verify-card" aria-labelledby="verify-title">
+  <h2
+    id="verify-title"
+    class="ui-card__title ui-card__title--large"
+    i18n="@@donor.receipts.verify.title"
+  >
+    Ověřit potvrzení
+  </h2>
+  <p class="yearly-sub" i18n="@@donor.receipts.verify.text">
+    Ověřte svoje potvrzení nebo potvrzení, které vám někdo ukázal: naskenujete jeho QR kód,
+    nahrajete PDF nebo vložíte odkaz z kódu. Ukážeme, jaké údaje v něm fond podepsal.
+  </p>
+  <a routerLink="/overit" class="ui-button verify-link" i18n="@@donor.receipts.verify.link"
+    >Ověřit potvrzení</a
+  >
+</section>

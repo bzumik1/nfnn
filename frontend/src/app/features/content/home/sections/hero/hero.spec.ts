@@ -32,4 +32,11 @@ describe('Given the hero', () => {
     expect(action.textContent?.trim()).toBe('Přispět');
     expect(action.getAttribute('href')).toBe('/#prispet');
   });
+
+  it('when it renders, then its second action says where the foundation helps and leads to the projects', () => {
+    const action = (fixture.nativeElement as HTMLElement).querySelectorAll('.hero-btns a')[1];
+
+    expect(action.textContent?.trim()).toBe('Kde pomáháme');
+    expect(action.getAttribute('href')).toBe('/#projekty');
+  });
 });

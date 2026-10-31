@@ -1,5 +1,6 @@
 import { expect, Page } from '@playwright/test';
 import { FOUNDATION_PAYMENT_DETAILS } from './qr-matrices';
+import { mockReceiptIssuing, ReceiptIssuing } from './receipt-issuing';
 import { noSignature, signatory } from './signature-image';
 
 export const donor = {
@@ -84,7 +85,7 @@ export function problem(status: number, type: string, title: string, detail: str
 export interface DonorApiMock {
   summary: unknown;
   list: unknown;
-  receipts?: { singleFileName: string };
+  receipts?: ReceiptIssuing;
 }
 
 export const noDonations: DonorApiMock = {
@@ -140,17 +141,6 @@ export function bankAccountItem(overrides: Record<string, unknown> = {}) {
   };
 }
 
-export function receiptPdf(fileName: string) {
-  return {
-    status: 200,
-    headers: {
-      'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="${fileName}"; filename*=UTF-8''${fileName}`,
-    },
-    body: Buffer.from('%PDF-1.4\n%%EOF'),
-  };
-}
-
 export const samplePngBase64 =
   'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAEElEQVR4nGNQTX4NRwzEcQBO0hcxU+9NfQAAAABJRU5ErkJggg==';
 
@@ -177,21 +167,8 @@ export async function mockDonorApi(
   page: Page,
   donations: DonorApiMock = noDonations,
 ): Promise<void> {
-  const receipts = donations.receipts;
-  if (receipts) {
-    await page.route(
-      (url) => url.pathname === '/api/donations/me/receipts/yearly',
-      (route) =>
-        route.fulfill(
-          receiptPdf(
-            `potvrzeni-o-darech-${new URL(route.request().url()).searchParams.get('year')}.pdf`,
-          ),
-        ),
-    );
-    await page.route(
-      (url) => /^\/api\/donations\/me\/[^/]+\/receipt$/.test(url.pathname),
-      (route) => route.fulfill(receiptPdf(receipts.singleFileName)),
-    );
+  if (donations.receipts) {
+    await mockReceiptIssuing(page, donations.receipts);
   }
   await page.route(
     (url) => url.pathname === '/api/operations/setup',

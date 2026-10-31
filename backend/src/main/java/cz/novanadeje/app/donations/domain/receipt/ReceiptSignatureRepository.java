@@ -12,8 +12,6 @@ public interface ReceiptSignatureRepository {
 
     List<SignatureSummary> summaries();
 
-    Optional<SignatureImage> currentScan();
-
     void replace(PersonReference person, SignatureArtwork artwork, Instant uploadedAt);
 
     boolean remove(PersonReference person);

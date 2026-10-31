@@ -44,7 +44,7 @@ class IssuingSignatoryTest {
     private final IssuingSignatory issuing = new IssuingSignatory(signatories, signatures, images, people);
 
     @Test
-    @DisplayName("Given a chosen signatory with a receipt signature and a portrait, when a receipt is issued, then it prints their name and receipt role, names the signature's digest and stores the print portrait as a JPEG receipt image by its digest")
+    @DisplayName("Given a chosen signatory with a receipt signature and a portrait, when a receipt is issued, then it prints their name and receipt role, names the signature's digest without reading the signature and stores the print portrait as a JPEG receipt image by its digest")
     void should_resolve_name_role_signature_and_portrait_when_issued_given_full_signatory() {
         when(signatories.current()).thenReturn(Optional.of(CHOSEN));
         when(people.find(PETR.value())).thenReturn(Optional.of(new FoundationPerson(PETR.value(), "Petr Vzorový", true)));
@@ -60,6 +60,7 @@ class IssuingSignatoryTest {
         verify(images).storeIfAbsent(stored.capture(), eq(NOW));
         assertThat(stored.getValue().mediaType()).isEqualTo("image/jpeg");
         assertThat(stored.getValue().content()).isEqualTo(JPEG);
+        verify(signatures, never()).currentOf(any());
     }
 
     @Test

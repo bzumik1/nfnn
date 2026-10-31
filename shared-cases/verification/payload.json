@@ -1,6 +1,6 @@
 {
   "source": "edited",
-  "logic": "The verification proof a receipt carries in its QR code and its PDF link (plan v3 D5 to D7, slice 1.5): one form for every receipt, every gift always. An encoding case names a receipt (input.receipt), the key that signs it (signingKeyId, one of input.keys; the backend signs with the RFC 8032 test 1 seed its tests hold, never a key of a server) and the foundation's IČO. Every key in the file is a public RFC 8032 test key (test 1 21fe31df, test 2 39f713d0, test SHA(abc) 5f9b247e, whose public key has an odd x); a server outside development refuses them. The backend writes the body (payloadHex, big-endian): format 0x01; the key id, the first 4 bytes of SHA-256 of the raw 32-byte public key; flags, bit 0 yearly, bit 1 a company, bit 2 replaces an earlier receipt, bit 3 the postal code in the Czech form NNN NN, bits 4 to 7 zero; the serial of the number as u24, its year being the year of issue; the issue day as u16 days since 2000-01-01; a yearly receipt's year as u16; a replaced receipt's serial as u24 and its issue day as u16; the donor's name, street and city as a LEB128 byte length and NFC UTF-8; the postal code as u24 under bit 3, else as text; a company's IČO as u32; the number of gifts as LEB128; each gift as its day (u16, days not decreasing) and its amount in hellers (LEB128); the total in hellers (LEB128). It signs with Ed25519 the ASCII tag nfnn.cz/receipt/v1, one zero byte, the foundation's IČO as u32 and the body (signatureHex; statusSha256 is the SHA-256 of that signed message followed by the 64-byte signature, the digest the verification page sends to ask the receipt's status, so only a holder of the proof can ask), appends the 64-byte signature to the body and writes the bytes in chunks of 7 as decimal numbers of 17 digits, a last chunk of k bytes in 3, 5, 8, 10, 13 or 15 digits, after https://nfnn.cz/overit#1 (qrText). The symbol (qr) is a byte segment for https://nfnn.cz/overit# and a numeric segment for the rest, without an ECI header (one would take 2 bytes of the largest proof), error correction M up to version 13 and L from version 14, the smallest version that holds both; above version 40 (2 893 bytes) there is none and issuance is refused as donations/receipt-too-long. The limit is the byte count: the largest case holds 553 gifts of 200 to 1 500 Kč, three-byte amounts, and gifts below 163.84 Kč take a byte less each, so more of them fit. The browser reads every encoding case's qrText against input.keys and gets the verdict valid with keyId signingKeyId and the receipt input.receipt. A reading case gives a qrText made by hand, and both sides read it to its expected verdict. The reader checks the outside first, in this order: the prefix https://nfnn.cz/overit#1 (not-a-proof); only digits whose count a chunk width gives, each chunk below 2 to the power of 8 times its bytes (digits); no bytes, or fewer than 70 once the format byte is 0x01 (truncated); the format byte (unknown-format); the key id among input.keys (unknown-key) and not revoked (revoked-key); the Ed25519 signature of the last 64 bytes over the tag, the IČO and the rest, refused when S is not below the group order (bad-signature). Then it reads the body field by field in byte order and stops at the first rule broken, so a body broken in two places gets the verdict of the field nearer its start (a yearly receipt for 1999 with a name not in NFC is invalid-value, from the year, not invalid-text). A field is checked as soon as it is read, with two exceptions: a serial, the receipt's or the replaced receipt's, is checked only once the issue day after it is read (a serial of 0 with the body cut inside the issue day is truncated), and a gift only once both its day and its amount are read (a second gift dated before the first with an amount in a needless zero group is non-minimal-varint, not invalid-value). The rules, by the field they apply to: the flags with any of bits 4 to 7 (reserved-flags); any field running past the body (truncated); any LEB128 number with a needless last zero group (non-minimal-varint), of more than eight groups or of 2 to the power of 53 or more (invalid-value); a serial outside 1 to 999 999, a year before 2000 (invalid-value); a text that is empty, not UTF-8 or not NFC (invalid-text); a postal code above 99 999, an IČO above 99 999 999, no gift or a single receipt of more than one (invalid-value); a gift's day before its predecessor's, outside a yearly receipt's year, or an amount of zero (invalid-value), and, checked as each gift is added and before the total is read, gifts summing to 2 to the power of 53 or more (invalid-value, even when the total says 1); after the total, bytes after it (trailing-bytes), and only then a total other than the sum of the gifts (total-mismatch).",
+  "logic": "The verification proof a receipt carries in its QR code and its PDF link (plan v3 D5 to D7, slice 1.5): one form for every receipt, every gift always. An encoding case names a receipt (input.receipt), the key that signs it (signingKeyId, one of input.keys; the backend signs with the RFC 8032 test 1 seed its tests hold, never a key of a server) and the foundation's IČO. Every key in the file is a public RFC 8032 test key (test 1 21fe31df, test 2 39f713d0, test SHA(abc) 5f9b247e, whose public key has an odd x); a server outside development refuses them. The backend writes the body (payloadHex, big-endian): format 0x01; the key id, the first 4 bytes of SHA-256 of the raw 32-byte public key; flags, bit 0 yearly, bit 1 a company, bit 2 replaces an earlier receipt, bit 3 the postal code in the Czech form NNN NN, bits 4 to 7 zero; the serial of the number as u24, its year being the year of issue; the issue day as u16 days since 2000-01-01; a yearly receipt's year as u16; a replaced receipt's serial as u24 and its issue day as u16; the donor's name, street and city as a LEB128 byte length and NFC UTF-8; the postal code as u24 under bit 3, else as text; a company's IČO as u32; the number of gifts as LEB128; each gift as its day (u16, days not decreasing) and its amount in hellers (LEB128); the total in hellers (LEB128). It signs with Ed25519 the ASCII tag nfnn.cz/receipt/v1, one zero byte, the foundation's IČO as u32 and the body (signatureHex; statusSha256 is the SHA-256 of that signed message followed by the 64-byte signature, the digest the verification page sends to ask the receipt's status, so only a holder of the proof can ask), appends the 64-byte signature to the body and writes the bytes in chunks of 7 as decimal numbers of 17 digits, a last chunk of k bytes in 3, 5, 8, 10, 13 or 15 digits, after https://nfnn.cz/overit#1 (qrText). The symbol (qr) is a byte segment for https://nfnn.cz/overit# and a numeric segment for the rest, without an ECI header (one would take 2 bytes of the largest proof), error correction H at the smallest version that holds both, so the receipt can draw the foundation's star in its middle (Jakub 2026-10-31, look sheet of 1.9; H holds a proof of up to 1 232 bytes, about 220 gifts, and a receipt has rarely more than 20); when no version holds them at H, error correction L at the smallest version that holds both, and the receipt draws no star; above version 40 (2 893 bytes) there is none and issuance is refused as donations/receipt-too-long. The limit is the byte count: the largest case holds 553 gifts of 200 to 1 500 Kč, three-byte amounts, and gifts below 163.84 Kč take a byte less each, so more of them fit. The browser reads every encoding case's qrText against input.keys and gets the verdict valid with keyId signingKeyId and the receipt input.receipt. A reading case gives a qrText made by hand, and both sides read it to its expected verdict. The reader checks the outside first, in this order: the prefix https://nfnn.cz/overit#1 (not-a-proof); only digits whose count a chunk width gives, each chunk below 2 to the power of 8 times its bytes (digits); no bytes, or fewer than 70 once the format byte is 0x01 (truncated); the format byte (unknown-format); the key id among input.keys (unknown-key) and not revoked (revoked-key); the Ed25519 signature of the last 64 bytes over the tag, the IČO and the rest, refused when S is not below the group order (bad-signature). Then it reads the body field by field in byte order and stops at the first rule broken, so a body broken in two places gets the verdict of the field nearer its start (a yearly receipt for 1999 with a name not in NFC is invalid-value, from the year, not invalid-text). A field is checked as soon as it is read, with two exceptions: a serial, the receipt's or the replaced receipt's, is checked only once the issue day after it is read (a serial of 0 with the body cut inside the issue day is truncated), and a gift only once both its day and its amount are read (a second gift dated before the first with an amount in a needless zero group is non-minimal-varint, not invalid-value). The rules, by the field they apply to: the flags with any of bits 4 to 7 (reserved-flags); any field running past the body (truncated); any LEB128 number with a needless last zero group (non-minimal-varint), of more than eight groups or of 2 to the power of 53 or more (invalid-value); a serial outside 1 to 999 999, a year before 2000 (invalid-value); a text that is empty, not UTF-8 or not NFC (invalid-text); a postal code above 99 999, an IČO above 99 999 999, no gift or a single receipt of more than one (invalid-value); a gift's day before its predecessor's, outside a yearly receipt's year, or an amount of zero (invalid-value), and, checked as each gift is added and before the total is read, gifts summing to 2 to the power of 53 or more (invalid-value, even when the total says 1); after the total, bytes after it (trailing-bytes), and only then a total other than the sum of the gifts (total-mismatch).",
   "cases": [
     {
       "name": "a single receipt of one gift",
@@ -42,8 +42,8 @@
         "statusSha256": "8f7d3220d24c45b4e96b398d12c1ff7556d334e1ecb721eaffd34378dcfdf24f",
         "qrText": "https://nfnn.cz/overit#10031885061882060800046343990168929322040303989858395561963591784434255064686062301295334291440491033672150796955971721900197572809870224453345851022640003481333023798240570129532658228105484308483572369432889027858678234011311399567927722554466456666434335406596109819736103487095664656051122697630866947",
         "qr": {
-          "version": 8,
-          "errorCorrection": "M"
+          "version": 12,
+          "errorCorrection": "H"
         }
       }
     },
@@ -98,8 +98,8 @@
         "statusSha256": "a6bae0a5aba50870604f828d4f677cc94acf62c850122c596ccfe2485d47b214",
         "qrText": "https://nfnn.cz/overit#10031885061882086400135405622520338217807172291216043333694173083274731374305007389801316477532705341931408177360249790628537827313650725072661484147321923969472913634816110543150746117522615759546177168700088599861218666166886161375038704413868811088535051077720906538352745191055945184066572146038833275154577902804741007932571073053882693685871039227551612715222857638584735239802145403959336193663495210121975966120174569261725028183507203",
         "qr": {
-          "version": 10,
-          "errorCorrection": "M"
+          "version": 15,
+          "errorCorrection": "H"
         }
       }
     },
@@ -182,8 +182,8 @@
         "statusSha256": "4f4935e4cb264ce3e18784f0926f2e00c916d4653beaa66e77ecb9634fa22593",
         "qrText": "https://nfnn.cz/overit#100318850618820864001354056225203382178071722912160433336941730832747313743050073898013164775327053419314081773602497906285378273136578930726614841472681639694728431705089104727820019397736157595461070451800885448856372773249463898451074404138687790440524910543013088667005451910538126050840032277512342966943024727532741072377211072073269821061317604338220567715661908335299003230494636121976097512252348048043911358733914889106837945499745255869414323680884501730698421207334070199137454084745488888389727181110752813768779325452075250247886270257539920488067824999071947579808396947337836369931082352621120063661575957487396865357984653680146954918126743813545015041853900312272121968406970438460020476396910577408787949038365716571667324064619530123646847390834041411099751634615000",
         "qr": {
-          "version": 14,
-          "errorCorrection": "L"
+          "version": 20,
+          "errorCorrection": "H"
         }
       }
     },
@@ -278,8 +278,8 @@
         "statusSha256": "f501c109b47c42d19cd9b8b4556dd6d709666a6788098ccaf92cb9be237e9581",
         "qrText": "https://nfnn.cz/overit#10031885061882086400135405622520338217807172291216043333694173083274731374305007389801316477532705341931408177360249790628537827313660965072661484147263043969472836459622510466184932173109615759546100491580088539731676522121005740171153904413868775856381451051992334448368645191053810966684003226591593126773486195320812411237721106636901638105735936247822316771566190571385900322869074985765485902235481998404391135792860852110627719456957896586941432332043650173045360807146162470484157392090548888828403072031068134551297381745207525020201107025750899672353660416992367097180839694732475014145107355652809784746157595462610547800886449583752742179095154273994084138688169605606510789303693289051451910538270230040032371142630019831765728464369616377211107473195586892712554985797262274001579437327099661123939897111025447543222929156333658863750290337657724572521326681611703085036834785538940077830181931425027972520980428625410",
         "qr": {
-          "version": 14,
-          "errorCorrection": "L"
+          "version": 22,
+          "errorCorrection": "H"
         }
       }
     },
@@ -442,8 +442,8 @@
         "statusSha256": "0c3ff83292087cc34b9b27c84c0520cecd68902737bd3d4ad0b894572ce588a3",
         "qrText": "https://nfnn.cz/overit#10031885061882086400135405622520338217807172291216043333694173083274731374305007389801316477532705341931408177360249790628537827313678373072661484147252803969472823037849710452990792639781615759546087384380088529423755011713124440823247344413868769816583691047594287937260245191053807820956003224358210132851909935451231201637721105563159814104988268340933916771566190073312300322525477602085249463255044822084391135638510464910523265852319077586941432264541570172999404657078931226761742479834548888808438184991054610558275724245207525011615891025745101466504053710249594608195239694730008763393105695390251841436157595461568525400885749504083493429607883546040164138687876004326510592491111916964451910538147677720032289538251395749217177020379600377211073583219261061647457826553067715661907745475003229850391027575506414801254979243911358180266761106398140848634395869414323340097301730449313104165610631092738365065488888262220339510662653815301604452075250185627070257496541318378166938843477438624396947318039255051068718676935628261575954622697606008862090655841660102101682474366441386880555205377107101388560891034519105382178012400323350649047334069959305138083363772110913670682210733022810809892677156619146922910032344030563613412842901505978528439113599586516571075636231740780158694143240413325017309088746048381912333774397615454888884417365507107803015594737434520752502557505902575424974684454249990719475782723969473358231040110803735001900644615759546296444220088666433211754230857364356100336413868823335902731082668708863346545191053828726940003238059155807103683227805841637701035582555254336139000232980496296232048138218516519313255211892448332258726346591004768238242611702664237210753178801629190974760436711821528863061601228420",
         "qr": {
-          "version": 19,
-          "errorCorrection": "L"
+          "version": 31,
+          "errorCorrection": "H"
         }
       }
     },
@@ -899,8 +899,8 @@
         "statusSha256": "2a838f36ec9cba7c045b6cdc0c4f10a3e70f19a1cac85d4e17764efd4780c961",
         "qrText": "https://nfnn.cz/overit#1003188506188213760013540562252034422629511654896238273386227271876515332013403361649813070092477492419533202126065912641548808353653924733214904584377046380025797377080351057579239670734045207526810061372257546367675733905564566109672151410521889183006701264635601406636903208943405458200146152850840711319254285912331247990940423592679564733912009675578888",
         "qr": {
-          "version": 9,
-          "errorCorrection": "M"
+          "version": 13,
+          "errorCorrection": "H"
         }
       }
     },
@@ -950,8 +950,8 @@
         "statusSha256": "7e36118bd2c8c79ed141bfc6c9471bae4fc3cfeb56156f8cfc7b436fd9b9c367",
         "qrText": "https://nfnn.cz/overit#1003188506188218880016509273846016000135405623201121322040303989858395561963591784434255064686062301295334291440491033672150796955971721900197572860123600377211062845801021064286285733226667715663434879823271534060233199214046595628414123765834708797385524336763351399538041708305147668798543074605936228844409191052816806853902753388224149871397755350873344",
         "qr": {
-          "version": 9,
-          "errorCorrection": "M"
+          "version": 13,
+          "errorCorrection": "H"
         }
       }
     },
@@ -998,8 +998,8 @@
         "statusSha256": "1867d90fe5bd9337e002463644c5d42eb3989772c0af54a26d0c83f05afca4de",
         "qrText": "https://nfnn.cz/overit#10031885061882163200007862088630314107807901179869212846445106467778555065103262204833028987655087367074535286691524106527696089719308467498223348659407514070948567228210511017918325404996472535019634740115010945300213099807118747360961527519363185742732123622868587793036055700048697648716236456791850942350445737743",
         "qr": {
-          "version": 9,
-          "errorCorrection": "M"
+          "version": 13,
+          "errorCorrection": "H"
         }
       }
     },
@@ -1044,8 +1044,8 @@
         "statusSha256": "87b67e2b2ddf362be1c029b5ec58a29623d63d108b0e4ae725fac01b178bd73d",
         "qrText": "https://nfnn.cz/overit#100318850618820864001354056225203805565885656920195218699842900683873333208385899462175565989608590296330332919533117637465505196598076490914147826024024529488528736677749553245881688593314542607207207878255077974809403764313673335436331845532346252265910413847473704350520273237040601141154873082942338670332207347246148864617936622050223420088599861218686441387520641788082506669961146941624193798154852728727614677946894646304021254071591033623341881079056660644020835501973199556600228140912916960878676744206244874",
         "qr": {
-          "version": 11,
-          "errorCorrection": "M"
+          "version": 16,
+          "errorCorrection": "H"
         }
       }
     },
@@ -1089,8 +1089,8 @@
         "statusSha256": "5175d535c11f18f5184b365cf6ff24cea29ace69d73d1cf62d9401f13f5018b8",
         "qrText": "https://nfnn.cz/overit#10031885061881856000046343989969262310690387202833314543559772848974220373355348915060321956401657365010122201009173406513564881129589648453345851022706896091020052073832756220632747068204681229652073608211326389337621746544650578154017575428850481190375417064221134606891653298131246177092005461360996612",
         "qr": {
-          "version": 8,
-          "errorCorrection": "M"
+          "version": 12,
+          "errorCorrection": "H"
         }
       }
     },

@@ -6,7 +6,7 @@
           @if (kind() === 'news') {
             <ng-container i18n="@@content.detail.back.news">← Všechny aktuality</ng-container>
           } @else {
-            <ng-container i18n="@@content.detail.back.projects">← Všechny projekty</ng-container>
+            <ng-container i18n="@@content.detail.back.projects">← Kde pomáháme</ng-container>
           }
         </a>
       </p>
@@ -63,7 +63,9 @@
         @if (kind() === 'news') {
           <ng-container i18n="@@content.detail.back.news.again">Zpět na aktuality</ng-container>
         } @else {
-          <ng-container i18n="@@content.detail.back.projects.again">Zpět na projekty</ng-container>
+          <ng-container i18n="@@content.detail.back.projects.again"
+            >Kde všude pomáháme</ng-container
+          >
         }
       </a>
     </p>

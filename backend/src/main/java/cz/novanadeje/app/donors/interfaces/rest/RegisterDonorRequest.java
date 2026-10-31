@@ -15,7 +15,7 @@ import jakarta.validation.constraints.Size;
 
 record RegisterDonorRequest(
         @NotNull DonorType type,
-        @NotBlank @Size(max = Donor.MAX_NAME_LENGTH) String name,
+        @NotBlank @Size(max = Donor.MAX_NAME_LENGTH) @PrintableOnReceipt String name,
         @ValidCompanyIdentifier String companyIdentifier,
         @NotNull @Valid AddressRequest address,
         @NotBlank @Email(message = "{donors.email.invalid}") @Pattern(regexp = EmailAddress.SHAPE_REGEX, message = "{donors.email.invalid}") @Size(max = 254) String email,
@@ -25,7 +25,8 @@ record RegisterDonorRequest(
 ) {
 
     RegisterDonorCommand toCommand() {
-        return new RegisterDonorCommand(type, name, companyIdentifier, address.street(), address.city(), address.postalCode(),
+        return new RegisterDonorCommand(type, PrintedInput.of(name), companyIdentifier, PrintedInput.of(address.street()),
+                PrintedInput.of(address.city()), address.postalCode(),
                 email, password, preferredLocale, RegistrationReturn.ofPath(returnTo));
     }
 

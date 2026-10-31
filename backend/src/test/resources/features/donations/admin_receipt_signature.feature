@@ -23,8 +23,8 @@ Feature: An administrator chooses who signs the donation receipts and uploads th
       | id   | date       | amount  | account    | bankCode | name          | variableSymbol |
       | 2001 | 2026-10-01 | 1000.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
     And the application starts the import
-    And "Jana" downloads the receipt of her donation received on 2026-10-01
-    And the receipt "Jana" downloaded is the frozen receipt issued to her last
+    And "Jana" issues the receipt of her donation received on 2026-10-01
+    And the issued receipt is the single receipt of the donation of "Jana" received on 2026-10-01
     And the frozen receipt shows no signature image
     And the frozen receipt shows no portrait
     When "Jana" uploads a 3000 by 1000 pixel JPEG scan named "podpis.jpg" as the receipt signature
@@ -33,14 +33,14 @@ Feature: An administrator chooses who signs the donation receipts and uploads th
     And the admin action "CHANGE_RECEIPT_SIGNATURE" by "Jana" is recorded with details containing "Nahrán obrázek podpisu na potvrzení o daru u osoby"
     When "Jana" asks for the receipt signature
     Then the receipt signature is set, 1200 by 400 pixels, uploaded at "2026-12-20T11:00:00Z"
-    When "Jana" downloads the receipt of her donation received on 2026-10-01
+    When "Jana" issues the receipt of her donation received on 2026-10-01
     Then 1 receipt is stored
-    And the receipt "Jana" downloaded is the frozen receipt issued to her last
+    And the issued receipt is the single receipt of the donation of "Jana" received on 2026-10-01
     And the frozen receipt shows no signature image
     Given today is 2027-01-15
-    When "Jana" downloads her yearly receipt for 2026
+    When "Jana" issues her yearly receipt for 2026
     Then the response status is 200
-    And the receipt "Jana" downloaded is the frozen receipt issued to her last
+    And the issued receipt is the yearly receipt for 2026
     And the frozen receipt shows the current signature image
     And the frozen receipt holds:
       | field          | value                 |
@@ -75,6 +75,30 @@ Feature: An administrator chooses who signs the donation receipts and uploads th
     Then the receipt signature is a vector of 3 paths in the view box "0 0 300 100", 1200 by 400 pixels, uploaded at "2026-12-20T11:00:00Z"
     When "Jana" uploads a 600 by 200 pixel JPEG scan named "podpis.jpg" as the receipt signature
     Then the receipt signature is set, 600 by 200 pixels, uploaded at "2026-12-20T11:00:00Z"
+
+  Scenario: A receipt issued with a vector signature keeps its digest, and only its donor gets the canonical JSON it names
+    Given a person "Petr" is registered
+    And the bank account has these movements:
+      | id   | date       | amount  | account    | bankCode | name          | variableSymbol |
+      | 2001 | 2026-10-01 | 1000.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
+    And the application starts the import
+    And "Jana" uploads the vector signature "podpis.svg" as the receipt signature
+    When "Jana" issues the receipt of her donation received on 2026-10-01
+    Then the response status is 200
+    And the frozen receipt shows the current signature image
+    When "Jana" fetches the signature image of receipt "2026-000001"
+    Then the response status is 200
+    And the image is the current vector signature as its canonical JSON, kept by the browser and never sniffed
+    When "Petr" fetches the signature image of receipt "2026-000001"
+    Then the response status is 404
+    And the problem type ends with "donations/receipt-image-not-found"
+    When "Jana" uploads a 600 by 200 pixel JPEG scan named "podpis.jpg" as the receipt signature
+    And "Jana" reads the issued receipt again
+    Then the response status is 200
+    And the frozen receipt shows the vector signature it was issued with, not the current scan
+    When "Jana" fetches the signature image of receipt "2026-000001"
+    Then the response status is 200
+    And the image is the vector signature the receipt was issued with
 
   Scenario Outline: An SVG with anything but filled paths is refused naming the problem, and the signature stays
     Given "Jana" uploads the vector signature "podpis.svg" as the receipt signature

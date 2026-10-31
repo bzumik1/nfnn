@@ -126,7 +126,6 @@ app:
       registry-file: N 78
       issue-place: V Novém Boru
       issue-place-en: Nový Bor
-      concurrent-renders: 3
       first-year: ${RECEIPT_FIRST_YEAR:2026}
       signing:
         key: ${RECEIPT_SIGNING_KEY:}
@@ -205,5 +204,3 @@ logging:
     jakarta.mail: INFO
     cz.novanadeje.app: INFO
     org.springframework.web: INFO
-    com.openhtmltopdf: WARN
-    org.apache.pdfbox.pdmodel.font.PDType1Font: ERROR

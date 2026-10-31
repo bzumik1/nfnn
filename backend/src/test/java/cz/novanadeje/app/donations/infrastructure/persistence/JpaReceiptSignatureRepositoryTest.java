@@ -3,8 +3,6 @@ package cz.novanadeje.app.donations.infrastructure.persistence;
 import cz.novanadeje.app.donations.domain.receipt.ContentDigest;
 import cz.novanadeje.app.donations.domain.receipt.CurrentSignature;
 import cz.novanadeje.app.donations.domain.receipt.PersonReference;
-import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatory;
-import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatoryRepository;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatureRepository;
 import cz.novanadeje.app.donations.domain.receipt.SignatureKind;
 import cz.novanadeje.app.donations.domain.receipt.SignatureSummary;
@@ -14,7 +12,6 @@ import cz.novanadeje.app.donations.domain.receipt.SignaturePathData;
 import cz.novanadeje.app.donations.domain.receipt.SignatureVector;
 import cz.novanadeje.app.donations.domain.receipt.SignatureViewBox;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptImageRepository;
-import cz.novanadeje.app.donations.infrastructure.pdf.ReceiptResources;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -54,10 +51,6 @@ class JpaReceiptSignatureRepositoryTest {
     @Autowired
     private ReceiptSignatureRepository signatures;
     @Autowired
-    private ReceiptSignatoryRepository signatories;
-    @Autowired
-    private ReceiptResources resources;
-    @Autowired
     private ReceiptImageRepository receiptImages;
     @Autowired
     private JdbcClient jdbc;
@@ -83,13 +76,11 @@ class JpaReceiptSignatureRepositoryTest {
     }
 
     @Test
-    @DisplayName("Given a vector signature uploaded, when the receipt images are asked for it, then its media type is JSON and its canonical bytes are served as stored without being read as a vector")
+    @DisplayName("Given a vector signature uploaded, when the receipt images are asked for it, then its canonical bytes come back as stored, as JSON, without being read as a vector")
     void should_answer_media_type_and_canonical_bytes_when_asked_given_vector_signature() {
         signatures.replace(PERSON, VECTOR, NOW);
         flushAndClear();
 
-        assertThat(resources.imageMediaType(VECTOR.digest())).contains("application/json");
-        assertThat(resources.imageMediaType(FIRST.digest())).isEmpty();
         assertThat(receiptImages.find(VECTOR.digest())).hasValueSatisfying(image -> {
             assertThat(image.mediaType()).isEqualTo("application/json");
             assertThat(image.content()).isEqualTo(VECTOR.canonicalBytes());
@@ -163,30 +154,13 @@ class JpaReceiptSignatureRepositoryTest {
     }
 
     @Test
-    @DisplayName("Given a scan uploaded for the chosen signatory, when the current scan is asked for, then the scan comes back")
-    void should_answer_scan_when_current_scan_asked_given_scan() {
-        signatories.choose(new ReceiptSignatory(PERSON, "předseda správní rady", NOW));
-        signatures.replace(PERSON, FIRST, NOW);
-        flushAndClear();
-
-        assertThat(signatures.currentScan()).contains(FIRST);
-    }
-
-    @Test
-    @DisplayName("Given a vector signature whose content no longer reads, when the current scan is asked for, then there is none and the vector is not read")
-    void should_answer_no_scan_without_reading_vector_when_current_scan_asked_given_unreadable_vector() {
-        signatories.choose(new ReceiptSignatory(PERSON, "předseda správní rady", NOW));
+    @DisplayName("Given a vector signature of a person whose content no longer reads, when its digest is asked for, then the digest comes back without reading the vector")
+    void should_answer_vector_digest_without_reading_it_when_digest_asked_given_unreadable_vector() {
         signatures.replace(PERSON, VECTOR, NOW);
         flushAndClear();
         jdbc.sql("update receipt_image set content = ? where sha256 = ?").params("garbage".getBytes(StandardCharsets.UTF_8), VECTOR.digest().value()).update();
 
-        assertThat(signatures.currentScan()).isEmpty();
-    }
-
-    @Test
-    @DisplayName("Given nothing uploaded, when the current scan is asked for, then there is none")
-    void should_answer_no_scan_when_current_scan_asked_given_nothing_uploaded() {
-        assertThat(signatures.currentScan()).isEmpty();
+        assertThat(signatures.digestOf(PERSON)).contains(VECTOR.digest());
     }
 
     @Test
@@ -217,6 +191,21 @@ class JpaReceiptSignatureRepositoryTest {
         assertThat(jdbc.sql("select count(*) from donation_person_receipt_signature").query(Long.class).single()).isEqualTo(1L);
         assertThat(jdbc.sql("select count(*) from receipt_image where sha256 in (?, ?)").params(FIRST.digest().value(), SECOND.digest().value())
                 .query(Long.class).single()).isEqualTo(2L);
+    }
+
+    @Test
+    @DisplayName("Given a signature uploaded, when the same image is uploaded again later, then its receipt image is stored once and keeps the time it was first used")
+    void should_store_the_image_once_and_keep_its_first_use_when_uploaded_again_given_the_same_image() {
+        signatures.replace(PERSON, FIRST, NOW);
+        flushAndClear();
+
+        signatures.replace(PERSON, FIRST, NOW.plusSeconds(60));
+        flushAndClear();
+
+        assertThat(jdbc.sql("select count(*) from receipt_image where sha256 = ?").param(FIRST.digest().value()).query(Long.class).single())
+                .isEqualTo(1L);
+        assertThat(jdbc.sql("select first_used_at from receipt_image where sha256 = ?").param(FIRST.digest().value()).query(Instant.class).single())
+                .isEqualTo(NOW);
     }
 
     @Test
@@ -251,16 +240,6 @@ class JpaReceiptSignatureRepositoryTest {
 
         assertThatThrownBy(() -> jdbc.sql("update donation_person_receipt_signature set image_sha256 = ?").param("0".repeat(64)).update())
                 .hasMessageContaining("fk_donation_person_receipt_signature_image");
-    }
-
-    @Test
-    @DisplayName("Given a scan uploaded for a person who does not sign the receipts, when the current scan is asked for, then there is none")
-    void should_answer_no_scan_when_current_scan_asked_given_scan_of_another_person() {
-        signatories.choose(new ReceiptSignatory(OTHER, "místopředseda", NOW));
-        signatures.replace(PERSON, FIRST, NOW);
-        flushAndClear();
-
-        assertThat(signatures.currentScan()).isEmpty();
     }
 
     @Test

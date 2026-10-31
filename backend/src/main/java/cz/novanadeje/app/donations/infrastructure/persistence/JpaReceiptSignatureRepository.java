@@ -22,13 +22,10 @@ class JpaReceiptSignatureRepository implements ReceiptSignatureRepository {
 
     private final ReceiptSignatureJpaRepository signatures;
     private final ReceiptImageJpaRepository images;
-    private final ReceiptSignatoryJpaRepository signatories;
 
-    JpaReceiptSignatureRepository(ReceiptSignatureJpaRepository signatures, ReceiptImageJpaRepository images,
-                                  ReceiptSignatoryJpaRepository signatories) {
+    JpaReceiptSignatureRepository(ReceiptSignatureJpaRepository signatures, ReceiptImageJpaRepository images) {
         this.signatures = signatures;
         this.images = images;
-        this.signatories = signatories;
     }
 
     @Override
@@ -47,19 +44,6 @@ class JpaReceiptSignatureRepository implements ReceiptSignatureRepository {
                 .map(row -> new SignatureSummary(new PersonReference(row.getPersonId()), kindOf(row.getMediaType()), row.getWidth(), row.getHeight(),
                         row.getUploadedAt()))
                 .toList();
-    }
-
-    @Override
-    public Optional<SignatureImage> currentScan() {
-        return signatories.findById(ReceiptSignatoryJpaEntity.SINGLETON_ID)
-                .map(signatory -> signatory.toDomain().person())
-                .flatMap(person -> signatures.findById(person.value()))
-                .flatMap(stored -> {
-                    ReceiptImageJpaEntity image = image(stored);
-                    return PNG.equals(image.mediaType())
-                            ? Optional.of(new SignatureImage(image.content(), stored.width(), stored.height()))
-                            : Optional.empty();
-                });
     }
 
     @Override

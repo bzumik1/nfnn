@@ -15,9 +15,9 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 class AdapterLibraryRulesTest {
 
     @ArchTest
-    static final ArchRule qr_code_library_is_used_only_by_the_shared_qr_adapter = noClasses()
-            .that().resideOutsideOfPackage("cz.novanadeje.app.shared.infrastructure.qr..")
-            .should().dependOnClassesThat().resideInAPackage("com.google.zxing..");
+    static final ArchRule no_class_draws_a_pdf_or_a_qr_code_since_the_browser_draws_both = noClasses()
+            .should().dependOnClassesThat()
+            .resideInAnyPackage("io.github.openhtmltopdf..", "com.openhtmltopdf..", "org.apache.pdfbox..", "com.google.zxing..");
 
     @ArchTest
     static final ArchRule fio_client_library_is_used_only_by_the_donations_fio_adapter = noClasses()
@@ -25,10 +25,9 @@ class AdapterLibraryRulesTest {
             .should().dependOnClassesThat().resideInAPackage("io.github.bzumik1.fio..");
 
     @ArchTest
-    static final ArchRule pdf_and_template_libraries_are_used_only_by_infrastructure_adapters = noClasses()
+    static final ArchRule template_library_is_used_only_by_infrastructure_adapters = noClasses()
             .that().resideOutsideOfPackage("..infrastructure..")
-            .should().dependOnClassesThat()
-            .resideInAnyPackage("io.github.openhtmltopdf..", "com.openhtmltopdf..", "org.apache.pdfbox..", "org.thymeleaf..");
+            .should().dependOnClassesThat().resideInAPackage("org.thymeleaf..");
 
     @ArchTest
     static final ArchRule image_libraries_are_used_only_by_the_content_media_and_receipt_signature_adapters = noClasses()

@@ -14,7 +14,12 @@ const TEST_SUPPORT = [
 ];
 const SHARED_CASE_LOADER = 'src/testing/shared-cases.ts';
 const SHARED_CASE_SETUP = 'src/testing/shared-cases-setup.ts';
+const RECEIPT_ASSETS_SETUP = 'src/testing/receipt-assets-setup.ts';
 const ED25519_FALLBACK = 'src/app/features/donations/verification/noble-ed25519.ts';
+const RECEIPT_LAYOUT = 'src/app/features/donations/receipt-pdf/receipt-layout.ts';
+const RECEIPT_WORKER = 'src/app/features/donations/receipt-pdf/receipt-pdf.worker.ts';
+const QR_DECODING = 'src/app/features/donations/verification/qr-decoding.ts';
+const QR_DECODER_WORKER = 'src/app/features/donations/verification/qr-decoder.worker.ts';
 const COMPUTED_IMPORTS_ALLOWED_IN = ['routes'];
 
 const SCOPES = {
@@ -23,10 +28,16 @@ const SCOPES = {
   routes: { files: ['src/**/*.routes.ts'], within: 'app' },
   sharedCaseLoader: { files: [SHARED_CASE_LOADER], within: 'testSupport' },
   sharedCaseSetup: { files: [SHARED_CASE_SETUP], within: 'testSupport' },
+  receiptAssetsSetup: { files: [RECEIPT_ASSETS_SETUP], within: 'testSupport' },
   ed25519Fallback: { files: [ED25519_FALLBACK], within: 'app' },
+  receiptLayout: { files: [RECEIPT_LAYOUT], within: 'app' },
+  receiptWorker: { files: [RECEIPT_WORKER], within: 'app' },
+  qrDecoding: { files: [QR_DECODING], within: 'app' },
+  qrDecoderWorker: { files: [QR_DECODER_WORKER], within: 'app' },
 };
 
-const TEST_SCOPES = ['testSupport', 'sharedCaseLoader', 'sharedCaseSetup'];
+const NODE_SETUPS = ['sharedCaseSetup', 'receiptAssetsSetup'];
+const TEST_SCOPES = ['testSupport', 'sharedCaseLoader', ...NODE_SETUPS];
 
 const CONFINED_IMPORTS = [
   {
@@ -46,12 +57,54 @@ const CONFINED_IMPORTS = [
       'The Ed25519 fallback for browsers without it in WebCrypto lives in src/app/features/donations/verification/noble-ed25519.ts.',
   },
   {
+    patterns: [
+      'pdfkit',
+      'pdfkit/*',
+      'fontkit',
+      'fontkit/*',
+      'linebreak',
+      'linebreak/*',
+      'fflate',
+      'fflate/*',
+      'png-js',
+      'png-js/*',
+      '@noble/ciphers',
+      '@noble/ciphers/*',
+    ],
+    dynamic: '^(?:pdfkit|fontkit|linebreak|fflate|png-js|@noble/ciphers)(?:/.*)?$',
+    allowedIn: ['receiptLayout'],
+    examples: [
+      'pdfkit',
+      'pdfkit/js/pdfkit.standalone.js',
+      'fontkit',
+      'linebreak',
+      'fflate',
+      'png-js',
+      '@noble/ciphers',
+    ],
+    message:
+      'pdfkit and the libraries it brings (fontkit, linebreak, fflate, png-js, @noble/ciphers) draw receipts only in src/app/features/donations/receipt-pdf/receipt-layout.ts, which only the receipt worker loads.',
+  },
+  {
+    patterns: [
+      '**/receipt-layout',
+      '**/receipt-pdf/receipt-layout',
+      '**/receipt-layout.js',
+      '**/receipt-pdf/receipt-layout.js',
+    ],
+    dynamic: '(?:^|/)receipt-layout(?:\\.js)?$',
+    allowedIn: ['receiptWorker', ...TEST_SCOPES],
+    examples: ['./receipt-layout', '../receipt-pdf/receipt-layout'],
+    message:
+      'The receipt layout carries pdfkit, so only the receipt worker (receipt-pdf.worker.ts) and tests load it; the app starts the worker instead.',
+  },
+  {
     names: NODE_BUILTINS,
     dynamic: `^(?:${NODE_BUILTINS.map((name) => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})$`,
-    allowedIn: ['sharedCaseSetup'],
+    allowedIn: NODE_SETUPS,
     examples: ['node:fs', 'path'],
     message:
-      'Only the Vitest global setup src/testing/shared-cases-setup.ts runs in Node; specs get the shared cases from it and the app never imports Node.',
+      'Only the Vitest global setups src/testing/shared-cases-setup.ts and receipt-assets-setup.ts run in Node; specs get their data from them and the app never imports Node.',
   },
   {
     patterns: ['**/testing', '**/testing/**'],
@@ -72,13 +125,11 @@ const CONFINED_IMPORTS = [
       'fake-indexeddb/*',
       'pdfjs-dist',
       'pdfjs-dist/*',
-      'jsqr',
-      'jsqr/*',
       '@playwright/test',
       '@playwright/test/*',
     ],
     dynamic:
-      '^(?:vitest|@vitest/[^/]+|fast-check|fake-indexeddb|pdfjs-dist|jsqr|@playwright/test)(?:/.*)?$',
+      '^(?:vitest|@vitest/[^/]+|fast-check|fake-indexeddb|pdfjs-dist|@playwright/test)(?:/.*)?$',
     allowedIn: TEST_SCOPES,
     examples: [
       'vitest',
@@ -88,12 +139,31 @@ const CONFINED_IMPORTS = [
       'fake-indexeddb/auto',
       'pdfjs-dist',
       'pdfjs-dist/legacy/build/pdf.mjs',
-      'jsqr',
-      'jsqr/dist/jsQR.js',
       '@playwright/test',
     ],
     message:
-      'A development library (Vitest, fast-check, fake-indexeddb, pdf.js, jsQR, Playwright) serves the tests only; the app never ships it.',
+      'A development library (Vitest, fast-check, fake-indexeddb, pdf.js, Playwright) serves the tests only; the app never ships it.',
+  },
+  {
+    patterns: ['jsqr', 'jsqr/*'],
+    dynamic: '^jsqr(?:/.*)?$',
+    allowedIn: ['qrDecoding', ...TEST_SCOPES],
+    examples: ['jsqr', 'jsqr/dist/jsQR.js'],
+    message:
+      'jsQR reads QR codes only in src/app/features/donations/verification/qr-decoding.ts, which only the QR decoder worker loads, and in tests.',
+  },
+  {
+    patterns: [
+      '**/qr-decoding',
+      '**/verification/qr-decoding',
+      '**/qr-decoding.js',
+      '**/verification/qr-decoding.js',
+    ],
+    dynamic: '(?:^|/)qr-decoding(?:\\.js)?$',
+    allowedIn: ['qrDecoderWorker', ...TEST_SCOPES],
+    examples: ['./qr-decoding', '../verification/qr-decoding'],
+    message:
+      'The QR decoding carries jsQR, so only the QR decoder worker (qr-decoder.worker.ts) and tests load it; the app starts the worker instead.',
   },
 ];
 

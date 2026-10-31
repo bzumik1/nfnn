@@ -44,7 +44,9 @@ Feature: An administrator lists the answers about older variable symbols and cor
 
   Scenario: A "Yes" whose donations a downloaded receipt already covers cannot be reversed
     Given "Petr" confirms symbol "6123456789" at bank account "1234567/0800"
-    And "Petr" downloads the receipt of his donation received on 2026-08-05
+    And "Petr" issues the receipt of his donation received on 2026-08-05
+    And the issued receipt is the single receipt of the donation of "Petr" received on 2026-08-05
+    And the issued receipt has number "2026-000001"
     When "Jana" reverses the symbol answer of "Petr" to "6123456789"
     Then the response status is 409
     And the problem type ends with "donations/symbol-claim-has-receipt"

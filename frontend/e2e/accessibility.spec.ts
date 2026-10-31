@@ -2,6 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { routeLogsApi } from './admin-logs-api';
 import { Locator, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
+import { fakeCameraShowing, pdfWithLink, pngDataUrl, qrCodePng } from './receipt-code-files';
 import {
   administrator,
   adminSettings,
@@ -44,6 +45,15 @@ import {
   SINGLE_RECEIPT,
   YEARLY_RECEIPT,
 } from './receipt-verification';
+import {
+  donations as receiptDonations,
+  ISSUING,
+  openReceiptsAfterSignIn,
+  pretendIphoneThatShares,
+  yearlyButton,
+  yearlyLine,
+} from './receipt-donations';
+import { answerReceiptIssuing, RECEIPT_ISSUING_URL } from './receipt-issuing';
 import {
   noSignatory,
   refusedVector,
@@ -262,6 +272,32 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
       await expect(heading).toHaveText(title);
       expect(await violations(page)).toEqual([]);
     }
+
+    test('then the camera preview while scanning and a refused file break no rule', async ({
+      page,
+    }) => {
+      await page.addInitScript(
+        fakeCameraShowing,
+        pngDataUrl(qrCodePng('https://example.org/jiny-kod')),
+      );
+      await openVerification(page, { keys: KEY_LIST, status: 'active' });
+
+      await page.getByRole('button', { name: 'Naskenovat QR kód' }).click();
+      await expect(page.locator('video')).toBeVisible();
+      await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toBeVisible();
+      expect(await violations(page)).toEqual([]);
+
+      await page.getByRole('button', { name: 'Zastavit skenování' }).click();
+      await page.getByLabel('Nahrát PDF nebo fotku').setInputFiles({
+        name: 'poznamka.pdf',
+        mimeType: 'application/pdf',
+        buffer: pdfWithLink('https://example.org'),
+      });
+      await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toContainText('PDF');
+      await page.getByRole('button', { name: 'Ověřit odkaz' }).click();
+      await expect(page.locator('#proof-link-error')).toBeVisible();
+      expect(await violations(page)).toEqual([]);
+    });
 
     test('then the explanation, the check under way and every answer of the fund break no rule', async ({
       page,
@@ -1016,16 +1052,16 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
     await page.goto('/sprava/spravci');
     await expect(page.getByRole('heading', { level: 1, name: 'Správci' })).toBeFocused();
-    await expect(page.locator('tbody tr')).toHaveCount(2);
+    await expect(page.locator('.administrator-row')).toHaveCount(2);
 
     expect(await violations(page)).toEqual([]);
 
     await page
-      .locator('tbody tr')
+      .locator('.administrator-row')
       .nth(1)
       .getByRole('button', { name: 'Odebrat roli správce' })
       .click();
-    await expect(page.locator('tbody tr').nth(1)).toContainText('Odebrat roli správce?');
+    await expect(page.locator('.administrator-row').nth(1)).toContainText('Odebrat roli správce?');
     await page.getByRole('button', { name: 'Přidat správce' }).click();
     await expect(page.getByLabel('E-mail dárce')).toBeFocused();
 
@@ -1645,7 +1681,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
     await page.goto('/sprava/lide-fondu');
     await expect(
-      page.locator('.people-list').getByRole('img', { name: 'Podpis na potvrzení: Petr Vzorový' }),
+      page.locator('.ui-person-list').getByRole('img', { name: 'Podpis na potvrzení: Petr Vzorový' }),
     ).toBeVisible();
     expect(await violations(page)).toEqual([]);
     await page.getByRole('button', { name: 'Upravit: Petr Vzorový' }).click();
@@ -2105,6 +2141,40 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.getByRole('button', { name: 'Upravit', exact: true }).click();
     await page.getByRole('button', { name: 'Smazat projekt' }).click();
     await expect(page.getByRole('group', { name: 'Smazat projekt?' })).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when a signed-in donor waits for a receipt PDF, then its progress line, bar and cancel button break no rule', async ({
+    page,
+  }) => {
+    await mockDonorApi(page, receiptDonations);
+    await page.clock.install();
+    await page.route(
+      (url) => url.pathname === RECEIPT_ISSUING_URL,
+      () => new Promise<void>(() => undefined),
+    );
+    await openReceiptsAfterSignIn(page);
+    await yearlyButton(page).click();
+    await expect(yearlyLine(page)).toHaveText('Připravujeme údaje potvrzení…');
+    await page.clock.fastForward(8000);
+    await expect(page.getByRole('button', { name: 'Zrušit' })).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when a signed-in donor on an iPhone has a receipt PDF ready for the second tap, then it breaks no rule', async ({
+    page,
+  }) => {
+    await pretendIphoneThatShares(page);
+    await mockDonorApi(page, receiptDonations);
+    await page.route(
+      (url) => url.pathname === RECEIPT_ISSUING_URL,
+      (route) => answerReceiptIssuing(route, ISSUING),
+    );
+    await openReceiptsAfterSignIn(page);
+    await yearlyButton(page).click();
+    await expect(page.getByRole('button', { name: 'Otevřít potvrzení' })).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
   });

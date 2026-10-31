@@ -110,7 +110,7 @@
               "type": "object",
               "required": ["version", "errorCorrection"],
               "additionalProperties": false,
-              "properties": { "version": { "type": "integer", "minimum": 1, "maximum": 40 }, "errorCorrection": { "enum": ["M", "L"] } }
+              "properties": { "version": { "type": "integer", "minimum": 1, "maximum": 40 }, "errorCorrection": { "enum": ["H", "L"] } }
             },
             {
               "type": "object",

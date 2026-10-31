@@ -13,6 +13,7 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptFingerprint;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptIssueLimitReached;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptReplacementInBrowserOnly;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptUnprintable;
 import cz.novanadeje.app.donations.domain.receipt.ReplacedReceipt;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningPaused;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
@@ -136,11 +137,12 @@ public class DonationReceiptIssuer {
     }
 
     private DonationReceipt issueNew(ReceiptRequest request, ReceiptFingerprint fingerprint, Optional<DonationReceipt> replaced) {
-        if (replaced.isPresent() && receipts.countReplacementsIssuedAfter(request.donor(), clock.instant().minus(ISSUE_LIMIT_WINDOW)) >= REPLACEMENTS_PER_DONOR_A_DAY) {
-            throw new ReceiptIssueLimitReached(request.donor(), REPLACEMENTS_PER_DONOR_A_DAY);
-        }
         Instant issuedAt = clock.instant();
         SignatoryAtIssue signatory = signatories.resolve(issuedAt);
+        ReceiptUnprintable.refuseUnlessPrintable(request.record(), foundation, signatory.signatory());
+        if (replaced.isPresent() && receipts.countReplacementsIssuedAfter(request.donor(), issuedAt.minus(ISSUE_LIMIT_WINDOW)) >= REPLACEMENTS_PER_DONOR_A_DAY) {
+            throw new ReceiptIssueLimitReached(request.donor(), REPLACEMENTS_PER_DONOR_A_DAY);
+        }
         long serial = receipts.nextSerial();
         ReceiptNumber number = ReceiptNumber.of(Year.from(request.today()), serial);
         if (serial >= SERIAL_WORTH_A_WARNING) {

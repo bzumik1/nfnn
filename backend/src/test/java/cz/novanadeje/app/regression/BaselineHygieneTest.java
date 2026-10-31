@@ -24,6 +24,8 @@ class BaselineHygieneTest {
     private static final String FIXTURE_SECRET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJ0123-_QQ";
     private static final String TEST_BACKUP_KEY = "AGE-SECRET-KEY-1R45A984EXXAFC85YZSYGY9R6XJTD4E9AKY65ZCRGPDQ89E7ANW8QKT6GWH";
     private static final String OTHER_BACKUP_KEY = "AGE-SECRET-KEY-1ARXU2VF0GAFA8YLTUXNPDZE0UV33WNCJJEUWM3C2RKSR7A829JTS8HRKXT";
+    private static final String V2_RECEIPT_TEMPLATE_DIGEST = "7b30974aef2fdaf01f6e4990c8c4b526a0de8d8371452023be783677b69bf7e7";
+    private static final JsonMapper RECEIPT_CORPUS_JSON = JsonMapper.builder().build();
     private static final BaselineHygiene.Fixtures NO_FIXTURES = new BaselineHygiene.Fixtures(Set.of(), Set.of());
 
     @ParameterizedTest
@@ -37,6 +39,24 @@ class BaselineHygieneTest {
 
         assertThat(report.filesScanned()).as("files in %s", folder).isPositive();
         assertThat(report.findings()).as("findings in %s", folder).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given v2's receipt corpus, when the template each sample names is read, then it is the one public bundle v2 issued from, which its retired history test spelled out until slice 1.10")
+    void should_name_the_one_public_template_bundle_when_read_given_v2_receipt_corpus() throws IOException {
+        Path corpus = SharedCases.repositoryRoot().resolve("regression/v2/receipts");
+        List<Path> samples;
+        try (var files = Files.list(corpus)) {
+            samples = files.filter(file -> file.getFileName().toString().endsWith(".json"))
+                    .filter(file -> !Set.of("digests.json", "refusals.json").contains(file.getFileName().toString()))
+                    .sorted().toList();
+        }
+
+        assertThat(samples).isNotEmpty();
+        for (Path sample : samples) {
+            JsonNode receipt = RECEIPT_CORPUS_JSON.readTree(Files.readString(sample));
+            assertThat(receipt.findValue("template").asString()).as("template of %s", sample.getFileName()).isEqualTo(V2_RECEIPT_TEMPLATE_DIGEST);
+        }
     }
 
     @Test

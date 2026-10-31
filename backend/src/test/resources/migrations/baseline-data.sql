@@ -80,6 +80,20 @@ values ('0190a000-0000-7000-8000-000000000024', '0190a000-0000-7000-8000-0000000
         repeat('3', 64), null, null, repeat('1', 64), '{}', repeat('2', 64), repeat('2', 64), 1, repeat('4', 64));
 insert into donation_receipt_signature (id, image_sha256, width, height, uploaded_at)
 values (1, repeat('2', 64), 600, 200, '2026-01-09T10:00:00Z');
+insert into receipt_signing_key (key_id, public_key, registered_at, status, seal)
+values ('0a1b2c3d', decode(repeat('ab', 32), 'hex'), '2026-01-09T10:00:00Z', 'active', 'seal');
+insert into receipt_signing_key_adoption (restore_id, adopted_at) values ('restore-1', '2026-01-09T10:00:00Z');
+insert into issued_receipt (id, donor_id, kind, donation_id, receipt_year, number, issued_on, issued_at, locale, fingerprint,
+                            status, schema_version, frozen, signature_image_sha256, signing_key_id, proof, status_sha256,
+                            supersedes_id, superseded_at)
+values ('0190a000-0000-7000-8000-000000000026', '0190a000-0000-7000-8000-000000000010', 'SINGLE',
+        '0190a000-0000-7000-8000-000000000023', null, '2026-000001', '2026-01-09', '2026-01-09T10:00:00Z', 'cs',
+        repeat('5', 64), 'REPLACED', 1, '{}', repeat('2', 64), '0a1b2c3d', decode(repeat('cd', 65), 'hex'), repeat('6', 64),
+        null, '2026-01-09T11:00:00Z'),
+       ('0190a000-0000-7000-8000-000000000027', '0190a000-0000-7000-8000-000000000010', 'SINGLE',
+        '0190a000-0000-7000-8000-000000000023', null, '2026-000002', '2026-01-09', '2026-01-09T11:00:00Z', 'cs',
+        repeat('7', 64), 'ACTIVE', 1, '{}', null, '0a1b2c3d', decode(repeat('ef', 65), 'hex'), repeat('8', 64),
+        '0190a000-0000-7000-8000-000000000026', null);
 insert into donation_monthly_report (report_month, sent_at) values ('2026-01-01', '2026-02-01T06:00:00Z');
 insert into donation_report_settings (id, recipients, send_day, include_donors, include_donations,
                                       include_unpaired_payments, include_bank_import, updated_at)

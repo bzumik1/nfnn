@@ -100,7 +100,7 @@ describe('Given the projects section with published projects', () => {
     expect(root.textContent).not.toContain('Dominik, 7 let');
     const all = root.querySelector('a.all-link') as HTMLAnchorElement;
     expect(all.getAttribute('href')).toBe('/projekty');
-    expect(all.textContent?.trim()).toBe('Všechny projekty');
+    expect(all.textContent?.trim()).toBe('Kde všude pomáháme');
     expect(root.querySelector('.lead')?.textContent?.trim()).toBe(
       'Každý projekt je skutečný příběh skutečného dítěte.',
     );

@@ -1,8 +1,22 @@
-import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
+import {
+  afterNextRender,
+  computed,
+  DestroyRef,
+  effect,
+  inject,
+  Injectable,
+  Injector,
+  signal,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Router } from '@angular/router';
-import { catchError, forkJoin, last, map, Observable, of, tap } from 'rxjs';
-import { problemOf, problemTypeEndsWith } from '../../../core/auth/api-problem';
+import { ActivatedRoute, Router } from '@angular/router';
+import { catchError, forkJoin, last, map, Observable, of, Subscription, tap } from 'rxjs';
+import {
+  describeProblemWithoutFields,
+  problemOf,
+  problemTypeEndsWith,
+} from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { BankAccountItem, BankAccountsApi } from '../../donations/bank-accounts-api';
@@ -13,7 +27,17 @@ import {
   DonationSummaryResponse,
   DownloadedFile,
 } from '../../donations/donations-api';
-import { saveBlob } from '../../donations/file-download';
+import { ReceiptSubject } from '../../donations/receipt-pdf/frozen-receipt';
+import { PdfDelivery } from '../../donations/receipt-pdf/pdf-delivery';
+import {
+  ReceiptPdf,
+  ReceiptPdfEvent,
+  ReceiptPdfFailure,
+  ReceiptPdfFailureReason,
+  ReceiptPdfPhase,
+} from '../../donations/receipt-pdf/receipt-pdf';
+import { RECEIPT_RESTART_PARAM, ReceiptRestart } from '../../donations/receipt-pdf/receipt-restart';
+import { DownloadProgressState } from '../../../shared/ui/download-progress/download-progress';
 
 export type DonationsState = 'loading' | 'ready' | 'error';
 
@@ -25,20 +49,48 @@ export type BankCheckOutcome =
   | { readonly kind: 'unfinished' }
   | { readonly kind: 'failed' };
 
-interface SavedReceipt {
+interface ReceiptTask {
   readonly key: string;
-  readonly fileName: string;
+  readonly progress: DownloadProgressState;
+  readonly file: DownloadedFile | null;
 }
 
 export interface ReceiptError {
   readonly scope: ReceiptScope;
+  readonly key: string;
   readonly message: string;
 }
 
 const RECEIPT_FAILED = $localize`:@@donor.dashboard.receipt.error:Potvrzení se nepodařilo stáhnout. Zkuste to prosím znovu.`;
+const RECEIPT_DRAWING_FAILED = $localize`:@@donor.dashboard.receipt.drawingFailed:PDF se v prohlížeči nepodařilo vytvořit. Zkuste to prosím znovu; když to nepomůže, zkuste jiný prohlížeč nebo nám napište na info@nfnn.cz.`;
+const RECEIPT_IMAGE_FAILED = $localize`:@@donor.dashboard.receipt.imageFailed:Podpis na potvrzení se nepodařilo ověřit, a tak jsme PDF nevytvořili. Zkuste to prosím znovu; když to nepomůže, napište nám na info@nfnn.cz.`;
+const RECEIPT_TOOLS_MISSING = $localize`:@@donor.dashboard.receipt.toolsMissing:Web se mezitím aktualizoval. Obnovte prosím stránku a stáhněte potvrzení znovu.`;
+const RECEIPT_TOOLS_STILL_MISSING = $localize`:@@donor.dashboard.receipt.toolsStillMissing:Nástroje pro PDF se nepodařilo načíst ani po obnovení stránky. Zkontrolujte prosím připojení nebo blokování skriptů, zkuste jiný prohlížeč, nebo nám napište na info@nfnn.cz.`;
+const RECEIPT_UNPRINTABLE = $localize`:@@donor.dashboard.receipt.unprintable:Údaje potvrzení obsahují znak, který v PDF neumíme vytisknout, a tak jsme PDF nevytvořili. Napište nám prosím na info@nfnn.cz.`;
+const RECEIPT_STYLE_FAILED = $localize`:@@donor.dashboard.receipt.styleFailed:PDF teď kvůli chybě na webu nejde vytvořit. Napište nám prosím na info@nfnn.cz, opravíme ji.`;
+const RECEIPT_CANCELLED = $localize`:@@donor.dashboard.receipt.cancelled:Přípravu potvrzení jste zrušili.`;
+const DRAWING_FAILURE_TEXTS: Readonly<Record<ReceiptPdfFailureReason, string>> = {
+  'tools-missing': RECEIPT_TOOLS_MISSING,
+  fonts: RECEIPT_DRAWING_FAILED,
+  image: RECEIPT_IMAGE_FAILED,
+  drawing: RECEIPT_DRAWING_FAILED,
+  unprintable: RECEIPT_UNPRINTABLE,
+  style: RECEIPT_STYLE_FAILED,
+};
+const STEPS_BEFORE_DRAWING = 2;
+const STEPS_AFTER_DRAWING = 1;
+const PHASE_STEPS: Readonly<Record<ReceiptPdfPhase, number>> = { data: 1, tools: 2, drawing: 2 };
+const YEARLY_DOWNLOAD = /^rok-(\d{4})$/;
+const SINGLE_DOWNLOAD = /^dar-([0-9a-zA-Z-]{1,64})$/;
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const RECEIPT_BEFORE_FIRST_YEAR = 'donations/receipt-before-first-year';
+const RECEIPT_UNPRINTABLE_PROBLEM = 'donations/receipt-unprintable';
+const RECEIPT_SIGNING_PAUSED_PROBLEM = 'donations/receipt-signing-paused';
+const PROBLEMS_SHOWN_WITH_DETAIL: Readonly<Record<string, string>> = {
+  [RECEIPT_UNPRINTABLE_PROBLEM]: RECEIPT_UNPRINTABLE,
+  [RECEIPT_SIGNING_PAUSED_PROBLEM]: RECEIPT_FAILED,
+};
 const YEARLY_PROBLEMS_SHOWN_AS_TITLE = [
   'donations/year-not-yet-completed',
   'donations/yearly-receipt-not-available',
@@ -55,6 +107,13 @@ export class DonorDonations {
   private readonly donations = inject(DonationsApi);
   private readonly bankAccountsApi = inject(BankAccountsApi);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly receiptPdf = inject(ReceiptPdf);
+  private readonly delivery = inject(PdfDelivery);
+  private readonly restart = inject(ReceiptRestart);
+  private readonly document = inject(DOCUMENT);
+  private readonly injector = inject(Injector);
+  private readonly pendingDownload =
+    inject(ActivatedRoute).snapshot.queryParamMap.get(RECEIPT_RESTART_PARAM);
 
   readonly state = signal<DonationsState>('loading');
   readonly summary = signal<DonationSummaryResponse | null>(null);
@@ -75,11 +134,33 @@ export class DonorDonations {
 
   readonly receiptError = signal<ReceiptError | null>(null);
   private readonly downloads = signal<ReadonlySet<string>>(new Set());
-  private readonly savedReceipt = signal<SavedReceipt | null>(null);
+  private readonly receiptTasks = signal<ReadonlyMap<string, ReceiptTask>>(new Map());
+  private readonly running = new Map<string, Subscription>();
+  private readonly focusedAtStart = new Map<string, Element | null>();
+  private pendingStarted = false;
   private latestDonationsRequest = 0;
   private bankCheckEndedAt: number | null = null;
+  private readonly printedDonor = computed(() => {
+    const donor = this.auth.donor();
+    return donor === null
+      ? null
+      : JSON.stringify([
+          donor.name,
+          donor.address.street,
+          donor.address.postalCode,
+          donor.address.city,
+        ]);
+  });
 
   constructor() {
+    let printedBefore: string | null | undefined;
+    effect(() => {
+      const printed = this.printedDonor();
+      if (printedBefore !== undefined && printed !== printedBefore) {
+        this.dropReadyFiles();
+      }
+      printedBefore = printed;
+    });
     this.load();
     this.checkBank(false);
     this.bankAccountsApi
@@ -135,6 +216,7 @@ export class DonorDonations {
           this.summary.set(summary);
           this.items.set(list.items);
           this.state.set('ready');
+          this.startPendingDownload();
         }
         return list.items;
       }),
@@ -169,32 +251,146 @@ export class DonorDonations {
     return this.downloads().has(singleKey(item.id));
   }
 
-  yearlySaved(year: number): string | null {
-    return this.savedText(yearlyKey(year));
+  yearlyReady(year: number): boolean {
+    return this.readyFile(yearlyKey(year)) !== null;
   }
 
-  singleSaved(item: DonationItem): string | null {
-    return this.savedText(singleKey(item.id));
+  singleReady(item: DonationItem): boolean {
+    return this.readyFile(singleKey(item.id)) !== null;
   }
 
-  private savedText(key: string): string | null {
-    const saved = this.savedReceipt();
-    if (saved?.key !== key) {
-      return null;
-    }
-    const fileName = saved.fileName;
-    return $localize`:@@donor.dashboard.receipt.saved:Potvrzení ${fileName}:fileName: je stažené. Najdete ho ve stažených souborech.`;
+  yearlyTarget(year: number): string {
+    return downloadName(yearlyKey(year));
+  }
+
+  singleTarget(item: DonationItem): string {
+    return downloadName(singleKey(item.id));
+  }
+
+  yearlyError(year: number): string | null {
+    return this.errorAt(yearlyKey(year));
+  }
+
+  singleError(item: DonationItem): string | null {
+    return this.errorAt(singleKey(item.id));
+  }
+
+  yearlyProgress(year: number): DownloadProgressState | null {
+    return this.progressOf(yearlyKey(year));
+  }
+
+  singleProgress(item: DonationItem): DownloadProgressState | null {
+    return this.progressOf(singleKey(item.id));
+  }
+
+  cancelYearlyReceipt(year: number): void {
+    this.cancel(yearlyKey(year));
+  }
+
+  cancelSingleReceipt(item: DonationItem): void {
+    this.cancel(singleKey(item.id));
+  }
+
+  private errorAt(key: string): string | null {
+    const error = this.receiptError();
+    return error?.key === key ? error.message : null;
+  }
+
+  private progressOf(key: string): DownloadProgressState | null {
+    return this.receiptTasks().get(key)?.progress ?? null;
+  }
+
+  private readyFile(key: string): DownloadedFile | null {
+    return this.receiptTasks().get(key)?.file ?? null;
+  }
+
+  private setTask(key: string, task: Omit<ReceiptTask, 'key'> | null): void {
+    this.receiptTasks.update((tasks) => {
+      const next = new Map(tasks);
+      if (task === null) {
+        next.delete(key);
+      } else {
+        next.set(key, { key, ...task });
+      }
+      return next;
+    });
+  }
+
+  private dropFinishedTasks(): void {
+    this.receiptTasks.update(
+      (tasks) =>
+        new Map(
+          [...tasks].filter(
+            ([, task]) => task.progress.kind !== 'done' && task.progress.kind !== 'cancelled',
+          ),
+        ),
+    );
+  }
+
+  private dropReadyFiles(): void {
+    this.receiptTasks.update(
+      (tasks) =>
+        new Map(
+          [...tasks].filter(([, task]) => task.progress.kind === 'running' && task.file === null),
+        ),
+    );
+  }
+
+  private focusDownloadButtonIfLost(key: string): void {
+    afterNextRender(
+      () => {
+        const focused = this.document.activeElement;
+        const unmoved = focused === this.focusedAtStart.get(key);
+        this.focusedAtStart.delete(key);
+        if (focused !== null && focused !== this.document.body && !unmoved) {
+          return;
+        }
+        this.document
+          .querySelector<HTMLButtonElement>(`[data-receipt-download="${downloadName(key)}"]`)
+          ?.focus();
+      },
+      { injector: this.injector },
+    );
   }
 
   downloadYearlyReceipt(year: number): void {
-    this.download(yearlyKey(year), 'yearly', this.donations.yearlyReceipt(year));
+    this.download(yearlyKey(year), 'yearly', { year });
   }
 
   downloadSingleReceipt(item: DonationItem): void {
     if (!item.receiptAvailable) {
       return;
     }
-    this.download(singleKey(item.id), 'single', this.donations.singleReceipt(item.id));
+    this.download(singleKey(item.id), 'single', { donationId: item.id });
+  }
+
+  private startPendingDownload(): void {
+    const pending = this.pendingDownload;
+    if (pending === null || this.pendingStarted) {
+      return;
+    }
+    this.pendingStarted = true;
+    void this.router.navigate([], {
+      queryParams: { [RECEIPT_RESTART_PARAM]: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+    if (!this.restart.resumes(pending)) {
+      this.restart.finished();
+      return;
+    }
+    const year = YEARLY_DOWNLOAD.exec(pending);
+    if (year !== null && Number(year[1]) <= (this.summary()?.yearlyReceiptsAvailableThrough ?? 0)) {
+      this.downloadYearlyReceipt(Number(year[1]));
+      return;
+    }
+    const single = SINGLE_DOWNLOAD.exec(pending);
+    const item = this.items().find((each) => each.id === single?.[1]);
+    if (item !== undefined) {
+      this.downloadSingleReceipt(item);
+      return;
+    }
+    this.restart.finished();
   }
 
   private checkBank(byDonor: boolean): void {
@@ -250,27 +446,96 @@ export class DonorDonations {
     return problemTypeEndsWith(failure, UNAUTHENTICATED) || this.auth.status() === 'anonymous';
   }
 
-  private download(key: string, scope: ReceiptScope, file$: Observable<DownloadedFile>): void {
+  private download(key: string, scope: ReceiptScope, subject: ReceiptSubject): void {
     if (this.downloads().has(key)) {
       return;
     }
+    if (this.readyFile(key) !== null) {
+      this.open(key);
+      return;
+    }
     this.receiptError.set(null);
-    this.savedReceipt.set(null);
+    this.dropFinishedTasks();
     this.downloads.update((running) => new Set(running).add(key));
-    file$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: (file) => {
-        this.finishDownload(key);
-        saveBlob(file);
-        this.savedReceipt.set({ key, fileName: file.fileName });
-      },
-      error: (failure: unknown) => {
-        this.finishDownload(key);
-        this.receiptFailed(scope, failure);
-      },
+    this.focusedAtStart.set(key, this.document.activeElement);
+    const subscription = this.receiptPdf
+      .draw(subject)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (event) => this.receiptProgressed(key, scope, event),
+        error: (failure: unknown) => {
+          this.finishDownload(key);
+          this.setTask(key, null);
+          this.receiptFailed(scope, failure, key);
+          this.focusDownloadButtonIfLost(key);
+        },
+      });
+    this.running.set(key, subscription);
+  }
+
+  private receiptProgressed(key: string, scope: ReceiptScope, event: ReceiptPdfEvent): void {
+    if (event.kind === 'phase') {
+      const pages = Math.max(event.pages, 1);
+      this.setTask(key, {
+        file: null,
+        progress: {
+          kind: 'running',
+          step: PHASE_STEPS[event.phase] + Math.min(event.page, pages),
+          steps: STEPS_BEFORE_DRAWING + pages + STEPS_AFTER_DRAWING,
+          text: phaseText(event.phase),
+          ...(event.phase === 'drawing' && event.page > 0 ? { detail: pageText(event.page) } : {}),
+        },
+      });
+      return;
+    }
+    this.finishDownload(key);
+    this.restart.finished();
+    const file = event.file;
+    if (this.delivery.needsSecondTap(file)) {
+      this.setTask(key, { file, progress: finished('ready', readyText(scope, file.fileName)) });
+      this.focusDownloadButtonIfLost(key);
+      return;
+    }
+    this.delivery.save(file);
+    this.setTask(key, { file: null, progress: finished('done', savedText(file.fileName)) });
+    this.focusDownloadButtonIfLost(key);
+  }
+
+  private open(key: string): void {
+    const task = this.receiptTasks().get(key);
+    const file = task?.file ?? null;
+    if (task === undefined || file === null) {
+      return;
+    }
+    void this.delivery.share(file).then((outcome) => {
+      if (this.receiptTasks().get(key) !== task) {
+        return;
+      }
+      if (outcome === 'shared') {
+        this.setTask(key, { file: null, progress: finished('done', sharedText(file.fileName)) });
+      } else if (outcome === 'saved') {
+        this.setTask(key, { file: null, progress: finished('done', savedText(file.fileName)) });
+      } else if (outcome === 'failed') {
+        this.delivery.save(file);
+        this.setTask(key, { file: null, progress: finished('done', savedText(file.fileName)) });
+      }
     });
   }
 
+  private cancel(key: string): void {
+    const subscription = this.running.get(key);
+    if (subscription === undefined) {
+      return;
+    }
+    subscription.unsubscribe();
+    this.finishDownload(key);
+    this.restart.abandoned(downloadName(key));
+    this.setTask(key, { file: null, progress: finished('cancelled', RECEIPT_CANCELLED) });
+    this.focusDownloadButtonIfLost(key);
+  }
+
   private finishDownload(key: string): void {
+    this.running.delete(key);
     this.downloads.update((running) => {
       const remaining = new Set(running);
       remaining.delete(key);
@@ -278,28 +543,99 @@ export class DonorDonations {
     });
   }
 
-  private receiptFailed(scope: ReceiptScope, failure: unknown): void {
+  private drawingFailed(scope: ReceiptScope, failure: ReceiptPdfFailure, key: string): void {
+    if (failure.reason === 'tools-missing') {
+      const restart = this.restart.tryRestart(downloadName(key));
+      if (restart !== 'reloading') {
+        this.receiptError.set({
+          scope,
+          key,
+          message:
+            restart === 'reloaded-already' ? RECEIPT_TOOLS_STILL_MISSING : RECEIPT_TOOLS_MISSING,
+        });
+      }
+      return;
+    }
+    this.restart.abandoned(downloadName(key));
+    this.receiptError.set({ scope, key, message: DRAWING_FAILURE_TEXTS[failure.reason] });
+  }
+
+  private receiptFailed(scope: ReceiptScope, failure: unknown, key: string): void {
+    if (failure instanceof ReceiptPdfFailure) {
+      this.drawingFailed(scope, failure, key);
+      return;
+    }
+    this.restart.abandoned(downloadName(key));
     if (this.sessionEnded(failure)) {
       this.sendToSignIn();
       return;
     }
     const problem = problemOf(failure);
+    const shownWithDetail = Object.keys(PROBLEMS_SHOWN_WITH_DETAIL).find((type) =>
+      problemTypeEndsWith(failure, type),
+    );
+    if (shownWithDetail !== undefined) {
+      this.receiptError.set({
+        scope,
+        key,
+        message: describeProblemWithoutFields(failure, PROBLEMS_SHOWN_WITH_DETAIL[shownWithDetail]),
+      });
+      return;
+    }
     if (
       scope === 'yearly' &&
       YEARLY_PROBLEMS_SHOWN_AS_TITLE.some((type) => problemTypeEndsWith(failure, type))
     ) {
-      this.receiptError.set({ scope, message: problem?.title || RECEIPT_FAILED });
+      this.receiptError.set({ scope, key, message: problem?.title || RECEIPT_FAILED });
       return;
     }
     const rowOutdated =
       problem?.status === NOT_FOUND || problemTypeEndsWith(failure, RECEIPT_BEFORE_FIRST_YEAR);
     if (scope === 'single' && rowOutdated) {
-      this.receiptError.set({ scope, message: problem?.title || RECEIPT_FAILED });
+      this.receiptError.set({ scope, key, message: problem?.title || RECEIPT_FAILED });
       this.fetchDonations();
       return;
     }
-    this.receiptError.set({ scope, message: RECEIPT_FAILED });
+    this.receiptError.set({ scope, key, message: RECEIPT_FAILED });
   }
+}
+
+function phaseText(phase: ReceiptPdfPhase): string {
+  switch (phase) {
+    case 'data':
+      return $localize`:@@donor.dashboard.receipt.phase.data:Připravujeme údaje potvrzení…`;
+    case 'tools':
+      return $localize`:@@donor.dashboard.receipt.phase.tools:Načítáme nástroje pro PDF…`;
+    case 'drawing':
+      return $localize`:@@donor.dashboard.receipt.phase.drawingPdf:Vytváříme PDF…`;
+  }
+}
+
+function pageText(page: number): string {
+  return $localize`:@@donor.dashboard.receipt.phase.page:Strana ${page}:page:`;
+}
+
+function finished(kind: 'ready' | 'done' | 'cancelled', text: string): DownloadProgressState {
+  return { kind, step: 1, steps: 1, text };
+}
+
+function savedText(fileName: string): string {
+  return $localize`:@@donor.dashboard.receipt.saved:Potvrzení ${fileName}:fileName: je stažené. Najdete ho ve stažených souborech.`;
+}
+
+function readyText(scope: ReceiptScope, fileName: string): string {
+  if (scope === 'single') {
+    return $localize`:@@donor.dashboard.receipt.readySingle:Potvrzení ${fileName}:fileName: je připravené. Otevřete ho tlačítkem Otevřít PDF.`;
+  }
+  return $localize`:@@donor.dashboard.receipt.ready:Potvrzení ${fileName}:fileName: je připravené. Otevřete ho tlačítkem Otevřít potvrzení.`;
+}
+
+function sharedText(fileName: string): string {
+  return $localize`:@@donor.dashboard.receipt.shared:Potvrzení ${fileName}:fileName: jste předali z nabídky sdílení.`;
+}
+
+function downloadName(key: string): string {
+  return key.replace(/^yearly:/, 'rok-').replace(/^single:/, 'dar-');
 }
 
 function outcomeOf(

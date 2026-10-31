@@ -234,6 +234,33 @@
   --side-nav-width: 240px;
   --top-bar-height: 65px;
   --floating-notice-height: 0rem;
+
+  --receipt-color-text: #1a1a2e;
+  --receipt-color-muted: #555555;
+  --receipt-color-english: #6b7280;
+  --receipt-color-rule: #b8bec6;
+  --receipt-color-row-rule: #dde1e6;
+  --receipt-color-table-head: #f1f3f5;
+  --receipt-color-card: #f1f3f5;
+  --receipt-color-card-rule: #b8bec6;
+  --receipt-color-notice: #fdf1e3;
+  --receipt-color-notice-border: #e0a458;
+  --receipt-color-code: #1a1a2e;
+  --receipt-color-code-mark: #2563eb;
+  --receipt-color-code-star: #005dab;
+  --receipt-color-code-star-fill: #ffffff;
+  --receipt-size-body: 9.5pt;
+  --receipt-size-small: 7.5pt;
+  --receipt-size-title: 13pt;
+  --receipt-size-heading: 10.5pt;
+  --receipt-leading: 1.3;
+  --receipt-margin-top: 15mm;
+  --receipt-margin-right: 18mm;
+  --receipt-margin-bottom: 20mm;
+  --receipt-margin-left: 18mm;
+  --receipt-font-body: 'body.dff39d7ece2769ee.ttf';
+  --receipt-font-bold: 'body-bold.9c1666e97d06aa76.ttf';
+  --receipt-font-heading: 'heading.45cd81d9ffd96e49.ttf';
 }
 
 @media (prefers-contrast: more) {

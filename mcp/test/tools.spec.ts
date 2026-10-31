@@ -597,16 +597,14 @@ describe('Given an administrator connected with the reading permission only', ()
     expect(description).toContain('no receipt can be issued');
   });
 
-  it('when the tools are listed, then the receipt signature tool does not promise that receipts already print a vector signature', async () => {
+  it('when the tools are listed, then the receipt signature tool says receipts issued after the upload carry a scan and a vector alike', async () => {
     const { tools } = await client.listTools();
     const description =
       tools.find((tool) => tool.name === 'nfnn_receipt_signature')?.description ?? '';
-    expect(description).not.toContain(
-      'Receipts issued after the upload carry it above the signatory',
-    );
     expect(description).toContain(
-      'the portrait and a VECTOR signature only once receipts are drawn in the browser; until then they carry the line and the name',
+      'Receipts issued after a change carry the portrait, the signature (a scan and a vector alike), the name and the receipt role.',
     );
+    expect(description).not.toContain('until then');
   });
 
   it('when the receipt signature is asked, then the answer carries portraitPrintable and the description explains a false one', async () => {

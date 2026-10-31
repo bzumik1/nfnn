@@ -10,6 +10,7 @@ import {
   sharedCases,
   topicSchemas,
 } from './shared-cases';
+import { parseVectorArt } from '../app/features/donations/receipt-pdf/vector-art';
 
 interface EditableCaseFile {
   source: string;
@@ -180,6 +181,26 @@ describe('Given the SPAYD cases and the payment QR cases', () => {
 
     expect(Object.keys(encodedTexts).length).toBeGreaterThan(0);
     expect(encodedTexts).toEqual(textsOfSpaydCases());
+  });
+});
+
+describe('Given the frozen receipt cases and the printed receipt cases', () => {
+  it('when they are matched by case name, then every frozen receipt has its printed text and each names the same v2 sample', () => {
+    const printed = Object.fromEntries(
+      sharedCases('receipts/v1/printed.json').map((sharedCase) => [
+        sharedCase.name,
+        sharedCase.input.v2Sample,
+      ]),
+    );
+    const frozen = Object.fromEntries(
+      sharedCases('receipts/v1/frozen.json').map((sharedCase) => [
+        sharedCase.name,
+        sharedCase.input.v2Sample,
+      ]),
+    );
+
+    expect(Object.keys(printed).length).toBeGreaterThan(0);
+    expect(printed).toEqual(frozen);
   });
 });
 
@@ -407,6 +428,26 @@ describe('Given the vector signature cases', () => {
     expect(schemaViolations(VECTOR_CASES, file).join('\n')).toMatch(
       /\/cases\/0\/expected\/canonical must match pattern/,
     );
+  });
+
+  it('when each canonical JSON is read as the receipt drawing reads the served bytes, then it gives the view box and paths of its case', () => {
+    const cases = sharedCases(VECTOR_CASES);
+
+    expect(cases.length).toBeGreaterThan(0);
+    for (const sharedCase of cases) {
+      expect(parseVectorArt(sharedCase.expected.canonical)).toEqual(
+        JSON.parse(sharedCase.expected.canonical),
+      );
+    }
+  });
+
+  it('when a canonical JSON carries a fill the receipt drawing refuses, then reading it fails', () => {
+    const canonical = sharedCases(VECTOR_CASES)[0].expected.canonical.replace(
+      /"fill":"#[0-9a-f]{6}"/,
+      '"fill":"red"',
+    );
+
+    expect(() => parseVectorArt(canonical)).toThrow(/refused/);
   });
 });
 

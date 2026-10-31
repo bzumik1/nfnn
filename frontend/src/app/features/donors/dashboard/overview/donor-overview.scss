@@ -109,10 +109,29 @@
     flex-basis: 100%;
     margin-top: 0;
   }
+}
 
-  .receipt-saved span {
-    margin-top: var(--space-1-5);
-    overflow-wrap: anywhere;
+.receipt-ready-action {
+  display: grid;
+  justify-items: end;
+}
+
+.receipt-saved {
+  inline-size: 0;
+  min-inline-size: 100%;
+  justify-items: end;
+  text-align: right;
+}
+
+@include bp.down(cards) {
+  .receipt-ready-action {
+    flex-basis: 100%;
+    justify-items: start;
+  }
+
+  .receipt-saved {
+    justify-items: start;
+    text-align: left;
   }
 }
 

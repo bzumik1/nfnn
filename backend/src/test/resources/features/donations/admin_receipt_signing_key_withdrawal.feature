@@ -31,7 +31,7 @@ Feature: An administrator withdraws a leaked receipt signing key from the web, w
     Then the server logged the error "Receipt signing key 21fe31df of this server is withdrawn, so the server signs no receipt until it starts with a new seed"
     And the server's admin action "REGISTER_RECEIPT_SIGNING_KEY" is recorded 1 time with details containing "21fe31df"
 
-  Scenario: Until the server starts with a new seed, no receipt is issued or downloaded, not even one issued before the withdrawal, and the administration issues none either
+  Scenario: Until the server starts with a new seed, no receipt is issued, not even once more one issued before the withdrawal, which still reads back, and the administration issues none either
     Given the bank account has these movements:
       | id   | date       | amount | account    | bankCode | name          | variableSymbol |
       | 3001 | 2026-11-02 | 500.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
@@ -42,9 +42,10 @@ Feature: An administrator withdraws a leaked receipt signing key from the web, w
     When "Jana" issues the receipt of her donation received on 2026-11-02
     Then the response status is 409
     And the problem type ends with "donations/receipt-signing-paused"
-    When "Jana" downloads the receipt of her donation received on 2026-11-02
-    Then the response status is 409
-    And the problem type ends with "donations/receipt-signing-paused"
+    When "Jana" reads receipt "2026-000001"
+    Then the response status is 200
+    And the issued receipt has number "2026-000001"
+    And the frozen receipt is signed with the server's key
     When "Jana" issues in the administration the receipt of the donation of "Jana" received on 2026-11-02
     Then the response status is 409
     And the problem type ends with "donations/receipt-signing-paused"

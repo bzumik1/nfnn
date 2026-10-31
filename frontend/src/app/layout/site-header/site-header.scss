@@ -5,6 +5,7 @@
 }
 
 .nav {
+  container: site-nav / inline-size;
   position: fixed;
   top: 0;
   left: 0;
@@ -265,7 +266,7 @@
   }
 }
 
-@include bp.down(nav) {
+@include bp.container-down(site-nav, nav) {
   .desktop-nav {
     display: none;
   }
@@ -279,7 +280,7 @@
   }
 }
 
-@include bp.up(nav) {
+@include bp.container-up(site-nav, nav) {
   .mobile-menu {
     display: none;
   }

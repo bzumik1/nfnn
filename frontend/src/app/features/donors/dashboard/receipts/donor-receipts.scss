@@ -63,10 +63,11 @@
   align-items: flex-end;
 }
 
-.receipt-saved span {
-  margin-top: var(--space-1-5);
+.receipt-saved {
+  inline-size: 0;
+  min-inline-size: 100%;
+  justify-items: end;
   text-align: right;
-  overflow-wrap: anywhere;
 }
 
 .year-note {
@@ -123,7 +124,8 @@ a {
     align-items: flex-start;
   }
 
-  .receipt-saved span {
+  .receipt-saved {
+    justify-items: start;
     text-align: left;
   }
 
@@ -145,5 +147,9 @@ a {
 }
 
 .single-gifts {
+  margin-top: var(--space-4);
+}
+
+.verify-link {
   margin-top: var(--space-4);
 }
