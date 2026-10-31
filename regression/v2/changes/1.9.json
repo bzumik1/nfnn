@@ -24,6 +24,18 @@
     "contract": "docs/frontend-overview.md, verification-qr.ts"
   },
   {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/schemas/receipts/printable.schema.json",
+    "reason": "1.9 adds the schema of shared-cases/receipts/printable.json: a text, the text a receipt prints for it and the code points of it outside the printable set, so Vitest checks every case's shape",
+    "contract": ".claude/rules/testing.md, Logic on both sides"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/schemas/receipts/v1/printed.schema.json",
+    "reason": "1.9 adds the schema of shared-cases/receipts/v1/printed.json: per frozen case the printed lines, the yearly table's column headers, the footer line and the page count, so Vitest checks every case's shape",
+    "contract": ".claude/rules/testing.md, Logic on both sides"
+  },
+  {
     "kind": "retired",
     "suite": "frontend-vitest",
     "test": "src/app/features/donations/donations-api.spec.ts > Given the donations API > when the receipt of one donation is requested, then it downloads that donation's PDF under the file name from the server",
@@ -70,6 +82,34 @@
     "reason": "1.9 draws the donor's receipts in the browser from the frozen data of POST /api/donations/me/receipts, so DonationsApi no longer fetches the PDF of a donation or a year (singleReceipt and yearlyReceipt are gone); the file-name reading from Content-Disposition stays for the administration's downloads as downloadedFile",
     "replacement": "src/app/features/donations/donations-api.spec.ts > Given a file the server sends for download > when the server sends no file name, then the name the caller gives is used",
     "contract": "docs/frontend-overview.md, donations-api.ts and receipt-pdf"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.pdf.ReceiptCorpusTest > Given the template on the classpath, when the corpus is rendered, then it is the template the history recorded",
+    "reason": "1.9 changes the receipt template on the classpath (the issue date without a comma, Jakub 2026-10-31), so the v2 corpus renders with the template v2 issued with, read from the recorded history, and the test checks that recorded template instead of the classpath's",
+    "replacement": "donations.infrastructure.pdf.ReceiptCorpusTest > Given the template v2 issued with, when the corpus is rendered, then it renders with that recorded template whatever the classpath holds"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the donations page opens > then a running download disables its button and says the PDF is being prepared until it arrives",
+    "reason": "1.9 keeps a running download's button focusable with aria-disabled instead of disabled, so the focus stays on it through the drawing and the save",
+    "replacement": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the donations page opens > then a running download marks its button unavailable, keeps it focusable and says the PDF is being prepared until it arrives"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the receipts page opens > then a running download disables its button and says the PDF is being prepared until it arrives",
+    "reason": "1.9 keeps a running download's button focusable with aria-disabled instead of disabled, so the focus stays on it through the drawing and the save",
+    "replacement": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the receipts page opens > then a running download marks its button unavailable, keeps it focusable and says the PDF is being prepared until it arrives"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/profile-card/profile-card.spec.ts > Given the donor data card in the overview > when a person opens the overview > and the server refuses the data, then the form stays and says why",
+    "reason": "1.9 refuses an unprintable name, street or city at its field, so a field error from the server stands at that field and takes the focus while the form line keeps only the title",
+    "replacement": "src/app/features/donors/dashboard/profile-card/profile-card.spec.ts > Given the donor data card in the overview > when a person opens the overview > and the server refuses a field, then the form stays, the message stands at that field, which takes the focus, and the form line gives only the title"
   },
   {
     "path": "GET /api/donations/me/{id}/receipt",
