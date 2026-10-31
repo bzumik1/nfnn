@@ -6,6 +6,7 @@ import {
   formatReceiptDateEn,
 } from '../receipt-format';
 import { FrozenReceipt } from './frozen-receipt';
+import { printedText } from './receipt-characters';
 
 export interface Bilingual {
   readonly cs: string;
@@ -151,11 +152,33 @@ function bracketed(value: string): string {
   return `(${value})`;
 }
 
+function printed<T>(value: T, outside: Set<number>): T {
+  if (typeof value === 'string') {
+    const text = printedText(value);
+    text.outside.forEach((codePoint) => outside.add(codePoint));
+    return text.text as T;
+  }
+  if (Array.isArray(value)) {
+    return value.map((item: unknown) => printed(item, outside)) as T;
+  }
+  if (value !== null && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [key, printed(item, outside)]),
+    ) as T;
+  }
+  return value;
+}
+
 export function receiptDocument(
-  receipt: FrozenReceipt,
+  frozen: FrozenReceipt,
   issuedAt: string,
   captions: ReceiptCaptions,
 ): ReceiptDocument {
+  const outside = new Set<number>();
+  const receipt = printed(frozen, outside);
+  if (outside.size > 0) {
+    throw new ReceiptUnprintable([...outside]);
+  }
   const texts = textsOf(receipt);
   const foundation = receipt.foundation;
   const foundationAddress = singleLine(foundation.address);

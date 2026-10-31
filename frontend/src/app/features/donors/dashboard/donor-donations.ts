@@ -2,7 +2,11 @@ import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core'
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { catchError, forkJoin, last, map, Observable, of, Subscription, tap } from 'rxjs';
-import { problemOf, problemTypeEndsWith } from '../../../core/auth/api-problem';
+import {
+  describeProblemWithoutFields,
+  problemOf,
+  problemTypeEndsWith,
+} from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { BankAccountItem, BankAccountsApi } from '../../donations/bank-accounts-api';
@@ -19,6 +23,7 @@ import {
   ReceiptPdf,
   ReceiptPdfEvent,
   ReceiptPdfFailure,
+  ReceiptPdfFailureReason,
   ReceiptPdfPhase,
 } from '../../donations/receipt-pdf/receipt-pdf';
 import { RECEIPT_RESTART_PARAM, ReceiptRestart } from '../../donations/receipt-pdf/receipt-restart';
@@ -49,7 +54,15 @@ const RECEIPT_FAILED = $localize`:@@donor.dashboard.receipt.error:Potvrzení se 
 const RECEIPT_DRAWING_FAILED = $localize`:@@donor.dashboard.receipt.drawingFailed:PDF se v prohlížeči nepodařilo vytvořit. Zkuste to prosím znovu; když to nepomůže, zkuste jiný prohlížeč nebo nám napište na info@nfnn.cz.`;
 const RECEIPT_IMAGE_FAILED = $localize`:@@donor.dashboard.receipt.imageFailed:Podpis na potvrzení se nepodařilo ověřit, a tak jsme PDF nevytvořili. Zkuste to prosím znovu; když to nepomůže, napište nám na info@nfnn.cz.`;
 const RECEIPT_TOOLS_MISSING = $localize`:@@donor.dashboard.receipt.toolsMissing:Web se mezitím aktualizoval. Obnovte prosím stránku a stáhněte potvrzení znovu.`;
+const RECEIPT_UNPRINTABLE = $localize`:@@donor.dashboard.receipt.unprintable:Údaje potvrzení obsahují znak, který v PDF neumíme vytisknout, a tak jsme PDF nevytvořili. Napište nám prosím na info@nfnn.cz.`;
 const RECEIPT_CANCELLED = $localize`:@@donor.dashboard.receipt.cancelled:Přípravu potvrzení jste zrušili.`;
+const DRAWING_FAILURE_TEXTS: Readonly<Record<ReceiptPdfFailureReason, string>> = {
+  'tools-missing': RECEIPT_TOOLS_MISSING,
+  fonts: RECEIPT_DRAWING_FAILED,
+  image: RECEIPT_IMAGE_FAILED,
+  drawing: RECEIPT_DRAWING_FAILED,
+  unprintable: RECEIPT_UNPRINTABLE,
+};
 const RECEIPT_STEPS = 3;
 const PHASE_STEPS: Readonly<Record<ReceiptPdfPhase, number>> = { data: 1, tools: 2, drawing: 3 };
 const YEARLY_DOWNLOAD = /^rok-(\d{4})$/;
@@ -57,6 +70,7 @@ const SINGLE_DOWNLOAD = /^dar-([0-9a-zA-Z-]{1,64})$/;
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const RECEIPT_BEFORE_FIRST_YEAR = 'donations/receipt-before-first-year';
+const RECEIPT_UNPRINTABLE_PROBLEM = 'donations/receipt-unprintable';
 const YEARLY_PROBLEMS_SHOWN_AS_TITLE = [
   'donations/year-not-yet-completed',
   'donations/yearly-receipt-not-available',
@@ -414,8 +428,7 @@ export class DonorDonations {
       }
       return;
     }
-    const message = failure.reason === 'image' ? RECEIPT_IMAGE_FAILED : RECEIPT_DRAWING_FAILED;
-    this.receiptError.set({ scope, message });
+    this.receiptError.set({ scope, message: DRAWING_FAILURE_TEXTS[failure.reason] });
   }
 
   private receiptFailed(scope: ReceiptScope, failure: unknown, key: string): void {
@@ -428,6 +441,13 @@ export class DonorDonations {
       return;
     }
     const problem = problemOf(failure);
+    if (problemTypeEndsWith(failure, RECEIPT_UNPRINTABLE_PROBLEM)) {
+      this.receiptError.set({
+        scope,
+        message: describeProblemWithoutFields(failure, RECEIPT_UNPRINTABLE),
+      });
+      return;
+    }
     if (
       scope === 'yearly' &&
       YEARLY_PROBLEMS_SHOWN_AS_TITLE.some((type) => problemTypeEndsWith(failure, type))

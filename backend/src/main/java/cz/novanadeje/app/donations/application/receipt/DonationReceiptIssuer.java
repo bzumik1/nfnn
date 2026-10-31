@@ -13,6 +13,7 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptFingerprint;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptIssueLimitReached;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatureRepository;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptUnprintable;
 import cz.novanadeje.app.donations.domain.receipt.ReplacedReceipt;
 import cz.novanadeje.app.donations.domain.receipt.Signatory;
 import cz.novanadeje.app.donations.domain.receipt.SignatureImage;
@@ -80,6 +81,7 @@ public class DonationReceiptIssuer {
     }
 
     private DonationReceipt issueNew(ReceiptRequest request, ReceiptFingerprint fingerprint, Optional<DonationReceipt> replaced) {
+        ReceiptUnprintable.refuseUnlessPrintable(request.record(), foundation, signatory);
         if (replaced.isPresent() && receipts.countReplacementsIssuedAfter(request.donor(), clock.instant().minus(ISSUE_LIMIT_WINDOW)) >= REPLACEMENTS_PER_DONOR_A_DAY) {
             throw new ReceiptIssueLimitReached(request.donor(), REPLACEMENTS_PER_DONOR_A_DAY);
         }

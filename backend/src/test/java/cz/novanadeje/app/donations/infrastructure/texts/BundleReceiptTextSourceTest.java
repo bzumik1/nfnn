@@ -3,8 +3,11 @@ package cz.novanadeje.app.donations.infrastructure.texts;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptTextSet;
 import cz.novanadeje.app.donations.infrastructure.pdf.ReceiptTemplate;
 import cz.novanadeje.app.shared.domain.LocaleCode;
+import cz.novanadeje.app.shared.domain.PrintableText;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -41,5 +44,15 @@ class BundleReceiptTextSourceTest {
         assertThat(texts.english().orElseThrow().keySet()).allMatch(key -> key.startsWith("receipt."))
                 .noneMatch(key -> key.startsWith("receipt.fileName."));
         assertThat(texts.english().orElseThrow().keySet()).isEqualTo(texts.czech().keySet());
+    }
+
+    @Test
+    @DisplayName("Given the bundle, when the Czech and English receipt texts are read, then every one of them prints as it is")
+    void should_print_every_text_as_it_is_when_read_given_bundle() {
+        ReceiptTextSet texts = source.textsFor(LocaleCode.EN);
+
+        assertThat(texts.czech().values()).allSatisfy(text -> assertThat(PrintableText.of(text)).isEqualTo(new PrintableText(text, List.of())));
+        assertThat(texts.english().orElseThrow().values())
+                .allSatisfy(text -> assertThat(PrintableText.of(text)).isEqualTo(new PrintableText(text, List.of())));
     }
 }

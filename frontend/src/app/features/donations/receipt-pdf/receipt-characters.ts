@@ -45,6 +45,36 @@ export const RECEIPT_PRINTABLE_RANGES: readonly CodePointRange[] = [
   [0x2212, 0x2212],
 ];
 
+export const RECEIPT_DROPPED_RANGES: readonly CodePointRange[] = [
+  [0x00ad, 0x00ad],
+  [0x061c, 0x061c],
+  [0x180e, 0x180e],
+  [0x200b, 0x200f],
+  [0x202a, 0x202e],
+  [0x2060, 0x2064],
+  [0x2066, 0x206f],
+  [0xfeff, 0xfeff],
+];
+
+function within(ranges: readonly CodePointRange[], codePoint: number): boolean {
+  return ranges.some(([first, last]) => codePoint >= first && codePoint <= last);
+}
+
+function codePointOf(character: string): number {
+  return character.codePointAt(0) ?? 0;
+}
+
 export function printedText(raw: string): PrintedText {
-  return { text: raw, outside: [] };
+  const text = Array.from(raw)
+    .filter((character) => !within(RECEIPT_DROPPED_RANGES, codePointOf(character)))
+    .join('')
+    .normalize('NFC');
+  const outside = new Set<number>();
+  for (const character of text) {
+    const codePoint = codePointOf(character);
+    if (!within(RECEIPT_PRINTABLE_RANGES, codePoint)) {
+      outside.add(codePoint);
+    }
+  }
+  return { text, outside: [...outside] };
 }

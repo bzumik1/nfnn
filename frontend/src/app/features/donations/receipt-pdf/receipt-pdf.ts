@@ -5,7 +5,12 @@ import { defer, from, Observable, of, switchMap, timeout } from 'rxjs';
 import { DownloadedFile } from '../donations-api';
 import { ReceiptSubject } from './frozen-receipt';
 import { ReceiptArt, receiptArt } from './receipt-art';
-import { ReceiptCaptions, receiptDocument } from './receipt-document';
+import {
+  ReceiptCaptions,
+  ReceiptDocument,
+  receiptDocument,
+  ReceiptUnprintable,
+} from './receipt-document';
 import { canvasColorToHex, resolveReceiptStyle, ReceiptStyle } from './receipt-style';
 import { ReceiptWorker } from './receipt-worker-messages';
 import { ReceiptsApi } from './receipts-api';
@@ -16,7 +21,8 @@ export type ReceiptPdfEvent =
   | { readonly kind: 'phase'; readonly phase: ReceiptPdfPhase; readonly page: number }
   | { readonly kind: 'done'; readonly file: DownloadedFile };
 
-export type ReceiptPdfFailureReason = 'tools-missing' | 'fonts' | 'image' | 'drawing';
+export type ReceiptPdfFailureReason =
+  'tools-missing' | 'fonts' | 'image' | 'drawing' | 'unprintable';
 
 export class ReceiptPdfFailure extends Error {
   constructor(readonly reason: ReceiptPdfFailureReason) {
@@ -86,21 +92,40 @@ export class ReceiptPdf {
         .subscribe({
           next: ({ issued, signature, portrait }) => {
             subscriber.next({ kind: 'phase', phase: 'tools', page: 0 });
-            const document = receiptDocument(issued.receipt, issued.issuedAt, captions());
+            let document: ReceiptDocument;
+            try {
+              document = receiptDocument(issued.receipt, issued.issuedAt, captions());
+            } catch (failure: unknown) {
+              subscriber.error(
+                new ReceiptPdfFailure(
+                  failure instanceof ReceiptUnprintable ? 'unprintable' : 'drawing',
+                ),
+              );
+              return;
+            }
             let ready = false;
-            worker = this.environment.worker();
+            try {
+              worker = this.environment.worker();
+            } catch {
+              subscriber.error(new ReceiptPdfFailure('tools-missing'));
+              return;
+            }
             worker.onerror = () =>
               subscriber.error(new ReceiptPdfFailure(ready ? 'drawing' : 'tools-missing'));
             worker.onmessage = ({ data }) => {
               switch (data.kind) {
                 case 'ready':
                   ready = true;
-                  worker?.postMessage({
-                    document,
-                    style: this.environment.style(),
-                    signature,
-                    portrait,
-                  });
+                  try {
+                    worker?.postMessage({
+                      document,
+                      style: this.environment.style(),
+                      signature,
+                      portrait,
+                    });
+                  } catch {
+                    subscriber.error(new ReceiptPdfFailure('drawing'));
+                  }
                   break;
                 case 'page':
                   subscriber.next({ kind: 'phase', phase: 'drawing', page: data.page });

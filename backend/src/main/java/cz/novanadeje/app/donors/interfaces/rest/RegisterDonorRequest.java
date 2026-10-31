@@ -14,7 +14,7 @@ import jakarta.validation.constraints.Size;
 
 record RegisterDonorRequest(
         @NotNull DonorType type,
-        @NotBlank @Size(max = Donor.MAX_NAME_LENGTH) String name,
+        @NotBlank @Size(max = Donor.MAX_NAME_LENGTH) @PrintableOnReceipt String name,
         @ValidCompanyIdentifier String companyIdentifier,
         @NotNull @Valid AddressRequest address,
         @NotBlank @Email @Size(max = 254) String email,
