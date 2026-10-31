@@ -1,13 +1,11 @@
 package cz.novanadeje.app.operations.infrastructure.backup;
 
 import cz.novanadeje.app.operations.application.settings.ApplicationRestarter;
-import cz.novanadeje.app.shared.application.event.ReceiptSigningKeyWithdrawn;
+import cz.novanadeje.app.shared.application.event.ReceiptSigningKeyWithdrawalAnnounced;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.scheduling.annotation.Async;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.event.TransactionPhase;
-import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -29,9 +27,8 @@ class ReceiptSeedRenewal {
         this.restarter = restarter;
     }
 
-    @Async
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void renewSeed(ReceiptSigningKeyWithdrawn withdrawn) {
+    @EventListener
+    public void renewSeed(ReceiptSigningKeyWithdrawalAnnounced withdrawn) {
         if (!withdrawn.current()) {
             return;
         }
