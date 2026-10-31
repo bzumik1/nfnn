@@ -42,6 +42,18 @@ describe('Given a receipt download whose drawing tools went missing after a new 
     expect(restart.tryRestart('rok-2025')).toBe(true);
   });
 
+  it('when the reloaded page asks whether to resume the download its address names, then only the download this tab reloaded for is resumed', () => {
+    restart.tryRestart('rok-2025');
+
+    expect(restart.resumes('rok-2025')).toBe(true);
+    expect(restart.resumes('rok-2024')).toBe(false);
+    expect(restart.resumes('dar-d-1')).toBe(false);
+  });
+
+  it('when a page opens with a download in its address but this tab never reloaded for it, then it is not resumed', () => {
+    expect(restart.resumes('rok-2025')).toBe(false);
+  });
+
   it('when the browser keeps no session storage, then it never reloads, so it cannot loop', () => {
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('blocked');

@@ -1,3 +1,4 @@
+import type { MockInstance } from 'vitest';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import {
   HttpTestingController,
@@ -35,6 +36,7 @@ import { FakeReceiptPdfEnvironment } from '../../donations/receipt-pdf/testing/f
 import {
   frozenCase,
   SINGLE_PERSON_CS,
+  YEARLY_120,
   YEARLY_ONE,
 } from '../../donations/receipt-pdf/testing/receipt-fixtures';
 import { donorsRoutes } from '../donors.routes';
@@ -1228,6 +1230,61 @@ describe('Given a signed-in donor in the donor area', () => {
       );
     });
 
+    it('then a single receipt started while the yearly one is drawn keeps its own line, and neither takes the other one away', async () => {
+      receiptEnvironment.autoDraw = false;
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+      const yearlyLine = `${yearSection(2025)} .gift-year-head .receipt-saved`;
+      const singleLine = `${yearSection(2026)} tbody tr:nth-child(2) .receipt-saved`;
+
+      await click(`${yearSection(2025)} .yearly-pdf`);
+      receiptRequest({ year: 2025 }).flush(issuedYearly(2025));
+      await settle();
+      const yearly = receiptEnvironment.last();
+      yearly.say({ kind: 'ready' });
+      yearly.say({ kind: 'page', page: 1 });
+      await settle();
+      await click(secondRowButton);
+
+      expect(text(yearlyLine)).toBe('Vytváříme PDF, strana 1…');
+      expect(text(singleLine)).toBe('Připravujeme údaje potvrzení…');
+      receiptRequest({ donationId: 'd-3' }).flush(issuedSingle('2026-000017'));
+      await settle();
+      receiptEnvironment.last().drawAll();
+      await settle();
+
+      expect(text(singleLine)).toBe(
+        'Potvrzení potvrzeni-o-daru-2026-000017.pdf je stažené. Najdete ho ve stažených souborech.',
+      );
+      expect(text(yearlyLine)).toBe('Vytváříme PDF, strana 1…');
+      yearly.drawAll();
+      await settle();
+      expect(text(yearlyLine)).toBe(
+        'Potvrzení potvrzeni-o-darech-2025.pdf je stažené. Najdete ho ve stažených souborech.',
+      );
+    });
+
+    it('then on an iPhone the receipt of one payment is opened by a second tap on the button of its row', async () => {
+      vi.spyOn(PdfDelivery.prototype, 'needsSecondTap').mockReturnValue(true);
+      const share = vi.spyOn(PdfDelivery.prototype, 'share').mockResolvedValue('shared');
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      await click(secondRowButton);
+      receiptRequest({ donationId: 'd-3' }).flush(issuedSingle('2026-000017'));
+      await settle();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(text(secondRowButton)).toBe('Otevřít PDF, dar z 10. 01. 2026, 1 000 Kč');
+      expect(document.activeElement).toBe(element(secondRowButton));
+      await click(secondRowButton);
+      await settleBlobFailure();
+
+      http.expectNone({ method: 'POST', url: RECEIPTS_URL });
+      expect(share).toHaveBeenCalledTimes(1);
+      expect(text(secondRowButton)).toBe('Stáhnout PDF, dar z 10. 01. 2026, 1 000 Kč');
+    });
+
     it('then a yearly receipt the server refuses shows the reason on the donations page', async () => {
       await open('/darce/dary');
       await respond(twoYearSummary(), twoYearDonations());
@@ -1936,8 +1993,9 @@ describe('Given a signed-in donor in the donor area', () => {
         receiptEnvironment.last().say({ kind: 'page', page: 1 });
         receiptEnvironment.last().say({ kind: 'page', page: 2 });
         await settle();
-        expect(line(2025)).toBe('Kreslíme PDF, strana 2…');
+        expect(line(2025)).toBe('Vytváříme PDF, strana 2…');
         expect(yearRow(2025).querySelector('progress')?.getAttribute('value')).toBe('3');
+        expect(yearRow(2025).querySelector('progress')?.getAttribute('max')).toBe('4');
 
         receiptEnvironment.last().drawAll();
         await settle();
@@ -1946,6 +2004,29 @@ describe('Given a signed-in donor in the donor area', () => {
         );
         expect(yearRow(2025).querySelector('progress')).toBeNull();
         expect(savedFiles).toEqual([{ fileName: 'potvrzeni-o-darech-2025.pdf', href: OBJECT_URL }]);
+      });
+
+      it('then each page drawn moves the bar on, against the pages a year of that many gifts takes', async () => {
+        await downloadYear(2025);
+        receiptRequest({ year: 2025 }).flush(
+          issued({ ...frozenCase(YEARLY_120), year: 2025, number: '2026-000001' }),
+        );
+        await settle();
+        receiptEnvironment.last().say({ kind: 'ready' });
+        const bar = (): string[] => {
+          const progress = yearRow(2025).querySelector('progress');
+          return [progress?.getAttribute('value') ?? '', progress?.getAttribute('max') ?? ''];
+        };
+
+        receiptEnvironment.last().say({ kind: 'page', page: 1 });
+        await settle();
+        expect(bar()).toEqual(['3', '8']);
+        receiptEnvironment.last().say({ kind: 'page', page: 3 });
+        await settle();
+        expect(bar()).toEqual(['5', '8']);
+        receiptEnvironment.last().say({ kind: 'page', page: 7 });
+        await settle();
+        expect(bar()).toEqual(['7', '8']);
       });
 
       it('then a drawing that takes longer than eight seconds can be cancelled, which stops it and frees the button', async () => {
@@ -1964,6 +2045,8 @@ describe('Given a signed-in donor in the donor area', () => {
         expect(line(2025)).toBe('Přípravu potvrzení jste zrušili.');
         expect(button('.yearly-pdf').disabled).toBe(false);
         expect(savedFiles).toEqual([]);
+        await vi.advanceTimersByTimeAsync(0);
+        expect(document.activeElement).toBe(yearRow(2025).querySelector('.yearly-pdf'));
       });
 
       it('then a drawing that fails says what to do next', async () => {
@@ -2021,32 +2104,89 @@ describe('Given a signed-in donor in the donor area', () => {
         );
       });
 
-      it('then on an iPhone the finished PDF waits for a second tap, which opens the share sheet', async () => {
-        vi.spyOn(PdfDelivery.prototype, 'needsSecondTap').mockReturnValue(true);
-        const share = vi.spyOn(PdfDelivery.prototype, 'share').mockResolvedValue('shared');
-        await downloadYear(2025);
-        receiptRequest({ year: 2025 }).flush(issuedYearly(2025));
-        await settle();
-        receiptEnvironment.last().drawAll();
-        await settle();
+      describe('and it is finished on an iPhone, where the PDF waits for a second tap', () => {
+        let share: MockInstance<PdfDelivery['share']>;
 
-        expect(savedFiles).toEqual([]);
-        expect(line(2025)).toBe(
-          'Potvrzení potvrzeni-o-darech-2025.pdf je připravené. Otevřete ho tlačítkem Otevřít potvrzení. Otevřít potvrzení',
-        );
-        (yearRow(2025).querySelector('.download-progress-open') as HTMLButtonElement).click();
-        await settleBlobFailure();
+        beforeEach(async () => {
+          vi.spyOn(PdfDelivery.prototype, 'needsSecondTap').mockReturnValue(true);
+          share = vi.spyOn(PdfDelivery.prototype, 'share').mockResolvedValue('shared');
+          await downloadYear(2025);
+          receiptRequest({ year: 2025 }).flush(issuedYearly(2025));
+          await settle();
+          receiptEnvironment.last().drawAll();
+          await settle();
+          await new Promise((resolve) => setTimeout(resolve, 0));
+        });
 
-        expect(share).toHaveBeenCalledWith(
-          expect.objectContaining({ fileName: 'potvrzeni-o-darech-2025.pdf' }),
-        );
-        expect(line(2025)).toBe(
-          'Potvrzení potvrzeni-o-darech-2025.pdf je otevřené. Uložte ho nebo ho pošlete, kam potřebujete.',
-        );
+        it('then nothing is saved yet, the line says it is ready and the same button now opens it, with the focus on it', () => {
+          expect(savedFiles).toEqual([]);
+          expect(line(2025)).toBe(
+            'Potvrzení potvrzeni-o-darech-2025.pdf je připravené. Otevřete ho tlačítkem Otevřít potvrzení.',
+          );
+          const open = yearRow(2025).querySelector('.yearly-pdf') as HTMLButtonElement;
+          expect(normalized(open.textContent ?? '')).toBe('Otevřít potvrzení za rok 2025 (PDF)');
+          expect(open.disabled).toBe(false);
+          expect(document.activeElement).toBe(open);
+          expect(yearRow(2025).querySelectorAll('button')).toHaveLength(1);
+        });
+
+        it('then the second tap on that button opens the share sheet and issues nothing again', async () => {
+          await downloadYear(2025);
+          await settleBlobFailure();
+
+          http.expectNone({ method: 'POST', url: RECEIPTS_URL });
+          expect(share).toHaveBeenCalledTimes(1);
+          expect(share).toHaveBeenCalledWith(
+            expect.objectContaining({ fileName: 'potvrzeni-o-darech-2025.pdf' }),
+          );
+          expect(receiptEnvironment.workers).toHaveLength(1);
+          expect(line(2025)).toBe(
+            'Potvrzení potvrzeni-o-darech-2025.pdf jste předali z nabídky sdílení.',
+          );
+          expect(normalized(yearRow(2025).querySelector('.yearly-pdf')?.textContent ?? '')).toBe(
+            'Stáhnout potvrzení za rok 2025 (PDF)',
+          );
+        });
+
+        it('then a share sheet the browser cannot open saves the file and says it is saved', async () => {
+          share.mockResolvedValue('saved');
+
+          await downloadYear(2025);
+          await settleBlobFailure();
+
+          expect(line(2025)).toBe(
+            'Potvrzení potvrzeni-o-darech-2025.pdf je stažené. Najdete ho ve stažených souborech.',
+          );
+        });
+
+        it('then a share sheet the donor closes keeps the file ready for another tap', async () => {
+          share.mockResolvedValue('dismissed');
+
+          await downloadYear(2025);
+          await settleBlobFailure();
+
+          expect(normalized(yearRow(2025).querySelector('.yearly-pdf')?.textContent ?? '')).toBe(
+            'Otevřít potvrzení za rok 2025 (PDF)',
+          );
+        });
       });
     });
 
+    it('then an address naming a download that no reload of this tab asked for issues nothing and drops it from the address', async () => {
+      sessionStorage.clear();
+      vi.spyOn(ReceiptRestart.prototype, 'finished');
+      await open('/darce/potvrzeni?stahnout=rok-2025');
+      await respond(twoYearSummary(), twoYearDonations());
+      await settle();
+
+      http.expectNone({ method: 'POST', url: RECEIPTS_URL });
+      expect(savedFiles).toEqual([]);
+      expect(TestBed.inject(Router).url).toBe('/darce/potvrzeni');
+      expect(ReceiptRestart.prototype.finished).toHaveBeenCalled();
+    });
+
     it('then an address naming a download after a reload starts it once the gifts are loaded and drops it from the address', async () => {
+      sessionStorage.setItem('nfnn.receipt-restart', 'rok-2025');
       vi.spyOn(ReceiptRestart.prototype, 'finished');
       await open('/darce/potvrzeni?stahnout=rok-2025');
       await respond(twoYearSummary(), twoYearDonations());

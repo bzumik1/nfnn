@@ -94,8 +94,8 @@ describe('Given the browser receipt PDF', () => {
 
     it('then it first issues the receipt, then starts the drawing tools and hands them the document and the theme', () => {
       expect(events).toEqual([
-        { kind: 'phase', phase: 'data', page: 0 },
-        { kind: 'phase', phase: 'tools', page: 0 },
+        { kind: 'phase', phase: 'data', page: 0, pages: 0 },
+        { kind: 'phase', phase: 'tools', page: 0, pages: 1 },
       ]);
       const worker = environment.last();
       expect(worker.requests).toEqual([]);
@@ -114,8 +114,8 @@ describe('Given the browser receipt PDF', () => {
       environment.last().drawAll(2);
 
       expect(events.slice(2)).toEqual([
-        { kind: 'phase', phase: 'drawing', page: 1 },
-        { kind: 'phase', phase: 'drawing', page: 2 },
+        { kind: 'phase', phase: 'drawing', page: 1, pages: 1 },
+        { kind: 'phase', phase: 'drawing', page: 2, pages: 1 },
         expect.objectContaining({ kind: 'done' }),
       ]);
       const done = events.at(-1);

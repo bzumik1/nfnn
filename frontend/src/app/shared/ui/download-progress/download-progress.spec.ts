@@ -4,17 +4,13 @@ import { DownloadProgress, DownloadProgressState } from './download-progress';
 describe('Given a download progress line', () => {
   let fixture: ComponentFixture<DownloadProgress>;
   let cancelled: number;
-  let opened: number;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({ imports: [DownloadProgress] }).compileComponents();
     vi.useFakeTimers();
     fixture = TestBed.createComponent(DownloadProgress);
-    fixture.componentRef.setInput('openLabel', 'Otevřít potvrzení');
     cancelled = 0;
-    opened = 0;
     fixture.componentInstance.cancelled.subscribe(() => cancelled++);
-    fixture.componentInstance.opened.subscribe(() => opened++);
     fixture.detectChanges();
   });
 
@@ -84,12 +80,10 @@ describe('Given a download progress line', () => {
   describe('when the file waits for a second tap to open', () => {
     beforeEach(() => show({ kind: 'ready', step: 3, steps: 3, text: 'Potvrzení je připravené.' }));
 
-    it('then the status says so and a button named by the caller opens it', () => {
+    it('then the status says so and it adds no button of its own, as the button that started the download opens the file', () => {
       expect(status()).toBe('Potvrzení je připravené.');
-      const open = element('.download-progress-open') as HTMLButtonElement;
-      expect(open.textContent?.trim()).toBe('Otevřít potvrzení');
-      open.click();
-      expect(opened).toBe(1);
+      expect(element('button')).toBeNull();
+      expect(element('progress')).toBeNull();
     });
   });
 });

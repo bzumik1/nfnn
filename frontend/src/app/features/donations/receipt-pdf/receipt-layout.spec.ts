@@ -4,7 +4,7 @@ import { sharedCases } from '../../../../testing/shared-cases';
 import { FrozenReceipt } from './frozen-receipt';
 import { ReceiptArt } from './receipt-art';
 import { receiptCaptions } from './receipt-captions';
-import { receiptDocument, ReceiptDocument } from './receipt-document';
+import { estimatedReceiptPages, receiptDocument, ReceiptDocument } from './receipt-document';
 import { drawReceipt, ReceiptAssets } from './receipt-layout';
 import { RECEIPT_PRINTABLE_RANGES } from './receipt-characters';
 import { parseVectorArt } from './vector-art';
@@ -211,6 +211,10 @@ describe('Given every frozen receipt case and the text v2 printed for it', () =>
           expect(read.pages.length).toBe(
             (expected?.v2Pages ?? 0) + (PAGES_BEYOND_V2[sharedCase.name] ?? 0),
           );
+        });
+
+        it('when it is drawn, then the page count the progress bar expects for its gifts is its page count', () => {
+          expect(estimatedReceiptPages(frozen.gifts.length)).toBe(read.pages.length);
         });
 
         it('when a yearly receipt runs onto further pages, then each of them repeats the column headers as an artifact', () => {

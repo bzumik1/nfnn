@@ -294,3 +294,7 @@ export function receiptDocument(
     ]).cs,
   };
 }
+
+export function estimatedReceiptPages(gifts: number): number {
+  return gifts > 0 ? 1 : 0;
+}

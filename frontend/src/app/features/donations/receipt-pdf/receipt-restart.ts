@@ -22,6 +22,10 @@ export class ReceiptRestart {
     return true;
   }
 
+  resumes(download: string): boolean {
+    return download === '';
+  }
+
   finished(): void {
     try {
       sessionStorage.removeItem(RESTART_KEY);

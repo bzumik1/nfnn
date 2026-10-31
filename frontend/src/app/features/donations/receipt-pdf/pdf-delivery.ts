@@ -14,7 +14,7 @@ export const PDF_DELIVERY_NAVIGATOR = new InjectionToken<ShareableNavigator>(
   { providedIn: 'root', factory: () => navigator },
 );
 
-export type PdfShareOutcome = 'shared' | 'dismissed' | 'failed';
+export type PdfShareOutcome = 'shared' | 'saved' | 'dismissed' | 'failed';
 
 const APPLE_TOUCH_DEVICE = /iPad|iPhone|iPod/;
 const DESKTOP_SAFARI_ON_IPAD = /Macintosh/;

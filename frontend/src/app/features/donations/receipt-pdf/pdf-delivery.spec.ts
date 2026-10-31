@@ -53,6 +53,16 @@ describe('Given a phone or tablet of Apple that can share files', () => {
     expect(await delivery(shareable).share(FILE)).toBe('dismissed');
   });
 
+  it('when the file cannot be shared after all, then it is saved instead and the outcome says saved, not shared', async () => {
+    const save = vi.spyOn(PdfDelivery.prototype, 'save').mockImplementation(() => undefined);
+
+    const outcome = await delivery({ ...shareable, canShare: () => false }).share(FILE);
+
+    expect(outcome).toBe('saved');
+    expect(save).toHaveBeenCalledWith(FILE);
+    expect(share).not.toHaveBeenCalled();
+  });
+
   it('when the share sheet fails, then it says so', async () => {
     share.mockRejectedValue(new DOMException('denied', 'NotAllowedError'));
 
