@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { immutableLocations } from './immutable-locations.mjs';
 
 const [baseUrl, distDir, nginxConf] = process.argv.slice(2);
 if (!baseUrl || !distDir || !nginxConf) {
@@ -10,7 +11,6 @@ if (!baseUrl || !distDir || !nginxConf) {
 const IMMUTABLE = 'public, max-age=31536000, immutable';
 const HASHED_BUNDLE = /^(?:chunk|main|polyfills|styles|worker)-[A-Za-z0-9_-]{8}\.(?:js|css)$/;
 const HASHED_RECEIPT_FONT = /^receipt-fonts\/(?:body|body-bold|heading)\.[0-9a-f]{16}\.ttf$/;
-const RECEIPT_FONT_LOCATION = '^/receipt-fonts/';
 const NEVER_IMMUTABLE = [
   'index.html',
   'ngsw.json',
@@ -43,7 +43,6 @@ const MISSING_ASSETS = [
   '/receipt-fonts/body.0123456789abcdef.ttf',
   '/receipt-fonts/body.ttf',
 ];
-const IMMUTABLE_RULE = 'add_header Cache-Control $immutable_cache_control always;';
 const UNCACHED_ERROR = new Set(['no-store', 'no-cache']);
 const APP_ROUTES = ['/', '/darce/prehled', '/sprava', '/aktuality/nejaka-zprava'];
 
@@ -71,20 +70,6 @@ function expectedContentType(file) {
   return file.endsWith('.ttf') ? 'font/ttf' : null;
 }
 
-function immutableLocationPatterns(conf) {
-  return [...conf.matchAll(/location\s+~\*?\s+"([^"]+)"\s*\{([^{}]*)\}/g)]
-    .filter((match) => match[2].split('\n').some((line) => line.trim() === IMMUTABLE_RULE))
-    .map((match) => new RegExp(match[1]));
-}
-
-function bundlePatterns(patterns) {
-  return patterns.filter((pattern) => !pattern.source.startsWith(RECEIPT_FONT_LOCATION));
-}
-
-function receiptFontPatterns(patterns) {
-  return patterns.filter((pattern) => pattern.source.startsWith(RECEIPT_FONT_LOCATION));
-}
-
 async function request(path) {
   const response = await fetch(new URL(path, baseUrl), { redirect: 'manual' });
   const body = await response.text();
@@ -105,9 +90,9 @@ if (hashed.length === 0) {
   fail(`no hashed bundle found in ${distDir}`);
 }
 
-const immutable = immutableLocationPatterns(readFileSync(nginxConf, 'utf8'));
-const patterns = bundlePatterns(immutable);
-const fontPatterns = receiptFontPatterns(immutable);
+const { bundles: patterns, receiptFonts: fontPatterns } = immutableLocations(
+  readFileSync(nginxConf, 'utf8'),
+);
 const receiptFonts = built.filter(
   (file) => file.startsWith('receipt-fonts/') && file.endsWith('.ttf'),
 );
