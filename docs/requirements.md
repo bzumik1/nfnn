@@ -69,6 +69,7 @@ Web představí fond a jeho pomoc dětem, usnadní darování a dárcům dá ú�
 - Podepisuje Pavel Znamenáček, předseda správní rady. Jméno, funkci a podpis mění správce ve správě; podpis nejlépe jako vektor SVG složený jen z vyplněných tvarů (Jakub 2026-10-30: „Chtěl bych všude používat podpis jako SVG“), sken JPEG, PNG nebo WebP zůstává jako záloha; bez razítka (zákon ho nevyžaduje). Bez nahraného podpisu je na potvrzení čára se jménem.
 - Vystavené potvrzení se nemění. Změní-li se potvrzované údaje (pozdě spárovaný dar, nové jméno nebo adresa), další stažení vystaví náhradní potvrzení s novým číslem, které uvádí, co nahrazuje. Jazyk podle dárce; anglické potvrzení je dvojjazyčné.
 - Web vystavuje potvrzení jen za dary od 1. 1. 2026. Starší dary přehled ukazuje, jen bez PDF.
+- Ověření potvrzení (Jakub 31. 10. 2026): v sekci Potvrzení o daru je jedna karta „Ověřit potvrzení“ (ne odkaz u každého potvrzení), která vede na stránku nfnn.cz/overit. Tam dárce i kdokoli jiný ověří vlastní nebo cizí potvrzení i bez fotoaparátové aplikace: naskenuje QR kód fotoaparátem přímo ve stránce, nahraje PDF potvrzení nebo fotku kódu, nebo vloží odkaz z kódu. Kód se čte jen v prohlížeči a nikam se neposílá.
 
 ## 5. Příjem a párování darů
 

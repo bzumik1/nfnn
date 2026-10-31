@@ -1,6 +1,7 @@
-import { Request } from '@playwright/test';
-import { mockDonorApi } from './donor-session';
+import { Page, Request } from '@playwright/test';
+import { mockDonorApi, openDonorSection, signIn } from './donor-session';
 import { expect, test } from './fixtures';
+import { fakeCameraShowing, pdfWithLink, pngDataUrl, qrCodePng } from './receipt-code-files';
 import {
   CHANGED_AMOUNT,
   serveReceiptApi,
@@ -19,6 +20,7 @@ import {
 } from './receipt-verification';
 
 const SIGNED = 'Podepsáno fondem Nová naděje';
+const PROOF_ADDRESS = 'https://nfnn.cz/overit#';
 const DONOR_NAME = 'Marie Dvořáková';
 
 test.describe('Given a visitor who scans the verification QR of a receipt', () => {
@@ -369,4 +371,177 @@ test.describe('Given a visitor who is online while the fund gives no usable answ
       await expect(page.getByRole('heading', { level: 1 })).toHaveText(SIGNED);
     });
   }
+});
+
+test.describe('Given a visitor who opens the verification page without a code', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+    await serveReceiptKeys(page);
+    await serveReceiptStatus(page, 'active');
+  });
+
+  async function expectVerifiedWithoutSendingTheCode(
+    page: Page,
+    requests: Request[],
+  ): Promise<void> {
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(SIGNED);
+    await expect(page.locator('dd').filter({ hasText: DONOR_NAME })).toBeVisible();
+    expect(new URL(page.url()).pathname).toBe('/overit');
+    expect(new URL(page.url()).hash).toBe('');
+    const pieces = [
+      SINGLE_RECEIPT.fragment.slice(17, 57),
+      SINGLE_RECEIPT.fragment.slice(-40),
+      DONOR_NAME,
+    ];
+    for (const request of requests) {
+      const sent = [
+        request.url(),
+        request.postData() ?? '',
+        ...Object.values(await request.allHeaders()),
+      ].join('\n');
+      for (const piece of pieces) {
+        expect(sent).not.toContain(piece);
+      }
+    }
+    const api = requests.filter((request) => new URL(request.url()).pathname.startsWith('/api/'));
+    expect(
+      [
+        ...new Set(api.map((request) => `${request.method()} ${new URL(request.url()).pathname}`)),
+      ].sort(),
+    ).toEqual([
+      'GET /api/donations/receipt-keys',
+      'GET /api/operations/setup',
+      'POST /api/donations/receipts/status',
+    ]);
+  }
+
+  test('when they paste the link of the code, then the page verifies it in place and sends only the key list request and the digest', async ({
+    page,
+  }) => {
+    const requests: Request[] = [];
+    page.on('request', (request) => requests.push(request));
+    await page.goto('/overit');
+
+    await page.getByLabel('Odkaz z QR kódu').fill(`${PROOF_ADDRESS}${SINGLE_RECEIPT.fragment}`);
+    await page.getByRole('button', { name: 'Ověřit odkaz' }).click();
+
+    await expectVerifiedWithoutSendingTheCode(page, requests);
+    await expect(page.getByRole('heading', { level: 1 })).toBeFocused();
+  });
+
+  test('when they upload the PDF of the receipt, then the page reads the verification link from it and verifies the code', async ({
+    page,
+  }) => {
+    const requests: Request[] = [];
+    page.on('request', (request) => requests.push(request));
+    await page.goto('/overit');
+
+    await page.getByLabel('Nahrát PDF nebo fotku').setInputFiles({
+      name: 'potvrzeni.pdf',
+      mimeType: 'application/pdf',
+      buffer: pdfWithLink(`${PROOF_ADDRESS}${SINGLE_RECEIPT.fragment}`),
+    });
+
+    await expectVerifiedWithoutSendingTheCode(page, requests);
+  });
+
+  test('when they upload a photo of the code, then the page reads the code in the browser and verifies it', async ({
+    page,
+  }) => {
+    const requests: Request[] = [];
+    page.on('request', (request) => requests.push(request));
+    await page.goto('/overit');
+
+    await page.getByLabel('Nahrát PDF nebo fotku').setInputFiles({
+      name: 'kod.png',
+      mimeType: 'image/png',
+      buffer: qrCodePng(`${PROOF_ADDRESS}${SINGLE_RECEIPT.fragment}`),
+    });
+
+    await expectVerifiedWithoutSendingTheCode(page, requests);
+  });
+
+  test('when they upload a photo of another QR code, then the page says it is not a receipt code and verifies nothing', async ({
+    page,
+  }) => {
+    await page.goto('/overit');
+
+    await page.getByLabel('Nahrát PDF nebo fotku').setInputFiles({
+      name: 'kod.png',
+      mimeType: 'image/png',
+      buffer: qrCodePng(`https://nfnn.cy/overit#${SINGLE_RECEIPT.fragment.slice(0, 40)}`),
+    });
+
+    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toHaveText(
+      'Tento QR kód nepatří k potvrzení fondu Nová naděje. Načtěte kód z potvrzení o daru.',
+    );
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Ověření potvrzení o daru');
+  });
+
+  test('when they scan the code with the camera in the page, then the page verifies it and turns the camera off', async ({
+    page,
+  }) => {
+    const requests: Request[] = [];
+    page.on('request', (request) => requests.push(request));
+    await page.addInitScript(
+      fakeCameraShowing,
+      pngDataUrl(qrCodePng(`${PROOF_ADDRESS}${SINGLE_RECEIPT.fragment}`)),
+    );
+    await page.goto('/overit');
+
+    await page.getByRole('button', { name: 'Naskenovat QR kód' }).click();
+
+    await expectVerifiedWithoutSendingTheCode(page, requests);
+    await expect(page.locator('video')).toHaveCount(0);
+  });
+
+  test('when the browser refuses the camera, then the page says how to go on', async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'mediaDevices', {
+        configurable: true,
+        value: {
+          getUserMedia: () => Promise.reject(new DOMException('denied', 'NotAllowedError')),
+        },
+      });
+    });
+    await page.goto('/overit');
+
+    await page.getByRole('button', { name: 'Naskenovat QR kód' }).click();
+
+    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toHaveText(
+      'Prohlížeč nedovolil použít fotoaparát. Povolte ho v nastavení prohlížeče, nebo nahrajte PDF či fotku kódu.',
+    );
+  });
+
+  test('when a result is shown, then another receipt can be verified from the same page', async ({
+    page,
+  }) => {
+    await page.goto('/overit');
+    await page.getByLabel('Odkaz z QR kódu').fill(`${PROOF_ADDRESS}${SINGLE_RECEIPT.fragment}`);
+    await page.getByRole('button', { name: 'Ověřit odkaz' }).click();
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(SIGNED);
+
+    await page.getByRole('button', { name: 'Ověřit další potvrzení' }).click();
+
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Ověření potvrzení o daru');
+    await expect(page.getByRole('heading', { level: 1 })).toBeFocused();
+    await expect(page.getByLabel('Odkaz z QR kódu')).toHaveValue('');
+  });
+});
+
+test.describe('Given a signed-in donor on the receipts page', () => {
+  test('when they choose to verify a receipt, then the verification page opens ready to read a code', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await serveReceiptKeys(page);
+    await signIn(page);
+    await openDonorSection(page, 'Potvrzení o daru');
+
+    await page.getByRole('link', { name: 'Ověřit potvrzení' }).click();
+
+    await expect(page).toHaveURL(/\/overit$/);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Ověření potvrzení o daru');
+    await expect(page.getByRole('button', { name: 'Naskenovat QR kód' })).toBeVisible();
+  });
 });

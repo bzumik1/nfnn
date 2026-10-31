@@ -1894,6 +1894,27 @@ describe('Given a signed-in donor in the donor area', () => {
   });
 
   describe('when the receipts page opens', () => {
+    it('then a card offers to verify a receipt, the donor’s own or anyone else’s, on the verification page', async () => {
+      await open('/darce/potvrzeni');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      expect(text('.verify-card h2')).toBe('Ověřit potvrzení');
+      expect(text('.verify-card p')).toBe(
+        'Ověřte svoje potvrzení nebo potvrzení, které vám někdo ukázal: naskenujete jeho QR kód, nahrajete PDF nebo vložíte odkaz z kódu. Ukážeme, jaké údaje v něm fond podepsal.',
+      );
+      const link = element('.verify-card a');
+      expect(link?.textContent?.trim()).toBe('Ověřit potvrzení');
+      expect(link?.getAttribute('href')).toBe('/overit');
+    });
+
+    it('then the card to verify a receipt is there even while the donations load', async () => {
+      await open('/darce/potvrzeni');
+
+      expect(element('.verify-card a')?.getAttribute('href')).toBe('/overit');
+
+      await respond(twoYearSummary(), twoYearDonations());
+    });
+
     it('then every year shows its count, its total and what can be done with its receipt', async () => {
       await open('/darce/potvrzeni');
       await respond(twoYearSummary(), twoYearDonations());

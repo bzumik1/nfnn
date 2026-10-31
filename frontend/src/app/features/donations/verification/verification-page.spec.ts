@@ -144,6 +144,48 @@ describe('Given the verification page', () => {
     expect(verifier.calls).toEqual([null]);
   });
 
+  describe('when it opens without a code and the visitor pastes the link of a code', () => {
+    beforeEach(async () => {
+      await open('/overit');
+      verifier.answer = () =>
+        Promise.resolve({ state: 'signed', receipt: SINGLE, status: 'active' });
+      const field = root().querySelector('#proof-link') as HTMLInputElement;
+      field.value = `https://nfnn.cz/overit#${FRAGMENT}`;
+      field.dispatchEvent(new Event('input'));
+      await settle();
+      (root().querySelector('.proof-link-form') as HTMLFormElement).dispatchEvent(
+        new Event('submit'),
+      );
+      await settle();
+    });
+
+    it('then it verifies that code in the page, focuses the verdict and leaves the address alone', () => {
+      expect(verifier.calls).toEqual([null, FRAGMENT]);
+      expect(heading().textContent?.trim()).toBe('Podepsáno fondem Nová naděje');
+      expect(document.activeElement).toBe(heading());
+      expect(TestBed.inject(Location).path(true)).toBe('/overit');
+    });
+
+    it('and they ask to verify another receipt, then the ways to read a code come back with the focus on the heading', async () => {
+      button('Ověřit další potvrzení')?.click();
+      await settle();
+
+      expect(heading().textContent?.trim()).toBe('Ověření potvrzení o daru');
+      expect(document.activeElement).toBe(heading());
+      expect(root().querySelector('#proof-link')).not.toBeNull();
+      expect(verifier.calls).toEqual([null, FRAGMENT]);
+    });
+  });
+
+  it('when it opens without a code, then it offers the ways to read one in the page', async () => {
+    await open('/overit');
+
+    expect(Array.from(root().querySelectorAll('h2'), (title) => title.textContent?.trim())).toEqual(
+      ['Nahrát soubor', 'Vložit odkaz'],
+    );
+    expect(button('Ověřit další potvrzení')).toBeUndefined();
+  });
+
   it('when it opens, then search engines are asked not to index it, and leaving it lifts that', async () => {
     await open('/overit');
     const meta = TestBed.inject(Meta);

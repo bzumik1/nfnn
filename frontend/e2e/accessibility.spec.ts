@@ -2,6 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { routeLogsApi } from './admin-logs-api';
 import { Locator, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
+import { fakeCameraShowing, pdfWithLink, pngDataUrl, qrCodePng } from './receipt-code-files';
 import {
   administrator,
   adminSettings,
@@ -265,6 +266,32 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
       await expect(heading).toHaveText(title);
       expect(await violations(page)).toEqual([]);
     }
+
+    test('then the camera preview while scanning and a refused file break no rule', async ({
+      page,
+    }) => {
+      await page.addInitScript(
+        fakeCameraShowing,
+        pngDataUrl(qrCodePng('https://example.org/jiny-kod')),
+      );
+      await openVerification(page, { keys: KEY_LIST, status: 'active' });
+
+      await page.getByRole('button', { name: 'Naskenovat QR kód' }).click();
+      await expect(page.locator('video')).toBeVisible();
+      await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toBeVisible();
+      expect(await violations(page)).toEqual([]);
+
+      await page.getByRole('button', { name: 'Zastavit skenování' }).click();
+      await page.getByLabel('Nahrát PDF nebo fotku').setInputFiles({
+        name: 'poznamka.pdf',
+        mimeType: 'application/pdf',
+        buffer: pdfWithLink('https://example.org'),
+      });
+      await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toContainText('PDF');
+      await page.getByRole('button', { name: 'Ověřit odkaz' }).click();
+      await expect(page.locator('#proof-link-error')).toBeVisible();
+      expect(await violations(page)).toEqual([]);
+    });
 
     test('then the explanation, the check under way and every answer of the fund break no rule', async ({
       page,
