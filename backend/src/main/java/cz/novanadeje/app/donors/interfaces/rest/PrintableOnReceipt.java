@@ -35,12 +35,16 @@ import java.lang.annotation.Target;
             if (!printed.prints()) {
                 return false;
             }
-            if (value.isBlank() || !printed.text().isBlank()) {
+            if (value.isBlank() || !blank(printed.text())) {
                 return true;
             }
             context.disableDefaultConstraintViolation();
             context.buildConstraintViolationWithTemplate(BLANK_MESSAGE).addConstraintViolation();
             return false;
+        }
+
+        private static boolean blank(String text) {
+            return text.codePoints().allMatch(codePoint -> Character.isWhitespace(codePoint) || Character.isSpaceChar(codePoint));
         }
     }
 }
