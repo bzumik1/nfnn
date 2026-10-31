@@ -84,6 +84,16 @@ export class DonorGifts {
     });
   });
 
+  protected readonly receiptErrorAboveYears = computed(() => {
+    const error = this.donations.receiptError();
+    const shownAtItsYearOrGift = this.years().some(
+      (group) =>
+        this.donations.yearlyError(group.year) !== null ||
+        group.items.some((item) => this.donations.singleError(item) !== null),
+    );
+    return error === null || shownAtItsYearOrGift ? null : error.message;
+  });
+
   constructor() {
     this.donations.checkBankIfStale();
     effect(() => this.receiptAlert()?.nativeElement.scrollIntoView?.({ block: 'center' }));

@@ -287,6 +287,34 @@
     "replacement": "donations.domain.receipt.proof.VerificationQrSymbolTest > version \"9\" at \"H\" holds \"72\" bytes"
   },
   {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the donations page opens > then a yearly receipt the server refuses shows the reason on the donations page",
+    "reason": "1.9 shows a failed download in Moje dary where it was started, a yearly one under its year's heading and a single one in the gift's row, instead of above the years (Jakub 2026-10-31)",
+    "replacement": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the donations page opens > then a yearly receipt the server refuses shows the reason at that year, not above the years"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the donations page opens > then a receipt no longer available shows the problem title and loads the payments again",
+    "reason": "1.9 shows a failed download in Moje dary where it was started, a yearly one under its year's heading and a single one in the gift's row, instead of above the years (Jakub 2026-10-31)",
+    "replacement": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the donations page opens > then a receipt no longer available shows the problem title in its row and loads the payments again"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the donations page opens > then a payment from before the first receipt year shows the problem title and loads the payments again",
+    "reason": "1.9 shows a failed download in Moje dary where it was started, a yearly one under its year's heading and a single one in the gift's row, instead of above the years (Jakub 2026-10-31)",
+    "replacement": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the donations page opens > then a payment from before the first receipt year shows the problem title in its row and loads the payments again"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the donations page opens > then a download failing for any other reason asks to try again and a successful retry clears it",
+    "reason": "1.9 shows a failed download in Moje dary where it was started, a yearly one under its year's heading and a single one in the gift's row, instead of above the years (Jakub 2026-10-31)",
+    "replacement": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the donations page opens > then a download failing for any other reason asks to try again in its row without moving the page, and a successful retry clears it"
+  },
+  {
     "path": "GET /api/donations/me/{id}/receipt",
     "scenario": "donations/admin_donor_accounts: *",
     "kind": "body",

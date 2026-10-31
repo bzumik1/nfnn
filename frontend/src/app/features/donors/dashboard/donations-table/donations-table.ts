@@ -28,6 +28,7 @@ export class DonationsTable {
 
   readonly items = input.required<readonly DonationItem[]>();
   readonly withReceipts = input(true);
+  readonly errorsAtRows = input(false);
   readonly labelledBy = input<string | null>(null);
 
   protected crowns(amountMinor: number): string {

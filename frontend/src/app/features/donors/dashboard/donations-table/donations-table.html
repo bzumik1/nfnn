@@ -59,7 +59,9 @@
         @if (withReceipts()) {
           <td
             class="receipt"
-            [class.is-empty]="!item.receiptAvailable && !missingReceipt(item)"
+            [class.is-empty]="
+              !item.receiptAvailable && !missingReceipt(item) && !donations.singleError(item)
+            "
             data-label="Potvrzení"
             i18n-data-label="@@donor.dashboard.payments.col.receipt"
           >
@@ -116,6 +118,11 @@
                   >
                 }
               }
+            }
+            @if (errorsAtRows() && donations.singleError(item); as message) {
+              <p class="ui-callout ui-callout--danger row-receipt-error" role="alert">
+                {{ message }}
+              </p>
             }
           </td>
         }

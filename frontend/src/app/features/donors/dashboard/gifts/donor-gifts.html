@@ -20,9 +20,9 @@
           protože roční obsahuje všechny dary roku.
         </p>
       }
-      @if (donations.receiptError(); as error) {
+      @if (receiptErrorAboveYears(); as message) {
         <p #receiptAlert class="ui-callout ui-callout--danger receipt-error" role="alert">
-          {{ error.message }}
+          {{ message }}
         </p>
       }
     </div>
@@ -73,8 +73,17 @@
                 </p>
               }
             }
+            @if (donations.yearlyError(group.year); as message) {
+              <p class="ui-callout ui-callout--danger year-receipt-error" role="alert">
+                {{ message }}
+              </p>
+            }
           </div>
-          <app-donations-table [items]="group.items" [labelledBy]="yearHeadingId(group.year)" />
+          <app-donations-table
+            [items]="group.items"
+            [labelledBy]="yearHeadingId(group.year)"
+            [errorsAtRows]="true"
+          />
         </section>
       }
       @if (receivedWithoutReceipt()) {

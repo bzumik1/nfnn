@@ -1269,7 +1269,7 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(text(secondRowButton)).toBe('Stáhnout PDF, dar z 10. 01. 2026, 1 000 Kč');
     });
 
-    it('then a yearly receipt the server refuses shows the reason on the donations page', async () => {
+    it('then a yearly receipt the server refuses shows the reason at that year, not above the years', async () => {
       await open('/darce/dary');
       await respond(twoYearSummary(), twoYearDonations());
 
@@ -1283,7 +1283,8 @@ describe('Given a signed-in donor in the donor area', () => {
       );
       await settleBlobFailure();
 
-      expect(text('.payments-card [role="alert"]')).toBe('Za rok 2025 nic');
+      expect(text(`${yearSection(2025)} .gift-year-head [role="alert"]`)).toBe('Za rok 2025 nic');
+      expect(element('.payments-card > .ui-card__bar [role="alert"]')).toBeNull();
     });
 
     it('then a year before the first receipt year offers no yearly receipt at its heading', async () => {
@@ -1753,7 +1754,7 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(text(secondRowButton)).toBe('Stáhnout PDF, dar z 10. 01. 2026, 1 000 Kč');
     });
 
-    it('then a receipt no longer available shows the problem title and loads the payments again', async () => {
+    it('then a receipt no longer available shows the problem title in its row and loads the payments again', async () => {
       await open('/darce/dary');
       await respond(twoYearSummary(), twoYearDonations());
 
@@ -1777,12 +1778,39 @@ describe('Given a signed-in donor in the donor area', () => {
       });
       await respond(twoYearSummary(), refunded);
 
-      expect(text('.payments-card [role="alert"]')).toBe('Potvrzení k tomuto daru nelze vystavit');
+      expect(text(`${yearSection(2026)} tbody tr:nth-child(2) [role="alert"]`)).toBe(
+        'Potvrzení k tomuto daru nelze vystavit',
+      );
+      expect(element('.payments-card > .ui-card__bar [role="alert"]')).toBeNull();
       expect(text('.payments-card tbody tr:nth-child(2)')).toContain('Vráceno');
       expect(element(secondRowButton)).toBeNull();
     });
 
-    it('then a payment from before the first receipt year shows the problem title and loads the payments again', async () => {
+    it('then a refused receipt whose gift is gone after the payments load again shows the problem title above the years', async () => {
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      await click(secondRowButton);
+      receiptRequest({ donationId: 'd-3' }).flush(
+        problemBody(
+          'donations/receipt-not-available',
+          'Potvrzení k tomuto daru nelze vystavit',
+          404,
+        ),
+        { status: 404, statusText: 'Not Found' },
+      );
+      await settleBlobFailure();
+      const without = twoYearDonations();
+      without.items.splice(1, 1);
+      await respond(twoYearSummary(), without);
+
+      expect(text('.payments-card > .ui-card__bar [role="alert"]')).toBe(
+        'Potvrzení k tomuto daru nelze vystavit',
+      );
+      expect(element('.payments-card tbody [role="alert"]')).toBeNull();
+    });
+
+    it('then a payment from before the first receipt year shows the problem title in its row and loads the payments again', async () => {
       await open('/darce/dary');
       await respond(twoYearSummary(), twoYearDonations());
 
@@ -1798,7 +1826,7 @@ describe('Given a signed-in donor in the donor area', () => {
       await settleBlobFailure();
       await respond(summaryWithReceiptsFrom2026(), donationsWithoutReceiptsBefore2026());
 
-      expect(text('.payments-card [role="alert"]')).toBe(
+      expect(text(`${yearSection(2025)} tbody tr:nth-child(1) [role="alert"]`)).toBe(
         'Za dary z této doby potvrzení na webu nevystavujeme',
       );
       expect(element(thirdRowButton)).toBeNull();
@@ -1806,7 +1834,7 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(savedFiles).toEqual([]);
     });
 
-    it('then a download failing for any other reason asks to try again and a successful retry clears it', async () => {
+    it('then a download failing for any other reason asks to try again in its row without moving the page, and a successful retry clears it', async () => {
       const scrolled: Element[] = [];
       Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
         configurable: true,
@@ -1825,10 +1853,11 @@ describe('Given a signed-in donor in the donor area', () => {
       });
       await settleBlobFailure();
 
-      expect(text('.payments-card [role="alert"]')).toBe(
+      expect(text(`${yearSection(2026)} tbody tr:nth-child(2) [role="alert"]`)).toBe(
         'Potvrzení se nepodařilo stáhnout. Zkuste to prosím znovu.',
       );
-      expect(scrolled).toEqual([element('.payments-card [role="alert"]')]);
+      expect(element('.payments-card > .ui-card__bar [role="alert"]')).toBeNull();
+      expect(scrolled).toEqual([]);
       Reflect.deleteProperty(HTMLElement.prototype, 'scrollIntoView');
 
       await click(secondRowButton);

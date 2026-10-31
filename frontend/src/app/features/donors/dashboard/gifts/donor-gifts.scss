@@ -50,6 +50,11 @@
   white-space: nowrap;
 }
 
+.year-receipt-error {
+  flex-basis: 100%;
+  margin-top: 0;
+}
+
 .gift-year-note {
   font-size: var(--text-sm);
   color: var(--color-text-soft);

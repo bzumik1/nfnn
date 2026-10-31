@@ -57,6 +57,7 @@ interface ReceiptTask {
 
 export interface ReceiptError {
   readonly scope: ReceiptScope;
+  readonly key: string;
   readonly message: string;
 }
 
@@ -266,6 +267,14 @@ export class DonorDonations {
     return downloadName(singleKey(item.id));
   }
 
+  yearlyError(year: number): string | null {
+    return this.errorAt(yearlyKey(year));
+  }
+
+  singleError(item: DonationItem): string | null {
+    return this.errorAt(singleKey(item.id));
+  }
+
   yearlyProgress(year: number): DownloadProgressState | null {
     return this.progressOf(yearlyKey(year));
   }
@@ -280,6 +289,11 @@ export class DonorDonations {
 
   cancelSingleReceipt(item: DonationItem): void {
     this.cancel(singleKey(item.id));
+  }
+
+  private errorAt(key: string): string | null {
+    const error = this.receiptError();
+    return error?.key === key ? error.message : null;
   }
 
   private progressOf(key: string): DownloadProgressState | null {
@@ -535,6 +549,7 @@ export class DonorDonations {
       if (restart !== 'reloading') {
         this.receiptError.set({
           scope,
+          key,
           message:
             restart === 'reloaded-already' ? RECEIPT_TOOLS_STILL_MISSING : RECEIPT_TOOLS_MISSING,
         });
@@ -542,7 +557,7 @@ export class DonorDonations {
       return;
     }
     this.restart.abandoned(downloadName(key));
-    this.receiptError.set({ scope, message: DRAWING_FAILURE_TEXTS[failure.reason] });
+    this.receiptError.set({ scope, key, message: DRAWING_FAILURE_TEXTS[failure.reason] });
   }
 
   private receiptFailed(scope: ReceiptScope, failure: unknown, key: string): void {
@@ -562,6 +577,7 @@ export class DonorDonations {
     if (shownWithDetail !== undefined) {
       this.receiptError.set({
         scope,
+        key,
         message: describeProblemWithoutFields(failure, PROBLEMS_SHOWN_WITH_DETAIL[shownWithDetail]),
       });
       return;
@@ -570,17 +586,17 @@ export class DonorDonations {
       scope === 'yearly' &&
       YEARLY_PROBLEMS_SHOWN_AS_TITLE.some((type) => problemTypeEndsWith(failure, type))
     ) {
-      this.receiptError.set({ scope, message: problem?.title || RECEIPT_FAILED });
+      this.receiptError.set({ scope, key, message: problem?.title || RECEIPT_FAILED });
       return;
     }
     const rowOutdated =
       problem?.status === NOT_FOUND || problemTypeEndsWith(failure, RECEIPT_BEFORE_FIRST_YEAR);
     if (scope === 'single' && rowOutdated) {
-      this.receiptError.set({ scope, message: problem?.title || RECEIPT_FAILED });
+      this.receiptError.set({ scope, key, message: problem?.title || RECEIPT_FAILED });
       this.fetchDonations();
       return;
     }
-    this.receiptError.set({ scope, message: RECEIPT_FAILED });
+    this.receiptError.set({ scope, key, message: RECEIPT_FAILED });
   }
 }
 
