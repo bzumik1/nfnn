@@ -33,9 +33,9 @@ declare module 'vitest' {
 export type ReceiptFontName = 'body' | 'body-bold' | 'heading';
 
 export function themeFont(theme: string, name: ReceiptFontName): Uint8Array {
-  const encoded = inject('receiptAssets').fonts[theme]?.[`${name}.ttf`];
+  const encoded = inject('receiptAssets').fonts[theme]?.[name];
   if (encoded === undefined) {
-    throw new Error(`The theme ${theme} has no receipt font ${name}.ttf`);
+    throw new Error(`The theme ${theme} has no receipt font ${name}`);
   }
   return Uint8Array.from(atob(encoded), (character) => character.charCodeAt(0));
 }

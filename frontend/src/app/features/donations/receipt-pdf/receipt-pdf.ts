@@ -11,7 +11,7 @@ import {
   receiptDocument,
   ReceiptUnprintable,
 } from './receipt-document';
-import { canvasColorToHex, resolveReceiptStyle, ReceiptStyle } from './receipt-style';
+import { resolveReceiptStyle, ReceiptStyle, ReceiptStyleRefused } from './receipt-style';
 import { ReceiptWorker } from './receipt-worker-messages';
 import { ReceiptsApi } from './receipts-api';
 
@@ -22,7 +22,7 @@ export type ReceiptPdfEvent =
   | { readonly kind: 'done'; readonly file: DownloadedFile };
 
 export type ReceiptPdfFailureReason =
-  'tools-missing' | 'fonts' | 'image' | 'drawing' | 'unprintable';
+  'tools-missing' | 'fonts' | 'image' | 'drawing' | 'unprintable' | 'style';
 
 export class ReceiptPdfFailure extends Error {
   constructor(readonly reason: ReceiptPdfFailureReason) {
@@ -44,7 +44,7 @@ export const RECEIPT_PDF_ENVIRONMENT = new InjectionToken<ReceiptPdfEnvironment>
         new Worker(new URL('./receipt-pdf.worker', import.meta.url), {
           type: 'module',
         }) as ReceiptWorker,
-      style: () => resolveReceiptStyle(document.documentElement, canvasColorToHex()),
+      style: () => resolveReceiptStyle(document.documentElement),
     }),
   },
 );
@@ -123,8 +123,12 @@ export class ReceiptPdf {
                       signature,
                       portrait,
                     });
-                  } catch {
-                    subscriber.error(new ReceiptPdfFailure('drawing'));
+                  } catch (failure: unknown) {
+                    subscriber.error(
+                      new ReceiptPdfFailure(
+                        failure instanceof ReceiptStyleRefused ? 'style' : 'drawing',
+                      ),
+                    );
                   }
                   break;
                 case 'page':

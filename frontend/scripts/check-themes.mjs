@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
@@ -23,11 +24,22 @@ function used(source) {
   return new Set([...source.matchAll(/var\(\s*(--[a-z0-9-]+)/g)].map((match) => match[1]));
 }
 
-const themes = new Map(
-  readdirSync(themesDir)
-    .filter((name) => statSync(join(themesDir, name)).isDirectory())
-    .map((name) => [name, declared(readFileSync(join(themesDir, name, '_theme.scss'), 'utf8'))]),
+function values(source) {
+  return new Map(
+    [...source.matchAll(/(--receipt-[a-z0-9-]+)\s*:\s*([^;]+);/g)].map((match) => [
+      match[1],
+      match[2].trim(),
+    ]),
+  );
+}
+
+const themeNames = readdirSync(themesDir).filter((name) =>
+  statSync(join(themesDir, name)).isDirectory(),
 );
+const sources = new Map(
+  themeNames.map((name) => [name, readFileSync(join(themesDir, name, '_theme.scss'), 'utf8')]),
+);
+const themes = new Map(themeNames.map((name) => [name, declared(sources.get(name))]));
 
 const needed = new Map();
 for (const file of scssFiles(join(root, 'src'))) {
@@ -46,14 +58,70 @@ for (const [, token] of readFileSync(join(root, receiptStyle), 'utf8').matchAll(
 )) {
   needed.set(token, receiptStyle);
 }
-const receiptFonts = ['body.ttf', 'body-bold.ttf', 'heading.ttf'];
+const RECEIPT_COLOR = /^#[0-9a-f]{6}$/;
+const RECEIPT_FONT = /^'((?:body|body-bold|heading)\.([0-9a-f]{16})\.ttf)'$/;
+const READ_ON_THE_PAGE = [
+  '--receipt-color-text',
+  '--receipt-color-muted',
+  '--receipt-color-english',
+  '--receipt-color-code',
+];
+const MINIMUM_CONTRAST = 4.5;
+
+function luminance(hex) {
+  const channel = (offset) => {
+    const value = parseInt(hex.slice(offset, offset + 2), 16) / 255;
+    return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * channel(1) + 0.7152 * channel(3) + 0.0722 * channel(5);
+}
+
+function contrastOnWhite(hex) {
+  return 1.05 / (luminance(hex) + 0.05);
+}
 
 const problems = [];
 for (const theme of themes.keys()) {
   const folder = join(themesDir, theme, 'receipt');
-  for (const font of receiptFonts) {
-    if (!existsSync(join(folder, font))) {
-      problems.push(`theme ${theme} has no receipt font src/themes/${theme}/receipt/${font}`);
+  const tokens = values(sources.get(theme));
+  const named = new Set();
+  for (const [token, value] of tokens) {
+    if (token.startsWith('--receipt-color-')) {
+      if (!RECEIPT_COLOR.test(value)) {
+        problems.push(`theme ${theme} sets ${token} to ${value}, not a literal lower-case #rrggbb`);
+      } else if (READ_ON_THE_PAGE.includes(token) && contrastOnWhite(value) < MINIMUM_CONTRAST) {
+        problems.push(
+          `theme ${theme} sets ${token} to ${value}, ${contrastOnWhite(value).toFixed(2)}:1 on the white receipt page, below ${MINIMUM_CONTRAST}:1`,
+        );
+      }
+    }
+    if (token.startsWith('--receipt-font-')) {
+      const match = RECEIPT_FONT.exec(value);
+      if (match === null) {
+        problems.push(
+          `theme ${theme} sets ${token} to ${value}, not a quoted content-named font file`,
+        );
+        continue;
+      }
+      const [, file, hash] = match;
+      named.add(file);
+      const path = join(folder, file);
+      if (!existsSync(path)) {
+        problems.push(
+          `theme ${theme} names ${file} in ${token}, but src/themes/${theme}/receipt/ has no such file`,
+        );
+      } else if (
+        createHash('sha256').update(readFileSync(path)).digest('hex').slice(0, 16) !== hash
+      ) {
+        problems.push(`src/themes/${theme}/receipt/${file} does not match the hash in its name`);
+      }
+    }
+  }
+  if (existsSync(folder)) {
+    for (const name of readdirSync(folder)) {
+      if (name.endsWith('.ttf') && !named.has(name)) {
+        problems.push(`src/themes/${theme}/receipt/${name} is a font no receipt token names`);
+      }
     }
   }
   if (!existsSync(folder) || !readdirSync(folder).some((name) => name.endsWith('.txt'))) {
@@ -87,5 +155,5 @@ if (problems.length > 0) {
   process.exit(1);
 }
 console.log(
-  `${themes.size} themes set all ${needed.size} tokens the styles and the receipt use, and carry the receipt fonts.`,
+  `${themes.size} themes set all ${needed.size} tokens the styles and the receipt use, and carry content-named receipt fonts, literal receipt colours and readable receipt text.`,
 );

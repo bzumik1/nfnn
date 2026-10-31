@@ -3,7 +3,7 @@ import { QrSymbol } from '../../../shared/ui/qr-code/qr-encoder';
 import { ReceiptArt } from './receipt-art';
 import { Bilingual, ReceiptDocument, ReceiptGiftRow } from './receipt-document';
 import { RECEIPT_LOGO } from './receipt-logo';
-import { ReceiptStyle } from './receipt-style';
+import { checkedReceiptStyle, ReceiptStyle } from './receipt-style';
 import { VectorArt } from './vector-art';
 import { qrPlacement, verificationSymbol } from './verification-qr';
 
@@ -851,5 +851,5 @@ export async function drawReceipt(
   assets: ReceiptAssets,
   onPage: (page: number) => void = () => undefined,
 ): Promise<Uint8Array> {
-  return new ReceiptLayout(document, style, assets, onPage).draw();
+  return new ReceiptLayout(document, checkedReceiptStyle(style), assets, onPage).draw();
 }

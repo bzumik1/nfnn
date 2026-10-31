@@ -55,6 +55,7 @@ const RECEIPT_DRAWING_FAILED = $localize`:@@donor.dashboard.receipt.drawingFaile
 const RECEIPT_IMAGE_FAILED = $localize`:@@donor.dashboard.receipt.imageFailed:Podpis na potvrzení se nepodařilo ověřit, a tak jsme PDF nevytvořili. Zkuste to prosím znovu; když to nepomůže, napište nám na info@nfnn.cz.`;
 const RECEIPT_TOOLS_MISSING = $localize`:@@donor.dashboard.receipt.toolsMissing:Web se mezitím aktualizoval. Obnovte prosím stránku a stáhněte potvrzení znovu.`;
 const RECEIPT_UNPRINTABLE = $localize`:@@donor.dashboard.receipt.unprintable:Údaje potvrzení obsahují znak, který v PDF neumíme vytisknout, a tak jsme PDF nevytvořili. Napište nám prosím na info@nfnn.cz.`;
+const RECEIPT_STYLE_FAILED = $localize`:@@donor.dashboard.receipt.styleFailed:PDF teď kvůli chybě na webu nejde vytvořit. Napište nám prosím na info@nfnn.cz, opravíme ji.`;
 const RECEIPT_CANCELLED = $localize`:@@donor.dashboard.receipt.cancelled:Přípravu potvrzení jste zrušili.`;
 const DRAWING_FAILURE_TEXTS: Readonly<Record<ReceiptPdfFailureReason, string>> = {
   'tools-missing': RECEIPT_TOOLS_MISSING,
@@ -62,6 +63,7 @@ const DRAWING_FAILURE_TEXTS: Readonly<Record<ReceiptPdfFailureReason, string>> =
   image: RECEIPT_IMAGE_FAILED,
   drawing: RECEIPT_DRAWING_FAILED,
   unprintable: RECEIPT_UNPRINTABLE,
+  style: RECEIPT_STYLE_FAILED,
 };
 const RECEIPT_STEPS = 3;
 const PHASE_STEPS: Readonly<Record<ReceiptPdfPhase, number>> = { data: 1, tools: 2, drawing: 3 };

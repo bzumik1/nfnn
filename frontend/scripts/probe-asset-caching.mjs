@@ -9,6 +9,8 @@ if (!baseUrl || !distDir || !nginxConf) {
 
 const IMMUTABLE = 'public, max-age=31536000, immutable';
 const HASHED_BUNDLE = /^(?:chunk|main|polyfills|styles|worker)-[A-Za-z0-9_-]{8}\.(?:js|css)$/;
+const HASHED_RECEIPT_FONT = /^receipt-fonts\/(?:body|body-bold|heading)\.[0-9a-f]{16}\.ttf$/;
+const RECEIPT_FONT_LOCATION = '^/receipt-fonts/';
 const NEVER_IMMUTABLE = [
   'index.html',
   'ngsw.json',
@@ -38,6 +40,8 @@ const MISSING_ASSETS = [
   '/images/missing-probe.webp',
   '/media/missing-probe.woff2',
   '/receipt-fonts/missing-probe.ttf',
+  '/receipt-fonts/body.0123456789abcdef.ttf',
+  '/receipt-fonts/body.ttf',
 ];
 const IMMUTABLE_RULE = 'add_header Cache-Control $immutable_cache_control always;';
 const UNCACHED_ERROR = new Set(['no-store', 'no-cache']);
@@ -54,7 +58,7 @@ function files(dir) {
 }
 
 function expectedCacheControl(file) {
-  if (file.startsWith('media/') || HASHED_BUNDLE.test(file)) {
+  if (file.startsWith('media/') || HASHED_BUNDLE.test(file) || HASHED_RECEIPT_FONT.test(file)) {
     return IMMUTABLE;
   }
   if (file.startsWith('images/') || file.startsWith('receipt-fonts/')) {
@@ -71,6 +75,14 @@ function immutableLocationPatterns(conf) {
   return [...conf.matchAll(/location\s+~\*?\s+"([^"]+)"\s*\{([^{}]*)\}/g)]
     .filter((match) => match[2].split('\n').some((line) => line.trim() === IMMUTABLE_RULE))
     .map((match) => new RegExp(match[1]));
+}
+
+function bundlePatterns(patterns) {
+  return patterns.filter((pattern) => !pattern.source.startsWith(RECEIPT_FONT_LOCATION));
+}
+
+function receiptFontPatterns(patterns) {
+  return patterns.filter((pattern) => pattern.source.startsWith(RECEIPT_FONT_LOCATION));
 }
 
 async function request(path) {
@@ -93,7 +105,37 @@ if (hashed.length === 0) {
   fail(`no hashed bundle found in ${distDir}`);
 }
 
-const patterns = immutableLocationPatterns(readFileSync(nginxConf, 'utf8'));
+const immutable = immutableLocationPatterns(readFileSync(nginxConf, 'utf8'));
+const patterns = bundlePatterns(immutable);
+const fontPatterns = receiptFontPatterns(immutable);
+const receiptFonts = built.filter(
+  (file) => file.startsWith('receipt-fonts/') && file.endsWith('.ttf'),
+);
+if (receiptFonts.length === 0) {
+  fail(`no receipt font found in ${distDir}`);
+}
+for (const file of receiptFonts) {
+  if (!HASHED_RECEIPT_FONT.test(file)) {
+    fail(`the receipt font /${file} carries no content hash in its name`);
+  }
+}
+if (fontPatterns.length !== 1) {
+  fail(
+    `expected one regex location with the immutable rule for /receipt-fonts/, found ${fontPatterns.length}`,
+  );
+} else {
+  const [pattern] = fontPatterns;
+  for (const file of receiptFonts) {
+    if (!pattern.test(`/${file}`)) {
+      fail(`the receipt font rule ${pattern} does not match the built file /${file}`);
+    }
+  }
+  for (const path of ['/receipt-fonts/body.ttf', '/receipt-fonts/OFL-inter.txt']) {
+    if (pattern.test(path)) {
+      fail(`the receipt font rule ${pattern} matches ${path}, which must not be immutable`);
+    }
+  }
+}
 if (patterns.length !== 1) {
   fail(
     `expected one regex location with the immutable rule in ${nginxConf}, found ${patterns.length}`,
@@ -178,5 +220,5 @@ if (failures.length > 0) {
   process.exit(1);
 }
 console.log(
-  `asset caching: ${hashed.length} hashed bundles immutable, ${built.length} built files checked, missing files answer 404`,
+  `asset caching: ${hashed.length} hashed bundles and ${receiptFonts.length} receipt fonts immutable, ${built.length} built files checked, missing files answer 404`,
 );

@@ -70,15 +70,18 @@ export const RECEIPT_FONT_TOKENS = {
 
 export class ReceiptStyleRefused extends Error {}
 
-export type CssColorToHex = (cssColor: string) => string;
-
 const POINTS_PER_MM = 72 / 25.4;
-const HEX = /^#[0-9a-f]{6}$/;
+const HEX = /^#[0-9a-fA-F]{6}$/;
+const FONT_FILE = /^(?:body|body-bold|heading)\.[0-9a-f]{16}\.ttf$/;
+const QUOTED = /^(['"])(.*)\1$/;
+const PAGE = '#ffffff';
+const MINIMUM_CONTRAST = 4.5;
+const READ_ON_THE_PAGE = ['text', 'muted', 'english', 'code'] as const;
 
 function tokenValue(style: CSSStyleDeclaration, token: string): string {
   const value = style.getPropertyValue(token).trim();
   if (value === '') {
-    throw new Error(`The theme does not set the receipt token ${token}.`);
+    throw new ReceiptStyleRefused(`The theme does not set the receipt token ${token}.`);
   }
   return value;
 }
@@ -87,9 +90,32 @@ function measured(style: CSSStyleDeclaration, token: string, unit: 'pt' | 'mm'):
   const value = tokenValue(style, token);
   const match = new RegExp(`^(\\d+(?:\\.\\d+)?)${unit}$`).exec(value);
   if (match === null) {
-    throw new Error(`The receipt token ${token} is ${value}, not a length in ${unit}.`);
+    throw new ReceiptStyleRefused(
+      `The receipt token ${token} is ${value}, not a length in ${unit}.`,
+    );
   }
   return Number(match[1]);
+}
+
+function color(style: CSSStyleDeclaration, token: string): string {
+  const value = tokenValue(style, token);
+  if (!HEX.test(value)) {
+    throw new ReceiptStyleRefused(
+      `The receipt token ${token} is ${value}, not a literal #rrggbb colour.`,
+    );
+  }
+  return value.toLowerCase();
+}
+
+function fontFile(style: CSSStyleDeclaration, token: string): string {
+  const value = tokenValue(style, token);
+  const file = QUOTED.exec(value)?.[2] ?? value;
+  if (!FONT_FILE.test(file)) {
+    throw new ReceiptStyleRefused(
+      `The receipt token ${token} is ${value}, not a content-named receipt font file.`,
+    );
+  }
+  return file;
 }
 
 function mapped<T extends Record<string, string>, V>(
@@ -101,45 +127,52 @@ function mapped<T extends Record<string, string>, V>(
   ) as { readonly [K in keyof T]: V };
 }
 
-export function resolveReceiptStyle(
-  element: Element,
-  toHex: CssColorToHex = canvasColorToHex(),
-): ReceiptStyle {
+function luminance(hex: string): number {
+  const channel = (offset: number): number => {
+    const value = parseInt(hex.slice(offset, offset + 2), 16) / 255;
+    return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * channel(1) + 0.7152 * channel(3) + 0.0722 * channel(5);
+}
+
+function contrast(foreground: string, background: string): number {
+  const [lighter, darker] = [luminance(foreground), luminance(background)].sort(
+    (first, second) => second - first,
+  );
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+export function checkedReceiptStyle(style: ReceiptStyle): ReceiptStyle {
+  for (const role of READ_ON_THE_PAGE) {
+    const value = style.colors[role];
+    if (!HEX.test(value)) {
+      throw new ReceiptStyleRefused(
+        `The receipt colour ${RECEIPT_COLOR_TOKENS[role]} is ${value}, not a literal #rrggbb colour.`,
+      );
+    }
+    const ratio = contrast(value, PAGE);
+    if (ratio < MINIMUM_CONTRAST) {
+      throw new ReceiptStyleRefused(
+        `The receipt colour ${RECEIPT_COLOR_TOKENS[role]} ${value} has a contrast of ${ratio.toFixed(2)}:1 on the white page, below ${MINIMUM_CONTRAST}:1.`,
+      );
+    }
+  }
+  return style;
+}
+
+export function resolveReceiptStyle(element: Element): ReceiptStyle {
   const style = getComputedStyle(element);
   const leading = tokenValue(style, RECEIPT_LEADING_TOKEN);
   if (!/^\d+(\.\d+)?$/.test(leading)) {
-    throw new Error(`The receipt token ${RECEIPT_LEADING_TOKEN} is ${leading}, not a number.`);
+    throw new ReceiptStyleRefused(
+      `The receipt token ${RECEIPT_LEADING_TOKEN} is ${leading}, not a number.`,
+    );
   }
-  return {
-    colors: mapped(RECEIPT_COLOR_TOKENS, (token) => {
-      const hex = toHex(tokenValue(style, token)).toLowerCase();
-      if (!HEX.test(hex)) {
-        throw new Error(`The receipt token ${token} gives no colour the receipt can print.`);
-      }
-      return hex;
-    }),
+  return checkedReceiptStyle({
+    colors: mapped(RECEIPT_COLOR_TOKENS, (token) => color(style, token)),
     sizes: mapped(RECEIPT_SIZE_TOKENS, (token) => measured(style, token, 'pt')),
     leading: Number(leading),
-    fonts: { body: '', bold: '', heading: '' },
+    fonts: mapped(RECEIPT_FONT_TOKENS, (token) => fontFile(style, token)),
     margins: mapped(RECEIPT_MARGIN_TOKENS, (token) => measured(style, token, 'mm') * POINTS_PER_MM),
-  };
-}
-
-export function canvasColorToHex(): CssColorToHex {
-  const canvas = document.createElement('canvas');
-  canvas.width = 1;
-  canvas.height = 1;
-  const context = canvas.getContext('2d', { willReadFrequently: true });
-  return (cssColor) => {
-    if (context === null) {
-      return cssColor;
-    }
-    context.clearRect(0, 0, 1, 1);
-    context.fillStyle = '#ffffff';
-    context.fillRect(0, 0, 1, 1);
-    context.fillStyle = cssColor;
-    context.fillRect(0, 0, 1, 1);
-    const [red, green, blue] = context.getImageData(0, 0, 1, 1).data;
-    return `#${[red, green, blue].map((channel) => channel.toString(16).padStart(2, '0')).join('')}`;
-  };
+  });
 }
