@@ -440,6 +440,10 @@ class Journey {
   }
 
   async connectorToken(admin) {
+    await this.waitUntil('the connector to name this site as its resource', 90, async () => {
+      const answer = await this.request('GET', '/.well-known/oauth-protected-resource/mcp');
+      return answer.status === 200 && answer.json?.resource?.replace(/\/$/, '') === `${this.site}/mcp`;
+    });
     const verifier = randomBytes(32).toString('base64url');
     const challenge = createHash('sha256').update(verifier).digest('base64url');
     const redirectUri = `${CONNECTOR_REDIRECT.replace('/callback', '')}:43117/callback`;
