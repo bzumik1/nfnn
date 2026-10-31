@@ -22,7 +22,7 @@ import { proofFragmentInPdf } from './pdf-proof-link';
 import { proofFragment } from './proof-link';
 import { ProofLinkValidator } from './proof-link-validator';
 import type { QrImage } from './qr-image';
-import { QrReader } from './qr-reader';
+import { QrReader, QrReaderOutdated } from './qr-reader';
 import { PictureTooLarge, SCAN_DEVICE } from './scan-device';
 
 export const SCAN_INTERVAL_MS = 250;
@@ -50,6 +50,7 @@ const FILE_TOO_LARGE = $localize`:@@donor.verify.input.fileTooLarge:Soubor je p�
 const PDF_WITHOUT_LINK = $localize`:@@donor.verify.input.pdfWithoutLink:V tomto PDF jsme ověřovací kód nenašli. Nahrajte PDF potvrzení tak, jak jste ho stáhli z webu fondu, nebo načtěte jeho QR kód.`;
 const PICTURE_WITHOUT_CODE = $localize`:@@donor.verify.input.pictureWithoutCode:Na obrázku jsme QR kód nenašli. Vyfoťte kód zblízka a ostře, nebo nahrajte PDF potvrzení.`;
 const PICTURE_TOO_LARGE = $localize`:@@donor.verify.input.pictureTooLarge:Obrázek je příliš velký. Nahrajte fotku nebo snímek obrazovky QR kódu do 50 megapixelů.`;
+const READER_OUTDATED = $localize`:@@donor.verify.input.readerOutdated:Web se mezitím aktualizoval. Obnovte prosím stránku a načtěte kód znovu.`;
 const FILE_UNREADABLE = $localize`:@@donor.verify.input.fileUnreadable:Soubor se nepodařilo otevřít. Nahrajte PDF potvrzení nebo fotku kódu ve formátu JPEG či PNG.`;
 const CAMERA_REFUSALS = ['NotAllowedError', 'SecurityError'];
 const CAMERA_ABSENCES = ['NotFoundError', 'OverconstrainedError'];
@@ -182,8 +183,11 @@ export class ProofInput {
         return;
       }
       this.handOverCodes(await this.reader.read(image), PICTURE_WITHOUT_CODE);
-    } catch {
-      this.problem.set({ way: 'file', text: FILE_UNREADABLE });
+    } catch (failure: unknown) {
+      this.problem.set({
+        way: 'file',
+        text: failure instanceof QrReaderOutdated ? READER_OUTDATED : FILE_UNREADABLE,
+      });
     } finally {
       this.reading.set(false);
     }
@@ -212,8 +216,8 @@ export class ProofInput {
     try {
       const frame = this.device.frame(video);
       codes = frame === null ? [] : await this.reader.read(frame);
-    } catch {
-      this.cameraFailed(run);
+    } catch (failure: unknown) {
+      this.endScan(run, failure instanceof QrReaderOutdated ? READER_OUTDATED : CAMERA_FAILED);
       return;
     }
     if (run !== this.scanRun) {

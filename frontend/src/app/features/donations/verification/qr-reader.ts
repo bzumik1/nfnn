@@ -1,4 +1,5 @@
 import { inject, Injectable, InjectionToken } from '@angular/core';
+import { ErrorReporter } from '../../../core/errors/error-reporter';
 import type { QrImage } from './qr-image';
 
 export interface QrWorkerQuestion {
@@ -32,8 +33,11 @@ interface BarcodeDetectorClass {
   getSupportedFormats(): Promise<string[]>;
 }
 
+export class QrReaderOutdated extends Error {}
+
 const QR_FORMAT = 'qr_code';
 export const QR_WORKER_TIMEOUT_MS = 10_000;
+export const QR_WORKER_STARTS_BEFORE_GIVING_UP = 3;
 
 async function browserDetector(): Promise<QrDetector | null> {
   const detectorClass = (globalThis as { BarcodeDetector?: BarcodeDetectorClass }).BarcodeDetector;
@@ -60,10 +64,12 @@ export const QR_READER_ENVIRONMENT = new InjectionToken<QrReaderEnvironment>('QR
 @Injectable({ providedIn: 'root' })
 export class QrReader {
   private readonly environment = inject(QR_READER_ENVIRONMENT);
+  private readonly reporter = inject(ErrorReporter);
   private readonly waiting = new Map<number, (text: string | null) => void>();
   private detector: Promise<QrDetector | null> | null = null;
   private worker: QrWorker | null = null;
   private asked = 0;
+  private failedStarts = 0;
 
   async read(image: QrImage): Promise<readonly string[]> {
     const detector = await (this.detector ??= this.environment.detector());
@@ -90,6 +96,9 @@ export class QrReader {
   }
 
   private askWorker(image: QrImage): Promise<string | null> {
+    if (this.failedStarts >= QR_WORKER_STARTS_BEFORE_GIVING_UP) {
+      return Promise.reject(new QrReaderOutdated('The QR worker of this page does not start.'));
+    }
     const worker = this.startedWorker();
     if (worker === null) {
       return Promise.resolve(null);
@@ -119,20 +128,32 @@ export class QrReader {
     let worker: QrWorker;
     try {
       worker = this.environment.worker();
-    } catch {
+    } catch (failure: unknown) {
+      this.startFailed(failure);
       return null;
     }
+    let answered = false;
     worker.onmessage = ({ data }) => {
+      answered = true;
+      this.failedStarts = 0;
       const answer = this.waiting.get(data.id);
       this.waiting.delete(data.id);
       answer?.(data.text);
     };
-    worker.onerror = () => {
+    worker.onerror = (event) => {
+      if (!answered) {
+        this.startFailed(event.error);
+      }
       if (this.worker === worker) {
         this.release();
       }
     };
     this.worker = worker;
     return worker;
+  }
+
+  private startFailed(failure: unknown): void {
+    this.failedStarts++;
+    this.reporter.report('qr-encode', 'global', failure);
   }
 }

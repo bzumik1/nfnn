@@ -2124,7 +2124,7 @@ describe('Given a signed-in donor in the donor area', () => {
         receiptRequest({ year: 2025 }).flush(issuedYearly(2025));
         await settle();
         receiptEnvironment.last().say({ kind: 'ready' });
-        receiptEnvironment.last().say({ kind: 'failed', reason: 'drawing' });
+        receiptEnvironment.last().say({ kind: 'failed', reason: 'drawing', name: 'Other' });
         await settleBlobFailure();
 
         expect(element('.yearly-card [role="alert"]')?.textContent).toContain(
@@ -2157,7 +2157,7 @@ describe('Given a signed-in donor in the donor area', () => {
         receiptRequest({ year: 2025 }).flush(issuedYearly(2025));
         await settle();
         receiptEnvironment.last().say({ kind: 'ready' });
-        receiptEnvironment.last().say({ kind: 'failed', reason: 'drawing' });
+        receiptEnvironment.last().say({ kind: 'failed', reason: 'drawing', name: 'Other' });
         await settle();
 
         expect(text('.yearly-card [role="alert"]')).toBe(

@@ -5,6 +5,7 @@ import { Subscription } from 'rxjs';
 import { FrozenReceipt, IssuedReceipt } from './frozen-receipt';
 import {
   RECEIPT_PDF_ENVIRONMENT,
+  RECEIPT_DRAWING_TIMEOUT_MS,
   ReceiptPdf,
   ReceiptPdfEvent,
   ReceiptPdfFailure,
@@ -13,6 +14,11 @@ import { ReceiptStyleRefused } from './receipt-style';
 import { FakeReceiptPdfEnvironment } from './testing/fake-receipt-worker';
 import { frozenCase, SINGLE_PERSON_CS, YEARLY_BILINGUAL } from './testing/receipt-fixtures';
 import { SYNTHETIC_SIGNATURE_JSON } from './testing/synthetic-art';
+import {
+  closedReport,
+  recordClientErrors,
+  SentClientErrors,
+} from '../../../core/errors/testing/client-error-reports';
 
 const ISSUED_AT = '2027-01-15T09:30:00Z';
 
@@ -48,9 +54,11 @@ describe('Given the browser receipt PDF', () => {
   let failure: unknown;
   let completed: boolean;
   let subscription: Subscription;
+  let reports: SentClientErrors;
 
   beforeEach(() => {
     environment = new FakeReceiptPdfEnvironment();
+    reports = recordClientErrors();
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
@@ -67,6 +75,9 @@ describe('Given the browser receipt PDF', () => {
   afterEach(() => {
     subscription?.unsubscribe();
     http.verify();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    vi.useRealTimers();
   });
 
   function draw(subject: { year: number } | { donationId: string }): void {
@@ -143,9 +154,58 @@ describe('Given the browser receipt PDF', () => {
 
     it('then fonts that do not load are named as the reason', () => {
       environment.last().say({ kind: 'ready' });
-      environment.last().say({ kind: 'failed', reason: 'fonts' });
+      environment.last().say({ kind: 'failed', reason: 'fonts', name: 'TypeError' });
 
       expect((failure as ReceiptPdfFailure).reason).toBe('fonts');
+    });
+
+    it('then fonts that are gone after a deploy mean the tools are missing, so the page loads once more', () => {
+      environment.last().say({ kind: 'ready' });
+      environment.last().say({ kind: 'failed', reason: 'tools-missing', name: 'NotFoundError' });
+
+      expect((failure as ReceiptPdfFailure).reason).toBe('tools-missing');
+    });
+
+    describe('and the drawing fails', () => {
+      it('before the worker is ready, then a pdf-load report of closed values reaches the server', () => {
+        environment.last().fail();
+
+        expect(reports.bodies()).toEqual([closedReport('pdf-load', 'Other')]);
+      });
+
+      it('while the worker draws, then a pdf-render report reaches the server', () => {
+        environment.last().say({ kind: 'ready' });
+        environment.last().fail();
+
+        expect(reports.bodies()).toEqual([closedReport('pdf-render', 'Other')]);
+      });
+
+      it('because the fonts do not load, then a pdf-load report names the closed error the worker caught', () => {
+        environment.last().say({ kind: 'ready' });
+        environment.last().say({ kind: 'failed', reason: 'fonts', name: 'TypeError' });
+
+        expect(reports.bodies()).toEqual([closedReport('pdf-load', 'TypeError')]);
+      });
+
+      it('because the fonts are gone after a deploy, then a pdf-load report names them not found', () => {
+        environment.last().say({ kind: 'ready' });
+        environment.last().say({ kind: 'failed', reason: 'tools-missing', name: 'NotFoundError' });
+
+        expect(reports.bodies()).toEqual([closedReport('pdf-load', 'NotFoundError')]);
+      });
+
+      it('inside the layout, then a pdf-render report names the closed error the worker caught', () => {
+        environment.last().say({ kind: 'ready' });
+        environment.last().say({ kind: 'failed', reason: 'drawing', name: 'RangeError' });
+
+        expect(reports.bodies()).toEqual([closedReport('pdf-render', 'RangeError')]);
+      });
+    });
+
+    it('and the drawing finishes, then nothing is reported', () => {
+      environment.last().drawAll();
+
+      expect(reports.bodies()).toEqual([]);
     });
 
     it('then giving up stops the worker', () => {
@@ -172,6 +232,18 @@ describe('Given the browser receipt PDF', () => {
 
     expect(failure).toBeInstanceOf(HttpErrorResponse);
     expect(environment.workers).toEqual([]);
+    expect(reports.bodies()).toEqual([]);
+  });
+
+  it('when the worker never answers, then the drawing times out and a pdf-render report names the timeout', () => {
+    vi.useFakeTimers();
+    draw({ year: 2026 });
+    issue(frozenCase(YEARLY_BILINGUAL), { year: 2026 });
+
+    vi.advanceTimersByTime(RECEIPT_DRAWING_TIMEOUT_MS);
+
+    expect((failure as ReceiptPdfFailure).reason).toBe('drawing');
+    expect(reports.bodies()).toEqual([closedReport('pdf-render', 'TimeoutError')]);
   });
 
   it('when the frozen receipt holds a character no receipt can print, then the drawing fails as unprintable and no worker starts', () => {
@@ -184,6 +256,7 @@ describe('Given the browser receipt PDF', () => {
     expect(failure).toBeInstanceOf(ReceiptPdfFailure);
     expect((failure as ReceiptPdfFailure).reason).toBe('unprintable');
     expect(environment.workers).toHaveLength(0);
+    expect(reports.bodies()).toEqual([]);
   });
 
   it('when the theme gives a style the receipt refuses, then the drawing fails as a style failure instead of waiting for the timeout', () => {
@@ -196,6 +269,7 @@ describe('Given the browser receipt PDF', () => {
 
     expect(failure).toBeInstanceOf(ReceiptPdfFailure);
     expect((failure as ReceiptPdfFailure).reason).toBe('style');
+    expect(reports.bodies()).toEqual([closedReport('pdf-render', 'Error')]);
   });
 
   it('when the receipt has no text the document needs, then the drawing fails at once instead of waiting for the timeout', () => {
@@ -234,6 +308,7 @@ describe('Given the browser receipt PDF', () => {
 
     expect(failure).toBeInstanceOf(ReceiptPdfFailure);
     expect((failure as ReceiptPdfFailure).reason).toBe('tools-missing');
+    expect(reports.bodies()).toEqual([closedReport('pdf-load', 'SecurityError')]);
   });
 
   describe('when the receipt names a signature image', () => {
@@ -271,6 +346,7 @@ describe('Given the browser receipt PDF', () => {
 
       expect((failure as ReceiptPdfFailure).reason).toBe('image');
       expect(environment.workers).toEqual([]);
+      expect(reports.bodies()).toEqual([closedReport('pdf-render', 'Error')]);
     });
   });
 });

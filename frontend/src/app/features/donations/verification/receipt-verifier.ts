@@ -2,6 +2,7 @@ import { DOCUMENT } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { inject, Injectable, InjectionToken } from '@angular/core';
 import { firstValueFrom, timeout } from 'rxjs';
+import { ErrorReporter } from '../../../core/errors/error-reporter';
 import { ed25519Verifies } from './ed25519';
 import { ReceiptKeyStore } from './receipt-key-store';
 import { keyLookup, type TrustedKeys } from './receipt-keys';
@@ -56,6 +57,7 @@ export class ReceiptVerifier {
   private readonly store = inject(ReceiptKeyStore);
   private readonly verifies = inject(SIGNATURE_CHECK);
   private readonly navigator = inject(DOCUMENT).defaultView?.navigator;
+  private readonly reporter = inject(ErrorReporter);
 
   async verify(
     fragment: string | null,
@@ -84,7 +86,8 @@ export class ReceiptVerifier {
       }
       const reading = fresh.reach === 'online' ? await this.read(text, fresh.keys) : first;
       return await this.outcomeOf(reading, fresh.reach, progress);
-    } catch {
+    } catch (failure: unknown) {
+      this.reporter.report('verify-signature', 'global', failure);
       return { state: 'failed' };
     }
   }
