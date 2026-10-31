@@ -950,6 +950,22 @@ describe('Given the sign-in dialog', () => {
       );
     });
 
+    it('with a character no receipt can print in the name or the city, then nothing is sent and those fields say so', async () => {
+      await fillInPerson();
+      await fillIn('#register-name', 'Jana 中 Nováková');
+      await fillIn('#register-city', 'Ústí 🙂');
+
+      await submit('.register-form');
+
+      http.expectNone('/api/donors/auth/register');
+      const refusal =
+        'Obsahuje znak, který na potvrzení o daru nevytiskneme, například emoji nebo čínské písmo. Napište prosím tento údaj latinkou, cyrilicí nebo řeckým písmem.';
+      expect(element('#register-name-error').textContent?.trim()).toBe(refusal);
+      expect(element('#register-city-error').textContent?.trim()).toBe(refusal);
+      expect(element('#register-street-error')).toBeNull();
+      expect(document.activeElement).toBe(element('#register-name'));
+    });
+
     it('and the server refuses a field, then the message stands at that field, which takes the focus', async () => {
       await fillInPerson();
 

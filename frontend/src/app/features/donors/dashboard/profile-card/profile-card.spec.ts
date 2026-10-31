@@ -167,7 +167,7 @@ describe('Given the donor data card in the overview', () => {
       expect(document.activeElement).toBe(element('.profile-edit'));
     });
 
-    it('and the server refuses the data, then the form stays and says why', async () => {
+    it('and the server refuses a field, then the form stays, the message stands at that field, which takes the focus, and the form line gives only the title', async () => {
       await click('.profile-edit');
 
       await submit();
@@ -182,10 +182,71 @@ describe('Given the donor data card in the overview', () => {
       await settle();
 
       expect(element('.profile-form')).not.toBeNull();
-      expect(element('.profile-form .ui-field-error').textContent).toContain(
-        'Neplatný požadavek. PSČ má pět číslic.',
+      expect(element('#profile-postal-code-error').textContent).toContain('PSČ má pět číslic.');
+      expect(element('#profile-postal-code').getAttribute('aria-invalid')).toBe('true');
+      expect(document.activeElement).toBe(element('#profile-postal-code'));
+      expect(element('.profile-form .ui-field-error').textContent).toContain('Neplatný požadavek');
+      expect(element('.profile-form .ui-field-error').textContent).not.toContain(
+        'PSČ má pět číslic.',
       );
       expect(element<HTMLButtonElement>('.profile-save').disabled).toBe(false);
+    });
+
+    it('and the server refuses the name, street and city as unprintable, then each field carries its message', async () => {
+      await click('.profile-edit');
+
+      await submit();
+      const unprintable = 'Obsahuje znak, který na potvrzení o daru nevytiskneme.';
+      http.expectOne('/api/donors/me').flush(
+        {
+          ...problem('validation', 'Neplatný požadavek'),
+          status: 400,
+          errors: [
+            { field: 'name', message: unprintable },
+            { field: 'address.street', message: unprintable },
+            { field: 'address.city', message: unprintable },
+          ],
+        },
+        { status: 400, statusText: 'Bad Request' },
+      );
+      await settle();
+
+      for (const id of ['profile-name', 'profile-street', 'profile-city']) {
+        expect(element(`#${id}-error`).textContent).toContain(unprintable);
+      }
+      expect(document.activeElement).toBe(element('#profile-name'));
+    });
+
+    it('and types a character no receipt can print into the name, street or city, then nothing is sent and each of those fields says so', async () => {
+      await click('.profile-edit');
+      await fillIn('#profile-name', 'Jana 中 Nováková');
+      await fillIn('#profile-street', 'Dlouhá 12 🏠');
+      await fillIn('#profile-city', 'Ústí nad Labem');
+
+      await submit();
+
+      http.expectNone('/api/donors/me');
+      const refusal =
+        'Obsahuje znak, který na potvrzení o daru nevytiskneme, například emoji nebo čínské písmo. Napište prosím tento údaj latinkou, cyrilicí nebo řeckým písmem.';
+      expect(element('#profile-name-error').textContent?.trim()).toBe(refusal);
+      expect(element('#profile-street-error').textContent?.trim()).toBe(refusal);
+      expect(element('#profile-city-error')).toBeNull();
+      expect(element('#profile-name').getAttribute('aria-invalid')).toBe('true');
+      expect(document.activeElement).toBe(element('#profile-name'));
+    });
+
+    it('and types Greek, Cyrillic or Vietnamese letters, then they are sent', async () => {
+      await click('.profile-edit');
+      await fillIn('#profile-name', 'Nguyễn Thị Minh Khai');
+      await fillIn('#profile-street', 'Хрещатик 1');
+      await fillIn('#profile-city', 'Αθήνα');
+
+      await submit();
+
+      const request = http.expectOne({ method: 'PATCH', url: '/api/donors/me' });
+      expect(request.request.body.name).toBe('Nguyễn Thị Minh Khai');
+      request.flush(sampleDonor());
+      await settle();
     });
 
     it('and the session has ended, then the overview is told to send the donor to sign in', async () => {

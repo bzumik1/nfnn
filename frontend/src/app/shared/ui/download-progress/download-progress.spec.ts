@@ -77,6 +77,32 @@ describe('Given a download progress line', () => {
     });
   });
 
+  describe('when a download runs page by page', () => {
+    beforeEach(() =>
+      show({ kind: 'running', step: 2, steps: 5, text: 'Vytváříme PDF…', detail: 'Strana 1' }),
+    );
+
+    it('then the status names only the phase, while the page shows beside the bar and in its value text', async () => {
+      await show({ kind: 'running', step: 3, steps: 5, text: 'Vytváříme PDF…', detail: 'Strana 2' });
+
+      expect(status()).toBe('Vytváříme PDF…');
+      const bar = element('progress') as HTMLProgressElement;
+      expect(bar.getAttribute('aria-label')).toBe('Vytváříme PDF…');
+      expect(bar.getAttribute('aria-valuetext')).toBe('Strana 2');
+      const detail = element('.download-progress-detail');
+      expect(detail?.textContent?.trim()).toBe('Strana 2');
+      expect(detail?.getAttribute('aria-hidden')).toBe('true');
+    });
+  });
+
+  it('when a download is cancelled, then the status says so without the look of a success and no bar shows', async () => {
+    await show({ kind: 'cancelled', step: 1, steps: 1, text: 'Přípravu potvrzení jste zrušili.' });
+
+    expect(status()).toBe('Přípravu potvrzení jste zrušili.');
+    expect(element('.download-progress-line--done')).toBeNull();
+    expect(element('progress')).toBeNull();
+  });
+
   describe('when the file waits for a second tap to open', () => {
     beforeEach(() => show({ kind: 'ready', step: 3, steps: 3, text: 'Potvrzení je připravené.' }));
 
