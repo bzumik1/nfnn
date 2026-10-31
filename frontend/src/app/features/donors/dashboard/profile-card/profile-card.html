@@ -38,6 +38,7 @@
             type="text"
             autocomplete="organization"
             [(ngModel)]="fields.name"
+            appPrintableOnReceipt
             required
             maxlength="160"
           />
@@ -54,6 +55,7 @@
             type="text"
             autocomplete="street-address"
             [(ngModel)]="fields.street"
+            appPrintableOnReceipt
             required
             maxlength="200"
           />
@@ -72,6 +74,7 @@
             type="text"
             autocomplete="name"
             [(ngModel)]="fields.name"
+            appPrintableOnReceipt
             required
             maxlength="160"
           />
@@ -88,6 +91,7 @@
             type="text"
             autocomplete="street-address"
             [(ngModel)]="fields.street"
+            appPrintableOnReceipt
             required
             maxlength="200"
           />
@@ -120,6 +124,7 @@
             type="text"
             autocomplete="address-level2"
             [(ngModel)]="fields.city"
+            appPrintableOnReceipt
             required
             maxlength="120"
           />

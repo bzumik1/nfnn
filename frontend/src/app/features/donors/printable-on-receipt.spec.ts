@@ -21,6 +21,8 @@ describe('Given a donor field whose text goes onto the receipt', () => {
   });
 
   it('when the text holds an emoji, then the field names the printable rule', () => {
-    expect(validator.validate(new FormControl('Dlouhá 12 🏠'))).toEqual({ printableOnReceipt: true });
+    expect(validator.validate(new FormControl('Dlouhá 12 🏠'))).toEqual({
+      printableOnReceipt: true,
+    });
   });
 });
