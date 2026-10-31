@@ -37,6 +37,15 @@ describe('Given the about section', () => {
     expect(paragraphs[2]).toMatch(/^Nová naděje – nadační fond byl zřízen/);
   });
 
+  it('when it renders, then its link to the projects says where the foundation helps', () => {
+    const link = (fixture.nativeElement as HTMLElement).querySelector<HTMLAnchorElement>(
+      'a.link-arrow',
+    )!;
+
+    expect(link.textContent?.trim()).toBe('Kde pomáháme →');
+    expect(link.getAttribute('href')).toBe('/#projekty');
+  });
+
   describe('when it renders who runs the foundation today', () => {
     function board(): HTMLElement {
       return (fixture.nativeElement as HTMLElement).querySelector('.board')!;
