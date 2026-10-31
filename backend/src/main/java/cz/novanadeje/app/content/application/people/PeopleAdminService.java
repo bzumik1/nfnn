@@ -12,11 +12,13 @@ import cz.novanadeje.app.content.domain.people.PersonNotFound;
 import cz.novanadeje.app.content.domain.people.PersonRepository;
 import cz.novanadeje.app.content.domain.people.PersonSignsReceipts;
 import cz.novanadeje.app.content.domain.people.ReceiptPortraitInBrowserOnly;
+import cz.novanadeje.app.content.domain.people.SignatoryNameUnprintable;
 import cz.novanadeje.app.content.domain.people.TooManyPeople;
 import cz.novanadeje.app.shared.application.account.VerifiedAccountEmails;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.event.FoundationPersonRemoved;
 import cz.novanadeje.app.shared.application.people.ReceiptSignatoryLookup;
+import cz.novanadeje.app.shared.domain.PrintableText;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -87,7 +89,12 @@ public class PeopleAdminService {
         Instant now = clock.instant();
         Person current = find(id);
         PersonDetails details = checked(command.toDetails());
-        if (connected && !details.portrait().equals(current.details().portrait()) && signatories.signsReceipts(id.value())) {
+        boolean portraitChanged = !details.portrait().equals(current.details().portrait());
+        boolean unprintableName = !PrintableText.prints(details.name());
+        if ((connected && portraitChanged || unprintableName) && signatories.signsReceipts(id.value())) {
+            if (unprintableName) {
+                throw new SignatoryNameUnprintable(id);
+            }
             throw new ReceiptPortraitInBrowserOnly();
         }
         Person edited = current.edit(details, now);

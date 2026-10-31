@@ -48,7 +48,7 @@
     "scenario": "donations/admin_receipt_signature: *",
     "kind": "logs",
     "line": "donations.application.pairing.PaymentPairingService: Donor * learned sender account link *",
-    "reason": "1.16: the person id now in the signature's path is numbered before the learned account link, so the link's masked id is <id:4> instead of <id:3>; the line is the same",
+    "reason": "1.16: the person who signs and their signature are numbered before the learned account link, so the link's masked id moves by one or two (<id:3> to <id:4> against v2, <id:5> to <id:6> against main); the line is the same",
     "contract": "docs/api-contract.md, Receipt signatory and signatures",
     "security": {
       "approvedIn": "PENDING",

@@ -27,8 +27,8 @@ class ReceiptSignatoryTest {
 
     @ParameterizedTest(name = "Given a role {0}, when the signatory is made, then it is refused")
     @MethodSource("refusedRoles")
-    @DisplayName("Given a blank role or a role holding a control character, when the signatory is made, then it is refused")
-    void should_refuse_the_role_when_made_given_blank_or_control_character(String description, String role) {
+    @DisplayName("Given a blank role, a role holding a control character or a character no receipt can print, when the signatory is made, then it is refused")
+    void should_refuse_the_role_when_made_given_blank_control_or_unprintable_character(String description, String role) {
         assertThatThrownBy(() -> new ReceiptSignatory(PERSON, role, AT)).isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -38,7 +38,10 @@ class ReceiptSignatoryTest {
                 arguments("with a line break", "předseda\nsprávní rady"),
                 arguments("with a tab", "předseda\tsprávní rady"),
                 arguments("with a NUL character", "předseda\u0000"),
-                arguments("with a C1 control character", "předseda\u009b"));
+                arguments("with a C1 control character", "předseda\u009b"),
+                arguments("with an emoji no receipt can print", "předseda 😀"),
+                arguments("with a letter no receipt font carries", "předseda 王"),
+                arguments("of characters a receipt drops only", "\u200b\u00ad"));
     }
 
     @Test

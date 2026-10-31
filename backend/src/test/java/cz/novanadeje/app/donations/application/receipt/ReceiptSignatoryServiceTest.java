@@ -3,6 +3,7 @@ package cz.novanadeje.app.donations.application.receipt;
 import cz.novanadeje.app.donations.domain.receipt.PersonReference;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptPersonNotFound;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatoryNeedsRenaming;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatoryUnprintable;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatory;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatoryRepository;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatureRepository;
@@ -132,6 +133,19 @@ class ReceiptSignatoryServiceTest {
         when(people.findForUpdate(CHAIR.value())).thenReturn(Optional.of(new FoundationPerson(CHAIR.value(), "Josef\nVzorový", false, true)));
 
         assertThatThrownBy(() -> service.choose(ADMIN, CHAIR, "předseda")).isInstanceOf(ReceiptSignatoryNeedsRenaming.class)
+                .hasMessageNotContaining("Josef");
+
+        verify(signatories, never()).choose(any());
+        verifyNoInteractions(events);
+    }
+
+    @Test
+    @DisplayName("Given a person whose name holds a character no receipt can print, when an administrator chooses them, then it is refused until they are renamed and nothing changes")
+    void should_refuse_until_renamed_when_chosen_given_an_unprintable_name() {
+        when(people.findForUpdate(CHAIR.value())).thenReturn(Optional.of(new FoundationPerson(CHAIR.value(), "Josef Vzorový 😀", false)));
+
+        assertThatThrownBy(() -> service.choose(ADMIN, CHAIR, "předseda")).isInstanceOf(ReceiptSignatoryUnprintable.class)
+                .hasFieldOrPropertyWithValue("code", "donations/signatory-unprintable")
                 .hasMessageNotContaining("Josef");
 
         verify(signatories, never()).choose(any());

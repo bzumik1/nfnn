@@ -8,5 +8,5 @@ import jakarta.validation.constraints.Size;
 
 record ReceiptSignatoryRequest(
         @NotNull @Size(max = 36) @Pattern(regexp = "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}") String personId,
-        @NotBlank @Size(max = ReceiptSignatory.MAX_ROLE_LENGTH) @Pattern(regexp = ReceiptSignatory.ROLE_PATTERN) String receiptRole) {
+        @NotBlank @Size(max = ReceiptSignatory.MAX_ROLE_LENGTH) @Pattern(regexp = ReceiptSignatory.ROLE_PATTERN) @PrintableOnReceipt String receiptRole) {
 }

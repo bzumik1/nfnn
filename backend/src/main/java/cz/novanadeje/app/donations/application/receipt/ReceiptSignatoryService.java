@@ -4,12 +4,14 @@ import cz.novanadeje.app.donations.domain.receipt.PersonReference;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptPersonNotFound;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatoryNeedsRenaming;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatory;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatoryUnprintable;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatoryRepository;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatureRepository;
 import cz.novanadeje.app.donations.domain.receipt.SignatureSummary;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.people.FoundationPeople;
 import cz.novanadeje.app.shared.application.people.FoundationPerson;
+import cz.novanadeje.app.shared.domain.PrintableText;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -55,6 +57,9 @@ public class ReceiptSignatoryService {
         FoundationPerson known = people.findForUpdate(person.value()).orElseThrow(() -> new ReceiptPersonNotFound(person));
         if (known.needsCorrection()) {
             throw new ReceiptSignatoryNeedsRenaming(person);
+        }
+        if (!PrintableText.prints(known.name())) {
+            throw new ReceiptSignatoryUnprintable(person);
         }
         Instant now = clock.instant();
         ReceiptSignatory chosen = new ReceiptSignatory(person, receiptRole, now);

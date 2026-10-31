@@ -193,6 +193,29 @@ Feature: An administrator chooses who signs the donation receipts and uploads th
     And "Jana" chooses "Josef Vzorový" to sign the receipts as "předseda správní rady"
     Then the response status is 200
 
+  Scenario: A name or a receipt role no receipt can print is refused when the signatory is chosen or renamed, so a chosen signatory can always be issued
+    When "Jana" chooses "Josef Vzorový" to sign the receipts as "předseda 😀"
+    Then the response status is 400
+    And the problem lists an error for field "receiptRole"
+    Given "Jana" adds a person:
+      | name | Eva Vzor 😀 |
+    When "Jana" chooses "Eva Vzor 😀" to sign the receipts as "předseda správní rady"
+    Then the response status is 409
+    And the problem type ends with "donations/signatory-unprintable"
+    And the problem's detail starts with "Jméno této osoby obsahuje znak, který na potvrzení o daru nevytiskneme"
+    Given "Jana" adds a person:
+      | name | Adam Vzor |
+    And "Jana" chooses "Adam Vzor" to sign the receipts as "místopředseda správní rady"
+    When "Jana" updates the person "Adam Vzor":
+      | name | Adam Vzor 王 |
+    Then the response status is 409
+    And the problem type ends with "content/signatory-name-unprintable"
+    When "Jana" updates the person "Eva Vzor 😀":
+      | name | Eva Vzor 王 |
+    Then the response status is 200
+    When "Jana" asks for the receipt signatory
+    Then the receipt signatory is "Adam Vzor" as "místopředseda správní rady", with a portrait missing and a signature missing
+
   Scenario: Without a chosen signatory no receipt is issued, and the administration and the donor are told why
     Given no person of the foundation signs the receipts
     And the bank account has these movements:

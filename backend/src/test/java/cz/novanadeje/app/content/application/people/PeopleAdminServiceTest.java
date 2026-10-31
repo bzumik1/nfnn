@@ -14,6 +14,7 @@ import cz.novanadeje.app.content.domain.people.PersonRepository;
 import cz.novanadeje.app.content.domain.people.TooManyPeople;
 import cz.novanadeje.app.content.domain.people.PersonSignsReceipts;
 import cz.novanadeje.app.content.domain.people.ReceiptPortraitInBrowserOnly;
+import cz.novanadeje.app.content.domain.people.SignatoryNameUnprintable;
 import cz.novanadeje.app.shared.application.account.VerifiedAccountEmails;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.event.FoundationPersonRemoved;
@@ -262,6 +263,36 @@ class PeopleAdminServiceTest {
     }
 
     @Test
+    @DisplayName("Given the person who signs the receipts, when they are renamed to a name no receipt can print, then it is refused and nothing changes")
+    void should_refuse_the_rename_when_renamed_to_an_unprintable_name_given_the_person_signs_receipts() {
+        Person current = stored(0, Optional.of(PORTRAIT));
+        when(people.findByIdForUpdate(current.id())).thenReturn(Optional.of(current));
+        when(signatories.signsReceipts(current.id().value())).thenReturn(true);
+        lenient().when(media.findSize(PORTRAIT)).thenReturn(Optional.of(SQUARE));
+
+        assertThatThrownBy(() -> service().update(ADMIN, current.id(), renamed("Eva Vzorová 😀"), false))
+                .isInstanceOf(SignatoryNameUnprintable.class)
+                .hasFieldOrPropertyWithValue("code", "content/signatory-name-unprintable")
+                .hasMessageNotContaining("Eva");
+        InOrder order = inOrder(people, signatories);
+        order.verify(people).findByIdForUpdate(current.id());
+        order.verify(signatories).signsReceipts(current.id().value());
+        verify(people, never()).save(any());
+        verify(events, never()).publishEvent(any(Object.class));
+    }
+
+    @Test
+    @DisplayName("Given a person who does not sign the receipts, when they are renamed to a name no receipt can print, then it passes, since the site shows it")
+    void should_rename_when_renamed_to_an_unprintable_name_given_the_person_does_not_sign() {
+        Person current = stored(0, Optional.of(PORTRAIT));
+        when(people.findByIdForUpdate(current.id())).thenReturn(Optional.of(current));
+        when(signatories.signsReceipts(current.id().value())).thenReturn(false);
+        when(media.findSize(PORTRAIT)).thenReturn(Optional.of(SQUARE));
+
+        assertThat(service().update(ADMIN, current.id(), renamed("Eva Vzorová 😀"), false).name()).isEqualTo("Eva Vzorová 😀");
+    }
+
+    @Test
     @DisplayName("Given a person who does not sign the receipts, when a connected application changes their portrait, then it passes")
     void should_change_the_portrait_when_changed_by_a_connection_given_the_person_does_not_sign() {
         Person current = stored(0, Optional.of(PORTRAIT));
@@ -405,6 +436,11 @@ class PeopleAdminServiceTest {
     private static Person withEmails(String name, Optional<String> personal, Optional<String> fund, int position) {
         return Person.add(PersonId.newId(BEFORE), new PersonDetails(name, Optional.empty(), true, Optional.empty(), false, Optional.empty(),
                 new PersonEmails(personal.map(EmailAddress::new), fund.map(EmailAddress::new))), position, BEFORE);
+    }
+
+    private static PersonCommand renamed(String name) {
+        return new PersonCommand(name, Optional.of("Zakladatelka"), true, Optional.of("předsedkyně"), true, Optional.of(PORTRAIT),
+                new PersonEmails(Optional.empty(), Optional.empty()));
     }
 
     private static PersonCommand command(Optional<MediaId> portrait) {
