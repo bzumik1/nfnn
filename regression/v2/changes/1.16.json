@@ -308,5 +308,281 @@
         "<id>": "the media id of the portrait"
       }
     }
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.receipt.DonationReceiptIssuerTest > Given an uploaded signature, when a receipt is issued, then the frozen receipt names the digest of the signature image",
+    "replacement": "donations.application.receipt.DonationReceiptIssuerTest > Given a signatory with a receipt signature and a portrait, when a receipt is issued, then the document prints the signatory and the frozen receipt names the digests of both images",
+    "reason": "1.16 (Jakub 2026-10-30, layout 3B): the frozen signatory carries the portrait beside the signature image, so the test of the signature image alone became the test of both images (renamed, same checks plus the portrait)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.receipt.ReceiptFreezerTest > Given a Czech document and a signature image, when it is frozen, then it keeps the document, the Czech texts, the image digest and the proof of the signed receipt under the server's key",
+    "replacement": "donations.application.receipt.ReceiptFreezerTest > Given a Czech document and a signature image and a portrait, when it is frozen, then it keeps the document, the Czech texts, both image digests and the proof of the signed receipt under the server's key",
+    "reason": "1.16 (Jakub 2026-10-30, layout 3B): the frozen signatory carries the portrait beside the signature image, so the test of the signature image alone became the test of both images (renamed, same checks plus the portrait)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.receipt.ReceiptFreezerTest > Given an English yearly document without a signature image, when it is frozen, then it keeps both languages' texts and no image",
+    "replacement": "donations.application.receipt.ReceiptFreezerTest > Given an English yearly document without a signature image or a portrait, when it is frozen, then it keeps both languages' texts and no image",
+    "reason": "1.16 (Jakub 2026-10-30, layout 3B): the frozen signatory carries the portrait beside the signature image, so the test of the signature image alone became the test of both images (renamed, same checks plus the portrait)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.persistence.JpaDonationReceiptRepositoryTest > Given a donor whose replaced receipt shows a signature image, when asked whether a receipt of theirs shows an image, then that image does and another image or donor does not",
+    "replacement": "donations.infrastructure.persistence.JpaDonationReceiptRepositoryTest > Given a donor whose replaced receipt shows a signature image and a portrait, when asked whether a receipt of theirs shows an image, then those images do and another image or donor does not",
+    "reason": "1.16 (Jakub 2026-10-30, layout 3B): the frozen signatory carries the portrait beside the signature image, so the test of the signature image alone became the test of both images (renamed, same checks plus the portrait)"
+  },
+  {
+    "path": "POST /api/admin/donations/receipt-signature",
+    "scenario": "donations/admin_receipts: The administration lists the issued receipts newest first, a page at a time, by donor and by the year of issue, and reads one with its image*",
+    "kind": "removed",
+    "reason": "1.16 (Jakub 2026-10-30, layout 3B): the singleton receipt signature moved to one per person of the foundation, so the scenario uploads it at /api/admin/donations/receipt-signatures/{personId}",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "path": "POST /api/admin/donations/receipt-signature",
+    "scenario": "donations/donation_receipts_frozen: Another donor's receipt and the signature image it shows answer as not found*",
+    "kind": "removed",
+    "reason": "1.16 (Jakub 2026-10-30, layout 3B): the singleton receipt signature moved to one per person of the foundation, so the scenario uploads it at /api/admin/donations/receipt-signatures/{personId}",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "path": "POST /api/admin/donations/receipt-signature",
+    "scenario": "donations/donation_receipts_frozen: The donor fetches the signature image their receipt shows, and later receipts show the image current when they are issued*",
+    "kind": "removed",
+    "reason": "1.16 (Jakub 2026-10-30, layout 3B): the singleton receipt signature moved to one per person of the foundation, so the scenario uploads it at /api/admin/donations/receipt-signatures/{personId}",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "path": "POST /api/donations/me/receipts",
+    "scenario": "donations/admin_receipts: The administration lists the issued receipts newest first, a page at a time, by donor and by the year of issue, and reads one with its image*",
+    "kind": "body",
+    "field": "$.id",
+    "reason": "1.16: the signature is uploaded for the person who signs (POST /api/admin/donations/receipt-signatures/{personId}) instead of the singleton, so the person's id is numbered first and the masked ids after it move by one; the answers are the same",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "path": "POST /api/donations/me/receipts",
+    "scenario": "donations/admin_receipts: The administration lists the issued receipts newest first, a page at a time, by donor and by the year of issue, and reads one with its image*",
+    "kind": "body",
+    "field": "$.donationId",
+    "reason": "1.16: the signature is uploaded for the person who signs (POST /api/admin/donations/receipt-signatures/{personId}) instead of the singleton, so the person's id is numbered first and the masked ids after it move by one; the answers are the same",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "path": "GET /api/admin/donations/receipts",
+    "scenario": "donations/admin_receipts: The administration lists the issued receipts newest first, a page at a time, by donor and by the year of issue, and reads one with its image*",
+    "kind": "body",
+    "field": "$.items[*].id",
+    "reason": "1.16: the signature is uploaded for the person who signs (POST /api/admin/donations/receipt-signatures/{personId}) instead of the singleton, so the person's id is numbered first and the masked ids after it move by one; the answers are the same",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "path": "GET /api/admin/donations/receipts",
+    "scenario": "donations/admin_receipts: The administration lists the issued receipts newest first, a page at a time, by donor and by the year of issue, and reads one with its image*",
+    "kind": "body",
+    "field": "$.items[*].donationId",
+    "reason": "1.16: the signature is uploaded for the person who signs (POST /api/admin/donations/receipt-signatures/{personId}) instead of the singleton, so the person's id is numbered first and the masked ids after it move by one; the answers are the same",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "path": "GET /api/admin/donations/receipts/{id}",
+    "scenario": "donations/admin_receipts: The administration lists the issued receipts newest first, a page at a time, by donor and by the year of issue, and reads one with its image*",
+    "kind": "body",
+    "field": "$.id",
+    "reason": "1.16: the signature is uploaded for the person who signs (POST /api/admin/donations/receipt-signatures/{personId}) instead of the singleton, so the person's id is numbered first and the masked ids after it move by one; the answers are the same",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "path": "GET /api/admin/donations/receipts/{id}",
+    "scenario": "donations/admin_receipts: The administration lists the issued receipts newest first, a page at a time, by donor and by the year of issue, and reads one with its image*",
+    "kind": "body",
+    "field": "$.instance",
+    "reason": "1.16: the signature is uploaded for the person who signs (POST /api/admin/donations/receipt-signatures/{personId}) instead of the singleton, so the person's id is numbered first and the masked ids after it move by one; the answers are the same",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "path": "POST /api/donations/me/receipts",
+    "scenario": "donations/donation_receipts_frozen: Another donor's receipt and the signature image it shows answer as not found*",
+    "kind": "body",
+    "field": "$.id",
+    "reason": "1.16: the signature is uploaded for the person who signs (POST /api/admin/donations/receipt-signatures/{personId}) instead of the singleton, so the person's id is numbered first and the masked ids after it move by one; the answers are the same",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "path": "POST /api/donations/me/receipts",
+    "scenario": "donations/donation_receipts_frozen: Another donor's receipt and the signature image it shows answer as not found*",
+    "kind": "body",
+    "field": "$.donationId",
+    "reason": "1.16: the signature is uploaded for the person who signs (POST /api/admin/donations/receipt-signatures/{personId}) instead of the singleton, so the person's id is numbered first and the masked ids after it move by one; the answers are the same",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "path": "GET /api/donations/me/receipts/{id}",
+    "scenario": "donations/donation_receipts_frozen: Another donor's receipt and the signature image it shows answer as not found*",
+    "kind": "body",
+    "field": "$.instance",
+    "reason": "1.16: the signature is uploaded for the person who signs (POST /api/admin/donations/receipt-signatures/{personId}) instead of the singleton, so the person's id is numbered first and the masked ids after it move by one; the answers are the same",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "path": "POST /api/donations/me/receipts",
+    "scenario": "donations/donation_receipts_frozen: The donor fetches the signature image their receipt shows, and later receipts show the image current when they are issued*",
+    "kind": "body",
+    "field": "$.id",
+    "reason": "1.16: the signature is uploaded for the person who signs (POST /api/admin/donations/receipt-signatures/{personId}) instead of the singleton, so the person's id is numbered first and the masked ids after it move by one; the answers are the same",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "path": "GET /api/donations/me/receipts/{id}",
+    "scenario": "donations/donation_receipts_frozen: The donor fetches the signature image their receipt shows, and later receipts show the image current when they are issued*",
+    "kind": "body",
+    "field": "$.id",
+    "reason": "1.16: the signature is uploaded for the person who signs (POST /api/admin/donations/receipt-signatures/{personId}) instead of the singleton, so the person's id is numbered first and the masked ids after it move by one; the answers are the same",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "path": "POST /api/donations/me/receipts",
+    "scenario": "donations/admin_receipts: The administration lists the issued receipts newest first, a page at a time, by donor and by the year of issue, and reads one with its image*",
+    "kind": "request",
+    "reason": "1.16: the signature is uploaded for the person who signs (POST /api/admin/donations/receipt-signatures/{personId}) instead of the singleton, so the person's id is numbered first and the masked ids after it move by one; the answers are the same (the donation id or receipt id in the request)",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "path": "GET /api/admin/donations/receipts/{id}",
+    "scenario": "donations/admin_receipts: The administration lists the issued receipts newest first, a page at a time, by donor and by the year of issue, and reads one with its image*",
+    "kind": "request",
+    "reason": "1.16: the signature is uploaded for the person who signs (POST /api/admin/donations/receipt-signatures/{personId}) instead of the singleton, so the person's id is numbered first and the masked ids after it move by one; the answers are the same (the donation id or receipt id in the request)",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "path": "POST /api/donations/me/receipts",
+    "scenario": "donations/donation_receipts_frozen: Another donor's receipt and the signature image it shows answer as not found*",
+    "kind": "request",
+    "reason": "1.16: the signature is uploaded for the person who signs (POST /api/admin/donations/receipt-signatures/{personId}) instead of the singleton, so the person's id is numbered first and the masked ids after it move by one; the answers are the same (the donation id or receipt id in the request)",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "path": "GET /api/donations/me/receipts/{id}",
+    "scenario": "donations/donation_receipts_frozen: Another donor's receipt and the signature image it shows answer as not found*",
+    "kind": "request",
+    "reason": "1.16: the signature is uploaded for the person who signs (POST /api/admin/donations/receipt-signatures/{personId}) instead of the singleton, so the person's id is numbered first and the masked ids after it move by one; the answers are the same (the donation id or receipt id in the request)",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "path": "GET /api/donations/me/receipts/{id}",
+    "scenario": "donations/donation_receipts_frozen: The donor fetches the signature image their receipt shows, and later receipts show the image current when they are issued*",
+    "kind": "request",
+    "reason": "1.16: the signature is uploaded for the person who signs (POST /api/admin/donations/receipt-signatures/{personId}) instead of the singleton, so the person's id is numbered first and the masked ids after it move by one; the answers are the same (the donation id or receipt id in the request)",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "path": "POST /api/donations/me/receipts",
+    "scenario": "donations/donation_receipts_frozen: *",
+    "kind": "added",
+    "field": "$.receipt.signatory.portraitImage",
+    "reason": "1.16 (Jakub 2026-10-30, layout 3B): the frozen signatory gains portraitImage beside signatureImage, the digest of the signatory's portrait prepared for print, or null",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "path": "POST /api/donations/me/receipts",
+    "scenario": "donations/admin_receipts: *",
+    "kind": "added",
+    "field": "$.receipt.signatory.portraitImage",
+    "reason": "1.16 (Jakub 2026-10-30, layout 3B): the frozen signatory gains portraitImage beside signatureImage, the digest of the signatory's portrait prepared for print, or null",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "path": "GET /api/donations/me/receipts/{id}",
+    "scenario": "donations/donation_receipts_frozen: *",
+    "kind": "added",
+    "field": "$.receipt.signatory.portraitImage",
+    "reason": "1.16 (Jakub 2026-10-30, layout 3B): the frozen signatory gains portraitImage beside signatureImage, the digest of the signatory's portrait prepared for print, or null",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "path": "GET /api/donations/me/receipts",
+    "scenario": "donations/donation_receipts_frozen: *",
+    "kind": "added",
+    "field": "$.items[*].receipt.signatory.portraitImage",
+    "reason": "1.16 (Jakub 2026-10-30, layout 3B): the frozen signatory gains portraitImage beside signatureImage, the digest of the signatory's portrait prepared for print, or null",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "path": "GET /api/donations/me/receipts",
+    "scenario": "donations/admin_receipts: *",
+    "kind": "added",
+    "field": "$.items[*].receipt.signatory.portraitImage",
+    "reason": "1.16 (Jakub 2026-10-30, layout 3B): the frozen signatory gains portraitImage beside signatureImage, the digest of the signatory's portrait prepared for print, or null",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "path": "POST /api/admin/donations/donors/{id}/receipts",
+    "scenario": "donations/admin_receipts: *",
+    "kind": "added",
+    "field": "$.receipt.signatory.portraitImage",
+    "reason": "1.16 (Jakub 2026-10-30, layout 3B): the frozen signatory gains portraitImage beside signatureImage, the digest of the signatory's portrait prepared for print, or null",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "path": "POST /api/admin/donations/donors/{id}/receipts",
+    "scenario": "donors/connected_apps: *",
+    "kind": "added",
+    "field": "$.receipt.signatory.portraitImage",
+    "reason": "1.16 (Jakub 2026-10-30, layout 3B): the frozen signatory gains portraitImage beside signatureImage, the digest of the signatory's portrait prepared for print, or null",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "path": "GET /api/admin/donations/receipts/{id}",
+    "scenario": "donations/admin_receipts: *",
+    "kind": "added",
+    "field": "$.receipt.signatory.portraitImage",
+    "reason": "1.16 (Jakub 2026-10-30, layout 3B): the frozen signatory gains portraitImage beside signatureImage, the digest of the signatory's portrait prepared for print, or null",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "scenario": "donations/admin_receipts: *",
+    "kind": "logs",
+    "line": "donations.application.pairing.PaymentPairingService: Donor * learned sender account link *",
+    "reason": "1.16: the person id in the signature's path is numbered before the learned account link, so the link's masked id moves by one; the line is the same",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures",
+    "security": {
+      "approvedIn": "PENDING",
+      "fields": {
+        "<id>": "the donor id, then the learned account link id; the same line as in v2, only the masked numbering moves"
+      }
+    }
+  },
+  {
+    "scenario": "donations/donation_receipts_frozen: *",
+    "kind": "logs",
+    "line": "donations.application.pairing.PaymentPairingService: Donor * learned sender account link *",
+    "reason": "1.16: the person id in the signature's path is numbered before the learned account link, so the link's masked id moves by one; the line is the same",
+    "contract": "docs/api-contract.md, Receipt signatory and signatures",
+    "security": {
+      "approvedIn": "PENDING",
+      "fields": {
+        "<id>": "the donor id, then the learned account link id; the same line as in v2, only the masked numbering moves"
+      }
+    }
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when every source of the attention card answers > then an uploaded signature or one that cannot be checked adds no row",
+    "replacement": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when every source of the attention card answers > then a signatory who cannot be checked says so with a retry, and a signed signatory adds no row",
+    "reason": "1.16 (Jakub 2026-10-30): the receipt signature belongs to the person who signs, so the attention row about it names the signatory and leads to the people of the foundation instead of the receipt settings"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when every source of the attention card answers > then receipts without an uploaded signature get a row leading to the receipt settings",
+    "replacement": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when every source of the attention card answers > then a signatory without an uploaded signature gets a row leading to the people of the foundation",
+    "reason": "1.16 (Jakub 2026-10-30): the receipt signature belongs to the person who signs, so the attention row about it names the signatory and leads to the people of the foundation instead of the receipt settings"
   }
 ]
