@@ -21,6 +21,7 @@ class BundleReceiptTextSourceTest {
 
     private static final Path BROWSER_RECEIPT_DOCUMENT = Path.of("frontend", "src", "app", "features", "donations", "receipt-pdf", "receipt-document.ts");
     private static final Pattern RECEIPT_TEXT_KEY = Pattern.compile("'(receipt\\.[A-Za-z.]+)'");
+    private static final Pattern RECEIPT_TEXT_KEY_FAMILY = Pattern.compile("`(receipt\\.[A-Za-z.]+\\.)\\$\\{");
 
     private final BundleReceiptTextSource source = new BundleReceiptTextSource();
 
@@ -89,5 +90,19 @@ class BundleReceiptTextSourceTest {
         assertThat(keysTheBrowserReads).contains("receipt.title.yearly", "receipt.verification.heading", "receipt.signature.alt");
         assertThat(texts.czech().keySet()).containsAll(keysTheBrowserReads);
         assertThat(texts.english().orElseThrow().keySet()).containsAll(keysTheBrowserReads);
+    }
+
+    @Test
+    @DisplayName("Given the key families the browser's receipt completes with a value of the frozen receipt, when they are looked up in the bundle, then each has receipt texts in Czech and in English, so a renamed family cannot fall back to the app's words unnoticed")
+    void should_hold_every_key_family_the_browser_completes_when_looked_up_given_the_browsers_receipt_document() throws IOException {
+        String document = Files.readString(SharedCases.repositoryRoot().resolve(BROWSER_RECEIPT_DOCUMENT));
+        Set<String> families = RECEIPT_TEXT_KEY_FAMILY.matcher(document).results().map(match -> match.group(1)).collect(Collectors.toSet());
+        ReceiptTextSet texts = source.textsFor(LocaleCode.EN);
+
+        assertThat(families).contains("receipt.gift.form.");
+        assertThat(families).allSatisfy(family -> {
+            assertThat(texts.czech().keySet()).anyMatch(key -> key.startsWith(family));
+            assertThat(texts.english().orElseThrow().keySet()).anyMatch(key -> key.startsWith(family));
+        });
     }
 }
