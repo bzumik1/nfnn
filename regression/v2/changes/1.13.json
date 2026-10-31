@@ -12,7 +12,7 @@
     "reason": "1.13 logs at WARN, besides the WITHDRAW_RECEIPT_SIGNING_KEY audit entry, who withdrew which key, so the withdrawal shows in backend.log",
     "contract": "docs/api-contract.md, Receipt verification proof and signing keys (Withdrawing a key); docs/security-overview.md, Receipt signing key",
     "security": {
-      "approvedIn": "PENDING",
+      "approvedIn": "PR #258, Jakub 2026-10-31",
       "fields": {
         "<id>": "the administrator's account id (a UUID), as every audit line names it; no name or e-mail",
         "<key-id>": "the receipt signing key id: 8 hex digits of the SHA-256 of the public key, public (GET /api/donations/receipt-keys serves it to anyone); no personal data and no secret"
@@ -25,7 +25,7 @@
     "reason": "1.13 logs at WARN a withdrawal refused because the administrator's withdrawals are paused after five refused second factors within 15 minutes (as the backup key's reveal, security review 2026-10-29)",
     "contract": "docs/api-contract.md, Receipt verification proof and signing keys (Withdrawing a key); docs/security-overview.md, Receipt signing key",
     "security": {
-      "approvedIn": "PENDING",
+      "approvedIn": "PR #258, Jakub 2026-10-31",
       "fields": {
         "<id>": "the administrator's account id (a UUID), as every audit line names it; no name or e-mail"
       }
@@ -37,7 +37,7 @@
     "reason": "1.13 logs at WARN, besides the WITHDRAW_RECEIPT_SIGNING_KEY_REFUSED audit entry, a withdrawal whose fresh second factor was missing or did not match",
     "contract": "docs/api-contract.md, Receipt verification proof and signing keys (Withdrawing a key); docs/security-overview.md, Receipt signing key",
     "security": {
-      "approvedIn": "PENDING",
+      "approvedIn": "PR #258, Jakub 2026-10-31",
       "fields": {
         "<id>": "the administrator's account id (a UUID), as every audit line names it; no name or e-mail",
         "<key-id>": "the receipt signing key id: 8 hex digits of the SHA-256 of the public key, public (GET /api/donations/receipt-keys serves it to anyone); no personal data and no secret"
@@ -50,7 +50,7 @@
     "reason": "1.13 logs at ERROR at start when the server's own key is withdrawn (the entrypoint did not replace the seed), so the server signs no receipt",
     "contract": "docs/api-contract.md, Receipt verification proof and signing keys (start: cross-check with the audit trail); docs/system-overview.md, donations (Receipt signing keys); docs/security-overview.md, Receipt signing key",
     "security": {
-      "approvedIn": "PENDING",
+      "approvedIn": "PR #258, Jakub 2026-10-31",
       "fields": {
         "<key-id>": "the receipt signing key id: 8 hex digits of the SHA-256 of the public key, public (GET /api/donations/receipt-keys serves it to anyone); no personal data and no secret"
       }
@@ -62,7 +62,7 @@
     "reason": "1.13 logs at ERROR at start, once per key, a key the audit trail withdrew whose row is active again (a row put back from before the withdrawal); it is published as revoked and flagged on /sprava and in nfnn_status",
     "contract": "docs/api-contract.md, Receipt verification proof and signing keys (start: cross-check with the audit trail); docs/system-overview.md, donations (Receipt signing keys); docs/security-overview.md, Receipt signing key",
     "security": {
-      "approvedIn": "PENDING",
+      "approvedIn": "PR #258, Jakub 2026-10-31",
       "fields": {
         "<key-id>": "the receipt signing key id: 8 hex digits of the SHA-256 of the public key, public (GET /api/donations/receipt-keys serves it to anyone); no personal data and no secret"
       }
@@ -74,7 +74,7 @@
     "reason": "1.13 logs at ERROR at start, once per key, a key the audit trail registered, adopted or withdrew whose row is gone; flagged on /sprava and in nfnn_status",
     "contract": "docs/api-contract.md, Receipt verification proof and signing keys (start: cross-check with the audit trail); docs/system-overview.md, donations (Receipt signing keys); docs/security-overview.md, Receipt signing key",
     "security": {
-      "approvedIn": "PENDING",
+      "approvedIn": "PR #258, Jakub 2026-10-31",
       "fields": {
         "<key-id>": "the receipt signing key id: 8 hex digits of the SHA-256 of the public key, public (GET /api/donations/receipt-keys serves it to anyone); no personal data and no secret"
       }
@@ -86,7 +86,7 @@
     "reason": "1.13 logs at WARN, as soon as the withdrawal of the server's own key is committed, that the backend left the request for a new seed in the restore folder and restarts once the administrators were told",
     "contract": "docs/api-contract.md, Receipt verification proof and signing keys (Withdrawing a key); docs/system-overview.md, donations (Receipt signing keys); deploy/README.md",
     "security": {
-      "approvedIn": "PENDING",
+      "approvedIn": "PR #258, Jakub 2026-10-31",
       "fields": {
         "<key-id>": "the receipt signing key id: 8 hex digits of the SHA-256 of the public key, public (GET /api/donations/receipt-keys serves it to anyone); no personal data and no secret"
       }
@@ -99,7 +99,7 @@
     "reason": "1.13 refuses to issue or return any receipt while the server's own signing key is withdrawn and logs at WARN which donor asked and which key: between the withdrawal and the restart this is the expected state, and a seed that was not renewed shows as the registrar's ERROR at start (review 1.13 r1, merge with 1.6; WARN instead of ERROR after review 1.13 r2)",
     "contract": "docs/api-contract.md, Receipt verification proof and signing keys (Withdrawing a key); docs/system-overview.md, donations (Withdrawing a receipt signing key)",
     "security": {
-      "approvedIn": "PENDING",
+      "approvedIn": "PR #258, Jakub 2026-10-31",
       "fields": {
         "<id>": "the donor's id in donations (a UUID), as the existing line Issued receipt … for donor <id> names it; no name, e-mail or address",
         "<key-id>": "the receipt signing key id: 8 hex digits of the SHA-256 of the public key, public (GET /api/donations/receipt-keys serves it to anyone); no personal data and no secret"
