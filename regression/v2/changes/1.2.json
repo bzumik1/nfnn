@@ -1,0 +1,21 @@
+[
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/payment/details.json",
+    "reason": "1.2 adds the backend-only cases of what GET /api/donations/payment-details serves (lead 2026-10-30, after 0.6d): the account, CZK, the recipient name and both messages as SPAYD text, and the 1 Kč of an account verification; SpaydText writes % as a space (plan section 12), which the cases with % show; payment/spayd.json stays as it is and becomes the browser's in 1.4",
+    "contract": "docs/api-contract.md, GET /api/donations/payment-details; .claude/rules/testing.md, Logic on both sides"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/schemas/payment/details.schema.json",
+    "reason": "1.2 adds the schema of payment/details.json: SPAYD text of the QR alphanumeric set without * and %, at most 35 characters for the recipient and 60 for a message",
+    "contract": "docs/api-contract.md, GET /api/donations/payment-details; .claude/rules/testing.md, Logic on both sides"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.BankAccountTest > [1] accountNumber = \"123456789/0800\"",
+    "reason": "1.2 checks modulo 11 on the account number and that the IBAN is the account number's (plan section 12, Linky review), and 123456789/0800 fails modulo 11, so it is no longer an accepted account; the accepted cases now take the foundation's 5544332217/2010 first, each with the IBAN its number gives, and BankAccountTest and CzechAccountNumberTest refuse 123456789/0800",
+    "replacement": "donations.domain.BankAccountTest > [1] accountNumber = \"5544332217/2010\""
+  }
+]
