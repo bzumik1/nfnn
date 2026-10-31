@@ -163,4 +163,31 @@
   --side-nav-width: 230px;
   --top-bar-height: 62px;
   --floating-notice-height: 0rem;
+
+  --receipt-color-text: #202020;
+  --receipt-color-muted: #484848;
+  --receipt-color-english: #0f5e5e;
+  --receipt-color-rule: #7a9a9a;
+  --receipt-color-row-rule: #c8d6d6;
+  --receipt-color-table-head: #e3eeee;
+  --receipt-color-card: #e3eeee;
+  --receipt-color-card-rule: #7a9a9a;
+  --receipt-color-notice: #fff4d6;
+  --receipt-color-notice-border: #b07d00;
+  --receipt-color-code: #202020;
+  --receipt-color-code-mark: #0f766e;
+  --receipt-color-code-star: #0f766e;
+  --receipt-color-code-star-fill: #fdfcf7;
+  --receipt-size-body: 9pt;
+  --receipt-size-small: 7pt;
+  --receipt-size-title: 12pt;
+  --receipt-size-heading: 10pt;
+  --receipt-leading: 1.35;
+  --receipt-margin-top: 15mm;
+  --receipt-margin-right: 15mm;
+  --receipt-margin-bottom: 20mm;
+  --receipt-margin-left: 15mm;
+  --receipt-font-body: 'body.3a702fdc360fa254.ttf';
+  --receipt-font-bold: 'body-bold.d061552b593f1876.ttf';
+  --receipt-font-heading: 'heading.d061552b593f1876.ttf';
 }

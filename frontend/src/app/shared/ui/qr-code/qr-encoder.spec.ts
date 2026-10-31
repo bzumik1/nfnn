@@ -223,3 +223,25 @@ describe('Given random links of a prefix in bytes and a payload in digits, from 
     RANDOM_LOOP_TIMEOUT_MS,
   );
 });
+
+describe('Given segments that a smaller version would hold', () => {
+  it('when a minimum version is given, then the symbol takes that version and decodes to the same text', () => {
+    const symbol = encodeSegments(
+      [byteSegment('https://nfnn.cz/overit#'), numericSegment('1')],
+      'L',
+      14,
+    );
+
+    expect(symbol.version).toBe(14);
+    expect(symbol.size).toBe(73);
+    expect(decodeMatrix(symbol)?.data).toBe('https://nfnn.cz/overit#1');
+  });
+
+  it('when the minimum version is below the smallest that holds them, then the smallest that holds them is taken', () => {
+    const text = SEVENTEEN_DIGITS.repeat(10);
+
+    expect(encodeSegments([numericSegment(text)], 'M', 1).version).toBe(
+      encodeSegments([numericSegment(text)], 'M').version,
+    );
+  });
+});

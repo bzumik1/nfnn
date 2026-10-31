@@ -34,16 +34,34 @@
               {
                 "glob": "**/*",
                 "input": "public"
+              },
+              {
+                "glob": "*",
+                "input": "src/themes/nova-nadeje/receipt",
+                "output": "receipt-fonts"
               }
             ],
             "styles": ["src/styles.scss"],
-            "polyfills": ["@angular/localize/init"]
+            "polyfills": ["@angular/localize/init"],
+            "webWorkerTsConfig": "tsconfig.worker.json",
+            "allowedCommonJsDependencies": [
+              "base64-js",
+              "brotli",
+              "clone",
+              "dfa",
+              "fast-deep-equal",
+              "tiny-inflate",
+              "unicode-trie"
+            ]
           },
           "configurations": {
             "production": {
               "optimization": {
                 "scripts": true,
-                "styles": { "minify": true, "inlineCritical": false },
+                "styles": {
+                  "minify": true,
+                  "inlineCritical": false
+                },
                 "fonts": true
               },
               "budgets": [
@@ -51,6 +69,12 @@
                   "type": "initial",
                   "maximumWarning": "500kB",
                   "maximumError": "1MB"
+                },
+                {
+                  "type": "bundle",
+                  "name": "receipt-pdf-worker",
+                  "maximumWarning": "650kB",
+                  "maximumError": "800kB"
                 },
                 {
                   "type": "anyComponentStyle",
@@ -68,7 +92,18 @@
             "control-theme": {
               "stylePreprocessorOptions": {
                 "includePaths": ["src/styles", "src/themes/control"]
-              }
+              },
+              "assets": [
+                {
+                  "glob": "**/*",
+                  "input": "public"
+                },
+                {
+                  "glob": "*",
+                  "input": "src/themes/control/receipt",
+                  "output": "receipt-fonts"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"

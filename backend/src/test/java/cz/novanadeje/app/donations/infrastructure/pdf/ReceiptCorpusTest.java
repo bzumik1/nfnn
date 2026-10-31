@@ -97,6 +97,7 @@ class ReceiptCorpusTest {
     private static final Path HISTORY = Path.of("src/test/resources/receipts/history");
     private static final Path PREVIEW = Path.of("build/receipt-corpus");
     private static final String HISTORY_TEMPLATE = "7b30974aef2fdaf01f6e4990c8c4b526a0de8d8371452023be783677b69bf7e7";
+    private static final ReceiptTemplate V2_TEMPLATE = recordedTemplate();
     private static final Instant ISSUED_AT = Instant.parse("2027-01-15T09:30:00Z");
     private static final int DPI = 100;
     private static final Signatory FICTIONAL_SIGNATORY = new Signatory("Petr Vzorový", SIGNATORY.role());
@@ -158,9 +159,9 @@ class ReceiptCorpusTest {
     }
 
     @Test
-    @DisplayName("Given the template on the classpath, when the corpus is rendered, then it is the template the history recorded")
-    void should_render_with_the_recorded_template_when_the_corpus_is_rendered() {
-        assertThat(ReceiptTemplate.fromClasspath().digest().value()).isEqualTo(HISTORY_TEMPLATE);
+    @DisplayName("Given the template v2 issued with, when the corpus is rendered, then it renders with that recorded template whatever the classpath holds")
+    void should_render_with_the_recorded_v2_template_when_the_corpus_is_rendered() {
+        assertThat(V2_TEMPLATE.digest().value()).isEqualTo(HISTORY_TEMPLATE);
     }
 
     @Test
@@ -265,13 +266,21 @@ class ReceiptCorpusTest {
         return node;
     }
 
+    private static ReceiptTemplate recordedTemplate() {
+        try {
+            return ReceiptTemplate.fromContent(Files.readString(HISTORY.resolve(HISTORY_TEMPLATE).resolve("template.json"), StandardCharsets.UTF_8));
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
     private static Rendered rendered(Sample sample) {
         return RENDERED.computeIfAbsent(sample.name(), name -> render(sample));
     }
 
     private static Rendered render(Sample sample) {
         InMemoryReceiptResources resources = new InMemoryReceiptResources();
-        ThymeleafPdfReceiptRenderer renderer = new ThymeleafPdfReceiptRenderer(resources, ReceiptTemplate.fromClasspath(),
+        ThymeleafPdfReceiptRenderer renderer = new ThymeleafPdfReceiptRenderer(resources, V2_TEMPLATE,
                 InMemoryReceiptSignatures.holding(sample.signature()), Clock.fixed(NOW, ZoneOffset.UTC));
         ReceiptSnapshot snapshot = renderer.freeze(sample.document());
         byte[] bytes = renderer.render(snapshot, sample.document().number(), ISSUED_AT);

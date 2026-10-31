@@ -14,14 +14,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 class VerificationQrSymbolTest {
 
     @Test
-    @DisplayName("Given every QR version, when its data capacity at L and M is compared with ZXing's tables, then they agree")
+    @DisplayName("Given every QR version, when its data capacity at L and H is compared with ZXing's tables, then they agree")
     void should_agree_with_zxing_when_capacity_is_compared_given_every_version() {
         IntStream.rangeClosed(1, VerificationQrSymbol.MAX_VERSION).forEach(number -> {
             Version version = Version.getVersionForNumber(number);
             assertThat(VerificationQrSymbol.dataCodewords(number, VerificationQrSymbol.ErrorCorrection.L)).as("version %d at L", number)
                     .isEqualTo(version.getTotalCodewords() - version.getECBlocksForLevel(ErrorCorrectionLevel.L).getTotalECCodewords());
-            assertThat(VerificationQrSymbol.dataCodewords(number, VerificationQrSymbol.ErrorCorrection.M)).as("version %d at M", number)
-                    .isEqualTo(version.getTotalCodewords() - version.getECBlocksForLevel(ErrorCorrectionLevel.M).getTotalECCodewords());
+            assertThat(VerificationQrSymbol.dataCodewords(number, VerificationQrSymbol.ErrorCorrection.H)).as("version %d at H", number)
+                    .isEqualTo(version.getTotalCodewords() - version.getECBlocksForLevel(ErrorCorrectionLevel.H).getTotalECCodewords());
         });
     }
 
@@ -34,39 +34,53 @@ class VerificationQrSymbolTest {
     }
 
     @Test
-    @DisplayName("Given proofs around the last medium version, when their symbols are chosen, then up to version 13 they keep M and above it switch to L")
-    void should_switch_to_low_above_version_13_when_chosen_given_proofs_around_its_capacity() {
-        assertThat(VerificationQrSymbol.of(ReceiptProofText.of(new byte[302])))
-                .contains(new VerificationQrSymbol(VerificationQrSymbol.LAST_VERSION_AT_MEDIUM, VerificationQrSymbol.ErrorCorrection.M));
-        assertThat(VerificationQrSymbol.of(ReceiptProofText.of(new byte[303])))
-                .contains(new VerificationQrSymbol(VerificationQrSymbol.LAST_VERSION_AT_MEDIUM + 1, VerificationQrSymbol.ErrorCorrection.L));
+    @DisplayName("Given proofs around what H holds at version 40, when their symbols are chosen, then up to it they take H, so the receipt can draw its star, and above it L")
+    void should_take_h_while_it_holds_and_l_above_when_chosen_given_proofs_around_its_capacity() {
+        assertThat(VerificationQrSymbol.of(ReceiptProofText.of(new byte[1232])))
+                .contains(new VerificationQrSymbol(VerificationQrSymbol.MAX_VERSION, VerificationQrSymbol.ErrorCorrection.H));
+        assertThat(VerificationQrSymbol.of(ReceiptProofText.of(new byte[1233])))
+                .contains(new VerificationQrSymbol(25, VerificationQrSymbol.ErrorCorrection.L));
     }
 
     @ParameterizedTest(name = "version {0} at {1} holds {2} bytes")
     @CsvSource({
-            "2, M, 1, 3, M",
-            "3, M, 16, 4, M",
-            "4, M, 36, 5, M",
-            "5, M, 58, 6, M",
-            "6, M, 80, 7, M",
-            "7, M, 95, 8, M",
-            "8, M, 125, 9, M",
-            "9, M, 153, 10, M",
-            "10, M, 185, 11, M",
-            "11, M, 223, 12, M",
-            "12, M, 259, 13, M",
-            "13, M, 302, 14, L",
-            "14, L, 427, 15, L",
-            "15, L, 489, 16, L",
-            "16, L, 554, 17, L",
-            "17, L, 611, 18, L",
-            "18, L, 684, 19, L",
-            "19, L, 758, 20, L",
-            "20, L, 823, 21, L",
-            "21, L, 893, 22, L",
-            "22, L, 966, 23, L",
-            "23, L, 1053, 24, L",
-            "24, L, 1132, 25, L",
+            "4, H, 9, 5, H",
+            "5, H, 18, 6, H",
+            "6, H, 32, 7, H",
+            "7, H, 38, 8, H",
+            "8, H, 58, 9, H",
+            "9, H, 72, 10, H",
+            "10, H, 92, 11, H",
+            "11, H, 110, 12, H",
+            "12, H, 128, 13, H",
+            "13, H, 150, 14, H",
+            "14, H, 166, 15, H",
+            "15, H, 192, 16, H",
+            "16, H, 222, 17, H",
+            "17, H, 252, 18, H",
+            "18, H, 281, 19, H",
+            "19, H, 309, 20, H",
+            "20, H, 352, 21, H",
+            "21, H, 373, 22, H",
+            "22, H, 408, 23, H",
+            "23, H, 430, 24, H",
+            "24, H, 480, 25, H",
+            "25, H, 504, 26, H",
+            "26, H, 561, 27, H",
+            "27, H, 592, 28, H",
+            "28, H, 625, 29, H",
+            "29, H, 664, 30, H",
+            "30, H, 708, 31, H",
+            "31, H, 755, 32, H",
+            "32, H, 807, 33, H",
+            "33, H, 862, 34, H",
+            "34, H, 921, 35, H",
+            "35, H, 946, 36, H",
+            "36, H, 1013, 37, H",
+            "37, H, 1054, 38, H",
+            "38, H, 1100, 39, H",
+            "39, H, 1179, 40, H",
+            "40, H, 1232, 25, L",
             "25, L, 1233, 26, L",
             "26, L, 1326, 27, L",
             "27, L, 1422, 28, L",

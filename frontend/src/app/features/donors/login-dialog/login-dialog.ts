@@ -55,6 +55,7 @@ import { formatMinorUnits } from '../../donations/donation-amount';
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
 import { CompanyIdentifierValidator, hasValidCheckDigit } from '../company-identifier';
 import { CompanyLookupApi, RegisteredCompany } from '../company-lookup-api';
+import { PrintableOnReceiptValidator } from '../printable-on-receipt';
 import {
   CITY_MESSAGES,
   COMPANY_NAME_MESSAGES,
@@ -118,6 +119,7 @@ const REGISTRATION_FIELDS: Readonly<Record<string, string>> = {
     CopyButton,
     QrCode,
     CompanyIdentifierValidator,
+    PrintableOnReceiptValidator,
   ],
   templateUrl: './login-dialog.html',
   styleUrl: './login-dialog.scss',

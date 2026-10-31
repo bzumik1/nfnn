@@ -3,6 +3,7 @@ import { formatMinorUnits } from '../../../donations/donation-amount';
 import { formatDonationDate } from '../../../donations/donation-date';
 import { DonationItem, DonationStatus } from '../../../donations/donations-api';
 import { DonorDonations } from '../donor-donations';
+import { DownloadProgress } from '../../../../shared/ui/download-progress/download-progress';
 
 const STATUS_LABELS: Record<DonationStatus, string> = {
   RECEIVED: $localize`:@@donor.dashboard.payments.status.received:Přijato`,
@@ -17,6 +18,7 @@ export function donationStatusLabel(status: DonationStatus): string {
 
 @Component({
   selector: 'app-donations-table',
+  imports: [DownloadProgress],
   templateUrl: './donations-table.html',
   styleUrl: './donations-table.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -26,6 +28,7 @@ export class DonationsTable {
 
   readonly items = input.required<readonly DonationItem[]>();
   readonly withReceipts = input(true);
+  readonly errorsAtRows = input(false);
   readonly labelledBy = input<string | null>(null);
 
   protected crowns(amountMinor: number): string {

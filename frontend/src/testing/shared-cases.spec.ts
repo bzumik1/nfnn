@@ -182,6 +182,26 @@ describe('Given the SPAYD cases and the payment QR cases', () => {
   });
 });
 
+describe('Given the frozen receipt cases and the printed receipt cases', () => {
+  it('when they are matched by case name, then every frozen receipt has its printed text and each names the same v2 sample', () => {
+    const printed = Object.fromEntries(
+      sharedCases('receipts/v1/printed.json').map((sharedCase) => [
+        sharedCase.name,
+        sharedCase.input.v2Sample,
+      ]),
+    );
+    const frozen = Object.fromEntries(
+      sharedCases('receipts/v1/frozen.json').map((sharedCase) => [
+        sharedCase.name,
+        sharedCase.input.v2Sample,
+      ]),
+    );
+
+    expect(Object.keys(printed).length).toBeGreaterThan(0);
+    expect(printed).toEqual(frozen);
+  });
+});
+
 describe('Given a SPAYD case', () => {
   it('when its expected text is not SPAYD text, then it is refused', () => {
     const file = editable(SPAYD_CASES);

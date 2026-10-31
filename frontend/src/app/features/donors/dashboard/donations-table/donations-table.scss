@@ -90,10 +90,10 @@ tr.is-verification td.amount {
   max-width: 12rem;
 }
 
-.receipt-saved span {
-  margin-top: var(--space-1-5);
-  font-size: var(--text-xs);
-  overflow-wrap: anywhere;
+.row-receipt-error {
+  max-width: 16rem;
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
 }
 
 .receipt-note {
@@ -112,7 +112,8 @@ tr.is-verification td.amount {
   cursor: pointer;
   font-family: var(--font-sans);
 
-  &:disabled {
+  &:disabled,
+  &[aria-disabled='true'] {
     cursor: not-allowed;
     opacity: 0.6;
   }
@@ -185,7 +186,8 @@ tr.is-verification td.amount {
     display: none;
   }
 
-  .receipt-saved {
+  .receipt-saved,
+  .row-receipt-error {
     max-width: none;
   }
 }

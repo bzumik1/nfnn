@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nfnn.cz/shared-cases/schemas/receipts/printable.schema.json",
+  "title": "Printable receipt text cases: a text, the text a receipt prints for it and the code points of it outside the printable set",
+  "type": "object",
+  "required": ["source", "logic", "cases"],
+  "additionalProperties": false,
+  "properties": {
+    "source": { "$ref": "../defs/source.schema.json" },
+    "logic": { "type": "string", "minLength": 1 },
+    "cases": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/case" } }
+  },
+  "$defs": {
+    "case": {
+      "type": "object",
+      "required": ["name", "input", "expected"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "input": {
+          "type": "object",
+          "required": ["text"],
+          "additionalProperties": false,
+          "properties": { "text": { "type": "string" } }
+        },
+        "expected": {
+          "type": "object",
+          "required": ["text", "outside"],
+          "additionalProperties": false,
+          "properties": {
+            "text": { "type": "string" },
+            "outside": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": { "type": "string", "pattern": "^U\\+(?:[1-9A-F][0-9A-F]{4,5}|[0-9A-F]{4})$" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,4 +1,7 @@
-if (typeof HTMLDialogElement.prototype.showModal !== 'function') {
+if (
+  typeof HTMLDialogElement !== 'undefined' &&
+  typeof HTMLDialogElement.prototype.showModal !== 'function'
+) {
   HTMLDialogElement.prototype.showModal = function (this: HTMLDialogElement) {
     this.open = true;
     this.querySelector<HTMLElement>('[autofocus]')?.focus();

@@ -149,6 +149,9 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Only the receipt worker carries the PDF library
+        run: node scripts/check-receipt-chunks.mjs dist/frontend/browser
+
       - name: Playwright's Chromium headless shell is installed
         run: |
           for _ in $(seq 300); do

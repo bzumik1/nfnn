@@ -48,7 +48,7 @@ const twoYears = {
 
 const withReceipts = {
   ...twoYears,
-  receipts: { singleFileName: 'potvrzeni-o-daru-2026-000001.pdf' },
+  receipts: { singleNumber: '2026-000001' },
 };
 
 const receiptsFrom2026 = {

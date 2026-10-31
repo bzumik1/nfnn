@@ -83,6 +83,12 @@ public class DonorFrozenReceiptStepDefinitions {
         jdbc.sql("select setval('donation_receipt_number_seq', ?)").param(serial).query(Long.class).single();
     }
 
+    @Given("the donation records keep the street of {string} as {string}, saved before receipts checked their characters")
+    public void theDonationRecordsKeepTheStreetAs(String alias, String street) {
+        int updated = jdbc.sql("update donor_record set street = ? where donor_id = ?").param(street).param(scenarioDonors.idOf(alias)).update();
+        assertThat(updated).isEqualTo(1);
+    }
+
     @Given("{string} changed her/his address and issued her/his yearly receipt for {int} {int} times")
     public void changedTheAddressAndIssuedTheYearlyReceiptTimes(String alias, int year, int times) {
         for (int round = 1; round <= times; round++) {

@@ -91,6 +91,19 @@ class ReceiptPropertiesTest {
         });
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"foundation-name", "foundation-street", "foundation-city", "registry-court",
+            "registry-file", "issue-place", "issue-place-en", "signatory-name", "signatory-role"})
+    @DisplayName("Given a printed receipt value with a character the receipt fonts cannot print, when the context starts, then it fails naming the property and the code point")
+    void should_fail_naming_property_when_started_given_unprintable_printed_value(String property) {
+        contexts.withPropertyValues("app.donations.receipt." + property + "=Nov\u00e1 \ud83d\ude00").run(context -> {
+            assertThat(context).hasFailed();
+            assertThat(context.getStartupFailure()).rootCause()
+                    .hasMessageContaining("app.donations.receipt." + property)
+                    .hasMessageContaining("U+1F600");
+        });
+    }
+
     @Configuration(proxyBeanMethods = false)
     @EnableConfigurationProperties(ReceiptProperties.class)
     @Import(ReceiptConfiguration.class)

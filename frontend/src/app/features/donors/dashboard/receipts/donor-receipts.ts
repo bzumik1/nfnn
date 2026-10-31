@@ -6,6 +6,7 @@ import { DonationsTable } from '../donations-table/donations-table';
 import { MissingGift } from '../missing-gift/missing-gift';
 import { DonationsPending } from '../donations-pending/donations-pending';
 import { DonorDonations } from '../donor-donations';
+import { DownloadProgress } from '../../../../shared/ui/download-progress/download-progress';
 import { GiftCount, receivedVerifications } from '../gift-count/gift-count';
 import { PageTitle } from '../page-title/page-title';
 import { YearReceipt, yearReceipt } from '../yearly-receipt';
@@ -20,7 +21,15 @@ interface YearRow {
 
 @Component({
   selector: 'app-donor-receipts',
-  imports: [RouterLink, PageTitle, DonationsPending, DonationsTable, GiftCount, MissingGift],
+  imports: [
+    DownloadProgress,
+    RouterLink,
+    PageTitle,
+    DonationsPending,
+    DonationsTable,
+    GiftCount,
+    MissingGift,
+  ],
   templateUrl: './donor-receipts.html',
   styleUrl: './donor-receipts.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

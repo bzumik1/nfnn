@@ -44,6 +44,15 @@ import {
   SINGLE_RECEIPT,
   YEARLY_RECEIPT,
 } from './receipt-verification';
+import {
+  donations as receiptDonations,
+  ISSUING,
+  openReceiptsAfterSignIn,
+  pretendIphoneThatShares,
+  yearlyButton,
+  yearlyLine,
+} from './receipt-donations';
+import { answerReceiptIssuing, RECEIPT_ISSUING_URL } from './receipt-issuing';
 import { uploadedSignature } from './signature-image';
 
 const WCAG_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
@@ -1935,6 +1944,40 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.getByRole('button', { name: 'Upravit', exact: true }).click();
     await page.getByRole('button', { name: 'Smazat projekt' }).click();
     await expect(page.getByRole('group', { name: 'Smazat projekt?' })).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when a signed-in donor waits for a receipt PDF, then its progress line, bar and cancel button break no rule', async ({
+    page,
+  }) => {
+    await mockDonorApi(page, receiptDonations);
+    await page.clock.install();
+    await page.route(
+      (url) => url.pathname === RECEIPT_ISSUING_URL,
+      () => new Promise<void>(() => undefined),
+    );
+    await openReceiptsAfterSignIn(page);
+    await yearlyButton(page).click();
+    await expect(yearlyLine(page)).toHaveText('Připravujeme údaje potvrzení…');
+    await page.clock.fastForward(8000);
+    await expect(page.getByRole('button', { name: 'Zrušit' })).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when a signed-in donor on an iPhone has a receipt PDF ready for the second tap, then it breaks no rule', async ({
+    page,
+  }) => {
+    await pretendIphoneThatShares(page);
+    await mockDonorApi(page, receiptDonations);
+    await page.route(
+      (url) => url.pathname === RECEIPT_ISSUING_URL,
+      (route) => answerReceiptIssuing(route, ISSUING),
+    );
+    await openReceiptsAfterSignIn(page);
+    await yearlyButton(page).click();
+    await expect(page.getByRole('button', { name: 'Otevřít potvrzení' })).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
   });
