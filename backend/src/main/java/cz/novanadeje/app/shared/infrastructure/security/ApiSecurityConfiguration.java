@@ -51,6 +51,7 @@ class ApiSecurityConfiguration {
                         .requestMatchers(HttpMethod.POST, "/api/operations/client-errors").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/donations/payment-details").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/donations/receipt-keys").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/donations/receipts/status").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/content/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/donors/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/donors/company-lookup").permitAll()

@@ -235,6 +235,28 @@ class JpaDonationReceiptRepositoryTest {
     }
 
     @Test
+    @DisplayName("Given an active, a replaced and a withdrawn receipt, when a status is read by a status digest, then each digest gives its own receipt's status and any other digest finds none")
+    void should_give_each_receipts_status_when_read_by_status_digest_given_active_replaced_and_withdrawn_receipts() {
+        DonorReference jana = storedDonor("4821937560");
+        DonationReceipt replaced = yearly(jana, YEAR_2025, "2026-000001", Optional.empty());
+        receipts.save(replaced);
+        replaced.markSuperseded(NOW.plusSeconds(3600));
+        receipts.save(replaced);
+        DonationReceipt active = yearly(jana, YEAR_2025, "2026-000002", Optional.of(replaced.id()));
+        receipts.save(active);
+        DonationReceipt withdrawn = yearly(jana, YEAR_2026, "2026-000003", Optional.empty());
+        receipts.save(withdrawn);
+        flushAndClear();
+        jdbc.sql("update issued_receipt set status = 'WITHDRAWN' where id = ?").param(withdrawn.id().value()).update();
+
+        assertThat(receipts.findStatusByStatusDigest(active.frozen().statusDigest())).contains(ReceiptStatus.ACTIVE);
+        assertThat(receipts.findStatusByStatusDigest(replaced.frozen().statusDigest())).contains(ReceiptStatus.REPLACED);
+        assertThat(receipts.findStatusByStatusDigest(withdrawn.frozen().statusDigest())).contains(ReceiptStatus.WITHDRAWN);
+        assertThat(receipts.findStatusByStatusDigest(new ContentDigest("f".repeat(64)))).isEmpty();
+        assertThat(receipts.findStatusByStatusDigest(ContentDigest.of(active.frozen().verification().proof().bytes()))).isEmpty();
+    }
+
+    @Test
     @DisplayName("Given a stored receipt, when a replaced copy of it with other frozen data is saved, then only the status and superseded_at change")
     void should_change_only_status_when_saved_given_stored_receipt() {
         DonorReference jana = storedDonor("4821937560");

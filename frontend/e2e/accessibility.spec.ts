@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { routeLogsApi } from './admin-logs-api';
-import { Page } from '@playwright/test';
+import { Locator, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import {
   administrator,
@@ -30,6 +30,20 @@ import {
   openPolicyFromFooter,
   withoutSessionStorage,
 } from './lost-chunks';
+import {
+  CHANGED_AMOUNT,
+  forgetKeyList,
+  keepKeyListNow,
+  KEY_LIST,
+  LIST_WITHOUT_THE_KEY,
+  type ReceiptApi,
+  REVOKED_KEY_LIST,
+  scanFragment,
+  breakSha256,
+  serveReceiptApi,
+  SINGLE_RECEIPT,
+  YEARLY_RECEIPT,
+} from './receipt-verification';
 import { uploadedSignature } from './signature-image';
 
 const WCAG_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
@@ -221,6 +235,121 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Tuhle stránku jsme nenašli');
     await expect(page).toHaveURL(/\/stara-stranka$/);
     expect(await violations(page)).toEqual([]);
+  });
+
+  test.describe('when they verify receipt codes', () => {
+    async function openVerification(page: Page, api: ReceiptApi): Promise<Locator> {
+      await serveReceiptApi(page, api);
+      const heading = page.getByRole('heading', { level: 1 });
+      await page.goto('/overit');
+      await expect(heading).toHaveText('Ověření potvrzení o daru');
+      return heading;
+    }
+
+    async function scanAndCheck(
+      page: Page,
+      heading: Locator,
+      fragment: string,
+      title: string,
+    ): Promise<void> {
+      await scanFragment(page, fragment);
+      await expect(heading).toHaveText(title);
+      expect(await violations(page)).toEqual([]);
+    }
+
+    test('then the explanation, the check under way and every answer of the fund break no rule', async ({
+      page,
+    }) => {
+      const api: ReceiptApi = { keys: KEY_LIST, status: 'never' };
+      const heading = await openVerification(page, api);
+      expect(await violations(page)).toEqual([]);
+
+      await scanFragment(page, SINGLE_RECEIPT.fragment);
+      await expect(page.getByText('Podpis sedí, ptáme se fondu na stav potvrzení…')).toBeVisible();
+      expect(await violations(page)).toEqual([]);
+      await expect(heading).toHaveText('Podpis sedí, ale fond teď neodpověděl, zda potvrzení vede');
+      expect(await violations(page)).toEqual([]);
+
+      const answers: readonly [string, string, string][] = [
+        ['active', YEARLY_RECEIPT.fragment, 'Podepsáno fondem Nová naděje'],
+        ['replaced', SINGLE_RECEIPT.fragment, 'Fond toto potvrzení nahradil novějším'],
+        ['withdrawn', YEARLY_RECEIPT.fragment, 'Fond toto potvrzení zrušil'],
+        ['unknown', SINGLE_RECEIPT.fragment, 'Fond toto potvrzení ve své evidenci nevede'],
+      ];
+      for (const [status, fragment, title] of answers) {
+        api.status = status;
+        await scanAndCheck(page, heading, fragment, title);
+      }
+    });
+
+    test('then every code or key list the page refuses breaks no rule', async ({ page }) => {
+      const api: ReceiptApi = { keys: KEY_LIST, status: 'active' };
+      const heading = await openVerification(page, api);
+
+      const refusals: readonly [object, string, string][] = [
+        [KEY_LIST, CHANGED_AMOUNT.fragment, 'Neověřeno: podpis neodpovídá údajům'],
+        [
+          LIST_WITHOUT_THE_KEY,
+          YEARLY_RECEIPT.fragment,
+          'Neověřeno: kód podepsal klíč, který fond nezveřejnil',
+        ],
+        [REVOKED_KEY_LIST, SINGLE_RECEIPT.fragment, 'Neověřeno: fond tento klíč zneplatnil'],
+        [KEY_LIST, SINGLE_RECEIPT.fragment.slice(0, 60), 'Odkaz je neúplný'],
+        [KEY_LIST, `2${SINGLE_RECEIPT.fragment.slice(1)}`, 'Tento kód je novější než stránka'],
+        [
+          { foundation: { companyIdentifier: '27278794' }, keys: 'none' },
+          CHANGED_AMOUNT.fragment,
+          'Neověřeno: seznam klíčů fondu teď nejde použít',
+        ],
+      ];
+      for (const [keys, fragment, title] of refusals) {
+        api.keys = keys;
+        await scanAndCheck(page, heading, fragment, title);
+      }
+    });
+
+    test('then every result without an answer, without a connection or with a failed check breaks no rule', async ({
+      page,
+      context,
+    }) => {
+      const heading = await openVerification(page, { keys: 503, status: 'active' });
+
+      await scanAndCheck(page, heading, SINGLE_RECEIPT.fragment, 'Ověření teď nejde dokončit');
+
+      await keepKeyListNow(page, LIST_WITHOUT_THE_KEY);
+      await scanAndCheck(
+        page,
+        heading,
+        YEARLY_RECEIPT.fragment,
+        'Neověřeno: tento podpis zatím neumíme ověřit',
+      );
+
+      await context.setOffline(true);
+      await scanFragment(page, SINGLE_RECEIPT.fragment);
+      await expect(
+        page.getByText(
+          'Kód podepsal klíč, který tato stránka zatím nezná. Připojte se k internetu a zkuste to znovu.',
+        ),
+      ).toBeVisible();
+      expect(await violations(page)).toEqual([]);
+
+      await keepKeyListNow(page, KEY_LIST);
+      await scanFragment(page, YEARLY_RECEIPT.fragment);
+      await expect(heading).toHaveText('Podepsáno fondem Nová naděje');
+      await expect(
+        page.getByText(
+          'Bez připojení nelze zjistit, zda fond potvrzení později nenahradil novějším nebo nezrušil.',
+        ),
+      ).toBeVisible();
+      expect(await violations(page)).toEqual([]);
+
+      await forgetKeyList(page);
+      await scanAndCheck(page, heading, SINGLE_RECEIPT.fragment, 'Nelze ověřit bez připojení');
+
+      await keepKeyListNow(page, KEY_LIST);
+      await breakSha256(page);
+      await scanAndCheck(page, heading, YEARLY_RECEIPT.fragment, 'Ověření se nepodařilo');
+    });
   });
 
   test('when they open a password reset link, then nothing on the page breaks the rules', async ({

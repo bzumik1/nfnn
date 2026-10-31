@@ -103,6 +103,11 @@ class JpaDonationReceiptRepository implements DonationReceiptRepository {
     }
 
     @Override
+    public Optional<ReceiptStatus> findStatusByStatusDigest(ContentDigest statusDigest) {
+        return jpa.findStatusByStatusSha256(statusDigest.value());
+    }
+
+    @Override
     public boolean anyShowsSignatureImage(ContentDigest image) {
         return jpa.existsBySignatureImageSha256(image.value());
     }

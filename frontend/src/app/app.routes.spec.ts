@@ -43,3 +43,21 @@ describe('Given a signed-in donor and the app routes', () => {
     expect(await open('/donor/prehled')).toBe('/darce/prehled');
   });
 });
+
+describe('Given a visitor and the app routes', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter(routes)],
+    });
+  });
+
+  it('when a receipt code opens the verification page, then its address and title are its own', async () => {
+    const router = TestBed.inject(Router);
+
+    await router.navigateByUrl('/overit#1234');
+
+    expect(router.url).toBe('/overit#1234');
+    expect(document.title).toBe('Ověření potvrzení o daru | Nová naděje – nadační fond');
+  });
+});

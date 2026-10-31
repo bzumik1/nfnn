@@ -227,3 +227,16 @@ describe('Given the libraries only tests may use', () => {
     assert.deepEqual(devOnly.allowedIn, ['testSupport', 'sharedCaseLoader', 'sharedCaseSetup']);
   });
 });
+
+describe('Given the fallback Ed25519 library of the verification page', () => {
+  const noble = CONFINED_IMPORTS.find((entry) => entry.examples.includes('@noble/curves'));
+
+  it('when the table is read, then @noble/curves and its hashes load only lazily in their one adapter', () => {
+    assert.ok(noble, 'an entry for @noble/curves');
+    assert.deepEqual(noble.allowedIn, ['ed25519Fallback']);
+    assert.equal(noble.lazyOnly, true);
+    assert.deepEqual(SCOPES.ed25519Fallback.files, [
+      'src/app/features/donations/verification/noble-ed25519.ts',
+    ]);
+  });
+});
