@@ -236,11 +236,17 @@ describe('Given an administrator on the history page', () => {
         action: 'REMOVE_RECEIPT_SIGNATURE',
         details: 'Signature image for receipts removed',
       }),
+      adminAction({
+        id: '019a1c00-0000-7000-8000-00000000e007',
+        action: 'CHOOSE_RECEIPT_SIGNATORY',
+        details: 'Potvrzení o daru podepisuje osoba',
+      }),
     ]);
 
-    const [uploaded, removed] = rows();
+    const [uploaded, removed, chosen] = rows();
     expect(rowText(uploaded)).toContain('Nahrání podpisu na potvrzení o daru');
     expect(rowText(removed)).toContain('Odebrání podpisu z potvrzení o daru');
+    expect(rowText(chosen)).toContain('Výběr toho, kdo podepisuje potvrzení o daru');
   });
 
   it('when a change came through a connected application, then the row names the application and a change on the web names none', () => {

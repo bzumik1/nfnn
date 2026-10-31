@@ -118,14 +118,19 @@ public record AdminActionFacts(String summaryKey, Map<String, String> values) {
                 full("Monthly report for (?<month>\\d{4}-\\d{2}) sent by hand to (?<recipients>.+)")));
         shapes.put("CHANGE_RECEIPT_SIGNATURE", List.of(
                 full("Nahrán obrázek podpisu na potvrzení o daru: (?<width>\\d+) × (?<height>\\d+) px, SHA-256 \\S+"),
-                full("Signature image for receipts uploaded: (?<width>\\d+)x(?<height>\\d+) px, SHA-256 \\S+")));
+                full("Signature image for receipts uploaded: (?<width>\\d+)x(?<height>\\d+) px, SHA-256 \\S+"),
+                variant("person", "Nahrán obrázek podpisu na potvrzení o daru u osoby " + ID + ": (?<width>\\d+) × (?<height>\\d+) px, SHA-256 \\S+"),
+                variant("personVector", "Nahrán vektorový podpis \\(SVG\\) na potvrzení o daru u osoby " + ID + ", SHA-256 \\S+")));
+        shapes.put("CHOOSE_RECEIPT_SIGNATORY", List.of(
+                full("Potvrzení o daru podepisuje osoba " + ID + ", funkce na potvrzení: (?<role>.+)")));
         shapes.put("REGISTER_RECEIPT_SIGNING_KEY", List.of(
                 full("Server zaregistroval svůj klíč k ověřovacím QR na potvrzeních o daru: (?<key>[0-9a-f]{8})")));
         shapes.put("ADOPT_RECEIPT_SIGNING_KEY", List.of(
                 full("Server převzal klíč k ověřovacím QR (?<key>[0-9a-f]{8}) z obnovené zálohy \\(obnova (?<restore>[0-9A-Za-z:.-]{1,40})\\)")));
         shapes.put("REMOVE_RECEIPT_SIGNATURE", List.of(
                 full("Obrázek podpisu odebrán; .*"),
-                full("Signature image for receipts removed; .*")));
+                full("Signature image for receipts removed; .*"),
+                variant("person", "Obrázek podpisu na potvrzení o daru u osoby " + ID + " odebrán")));
         shapes.put("CHANGE_ABOUT_PHOTO", List.of(
                 full("Fotka " + ID + " v sekci O nás nastavena"),
                 variant("edited", "Fotka " + ID + " v sekci O nás upravena")));

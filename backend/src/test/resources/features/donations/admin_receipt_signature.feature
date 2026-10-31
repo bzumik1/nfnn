@@ -11,7 +11,7 @@ Feature: An administrator chooses who signs the donation receipts and uploads th
     Given today is 2026-12-20
     And a person "Jana" is registered
     And "Jana" is an administrator
-    And "Eva Vzorová" signs the receipts as "předsedkyně správní rady"
+    And "Josef Vzorový" signs the receipts as "předseda správní rady"
 
   Scenario: Without an upload the receipts carry only the line and the signatory's name
     When "Jana" asks for the receipt signature
@@ -42,9 +42,9 @@ Feature: An administrator chooses who signs the donation receipts and uploads th
     And the receipt "Jana" downloaded is the frozen receipt issued to her last
     And the frozen receipt shows the current signature image
     And the frozen receipt holds:
-      | field          | value            |
-      | signatory.name | Eva Vzorová              |
-      | signatory.role | předsedkyně správní rady |
+      | field          | value                 |
+      | signatory.name | Josef Vzorový         |
+      | signatory.role | předseda správní rady |
 
   Scenario: A removed signature leaves the next receipts with the line and the name
     Given "Jana" uploads a 600 by 200 pixel JPEG scan named "podpis.jpg" as the receipt signature
@@ -134,7 +134,7 @@ Feature: An administrator chooses who signs the donation receipts and uploads th
     Then the response status is 200
     And the receipt signatory is "Adam Vzor" as "místopředseda správní rady", with a portrait set and a signature set
     And the receipt signatures list a RASTER signature of "Adam Vzor", 600 by 200 pixels
-    When "Jana" asks for the receipt signature of "Eva Vzorová"
+    When "Jana" asks for the receipt signature of "Josef Vzorový"
     Then the response status is 200
     And the receipt signature is not set
 
@@ -142,17 +142,17 @@ Feature: An administrator chooses who signs the donation receipts and uploads th
     When "Jana" chooses a person who does not exist to sign the receipts
     Then the response status is 404
     And the problem type ends with "donations/person-not-found"
-    When "Jana" chooses "Eva Vzorová" to sign the receipts as " "
+    When "Jana" chooses "Josef Vzorový" to sign the receipts as " "
     Then the response status is 400
     And the problem type ends with "validation"
-    When "Jana" chooses the person "Eva" to sign the receipts as "předsedkyně"
+    When "Jana" chooses the person "Eva" to sign the receipts as "předseda"
     Then the response status is 400
     And the problem type ends with "validation"
     When "Jana" uploads a 600 by 200 pixel JPEG scan as the receipt signature of a person who does not exist
     Then the response status is 404
     And the problem type ends with "donations/person-not-found"
     When "Jana" asks for the receipt signatory
-    Then the receipt signatory is "Eva Vzorová" as "předsedkyně správní rady", with a portrait missing and a signature missing
+    Then the receipt signatory is "Josef Vzorový" as "předseda správní rady", with a portrait missing and a signature missing
     And the receipt signatures list none
 
   Scenario: Without a chosen signatory no receipt is issued, and the administration and the donor are told why
@@ -184,10 +184,10 @@ Feature: An administrator chooses who signs the donation receipts and uploads th
     When "Petr" asks for the receipt signatory
     Then the response status is 403
     And the problem type ends with "auth/forbidden"
-    When "Petr" chooses "Eva Vzorová" to sign the receipts as "předseda"
+    When "Petr" chooses "Josef Vzorový" to sign the receipts as "předseda"
     Then the response status is 403
     When someone without a token asks for the receipt signatory
     Then the response status is 401
     And the problem type ends with "auth/unauthenticated"
-    When someone without a token chooses "Eva Vzorová" to sign the receipts as "předseda"
+    When someone without a token chooses "Josef Vzorový" to sign the receipts as "předseda"
     Then the response status is 401
