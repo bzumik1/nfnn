@@ -5,10 +5,12 @@ import { provideRouter, Router } from '@angular/router';
 import { authInterceptor } from '../../../core/auth/auth-interceptor';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
+import { person, PORTRAIT_ID } from '../../content/testing/people-fixtures';
 import { administrator } from '../testing/admin-fixtures';
 import { AdminAdministrators } from './admin-administrators';
 
 const LIST_URL = '/api/admin/donors/administrators';
+const PEOPLE_URL = '/api/admin/content/people';
 const PETR_ID = '019a1c00-0000-7000-8000-00000000a002';
 
 function problem(status: number, type: string, title: string, detail: string) {
@@ -70,11 +72,11 @@ describe('Given an administrator on the administrators page', () => {
       .trim();
   }
 
-  function rows(): HTMLTableRowElement[] {
-    return Array.from(fixture.nativeElement.querySelectorAll('tbody tr'));
+  function rows(): HTMLElement[] {
+    return Array.from(fixture.nativeElement.querySelectorAll('.administrator-row'));
   }
 
-  function rowText(row: HTMLTableRowElement): string {
+  function rowText(row: HTMLElement): string {
     return (row.textContent ?? '').replace(/\s+/g, ' ').trim();
   }
 
@@ -83,41 +85,95 @@ describe('Given an administrator on the administrators page', () => {
       (candidate) => candidate.textContent?.trim() === name,
     );
     if (found === undefined) {
-      throw new Error(`No button "${name}" in "${rowText(row as HTMLTableRowElement)}"`);
+      throw new Error(`No button "${name}" in "${rowText(row)}"`);
     }
     return found;
   }
 
+  function badges(row: HTMLElement): string[] {
+    return Array.from(row.querySelectorAll('.ui-person-row__badges li')).map((badge) =>
+      (badge.textContent ?? '').trim(),
+    );
+  }
+
+  function peopleArrive(members = [person({ linkedToAccount: false })]): void {
+    http.expectOne(PEOPLE_URL).flush({ members, note: null, footnote: null });
+  }
+
   async function listed(items = [jana, petr]): Promise<void> {
+    if (http.match(PEOPLE_URL).length > 0) {
+      throw new Error('The people of the foundation are asked for only once');
+    }
     http.expectOne(LIST_URL).flush({ items });
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
   }
 
-  it('when the list arrives, then every administrator shows name, e-mail and whether two-factor authentication is on, and the signed-in one has no buttons', async () => {
+  it('when the list arrives, then every administrator is a row with a round avatar, the name, the e-mail and badges, and the signed-in one has no buttons', async () => {
     expect(text('[role="status"]:not(:empty)')).toBe('Načítáme správce…');
+    peopleArrive();
 
     await listed();
 
     const [first, second] = rows();
-    expect(rowText(first)).toContain('Jana Nováková');
-    expect(rowText(first)).toContain('to jste vy');
-    expect(rowText(first)).toContain('jana@example.cz');
-    expect(rowText(first)).toContain('zapnuté');
+    expect(first.querySelector('.ui-person-row__name')?.textContent?.trim()).toBe('Jana Nováková');
+    expect(text('.administrator-row:first-child .ui-person-row__meta')).toBe('jana@example.cz');
+    expect(badges(first)).toEqual(['To jste vy', 'Dvoufaktorové ověření zapnuté']);
+    expect(first.querySelector('app-avatar')?.textContent?.trim()).toBe('JN');
     expect(rowText(first)).toContain('Svůj účet spravujete v Údajích a zabezpečení.');
-    expect(first.querySelector('.action a')?.getAttribute('href')).toBe('/darce/udaje');
+    expect(first.querySelector('.ui-person-row__note a')?.getAttribute('href')).toBe(
+      '/darce/udaje',
+    );
     expect(first.querySelectorAll('button')).toHaveLength(0);
-    expect(rowText(second)).toContain('Petr Svoboda');
     expect(second.querySelector('a.admin-name')?.getAttribute('href')).toBe(
       `/sprava/darci/${PETR_ID}`,
     );
-    expect(rowText(second)).toContain('vypnuté, správa se mu otevře jen přístupovým klíčem');
+    expect(badges(second)).toEqual(['Dvoufaktorové ověření vypnuté']);
+    expect(rowText(second)).toContain('Správa se mu otevře jen přístupovým klíčem.');
+    expect(second.querySelector('app-avatar')?.textContent?.trim()).toBe('PS');
+    expect(second.querySelector('.ui-person-row__actions')).not.toBeNull();
     expect(button(second, 'Odebrat roli správce')).toBeTruthy();
     expect(second.querySelectorAll('button')).toHaveLength(1);
   });
 
+  it('when a person of the foundation is linked to an administrator by e-mail, then the row shows the portrait of the first such person, as the top bar does', async () => {
+    peopleArrive([
+      person({ name: 'Eva Vzorová', linkedToAccount: true, fundEmail: 'jana@example.cz' }),
+      person({ id: 'unlinked', linkedToAccount: false, personalEmail: 'petr@example.cz' }),
+      person({
+        id: 'first',
+        name: 'Petr Svoboda',
+        linkedToAccount: true,
+        personalEmail: 'petr@example.cz',
+        portrait: null,
+      }),
+      person({ id: 'later', linkedToAccount: true, fundEmail: 'petr@example.cz' }),
+    ]);
+
+    await listed();
+
+    const [first, second] = rows();
+    expect(first.querySelector('app-avatar img')?.getAttribute('src')).toBe(
+      `/api/content/media/${PORTRAIT_ID}?w=480`,
+    );
+    expect(first.querySelector('app-avatar img')?.getAttribute('alt')).toBe('');
+    expect(second.querySelector('app-avatar img')).toBeNull();
+    expect(second.querySelector('app-avatar')?.textContent?.trim()).toBe('PS');
+  });
+
+  it('when the people of the foundation cannot be loaded, then every administrator keeps the initials and no alert shows', async () => {
+    http.expectOne(PEOPLE_URL).flush(null, { status: 500, statusText: 'Error' });
+
+    await listed();
+
+    expect(rows()).toHaveLength(2);
+    expect(rows()[0].querySelector('app-avatar')?.textContent?.trim()).toBe('JN');
+    expect(text('[role="alert"]:not(:empty)')).toBe('');
+  });
+
   it('when the list cannot be loaded, then an alert offers a retry that loads again', async () => {
+    peopleArrive();
     http.expectOne(LIST_URL).flush(null, { status: 500, statusText: 'Error' });
     fixture.detectChanges();
 
@@ -130,6 +186,7 @@ describe('Given an administrator on the administrators page', () => {
   });
 
   it('when a registered e-mail is added, then the new administrator is listed and the status says the administration waits for two-factor authentication', async () => {
+    peopleArrive();
     await listed([jana]);
 
     const input = element<HTMLInputElement>('#grant-email');
@@ -155,6 +212,7 @@ describe('Given an administrator on the administrators page', () => {
   });
 
   it('when the e-mail is empty, then the field says so and nothing is sent', async () => {
+    peopleArrive();
     await listed([jana]);
 
     element<HTMLFormElement>('form').dispatchEvent(new Event('submit'));
@@ -168,6 +226,7 @@ describe('Given an administrator on the administrators page', () => {
   });
 
   it('when nobody is registered with the e-mail, then the refusal stays at the form as an alert', async () => {
+    peopleArrive();
     await listed([jana]);
 
     const input = element<HTMLInputElement>('#grant-email');
@@ -192,6 +251,7 @@ describe('Given an administrator on the administrators page', () => {
   });
 
   it('when another administrator is removed after the confirmation, then the list reloads and the status says their sign-ins ended', async () => {
+    peopleArrive();
     await listed();
 
     button(rows()[1], 'Odebrat roli správce').click();
@@ -199,7 +259,7 @@ describe('Given an administrator on the administrators page', () => {
     expect(rowText(rows()[1])).toContain(
       'Petr Svoboda přestane být správcem a všechna jeho přihlášení skončí. Jeho dárcovský účet zůstane. Odebrat roli správce?',
     );
-    expect(rows()[1].querySelector('.confirm')?.getAttribute('aria-label')).toBe(
+    expect(rows()[1].querySelector('[role="group"]')?.getAttribute('aria-label')).toBe(
       'Odebrat roli správce: Petr Svoboda?',
     );
     button(rows()[1], 'Ano, odebrat').click();
@@ -220,6 +280,7 @@ describe('Given an administrator on the administrators page', () => {
   });
 
   it('when "Ponechat" answers the confirmation, then nothing is sent, the buttons come back and the focus returns to the opener', async () => {
+    peopleArrive();
     await listed();
 
     button(rows()[1], 'Odebrat roli správce').click();
@@ -237,6 +298,7 @@ describe('Given an administrator on the administrators page', () => {
 
   it('when two-factor authentication of another administrator is turned off, then the confirmation asks about the owner and the status names the e-mail', async () => {
     const petrWithFactor = { ...petr, secondFactorEnabled: true };
+    peopleArrive();
     await listed([jana, petrWithFactor]);
 
     button(rows()[1], 'Vypnout dvoufaktorové ověření').click();
@@ -260,6 +322,7 @@ describe('Given an administrator on the administrators page', () => {
   });
 
   it('when the removal is refused, then the alert shows the backend title and the list stays', async () => {
+    peopleArrive();
     await listed();
 
     button(rows()[1], 'Odebrat roli správce').click();
@@ -290,6 +353,7 @@ describe('Given an administrator on the administrators page', () => {
     const navigate = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
     const refusal = problem(403, 'auth/forbidden', 'Nemáte oprávnění', 'Jen pro správce.');
 
+    peopleArrive();
     http.expectOne(LIST_URL).flush(refusal.body, refusal.options);
     fixture.detectChanges();
 

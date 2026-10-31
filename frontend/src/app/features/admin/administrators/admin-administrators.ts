@@ -2,6 +2,7 @@ import {
   afterNextRender,
   ChangeDetectionStrategy,
   Component,
+  computed,
   DestroyRef,
   ElementRef,
   inject,
@@ -18,8 +19,10 @@ import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { FocusFirstInvalid } from '../../../shared/ui/form-field/focus-first-invalid';
 import { FormControlDirective } from '../../../shared/ui/form-field/form-control';
 import { FormField } from '../../../shared/ui/form-field/form-field';
-import { AdminApi, AdministratorResponse } from '../admin-api';
+import { Avatar } from '../../../shared/ui/avatar/avatar';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
+import { PeopleApi, PersonResponse } from '../../content/people-api';
+import { AdminApi, AdministratorResponse } from '../admin-api';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -29,6 +32,7 @@ type PendingAction = { kind: ActionKind; donorId: string } | null;
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const FORBIDDEN = 'auth/forbidden';
+const PORTRAIT_WIDTH = 480;
 
 @Component({
   selector: 'app-admin-administrators',
@@ -39,6 +43,7 @@ const FORBIDDEN = 'auth/forbidden';
     FormControlDirective,
     FocusFirstInvalid,
     RouterLink,
+    Avatar,
   ],
   templateUrl: './admin-administrators.html',
   styleUrl: './admin-administrators.scss',
@@ -46,6 +51,7 @@ const FORBIDDEN = 'auth/forbidden';
 })
 export class AdminAdministrators {
   private readonly api = inject(AdminApi);
+  private readonly people = inject(PeopleApi);
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
   private readonly loginDialog = inject(LoginDialogService);
@@ -63,6 +69,8 @@ export class AdminAdministrators {
   protected readonly grantError = signal<string | null>(null);
   protected readonly pending = signal<PendingAction>(null);
   protected readonly self = this.auth.donor;
+  private readonly members = signal<PersonResponse[]>([]);
+  private readonly portraits = computed(() => portraitsByEmail(this.members()));
 
   protected readonly emailMessages = {
     required: $localize`:@@admin.administrators.email.required:Vyplňte prosím e-mail registrovaného dárce.`,
@@ -73,6 +81,7 @@ export class AdminAdministrators {
 
   constructor() {
     this.load();
+    this.loadPortraits();
     afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
   }
 
@@ -98,6 +107,10 @@ export class AdminAdministrators {
           this.state.set('error');
         },
       });
+  }
+
+  protected portraitOf(item: AdministratorResponse): string | null {
+    return this.portraits().get(item.email) ?? null;
   }
 
   protected isSelf(item: AdministratorResponse): boolean {
@@ -212,6 +225,16 @@ export class AdminAdministrators {
     });
   }
 
+  private loadPortraits(): void {
+    this.people
+      .load()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (people) => this.members.set(people.members),
+        error: () => this.members.set([]),
+      });
+  }
+
   private openerOf(pending: PendingAction): () => HTMLElement | null {
     const id = pending === null ? null : openerId(pending.kind, pending.donorId);
     return () =>
@@ -237,4 +260,20 @@ export class AdminAdministrators {
 
 function openerId(kind: ActionKind, donorId: string): string {
   return `administrator-${kind}-${donorId.replace(/[^A-Za-z0-9_-]/g, '_')}`;
+}
+
+function portraitsByEmail(members: PersonResponse[]): Map<string, string | null> {
+  const portraits = new Map<string, string | null>();
+  for (const member of members) {
+    if (!member.linkedToAccount) {
+      continue;
+    }
+    const portrait = member.portrait ? `${member.portrait.url}?w=${PORTRAIT_WIDTH}` : null;
+    for (const email of [member.personalEmail, member.fundEmail]) {
+      if (email !== null && !portraits.has(email)) {
+        portraits.set(email, portrait);
+      }
+    }
+  }
+  return portraits;
 }
