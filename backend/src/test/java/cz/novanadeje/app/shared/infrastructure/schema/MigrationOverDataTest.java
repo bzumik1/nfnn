@@ -16,7 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class MigrationOverDataTest {
 
-    private static final String RECEIPT_SWITCH = "024-delete-test-receipts-and-drop-the-server-drawing";
+    private static final String RECEIPT_SWITCH = "donations/024-delete-test-receipts-and-drop-the-server-drawing";
     private static final String RECEIPT_SWITCH_REASON = "plan v3 1.10: the site is not live, so every receipt issued so far is a test receipt"
             + " (D12, A2); the browser draws the PDF, and nothing reads the old tables any more";
 

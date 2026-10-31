@@ -14,9 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.TreeMap;
-import java.util.TreeSet;
 
 final class BaselineDatabase {
 
@@ -42,12 +40,12 @@ final class BaselineDatabase {
         }
     }
 
-    static Set<String> appliedChangesets(Connection connection) throws SQLException {
-        Set<String> ids = new TreeSet<>();
+    static List<String> appliedChangesets(Connection connection) throws SQLException {
+        List<String> ids = new ArrayList<>();
         try (var statement = connection.createStatement();
-             var result = statement.executeQuery("select id from databasechangelog")) {
+             var result = statement.executeQuery("select filename, id from databasechangelog order by orderexecuted")) {
             while (result.next()) {
-                ids.add(result.getString(1));
+                ids.add(contextOf(result.getString(1)) + "/" + result.getString(2));
             }
         }
         return ids;
@@ -77,5 +75,10 @@ final class BaselineDatabase {
             result.next();
             return result.getLong(1);
         }
+    }
+
+    private static String contextOf(String changelogFile) {
+        String[] folders = changelogFile.split("/");
+        return folders[folders.length - 2];
     }
 }

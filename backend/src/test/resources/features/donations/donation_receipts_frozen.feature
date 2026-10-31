@@ -156,6 +156,9 @@ Feature: A donor issues receipts of their donations as frozen, signed data
       | receivedOn | amountMinor |
       | 2026-10-05 | 100000      |
     And 1 receipt is stored
+    When "Jana" asks for her donations
+    Then the donation received on 2025-12-10 is listed without a receipt
+    And the donation received on 2026-10-05 is listed with a receipt
 
   Scenario: The yearly receipt freezes only that year's donations, oldest first
     Given today is 2025-12-20
@@ -223,6 +226,7 @@ Feature: A donor issues receipts of their donations as frozen, signed data
     When "Jana" lists her receipts
     Then the response status is 200
     And the answer is JSON that must not be cached
+    And the receipt list gives receipt "2027-000001" as superseded when receipt "2027-000002" was issued, and receipt "2027-000002" as not superseded
     And the receipt list shows:
       | number      | status   | kind   |
       | 2027-000002 | ACTIVE   | YEARLY |

@@ -340,6 +340,12 @@ public class DonorFrozenReceiptStepDefinitions {
                 .containsExactlyElementsOf(table.asMaps().stream().map(row -> row.get("number") + " " + row.get("status") + " " + row.get("kind")).toList());
     }
 
+    @Then("the receipt list gives receipt {string} as superseded when receipt {string} was issued, and receipt {string} as not superseded")
+    public void theReceiptListGivesTheSupersededTime(String replaced, String replacing, String active) {
+        assertThat(listedReceipt(replaced).get("supersededAt").asString()).isEqualTo(listedReceipt(replacing).get("issuedAt").asString());
+        assertThat(listedReceipt(active).get("supersededAt").isNull()).withFailMessage("Receipt %s is superseded in %s", active, listedReceipt(active)).isTrue();
+    }
+
     @Then("the receipt list is empty")
     public void theReceiptListIsEmpty() {
         assertThat(api.lastResponseJson().get("items")).isEmpty();
@@ -366,6 +372,15 @@ public class DonorFrozenReceiptStepDefinitions {
     private JsonNode lastIssued() {
         assertThat(issued).withFailMessage("No receipt was issued").isNotEmpty();
         return issued.getLast();
+    }
+
+    private JsonNode listedReceipt(String number) {
+        JsonNode items = api.lastResponseJson().get("items");
+        assertThat(items).withFailMessage("No items in %s", api.lastResponse().getBody()).isNotNull();
+        return items.valueStream()
+                .filter(item -> item.get("number").asString().equals(number))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("No receipt " + number + " in " + items));
     }
 
     private JsonNode answeredReceipt() {

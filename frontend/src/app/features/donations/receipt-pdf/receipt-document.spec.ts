@@ -4,6 +4,7 @@ import {
   frozenCase,
   SINGLE_MANUAL,
   SINGLE_PERSON_CS,
+  SINGLE_PERSON_EN,
   SINGLE_SIGNATURE,
   TEST_CAPTIONS,
   YEARLY_120,
@@ -72,6 +73,15 @@ describe('Given the frozen single receipt of a person in Czech', () => {
   it('when every text is mapped, then none is left with a placeholder', () => {
     const texts = JSON.stringify(document);
     expect(texts).not.toMatch(/\{\d\}/);
+  });
+});
+
+describe('Given the frozen single receipt of a person who prefers English', () => {
+  const document = receiptDocument(frozenCase(SINGLE_PERSON_EN), ISSUED_AT, TEST_CAPTIONS);
+
+  it('when it is mapped, then it is bilingual and the file has the English name with its number', () => {
+    expect(document.bilingual).toBe(true);
+    expect(document.fileName).toBe('donation-receipt-2027-000001.pdf');
   });
 });
 

@@ -3,14 +3,24 @@ package cz.novanadeje.app.donations.infrastructure.texts;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptTextSet;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PrintableText;
+import cz.novanadeje.app.sharedcases.SharedCases;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
+import java.util.Set;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class BundleReceiptTextSourceTest {
+
+    private static final Path BROWSER_RECEIPT_DOCUMENT = Path.of("frontend", "src", "app", "features", "donations", "receipt-pdf", "receipt-document.ts");
+    private static final Pattern RECEIPT_TEXT_KEY = Pattern.compile("'(receipt\\.[A-Za-z.]+)'");
 
     private final BundleReceiptTextSource source = new BundleReceiptTextSource();
 
@@ -67,5 +77,17 @@ class BundleReceiptTextSourceTest {
         assertThat(texts.czech().values()).allSatisfy(text -> assertThat(PrintableText.of(text)).isEqualTo(new PrintableText(text, List.of())));
         assertThat(texts.english().orElseThrow().values())
                 .allSatisfy(text -> assertThat(PrintableText.of(text)).isEqualTo(new PrintableText(text, List.of())));
+    }
+
+    @Test
+    @DisplayName("Given the keys the browser's receipt reads from the frozen texts, when they are looked up in the bundle, then each is a receipt text in Czech and in English, so a renamed key cannot fall back to the app's words unnoticed")
+    void should_hold_every_key_the_browser_reads_when_looked_up_given_the_browsers_receipt_document() throws IOException {
+        String document = Files.readString(SharedCases.repositoryRoot().resolve(BROWSER_RECEIPT_DOCUMENT));
+        Set<String> keysTheBrowserReads = RECEIPT_TEXT_KEY.matcher(document).results().map(match -> match.group(1)).collect(Collectors.toSet());
+        ReceiptTextSet texts = source.textsFor(LocaleCode.EN);
+
+        assertThat(keysTheBrowserReads).contains("receipt.title.yearly", "receipt.verification.heading", "receipt.signature.alt");
+        assertThat(texts.czech().keySet()).containsAll(keysTheBrowserReads);
+        assertThat(texts.english().orElseThrow().keySet()).containsAll(keysTheBrowserReads);
     }
 }

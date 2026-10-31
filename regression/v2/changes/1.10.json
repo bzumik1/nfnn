@@ -780,13 +780,6 @@
   },
   {
     "kind": "removed",
-    "path": "GET /api/donations/me/{id}/receipt",
-    "scenario": "donations/admin_receipt_signing_key_withdrawal: *",
-    "reason": "1.10 removes v2's PDF download of a single receipt (plan v3 1.10): the withdrawal scenario no longer asks it; issuing stays refused while the key is withdrawn, which the scenario's POST /api/donations/me/receipts checks",
-    "contract": "docs/api-contract.md, Receipts"
-  },
-  {
-    "kind": "removed",
     "scenario": "donations/donation_receipts_frozen: Issuing receipts is limited per client address, counting the old downloads too*",
     "reason": "1.10 removes the old downloads, so the scenario that counted them in the limit is now the one that counts a yearly and a single receipt issued alike",
     "contract": "docs/api-contract.md, Receipts; docs/security-overview.md, rate limits"
@@ -888,5 +881,25 @@
         "<n>": "how many payments the confirmation paired, as before"
       }
     }
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/donation_receipts.feature > A donor downloads PDF receipts of their donations - A payment that verified an account has no receipt of its own and counts in the yearly receipt",
+    "replacement": "feature_classpath_features/donations/donation_receipts_frozen.feature > A donor issues receipts of their donations as frozen, signed data - A payment that verified an account has no receipt of its own and counts in the yearly receipt",
+    "reason": "1.10 removes v2's PDF downloads (plan v3 1.10, lead note 1): donation_receipts.feature asked the old GET addresses, so its scenarios go and the scenario of donation_receipts_frozen.feature that checks the same rule through POST /api/donations/me/receipts and the frozen receipt takes over"
+  },
+  {
+    "kind": "removed",
+    "scenario": "donations/admin_receipt_signing_key_withdrawal: Until the server starts with a new seed, no receipt is issued or downloaded, not even one issued before the withdrawal, and the administration issues none either*",
+    "reason": "1.10 removes v2's PDF download of a single receipt (plan v3 1.10), which the scenario asked while signing was paused, so the scenario is renamed: issuing stays refused, and it now also pins that the receipt issued before the withdrawal still reads back with its key (review 1.10 r1, tests m4, security m3)",
+    "contract": "docs/api-contract.md, Receipt verification proof and signing keys"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/admin_receipt_signing_key_withdrawal.feature > An administrator withdraws a leaked receipt signing key from the web, with a fresh second factor - Until the server starts with a new seed, no receipt is issued or downloaded, not even one issued before the withdrawal, and the administration issues none either",
+    "replacement": "feature_classpath_features/donations/admin_receipt_signing_key_withdrawal.feature > An administrator withdraws a leaked receipt signing key from the web, with a fresh second factor - Until the server starts with a new seed, no receipt is issued, not even once more one issued before the withdrawal, which still reads back, and the administration issues none either",
+    "reason": "1.10 removes v2's PDF download, so the scenario no longer asks it and is renamed after what it checks now"
   }
 ]
