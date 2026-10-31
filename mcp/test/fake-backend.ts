@@ -436,6 +436,10 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
       ];
     case 'GET /api/admin/content/projects':
       return [200, { items: [] }];
+    case 'GET /api/admin/content/project-order':
+      return [200, { order: 'YEAR_THEN_CATEGORY' }];
+    case 'PUT /api/admin/content/project-order':
+      return [200, { order: (JSON.parse(body) as Record<string, unknown>)['order'] }];
     case `GET /api/admin/content/news/${UNKNOWN_ID}`:
       return [200, { id: UNKNOWN_ID, title: 'Koncept', body: 'Dlouhý text aktuality.' }];
     case `GET /api/admin/content/projects/${UNKNOWN_ID}`:
