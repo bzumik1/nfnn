@@ -79,10 +79,10 @@ export class ReceiptPdf {
         )
         .subscribe({
           next: ({ issued, signature, portrait }) => {
-            const pages = estimatedReceiptPages(issued.receipt.gifts.length);
-            subscriber.next({ kind: 'phase', phase: 'tools', page: 0, pages });
+            let pages: number;
             let document: ReceiptDocument;
             try {
+              pages = estimatedReceiptPages(issued.receipt.gifts.length);
               document = receiptDocument(issued.receipt, issued.issuedAt, receiptCaptions());
             } catch (failure: unknown) {
               subscriber.error(
@@ -92,6 +92,7 @@ export class ReceiptPdf {
               );
               return;
             }
+            subscriber.next({ kind: 'phase', phase: 'tools', page: 0, pages });
             let ready = false;
             try {
               worker = this.environment.worker();
