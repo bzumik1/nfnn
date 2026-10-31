@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { inject, Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { inject, Injectable, signal } from '@angular/core';
+import { Observable, tap } from 'rxjs';
 import { QrMatrix } from '../../shared/ui/qr-code/qr-matrix';
 
 export interface BankAccountResponse {
@@ -20,6 +20,9 @@ export interface PaymentQrResponse {
 @Injectable({ providedIn: 'root' })
 export class PaymentQrApi {
   private readonly http = inject(HttpClient);
+  private readonly knownAccount = signal<BankAccountResponse | null>(null);
+
+  readonly foundationAccount = this.knownAccount.asReadonly();
 
   paymentQr(
     amount: number,
@@ -33,6 +36,8 @@ export class PaymentQrApi {
     if (purpose !== 'DONATION') {
       params = params.set('purpose', purpose);
     }
-    return this.http.get<PaymentQrResponse>('/api/donations/payment-qr', { params });
+    return this.http
+      .get<PaymentQrResponse>('/api/donations/payment-qr', { params })
+      .pipe(tap((qr) => this.knownAccount.set(qr.bankAccount)));
   }
 }

@@ -34,6 +34,8 @@ export class Home {
   protected readonly content = signal<HomeResponse | null>(null);
   protected readonly news = computed(() => this.content()?.news ?? []);
   protected readonly projects = computed(() => this.content()?.projects ?? []);
+  protected readonly aboutPhoto = computed(() => this.content()?.about?.photo ?? null);
+  protected readonly people = computed(() => this.content()?.people ?? null);
 
   constructor() {
     this.homeApi

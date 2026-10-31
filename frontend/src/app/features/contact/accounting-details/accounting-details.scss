@@ -1,0 +1,43 @@
+.accounting {
+  margin: 0;
+}
+
+.accounting-list {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+
+.accounting-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--space-4);
+
+  dt {
+    flex: 0 0 6.5rem;
+  }
+
+  dd {
+    flex: 1 1 21rem;
+    min-width: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-1) var(--space-3);
+  }
+}
+
+.accounting-value {
+  flex: 1 1 15rem;
+}
+
+.accounting-link {
+  color: var(--color-accent);
+  font-weight: var(--weight-semibold);
+}
+
+.accounting .accounting-note {
+  margin: var(--space-6) 0 0;
+}

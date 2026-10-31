@@ -1,0 +1,564 @@
+<div class="ui-page container">
+  <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.people.heading">Lidé fondu</h1>
+  <p class="ui-page-intro" i18n="@@admin.people.intro">
+    Lidé fondu se ukážou na úvodní stránce v sekci O nás v bloku „Kdo fond vede“: lidé s kartou s
+    portrétem a rolí, pod nimi slovo zakladatelů s jejich podpisy, řádek správní rady a pod ním
+    volitelný řádek. Dokud tu nikdo není, web ukazuje svůj vlastní blok.
+  </p>
+
+  @switch (state()) {
+    @case ('loading') {
+      <p class="ui-load-state" role="status" i18n="@@admin.people.loading">Načítáme lidi fondu…</p>
+    }
+    @case ('error') {
+      <div class="ui-load-state ui-load-state--error" role="alert">
+        <p i18n="@@admin.people.error.text">Lidi fondu se nepodařilo načíst.</p>
+        <button type="button" class="ui-button" (click)="load()" i18n="@@admin.people.error.retry">
+          Zkusit znovu
+        </button>
+      </div>
+    }
+    @case ('ready') {
+      <section class="ui-card" aria-labelledby="people-list-title">
+        <h2 id="people-list-title" class="ui-card__title" i18n="@@admin.people.list.title">
+          Lidé v pořadí na webu
+        </h2>
+        <div class="ui-card__body">
+          @if (members().length === 0) {
+            <p class="ui-card__empty" i18n="@@admin.people.list.empty">
+              Zatím tu nikdo není, web ukazuje svůj vlastní blok „Kdo fond vede“.
+            </p>
+          } @else {
+            <ol class="people-list">
+              @for (member of members(); track member.id; let first = $first, last = $last) {
+                <li class="person-row">
+                  <app-avatar
+                    class="person-thumb"
+                    [name]="member.name"
+                    [src]="member.portrait ? member.portrait.url + '?w=480' : null"
+                    [size]="48"
+                  />
+                  <div class="person-text">
+                    <p class="person-name">{{ member.name }}</p>
+                    @if (member.role) {
+                      <p class="person-role">{{ member.role }}</p>
+                    }
+                    <ul class="person-badges">
+                      @if (member.featured) {
+                        <li class="ui-badge ui-badge--accent" i18n="@@admin.people.badge.featured">
+                          Karta s portrétem
+                        </li>
+                      }
+                      @if (member.onBoard) {
+                        <li class="ui-badge ui-badge--success">{{ boardLabel(member) }}</li>
+                      }
+                      @if (member.webSignature) {
+                        <li class="ui-badge ui-badge--accent" i18n="@@admin.people.badge.signature">
+                          Podpis na webu
+                        </li>
+                      }
+                      @if (member.linkedToAccount) {
+                        <li class="ui-badge ui-badge--success" i18n="@@admin.people.badge.linked">
+                          Propojeno s účtem na webu
+                        </li>
+                      }
+                    </ul>
+                  </div>
+                  <div class="person-actions">
+                    <button
+                      type="button"
+                      class="ui-button ui-button--small ui-button--quiet"
+                      [id]="'person-up-' + member.id"
+                      [disabled]="first || busy()"
+                      [attr.aria-label]="moveUpLabel(member)"
+                      (click)="move(member, 'up')"
+                    >
+                      <span aria-hidden="true">↑</span>
+                      <span i18n="@@admin.people.move.up">Výš</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="ui-button ui-button--small ui-button--quiet"
+                      [id]="'person-down-' + member.id"
+                      [disabled]="last || busy()"
+                      [attr.aria-label]="moveDownLabel(member)"
+                      (click)="move(member, 'down')"
+                    >
+                      <span aria-hidden="true">↓</span>
+                      <span i18n="@@admin.people.move.down">Níž</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="ui-button ui-button--small"
+                      [id]="'person-edit-' + member.id"
+                      [disabled]="busy()"
+                      [attr.aria-label]="editLabel(member)"
+                      [attr.aria-expanded]="editing() === member.id"
+                      aria-controls="person-editor"
+                      (click)="edit(member)"
+                      i18n="@@admin.people.edit"
+                    >
+                      Upravit
+                    </button>
+                  </div>
+                </li>
+              }
+            </ol>
+          }
+          <div class="list-actions">
+            <button
+              id="people-add"
+              type="button"
+              class="ui-button ui-button--primary"
+              [disabled]="full() || busy()"
+              [attr.aria-expanded]="adding()"
+              aria-controls="person-editor"
+              (click)="startAdding()"
+              i18n="@@admin.people.add"
+            >
+              Přidat osobu
+            </button>
+            @if (full()) {
+              <p class="field-hint" i18n="@@admin.people.full">
+                Web ukáže nejvýš 30 lidí; nejdřív někoho odeberte.
+              </p>
+            }
+          </div>
+          <app-live-notice class="card-notice" [notice]="listNotice()" />
+        </div>
+      </section>
+
+      <div id="person-editor">
+        @if (editing() !== null) {
+          <section class="ui-card editor" aria-labelledby="person-editor-title">
+            <h2 id="person-editor-title" class="ui-card__title">
+              @if (current(); as member) {
+                <ng-container i18n="@@admin.people.editor.editTitle"
+                  >Upravit: {{ member.name }}</ng-container
+                >
+              } @else {
+                <ng-container i18n="@@admin.people.editor.addTitle">Nová osoba</ng-container>
+              }
+            </h2>
+            <form
+              #personForm="ngForm"
+              class="ui-card__body"
+              appFocusFirstInvalid
+              (ngSubmit)="save(personForm)"
+              novalidate
+            >
+              <div class="fields">
+                <app-form-field
+                  label="Jméno a příjmení"
+                  i18n-label="@@admin.people.name"
+                  hint="Tak, jak se má ukázat na webu, bez titulů navíc."
+                  i18n-hint="@@admin.people.name.hint"
+                  [messages]="nameMessages"
+                >
+                  <input
+                    appFormControl
+                    id="person-name"
+                    name="name"
+                    type="text"
+                    autocomplete="off"
+                    required
+                    [(ngModel)]="draft.name"
+                    [maxlength]="maxNameLength"
+                  />
+                </app-form-field>
+                <app-form-field
+                  label="Role pod jménem (nepovinné)"
+                  i18n-label="@@admin.people.role"
+                  hint="Ukáže se na kartě pod jménem, například Zakladatelka a členka správní rady."
+                  i18n-hint="@@admin.people.role.hint"
+                  [messages]="roleMessages"
+                >
+                  <input
+                    appFormControl
+                    id="person-role"
+                    name="role"
+                    type="text"
+                    autocomplete="off"
+                    [(ngModel)]="draft.role"
+                    [maxlength]="maxRoleLength"
+                  />
+                </app-form-field>
+              </div>
+
+              <fieldset class="choices">
+                <legend i18n="@@admin.people.where">Kde se ukáže</legend>
+                <label class="choice">
+                  <input type="checkbox" name="featured" [(ngModel)]="draft.featured" />
+                  <span i18n="@@admin.people.featured"
+                    >Karta s portrétem a rolí v bloku „Kdo fond vede“</span
+                  >
+                </label>
+                <label class="choice">
+                  <input type="checkbox" name="onBoard" [(ngModel)]="draft.onBoard" />
+                  <span i18n="@@admin.people.onBoard">V řádku „Správní rada“</span>
+                </label>
+              </fieldset>
+              @if (draft.onBoard) {
+                <div class="fields">
+                  <app-form-field
+                    label="Poznámka v řádku správní rady (nepovinné)"
+                    i18n-label="@@admin.people.boardNote"
+                    hint="Ukáže se v závorce za jménem, například předseda."
+                    i18n-hint="@@admin.people.boardNote.hint"
+                    [messages]="boardNoteMessages"
+                  >
+                    <input
+                      appFormControl
+                      id="person-board-note"
+                      name="boardNote"
+                      type="text"
+                      autocomplete="off"
+                      [(ngModel)]="draft.boardNote"
+                      [maxlength]="maxBoardNoteLength"
+                    />
+                  </app-form-field>
+                </div>
+              }
+
+              <fieldset class="choices emails">
+                <legend i18n="@@admin.people.emails">E-maily jen pro správu</legend>
+                <p class="field-hint" i18n="@@admin.people.emails.hint">
+                  Web je neukazuje; vidí je jen administrátoři tady a v připojené aplikaci. Účet na
+                  webu s potvrzeným e-mailem, který se shoduje s jedním z nich, se s osobou propojí:
+                  správce pak má u svého jména její portrét. Propojení nedává žádná práva.
+                </p>
+                <div class="fields">
+                  <app-form-field
+                    label="Osobní e-mail (nepovinné)"
+                    i18n-label="@@admin.people.personalEmail"
+                    [messages]="emailMessages"
+                  >
+                    <input
+                      appFormControl
+                      id="person-personal-email"
+                      name="personalEmail"
+                      type="email"
+                      autocomplete="off"
+                      [(ngModel)]="draft.personalEmail"
+                      [maxlength]="maxEmailLength"
+                      [pattern]="emailShape"
+                    />
+                  </app-form-field>
+                  <app-form-field
+                    label="E-mail ve fondu (nepovinné)"
+                    i18n-label="@@admin.people.fundEmail"
+                    hint="Adresa nadačního fondu, například jmeno@nfnn.cz."
+                    i18n-hint="@@admin.people.fundEmail.hint"
+                    [messages]="emailMessages"
+                  >
+                    <input
+                      appFormControl
+                      id="person-fund-email"
+                      name="fundEmail"
+                      type="email"
+                      autocomplete="off"
+                      [(ngModel)]="draft.fundEmail"
+                      [maxlength]="maxEmailLength"
+                      [pattern]="emailShape"
+                    />
+                  </app-form-field>
+                </div>
+              </fieldset>
+
+              <div class="image-field">
+                <p class="field-label" i18n="@@admin.people.portrait">Portrét (nepovinné)</p>
+                @if (portraitUrl(); as url) {
+                  <app-avatar
+                    class="portrait-preview"
+                    [name]="draft.name"
+                    [src]="url"
+                    [size]="120"
+                  />
+                }
+                <div class="image-actions">
+                  <app-file-button
+                    inputId="person-portrait"
+                    accept="image/jpeg,image/png,image/webp"
+                    describedBy="person-portrait-hint"
+                    [disabled]="busy()"
+                    (chosen)="uploadPortrait($event)"
+                  >
+                    @if (portrait()) {
+                      <ng-container i18n="@@admin.people.portrait.replace"
+                        >Vyměnit portrét</ng-container
+                      >
+                    } @else {
+                      <ng-container i18n="@@admin.people.portrait.choose"
+                        >Nahrát portrét</ng-container
+                      >
+                    }
+                  </app-file-button>
+                  @if (portrait()) {
+                    <button
+                      type="button"
+                      class="ui-link-button"
+                      [disabled]="busy()"
+                      (click)="dropPortrait()"
+                      i18n="@@admin.people.portrait.drop"
+                    >
+                      Bez portrétu
+                    </button>
+                  }
+                </div>
+                <p id="person-portrait-hint" class="field-hint" i18n="@@admin.people.portrait.hint">
+                  JPEG, PNG nebo WebP do 10 MB, nejlépe čtvercový. Web ho ukáže v kruhu a okraje
+                  ořízne. Nahrajte ho jen se souhlasem toho, kdo je na něm. Na web se dostane, až
+                  osobu uložíte.
+                </p>
+                <div role="status">
+                  @if (uploadingPortrait()) {
+                    <p class="field-status" i18n="@@admin.people.portrait.uploading">
+                      Nahráváme portrét…
+                    </p>
+                  }
+                </div>
+                @if (portraitError(); as error) {
+                  <p class="field-error" role="alert">{{ error }}</p>
+                }
+              </div>
+
+              <div class="form-actions">
+                <button type="submit" class="ui-button ui-button--primary" [disabled]="busy()">
+                  @if (saving()) {
+                    <ng-container i18n="@@admin.people.saving">Ukládáme…</ng-container>
+                  } @else if (adding()) {
+                    <ng-container i18n="@@admin.people.save.add"
+                      >Přidat a ukázat na webu</ng-container
+                    >
+                  } @else {
+                    <ng-container i18n="@@admin.people.save.edit"
+                      >Uložit a ukázat na webu</ng-container
+                    >
+                  }
+                </button>
+                <button
+                  type="button"
+                  class="ui-link-button"
+                  [disabled]="saving()"
+                  (click)="cancelEditing()"
+                  i18n="@@admin.people.cancel"
+                >
+                  Zavřít bez uložení
+                </button>
+              </div>
+              <app-live-notice class="card-notice" [notice]="editorNotice()" />
+            </form>
+
+            @if (current(); as member) {
+              <div class="ui-card__body signature-part">
+                <h3 class="part-title" i18n="@@admin.people.signature.title">Podpis na webu</h3>
+                <p
+                  class="field-hint"
+                  id="person-signature-hint"
+                  i18n="@@admin.people.signature.hint"
+                >
+                  Obrázek ručního podpisu jen pro web, ne podpis na potvrzení o daru. Ukáže se pod
+                  slovem zakladatelů, má-li osoba kartu. Nejlépe PNG s průhledným pozadím, tmavý
+                  inkoust, ořízlý těsně kolem podpisu. Uloží se hned po nahrání; nahrát ho a odebrat
+                  jde jen tady v prohlížeči.
+                </p>
+                @if (signatureUrl(); as url) {
+                  <img
+                    class="signature-preview"
+                    [src]="url"
+                    alt=""
+                    [attr.width]="member.webSignature?.width"
+                    [attr.height]="member.webSignature?.height"
+                  />
+                }
+                <div class="image-actions">
+                  <app-file-button
+                    inputId="person-signature"
+                    accept="image/png,image/jpeg,image/webp"
+                    describedBy="person-signature-hint"
+                    [disabled]="busy()"
+                    (chosen)="uploadSignature($event)"
+                  >
+                    @if (member.webSignature) {
+                      <ng-container i18n="@@admin.people.signature.replace"
+                        >Vyměnit podpis</ng-container
+                      >
+                    } @else {
+                      <ng-container i18n="@@admin.people.signature.choose"
+                        >Nahrát podpis</ng-container
+                      >
+                    }
+                  </app-file-button>
+                  @if (member.webSignature) {
+                    <button
+                      type="button"
+                      class="ui-button ui-button--small ui-button--danger-outline"
+                      [disabled]="busy()"
+                      (click)="removeSignature()"
+                      i18n="@@admin.people.signature.remove"
+                    >
+                      Odebrat podpis
+                    </button>
+                  }
+                </div>
+                <div role="status">
+                  @if (uploadingSignature()) {
+                    <p class="field-status" i18n="@@admin.people.signature.working">
+                      Ukládáme podpis…
+                    </p>
+                  }
+                </div>
+                <app-live-notice class="card-notice" [notice]="signatureNotice()" />
+              </div>
+
+              <div class="ui-card__body remove-part">
+                <h3 class="part-title" i18n="@@admin.people.remove.title">Odebrání osoby</h3>
+                <p class="ui-card__intro" i18n="@@admin.people.remove.intro">
+                  Osoba hned zmizí z webu a její portrét a podpis se smažou z databáze; ze záloh
+                  zmizí do 30 dnů.
+                </p>
+                @if (confirmingRemoval()) {
+                  <span
+                    class="confirm"
+                    role="group"
+                    aria-label="Odebrat osobu?"
+                    i18n-aria-label="@@admin.people.remove.confirm.label"
+                  >
+                    <span i18n="@@admin.people.remove.confirm.question"
+                      >Opravdu odebrat z webu osobu {{ member.name }}?</span
+                    >
+                    <button
+                      type="button"
+                      class="ui-button ui-button--danger"
+                      [disabled]="removing()"
+                      (click)="remove()"
+                    >
+                      @if (removing()) {
+                        <ng-container i18n="@@admin.people.removing">Odebíráme…</ng-container>
+                      } @else {
+                        <ng-container i18n="@@admin.people.remove.yes"
+                          >Odebrat a smazat</ng-container
+                        >
+                      }
+                    </button>
+                    <button
+                      id="person-remove-cancel"
+                      type="button"
+                      class="ui-link-button"
+                      [disabled]="removing()"
+                      (click)="cancelRemoval()"
+                      i18n="@@admin.people.remove.no"
+                    >
+                      Zrušit
+                    </button>
+                  </span>
+                } @else {
+                  <button
+                    id="person-remove"
+                    type="button"
+                    class="ui-button ui-button--danger-outline"
+                    [disabled]="busy()"
+                    (click)="askRemoval()"
+                    i18n="@@admin.people.remove.open"
+                  >
+                    Odebrat osobu z webu
+                  </button>
+                }
+              </div>
+            }
+          </section>
+        }
+      </div>
+
+      <section class="ui-card" aria-labelledby="founders-note-title">
+        <h2 id="founders-note-title" class="ui-card__title" i18n="@@admin.people.note.title">
+          Slovo zakladatelů
+        </h2>
+        <form
+          #noteForm="ngForm"
+          class="ui-card__body"
+          appFocusFirstInvalid
+          (ngSubmit)="saveNote(noteForm)"
+          novalidate
+        >
+          <div class="fields">
+            <app-form-field
+              label="Text pod kartami (nepovinné)"
+              i18n-label="@@admin.people.note.label"
+              hint="Krátký text bez formátování, nejvíc 600 znaků; odstavce oddělte prázdným řádkem. Pod ním se ukážou podpisy lidí s kartou, kteří mají podpis na webu. Prázdný text slovo zakladatelů z webu odebere."
+              i18n-hint="@@admin.people.note.hint"
+              [messages]="noteMessages"
+            >
+              <textarea
+                appFormControl
+                id="founders-note"
+                name="note"
+                rows="6"
+                [(ngModel)]="noteText"
+                [maxlength]="maxNoteLength"
+              ></textarea>
+            </app-form-field>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="ui-button ui-button--primary" [disabled]="savingNote()">
+              @if (savingNote()) {
+                <ng-container i18n="@@admin.people.note.saving">Ukládáme…</ng-container>
+              } @else {
+                <ng-container i18n="@@admin.people.note.save"
+                  >Uložit slovo zakladatelů</ng-container
+                >
+              }
+            </button>
+          </div>
+          <app-live-notice class="card-notice" [notice]="noteNotice()" />
+        </form>
+      </section>
+
+      <section class="ui-card" aria-labelledby="people-footnote-title">
+        <h2 id="people-footnote-title" class="ui-card__title" i18n="@@admin.people.footnote.title">
+          Řádek pod správní radou
+        </h2>
+        <form
+          #footnoteForm="ngForm"
+          class="ui-card__body"
+          appFocusFirstInvalid
+          (ngSubmit)="saveFootnote(footnoteForm)"
+          novalidate
+        >
+          <div class="fields">
+            <app-form-field
+              label="Text řádku (nepovinné)"
+              i18n-label="@@admin.people.footnote.label"
+              hint="Jedna věta pod výčtem správní rady, například kdo se stará o web. Nejvíc 200 znaků bez formátování a bez odstavců. Prázdný text řádek z webu odebere."
+              i18n-hint="@@admin.people.footnote.hint"
+              [messages]="footnoteMessages"
+            >
+              <textarea
+                appFormControl
+                id="people-footnote"
+                name="footnote"
+                rows="3"
+                [(ngModel)]="footnoteText"
+                [maxlength]="maxFootnoteLength"
+              ></textarea>
+            </app-form-field>
+          </div>
+          <div class="form-actions">
+            <button
+              type="submit"
+              class="ui-button ui-button--primary"
+              [disabled]="savingFootnote()"
+            >
+              @if (savingFootnote()) {
+                <ng-container i18n="@@admin.people.footnote.saving">Ukládáme…</ng-container>
+              } @else {
+                <ng-container i18n="@@admin.people.footnote.save">Uložit řádek</ng-container>
+              }
+            </button>
+          </div>
+          <app-live-notice class="card-notice" [notice]="footnoteNotice()" />
+        </form>
+      </section>
+    }
+  }
+</div>

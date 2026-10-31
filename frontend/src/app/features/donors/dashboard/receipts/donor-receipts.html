@@ -94,6 +94,13 @@
         <p class="yearly-hint" i18n="@@donor.dashboard.yearly.beforeReceipts">
           Potvrzení za rok tu vystavujeme za dary od roku {{ donations.receiptsFrom() }}.
         </p>
+      } @else {
+        <p class="yearly-earlier">
+          <span i18n="@@donor.receipts.yearly.earlier"
+            >Potvrzení tu vystavujeme za dary od roku {{ donations.receiptsFrom() }}. Za dřívější
+            dary nám napište na</span
+          >&ngsp;<a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a>.
+        </p>
       }
     } @else {
       <p class="yearly-empty" i18n="@@donor.dashboard.yearly.empty">
@@ -112,11 +119,30 @@
     >
       Potvrzení k jednotlivému daru
     </h2>
-    <p class="yearly-sub">
-      <span i18n="@@donor.receipts.single.text"
-        >Potvrzení ke každému přijatému daru zvlášť stáhnete hned po jeho připsání v části</span
-      >&ngsp;<a routerLink="/darce/dary" i18n="@@donor.receipts.single.link">Moje dary</a>.
-    </p>
+    @if (runningYearGifts().length > 0) {
+      <p class="yearly-sub">
+        <span i18n="@@donor.receipts.single.runningYear"
+          >Potvrzení k letošním darům stáhnete tady hned po jejich připsání, ke starším darům v
+          části</span
+        >&ngsp;<a routerLink="/darce/dary" i18n="@@donor.receipts.single.link">Moje dary</a>.
+      </p>
+      @if (donations.receiptError(); as error) {
+        @if (error.scope === 'single') {
+          <p class="ui-callout ui-callout--danger receipt-error" role="alert">
+            {{ error.message }}
+          </p>
+        }
+      }
+      <div class="single-gifts">
+        <app-donations-table [items]="runningYearGifts()" labelledBy="single-title" />
+      </div>
+    } @else {
+      <p class="yearly-sub">
+        <span i18n="@@donor.receipts.single.text"
+          >Potvrzení ke každému přijatému daru zvlášť stáhnete hned po jeho připsání v části</span
+        >&ngsp;<a routerLink="/darce/dary" i18n="@@donor.receipts.single.link">Moje dary</a>.
+      </p>
+    }
   </section>
 } @else {
   <app-donations-pending />

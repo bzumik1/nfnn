@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when it renders who runs the foundation today > then the whole board and the auditor are listed as in the registry",
+    "reason": "PR #228: Jakub 2026-10-30 asked to leave the auditor and the registry's way of acting off the site, so the test checks the board alone and its name says so",
+    "replacement": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when it renders who runs the foundation today > then the whole board is listed as in the registry, without the auditor",
+    "contract": "docs/frontend-overview.md, about"
+  }
+]

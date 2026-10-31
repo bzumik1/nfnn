@@ -585,7 +585,7 @@ jobs:
           rm -f "$RUNNER_TEMP/backup-key.json"
           [ "$mismatch" = 400 ] || { echo "::error::the setup must refuse words that are not the backup key's (got $mismatch)"; exit 1; }
           restarts=$(docker inspect -f '{{.RestartCount}}' nfnn-backend)
-          saved=$(curl -fsS --max-time 30 -H 'X-Forwarded-For: 203.0.113.7' -H 'Content-Type: application/json' --data "{\"code\":\"$code\",\"backupKeyWords\":$key_words,\"settings\":[{\"name\":\"PUBLIC_URL\",\"value\":\"http://localhost:8089\"},{\"name\":\"MAIL_HOST\",\"value\":\"localhost\"},{\"name\":\"MAIL_PORT\",\"value\":\"1025\"},{\"name\":\"MAIL_FROM\",\"value\":\"info@nfnn.cz\"},{\"name\":\"CONTACT_RECIPIENT\",\"value\":\"info@nfnn.cz\"},{\"name\":\"ADMIN_EMAILS\",\"value\":\"spravce@example.cz\"},{\"name\":\"MAIL_PASSWORD\",\"value\":\"not-a-real-password\"}]}" http://localhost:8089/api/operations/setup)
+          saved=$(curl -fsS --max-time 30 -H 'X-Forwarded-For: 203.0.113.7' -H 'Content-Type: application/json' --data "{\"code\":\"$code\",\"backupKeyWords\":$key_words,\"settings\":[{\"name\":\"PUBLIC_URL\",\"value\":\"http://localhost:8089\"},{\"name\":\"MAIL_HOST\",\"value\":\"nfnn-probe-mail\"},{\"name\":\"MAIL_PORT\",\"value\":\"1025\"},{\"name\":\"MAIL_FROM\",\"value\":\"info@nfnn.cz\"},{\"name\":\"CONTACT_RECIPIENT\",\"value\":\"info@nfnn.cz\"},{\"name\":\"ADMIN_EMAILS\",\"value\":\"spravce@example.cz\"},{\"name\":\"MAIL_PASSWORD\",\"value\":\"not-a-real-password\"}]}" http://localhost:8089/api/operations/setup)
           echo "$saved" | jq -e '.restarting == true' > /dev/null || { echo "::error::the setup was not saved: $saved"; exit 1; }
           echo "The backend restarts with the stored settings"
           for _ in $(seq 90); do
@@ -850,6 +850,52 @@ jobs:
           [ -z "$(sudo find "$backups" \( -name '*.dump' -o -name work \))" ] || { echo "::error::a backup, a restore or a test restore left an unencrypted copy in the backups folder"; sudo find "$backups"; exit 1; }
           curl -fsS --max-time 10 http://localhost:8089/ | grep -q '<app-root'
 
+      - name: An administrator signed in with the second factor uploads a JPEG and a WebP photo, which the read-only backend stores as WebP
+        run: |
+          echo "Mail goes to the probe's own mail catcher, the MAIL_HOST of the first setup, on the stack's network"
+          docker run -d --name nfnn-probe-mail --network nfnn-edge -p 127.0.0.1:8025:8025 axllent/mailpit:v1.31.5 > /dev/null
+          for _ in $(seq 30); do
+            curl -fsS -o /dev/null --max-time 2 http://127.0.0.1:8025/api/v1/messages 2> /dev/null && break
+            sleep 1
+          done
+          api=http://localhost:8089/api
+          client='X-Forwarded-For: 203.0.113.30'
+          password='a probe password for the photo upload'
+          registered=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 -H "$client" -H 'Content-Type: application/json' --data "{\"type\":\"PERSON\",\"name\":\"Zkušební Správce\",\"address\":{\"street\":\"Zkušební 1\",\"city\":\"Zkušebná\",\"postalCode\":\"100 00\"},\"email\":\"spravce@example.cz\",\"password\":\"$password\",\"preferredLocale\":\"cs\"}" "$api/donors/auth/register")
+          [ "$registered" = 202 ] || { echo "::error::the registration of the administrator named in ADMIN_EMAILS answered $registered"; exit 1; }
+          token=
+          for _ in $(seq 30); do
+            for id in $(curl -fsS --max-time 5 'http://127.0.0.1:8025/api/v1/search?query=to%3Aspravce%40example.cz' | jq -r '.messages[].ID'); do
+              token=$(curl -fsS --max-time 5 "http://127.0.0.1:8025/api/v1/message/$id" | jq -r '.Text' | grep -oE 'potvrzeni-emailu#token=[A-Za-z0-9_-]{43}' | head -n 1 | cut -d= -f2)
+              [ -n "$token" ] && break 2
+            done
+            sleep 1
+          done
+          [ -n "$token" ] || { echo "::error::no verification e-mail reached the mail catcher"; exit 1; }
+          session=$(curl -fsS --max-time 30 -H "$client" -H 'Content-Type: application/json' --data "{\"token\":\"$token\"}" "$api/donors/auth/email-verification/confirm" | jq -r '.accessToken')
+          enrolment=$(curl -fsS --max-time 30 -H "$client" -H "Authorization: Bearer $session" -H 'Content-Type: application/json' --data "{\"password\":\"$password\"}" "$api/donors/me/second-factor/setup")
+          code=$(TOTP_SECRET="$(echo "$enrolment" | jq -r '.secret')" python3 -c '
+          import base64, hashlib, hmac, os, struct, time
+          digest = hmac.new(base64.b32decode(os.environ["TOTP_SECRET"]), struct.pack(">Q", int(time.time()) // 30), hashlib.sha1).digest()
+          offset = digest[-1] & 15
+          print("%06d" % ((struct.unpack(">I", digest[offset:offset + 4])[0] & 0x7FFFFFFF) % 1000000))')
+          admin=$(curl -fsS --max-time 30 -H "$client" -H "Authorization: Bearer $session" -H 'Content-Type: application/json' --data "{\"code\":\"$code\"}" "$api/donors/me/second-factor/confirm" | jq -r '.accessToken')
+          ACCESS_TOKEN="$admin" python3 -c 'import base64, json, os, sys; payload = os.environ["ACCESS_TOKEN"].split(".")[1]; sys.exit("ADMIN" not in json.loads(base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4)))["roles"])' || { echo "::error::the session opened with the second factor does not carry ADMIN"; exit 1; }
+          for photo in frontend/public/images/og-image.jpg:image/jpeg frontend/public/images/news-1.webp:image/webp; do
+            file=${photo%%:*}
+            uploaded=$(curl -sS -w '\n%{http_code}' --max-time 60 -H "$client" -H "Authorization: Bearer $admin" -F "file=@$file;type=${photo#*:}" "$api/admin/content/media")
+            [ "$(echo "$uploaded" | tail -n 1)" = 201 ] || { echo "::error::uploading $file answered $(echo "$uploaded" | tail -n 1): $(echo "$uploaded" | head -n -1)"; exit 1; }
+            url=$(echo "$uploaded" | head -n -1 | jq -r '.url')
+            variant="$RUNNER_TEMP/variant.webp"
+            type=$(curl -fsS -o "$variant" -w '%{content_type}' --max-time 10 "http://localhost:8089$url?w=480")
+            [ "$type" = image/webp ] && [ "$(head -c 4 "$variant")" = RIFF ] && [ "$(dd if="$variant" bs=1 skip=8 count=4 2> /dev/null)" = WEBP ] || { echo "::error::the photo uploaded from $file is not served as WebP (got $type)"; exit 1; }
+            echo "$file was stored and is served as WebP at $url"
+          done
+          if grep -n 'UnsatisfiedLinkError' "$RUNNER_TEMP/nfnn/logs/backend.log"; then
+            echo "::error::the backend could not load the WebP codec's native library"
+            exit 1
+          fi
+
       - name: Hashed bundles are cached for good and a missing file answers 404, never the app
         run: |
           docker cp nfnn-frontend:/usr/share/nginx/html "$RUNNER_TEMP/frontend-html"
@@ -876,7 +922,9 @@ jobs:
 
       - name: Stop
         if: always()
-        run: docker compose down
+        run: |
+          docker rm -f nfnn-probe-mail > /dev/null 2>&1 || true
+          docker compose down
 
   gate:
     if: always()

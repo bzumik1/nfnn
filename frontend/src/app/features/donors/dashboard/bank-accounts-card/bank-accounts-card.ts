@@ -179,6 +179,13 @@ export class BankAccountsCard {
     );
   });
   private readonly newlyVerifiedId = computed(() => this.newlyVerified()?.id ?? null);
+  protected readonly alreadyVerified = computed(() =>
+    alreadyVerifiedMessage(
+      this.accounts()
+        .filter((account) => labelOf(account) === 'active' && !account.pairingExcluded)
+        .map((account) => account.accountNumber),
+    ),
+  );
   private watchRequest: Subscription | undefined;
 
   constructor() {
@@ -588,6 +595,16 @@ function earlierGiftsMessage(count: number, total: string): string {
     default:
       return $localize`:@@donor.bankAccounts.addDialog.earlierGifts.other:Přiřadili jsme vám také ${count}:count: dřívějších darů z\u00a0tohoto účtu, celkem ${total}:total:\u00a0Kč.`;
   }
+}
+
+function alreadyVerifiedMessage(accountNumbers: readonly string[]): string | null {
+  if (accountNumbers.length === 0) {
+    return null;
+  }
+  const accounts = joinedList(accountNumbers);
+  return accountNumbers.length === 1
+    ? $localize`:@@donor.bankAccounts.addDialog.alreadyVerified.one:Účet ${accounts}:account: už máte ověřený, 1\u00a0Kč z něj posílat nemusíte.`
+    : $localize`:@@donor.bankAccounts.addDialog.alreadyVerified.other:Účty ${accounts}:accounts: už máte ověřené, 1\u00a0Kč z nich posílat nemusíte.`;
 }
 
 function receiptsChangedMessage(years: readonly number[]): string {

@@ -5,6 +5,7 @@ import {
   answer,
   asRecord,
   plain,
+  PROJECT_ORDERS,
   text,
   ToolRefusal,
   withHint,
@@ -360,7 +361,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Aktuality a projekty',
       description:
-        'Every news article and project of the site, drafts included, with id, slug, title, tag, perex, photo, published date, live (whether the site shows it today: published and the published date not after today in Prague) and the length of the text, but not the text itself: read one whole with nfnn_news_article or nfnn_project.',
+        'Every news article and project of the site, drafts included, with id, slug, title, tag, perex, the year and category of a project, photo, published date, live (whether the site shows it today: published and the published date not after today in Prague) and the length of the text, but not the text itself: read one whole with nfnn_news_article or nfnn_project.',
       annotations: READ_ONLY,
     },
     async (ctx) =>
@@ -371,6 +372,19 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
         ]);
         return text({ news: withoutBodies(news), projects: withoutBodies(projects) });
       }),
+  );
+
+  server.registerTool(
+    'nfnn_project_order',
+    {
+      title: 'Řazení projektů',
+      description: `How the site orders the projects on the home page and the list of projects (the administration lists them the same way, drafts first), as \`order\`: ${PROJECT_ORDERS} Changed with nfnn_set_project_order.`,
+      annotations: READ_ONLY,
+    },
+    async (ctx) =>
+      answer(deps, ctx, 'nfnn_project_order', async ({ apiToken }) =>
+        text(await backend.get('/api/admin/content/project-order', apiToken)),
+      ),
   );
 
   server.registerTool(
@@ -397,7 +411,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Projekt',
       description:
-        'One project whole, draft or published: every field nfnn_update_project takes, with its text, year and photo, and live (whether the site shows it today; false for a draft and before its published date).',
+        'One project whole, draft or published: every field nfnn_update_project takes, with its text, year, category and photo, and live (whether the site shows it today; false for a draft and before its published date).',
       inputSchema: z.object({ id: UUID }),
       annotations: READ_ONLY,
     },
@@ -409,6 +423,34 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
         async ({ apiToken }) =>
           text(await backend.get(`/api/admin/content/projects/${id}`, apiToken)),
         `project ${id}`,
+      ),
+  );
+
+  server.registerTool(
+    'nfnn_about',
+    {
+      title: 'Fotka v sekci O nás',
+      description:
+        'The photo the home page shows in its About section: its id, size in pixels, alt (read by screen readers) and caption (shown under it to every visitor), or photo null while the site shows its placeholder photo. Change it with nfnn_update_about.',
+      annotations: READ_ONLY,
+    },
+    async (ctx) =>
+      answer(deps, ctx, 'nfnn_about', async ({ apiToken }) =>
+        text(await backend.get('/api/admin/content/about', apiToken)),
+      ),
+  );
+
+  server.registerTool(
+    'nfnn_people',
+    {
+      title: 'Lidé fondu',
+      description:
+        'The people of the foundation (Lidé fondu) the home page shows in "Kdo fond vede", in their order: id, name, role, position, onBoard with boardNote, featured, portrait and webSignature (id, url, size, or null), personalEmail and fundEmail (administration data only, never on the site), linkedToAccount (true when one of those e-mails is the confirmed e-mail of an account on the site; the link only shows the portrait at that account and grants nothing), the founders note under the cards and the footnote, the one line under the board line (each null when none). With no people the home page shows its own block. Change them with nfnn_add_person, nfnn_update_person, nfnn_remove_person, nfnn_order_people, nfnn_update_founders_note, nfnn_update_people_footnote, nfnn_set_web_signature and nfnn_remove_web_signature.',
+      annotations: READ_ONLY,
+    },
+    async (ctx) =>
+      answer(deps, ctx, 'nfnn_people', async ({ apiToken }) =>
+        text(await backend.get('/api/admin/content/people', apiToken)),
       ),
   );
 

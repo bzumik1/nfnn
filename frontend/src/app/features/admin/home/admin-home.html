@@ -168,7 +168,8 @@
         @if (backupKeyUnconfirmed()) {
           <li class="attention-item attention-item--warning attention-backup-key">
             <span i18n="@@admin.home.attention.backupKey"
-              >Klíč k zálohám si zatím nikdo neuložil. Bez něj žádnou zálohu neobnovíte.</span
+              >Klíč k zálohám si zatím nikdo neuložil. Bez něj žádnou zálohu neobnovíte. Uložit ho
+              má někdo ze správní rady, ne technik.</span
             >
             &ngsp;
             <a
@@ -203,6 +204,21 @@
               routerLink="/sprava/spravci"
               i18n="@@admin.home.attention.secondFactor.open"
               >Otevřít Správce</a
+            >
+          </li>
+        }
+        @if (signatureMissing()) {
+          <li class="attention-item attention-signature">
+            <span i18n="@@admin.home.attention.signature"
+              >Potvrzení o daru zatím nemají nahraný podpis, jen čáru se jménem.</span
+            >
+            &ngsp;
+            <a
+              class="ui-button ui-button--small"
+              routerLink="/sprava/nastaveni"
+              fragment="settings-RECEIPTS"
+              i18n="@@admin.home.attention.signature.open"
+              >Nahrát podpis</a
             >
           </li>
         }
@@ -511,6 +527,10 @@
                 </tr>
               </tfoot>
             </table>
+            <p class="overview-hint overview-columns" i18n="@@admin.home.overview.columns">
+              Noví dárci jsou nové registrace, i bez daru, takže jich může být víc než dárců. Celkem
+              zahrnuje i platby, které ještě nemají dárce (Celkem = Přiřazené + Bez dárce).
+            </p>
           }
         }
       }

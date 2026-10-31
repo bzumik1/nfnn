@@ -27,8 +27,8 @@ describe('Given the state of the backups', () => {
           'Zálohy webu Nová naděje potřebují pomoc správce serveru.',
           '',
           'Co je špatně:',
-          '- Web teď nevidí složku se zálohami, takže zálohy nejde vytvořit ani stáhnout. Data webu jsou v pořádku. Zkopírujte prosím zprávu pro technika a pošlete ji správci serveru.',
-          '- Poslední záloha se nepovedla. Data webu jsou v pořádku, ale nejsou zálohovaná. Zkuste Zálohovat teď; když to nepomůže, zkopírujte zprávu pro technika a pošlete ji správci serveru.',
+          '- Web teď nevidí složku se zálohami, takže zálohy nejde vytvořit ani stáhnout. Data webu jsou v pořádku.',
+          '- Poslední záloha se nepovedla. Data webu jsou v pořádku, ale nejsou zálohovaná.',
           '',
           'Technické podrobnosti:',
           '- Backend nevidí složku záloh. Zkontrolujte compose na serveru: backend má mít připojenou složku /DATA/AppData/nfnn/backups jako /backups.',
@@ -37,6 +37,10 @@ describe('Given the state of the backups', () => {
           '- Poslední zkušební obnova: zatím žádná',
         ].join('\n'),
       );
+    });
+
+    it('then the message does not ask the technician to copy and send it', () => {
+      expect(technicianMessage(view)).not.toContain('pošlete');
     });
 
     it('then nothing about the backup key goes into the message', () => {

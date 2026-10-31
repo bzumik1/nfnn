@@ -118,6 +118,22 @@ describe('Given the donor data card in the overview', () => {
       expect(document.activeElement).toBe(element('.profile-edit'));
     });
 
+    it('and edits the data, then the address fields come in the order of the registration: street, postal code, city', async () => {
+      await click('.profile-edit');
+
+      const fields = [
+        ...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLInputElement>(
+          '.profile-form input',
+        ),
+      ].map((input) => input.id);
+      expect(fields).toEqual([
+        'profile-name',
+        'profile-street',
+        'profile-postal-code',
+        'profile-city',
+      ]);
+    });
+
     it('and edits the data, then the language field says that receipts already downloaded keep their language', async () => {
       await click('.profile-edit');
 

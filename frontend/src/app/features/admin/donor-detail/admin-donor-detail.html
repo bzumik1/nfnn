@@ -430,16 +430,20 @@
             </p>
           } @else {
             <p class="admin-hint admin-hint--card" i18n="@@admin.donorDetail.accounts.hint">
-              Jen nechcete, aby se dárci přiřazovaly další platby bez symbolu? Vypněte párování,
-              dosavadní dary zůstanou. Účet se dárci přiřadil omylem? Odeberte ho: smažeme i dary,
-              které se přes něj přiřadily, a odpovědi o starších symbolech.
+              Sloupec Dary přiřazené podle účtu počítá jen platby bez variabilního symbolu, které se
+              dárci přiřadily podle účtu; dary se symbolem najdete níže v části Dary. Jen nechcete,
+              aby se dárci přiřazovaly další platby bez symbolu? Vypněte párování, dosavadní dary
+              zůstanou. Účet se dárci přiřadil omylem? Odeberte ho: smažeme i dary, které se přes
+              něj přiřadily, a odpovědi o starších symbolech.
             </p>
             <table class="ui-table">
               <thead>
                 <tr>
                   <th i18n="@@admin.donorDetail.accounts.col.account">Účet</th>
                   <th i18n="@@admin.donorDetail.accounts.col.status">Stav</th>
-                  <th i18n="@@admin.donorDetail.accounts.col.donations">Dary přes účet</th>
+                  <th i18n="@@admin.donorDetail.accounts.col.donations">
+                    Dary přiřazené podle účtu
+                  </th>
                   <th class="action">
                     <span class="visually-hidden" i18n="@@admin.donorDetail.accounts.col.action"
                       >Akce</span
@@ -494,7 +498,7 @@
                       </span>
                     </td>
                     <td
-                      data-label="Dary přes účet"
+                      data-label="Dary přiřazené podle účtu"
                       i18n-data-label="@@admin.donorDetail.accounts.col.donations"
                     >
                       {{ donationsCount(item.donationCount) }}
