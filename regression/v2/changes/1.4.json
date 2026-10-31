@@ -91,6 +91,14 @@
   },
   {
     "path": "POST /api/donors/me/second-factor/setup",
+    "scenario": "content/choose_project_order: *",
+    "kind": "body",
+    "field": "$.qrCode",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the authenticator set-up answers the secret and the otpauth URI only, and the browser draws the QR from otpauthUri (1.3), so qrCode is removed",
+    "contract": "docs/api-contract.md, Second factor (POST /api/donors/me/second-factor/setup)"
+  },
+  {
+    "path": "POST /api/donors/me/second-factor/setup",
     "scenario": "donations/admin_activity_since: *",
     "kind": "body",
     "field": "$.qrCode",
