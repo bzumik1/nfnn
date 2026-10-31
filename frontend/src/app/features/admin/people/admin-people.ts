@@ -25,6 +25,8 @@ import { FormControlDirective } from '../../../shared/ui/form-field/form-control
 import { FormField } from '../../../shared/ui/form-field/form-field';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 import { MAX_IMAGE_BYTES, mediaUrl, NewsApi, UploadedImageResponse } from '../../content/news-api';
+import { AdminApi, MAX_RECEIPT_ROLE_LENGTH, ReceiptSignatoryResponse } from '../admin-api';
+import { ReceiptSignature } from '../receipt-signature/receipt-signature';
 import {
   EMAIL_SHAPE,
   MAX_BOARD_NOTE_LENGTH,
@@ -41,6 +43,11 @@ import {
 
 type LoadState = 'loading' | 'ready' | 'error';
 type Direction = 'up' | 'down';
+
+interface ReceiptDraft {
+  signs: boolean;
+  role: string;
+}
 
 interface Draft {
   name: string;
@@ -67,6 +74,7 @@ const NEW_PERSON = 'new';
     FocusFirstInvalid,
     FileButton,
     LiveNotice,
+    ReceiptSignature,
   ],
   templateUrl: './admin-people.html',
   styleUrl: './admin-people.scss',
@@ -74,6 +82,7 @@ const NEW_PERSON = 'new';
 })
 export class AdminPeople {
   private readonly api = inject(PeopleApi);
+  private readonly admin = inject(AdminApi);
   private readonly media = inject(NewsApi);
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
@@ -89,6 +98,7 @@ export class AdminPeople {
   protected readonly maxBoardNoteLength = MAX_BOARD_NOTE_LENGTH;
   protected readonly maxNoteLength = MAX_FOUNDERS_NOTE_LENGTH;
   protected readonly maxEmailLength = MAX_EMAIL_LENGTH;
+  protected readonly maxReceiptRoleLength = MAX_RECEIPT_ROLE_LENGTH;
   protected readonly emailShape = EMAIL_SHAPE;
 
   protected readonly state = signal<LoadState>('loading');
@@ -107,8 +117,12 @@ export class AdminPeople {
   protected readonly listNotice = signal<Notice | null>(null);
   protected readonly editorNotice = signal<Notice | null>(null);
   protected readonly noteNotice = signal<Notice | null>(null);
+  protected readonly signatory = signal<ReceiptSignatoryResponse | null>(null);
+  protected readonly savingReceipt = signal(false);
+  protected readonly receiptNotice = signal<Notice | null>(null);
 
   protected draft: Draft = emptyDraft();
+  protected receiptDraft: ReceiptDraft = { signs: false, role: '' };
   protected noteText = '';
 
   protected readonly nameMessages = {
@@ -124,6 +138,10 @@ export class AdminPeople {
   protected readonly emailMessages = {
     pattern: $localize`:@@admin.people.email.invalid:Zadejte e-mail ve tvaru jana@example.cz.`,
     maxlength: $localize`:@@admin.people.email.tooLong:E-mail může mít nejvíc ${MAX_EMAIL_LENGTH}:max: znaků.`,
+  };
+  protected readonly receiptRoleMessages = {
+    required: $localize`:@@admin.people.receiptRole.required:Vyplňte prosím funkci, která se vytiskne pod jméno.`,
+    maxlength: $localize`:@@admin.people.receiptRole.tooLong:Funkce může mít nejvíc ${MAX_RECEIPT_ROLE_LENGTH}:max: znaků.`,
   };
   protected readonly noteMessages = {
     maxlength: $localize`:@@admin.people.note.tooLong:Slovo zakladatelů může mít nejvíc ${MAX_FOUNDERS_NOTE_LENGTH}:max: znaků.`,
@@ -143,9 +161,11 @@ export class AdminPeople {
     const signature = this.current()?.webSignature;
     return signature ? mediaUrl(signature.id, PREVIEW_WIDTH) : null;
   });
+  protected readonly signatoryName = computed(() => this.signatory()?.signatory?.name ?? null);
   protected readonly busy = computed(
     () =>
       this.saving() ||
+      this.savingReceipt() ||
       this.removing() ||
       this.uploadingPortrait() ||
       this.uploadingSignature() ||
@@ -154,6 +174,7 @@ export class AdminPeople {
 
   constructor() {
     this.load();
+    this.loadSignatory();
     afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
   }
 
@@ -178,6 +199,59 @@ export class AdminPeople {
             return;
           }
           this.state.set('error');
+        },
+      });
+  }
+
+  protected signs(member: PersonResponse): boolean {
+    return this.signatory()?.signatory?.personId === member.id;
+  }
+
+  protected loadSignatory(): void {
+    this.admin
+      .receiptSignatory()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (view) => this.signatory.set(view),
+        error: () => this.signatory.set(null),
+      });
+  }
+
+  protected saveReceipt(form: NgForm): void {
+    const person = this.current();
+    if (person === null || this.busy()) {
+      return;
+    }
+    this.receiptNotice.set(null);
+    if (form.invalid) {
+      return;
+    }
+    this.savingReceipt.set(true);
+    this.admin
+      .chooseReceiptSignatory({ personId: person.id, receiptRole: this.receiptDraft.role.trim() })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (chosen) => {
+          this.savingReceipt.set(false);
+          this.signatory.update((view) => ({
+            signatory: chosen,
+            signatures: view?.signatures ?? [],
+          }));
+          this.receiptDraft = { signs: false, role: chosen.receiptRole };
+          this.receiptNotice.set({
+            kind: 'status',
+            text: $localize`:@@admin.people.receipt.saved:Potvrzení vystavená od teď podepisuje ${chosen.name}:name: s funkcí ${chosen.receiptRole}:role:.`,
+          });
+        },
+        error: (failure: unknown) => {
+          this.savingReceipt.set(false);
+          this.receiptNotice.set({
+            kind: 'alert',
+            text: describeProblem(
+              failure,
+              $localize`:@@admin.people.receipt.failed:Podepisujícího se nepodařilo uložit. Zkuste to prosím znovu.`,
+            ),
+          });
         },
       });
   }
@@ -460,8 +534,13 @@ export class AdminPeople {
     this.listNotice.set(null);
     this.editorNotice.set(null);
     this.signatureNotice.set(null);
+    this.receiptNotice.set(null);
     this.portraitError.set(null);
     this.confirmingRemoval.set(false);
+    this.receiptDraft = {
+      signs: false,
+      role: member && this.signs(member) ? (this.signatory()?.signatory?.receiptRole ?? '') : '',
+    };
     this.draft = member
       ? {
           name: member.name,

@@ -40,6 +40,7 @@ import {
   unpublishedKeysSentence,
 } from '../settings/receipt-signing-key/unpublished-keys';
 
+type SignatoryState = 'loading' | 'ok' | 'missing' | 'unsigned' | 'error';
 type LoadState = 'loading' | 'ready' | 'error';
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
@@ -130,7 +131,7 @@ export class AdminHome {
   protected readonly unpaired = signal<UnpairedSummary | null>(null);
   protected readonly administratorsState = signal<LoadState>('loading');
   protected readonly withoutSecondFactor = signal<readonly string[]>([]);
-  protected readonly signatureMissing = signal(false);
+  protected readonly signatoryState = signal<SignatoryState>('loading');
   protected readonly sinceState = signal<LoadState>('loading');
   protected readonly since = signal<SinceSignIn | null>(null);
   protected readonly backupsState = signal<LoadState>('loading');
@@ -259,6 +260,9 @@ export class AdminHome {
   protected readonly administratorsNeedAttention = computed(
     () => this.administratorsState() === 'error' || this.withoutSecondFactor().length > 0,
   );
+  protected readonly signatoryNeedsAttention = computed(() =>
+    ['error', 'missing', 'unsigned'].includes(this.signatoryState()),
+  );
   protected readonly signingKeysNeedAttention = computed(
     () => this.signingKeysState() === 'error' || this.unpublishedSigningKeys().length > 0,
   );
@@ -282,7 +286,7 @@ export class AdminHome {
       this.backupKeyUnconfirmed() ||
       this.administratorsNeedAttention() ||
       this.signingKeysNeedAttention() ||
-      this.signatureMissing(),
+      this.signatoryNeedsAttention(),
   );
   protected readonly unpairedText = computed(() => {
     const summary = this.unpaired();
@@ -311,7 +315,7 @@ export class AdminHome {
     this.loadUnpaired();
     this.loadAdministrators();
     this.loadSigningKeys();
-    this.loadSignature();
+    this.loadSignatory();
     afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
   }
 
@@ -414,13 +418,17 @@ export class AdminHome {
       });
   }
 
-  private loadSignature(): void {
+  protected loadSignatory(): void {
+    this.signatoryState.set('loading');
     this.api
-      .receiptSignature()
+      .receiptSignatory()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (signature) => this.signatureMissing.set(!signature.configured),
-        error: () => this.signatureMissing.set(false),
+        next: (view) =>
+          this.signatoryState.set(
+            view.signatory === null ? 'missing' : view.signatory.signature ? 'ok' : 'unsigned',
+          ),
+        error: () => this.signatoryState.set('error'),
       });
   }
 

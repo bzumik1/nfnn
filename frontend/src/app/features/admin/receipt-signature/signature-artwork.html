@@ -1,0 +1,21 @@
+@if (signature().kind === 'VECTOR' && signature().vector; as vector) {
+  <svg
+    class="signature-artwork"
+    role="img"
+    preserveAspectRatio="xMidYMid meet"
+    [attr.aria-label]="label()"
+    [attr.viewBox]="viewBox(vector.viewBox)"
+  >
+    @for (path of vector.paths; track $index) {
+      <path [attr.d]="path.d" [attr.fill]="fill(path)" [attr.fill-opacity]="path.opacity" />
+    }
+  </svg>
+} @else if (signature().configured && signature().image; as image) {
+  <img
+    class="signature-artwork"
+    [src]="image"
+    [alt]="label()"
+    [attr.width]="signature().width"
+    [attr.height]="signature().height"
+  />
+}

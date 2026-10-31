@@ -5,10 +5,14 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  effect,
   ElementRef,
   inject,
   Injector,
+  input,
+  output,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -16,16 +20,12 @@ import {
   describeProblem,
   describeProblemWithoutFields,
   problemTypeEndsWith,
-} from '../../../../core/auth/api-problem';
-import { formatBankTime } from '../../../donations/donation-date';
-import {
-  AdminApi,
-  ReceiptSignatureResponse,
-  SignatureVectorPath,
-  SignatureVectorResponse,
-} from '../../admin-api';
-import { Notice } from '../../../../shared/ui/live-notice/live-notice';
-import { FileButton } from '../../../../shared/ui/file-button/file-button';
+} from '../../../core/auth/api-problem';
+import { formatBankTime } from '../../donations/donation-date';
+import { AdminApi, ReceiptSignatureResponse } from '../admin-api';
+import { Notice } from '../../../shared/ui/live-notice/live-notice';
+import { FileButton } from '../../../shared/ui/file-button/file-button';
+import { SignatureArtwork } from './signature-artwork';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -33,14 +33,12 @@ const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const SVG_TYPE = 'image/svg+xml';
 const MAX_BYTES = 10 * 1024 * 1024;
 const MAX_SVG_BYTES = 200 * 1024;
-const HEX_FILL = /^#[0-9a-f]{6}$/;
-const BLACK = '#000000';
 const UNSUPPORTED_VECTOR = '/donations/unsupported-signature-vector';
 const PIXELS = new Intl.NumberFormat('cs-CZ');
 
 @Component({
   selector: 'app-receipt-signature',
-  imports: [FileButton],
+  imports: [FileButton, SignatureArtwork],
   templateUrl: './receipt-signature.html',
   styleUrl: './receipt-signature.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -53,6 +51,9 @@ export class ReceiptSignature {
   private readonly removeButton = viewChild<ElementRef<HTMLButtonElement>>('removeButton');
   private readonly removeCancel = viewChild<ElementRef<HTMLButtonElement>>('removeCancel');
 
+  readonly personId = input.required<string>();
+  readonly changed = output<ReceiptSignatureResponse>();
+
   protected readonly state = signal<LoadState>('loading');
   protected readonly signature = signal<ReceiptSignatureResponse | null>(null);
   protected readonly uploading = signal(false);
@@ -61,13 +62,20 @@ export class ReceiptSignature {
   protected readonly notice = signal<Notice | null>(null);
 
   constructor() {
-    this.load();
+    effect(() => {
+      this.personId();
+      untracked(() => {
+        this.notice.set(null);
+        this.confirmingRemoval.set(false);
+        this.load();
+      });
+    });
   }
 
   protected load(): void {
     this.state.set('loading');
     this.api
-      .receiptSignature()
+      .receiptSignature(this.personId())
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (signature) => {
@@ -76,14 +84,6 @@ export class ReceiptSignature {
         },
         error: () => this.state.set('error'),
       });
-  }
-
-  protected viewBox(vector: SignatureVectorResponse): string {
-    return vector.viewBox.join(' ');
-  }
-
-  protected fill(path: SignatureVectorPath): string {
-    return HEX_FILL.test(path.fill) ? path.fill : BLACK;
   }
 
   protected uploadedLine(signature: ReceiptSignatureResponse): string {
@@ -126,12 +126,13 @@ export class ReceiptSignature {
     }
     this.uploading.set(true);
     this.api
-      .uploadReceiptSignature(file)
+      .uploadReceiptSignature(this.personId(), file)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (signature) => {
           this.uploading.set(false);
           this.signature.set(signature);
+          this.changed.emit(signature);
           this.notice.set({
             kind: 'status',
             text: $localize`:@@admin.signature.saved:Podpis je uložený. Ponesou ho potvrzení vystavená od teď.`,
@@ -170,13 +171,11 @@ export class ReceiptSignature {
     }
     this.removing.set(true);
     this.api
-      .removeReceiptSignature()
+      .removeReceiptSignature(this.personId())
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
-          this.removing.set(false);
-          this.confirmingRemoval.set(false);
-          this.signature.set({
+          const removed: ReceiptSignatureResponse = {
             configured: false,
             kind: null,
             image: null,
@@ -184,7 +183,11 @@ export class ReceiptSignature {
             width: null,
             height: null,
             uploadedAt: null,
-          });
+          };
+          this.removing.set(false);
+          this.confirmingRemoval.set(false);
+          this.signature.set(removed);
+          this.changed.emit(removed);
           this.notice.set({
             kind: 'status',
             text: $localize`:@@admin.signature.removed:Podpis je odebraný. Potvrzení vystavená od teď ho nebudou mít.`,

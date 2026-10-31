@@ -1,6 +1,6 @@
 import { expect, Page } from '@playwright/test';
 import { PAYMENT_QR_500, SECOND_FACTOR_QR } from './qr-matrices';
-import { noSignature } from './signature-image';
+import { noSignature, signatory } from './signature-image';
 
 export const donor = {
   id: '01a18e56-bdb0-775a-bd0a-a60756831369',
@@ -206,7 +206,11 @@ export async function mockDonorApi(
     (route) => route.fulfill({ json: { required: false, codeRequired: true } }),
   );
   await page.route(
-    (url) => url.pathname === '/api/admin/donations/receipt-signature',
+    (url) => url.pathname === '/api/admin/donations/receipt-signatory',
+    (route) => route.fulfill({ json: signatory() }),
+  );
+  await page.route(
+    (url) => url.pathname.startsWith('/api/admin/donations/receipt-signatures/'),
     (route) => route.fulfill({ json: noSignature }),
   );
   await page.route(
@@ -322,8 +326,6 @@ export const adminSettings = {
     adminSetting('FIO_TOKEN', 'BANK', null, { secret: true, configured: true, stored: true }),
     adminSetting('FIO_HISTORY_FROM', 'BANK', null),
     adminSetting('PAIRING_EXCLUDED_ACCOUNTS', 'BANK', null),
-    adminSetting('RECEIPT_SIGNATORY_NAME', 'RECEIPTS', 'Pavel Znamenáček'),
-    adminSetting('RECEIPT_SIGNATORY_ROLE', 'RECEIPTS', 'předseda správní rady'),
     adminSetting('RECEIPT_FIRST_YEAR', 'RECEIPTS', '2026'),
   ],
   secretsCanBeStored: true,

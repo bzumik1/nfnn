@@ -1,0 +1,86 @@
+<section class="ui-card" aria-labelledby="receipt-signatory-title">
+  <h2 id="receipt-signatory-title" class="ui-card__title" i18n="@@admin.signatory.title">
+    Kdo potvrzení podepisuje
+  </h2>
+  <div class="ui-card__body">
+    @switch (state()) {
+      @case ('loading') {
+        <p class="signatory-status" role="status" i18n="@@admin.signatory.loading">
+          Načítáme, kdo potvrzení podepisuje…
+        </p>
+      }
+      @case ('error') {
+        <div class="signatory-error" role="alert">
+          <p i18n="@@admin.signatory.loadFailed">Nepodařilo se načíst, kdo potvrzení podepisuje.</p>
+          <button type="button" class="ui-button" (click)="load()" i18n="@@admin.signatory.retry">
+            Zkusit znovu
+          </button>
+        </div>
+      }
+      @case ('ready') {
+        @if (block(); as block) {
+          <p class="ui-card__intro" i18n="@@admin.signatory.intro">
+            Takhle vypadá podpis na potvrzeních vystavených od teď. Kdo podepisuje, jeho funkci na
+            potvrzení a podpis změníte u lidí fondu; potvrzení už vystavená se nemění.
+          </p>
+          <figure class="signature-block">
+            <figcaption class="signature-block-caption" i18n="@@admin.signatory.preview">
+              Náhled podpisu na potvrzení
+            </figcaption>
+            <div class="signature-block-body">
+              @if (block.portraitUrl; as url) {
+                <img class="signature-block-portrait" [src]="url" alt="" width="96" height="96" />
+              } @else {
+                <span class="signature-block-portrait signature-block-portrait--empty"></span>
+              }
+              <div class="signature-block-text">
+                <p class="signature-block-for" i18n="@@admin.signatory.for">
+                  Za Nová naděje - nadační fond:
+                </p>
+                <div class="signature-block-signature">
+                  @if (block.signature; as signature) {
+                    <app-signature-artwork [signature]="signature" [label]="signatureLabel" />
+                  }
+                </div>
+                <p class="signature-block-name">{{ block.signatory.name }}</p>
+                <p class="signature-block-role">{{ block.signatory.receiptRole }}</p>
+              </div>
+            </div>
+          </figure>
+          @if (!block.signatory.portrait || !block.signatory.signature) {
+            <p class="ui-callout ui-callout--warning signatory-gaps">
+              @if (!block.signatory.portrait && !block.signatory.signature) {
+                <ng-container i18n="@@admin.signatory.gap.both"
+                  >Osoba nemá portrét ani podpis na potvrzení. Potvrzení budou mít jen čáru se
+                  jménem a funkcí.</ng-container
+                >
+              } @else if (!block.signatory.signature) {
+                <ng-container i18n="@@admin.signatory.gap.signature"
+                  >Osoba nemá nahraný podpis na potvrzení. Potvrzení budou mít místo něj jen
+                  čáru.</ng-container
+                >
+              } @else {
+                <ng-container i18n="@@admin.signatory.gap.portrait"
+                  >Osoba nemá portrét. Potvrzení budou bez fotky.</ng-container
+                >
+              }
+            </p>
+          }
+        } @else {
+          <p class="ui-callout ui-callout--danger signatory-missing" role="alert">
+            <ng-container i18n="@@admin.signatory.missing"
+              >Potvrzení o daru teď nikdo nepodepisuje, a tak je web dárcům nevystaví. Vyberte u
+              lidí fondu, kdo je podepisuje, a jeho funkci na potvrzení.</ng-container
+            >
+          </p>
+        }
+        <a
+          class="ui-button ui-button--small signatory-open"
+          routerLink="/sprava/lide-fondu"
+          i18n="@@admin.signatory.open"
+          >Otevřít lidi fondu</a
+        >
+      }
+    }
+  </div>
+</section>

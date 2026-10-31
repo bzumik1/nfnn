@@ -5,15 +5,16 @@ import { provideRouter } from '@angular/router';
 import {
   noReceiptSignature,
   receiptSignature,
+  SIGNATORY_ID,
   SIGNATURE_IMAGE,
   vectorReceiptSignature,
-} from '../../testing/admin-fixtures';
-import { ReceiptSignatureResponse } from '../../admin-api';
+} from '../testing/admin-fixtures';
+import { ReceiptSignatureResponse } from '../admin-api';
 import { ReceiptSignature } from './receipt-signature';
 
-const SIGNATURE_URL = '/api/admin/donations/receipt-signature';
+const SIGNATURE_URL = `/api/admin/donations/receipt-signatures/${SIGNATORY_ID}`;
 
-describe('Given the signature section of the receipt settings', () => {
+describe('Given the receipt signature part of a person of the foundation', () => {
   let fixture: ComponentFixture<ReceiptSignature>;
   let http: HttpTestingController;
 
@@ -24,6 +25,7 @@ describe('Given the signature section of the receipt settings', () => {
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(ReceiptSignature);
+    fixture.componentRef.setInput('personId', SIGNATORY_ID);
     fixture.detectChanges();
   });
 
@@ -46,11 +48,11 @@ describe('Given the signature section of the receipt settings', () => {
   }
 
   function preview(): HTMLImageElement | null {
-    return fixture.nativeElement.querySelector('img.signature-preview');
+    return fixture.nativeElement.querySelector('img.signature-artwork');
   }
 
   function vectorPreview(): SVGSVGElement | null {
-    return fixture.nativeElement.querySelector('svg.signature-preview');
+    return fixture.nativeElement.querySelector('svg.signature-artwork');
   }
 
   async function settle(): Promise<void> {
@@ -86,11 +88,11 @@ describe('Given the signature section of the receipt settings', () => {
 
     expect(preview()).toBeNull();
     expect(text('.signature-state')).toBe(
-      'Podpis není nahraný. Potvrzení mají místo něj jen čáru se jménem.',
+      'Podpis není nahraný. Potvrzení, která osoba podepisuje, mají místo něj jen čáru se jménem.',
     );
-    expect(fixture.nativeElement.textContent).not.toContain('Odebrat podpis');
-    expect(text('h2')).toBe('Podpis na potvrzeních');
-    expect(text('label[for="receipt-signature-file"]')).toBe('Nahrát podpis');
+    expect(fixture.nativeElement.textContent).not.toContain('Odebrat podpis z potvrzení');
+    expect(text('h4')).toBe('Podpis na potvrzení');
+    expect(text('label[for="receipt-signature-file"]')).toBe('Nahrát podpis na potvrzení');
   });
 
   it('when a signature is uploaded, then it shows the scan with its size and upload time', async () => {
@@ -99,7 +101,7 @@ describe('Given the signature section of the receipt settings', () => {
     expect(preview()?.getAttribute('src')).toBe(SIGNATURE_IMAGE);
     expect(preview()?.getAttribute('alt')).toBe('Nahraný podpis');
     expect(text('.signature-state')).toBe('Nahráno 23. 10. 2026 21:30, 1 200 × 400 px.');
-    expect(text('label[for="receipt-signature-file"]')).toBe('Nahrát jiný podpis');
+    expect(text('label[for="receipt-signature-file"]')).toBe('Nahrát jiný podpis na potvrzení');
     expect(vectorPreview()).toBeNull();
   });
 
@@ -127,7 +129,7 @@ describe('Given the signature section of the receipt settings', () => {
       ['M250 50 L290 90 Z', '#c0392b', '1'],
     ]);
     expect(text('.signature-state')).toBe('Nahráno 23. 10. 2026 21:30, vektorový podpis (SVG).');
-    expect(text('label[for="receipt-signature-file"]')).toBe('Nahrát jiný podpis');
+    expect(text('label[for="receipt-signature-file"]')).toBe('Nahrát jiný podpis na potvrzení');
   });
 
   it.each(['url(https://example.com/a)', 'url(#a) #123456', '#abc', '#ABCDEF', '#1d2a5cff'])(
@@ -153,12 +155,25 @@ describe('Given the signature section of the receipt settings', () => {
     expect(text('.signature-state')).toBe('Nahráno 23. 10. 2026 21:30, 1 200 × 400 px.');
   });
 
-  it('when the hint is read, then it says a handwritten SVG signature is fine as filled shapes and only strokes and effects are refused, before the scan', async () => {
+  it('when the hint is read, then it says the signature is not public, a handwritten SVG is fine as filled shapes and only strokes and effects are refused, before the scan', async () => {
     await load(noReceiptSignature());
 
     expect(text('#receipt-signature-hint')).toBe(
-      'Podpis se tiskne nad jméno podepisujícího na potvrzeních vystavených po nahrání; ta už vystavená se nemění. Nejlépe SVG do 200 kB: ručně psaný podpis jde, když jsou jeho tahy převedené na vyplněné tvary. Obrysy s nastavenou tloušťkou čáry (stroke) a efekty web odmítne. Jinak sken JPEG, PNG či WebP do 10 MB: tmavý podpis na bílém papíře.',
+      'Tiskne se nad jméno na potvrzeních, která tato osoba podepisuje, vystavených po nahrání; ta už vystavená se nemění. Není veřejný: dárce ho uvidí jen na svém potvrzení. Uloží se hned po nahrání. Nejlépe SVG do 200 kB: ručně psaný podpis jde, když jsou jeho tahy převedené na vyplněné tvary. Obrysy s nastavenou tloušťkou čáry (stroke) a efekty web odmítne. Jinak sken JPEG, PNG či WebP do 10 MB: tmavý podpis na bílém papíře.',
     );
+  });
+
+  it('when another person is shown, then their own signature is loaded', async () => {
+    await load(receiptSignature());
+
+    fixture.componentRef.setInput('personId', 'other-person');
+    await settle();
+
+    http
+      .expectOne({ method: 'GET', url: '/api/admin/donations/receipt-signatures/other-person' })
+      .flush(noReceiptSignature());
+    await settle();
+    expect(text('.signature-state')).toContain('Podpis není nahraný.');
   });
 
   it('when the signature cannot be loaded, then it says so and loads again on request', async () => {
@@ -323,7 +338,7 @@ describe('Given the signature section of the receipt settings', () => {
   describe('when the administrator removes the uploaded signature', () => {
     beforeEach(async () => {
       await load(receiptSignature());
-      button('Odebrat podpis').click();
+      button('Odebrat podpis z potvrzení').click();
       await settle();
     });
 
@@ -338,7 +353,7 @@ describe('Given the signature section of the receipt settings', () => {
 
       expect(fixture.nativeElement.querySelector('.signature-confirm')).toBeNull();
       expect(preview()).not.toBeNull();
-      expect(document.activeElement).toBe(button('Odebrat podpis'));
+      expect(document.activeElement).toBe(button('Odebrat podpis z potvrzení'));
     });
 
     it('then a failed removal says so and gives the focus back to the remove button', async () => {
@@ -354,7 +369,7 @@ describe('Given the signature section of the receipt settings', () => {
       expect(text('[role="alert"]:not(:empty)')).toBe(
         'Podpis se nepodařilo odebrat. Zkuste to prosím znovu.',
       );
-      expect(document.activeElement).toBe(button('Odebrat podpis'));
+      expect(document.activeElement).toBe(button('Odebrat podpis z potvrzení'));
     });
 
     it('then on confirming it removes the signature and says so', async () => {

@@ -2,8 +2,11 @@
   display: block;
 }
 
-.ui-card__intro {
-  margin-bottom: var(--space-2);
+.signature-title {
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+  margin-bottom: var(--space-1-5);
 }
 
 .signature-hint {
@@ -21,14 +24,6 @@
   margin-bottom: var(--space-2);
   max-width: 360px;
   forced-color-adjust: none;
-}
-
-.signature-preview {
-  display: block;
-  width: 100%;
-  height: auto;
-  max-height: 120px;
-  object-fit: contain;
 }
 
 .signature-state {

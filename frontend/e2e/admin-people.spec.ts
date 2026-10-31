@@ -1,6 +1,14 @@
 import { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { administrator, mockDonorApi, samplePngBase64, session } from './donor-session';
+import {
+  noSignature,
+  noSignatory,
+  refusedVector,
+  signatory,
+  uploadedSignature,
+  vectorSignature,
+} from './signature-image';
 
 const PEOPLE = '/api/admin/content/people';
 const MEDIA = '/api/admin/content/media';
@@ -8,6 +16,18 @@ const PERSON_ID = '0199f3e0-0000-7000-8000-00000000c001';
 const PORTRAIT_ID = '0199f3e0-0000-7000-8000-00000000c101';
 const SIGNATURE_ID = '0199f3e0-0000-7000-8000-00000000c201';
 const PNG = Buffer.from(samplePngBase64, 'base64');
+const SIGNATORY = '/api/admin/donations/receipt-signatory';
+const RECEIPT_SIGNATURE = `/api/admin/donations/receipt-signatures/${PERSON_ID}`;
+const EVA: PersonBody = {
+  name: 'Eva Vzorová',
+  role: 'Zakladatelka',
+  onBoard: true,
+  boardNote: null,
+  featured: true,
+  portraitId: PORTRAIT_ID,
+  personalEmail: null,
+  fundEmail: null,
+};
 
 interface PersonBody {
   name: string;
@@ -122,7 +142,7 @@ test.describe('Given an administrator who keeps the people of the foundation', (
 
     await page.getByRole('button', { name: 'Upravit: Eva Vzorová' }).click();
     await expect(page.getByLabel('E-mail ve fondu (nepovinné)')).toHaveValue('eva@nfnn.cz');
-    await page.getByLabel('Nahrát podpis').setInputFiles({
+    await page.getByLabel('Nahrát podpis', { exact: true }).setInputFiles({
       name: 'podpis.png',
       mimeType: 'image/png',
       buffer: PNG,
@@ -158,6 +178,218 @@ test.describe('Given an administrator who keeps the people of the foundation', (
       ['POST', `${PEOPLE}/${PERSON_ID}/web-signature`, { imageId: SIGNATURE_ID }],
       ['DELETE', `${PEOPLE}/${PERSON_ID}`, null],
     ]);
+  });
+});
+
+test.describe('Given an administrator who chooses who signs the receipts', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+    await servePhotos(page);
+    await rememberedSession(page);
+    await page.route(
+      (url) => url.pathname === PEOPLE,
+      (route) => route.fulfill({ json: { members: [member(EVA)], note: null } }),
+    );
+  });
+
+  test('when they let a person sign the receipts with a role of their own, then the choice reaches the administration and the person is marked as the signatory', async ({
+    page,
+  }) => {
+    const chosen: unknown[] = [];
+    let current: object = noSignatory;
+    await page.route(
+      (url) => url.pathname === SIGNATORY,
+      (route) => {
+        if (route.request().method() === 'PUT') {
+          chosen.push(route.request().postDataJSON());
+          const view = signatory({
+            personId: PERSON_ID,
+            name: 'Eva Vzorová',
+            receiptRole: 'předsedkyně správní rady',
+            portrait: true,
+          });
+          current = view;
+          return route.fulfill({ json: view.signatory });
+        }
+        return route.fulfill({ json: current });
+      },
+    );
+
+    await page.goto('/sprava/lide-fondu');
+    await page.getByRole('button', { name: 'Upravit: Eva Vzorová' }).click();
+    const part = page.locator('.receipt-part');
+    await expect(part).toContainText(
+      'Potvrzení teď nikdo nepodepisuje, a tak je web dárcům nevystaví.',
+    );
+
+    await part.getByLabel('Podepisuje potvrzení').check();
+    await part.getByLabel('Funkce na potvrzení').fill('předsedkyně správní rady');
+    await part.getByRole('button', { name: 'Uložit pro potvrzení' }).click();
+
+    await expect(part.getByRole('status').filter({ hasText: /\S/ }).first()).toHaveText(
+      'Potvrzení vystavená od teď podepisuje Eva Vzorová s funkcí předsedkyně správní rady.',
+    );
+    await expect(part).toContainText('Tato osoba podepisuje potvrzení o daru.');
+    expect(chosen).toEqual([{ personId: PERSON_ID, receiptRole: 'předsedkyně správní rady' }]);
+  });
+
+  test('when they upload a scan of the receipt signature and remove it again, then the part shows it and asks before removing', async ({
+    page,
+  }) => {
+    let current: object = noSignature;
+    const methods: string[] = [];
+    await page.route(
+      (url) => url.pathname === SIGNATORY,
+      (route) => route.fulfill({ json: signatory({ personId: PERSON_ID, name: 'Eva Vzorová' }) }),
+    );
+    await page.route(
+      (url) => url.pathname === RECEIPT_SIGNATURE,
+      (route) => {
+        const method = route.request().method();
+        methods.push(method);
+        if (method === 'POST') {
+          current = uploadedSignature;
+        }
+        if (method === 'DELETE') {
+          current = noSignature;
+          return route.fulfill({ status: 204, body: '' });
+        }
+        return route.fulfill({ json: current });
+      },
+    );
+
+    await page.goto('/sprava/lide-fondu');
+    await page.getByRole('button', { name: 'Upravit: Eva Vzorová' }).click();
+    const part = page.locator('app-receipt-signature');
+    await expect(part).toContainText('Podpis není nahraný.');
+
+    await part.getByLabel('Nahrát podpis na potvrzení').setInputFiles({
+      name: 'podpis.jpg',
+      mimeType: 'image/jpeg',
+      buffer: Buffer.from('JPEG'),
+    });
+
+    await expect(part.getByRole('img', { name: 'Nahraný podpis' })).toBeVisible();
+    await expect(part.getByRole('status').filter({ hasText: /\S/ })).toHaveText(
+      'Podpis je uložený. Ponesou ho potvrzení vystavená od teď.',
+    );
+    await expect(part).toContainText('Nahráno 23. 10. 2026 21:30, 600 × 200 px.');
+
+    await part.getByRole('button', { name: 'Odebrat podpis z potvrzení' }).click();
+    const confirmation = part.getByRole('group', { name: 'Odebrat podpis z potvrzení?' });
+    await expect(confirmation).toContainText('bez podpisu');
+    await confirmation.getByRole('button', { name: 'Odebrat podpis z potvrzení' }).click();
+
+    await expect(part.getByRole('status').filter({ hasText: /\S/ })).toHaveText(
+      'Podpis je odebraný. Potvrzení vystavená od teď ho nebudou mít.',
+    );
+    await expect(part.getByRole('img', { name: 'Nahraný podpis' })).toHaveCount(0);
+    expect(methods.filter((method) => method !== 'GET')).toEqual(['POST', 'DELETE']);
+  });
+
+  test('when they upload a vector receipt signature, then the part draws it, a refused SVG keeps it with the reason first, and a scan and an SVG replace each other', async ({
+    page,
+  }) => {
+    let current: object = noSignature;
+    let uploads = 0;
+    const answers: object[] = [vectorSignature, refusedVector, uploadedSignature, vectorSignature];
+    await page.route(
+      (url) => url.pathname === RECEIPT_SIGNATURE,
+      (route) => {
+        if (route.request().method() !== 'POST') {
+          return route.fulfill({ json: current });
+        }
+        const answer = answers[uploads++];
+        if (answer === refusedVector) {
+          return route.fulfill({
+            status: 400,
+            contentType: 'application/problem+json',
+            body: JSON.stringify(refusedVector),
+          });
+        }
+        current = answer;
+        return route.fulfill({ json: current });
+      },
+    );
+
+    await page.goto('/sprava/lide-fondu');
+    await page.getByRole('button', { name: 'Upravit: Eva Vzorová' }).click();
+    const part = page.locator('app-receipt-signature');
+    const saved = part.getByRole('status').filter({ hasText: /\S/ });
+    const alert = part.getByRole('alert').filter({ hasText: /\S/ });
+    await expect(part).toContainText('Podpis není nahraný.');
+
+    await part.getByLabel('Nahrát podpis na potvrzení').setInputFiles({
+      name: 'podpis.svg',
+      mimeType: 'image/svg+xml',
+      buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 100"/>'),
+    });
+
+    const drawing = part.locator('svg.signature-artwork');
+    await expect(drawing).toBeVisible();
+    await expect(drawing).toHaveAccessibleName('Nahraný podpis');
+    await expect(drawing.locator('path')).toHaveCount(2);
+    await expect(part).toContainText('Nahráno 23. 10. 2026 21:30, vektorový podpis (SVG).');
+    await expect(saved).toHaveText('Podpis je uložený. Ponesou ho potvrzení vystavená od teď.');
+
+    await part.getByLabel('Nahrát jiný podpis na potvrzení').setInputFiles({
+      name: 'jiny.svg',
+      mimeType: 'image/svg+xml',
+      buffer: Buffer.from('<svg><script/></svg>'),
+    });
+
+    await expect(alert).toHaveText(
+      'SVG nejde použít jako podpis. Soubor obsahuje nepovolený prvek „script“. Ručně psaný podpis v SVG jde, když jsou jeho tahy převedené na vyplněné tvary (path); obrysy s nastavenou tloušťkou čáry (stroke) a efekty web nepřijme a soubor smí mít nejvýš 200 kB. Místo něj můžete nahrát sken JPEG, PNG nebo WebP.',
+    );
+    await expect(drawing.locator('path')).toHaveCount(2);
+
+    await part.getByLabel('Nahrát jiný podpis na potvrzení').setInputFiles({
+      name: 'podpis.jpg',
+      mimeType: 'image/jpeg',
+      buffer: Buffer.from([0xff, 0xd8, 0xff, 0xe0]),
+    });
+
+    const scan = part.locator('img.signature-artwork');
+    await expect(scan).toBeVisible();
+    await expect(drawing).toHaveCount(0);
+    await expect(part).toContainText('Nahráno 23. 10. 2026 21:30, 600 × 200 px.');
+    await expect(saved).toHaveText('Podpis je uložený. Ponesou ho potvrzení vystavená od teď.');
+    await expect(alert).toHaveCount(0);
+
+    await part.getByLabel('Nahrát jiný podpis na potvrzení').setInputFiles({
+      name: 'podpis.svg',
+      mimeType: 'image/svg+xml',
+      buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 100"/>'),
+    });
+
+    await expect(drawing.locator('path')).toHaveCount(2);
+    await expect(scan).toHaveCount(0);
+    await expect(part).toContainText('Nahráno 23. 10. 2026 21:30, vektorový podpis (SVG).');
+    expect(uploads).toBe(4);
+  });
+
+  test('when the vector receipt signature is shown in a dark forced-colours mode, then its frame keeps the paper and the ink keeps its colour', async ({
+    page,
+  }) => {
+    await page.emulateMedia({ forcedColors: 'active', colorScheme: 'dark' });
+    await page.route(
+      (url) => url.pathname === RECEIPT_SIGNATURE,
+      (route) => route.fulfill({ json: vectorSignature }),
+    );
+
+    await page.goto('/sprava/lide-fondu');
+    await page.getByRole('button', { name: 'Upravit: Eva Vzorová' }).click();
+    const frame = page.locator('app-receipt-signature .signature-frame');
+    await expect(frame.locator('path')).toHaveCount(2);
+
+    const colours = await frame.evaluate((element) => ({
+      adjust: getComputedStyle(element).forcedColorAdjust,
+      paper: getComputedStyle(element).backgroundColor,
+      ink: getComputedStyle(element.querySelector('path') as Element).fill,
+    }));
+    expect(colours.adjust).toBe('none');
+    expect(colours.paper).not.toBe('rgb(0, 0, 0)');
+    expect(colours.ink).toBe('rgb(29, 42, 92)');
   });
 });
 

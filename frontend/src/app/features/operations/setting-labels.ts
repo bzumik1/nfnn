@@ -16,8 +16,6 @@ export const SETTING_LABELS: Readonly<Record<SettingName, string>> = {
   FIO_TOKEN: $localize`:@@operations.setting.FIO_TOKEN:Token Fio API (jen pro čtení)`,
   FIO_HISTORY_FROM: $localize`:@@operations.setting.FIO_HISTORY_FROM:Stáhnout platby od data`,
   PAIRING_EXCLUDED_ACCOUNTS: $localize`:@@operations.setting.PAIRING_EXCLUDED_ACCOUNTS:Účty, podle kterých se nepáruje`,
-  RECEIPT_SIGNATORY_NAME: $localize`:@@operations.setting.RECEIPT_SIGNATORY_NAME:Kdo podepisuje potvrzení`,
-  RECEIPT_SIGNATORY_ROLE: $localize`:@@operations.setting.RECEIPT_SIGNATORY_ROLE:Jeho funkce`,
   RECEIPT_FIRST_YEAR: $localize`:@@operations.setting.RECEIPT_FIRST_YEAR:Potvrzení na webu od roku`,
   ADMIN_EMAILS: $localize`:@@operations.setting.ADMIN_EMAILS:E-mail prvního správce`,
 };

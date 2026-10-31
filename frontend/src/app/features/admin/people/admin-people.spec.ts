@@ -12,10 +12,18 @@ import {
   PERSON_ID,
   PORTRAIT_ID,
 } from '../../content/testing/people-fixtures';
+import { ReceiptSignatoryResponse } from '../admin-api';
+import {
+  noReceiptSignatory,
+  noReceiptSignature,
+  receiptSignatory,
+} from '../testing/admin-fixtures';
 import { AdminPeople } from './admin-people';
 
 const PEOPLE_URL = '/api/admin/content/people';
 const MEDIA_URL = '/api/admin/content/media';
+const SIGNATORY_URL = '/api/admin/donations/receipt-signatory';
+const RECEIPT_SIGNATURES = '/api/admin/donations/receipt-signatures/';
 
 function problem(status: number, type: string, title: string, detail: string) {
   return {
@@ -28,7 +36,7 @@ function problem(status: number, type: string, title: string, detail: string) {
   };
 }
 
-async function setUp(): Promise<{
+async function setUp(signatory: ReceiptSignatoryResponse = noReceiptSignatory()): Promise<{
   fixture: ComponentFixture<AdminPeople>;
   http: HttpTestingController;
 }> {
@@ -48,7 +56,16 @@ async function setUp(): Promise<{
     .flush(authResponse('token-1', sampleDonor({ roles: ['DONOR', 'ADMIN'] })));
   const fixture = TestBed.createComponent(AdminPeople);
   fixture.detectChanges();
+  http.expectOne(SIGNATORY_URL).flush(signatory);
   return { fixture, http };
+}
+
+function verifyLeavingReceiptSignatures(http: HttpTestingController): void {
+  http
+    .match((request) => request.url.startsWith(RECEIPT_SIGNATURES))
+    .filter((pending) => !pending.cancelled)
+    .forEach((pending) => pending.flush(noReceiptSignature()));
+  http.verify();
 }
 
 function element<T extends HTMLElement>(fixture: ComponentFixture<unknown>, selector: string): T {
@@ -164,7 +181,7 @@ describe('Given an administrator and no people of the foundation yet', () => {
     await settle(fixture);
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => verifyLeavingReceiptSignatures(http));
 
   it('when the page opens, then it says the site keeps its own block and offers to add a person', () => {
     expect(text(fixture, 'h1')).toBe('Lidé fondu');
@@ -278,7 +295,7 @@ describe('Given an administrator and two people of the foundation', () => {
     await settle(fixture);
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => verifyLeavingReceiptSignatures(http));
 
   it('when the page opens, then the list names both in order with their badges and the note is filled in', () => {
     expect(rows(fixture)).toEqual(['Eva Vzorová', 'Adam Vzor']);
@@ -450,7 +467,7 @@ describe('Given an administrator whose people do not load', () => {
     ({ fixture, http } = await setUp());
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => verifyLeavingReceiptSignatures(http));
 
   it('when the server fails, then the page offers to try again, and trying again loads them', async () => {
     http.expectOne(PEOPLE_URL).flush(null, { status: 500, statusText: 'Error' });
@@ -473,5 +490,89 @@ describe('Given an administrator whose people do not load', () => {
     await settle(fixture);
 
     expect(navigate).toHaveBeenCalledWith('/darce/prehled');
+  });
+});
+
+describe('Given an administrator and two people of the foundation, one of whom signs the receipts', () => {
+  let fixture: ComponentFixture<AdminPeople>;
+  let http: HttpTestingController;
+
+  beforeEach(async () => {
+    ({ fixture, http } = await setUp(receiptSignatory({ personId: PERSON_ID })));
+    http.expectOne(PEOPLE_URL).flush({ members: [person(), ADAM], note: null });
+    await settle(fixture);
+  });
+
+  afterEach(() => verifyLeavingReceiptSignatures(http));
+
+  it('when the page opens, then the person who signs carries a badge saying so', () => {
+    expect(badges(fixture)).toContain('Podepisuje potvrzení');
+  });
+
+  it('when they edit the signatory, then the part for receipts says so with the receipt role, shows their receipt signature and refuses removing them', async () => {
+    await click(fixture, `#person-edit-${PERSON_ID}`);
+
+    expect(text(fixture, '.receipt-part h3')).toBe('Na potvrzení o daru');
+    expect(text(fixture, '.receipt-part .field-hint')).toBe(
+      'Tato osoba podepisuje potvrzení o daru. Potvrzení vždy podepisuje jen jedna osoba; jinou vyberete u ní.',
+    );
+    expect(element<HTMLInputElement>(fixture, '#person-receipt-role').value).toBe(
+      'předsedkyně správní rady',
+    );
+    expect(fixture.nativeElement.querySelector('#person-signs-receipts')).toBeNull();
+    http
+      .expectOne({ method: 'GET', url: `${RECEIPT_SIGNATURES}${PERSON_ID}` })
+      .flush(noReceiptSignature());
+    await settle(fixture);
+    expect(text(fixture, '.receipt-part h4')).toBe('Podpis na potvrzení');
+    expect(findButton(fixture, 'Odebrat osobu z webu')).toBeNull();
+    expect(text(fixture, '.remove-part .ui-callout')).toBe(
+      'Osoba podepisuje potvrzení o daru, a tak ji nejde odebrat. Nejdřív vyberte jinou osobu, která je bude podepisovat.',
+    );
+  });
+
+  it('when they let another person sign with a receipt role, then the choice is saved and the badge moves', async () => {
+    await click(fixture, `#person-edit-${OTHER_PERSON_ID}`);
+    expect(text(fixture, '#person-signs-receipts-hint')).toBe(
+      'Potvrzení vždy podepisuje jen jedna osoba; teď je to Eva Vzorová. Po uložení je bude podepisovat tato osoba.',
+    );
+    expect(fixture.nativeElement.querySelector('#person-receipt-role')).toBeNull();
+
+    await check(fixture, 'signsReceipts');
+    await type(fixture, '#person-receipt-role', '  místopředseda správní rady ');
+    await submit(fixture, '.receipt-form');
+
+    const choice = http.expectOne(SIGNATORY_URL);
+    expect(choice.request.method).toBe('PUT');
+    expect(choice.request.body).toEqual({
+      personId: OTHER_PERSON_ID,
+      receiptRole: 'místopředseda správní rady',
+    });
+    choice.flush(
+      receiptSignatory({
+        personId: OTHER_PERSON_ID,
+        name: 'Adam Vzor',
+        receiptRole: 'místopředseda správní rady',
+      }).signatory,
+    );
+    await settle(fixture);
+
+    expect(text(fixture, '.receipt-part .ui-notice--status')).toBe(
+      'Potvrzení vystavená od teď podepisuje Adam Vzor s funkcí místopředseda správní rady.',
+    );
+    expect(text(fixture, `.person-row:nth-child(2) .person-badges`)).toContain(
+      'Podepisuje potvrzení',
+    );
+  });
+
+  it('when they let another person sign without a receipt role, then the field says so and nothing is sent', async () => {
+    await click(fixture, `#person-edit-${OTHER_PERSON_ID}`);
+    await check(fixture, 'signsReceipts');
+    await submit(fixture, '.receipt-form');
+
+    expect(text(fixture, '.receipt-part app-form-field')).toContain(
+      'Vyplňte prosím funkci, která se vytiskne pod jméno.',
+    );
+    http.expectNone(SIGNATORY_URL);
   });
 });

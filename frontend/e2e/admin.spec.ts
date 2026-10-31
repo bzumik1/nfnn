@@ -258,7 +258,7 @@ test.describe('Given an administrator', () => {
     await expect(attention.locator('.attention-list > li')).toHaveText([
       '1 platba čeká na přiřazení dárci (150 Kč). Přiřadit platby',
       'Zatím se nevyzkoušelo, že jde zálohu obnovit. Spusťte Ověřit obnovu teď. Otevřít zálohy',
-      'Potvrzení o daru zatím nemají nahraný podpis, jen čáru se jménem. Nahrát podpis',
+      'Kdo podepisuje potvrzení o daru, zatím nemá nahraný podpis; potvrzení mají jen čáru se jménem. Nahrát podpis',
     ]);
     await expect(attention.getByRole('link', { name: 'Přiřadit platby' })).toHaveAttribute(
       'href',
@@ -266,7 +266,7 @@ test.describe('Given an administrator', () => {
     );
     await expect(attention.getByRole('link', { name: 'Nahrát podpis' })).toHaveAttribute(
       'href',
-      '/sprava/nastaveni#settings-RECEIPTS',
+      '/sprava/lide-fondu',
     );
     const backupsCard = page.getByRole('region', { name: 'Zálohy databáze' });
     await expect(backupsCard).toContainText('23. 10. 2026 03:00 (2 kB)');

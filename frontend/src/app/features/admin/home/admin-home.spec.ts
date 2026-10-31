@@ -19,6 +19,8 @@ import {
   receiptSigningKey,
   receiptSigningKeys,
   unpairedPayment,
+  noReceiptSignatory,
+  receiptSignatory,
 } from '../testing/admin-fixtures';
 import { AdminHome } from './admin-home';
 
@@ -30,15 +32,7 @@ const ADMINISTRATORS_URL = '/api/admin/donors/administrators';
 const PREVIOUS_SIGN_IN_URL = '/api/admin/donors/me/previous-sign-in';
 const SINCE_URL = '/api/admin/donations/overview/since';
 const SIGNING_KEYS_URL = '/api/admin/donations/receipt-signing-keys';
-const SIGNATURE_URL = '/api/admin/donations/receipt-signature';
-const SIGNATURE = { configured: true, image: null, width: 400, height: 120, uploadedAt: null };
-const NO_SIGNATURE = {
-  configured: false,
-  image: null,
-  width: null,
-  height: null,
-  uploadedAt: null,
-};
+const SIGNATORY_URL = '/api/admin/donations/receipt-signatory';
 
 describe('Given an administrator on the administration home', () => {
   let fixture: ComponentFixture<AdminHome>;
@@ -80,7 +74,7 @@ describe('Given an administrator on the administration home', () => {
       .match((request) => request.url === SINCE_URL)
       .forEach((pending) => pending.flush(activitySince()));
     http.match(SIGNING_KEYS_URL).forEach((pending) => pending.flush(receiptSigningKeys()));
-    http.match(SIGNATURE_URL).forEach((pending) => pending.flush(SIGNATURE));
+    http.match(SIGNATORY_URL).forEach((pending) => pending.flush(receiptSignatory()));
     http.verify();
   });
 
@@ -741,24 +735,46 @@ describe('Given an administrator on the administration home', () => {
       ]);
     });
 
-    it('then receipts without an uploaded signature get a row leading to the receipt settings', async () => {
+    it('then receipts nobody signs get a red row leading to the people of the foundation', async () => {
       await sources();
-      http.expectOne(SIGNATURE_URL).flush(NO_SIGNATURE);
+      http.expectOne(SIGNATORY_URL).flush(noReceiptSignatory());
       await fixture.whenStable();
       fixture.detectChanges();
 
       expect(items()).toEqual([
-        'Potvrzení o daru zatím nemají nahraný podpis, jen čáru se jménem. Nahrát podpis',
+        'Potvrzení o daru nikdo nepodepisuje, a tak je web dárcům nevystaví. Vybrat podepisujícího',
       ]);
-      expect(attention().querySelector('a')?.getAttribute('href')).toBe(
-        '/sprava/nastaveni#settings-RECEIPTS',
-      );
+      expect(
+        attention().querySelector('.attention-item--danger.attention-signatory'),
+      ).not.toBeNull();
+      expect(attention().querySelector('a')?.getAttribute('href')).toBe('/sprava/lide-fondu');
       expect(attention().querySelector('.healthy')).toBeNull();
     });
 
-    it('then an uploaded signature or one that cannot be checked adds no row', async () => {
+    it('then a signatory without an uploaded signature gets a row leading to the people of the foundation', async () => {
       await sources();
-      http.expectOne(SIGNATURE_URL).flush(null, { status: 500, statusText: 'Error' });
+      http.expectOne(SIGNATORY_URL).flush(receiptSignatory({ signature: false }));
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(items()).toEqual([
+        'Kdo podepisuje potvrzení o daru, zatím nemá nahraný podpis; potvrzení mají jen čáru se jménem. Nahrát podpis',
+      ]);
+      expect(attention().querySelector('.attention-item--danger')).toBeNull();
+      expect(attention().querySelector('a')?.getAttribute('href')).toBe('/sprava/lide-fondu');
+    });
+
+    it('then a signatory who cannot be checked says so with a retry, and a signed signatory adds no row', async () => {
+      await sources();
+      http.expectOne(SIGNATORY_URL).flush(null, { status: 500, statusText: 'Error' });
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(items()).toEqual([
+        'Nepodařilo se zkontrolovat, kdo podepisuje potvrzení o daru. Zkusit znovu',
+      ]);
+      (attention().querySelector('.attention-item button') as HTMLButtonElement).click();
+      http.expectOne(SIGNATORY_URL).flush(receiptSignatory());
       await fixture.whenStable();
       fixture.detectChanges();
 

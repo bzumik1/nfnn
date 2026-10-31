@@ -1,16 +1,12 @@
-<section class="ui-card" aria-labelledby="receipt-signature-title">
-  <h2 id="receipt-signature-title" class="ui-card__title" i18n="@@admin.signature.title">
-    Podpis na potvrzeních
-  </h2>
-  <div class="ui-card__body">
-    <p class="ui-card__intro" i18n="@@admin.signature.saveNow">
-      Ukládá se hned, bez tlačítka Uložit nastavení a bez restartu webu.
-    </p>
-    <p id="receipt-signature-hint" class="signature-hint" i18n="@@admin.signature.hint">
-      Podpis se tiskne nad jméno podepisujícího na potvrzeních vystavených po nahrání; ta už
-      vystavená se nemění. Nejlépe SVG do 200 kB: ručně psaný podpis jde, když jsou jeho tahy
-      převedené na vyplněné tvary. Obrysy s nastavenou tloušťkou čáry (stroke) a efekty web odmítne.
-      Jinak sken JPEG, PNG či WebP do 10 MB: tmavý podpis na bílém papíře.
+<div class="receipt-signature">
+  <h4 class="signature-title" i18n="@@admin.signature.title">Podpis na potvrzení</h4>
+  <div>
+    <p id="receipt-signature-hint" class="signature-hint" i18n="@@admin.signature.personHint">
+      Tiskne se nad jméno na potvrzeních, která tato osoba podepisuje, vystavených po nahrání; ta už
+      vystavená se nemění. Není veřejný: dárce ho uvidí jen na svém potvrzení. Uloží se hned po
+      nahrání. Nejlépe SVG do 200 kB: ručně psaný podpis jde, když jsou jeho tahy převedené na
+      vyplněné tvary. Obrysy s nastavenou tloušťkou čáry (stroke) a efekty web odmítne. Jinak sken
+      JPEG, PNG či WebP do 10 MB: tmavý podpis na bílém papíře.
     </p>
 
     @switch (state()) {
@@ -29,41 +25,15 @@
       }
       @case ('ready') {
         @if (signature(); as current) {
-          @if (current.kind === 'VECTOR' && current.vector) {
+          @if (current.configured) {
             <div class="signature-frame">
-              <svg
-                class="signature-preview"
-                role="img"
-                aria-label="Nahraný podpis"
-                i18n-aria-label="@@admin.signature.alt"
-                preserveAspectRatio="xMidYMid meet"
-                [attr.viewBox]="viewBox(current.vector)"
-              >
-                @for (path of current.vector.paths; track $index) {
-                  <path
-                    [attr.d]="path.d"
-                    [attr.fill]="fill(path)"
-                    [attr.fill-opacity]="path.opacity"
-                  />
-                }
-              </svg>
-            </div>
-            <p class="signature-state">{{ uploadedLine(current) }}</p>
-          } @else if (current.configured && current.image) {
-            <div class="signature-frame">
-              <img
-                class="signature-preview"
-                [src]="current.image"
-                alt="Nahraný podpis"
-                i18n-alt="@@admin.signature.alt"
-                [attr.width]="current.width"
-                [attr.height]="current.height"
-              />
+              <app-signature-artwork [signature]="current" />
             </div>
             <p class="signature-state">{{ uploadedLine(current) }}</p>
           } @else {
             <p class="signature-state" i18n="@@admin.signature.none">
-              Podpis není nahraný. Potvrzení mají místo něj jen čáru se jménem.
+              Podpis není nahraný. Potvrzení, která osoba podepisuje, mají místo něj jen čáru se
+              jménem.
             </p>
           }
 
@@ -76,9 +46,13 @@
               (chosen)="upload($event)"
             >
               @if (current.configured) {
-                <ng-container i18n="@@admin.signature.replace">Nahrát jiný podpis</ng-container>
+                <ng-container i18n="@@admin.signature.replace"
+                  >Nahrát jiný podpis na potvrzení</ng-container
+                >
               } @else {
-                <ng-container i18n="@@admin.signature.choose">Nahrát podpis</ng-container>
+                <ng-container i18n="@@admin.signature.choose"
+                  >Nahrát podpis na potvrzení</ng-container
+                >
               }
             </app-file-button>
             @if (current.configured && !confirmingRemoval()) {
@@ -90,7 +64,7 @@
                 (click)="askRemoval()"
                 i18n="@@admin.signature.remove"
               >
-                Odebrat podpis
+                Odebrat podpis z potvrzení
               </button>
             }
           </div>
@@ -99,7 +73,7 @@
             <div
               class="signature-confirm"
               role="group"
-              aria-label="Odebrat podpis?"
+              aria-label="Odebrat podpis z potvrzení?"
               i18n-aria-label="@@admin.signature.confirm.label"
             >
               <span i18n="@@admin.signature.confirm.question"
@@ -114,7 +88,9 @@
                 @if (removing()) {
                   <ng-container i18n="@@admin.signature.removing">Odebíráme…</ng-container>
                 } @else {
-                  <ng-container i18n="@@admin.signature.confirm.yes">Odebrat podpis</ng-container>
+                  <ng-container i18n="@@admin.signature.confirm.yes"
+                    >Odebrat podpis z potvrzení</ng-container
+                  >
                 }
               </button>
               <button
@@ -150,4 +126,4 @@
       }
     }
   </div>
-</section>
+</div>
