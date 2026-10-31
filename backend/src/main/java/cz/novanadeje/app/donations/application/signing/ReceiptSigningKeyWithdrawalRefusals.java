@@ -7,7 +7,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
@@ -37,7 +36,7 @@ public class ReceiptSigningKeyWithdrawalRefusals {
         return trail.countPerformedSince(adminId, REFUSED_ACTION, now.minus(PAUSE_WINDOW)) >= REFUSALS_BEFORE_PAUSE;
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public void record(UUID adminId, ReceiptSigningKeyId keyId, Instant at) {
         events.publishEvent(new AdminActionPerformed(adminId, REFUSED_ACTION, Optional.empty(),
                 "Klíč k ověřovacím QR " + keyId + " se nestáhl: druhý faktor nesouhlasil", at));

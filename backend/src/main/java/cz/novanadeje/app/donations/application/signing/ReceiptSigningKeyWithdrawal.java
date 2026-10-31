@@ -16,7 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionOperations;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -35,33 +35,45 @@ public class ReceiptSigningKeyWithdrawal {
     private final FreshSecondFactor freshSecondFactor;
     private final ReceiptSigningKeyWithdrawalRefusals refusals;
     private final ApplicationEventPublisher events;
+    private final TransactionOperations transactions;
     private final Clock clock;
 
     public ReceiptSigningKeyWithdrawal(ReceiptSigningKeyRepository keys, ReceiptSigningKeys published, RecordSeals seals,
                                        FreshSecondFactor freshSecondFactor, ReceiptSigningKeyWithdrawalRefusals refusals,
-                                       ApplicationEventPublisher events, Clock clock) {
+                                       ApplicationEventPublisher events, TransactionOperations transactions, Clock clock) {
         this.keys = keys;
         this.published = published;
         this.seals = seals;
         this.freshSecondFactor = freshSecondFactor;
         this.refusals = refusals;
         this.events = events;
+        this.transactions = transactions;
         this.clock = clock;
     }
 
-    @Transactional
     public WithdrawnReceiptSigningKey withdraw(UUID adminId, ReceiptSigningKeyId keyId, FreshSecondFactorProof proof) {
-        refuseUnlessWithdrawable(published(keyId, keys.findAll().stream().filter(key -> key.id().equals(keyId)).findFirst()));
+        refuseUnlessWithdrawable(published(keyId, row(keyId)));
         Instant now = clock.instant();
         if (refusals.paused(adminId, now)) {
             log.warn("Admin {} asked to withdraw a receipt signing key while it is paused after refused second factors", adminId);
             throw new ReceiptSigningKeyWithdrawalPaused();
         }
         try {
+            return transactions.execute(status -> withdrawLocked(adminId, keyId, proof, now));
+        } catch (RefusedSecondFactor refusal) {
+            if (withdrawnByNow(keyId)) {
+                throw new ReceiptSigningKeyAlreadyWithdrawn(keyId);
+            }
+            refusals.record(adminId, keyId, now);
+            throw refusal.refused;
+        }
+    }
+
+    private WithdrawnReceiptSigningKey withdrawLocked(UUID adminId, ReceiptSigningKeyId keyId, FreshSecondFactorProof proof, Instant now) {
+        try {
             freshSecondFactor.require(adminId, proof);
         } catch (DomainException refused) {
-            refusals.record(adminId, keyId, now);
-            throw refused;
+            throw new RefusedSecondFactor(refused);
         }
         ReceiptSigningKey key = refuseUnlessWithdrawable(published(keyId, keys.lockForWithdrawal(keyId)));
         boolean current = published.isCurrent(keyId);
@@ -70,6 +82,14 @@ public class ReceiptSigningKeyWithdrawal {
         events.publishEvent(new ReceiptSigningKeyWithdrawn(adminId, keyId.value(), current, now));
         log.warn("Admin {} withdrew the receipt signing key {}", adminId, keyId);
         return new WithdrawnReceiptSigningKey(keyId, current);
+    }
+
+    private Optional<ReceiptSigningKey> row(ReceiptSigningKeyId keyId) {
+        return keys.findAll().stream().filter(key -> key.id().equals(keyId)).findFirst();
+    }
+
+    private boolean withdrawnByNow(ReceiptSigningKeyId keyId) {
+        return row(keyId).filter(published::publishable).filter(ReceiptSigningKey::isWithdrawn).isPresent();
     }
 
     private ReceiptSigningKey published(ReceiptSigningKeyId keyId, Optional<ReceiptSigningKey> row) {
@@ -81,5 +101,15 @@ public class ReceiptSigningKeyWithdrawal {
             throw new ReceiptSigningKeyAlreadyWithdrawn(key.id());
         }
         return key;
+    }
+
+    private static final class RefusedSecondFactor extends RuntimeException {
+
+        private final DomainException refused;
+
+        private RefusedSecondFactor(DomainException refused) {
+            super(refused.getMessage(), refused, false, false);
+            this.refused = refused;
+        }
     }
 }
