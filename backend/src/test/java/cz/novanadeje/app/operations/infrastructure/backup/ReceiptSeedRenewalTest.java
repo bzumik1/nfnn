@@ -5,7 +5,7 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import cz.novanadeje.app.operations.application.settings.ApplicationRestarter;
-import cz.novanadeje.app.shared.application.event.ReceiptSigningKeyWithdrawn;
+import cz.novanadeje.app.shared.application.event.ReceiptSigningKeyWithdrawalAnnounced;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -18,8 +18,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.time.Instant;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -27,9 +25,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 class ReceiptSeedRenewalTest {
-
-    private static final UUID ADMIN = UUID.fromString("019a1c00-0000-7000-8000-00000000a001");
-    private static final Instant AT = Instant.parse("2026-11-20T09:30:00Z");
 
     @TempDir
     private Path folders;
@@ -54,9 +49,9 @@ class ReceiptSeedRenewalTest {
     }
 
     @Test
-    @DisplayName("Given the server's own key withdrawn, when the withdrawal is committed, then the request for a new seed names the key in the restore folder, the backend restarts and a WARN says why")
+    @DisplayName("Given the server's own key withdrawn, when the administrators were told, then the request for a new seed names the key in the restore folder, the backend restarts and a WARN says why")
     void should_leave_the_request_and_restart_when_committed_given_the_current_key() throws IOException {
-        renewal.renewSeed(new ReceiptSigningKeyWithdrawn(ADMIN, "21fe31df", true, AT));
+        renewal.renewSeed(new ReceiptSigningKeyWithdrawalAnnounced("21fe31df", true));
 
         assertThat(restore.resolve("receipt-signing-key.renew")).hasContent("21fe31df");
         assertThat(restore).isDirectoryNotContaining("glob:**.part");
@@ -69,9 +64,9 @@ class ReceiptSeedRenewalTest {
     }
 
     @Test
-    @DisplayName("Given an earlier key withdrawn, when the withdrawal is committed, then no seed is requested and the backend keeps running")
+    @DisplayName("Given an earlier key withdrawn, when the administrators were told, then no seed is requested and the backend keeps running")
     void should_leave_nothing_when_committed_given_an_earlier_key() {
-        renewal.renewSeed(new ReceiptSigningKeyWithdrawn(ADMIN, "39f713d0", false, AT));
+        renewal.renewSeed(new ReceiptSigningKeyWithdrawalAnnounced("39f713d0", false));
 
         assertThat(restore).isEmptyDirectory();
         verify(restarter, never()).restartAfterCommit();
@@ -79,11 +74,11 @@ class ReceiptSeedRenewalTest {
     }
 
     @Test
-    @DisplayName("Given no restore folder, when the withdrawal of the own key is committed, then the backend does not restart and an ERROR says the seed stays until replaced by hand")
+    @DisplayName("Given no restore folder, when the administrators were told of the withdrawal of the own key, then the backend does not restart and an ERROR says the seed stays until replaced by hand")
     void should_not_restart_and_log_error_when_committed_given_no_restore_folder() throws IOException {
         Files.delete(restore);
 
-        renewal.renewSeed(new ReceiptSigningKeyWithdrawn(ADMIN, "21fe31df", true, AT));
+        renewal.renewSeed(new ReceiptSigningKeyWithdrawalAnnounced("21fe31df", true));
 
         verify(restarter, never()).restartAfterCommit();
         assertThat(lines.list).singleElement().satisfies(line -> {
