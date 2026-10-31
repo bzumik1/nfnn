@@ -237,7 +237,13 @@ describe('Given an administrator on a donor card', () => {
     expect(dialogText).toContain('Smažeme');
     expect(dialogText).toContain('jméno, adresu, e-mail a heslo');
     expect(dialogText).toContain('Zůstane');
-    expect(dialogText).toContain('dary a vydaná potvrzení, bez jména');
+    expect(dialogText).toContain(
+      'dary a vydaná potvrzení kvůli účetnictví; potvrzení na serveru beze změny, i se jménem a adresou dárce',
+    );
+    expect(dialogText).toContain(
+      'platby z banky, jak je uvádí výpis (číslo účtu a jméno plátce), a záznamy v Historii změn',
+    );
+    expect(dialogText).not.toContain('bez jména');
     expect(dialogText).toContain('Dárce dostane na dosavadní e-mail potvrzení o výmazu.');
     expect(dialogText).toContain('Dárce o výmaz požádal a ověřil(a) jsem, že jde o majitele účtu');
     expect(document.activeElement).toBe(button(dialog, 'Zrušit'));
@@ -270,7 +276,7 @@ describe('Given an administrator on a donor card', () => {
       'app-live-notice',
     ) as HTMLElement;
     expect(text('.ui-notice--status')).toBe(
-      'Osobní údaje dárce jsme vymazali a na jeho dosavadní e-mail poslali potvrzení. Účet už nejde použít; dary a vydaná potvrzení zůstávají bez jména.',
+      'Osobní údaje dárce jsme vymazali a na jeho dosavadní e-mail poslali potvrzení. Účet už nejde použít. Dary a vydaná potvrzení zůstávají kvůli účetnictví; potvrzení zůstávají beze změny, i se jménem a adresou.',
     );
     expect(document.activeElement).toBe(notice);
     const erased = donorAccount({
@@ -291,7 +297,7 @@ describe('Given an administrator on a donor card', () => {
 
     expect(text('h1')).toBe('Vymazaný dárce');
     expect(text('.admin-erased')).toBe(
-      'Osobní údaje tohoto dárce jsme vymazali 23. 10. 2026 11:00. Účet už nejde použít; dary a vydaná potvrzení zůstávají kvůli účetnictví, bez jména.',
+      'Osobní údaje tohoto dárce jsme vymazali 23. 10. 2026 11:00. Účet už nejde použít. Dary a vydaná potvrzení zůstávají kvůli účetnictví; potvrzení zůstávají na serveru beze změny, i se jménem a adresou dárce.',
     );
     expect(facts('Údaje')).toContain('E-mail vymazán |');
     expect(facts('Údaje')).toContain('Adresa vymazána');
@@ -381,6 +387,30 @@ describe('Given an administrator on a donor card', () => {
     expect(receipts).toContain('Dar z 10. 10. 2026');
     expect(receipts).toContain('17. 10. 2026 11:00 česky');
     expect(receipts).toContain('platné');
+  });
+
+  it('when the donor gives with the symbol from a verified account, then the account column counts only gifts paired by the account and says where the others are', async () => {
+    await loaded(
+      donorAccount(),
+      donorDetail({
+        bankAccounts: [
+          adminBankAccount({ donationCount: 0, totalAmountMinor: 0, lastDonationOn: null }),
+        ],
+      }),
+    );
+
+    const accounts = section('Bankovní účty');
+    expect(
+      Array.from(accounts.querySelectorAll('thead th') as NodeListOf<HTMLElement>).map((cell) =>
+        cell.textContent?.trim(),
+      ),
+    ).toEqual(['Účet', 'Stav', 'Dary přiřazené podle účtu', 'Akce']);
+    const cell = accounts.querySelector('tbody tr td:nth-child(3)') as HTMLElement;
+    expect(cell.dataset['label']).toBe('Dary přiřazené podle účtu');
+    expect(cell.textContent?.trim()).toBe('0 darů');
+    expect((accounts.querySelector('.admin-hint') as HTMLElement).textContent).toContain(
+      'Sloupec Dary přiřazené podle účtu počítá jen platby bez variabilního symbolu, které se dárci přiřadily podle účtu; dary se symbolem najdete níže v části Dary.',
+    );
   });
 
   it('when the donor has donations, then the donations card links to the paired payments of this donor', async () => {

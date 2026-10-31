@@ -139,3 +139,23 @@ test.describe('Given a signed-in donor who goes back to the home page', () => {
     await expect(page.locator('#contact-email')).toHaveValue('jana.jinak@example.cz');
   });
 });
+
+test.describe('Given an accountant on the home page', () => {
+  test.use({ permissions: ['clipboard-read', 'clipboard-write'] });
+
+  test('when they copy the IČO and the IBAN from Údaje pro účetní, then the clipboard holds each as typed into accounting', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await page.goto('/');
+    const details = page.locator('#kontakt').getByRole('definition');
+    await expect(page.locator('#kontakt')).toContainText('CZ26 2010 0000 0055 4433 2217');
+
+    await details.filter({ hasText: '27278794' }).getByRole('button').click();
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('27278794');
+    await details.filter({ hasText: 'CZ26 2010' }).getByRole('button').click();
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+      'CZ2620100000005544332217',
+    );
+  });
+});

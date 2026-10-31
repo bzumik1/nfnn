@@ -6,6 +6,7 @@ import {
   answerChange,
   asRecord,
   plain,
+  PROJECT_ORDERS,
   text,
   ToolRefusal,
   withHint,
@@ -19,6 +20,39 @@ const WRITING = {
   openWorldHint: false,
 };
 const UUID = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+
+const PERSON = {
+  name: z.string().min(1).max(100).describe('First and last name, as the site shows it.'),
+  role: z
+    .string()
+    .max(120)
+    .optional()
+    .describe('Shown under the name on the card, e.g. "Zakladatelka a členka správní rady".'),
+  onBoard: z.boolean().describe('Named in the board line "Správní rada: …".'),
+  boardNote: z
+    .string()
+    .max(60)
+    .optional()
+    .describe('Shown in parentheses after the name in the board line, e.g. "předseda".'),
+  featured: z.boolean().describe('Gets a card with the portrait in "Kdo fond vede".'),
+  portraitId: UUID.optional().describe(
+    'Id of an uploaded portrait (nfnn_photo_upload_link, or the one nfnn_people shows); left out, the card shows no portrait. Shown round, cropped to a square.',
+  ),
+  personalEmail: z
+    .email()
+    .max(254)
+    .optional()
+    .describe(
+      'The personal e-mail of the person. Administration data only: never shown on the site.',
+    ),
+  fundEmail: z
+    .email()
+    .max(254)
+    .optional()
+    .describe(
+      'The foundation address of the person, e.g. jmeno@nfnn.cz. Administration data only: not shown on the site for now.',
+    ),
+};
 const DAY = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const MONTH = z.string().regex(/^\d{4}-\d{2}$/);
 const PLAN_TIME = /^([01][0-9]|2[0-3]):[0-5][0-9]$/;
@@ -65,7 +99,22 @@ const ARTICLE = {
       'One sentence saying what the photo shows, for screen readers and when it does not load; kept only with a photo.',
     ),
 };
-const PROJECT = { ...ARTICLE, year: z.number().int().min(2005).max(2100) };
+const NEWS = {
+  ...ARTICLE,
+  signerId: UUID.optional().describe(
+    'Id of the person of the foundation who signs the article (nfnn_people): the site shows their portrait, name and role under it. Left out means unsigned. On the web the default is the person linked to the writing administrator; here choose it yourself.',
+  ),
+};
+const PROJECT_CATEGORY = z
+  .enum(['CHILDREN', 'ADULTS', 'ANIMALS', 'OTHER'])
+  .describe(
+    'Whom the project helped: CHILDREN, ADULTS, ANIMALS or OTHER. How the site orders the projects by year and category is chosen with nfnn_set_project_order.',
+  );
+const PROJECT = {
+  ...ARTICLE,
+  year: z.number().int().min(2005).max(2100),
+  category: PROJECT_CATEGORY,
+};
 const ACCOUNT_LINK = z.object({
   donorId: UUID,
   linkId: UUID.describe("Id of the account link from the donor's card (nfnn_donor)."),
@@ -235,6 +284,22 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
   );
 
   server.registerTool(
+    'nfnn_set_project_order',
+    {
+      title: 'Nastavit řazení projektů',
+      description: `Chooses how the site orders the projects on the home page and the list of projects (the administration lists them the same way, drafts first): ${PROJECT_ORDERS} Choosing the order already set changes nothing. Audited as CHANGE_PROJECT_ORDER.`,
+      inputSchema: z.object({
+        order: z.enum(['YEAR_THEN_CATEGORY', 'YEAR', 'CATEGORY_THEN_YEAR']),
+      }),
+      annotations: WRITING,
+    },
+    async ({ order }, ctx) =>
+      answerChange(deps, ctx, 'nfnn_set_project_order', async ({ apiToken }) =>
+        text(await backend.put('/api/admin/content/project-order', apiToken, { order })),
+      ),
+  );
+
+  server.registerTool(
     'nfnn_change_settings',
     {
       title: 'Změnit nastavení webu',
@@ -330,8 +395,8 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Napsat aktualitu',
       description:
-        'Creates a news article as a draft (not on the site until nfnn_publish_news); audited as CREATE_NEWS. Texts are Czech, sentence case.',
-      inputSchema: z.object(ARTICLE),
+        'Creates a news article as a draft (not on the site until nfnn_publish_news), signed by a person of the foundation when signerId is given; audited as CREATE_NEWS. Texts are Czech, sentence case; the signature is not written into the body.',
+      inputSchema: z.object(NEWS),
       annotations: WRITING,
     },
     async (article, ctx) =>
@@ -345,8 +410,8 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Upravit aktualitu',
       description:
-        'Replaces the texts and the photo of a news article, draft or published (the published date stays); send every field, read them with nfnn_news_article first. Audited as UPDATE_NEWS.',
-      inputSchema: z.object({ id: UUID, ...ARTICLE }),
+        'Replaces the texts, the photo and the signer of a news article, draft or published (the published date stays); send every field (signerId is signer.id of nfnn_news_article; left out removes the signer), read them with nfnn_news_article first. Audited as UPDATE_NEWS.',
+      inputSchema: z.object({ id: UUID, ...NEWS }),
       annotations: { ...WRITING, idempotentHint: true },
     },
     async ({ id, ...article }, ctx) =>
@@ -365,7 +430,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Založit projekt',
       description:
-        'Creates a project of the given year as a draft (not on the site until nfnn_publish_project); audited as CREATE_PROJECT.',
+        'Creates a project of the given year and category as a draft (not on the site until nfnn_publish_project); audited as CREATE_PROJECT.',
       inputSchema: z.object(PROJECT),
       annotations: WRITING,
     },
@@ -380,7 +445,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Upravit projekt',
       description:
-        'Replaces the texts, the year and the photo of a project (the published date stays); send every field, read them with nfnn_project first. Audited as UPDATE_PROJECT.',
+        'Replaces the texts, the year, the category and the photo of a project (the published date stays); send every field, read them with nfnn_project first. Audited as UPDATE_PROJECT.',
       inputSchema: z.object({ id: UUID, ...PROJECT }),
       annotations: { ...WRITING, idempotentHint: true },
     },
@@ -392,6 +457,206 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
         async ({ apiToken }) =>
           text(await backend.put(`/api/admin/content/projects/${id}`, apiToken, project)),
         `project ${id}`,
+      ),
+  );
+
+  server.registerTool(
+    'nfnn_update_about',
+    {
+      title: 'Fotka v sekci O nás',
+      description:
+        'Sets the photo the home page shows in its About section, with its alt and caption, or removes it with photoId null: the site then shows its placeholder photo again, the texts go too, and the removed or replaced photo is deleted unless a news article or project still uses it. Send every field; read them with nfnn_about first. A photo of people goes up through nfnn_photo_upload_link (or the web), never from a public address. Audited as CHANGE_ABOUT_PHOTO or REMOVE_ABOUT_PHOTO.',
+      inputSchema: z.object({
+        photoId: UUID.nullable().describe(
+          'Id of an uploaded photo (nfnn_upload_photo, nfnn_photo_upload_link, or the one nfnn_about shows); null removes the photo.',
+        ),
+        photoAlt: z
+          .string()
+          .max(200)
+          .optional()
+          .describe(
+            'One sentence saying what the photo shows, for screen readers and when it does not load.',
+          ),
+        caption: z
+          .string()
+          .max(200)
+          .optional()
+          .describe(
+            "Shown under the photo to every visitor, for example when and where it was taken. Name a person only with their consent, or their guardians' for a child.",
+          ),
+      }),
+      annotations: { ...WRITING, destructiveHint: true, idempotentHint: true },
+    },
+    async ({ photoId, photoAlt, caption }, ctx) =>
+      answerChange(deps, ctx, 'nfnn_update_about', async ({ apiToken }) =>
+        text(
+          await backend.put(
+            '/api/admin/content/about',
+            apiToken,
+            photoId === null
+              ? { photoId, photoAlt: null, caption: null }
+              : { photoId, photoAlt: photoAlt ?? null, caption: caption ?? null },
+          ),
+        ),
+      ),
+  );
+
+  server.registerTool(
+    'nfnn_add_person',
+    {
+      title: 'Přidat osobu mezi lidi fondu',
+      description:
+        'Adds a person to the people of the foundation (Lidé fondu), last in the order; the home page then shows its block "Kdo fond vede" from these people instead of its own. Featured people get a card with their portrait and role, people on the board are named in the board line with their note in parentheses. Answers the person with their id. A portrait of a person goes up through nfnn_photo_upload_link (or the web), never from a public address, and only with their consent. Their web signature is set afterwards with nfnn_set_web_signature. Audited as ADD_PERSON.',
+      inputSchema: z.object(PERSON),
+      annotations: WRITING,
+    },
+    async (person, ctx) =>
+      answerChange(deps, ctx, 'nfnn_add_person', async ({ apiToken }) =>
+        text(await backend.post('/api/admin/content/people', apiToken, personBody(person))),
+      ),
+  );
+
+  server.registerTool(
+    'nfnn_update_person',
+    {
+      title: 'Upravit osobu mezi lidmi fondu',
+      description:
+        'Replaces the name, role, board membership, board note, featured flag, portrait and the two e-mails of a person of the foundation; send every field, read them with nfnn_people first. A replaced or removed portrait is deleted unless a news article or project still uses it. The web signature stays as it is (nfnn_set_web_signature and nfnn_remove_web_signature change it). A portrait cannot be an image that is a web signature. Audited as UPDATE_PERSON.',
+      inputSchema: z.object({ id: UUID, ...PERSON }),
+      annotations: { ...WRITING, destructiveHint: true, idempotentHint: true },
+    },
+    async ({ id, ...person }, ctx) =>
+      answerChange(
+        deps,
+        ctx,
+        'nfnn_update_person',
+        async ({ apiToken }) =>
+          text(await backend.put(`/api/admin/content/people/${id}`, apiToken, personBody(person))),
+        `person ${id}`,
+      ),
+  );
+
+  server.registerTool(
+    'nfnn_remove_person',
+    {
+      title: 'Odebrat osobu z lidí fondu',
+      description:
+        'Removes a person from the people of the foundation and deletes their portrait and web signature unless a news article or project still uses them. When the last person goes, the home page shows its own block again. Audited as REMOVE_PERSON.',
+      inputSchema: z.object({ id: UUID }),
+      annotations: { ...WRITING, destructiveHint: true, idempotentHint: true },
+    },
+    async ({ id }, ctx) =>
+      answerChange(
+        deps,
+        ctx,
+        'nfnn_remove_person',
+        async ({ apiToken }) => {
+          await backend.delete(`/api/admin/content/people/${id}`, apiToken);
+          return plain('The person is removed from the people of the foundation.');
+        },
+        `person ${id}`,
+      ),
+  );
+
+  server.registerTool(
+    'nfnn_set_web_signature',
+    {
+      title: 'Nastavit podpis na webu',
+      description:
+        'Sets the web signature of a person of the foundation: the public image of their handwritten signature that the home page shows under the founders note of "Kdo fond vede" when the person is featured. It is never the receipt signature (the signature on donation receipts stays on the web, /sprava/nastaveni). The image goes up only as a file through nfnn_photo_upload_link (or the web), never from a public address, and only with the person\'s consent; it cannot be anyone\'s portrait. A replaced signature is deleted unless a news article or project still uses it. Answers the person. Audited as CHANGE_WEB_SIGNATURE.',
+      inputSchema: z.object({
+        id: UUID.describe('Id of the person, as nfnn_people shows it.'),
+        imageId: UUID.describe(
+          'Id of the uploaded signature image, as the PUT of nfnn_photo_upload_link answers it.',
+        ),
+      }),
+      annotations: { ...WRITING, idempotentHint: true },
+    },
+    async ({ id, imageId }, ctx) =>
+      answerChange(
+        deps,
+        ctx,
+        'nfnn_set_web_signature',
+        async ({ apiToken }) =>
+          text(
+            await backend.post(`/api/admin/content/people/${id}/web-signature`, apiToken, {
+              imageId,
+            }),
+          ),
+        `person ${id}`,
+      ),
+  );
+
+  server.registerTool(
+    'nfnn_remove_web_signature',
+    {
+      title: 'Odebrat podpis z webu',
+      description:
+        'Removes the web signature of a person of the foundation, the public image under the founders note of "Kdo fond vede", and deletes the image unless a news article or project still uses it; a person without one stays as they are. It is never the receipt signature, which stays on the web (/sprava/nastaveni). Answers the person. Audited as REMOVE_WEB_SIGNATURE.',
+      inputSchema: z.object({ id: UUID.describe('Id of the person, as nfnn_people shows it.') }),
+      annotations: { ...WRITING, destructiveHint: true, idempotentHint: true },
+    },
+    async ({ id }, ctx) =>
+      answerChange(
+        deps,
+        ctx,
+        'nfnn_remove_web_signature',
+        async ({ apiToken }) =>
+          text(await backend.delete(`/api/admin/content/people/${id}/web-signature`, apiToken)),
+        `person ${id}`,
+      ),
+  );
+
+  server.registerTool(
+    'nfnn_order_people',
+    {
+      title: 'Seřadit lidi fondu',
+      description:
+        'Sets the order of the people of the foundation, the order of the cards, the board line and the signatures on the home page: memberIds names every person of nfnn_people exactly once, first first. Audited as ORDER_PEOPLE.',
+      inputSchema: z.object({ memberIds: z.array(UUID).min(1).max(30) }),
+      annotations: { ...WRITING, idempotentHint: true },
+    },
+    async ({ memberIds }, ctx) =>
+      answerChange(deps, ctx, 'nfnn_order_people', async ({ apiToken }) =>
+        text(await backend.put('/api/admin/content/people/order', apiToken, { memberIds })),
+      ),
+  );
+
+  server.registerTool(
+    'nfnn_update_founders_note',
+    {
+      title: 'Slovo zakladatelů',
+      description:
+        'Writes the founders note shown under the cards of "Kdo fond vede" on the home page, plain Czech text (no Markdown) with paragraphs split by an empty line, at most 600 characters; an empty text removes it. The web signatures of the featured people show under the note only (nfnn_set_web_signature). Audited as CHANGE_FOUNDERS_NOTE.',
+      inputSchema: z.object({ text: z.string().max(600) }),
+      annotations: { ...WRITING, idempotentHint: true },
+    },
+    async ({ text: note }, ctx) =>
+      answerChange(deps, ctx, 'nfnn_update_founders_note', async ({ apiToken }) =>
+        text(
+          await backend.put('/api/admin/content/people/note', apiToken, {
+            text: note.trim() === '' ? null : note,
+          }),
+        ),
+      ),
+  );
+
+  server.registerTool(
+    'nfnn_update_people_footnote',
+    {
+      title: 'Řádek pod správní radou',
+      description:
+        'Writes the one line shown under the board line of "Kdo fond vede" on the home page, after the founders note (for example who runs the site as a volunteer), plain Czech text on one line (line breaks become spaces), at most 200 characters; an empty text removes it. Audited as CHANGE_PEOPLE_FOOTNOTE.',
+      inputSchema: z.object({ text: z.string().max(200) }),
+      annotations: { ...WRITING, idempotentHint: true },
+    },
+    async ({ text: footnote }, ctx) =>
+      answerChange(deps, ctx, 'nfnn_update_people_footnote', async ({ apiToken }) =>
+        text(
+          await backend.put('/api/admin/content/people/footnote', apiToken, {
+            text: footnote.trim() === '' ? null : footnote,
+          }),
+        ),
       ),
   );
 
@@ -451,7 +716,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     'nfnn_upload_photo',
     {
       title: 'Nahrát fotku z adresy',
-      description: `Downloads a photo from a public https address (the image file itself: JPEG, PNG, WebP or GIF, at most ${MAX_PHOTO_BYTES / 1024 / 1024} MB, 3 redirects, 15 s) and uploads it to the site as the web does: turned upright, converted to WebP in sizes for every screen. Answers the photo id for coverImageId of nfnn_create_news, nfnn_update_news, nfnn_create_project or nfnn_update_project; the photo shows nowhere until one of them uses it. Addresses in private networks are refused. For a file on this computer use nfnn_photo_upload_link.`,
+      description: `Downloads a photo from a public https address (the image file itself: JPEG, PNG, WebP or GIF, at most ${MAX_PHOTO_BYTES / 1024 / 1024} MB, 3 redirects, 15 s) and uploads it to the site as the web does: turned upright, converted to WebP in sizes for every screen. Answers the photo id for coverImageId of nfnn_create_news, nfnn_update_news, nfnn_create_project or nfnn_update_project, or for photoId of nfnn_update_about; the photo shows nowhere until one of them uses it. Never use it for a photo of a person (the About photo, a portrait for nfnn_add_person or nfnn_update_person) or a web signature for nfnn_set_web_signature: those go through nfnn_photo_upload_link. Addresses in private networks are refused. For a file on this computer use nfnn_photo_upload_link.`,
       inputSchema: z.object({ url: z.string().min(1).max(2000) }),
       annotations: { ...WRITING, openWorldHint: true },
     },
@@ -470,7 +735,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     'nfnn_photo_upload_link',
     {
       title: 'Odkaz pro nahrání fotky',
-      description: `A one-time address to upload a photo file from a computer, e.g. from a shell with curl: PUT the file there with the ticket header and the image's Content-Type (at most ${MAX_PHOTO_BYTES / 1024 / 1024} MB). The ticket works once, for at most 10 minutes; the answer of the PUT is the photo id (and its size) for coverImageId, as nfnn_upload_photo answers it.`,
+      description: `A one-time address to upload a photo file from a computer, e.g. from a shell with curl: PUT the file there with the ticket header and the image's Content-Type (at most ${MAX_PHOTO_BYTES / 1024 / 1024} MB). The ticket works once, for at most 10 minutes; the answer of the PUT is the photo id (and its size) for coverImageId, photoId of nfnn_update_about, portraitId of nfnn_add_person and nfnn_update_person or imageId of nfnn_set_web_signature, as nfnn_upload_photo answers it. Photos of people and web signatures go up only this way.`,
       annotations: WRITING,
     },
     async (ctx) =>
@@ -541,6 +806,28 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
         return plain(`The logger ${logger} is back at its configured level.`);
       }),
   );
+}
+
+function personBody(person: {
+  name: string;
+  role?: string;
+  onBoard: boolean;
+  boardNote?: string;
+  featured: boolean;
+  portraitId?: string;
+  personalEmail?: string;
+  fundEmail?: string;
+}): Record<string, unknown> {
+  return {
+    name: person.name,
+    role: person.role ?? null,
+    onBoard: person.onBoard,
+    boardNote: person.boardNote ?? null,
+    featured: person.featured,
+    portraitId: person.portraitId ?? null,
+    personalEmail: person.personalEmail ?? null,
+    fundEmail: person.fundEmail ?? null,
+  };
 }
 
 function uploaded(image: unknown): ReturnType<typeof text> {

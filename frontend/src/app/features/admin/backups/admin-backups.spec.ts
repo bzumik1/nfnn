@@ -150,7 +150,7 @@ describe('Given an administrator on the backups page', () => {
     );
 
     expect(texts('.problems > ul li')).toEqual([
-      'Poslední záloha se nepovedla. Data webu jsou v pořádku, ale nejsou zálohovaná. Zkuste Zálohovat teď; když to nepomůže, zkopírujte zprávu pro technika a pošlete ji správci serveru.',
+      'Poslední záloha se nepovedla. Data webu jsou v pořádku, ale nejsou zálohovaná. Zkuste Zálohovat teď; když to nepomůže, zkopírujte zprávu pro technika a pošlete ji správci serveru, který web nainstaloval.',
       'Zatím se nevyzkoušelo, že jde zálohu obnovit. Spusťte Ověřit obnovu teď.',
     ]);
     expect(texts('.problems details li')).toEqual([
@@ -190,7 +190,7 @@ describe('Given an administrator on the backups page', () => {
     );
 
     expect(texts('.problems > ul li')[0]).toBe(
-      'Web teď nevidí složku se zálohami, takže zálohy nejde vytvořit ani stáhnout. Data webu jsou v pořádku. Zkopírujte prosím zprávu pro technika a pošlete ji správci serveru.',
+      'Web teď nevidí složku se zálohami, takže zálohy nejde vytvořit ani stáhnout. Data webu jsou v pořádku. Zkopírujte prosím zprávu pro technika a pošlete ji správci serveru, který web nainstaloval.',
     );
     expect(texts('.problems details li')[0]).toContain('Backend nevidí složku záloh.');
     expect(button('Zálohovat teď').disabled).toBe(true);
@@ -199,6 +199,21 @@ describe('Given an administrator on the backups page', () => {
       'Zálohovat teď ani ověřit obnovu nejde, dokud se nevyřeší problém výše.',
     );
     expect(text('[aria-labelledby="backups-list-title"]')).toContain('Zatím žádná záloha.');
+  });
+
+  it('when no backup exists yet, then the page does not ask to download one to keep elsewhere', async () => {
+    await respond(
+      backupsView({
+        available: false,
+        backups: [],
+        lastBackup: null,
+        lastTestRestore: null,
+        problems: ['BACKUPS_UNAVAILABLE'],
+      }),
+    );
+
+    expect(fixture.nativeElement.querySelector('.off-server')).toBeNull();
+    expect(fixture.nativeElement.textContent).not.toContain('tlačítkem Stáhnout');
   });
 
   it('when a problem needs the server administrator, then a button copies the message for the technician without the backup key', async () => {

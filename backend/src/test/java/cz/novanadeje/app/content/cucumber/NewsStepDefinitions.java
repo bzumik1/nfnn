@@ -175,7 +175,17 @@ public class NewsStepDefinitions {
         if (fields.containsKey("coverImageAlt")) {
             body.put("coverImageAlt", fields.get("coverImageAlt"));
         }
+        if (fields.containsKey("signer")) {
+            body.put("signerId", signerId(fields.get("signer")));
+        }
         return body;
+    }
+
+    private String signerId(String nameOrId) {
+        if (nameOrId.matches("[0-9a-f-]{36}")) {
+            return nameOrId;
+        }
+        return jdbc.sql("select id from content_person where name = ?").param(nameOrId).query(String.class).single();
     }
 
     private void rememberArticle() {

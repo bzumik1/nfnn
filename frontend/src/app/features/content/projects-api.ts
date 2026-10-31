@@ -8,11 +8,33 @@ export interface CoverImageResponse {
   alt: string | null;
 }
 
+export type ProjectCategory = 'CHILDREN' | 'ADULTS' | 'ANIMALS' | 'OTHER';
+
+export const PROJECT_CATEGORIES: readonly ProjectCategory[] = [
+  'CHILDREN',
+  'ADULTS',
+  'ANIMALS',
+  'OTHER',
+];
+
+export type ProjectOrder = 'YEAR_THEN_CATEGORY' | 'YEAR' | 'CATEGORY_THEN_YEAR';
+
+export const PROJECT_ORDERS: readonly ProjectOrder[] = [
+  'YEAR_THEN_CATEGORY',
+  'YEAR',
+  'CATEGORY_THEN_YEAR',
+];
+
+export interface ProjectOrderResponse {
+  order: ProjectOrder;
+}
+
 export interface ProjectResponse {
   id: string;
   slug: string;
   title: string;
   year: number;
+  category: ProjectCategory;
   tag: string | null;
   perex: string;
   body: string;
@@ -37,6 +59,7 @@ export interface ProjectPageResponse extends ProjectListResponse {
 export interface ProjectRequest {
   title: string;
   year: number;
+  category: ProjectCategory;
   slug: string | null;
   tag: string | null;
   perex: string;
@@ -64,6 +87,7 @@ export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 export const SLUG_PATTERN = '[a-z0-9]+(-[a-z0-9]+)*';
 
 const ADMIN_PROJECTS = '/api/admin/content/projects';
+const ADMIN_PROJECT_ORDER = '/api/admin/content/project-order';
 const ADMIN_MEDIA = '/api/admin/content/media';
 const PUBLIC_PROJECTS = '/api/content/projects';
 const PUBLIC_MEDIA = '/api/content/media/';
@@ -113,6 +137,14 @@ export class ProjectsApi {
 
   delete(id: string): Observable<void> {
     return this.http.delete<void>(`${ADMIN_PROJECTS}/${id}`);
+  }
+
+  order(): Observable<ProjectOrderResponse> {
+    return this.http.get<ProjectOrderResponse>(ADMIN_PROJECT_ORDER);
+  }
+
+  changeOrder(order: ProjectOrder): Observable<ProjectOrderResponse> {
+    return this.http.put<ProjectOrderResponse>(ADMIN_PROJECT_ORDER, { order });
   }
 
   uploadImage(file: File): Observable<UploadedImageResponse> {

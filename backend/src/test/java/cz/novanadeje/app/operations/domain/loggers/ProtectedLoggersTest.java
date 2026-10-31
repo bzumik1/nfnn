@@ -13,7 +13,8 @@ class ProtectedLoggersTest {
     @ParameterizedTest
     @ValueSource(strings = {"org.hibernate.orm.jdbc.bind", "org.hibernate.orm.jdbc.extract.Values", "org.hibernate.internal.util.EntityPrinter",
             "org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor", "org.springframework.web.client.RestTemplate",
-            "org.apache.coyote.http11.Http11InputBuffer", "org.postgresql.core.v3", "jakarta.mail"})
+            "org.apache.coyote.http11.Http11InputBuffer", "org.postgresql.core.v3", "jakarta.mail",
+            "org.springframework.web.method.HandlerMethod", "org.springframework.web.method.support.InvocableHandlerMethod"})
     @DisplayName("Given a logger that would write bound values, bodies, raw requests or mail traffic, when it is checked, then it is protected")
     void should_protect_when_checked_given_logger_that_writes_data(String name) {
         assertThat(ProtectedLoggers.covers(new LoggerName(name))).isTrue();

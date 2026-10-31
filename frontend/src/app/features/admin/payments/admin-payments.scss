@@ -334,39 +334,6 @@
   gap: var(--space-1-5);
 }
 
-.pair-result {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  grid-template-rows: auto auto;
-  column-gap: var(--space-2-5);
-  align-items: center;
-  padding: var(--space-2) var(--space-3);
-  border: 1.5px solid var(--color-border-soft);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-
-  &.is-selected {
-    border-color: var(--color-accent);
-    background: var(--color-surface-accent);
-  }
-
-  input {
-    grid-row: 1 / span 2;
-  }
-}
-
-.pair-result-name {
-  font-weight: var(--weight-semibold);
-  color: var(--color-text);
-}
-
-.pair-result-detail {
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-  font-variant-numeric: var(--numeric-figures);
-  overflow-wrap: anywhere;
-}
-
 .verification-tag {
   margin-left: var(--space-1-5);
   font-family: var(--font-sans);

@@ -15,6 +15,8 @@ export const GIVING_DONOR_ID = '019a0000-0000-7000-8000-000000000003';
 export const MEDIA_ID = '019a0000-0000-7000-8000-000000000004';
 export const DONATION_ID = '019a0000-0000-7000-8000-000000000005';
 export const LINK_ID = '019a0000-0000-7000-8000-000000000006';
+export const PERSON_ID = '019a0000-0000-7000-8000-000000000007';
+export const SIGNED_PERSON_ID = '019a0000-0000-7000-8000-000000000008';
 const LOG_MATCHES: Record<string, number[]> = {
   'backend.log': [36],
   'backend.log.2026-10-22.0.gz': [70, 50, 10],
@@ -280,6 +282,55 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
           applied: { backupTime: '03:00', testRestoreDay: 7, testRestoreTime: '04:00' },
         },
       ];
+    case 'GET /api/admin/content/people':
+      return [200, people()];
+    case 'POST /api/admin/content/people':
+      return [201, person(PERSON_ID, 1, JSON.parse(body) as Record<string, unknown>)];
+    case `PUT /api/admin/content/people/${PERSON_ID}`:
+      return [200, person(PERSON_ID, 1, JSON.parse(body) as Record<string, unknown>)];
+    case `DELETE /api/admin/content/people/${PERSON_ID}`:
+      return [204, undefined];
+    case `DELETE /api/admin/content/people/${SIGNED_PERSON_ID}`:
+      return [204, undefined];
+    case `POST /api/admin/content/people/${PERSON_ID}/web-signature`: {
+      const imageId = (JSON.parse(body) as Record<string, unknown>)['imageId'];
+      return [
+        200,
+        {
+          ...person(PERSON_ID, 1, { name: 'Adam Vzor', onBoard: true, featured: false }),
+          webSignature: {
+            id: imageId,
+            url: `/api/content/media/${String(imageId)}`,
+            width: 600,
+            height: 180,
+          },
+        },
+      ];
+    }
+    case `DELETE /api/admin/content/people/${SIGNED_PERSON_ID}/web-signature`:
+      return [
+        200,
+        person(SIGNED_PERSON_ID, 0, { name: 'Eva Vzorová', onBoard: true, featured: true }),
+      ];
+    case 'PUT /api/admin/content/people/order':
+      return [200, people()];
+    case 'PUT /api/admin/content/people/note': {
+      const note = JSON.parse(body) as Record<string, unknown>;
+      return [200, { text: note['text'] ?? null }];
+    }
+    case 'PUT /api/admin/content/people/footnote': {
+      const footnote = JSON.parse(body) as Record<string, unknown>;
+      return [200, { text: footnote['text'] ?? null }];
+    }
+    case 'GET /api/admin/content/about':
+      return [
+        200,
+        { photo: aboutPhoto({ photoAlt: 'Malý chlapec', caption: 'Kde to všechno začalo' }) },
+      ];
+    case 'PUT /api/admin/content/about': {
+      const about = JSON.parse(body) as Record<string, unknown>;
+      return [200, { photo: about['photoId'] === null ? null : aboutPhoto(about) }];
+    }
     case 'POST /api/admin/content/news':
       return [201, { id: UNKNOWN_ID, slug: 'letni-tabor', ...content(body) }];
     case `PUT /api/admin/content/news/${UNKNOWN_ID}`:
@@ -366,6 +417,10 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
       ];
     case 'GET /api/admin/content/projects':
       return [200, { items: [] }];
+    case 'GET /api/admin/content/project-order':
+      return [200, { order: 'YEAR_THEN_CATEGORY' }];
+    case 'PUT /api/admin/content/project-order':
+      return [200, { order: (JSON.parse(body) as Record<string, unknown>)['order'] }];
     case `GET /api/admin/content/news/${UNKNOWN_ID}`:
       return [200, { id: UNKNOWN_ID, title: 'Koncept', body: 'Dlouhý text aktuality.' }];
     case `GET /api/admin/content/projects/${UNKNOWN_ID}`:
@@ -535,9 +590,27 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
 }
 
 function content(body: string): Record<string, unknown> {
-  const { coverImageId, coverImageAlt, ...fields } = JSON.parse(body) as Record<string, unknown>;
+  const { coverImageId, coverImageAlt, signerId, ...fields } = JSON.parse(body) as Record<
+    string,
+    unknown
+  >;
   return {
     ...fields,
+    ...(typeof signerId === 'string'
+      ? {
+          signer: {
+            id: signerId,
+            name: 'Pavel Vzorový',
+            role: 'Předseda správní rady',
+            portrait: {
+              id: MEDIA_ID,
+              url: `/api/content/media/${MEDIA_ID}`,
+              width: 640,
+              height: 640,
+            },
+          },
+        }
+      : {}),
     coverImage:
       typeof coverImageId === 'string'
         ? {
@@ -556,10 +629,30 @@ const PETR = {
   registeredAt: '2026-10-01T08:00:00Z',
 };
 
+const BROWSER_ERROR_LINES = [
+  '2026-11-04T10:00:01.000Z  WARN 1 --- [nova-nadeje] [exec-1] c.n.app.operations.clienterrors          : Browser error kind=pdf-render place=global name=TypeError version=1a2b3c4 browser=safari/18 os=ios display=standalone count=2',
+  '2026-11-04T11:00:00.000Z  WARN 1 --- [nova-nadeje] [scheduling-1] c.n.app.operations.clienterrors          : Browser error reports over the hourly cap bucket=general dropped=2',
+];
+
 function logSearch(name: string, params: URLSearchParams): [number, unknown] {
   const offsets = LOG_MATCHES[name];
   if (offsets === undefined) {
     return [404, problem(404, 'operations/log-not-found', 'Log nenalezen')];
+  }
+  if (params.get('pattern') === 'Browser error') {
+    return [
+      200,
+      {
+        name,
+        sizeBytes: 400,
+        matches: BROWSER_ERROR_LINES.map((line, index) => ({
+          offset: index * 200,
+          line,
+        })).reverse(),
+        moreOlder: false,
+        scannedFrom: 0,
+      },
+    ];
   }
   const before = params.has('before') ? Number(params.get('before')) : Infinity;
   const limit = Number(params.get('limit') ?? 50);
@@ -638,4 +731,67 @@ function problem(
 function jwt(subject: string, scope: string): string {
   const encode = (value: unknown) => Buffer.from(JSON.stringify(value)).toString('base64url');
   return `${encode({ alg: 'HS256' })}.${encode({ sub: subject, scope, aud: `${ISSUER}/mcp` })}.signature`;
+}
+
+function aboutPhoto(about: Record<string, unknown>): Record<string, unknown> {
+  return {
+    id: MEDIA_ID,
+    url: `/api/content/media/${MEDIA_ID}`,
+    width: 1200,
+    height: 1600,
+    alt: about['photoAlt'] ?? null,
+    caption: about['caption'] ?? null,
+  };
+}
+
+function people(): Record<string, unknown> {
+  return {
+    members: [
+      {
+        ...person(SIGNED_PERSON_ID, 0, {
+          name: 'Eva Vzorová',
+          role: 'Zakladatelka a předsedkyně rady',
+          onBoard: true,
+          boardNote: 'předsedkyně',
+          featured: true,
+          portraitId: MEDIA_ID,
+          fundEmail: 'eva@nfnn.cz',
+        }),
+        webSignature: {
+          id: UNKNOWN_ID,
+          url: `/api/content/media/${UNKNOWN_ID}`,
+          width: 600,
+          height: 180,
+        },
+      },
+      person(PERSON_ID, 1, { name: 'Adam Vzor', onBoard: true, featured: false }),
+    ],
+    note: 'Děkujeme všem, kdo pomáhají s námi.',
+    footnote: 'Web zajišťuje bez nároku na odměnu Petr Vzor.',
+  };
+}
+
+function person(
+  id: string,
+  position: number,
+  fields: Record<string, unknown>,
+): Record<string, unknown> {
+  const portraitId = fields['portraitId'];
+  return {
+    id,
+    name: fields['name'],
+    role: fields['role'] ?? null,
+    position,
+    onBoard: fields['onBoard'],
+    boardNote: fields['boardNote'] ?? null,
+    featured: fields['featured'],
+    portrait:
+      typeof portraitId === 'string'
+        ? { id: portraitId, url: `/api/content/media/${portraitId}`, width: 640, height: 640 }
+        : null,
+    webSignature: null,
+    personalEmail: fields['personalEmail'] ?? null,
+    fundEmail: fields['fundEmail'] ?? null,
+    linkedToAccount: false,
+  };
 }

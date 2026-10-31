@@ -5,7 +5,9 @@ import cz.novanadeje.app.content.domain.media.MediaImage;
 import cz.novanadeje.app.content.domain.media.MediaImageRepository;
 import cz.novanadeje.app.content.domain.media.MediaVariant;
 import cz.novanadeje.app.content.domain.project.Project;
+import cz.novanadeje.app.content.domain.project.ProjectCategory;
 import cz.novanadeje.app.content.domain.project.ProjectId;
+import cz.novanadeje.app.content.domain.project.ProjectOrder;
 import cz.novanadeje.app.content.domain.project.ProjectRepository;
 import cz.novanadeje.app.content.domain.project.ProjectContent;
 import cz.novanadeje.app.content.domain.Slug;
@@ -45,7 +47,7 @@ class JpaProjectRepositoryTest {
         MediaImage image = image();
         media.save(image);
         Project project = Project.create(ProjectId.newId(NOW),
-                new ProjectContent(new Slug("dominik"), "Dominik", 2024, Optional.of("Projekt"), "Perex", "Text\n\nDruhý odstavec", Optional.of(image.id()), Optional.of("Dominik na novém vozíku")), NOW);
+                new ProjectContent(new Slug("dominik"), "Dominik", 2024, ProjectCategory.CHILDREN, Optional.of("Projekt"), "Perex", "Text\n\nDruhý odstavec", Optional.of(image.id()), Optional.of("Dominik na novém vozíku")), NOW);
 
         projects.save(project);
         flushAndClear();
@@ -65,7 +67,7 @@ class JpaProjectRepositoryTest {
         Project scheduled = save(project("planovana", NOW), Optional.of(LocalDate.parse("2026-11-05")));
         flushAndClear();
 
-        assertThat(projects.findAllDraftsFirst()).extracting(Project::slug)
+        assertThat(projects.findAllDraftsFirst(ProjectOrder.YEAR_THEN_CATEGORY)).extracting(Project::slug)
                 .containsExactly(draft.slug(), scheduled.slug(), newer.slug(), older.slug());
     }
 
@@ -80,9 +82,9 @@ class JpaProjectRepositoryTest {
         flushAndClear();
 
         assertThat(projects.countVisible(TODAY)).isEqualTo(3);
-        assertThat(projects.findVisibleNewestFirst(TODAY, 0, 2)).extracting(Project::slug).containsExactly(new Slug("dnes"), new Slug("vcera"));
-        assertThat(projects.findVisibleNewestFirst(TODAY, 2, 2)).extracting(Project::slug).containsExactly(new Slug("loni"));
-        assertThat(projects.findVisibleNewestFirst(TODAY.minusDays(1), 0, 10)).extracting(Project::slug).containsExactly(new Slug("vcera"), new Slug("loni"));
+        assertThat(projects.findVisible(TODAY, ProjectOrder.YEAR_THEN_CATEGORY, 0, 2)).extracting(Project::slug).containsExactly(new Slug("dnes"), new Slug("vcera"));
+        assertThat(projects.findVisible(TODAY, ProjectOrder.YEAR_THEN_CATEGORY, 2, 2)).extracting(Project::slug).containsExactly(new Slug("loni"));
+        assertThat(projects.findVisible(TODAY.minusDays(1), ProjectOrder.YEAR_THEN_CATEGORY, 0, 10)).extracting(Project::slug).containsExactly(new Slug("vcera"), new Slug("loni"));
     }
 
     @Test
@@ -93,8 +95,61 @@ class JpaProjectRepositoryTest {
         save(project("koncept-loni", 2025, NOW), Optional.empty());
         flushAndClear();
 
-        assertThat(projects.findVisibleNewestFirst(TODAY, 0, 10)).extracting(Project::slug).containsExactly(new Slug("letos"), new Slug("loni"));
-        assertThat(projects.findAllDraftsFirst()).extracting(Project::slug).containsExactly(new Slug("koncept-loni"), new Slug("letos"), new Slug("loni"));
+        assertThat(projects.findVisible(TODAY, ProjectOrder.YEAR_THEN_CATEGORY, 0, 10)).extracting(Project::slug).containsExactly(new Slug("letos"), new Slug("loni"));
+        assertThat(projects.findAllDraftsFirst(ProjectOrder.YEAR_THEN_CATEGORY)).extracting(Project::slug).containsExactly(new Slug("koncept-loni"), new Slug("letos"), new Slug("loni"));
+    }
+
+    @Test
+    @DisplayName("Given projects of two years in every category, when they are listed, then within a year children come first, then adults, animals and the others")
+    void should_order_by_category_within_a_year_when_listed() {
+        LocalDate published = LocalDate.parse("2026-10-01");
+        save(project("zvirata", 2025, ProjectCategory.ANIMALS, NOW.minusSeconds(4)), Optional.of(published));
+        save(project("ostatni", 2025, ProjectCategory.OTHER, NOW.minusSeconds(3)), Optional.of(published));
+        save(project("dospeli", 2025, ProjectCategory.ADULTS, NOW.minusSeconds(2)), Optional.of(published));
+        save(project("deti", 2025, ProjectCategory.CHILDREN, NOW.minusSeconds(5)), Optional.of(published));
+        save(project("deti-novejsi", 2025, ProjectCategory.CHILDREN, NOW.minusSeconds(1)), Optional.of(published));
+        save(project("zvirata-letos", 2026, ProjectCategory.ANIMALS, NOW), Optional.of(published));
+        save(project("koncept-deti", 2024, ProjectCategory.CHILDREN, NOW), Optional.empty());
+        flushAndClear();
+
+        assertThat(projects.findVisible(TODAY, ProjectOrder.YEAR_THEN_CATEGORY, 0, 10)).extracting(project -> project.slug().value())
+                .containsExactly("zvirata-letos", "deti-novejsi", "deti", "dospeli", "zvirata", "ostatni");
+        assertThat(projects.findAllDraftsFirst(ProjectOrder.YEAR_THEN_CATEGORY)).extracting(project -> project.slug().value())
+                .containsExactly("koncept-deti", "zvirata-letos", "deti-novejsi", "deti", "dospeli", "zvirata", "ostatni");
+    }
+
+    @Test
+    @DisplayName("Given projects of two years in several categories, when they are listed by year alone, then a year lists its projects from the one published last whatever their category")
+    void should_order_by_year_and_publication_day_when_listed_by_year() {
+        save(project("deti", 2025, ProjectCategory.CHILDREN, NOW.minusSeconds(3)), Optional.of(LocalDate.parse("2026-10-01")));
+        save(project("zvirata", 2025, ProjectCategory.ANIMALS, NOW.minusSeconds(2)), Optional.of(LocalDate.parse("2026-10-03")));
+        save(project("dospeli", 2025, ProjectCategory.ADULTS, NOW.minusSeconds(1)), Optional.of(LocalDate.parse("2026-10-02")));
+        save(project("ostatni-letos", 2026, ProjectCategory.OTHER, NOW), Optional.of(LocalDate.parse("2026-09-01")));
+        save(project("koncept", 2024, ProjectCategory.CHILDREN, NOW), Optional.empty());
+        flushAndClear();
+
+        assertThat(projects.findVisible(TODAY, ProjectOrder.YEAR, 0, 10)).extracting(project -> project.slug().value())
+                .containsExactly("ostatni-letos", "zvirata", "dospeli", "deti");
+        assertThat(projects.findAllDraftsFirst(ProjectOrder.YEAR)).extracting(project -> project.slug().value())
+                .containsExactly("koncept", "ostatni-letos", "zvirata", "dospeli", "deti");
+    }
+
+    @Test
+    @DisplayName("Given projects of three years in every category, when they are listed by category first, then every project for children leads, each category from the newest year")
+    void should_order_by_category_before_year_when_listed_by_category_first() {
+        LocalDate published = LocalDate.parse("2026-10-01");
+        save(project("ostatni-letos", 2026, ProjectCategory.OTHER, NOW), Optional.of(published));
+        save(project("dospeli-loni", 2025, ProjectCategory.ADULTS, NOW.minusSeconds(1)), Optional.of(published));
+        save(project("deti-predloni", 2024, ProjectCategory.CHILDREN, NOW.minusSeconds(2)), Optional.of(published));
+        save(project("deti-loni", 2025, ProjectCategory.CHILDREN, NOW.minusSeconds(3)), Optional.of(published));
+        save(project("zvirata-letos", 2026, ProjectCategory.ANIMALS, NOW.minusSeconds(4)), Optional.of(published));
+        save(project("deti-loni-novejsi", 2025, ProjectCategory.CHILDREN, NOW.minusSeconds(5)), Optional.of(LocalDate.parse("2026-10-02")));
+        flushAndClear();
+
+        assertThat(projects.findVisible(TODAY, ProjectOrder.CATEGORY_THEN_YEAR, 0, 10)).extracting(project -> project.slug().value())
+                .containsExactly("deti-loni-novejsi", "deti-loni", "deti-predloni", "dospeli-loni", "zvirata-letos", "ostatni-letos");
+        assertThat(projects.findVisible(TODAY, ProjectOrder.CATEGORY_THEN_YEAR, 2, 2)).extracting(project -> project.slug().value())
+                .containsExactly("deti-predloni", "dospeli-loni");
     }
 
     @Test
@@ -120,7 +175,12 @@ class JpaProjectRepositoryTest {
     }
 
     private static Project project(String slug, int year, Instant at) {
-        return Project.create(ProjectId.newId(at), new ProjectContent(new Slug(slug), slug, year, Optional.empty(), "Perex", "Text", Optional.empty()), at);
+        return project(slug, year, ProjectCategory.OTHER, at);
+    }
+
+    private static Project project(String slug, int year, ProjectCategory category, Instant at) {
+        return Project.create(ProjectId.newId(at), new ProjectContent(new Slug(slug), slug, year, category, Optional.empty(), "Perex", "Text", Optional.empty(),
+                Optional.empty()), at);
     }
 
     private static MediaImage image() {

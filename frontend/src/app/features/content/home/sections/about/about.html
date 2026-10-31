@@ -21,25 +21,148 @@
         >Naše projekty →</a
       >
     </div>
-    <div class="about-img-wrap">
-      <div class="about-img">
-        <img
-          loading="lazy"
-          srcset="/images/about-720.webp 720w, /images/about-1440.webp 1440w"
-          sizes="720px"
-          src="/images/about-720.webp"
-          width="720"
-          height="480"
-          alt=""
-          class="real-img"
-        />
-      </div>
-      <div class="about-badge">
-        <div class="about-badge-title">FOD</div>
-        <div class="about-badge-text" i18n="@@home.about.badge">
-          Úzká spolupráce s Fondem ohrožených dětí
+    @if (photo(); as photo) {
+      <figure class="about-figure" [style.--about-photo-ratio]="photo.width / photo.height">
+        <div class="about-frame">
+          <img
+            loading="lazy"
+            [attr.srcset]="photoSet()"
+            sizes="(max-width: 768px) calc(100vw - 32px), 560px"
+            [src]="photoSource()"
+            [attr.width]="photo.width"
+            [attr.height]="photo.height"
+            [alt]="photo.alt ?? ''"
+            class="about-photo"
+          />
+          <ng-container [ngTemplateOutlet]="badge" />
         </div>
+        @if (photo.caption) {
+          <figcaption class="about-caption">{{ photo.caption }}</figcaption>
+        }
+      </figure>
+    } @else {
+      <div class="about-img-wrap">
+        <div class="about-img">
+          <img
+            loading="lazy"
+            srcset="/images/about-720.webp 720w, /images/about-1440.webp 1440w"
+            sizes="720px"
+            src="/images/about-720.webp"
+            width="720"
+            height="480"
+            alt=""
+            class="real-img"
+          />
+        </div>
+        <ng-container [ngTemplateOutlet]="badge" />
       </div>
+    }
+  </div>
+  <div class="ui-container">
+    <div class="board">
+      <h3 class="ui-eyebrow board-title" i18n="@@home.about.board.title">Kdo fond vede</h3>
+      @if (people(); as people) {
+        @if (people.featured.length > 0) {
+          <ul class="board-people">
+            @for (card of people.featured; track $index) {
+              <li class="board-person">
+                <app-avatar
+                  class="board-photo"
+                  [name]="card.name"
+                  [src]="card.portrait ? portraitSource(card.portrait.id) : null"
+                  [size]="160"
+                  loading="lazy"
+                />
+                <div>
+                  <p class="board-name">{{ card.name }}</p>
+                  @if (card.role) {
+                    <p class="board-role">{{ card.role }}</p>
+                  }
+                </div>
+              </li>
+            }
+          </ul>
+        }
+        @if (people.note; as note) {
+          <div class="founders-note">
+            @for (paragraph of paragraphs(note.text); track $index) {
+              <p class="founders-note-text">{{ paragraph }}</p>
+            }
+            @if (note.signatures.length > 0) {
+              <ul class="signatures">
+                @for (signature of note.signatures; track $index) {
+                  <li class="signature">
+                    <img
+                      loading="lazy"
+                      [src]="signatureSource(signature.url)"
+                      [attr.width]="signature.width"
+                      [attr.height]="signature.height"
+                      alt=""
+                      class="signature-ink"
+                    />
+                    <span class="signature-name">{{ signature.name }}</span>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+        }
+        @if (boardLine(); as line) {
+          <p class="board-members">{{ line }}</p>
+        }
+        @if (people.footnote; as footnote) {
+          <p class="board-footnote">{{ footnote }}</p>
+        }
+      } @else {
+        <ul class="board-people">
+          <li class="board-person">
+            <app-avatar
+              class="board-photo"
+              name="Pavel Znamenáček"
+              src="/images/pavel-znamenacek-160.webp"
+              srcset="/images/pavel-znamenacek-160.webp 160w, /images/pavel-znamenacek-320.webp 320w"
+              sizes="(max-width: 480px) 96px, 160px"
+              [size]="160"
+              loading="lazy"
+            />
+            <div>
+              <p class="board-name" i18n="@@home.about.board.pavel.name">Pavel Znamenáček</p>
+              <p class="board-role" i18n="@@home.about.board.pavel.role">
+                Zakladatel a předseda správní rady
+              </p>
+            </div>
+          </li>
+          <li class="board-person">
+            <app-avatar
+              class="board-photo"
+              name="Andrea Znamenáčková"
+              src="/images/andrea-znamenackova-160.webp"
+              srcset="/images/andrea-znamenackova-160.webp 160w, /images/andrea-znamenackova-320.webp 320w"
+              sizes="(max-width: 480px) 96px, 160px"
+              [size]="160"
+              loading="lazy"
+            />
+            <div>
+              <p class="board-name" i18n="@@home.about.board.andrea.name">Andrea Znamenáčková</p>
+              <p class="board-role" i18n="@@home.about.board.andrea.role">
+                Zakladatelka a členka správní rady
+              </p>
+            </div>
+          </li>
+        </ul>
+        <p class="board-members" i18n="@@home.about.board.members">
+          Správní rada: Pavel&nbsp;Znamenáček (předseda), Andrea&nbsp;Znamenáčková,
+          Zdeňka&nbsp;Znamenáčková.
+        </p>
+      }
     </div>
   </div>
+  <ng-template #badge>
+    <div class="about-badge">
+      <div class="about-badge-title">FOD</div>
+      <div class="about-badge-text" i18n="@@home.about.badge">
+        Úzká spolupráce s Fondem ohrožených dětí
+      </div>
+    </div>
+  </ng-template>
 </section>
