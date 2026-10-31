@@ -11,6 +11,7 @@ from fontTools.ttLib import TTFont
 from fontTools.varLib import instancer
 from fontTools.merge import Merger
 from fontTools import subset
+from fontTools.misc.timeTools import timestampFromString
 
 frontend = Path(sys.argv[1])
 dejavu = Path(sys.argv[2])
@@ -25,16 +26,26 @@ CHARACTERS = (
 )
 
 
+FIXED_TIME = timestampFromString("Thu Jan  1 00:00:00 2026")
+
+
+def saved(font, path):
+    font.recalcTimestamp = False
+    font["head"].created = FIXED_TIME
+    font["head"].modified = FIXED_TIME
+    font.save(path)
+
+
 def static_instance(source, weight, target):
     font = TTFont(source)
     if "fvar" in font:
         font = instancer.instantiateVariableFont(font, {"wght": weight})
     font.flavor = None
-    font.save(target)
+    saved(font, target)
 
 
 def merged(parts, target):
-    Merger().merge([str(part) for part in parts]).save(target)
+    saved(Merger().merge([str(part) for part in parts]), target)
     for part in parts:
         part.unlink()
 
@@ -50,7 +61,7 @@ def subset_to_receipt(path):
     subsetter = subset.Subsetter(options)
     subsetter.populate(unicodes=CHARACTERS)
     subsetter.subset(font)
-    font.save(path)
+    saved(font, path)
 
 
 def named(path, family, style):
@@ -63,7 +74,7 @@ def named(path, family, style):
         table.setName(value, name_id, 1, 0, 0)
     font["OS/2"].usWeightClass = 700 if style == "Bold" else 400
     font["OS/2"].fsType = 0
-    font.save(path)
+    saved(font, path)
 
 
 def from_variable(theme, prefix, weight, family, style, target_name):
