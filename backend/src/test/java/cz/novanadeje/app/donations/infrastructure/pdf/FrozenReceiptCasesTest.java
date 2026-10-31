@@ -47,6 +47,7 @@ class FrozenReceiptCasesTest {
     private static final String PRINTED_CASE_FILE = "receipts/v1/printed.json";
     private static final Pattern FOOTER = Pattern.compile("(.*· .*Číslo potvrzení: .*) [0-9]+ / [0-9]+");
     private static final Pattern CZECH_DATE = Pattern.compile("(?<![0-9])([0-9]{1,2})\\. ([0-9]{1,2})\\. ([0-9]{4})(?![0-9])");
+    private static final Pattern HYPHEN_AFTER_LETTER = Pattern.compile("\\p{L}-$");
     private final ReceiptSigner signer = Rfc8032Keys.test1Signer();
     private final ReceiptProofs proofs = new ReceiptProofs(signer, Receipts.FOUNDATION);
 
@@ -136,7 +137,7 @@ class FrozenReceiptCasesTest {
         }
         assertThat(footers).hasSize(1);
         ObjectNode printed = JSON.createObjectNode();
-        printed.put("body", withD11Dates(normalised(String.join(" ", body))));
+        printed.put("body", withD11Dates(normalised(joinedLines(body))));
         if (header.isEmpty()) {
             printed.putNull("tableHeader");
         } else {
@@ -153,6 +154,17 @@ class FrozenReceiptCasesTest {
             rest = rest.replace(headerText, " ");
         }
         return rest.isBlank();
+    }
+
+    private static String joinedLines(List<String> lines) {
+        StringBuilder text = new StringBuilder();
+        for (String line : lines) {
+            if (!text.isEmpty() && !HYPHEN_AFTER_LETTER.matcher(text).find()) {
+                text.append(' ');
+            }
+            text.append(line.strip());
+        }
+        return text.toString();
     }
 
     private static String normalised(String text) {

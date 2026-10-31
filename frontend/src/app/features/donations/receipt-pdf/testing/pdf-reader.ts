@@ -49,6 +49,8 @@ interface CanvasLike {
   getContext(kind: '2d'): CanvasRenderingContext2D;
 }
 
+const HYPHEN_AFTER_LETTER = /\p{L}-$/u;
+
 export function normalised(text: string): string {
   return text.replace(/[ \s]+/g, ' ').trim();
 }
@@ -93,19 +95,23 @@ export async function readPdf(bytes: Uint8Array): Promise<ReadPdf> {
     let depth = 0;
     const text: string[] = [];
     const artifacts: string[] = [];
+    const into = () => (artifactDepth > 0 ? artifacts : text);
     for (const item of content.items as TextPiece[]) {
       if (item.type === 'beginMarkedContent' || item.type === 'beginMarkedContentProps') {
+        into().push(' ');
         depth++;
         if (item.tag === 'Artifact' && artifactDepth === 0) {
           artifactDepth = depth;
         }
       } else if (item.type === 'endMarkedContent') {
+        into().push(' ');
         if (depth === artifactDepth) {
           artifactDepth = 0;
         }
         depth--;
       } else if (item.str !== undefined) {
-        (artifactDepth > 0 ? artifacts : text).push(item.str, item.hasEOL ? ' ' : '');
+        const brokenWord = HYPHEN_AFTER_LETTER.test(item.str);
+        into().push(item.str, item.hasEOL && !brokenWord ? ' ' : '');
       }
     }
     const annotations = (await page.getAnnotations()) as {
@@ -122,8 +128,8 @@ export async function readPdf(bytes: Uint8Array): Promise<ReadPdf> {
       number,
       widthPt,
       heightPt,
-      text: normalised(text.join(' ')),
-      artifacts: normalised(artifacts.join(' ')),
+      text: normalised(text.join('')),
+      artifacts: normalised(artifacts.join('')),
       links: annotations
         .filter((annotation) => annotation.subtype === 'Link')
         .map((annotation) => ({ url: annotation.url ?? '', rect: annotation.rect })),

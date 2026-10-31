@@ -118,7 +118,10 @@ export function encodeSegments(
   errorCorrection: QrErrorCorrection,
   minimumVersion = 1,
 ): QrSymbol {
-  const version = smallestVersion(segments, errorCorrection);
+  const version = smallestVersion(segments, errorCorrection, minimumVersion);
+  if (version === null) {
+    throw new Error(`The text does not fit a QR code of version 40 at level ${errorCorrection}`);
+  }
   const codewords = withErrorCorrection(
     dataCodewords(segments, version, errorCorrection),
     version,
@@ -248,14 +251,18 @@ function dataCapacity(version: number, errorCorrection: QrErrorCorrection): numb
   );
 }
 
-function smallestVersion(segments: readonly QrSegment[], errorCorrection: QrErrorCorrection) {
-  for (let version = 1; version <= MAX_VERSION; version++) {
+export function smallestVersion(
+  segments: readonly QrSegment[],
+  errorCorrection: QrErrorCorrection,
+  minimumVersion = 1,
+): number | null {
+  for (let version = Math.max(1, minimumVersion); version <= MAX_VERSION; version++) {
     const length = segments.reduce((sum, segment) => sum + segmentLength(segment, version), 0);
     if (length <= dataCapacity(version, errorCorrection) * 8) {
       return version;
     }
   }
-  throw new Error(`The text does not fit a QR code of version 40 at level ${errorCorrection}`);
+  return null;
 }
 
 function dataCodewords(

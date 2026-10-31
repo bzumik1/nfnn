@@ -44,10 +44,10 @@ describe('Given the frozen single receipt of a person in Czech', () => {
     expect(document.singleGift?.map((line) => line.cs)).toEqual([
       'Forma daru: peněžitý dar, bankovní převod',
       'Datum připsání na účet: 15. 03. 2026',
-      'Částka: 500 Kč',
+      'Částka: 500\u00a0Kč',
       'Účet příjemce: 5544332217/2010',
     ]);
-    expect(document.declaration.cs).toContain('přijal dne 15. 03. 2026 peněžitý dar ve výši 500 Kč');
+    expect(document.declaration.cs).toContain('přijal dne 15. 03. 2026 peněžitý dar ve výši 500\u00a0Kč');
     expect(document.signature.issuedAt.cs).toBe('V Novém Boru, dne 15. 01. 2027');
     expect(document.signature.forFoundation.cs).toBe('Za Nová naděje - nadační fond:');
     expect(document.signature.name).toBe('Petr Vzorový');
@@ -69,7 +69,7 @@ describe('Given the frozen single receipt of a person in Czech', () => {
     expect(document.verification.heading).toEqual({ cs: 'Ověření potvrzení', en: null });
   });
 
-  it('when every text is mapped, then none is left with a placeholder or a non-breaking space the PDF fonts would print oddly', () => {
+  it('when every text is mapped, then none is left with a placeholder', () => {
     const texts = JSON.stringify(document);
     expect(texts).not.toMatch(/\{\d\}/);
   });
@@ -81,8 +81,8 @@ describe('Given the frozen yearly receipt of a person who prefers English', () =
   it('when it is mapped, then every line has its English twin and the file has the English name', () => {
     expect(document.bilingual).toBe(true);
     expect(document.title).toEqual({
-      cs: 'Potvrzení o přijatých darech za rok 2026',
-      en: 'Confirmation of donations received in 2026',
+      cs: 'Potvrzení o přijatých darech za rok\u00a02026',
+      en: 'Confirmation of donations received in\u00a02026',
     });
     expect(document.donee.heading).toEqual({ cs: 'Obdarovaný', en: 'Donee' });
     expect(document.fileName).toBe('donation-summary-2026.pdf');
@@ -126,10 +126,10 @@ describe('Given the frozen yearly receipt with 120 gifts', () => {
     expect(document.giftTable?.rows).toHaveLength(120);
     expect(document.giftTable?.rows[0]).toEqual({
       receivedOn: { cs: '01. 01. 2026', en: null },
-      amount: { cs: '100 Kč', en: null },
+      amount: { cs: '100\u00a0Kč', en: null },
     });
     expect(document.giftTable?.count.cs).toBe('Počet darů: 120');
-    expect(document.giftTable?.total.cs).toMatch(/^Celkem darováno v roce 2026: [\d  ]+(,\d\d)? Kč$/);
+    expect(document.giftTable?.total.cs).toMatch(/^Celkem darováno v roce 2026: [\d\u00a0]+(,\d\d)?\u00a0Kč$/);
     expect(document.fileName).toBe('potvrzeni-o-darech-2026.pdf');
   });
 });

@@ -4,6 +4,8 @@ import {
   INLINE_SYMBOL_MM,
   MINIMUM_INLINE_MODULE_MM,
   MINIMUM_OWN_AREA_MODULE_MM,
+  OWN_AREA_MODULE_MM,
+  OWN_AREA_SYMBOL_MM,
   qrPlacement,
   verificationSymbol,
 } from './verification-qr';
@@ -75,6 +77,25 @@ describe('Given verification symbols of every version', () => {
         expect(placement.moduleMm).toBeGreaterThanOrEqual(MINIMUM_OWN_AREA_MODULE_MM);
         expect(placement.symbolMm).toBeCloseTo(placement.moduleMm * symbol.size, 6);
       }
+    }
+  });
+});
+
+describe('Given verification symbols above version 13', () => {
+  it('when they are placed in their own area, then the modules grow up to 0.8 mm as long as the symbol stays within 100 mm, never below 0.6 mm', () => {
+    const own = ENCODED.filter((each) => !('refusal' in each.qr) && each.qr.version > 13).map(
+      (each) => verificationSymbol(each.qrText),
+    );
+    expect(own.length).toBeGreaterThan(2);
+    for (const symbol of own) {
+      const placement = qrPlacement(symbol);
+      expect(placement.moduleMm).toBeLessThanOrEqual(OWN_AREA_MODULE_MM);
+      expect(placement.moduleMm).toBeGreaterThanOrEqual(MINIMUM_OWN_AREA_MODULE_MM);
+      expect(
+        placement.moduleMm === OWN_AREA_MODULE_MM ||
+          placement.moduleMm === MINIMUM_OWN_AREA_MODULE_MM ||
+          Math.abs(placement.symbolMm - OWN_AREA_SYMBOL_MM) < 1e-9,
+      ).toBe(true);
     }
   });
 });

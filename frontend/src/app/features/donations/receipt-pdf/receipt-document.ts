@@ -1,3 +1,10 @@
+import {
+  fillReceiptText,
+  formatReceiptAmount,
+  formatReceiptAmountEn,
+  formatReceiptDate,
+  formatReceiptDateEn,
+} from '../receipt-format';
 import { FrozenReceipt } from './frozen-receipt';
 
 export interface Bilingual {
@@ -70,10 +77,187 @@ export interface ReceiptCaptions {
   readonly portraitAlt: string;
 }
 
+type ReceiptTexts = Readonly<Record<string, string>>;
+
+interface Texts {
+  readonly bilingual: boolean;
+  line(key: string, cs: readonly string[], en?: readonly string[]): Bilingual;
+}
+
+function textsOf(receipt: FrozenReceipt): Texts {
+  const english: ReceiptTexts | null = receipt.locale === 'en' ? receipt.texts.en : null;
+  const text = (texts: ReceiptTexts, key: string, values: readonly string[]): string => {
+    const template = texts[key];
+    if (template === undefined) {
+      throw new Error(`The frozen receipt has no text ${key}.`);
+    }
+    return fillReceiptText(template, ...values);
+  };
+  return {
+    bilingual: english !== null,
+    line: (key, cs, en = cs) => ({
+      cs: text(receipt.texts.cs, key, cs),
+      en: english === null ? null : text(english, key, en),
+    }),
+  };
+}
+
+function singleLine(address: FrozenReceipt['donor']['address']): string {
+  return `${address.street.trim()}, ${address.postalCode.trim()} ${address.city.trim()}`;
+}
+
+function fileNameOf(receipt: FrozenReceipt): string {
+  const english = receipt.locale === 'en';
+  if (receipt.kind === 'SINGLE') {
+    return english
+      ? `donation-receipt-${receipt.number}.pdf`
+      : `potvrzeni-o-daru-${receipt.number}.pdf`;
+  }
+  return english
+    ? `donation-summary-${receipt.year}.pdf`
+    : `potvrzeni-o-darech-${receipt.year}.pdf`;
+}
+
+function donorLines(receipt: FrozenReceipt, texts: Texts): Bilingual[] {
+  const donor = receipt.donor;
+  const address = singleLine(donor.address);
+  const symbol = texts.line('receipt.donor.variableSymbol', [donor.variableSymbol]);
+  if (donor.type === 'COMPANY') {
+    return [
+      texts.line('receipt.donor.company.name', [donor.name.trim()]),
+      texts.line('receipt.donor.company.identifier', [donor.companyIdentifier ?? '']),
+      texts.line('receipt.donor.company.seat', [address]),
+      symbol,
+    ];
+  }
+  return [
+    texts.line('receipt.donor.person.name', [donor.name.trim()]),
+    texts.line('receipt.donor.person.residence', [address]),
+    symbol,
+  ];
+}
+
+function bracketed(value: string): string {
+  return `(${value})`;
+}
+
 export function receiptDocument(
   receipt: FrozenReceipt,
   issuedAt: string,
   captions: ReceiptCaptions,
 ): ReceiptDocument {
-  throw new Error(`not implemented ${receipt.number} ${issuedAt} ${captions.signatureAlt}`);
+  const texts = textsOf(receipt);
+  const foundation = receipt.foundation;
+  const foundationAddress = singleLine(foundation.address);
+  const year = receipt.year === null ? '' : String(receipt.year);
+  const single = receipt.kind === 'SINGLE';
+  const first = receipt.gifts[0];
+  const totalCs = formatReceiptAmount(receipt.total.amountMinor);
+  const totalEn = formatReceiptAmountEn(receipt.total.amountMinor);
+  const receivedOnCs = formatReceiptDate(first.receivedOn);
+  const receivedOnEn = formatReceiptDateEn(first.receivedOn);
+  const issuedOnCs = formatReceiptDate(receipt.issuedOn);
+  const issuedOnEn = formatReceiptDateEn(receipt.issuedOn);
+  const account = texts.line('receipt.gift.account', [foundation.bankAccountNumber]);
+  const caption = (value: Bilingual): Bilingual => ({
+    cs: value.cs,
+    en: texts.bilingual ? value.en : null,
+  });
+  return {
+    bilingual: texts.bilingual,
+    number: receipt.number,
+    issuedAt,
+    fileName: fileNameOf(receipt),
+    author: foundation.name,
+    logoAlt: foundation.name,
+    title: single
+      ? texts.line('receipt.title.single', [])
+      : texts.line('receipt.title.yearly', [year]),
+    numberLine: texts.line('receipt.number', [receipt.number]),
+    issuedOnLine: texts.line('receipt.issuedOn', [issuedOnCs], [issuedOnEn]),
+    replaces:
+      receipt.replaces === null
+        ? null
+        : texts.line(
+            'receipt.replaces',
+            [receipt.replaces.number, formatReceiptDate(receipt.replaces.issuedOn)],
+            [receipt.replaces.number, formatReceiptDateEn(receipt.replaces.issuedOn)],
+          ),
+    donee: {
+      heading: texts.line('receipt.donee', []),
+      lines: [
+        texts.line('receipt.donee.name', [foundation.name]),
+        texts.line('receipt.donee.companyIdentifier', [foundation.companyIdentifier]),
+        texts.line('receipt.donee.seat', [foundationAddress]),
+        texts.line('receipt.donee.registry', [foundation.registryFile, foundation.registryCourt]),
+      ],
+    },
+    donor: { heading: texts.line('receipt.donor', []), lines: donorLines(receipt, texts) },
+    singleGift: single
+      ? [
+          texts.line(`receipt.gift.form.${first.source}`, []),
+          texts.line('receipt.gift.receivedOn', [receivedOnCs], [receivedOnEn]),
+          texts.line('receipt.gift.amount', [totalCs], [totalEn]),
+          account,
+        ]
+      : null,
+    giftTable: single
+      ? null
+      : {
+          account,
+          columns: {
+            receivedOn: texts.line('receipt.table.receivedOn', []),
+            amount: texts.line('receipt.table.amount', []),
+          },
+          rows: receipt.gifts.map((gift) => ({
+            receivedOn: {
+              cs: formatReceiptDate(gift.receivedOn),
+              en: texts.bilingual ? bracketed(formatReceiptDateEn(gift.receivedOn)) : null,
+            },
+            amount: {
+              cs: formatReceiptAmount(gift.amountMinor),
+              en: texts.bilingual ? bracketed(formatReceiptAmountEn(gift.amountMinor)) : null,
+            },
+          })),
+          count: texts.line('receipt.yearly.count', [String(receipt.gifts.length)]),
+          total: texts.line('receipt.yearly.total', [year, totalCs], [year, totalEn]),
+        },
+    declaration: single
+      ? texts.line(
+          'receipt.declaration.single',
+          [foundation.name, receivedOnCs, totalCs, foundation.bankAccountNumber],
+          [foundation.name, receivedOnEn, totalEn, foundation.bankAccountNumber],
+        )
+      : texts.line(
+          'receipt.declaration.yearly',
+          [foundation.name, year, totalCs, foundation.bankAccountNumber],
+          [foundation.name, year, totalEn, foundation.bankAccountNumber],
+        ),
+    signature: {
+      issuedAt: texts.line(
+        'receipt.issuedAt',
+        [foundation.issuePlace, issuedOnCs],
+        [foundation.issuePlaceEn, issuedOnEn],
+      ),
+      forFoundation: texts.line('receipt.signature.for', [foundation.name]),
+      name: receipt.signatory.name,
+      role: receipt.signatory.role,
+      signatureImage: receipt.signatory.signatureImage?.sha256 ?? null,
+      portraitImage: receipt.signatory.portraitImage?.sha256 ?? null,
+      signatureAlt: captions.signatureAlt,
+      portraitAlt: captions.portraitAlt,
+    },
+    verification: {
+      qrText: receipt.verification.qrText,
+      heading: caption(captions.verificationHeading),
+      text: caption(captions.verificationText),
+      alt: captions.verificationAlt,
+    },
+    footer: texts.line('receipt.footer', [
+      foundation.name,
+      foundation.companyIdentifier,
+      foundationAddress,
+      receipt.number,
+    ]).cs,
+  };
 }

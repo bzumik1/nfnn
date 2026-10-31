@@ -70,14 +70,58 @@ export function receiptDisplay(receipt: SignedReceipt): ReceiptDisplay {
   };
 }
 
+const ENGLISH_MONTHS = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+] as const;
+
 export function formatReceiptAmountEn(amountMinor: number): string {
-  throw new Error(`not implemented ${amountMinor}`);
+  const crowns = Math.floor(amountMinor / 100);
+  const hellers = amountMinor % 100;
+  const grouped = String(crowns).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return hellers === 0 ? `CZK ${grouped}` : `CZK ${grouped}.${String(hellers).padStart(2, '0')}`;
 }
 
 export function formatReceiptDateEn(day: string): string {
-  throw new Error(`not implemented ${day}`);
+  const [year, month, date] = day.split('-').map(Number);
+  return `${date} ${ENGLISH_MONTHS[month - 1]} ${year}`;
 }
 
 export function fillReceiptText(template: string, ...values: readonly string[]): string {
-  throw new Error(`not implemented ${template} ${values.length}`);
+  let text = '';
+  let quoted = false;
+  for (let index = 0; index < template.length; index++) {
+    const character = template[index];
+    if (character === "'") {
+      if (template[index + 1] === "'") {
+        text += "'";
+        index++;
+      } else {
+        quoted = !quoted;
+      }
+      continue;
+    }
+    const placeholder = quoted ? null : /^\{(\d+)\}/.exec(template.slice(index));
+    if (placeholder === null) {
+      text += character;
+      continue;
+    }
+    const value = values[Number(placeholder[1])];
+    if (value === undefined) {
+      throw new Error(`The receipt text has no value for ${placeholder[0]}.`);
+    }
+    text += value;
+    index += placeholder[0].length - 1;
+  }
+  return text;
 }

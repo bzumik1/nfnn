@@ -1,4 +1,6 @@
 declare module 'pdfkit' {
+  type PdfString = object;
+
   interface PdfStructureOptions {
     readonly alt?: string;
     readonly lang?: string;
@@ -21,6 +23,22 @@ declare module 'pdfkit' {
     readonly continued?: boolean;
     readonly characterSpacing?: number;
     readonly features?: readonly string[];
+    readonly baseline?: 'alphabetic' | 'top';
+  }
+
+  interface PdfImageOptions {
+    readonly width?: number;
+    readonly height?: number;
+    readonly fit?: [number, number];
+    readonly cover?: [number, number];
+    readonly align?: 'left' | 'center' | 'right';
+    readonly valign?: 'top' | 'center' | 'bottom';
+  }
+
+  interface PdfEmbeddedFont {
+    readonly ascender: number;
+    readonly descender: number;
+    readonly font: { hasGlyphForCodePoint(codePoint: number): boolean };
   }
 
   interface PdfDocumentOptions {
@@ -55,6 +73,7 @@ declare module 'pdfkit' {
   class PDFDocument {
     constructor(options?: PdfDocumentOptions);
     page: PdfPage;
+    readonly _font: PdfEmbeddedFont;
     x: number;
     y: number;
     on(event: 'data', listener: (chunk: Uint8Array) => void): this;
@@ -87,8 +106,9 @@ declare module 'pdfkit' {
     restore(): this;
     translate(x: number, y: number): this;
     scale(x: number, y?: number): this;
-    image(source: Uint8Array | ArrayBuffer, x: number, y: number, options: { width: number; height: number }): this;
-    link(x: number, y: number, width: number, height: number, url: string, options?: { structParent?: PdfStructureElement; Contents?: string }): this;
+    roundedRect(x: number, y: number, width: number, height: number, radius: number): this;
+    image(source: Uint8Array | ArrayBuffer, x: number, y: number, options: PdfImageOptions): this;
+    link(x: number, y: number, width: number, height: number, url: string, options?: { structParent?: PdfStructureElement; Contents?: PdfString }): this;
     struct(type: string, options?: PdfStructureOptions, children?: () => void): PdfStructureElement;
     struct(type: string, children: () => void): PdfStructureElement;
     addStructure(element: PdfStructureElement): this;
@@ -97,5 +117,5 @@ declare module 'pdfkit' {
   }
 
   export default PDFDocument;
-  export type { PdfStructureElement, PdfDocumentOptions };
+  export type { PdfStructureElement, PdfStructureOptions, PdfDocumentOptions };
 }
