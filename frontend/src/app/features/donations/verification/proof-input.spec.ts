@@ -386,7 +386,7 @@ describe('Given the ways to read a receipt code on the verification page', () =>
       Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
 
       expect(device.track.stopped).toBe(true);
-      expect(button('Naskenovat QR kód')).toBeDefined();
+      expect(document.activeElement).toBe(button('Naskenovat QR kód'));
     });
 
     it('and a file hands over a code while the camera scans, then the camera turns off', async () => {

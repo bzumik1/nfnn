@@ -98,6 +98,7 @@ export class ProofInput {
     const hidden = (): void => {
       if (this.document.visibilityState === 'hidden' && this.scan() !== 'idle') {
         this.stopCamera();
+        afterNextRender(() => this.focusIfLost(this.scanButton()), { injector: this.injector });
       }
     };
     this.document.addEventListener('visibilitychange', hidden);

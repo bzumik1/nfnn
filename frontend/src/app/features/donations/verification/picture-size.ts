@@ -14,7 +14,7 @@ const VP8_START = [0x9d, 0x01, 0x2a];
 const VP8L_SIGNATURE = 0x2f;
 
 export function pictureSize(bytes: Uint8Array): PictureSize | null {
-  const size = pngSize(bytes) ?? jpegSize(bytes) ?? gifSize(bytes) ?? webpSize(bytes);
+  const size = pngSize(bytes) ?? jpegSize(bytes) ?? webpSize(bytes);
   return size !== null && size.width > 0 && size.height > 0 ? size : null;
 }
 
@@ -56,14 +56,6 @@ function jpegSize(bytes: Uint8Array): PictureSize | null {
     at += 2 + length;
   }
   return null;
-}
-
-function gifSize(bytes: Uint8Array): PictureSize | null {
-  const signature = ascii(bytes, 0, 6);
-  if ((signature !== 'GIF87a' && signature !== 'GIF89a') || bytes.length < 10) {
-    return null;
-  }
-  return { width: u16le(bytes, 6), height: u16le(bytes, 8) };
 }
 
 function webpSize(bytes: Uint8Array): PictureSize | null {

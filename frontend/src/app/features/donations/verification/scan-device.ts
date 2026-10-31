@@ -72,17 +72,12 @@ export const SCAN_DEVICE = new InjectionToken<ScanDevice>('scan device', {
       picture: async (file) => {
         const size = pictureSize(new Uint8Array(await file.arrayBuffer()));
         if (size === null) {
-          throw new Error('The picture is no PNG, JPEG, GIF or WebP.');
+          throw new Error('The picture is no PNG, JPEG or WebP.');
         }
         if (size.width * size.height > LARGEST_PICTURE_PIXELS) {
           throw new PictureTooLarge();
         }
-        const target = scaled(size.width, size.height, LARGEST_PICTURE_SIDE);
-        const bitmap = await createImageBitmap(file, {
-          resizeWidth: target.width,
-          resizeHeight: target.height,
-          resizeQuality: 'high',
-        });
+        const bitmap = await createImageBitmap(file);
         try {
           const image = pixels(document, bitmap, bitmap.width, bitmap.height, LARGEST_PICTURE_SIDE);
           if (image === null) {

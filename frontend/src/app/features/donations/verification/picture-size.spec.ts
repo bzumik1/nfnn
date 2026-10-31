@@ -80,13 +80,6 @@ describe('Given the first bytes of a picture file', () => {
     expect(pictureSize(jpeg(4_032, 3_024, [exif]))).toEqual({ width: 4_032, height: 3_024 });
   });
 
-  it('when it is a GIF, then it gives the size from its screen descriptor', () => {
-    expect(pictureSize(bytes('GIF89a', u16le(640), u16le(480), [0, 0, 0]))).toEqual({
-      width: 640,
-      height: 480,
-    });
-  });
-
   it('when it is a lossy WebP, then it gives the size from its frame', () => {
     const frame = [0, 0, 0, 0x9d, 0x01, 0x2a, ...u16le(800), ...u16le(600)];
 
@@ -111,6 +104,10 @@ describe('Given the first bytes of a picture file', () => {
   for (const [name, file] of [
     ['empty', new Uint8Array(0)],
     ['plain text', bytes('just some text')],
+    [
+      'a GIF, whose frames may be far larger than the size its header declares',
+      bytes('GIF89a', u16le(1), u16le(1), [0, 0, 0]),
+    ],
     ['a PNG cut off before its size', png(10, 10).slice(0, 20)],
     ['a JPEG without a frame header', bytes([0xff, 0xd8], segment(0xe0, [0, 0, 0]), [0xff, 0xd9])],
     ['a JPEG whose segment runs past the end', bytes([0xff, 0xd8, 0xff, 0xe1, 0xff, 0xff, 0, 0])],
