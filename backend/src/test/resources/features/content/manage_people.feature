@@ -427,6 +427,11 @@ Feature: An administrator keeps the people of the foundation that the About sect
     And the person says:
       | fundEmail     | adam@nfnn.cz |
       | personalEmail |              |
+    When the exchanged API token writes the line under the board:
+      """
+      Web zajišťuje Petr Vzor.
+      """
+    Then the response status is 200
     When the exchanged API token orders the people:
       | Adam Vzor   |
       | Eva Vzorová |
@@ -434,11 +439,6 @@ Feature: An administrator keeps the people of the foundation that the About sect
     When the exchanged API token writes the founders note:
       """
       Děkujeme.
-      """
-    Then the response status is 200
-    When the exchanged API token writes the line under the board:
-      """
-      Web zajišťuje Petr Vzor.
       """
     Then the response status is 200
     When the exchanged API token updates the person "Eva Vzorová":
@@ -474,9 +474,9 @@ Feature: An administrator keeps the people of the foundation that the About sect
       | REMOVE_WEB_SIGNATURE   | claude.ai |
       | CHANGE_WEB_SIGNATURE   | claude.ai |
       | UPDATE_PERSON          | claude.ai |
-      | CHANGE_PEOPLE_FOOTNOTE | claude.ai |
       | CHANGE_FOUNDERS_NOTE   | claude.ai |
       | ORDER_PEOPLE           | claude.ai |
+      | CHANGE_PEOPLE_FOOTNOTE | claude.ai |
       | UPDATE_PERSON          | claude.ai |
       | ADD_PERSON             | claude.ai |
       | CHANGE_WEB_SIGNATURE   |           |
