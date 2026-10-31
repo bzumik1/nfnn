@@ -2,7 +2,9 @@ package cz.novanadeje.app.donations.cucumber;
 
 import cz.novanadeje.app.cucumber.ApiClient;
 import cz.novanadeje.app.cucumber.DonorSessions;
-import cz.novanadeje.app.support.MutableClock;
+import cz.novanadeje.app.cucumber.ScenarioDonors;
+import cz.novanadeje.app.donations.application.receipt.ReceiptSignatureService;
+import cz.novanadeje.app.donations.domain.receipt.PersonReference;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -18,10 +20,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.sql.Timestamp;
-import java.util.HexFormat;
 import java.util.Base64;
 import java.util.Map;
 import java.util.UUID;
@@ -60,28 +58,23 @@ public class AdminReceiptSignatureStepDefinitions {
     private final ApiClient api;
     private final DonorSessions sessions;
     private final JdbcClient jdbc;
-    private final MutableClock clock;
+    private final ScenarioDonors donors;
+    private final ReceiptSignatureService signatures;
 
-    public AdminReceiptSignatureStepDefinitions(ApiClient api, DonorSessions sessions, JdbcClient jdbc, MutableClock clock) {
+    public AdminReceiptSignatureStepDefinitions(ApiClient api, DonorSessions sessions, JdbcClient jdbc, ScenarioDonors donors,
+            ReceiptSignatureService signatures) {
         this.api = api;
         this.sessions = sessions;
         this.jdbc = jdbc;
-        this.clock = clock;
+        this.donors = donors;
+        this.signatures = signatures;
     }
 
-    @Given("the person who signs the receipts has a {int} by {int} pixel scan as their receipt signature")
-    public void thePersonWhoSignsTheReceiptsHasAScan(int width, int height) {
-        byte[] png = png(width, height);
-        String digest = sha256(png);
-        Timestamp now = Timestamp.from(clock.instant());
-        jdbc.sql("insert into receipt_image (sha256, media_type, content, first_used_at) values (:sha, 'image/png', :content, :at) on conflict do nothing")
-                .param("sha", digest).param("content", png).param("at", now).update();
-        jdbc.sql("""
-                        insert into donation_person_receipt_signature (person_id, image_sha256, width, height, uploaded_at)
-                        select person_id, :sha, :width, :height, :at from donation_receipt_signatory
-                        on conflict (person_id) do update set image_sha256 = excluded.image_sha256, width = excluded.width,
-                        height = excluded.height, uploaded_at = excluded.uploaded_at""")
-                .param("sha", digest).param("width", width).param("height", height).param("at", now).update();
+    @Given("{string} has uploaded a {int} by {int} pixel JPEG scan as the receipt signature of the person who signs the receipts")
+    public void hasUploadedAJpegScanForTheSignatory(String alias, int width, int height) {
+        sessions.actAs(alias);
+        UUID signatory = jdbc.sql("select person_id from donation_receipt_signatory").query(UUID.class).single();
+        signatures.upload(donors.idOf(alias), new PersonReference(signatory), jpeg(width, height));
     }
 
     @When("{string} asks for the receipt signature")
@@ -207,23 +200,7 @@ public class AdminReceiptSignatureStepDefinitions {
         return jdbc.sql("select id from content_person where name = ?").param(name).query(UUID.class).single();
     }
 
-    private static byte[] png(int width, int height) {
-        return encoded(drawing(width, height), "png");
-    }
-
-    private static String sha256(byte[] bytes) {
-        try {
-            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
-        } catch (NoSuchAlgorithmException impossible) {
-            throw new IllegalStateException(impossible);
-        }
-    }
-
     private static byte[] jpeg(int width, int height) {
-        return encoded(drawing(width, height), "jpg");
-    }
-
-    private static BufferedImage drawing(int width, int height) {
         BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
         Graphics2D graphics = image.createGraphics();
         graphics.setColor(Color.WHITE);
@@ -231,13 +208,9 @@ public class AdminReceiptSignatureStepDefinitions {
         graphics.setColor(new Color(0x1d, 0x2a, 0x5c));
         graphics.fillRect(width / 4, height / 2 - 3, width / 2, 6);
         graphics.dispose();
-        return image;
-    }
-
-    private static byte[] encoded(BufferedImage image, String format) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try {
-            ImageIO.write(image, format, out);
+            ImageIO.write(image, "jpg", out);
         } catch (IOException impossible) {
             throw new UncheckedIOException(impossible);
         }

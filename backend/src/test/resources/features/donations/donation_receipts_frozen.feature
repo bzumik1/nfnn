@@ -371,7 +371,7 @@ Feature: A donor issues receipts of their donations as frozen, signed data
     And a person "Jana" is registered
     And "Jana" is an administrator
     And a person "Petr" is registered
-    And the person who signs the receipts has a 600 by 200 pixel scan as their receipt signature
+    And "Jana" has uploaded a 600 by 200 pixel JPEG scan as the receipt signature of the person who signs the receipts
     And the bank account has these movements:
       | id   | date       | amount  | account    | bankCode | name          | variableSymbol |
       | 2001 | 2026-10-01 | 1000.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
@@ -409,7 +409,7 @@ Feature: A donor issues receipts of their donations as frozen, signed data
     And the application starts the import
     And "Jana" issues the receipt of her donation received on 2026-10-01
     And the frozen receipt shows no signature image
-    When the person who signs the receipts has a 600 by 200 pixel scan as their receipt signature
+    When "Jana" has uploaded a 600 by 200 pixel JPEG scan as the receipt signature of the person who signs the receipts
     And today is 2027-01-15
     And "Jana" issues her yearly receipt for 2026
     Then the response status is 200
