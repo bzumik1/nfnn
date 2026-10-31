@@ -443,5 +443,21 @@
     "replacement": "shared.infrastructure.security.AdminHandlerClassificationTest > Given the classification, when the security chain decides for a browser administrator and for connected applications, then a browser-only handler refuses every connected application, also asked with HEAD for a GET, a connector-reachable one admits the writing permission, and a change needs it",
     "reason": "1.16 round 2 (R2-m1): a browser-only GET is matched for HEAD as well, and the classification test also asks every GET handler with HEAD",
     "contract": "docs/security-overview.md, Connected applications (OAuth 2.1 for the MCP connector)"
+  },
+  {
+    "path": "POST /api/donations/me/receipts",
+    "scenario": "donations/receipt_status: *",
+    "kind": "added",
+    "field": "$.receipt.signatory.portraitImage",
+    "reason": "1.16 (Jakub 2026-10-30, layout 3B): the frozen signatory gains portraitImage beside signatureImage, the digest of the signatory's portrait prepared for print, or null",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "path": "POST /api/donations/me/receipts",
+    "scenario": "donations/admin_receipt_signing_key_withdrawal: *",
+    "kind": "added",
+    "field": "$.receipt.signatory.portraitImage",
+    "reason": "1.16 (Jakub 2026-10-30, layout 3B): the frozen signatory gains portraitImage beside signatureImage, the digest of the signatory's portrait prepared for print, or null",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
   }
 ]
