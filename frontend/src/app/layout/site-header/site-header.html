@@ -24,7 +24,7 @@
         [fragment]="current() === 'projekty' ? undefined : 'projekty'"
         [attr.aria-current]="current() === 'projekty' ? 'page' : null"
         i18n="@@layout.header.nav.projects"
-        >Projekty</a
+        >Kde pomáháme</a
       >
       <a
         class="nav-link"
@@ -80,100 +80,100 @@
       <span></span>
     </button>
   </div>
-</nav>
 
-@if (menuOpen()) {
-  <div id="mobile-menu" class="mobile-menu" (focusout)="leaveMenu($event)">
-    <a
-      class="mobile-link"
-      routerLink="/"
-      fragment="o-nas"
-      (click)="closeMenu()"
-      i18n="@@layout.header.nav.about"
-      >O nás</a
-    >
-    <a
-      class="mobile-link"
-      [class.is-current]="current() === 'projekty'"
-      [routerLink]="current() === 'projekty' ? '/projekty' : '/'"
-      [fragment]="current() === 'projekty' ? undefined : 'projekty'"
-      [attr.aria-current]="current() === 'projekty' ? 'page' : null"
-      (click)="closeMenu()"
-      i18n="@@layout.header.nav.projects"
-      >Projekty</a
-    >
-    <a
-      class="mobile-link"
-      [class.is-current]="current() === 'aktuality'"
-      [routerLink]="current() === 'aktuality' ? '/aktuality' : '/'"
-      [fragment]="current() === 'aktuality' ? undefined : 'aktuality'"
-      [attr.aria-current]="current() === 'aktuality' ? 'page' : null"
-      (click)="closeMenu()"
-      i18n="@@layout.header.nav.news"
-      >Aktuality</a
-    >
-    <a
-      class="mobile-link"
-      routerLink="/"
-      fragment="kontakt"
-      (click)="closeMenu()"
-      i18n="@@layout.header.nav.contact"
-      >Kontakt</a
-    >
-    <a
-      class="mobile-cta"
-      routerLink="/"
-      fragment="prispet"
-      (click)="closeMenu()"
-      i18n="@@layout.header.nav.donate"
-      >Přispět</a
-    >
-    @if (auth.signedIn()) {
-      <a class="mobile-login" routerLink="/darce/prehled" (click)="closeMenu()">
-        <svg
-          class="mobile-login-icon"
-          aria-hidden="true"
-          width="18"
-          height="18"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <circle cx="12" cy="8" r="4" />
-          <path d="M4 21a8 8 0 0 1 16 0" />
-        </svg>
-        <span i18n="@@layout.header.mobile.portal">Můj přehled</span>
-      </a>
-    } @else {
-      <button type="button" class="mobile-login" (click)="openLogin()">
-        <svg
-          class="mobile-login-icon"
-          aria-hidden="true"
-          width="18"
-          height="18"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <circle cx="12" cy="8" r="4" />
-          <path d="M4 21a8 8 0 0 1 16 0" />
-        </svg>
-        <span i18n="@@layout.header.mobile.login">Přihlásit se</span>
-      </button>
-      <button
-        type="button"
-        class="mobile-register"
-        (click)="openRegistration()"
-        i18n="@@layout.header.mobile.register"
+  @if (menuOpen()) {
+    <div id="mobile-menu" class="mobile-menu" (focusout)="leaveMenu($event)">
+      <a
+        class="mobile-link"
+        routerLink="/"
+        fragment="o-nas"
+        (click)="closeMenu()"
+        i18n="@@layout.header.nav.about"
+        >O nás</a
       >
-        Založit účet
-      </button>
-    }
-  </div>
-}
+      <a
+        class="mobile-link"
+        [class.is-current]="current() === 'projekty'"
+        [routerLink]="current() === 'projekty' ? '/projekty' : '/'"
+        [fragment]="current() === 'projekty' ? undefined : 'projekty'"
+        [attr.aria-current]="current() === 'projekty' ? 'page' : null"
+        (click)="closeMenu()"
+        i18n="@@layout.header.nav.projects"
+        >Kde pomáháme</a
+      >
+      <a
+        class="mobile-link"
+        [class.is-current]="current() === 'aktuality'"
+        [routerLink]="current() === 'aktuality' ? '/aktuality' : '/'"
+        [fragment]="current() === 'aktuality' ? undefined : 'aktuality'"
+        [attr.aria-current]="current() === 'aktuality' ? 'page' : null"
+        (click)="closeMenu()"
+        i18n="@@layout.header.nav.news"
+        >Aktuality</a
+      >
+      <a
+        class="mobile-link"
+        routerLink="/"
+        fragment="kontakt"
+        (click)="closeMenu()"
+        i18n="@@layout.header.nav.contact"
+        >Kontakt</a
+      >
+      <a
+        class="mobile-cta"
+        routerLink="/"
+        fragment="prispet"
+        (click)="closeMenu()"
+        i18n="@@layout.header.nav.donate"
+        >Přispět</a
+      >
+      @if (auth.signedIn()) {
+        <a class="mobile-login" routerLink="/darce/prehled" (click)="closeMenu()">
+          <svg
+            class="mobile-login-icon"
+            aria-hidden="true"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="8" r="4" />
+            <path d="M4 21a8 8 0 0 1 16 0" />
+          </svg>
+          <span i18n="@@layout.header.mobile.portal">Můj přehled</span>
+        </a>
+      } @else {
+        <button type="button" class="mobile-login" (click)="openLogin()">
+          <svg
+            class="mobile-login-icon"
+            aria-hidden="true"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="8" r="4" />
+            <path d="M4 21a8 8 0 0 1 16 0" />
+          </svg>
+          <span i18n="@@layout.header.mobile.login">Přihlásit se</span>
+        </button>
+        <button
+          type="button"
+          class="mobile-register"
+          (click)="openRegistration()"
+          i18n="@@layout.header.mobile.register"
+        >
+          Založit účet
+        </button>
+      }
+    </div>
+  }
+</nav>

@@ -146,6 +146,7 @@ Peníze a potvrzení:
 - Karta „Připraveno na potvrzení“ od prosince a vzorové PDF s vodoznakem VZOR, které se nevydá.
 - Data pro výroční zprávu a export pro účetní; dárce může odmítnout uvedení jménem (zákonné požadavky ověřit před stavbou).
 - Přehled, kdo si nestáhl roční potvrzení, a jedna připomínka 15. února s odkazem na web.
+- Dar na konkrétní projekt (Jakub 31. 10. 2026): projekt, který přijímá dary, má vlastní kód, který jde do QR platby jako specifický symbol (tlačítko „Přispět na tento projekt“ na stránce projektu a volba projektu v sekci Přispět); variabilní symbol dál určuje dárce, takže párování se nemění a funguje to i bez účtu. Import dar k projektu přiřadí podle specifického symbolu, správce ho ve správě i přes konektor přiřadí, změní nebo odebere ručně (dárce zavolal, napsal symbol špatně, kód jen ve zprávě). Přehled dárce ukáže u daru projekt, měsíční report a přehledy správy částky po projektech, stránka projektu může ukázat vybranou částku. Potvrzení o daru se nemění (stejný dar na účel fondu, jména dětí na daňový doklad nepatří); že stačí evidence ve správě, potvrdí účetní fondu před stavbou.
 
 Dárci:
 
@@ -210,7 +211,6 @@ Veřejný web a provoz:
 - Grafy darů v přehledech správy a dárce.
 - Trvalý příkaz dárce jako jeden řádek v jeho přehledu.
 - Návrhy párování pro nespárované platby.
-- Dar na konkrétní projekt s ukazatelem vybrané částky.
 - Dárkový certifikát.
 - Loga partnerů.
 - Export vlastních darů dárcem (CSV).

@@ -38,7 +38,7 @@ describe('Given the site footer', () => {
     expect(links).toEqual([
       ['/#uvod', 'Domů'],
       ['/#o-nas', 'O nás'],
-      ['/#projekty', 'Projekty'],
+      ['/#projekty', 'Kde pomáháme'],
       ['/#aktuality', 'Aktuality'],
       ['/#kontakt', 'Kontakt'],
       ['/#prispet', 'Přispět'],
