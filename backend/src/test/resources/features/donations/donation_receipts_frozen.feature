@@ -491,6 +491,28 @@ Feature: A donor issues receipts of their donations as frozen, signed data
     Then the response status is 200
     And the frozen receipt shows another portrait than before
 
+  Scenario: A portrait whose stored image cannot be decoded is left out, and the receipt is still issued with the signatory's name
+    Given today is 2026-12-20
+    And a person "Jana" is registered
+    And "Jana" is an administrator
+    And "Jana" uploads a 900 by 600 pixel PNG image named "prvni.png"
+    And "Jana" adds a person:
+      | name     | Adam Vzor |
+      | portrait | prvni.png |
+    And "Jana" chooses "Adam Vzor" to sign the receipts as "místopředseda správní rady"
+    And the stored portrait of "Adam Vzor" cannot be decoded
+    And the bank account has these movements:
+      | id   | date       | amount  | account    | bankCode | name          | variableSymbol |
+      | 2001 | 2026-10-01 | 1000.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
+    And the application starts the import
+    When "Jana" issues the receipt of her donation received on 2026-10-01
+    Then the response status is 200
+    And the frozen receipt holds:
+      | field          | value                      |
+      | signatory.name | Adam Vzor                  |
+      | signatory.role | místopředseda správní rady |
+    And the frozen receipt shows no portrait
+
   Scenario: A company's receipt freezes its seat and identification number
     Given today is 2026-12-20
     And a company "Stavby" is registered with identification number "45274649"

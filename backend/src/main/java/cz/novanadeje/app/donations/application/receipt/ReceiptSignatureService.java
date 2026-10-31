@@ -66,7 +66,9 @@ public class ReceiptSignatureService {
         SignatureArtwork artwork = isSvg(upload) ? vector(upload) : processor.process(upload);
         Instant now = clock.instant();
         transaction.executeWithoutResult(status -> {
-            known(person);
+            if (people.findForUpdate(person.value()).isEmpty()) {
+                throw new ReceiptPersonNotFound(person);
+            }
             signatures.replace(person, artwork, now);
             events.publishEvent(new AdminActionPerformed(adminId, CHANGE_ACTION, Optional.empty(), details(person, artwork), now));
         });
@@ -77,7 +79,7 @@ public class ReceiptSignatureService {
     @Transactional
     public void forget(PersonReference person) {
         if (signatures.remove(person)) {
-            log.info("Receipt signature of removed person {} deleted", person);
+            AfterCommit.run(() -> log.info("Receipt signature of removed person {} deleted", person));
         }
     }
 
@@ -125,6 +127,6 @@ public class ReceiptSignatureService {
         Instant now = clock.instant();
         events.publishEvent(new AdminActionPerformed(adminId, REMOVE_ACTION, Optional.empty(),
                 "Obrázek podpisu na potvrzení o daru u osoby " + person + " odebrán", now));
-        log.info("Admin {} removed the signature image for receipts", adminId);
+        AfterCommit.run(() -> log.info("Admin {} removed the signature image for receipts", adminId));
     }
 }

@@ -51,13 +51,13 @@ public class ReceiptSignatoryService {
 
     @Transactional
     public ChosenSignatoryView choose(UUID adminId, PersonReference person, String receiptRole) {
-        FoundationPerson known = people.find(person.value()).orElseThrow(() -> new ReceiptPersonNotFound(person));
+        FoundationPerson known = people.findForUpdate(person.value()).orElseThrow(() -> new ReceiptPersonNotFound(person));
         Instant now = clock.instant();
         ReceiptSignatory chosen = new ReceiptSignatory(person, receiptRole, now);
         signatories.choose(chosen);
         events.publishEvent(new AdminActionPerformed(adminId, CHOOSE_ACTION, Optional.empty(),
-                "Potvrzení o daru podepisuje osoba " + person + ", funkce na potvrzení: " + chosen.receiptRole(), now));
-        log.info("Admin {} chose person {} to sign the receipts", adminId, person);
+                "Potvrzení o daru podepisuje osoba " + person, now));
+        AfterCommit.run(() -> log.info("Admin {} chose person {} to sign the receipts", adminId, person));
         return view(chosen, known, signatures.digestOf(person).isPresent());
     }
 

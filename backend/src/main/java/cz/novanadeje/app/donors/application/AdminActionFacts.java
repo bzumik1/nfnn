@@ -122,7 +122,7 @@ public record AdminActionFacts(String summaryKey, Map<String, String> values) {
                 variant("person", "Nahrán obrázek podpisu na potvrzení o daru u osoby " + ID + ": (?<width>\\d+) × (?<height>\\d+) px, SHA-256 \\S+"),
                 variant("personVector", "Nahrán vektorový podpis \\(SVG\\) na potvrzení o daru u osoby " + ID + ", SHA-256 \\S+")));
         shapes.put("CHOOSE_RECEIPT_SIGNATORY", List.of(
-                full("Potvrzení o daru podepisuje osoba " + ID + ", funkce na potvrzení: (?<role>.+)")));
+                full("Potvrzení o daru podepisuje osoba " + ID)));
         shapes.put("REGISTER_RECEIPT_SIGNING_KEY", List.of(
                 full("Server zaregistroval svůj klíč k ověřovacím QR na potvrzeních o daru: (?<key>[0-9a-f]{8})")));
         shapes.put("ADOPT_RECEIPT_SIGNING_KEY", List.of(

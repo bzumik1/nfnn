@@ -399,6 +399,17 @@ public class DonorFrozenReceiptStepDefinitions {
         BufferedImage portrait = ImageIO.read(new ByteArrayInputStream(api.lastResponseBytes()));
         assertThat(portrait.getWidth()).isEqualTo(side);
         assertThat(portrait.getHeight()).isEqualTo(side);
+        assertThat(sha256(api.lastResponseBytes())).isEqualTo(portraitImageSeen.orElseThrow(() -> new AssertionError("No portrait was seen before")));
+    }
+
+    @Given("the stored portrait of {string} cannot be decoded")
+    public void theStoredPortraitCannotBeDecoded(String name) {
+        int damaged = jdbc.sql("""
+                        update content_media_variant set data = ? where media_id = (select portrait_media_id from content_person where name = ?)""")
+                .param(new byte[] {1, 2, 3, 4})
+                .param(name)
+                .update();
+        assertThat(damaged).isPositive();
     }
 
     @Then("the image is the current vector signature as its canonical JSON, never sniffed as another type")

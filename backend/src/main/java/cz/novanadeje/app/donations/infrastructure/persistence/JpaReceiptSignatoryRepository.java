@@ -29,6 +29,8 @@ class JpaReceiptSignatoryRepository implements ReceiptSignatoryRepository, Recei
 
     @Override
     public boolean signsReceipts(UUID personId) {
-        return jpa.existsByIdAndPersonId(ReceiptSignatoryJpaEntity.SINGLETON_ID, personId);
+        return jpa.findLockedById(ReceiptSignatoryJpaEntity.SINGLETON_ID).map(ReceiptSignatoryJpaEntity::toDomain)
+                .filter(signatory -> signatory.person().value().equals(personId))
+                .isPresent();
     }
 }

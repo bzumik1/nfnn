@@ -14,6 +14,7 @@ import cz.novanadeje.app.support.MutableClock;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.Instant;
@@ -25,6 +26,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -80,7 +82,7 @@ class ReceiptSignatoryServiceTest {
     @Test
     @DisplayName("Given a person of the foundation, when an administrator chooses them with a receipt role, then the choice is stored, audited and returned")
     void should_store_and_audit_when_chosen_given_person() {
-        when(people.find(CHAIR.value())).thenReturn(Optional.of(new FoundationPerson(CHAIR.value(), "Josef Vzorový", false)));
+        when(people.findForUpdate(CHAIR.value())).thenReturn(Optional.of(new FoundationPerson(CHAIR.value(), "Josef Vzorový", false)));
         when(signatures.digestOf(CHAIR)).thenReturn(Optional.empty());
 
         ChosenSignatoryView chosen = service.choose(ADMIN, CHAIR, "  předseda správní rady ");
@@ -92,19 +94,34 @@ class ReceiptSignatoryServiceTest {
         assertThat(published.getValue().action()).isEqualTo("CHOOSE_RECEIPT_SIGNATORY");
         assertThat(published.getValue().adminId()).isEqualTo(ADMIN);
         assertThat(published.getValue().details())
-                .isEqualTo("Potvrzení o daru podepisuje osoba " + CHAIR + ", funkce na potvrzení: předseda správní rady")
-                .doesNotContain("Josef");
+                .isEqualTo("Potvrzení o daru podepisuje osoba " + CHAIR)
+                .doesNotContain("Josef")
+                .doesNotContain("předseda");
         assertThat(published.getValue().performedAt()).isEqualTo(NOW);
     }
 
     @Test
     @DisplayName("Given a person the foundation does not have, when an administrator chooses them, then it is refused as not found and nothing changes")
     void should_refuse_as_not_found_when_chosen_given_unknown_person() {
-        when(people.find(OTHER.value())).thenReturn(Optional.empty());
+        when(people.findForUpdate(OTHER.value())).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.choose(ADMIN, OTHER, "předseda")).isInstanceOf(ReceiptPersonNotFound.class);
 
         verify(signatories, never()).choose(any());
         verifyNoInteractions(events);
+    }
+
+    @Test
+    @DisplayName("Given a person of the foundation, when an administrator chooses them, then the person is read with a lock before the choice is stored")
+    void should_lock_person_before_storing_when_chosen_given_person() {
+        when(people.findForUpdate(CHAIR.value())).thenReturn(Optional.of(new FoundationPerson(CHAIR.value(), "Josef Vzorový", false)));
+        when(signatures.digestOf(CHAIR)).thenReturn(Optional.empty());
+
+        service.choose(ADMIN, CHAIR, "předseda správní rady");
+
+        InOrder order = inOrder(people, signatories);
+        order.verify(people).findForUpdate(CHAIR.value());
+        order.verify(signatories).choose(any());
+        verify(people, never()).find(any());
     }
 }

@@ -11,8 +11,13 @@ import cz.novanadeje.app.content.domain.people.PersonId;
 import cz.novanadeje.app.content.domain.people.PersonRepository;
 import cz.novanadeje.app.shared.application.people.FoundationPerson;
 import cz.novanadeje.app.shared.application.people.PrintPortrait;
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -23,9 +28,16 @@ import java.io.UncheckedIOException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -76,6 +88,83 @@ class ContentFoundationPeopleTest {
         assertThat(foundationPeople.printPortraitOf(WITHOUT_PORTRAIT.value())).isEmpty();
         assertThat(foundationPeople.printPortraitOf(PersonId.newId(AT.plusSeconds(9)).value())).isEmpty();
         assertThat(foundationPeople.printPortraitOf(WITH_PORTRAIT.value())).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a person of the foundation, when they are looked up for an update, then the lookup locks their row and an unknown id finds nobody")
+    void should_read_with_lock_when_looked_up_for_update_given_person() {
+        when(people.findByIdForUpdate(WITH_PORTRAIT)).thenReturn(Optional.of(person(WITH_PORTRAIT, "Petr Vzorový", Optional.of(PORTRAIT))));
+
+        assertThat(foundationPeople.findForUpdate(WITH_PORTRAIT.value())).contains(new FoundationPerson(WITH_PORTRAIT.value(), "Petr Vzorový", true));
+        assertThat(foundationPeople.findForUpdate(WITHOUT_PORTRAIT.value())).isEmpty();
+        verify(people, never()).findById(any());
+    }
+
+    @Test
+    @DisplayName("Given a portrait asked for by two receipts at once, when both wait for it, then it is prepared once and both get the same bytes")
+    void should_prepare_once_when_asked_at_once_given_two_receipts() throws Exception {
+        givenPeople();
+        CountDownLatch loading = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        AtomicInteger loads = new AtomicInteger();
+        MediaImage image = new MediaImage(PORTRAIT, 1200, 800, List.of(variant(960, 640)), AT);
+        when(media.findById(PORTRAIT)).thenAnswer(call -> {
+            loads.incrementAndGet();
+            loading.countDown();
+            release.await(5, TimeUnit.SECONDS);
+            return Optional.of(image);
+        });
+        FutureTask<Optional<PrintPortrait>> first = new FutureTask<>(() -> foundationPeople.printPortraitOf(WITH_PORTRAIT.value()));
+        FutureTask<Optional<PrintPortrait>> second = new FutureTask<>(() -> foundationPeople.printPortraitOf(WITH_PORTRAIT.value()));
+        Thread.ofPlatform().start(first);
+        assertThat(loading.await(5, TimeUnit.SECONDS)).isTrue();
+        Thread waiting = Thread.ofPlatform().start(second);
+        await().until(() -> waiting.getState() != Thread.State.RUNNABLE && waiting.getState() != Thread.State.NEW);
+        release.countDown();
+
+        assertThat(first.get(5, TimeUnit.SECONDS)).isPresent();
+        assertThat(second.get(5, TimeUnit.SECONDS)).isEqualTo(first.get());
+        assertThat(loads).hasValue(1);
+    }
+
+    @Test
+    @DisplayName("Given more portraits asked for than are kept, when each is prepared, then only a few prepared portraits stay in memory")
+    void should_keep_few_when_prepared_given_many_portraits() {
+        for (int index = 0; index < 12; index++) {
+            MediaId portrait = MediaId.newId(AT.plusSeconds(100 + index));
+            PersonId person = PersonId.newId(AT.plusSeconds(200 + index));
+            when(people.findById(person)).thenReturn(Optional.of(person(person, "Petr Vzorový", Optional.of(portrait))));
+            when(media.findById(portrait)).thenReturn(Optional.of(new MediaImage(portrait, 64, 64, List.of(variant(64, 64)), AT)));
+
+            assertThat(foundationPeople.printPortraitOf(person.value())).isPresent();
+        }
+
+        assertThat(foundationPeople.portraitsKept()).isLessThanOrEqualTo(4);
+    }
+
+    @Test
+    @DisplayName("Given a portrait whose stored image cannot be decoded, when the portrait for print is asked for, then there is none and a warning names only the image id")
+    void should_answer_none_and_warn_when_asked_given_undecodable_portrait() {
+        givenPeople();
+        when(media.findById(PORTRAIT)).thenReturn(Optional.of(new MediaImage(PORTRAIT, 1200, 800,
+                List.of(new MediaVariant(1200, 800, new byte[] {1, 2, 3, 4})), AT)));
+        ListAppender<ILoggingEvent> log = new ListAppender<>();
+        log.start();
+        Logger logger = (Logger) LoggerFactory.getLogger(ContentFoundationPeople.class);
+        logger.addAppender(log);
+        try {
+            assertThat(foundationPeople.printPortraitOf(WITH_PORTRAIT.value())).isEmpty();
+        } finally {
+            logger.detachAppender(log);
+        }
+
+        assertThat(log.list).singleElement().satisfies(event -> {
+            assertThat(event.getLevel()).isEqualTo(Level.WARN);
+            assertThat(event.getFormattedMessage())
+                    .isEqualTo("Portrait " + PORTRAIT.value() + " cannot be prepared for print, the receipt is issued without it")
+                    .doesNotContain("Petr");
+            assertThat(event.getThrowableProxy()).isNull();
+        });
     }
 
     private void givenPeople() {

@@ -73,6 +73,7 @@ class ReceiptSignatureServiceTest {
     @BeforeEach
     void givenPersonOfFoundation() {
         when(people.find(PERSON.value())).thenReturn(Optional.of(new FoundationPerson(PERSON.value(), "Josef Vzorový", true)));
+        when(people.findForUpdate(PERSON.value())).thenReturn(Optional.of(new FoundationPerson(PERSON.value(), "Josef Vzorový", true)));
     }
 
     @Test
@@ -146,12 +147,25 @@ class ReceiptSignatureServiceTest {
 
         service.upload(ADMIN, PERSON, SVG);
 
-        InOrder order = inOrder(vectors, transactions, signatures, events);
+        InOrder order = inOrder(vectors, transactions, people, signatures, events);
         order.verify(vectors).parse(SVG);
         order.verify(transactions).getTransaction(any());
+        order.verify(people).findForUpdate(PERSON.value());
         order.verify(signatures).replace(PERSON, VECTOR, NOW);
         order.verify(events).publishEvent(any(AdminActionPerformed.class));
         order.verify(transactions).commit(any());
+    }
+
+    @Test
+    @DisplayName("Given a person removed while their upload was processed, when the write runs, then it is refused as not found and nothing is stored")
+    void should_store_nothing_when_written_given_person_removed_meanwhile() {
+        when(processor.process(UPLOAD)).thenReturn(IMAGE);
+        when(people.findForUpdate(PERSON.value())).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.upload(ADMIN, PERSON, UPLOAD)).isInstanceOf(ReceiptPersonNotFound.class);
+
+        verify(signatures, never()).replace(any(), any(), any());
+        verifyNoInteractions(events);
     }
 
     @Test

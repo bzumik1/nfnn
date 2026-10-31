@@ -11,7 +11,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.test.context.transaction.TestTransaction;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.UUID;
 
@@ -35,6 +40,8 @@ class JpaReceiptSignatoryRepositoryTest {
     private JdbcClient jdbc;
     @Autowired
     private EntityManager entityManager;
+    @Autowired
+    private PlatformTransactionManager transactionManager;
 
     @Test
     @DisplayName("Given no signatory chosen, when the signatory is read, then there is none and nobody signs the receipts")
@@ -74,6 +81,27 @@ class JpaReceiptSignatoryRepositoryTest {
         assertThatThrownBy(() -> jdbc.sql("insert into donation_receipt_signatory (id, person_id, receipt_role, chosen_at) values (2, ?, 'x', now())")
                 .param(FIRST).update())
                 .hasMessageContaining("ck_donation_receipt_signatory_singleton");
+    }
+
+    @Test
+    @DisplayName("Given a committed signatory, when it is asked whether a person signs, then another transaction cannot lock the signatory row until this one ends")
+    void should_hold_singleton_lock_when_asked_given_committed_signatory() {
+        TestTransaction.end();
+        TransactionTemplate separately = new TransactionTemplate(transactionManager);
+        separately.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        separately.executeWithoutResult(status -> signatories.choose(new ReceiptSignatory(new PersonReference(FIRST), "předseda správní rady", NOW)));
+        try {
+            separately.executeWithoutResult(status -> {
+                assertThat(lookup.signsReceipts(SECOND)).isFalse();
+
+                assertThatThrownBy(() -> separately.executeWithoutResult(other -> jdbc
+                        .sql("select id from donation_receipt_signatory where id = 1 for update nowait").query().listOfRows()))
+                        .isInstanceOf(DataAccessException.class)
+                        .hasMessageContaining("could not obtain lock on row");
+            });
+        } finally {
+            separately.executeWithoutResult(status -> jdbc.sql("delete from donation_receipt_signatory").update());
+        }
     }
 
     private void flushAndClear() {

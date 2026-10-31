@@ -12,9 +12,11 @@ import cz.novanadeje.app.shared.application.people.FoundationPerson;
 import cz.novanadeje.app.shared.application.people.PrintPortrait;
 import org.springframework.stereotype.Component;
 
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Optional;
 import java.util.UUID;
 
@@ -23,14 +25,14 @@ class ContentFoundationPeople implements FoundationPeople {
 
     private static final int PORTRAITS_KEPT = 4;
 
+    private static final Logger log = LoggerFactory.getLogger(ContentFoundationPeople.class);
+
     private final PersonRepository people;
     private final MediaImageRepository media;
-    private final Map<MediaId, PrintPortrait> prepared = Collections.synchronizedMap(new LinkedHashMap<>(PORTRAITS_KEPT, 0.75f, true) {
-        @Override
-        protected boolean removeEldestEntry(Map.Entry<MediaId, PrintPortrait> eldest) {
-            return size() > PORTRAITS_KEPT;
-        }
-    });
+    private final Cache<MediaId, Optional<PrintPortrait>> prepared = Caffeine.newBuilder()
+            .maximumSize(PORTRAITS_KEPT)
+            .executor(Runnable::run)
+            .build();
 
     ContentFoundationPeople(PersonRepository people, MediaImageRepository media) {
         this.people = people;
@@ -39,8 +41,12 @@ class ContentFoundationPeople implements FoundationPeople {
 
     @Override
     public Optional<FoundationPerson> find(UUID personId) {
-        return people.findById(new PersonId(personId))
-                .map(person -> new FoundationPerson(personId, person.details().name(), person.details().portrait().isPresent()));
+        return people.findById(new PersonId(personId)).map(person -> foundationPerson(personId, person));
+    }
+
+    @Override
+    public Optional<FoundationPerson> findForUpdate(UUID personId) {
+        return people.findByIdForUpdate(new PersonId(personId)).map(person -> foundationPerson(personId, person));
     }
 
     @Override
@@ -48,16 +54,28 @@ class ContentFoundationPeople implements FoundationPeople {
         return people.findById(new PersonId(personId))
                 .map(Person::details)
                 .flatMap(details -> details.portrait())
-                .flatMap(this::prepared);
+                .flatMap(portrait -> prepared.get(portrait, this::prepare));
     }
 
-    private Optional<PrintPortrait> prepared(MediaId portrait) {
-        PrintPortrait known = prepared.get(portrait);
-        if (known != null) {
-            return Optional.of(known);
+    long portraitsKept() {
+        prepared.cleanUp();
+        return prepared.estimatedSize();
+    }
+
+    private Optional<PrintPortrait> prepare(MediaId portrait) {
+        Optional<MediaImage> image = media.findById(portrait);
+        if (image.isEmpty()) {
+            return Optional.empty();
         }
-        Optional<PrintPortrait> fresh = media.findById(portrait).map(MediaImage::largest).map(PrintPortraits::prepare);
-        fresh.ifPresent(print -> prepared.put(portrait, print));
-        return fresh;
+        try {
+            return Optional.of(PrintPortraits.prepare(image.get().largest()));
+        } catch (IllegalStateException undecodable) {
+            log.warn("Portrait {} cannot be prepared for print, the receipt is issued without it", portrait.value());
+            return Optional.empty();
+        }
+    }
+
+    private static FoundationPerson foundationPerson(UUID personId, Person person) {
+        return new FoundationPerson(personId, person.details().name(), person.details().portrait().isPresent());
     }
 }

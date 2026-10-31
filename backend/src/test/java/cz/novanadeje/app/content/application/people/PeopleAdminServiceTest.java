@@ -221,6 +221,9 @@ class PeopleAdminServiceTest {
 
         assertThatThrownBy(() -> service().remove(ADMIN, current.id())).isInstanceOf(PersonSignsReceipts.class)
                 .hasFieldOrPropertyWithValue("code", "content/person-signs-receipts");
+        InOrder order = inOrder(people, signatories);
+        order.verify(people).findByIdForUpdate(current.id());
+        order.verify(signatories).signsReceipts(current.id().value());
         verify(people, never()).delete(any());
         verify(media, never()).deleteIfUnused(any());
         verify(events, never()).publishEvent(any(Object.class));

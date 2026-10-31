@@ -7,5 +7,7 @@ public interface FoundationPeople {
 
     Optional<FoundationPerson> find(UUID personId);
 
+    Optional<FoundationPerson> findForUpdate(UUID personId);
+
     Optional<PrintPortrait> printPortraitOf(UUID personId);
 }
