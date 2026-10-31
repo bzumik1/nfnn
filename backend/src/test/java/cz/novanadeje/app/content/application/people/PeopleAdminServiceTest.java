@@ -12,6 +12,7 @@ import cz.novanadeje.app.content.domain.people.PersonImageInUse;
 import cz.novanadeje.app.content.domain.people.PersonNotFound;
 import cz.novanadeje.app.content.domain.people.PersonRepository;
 import cz.novanadeje.app.content.domain.people.TooManyPeople;
+import cz.novanadeje.app.shared.application.account.VerifiedAccountEmails;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import org.junit.jupiter.api.DisplayName;
@@ -33,6 +34,7 @@ import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
@@ -58,9 +60,48 @@ class PeopleAdminServiceTest {
     private MediaImageRepository media;
     @Mock
     private ApplicationEventPublisher events;
+    @Mock
+    private VerifiedAccountEmails accounts;
 
     private PeopleAdminService service() {
-        return new PeopleAdminService(people, media, events, Clock.fixed(NOW, ZoneOffset.UTC));
+        return new PeopleAdminService(people, media, events, accounts, Clock.fixed(NOW, ZoneOffset.UTC));
+    }
+
+    @Test
+    @DisplayName("Given a person whose fund e-mail is the confirmed e-mail of an account and one whose e-mail is not, when the people are listed, then only the first is linked to an account")
+    void should_mark_the_linked_person_when_listed_given_a_confirmed_account_email() {
+        Person eva = withEmails("Eva Vzorová", Optional.empty(), Optional.of("eva@nfnn.cz"), 0);
+        Person adam = withEmails("Adam Vzor", Optional.of("adam@example.org"), Optional.empty(), 1);
+        when(people.findAllInOrder()).thenReturn(List.of(eva, adam));
+        when(accounts.belongsToVerifiedAccount(new EmailAddress("eva@nfnn.cz"))).thenReturn(true);
+
+        assertThat(service().list()).extracting(PersonView::name, PersonView::linkedToAccount)
+                .containsExactly(tuple("Eva Vzorová", true), tuple("Adam Vzor", false));
+    }
+
+    @Test
+    @DisplayName("Given an account whose confirmed e-mail is a person's personal e-mail, when the account asks for its own person, then it is that person")
+    void should_find_the_person_when_the_account_asks_given_its_confirmed_email_is_theirs() {
+        Person eva = withEmails("Eva Vzorová", Optional.empty(), Optional.of("eva@nfnn.cz"), 0);
+        Person adam = withEmails("Adam Vzor", Optional.of("adam@example.org"), Optional.empty(), 1);
+        when(accounts.verifiedEmailOf(ADMIN)).thenReturn(Optional.of(new EmailAddress("adam@example.org")));
+        when(people.findAllInOrder()).thenReturn(List.of(eva, adam));
+        when(accounts.belongsToVerifiedAccount(new EmailAddress("adam@example.org"))).thenReturn(true);
+
+        Optional<PersonView> mine = service().mine(ADMIN);
+
+        assertThat(mine).map(PersonView::name).contains("Adam Vzor");
+        assertThat(mine).map(PersonView::linkedToAccount).contains(true);
+    }
+
+    @Test
+    @DisplayName("Given an account without a confirmed e-mail or with one no person has, when it asks for its own person, then there is none")
+    void should_find_nobody_when_the_account_asks_given_no_person_has_its_confirmed_email() {
+        when(accounts.verifiedEmailOf(ADMIN)).thenReturn(Optional.empty(), Optional.of(new EmailAddress("jana@example.cz")));
+        when(people.findAllInOrder()).thenReturn(List.of(withEmails("Eva Vzorová", Optional.empty(), Optional.of("eva@nfnn.cz"), 0)));
+
+        assertThat(service().mine(ADMIN)).isEmpty();
+        assertThat(service().mine(ADMIN)).isEmpty();
     }
 
     @Test
@@ -282,6 +323,11 @@ class PeopleAdminServiceTest {
     private static Person stored(int position, Optional<MediaId> portrait) {
         return Person.add(PersonId.newId(BEFORE), new PersonDetails("Adam Vzor", Optional.empty(), true, Optional.empty(), true, portrait, PersonEmails.NONE), position,
                 BEFORE);
+    }
+
+    private static Person withEmails(String name, Optional<String> personal, Optional<String> fund, int position) {
+        return Person.add(PersonId.newId(BEFORE), new PersonDetails(name, Optional.empty(), true, Optional.empty(), false, Optional.empty(),
+                new PersonEmails(personal.map(EmailAddress::new), fund.map(EmailAddress::new))), position, BEFORE);
     }
 
     private static PersonCommand command(Optional<MediaId> portrait) {

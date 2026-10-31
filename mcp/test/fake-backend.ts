@@ -754,5 +754,6 @@ function person(
     webSignature: null,
     personalEmail: fields['personalEmail'] ?? null,
     fundEmail: fields['fundEmail'] ?? null,
+    linkedToAccount: false,
   };
 }

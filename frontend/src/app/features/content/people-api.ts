@@ -21,6 +21,7 @@ export interface PersonResponse {
   webSignature: PersonImageResponse | null;
   personalEmail: string | null;
   fundEmail: string | null;
+  linkedToAccount: boolean;
 }
 
 export interface PeopleResponse {
@@ -38,6 +39,10 @@ export interface PersonRequest {
   portraitId: string | null;
   personalEmail: string | null;
   fundEmail: string | null;
+}
+
+export interface OwnPersonResponse {
+  member: PersonResponse | null;
 }
 
 export interface FoundersNoteResponse {
@@ -95,6 +100,10 @@ export class PeopleApi {
 
   load(): Observable<PeopleResponse> {
     return this.http.get<PeopleResponse>(ADMIN_PEOPLE);
+  }
+
+  mine(): Observable<OwnPersonResponse> {
+    return this.http.get<OwnPersonResponse>(`${ADMIN_PEOPLE}/me`);
   }
 
   add(request: PersonRequest): Observable<PersonResponse> {

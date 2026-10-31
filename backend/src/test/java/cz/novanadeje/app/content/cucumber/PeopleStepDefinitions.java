@@ -219,6 +219,23 @@ public class PeopleStepDefinitions {
         assertThat(actual).containsExactlyElementsOf(expected.stream().map(this::resolved).toList());
     }
 
+    @When("{string} asks for her own person of the foundation")
+    public void asksForHerOwnPerson(String alias) {
+        sessions.actAs(alias);
+        api.get(PEOPLE + "/me");
+    }
+
+    @Then("her own person of the foundation is {string}")
+    public void herOwnPersonIs(String name) {
+        assertThat(api.lastResponseJson().get("member").get("name").asString()).isEqualTo(name);
+        assertThat(api.lastResponseJson().get("member").get("linkedToAccount").asBoolean()).isTrue();
+    }
+
+    @Then("she has no own person of the foundation")
+    public void sheHasNoOwnPerson() {
+        assertThat(api.lastResponseJson().get("member").isNull()).isTrue();
+    }
+
     @Then("there are no people of the foundation and no founders note")
     public void thereAreNoPeopleAndNoNote() {
         assertThat(api.lastResponseJson().get("members")).isEmpty();

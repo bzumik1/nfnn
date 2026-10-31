@@ -57,6 +57,11 @@
                           Podpis na webu
                         </li>
                       }
+                      @if (member.linkedToAccount) {
+                        <li class="ui-badge ui-badge--success" i18n="@@admin.people.badge.linked">
+                          Propojeno s účtem na webu
+                        </li>
+                      }
                     </ul>
                   </div>
                   <div class="person-actions">
@@ -218,7 +223,9 @@
               <fieldset class="choices emails">
                 <legend i18n="@@admin.people.emails">E-maily jen pro správu</legend>
                 <p class="field-hint" i18n="@@admin.people.emails.hint">
-                  Web je neukazuje; vidí je jen administrátoři tady a v připojené aplikaci.
+                  Web je neukazuje; vidí je jen administrátoři tady a v připojené aplikaci. Účet na
+                  webu s potvrzeným e-mailem, který se shoduje s jedním z nich, se s osobou propojí:
+                  správce pak má u svého jména její portrét. Propojení nedává žádná práva.
                 </p>
                 <div class="fields">
                   <app-form-field

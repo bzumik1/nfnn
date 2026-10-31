@@ -1,0 +1,41 @@
+[
+  {
+    "path": "GET /api/admin/content/people/me",
+    "scenario": "content/manage_people: *",
+    "kind": "added",
+    "reason": "Jakub 2026-10-30: the signed-in administrator's own person of the foundation, the one whose personal or fund e-mail is the account's confirmed e-mail, so the administration shows their portrait at the account and signs news with them by default; v2 had no such endpoint",
+    "contract": "docs/api-contract.md, content — public CMS; MCP connector"
+  },
+  {
+    "path": "GET /api/admin/content/people*",
+    "scenario": "*",
+    "kind": "added",
+    "field": "$*.linkedToAccount",
+    "reason": "Jakub 2026-10-30: a person of the foundation is linked to the account on the site whose confirmed e-mail is the person's personal or fund e-mail; the link grants nothing and only shows, so every person in the administration's answers says whether it is linked",
+    "contract": "docs/api-contract.md, content — public CMS"
+  },
+  {
+    "path": "POST /api/admin/content/people*",
+    "scenario": "*",
+    "kind": "added",
+    "field": "$*.linkedToAccount",
+    "reason": "Jakub 2026-10-30: a person of the foundation is linked to the account on the site whose confirmed e-mail is the person's personal or fund e-mail; the link grants nothing and only shows, so every person in the administration's answers says whether it is linked",
+    "contract": "docs/api-contract.md, content — public CMS"
+  },
+  {
+    "path": "PUT /api/admin/content/people*",
+    "scenario": "*",
+    "kind": "added",
+    "field": "$*.linkedToAccount",
+    "reason": "Jakub 2026-10-30: a person of the foundation is linked to the account on the site whose confirmed e-mail is the person's personal or fund e-mail; the link grants nothing and only shows, so every person in the administration's answers says whether it is linked",
+    "contract": "docs/api-contract.md, content — public CMS"
+  },
+  {
+    "path": "DELETE /api/admin/content/people*",
+    "scenario": "*",
+    "kind": "added",
+    "field": "$*.linkedToAccount",
+    "reason": "Jakub 2026-10-30: a person of the foundation is linked to the account on the site whose confirmed e-mail is the person's personal or fund e-mail; the link grants nothing and only shows, so every person in the administration's answers says whether it is linked",
+    "contract": "docs/api-contract.md, content — public CMS"
+  }
+]
