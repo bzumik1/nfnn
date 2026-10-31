@@ -51,9 +51,11 @@ enum AdminHandlerReach {
         table.put("POST /api/admin/content/news/{id}/publish", CONNECTOR);
         table.put("POST /api/admin/content/news/{id}/unpublish", CONNECTOR);
         table.put("GET /api/admin/content/people", CONNECTOR);
+        table.put("GET /api/admin/content/people/me", CONNECTOR);
         table.put("POST /api/admin/content/people", CONNECTOR);
         table.put("PUT /api/admin/content/people/order", CONNECTOR);
         table.put("PUT /api/admin/content/people/note", CONNECTOR);
+        table.put("PUT /api/admin/content/people/footnote", CONNECTOR);
         table.put("PUT /api/admin/content/people/{id}", CONNECTOR);
         table.put("DELETE /api/admin/content/people/{id}", CONNECTOR);
         table.put("POST /api/admin/content/people/{id}/web-signature", CONNECTOR);
