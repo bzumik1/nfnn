@@ -155,8 +155,10 @@ public class ApiClient {
         Map<String, String> sent = new LinkedHashMap<>(headers);
         sent.putIfAbsent(FORWARDED_FOR, clientAddress);
         sent.forEach((name, value) -> request.append(name).append(": ").append(value).append("\r\n"));
-        request.append("Content-Type: application/json\r\n")
-                .append("Content-Length: ").append(body.length).append("\r\n")
+        if (sent.keySet().stream().noneMatch(HttpHeaders.CONTENT_TYPE::equalsIgnoreCase)) {
+            request.append("Content-Type: application/json\r\n");
+        }
+        request.append("Content-Length: ").append(body.length).append("\r\n")
                 .append("Connection: close\r\n\r\n");
         try (Socket socket = new Socket("localhost", port)) {
             OutputStream out = socket.getOutputStream();

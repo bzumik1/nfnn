@@ -43,6 +43,7 @@ const UNAUTHENTICATED = 'auth/unauthenticated';
 const FORBIDDEN = 'auth/forbidden';
 export const WINDOW_BYTES = 20000;
 export const SEARCH_LIMIT = 50;
+export const BROWSER_ERRORS_PATTERN = 'Browser error';
 export const LOG_LEVELS: readonly LogLevel[] = ['TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR', 'OFF'];
 export const DEFAULT_OVERRIDE_MINUTES = 30;
 export const MAX_OVERRIDE_MINUTES = 1440;
@@ -253,14 +254,26 @@ export class AdminLogs {
   }
 
   protected find(form: NgForm): void {
+    if (form.invalid) {
+      return;
+    }
+    this.searchFor(this.pattern.trim());
+  }
+
+  protected findBrowserErrors(): void {
+    this.pattern = BROWSER_ERRORS_PATTERN;
+    this.searchFor(BROWSER_ERRORS_PATTERN);
+  }
+
+  private searchFor(pattern: string): void {
     const name = this.selectedFile();
-    if (form.invalid || name === null) {
+    if (name === null) {
       return;
     }
     this.searchState.set('loading');
     this.searchError.set('');
     this.api
-      .searchLog(name, this.pattern.trim(), null, SEARCH_LIMIT)
+      .searchLog(name, pattern, null, SEARCH_LIMIT)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (result) => {
