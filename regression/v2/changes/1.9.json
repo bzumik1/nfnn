@@ -12,6 +12,18 @@
     "contract": "docs/api-contract.md, donations/receipt-unprintable and the registration and profile validation; docs/security-overview.md and docs/system-overview.md, the receipt drawn in the browser"
   },
   {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/verification/payload.json",
+    "reason": "Jakub 2026-10-31 (look sheet of 1.9, the verification QR in the look of the payment QR, variant b3): the proof's symbol takes error correction H at the smallest version that holds it, so the receipt draws the foundation's star in its middle as the payment QR does; H holds a proof of up to 1 232 bytes (about 220 gifts; Jakub: a receipt has rarely more than 20), and a larger proof keeps L without the star. Eleven encoding cases now name H and their version (one gift 12, twelve gifts 15, forty 20, fifty-two 22, 120 gifts 31); 366 and 553 gifts keep L; the refusal above version 40 at L (2 893 bytes) is unchanged. The backend (VerificationQrSymbol through ReceiptProofSharedCasesTest) and the browser (verification-qr.spec.ts) choose the same symbol for every case",
+    "contract": "docs/frontend-overview.md, verification-qr.ts and receipt-layout.ts; docs/system-overview.md, receipts"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/schemas/verification/payload.schema.json",
+    "reason": "Jakub 2026-10-31 (look sheet of 1.9, variant b3): a case's symbol names error correction H or L; M is no longer chosen",
+    "contract": "docs/frontend-overview.md, verification-qr.ts"
+  },
+  {
     "kind": "retired",
     "suite": "frontend-vitest",
     "test": "src/app/features/donations/donations-api.spec.ts > Given the donations API > when the receipt of one donation is requested, then it downloads that donation's PDF under the file name from the server",

@@ -23,6 +23,7 @@ import {
 import {
   frozenCase,
   SINGLE_PERSON_CS,
+  SINGLE_PERSON_EN,
   SINGLE_SIGNATURE,
   YEARLY_120,
   YEARLY_BILINGUAL,
@@ -426,6 +427,25 @@ const QR_SAMPLES: readonly { gifts: number; name: string }[] = [
   { gifts: 120, name: YEARLY_120 },
   { gifts: 366, name: YEARLY_366 },
 ];
+
+describe('Given single receipts whose QR code stands beside the signature', () => {
+  for (const name of [SINGLE_PERSON_CS, SINGLE_PERSON_EN]) {
+    it(`when ${name} is drawn, then the caption of the code lies under the code, never beside it`, async () => {
+      const read = await readPdf(await drawReceipt(documentOf(frozenCase(name)), TEST_STYLE, NO_ART));
+      const page = read.pages.find((each) => each.links.length > 0);
+      if (page === undefined) {
+        throw new Error('no page links the proof');
+      }
+      const [, codeBottom] = page.links[0].rect;
+      const heading = page.placed.filter(
+        (placed) => placed.text.trim() === CAPTIONS.verificationHeading.cs,
+      );
+
+      expect(heading.length).toBe(1);
+      expect(heading[0].baselinePt).toBeLessThan(codeBottom);
+    }, 60_000);
+  }
+});
 
 describe('Given receipts of 1, 40, 120 and 366 gifts', () => {
   for (const sample of QR_SAMPLES) {

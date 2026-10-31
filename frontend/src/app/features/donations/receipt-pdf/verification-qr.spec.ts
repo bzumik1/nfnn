@@ -45,13 +45,21 @@ describe('Given the encoding cases of the verification proof', () => {
   }
 });
 
-describe('Given a proof that level M holds only from version 14 but level L holds at version 13', () => {
-  it('when it is drawn, then it takes level L at version 14, as the server counts it', () => {
-    const digits = '1'.repeat(774);
-    const symbol = verificationSymbol(`https://nfnn.cz/overit#${digits}`);
+describe('Given proofs around what level H holds at version 40', () => {
+  it('when the largest one H holds is drawn, then it takes level H at version 40, so the receipt can draw its star', () => {
+    const symbol = verificationSymbol(`https://nfnn.cz/overit#${'1'.repeat(2995)}`);
 
     expect({ version: symbol.version, errorCorrection: symbol.errorCorrection }).toEqual({
-      version: 14,
+      version: 40,
+      errorCorrection: 'H',
+    });
+  });
+
+  it('when one digit more is drawn, then it takes level L at the smallest version that holds it, as the server counts it', () => {
+    const symbol = verificationSymbol(`https://nfnn.cz/overit#${'1'.repeat(2996)}`);
+
+    expect({ version: symbol.version, errorCorrection: symbol.errorCorrection }).toEqual({
+      version: 25,
       errorCorrection: 'L',
     });
   });
@@ -63,15 +71,24 @@ describe('Given a text that is not a verification proof', () => {
   });
 });
 
+describe('Given the placement of the verification symbol', () => {
+  it('when its sizes are read, then a symbol beside the signature has modules of at least 0.66 mm', () => {
+    expect(MINIMUM_INLINE_MODULE_MM).toBe(0.66);
+  });
+});
+
 describe('Given verification symbols of every version', () => {
-  it('when one up to version 13 is placed, then it fills the 35 mm block with modules of at least 0.5 mm', () => {
+  it('when one up to version 13 is placed, then it fills the 35 mm block, or grows beyond it to keep modules of 0.66 mm', () => {
     for (const encoded of ENCODED.filter((each) => !('refusal' in each.qr))) {
       const symbol = verificationSymbol(encoded.qrText);
       const placement = qrPlacement(symbol);
       if (symbol.version <= 13) {
         expect(placement.area).toBe('inline');
-        expect(placement.symbolMm).toBe(INLINE_SYMBOL_MM);
-        expect(placement.moduleMm).toBeGreaterThanOrEqual(MINIMUM_INLINE_MODULE_MM);
+        expect(placement.symbolMm).toBeCloseTo(
+          Math.max(INLINE_SYMBOL_MM, MINIMUM_INLINE_MODULE_MM * symbol.size),
+          9,
+        );
+        expect(placement.moduleMm).toBeGreaterThanOrEqual(MINIMUM_INLINE_MODULE_MM - 1e-9);
       } else {
         expect(placement.area).toBe('own');
         expect(placement.moduleMm).toBeGreaterThanOrEqual(MINIMUM_OWN_AREA_MODULE_MM);

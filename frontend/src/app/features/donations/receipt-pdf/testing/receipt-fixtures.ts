@@ -49,4 +49,6 @@ export const YEARLY_366 =
 export const YEARLY_ONE = "A person's year with exactly one gift, Czech";
 export const SINGLE_SIGNATURE =
   'One gift of a person on a receipt that carries the signature image';
+export const SINGLE_PERSON_EN =
+  'One gift of a person who prefers English, so a bilingual single receipt';
 export const SINGLE_MANUAL = 'One gift recorded by hand, not by bank transfer, Czech';

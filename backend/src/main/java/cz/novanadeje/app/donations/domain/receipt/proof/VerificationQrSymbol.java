@@ -19,7 +19,8 @@ public record VerificationQrSymbol(int version, ErrorCorrection errorCorrection)
 
     public enum ErrorCorrection {
         L,
-        M
+        M,
+        H
     }
 
     public VerificationQrSymbol {
