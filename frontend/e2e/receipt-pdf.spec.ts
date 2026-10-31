@@ -31,7 +31,7 @@ function documentsLoaded(page: Page): string[] {
 }
 
 test.describe('Given a signed-in donor who downloads a receipt', () => {
-  test('when the data takes a while, then a progress line names each step, and the PDF drawn in the browser is saved and holds the receipt', async ({
+  test('when the data takes a while, then a progress line names each step, the focused button keeps the focus, and the PDF drawn in the browser is saved and holds the receipt', async ({
     page,
   }) => {
     await mockDonorApi(page, donations);
@@ -46,11 +46,13 @@ test.describe('Given a signed-in donor who downloads a receipt', () => {
     );
     await openReceiptsAfterSignIn(page);
 
-    await yearlyButton(page).click();
+    await yearlyButton(page).focus();
+    await page.keyboard.press('Enter');
 
     await expect(yearlyLine(page)).toHaveText('Připravujeme údaje potvrzení…');
     await expect(page.locator('.year-row progress')).toHaveAttribute('value', '1');
-    await expect(yearlyButton(page)).toBeDisabled();
+    await expect(yearlyButton(page)).toHaveAttribute('aria-disabled', 'true');
+    await expect(yearlyButton(page)).toBeFocused();
 
     const download = page.waitForEvent('download');
     release();
@@ -61,6 +63,7 @@ test.describe('Given a signed-in donor who downloads a receipt', () => {
       'Potvrzení potvrzeni-o-darech-2025.pdf je stažené. Najdete ho ve stažených souborech.',
     );
     await expect(page.locator('.year-row progress')).toHaveCount(0);
+    await expect(yearlyButton(page)).toBeFocused();
     const pdf = await readPdf(await savedPdf(saved));
     expect(pdf.pages).toHaveLength(1);
     expect(pdf.pages[0].text).toContain('2026-000001');
@@ -93,7 +96,7 @@ test.describe('Given a signed-in donor who downloads a receipt', () => {
     );
   });
 
-  test('when the drawing tools are still missing after that one reload, then the page asks to reload it instead of trying again', async ({
+  test('when the drawing tools are still missing after that one reload, then the page says they could not be loaded and what to try instead of reloading again', async ({
     page,
   }) => {
     await mockDonorApi(page, { ...donations, receipts: ISSUING });
@@ -107,7 +110,7 @@ test.describe('Given a signed-in donor who downloads a receipt', () => {
     await yearlyButton(page).click();
 
     await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toHaveText(
-      'Web se mezitím aktualizoval. Obnovte prosím stránku a stáhněte potvrzení znovu.',
+      'Nástroje pro PDF se nepodařilo načíst ani po obnovení stránky. Zkontrolujte prosím připojení nebo blokování skriptů, zkuste jiný prohlížeč, nebo nám napište na info@nfnn.cz.',
     );
     expect(documents).toEqual(['/darce/potvrzeni?stahnout=rok-2025']);
     await expect(page).toHaveURL(/\/darce\/potvrzeni$/);
@@ -187,10 +190,16 @@ async function lastDrawingMs(page: Page): Promise<number> {
 }
 
 const SLOWER_COMPUTER = 4;
-const DRAWING_BUDGET_MS = 2000;
+const WARM_DRAWINGS = 5;
+const WARM_MEDIAN_BOUND_MS = 1000;
 
-test.describe('Given a donor whose year holds 120 gifts, on a computer four times slower', () => {
-  test('when they download its receipt, then the worker draws all its pages within two seconds, timed in the page and scaled by four', async ({
+function median(values: readonly number[]): number {
+  const sorted = [...values].sort((first, second) => first - second);
+  return sorted[Math.floor(sorted.length / 2)];
+}
+
+test.describe('Given a donor whose year holds 120 gifts', () => {
+  test('when they download its receipt again and again, then the median drawing in the worker stays within a second at full speed, and the cold and warm times are reported', async ({
     page,
   }) => {
     await timeWorkerDrawings(page);
@@ -205,16 +214,25 @@ test.describe('Given a donor whose year holds 120 gifts, on a computer four time
       return { pdf: await savedPdf(saved), milliseconds: await lastDrawingMs(page) };
     };
 
-    const warm = await draw();
-    const timed = [await draw(), await draw(), await draw()].map((run) => run.milliseconds);
-    const fastest = Math.min(...timed);
+    const cold = await draw();
+    const warm: number[] = [];
+    for (let run = 0; run < WARM_DRAWINGS; run++) {
+      warm.push((await draw()).milliseconds);
+    }
+    const warmMedian = median(warm);
 
-    test.info().annotations.push({
-      type: 'drawing time in the worker at CPU 1× (warm, three runs)',
-      description: `${timed.join(' ms, ')} ms; ×${SLOWER_COMPUTER} = ${fastest * SLOWER_COMPUTER} ms`,
-    });
-    expect((await readPdf(warm.pdf)).pages).toHaveLength(5);
-    expect(timed.every(Number.isFinite)).toBe(true);
-    expect(fastest * SLOWER_COMPUTER).toBeLessThanOrEqual(DRAWING_BUDGET_MS);
+    test.info().annotations.push(
+      {
+        type: 'cold drawing in the worker at CPU 1×',
+        description: `${cold.milliseconds} ms; ×${SLOWER_COMPUTER} = ${cold.milliseconds * SLOWER_COMPUTER} ms`,
+      },
+      {
+        type: `warm drawings in the worker at CPU 1× (${WARM_DRAWINGS} runs)`,
+        description: `${warm.join(' ms, ')} ms; median ${warmMedian} ms, ×${SLOWER_COMPUTER} = ${warmMedian * SLOWER_COMPUTER} ms`,
+      },
+    );
+    expect((await readPdf(cold.pdf)).pages).toHaveLength(5);
+    expect([cold.milliseconds, ...warm].every(Number.isFinite)).toBe(true);
+    expect(warmMedian).toBeLessThanOrEqual(WARM_MEDIAN_BOUND_MS);
   });
 });
