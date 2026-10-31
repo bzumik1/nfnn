@@ -1,5 +1,13 @@
 [
   {
+    "path": "PUT /api/admin/content/people/{id}",
+    "scenario": "content/manage_people: The person who signs the receipts stays, and only a browser changes their portrait*",
+    "kind": "body",
+    "field": "$.detail",
+    "reason": "Slice 1.22 (Phase 1 security gate m1): a connected application may no longer rename the person who signs the receipts, so the portrait refusal no longer says the name can be changed through a connected application",
+    "contract": "docs/api-contract.md, Content administration (PUT /api/admin/content/people/{id}) and People of the foundation"
+  },
+  {
     "kind": "retired",
     "suite": "backend-junit",
     "test": "donations.application.receipt.DonationReceiptIssuerConcurrencyTest > Given the server's signing key is not registered, when a receipt is issued, then the database refuses it, nothing is stored and its number stays a gap",

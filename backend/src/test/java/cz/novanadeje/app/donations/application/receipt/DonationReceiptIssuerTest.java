@@ -30,6 +30,7 @@ import cz.novanadeje.app.donations.domain.receipt.Signatory;
 import cz.novanadeje.app.donations.domain.receipt.Receipts;
 import cz.novanadeje.app.donations.domain.receipt.ReplacedReceipt;
 import cz.novanadeje.app.donations.domain.receipt.Signatory;
+import cz.novanadeje.app.donations.domain.receipt.YearlyReceiptNotAvailable;
 import cz.novanadeje.app.donations.domain.receipt.proof.ReceiptTooLong;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyId;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyUnpublished;
@@ -229,8 +230,7 @@ class DonationReceiptIssuerTest {
         when(donorRecords.findById(JANA)).thenReturn(Optional.empty());
         when(donations.findByDonorNewestFirst(JANA)).thenReturn(List.of());
 
-        assertThatThrownBy(() -> issuer.issueForYear(JANA, YEAR_2026, TODAY)).isNotInstanceOf(DonorRecordErased.class)
-                .isNotInstanceOf(DonorRecordNotFound.class);
+        assertThatThrownBy(() -> issuer.issueForYear(JANA, YEAR_2026, TODAY)).isInstanceOf(YearlyReceiptNotAvailable.class);
         verify(receipts, never()).nextSerial();
     }
 
