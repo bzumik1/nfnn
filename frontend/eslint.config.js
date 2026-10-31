@@ -57,6 +57,25 @@ module.exports = defineConfig([
   },
   ...confinedImports(),
   {
+    files: ['src/**/*.ts'],
+    ignores: ['src/app/features/donations/payment-details-api.ts', 'src/**/*.spec.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/auth-interceptor'],
+              importNames: ['WITHOUT_ACCESS_TOKEN'],
+              message:
+                'Only the API service of a public endpoint (payment-details-api.ts) sends its request without the access token; an endpoint that needs the token answers 401 without it (frontend.md, HTTP and data).',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ['e2e/**/*.spec.ts'],
     rules: {
       'no-restricted-imports': [

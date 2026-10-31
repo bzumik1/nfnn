@@ -36,6 +36,7 @@ export interface RecordedRequest {
 export class FakeBackend {
   readonly requests: RecordedRequest[] = [];
   metadataAvailable = true;
+  receiptSigningKeysAvailable = true;
   previousSignInAt: string | null = '2026-10-28T20:14:00Z';
   private server: Server | undefined;
   url = '';
@@ -111,6 +112,12 @@ export class FakeBackend {
     if (request.method === 'GET' && url.pathname === '/api/admin/donors/me/previous-sign-in') {
       return [200, { previousSignInAt: this.previousSignInAt }];
     }
+    if (
+      !this.receiptSigningKeysAvailable &&
+      url.pathname === '/api/admin/donations/receipt-signing-keys'
+    ) {
+      return [404, problem(404, 'not-found', 'Nenalezeno')];
+    }
     return adminRoute(request, url, body);
   }
 }
@@ -129,6 +136,30 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
           coveredTo: '2026-10-22',
           lastSucceededAt: '2026-10-23T05:00:00Z',
           consecutiveFailures: 0,
+        },
+      ];
+    case 'GET /api/admin/donations/receipt-signing-keys':
+      return [
+        200,
+        {
+          currentKeyId: '21fe31df',
+          currentKeyPublished: true,
+          keys: [
+            {
+              keyId: '39f713d0',
+              status: 'active',
+              registeredAt: '2026-11-01T07:00:00Z',
+              published: false,
+              current: false,
+            },
+            {
+              keyId: '21fe31df',
+              status: 'active',
+              registeredAt: '2026-11-13T11:00:00Z',
+              published: true,
+              current: true,
+            },
+          ],
         },
       ];
     case 'GET /api/admin/operations/backups':
@@ -317,6 +348,10 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
     case 'PUT /api/admin/content/people/note': {
       const note = JSON.parse(body) as Record<string, unknown>;
       return [200, { text: note['text'] ?? null }];
+    }
+    case 'PUT /api/admin/content/people/footnote': {
+      const footnote = JSON.parse(body) as Record<string, unknown>;
+      return [200, { text: footnote['text'] ?? null }];
     }
     case 'GET /api/admin/content/about':
       return [
@@ -586,9 +621,27 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
 }
 
 function content(body: string): Record<string, unknown> {
-  const { coverImageId, coverImageAlt, ...fields } = JSON.parse(body) as Record<string, unknown>;
+  const { coverImageId, coverImageAlt, signerId, ...fields } = JSON.parse(body) as Record<
+    string,
+    unknown
+  >;
   return {
     ...fields,
+    ...(typeof signerId === 'string'
+      ? {
+          signer: {
+            id: signerId,
+            name: 'Pavel Vzorový',
+            role: 'Předseda správní rady',
+            portrait: {
+              id: MEDIA_ID,
+              url: `/api/content/media/${MEDIA_ID}`,
+              width: 640,
+              height: 640,
+            },
+          },
+        }
+      : {}),
     coverImage:
       typeof coverImageId === 'string'
         ? {
@@ -607,10 +660,30 @@ const PETR = {
   registeredAt: '2026-10-01T08:00:00Z',
 };
 
+const BROWSER_ERROR_LINES = [
+  '2026-11-04T10:00:01.000Z  WARN 1 --- [nova-nadeje] [exec-1] c.n.app.operations.clienterrors          : Browser error kind=pdf-render place=global name=TypeError version=1a2b3c4 browser=safari/18 os=ios display=standalone count=2',
+  '2026-11-04T11:00:00.000Z  WARN 1 --- [nova-nadeje] [scheduling-1] c.n.app.operations.clienterrors          : Browser error reports over the hourly cap bucket=general dropped=2',
+];
+
 function logSearch(name: string, params: URLSearchParams): [number, unknown] {
   const offsets = LOG_MATCHES[name];
   if (offsets === undefined) {
     return [404, problem(404, 'operations/log-not-found', 'Log nenalezen')];
+  }
+  if (params.get('pattern') === 'Browser error') {
+    return [
+      200,
+      {
+        name,
+        sizeBytes: 400,
+        matches: BROWSER_ERROR_LINES.map((line, index) => ({
+          offset: index * 200,
+          line,
+        })).reverse(),
+        moreOlder: false,
+        scannedFrom: 0,
+      },
+    ];
   }
   const before = params.has('before') ? Number(params.get('before')) : Infinity;
   const limit = Number(params.get('limit') ?? 50);
@@ -725,6 +798,7 @@ function people(): Record<string, unknown> {
       person(PERSON_ID, 1, { name: 'Adam Vzor', onBoard: true, featured: false }),
     ],
     note: 'Děkujeme všem, kdo pomáhají s námi.',
+    footnote: 'Web zajišťuje bez nároku na odměnu Petr Vzor.',
   };
 }
 
@@ -749,5 +823,6 @@ function person(
     webSignature: null,
     personalEmail: fields['personalEmail'] ?? null,
     fundEmail: fields['fundEmail'] ?? null,
+    linkedToAccount: false,
   };
 }

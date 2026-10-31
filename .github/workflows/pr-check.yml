@@ -422,7 +422,7 @@ jobs:
 
       - name: Compose file names no secret
         run: |
-          if grep -noE '\b(POSTGRES_PASSWORD|PGPASSWORD|DB_PASSWORD|JWT_SECRET|SETTINGS_KEY|BACKUP_KEY|MAIL_PASSWORD|FIO_TOKEN)\b' deploy/compose.yml; then
+          if grep -noE '\b(POSTGRES_PASSWORD|PGPASSWORD|DB_PASSWORD|JWT_SECRET|SETTINGS_KEY|BACKUP_KEY|RECEIPT_SIGNING_KEY|MAIL_PASSWORD|FIO_TOKEN)\b' deploy/compose.yml; then
             echo "::error::Secrets are generated into secrets/ or entered in the first setup, never written into deploy/compose.yml"
             exit 1
           fi
@@ -545,9 +545,19 @@ jobs:
       - name: First setup
         run: |
           secrets="$RUNNER_TEMP/nfnn/secrets"
-          for file in db-password db-app-password jwt-secret settings-key backup-key; do
+          for file in db-password db-app-password jwt-secret settings-key receipt-signing-key backup-key; do
             [ "$(sudo stat -c '%a %U' "$secrets/$file")" = '600 root' ] || { echo "::error::secrets/$file must exist, owned by root with mode 600"; sudo ls -la "$secrets"; exit 1; }
           done
+          [ "$(sudo cat "$secrets/receipt-signing-key" | base64 -d | wc -c)" = 32 ] || { echo "::error::secrets/receipt-signing-key must hold a 32-byte Ed25519 seed in base64"; exit 1; }
+          grep -qE 'Receipt signing key [0-9a-f]{8} registered and published' "$RUNNER_TEMP/nfnn/logs/backend.log" || { echo "::error::the backend did not register its receipt signing key at its first start"; exit 1; }
+          seed=$(sudo cat "$secrets/receipt-signing-key" | tr -d '\n')
+          seed_spellings="$RUNNER_TEMP/receipt-seed-spellings"
+          { echo "$seed"; echo "${seed%%=*}"; echo "${seed%%=*}" | tr '+/' '-_'; echo "$seed" | base64 -d | od -An -tx1 | tr -d ' \n'; } > "$seed_spellings"
+          if grep -qiF -f "$seed_spellings" "$RUNNER_TEMP/nfnn/logs/backend.log"; then
+            echo "::error::the receipt signing seed must never reach backend.log (Base64, unpadded, Base64url or hex)"
+            exit 1
+          fi
+          rm -f "$seed_spellings"
           status=$(curl -fsS --max-time 10 http://localhost:8089/api/operations/setup)
           [ "$status" = '{"required":true,"codeRequired":false,"lastRestore":null}' ] || { echo "::error::a fresh install opened directly must ask for the setup without a code (got $status)"; exit 1; }
           proxied=$(curl -fsS --max-time 10 -H 'X-Forwarded-For: 203.0.113.7' http://localhost:8089/api/operations/setup)
@@ -671,7 +681,7 @@ jobs:
           for container in nfnn-postgres nfnn-backup nfnn-mcp nfnn-frontend; do
             main_environment=$(docker exec --privileged "$container" sh -c "tr '\\0' '\\n' < /proc/1/environ")
             [ "$container" = nfnn-frontend ] || echo "$main_environment" | grep -q '^PATH=' || { echo "::error::could not read the environment of $container's main process (nginx alone writes its title over it)"; exit 1; }
-            for key in JWT_SECRET SETTINGS_KEY BACKUP_KEY DB_PASSWORD FIO_TOKEN MAIL_PASSWORD; do
+            for key in JWT_SECRET SETTINGS_KEY BACKUP_KEY RECEIPT_SIGNING_KEY DB_PASSWORD FIO_TOKEN MAIL_PASSWORD; do
               if docker exec "$container" printenv "$key" > /dev/null || echo "$main_environment" | grep -q "^$key="; then
                 echo "::error::$container must not receive $key, neither in its configuration nor in its main process"
                 exit 1
@@ -906,7 +916,15 @@ jobs:
           node frontend/scripts/probe-asset-caching.mjs http://localhost:8089 "$RUNNER_TEMP/frontend-html" frontend/nginx.conf
 
       - name: API, connector and discovery answers stay out of the browser's and Cloudflare's caches
-        run: node frontend/scripts/probe-edge-caching.mjs http://localhost:8089
+        run: |
+          echo "A donor of the stack signs in, so the probe can show that the cacheable answers are the same for a signed-in donor"
+          probe_donor='{"type":"PERSON","name":"Sonda Mezipaměti","address":{"street":"Zkušební 1","city":"Tišnov","postalCode":"666 01"},"email":"sonda-mezipameti@example.cz","password":"a probe of the stack only","preferredLocale":"cs"}'
+          curl -fsS --max-time 30 -o /dev/null -H 'X-Forwarded-For: 203.0.113.41' -H 'Content-Type: application/json' --data "$probe_donor" http://localhost:8089/api/donors/auth/register || { echo "::error::the probe donor's registration was refused"; exit 1; }
+          docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "update donor set email_verified_at = now() where email = 'sonda-mezipameti@example.cz'" | grep -qx 'UPDATE 1' || { echo "::error::the probe donor was not registered"; exit 1; }
+          token=$(curl -fsS --max-time 30 -H 'X-Forwarded-For: 203.0.113.41' -H 'Content-Type: application/json' --data '{"email":"sonda-mezipameti@example.cz","password":"a probe of the stack only"}' http://localhost:8089/api/donors/auth/login | jq -r '.accessToken')
+          [ -n "$token" ] && [ "$token" != null ] || { echo "::error::the probe donor could not sign in"; exit 1; }
+          echo "::add-mask::$token"
+          PROBE_ACCESS_TOKEN="$token" node frontend/scripts/probe-edge-caching.mjs http://localhost:8089
 
       - name: Logs
         if: failure()

@@ -1,6 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { sharedCases } from '../../../../testing/shared-cases';
 import { QrCode } from './qr-code';
+import { byteSegment, encodeSegments, encodeText, numericSegment } from './qr-encoder';
 import { isDark, QrMatrix } from './qr-matrix';
+import { decodePlainQr } from './testing/plain-qr-decoder';
 import { checkerboard, inverseCheckerboard } from './testing/qr-matrices';
 
 const SIZE = 25;
@@ -82,5 +85,56 @@ describe('Given a plain QR code', () => {
     const squares = path.getAttribute('d')?.match(/h1v1h-1z/g) ?? [];
     expect(squares).toHaveLength(Math.ceil((SIZE * SIZE) / 2));
     expect(fixture.nativeElement.querySelector('.qr-star')).toBeNull();
+  });
+});
+
+for (const sharedCase of sharedCases('qr/totp.json')) {
+  describe(`Given the plain QR code the encoder draws for the authenticator case ${sharedCase.name}`, () => {
+    it('when it is decoded from its SVG, then it gives the URI back behind the ECI 1 header', () => {
+      const fixture = render(encodeText(sharedCase.input.uri, 'M'), 'plain');
+
+      const decoded = decodePlainQr(fixture.nativeElement.querySelector('svg'));
+
+      expect(decoded?.data).toBe(sharedCase.input.uri);
+      expect(decoded?.version).toBe(sharedCase.expected.version);
+      expect(decoded?.chunks.map((chunk) => chunk.type)).toEqual(['eci', 'byte']);
+      expect(decoded?.chunks[0]).toEqual({ type: 'eci', assignmentNumber: 1 });
+    });
+  });
+}
+
+for (const sharedCase of sharedCases('qr/payment.json')) {
+  describe(`Given the plain QR code the encoder draws for the payment case ${sharedCase.name}`, () => {
+    it('when it is decoded from its SVG, then it gives the SPAYD text back in alphanumeric mode', () => {
+      const fixture = render(encodeText(sharedCase.input.spayd, 'H'), 'plain');
+
+      const decoded = decodePlainQr(fixture.nativeElement.querySelector('svg'));
+
+      expect(decoded?.data).toBe(sharedCase.input.spayd);
+      expect(decoded?.chunks.map((chunk) => chunk.type)).toEqual(['alphanumeric']);
+    });
+  });
+}
+
+describe('Given a verification link of a prefix in bytes and a payload in digits', () => {
+  it('when the plain QR code of its symbol is decoded from its SVG, then it gives both segments back as they were written', () => {
+    const prefix = 'https://nfnn.cz/overit#1';
+    const digits = '720575940379279350000000000000000';
+    const fixture = render(
+      encodeSegments([byteSegment(prefix), numericSegment(digits)], 'L'),
+      'plain',
+    );
+
+    const decoded = decodePlainQr(fixture.nativeElement.querySelector('svg'));
+
+    expect(decoded?.data).toBe(prefix + digits);
+    expect(decoded?.chunks).toEqual([
+      {
+        type: 'byte',
+        bytes: Array.from(prefix, (character) => character.charCodeAt(0)),
+        text: prefix,
+      },
+      { type: 'numeric', text: digits },
+    ]);
   });
 });

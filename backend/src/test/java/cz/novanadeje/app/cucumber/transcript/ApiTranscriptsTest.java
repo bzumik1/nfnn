@@ -1,14 +1,13 @@
 package cz.novanadeje.app.cucumber.transcript;
 
 import cz.novanadeje.app.operations.domain.settings.Setting;
+import cz.novanadeje.app.support.AsyncTaskTracker;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.core.task.SimpleAsyncTaskExecutor;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -72,6 +71,13 @@ class ApiTranscriptsTest {
     }
 
     @Test
+    @DisplayName("Given the receipt signing seed in the environment, when recording starts, then it is refused without naming its value")
+    void should_refuse_to_record_when_the_receipt_signing_seed_is_in_the_environment() {
+        assertThatThrownBy(() -> ApiTranscripts.refuseRealSecrets(Map.of("RECEIPT_SIGNING_KEY", "UExBTlRFRC1TRUVE")))
+                .isInstanceOf(IllegalStateException.class).hasMessageContaining("RECEIPT_SIGNING_KEY").hasMessageNotContaining("UExBTlRFRC1TRUVE");
+    }
+
+    @Test
     @DisplayName("Given a secret under a name Spring binds by relaxed binding, an application variable or SPRING_APPLICATION_JSON, when recording starts, then it is refused")
     void should_refuse_to_record_when_a_secret_could_reach_spring_under_another_name() {
         for (String name : List.of("APP_OPERATIONS_BACKUPKEY_VALUE", "APP_SECURITY_JWT_SECRET", "APP_DONATIONS_FIO_TOKEN", "SPRING_APPLICATION_JSON",
@@ -101,14 +107,14 @@ class ApiTranscriptsTest {
             }
         }
 
-        assertThat(bound).contains("BACKUP_KEY", "JWT_SECRET", "SETTINGS_KEY", "FIO_TOKEN", "MAIL_PASSWORD").allSatisfy(name ->
+        assertThat(bound).contains("BACKUP_KEY", "JWT_SECRET", "SETTINGS_KEY", "FIO_TOKEN", "MAIL_PASSWORD", "RECEIPT_SIGNING_KEY").allSatisfy(name ->
                 assertThatThrownBy(() -> ApiTranscripts.refuseRealSecrets(Map.of(name, "x"))).as(name).isInstanceOf(IllegalStateException.class));
     }
 
     @Test
     @DisplayName("Given an executor that cannot report its work, when the recorder waits for asynchronous work, then it fails instead of skipping the wait")
     void should_fail_when_the_recorder_cannot_wait_for_asynchronous_work() {
-        assertThatThrownBy(() -> ApiTranscriptHooks.awaitIdle(new SimpleAsyncTaskExecutor(), Duration.ofSeconds(1)))
+        assertThatThrownBy(() -> ApiTranscriptHooks.awaitAsynchronousWork(new AsyncTaskTracker()))
                 .isInstanceOf(IllegalStateException.class);
     }
 

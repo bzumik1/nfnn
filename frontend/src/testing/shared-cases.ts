@@ -35,28 +35,60 @@ export interface QrSymbol {
 }
 
 export interface SpaydInput {
-  readonly recipient: {
-    readonly accountNumber: string;
-    readonly iban: string;
-    readonly name: string;
-  };
-  readonly amount?: string;
+  readonly details?: string;
+  readonly servedDetails?: PaymentDetailsExpected;
+  readonly amountMinor: number;
   readonly variableSymbol?: string;
-  readonly purpose?: string;
+  readonly purpose?: 'DONATION' | 'ACCOUNT_VERIFICATION';
 }
 
 export type SpaydExpected =
   | { readonly spayd: string }
   | {
       readonly refused: {
-        readonly status: number;
-        readonly type: string;
-        readonly fields: readonly string[];
+        readonly fields: readonly ('amountMinor' | 'variableSymbol' | 'details')[];
       };
     };
 
+export interface PaymentDetailsInput {
+  readonly recipient: {
+    readonly accountNumber: string;
+    readonly iban: string;
+    readonly name: string;
+  };
+}
+
+export interface PaymentDetailsExpected {
+  readonly account: {
+    readonly number: string;
+    readonly iban: string;
+    readonly recipientName: string;
+  };
+  readonly currency: 'CZK';
+  readonly messages: {
+    readonly donation: string;
+    readonly accountVerification: string;
+  };
+  readonly accountVerificationAmountMinor: number;
+}
+
+export interface PaymentAccountInput {
+  readonly accountNumber: string;
+  readonly iban: string;
+}
+
+export interface PaymentAccountExpected {
+  readonly ibanOfNumber: string | null;
+  readonly matches: boolean;
+}
+
 export interface PaymentQrInput {
   readonly spayd: string;
+}
+
+export interface EncoderQrInput {
+  readonly text: string;
+  readonly errorCorrection: 'L' | 'M' | 'Q' | 'H';
 }
 
 export interface TotpUriInput {
@@ -93,6 +125,56 @@ export type ReceiptFormattingExpected =
       };
     };
 
+export interface VerificationKey {
+  readonly keyId: string;
+  readonly publicKeyHex: string;
+  readonly status: 'active' | 'revoked';
+}
+
+export interface VerifiedReceipt {
+  readonly kind: 'single' | 'yearly';
+  readonly number: string;
+  readonly issuedOn: string;
+  readonly year: number | null;
+  readonly replaces: { readonly number: string; readonly issuedOn: string } | null;
+  readonly donor: {
+    readonly type: 'person' | 'company';
+    readonly name: string;
+    readonly street: string;
+    readonly city: string;
+    readonly postalCode: string;
+    readonly companyIdentifier: string | null;
+  };
+  readonly gifts: readonly { readonly receivedOn: string; readonly amountMinor: number }[];
+  readonly totalMinor: number;
+}
+
+export type VerificationInput =
+  | {
+      readonly receipt: VerifiedReceipt;
+      readonly signingKeyId: string;
+      readonly foundation: { readonly companyIdentifier: string };
+      readonly keys: readonly VerificationKey[];
+    }
+  | {
+      readonly qrText: string;
+      readonly foundation: { readonly companyIdentifier: string };
+      readonly keys: readonly VerificationKey[];
+    };
+
+export type VerificationExpected =
+  | {
+      readonly payloadHex: string;
+      readonly signatureHex: string;
+      readonly signedSha256: string;
+      readonly qrText: string;
+      readonly qr:
+        | { readonly version: number; readonly errorCorrection: 'M' | 'L' }
+        | { readonly refusal: 'donations/receipt-too-long' };
+    }
+  | { readonly verdict: 'valid'; readonly keyId: string; readonly receipt: VerifiedReceipt }
+  | { readonly verdict: 'rejected'; readonly reason: string };
+
 export type RowsInput = Readonly<Record<string, unknown>>;
 export type Answer = Readonly<Record<string, unknown>>;
 
@@ -101,7 +183,10 @@ export interface SharedCaseTopics {
   readonly 'donor-summary/summary.json': SharedCase<RowsInput, Answer>;
   readonly 'monthly-report/formatting.json': SharedCase<Answer, { readonly text: string }>;
   readonly 'monthly-report/report.json': SharedCase<RowsInput, Answer>;
+  readonly 'payment/account.json': SharedCase<PaymentAccountInput, PaymentAccountExpected>;
+  readonly 'payment/details.json': SharedCase<PaymentDetailsInput, PaymentDetailsExpected>;
   readonly 'payment/spayd.json': SharedCase<SpaydInput, SpaydExpected>;
+  readonly 'qr/encoder.json': SharedCase<EncoderQrInput, QrSymbol>;
   readonly 'qr/payment.json': SharedCase<PaymentQrInput, QrSymbol>;
   readonly 'qr/totp.json': SharedCase<TotpQrInput, QrSymbol>;
   readonly 'receipts/formatting.json': SharedCase<
@@ -109,6 +194,7 @@ export interface SharedCaseTopics {
     ReceiptFormattingExpected
   >;
   readonly 'totp/uri.json': SharedCase<TotpUriInput, { readonly uri: string }>;
+  readonly 'verification/payload.json': SharedCase<VerificationInput, VerificationExpected>;
 }
 
 export type SharedCaseTopic = keyof SharedCaseTopics;
@@ -118,11 +204,15 @@ const REGISTERED_TOPICS: Readonly<Record<SharedCaseTopic, true>> = {
   'donor-summary/summary.json': true,
   'monthly-report/formatting.json': true,
   'monthly-report/report.json': true,
+  'payment/account.json': true,
+  'payment/details.json': true,
   'payment/spayd.json': true,
+  'qr/encoder.json': true,
   'qr/payment.json': true,
   'qr/totp.json': true,
   'receipts/formatting.json': true,
   'totp/uri.json': true,
+  'verification/payload.json': true,
 };
 
 export const SHARED_CASE_TOPICS = Object.keys(REGISTERED_TOPICS) as readonly SharedCaseTopic[];

@@ -25,6 +25,7 @@ const PAYMENT_CASES = 'qr/payment.json';
 const TOTP_CASES = 'qr/totp.json';
 const TOTP_URI_CASES = 'totp/uri.json';
 const RECEIPT_CASES = 'receipts/formatting.json';
+const VERIFICATION_CASES = 'verification/payload.json';
 const FINDER_SPAN = 17;
 const MODULES_PER_VERSION = 4;
 
@@ -51,6 +52,10 @@ function inconsistencies(symbol: QrSymbol): readonly string[] {
 function qrSymbols(): readonly { name: string; symbol: QrSymbol }[] {
   return [
     ...sharedCases('qr/payment.json').map((sharedCase) => ({
+      name: sharedCase.name,
+      symbol: sharedCase.expected,
+    })),
+    ...sharedCases('qr/encoder.json').map((sharedCase) => ({
       name: sharedCase.name,
       symbol: sharedCase.expected,
     })),
@@ -209,17 +214,41 @@ describe('Given a SPAYD case', () => {
     );
   });
 
-  it('when its refusal names a problem type that is no problem type of the API, then it is refused', () => {
+  it('when its refusal names a field spayd() does not have, then it is refused', () => {
     const file = editable(SPAYD_CASES);
     const refusal = file.cases.find((sharedCase) => sharedCase.expected.refused !== undefined);
     if (refusal?.expected.refused === undefined) {
       throw new Error(`${SPAYD_CASES} holds no refusal`);
     }
-    refusal.expected.refused['type'] = 'https://nfnn.cz/problems/anything/at all';
+    refusal.expected.refused['fields'] = ['purpose'];
 
     expect(schemaViolations(SPAYD_CASES, file).join('\n')).toMatch(
-      /\/cases\/\d+\/expected\/refused\/type must match pattern/,
+      /\/cases\/\d+\/expected\/refused\/fields\/0 must be equal to one of the allowed values/,
     );
+  });
+
+  it('when its input names the payment details both by a case and as an answer, then it is refused', () => {
+    const file = editable(SPAYD_CASES);
+    const byName = file.cases.find((sharedCase) => sharedCase.input['details'] !== undefined);
+    const served = file.cases.find((sharedCase) => sharedCase.input['servedDetails'] !== undefined);
+    if (byName === undefined || served === undefined) {
+      throw new Error(`${SPAYD_CASES} names no payment details both ways`);
+    }
+    byName.input['servedDetails'] = served.input['servedDetails'];
+
+    expect(schemaViolations(SPAYD_CASES, file).join('\n')).toMatch(
+      /\/cases\/\d+\/input must match exactly one schema in oneOf/,
+    );
+  });
+
+  it('when it names payment details by a case, then that case is one of payment/details.json', () => {
+    const detailsCases = new Set(sharedCases('payment/details.json').map((answer) => answer.name));
+    const named = sharedCases(SPAYD_CASES).flatMap((sharedCase) =>
+      sharedCase.input.details === undefined ? [] : [sharedCase.input.details],
+    );
+
+    expect(named.length).toBeGreaterThan(0);
+    expect(named.filter((name) => !detailsCases.has(name))).toEqual([]);
   });
 });
 
@@ -352,5 +381,47 @@ describe('Given a shared case file without its schema', () => {
     expect(schemaViolations('unknown/topic.json', {})).toEqual([
       'schemas/unknown/topic.schema.json is missing',
     ]);
+  });
+});
+
+describe('Given the verification proof cases', () => {
+  const chunkDigits = [0, 3, 5, 8, 10, 13, 15, 17];
+
+  it('when each encoding case is checked, then its text carries exactly as many digits as its body and signature need', () => {
+    const encodings = sharedCases(VERIFICATION_CASES).flatMap((sharedCase) =>
+      'payloadHex' in sharedCase.expected ? [sharedCase.expected] : [],
+    );
+    expect(encodings.length).toBeGreaterThan(0);
+    for (const proof of encodings) {
+      const bytes = (proof.payloadHex.length + proof.signatureHex.length) / 2;
+      const digits = 17 * Math.floor(bytes / 7) + chunkDigits[bytes % 7];
+      expect(proof.qrText).toHaveLength('https://nfnn.cz/overit#1'.length + digits);
+    }
+  });
+
+  it('when a reading case is rejected for a reason no reader gives, then it is refused', () => {
+    const file = editable(VERIFICATION_CASES);
+    const rejected = file.cases.find((sharedCase) => sharedCase.expected['verdict'] === 'rejected');
+    if (rejected === undefined) {
+      throw new Error(`${VERIFICATION_CASES} holds no rejected reading case`);
+    }
+    rejected.expected['reason'] = 'looks-odd';
+
+    expect(schemaViolations(VERIFICATION_CASES, file).join('\n')).toMatch(
+      /expected\/reason must be equal to one of the allowed values/,
+    );
+  });
+
+  it('when an encoding case names a refusal other than a receipt too long, then it is refused', () => {
+    const file = editable(VERIFICATION_CASES);
+    const encoding = file.cases.find((sharedCase) => 'payloadHex' in sharedCase.expected);
+    if (encoding === undefined) {
+      throw new Error(`${VERIFICATION_CASES} holds no encoding case`);
+    }
+    encoding.expected['qr'] = { refusal: 'donations/rate-limited' };
+
+    expect(schemaViolations(VERIFICATION_CASES, file).join('\n')).toMatch(
+      /expected\/qr\/refusal must be equal to constant/,
+    );
   });
 });

@@ -2,8 +2,8 @@
   <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.people.heading">Lidé fondu</h1>
   <p class="ui-page-intro" i18n="@@admin.people.intro">
     Lidé fondu se ukážou na úvodní stránce v sekci O nás v bloku „Kdo fond vede“: lidé s kartou s
-    portrétem a rolí, pod nimi slovo zakladatelů s jejich podpisy a řádek správní rady. Dokud tu
-    nikdo není, web ukazuje svůj vlastní blok.
+    portrétem a rolí, pod nimi slovo zakladatelů s jejich podpisy, řádek správní rady a pod ním
+    volitelný řádek. Dokud tu nikdo není, web ukazuje svůj vlastní blok.
   </p>
 
   @switch (state()) {
@@ -55,6 +55,11 @@
                       @if (member.webSignature) {
                         <li class="ui-badge ui-badge--accent" i18n="@@admin.people.badge.signature">
                           Podpis na webu
+                        </li>
+                      }
+                      @if (member.linkedToAccount) {
+                        <li class="ui-badge ui-badge--success" i18n="@@admin.people.badge.linked">
+                          Propojeno s účtem na webu
                         </li>
                       }
                     </ul>
@@ -218,7 +223,9 @@
               <fieldset class="choices emails">
                 <legend i18n="@@admin.people.emails">E-maily jen pro správu</legend>
                 <p class="field-hint" i18n="@@admin.people.emails.hint">
-                  Web je neukazuje; vidí je jen administrátoři tady a v připojené aplikaci.
+                  Web je neukazuje; vidí je jen administrátoři tady a v připojené aplikaci. Účet na
+                  webu s potvrzeným e-mailem, který se shoduje s jedním z nich, se s osobou propojí:
+                  správce pak má u svého jména její portrét. Propojení nedává žádná práva.
                 </p>
                 <div class="fields">
                   <app-form-field
@@ -504,6 +511,52 @@
             </button>
           </div>
           <app-live-notice class="card-notice" [notice]="noteNotice()" />
+        </form>
+      </section>
+
+      <section class="ui-card" aria-labelledby="people-footnote-title">
+        <h2 id="people-footnote-title" class="ui-card__title" i18n="@@admin.people.footnote.title">
+          Řádek pod správní radou
+        </h2>
+        <form
+          #footnoteForm="ngForm"
+          class="ui-card__body"
+          appFocusFirstInvalid
+          (ngSubmit)="saveFootnote(footnoteForm)"
+          novalidate
+        >
+          <div class="fields">
+            <app-form-field
+              label="Text řádku (nepovinné)"
+              i18n-label="@@admin.people.footnote.label"
+              hint="Jedna věta pod výčtem správní rady, například kdo se stará o web. Nejvíc 200 znaků bez formátování a bez odstavců. Prázdný text řádek z webu odebere."
+              i18n-hint="@@admin.people.footnote.hint"
+              [messages]="footnoteMessages"
+            >
+              <textarea
+                appFormControl
+                id="people-footnote"
+                name="footnote"
+                rows="3"
+                [(ngModel)]="footnoteText"
+                [maxlength]="maxFootnoteLength"
+              ></textarea>
+            </app-form-field>
+          </div>
+          <div class="form-actions">
+            <button
+              type="submit"
+              class="ui-button ui-button--primary"
+              [disabled]="savingFootnote()"
+            >
+              @if (savingFootnote()) {
+                <ng-container i18n="@@admin.people.footnote.saving">Ukládáme…</ng-container>
+              } @else {
+                <ng-container i18n="@@admin.people.footnote.save">Uložit řádek</ng-container>
+              }
+            </button>
+          </div>
+          <app-live-notice class="card-notice" [notice]="footnoteNotice()" />
         </form>
       </section>
     }

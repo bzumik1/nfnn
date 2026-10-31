@@ -119,6 +119,10 @@ public record AdminActionFacts(String summaryKey, Map<String, String> values) {
         shapes.put("CHANGE_RECEIPT_SIGNATURE", List.of(
                 full("Nahrán obrázek podpisu na potvrzení o daru: (?<width>\\d+) × (?<height>\\d+) px, SHA-256 \\S+"),
                 full("Signature image for receipts uploaded: (?<width>\\d+)x(?<height>\\d+) px, SHA-256 \\S+")));
+        shapes.put("REGISTER_RECEIPT_SIGNING_KEY", List.of(
+                full("Server zaregistroval svůj klíč k ověřovacím QR na potvrzeních o daru: (?<key>[0-9a-f]{8})")));
+        shapes.put("ADOPT_RECEIPT_SIGNING_KEY", List.of(
+                full("Server převzal klíč k ověřovacím QR (?<key>[0-9a-f]{8}) z obnovené zálohy \\(obnova (?<restore>[0-9A-Za-z:.-]{1,40})\\)")));
         shapes.put("REMOVE_RECEIPT_SIGNATURE", List.of(
                 full("Obrázek podpisu odebrán; .*"),
                 full("Signature image for receipts removed; .*")));
@@ -134,6 +138,9 @@ public record AdminActionFacts(String summaryKey, Map<String, String> values) {
         shapes.put("CHANGE_FOUNDERS_NOTE", List.of(
                 full("Slovo zakladatelů upraveno"),
                 variant("removed", "Slovo zakladatelů odebráno")));
+        shapes.put("CHANGE_PEOPLE_FOOTNOTE", List.of(
+                full("Řádek pod správní radou upraven"),
+                variant("removed", "Řádek pod správní radou odebrán")));
         shapes.put("CHANGE_WEB_SIGNATURE", List.of(full("Podpis " + ID + " na webu u osoby " + ID + " nastaven")));
         shapes.put("REMOVE_WEB_SIGNATURE", List.of(full("Podpis na webu u osoby " + ID + " odebrán")));
         shapes.put("CHANGE_PROJECT_ORDER", List.of(

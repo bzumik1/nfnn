@@ -93,6 +93,7 @@ describe('Given an administrator connected with the reading permission only', ()
       'nfnn_update_backup_schedule',
       'nfnn_update_founders_note',
       'nfnn_update_news',
+      'nfnn_update_people_footnote',
       'nfnn_update_person',
       'nfnn_update_project',
       'nfnn_update_report_settings',
@@ -138,6 +139,32 @@ describe('Given an administrator connected with the reading permission only', ()
     expect(text).toContain('"health":"UP"');
     expect(text).toContain('"lastSucceededAt":"2026-10-23T07:00:00+02:00"');
     expect(text).toContain('"outcome":"OK"');
+  });
+
+  it('when the status is asked, then it names the receipt signing key with its registration time and flags a key that fails its seal', async () => {
+    const result = await client.callTool({ name: 'nfnn_status', arguments: {} });
+    expect(stack.backend.requests.map((request) => request.path)).toContain(
+      '/api/admin/donations/receipt-signing-keys',
+    );
+    expect(textOf(result)).toContain(
+      '"receiptSigningKeys":{"currentKeyId":"21fe31df","currentKeyRegisteredAt":"2026-11-13T12:00:00+01:00","currentKeyPublished":true,"unpublishedKeyIds":["39f713d0"],"attention":true}',
+    );
+  });
+
+  it('when the status is asked of a backend without the receipt signing keys, then the rest still comes and the key part says it is unavailable', async () => {
+    stack.backend.receiptSigningKeysAvailable = false;
+    try {
+      const result = await client.callTool({ name: 'nfnn_status', arguments: {} });
+      expect(result.isError).toBeFalsy();
+      const text = textOf(result);
+      expect(text).toContain('"revision":"abc1234"');
+      expect(text).toContain('"outcome":"OK"');
+      expect(text).toContain(
+        '"receiptSigningKeys":{"unavailable":"404 not-found: Nenalezeno","attention":true}',
+      );
+    } finally {
+      stack.backend.receiptSigningKeysAvailable = true;
+    }
   });
 
   it('when the tools are listed, then the overview says it counts the donors who gave in each month', async () => {
@@ -327,7 +354,7 @@ describe('Given an administrator connected with the reading permission only', ()
     ).toBe(false);
   });
 
-  it('when the people of the foundation are asked, then they come in order with their portraits, web signatures and the founders note', async () => {
+  it('when the people of the foundation are asked, then they come in order with their portraits, web signatures, the founders note and the line under the board', async () => {
     const result = await client.callTool({ name: 'nfnn_people', arguments: {} });
     expect(result.isError).toBeFalsy();
     const text = textOf(result);
@@ -335,6 +362,7 @@ describe('Given an administrator connected with the reading permission only', ()
     expect(text).toContain('"boardNote":"předsedkyně"');
     expect(text).toContain('"fundEmail":"eva@nfnn.cz"');
     expect(text).toContain('"note":"Děkujeme všem, kdo pomáhají s námi."');
+    expect(text).toContain('"footnote":"Web zajišťuje bez nároku na odměnu Petr Vzor."');
     expect(stack.backend.requests.map((request) => request.path)).toContain(
       '/api/admin/content/people',
     );
@@ -434,6 +462,25 @@ describe('Given an administrator connected with the reading permission only', ()
         request.path.startsWith('/api/admin/operations/logs/backend.log/search'),
       )?.path,
     ).toBe('/api/admin/operations/logs/backend.log/search?pattern=fio&limit=5');
+  });
+
+  it('when the browser error reports are searched for, then their lines come from the administration as the backend wrote them', async () => {
+    const search = textOf(
+      await client.callTool({
+        name: 'nfnn_log_search',
+        arguments: { pattern: 'Browser error' },
+      }),
+    );
+
+    expect(search).toContain(
+      'Browser error kind=pdf-render place=global name=TypeError version=1a2b3c4 browser=safari/18 os=ios display=standalone count=2',
+    );
+    expect(search).toContain('Browser error reports over the hourly cap bucket=general dropped=2');
+    expect(
+      stack.backend.requests.find((request) =>
+        request.path.startsWith('/api/admin/operations/logs/backend.log/search'),
+      )?.path,
+    ).toBe('/api/admin/operations/logs/backend.log/search?pattern=Browser+error&limit=50');
   });
 
   it('when a log name is not one of the files, then the tool lists the files and asks the administration for no window', async () => {
@@ -699,9 +746,10 @@ describe('Given an administrator connected with the writing permission', () => {
     expect(textOf(created)).toContain('"slug":"letni-tabor"');
     const edited = await client.callTool({
       name: 'nfnn_update_news',
-      arguments: { id: UNKNOWN_ID, ...article, slug: 'tabor-2026' },
+      arguments: { id: UNKNOWN_ID, ...article, slug: 'tabor-2026', signerId: PERSON_ID },
     });
     expect(edited.isError).toBeFalsy();
+    expect(textOf(edited)).toContain('"signer":{"id":"' + PERSON_ID + '"');
     const project = {
       title: 'Nová střecha',
       year: 2026,
@@ -722,7 +770,11 @@ describe('Given an administrator connected with the writing permission', () => {
       .map((request) => [request.method, request.path, JSON.parse(request.body)]);
     expect(writes).toEqual([
       ['POST', '/api/admin/content/news', article],
-      ['PUT', `/api/admin/content/news/${UNKNOWN_ID}`, { ...article, slug: 'tabor-2026' }],
+      [
+        'PUT',
+        `/api/admin/content/news/${UNKNOWN_ID}`,
+        { ...article, slug: 'tabor-2026', signerId: PERSON_ID },
+      ],
       ['POST', '/api/admin/content/projects', project],
       ['PUT', `/api/admin/content/projects/${UNKNOWN_ID}`, project],
     ]);
@@ -924,7 +976,7 @@ describe('Given an administrator connected with the writing permission', () => {
     );
   });
 
-  it('when the people are ordered and the founders note is written and emptied, then the administration gets the order and the text, an empty one as none', async () => {
+  it('when the people are ordered and the founders note and the line under the board are written and emptied, then the administration gets the order and the texts, an empty one as none', async () => {
     const ordered = await client.callTool({
       name: 'nfnn_order_people',
       arguments: { memberIds: [PERSON_ID, SIGNED_PERSON_ID] },
@@ -936,6 +988,15 @@ describe('Given an administrator connected with the writing permission', () => {
       arguments: { text: '  ' },
     });
     expect(textOf(emptied)).toContain('"text":null');
+    await client.callTool({
+      name: 'nfnn_update_people_footnote',
+      arguments: { text: 'Web zajišťuje Petr Vzor.' },
+    });
+    const footnoteEmptied = await client.callTool({
+      name: 'nfnn_update_people_footnote',
+      arguments: { text: ' ' },
+    });
+    expect(textOf(footnoteEmptied)).toContain('"text":null');
 
     const writes = stack.backend.requests
       .filter((request) => request.path.startsWith('/api/admin/content/people'))
@@ -944,6 +1005,8 @@ describe('Given an administrator connected with the writing permission', () => {
       ['PUT', '/api/admin/content/people/order', { memberIds: [PERSON_ID, SIGNED_PERSON_ID] }],
       ['PUT', '/api/admin/content/people/note', { text: 'Děkujeme.' }],
       ['PUT', '/api/admin/content/people/note', { text: null }],
+      ['PUT', '/api/admin/content/people/footnote', { text: 'Web zajišťuje Petr Vzor.' }],
+      ['PUT', '/api/admin/content/people/footnote', { text: null }],
     ]);
   });
 

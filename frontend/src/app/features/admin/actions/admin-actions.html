@@ -54,7 +54,9 @@
                     data-label="Správce"
                     i18n-data-label="@@admin.actions.col.admin"
                   >
-                    @if (item.adminName) {
+                    @if (byServer(item)) {
+                      <span class="admin-name" i18n="@@admin.actions.admin.server">server</span>
+                    } @else if (item.adminName) {
                       <span class="admin-name">{{ item.adminName }}</span>
                       <span class="admin-email">{{ item.adminEmail }}</span>
                     } @else {
@@ -86,7 +88,7 @@
                         Technické podrobnosti
                       </summary>
                       <span class="details-text">{{ item.details }}</span>
-                      @if (!item.adminName) {
+                      @if (!item.adminName && !byServer(item)) {
                         <span class="details-text" i18n="@@admin.actions.details.adminId"
                           >Správce: {{ item.adminId }}</span
                         >

@@ -1,0 +1,36 @@
+:host {
+  display: block;
+}
+
+.ui-card__intro {
+  margin-bottom: var(--space-3);
+}
+
+.signing-key-data {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-3) var(--space-6);
+}
+
+.signing-key-earlier {
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--color-text-secondary);
+  margin-top: var(--space-3);
+}
+
+.signing-key-status,
+.signing-key-error {
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  margin-top: var(--space-2-5);
+  color: var(--color-text-muted);
+}
+
+.signing-key-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  color: var(--color-danger);
+}

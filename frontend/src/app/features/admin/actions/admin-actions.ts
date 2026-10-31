@@ -49,6 +49,7 @@ const ACTION_NAMES: Record<string, string> = {
   REMOVE_PERSON: $localize`:@@admin.actions.action.removePerson:Odebrání osoby z lidí fondu`,
   ORDER_PEOPLE: $localize`:@@admin.actions.action.orderPeople:Změna pořadí lidí fondu`,
   CHANGE_FOUNDERS_NOTE: $localize`:@@admin.actions.action.changeFoundersNote:Úprava slova zakladatelů`,
+  CHANGE_PEOPLE_FOOTNOTE: $localize`:@@admin.actions.action.changePeopleFootnote:Úprava řádku pod správní radou`,
   CHANGE_WEB_SIGNATURE: $localize`:@@admin.actions.action.changeWebSignature:Nahrání podpisu pro web`,
   REMOVE_WEB_SIGNATURE: $localize`:@@admin.actions.action.removeWebSignature:Odebrání podpisu z webu`,
   CREATE_NEWS: $localize`:@@admin.actions.action.createNews:Napsání aktuality`,
@@ -72,7 +73,11 @@ const ACTION_NAMES: Record<string, string> = {
   CHANGE_LOG_LEVEL: $localize`:@@admin.actions.action.changeLogLevel:Dočasná změna úrovně logování`,
   RESET_LOG_LEVEL: $localize`:@@admin.actions.action.resetLogLevel:Vrácení úrovně logování`,
   CHANGE_SETTINGS: $localize`:@@admin.actions.action.changeSettings:Změna nastavení webu`,
+  REGISTER_RECEIPT_SIGNING_KEY: $localize`:@@admin.actions.action.registerReceiptSigningKey:Registrace klíče k ověřovacím QR kódům`,
+  ADOPT_RECEIPT_SIGNING_KEY: $localize`:@@admin.actions.action.adoptReceiptSigningKey:Převzetí klíče k ověřovacím QR kódům ze zálohy`,
 };
+
+const SERVER_ACTOR = '00000000-0000-0000-0000-000000000000';
 
 @Component({
   selector: 'app-admin-actions',
@@ -151,6 +156,10 @@ export class AdminActions {
 
   protected performedAt(item: AdminActionResponse): string {
     return formatBankTime(item.performedAt);
+  }
+
+  protected byServer(item: AdminActionResponse): boolean {
+    return item.adminId === SERVER_ACTOR;
   }
 
   protected actionName(item: AdminActionResponse): string {
