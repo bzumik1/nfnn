@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="012-sign-news-by-a-person" author="nfnn">
+        <addColumn tableName="content_news">
+            <column name="signer_person_id" type="uuid"/>
+        </addColumn>
+        <addForeignKeyConstraint baseTableName="content_news" baseColumnNames="signer_person_id" constraintName="fk_content_news_signer_person"
+                                 referencedTableName="content_person" referencedColumnNames="id" onDelete="SET NULL"/>
+        <createIndex tableName="content_news" indexName="ix_content_news_signer_person">
+            <column name="signer_person_id"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

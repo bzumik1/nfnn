@@ -28,6 +28,10 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 
+import cz.novanadeje.app.content.application.news.NewsSigners;
+import cz.novanadeje.app.content.domain.media.MediaImageRepository;
+import cz.novanadeje.app.content.domain.people.PersonRepository;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -46,7 +50,8 @@ class HomeContentServiceTest {
     private final ProjectOrderRepository projectOrders = mock(ProjectOrderRepository.class);
     private final AboutService about = mock(AboutService.class);
     private final PublicPeopleService people = mock(PublicPeopleService.class);
-    private final HomeContentService service = new HomeContentService(news, projects, projectOrders, about, people,
+    private final NewsSigners signers = new NewsSigners(mock(PersonRepository.class), mock(MediaImageRepository.class));
+    private final HomeContentService service = new HomeContentService(news, signers, projects, projectOrders, about, people,
             Clock.fixed(LATE_EVENING_UTC, ZoneOffset.UTC));
 
     @Test
