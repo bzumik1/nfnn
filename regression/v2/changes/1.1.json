@@ -1,0 +1,142 @@
+[
+  {
+    "kind": "log-field",
+    "line": "operations.clienterrors: Browser error kind=pdf-render place=global name=TypeError version=dev browser=safari/<n> os=ios display=standalone count=<n>",
+    "reason": "1.1: every accepted browser error report is one WARN line built only from values of closed lists and ranges (no address, no free text); the literal values in this shape are the ones the feature sends, each other value of the same lists makes a shape of the same form",
+    "contract": "docs/api-contract.md, Browser error reports",
+    "security": {
+      "approvedIn": "PR #221, Jakub 2026-10-30",
+      "fields": {
+        "<n>": "the browser's major version after the slash (1-999, absent for a browser the app does not recognise) and count, the number of times the browser saw this kind, place and name, this report included (1-100); both integers checked against those ranges",
+        "kind": "the kind of failure, one of unexpected, chunk-load, pdf-render, pdf-load, qr-encode, verify-parse, verify-signature",
+        "place": "where in the app it was caught, global (Angular's ErrorHandler) or navigation (a failed lazy chunk)",
+        "name": "the JavaScript error's name when it is one of 26 standard names (Error, TypeError, the DOMException names, HttpErrorResponse), else Other; never the error's message or stack",
+        "version": "the build's revision, 7-40 lowercase hex digits of the commit, or dev",
+        "browser": "the browser family, one of chrome, edge, firefox, safari, samsung, opera, other",
+        "os": "the operating system family, one of android, ios, ipados, macos, windows, linux, other",
+        "display": "browser or standalone (the installed app)"
+      }
+    }
+  },
+  {
+    "kind": "log-field",
+    "line": "operations.clienterrors: Browser error kind=unexpected place=global name=Error version=dev browser=other os=other display=browser count=<n>",
+    "reason": "1.1: every accepted browser error report is one WARN line built only from values of closed lists and ranges (no address, no free text); the literal values in this shape are the ones the feature sends, each other value of the same lists makes a shape of the same form",
+    "contract": "docs/api-contract.md, Browser error reports",
+    "security": {
+      "approvedIn": "PR #221, Jakub 2026-10-30",
+      "fields": {
+        "<n>": "the browser's major version after the slash (1-999, absent for a browser the app does not recognise) and count, the number of times the browser saw this kind, place and name, this report included (1-100); both integers checked against those ranges",
+        "kind": "the kind of failure, one of unexpected, chunk-load, pdf-render, pdf-load, qr-encode, verify-parse, verify-signature",
+        "place": "where in the app it was caught, global (Angular's ErrorHandler) or navigation (a failed lazy chunk)",
+        "name": "the JavaScript error's name when it is one of 26 standard names (Error, TypeError, the DOMException names, HttpErrorResponse), else Other; never the error's message or stack",
+        "version": "the build's revision, 7-40 lowercase hex digits of the commit, or dev",
+        "browser": "the browser family, one of chrome, edge, firefox, safari, samsung, opera, other",
+        "os": "the operating system family, one of android, ios, ipados, macos, windows, linux, other",
+        "display": "browser or standalone (the installed app)"
+      }
+    }
+  },
+  {
+    "kind": "log-field",
+    "line": "operations.clienterrors: Browser error kind=unexpected place=global name=Error version=dev browser=chrome/<n> os=android display=browser count=<n>",
+    "reason": "1.1: every accepted browser error report is one WARN line built only from values of closed lists and ranges (no address, no free text); the literal values in this shape are the ones the feature sends, each other value of the same lists makes a shape of the same form",
+    "contract": "docs/api-contract.md, Browser error reports",
+    "security": {
+      "approvedIn": "PR #221, Jakub 2026-10-30",
+      "fields": {
+        "<n>": "the browser's major version after the slash (1-999, absent for a browser the app does not recognise) and count, the number of times the browser saw this kind, place and name, this report included (1-100); both integers checked against those ranges",
+        "kind": "the kind of failure, one of unexpected, chunk-load, pdf-render, pdf-load, qr-encode, verify-parse, verify-signature",
+        "place": "where in the app it was caught, global (Angular's ErrorHandler) or navigation (a failed lazy chunk)",
+        "name": "the JavaScript error's name when it is one of 26 standard names (Error, TypeError, the DOMException names, HttpErrorResponse), else Other; never the error's message or stack",
+        "version": "the build's revision, 7-40 lowercase hex digits of the commit, or dev",
+        "browser": "the browser family, one of chrome, edge, firefox, safari, samsung, opera, other",
+        "os": "the operating system family, one of android, ios, ipados, macos, windows, linux, other",
+        "display": "browser or standalone (the installed app)"
+      }
+    }
+  },
+  {
+    "kind": "log-field",
+    "line": "operations.clienterrors: Browser error kind=pdf-load place=global name=Error version=dev browser=chrome/<n> os=android display=browser count=<n>",
+    "reason": "1.1: every accepted browser error report is one WARN line built only from values of closed lists and ranges (no address, no free text); the literal values in this shape are the ones the feature sends, each other value of the same lists makes a shape of the same form",
+    "contract": "docs/api-contract.md, Browser error reports",
+    "security": {
+      "approvedIn": "PR #221, Jakub 2026-10-30",
+      "fields": {
+        "<n>": "the browser's major version after the slash (1-999, absent for a browser the app does not recognise) and count, the number of times the browser saw this kind, place and name, this report included (1-100); both integers checked against those ranges",
+        "kind": "the kind of failure, one of unexpected, chunk-load, pdf-render, pdf-load, qr-encode, verify-parse, verify-signature",
+        "place": "where in the app it was caught, global (Angular's ErrorHandler) or navigation (a failed lazy chunk)",
+        "name": "the JavaScript error's name when it is one of 26 standard names (Error, TypeError, the DOMException names, HttpErrorResponse), else Other; never the error's message or stack",
+        "version": "the build's revision, 7-40 lowercase hex digits of the commit, or dev",
+        "browser": "the browser family, one of chrome, edge, firefox, safari, samsung, opera, other",
+        "os": "the operating system family, one of android, ios, ipados, macos, windows, linux, other",
+        "display": "browser or standalone (the installed app)"
+      }
+    }
+  },
+  {
+    "kind": "log-field",
+    "line": "operations.clienterrors: Browser error kind=pdf-render place=global name=Error version=dev browser=chrome/<n> os=android display=browser count=<n>",
+    "reason": "1.1: every accepted browser error report is one WARN line built only from values of closed lists and ranges (no address, no free text); the literal values in this shape are the ones the feature sends, each other value of the same lists makes a shape of the same form",
+    "contract": "docs/api-contract.md, Browser error reports",
+    "security": {
+      "approvedIn": "PR #221, Jakub 2026-10-30",
+      "fields": {
+        "<n>": "the browser's major version after the slash (1-999, absent for a browser the app does not recognise) and count, the number of times the browser saw this kind, place and name, this report included (1-100); both integers checked against those ranges",
+        "kind": "the kind of failure, one of unexpected, chunk-load, pdf-render, pdf-load, qr-encode, verify-parse, verify-signature",
+        "place": "where in the app it was caught, global (Angular's ErrorHandler) or navigation (a failed lazy chunk)",
+        "name": "the JavaScript error's name when it is one of 26 standard names (Error, TypeError, the DOMException names, HttpErrorResponse), else Other; never the error's message or stack",
+        "version": "the build's revision, 7-40 lowercase hex digits of the commit, or dev",
+        "browser": "the browser family, one of chrome, edge, firefox, safari, samsung, opera, other",
+        "os": "the operating system family, one of android, ios, ipados, macos, windows, linux, other",
+        "display": "browser or standalone (the installed app)"
+      }
+    }
+  },
+  {
+    "kind": "log-field",
+    "line": "operations.clienterrors: Browser error kind=verify-signature place=global name=Error version=dev browser=chrome/<n> os=android display=browser count=<n>",
+    "reason": "1.1: every accepted browser error report is one WARN line built only from values of closed lists and ranges (no address, no free text); the literal values in this shape are the ones the feature sends, each other value of the same lists makes a shape of the same form",
+    "contract": "docs/api-contract.md, Browser error reports",
+    "security": {
+      "approvedIn": "PR #221, Jakub 2026-10-30",
+      "fields": {
+        "<n>": "the browser's major version after the slash (1-999, absent for a browser the app does not recognise) and count, the number of times the browser saw this kind, place and name, this report included (1-100); both integers checked against those ranges",
+        "kind": "the kind of failure, one of unexpected, chunk-load, pdf-render, pdf-load, qr-encode, verify-parse, verify-signature",
+        "place": "where in the app it was caught, global (Angular's ErrorHandler) or navigation (a failed lazy chunk)",
+        "name": "the JavaScript error's name when it is one of 26 standard names (Error, TypeError, the DOMException names, HttpErrorResponse), else Other; never the error's message or stack",
+        "version": "the build's revision, 7-40 lowercase hex digits of the commit, or dev",
+        "browser": "the browser family, one of chrome, edge, firefox, safari, samsung, opera, other",
+        "os": "the operating system family, one of android, ios, ipados, macos, windows, linux, other",
+        "display": "browser or standalone (the installed app)"
+      }
+    }
+  },
+  {
+    "kind": "log-field",
+    "line": "operations.clienterrors: Browser error reports over the hourly cap bucket=general dropped=<n>",
+    "reason": "1.1: when an hour in which the global cap dropped browser error reports ends, one WARN line per bucket says how many were dropped",
+    "contract": "docs/api-contract.md, Browser error reports",
+    "security": {
+      "approvedIn": "PR #221, Jakub 2026-10-30",
+      "fields": {
+        "<n>": "how many reports of that bucket the cap dropped in the hour that just ended (1 or more)",
+        "bucket": "the cap's bucket, one of general, pdf-render, pdf-load, verify-signature"
+      }
+    }
+  },
+  {
+    "kind": "log-field",
+    "line": "operations.clienterrors: Browser error reports over the hourly cap bucket=pdf-render dropped=<n>",
+    "reason": "1.1: when an hour in which the global cap dropped browser error reports ends, one WARN line per bucket says how many were dropped",
+    "contract": "docs/api-contract.md, Browser error reports",
+    "security": {
+      "approvedIn": "PR #221, Jakub 2026-10-30",
+      "fields": {
+        "<n>": "how many reports of that bucket the cap dropped in the hour that just ended (1 or more)",
+        "bucket": "the cap's bucket, one of general, pdf-render, pdf-load, verify-signature"
+      }
+    }
+  }
+]

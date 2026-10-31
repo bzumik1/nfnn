@@ -427,6 +427,7 @@ const adminAnswers: Record<string, unknown> = {
   '/api/admin/operations/settings': fictionalSettings,
   '/api/admin/content/news': { items: [article, draft] },
   '/api/admin/content/projects': { items: [project] },
+  '/api/admin/content/project-order': { order: 'YEAR_THEN_CATEGORY' },
   [`/api/admin/content/news/${article.id}`]: article,
   [`/api/admin/content/projects/${project.id}`]: project,
 };

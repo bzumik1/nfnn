@@ -209,9 +209,9 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
   protected readonly publishDateHint = computed(() => {
     switch (this.publishState()) {
       case 'live':
-        return $localize`:@@admin.projectEditor.publishDate.hint.live:Projekt je na webu, změny se ukážou hned. Web řadí projekty podle roku, v něm podle toho, komu pomohly, a pak podle data zveřejnění.`;
+        return $localize`:@@admin.projectEditor.publishDate.hint.live:Projekt je na webu, změny se ukážou hned. Projekty na stejném místě řazení ukazuje web od naposledy zveřejněného.`;
       case 'scheduled':
-        return $localize`:@@admin.projectEditor.publishDate.hint.scheduled:Na web se projekt dostane ${this.publishedOn()}:date:, do té doby ho vidíte jen vy. Web řadí projekty podle roku, v něm podle toho, komu pomohly, a pak podle data zveřejnění.`;
+        return $localize`:@@admin.projectEditor.publishDate.hint.scheduled:Na web se projekt dostane ${this.publishedOn()}:date:, do té doby ho vidíte jen vy. Projekty na stejném místě řazení ukazuje web od naposledy zveřejněného.`;
       default:
         return $localize`:@@admin.projectEditor.publishDate.hint.draft:Projekt zatím vidíte jen vy. Tlačítko Uložit a zveřejnit ho pustí na web s tímto datem, s pozdějším datem až ten den.`;
     }

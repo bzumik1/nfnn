@@ -23,6 +23,7 @@ export function person(overrides: Partial<PersonResponse> = {}): PersonResponse 
     webSignature: null,
     personalEmail: null,
     fundEmail: null,
+    linkedToAccount: false,
     ...overrides,
   };
 }
@@ -58,6 +59,7 @@ export function publicPeople(overrides: Partial<PublicPeopleResponse> = {}): Pub
         },
       ],
     },
+    footnote: 'Web zajišťuje bez nároku na odměnu Petr Vzor.',
     ...overrides,
   };
 }

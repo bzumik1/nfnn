@@ -21,11 +21,13 @@ public class PublicNewsService {
 
     private final NewsArticleRepository news;
     private final FormerSlugs formerSlugs;
+    private final NewsSigners signers;
     private final Clock clock;
 
-    public PublicNewsService(NewsArticleRepository news, FormerSlugs formerSlugs, Clock clock) {
+    public PublicNewsService(NewsArticleRepository news, FormerSlugs formerSlugs, NewsSigners signers, Clock clock) {
         this.news = news;
         this.formerSlugs = formerSlugs;
+        this.signers = signers;
         this.clock = clock;
     }
 
@@ -34,7 +36,7 @@ public class PublicNewsService {
             throw new IllegalArgumentException("The page is 0 or more and the size 1 to " + MAX_PAGE_SIZE);
         }
         LocalDate today = today();
-        List<NewsArticleView> items = news.findVisibleNewestFirst(today, page * size, size).stream().map(article -> NewsArticleView.from(article, today)).toList();
+        List<NewsArticleView> items = signers.views(news.findVisibleNewestFirst(today, page * size, size), today);
         return new NewsPage(items, page, size, news.countVisible(today));
     }
 
@@ -44,7 +46,7 @@ public class PublicNewsService {
                 .or(() -> formerSlugs.newsArticle(slug).flatMap(news::findById))
                 .filter(found -> found.isVisibleOn(today))
                 .orElseThrow(() -> new NewsArticleNotFound(slug));
-        return NewsArticleView.from(article, today);
+        return signers.view(article, today);
     }
 
     private LocalDate today() {

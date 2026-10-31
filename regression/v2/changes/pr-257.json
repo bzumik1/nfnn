@@ -1,0 +1,74 @@
+[
+  {
+    "path": "POST /api/admin/content/news*",
+    "scenario": "content/clean_up_unused_photos: *",
+    "kind": "added",
+    "field": "$*.signer",
+    "reason": "Jakub 2026-10-30: a news article is signed by a person of the foundation, shown with portrait, name and role under the article, so every news answer carries signer (null when unsigned)",
+    "contract": "docs/api-contract.md, content — public CMS"
+  },
+  {
+    "path": "PUT /api/admin/content/news*",
+    "scenario": "content/clean_up_unused_photos: *",
+    "kind": "added",
+    "field": "$*.signer",
+    "reason": "Jakub 2026-10-30: a news article is signed by a person of the foundation, shown with portrait, name and role under the article, so every news answer carries signer (null when unsigned)",
+    "contract": "docs/api-contract.md, content — public CMS"
+  },
+  {
+    "path": "POST /api/admin/content/news*",
+    "scenario": "content/home_content: *",
+    "kind": "added",
+    "field": "$*.signer",
+    "reason": "Jakub 2026-10-30: a news article is signed by a person of the foundation, shown with portrait, name and role under the article, so every news answer carries signer (null when unsigned)",
+    "contract": "docs/api-contract.md, content — public CMS"
+  },
+  {
+    "path": "GET /api/content/home",
+    "scenario": "content/home_content: *",
+    "kind": "added",
+    "field": "$*.signer",
+    "reason": "Jakub 2026-10-30: a news article is signed by a person of the foundation, shown with portrait, name and role under the article, so every news answer carries signer (null when unsigned)",
+    "contract": "docs/api-contract.md, content — public CMS"
+  },
+  {
+    "path": "POST /api/admin/content/news*",
+    "scenario": "content/manage_about: *",
+    "kind": "added",
+    "field": "$*.signer",
+    "reason": "Jakub 2026-10-30: a news article is signed by a person of the foundation, shown with portrait, name and role under the article, so every news answer carries signer (null when unsigned)",
+    "contract": "docs/api-contract.md, content — public CMS"
+  },
+  {
+    "path": "GET /api/admin/content/news*",
+    "scenario": "content/manage_news: *",
+    "kind": "added",
+    "field": "$*.signer",
+    "reason": "Jakub 2026-10-30: a news article is signed by a person of the foundation, shown with portrait, name and role under the article, so every news answer carries signer (null when unsigned)",
+    "contract": "docs/api-contract.md, content — public CMS"
+  },
+  {
+    "path": "POST /api/admin/content/news*",
+    "scenario": "content/manage_news: *",
+    "kind": "added",
+    "field": "$*.signer",
+    "reason": "Jakub 2026-10-30: a news article is signed by a person of the foundation, shown with portrait, name and role under the article, so every news answer carries signer (null when unsigned)",
+    "contract": "docs/api-contract.md, content — public CMS"
+  },
+  {
+    "path": "PUT /api/admin/content/news*",
+    "scenario": "content/manage_news: *",
+    "kind": "added",
+    "field": "$*.signer",
+    "reason": "Jakub 2026-10-30: a news article is signed by a person of the foundation, shown with portrait, name and role under the article, so every news answer carries signer (null when unsigned)",
+    "contract": "docs/api-contract.md, content — public CMS"
+  },
+  {
+    "path": "GET /api/content/news*",
+    "scenario": "content/manage_news: *",
+    "kind": "added",
+    "field": "$*.signer",
+    "reason": "Jakub 2026-10-30: a news article is signed by a person of the foundation, shown with portrait, name and role under the article, so every news answer carries signer (null when unsigned)",
+    "contract": "docs/api-contract.md, content — public CMS"
+  }
+]
