@@ -129,8 +129,6 @@ Feature: An administrator connects an application such as Claude to the administ
       | POST   | /api/admin/operations/backups/key/confirmation                      |
       | DELETE | /api/admin/donations/receipt-signatures/{id}                        |
       | PUT    | /api/admin/donations/receipt-signatory                              |
-      | POST   | /api/admin/content/people/{id}/web-signature                        |
-      | DELETE | /api/admin/content/people/{id}/web-signature                        |
 
   Scenario: A donor without the administrator role cannot connect an application
     When "Petr" approves the connection for "https://claude.ai/.well-known/oauth-client" with scope "admin:read" and state "xyz"

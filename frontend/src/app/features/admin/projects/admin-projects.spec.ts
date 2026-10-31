@@ -10,6 +10,7 @@ import { draftProject, project } from '../../content/testing/project-fixtures';
 import { AdminProjects } from './admin-projects';
 
 const LIST_URL = '/api/admin/content/projects';
+const ORDER_URL = '/api/admin/content/project-order';
 
 function problem(status: number, type: string) {
   return {
@@ -45,6 +46,7 @@ describe('Given an administrator on the project list', () => {
       .flush(authResponse('token-1', sampleDonor({ roles: ['DONOR', 'ADMIN'] })));
     fixture = TestBed.createComponent(AdminProjects);
     fixture.detectChanges();
+    http.expectOne(ORDER_URL).flush({ order: 'YEAR_THEN_CATEGORY' });
   });
 
   afterEach(() => http.verify());
@@ -119,7 +121,7 @@ describe('Given an administrator on the project list', () => {
     http.expectOne(LIST_URL).flush({ items: [] });
     await settle();
 
-    expect(texts('.ui-card__intro')).toEqual([
+    expect(texts('[aria-labelledby="projects-list-title"] .ui-card__intro')).toEqual([
       'Zatím tu žádný projekt není. Napište první tlačítkem Nový projekt.',
     ]);
   });
@@ -139,6 +141,27 @@ describe('Given an administrator on the project list', () => {
     await settle();
 
     expect(rows()).toHaveLength(1);
+  });
+
+  it('when another order is saved, then the list is asked for again and shows the projects in the new order', async () => {
+    http.expectOne(LIST_URL).flush({
+      items: [project(), project({ id: '0199f3e0-0000-7000-8000-00000000c004', title: 'Pes' })],
+    });
+    await settle();
+
+    const year = fixture.nativeElement.querySelector('input[value="YEAR"]') as HTMLInputElement;
+    year.click();
+    await settle();
+    (fixture.nativeElement.querySelector('.order-form') as HTMLFormElement).requestSubmit();
+    await settle();
+    http.expectOne({ method: 'PUT', url: ORDER_URL }).flush({ order: 'YEAR' });
+    await settle();
+    http.expectOne(LIST_URL).flush({
+      items: [project({ id: '0199f3e0-0000-7000-8000-00000000c004', title: 'Pes' }), project()],
+    });
+    await settle();
+
+    expect(texts('td[data-label="Titulek"]')).toEqual(['Pes', 'Zahrada pro děti']);
   });
 
   it('when the donor is no administrator, then the page sends them to their overview', async () => {
@@ -187,6 +210,7 @@ describe('Given an administrator who has just deleted a project', () => {
     const fixture = TestBed.createComponent(AdminProjects);
     fixture.detectChanges();
     http.expectOne(LIST_URL).flush({ items: [] });
+    http.expectOne(ORDER_URL).flush({ order: 'YEAR_THEN_CATEGORY' });
     await fixture.whenStable();
     fixture.detectChanges();
 

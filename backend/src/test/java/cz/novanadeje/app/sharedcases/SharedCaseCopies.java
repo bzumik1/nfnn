@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 
 final class SharedCaseCopies {
 
-    static final List<String> QR_CASE_FILES = List.of("qr/payment.json", "qr/totp.json");
+    static final List<String> QR_CASE_FILES = List.of("qr/encoder.json", "qr/payment.json", "qr/totp.json");
     static final int SMALLEST_TELLING_VALUE = 2;
     private static final Pattern MATRIX_NOISE = Pattern.compile("[\\s\"'`,+\\[\\]]");
     private static final JsonMapper JSON = JsonMapper.builder().build();

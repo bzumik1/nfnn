@@ -67,20 +67,29 @@
     </div>
     <div class="topbar-right">
       <span class="topbar-donor">
-        <svg
-          aria-hidden="true"
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <circle cx="12" cy="8" r="4" />
-          <path d="M4 21a8 8 0 0 1 16 0" />
-        </svg>
+        @if (portraitUrl(); as portrait) {
+          <app-avatar
+            class="topbar-portrait"
+            [name]="donor()?.name ?? ''"
+            [src]="portrait"
+            [size]="24"
+          />
+        } @else {
+          <svg
+            aria-hidden="true"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="8" r="4" />
+            <path d="M4 21a8 8 0 0 1 16 0" />
+          </svg>
+        }
         <span>{{ donor()?.name }}</span>
       </span>
       <button type="button" class="topbar-logout" (click)="logout()" [disabled]="signingOut()">

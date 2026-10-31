@@ -2,6 +2,7 @@ package cz.novanadeje.app.content.interfaces.rest;
 
 import cz.novanadeje.app.content.application.people.FoundersNoteService;
 import cz.novanadeje.app.content.application.people.PeopleAdminService;
+import cz.novanadeje.app.content.application.people.PeopleFootnoteService;
 import cz.novanadeje.app.content.domain.media.MediaId;
 import cz.novanadeje.app.content.domain.people.PersonId;
 import jakarta.validation.Valid;
@@ -29,15 +30,22 @@ class AdminPeopleController {
 
     private final PeopleAdminService people;
     private final FoundersNoteService notes;
+    private final PeopleFootnoteService footnotes;
 
-    AdminPeopleController(PeopleAdminService people, FoundersNoteService notes) {
+    AdminPeopleController(PeopleAdminService people, FoundersNoteService notes, PeopleFootnoteService footnotes) {
         this.people = people;
         this.notes = notes;
+        this.footnotes = footnotes;
     }
 
     @GetMapping
     PeopleResponse read() {
-        return PeopleResponse.from(people.list(), notes.read());
+        return PeopleResponse.from(people.list(), notes.read(), footnotes.read());
+    }
+
+    @GetMapping("/me")
+    OwnPersonResponse mine(@AuthenticationPrincipal Jwt jwt) {
+        return new OwnPersonResponse(people.mine(admin(jwt)).map(PersonResponse::from).orElse(null));
     }
 
     @PostMapping
@@ -48,7 +56,7 @@ class AdminPeopleController {
 
     @PutMapping("/order")
     PeopleResponse order(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody PeopleOrderRequest request) {
-        return PeopleResponse.from(people.order(admin(jwt), request.toOrder()), notes.read());
+        return PeopleResponse.from(people.order(admin(jwt), request.toOrder()), notes.read(), footnotes.read());
     }
 
     @PutMapping("/note")
@@ -56,15 +64,20 @@ class AdminPeopleController {
         return new FoundersNoteResponse(notes.change(admin(jwt), Optional.ofNullable(request.text())).orElse(null));
     }
 
+    @PutMapping("/footnote")
+    PeopleFootnoteResponse changeFootnote(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody PeopleFootnoteRequest request) {
+        return new PeopleFootnoteResponse(footnotes.change(admin(jwt), Optional.ofNullable(request.text())).orElse(null));
+    }
+
     @PutMapping("/{id}")
     PersonResponse update(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody PersonRequest request) {
-        return PersonResponse.from(people.update(admin(jwt), new PersonId(id), request.toCommand(), !jwt.hasClaim(SCOPE_CLAIM)));
+        return PersonResponse.from(people.update(admin(jwt), new PersonId(id), request.toCommand(), jwt.hasClaim(SCOPE_CLAIM)));
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     void remove(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
-        people.remove(admin(jwt), new PersonId(id), !jwt.hasClaim(SCOPE_CLAIM));
+        people.remove(admin(jwt), new PersonId(id));
     }
 
     @PostMapping("/{id}/web-signature")

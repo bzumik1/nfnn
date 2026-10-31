@@ -35,28 +35,60 @@ export interface QrSymbol {
 }
 
 export interface SpaydInput {
-  readonly recipient: {
-    readonly accountNumber: string;
-    readonly iban: string;
-    readonly name: string;
-  };
-  readonly amount?: string;
+  readonly details?: string;
+  readonly servedDetails?: PaymentDetailsExpected;
+  readonly amountMinor: number;
   readonly variableSymbol?: string;
-  readonly purpose?: string;
+  readonly purpose?: 'DONATION' | 'ACCOUNT_VERIFICATION';
 }
 
 export type SpaydExpected =
   | { readonly spayd: string }
   | {
       readonly refused: {
-        readonly status: number;
-        readonly type: string;
-        readonly fields: readonly string[];
+        readonly fields: readonly ('amountMinor' | 'variableSymbol' | 'details')[];
       };
     };
 
+export interface PaymentDetailsInput {
+  readonly recipient: {
+    readonly accountNumber: string;
+    readonly iban: string;
+    readonly name: string;
+  };
+}
+
+export interface PaymentDetailsExpected {
+  readonly account: {
+    readonly number: string;
+    readonly iban: string;
+    readonly recipientName: string;
+  };
+  readonly currency: 'CZK';
+  readonly messages: {
+    readonly donation: string;
+    readonly accountVerification: string;
+  };
+  readonly accountVerificationAmountMinor: number;
+}
+
+export interface PaymentAccountInput {
+  readonly accountNumber: string;
+  readonly iban: string;
+}
+
+export interface PaymentAccountExpected {
+  readonly ibanOfNumber: string | null;
+  readonly matches: boolean;
+}
+
 export interface PaymentQrInput {
   readonly spayd: string;
+}
+
+export interface EncoderQrInput {
+  readonly text: string;
+  readonly errorCorrection: 'L' | 'M' | 'Q' | 'H';
 }
 
 export interface TotpUriInput {
@@ -217,7 +249,10 @@ export interface SharedCaseTopics {
   readonly 'donor-summary/summary.json': SharedCase<RowsInput, Answer>;
   readonly 'monthly-report/formatting.json': SharedCase<Answer, { readonly text: string }>;
   readonly 'monthly-report/report.json': SharedCase<RowsInput, Answer>;
+  readonly 'payment/account.json': SharedCase<PaymentAccountInput, PaymentAccountExpected>;
+  readonly 'payment/details.json': SharedCase<PaymentDetailsInput, PaymentDetailsExpected>;
   readonly 'payment/spayd.json': SharedCase<SpaydInput, SpaydExpected>;
+  readonly 'qr/encoder.json': SharedCase<EncoderQrInput, QrSymbol>;
   readonly 'qr/payment.json': SharedCase<PaymentQrInput, QrSymbol>;
   readonly 'qr/totp.json': SharedCase<TotpQrInput, QrSymbol>;
   readonly 'receipts/formatting.json': SharedCase<
@@ -237,7 +272,10 @@ const REGISTERED_TOPICS: Readonly<Record<SharedCaseTopic, true>> = {
   'donor-summary/summary.json': true,
   'monthly-report/formatting.json': true,
   'monthly-report/report.json': true,
+  'payment/account.json': true,
+  'payment/details.json': true,
   'payment/spayd.json': true,
+  'qr/encoder.json': true,
   'qr/payment.json': true,
   'qr/totp.json': true,
   'receipts/formatting.json': true,

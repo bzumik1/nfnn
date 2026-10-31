@@ -259,6 +259,38 @@ describe('Given an administrator on the logs page', () => {
     expect(text('.range')).toBe('Konec logu');
   });
 
+  it('when they ask for the browser error reports, then the search holds their pattern and the newest reports are listed', async () => {
+    await loadPage();
+    flushWindow('bytes=20000');
+    await settle();
+
+    button('Chyby z prohlížečů').click();
+    await settle();
+    http
+      .expectOne(
+        (request) =>
+          request.urlWithParams ===
+          `${LOGS_URL}/backend.log/search?pattern=Browser%20error&limit=50`,
+      )
+      .flush({
+        name: 'backend.log',
+        sizeBytes: 220,
+        matches: [
+          {
+            offset: 150,
+            line: '2026-11-04T10:00:01 WARN Browser error kind=pdf-render place=global name=TypeError version=1a2b3c4 browser=safari/18 os=ios display=standalone count=1',
+          },
+        ],
+        moreOlder: false,
+        scannedFrom: 150,
+      });
+    await settle();
+
+    expect(element<HTMLInputElement>('#log-search').value).toBe('Browser error');
+    expect(texts('.match')).toHaveLength(1);
+    expect(texts('.match')[0]).toContain('kind=pdf-render');
+  });
+
   it('when the pattern is not a valid expression, then the problem is shown at the search', async () => {
     await loadPage();
     flushWindow('bytes=20000');

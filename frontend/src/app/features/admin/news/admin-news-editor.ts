@@ -13,6 +13,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { catchError, forkJoin, of } from 'rxjs';
 import { FormsModule, NgForm } from '@angular/forms';
 import { Title } from '@angular/platform-browser';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -38,9 +39,11 @@ import {
   NewsApi,
   NewsArticleRequest,
   NewsArticleResponse,
+  NewsSignerResponse,
   SLUG_PATTERN,
   slugFromText,
 } from '../../content/news-api';
+import { OwnPersonResponse, PeopleApi } from '../../content/people-api';
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 import { ContentPreview, PreviewContent } from '../content-preview/content-preview';
@@ -82,6 +85,7 @@ const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 })
 export class AdminNewsEditor implements GuardsUnsavedChanges {
   private readonly api = inject(NewsApi);
+  private readonly peopleApi = inject(PeopleApi);
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -122,6 +126,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
   protected readonly uploading = signal(false);
   protected readonly uploadError = signal<string | null>(null);
   protected readonly askingToLeave = signal(false);
+  private readonly people = signal<NewsSignerResponse[]>([]);
   private readonly edited = signal(false);
   private answerLeave: ((leave: boolean) => void) | null = null;
   private discarded = false;
@@ -160,6 +165,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
   protected perex = '';
   protected body = '';
   protected coverImageAlt = '';
+  protected signerId = '';
   protected publishDate = todayIso();
   private slugEdited = false;
 
@@ -217,6 +223,13 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     }
     return `${address} ${$localize`:@@admin.newsEditor.slug.hint.oldLink:Pozor: dosavadní odkaz nfnn.cz/aktuality/${saved.slug}:oldSlug: po uložení přestane fungovat.`}`;
   });
+  protected readonly signers = computed(() => {
+    const people = this.people();
+    const current = this.article()?.signer;
+    return current && !people.some((person) => person.id === current.id)
+      ? [...people, current]
+      : people;
+  });
   protected readonly altMissing = computed(() => {
     const cover = this.article()?.coverImage;
     return cover != null && cover.alt === null && !this.coverUnsaved();
@@ -229,6 +242,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     } else {
       this.load(id);
     }
+    this.loadSigners(id === null);
     afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
     effect((onCleanup) => {
       const form = this.articleForm();
@@ -264,6 +278,26 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
           }
           this.state.set('error');
         },
+      });
+  }
+
+  private loadSigners(withDefault: boolean): void {
+    const noMember: OwnPersonResponse = { member: null };
+    forkJoin({
+      people: this.peopleApi.load(),
+      own: withDefault ? this.peopleApi.mine().pipe(catchError(() => of(noMember))) : of(noMember),
+    })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: ({ people, own }) => {
+          if (own.member && this.signerId === '' && this.article() === null) {
+            this.signerId = own.member.id;
+          }
+          this.people.set(
+            people.members.map(({ id, name, role, portrait }) => ({ id, name, role, portrait })),
+          );
+        },
+        error: () => this.people.set([]),
       });
   }
 
@@ -613,6 +647,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
       live: true,
       createdAt: saved?.createdAt ?? '',
       updatedAt: saved?.updatedAt ?? '',
+      signer: this.signers().find((person) => person.id === request.signerId) ?? null,
     };
   }
 
@@ -627,6 +662,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     this.body = article.body;
     this.coverImage.set(article.coverImage);
     this.coverImageAlt = article.coverImage?.alt ?? '';
+    this.signerId = article.signer?.id ?? '';
     this.publishDate = article.publishedOn ?? (this.publishDate || todayIso());
   }
 
@@ -642,6 +678,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
       body: this.body.trim(),
       coverImageId: this.coverImage()?.id ?? null,
       coverImageAlt: this.coverImage() && alt !== '' ? alt : null,
+      signerId: this.signerId === '' ? null : this.signerId,
     };
   }
 

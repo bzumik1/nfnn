@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="011-add-a-line-under-the-board" author="nfnn">
+        <createTable tableName="content_people_footnote">
+            <column name="id" type="smallint">
+                <constraints primaryKey="true" primaryKeyName="pk_content_people_footnote" nullable="false"/>
+            </column>
+            <column name="text" type="varchar(200)"/>
+            <column name="updated_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <sql>alter table content_people_footnote add constraint ck_content_people_footnote_singleton check (id = 1)</sql>
+    </changeSet>
+</databaseChangeLog>

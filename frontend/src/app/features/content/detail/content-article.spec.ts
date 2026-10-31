@@ -49,6 +49,65 @@ describe('Given the page of a news article', () => {
   });
 });
 
+describe('Given the page of a news article signed by a person of the foundation', () => {
+  const PORTRAIT = '0199f3e0-0000-7000-8000-00000000c101';
+
+  async function shown(
+    role: string | null,
+    portrait: boolean,
+  ): Promise<ComponentFixture<ContentArticle>> {
+    const fixture = await setUp();
+    fixture.componentRef.setInput('kind', 'news');
+    fixture.componentRef.setInput(
+      'page',
+      newsPage(
+        newsArticle({
+          signer: {
+            id: '0199f3e0-0000-7000-8000-00000000c001',
+            name: 'Pavel Vzorový',
+            role,
+            portrait: portrait
+              ? { id: PORTRAIT, url: `/api/content/media/${PORTRAIT}`, width: 640, height: 640 }
+              : null,
+          },
+        }),
+      ),
+    );
+    await fixture.whenStable();
+    return fixture;
+  }
+
+  it('when it is shown, then the portrait, the name and the role stand under the text', async () => {
+    const fixture = await shown('Předseda správní rady', true);
+
+    expect(text(fixture, '.signer-name')).toBe('Pavel Vzorový');
+    expect(text(fixture, '.signer-role')).toBe('Předseda správní rady');
+    expect(
+      (fixture.nativeElement.querySelector('.signer img') as HTMLImageElement).getAttribute('src'),
+    ).toBe(`/api/content/media/${PORTRAIT}?w=480`);
+    expect(fixture.nativeElement.querySelector('.prose + .signer')).not.toBeNull();
+  });
+
+  it('when the person has no portrait and no role, then their initials and name stand there alone', async () => {
+    const fixture = await shown(null, false);
+
+    expect(text(fixture, '.signer-name')).toBe('Pavel Vzorový');
+    expect(fixture.nativeElement.querySelector('.signer-role')).toBeNull();
+    expect(text(fixture, '.signer app-avatar')).toBe('PV');
+  });
+});
+
+describe('Given the page of an unsigned news article', () => {
+  it('when it is shown, then nothing stands under the text', async () => {
+    const fixture = await setUp();
+    fixture.componentRef.setInput('kind', 'news');
+    fixture.componentRef.setInput('page', newsPage(newsArticle()));
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('.signer')).toBeNull();
+  });
+});
+
 describe('Given the page of a project', () => {
   it('when it is shown, then the eyebrow carries the tag and the year and the article leads back to the projects', async () => {
     const fixture = await setUp();

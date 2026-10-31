@@ -1,6 +1,7 @@
 package cz.novanadeje.app.cucumber.transcript;
 
 import cz.novanadeje.app.cucumber.ScenarioDonors;
+import cz.novanadeje.app.support.AsyncTaskTracker;
 import cz.novanadeje.app.support.ReceiptSignatories;
 import cz.novanadeje.app.support.RecordingMailSender;
 import cz.novanadeje.app.support.RecordingSetupCodeAnnouncer;
@@ -10,7 +11,6 @@ import io.cucumber.java.BeforeAll;
 import io.cucumber.java.Scenario;
 import org.springframework.context.ApplicationContext;
 import org.springframework.jdbc.core.simple.JdbcClient;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.time.Duration;
 import java.util.Base64;
@@ -24,7 +24,6 @@ import java.util.stream.Stream;
 
 public class ApiTranscriptHooks {
 
-    private static final String ASYNC_EXECUTOR = "applicationTaskExecutor";
     private static final Duration ASYNC_WAIT = Duration.ofSeconds(15);
     private static final String NUMBERED_VARIABLE_SYMBOL = "<vs:#>";
     private static final String SETUP_CODE = "<setup-code>";
@@ -40,16 +39,19 @@ public class ApiTranscriptHooks {
     private final ScenarioDonors donors;
     private final JdbcClient jdbc;
     private final ApplicationContext context;
+    private final AsyncTaskTracker asyncTasks;
     private LogLineCapture logLines;
 
     public ApiTranscriptHooks(ApiTranscriptRecorder recorder, RecordingMailSender mailSender, RecordingSetupCodeAnnouncer setupCodes,
-                              ScenarioDonors donors, JdbcClient jdbc, ApplicationContext context) {
+                              ScenarioDonors donors, JdbcClient jdbc, ApplicationContext context,
+                              AsyncTaskTracker asyncTasks) {
         this.recorder = recorder;
         this.mailSender = mailSender;
         this.setupCodes = setupCodes;
         this.donors = donors;
         this.jdbc = jdbc;
         this.context = context;
+        this.asyncTasks = asyncTasks;
     }
 
     @BeforeAll
@@ -68,11 +70,11 @@ public class ApiTranscriptHooks {
     }
 
     @After(order = AFTER_EVERY_OTHER_TEAR_DOWN)
-    public void writeTranscript(Scenario scenario) throws InterruptedException {
+    public void writeTranscript(Scenario scenario) {
         if (!ApiTranscripts.recording()) {
             return;
         }
-        awaitIdle(context.getBean(ASYNC_EXECUTOR), ASYNC_WAIT);
+        awaitAsynchronousWork(asyncTasks);
         logLines.detach();
         ScenarioTranscript transcript = recorder.transcript();
         transcript.mails(mailSender.sentInScenario());
@@ -107,17 +109,7 @@ public class ApiTranscriptHooks {
                 Base64.getUrlEncoder().withoutPadding().encodeToString(seed), HexFormat.of().formatHex(seed)).collect(Collectors.toUnmodifiableSet());
     }
 
-    static void awaitIdle(Object executor, Duration timeout) throws InterruptedException {
-        if (!(executor instanceof ThreadPoolTaskExecutor pool)) {
-            throw new IllegalStateException("The application task executor is a " + executor.getClass().getName()
-                    + ", which cannot report its running work, so the recorder cannot wait for asynchronous mails and log lines");
-        }
-        long deadline = System.nanoTime() + timeout.toNanos();
-        while (pool.getActiveCount() > 0 || !pool.getThreadPoolExecutor().getQueue().isEmpty()) {
-            if (System.nanoTime() > deadline) {
-                throw new IllegalStateException("Asynchronous work did not finish within " + timeout);
-            }
-            Thread.sleep(20);
-        }
+    static void awaitAsynchronousWork(AsyncTaskTracker asyncTasks) {
+        asyncTasks.awaitIdleAfter("the scenario", ASYNC_WAIT);
     }
 }
