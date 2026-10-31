@@ -1,0 +1,9 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/site-header/site-header.spec.ts > Given the site header on the pages of news and projects > when the list of projects is open, then Projekty leads to the list and is marked, also in the phone menu",
+    "reason": "Jakub 2026-10-31 (\"Přejmenuj to všude, projekty zní hůř než Kde pomáháme\"): the menu item of the projects reads Kde pomáháme, so the test names it so",
+    "replacement": "src/app/layout/site-header/site-header.spec.ts > Given the site header on the pages of news and projects > when the list of projects is open, then Kde pomáháme leads to the list and is marked, also in the phone menu"
+  }
+]
