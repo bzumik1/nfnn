@@ -10,6 +10,7 @@ import {
   sharedCases,
   topicSchemas,
 } from './shared-cases';
+import { parseVectorArt } from '../app/features/donations/receipt-pdf/vector-art';
 
 interface EditableCaseFile {
   source: string;
@@ -427,6 +428,26 @@ describe('Given the vector signature cases', () => {
     expect(schemaViolations(VECTOR_CASES, file).join('\n')).toMatch(
       /\/cases\/0\/expected\/canonical must match pattern/,
     );
+  });
+
+  it('when each canonical JSON is read as the receipt drawing reads the served bytes, then it gives the view box and paths of its case', () => {
+    const cases = sharedCases(VECTOR_CASES);
+
+    expect(cases.length).toBeGreaterThan(0);
+    for (const sharedCase of cases) {
+      expect(parseVectorArt(sharedCase.expected.canonical)).toEqual(
+        JSON.parse(sharedCase.expected.canonical),
+      );
+    }
+  });
+
+  it('when a canonical JSON carries a fill the receipt drawing refuses, then reading it fails', () => {
+    const canonical = sharedCases(VECTOR_CASES)[0].expected.canonical.replace(
+      /"fill":"#[0-9a-f]{6}"/,
+      '"fill":"red"',
+    );
+
+    expect(() => parseVectorArt(canonical)).toThrow(/refused/);
   });
 });
 

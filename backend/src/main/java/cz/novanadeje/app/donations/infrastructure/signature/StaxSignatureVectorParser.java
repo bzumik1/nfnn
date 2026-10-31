@@ -166,7 +166,6 @@ class StaxSignatureVectorParser implements SignatureVectorParser {
         return namespace == null || namespace.isEmpty() || SVG_NAMESPACE.equals(namespace);
     }
 
-
     private static void skipSubtree(XMLStreamReader reader) throws XMLStreamException {
         int depth = 1;
         while (depth > 0) {
