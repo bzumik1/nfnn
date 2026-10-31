@@ -1511,7 +1511,9 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
       mimeType: 'image/svg+xml',
       buffer: Buffer.from('<svg/>'),
     });
-    await expect(card.getByRole('alert').filter({ hasText: /\S/ })).toContainText('script');
+    await expect(card.getByRole('alert').filter({ hasText: /\S/ })).toContainText(
+      'nepovolený prvek',
+    );
     expect(await violations(page)).toEqual([]);
   });
 

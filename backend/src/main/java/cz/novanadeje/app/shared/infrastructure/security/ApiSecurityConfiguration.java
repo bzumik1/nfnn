@@ -29,7 +29,8 @@ class ApiSecurityConfiguration {
             "/api/admin/content/projects/*",
             "/api/admin/donations/donors/*/bank-accounts/*",
             "/api/admin/donations/symbol-claims/*",
-            "/api/admin/donations/receipt-signatures/*"};
+            "/api/admin/donations/receipt-signatures/*",
+            "/api/admin/donations/receipt-images/*"};
     private static final String[] BROWSER_ONLY_POSTS = {
             "/api/admin/donors/administrators",
             "/api/admin/donors/*/second-factor/reset",
@@ -41,7 +42,8 @@ class ApiSecurityConfiguration {
             "/api/admin/donations/receipt-signatory"};
 
     private static final String[] BROWSER_ONLY_GETS = {
-            "/api/admin/donations/receipt-signatures/*"};
+            "/api/admin/donations/receipt-signatures/*",
+            "/api/admin/donations/receipt-images/*"};
 
     @Bean
     SecurityFilterChain apiSecurityFilterChain(HttpSecurity http, ProblemDetailSecurityErrorHandler errorHandler,

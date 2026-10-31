@@ -82,7 +82,7 @@ enum AdminHandlerReach {
         table.put("GET /api/admin/donations/payments", CONNECTOR);
         table.put("POST /api/admin/donations/payments/{id}/pair", CONNECTOR);
         table.put("POST /api/admin/donations/payments/{id}/unpair", CONNECTOR);
-        table.put("GET /api/admin/donations/receipt-images/{sha256}", CONNECTOR);
+        table.put("GET /api/admin/donations/receipt-images/{sha256}", BROWSER_ONLY);
         table.put("GET /api/admin/donations/receipt-signatory", CONNECTOR);
         table.put("PUT /api/admin/donations/receipt-signatory", BROWSER_ONLY);
         table.put("GET /api/admin/donations/receipt-signatures/{personId}", BROWSER_ONLY);
