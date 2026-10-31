@@ -1,0 +1,195 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nfnn.cz/shared-cases/schemas/verification/payload.schema.json",
+  "title": "Receipt verification proof cases: a receipt gives its signed proof and QR symbol, and a proof reads back to its verdict",
+  "description": "An encoding case (input.receipt) is encoded and signed by the backend and read back by the browser; a reading case (input.qrText) is read by both sides. The backend runs every case from slice 1.5, the browser from 1.8.",
+  "type": "object",
+  "required": ["source", "logic", "cases"],
+  "additionalProperties": false,
+  "properties": {
+    "source": { "$ref": "../defs/source.schema.json" },
+    "logic": { "type": "string", "minLength": 1 },
+    "cases": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/case" } }
+  },
+  "$defs": {
+    "day": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+    "number": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{6}$" },
+    "keyId": { "type": "string", "pattern": "^[0-9a-f]{8}$" },
+    "minor": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
+    "text": { "type": "string", "minLength": 1 },
+    "foundation": {
+      "type": "object",
+      "required": ["companyIdentifier"],
+      "additionalProperties": false,
+      "properties": { "companyIdentifier": { "type": "string", "pattern": "^[0-9]{8}$" } }
+    },
+    "keys": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["keyId", "publicKeyHex", "status"],
+        "additionalProperties": false,
+        "properties": {
+          "keyId": { "$ref": "#/$defs/keyId" },
+          "publicKeyHex": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "status": { "enum": ["active", "revoked"] }
+        }
+      }
+    },
+    "qrText": { "type": "string", "pattern": "^https://" },
+    "receipt": {
+      "type": "object",
+      "required": ["kind", "number", "issuedOn", "year", "replaces", "donor", "gifts", "totalMinor"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "enum": ["single", "yearly"] },
+        "number": { "$ref": "#/$defs/number" },
+        "issuedOn": { "$ref": "#/$defs/day" },
+        "year": { "type": ["integer", "null"], "minimum": 2000, "maximum": 2179 },
+        "replaces": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "required": ["number", "issuedOn"],
+              "additionalProperties": false,
+              "properties": { "number": { "$ref": "#/$defs/number" }, "issuedOn": { "$ref": "#/$defs/day" } }
+            }
+          ]
+        },
+        "donor": {
+          "type": "object",
+          "required": ["type", "name", "street", "city", "postalCode", "companyIdentifier"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "enum": ["person", "company"] },
+            "name": { "$ref": "#/$defs/text" },
+            "street": { "$ref": "#/$defs/text" },
+            "city": { "$ref": "#/$defs/text" },
+            "postalCode": { "$ref": "#/$defs/text" },
+            "companyIdentifier": { "type": ["string", "null"], "pattern": "^[0-9]{8}$" }
+          }
+        },
+        "gifts": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["receivedOn", "amountMinor"],
+            "additionalProperties": false,
+            "properties": { "receivedOn": { "$ref": "#/$defs/day" }, "amountMinor": { "$ref": "#/$defs/minor" } }
+          }
+        },
+        "totalMinor": { "$ref": "#/$defs/minor" }
+      }
+    },
+    "encoding": {
+      "type": "object",
+      "required": ["receipt", "signingKeyId", "foundation", "keys"],
+      "additionalProperties": false,
+      "properties": {
+        "receipt": { "$ref": "#/$defs/receipt" },
+        "signingKeyId": { "$ref": "#/$defs/keyId" },
+        "foundation": { "$ref": "#/$defs/foundation" },
+        "keys": { "$ref": "#/$defs/keys" }
+      }
+    },
+    "proof": {
+      "type": "object",
+      "required": ["payloadHex", "signatureHex", "signedSha256", "qrText", "qr"],
+      "additionalProperties": false,
+      "properties": {
+        "payloadHex": { "type": "string", "pattern": "^01([0-9a-f]{2})+$" },
+        "signatureHex": { "type": "string", "pattern": "^[0-9a-f]{128}$" },
+        "signedSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "qrText": { "type": "string", "pattern": "^https://nfnn\\.cz/overit#1[0-9]+$" },
+        "qr": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": ["version", "errorCorrection"],
+              "additionalProperties": false,
+              "properties": { "version": { "type": "integer", "minimum": 1, "maximum": 40 }, "errorCorrection": { "enum": ["M", "L"] } }
+            },
+            {
+              "type": "object",
+              "required": ["refusal"],
+              "additionalProperties": false,
+              "properties": { "refusal": { "const": "donations/receipt-too-long" } }
+            }
+          ]
+        }
+      }
+    },
+    "reading": {
+      "type": "object",
+      "required": ["qrText", "foundation", "keys"],
+      "additionalProperties": false,
+      "properties": {
+        "qrText": { "$ref": "#/$defs/qrText" },
+        "foundation": { "$ref": "#/$defs/foundation" },
+        "keys": { "$ref": "#/$defs/keys" }
+      }
+    },
+    "verdict": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["verdict", "keyId", "receipt"],
+          "additionalProperties": false,
+          "properties": { "verdict": { "const": "valid" }, "keyId": { "$ref": "#/$defs/keyId" }, "receipt": { "$ref": "#/$defs/receipt" } }
+        },
+        {
+          "type": "object",
+          "required": ["verdict", "reason"],
+          "additionalProperties": false,
+          "properties": {
+            "verdict": { "const": "rejected" },
+            "reason": {
+              "enum": [
+                "not-a-proof",
+                "digits",
+                "truncated",
+                "unknown-format",
+                "unknown-key",
+                "revoked-key",
+                "bad-signature",
+                "reserved-flags",
+                "non-minimal-varint",
+                "invalid-text",
+                "invalid-value",
+                "trailing-bytes",
+                "total-mismatch"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "case": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["name", "input", "expected"],
+          "additionalProperties": false,
+          "properties": {
+            "name": { "type": "string", "minLength": 1 },
+            "input": { "$ref": "#/$defs/encoding" },
+            "expected": { "$ref": "#/$defs/proof" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["name", "input", "expected"],
+          "additionalProperties": false,
+          "properties": {
+            "name": { "type": "string", "minLength": 1 },
+            "input": { "$ref": "#/$defs/reading" },
+            "expected": { "$ref": "#/$defs/verdict" }
+          }
+        }
+      ]
+    }
+  }
+}
