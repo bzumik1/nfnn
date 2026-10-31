@@ -2,6 +2,7 @@ package cz.novanadeje.app.content.application.project;
 
 import cz.novanadeje.app.content.domain.project.Project;
 import cz.novanadeje.app.content.domain.project.ProjectNotFound;
+import cz.novanadeje.app.content.domain.project.ProjectOrderRepository;
 import cz.novanadeje.app.content.domain.project.ProjectRepository;
 import cz.novanadeje.app.content.domain.FormerSlugs;
 import cz.novanadeje.app.content.domain.Slug;
@@ -20,11 +21,13 @@ public class PublicProjectService {
     public static final int MAX_PAGE_SIZE = 50;
 
     private final ProjectRepository projects;
+    private final ProjectOrderRepository orders;
     private final FormerSlugs formerSlugs;
     private final Clock clock;
 
-    public PublicProjectService(ProjectRepository projects, FormerSlugs formerSlugs, Clock clock) {
+    public PublicProjectService(ProjectRepository projects, ProjectOrderRepository orders, FormerSlugs formerSlugs, Clock clock) {
         this.projects = projects;
+        this.orders = orders;
         this.formerSlugs = formerSlugs;
         this.clock = clock;
     }
@@ -34,7 +37,7 @@ public class PublicProjectService {
             throw new IllegalArgumentException("The page is 0 or more and the size 1 to " + MAX_PAGE_SIZE);
         }
         LocalDate today = today();
-        List<ProjectView> items = projects.findVisibleNewestFirst(today, page * size, size).stream().map(project -> ProjectView.from(project, today)).toList();
+        List<ProjectView> items = projects.findVisible(today, orders.current(), page * size, size).stream().map(project -> ProjectView.from(project, today)).toList();
         return new ProjectPage(items, page, size, projects.countVisible(today));
     }
 

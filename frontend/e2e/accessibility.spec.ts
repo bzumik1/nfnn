@@ -1449,6 +1449,106 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
+  test('when an administrator keeps the people of the foundation and the home page shows them, then the section, the page, the editor and the removal confirmation break no rule', async ({
+    page,
+  }) => {
+    const personId = '0199f3e0-0000-7000-8000-00000000c001';
+    const portraitId = '0199f3e0-0000-7000-8000-00000000c101';
+    const signatureId = '0199f3e0-0000-7000-8000-00000000c201';
+    const image = (id: string, width: number, height: number) => ({
+      id,
+      url: `/api/content/media/${id}`,
+      width,
+      height,
+    });
+    await page.route(
+      (url) => url.pathname === '/api/admin/content/people',
+      (route) =>
+        route.fulfill({
+          json: {
+            members: [
+              {
+                id: personId,
+                name: 'Eva Vzorová',
+                role: 'Zakladatelka',
+                position: 0,
+                onBoard: true,
+                boardNote: 'předsedkyně',
+                featured: true,
+                portrait: image(portraitId, 640, 640),
+                webSignature: image(signatureId, 600, 180),
+                personalEmail: 'eva@example.org',
+                fundEmail: 'eva@nfnn.cz',
+              },
+            ],
+            note: 'Děkujeme všem, kdo pomáhají s námi.',
+          },
+        }),
+    );
+    await page.route(
+      (url) => url.pathname === '/api/content/home',
+      (route) =>
+        route.fulfill({
+          json: {
+            news: [],
+            projects: [],
+            about: { photo: null },
+            people: {
+              featured: [
+                {
+                  name: 'Eva Vzorová',
+                  role: 'Zakladatelka',
+                  portrait: image(portraitId, 640, 640),
+                },
+                { name: 'Adam Vzor', role: null, portrait: null },
+              ],
+              board: [{ name: 'Eva Vzorová', note: 'předsedkyně' }],
+              note: {
+                text: 'Děkujeme všem, kdo pomáhají s námi.',
+                signatures: [{ ...image(signatureId, 600, 180), name: 'Eva Vzorová' }],
+              },
+            },
+          },
+        }),
+    );
+    await page.route(
+      (url) => url.pathname.startsWith('/api/content/media/'),
+      (route) =>
+        route.fulfill({
+          contentType: 'image/png',
+          body: Buffer.from(samplePngBase64, 'base64'),
+        }),
+    );
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.goto('/');
+    await page.locator('#o-nas .signatures').scrollIntoViewIfNeeded();
+    await expect(page.locator('#o-nas .signature-name')).toHaveText('Eva Vzorová');
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
+    await page.goto('/sprava/lide-fondu');
+    await expect(page.getByRole('heading', { level: 1, name: 'Lidé fondu' })).toBeFocused();
+    await expect(page.locator('.person-name')).toHaveText('Eva Vzorová');
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.getByRole('button', { name: 'Upravit: Eva Vzorová' }).click();
+    await expect(page.getByLabel('E-mail ve fondu (nepovinné)')).toHaveValue('eva@nfnn.cz');
+    await page.getByLabel('Osobní e-mail (nepovinné)').fill('eva');
+    await page.getByRole('button', { name: 'Uložit a ukázat na webu' }).click();
+    await expect(page.getByText('Zadejte e-mail ve tvaru jana@example.cz.')).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.getByRole('button', { name: 'Odebrat osobu z webu' }).click();
+    await expect(page.getByRole('group', { name: 'Odebrat osobu?' })).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
   test('when an administrator writes a news article, then the list, the editor with its errors, its preview and the deletion confirmation break no rule', async ({
     page,
   }) => {
@@ -1581,6 +1681,10 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
       (route) => route.fulfill({ json: project }),
     );
     await page.route(
+      (url) => url.pathname === '/api/admin/content/project-order',
+      (route) => route.fulfill({ json: { order: 'YEAR_THEN_CATEGORY' } }),
+    );
+    await page.route(
       (url) => url.pathname.startsWith('/api/content/media/'),
       (route) =>
         route.fulfill({
@@ -1597,6 +1701,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.goto('/sprava/projekty');
     await expect(page.getByRole('heading', { level: 1, name: 'Projekty' })).toBeFocused();
     await expect(page.locator('tbody tr')).toHaveCount(3);
+    await expect(page.getByRole('radio', { name: 'Podle roku', exact: true })).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
 

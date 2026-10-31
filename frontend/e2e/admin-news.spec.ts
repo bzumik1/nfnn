@@ -198,6 +198,7 @@ test.describe('Given an administrator managing the news', () => {
         body: '**Text** o koncertu.',
         coverImageId: IMAGE_ID,
         coverImageAlt: 'Lidé na koncertě',
+        signerId: null,
       },
     ]);
 

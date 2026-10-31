@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/home-assets.spec.ts > Given a visitor on the home page > when a server dashboard asks for the app icon, then the site serves it as a 512 px PNG",
+    "reason": "PR #243: Jakub 2026-10-30 confirmed ZimaOS shows the icon from app-icon.svg, so the PNG copy is gone (everything that can be SVG is SVG)",
+    "replacement": "e2e/home-assets.spec.ts > Given a visitor on the home page > when a server dashboard asks for the app icon as SVG, then the site serves the white tile with the star",
+    "contract": "docs/frontend-overview.md, Icons"
+  }
+]

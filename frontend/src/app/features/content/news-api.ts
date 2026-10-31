@@ -8,6 +8,13 @@ export interface CoverImageResponse {
   alt: string | null;
 }
 
+export interface NewsSignerResponse {
+  id: string;
+  name: string;
+  role: string | null;
+  portrait: { id: string; url: string; width: number; height: number } | null;
+}
+
 export interface NewsArticleResponse {
   id: string;
   slug: string;
@@ -20,6 +27,7 @@ export interface NewsArticleResponse {
   live: boolean;
   createdAt: string;
   updatedAt: string;
+  signer: NewsSignerResponse | null;
 }
 
 export interface NewsListResponse {
@@ -41,6 +49,7 @@ export interface NewsArticleRequest {
   body: string;
   coverImageId: string | null;
   coverImageAlt: string | null;
+  signerId: string | null;
 }
 
 export interface UploadedImageResponse {
