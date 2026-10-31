@@ -205,7 +205,7 @@ test.describe('Given a visitor and people of the foundation kept in the administ
     await board.scrollIntoViewIfNeeded();
 
     await expect(board.locator('.board-name')).toHaveText(['Eva Vzorová', 'Adam Vzor']);
-    await expect(board.locator('.board-photo').first()).toHaveAttribute(
+    await expect(board.locator('.board-photo img').first()).toHaveAttribute(
       'src',
       `/api/content/media/${PORTRAIT_ID}?w=480`,
     );

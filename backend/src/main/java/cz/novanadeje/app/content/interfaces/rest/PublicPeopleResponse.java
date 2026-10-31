@@ -8,11 +8,11 @@ import cz.novanadeje.app.content.application.people.SignatureView;
 
 import java.util.List;
 
-public record PublicPeopleResponse(List<Card> featured, List<BoardMember> board, Note note) {
+public record PublicPeopleResponse(List<Card> featured, List<BoardMember> board, Note note, String footnote) {
 
     static PublicPeopleResponse from(PublicPeopleView view) {
         return new PublicPeopleResponse(view.featured().stream().map(Card::from).toList(), view.board().stream().map(BoardMember::from).toList(),
-                view.note().map(Note::from).orElse(null));
+                view.note().map(Note::from).orElse(null), view.footnote().orElse(null));
     }
 
     public record Card(String name, String role, PersonImageResponse portrait) {
