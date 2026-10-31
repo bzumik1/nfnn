@@ -52,7 +52,7 @@ interface CanvasLike {
 const HYPHEN_AFTER_LETTER = /\p{L}-$/u;
 
 export function normalised(text: string): string {
-  return text.replace(/[ \s]+/g, ' ').trim();
+  return text.replace(/\s+/g, ' ').trim();
 }
 
 export function latin1(bytes: Uint8Array): string {

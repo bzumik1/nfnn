@@ -8,7 +8,7 @@ if (!baseUrl || !distDir || !nginxConf) {
 }
 
 const IMMUTABLE = 'public, max-age=31536000, immutable';
-const HASHED_BUNDLE = /^(?:chunk|main|polyfills|styles)-[A-Za-z0-9_-]{8}\.(?:js|css)$/;
+const HASHED_BUNDLE = /^(?:chunk|main|polyfills|styles|worker)-[A-Za-z0-9_-]{8}\.(?:js|css)$/;
 const NEVER_IMMUTABLE = [
   'index.html',
   'ngsw.json',
@@ -22,7 +22,12 @@ const NEVER_IMMUTABLE = [
   'nested/chunk-ABCDEFGH.js',
   'ngsw-ABCDEFGH.js',
 ];
-const MISSING_HASHED = ['/chunk-Zz_-9aBc.js', '/chunk-ZZZZZZZZ.js', '/styles-Ab-c_D12.css'];
+const MISSING_HASHED = [
+  '/chunk-Zz_-9aBc.js',
+  '/chunk-ZZZZZZZZ.js',
+  '/styles-Ab-c_D12.css',
+  '/worker-Zz_-9aBc.js',
+];
 const MISSING_ASSETS = [
   '/missing-probe.js',
   '/favicon-missing.png',
@@ -32,6 +37,7 @@ const MISSING_ASSETS = [
   '/fonts/missing-probe.woff2',
   '/images/missing-probe.webp',
   '/media/missing-probe.woff2',
+  '/receipt-fonts/missing-probe.ttf',
 ];
 const IMMUTABLE_RULE = 'add_header Cache-Control $immutable_cache_control always;';
 const UNCACHED_ERROR = new Set(['no-store', 'no-cache']);
@@ -51,10 +57,14 @@ function expectedCacheControl(file) {
   if (file.startsWith('media/') || HASHED_BUNDLE.test(file)) {
     return IMMUTABLE;
   }
-  if (file.startsWith('images/')) {
+  if (file.startsWith('images/') || file.startsWith('receipt-fonts/')) {
     return 'public, max-age=3600';
   }
   return 'no-cache';
+}
+
+function expectedContentType(file) {
+  return file.endsWith('.ttf') ? 'font/ttf' : null;
 }
 
 function immutableLocationPatterns(conf) {
@@ -70,6 +80,7 @@ async function request(path) {
     status: response.status,
     cacheControl: response.headers.get('cache-control') ?? '',
     contentType: response.headers.get('content-type') ?? '',
+    contentEncoding: response.headers.get('content-encoding') ?? '',
     csp: response.headers.get('content-security-policy') ?? '',
     server: response.headers.get('server') ?? '',
     body,
@@ -109,6 +120,13 @@ for (const file of built) {
   }
   if (answer.cacheControl !== expected) {
     fail(`/${file} has Cache-Control "${answer.cacheControl}", expected "${expected}"`);
+  }
+  const contentType = expectedContentType(file);
+  if (contentType !== null && answer.contentType !== contentType) {
+    fail(`/${file} has Content-Type "${answer.contentType}", expected "${contentType}"`);
+  }
+  if (contentType !== null && answer.contentEncoding !== 'gzip') {
+    fail(`/${file} is sent without gzip ("${answer.contentEncoding}")`);
   }
   if (!answer.csp) {
     fail(`/${file} carries no Content-Security-Policy`);

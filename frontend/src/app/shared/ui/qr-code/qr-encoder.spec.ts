@@ -226,7 +226,11 @@ describe('Given random links of a prefix in bytes and a payload in digits, from 
 
 describe('Given segments that a smaller version would hold', () => {
   it('when a minimum version is given, then the symbol takes that version and decodes to the same text', () => {
-    const symbol = encodeSegments([byteSegment('https://nfnn.cz/overit#'), numericSegment('1')], 'L', 14);
+    const symbol = encodeSegments(
+      [byteSegment('https://nfnn.cz/overit#'), numericSegment('1')],
+      'L',
+      14,
+    );
 
     expect(symbol.version).toBe(14);
     expect(symbol.size).toBe(73);

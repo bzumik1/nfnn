@@ -43,7 +43,16 @@
             ],
             "styles": ["src/styles.scss"],
             "polyfills": ["@angular/localize/init"],
-            "webWorkerTsConfig": "tsconfig.worker.json"
+            "webWorkerTsConfig": "tsconfig.worker.json",
+            "allowedCommonJsDependencies": [
+              "base64-js",
+              "brotli",
+              "clone",
+              "dfa",
+              "fast-deep-equal",
+              "tiny-inflate",
+              "unicode-trie"
+            ]
           },
           "configurations": {
             "production": {
@@ -60,6 +69,12 @@
                   "type": "initial",
                   "maximumWarning": "500kB",
                   "maximumError": "1MB"
+                },
+                {
+                  "type": "bundle",
+                  "name": "receipt-pdf-worker",
+                  "maximumWarning": "650kB",
+                  "maximumError": "800kB"
                 },
                 {
                   "type": "anyComponentStyle",
