@@ -111,6 +111,30 @@
   }
 }
 
+.receipt-ready-action {
+  display: grid;
+  justify-items: end;
+}
+
+.receipt-saved {
+  inline-size: 0;
+  min-inline-size: 100%;
+  justify-items: end;
+  text-align: right;
+}
+
+@include bp.down(cards) {
+  .receipt-ready-action {
+    flex-basis: 100%;
+    justify-items: start;
+  }
+
+  .receipt-saved {
+    justify-items: start;
+    text-align: left;
+  }
+}
+
 .first-gift-steps {
   margin: var(--space-3) 0 var(--space-4);
   padding-left: var(--space-5);
