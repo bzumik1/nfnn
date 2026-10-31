@@ -292,6 +292,10 @@ test.describe('Given an administrator who chooses who signs the receipts', () =>
   }) => {
     let current: object = noSignature;
     let uploads = 0;
+    await page.route(
+      (url) => url.pathname === SIGNATORY,
+      (route) => route.fulfill({ json: signatory({ personId: PERSON_ID, name: 'Eva Vzorová' }) }),
+    );
     const answers: object[] = [vectorSignature, refusedVector, uploadedSignature, vectorSignature];
     await page.route(
       (url) => url.pathname === RECEIPT_SIGNATURE,

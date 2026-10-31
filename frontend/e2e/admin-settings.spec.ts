@@ -219,7 +219,8 @@ test.describe('Given an administrator on the settings page', () => {
 
     await page.goto('/sprava/nastaveni');
     const card = page.getByRole('region', { name: 'Kdo potvrzení podepisuje' });
-    await expect(card.getByRole('alert')).toHaveText(
+    await expect(card.getByRole('alert')).toHaveCount(0);
+    await expect(card.locator('.signatory-missing')).toHaveText(
       'Potvrzení o daru teď nikdo nepodepisuje, a tak je web dárcům nevystaví. Vyberte u lidí fondu, kdo je podepisuje, a jeho funkci na potvrzení.',
     );
     await expect(card.getByRole('figure')).toHaveCount(0);
