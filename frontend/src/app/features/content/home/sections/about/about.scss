@@ -145,16 +145,7 @@
 .board-photo {
   width: 160px;
   height: 160px;
-  border-radius: var(--radius-round);
-  object-fit: cover;
-}
-
-.board-photo--initials {
-  display: grid;
-  place-items: center;
-  background: var(--color-surface-alt);
-  color: var(--color-text-muted);
-  font: var(--weight-bold) var(--text-4xl) var(--font-serif);
+  font-size: var(--text-4xl);
 }
 
 .board-name {
