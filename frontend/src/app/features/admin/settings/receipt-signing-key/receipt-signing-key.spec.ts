@@ -148,6 +148,18 @@ describe('Given the receipt signing key section of the receipt settings', () => 
     fixture.detectChanges();
   }
 
+  async function pollFailing(status: number): Promise<void> {
+    await vi.advanceTimersByTimeAsync(RESTART_POLL_MS);
+    const request = http.expectOne({ method: 'GET', url: SIGNING_KEYS_URL });
+    if (status === 0) {
+      request.error(new ProgressEvent('error'));
+    } else {
+      request.flush('', { status, statusText: 'Error' });
+    }
+    await vi.advanceTimersByTimeAsync(1);
+    fixture.detectChanges();
+  }
+
   const renewedKeys = (published = true) =>
     receiptSigningKeys([
       earlierKey(),
@@ -412,6 +424,71 @@ describe('Given the receipt signing key section of the receipt settings', () => 
           'Klíč 21fe31df je stažený a web po restartu podepisuje novým klíčem.',
         );
       });
+    });
+
+    it('and one check fails with a server error before the restart, then the withdrawn key that follows claims no restart and the wait goes on', async () => {
+      await confirmWithdrawal();
+
+      await pollFailing(500);
+      await poll(stillWithdrawnKeys());
+
+      expect(rows()['Klíč serveru']).toBe('21fe31df');
+      expect(text('[role="status"]:not(:empty)')).toBe(restartingLine);
+      expect(text('[role="alert"]')).toBe('');
+
+      await poll(null);
+      await poll(renewedKeys());
+
+      expect(rows()['Klíč serveru']).toBe('b7e1c2d4');
+      expect(text('[role="status"]:not(:empty)')).toBe(
+        'Klíč 21fe31df je stažený a web po restartu podepisuje novým klíčem.',
+      );
+    });
+
+    it('and checks are refused as unauthorized or forbidden, then neither counts as the web going down and the withdrawn key that follows claims no restart', async () => {
+      await confirmWithdrawal();
+
+      await pollFailing(401);
+      await pollFailing(403);
+      await poll(stillWithdrawnKeys());
+
+      expect(rows()['Klíč serveru']).toBe('21fe31df');
+      expect(text('[role="status"]:not(:empty)')).toBe(restartingLine);
+      expect(text('[role="alert"]')).toBe('');
+    });
+
+    it('and the web cannot be reached and comes back with the withdrawn key, then the alert says it has no new key', async () => {
+      await confirmWithdrawal();
+
+      await pollFailing(0);
+      await poll(stillWithdrawnKeys());
+
+      expect(text('app-live-notice [role="alert"]')).toBe(
+        'Klíč 21fe31df je stažený, ale web po restartu nový klíč nemá, takže se potvrzení o daru nestáhnou; obraťte se prosím na technika serveru.',
+      );
+    });
+
+    it('and the web keeps answering with the withdrawn key for the whole wait without going down, then an alert says it did not restart and has no new key, not that it failed to start, and a retry watches again', async () => {
+      await confirmWithdrawal();
+
+      for (let check = 0; check < 100; check++) {
+        await (check % 10 === 5 ? pollFailing(403) : poll(stillWithdrawnKeys()));
+      }
+      await vi.advanceTimersByTimeAsync(RESTART_POLL_MS);
+      http.expectNone({ method: 'GET', url: SIGNING_KEYS_URL });
+      fixture.detectChanges();
+
+      expect(text('.signing-key-slow')).toContain(
+        'Klíč 21fe31df je stažený, ale web se zatím nerestartoval a nový klíč nemá, takže se potvrzení o daru nestáhnou. Počkejte pár minut a zkuste to znovu; když se nic nezmění, obraťte se prosím na technika serveru.',
+      );
+      expect(text('.signing-key-slow')).not.toContain('po restartu');
+      expect(text('[role="status"]:not(:empty)')).toBe('');
+      await click('Zkusit znovu');
+      expect(root().querySelector('.signing-key-slow')).toBeNull();
+      expect(text('[role="status"]:not(:empty)')).toBe(restartingLine);
+      await poll(null);
+      await poll(renewedKeys());
+      expect(rows()['Klíč serveru']).toBe('b7e1c2d4');
     });
 
     it('and the web goes down and comes back with the withdrawn key, then an alert says it has no new key and no new key is claimed', async () => {
