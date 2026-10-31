@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <include file="db/changelog/content/001_create_media.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/content/002_create_news.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/content/003_create_project.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donors/001_create_donor.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donors/002_create_donor_refresh_token.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donors/003_create_donor_password_reset_token.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donors/004_add_donor_email_verification.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donors/005_add_new_email_to_verification_token.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donors/006_add_second_factor.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donors/007_erase_donors.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donors/008_connected_apps.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donors/009_refresh_token_used_at.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donors/010_add_passkeys.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donors/011_optional_password.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donors/012_remind_unconfirmed_registrations.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donations/001_create_donor_record.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donations/002_create_bank_payment.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donations/003_create_donation.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donations/004_create_donor_sender_account.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donations/005_create_donation_receipt.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donations/006_link_sender_accounts_over_time.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donations/007_create_donation_monthly_report.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donations/008_keep_receipts_as_template_and_data.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donations/009_drop_receipts_stored_as_pdf.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donations/010_add_donation_purpose.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donations/011_confirm_old_variable_symbols.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donations/012_track_import_outages.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donations/013_pair_payments_by_hand.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donations/014_erase_donor_records.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donations/015_configure_monthly_report.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donations/016_upload_receipt_signature.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donations/017_queue_import_alerts.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donations/018_index_foreign_keys.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donations/019_choose_report_send_hour.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donations/020_index_activity_since.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donations/021_register_receipt_signing_keys.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donations/022_issue_receipts_as_frozen_data.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donations/023_index_issued_receipts_by_issue.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/contact/001_create_contact_message.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/operations/001_track_backup_alerts.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/operations/002_store_settings.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/operations/003_record_restores.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/shared/001_create_admin_action.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/shared/002_add_admin_action_client.xml" relativeToChangelogFile="false"/>
+
+</databaseChangeLog>

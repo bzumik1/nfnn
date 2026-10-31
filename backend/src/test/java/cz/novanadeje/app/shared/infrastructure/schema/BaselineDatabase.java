@@ -34,7 +34,11 @@ final class BaselineDatabase {
     }
 
     static void fill(Connection connection) throws IOException, SQLException {
-        try (var script = Objects.requireNonNull(BaselineDatabase.class.getResourceAsStream(BASELINE_DATA));
+        fill(connection, BASELINE_DATA);
+    }
+
+    static void fill(Connection connection, String data) throws IOException, SQLException {
+        try (var script = Objects.requireNonNull(BaselineDatabase.class.getResourceAsStream(data));
              var statement = connection.createStatement()) {
             statement.execute(new String(script.readAllBytes(), StandardCharsets.UTF_8));
         }
