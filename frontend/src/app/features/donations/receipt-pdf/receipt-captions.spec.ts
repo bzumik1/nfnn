@@ -5,8 +5,8 @@ describe('Given the captions printed beside the verification QR code', () => {
     const captions = receiptCaptions();
 
     expect(captions.verificationText).toEqual({
-      cs: 'Načtěte kód telefonem nebo na něj klikněte: ukáže, co fond na potvrzení podepsal.',
-      en: 'Scan the code or click it to see what the foundation signed on this confirmation.',
+      cs: 'Kód ukáže, co fond podepsal.',
+      en: 'The code shows what the foundation signed.',
     });
   });
 

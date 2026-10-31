@@ -74,6 +74,8 @@ declare module 'pdfkit' {
     constructor(options?: PdfDocumentOptions);
     page: PdfPage;
     readonly _font: PdfEmbeddedFont;
+    readonly info: Record<string, string | Date | undefined>;
+    endMetadata(): void;
     x: number;
     y: number;
     on(event: 'data', listener: (chunk: Uint8Array) => void): this;

@@ -21,6 +21,33 @@ export interface ReceiptAssets {
 
 type FontName = 'body' | 'bold' | 'heading';
 
+const XML_ESCAPES: Readonly<Record<string, string>> = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&apos;',
+};
+const XMP_FIELDS = ['Title', 'Author', 'Subject', 'Creator', 'Producer'] as const;
+
+function xmlEscaped(text: string): string {
+  return text.replace(/[&<>"']/g, (character) => XML_ESCAPES[character]);
+}
+
+function escapingXmp(doc: PDFDocument): PDFDocument {
+  const endMetadata = doc.endMetadata.bind(doc);
+  doc.endMetadata = () => {
+    for (const field of XMP_FIELDS) {
+      const value = doc.info[field];
+      if (typeof value === 'string') {
+        doc.info[field] = xmlEscaped(value);
+      }
+    }
+    endMetadata();
+  };
+  return doc;
+}
+
 interface Piece {
   readonly text: string;
   readonly font: FontName;
@@ -55,6 +82,7 @@ const BLANK_SIGNATURE = 12 * MM;
 const QR_GAP = 2 * MM;
 const QR_CAPTION_GAP = 5 * MM;
 const OWN_QR_GAP = 8 * MM;
+const QUIET_ZONE_MODULES = 4;
 const FOOTER_RULE = 3 * MM;
 const FOOTER_TEXT = 6 * MM;
 const HAIRLINE = 0.5;
@@ -88,31 +116,33 @@ class ReceiptLayout {
   ) {
     this.symbol = verificationSymbol(document.verification.qrText);
     const issuedAt = new Date(document.issuedAt);
-    this.doc = new PDFDocument({
-      size: [A4_WIDTH, A4_HEIGHT],
-      margins: {
-        top: style.margins.top,
-        right: style.margins.right,
-        bottom: 0,
-        left: style.margins.left,
-      },
-      font: assets.fonts.body,
-      bufferPages: true,
-      tagged: true,
-      lang: 'cs',
-      pdfVersion: '1.7',
-      subset: 'PDF/UA',
-      displayTitle: true,
-      info: {
-        Title: document.title.cs,
-        Author: document.author,
-        Subject: document.numberLine.cs,
-        Creator: document.author,
-        Producer: document.author,
-        CreationDate: issuedAt,
-        ModDate: issuedAt,
-      },
-    });
+    this.doc = escapingXmp(
+      new PDFDocument({
+        size: [A4_WIDTH, A4_HEIGHT],
+        margins: {
+          top: style.margins.top,
+          right: style.margins.right,
+          bottom: 0,
+          left: style.margins.left,
+        },
+        font: assets.fonts.body,
+        bufferPages: true,
+        tagged: true,
+        lang: 'cs',
+        pdfVersion: '1.7',
+        subset: 'PDF/UA',
+        displayTitle: true,
+        info: {
+          Title: document.title.cs,
+          Author: document.author,
+          Subject: document.numberLine.cs,
+          Creator: document.author,
+          Producer: document.author,
+          CreationDate: issuedAt,
+          ModDate: issuedAt,
+        },
+      }),
+    );
     this.doc.registerFont('body', assets.fonts.body);
     this.doc.registerFont('bold', assets.fonts.bold);
     this.doc.registerFont('heading', assets.fonts.heading);
@@ -587,11 +617,25 @@ class ReceiptLayout {
     return content + 2 * CARD_PADDING;
   }
 
+  private captionHeight(width: number, size: number): number {
+    const verification = this.document.verification;
+    return (
+      this.lineHeight(verification.heading, width, 'bold', size) +
+      LINE_GAP +
+      this.lineHeight(verification.text, width, 'body', size)
+    );
+  }
+
+  private inlineQrHeight(leftColumn: number): number {
+    const size = qrPlacement(this.symbol).symbolMm * MM;
+    return Math.max(size, this.captionHeight(leftColumn - size - QR_CAPTION_GAP, this.sizes.small));
+  }
+
   private signatureRowHeight(): number {
     const columns = this.signatureColumns();
     const left =
       this.lineHeight(this.document.signature.issuedAt, columns.left) +
-      (this.inlineQr() ? QR_GAP + qrPlacement(this.symbol).symbolMm * MM : 0);
+      (this.inlineQr() ? QR_GAP + this.inlineQrHeight(columns.left) : 0);
     return Math.max(this.cardHeight(), left);
   }
 
@@ -712,17 +756,15 @@ class ReceiptLayout {
   private ownQr(): void {
     const placement = qrPlacement(this.symbol);
     const size = placement.symbolMm * MM;
+    const captionWidth = this.width - size - QR_CAPTION_GAP;
+    const captionHeight = this.captionHeight(captionWidth, this.sizes.body);
+    const quietZone = QUIET_ZONE_MODULES * placement.moduleMm * MM;
     this.y += OWN_QR_GAP;
-    this.keep(size);
+    this.keep(Math.max(size + quietZone, captionHeight));
     const top = this.y;
     this.qr(this.left, top, placement.moduleMm * MM);
-    this.caption(
-      this.left + size + QR_CAPTION_GAP,
-      top,
-      this.width - size - QR_CAPTION_GAP,
-      this.sizes.body,
-    );
-    this.y = top + size;
+    this.caption(this.left + size + QR_CAPTION_GAP, top, captionWidth, this.sizes.body);
+    this.y = top + Math.max(size, captionHeight);
   }
 
   private caption(x: number, top: number, width: number, size: number): void {
@@ -770,6 +812,7 @@ class ReceiptLayout {
     const [viewX, viewY, viewWidth, viewHeight] = art.viewBox;
     const scale = Math.min(width / viewWidth, height / viewHeight);
     this.doc.save();
+    this.doc.rect(x, y, width, height).clip();
     this.doc.translate(x - viewX * scale, y - viewY * scale);
     this.doc.scale(scale);
     for (const path of art.paths) {
