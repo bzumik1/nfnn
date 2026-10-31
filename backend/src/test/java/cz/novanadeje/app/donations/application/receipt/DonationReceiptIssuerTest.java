@@ -609,8 +609,8 @@ class DonationReceiptIssuerTest {
     @DisplayName("Given a signatory whose name has a character outside the printable set, when a receipt is issued, then it is refused before a number is taken")
     void should_refuse_before_numbering_when_issued_given_an_unprintable_signatory() {
         DonationReceiptIssuer unprintable = new DonationReceiptIssuer(receipts,
-                new ReceiptRequestReader(donations, donorRecords, new FirstReceiptYear(YEAR_2026)), freezer, signatures, FOUNDATION,
-                new Signatory("Pavel\u0007Vzorový", "předseda správní rady"), Clock.fixed(NOW, ZoneOffset.UTC));
+                new ReceiptRequestReader(donations, donorRecords, new FirstReceiptYear(YEAR_2026)), freezer, signatures, signingKeys, FOUNDATION,
+                new Signatory("Pavel\u0007Vzorový", "předseda správní rady"), events, Clock.fixed(NOW, ZoneOffset.UTC));
         givenDonationsOfJana(jana(), MARCH);
 
         assertThatThrownBy(() -> unprintable.issueForYear(JANA, YEAR_2026, TODAY)).isInstanceOf(ReceiptUnprintable.class);
