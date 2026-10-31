@@ -31,6 +31,18 @@ class PersonTest {
     }
 
     @Test
+    @DisplayName("Given details holding a line break, when a person is added or edited, then it is refused, and a person stored with one can be edited to clean details")
+    void should_refuse_control_characters_when_added_or_edited_and_accept_clean_details_given_a_stored_line_break() {
+        PersonDetails broken = new PersonDetails("Eva\nVzorová", Optional.empty(), true, Optional.empty(), true, Optional.empty(), PersonEmails.NONE);
+        PersonDetails clean = new PersonDetails("Eva Vzorová", Optional.empty(), true, Optional.empty(), true, Optional.empty(), PersonEmails.NONE);
+        Person stored = new Person(PersonId.newId(BEFORE), broken, 0, Optional.empty(), BEFORE, BEFORE);
+
+        assertThatThrownBy(() -> Person.add(PersonId.newId(NOW), broken, 0, NOW)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> Person.add(PersonId.newId(NOW), clean, 0, NOW).edit(broken, NOW)).isInstanceOf(IllegalArgumentException.class);
+        assertThat(stored.edit(clean, NOW).details().name()).isEqualTo("Eva Vzorová");
+    }
+
+    @Test
     @DisplayName("Given a negative position, when a person is added, then it is refused")
     void should_refuse_the_person_when_added_given_a_negative_position() {
         assertThatThrownBy(() -> Person.add(PersonId.newId(NOW), details(Optional.empty()), -1, NOW))

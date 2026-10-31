@@ -6,6 +6,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -60,14 +61,16 @@ class PersonDetailsTest {
     }
 
     @Test
-    @DisplayName("Given a name, a role or a board note holding a control character, when the details are made, then they are refused")
-    void should_refuse_a_text_when_made_given_a_control_character() {
-        assertThatThrownBy(() -> new PersonDetails("Eva\nVzorová", Optional.empty(), false, Optional.empty(), false, Optional.empty(), PersonEmails.NONE))
-                .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new PersonDetails("Eva", Optional.of("Zakladatelka\u0007"), false, Optional.empty(), false, Optional.empty(),
-                PersonEmails.NONE)).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new PersonDetails("Eva", Optional.empty(), true, Optional.of("před\u0085sedkyně"), false, Optional.empty(),
-                PersonEmails.NONE)).isInstanceOf(IllegalArgumentException.class);
+    @DisplayName("Given a name, a role or a board note holding a control character, when the details are made, then they are kept as stored and say they hold one")
+    void should_keep_and_report_a_text_when_made_given_a_control_character() {
+        PersonDetails name = new PersonDetails("Eva\nVzorová", Optional.empty(), false, Optional.empty(), false, Optional.empty(), PersonEmails.NONE);
+        PersonDetails role = new PersonDetails("Eva", Optional.of("Zakladatelka\u0007"), false, Optional.empty(), false, Optional.empty(), PersonEmails.NONE);
+        PersonDetails note = new PersonDetails("Eva", Optional.empty(), true, Optional.of("před\u0085sedkyně"), false, Optional.empty(), PersonEmails.NONE);
+        PersonDetails clean = new PersonDetails("Eva", Optional.of("Zakladatelka"), true, Optional.of("předsedkyně"), false, Optional.empty(), PersonEmails.NONE);
+
+        assertThat(name.name()).isEqualTo("Eva\nVzorová");
+        assertThat(List.of(name, role, note)).allMatch(PersonDetails::holdsControlCharacter);
+        assertThat(clean.holdsControlCharacter()).isFalse();
     }
 
     @Test

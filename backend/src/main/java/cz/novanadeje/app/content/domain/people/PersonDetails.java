@@ -3,6 +3,7 @@ package cz.novanadeje.app.content.domain.people;
 import cz.novanadeje.app.content.domain.media.MediaId;
 
 import java.util.Optional;
+import java.util.stream.Stream;
 
 public record PersonDetails(String name, Optional<String> role, boolean onBoard, Optional<String> boardNote, boolean featured,
                             Optional<MediaId> portrait, PersonEmails emails) {
@@ -18,8 +19,8 @@ public record PersonDetails(String name, Optional<String> role, boolean onBoard,
             throw new IllegalArgumentException("A person has a name, a role, a board note, a portrait and e-mails (each optional one even when absent)");
         }
         name = name.strip();
-        if (name.isEmpty() || name.length() > MAX_NAME_LENGTH || hasControlCharacter(name)) {
-            throw new IllegalArgumentException("The name of a person has 1 to " + MAX_NAME_LENGTH + " characters and no control character");
+        if (name.isEmpty() || name.length() > MAX_NAME_LENGTH) {
+            throw new IllegalArgumentException("The name of a person has 1 to " + MAX_NAME_LENGTH + " characters");
         }
         role = text(role, "role", MAX_ROLE_LENGTH);
         boardNote = text(boardNote, "board note", MAX_BOARD_NOTE_LENGTH);
@@ -27,10 +28,14 @@ public record PersonDetails(String name, Optional<String> role, boolean onBoard,
 
     private static Optional<String> text(Optional<String> value, String what, int maxLength) {
         Optional<String> stripped = value.map(String::strip).filter(text -> !text.isEmpty());
-        if (stripped.isPresent() && (stripped.get().length() > maxLength || hasControlCharacter(stripped.get()))) {
-            throw new IllegalArgumentException("The " + what + " of a person is at most " + maxLength + " characters with no control character");
+        if (stripped.isPresent() && stripped.get().length() > maxLength) {
+            throw new IllegalArgumentException("The " + what + " of a person is at most " + maxLength + " characters");
         }
         return stripped;
+    }
+
+    public boolean holdsControlCharacter() {
+        return Stream.of(Optional.of(name), role, boardNote).flatMap(Optional::stream).anyMatch(PersonDetails::hasControlCharacter);
     }
 
     private static boolean hasControlCharacter(String text) {

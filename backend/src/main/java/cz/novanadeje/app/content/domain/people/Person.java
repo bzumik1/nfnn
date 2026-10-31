@@ -22,11 +22,19 @@ public record Person(PersonId id, PersonDetails details, int position, Optional<
     }
 
     public static Person add(PersonId id, PersonDetails details, int position, Instant at) {
+        requireWritable(details);
         return new Person(id, details, position, Optional.empty(), at, at);
     }
 
     public Person edit(PersonDetails next, Instant at) {
+        requireWritable(next);
         return new Person(id, next, position, webSignature, createdAt, at);
+    }
+
+    private static void requireWritable(PersonDetails details) {
+        if (details.holdsControlCharacter()) {
+            throw new IllegalArgumentException("The name, the role and the board note of a person hold no control character");
+        }
     }
 
     public Person placeAt(int nextPosition, Instant at) {
