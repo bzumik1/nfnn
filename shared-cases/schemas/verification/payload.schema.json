@@ -97,12 +97,12 @@
     },
     "proof": {
       "type": "object",
-      "required": ["payloadHex", "signatureHex", "signedSha256", "qrText", "qr"],
+      "required": ["payloadHex", "signatureHex", "statusSha256", "qrText", "qr"],
       "additionalProperties": false,
       "properties": {
         "payloadHex": { "type": "string", "pattern": "^01([0-9a-f]{2})+$" },
         "signatureHex": { "type": "string", "pattern": "^[0-9a-f]{128}$" },
-        "signedSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "statusSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
         "qrText": { "type": "string", "pattern": "^https://nfnn\\.cz/overit#1[0-9]+$" },
         "qr": {
           "oneOf": [

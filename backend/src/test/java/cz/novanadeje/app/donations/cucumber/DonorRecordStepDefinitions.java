@@ -125,9 +125,11 @@ public class DonorRecordStepDefinitions {
     @Then("the stored data of receipt {string} still names the donor as issued:")
     public void theStoredDataOfReceiptStillNamesTheDonorAsIssued(String number, Map<String, String> expected) {
         Map<String, String> stored = jdbc.sql("""
-                        select data::jsonb ->> 'donorName' as donor_name, data::jsonb ->> 'donorAddress' as donor_address,
-                               data::jsonb ->> 'donorIdentifier' as donor_identifier
-                        from donation_receipt where number = :number""")
+                        select frozen::jsonb #>> '{donor,name}' as donor_name,
+                               (frozen::jsonb #>> '{donor,address,street}') || ', ' || (frozen::jsonb #>> '{donor,address,postalCode}')
+                                       || ' ' || (frozen::jsonb #>> '{donor,address,city}') as donor_address,
+                               frozen::jsonb #>> '{donor,companyIdentifier}' as donor_identifier
+                        from issued_receipt where number = :number""")
                 .param("number", number)
                 .query((row, index) -> Map.of(
                         "donorName", Objects.toString(row.getString("donor_name"), ""),
