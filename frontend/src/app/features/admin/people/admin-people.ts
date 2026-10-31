@@ -37,8 +37,8 @@ import {
   PersonImageResponse,
   PersonRequest,
   PersonResponse,
-  personInitials,
 } from '../../content/people-api';
+import { Avatar } from '../../../shared/ui/avatar/avatar';
 
 type LoadState = 'loading' | 'ready' | 'error';
 type Direction = 'up' | 'down';
@@ -62,6 +62,7 @@ const NEW_PERSON = 'new';
 @Component({
   selector: 'app-admin-people',
   imports: [
+    Avatar,
     FormsModule,
     FormField,
     FormControlDirective,
@@ -91,7 +92,6 @@ export class AdminPeople {
   protected readonly maxNoteLength = MAX_FOUNDERS_NOTE_LENGTH;
   protected readonly maxEmailLength = MAX_EMAIL_LENGTH;
   protected readonly emailShape = EMAIL_SHAPE;
-  protected readonly initials = personInitials;
 
   protected readonly state = signal<LoadState>('loading');
   protected readonly members = signal<PersonResponse[]>([]);

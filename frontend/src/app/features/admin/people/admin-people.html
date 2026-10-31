@@ -32,19 +32,12 @@
             <ol class="people-list">
               @for (member of members(); track member.id; let first = $first, last = $last) {
                 <li class="person-row">
-                  @if (member.portrait; as image) {
-                    <img
-                      class="person-thumb"
-                      [src]="image.url + '?w=480'"
-                      alt=""
-                      width="48"
-                      height="48"
-                    />
-                  } @else {
-                    <span class="person-thumb person-thumb--initials" aria-hidden="true">{{
-                      initials(member.name)
-                    }}</span>
-                  }
+                  <app-avatar
+                    class="person-thumb"
+                    [name]="member.name"
+                    [src]="member.portrait ? member.portrait.url + '?w=480' : null"
+                    [size]="48"
+                  />
                   <div class="person-text">
                     <p class="person-name">{{ member.name }}</p>
                     @if (member.role) {
@@ -268,7 +261,12 @@
               <div class="image-field">
                 <p class="field-label" i18n="@@admin.people.portrait">Portrét (nepovinné)</p>
                 @if (portraitUrl(); as url) {
-                  <img class="portrait-preview" [src]="url" alt="" width="120" height="120" />
+                  <app-avatar
+                    class="portrait-preview"
+                    [name]="draft.name"
+                    [src]="url"
+                    [size]="120"
+                  />
                 }
                 <div class="image-actions">
                   <app-file-button

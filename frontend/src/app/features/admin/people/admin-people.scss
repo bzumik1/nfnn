@@ -35,19 +35,9 @@
 }
 
 .person-thumb {
-  display: block;
   width: var(--space-12);
   height: var(--space-12);
-  border-radius: var(--radius-round);
-  object-fit: cover;
-  background: var(--color-surface-alt);
-}
-
-.person-thumb--initials {
-  display: grid;
-  place-items: center;
-  color: var(--color-text-muted);
-  font: var(--weight-bold) var(--text-2xl) var(--font-serif);
+  font-size: var(--text-2xl);
 }
 
 .person-name {
@@ -130,13 +120,9 @@
 }
 
 .portrait-preview {
-  display: block;
   width: 120px;
   height: 120px;
-  border-radius: var(--radius-round);
-  object-fit: cover;
   margin-bottom: var(--space-2-5);
-  background: var(--color-surface-alt);
 }
 
 .signature-preview {

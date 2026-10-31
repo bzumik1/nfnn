@@ -195,7 +195,7 @@ describe('Given an administrator and no people of the foundation yet', () => {
     );
     http.expectOne(MEDIA_URL).flush(uploadedImage({ width: 640, height: 640 }));
     await settle(fixture);
-    expect(element<HTMLImageElement>(fixture, '.portrait-preview').getAttribute('src')).toBe(
+    expect(element<HTMLImageElement>(fixture, '.portrait-preview img').getAttribute('src')).toBe(
       `/api/content/media/${IMAGE_ID}?w=480`,
     );
 
@@ -298,7 +298,9 @@ describe('Given an administrator and two people of the foundation', () => {
       '.person-thumb',
     ) as NodeListOf<HTMLElement>;
 
-    expect(thumbs[0].tagName).toBe('IMG');
+    expect(thumbs[0].querySelector('img')?.getAttribute('src')).toBe(
+      `/api/content/media/${PORTRAIT_ID}?w=480`,
+    );
     expect(thumbs[1].textContent?.trim()).toBe('AV');
     expect(thumbs[1].getAttribute('aria-hidden')).toBe('true');
   });
@@ -328,7 +330,7 @@ describe('Given an administrator and two people of the foundation', () => {
       'eva@example.org',
     );
     expect(element<HTMLInputElement>(fixture, '#person-fund-email').value).toBe('eva@nfnn.cz');
-    expect(element<HTMLImageElement>(fixture, '.portrait-preview').getAttribute('src')).toBe(
+    expect(element<HTMLImageElement>(fixture, '.portrait-preview img').getAttribute('src')).toBe(
       `/api/content/media/${PORTRAIT_ID}?w=480`,
     );
 

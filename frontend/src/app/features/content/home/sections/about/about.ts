@@ -5,7 +5,8 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 import { RouterLink } from '@angular/router';
 import { AboutPhotoResponse } from '../../../about-api';
 import { mediaUrl } from '../../../news-api';
-import { personInitials, PublicPeopleResponse } from '../../../people-api';
+import { PublicPeopleResponse } from '../../../people-api';
+import { Avatar } from '../../../../../shared/ui/avatar/avatar';
 
 const PHOTO_WIDTHS = [480, 960, 1440];
 const LARGEST_WIDTH = PHOTO_WIDTHS[PHOTO_WIDTHS.length - 1];
@@ -15,7 +16,7 @@ const NO_BREAK_SPACE = '\u00a0';
 
 @Component({
   selector: 'app-about',
-  imports: [RouterLink, NgTemplateOutlet],
+  imports: [RouterLink, NgTemplateOutlet, Avatar],
   templateUrl: './about.html',
   styleUrl: './about.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -71,6 +72,4 @@ export class About {
       .map((paragraph) => paragraph.trim())
       .filter((paragraph) => paragraph !== '');
   }
-
-  protected readonly initials = personInitials;
 }

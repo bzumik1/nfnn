@@ -1,0 +1,13 @@
+@if (src(); as source) {
+  <img
+    [attr.loading]="loading()"
+    [attr.srcset]="srcset()"
+    [attr.sizes]="sizes()"
+    [src]="source"
+    [attr.width]="size()"
+    [attr.height]="size()"
+    alt=""
+  />
+} @else {
+  {{ initials() }}
+}
