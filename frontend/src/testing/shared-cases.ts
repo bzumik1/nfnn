@@ -174,6 +174,7 @@ export interface FrozenReceiptDocument {
     readonly name: string;
     readonly role: string;
     readonly signatureImage: { readonly sha256: string } | null;
+    readonly portraitImage: { readonly sha256: string } | null;
   };
 }
 

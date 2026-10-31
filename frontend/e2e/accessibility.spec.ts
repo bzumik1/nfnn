@@ -1713,6 +1713,11 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
     expect(await violations(page)).toEqual([]);
 
+    await page.getByRole('checkbox', { name: 'Podepisuje potvrzení' }).check();
+    await expect(page.getByLabel('Funkce na potvrzení')).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+
     await page.getByRole('button', { name: 'Odebrat osobu z webu' }).click();
     await expect(page.getByRole('group', { name: 'Odebrat osobu?' })).toBeVisible();
 
