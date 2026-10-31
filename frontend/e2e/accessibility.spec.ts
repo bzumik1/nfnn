@@ -1710,6 +1710,10 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
       (route) => route.fulfill({ json: project }),
     );
     await page.route(
+      (url) => url.pathname === '/api/admin/content/project-order',
+      (route) => route.fulfill({ json: { order: 'YEAR_THEN_CATEGORY' } }),
+    );
+    await page.route(
       (url) => url.pathname.startsWith('/api/content/media/'),
       (route) =>
         route.fulfill({
@@ -1726,6 +1730,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.goto('/sprava/projekty');
     await expect(page.getByRole('heading', { level: 1, name: 'Projekty' })).toBeFocused();
     await expect(page.locator('tbody tr')).toHaveCount(3);
+    await expect(page.getByRole('radio', { name: 'Podle roku', exact: true })).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
 

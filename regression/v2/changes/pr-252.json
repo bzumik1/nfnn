@@ -1,0 +1,84 @@
+[
+  {
+    "scenario": "content/manage_people: A connected application with the writing permission keeps the people and the note but never touches a web signature #*",
+    "kind": "removed",
+    "reason": "Jakub 2026-10-30 (\"Klidně ať to konektor umí, to není nebezpečné\"): a connected application with admin:write may set and remove the web signature of a person of the foundation, a public image for the site only and never the receipt signature, which stays web-only; with that, refusing a connection the rename or removal of a signed person (403 content/web-signature-in-browser-only) protected nothing and is gone; the scenario now has the connection rename a signed person, set and remove web signatures and remove a signed person: \"A connected application with the writing permission keeps the people, the note and the web signatures\"",
+    "contract": "docs/security-overview.md, Browser-session guard; docs/api-contract.md, content — public CMS"
+  },
+  {
+    "scenario": "donors/connected_apps: A dangerous or irreversible change is refused to a connected application even with the writing permission [POST | /api/admin/content/people/{id}/web-signature] #*",
+    "kind": "removed",
+    "reason": "Jakub 2026-10-30 (\"Klidně ať to konektor umí, to není nebezpečné\"): a connected application with admin:write may set and remove the web signature of a person of the foundation, a public image for the site only and never the receipt signature, which stays web-only; with that, refusing a connection the rename or removal of a signed person (403 content/web-signature-in-browser-only) protected nothing and is gone; the web-signature rows leave the browser-only outline, and manage_people covers the connection setting and removing it (200) and admin:read refused (403)",
+    "contract": "docs/security-overview.md, Browser-session guard; docs/api-contract.md, content — public CMS"
+  },
+  {
+    "scenario": "donors/connected_apps: A dangerous or irreversible change is refused to a connected application even with the writing permission [DELETE | /api/admin/content/people/{id}/web-signature] #*",
+    "kind": "removed",
+    "reason": "Jakub 2026-10-30 (\"Klidně ať to konektor umí, to není nebezpečné\"): a connected application with admin:write may set and remove the web signature of a person of the foundation, a public image for the site only and never the receipt signature, which stays web-only; with that, refusing a connection the rename or removal of a signed person (403 content/web-signature-in-browser-only) protected nothing and is gone; the web-signature rows leave the browser-only outline, and manage_people covers the connection setting and removing it (200) and admin:read refused (403)",
+    "contract": "docs/security-overview.md, Browser-session guard; docs/api-contract.md, content — public CMS"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "content.application.people.PeopleAdminServiceTest > Given a person with a portrait and a web signature, when they are removed from a browser, then they go first and both images are deleted when unused",
+    "reason": "Jakub 2026-10-30 (\"Klidně ať to konektor umí, to není nebezpečné\"): a connected application with admin:write may set and remove the web signature of a person of the foundation, a public image for the site only and never the receipt signature, which stays web-only; with that, refusing a connection the rename or removal of a signed person (403 content/web-signature-in-browser-only) protected nothing and is gone; the removal no longer depends on where it comes from",
+    "replacement": "content.application.people.PeopleAdminServiceTest > Given a person with a portrait and a web signature, when they are removed, then they go first and both images are deleted when unused",
+    "contract": "docs/security-overview.md, Browser-session guard; docs/api-contract.md, content — public CMS"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "content.application.people.PeopleAdminServiceTest > Given a person with a web signature, when a connected application removes them, then it is refused and nothing changes",
+    "reason": "Jakub 2026-10-30 (\"Klidně ať to konektor umí, to není nebezpečné\"): a connected application with admin:write may set and remove the web signature of a person of the foundation, a public image for the site only and never the receipt signature, which stays web-only; with that, refusing a connection the rename or removal of a signed person (403 content/web-signature-in-browser-only) protected nothing and is gone",
+    "replacement": "content.application.people.PeopleAdminServiceTest > Given a person with a portrait and a web signature, when they are removed, then they go first and both images are deleted when unused",
+    "contract": "docs/security-overview.md, Browser-session guard; docs/api-contract.md, content — public CMS"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "content.application.people.PeopleAdminServiceTest > Given a person without a web signature, when a connected application removes them, then they go with their portrait",
+    "reason": "Jakub 2026-10-30 (\"Klidně ať to konektor umí, to není nebezpečné\"): a connected application with admin:write may set and remove the web signature of a person of the foundation, a public image for the site only and never the receipt signature, which stays web-only; with that, refusing a connection the rename or removal of a signed person (403 content/web-signature-in-browser-only) protected nothing and is gone",
+    "replacement": "content.application.people.PeopleAdminServiceTest > Given a person with a portrait and a web signature, when they are removed, then they go first and both images are deleted when unused",
+    "contract": "docs/security-overview.md, Browser-session guard; docs/api-contract.md, content — public CMS"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "content.application.people.PeopleAdminServiceTest > Given a person with a web signature, when a connected application renames them, then it is refused, and a change that keeps the name passes",
+    "reason": "Jakub 2026-10-30 (\"Klidně ať to konektor umí, to není nebezpečné\"): a connected application with admin:write may set and remove the web signature of a person of the foundation, a public image for the site only and never the receipt signature, which stays web-only; with that, refusing a connection the rename or removal of a signed person (403 content/web-signature-in-browser-only) protected nothing and is gone",
+    "replacement": "content.application.people.PeopleAdminServiceTest > Given a person with a web signature, when they are renamed, then the new name is stored and the signature stays",
+    "contract": "docs/security-overview.md, Browser-session guard; docs/api-contract.md, content — public CMS"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "An administrator connects an application such as Claude to the administration - A dangerous or irreversible change is refused to a connected application even with the writing permission - Examples > An administrator connects an application such as Claude to the administration - A dangerous or irreversible change is refused to a connected application even with the writing permission - Examples - Example #1.16",
+    "reason": "Jakub 2026-10-30 (\"Klidně ať to konektor umí, to není nebezpečné\"): a connected application with admin:write may set and remove the web signature of a person of the foundation, a public image for the site only and never the receipt signature, which stays web-only; with that, refusing a connection the rename or removal of a signed person (403 content/web-signature-in-browser-only) protected nothing and is gone; the outline's POST web-signature row is gone",
+    "replacement": "feature_classpath_features/content/manage_people.feature > An administrator keeps the people of the foundation that the About section shows - A connected application with the writing permission keeps the people, the note and the web signatures",
+    "contract": "docs/security-overview.md, Browser-session guard; docs/api-contract.md, content — public CMS"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "An administrator connects an application such as Claude to the administration - A dangerous or irreversible change is refused to a connected application even with the writing permission - Examples > An administrator connects an application such as Claude to the administration - A dangerous or irreversible change is refused to a connected application even with the writing permission - Examples - Example #1.17",
+    "reason": "Jakub 2026-10-30 (\"Klidně ať to konektor umí, to není nebezpečné\"): a connected application with admin:write may set and remove the web signature of a person of the foundation, a public image for the site only and never the receipt signature, which stays web-only; with that, refusing a connection the rename or removal of a signed person (403 content/web-signature-in-browser-only) protected nothing and is gone; the outline's DELETE web-signature row is gone",
+    "replacement": "feature_classpath_features/content/manage_people.feature > An administrator keeps the people of the foundation that the About section shows - A connected application with the writing permission keeps the people, the note and the web signatures",
+    "contract": "docs/security-overview.md, Browser-session guard; docs/api-contract.md, content — public CMS"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/content/manage_people.feature > An administrator keeps the people of the foundation that the About section shows - A connected application with the writing permission keeps the people and the note but never touches a web signature",
+    "reason": "Jakub 2026-10-30 (\"Klidně ať to konektor umí, to není nebezpečné\"): a connected application with admin:write may set and remove the web signature of a person of the foundation, a public image for the site only and never the receipt signature, which stays web-only; with that, refusing a connection the rename or removal of a signed person (403 content/web-signature-in-browser-only) protected nothing and is gone",
+    "replacement": "feature_classpath_features/content/manage_people.feature > An administrator keeps the people of the foundation that the About section shows - A connected application with the writing permission keeps the people, the note and the web signatures",
+    "contract": "docs/security-overview.md, Browser-session guard; docs/api-contract.md, content — public CMS"
+  },
+  {
+    "kind": "retired",
+    "suite": "mcp-vitest",
+    "test": "test/tools.spec.ts > Given an administrator connected with the writing permission > when people are removed, then a person without a web signature goes and one with a signature is refused with the reason",
+    "reason": "Jakub 2026-10-30 (\"Klidně ať to konektor umí, to není nebezpečné\"): a connected application with admin:write may set and remove the web signature of a person of the foundation, a public image for the site only and never the receipt signature, which stays web-only; with that, refusing a connection the rename or removal of a signed person (403 content/web-signature-in-browser-only) protected nothing and is gone",
+    "replacement": "test/tools.spec.ts > Given an administrator connected with the writing permission > when people are removed, then a person goes whether or not they have a web signature",
+    "contract": "docs/security-overview.md, Browser-session guard; docs/api-contract.md, content — public CMS"
+  }
+]

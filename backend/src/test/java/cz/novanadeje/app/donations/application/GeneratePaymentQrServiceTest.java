@@ -28,7 +28,7 @@ import static org.mockito.Mockito.when;
 class GeneratePaymentQrServiceTest {
 
     private static final BankAccount FOUNDATION = new BankAccount(
-            "123456789/0800",
+            "19-2000145399/0800",
             new Iban("CZ6508000000192000145399"),
             "Nadační fond Nová naděje"
     );

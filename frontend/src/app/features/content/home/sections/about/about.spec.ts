@@ -211,10 +211,20 @@ describe('Given the about section', () => {
       ).toBeTruthy();
     });
 
-    it('and there is no note, nobody featured and nobody on the board, then only the heading stays', async () => {
+    it('then the line under the board follows the board line as its own paragraph', () => {
+      const line = board().querySelector('.board-members')!;
+      const footnote = board().querySelector('.board-footnote')!;
+
+      expect(text(footnote)).toBe('Web zajišťuje bez nároku na odměnu Petr Vzor.');
+      expect(
+        line.compareDocumentPosition(footnote) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+
+    it('and there is no note, nobody featured, nobody on the board and no line under it, then only the heading stays', async () => {
       fixture.componentRef.setInput(
         'people',
-        publicPeople({ featured: [], board: [], note: null }),
+        publicPeople({ featured: [], board: [], note: null, footnote: null }),
       );
       fixture.detectChanges();
       await fixture.whenStable();
@@ -222,6 +232,7 @@ describe('Given the about section', () => {
       expect(board().querySelector('.board-people')).toBeNull();
       expect(board().querySelector('.founders-note')).toBeNull();
       expect(board().querySelector('.board-members')).toBeNull();
+      expect(board().querySelector('.board-footnote')).toBeNull();
       expect(text(board().querySelector('h3'))).toBe('Kdo fond vede');
     });
   });

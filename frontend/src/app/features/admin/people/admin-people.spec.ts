@@ -160,7 +160,7 @@ describe('Given an administrator and no people of the foundation yet', () => {
 
   beforeEach(async () => {
     ({ fixture, http } = await setUp());
-    http.expectOne(PEOPLE_URL).flush({ members: [], note: null });
+    http.expectOne(PEOPLE_URL).flush({ members: [], note: null, footnote: null });
     await settle(fixture);
   });
 
@@ -195,7 +195,7 @@ describe('Given an administrator and no people of the foundation yet', () => {
     );
     http.expectOne(MEDIA_URL).flush(uploadedImage({ width: 640, height: 640 }));
     await settle(fixture);
-    expect(element<HTMLImageElement>(fixture, '.portrait-preview').getAttribute('src')).toBe(
+    expect(element<HTMLImageElement>(fixture, '.portrait-preview img').getAttribute('src')).toBe(
       `/api/content/media/${IMAGE_ID}?w=480`,
     );
 
@@ -263,6 +263,30 @@ describe('Given an administrator and no people of the foundation yet', () => {
     await settle(fixture);
     expect(text(fixture, '.ui-notice--status')).toBe('Slovo zakladatelů jsme z webu odebrali.');
   });
+
+  it('when they write the line under the board, then the trimmed text is saved, and an emptied line goes as none', async () => {
+    await type(fixture, '#people-footnote', '  Web zajišťuje Petr Vzor.  ');
+    await submit(fixture, 'form:has(#people-footnote)');
+
+    const save = http.expectOne(`${PEOPLE_URL}/footnote`);
+    expect(save.request.method).toBe('PUT');
+    expect(save.request.body).toEqual({ text: 'Web zajišťuje Petr Vzor.' });
+    save.flush({ text: 'Web zajišťuje Petr Vzor.' });
+    await settle(fixture);
+    expect(text(fixture, '.ui-notice--status')).toBe(
+      'Řádek pod správní radou je uložený a na webu.',
+    );
+
+    await type(fixture, '#people-footnote', '   ');
+    await submit(fixture, 'form:has(#people-footnote)');
+    const empty = http.expectOne(`${PEOPLE_URL}/footnote`);
+    expect(empty.request.body).toEqual({ text: null });
+    empty.flush({ text: null });
+    await settle(fixture);
+    expect(text(fixture, '.ui-notice--status')).toBe(
+      'Řádek pod správní radou jsme z webu odebrali.',
+    );
+  });
 });
 
 describe('Given an administrator and two people of the foundation', () => {
@@ -272,17 +296,29 @@ describe('Given an administrator and two people of the foundation', () => {
   beforeEach(async () => {
     ({ fixture, http } = await setUp());
     http.expectOne(PEOPLE_URL).flush({
-      members: [person({ personalEmail: 'eva@example.org', fundEmail: 'eva@nfnn.cz' }), ADAM],
+      members: [
+        person({
+          personalEmail: 'eva@example.org',
+          fundEmail: 'eva@nfnn.cz',
+          linkedToAccount: true,
+        }),
+        ADAM,
+      ],
       note: 'Děkujeme.',
+      footnote: 'Web zajišťuje Petr Vzor.',
     });
     await settle(fixture);
   });
 
   afterEach(() => http.verify());
 
-  it('when the page opens, then the list names both in order with their badges and the note is filled in', () => {
+  it('when the page opens, then the list names both in order with their badges and the note and the line under the board are filled in', () => {
     expect(rows(fixture)).toEqual(['Eva Vzorová', 'Adam Vzor']);
-    expect(badges(fixture)).toEqual(['Karta s portrétem', 'Ve správní radě (předsedkyně)']);
+    expect(badges(fixture)).toEqual([
+      'Karta s portrétem',
+      'Ve správní radě (předsedkyně)',
+      'Propojeno s účtem na webu',
+    ]);
     expect(element<HTMLButtonElement>(fixture, `#person-up-${PERSON_ID}`).disabled).toBe(true);
     expect(element<HTMLButtonElement>(fixture, `#person-down-${OTHER_PERSON_ID}`).disabled).toBe(
       true,
@@ -291,6 +327,21 @@ describe('Given an administrator and two people of the foundation', () => {
       'Níž: Eva Vzorová',
     );
     expect(element<HTMLTextAreaElement>(fixture, '#founders-note').value).toBe('Děkujeme.');
+    expect(element<HTMLTextAreaElement>(fixture, '#people-footnote').value).toBe(
+      'Web zajišťuje Petr Vzor.',
+    );
+  });
+
+  it('when the page opens, then a person without a portrait shows their initials in its place, hidden from the screen reader', () => {
+    const thumbs = fixture.nativeElement.querySelectorAll(
+      '.person-thumb',
+    ) as NodeListOf<HTMLElement>;
+
+    expect(thumbs[0].querySelector('img')?.getAttribute('src')).toBe(
+      `/api/content/media/${PORTRAIT_ID}?w=480`,
+    );
+    expect(thumbs[1].textContent?.trim()).toBe('AV');
+    expect(thumbs[1].getAttribute('aria-hidden')).toBe('true');
   });
 
   it('when they move the first person down, then the new order is saved and focus stays on the moved person', async () => {
@@ -302,6 +353,7 @@ describe('Given an administrator and two people of the foundation', () => {
     order.flush({
       members: [{ ...ADAM, position: 0 }, person({ position: 1 })],
       note: 'Děkujeme.',
+      footnote: 'Web zajišťuje Petr Vzor.',
     });
     await settle(fixture);
 
@@ -318,7 +370,7 @@ describe('Given an administrator and two people of the foundation', () => {
       'eva@example.org',
     );
     expect(element<HTMLInputElement>(fixture, '#person-fund-email').value).toBe('eva@nfnn.cz');
-    expect(element<HTMLImageElement>(fixture, '.portrait-preview').getAttribute('src')).toBe(
+    expect(element<HTMLImageElement>(fixture, '.portrait-preview img').getAttribute('src')).toBe(
       `/api/content/media/${PORTRAIT_ID}?w=480`,
     );
 
@@ -459,7 +511,7 @@ describe('Given an administrator whose people do not load', () => {
     expect(text(fixture, '[role="alert"]')).toContain('Lidi fondu se nepodařilo načíst.');
 
     await press(fixture, 'Zkusit znovu');
-    http.expectOne(PEOPLE_URL).flush({ members: [ADAM], note: null });
+    http.expectOne(PEOPLE_URL).flush({ members: [ADAM], note: null, footnote: null });
     await settle(fixture);
 
     expect(rows(fixture)).toEqual(['Adam Vzor']);

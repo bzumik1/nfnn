@@ -2,7 +2,9 @@ import { provideHttpClient, withInterceptors, withXhr } from '@angular/common/ht
 import {
   ApplicationConfig,
   EnvironmentProviders,
+  ErrorHandler,
   inject,
+  Provider,
   provideAppInitializer,
   provideBrowserGlobalErrorListeners,
 } from '@angular/core';
@@ -18,6 +20,7 @@ import {
 import { routes } from './app.routes';
 import { authInterceptor } from './core/auth/auth-interceptor';
 import { AuthStore } from './core/auth/auth-store';
+import { ReportingErrorHandler } from './core/errors/reporting-error-handler';
 import { ChunkLoadRecovery } from './core/reload/chunk-load-recovery';
 import { CanonicalLink } from './core/seo/canonical-link';
 
@@ -37,9 +40,15 @@ export const appHttpClient: EnvironmentProviders = provideHttpClient(
   withInterceptors([authInterceptor]),
 );
 
+export const appErrorHandler: Provider = {
+  provide: ErrorHandler,
+  useClass: ReportingErrorHandler,
+};
+
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
+    appErrorHandler,
     provideRouter(routes, inMemoryScrolling, chunkLoadRecoveryFeature),
     appHttpClient,
     provideAppInitializer(() => inject(AuthStore).restore()),

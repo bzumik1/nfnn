@@ -3,7 +3,10 @@ package cz.novanadeje.app.cucumber;
 import cz.novanadeje.app.cucumber.transcript.ApiTranscripts;
 import cz.novanadeje.app.donors.application.CompanyLookupService;
 import cz.novanadeje.app.operations.application.backup.BackupKeyWordChallenges;
+import cz.novanadeje.app.operations.application.clienterrors.ClientErrorCap;
+import cz.novanadeje.app.support.AsyncTaskTracker;
 import cz.novanadeje.app.support.BackupKeyWordDraws;
+import cz.novanadeje.app.support.ClientErrorCapWindows;
 import cz.novanadeje.app.support.CompanyLookupPause;
 import cz.novanadeje.app.support.DatabaseCleaner;
 import cz.novanadeje.app.support.FakeCompanyRegistry;
@@ -19,15 +22,12 @@ import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import org.awaitility.Awaitility;
 import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import tools.jackson.databind.JsonNode;
 
 import java.time.Duration;
 import java.util.List;
-import java.util.concurrent.ThreadPoolExecutor;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
 
 public class CommonStepDefinitions {
 
@@ -41,11 +41,11 @@ public class CommonStepDefinitions {
     private final FakeFioClient fioClient;
     private final FakeCompanyRegistry companyRegistry;
     private final ConfigurableApplicationContext context;
-    private final ThreadPoolTaskExecutor asyncWork;
+    private final AsyncTaskTracker asyncTasks;
 
     public CommonStepDefinitions(ApiClient api, RecordingMailSender mailSender, MutableClock clock, DatabaseCleaner database,
                                  FakeFioClient fioClient, FakeCompanyRegistry companyRegistry, ConfigurableApplicationContext context,
-                                 ThreadPoolTaskExecutor asyncWork) {
+                                 AsyncTaskTracker asyncTasks) {
         this.api = api;
         this.mailSender = mailSender;
         this.clock = clock;
@@ -53,7 +53,7 @@ public class CommonStepDefinitions {
         this.fioClient = fioClient;
         this.companyRegistry = companyRegistry;
         this.context = context;
-        this.asyncWork = asyncWork;
+        this.asyncTasks = asyncTasks;
     }
 
     @BeforeAll
@@ -64,7 +64,7 @@ public class CommonStepDefinitions {
 
     @Before
     public void isolateScenario() {
-        await().atMost(ASYNC_WORK_WAIT).until(this::asyncWorkIsDone);
+        asyncTasks.awaitIdleAfter("the previous scenario", ASYNC_WORK_WAIT);
         database.emptyAllTables();
         mailSender.clear();
         mailSender.startScenario();
@@ -74,13 +74,9 @@ public class CommonStepDefinitions {
         ServerReceiptSigningKey.storeAfterEmptyTables(context);
         RateLimiterWindows.reset(context);
         CompanyLookupPause.reset(context.getBean(CompanyLookupService.class));
+        ClientErrorCapWindows.reset(context.getBean(ClientErrorCap.class));
         BackupKeyWordDraws.reseed(context.getBean(BackupKeyWordChallenges.class));
         context.getBean(SwitchablePublicTestKeyPolicy.class).reset();
-    }
-
-    private boolean asyncWorkIsDone() {
-        ThreadPoolExecutor executor = asyncWork.getThreadPoolExecutor();
-        return executor.getCompletedTaskCount() == executor.getTaskCount();
     }
 
     @When("{int} seconds pass")

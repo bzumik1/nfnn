@@ -22,6 +22,7 @@ public class ProjectStepDefinitions {
 
     private static final String ADMIN_PROJECTS = "/api/admin/content/projects";
     private static final String PUBLIC_PROJECTS = "/api/content/projects";
+    private static final String PROJECT_ORDER = "/api/admin/content/project-order";
 
     private final ApiClient api;
     private final DonorSessions sessions;
@@ -117,6 +118,35 @@ public class ProjectStepDefinitions {
     public void someoneWithoutATokenAsksForTheProject(String slug) {
         api.forgetCredentials();
         api.get(PUBLIC_PROJECTS + "/" + slug);
+    }
+
+    @When("{string} asks for the project order")
+    public void asksForTheProjectOrder(String alias) {
+        sessions.actAs(alias);
+        api.get(PROJECT_ORDER);
+    }
+
+    @When("{string} sets the project order to {string}")
+    public void setsTheProjectOrderTo(String alias, String order) {
+        sessions.actAs(alias);
+        api.put(PROJECT_ORDER, Map.of("order", order));
+    }
+
+    @When("{string} sets the project order without one")
+    public void setsTheProjectOrderWithoutOne(String alias) {
+        sessions.actAs(alias);
+        api.put(PROJECT_ORDER, Map.of());
+    }
+
+    @When("someone without a token sets the project order to {string}")
+    public void someoneWithoutATokenSetsTheProjectOrderTo(String order) {
+        api.forgetCredentials();
+        api.put(PROJECT_ORDER, Map.of("order", order));
+    }
+
+    @Then("the project order is {string}")
+    public void theProjectOrderIs(String order) {
+        assertThat(api.lastResponseJson().get("order").asString()).isEqualTo(order);
     }
 
     @Then("the project says:")
