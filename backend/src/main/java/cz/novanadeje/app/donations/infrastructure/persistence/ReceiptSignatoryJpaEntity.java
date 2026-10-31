@@ -31,15 +31,6 @@ class ReceiptSignatoryJpaEntity {
     protected ReceiptSignatoryJpaEntity() {
     }
 
-    static ReceiptSignatoryJpaEntity of(ReceiptSignatory signatory) {
-        ReceiptSignatoryJpaEntity entity = new ReceiptSignatoryJpaEntity();
-        entity.id = SINGLETON_ID;
-        entity.personId = signatory.person().value();
-        entity.receiptRole = signatory.receiptRole();
-        entity.chosenAt = signatory.chosenAt();
-        return entity;
-    }
-
     ReceiptSignatory toDomain() {
         return new ReceiptSignatory(new PersonReference(personId), receiptRole, chosenAt);
     }

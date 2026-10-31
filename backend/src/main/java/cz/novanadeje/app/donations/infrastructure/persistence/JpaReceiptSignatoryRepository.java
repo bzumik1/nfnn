@@ -24,7 +24,7 @@ class JpaReceiptSignatoryRepository implements ReceiptSignatoryRepository, Recei
 
     @Override
     public void choose(ReceiptSignatory signatory) {
-        jpa.save(ReceiptSignatoryJpaEntity.of(signatory));
+        jpa.upsert(ReceiptSignatoryJpaEntity.SINGLETON_ID, signatory.person().value(), signatory.receiptRole(), signatory.chosenAt());
     }
 
     @Override

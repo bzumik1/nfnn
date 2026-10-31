@@ -18,10 +18,13 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.time.Duration;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 import static cz.novanadeje.app.donations.infrastructure.persistence.BankPersistenceTestConfiguration.NOW;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DataJpaTest
@@ -99,6 +102,39 @@ class JpaReceiptSignatoryRepositoryTest {
                         .isInstanceOf(DataAccessException.class)
                         .hasMessageContaining("could not obtain lock on row");
             });
+        } finally {
+            separately.executeWithoutResult(status -> jdbc.sql("delete from donation_receipt_signatory").update());
+        }
+    }
+
+    @Test
+    @DisplayName("Given nobody chosen yet, when two administrators make the first choice at the same time, then both succeed and the later one stands")
+    void should_keep_later_choice_when_two_first_choices_race_given_nobody_chosen() throws Exception {
+        TestTransaction.end();
+        TransactionTemplate separately = new TransactionTemplate(transactionManager);
+        separately.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        CompletableFuture<Void> second = new CompletableFuture<>();
+        try {
+            separately.executeWithoutResult(first -> {
+                signatories.choose(new ReceiptSignatory(new PersonReference(FIRST), "předseda správní rady", NOW));
+                entityManager.flush();
+                Thread.ofPlatform().start(() -> {
+                    try {
+                        separately.executeWithoutResult(other ->
+                                signatories.choose(new ReceiptSignatory(new PersonReference(SECOND), "místopředseda správní rady", NOW)));
+                        second.complete(null);
+                    } catch (RuntimeException refused) {
+                        second.completeExceptionally(refused);
+                    }
+                });
+                await().atMost(Duration.ofSeconds(10)).until(() -> separately.execute(probe -> jdbc
+                        .sql("select count(*) from pg_stat_activity where wait_event_type = 'Lock' and query like '%donation_receipt_signatory%'")
+                        .query(Long.class).single()) > 0);
+            });
+
+            assertThat(second).succeedsWithin(Duration.ofSeconds(10));
+            UUID standing = separately.execute(status -> signatories.current().orElseThrow().person().value());
+            assertThat(standing).isEqualTo(SECOND);
         } finally {
             separately.executeWithoutResult(status -> jdbc.sql("delete from donation_receipt_signatory").update());
         }

@@ -71,20 +71,20 @@ class StaxSignatureVectorParser implements SignatureVectorParser {
                         throw new UnsupportedSignatureVector(SignatureVectorProblem.DOCTYPE);
                 case XMLStreamConstants.ENTITY_REFERENCE -> throw new UnsupportedSignatureVector(SignatureVectorProblem.MALFORMED);
                 case XMLStreamConstants.PROCESSING_INSTRUCTION ->
-                        throw new UnsupportedSignatureVector(SignatureVectorProblem.ELEMENT, "?" + reader.getPITarget());
+                        throw new UnsupportedSignatureVector(SignatureVectorProblem.ELEMENT);
                 case XMLStreamConstants.CHARACTERS, XMLStreamConstants.CDATA, XMLStreamConstants.SPACE -> {
                     if (!reader.isWhiteSpace() && !reader.getText().isBlank()) {
                         throw new UnsupportedSignatureVector(SignatureVectorProblem.TEXT);
                     }
                 }
                 case XMLStreamConstants.START_ELEMENT -> {
-                    String name = elementName(reader);
+                    String name = reader.getLocalName();
                     if (!isSvgElement(reader)) {
-                        throw new UnsupportedSignatureVector(SignatureVectorProblem.NAMESPACE, name);
+                        throw new UnsupportedSignatureVector(SignatureVectorProblem.NAMESPACE);
                     }
                     if (styles.isEmpty()) {
                         if (rootSeen || !"svg".equals(name)) {
-                            throw new UnsupportedSignatureVector(rootSeen ? SignatureVectorProblem.MALFORMED : SignatureVectorProblem.ELEMENT, name);
+                            throw new UnsupportedSignatureVector(rootSeen ? SignatureVectorProblem.MALFORMED : SignatureVectorProblem.ELEMENT);
                         }
                         rootSeen = true;
                         viewBox = Optional.of(viewBox(reader));
@@ -92,7 +92,7 @@ class StaxSignatureVectorParser implements SignatureVectorParser {
                     } else if (styles.size() >= MAX_DEPTH) {
                         throw new UnsupportedSignatureVector(SignatureVectorProblem.TOO_COMPLEX);
                     } else if (styles.peek().leaf()) {
-                        throw new UnsupportedSignatureVector(SignatureVectorProblem.ELEMENT, name);
+                        throw new UnsupportedSignatureVector(SignatureVectorProblem.ELEMENT);
                     } else if (DROPPED_ELEMENTS.contains(name)) {
                         skipSubtree(reader);
                     } else if ("g".equals(name)) {
@@ -101,7 +101,7 @@ class StaxSignatureVectorParser implements SignatureVectorParser {
                         paths.add(path(reader, styles.peek()));
                         styles.push(new Style(BLACK, BigDecimal.ONE, true));
                     } else {
-                        throw new UnsupportedSignatureVector(SignatureVectorProblem.ELEMENT, name);
+                        throw new UnsupportedSignatureVector(SignatureVectorProblem.ELEMENT);
                     }
                 }
                 case XMLStreamConstants.END_ELEMENT -> styles.pop();
@@ -154,7 +154,7 @@ class StaxSignatureVectorParser implements SignatureVectorParser {
             String local = reader.getAttributeLocalName(index);
             boolean qualified = (namespace != null && !namespace.isEmpty()) || (prefix != null && !prefix.isEmpty());
             if (qualified || !allowed.contains(local)) {
-                throw new UnsupportedSignatureVector(SignatureVectorProblem.ATTRIBUTE, qualified ? prefixed(prefix, local) : local);
+                throw new UnsupportedSignatureVector(SignatureVectorProblem.ATTRIBUTE);
             }
             attributes.put(local, reader.getAttributeValue(index));
         }
@@ -166,13 +166,6 @@ class StaxSignatureVectorParser implements SignatureVectorParser {
         return namespace == null || namespace.isEmpty() || SVG_NAMESPACE.equals(namespace);
     }
 
-    private static String elementName(XMLStreamReader reader) {
-        return isSvgElement(reader) ? reader.getLocalName() : prefixed(reader.getPrefix(), reader.getLocalName());
-    }
-
-    private static String prefixed(String prefix, String local) {
-        return prefix == null || prefix.isEmpty() ? local : prefix + ":" + local;
-    }
 
     private static void skipSubtree(XMLStreamReader reader) throws XMLStreamException {
         int depth = 1;
