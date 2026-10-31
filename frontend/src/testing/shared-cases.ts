@@ -81,6 +81,11 @@ export interface PaymentQrInput {
   readonly spayd: string;
 }
 
+export interface EncoderQrInput {
+  readonly text: string;
+  readonly errorCorrection: 'L' | 'M' | 'Q' | 'H';
+}
+
 export interface TotpUriInput {
   readonly secret: string;
   readonly issuer: string;
@@ -232,6 +237,7 @@ export interface SharedCaseTopics {
   readonly 'monthly-report/report.json': SharedCase<RowsInput, Answer>;
   readonly 'payment/details.json': SharedCase<PaymentDetailsInput, PaymentDetailsExpected>;
   readonly 'payment/spayd.json': SharedCase<SpaydInput, SpaydExpected>;
+  readonly 'qr/encoder.json': SharedCase<EncoderQrInput, QrSymbol>;
   readonly 'qr/payment.json': SharedCase<PaymentQrInput, QrSymbol>;
   readonly 'qr/totp.json': SharedCase<TotpQrInput, QrSymbol>;
   readonly 'receipts/formatting.json': SharedCase<
@@ -252,6 +258,7 @@ const REGISTERED_TOPICS: Readonly<Record<SharedCaseTopic, true>> = {
   'monthly-report/report.json': true,
   'payment/details.json': true,
   'payment/spayd.json': true,
+  'qr/encoder.json': true,
   'qr/payment.json': true,
   'qr/totp.json': true,
   'receipts/formatting.json': true,
