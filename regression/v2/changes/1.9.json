@@ -1,0 +1,14 @@
+[
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/receipts/v1/printed.json",
+    "reason": "1.9 adds what a receipt drawn in the browser from its frozen data prints, one case per case of receipts/v1/frozen.json: v2's printed text of the same sample (regression/v2/receipts/) with the dates of D11 and nothing else, the column headers of a yearly table, the footer line without its page number and v2's page count; lines are joined by one space except after a hyphen right after a letter, where v2 broke a hyphenated word (Úlehlová-Ěrová); the browser (receipt-layout.spec.ts) reads its drawn PDF back with pdf.js against every case, and the backend (FrozenReceiptCasesTest) derives each case from the v2 sample again, so neither side nor the file can drift from what v2 printed; the source is edited",
+    "contract": "docs/frontend-overview.md, receipt-pdf; .claude/rules/testing.md, Logic on both sides"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/schemas/*",
+    "reason": "1.9 adds schemas/receipts/v1/printed.schema.json for receipts/v1/printed.json: the v2 sample as its input (the case name chains it to frozen.json), body, tableHeader (null for a single receipt), footer and v2Pages as its expected value",
+    "contract": ".claude/rules/testing.md, Logic on both sides"
+  }
+]
