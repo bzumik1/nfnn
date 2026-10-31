@@ -213,6 +213,22 @@ class ThymeleafPdfReceiptRendererTest {
     }
 
     @Test
+    @DisplayName("Given a frozen receipt naming a vector signature, when rendered, then the server drawing leaves the signature out and prints the line and the name")
+    void should_leave_signature_out_when_rendered_given_frozen_vector_signature() {
+        SignatureVector vector = new SignatureVector(SignatureViewBox.parse("0 0 300 100"),
+                List.of(new SignaturePath(SignaturePathData.parse("M10 80 C40 10 65 10 95 80 Z"), "#1d2a5c", BigDecimal.ONE)));
+        resources.storeOther(vector.digest(), "application/json");
+        ReceiptDocument document = Receipts.singleDocument(jana(), MARCH);
+        FrozenReceipt frozen = new FrozenReceipt(document, TEXTS.textsFor(LocaleCode.CS), Optional.of(vector.digest()),
+                verificationOf(document.number()));
+
+        byte[] pdf = renderer().render(frozen, NOW);
+
+        assertThat(text(pdf)).contains("Pavel Znamenáček");
+        assertThat(imagesOnFirstPage(pdf)).as("logo only").isEqualTo(1);
+    }
+
+    @Test
     @DisplayName("Given a current signature that cannot be read as a scan, when a receipt is frozen, then only the current scan is asked for and the receipt carries no signature")
     void should_ask_only_for_current_scan_when_frozen_given_signature_that_is_no_scan() {
         ReceiptSignatureRepository signatures = mock(ReceiptSignatureRepository.class);

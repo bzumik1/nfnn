@@ -34,6 +34,7 @@ import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.TimeZone;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -46,6 +47,7 @@ class ThymeleafPdfReceiptRenderer implements DonationReceiptRenderer {
     private static final int BOLD = 700;
     private static final String PRODUCER = "Nová naděje - nadační fond";
     private static final JsonMapper JSON = JsonMapper.builder().build();
+    private static final Set<String> RASTER_TYPES = Set.of("image/png", "image/jpeg");
     private static final TypeReference<Map<String, Object>> DATA = new TypeReference<>() {
     };
 
@@ -81,7 +83,7 @@ class ThymeleafPdfReceiptRenderer implements DonationReceiptRenderer {
         variables.put("cs", czech);
         variables.put("en", english);
         variables.put("logo", logo.dataUri());
-        variables.put("signature", receipt.signatureImage().map(this::image).orElse(null));
+        variables.put("signature", receipt.signatureImage().filter(this::drawnByServer).map(this::image).orElse(null));
         String html = engine.process(template.html(), new Context(document.locale().toLocale(), variables));
         return pdf(html, document.number(), issuedAt);
     }
@@ -140,6 +142,10 @@ class ThymeleafPdfReceiptRenderer implements DonationReceiptRenderer {
             throw new IllegalStateException("The stored receipt template " + digest + " does not match its digest");
         }
         return ReceiptTemplate.fromContent(content);
+    }
+
+    private boolean drawnByServer(ContentDigest digest) {
+        return resources.imageMediaType(digest).map(RASTER_TYPES::contains).orElse(true);
     }
 
     private String image(ContentDigest digest) {

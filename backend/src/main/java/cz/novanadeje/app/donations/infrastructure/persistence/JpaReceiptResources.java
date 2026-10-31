@@ -38,4 +38,9 @@ class JpaReceiptResources implements ReceiptResources {
     public Optional<ReceiptImage> image(ContentDigest digest) {
         return images.findById(digest.value()).map(stored -> new ReceiptImage(stored.content(), stored.mediaType()));
     }
+
+    @Override
+    public Optional<String> imageMediaType(ContentDigest digest) {
+        return images.findById(digest.value()).map(ReceiptImageJpaEntity::mediaType);
+    }
 }

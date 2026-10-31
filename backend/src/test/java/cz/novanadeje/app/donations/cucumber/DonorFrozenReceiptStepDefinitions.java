@@ -54,6 +54,7 @@ public class DonorFrozenReceiptStepDefinitions {
     private final DonationReceiptRepository receipts;
     private final List<JsonNode> issued = new ArrayList<>();
     private Optional<Downloaded> downloaded = Optional.empty();
+    private Optional<String> signatureImageSeen = Optional.empty();
 
     public DonorFrozenReceiptStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors scenarioDonors, JdbcClient jdbc, ReceiptSigner signer,
                                              DonationReceiptRepository receipts) {
@@ -338,7 +339,29 @@ public class DonorFrozenReceiptStepDefinitions {
 
     @Then("the frozen receipt shows the current signature image")
     public void theFrozenReceiptShowsTheCurrentSignatureImage() {
-        assertThat(answeredReceipt().get("receipt").get("signatory").get("signatureImage").get("sha256").asString()).isEqualTo(currentSignatureImage());
+        String shown = answeredReceipt().get("receipt").get("signatory").get("signatureImage").get("sha256").asString();
+        assertThat(shown).isEqualTo(currentSignatureImage());
+        signatureImageSeen = Optional.of(shown);
+    }
+
+    @Then("the frozen receipt still shows the signature image it showed before")
+    public void theFrozenReceiptStillShowsTheSignatureImageItShowedBefore() {
+        String before = signatureImageSeen.orElseThrow(() -> new AssertionError("No signature image was seen before"));
+        assertThat(answeredReceipt().get("receipt").get("signatory").get("signatureImage").get("sha256").asString())
+                .isEqualTo(before)
+                .isNotEqualTo(currentSignatureImage());
+    }
+
+    @Then("the image is the current vector signature as its canonical JSON, never sniffed as another type")
+    public void theImageIsTheCurrentVectorSignature() {
+        HttpHeaders headers = api.lastResponse().getHeaders();
+        assertThat(headers.getContentType()).hasToString("application/json");
+        assertThat(headers.getFirst("X-Content-Type-Options")).isEqualTo("nosniff");
+        assertThat(headers.getCacheControl()).isEqualTo("private, max-age=31536000, immutable");
+        assertThat(sha256(api.lastResponseBytes())).isEqualTo(currentSignatureImage());
+        JsonNode vector = JSON.readTree(api.lastResponseBytes());
+        assertThat(vector.properties()).extracting(Map.Entry::getKey).containsExactly("viewBox", "paths");
+        assertThat(vector.get("paths").get(0).properties()).extracting(Map.Entry::getKey).containsExactly("d", "fill", "opacity");
     }
 
     @Then("the image is the current signature, kept by the browser")

@@ -8,6 +8,8 @@ import cz.novanadeje.app.donations.domain.receipt.SignaturePath;
 import cz.novanadeje.app.donations.domain.receipt.SignaturePathData;
 import cz.novanadeje.app.donations.domain.receipt.SignatureVector;
 import cz.novanadeje.app.donations.domain.receipt.SignatureViewBox;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptImageRepository;
+import cz.novanadeje.app.donations.infrastructure.pdf.ReceiptResources;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -44,6 +46,10 @@ class JpaReceiptSignatureRepositoryTest {
     @Autowired
     private ReceiptSignatureRepository signatures;
     @Autowired
+    private ReceiptResources resources;
+    @Autowired
+    private ReceiptImageRepository receiptImages;
+    @Autowired
     private JdbcClient jdbc;
     @Autowired
     private EntityManager entityManager;
@@ -64,6 +70,20 @@ class JpaReceiptSignatureRepositoryTest {
         assertThat(signatures.current()).contains(new CurrentSignature(FIRST, NOW));
         assertThat(jdbc.sql("select media_type from receipt_image where sha256 = ?").param(FIRST.digest().value()).query(String.class).single())
                 .isEqualTo("image/png");
+    }
+
+    @Test
+    @DisplayName("Given a vector signature uploaded, when the receipt images are asked for it, then its media type is JSON and its canonical bytes are served as stored without being read as a vector")
+    void should_answer_media_type_and_canonical_bytes_when_asked_given_vector_signature() {
+        signatures.replace(VECTOR, NOW);
+        flushAndClear();
+
+        assertThat(resources.imageMediaType(VECTOR.digest())).contains("application/json");
+        assertThat(resources.imageMediaType(FIRST.digest())).isEmpty();
+        assertThat(receiptImages.find(VECTOR.digest())).hasValueSatisfying(image -> {
+            assertThat(image.mediaType()).isEqualTo("application/json");
+            assertThat(image.content()).isEqualTo(VECTOR.canonicalBytes());
+        });
     }
 
     @Test

@@ -14,4 +14,6 @@ public interface ReceiptResources {
     void storeImage(ContentDigest digest, ReceiptImage image, Instant firstUsedAt);
 
     Optional<ReceiptImage> image(ContentDigest digest);
+
+    Optional<String> imageMediaType(ContentDigest digest);
 }

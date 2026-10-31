@@ -11,6 +11,7 @@ class InMemoryReceiptResources implements ReceiptResources {
 
     private final Map<ContentDigest, String> templates = new ConcurrentHashMap<>();
     private final Map<ContentDigest, ReceiptImage> images = new ConcurrentHashMap<>();
+    private final Map<ContentDigest, String> mediaTypes = new ConcurrentHashMap<>();
 
     @Override
     public void storeTemplate(ContentDigest digest, String content, Instant firstUsedAt) {
@@ -25,6 +26,16 @@ class InMemoryReceiptResources implements ReceiptResources {
     @Override
     public void storeImage(ContentDigest digest, ReceiptImage image, Instant firstUsedAt) {
         images.putIfAbsent(digest, image);
+        mediaTypes.putIfAbsent(digest, image.mediaType());
+    }
+
+    void storeOther(ContentDigest digest, String mediaType) {
+        mediaTypes.putIfAbsent(digest, mediaType);
+    }
+
+    @Override
+    public Optional<String> imageMediaType(ContentDigest digest) {
+        return Optional.ofNullable(mediaTypes.get(digest));
     }
 
     @Override
