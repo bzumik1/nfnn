@@ -58,5 +58,85 @@
     "reason": "1.9 draws the donor's receipts in the browser from the frozen data of POST /api/donations/me/receipts, so DonationsApi no longer fetches the PDF of a donation or a year (singleReceipt and yearlyReceipt are gone); the file-name reading from Content-Disposition stays for the administration's downloads as downloadedFile",
     "replacement": "src/app/features/donations/donations-api.spec.ts > Given a file the server sends for download > when the server sends no file name, then the name the caller gives is used",
     "contract": "docs/frontend-overview.md, donations-api.ts and receipt-pdf"
+  },
+  {
+    "path": "GET /api/donations/me/{id}/receipt",
+    "scenario": "donations/admin_donor_accounts: *",
+    "kind": "body",
+    "field": "$.text[*]",
+    "reason": "Jakub 2026-10-31 (look sheet of 1.9, question 1; the site is not live, so no backward compatibility): a receipt issued from now on prints its place and day without a comma, \"V Novém Boru dne 15. 1. 2027\" (receipt.issuedAt \"{0} dne {1}\" in the Czech and default bundles, the English \"In {0}, on {1}\" stays); the bundle is a new receipt template b4d2173… with the text set 74c43fa…, while every receipt already issued keeps the texts it was frozen with, and the v2 corpus still renders with the template v2 issued with (7b30974…)",
+    "contract": "docs/system-overview.md, receipts; .claude/skills/receipt-template"
+  },
+  {
+    "path": "GET /api/donations/me/{id}/receipt",
+    "scenario": "donations/admin_donor_erasure: *",
+    "kind": "body",
+    "field": "$.text[*]",
+    "reason": "Jakub 2026-10-31 (look sheet of 1.9, question 1; the site is not live, so no backward compatibility): a receipt issued from now on prints its place and day without a comma, \"V Novém Boru dne 15. 1. 2027\" (receipt.issuedAt \"{0} dne {1}\" in the Czech and default bundles, the English \"In {0}, on {1}\" stays); the bundle is a new receipt template b4d2173… with the text set 74c43fa…, while every receipt already issued keeps the texts it was frozen with, and the v2 corpus still renders with the template v2 issued with (7b30974…)",
+    "contract": "docs/system-overview.md, receipts; .claude/skills/receipt-template"
+  },
+  {
+    "path": "GET /api/donations/me/receipts/yearly",
+    "scenario": "donations/admin_payments: *",
+    "kind": "body",
+    "field": "$.text[*]",
+    "reason": "Jakub 2026-10-31 (look sheet of 1.9, question 1; the site is not live, so no backward compatibility): a receipt issued from now on prints its place and day without a comma, \"V Novém Boru dne 15. 1. 2027\" (receipt.issuedAt \"{0} dne {1}\" in the Czech and default bundles, the English \"In {0}, on {1}\" stays); the bundle is a new receipt template b4d2173… with the text set 74c43fa…, while every receipt already issued keeps the texts it was frozen with, and the v2 corpus still renders with the template v2 issued with (7b30974…)",
+    "contract": "docs/system-overview.md, receipts; .claude/skills/receipt-template"
+  },
+  {
+    "path": "GET /api/donations/me/{id}/receipt",
+    "scenario": "donations/admin_payments: *",
+    "kind": "body",
+    "field": "$.text[*]",
+    "reason": "Jakub 2026-10-31 (look sheet of 1.9, question 1; the site is not live, so no backward compatibility): a receipt issued from now on prints its place and day without a comma, \"V Novém Boru dne 15. 1. 2027\" (receipt.issuedAt \"{0} dne {1}\" in the Czech and default bundles, the English \"In {0}, on {1}\" stays); the bundle is a new receipt template b4d2173… with the text set 74c43fa…, while every receipt already issued keeps the texts it was frozen with, and the v2 corpus still renders with the template v2 issued with (7b30974…)",
+    "contract": "docs/system-overview.md, receipts; .claude/skills/receipt-template"
+  },
+  {
+    "path": "GET /api/donations/me/receipts/yearly",
+    "scenario": "donations/admin_receipt_signature: *",
+    "kind": "body",
+    "field": "$.text[*]",
+    "reason": "Jakub 2026-10-31 (look sheet of 1.9, question 1; the site is not live, so no backward compatibility): a receipt issued from now on prints its place and day without a comma, \"V Novém Boru dne 15. 1. 2027\" (receipt.issuedAt \"{0} dne {1}\" in the Czech and default bundles, the English \"In {0}, on {1}\" stays); the bundle is a new receipt template b4d2173… with the text set 74c43fa…, while every receipt already issued keeps the texts it was frozen with, and the v2 corpus still renders with the template v2 issued with (7b30974…)",
+    "contract": "docs/system-overview.md, receipts; .claude/skills/receipt-template"
+  },
+  {
+    "path": "GET /api/donations/me/{id}/receipt",
+    "scenario": "donations/admin_receipt_signature: *",
+    "kind": "body",
+    "field": "$.text[*]",
+    "reason": "Jakub 2026-10-31 (look sheet of 1.9, question 1; the site is not live, so no backward compatibility): a receipt issued from now on prints its place and day without a comma, \"V Novém Boru dne 15. 1. 2027\" (receipt.issuedAt \"{0} dne {1}\" in the Czech and default bundles, the English \"In {0}, on {1}\" stays); the bundle is a new receipt template b4d2173… with the text set 74c43fa…, while every receipt already issued keeps the texts it was frozen with, and the v2 corpus still renders with the template v2 issued with (7b30974…)",
+    "contract": "docs/system-overview.md, receipts; .claude/skills/receipt-template"
+  },
+  {
+    "path": "GET /api/donations/me/{id}/receipt",
+    "scenario": "donations/admin_symbol_claims: *",
+    "kind": "body",
+    "field": "$.text[*]",
+    "reason": "Jakub 2026-10-31 (look sheet of 1.9, question 1; the site is not live, so no backward compatibility): a receipt issued from now on prints its place and day without a comma, \"V Novém Boru dne 15. 1. 2027\" (receipt.issuedAt \"{0} dne {1}\" in the Czech and default bundles, the English \"In {0}, on {1}\" stays); the bundle is a new receipt template b4d2173… with the text set 74c43fa…, while every receipt already issued keeps the texts it was frozen with, and the v2 corpus still renders with the template v2 issued with (7b30974…)",
+    "contract": "docs/system-overview.md, receipts; .claude/skills/receipt-template"
+  },
+  {
+    "path": "GET /api/donations/me/receipts/yearly",
+    "scenario": "donations/donation_receipts: *",
+    "kind": "body",
+    "field": "$.text[*]",
+    "reason": "Jakub 2026-10-31 (look sheet of 1.9, question 1; the site is not live, so no backward compatibility): a receipt issued from now on prints its place and day without a comma, \"V Novém Boru dne 15. 1. 2027\" (receipt.issuedAt \"{0} dne {1}\" in the Czech and default bundles, the English \"In {0}, on {1}\" stays); the bundle is a new receipt template b4d2173… with the text set 74c43fa…, while every receipt already issued keeps the texts it was frozen with, and the v2 corpus still renders with the template v2 issued with (7b30974…)",
+    "contract": "docs/system-overview.md, receipts; .claude/skills/receipt-template"
+  },
+  {
+    "path": "GET /api/donations/me/{id}/receipt",
+    "scenario": "donations/donation_receipts: *",
+    "kind": "body",
+    "field": "$.text[*]",
+    "reason": "Jakub 2026-10-31 (look sheet of 1.9, question 1; the site is not live, so no backward compatibility): a receipt issued from now on prints its place and day without a comma, \"V Novém Boru dne 15. 1. 2027\" (receipt.issuedAt \"{0} dne {1}\" in the Czech and default bundles, the English \"In {0}, on {1}\" stays); the bundle is a new receipt template b4d2173… with the text set 74c43fa…, while every receipt already issued keeps the texts it was frozen with, and the v2 corpus still renders with the template v2 issued with (7b30974…)",
+    "contract": "docs/system-overview.md, receipts; .claude/skills/receipt-template"
+  },
+  {
+    "path": "GET /api/donations/me/receipts/yearly",
+    "scenario": "donations/symbol_claims: *",
+    "kind": "body",
+    "field": "$.text[*]",
+    "reason": "Jakub 2026-10-31 (look sheet of 1.9, question 1; the site is not live, so no backward compatibility): a receipt issued from now on prints its place and day without a comma, \"V Novém Boru dne 15. 1. 2027\" (receipt.issuedAt \"{0} dne {1}\" in the Czech and default bundles, the English \"In {0}, on {1}\" stays); the bundle is a new receipt template b4d2173… with the text set 74c43fa…, while every receipt already issued keeps the texts it was frozen with, and the v2 corpus still renders with the template v2 issued with (7b30974…)",
+    "contract": "docs/system-overview.md, receipts; .claude/skills/receipt-template"
   }
 ]
