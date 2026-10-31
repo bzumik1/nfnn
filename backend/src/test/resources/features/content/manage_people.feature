@@ -453,3 +453,35 @@ Feature: An administrator keeps the people of the foundation that the About sect
     When the exchanged API token removes the person "Eva Vzorová"
     Then the response status is 403
     And the problem type ends with "auth/forbidden"
+
+  Scenario: The person who signs the receipts stays, and only a browser changes their portrait
+    Given "Jana" uploads a 640 by 640 pixel PNG image named "eva.png"
+    And "Jana" adds a person:
+      | name     | Eva Vzorová |
+      | portrait | eva.png     |
+    And "Jana" chooses "Eva Vzorová" to sign the receipts as "předsedkyně správní rady"
+    And "Jana" uploads a 640 by 640 pixel PNG image named "druha.png"
+    And "Jana" connected the application "https://claude.ai/.well-known/oauth-client" with scope "admin:read admin:write"
+    When the connector exchanges the connector token for an API token
+    And the exchanged API token updates the person "Eva Vzorová":
+      | name     | Eva Vzorová |
+      | portrait | druha.png   |
+    Then the response status is 403
+    And the problem type ends with "content/receipt-portrait-in-browser-only"
+    When the exchanged API token updates the person "Eva Vzorová":
+      | name     | Eva Vzorová  |
+      | role     | Zakladatelka |
+      | portrait | eva.png      |
+    Then the response status is 200
+    When the exchanged API token removes the person "Eva Vzorová"
+    Then the response status is 409
+    And the problem type ends with "content/person-signs-receipts"
+    When "Jana" removes the person "Eva Vzorová"
+    Then the response status is 409
+    And the problem type ends with "content/person-signs-receipts"
+    When "Jana" updates the person "Eva Vzorová":
+      | name     | Eva Vzorová |
+      | portrait | druha.png   |
+    Then the response status is 200
+    And the person says:
+      | portrait.id | {image:druha.png} |

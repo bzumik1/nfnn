@@ -1,6 +1,9 @@
 @donations
 Feature: A donor issues receipts of their donations as frozen, signed data
 
+  Background:
+    Given a person of the foundation signs the receipts
+
   Scenario: The yearly receipt of a completed year freezes the year's donations with their total, the texts and a signed proof
     Given today is 2026-12-20
     And a person "Jana" is registered
@@ -33,7 +36,7 @@ Feature: A donor issues receipts of their donations as frozen, signed data
       | donor.address.postalCode     | 400 01                     |
       | donor.address.city           | Ústí nad Labem             |
       | donor.variableSymbol         | {Jana}                     |
-      | signatory.name               | Pavel Znamenáček           |
+      | signatory.name               | Josef Vzorový              |
       | signatory.role               | předseda správní rady      |
     And the frozen receipt lists the gifts:
       | receivedOn | amountMinor |
@@ -443,6 +446,50 @@ Feature: A donor issues receipts of their donations as frozen, signed data
     Then the response status is 200
     And the issued receipt has number "2026-000001"
     And the frozen receipt still shows the signature image it showed before
+
+  Scenario: A receipt freezes a square print portrait of its signatory, served only to the donor whose receipt shows it, and a new portrait changes only later receipts
+    Given today is 2026-12-20
+    And a person "Jana" is registered
+    And "Jana" is an administrator
+    And a person "Petr" is registered
+    And "Jana" uploads a 900 by 600 pixel PNG image named "prvni.png"
+    And "Jana" adds a person:
+      | name     | Adam Vzor |
+      | portrait | prvni.png |
+    And "Jana" chooses "Adam Vzor" to sign the receipts as "místopředseda správní rady"
+    And the bank account has these movements:
+      | id   | date       | amount  | account    | bankCode | name          | variableSymbol |
+      | 2001 | 2026-10-01 | 1000.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
+      | 2002 | 2026-11-01 | 500.00  | 2900233333 | 2010     | Nováková Jana | {Jana}         |
+    And the application starts the import
+    When "Jana" issues the receipt of her donation received on 2026-10-01
+    Then the response status is 200
+    And the frozen receipt holds:
+      | field          | value                      |
+      | signatory.name | Adam Vzor                  |
+      | signatory.role | místopředseda správní rady |
+    And the frozen receipt shows no signature image
+    And the frozen receipt shows a portrait of the signatory
+    When "Jana" fetches the portrait image of receipt "2026-000001"
+    Then the response status is 200
+    And the image is a 600 pixel square JPEG portrait, kept by the browser and never sniffed as another type
+    When "Petr" fetches the portrait image of receipt "2026-000001"
+    Then the response status is 404
+    And the problem type ends with "donations/receipt-image-not-found"
+    Given "Jana" uploads a 400 by 700 pixel PNG image named "druha.png"
+    And "Jana" updates the person "Adam Vzor":
+      | name     | Adam Vzor |
+      | portrait | druha.png |
+    When "Jana" reads the issued receipt again
+    Then the response status is 200
+    And the issued receipt has number "2026-000001"
+    And the frozen receipt still shows the portrait it showed before
+    When "Jana" fetches the portrait image of receipt "2026-000001"
+    Then the response status is 200
+    And the image is a 600 pixel square JPEG portrait, kept by the browser and never sniffed as another type
+    When "Jana" issues the receipt of her donation received on 2026-11-01
+    Then the response status is 200
+    And the frozen receipt shows another portrait than before
 
   Scenario: A company's receipt freezes its seat and identification number
     Given today is 2026-12-20

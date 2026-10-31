@@ -24,6 +24,10 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDate;
@@ -55,6 +59,7 @@ public class DonorFrozenReceiptStepDefinitions {
     private final List<JsonNode> issued = new ArrayList<>();
     private Optional<Downloaded> downloaded = Optional.empty();
     private Optional<String> signatureImageSeen = Optional.empty();
+    private Optional<String> portraitImageSeen = Optional.empty();
 
     public DonorFrozenReceiptStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors scenarioDonors, JdbcClient jdbc, ReceiptSigner signer,
                                              DonationReceiptRepository receipts) {
@@ -164,6 +169,12 @@ public class DonorFrozenReceiptStepDefinitions {
     public void fetchesTheSignatureImageOfReceipt(String alias, String number) {
         sessions.actAs(alias);
         api.getBytes(IMAGES_PATH + signatureImageOf(number));
+    }
+
+    @When("{string} fetches the portrait image of receipt {string}")
+    public void fetchesThePortraitImageOfReceipt(String alias, String number) {
+        sessions.actAs(alias);
+        api.getBytes(IMAGES_PATH + portraitImageOf(number));
     }
 
     @When("{string} fetches the receipt image {string}")
@@ -352,6 +363,44 @@ public class DonorFrozenReceiptStepDefinitions {
                 .isNotEqualTo(currentSignatureImage());
     }
 
+    @Then("the frozen receipt shows no portrait")
+    public void theFrozenReceiptShowsNoPortrait() {
+        assertThat(answeredReceipt().get("receipt").get("signatory").get("portraitImage").isNull()).isTrue();
+    }
+
+    @Then("the frozen receipt shows a portrait of the signatory")
+    public void theFrozenReceiptShowsAPortraitOfTheSignatory() {
+        JsonNode portrait = answeredReceipt().get("receipt").get("signatory").get("portraitImage");
+        assertThat(portrait.isNull()).withFailMessage("The frozen receipt shows no portrait").isFalse();
+        String shown = portrait.get("sha256").asString();
+        assertThat(jdbc.sql("select media_type from receipt_image where sha256 = ?").param(shown).query(String.class).single()).isEqualTo("image/jpeg");
+        portraitImageSeen = Optional.of(shown);
+    }
+
+    @Then("the frozen receipt shows another portrait than before")
+    public void theFrozenReceiptShowsAnotherPortraitThanBefore() {
+        String before = portraitImageSeen.orElseThrow(() -> new AssertionError("No portrait was seen before"));
+        theFrozenReceiptShowsAPortraitOfTheSignatory();
+        assertThat(portraitImageSeen).isNotEqualTo(Optional.of(before));
+    }
+
+    @Then("the frozen receipt still shows the portrait it showed before")
+    public void theFrozenReceiptStillShowsThePortraitItShowedBefore() {
+        String before = portraitImageSeen.orElseThrow(() -> new AssertionError("No portrait was seen before"));
+        assertThat(answeredReceipt().get("receipt").get("signatory").get("portraitImage").get("sha256").asString()).isEqualTo(before);
+    }
+
+    @Then("the image is a {int} pixel square JPEG portrait, kept by the browser and never sniffed as another type")
+    public void theImageIsASquareJpegPortrait(int side) throws IOException {
+        HttpHeaders headers = api.lastResponse().getHeaders();
+        assertThat(headers.getContentType()).hasToString("image/jpeg");
+        assertThat(headers.getFirst("X-Content-Type-Options")).isEqualTo("nosniff");
+        assertThat(headers.getCacheControl()).isEqualTo("private, max-age=31536000, immutable");
+        BufferedImage portrait = ImageIO.read(new ByteArrayInputStream(api.lastResponseBytes()));
+        assertThat(portrait.getWidth()).isEqualTo(side);
+        assertThat(portrait.getHeight()).isEqualTo(side);
+    }
+
     @Then("the image is the current vector signature as its canonical JSON, never sniffed as another type")
     public void theImageIsTheCurrentVectorSignature() {
         HttpHeaders headers = api.lastResponse().getHeaders();
@@ -441,8 +490,13 @@ public class DonorFrozenReceiptStepDefinitions {
         return jdbc.sql("select signature_image_sha256 from issued_receipt where number = ?").param(number).query(String.class).single();
     }
 
+    private String portraitImageOf(String number) {
+        return jdbc.sql("select portrait_image_sha256 from issued_receipt where number = ?").param(number).query(String.class).single();
+    }
+
     private String currentSignatureImage() {
-        Optional<String> digest = jdbc.sql("select image_sha256 from donation_receipt_signature").query(String.class).optional();
+        Optional<String> digest = jdbc.sql("select s.image_sha256 from donation_person_receipt_signature s"
+                + " join donation_receipt_signatory c on c.person_id = s.person_id").query(String.class).optional();
         return digest.orElseThrow(() -> new AssertionError("No receipt signature is set"));
     }
 

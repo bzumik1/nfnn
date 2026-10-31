@@ -12,6 +12,7 @@ Feature: An administrator lists the answers about older variable symbols and cor
       | 1002 | 2026-09-05 | 500.00 | 1234567 | 0800     | Svoboda Petr | 6123456789     |                                       |
       | 1003 | 2026-10-14 | 1.00   | 1234567 | 0800     | Svoboda Petr | {Petr}         | OVERENI UCTU NADACNI FOND NOVA NADEJE |
     And the application starts the import
+    And a person of the foundation signs the receipts
 
   Scenario: The answers are listed newest first with the donor, the account, the symbol and the donations they paired
     Given "Petr" confirms symbol "6123456789" at bank account "1234567/0800"

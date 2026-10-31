@@ -1,6 +1,9 @@
 @donations
 Feature: A donor downloads PDF receipts of their donations
 
+  Background:
+    Given a person of the foundation signs the receipts
+
   Scenario: The yearly receipt of a completed year lists the year's donations with their total
     Given today is 2026-12-20
     And a person "Jana" is registered
@@ -28,7 +31,7 @@ Feature: A donor downloads PDF receipts of their donations
     And the PDF says "Celkem darováno v roce 2026: 4 750,50 Kč"
     And the PDF says "Číslo potvrzení: 2027-000001"
     And the PDF says "Datum vystavení: 15. 1. 2027"
-    And the PDF says "Pavel Znamenáček"
+    And the PDF says "Josef Vzorový"
     And the PDF says "předseda správní rady"
     And the PDF does not say "Confirmation"
     And 1 receipt is stored

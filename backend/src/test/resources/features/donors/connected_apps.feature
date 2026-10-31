@@ -124,10 +124,11 @@ Feature: An administrator connects an application such as Claude to the administ
       | POST   | /api/admin/donations/symbol-claims/{id}/reverse                     |
       | DELETE | /api/admin/donations/symbol-claims/{id}                             |
       | POST   | /api/admin/operations/backups/nfnn-2026-10-23_0300.dump.age/restore |
-      | POST   | /api/admin/donations/receipt-signature                              |
+      | POST   | /api/admin/donations/receipt-signatures/{id}                        |
       | POST   | /api/admin/operations/backups/key/reveal                            |
       | POST   | /api/admin/operations/backups/key/confirmation                      |
-      | DELETE | /api/admin/donations/receipt-signature                              |
+      | DELETE | /api/admin/donations/receipt-signatures/{id}                        |
+      | PUT    | /api/admin/donations/receipt-signatory                              |
       | POST   | /api/admin/content/people/{id}/web-signature                        |
       | DELETE | /api/admin/content/people/{id}/web-signature                        |
 
