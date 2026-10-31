@@ -139,7 +139,7 @@ class ReceiptLayout {
           bottom: 0,
           left: style.margins.left,
         },
-        font: assets.fonts.body,
+        font: null,
         bufferPages: true,
         tagged: true,
         lang: 'cs',

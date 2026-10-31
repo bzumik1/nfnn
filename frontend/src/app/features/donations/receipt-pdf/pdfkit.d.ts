@@ -44,7 +44,7 @@ declare module 'pdfkit' {
   interface PdfDocumentOptions {
     readonly size?: [number, number] | string;
     readonly margins?: { top: number; right: number; bottom: number; left: number };
-    readonly font?: Uint8Array | ArrayBuffer;
+    readonly font?: Uint8Array | ArrayBuffer | null;
     readonly bufferPages?: boolean;
     readonly autoFirstPage?: boolean;
     readonly tagged?: boolean;
