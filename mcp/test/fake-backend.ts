@@ -15,6 +15,10 @@ export const GIVING_DONOR_ID = '019a0000-0000-7000-8000-000000000003';
 export const MEDIA_ID = '019a0000-0000-7000-8000-000000000004';
 export const DONATION_ID = '019a0000-0000-7000-8000-000000000005';
 export const LINK_ID = '019a0000-0000-7000-8000-000000000006';
+export const RECEIPT_ID = '019a0000-0000-7000-8000-000000000017';
+export const REPLACING_DONOR_ID = '019a0000-0000-7000-8000-000000000018';
+export const ERASED_RECEIPT_ID = '019a0000-0000-7000-8000-000000000019';
+export const VERIFICATION_LINK = 'https://nfnn.cz/overit#1003188506188208640000126520415073310';
 export const PERSON_ID = '019a0000-0000-7000-8000-000000000007';
 export const SIGNED_PERSON_ID = '019a0000-0000-7000-8000-000000000008';
 const LOG_MATCHES: Record<string, number[]> = {
@@ -612,6 +616,73 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
           'Nejdřív zneplatněte potvrzení.',
         ),
       ];
+    case 'GET /api/admin/donations/receipts':
+      return [
+        200,
+        {
+          items: [
+            {
+              id: RECEIPT_ID,
+              donorId: DONOR_ID,
+              status: 'ACTIVE',
+              kind: 'YEARLY',
+              number: '2027-000001',
+              donationId: null,
+              year: 2026,
+              issuedOn: '2027-01-15',
+              issuedAt: '2027-01-15T11:00:00Z',
+              supersededAt: null,
+              locale: 'cs',
+              giftCount: 2,
+              totalAmountMinor: 350000,
+            },
+          ],
+          total: 3,
+          page: Number(url.searchParams.get('page') ?? '0'),
+          limit: Number(url.searchParams.get('limit') ?? '50'),
+        },
+      ];
+    case `GET /api/admin/donations/receipts/${RECEIPT_ID}`:
+      return [200, issuedReceipt({ year: 2026 })];
+    case `GET /api/admin/donations/receipts/${ERASED_RECEIPT_ID}`:
+      return [200, erasedDonorsReceipt()];
+    case `GET /api/admin/donations/receipts/${UNKNOWN_ID}`:
+      return [
+        404,
+        problem(
+          404,
+          'donations/receipt-not-found',
+          'Potvrzení nenalezeno',
+          'Takové potvrzení u vás nemáme.',
+        ),
+      ];
+    case `POST /api/admin/donations/donors/${DONOR_ID}/receipts`:
+      return [200, issuedReceipt(JSON.parse(body || '{}') as ReceiptSubject)];
+    case `POST /api/admin/donations/donors/${UNKNOWN_ID}/receipts`:
+      return [
+        404,
+        problem(404, 'donations/donor-not-found', 'Dárce nenalezen', 'Takového dárce neznáme.'),
+      ];
+    case `POST /api/admin/donations/donors/${REPLACING_DONOR_ID}/receipts`:
+      return [
+        403,
+        problem(
+          403,
+          'donations/receipt-replacement-in-browser-only',
+          'Nahradit potvrzení jde jen v prohlížeči',
+          'Dárce už má platné potvrzení s jinými údaji.',
+        ),
+      ];
+    case `POST /api/admin/donations/donors/${GIVING_DONOR_ID}/receipts`:
+      return [
+        409,
+        problem(
+          409,
+          'donations/receipt-issue-limit',
+          'Příliš mnoho nových potvrzení',
+          'Za posledních 24 hodin jste si nechali vystavit 20 náhradních potvrzení.',
+        ),
+      ];
     case 'POST /api/admin/donations/report/send':
       return [
         200,
@@ -627,6 +698,86 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
     default:
       return [404, problem(404, 'not-found', 'Nenalezeno')];
   }
+}
+
+interface ReceiptSubject {
+  readonly year?: number;
+  readonly donationId?: string;
+}
+
+function erasedDonorsReceipt(): Record<string, unknown> {
+  const issued = issuedReceipt({ year: 2026 });
+  const receipt = issued['receipt'] as Record<string, unknown>;
+  return {
+    ...issued,
+    id: ERASED_RECEIPT_ID,
+    donorErased: true,
+    receipt: {
+      ...receipt,
+      donor: {
+        type: 'PERSON',
+        name: 'Vymazaný dárce',
+        companyIdentifier: null,
+        address: { street: 'Vymazáno', city: 'Vymazáno', postalCode: '00000' },
+        variableSymbol: '1234567890',
+      },
+      verification: { keyId: '21fe31df', qrText: null },
+    },
+  };
+}
+
+function issuedReceipt(subject: ReceiptSubject): Record<string, unknown> {
+  const yearly = subject.year !== undefined;
+  const gifts = yearly
+    ? [
+        { receivedOn: '2026-10-01', amountMinor: 100000, source: 'BANK_TRANSFER' },
+        { receivedOn: '2026-11-15', amountMinor: 250000, source: 'BANK_TRANSFER' },
+      ]
+    : [{ receivedOn: '2026-10-01', amountMinor: 100000, source: 'BANK_TRANSFER' }];
+  const total = gifts.reduce((sum, gift) => sum + gift.amountMinor, 0);
+  return {
+    id: RECEIPT_ID,
+    donorId: DONOR_ID,
+    status: 'ACTIVE',
+    kind: yearly ? 'YEARLY' : 'SINGLE',
+    number: '2027-000001',
+    donationId: subject.donationId ?? null,
+    year: subject.year ?? null,
+    issuedAt: '2027-01-15T11:00:00Z',
+    supersededAt: null,
+    donorErased: false,
+    receipt: {
+      schemaVersion: 1,
+      kind: yearly ? 'YEARLY' : 'SINGLE',
+      number: '2027-000001',
+      issuedOn: '2027-01-15',
+      locale: 'cs',
+      year: subject.year ?? null,
+      replaces: null,
+      foundation: {
+        name: 'Nová naděje - nadační fond',
+        companyIdentifier: '27278794',
+        address: { street: 'Jiráskova 436', city: 'Nový Bor', postalCode: '473 01' },
+        registryCourt: 'Krajský soud v Ústí nad Labem',
+        registryFile: 'N 78',
+        bankAccountNumber: '5544332217/2010',
+        issuePlace: 'V Novém Boru',
+        issuePlaceEn: 'Nový Bor',
+      },
+      donor: {
+        type: 'PERSON',
+        name: 'Jana Nováková',
+        companyIdentifier: null,
+        address: { street: 'Dlouhá 12', city: 'Ústí nad Labem', postalCode: '400 01' },
+        variableSymbol: '1234567890',
+      },
+      gifts,
+      total: { amountMinor: total, currency: 'CZK' },
+      signatory: { name: 'Jan Novák', role: 'předseda správní rady', signatureImage: null },
+      texts: { cs: { 'receipt.declaration.yearly': '{0} potvrzuje, že …' }, en: null },
+      verification: { keyId: '21fe31df', qrText: VERIFICATION_LINK },
+    },
+  };
 }
 
 function content(body: string): Record<string, unknown> {

@@ -38,7 +38,7 @@ public class DonationReceiptService {
 
     public DonationReceipt issueForYear(DonorReference donor, Year year) {
         LocalDate today = FoundationCalendar.today(clock);
-        requireCompletedYear(year, today);
+        requireCompletedYear(firstYear, year, today);
         return issuer.issueForYear(donor, year, today);
     }
 
@@ -50,7 +50,7 @@ public class DonationReceiptService {
 
     public IssuedReceipt yearlyReceipt(DonorReference donor, Year year) {
         LocalDate today = FoundationCalendar.today(clock);
-        requireCompletedYear(year, today);
+        requireCompletedYear(firstYear, year, today);
         DonationReceipt receipt = issuer.issueForYear(donor, year, today);
         return renderingLimit.withinLimit(() -> pdf(receipt));
     }
@@ -59,7 +59,7 @@ public class DonationReceiptService {
         return IssuedReceipt.of(receipt, renderer.render(receipt.frozen(), receipt.issuedAt()));
     }
 
-    private void requireCompletedYear(Year year, LocalDate today) {
+    static void requireCompletedYear(FirstReceiptYear firstYear, Year year, LocalDate today) {
         if (!firstYear.admits(year)) {
             throw new ReceiptBeforeFirstYear(firstYear);
         }

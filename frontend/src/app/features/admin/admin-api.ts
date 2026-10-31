@@ -211,6 +211,33 @@ export interface AdminDonorDetailResponse {
   bankAccounts: BankAccountItem[];
   donations: DonationListResponse;
   receipts: AdminReceiptResponse[];
+  yearlyReceiptsAvailableThrough: number;
+  receiptsAvailableFrom: number;
+}
+
+export type ReceiptIssueRequest = { year: number } | { donationId: string };
+
+export type IssuedReceiptStatus = 'ACTIVE' | 'REPLACED' | 'WITHDRAWN';
+
+export interface AdminFrozenReceiptResponse {
+  number: string;
+  issuedOn: string;
+  replaces: { number: string; issuedOn: string } | null;
+  verification: { keyId: string; qrText: string };
+}
+
+export interface AdminIssuedReceiptResponse {
+  id: string;
+  donorId: string;
+  status: IssuedReceiptStatus;
+  kind: ReceiptKind;
+  number: string;
+  donationId: string | null;
+  year: number | null;
+  issuedAt: string;
+  supersededAt: string | null;
+  donorErased: boolean;
+  receipt: AdminFrozenReceiptResponse;
 }
 
 export interface ReportSectionsResponse {
@@ -690,6 +717,16 @@ export class AdminApi {
   donorDonations(donorId: string): Observable<AdminDonorDetailResponse> {
     return this.http.get<AdminDonorDetailResponse>(
       `/api/admin/donations/donors/${encodeURIComponent(donorId)}`,
+    );
+  }
+
+  issueReceipt(
+    donorId: string,
+    request: ReceiptIssueRequest,
+  ): Observable<AdminIssuedReceiptResponse> {
+    return this.http.post<AdminIssuedReceiptResponse>(
+      `/api/admin/donations/donors/${encodeURIComponent(donorId)}/receipts`,
+      request,
     );
   }
 
