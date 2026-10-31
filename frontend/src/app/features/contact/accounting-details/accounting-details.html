@@ -45,9 +45,9 @@
       <dt i18n="@@home.contact.accounting.account">Číslo účtu</dt>
       <dd>
         @if (account(); as known) {
-          <span class="accounting-value">{{ known.accountNumber }}</span>
+          <span class="accounting-value">{{ known.number }}</span>
           <app-copy-button
-            [value]="known.accountNumber"
+            [value]="known.number"
             what="číslo účtu"
             i18n-what="@@home.contact.accounting.copyAccount"
           />

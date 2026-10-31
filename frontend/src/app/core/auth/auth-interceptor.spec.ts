@@ -1,12 +1,13 @@
 import {
   HttpClient,
+  HttpContext,
   HttpErrorResponse,
   provideHttpClient,
   withInterceptors,
 } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { authInterceptor } from './auth-interceptor';
+import { authInterceptor, WITHOUT_ACCESS_TOKEN } from './auth-interceptor';
 import { AuthStore } from './auth-store';
 import { Donor } from './donor';
 import { authResponse, problem, sampleDonor } from './testing/donor-fixtures';
@@ -52,6 +53,43 @@ describe('Given the auth interceptor', () => {
     const request = http.expectOne('/api/contact/messages');
     expect(request.request.headers.has('Authorization')).toBe(false);
     request.flush(null, { status: 202, statusText: 'Accepted' });
+  });
+
+  it('when a call is marked as one without the access token, then it carries none although a donor is signed in', () => {
+    signIn('token-1');
+
+    client
+      .get('/api/donations/payment-details', {
+        context: new HttpContext().set(WITHOUT_ACCESS_TOKEN, true),
+      })
+      .subscribe();
+
+    const request = http.expectOne('/api/donations/payment-details');
+    expect(request.request.headers.has('Authorization')).toBe(false);
+    request.flush({});
+  });
+
+  it('when a call without the access token is refused with a problem file, then the caller gets the problem as a parsed body and no refresh happens', async () => {
+    signIn('token-1');
+    let failure: unknown;
+    client
+      .get('/api/donations/payment-details', {
+        context: new HttpContext().set(WITHOUT_ACCESS_TOKEN, true),
+        responseType: 'blob',
+      })
+      .subscribe({ error: (error: unknown) => (failure = error) });
+
+    http.expectOne('/api/donations/payment-details').flush(
+      new Blob([JSON.stringify(problem('donations/rate-limited'))], {
+        type: 'application/problem+json',
+      }),
+      { status: 429, statusText: 'Too Many Requests' },
+    );
+    await vi.waitFor(() => expect(failure).toBeInstanceOf(HttpErrorResponse));
+
+    expect((failure as HttpErrorResponse).error).toEqual(problem('donations/rate-limited'));
+    http.expectNone('/api/donors/auth/refresh');
+    expect(store.currentAccessToken()).toBe('token-1');
   });
 
   it('when the access token expired, then the session is refreshed and the call is retried with the new token', () => {

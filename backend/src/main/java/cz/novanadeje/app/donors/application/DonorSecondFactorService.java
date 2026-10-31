@@ -15,8 +15,6 @@ import cz.novanadeje.app.donors.domain.SecondFactorNotEnabled;
 import cz.novanadeje.app.donors.domain.SecondFactorNotPending;
 import cz.novanadeje.app.donors.domain.SecondFactorRepository;
 import cz.novanadeje.app.donors.domain.TotpSecret;
-import cz.novanadeje.app.shared.application.qr.QrCodeEncoder;
-import cz.novanadeje.app.shared.application.qr.QrErrorCorrection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -37,14 +35,13 @@ public class DonorSecondFactorService {
     private final DonorConfirmations confirmations;
     private final DonorSessionService sessions;
     private final DonorViews views;
-    private final QrCodeEncoder qrCodes;
     private final SecondFactorSessionGuard sessionGuard;
     private final DonorSecondFactorProperties properties;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public DonorSecondFactorService(DonorRepository donors, SecondFactorRepository secondFactors, RefreshTokenRepository refreshTokens,
-                                    DonorConfirmations confirmations, DonorSessionService sessions, DonorViews views, QrCodeEncoder qrCodes,
+                                    DonorConfirmations confirmations, DonorSessionService sessions, DonorViews views,
                                     SecondFactorSessionGuard sessionGuard, DonorSecondFactorProperties properties, ApplicationEventPublisher events,
                                     Clock clock) {
         this.donors = donors;
@@ -53,7 +50,6 @@ public class DonorSecondFactorService {
         this.confirmations = confirmations;
         this.sessions = sessions;
         this.views = views;
-        this.qrCodes = qrCodes;
         this.sessionGuard = sessionGuard;
         this.properties = properties;
         this.events = events;
@@ -72,7 +68,7 @@ public class DonorSecondFactorService {
         secondFactors.save(SecondFactor.enrol(donorId, secret, clock.instant()));
         String otpauthUri = secret.otpauthUri(properties.issuer(), donor.email().value());
         log.info("Second factor set-up started for donor {}", donorId);
-        return new SecondFactorEnrolment(secret.value(), otpauthUri, qrCodes.encode(otpauthUri, QrErrorCorrection.MEDIUM));
+        return new SecondFactorEnrolment(secret.value(), otpauthUri);
     }
 
     @Transactional

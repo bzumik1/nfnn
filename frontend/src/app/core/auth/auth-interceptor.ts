@@ -1,4 +1,5 @@
 import {
+  HttpContextToken,
   HttpErrorResponse,
   HttpEvent,
   HttpHandlerFn,
@@ -13,9 +14,14 @@ import { AuthStore } from './auth-store';
 const EXPIRED_TOKEN = 'auth/expired-token';
 const PROBLEM_MEDIA_TYPE = 'application/problem+json';
 
+export const WITHOUT_ACCESS_TOKEN = new HttpContextToken<boolean>(() => false);
+
 export const authInterceptor: HttpInterceptorFn = (request, next) => {
   if (!needsAccessToken(request.url)) {
     return next(request);
+  }
+  if (request.context.get(WITHOUT_ACCESS_TOKEN)) {
+    return send(request, next);
   }
   const store = inject(AuthStore);
   const token = store.currentAccessToken();

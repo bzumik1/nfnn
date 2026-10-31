@@ -214,17 +214,41 @@ describe('Given a SPAYD case', () => {
     );
   });
 
-  it('when its refusal names a problem type that is no problem type of the API, then it is refused', () => {
+  it('when its refusal names a field spayd() does not have, then it is refused', () => {
     const file = editable(SPAYD_CASES);
     const refusal = file.cases.find((sharedCase) => sharedCase.expected.refused !== undefined);
     if (refusal?.expected.refused === undefined) {
       throw new Error(`${SPAYD_CASES} holds no refusal`);
     }
-    refusal.expected.refused['type'] = 'https://nfnn.cz/problems/anything/at all';
+    refusal.expected.refused['fields'] = ['purpose'];
 
     expect(schemaViolations(SPAYD_CASES, file).join('\n')).toMatch(
-      /\/cases\/\d+\/expected\/refused\/type must match pattern/,
+      /\/cases\/\d+\/expected\/refused\/fields\/0 must be equal to one of the allowed values/,
     );
+  });
+
+  it('when its input names the payment details both by a case and as an answer, then it is refused', () => {
+    const file = editable(SPAYD_CASES);
+    const byName = file.cases.find((sharedCase) => sharedCase.input['details'] !== undefined);
+    const served = file.cases.find((sharedCase) => sharedCase.input['servedDetails'] !== undefined);
+    if (byName === undefined || served === undefined) {
+      throw new Error(`${SPAYD_CASES} names no payment details both ways`);
+    }
+    byName.input['servedDetails'] = served.input['servedDetails'];
+
+    expect(schemaViolations(SPAYD_CASES, file).join('\n')).toMatch(
+      /\/cases\/\d+\/input must match exactly one schema in oneOf/,
+    );
+  });
+
+  it('when it names payment details by a case, then that case is one of payment/details.json', () => {
+    const detailsCases = new Set(sharedCases('payment/details.json').map((answer) => answer.name));
+    const named = sharedCases(SPAYD_CASES).flatMap((sharedCase) =>
+      sharedCase.input.details === undefined ? [] : [sharedCase.input.details],
+    );
+
+    expect(named.length).toBeGreaterThan(0);
+    expect(named.filter((name) => !detailsCases.has(name))).toEqual([]);
   });
 });
 

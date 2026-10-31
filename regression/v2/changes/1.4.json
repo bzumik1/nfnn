@@ -1,0 +1,664 @@
+[
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/payment/spayd.json",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): payment/spayd.json becomes the browser's specification, run by spayd() and the encoder (source edited); SpaydText maps % to a space, so the 100% case changes; section 12's cases join (9 999 999,99 Kč accepted, one heller more refused, no variable symbol, the whole string alphanumeric, the 60-character message kept whole and 61 refused), and every refusal is the one spayd() gives, by its fields; the five cases of the removed endpoint's validation go (1 000 001 Kč, abc, 12.50, a missing amount and an unknown purpose): the panel spec refuses a typed amount that is not a whole number from 1 to 1 000 000 (12.5, 12,50, 0, 1000001, abc), and the amount and the purpose are typed values the browser never leaves out or misspells; round 1 of the review adds refusals for a 36-character recipient, an unchecked, empty or field-separating verification message, an empty donation message, a two-letter currency and an IBAN that is not the shown account number's or has wrong check digits",
+    "contract": ".claude/rules/testing.md, Logic on both sides; docs/api-contract.md, GET /api/donations/payment-details; shared-cases/payment/account.json"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/schemas/payment/spayd.schema.json",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the schema of payment/spayd.json takes the payment details by case name or written in, and a refusal as the fields spayd() names (amountMinor, variableSymbol, details)",
+    "contract": ".claude/rules/testing.md, Logic on both sides"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/payment/account.json",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the browser checks before it draws a payment QR that the served IBAN is the IBAN of the shown Czech account number (round 1 of the review), so payment/account.json is new (source edited): modulo 11 on the prefix and the number, a zero number, the bank code, IBAN check digits; the backend runs every case through CzechAccountNumber.toIban and BankAccount, which refused such pairs at startup since 1.2",
+    "contract": ".claude/rules/testing.md, Logic on both sides; docs/api-contract.md, GET /api/donations/payment-details"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/schemas/payment/account.schema.json",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the schema of the new payment/account.json: an account number and an IBAN in, the IBAN of the number (or null when the number is refused) and whether the pair matches out",
+    "contract": ".claude/rules/testing.md, Logic on both sides"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/qr/payment.json",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the QR symbols of the changed and added SPAYD texts of payment/spayd.json (1 heller, 9 999 999,99 Kč, the 100% message with a space, the 60-character message), encoded by ZXing at level H as before, so the browser's encoder and the backend runner both meet them",
+    "contract": ".claude/rules/testing.md, Logic on both sides"
+  },
+  {
+    "scenario": "donations/payment_qr: *",
+    "kind": "removed",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): GET /api/donations/payment-qr is removed with GeneratePaymentQrService and PaymentQrResponse, so its feature goes; the browser's spayd() runs every case of payment/spayd.json and the e2e route trap fails on any /payment-qr request",
+    "contract": "docs/api-contract.md, GET /api/donations/payment-details; docs/frontend-overview.md and docs/system-overview.md, the payment QR drawn in the browser"
+  },
+  {
+    "scenario": "donations/payment_details: The recipient and each message are what today's QR payment sends for its purpose*",
+    "kind": "removed",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): this 1.2 scenario compared payment-details with what payment-qr sent, and payment-qr is gone; DonationPurposeSharedCasesTest now reads every text the browser writes as the import does",
+    "contract": "docs/api-contract.md, GET /api/donations/payment-details; docs/frontend-overview.md and docs/system-overview.md, the payment QR drawn in the browser"
+  },
+  {
+    "path": "POST /api/donors/me/second-factor/setup",
+    "scenario": "content/clean_up_unused_photos: *",
+    "kind": "body",
+    "field": "$.qrCode",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the authenticator set-up answers the secret and the otpauth URI only, and the browser draws the QR from otpauthUri (1.3), so qrCode is removed",
+    "contract": "docs/api-contract.md, Second factor (POST /api/donors/me/second-factor/setup)"
+  },
+  {
+    "path": "POST /api/donors/me/second-factor/setup",
+    "scenario": "content/home_content: *",
+    "kind": "body",
+    "field": "$.qrCode",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the authenticator set-up answers the secret and the otpauth URI only, and the browser draws the QR from otpauthUri (1.3), so qrCode is removed",
+    "contract": "docs/api-contract.md, Second factor (POST /api/donors/me/second-factor/setup)"
+  },
+  {
+    "path": "POST /api/donors/me/second-factor/setup",
+    "scenario": "content/manage_about: *",
+    "kind": "body",
+    "field": "$.qrCode",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the authenticator set-up answers the secret and the otpauth URI only, and the browser draws the QR from otpauthUri (1.3), so qrCode is removed",
+    "contract": "docs/api-contract.md, Second factor (POST /api/donors/me/second-factor/setup)"
+  },
+  {
+    "path": "POST /api/donors/me/second-factor/setup",
+    "scenario": "content/manage_news: *",
+    "kind": "body",
+    "field": "$.qrCode",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the authenticator set-up answers the secret and the otpauth URI only, and the browser draws the QR from otpauthUri (1.3), so qrCode is removed",
+    "contract": "docs/api-contract.md, Second factor (POST /api/donors/me/second-factor/setup)"
+  },
+  {
+    "path": "POST /api/donors/me/second-factor/setup",
+    "scenario": "content/manage_people: *",
+    "kind": "body",
+    "field": "$.qrCode",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the authenticator set-up answers the secret and the otpauth URI only, and the browser draws the QR from otpauthUri (1.3), so qrCode is removed",
+    "contract": "docs/api-contract.md, Second factor (POST /api/donors/me/second-factor/setup)"
+  },
+  {
+    "path": "POST /api/donors/me/second-factor/setup",
+    "scenario": "content/manage_projects: *",
+    "kind": "body",
+    "field": "$.qrCode",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the authenticator set-up answers the secret and the otpauth URI only, and the browser draws the QR from otpauthUri (1.3), so qrCode is removed",
+    "contract": "docs/api-contract.md, Second factor (POST /api/donors/me/second-factor/setup)"
+  },
+  {
+    "path": "POST /api/donors/me/second-factor/setup",
+    "scenario": "content/choose_project_order: *",
+    "kind": "body",
+    "field": "$.qrCode",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the authenticator set-up answers the secret and the otpauth URI only, and the browser draws the QR from otpauthUri (1.3), so qrCode is removed",
+    "contract": "docs/api-contract.md, Second factor (POST /api/donors/me/second-factor/setup)"
+  },
+  {
+    "path": "POST /api/donors/me/second-factor/setup",
+    "scenario": "donations/admin_activity_since: *",
+    "kind": "body",
+    "field": "$.qrCode",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the authenticator set-up answers the secret and the otpauth URI only, and the browser draws the QR from otpauthUri (1.3), so qrCode is removed",
+    "contract": "docs/api-contract.md, Second factor (POST /api/donors/me/second-factor/setup)"
+  },
+  {
+    "path": "POST /api/donors/me/second-factor/setup",
+    "scenario": "donations/admin_donor_accounts: *",
+    "kind": "body",
+    "field": "$.qrCode",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the authenticator set-up answers the secret and the otpauth URI only, and the browser draws the QR from otpauthUri (1.3), so qrCode is removed",
+    "contract": "docs/api-contract.md, Second factor (POST /api/donors/me/second-factor/setup)"
+  },
+  {
+    "path": "POST /api/donors/me/second-factor/setup",
+    "scenario": "donations/admin_donor_erasure: *",
+    "kind": "body",
+    "field": "$.qrCode",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the authenticator set-up answers the secret and the otpauth URI only, and the browser draws the QR from otpauthUri (1.3), so qrCode is removed",
+    "contract": "docs/api-contract.md, Second factor (POST /api/donors/me/second-factor/setup)"
+  },
+  {
+    "path": "POST /api/donors/me/second-factor/setup",
+    "scenario": "donations/admin_import_state: *",
+    "kind": "body",
+    "field": "$.qrCode",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the authenticator set-up answers the secret and the otpauth URI only, and the browser draws the QR from otpauthUri (1.3), so qrCode is removed",
+    "contract": "docs/api-contract.md, Second factor (POST /api/donors/me/second-factor/setup)"
+  },
+  {
+    "path": "POST /api/donors/me/second-factor/setup",
+    "scenario": "donations/admin_monthly_report: *",
+    "kind": "body",
+    "field": "$.qrCode",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the authenticator set-up answers the secret and the otpauth URI only, and the browser draws the QR from otpauthUri (1.3), so qrCode is removed",
+    "contract": "docs/api-contract.md, Second factor (POST /api/donors/me/second-factor/setup)"
+  },
+  {
+    "path": "POST /api/donors/me/second-factor/setup",
+    "scenario": "donations/admin_payments: *",
+    "kind": "body",
+    "field": "$.qrCode",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the authenticator set-up answers the secret and the otpauth URI only, and the browser draws the QR from otpauthUri (1.3), so qrCode is removed",
+    "contract": "docs/api-contract.md, Second factor (POST /api/donors/me/second-factor/setup)"
+  },
+  {
+    "path": "POST /api/donors/me/second-factor/setup",
+    "scenario": "donations/admin_receipt_signature: *",
+    "kind": "body",
+    "field": "$.qrCode",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the authenticator set-up answers the secret and the otpauth URI only, and the browser draws the QR from otpauthUri (1.3), so qrCode is removed",
+    "contract": "docs/api-contract.md, Second factor (POST /api/donors/me/second-factor/setup)"
+  },
+  {
+    "path": "POST /api/donors/me/second-factor/setup",
+    "scenario": "donations/admin_symbol_claims: *",
+    "kind": "body",
+    "field": "$.qrCode",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the authenticator set-up answers the secret and the otpauth URI only, and the browser draws the QR from otpauthUri (1.3), so qrCode is removed",
+    "contract": "docs/api-contract.md, Second factor (POST /api/donors/me/second-factor/setup)"
+  },
+  {
+    "path": "POST /api/donors/me/second-factor/setup",
+    "scenario": "donors/admin_actions: *",
+    "kind": "body",
+    "field": "$.qrCode",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the authenticator set-up answers the secret and the otpauth URI only, and the browser draws the QR from otpauthUri (1.3), so qrCode is removed",
+    "contract": "docs/api-contract.md, Second factor (POST /api/donors/me/second-factor/setup)"
+  },
+  {
+    "path": "POST /api/donors/me/second-factor/setup",
+    "scenario": "donors/admin_administrators: *",
+    "kind": "body",
+    "field": "$.qrCode",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the authenticator set-up answers the secret and the otpauth URI only, and the browser draws the QR from otpauthUri (1.3), so qrCode is removed",
+    "contract": "docs/api-contract.md, Second factor (POST /api/donors/me/second-factor/setup)"
+  },
+  {
+    "path": "POST /api/donors/me/second-factor/setup",
+    "scenario": "donors/admin_donor_erasure: *",
+    "kind": "body",
+    "field": "$.qrCode",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the authenticator set-up answers the secret and the otpauth URI only, and the browser draws the QR from otpauthUri (1.3), so qrCode is removed",
+    "contract": "docs/api-contract.md, Second factor (POST /api/donors/me/second-factor/setup)"
+  },
+  {
+    "path": "POST /api/donors/me/second-factor/setup",
+    "scenario": "donors/admin_donors: *",
+    "kind": "body",
+    "field": "$.qrCode",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the authenticator set-up answers the secret and the otpauth URI only, and the browser draws the QR from otpauthUri (1.3), so qrCode is removed",
+    "contract": "docs/api-contract.md, Second factor (POST /api/donors/me/second-factor/setup)"
+  },
+  {
+    "path": "POST /api/donors/me/second-factor/setup",
+    "scenario": "donors/admin_previous_sign_in: *",
+    "kind": "body",
+    "field": "$.qrCode",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the authenticator set-up answers the secret and the otpauth URI only, and the browser draws the QR from otpauthUri (1.3), so qrCode is removed",
+    "contract": "docs/api-contract.md, Second factor (POST /api/donors/me/second-factor/setup)"
+  },
+  {
+    "path": "POST /api/donors/me/second-factor/setup",
+    "scenario": "donors/connected_apps: *",
+    "kind": "body",
+    "field": "$.qrCode",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the authenticator set-up answers the secret and the otpauth URI only, and the browser draws the QR from otpauthUri (1.3), so qrCode is removed",
+    "contract": "docs/api-contract.md, Second factor (POST /api/donors/me/second-factor/setup)"
+  },
+  {
+    "path": "POST /api/donors/me/second-factor/setup",
+    "scenario": "donors/donor_passkeys: *",
+    "kind": "body",
+    "field": "$.qrCode",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the authenticator set-up answers the secret and the otpauth URI only, and the browser draws the QR from otpauthUri (1.3), so qrCode is removed",
+    "contract": "docs/api-contract.md, Second factor (POST /api/donors/me/second-factor/setup)"
+  },
+  {
+    "path": "POST /api/donors/me/second-factor/setup",
+    "scenario": "donors/donor_passwordless: *",
+    "kind": "body",
+    "field": "$.qrCode",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the authenticator set-up answers the secret and the otpauth URI only, and the browser draws the QR from otpauthUri (1.3), so qrCode is removed",
+    "contract": "docs/api-contract.md, Second factor (POST /api/donors/me/second-factor/setup)"
+  },
+  {
+    "path": "POST /api/donors/me/second-factor/setup",
+    "scenario": "donors/donor_second_factor: *",
+    "kind": "body",
+    "field": "$.qrCode",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the authenticator set-up answers the secret and the otpauth URI only, and the browser draws the QR from otpauthUri (1.3), so qrCode is removed",
+    "contract": "docs/api-contract.md, Second factor (POST /api/donors/me/second-factor/setup)"
+  },
+  {
+    "path": "POST /api/donors/me/second-factor/setup",
+    "scenario": "donors/second_factor_recovery: *",
+    "kind": "body",
+    "field": "$.qrCode",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the authenticator set-up answers the secret and the otpauth URI only, and the browser draws the QR from otpauthUri (1.3), so qrCode is removed",
+    "contract": "docs/api-contract.md, Second factor (POST /api/donors/me/second-factor/setup)"
+  },
+  {
+    "path": "POST /api/donors/me/second-factor/setup",
+    "scenario": "operations/backup_key: *",
+    "kind": "body",
+    "field": "$.qrCode",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the authenticator set-up answers the secret and the otpauth URI only, and the browser draws the QR from otpauthUri (1.3), so qrCode is removed",
+    "contract": "docs/api-contract.md, Second factor (POST /api/donors/me/second-factor/setup)"
+  },
+  {
+    "path": "POST /api/donors/me/second-factor/setup",
+    "scenario": "operations/backups: *",
+    "kind": "body",
+    "field": "$.qrCode",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the authenticator set-up answers the secret and the otpauth URI only, and the browser draws the QR from otpauthUri (1.3), so qrCode is removed",
+    "contract": "docs/api-contract.md, Second factor (POST /api/donors/me/second-factor/setup)"
+  },
+  {
+    "path": "POST /api/donors/me/second-factor/setup",
+    "scenario": "operations/diagnostics: *",
+    "kind": "body",
+    "field": "$.qrCode",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the authenticator set-up answers the secret and the otpauth URI only, and the browser draws the QR from otpauthUri (1.3), so qrCode is removed",
+    "contract": "docs/api-contract.md, Second factor (POST /api/donors/me/second-factor/setup)"
+  },
+  {
+    "path": "POST /api/donors/me/second-factor/setup",
+    "scenario": "operations/plan_backups: *",
+    "kind": "body",
+    "field": "$.qrCode",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the authenticator set-up answers the secret and the otpauth URI only, and the browser draws the QR from otpauthUri (1.3), so qrCode is removed",
+    "contract": "docs/api-contract.md, Second factor (POST /api/donors/me/second-factor/setup)"
+  },
+  {
+    "path": "POST /api/donors/me/second-factor/setup",
+    "scenario": "operations/restore: *",
+    "kind": "body",
+    "field": "$.qrCode",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the authenticator set-up answers the secret and the otpauth URI only, and the browser draws the QR from otpauthUri (1.3), so qrCode is removed",
+    "contract": "docs/api-contract.md, Second factor (POST /api/donors/me/second-factor/setup)"
+  },
+  {
+    "path": "POST /api/donors/me/second-factor/setup",
+    "scenario": "operations/settings: *",
+    "kind": "body",
+    "field": "$.qrCode",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the authenticator set-up answers the secret and the otpauth URI only, and the browser draws the QR from otpauthUri (1.3), so qrCode is removed",
+    "contract": "docs/api-contract.md, Second factor (POST /api/donors/me/second-factor/setup)"
+  },
+  {
+    "path": "POST /api/donors/auth/login/second-factor/recovery",
+    "scenario": "donors/second_factor_recovery: *",
+    "kind": "body",
+    "field": "$.qrCode",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the recovery payment's instructions carry its SPAYD text, and the browser draws the QR from it, so qrCode is removed",
+    "contract": "docs/api-contract.md, Recovery by payment"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.GeneratePaymentQrServiceTest > Given a second-factor recovery code*",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the recovery payment's SPAYD text is now built by SecondFactorRecoveryPayments.spaydFor and checked there",
+    "replacement": "donations.application.recovery.SecondFactorRecoveryPaymentsTest > Given a recovery code, when the payment text is asked for, then it is the SPAYD text of 1 Kč to the foundation's account with the recovery message and no variable symbol"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.GeneratePaymentQrServiceTest > Given a variable symbol, *",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): GeneratePaymentQrService is removed with the endpoint; the browser's spayd() writes the donation's SPAYD text, proved by the shared cases",
+    "replacement": "src/app/features/donations/spayd.spec.ts > Given the shared case 500 Kč with a ten-digit variable symbol > when the browser composes the payment from the payment details it holds, then it gives the expected SPAYD text or refusal"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.GeneratePaymentQrServiceTest > Given no variable symbol*",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): GeneratePaymentQrService is removed with the endpoint; the browser's spayd() leaves X-VS out without a symbol, proved by the shared cases",
+    "replacement": "src/app/features/donations/spayd.spec.ts > Given the shared case 500 Kč without a variable symbol > when the browser composes the payment from the payment details it holds, then it gives the expected SPAYD text or refusal"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.GeneratePaymentQrServiceTest > Given an account verification, *",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): GeneratePaymentQrService is removed with the endpoint; the browser's spayd() writes the verification message, proved by the shared cases",
+    "replacement": "src/app/features/donations/spayd.spec.ts > Given the shared case 1 Kč verifying a donor's account > when the browser composes the payment from the payment details it holds, then it gives the expected SPAYD text or refusal"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.GeneratePaymentQrServiceTest > Given an account verification without a variable symbol*",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): GeneratePaymentQrService is removed with the endpoint; spayd() refuses a verification without a symbol",
+    "replacement": "src/app/features/donations/spayd.spec.ts > Given the shared case an account verification without a variable symbol is refused > when the browser composes the payment from the payment details it holds, then it gives the expected SPAYD text or refusal"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.GeneratePaymentQrServiceTest > Given a malformed variable symbol*",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): GeneratePaymentQrService is removed with the endpoint; spayd() refuses a malformed symbol",
+    "replacement": "src/app/features/donations/spayd.spec.ts > Given the shared case a variable symbol with a letter is refused > when the browser composes the payment from the payment details it holds, then it gives the expected SPAYD text or refusal"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.DonorSecondFactorServiceTest > Given the right password and no factor yet, when the set-up begins, then a pending factor is stored and the secret comes back as text, URI and QR code",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the set-up no longer answers a QR code, so the same test drops it from its name and its assertions",
+    "replacement": "donors.application.DonorSecondFactorServiceTest > Given the right password and no factor yet, when the set-up begins, then a pending factor is stored and the secret comes back as text and URI"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/payment_qr.feature > Visitor gets a QR payment for a donation - Donor's QR payment carries their variable symbol",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the payment_qr feature goes with GET /api/donations/payment-qr; spayd() puts the donor's symbol into X-VS",
+    "replacement": "src/app/features/donations/spayd.spec.ts > Given the shared case 500 Kč with a ten-digit variable symbol > when the browser composes the payment from the payment details it holds, then it gives the expected SPAYD text or refusal"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/payment_qr.feature > Visitor gets a QR payment for a donation - Anonymous visitor's*",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the payment_qr feature goes with GET /api/donations/payment-qr; spayd() leaves X-VS out for a visitor",
+    "replacement": "src/app/features/donations/spayd.spec.ts > Given the shared case 500 Kč without a variable symbol > when the browser composes the payment from the payment details it holds, then it gives the expected SPAYD text or refusal"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/payment_qr.feature > Visitor gets a QR payment for a donation - The QR payment that verifies a donor's account*",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the payment_qr feature goes with GET /api/donations/payment-qr; spayd() writes the verification message",
+    "replacement": "src/app/features/donations/spayd.spec.ts > Given the shared case 1 Kč verifying a donor's account > when the browser composes the payment from the payment details it holds, then it gives the expected SPAYD text or refusal"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/payment_qr.feature > Visitor gets a QR payment for a donation - A QR payment that verifies an account needs*",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the payment_qr feature goes with GET /api/donations/payment-qr; spayd() refuses a verification without a symbol",
+    "replacement": "src/app/features/donations/spayd.spec.ts > Given the shared case an account verification without a variable symbol is refused > when the browser composes the payment from the payment details it holds, then it gives the expected SPAYD text or refusal"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/payment_qr.feature > Visitor gets a QR payment for a donation - A purpose the foundation does not know*",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the payment_qr feature goes with GET /api/donations/payment-qr; spayd() takes the purpose as the TypeScript type DONATION or ACCOUNT_VERIFICATION, so no other purpose can be written, and the named donation case covers the explicit purpose",
+    "replacement": "src/app/features/donations/spayd.spec.ts > Given the shared case 1 000 Kč as a donation named explicitly > when the browser composes the payment from the payment details it holds, then it gives the expected SPAYD text or refusal"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/payment_qr.feature > Visitor gets a QR payment for a donation - Missing amount*",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the payment_qr feature goes with GET /api/donations/payment-qr; spayd() refuses an amount that is no safe integer of hellers, NaN included",
+    "replacement": "src/app/features/donations/spayd.spec.ts > Given the payment details of the foundation > when an amount is not a safe integer, then it is refused instead of written in exponent form"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/payment_qr.feature > Visitor gets a QR payment for a donation - Variable symbol that is not up to ten digits*",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the payment_qr feature goes with GET /api/donations/payment-qr; spayd() refuses a symbol of more than ten digits",
+    "replacement": "src/app/features/donations/spayd.spec.ts > Given the shared case an eleven-digit variable symbol is refused > when the browser composes the payment from the payment details it holds, then it gives the expected SPAYD text or refusal"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "Visitor gets a QR payment for a donation - Amount that is not a whole number of crowns from 1 to 1 000 000 is rejected - Examples > *",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the payment_qr feature goes with GET /api/donations/payment-qr; the donate section draws no QR for an amount that is not a whole number of crowns from 1 to 1 000 000",
+    "replacement": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when the visitor enters an amount that is not a whole number from 1 to 1 000 000, then no QR is drawn and a hint explains why"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/home.spec.ts > Given the home page > Given a signed-in donor > when the page opens, then the QR payment carries their variable symbol",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the home page draws the QR payment from the payment details instead of asking for it",
+    "replacement": "src/app/features/content/home/home.spec.ts > Given the home page > Given a signed-in donor > when the page opens, then the drawn QR payment carries their variable symbol"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/home.spec.ts > Given the home page > when nobody is signed in, then the QR payment is asked for without a variable symbol",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the home page draws the QR payment from the payment details instead of asking for it",
+    "replacement": "src/app/features/content/home/home.spec.ts > Given the home page > when nobody is signed in, then the payment details are asked for once and the drawn QR payment carries no variable symbol"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > Given a signed-in donor with a variable symbol > when the section opens, then the variable symbol travels with the request*",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the symbol goes into the drawn QR instead of a request",
+    "replacement": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > Given a signed-in donor with a variable symbol > when the section opens, then the variable symbol is in the QR payment and shown with the bank account"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when it opens, then it asks for a QR payment of 500 Kč*",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the section loads the payment details once and draws the 500 Kč QR itself",
+    "replacement": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when it opens, then it loads the payment details once and draws the QR payment of 500 Kč without a variable symbol beside the bank account"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when the QR for another amount is on its way*",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): D30: the previous QR is dimmed at once and stays until the redraw",
+    "replacement": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when the visitor types, then the previous QR is dimmed at once and stays until the new one replaces it"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when the QR is on its way, then it says it is being prepared",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): what is on its way is the payment details, not a QR",
+    "replacement": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when the payment details are on their way, then it says the QR is being prepared"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when the amount changes before the QR arrives*",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): no QR answer can arrive late any more; D30 redraws once for the finished amount",
+    "replacement": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when the visitor is still typing an amount, then the QR is redrawn once, for the finished amount, without a placeholder in between"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when the first QR is ready, then the other preset amounts are fetched ahead",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): no prefetch: every amount is drawn from the one answer of payment details",
+    "replacement": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when the visitor picks every preset and types an amount, then nothing more is asked of the server"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when the server fails, then it says so in Czech and asking again loads the QR",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): what can fail is the payment details request",
+    "replacement": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when the payment details fail to load, then it says so in Czech and asking again loads them and draws the QR"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when the visitor enters an amount that is not a whole number from 1 to 1 000 000, then nothing is asked for*",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): nothing is asked for any amount now, so the test says no QR is drawn",
+    "replacement": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when the visitor enters an amount that is not a whole number from 1 to 1 000 000, then no QR is drawn and a hint explains why"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when the visitor enters another amount, then it asks for the QR payment of that amount",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): D30: the QR of a typed amount is drawn 400 ms after the last key",
+    "replacement": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when the visitor enters another amount, then its QR payment is drawn 400 ms after the last key"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when the visitor is still typing an amount, then only the finished amount is asked for",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): D30: one redraw for the finished amount instead of one request",
+    "replacement": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when the visitor is still typing an amount, then the QR is redrawn once, for the finished amount, without a placeholder in between"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when the visitor picks 1 000 Kč, then its fetched-ahead QR payment*",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): 1 000 Kč is drawn at once in the browser, with other dots than 500 Kč",
+    "replacement": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when the visitor picks 1 000 Kč, then its QR payment is drawn at once in the browser, with other dots than for 500 Kč"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when the visitor picks another amount, then the status region says the QR for that amount is ready",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): D30: one announcement after 1.2 s of quiet",
+    "replacement": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when the visitor picks another amount, then after 1.2 s of quiet the status region says the QR for that amount is ready"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when the visitor writes the amount with a space between thousands, then it asks for that amount",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the amount with a space is drawn, not asked for",
+    "replacement": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when the visitor writes the amount with a space between thousands, then the QR is drawn for that amount"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/payment-qr-api.spec.ts > *",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): payment-qr-api.ts is removed with the endpoint; the payment details store makes the one request the QR needs",
+    "replacement": "src/app/features/donations/payment-details-store.spec.ts > Given the payment details store > when it is first asked, then it loads the payment details once and holds them"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/bank-accounts-card/bank-accounts-card.spec.ts > Given the bank accounts card in the overview > when the donor presses Přidat účet > and the QR payment cannot be prepared*",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): what can fail is the payment details request",
+    "replacement": "src/app/features/donors/dashboard/bank-accounts-card/bank-accounts-card.spec.ts > Given the bank accounts card in the overview > when the donor presses Přidat účet > and the payment details cannot be loaded, then the dialog says the QR payment failed and a retry asks again"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/donate-qr.spec.ts > Given a visitor on the home page > when they choose 1 000 Kč, then its prefetched QR payment*",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): no prefetch: the browser draws each amount from one answer of payment details, and the route trap fails on any server QR request",
+    "replacement": "e2e/donate-qr.spec.ts > Given a visitor on the home page > when they choose 1 000 Kč and back 500 Kč, then the browser draws each QR payment from one answer of payment details and never asks for a server QR"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/account-card/account-card.spec.ts > Given the sign-in and security card of the details page > when the donor turns the second factor on > and confirms the password, then the QR code is the browser's own encoding of the otpauth URI, not the matrix the server sent beside it",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the server sends no matrix beside the URI any more, so the 1.3 test drops that half of its name and its fixture",
+    "replacement": "src/app/features/donors/dashboard/account-card/account-card.spec.ts > Given the sign-in and security card of the details page > when the donor turns the second factor on > and confirms the password, then the QR code is the browser's own encoding of the otpauth URI"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/testing/shared-cases.spec.ts > Given a SPAYD case > when its refusal names a problem type that is no problem type of the API, then it is refused",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): a refusal of payment/spayd.json is now the fields spayd() names, not a problem type of the removed endpoint, so the schema check names those fields",
+    "replacement": "src/testing/shared-cases.spec.ts > Given a SPAYD case > when its refusal names a field spayd() does not have, then it is refused"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.interfaces.rest.SpaydSharedCasesTest > *",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the backend runner of payment/spayd.json asked GET /api/donations/payment-qr and retires with it; the browser runner features/donations/spayd.spec.ts runs every case through spayd() and encodeText, and DonationPurposeSharedCasesTest reads each text as the import does",
+    "replacement": "src/app/features/donations/spayd.spec.ts > Given the shared case 500 Kč without a variable symbol > when the browser composes the payment from the payment details it holds, then it gives the expected SPAYD text or refusal"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.payment.QrPaymentTest > Given a donation that identifies the donor, when the payment is rendered, then the SPAYD carries the variable symbol",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): QrPayment, which wrote v2's server QR, is removed in round 1 of the 1.4 review, as it had no production caller left; the browser's spayd() writes X-VS from the donor's symbol, proved by the shared case",
+    "replacement": "src/app/features/donations/spayd.spec.ts > Given the shared case 500 Kč with a ten-digit variable symbol > when the browser composes the payment from the payment details it holds, then it gives the expected SPAYD text or refusal"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.payment.QrPaymentTest > Given an anonymous donation, when the payment is rendered, then the SPAYD leaves out the variable symbol",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): QrPayment, which wrote v2's server QR, is removed in round 1 of the 1.4 review, as it had no production caller left; the browser's spayd() leaves X-VS out without a symbol, proved by the shared case",
+    "replacement": "src/app/features/donations/spayd.spec.ts > Given the shared case 500 Kč without a variable symbol > when the browser composes the payment from the payment details it holds, then it gives the expected SPAYD text or refusal"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.payment.QrPaymentTest > Given an account verification, when the payment is rendered, then it says it verifies the account",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): QrPayment, which wrote v2's server QR, is removed in round 1 of the 1.4 review, as it had no production caller left; the browser's spayd() writes the served verification message, proved by the shared case",
+    "replacement": "src/app/features/donations/spayd.spec.ts > Given the shared case 1 Kč verifying a donor's account > when the browser composes the payment from the payment details it holds, then it gives the expected SPAYD text or refusal"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.payment.QrPaymentTest > Given a second-factor recovery, when the payment is rendered, then it carries the recovery message and no variable symbol",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): QrPayment, which wrote v2's server QR, is removed in round 1 of the 1.4 review, as it had no production caller left; the recovery payment's text is written by PaymentDetails.spaydWithoutVariableSymbol through SecondFactorRecoveryPayments.spaydFor and checked there",
+    "replacement": "donations.application.recovery.SecondFactorRecoveryPaymentsTest > Given a recovery code, when the payment text is asked for, then it is the SPAYD text of 1 Kč to the foundation's account with the recovery message and no variable symbol"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.payment.QrPaymentTest > Given an account verification without a variable symbol, when the payment is created, then it is refused",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): QrPayment, which wrote v2's server QR, is removed in round 1 of the 1.4 review, as it had no production caller left; spayd() refuses a verification without a symbol, proved by the shared case",
+    "replacement": "src/app/features/donations/spayd.spec.ts > Given the shared case an account verification without a variable symbol is refused > when the browser composes the payment from the payment details it holds, then it gives the expected SPAYD text or refusal"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.payment.QrPaymentTest > Given an amount with hellers, when the payment is rendered, then the amount has two decimals",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): QrPayment, which wrote v2's server QR, is removed in round 1 of the 1.4 review, as it had no production caller left; spayd() writes AM with two decimals, down to the smallest amount, proved by the shared case",
+    "replacement": "src/app/features/donations/spayd.spec.ts > Given the shared case 1 heller, the smallest amount SPAYD holds > when the browser composes the payment from the payment details it holds, then it gives the expected SPAYD text or refusal"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.payment.QrPaymentTest > Given a recipient name with diacritics and punctuation, when the payment is rendered, then the name is uppercase ASCII",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): QrPayment, which wrote v2's server QR, is removed in round 1 of the 1.4 review, as it had no production caller left; SpaydText writes the recipient as uppercase ASCII for the payment details, and spayd() sends it as served, proved by the shared case",
+    "replacement": "src/app/features/donations/spayd.spec.ts > Given the shared case lowercase, diacritics and symbols in a recipient name become SPAYD text > when the browser composes the payment from the payment details it holds, then it gives the expected SPAYD text or refusal"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.payment.QrPaymentTest > Given a longer recipient name, when the payment is rendered, then the name is shortened to 35 characters",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): QrPayment, which wrote v2's server QR, is removed in round 1 of the 1.4 review, as it had no production caller left; SpaydText cuts the recipient at 35 characters",
+    "replacement": "donations.domain.payment.SpaydTextTest > Given a name longer than 35 characters, when it becomes SPAYD text, then it is cut at 35 and loses a space the cut leaves at its end"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.payment.QrPaymentTest > Given any values, when the payment is rendered, then the SPAYD keeps to the allowed characters",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): QrPayment, which wrote v2's server QR, is removed in round 1 of the 1.4 review, as it had no production caller left; SpaydText keeps only the characters a SPAYD value allows",
+    "replacement": "donations.domain.payment.SpaydTextTest > Given the characters a SPAYD value keeps, when a text becomes SPAYD text, then they stay"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.payment.QrPaymentTest > Given a donation that is not positive, when the payment is created, then it is rejected",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): QrPayment, which wrote v2's server QR, is removed in round 1 of the 1.4 review, as it had no production caller left; PaymentDetails refuses a SPAYD text for an amount that is not positive (the browser's spayd() refuses one below a heller, panel and shared cases)",
+    "replacement": "donations.domain.payment.PaymentDetailsTest > Given an amount that is not positive or an empty message, when a SPAYD text is written, then it is refused"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.payment.QrPaymentTest > Given a donation that does not fit the SPAYD amount field, when the payment is created, then it is rejected",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): QrPayment, which wrote v2's server QR, is removed in round 1 of the 1.4 review, as it had no production caller left; spayd() refuses one heller more than 9 999 999,99 Kč, proved by the shared case",
+    "replacement": "src/app/features/donations/spayd.spec.ts > Given the shared case one heller more than 9 999 999,99 Kč is refused > when the browser composes the payment from the payment details it holds, then it gives the expected SPAYD text or refusal"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.payment.QrPaymentTest > Given no recipient, when the payment is created, then it is rejected",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): QrPayment, which wrote v2's server QR, is removed in round 1 of the 1.4 review, as it had no production caller left; PaymentDetails refuses a missing part, the recipient included",
+    "replacement": "donations.domain.payment.PaymentDetailsTest > Given a missing part, when the payment details are created, then they are refused"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.payment.QrPaymentTest > Given the same values, when two payments are created, then they are equal",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): QrPayment, which wrote v2's server QR, is removed in round 1 of the 1.4 review, as it had no production caller left; no caller compares payments any more; PaymentDetails and SpaydText are records compared by value, as the payment details test does",
+    "replacement": "donations.domain.payment.PaymentDetailsTest > Given the foundation's account, when its payment details are made, then they carry the account, CZK and the SPAYD texts of the recipient and both messages"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.payment.PaymentDetailsTest > Given the payment details, when they are compared with today's QR payments, then the recipient and each message are the RN and MSG those payments send",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the bridge to QrPayment goes with QrPayment (round 1 of the 1.4 review); the recovery text is now written by PaymentDetails itself, so its RN and MSG are the details' by construction",
+    "replacement": "donations.domain.payment.PaymentDetailsTest > Given the payment details, when a SPAYD text without a variable symbol is written, then it carries the IBAN, the amount, CZK, the recipient and the message"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/payment_details.feature > Visitor gets the foundation's payment details to build a QR payment in the browser - The recipient and each message are what today's QR payment sends for its purpose*",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): this 1.2 scenario compared payment-details with what payment-qr sent, and payment-qr is gone; DonationPurposeSharedCasesTest reads every text the browser writes as the import does",
+    "replacement": "donations.domain.donation.DonationPurposeSharedCasesTest > Given 1 Kč verifying a donor's account, when the bank brings the payment the browser's SPAYD text asks for and the import reads its purpose, then it is an account verification exactly when the case verifies an account with the verification amount"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when the visitor picked 1 000 Kč and the section opens again while the site stays open, then 1 000 Kč stays chosen and is asked for",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): main (#226) checked that the remembered 1 000 Kč was asked for again at /api/donations/payment-qr; that endpoint is gone, so the test now checks that no request leaves and the QR of 1 000 Kč is drawn from the payment details already held",
+    "replacement": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when the visitor picked 1 000 Kč and the section opens again while the site stays open, then 1 000 Kč stays chosen and its QR is drawn from the details already held"
+  }
+]

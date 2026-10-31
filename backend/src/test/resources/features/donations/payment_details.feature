@@ -12,14 +12,6 @@ Feature: Visitor gets the foundation's payment details to build a QR payment in 
     And the answer's ETag is the SHA-256 of its body
     And the answer sets no cookie
 
-  Scenario: The recipient and each message are what today's QR payment sends for its purpose
-    When a visitor asks for the payment details
-    And the visitor also asks for a QR payment of 500 CZK
-    Then the recipient and the donation message of the payment details are the RN and MSG of that QR payment
-    When the visitor asks for a QR payment that verifies an account with variable symbol "1234567890" for the verification amount of the payment details
-    Then the recipient and the account verification message of the payment details are the RN and MSG of that QR payment
-    And that QR payment's amount is the verification amount of the payment details
-
   Scenario: A signed-in donor gets the same answer as a visitor
     Given a person "Jana" is registered
     When a visitor asks for the payment details

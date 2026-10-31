@@ -37,13 +37,33 @@ class PaymentDetailsTest {
     }
 
     @Test
-    @DisplayName("Given the payment details, when they are compared with today's QR payments, then the recipient and each message are the RN and MSG those payments send")
-    void should_match_the_rn_and_msg_of_todays_qr_payments_when_compared() {
-        String donation = QrPayment.donation(FOUNDATION, Money.czk(50_000)).toSpayd();
-        String verification = QrPayment.accountVerification(FOUNDATION, details.accountVerificationAmount(), SYMBOL).toSpayd();
+    @DisplayName("Given the payment details, when a SPAYD text without a variable symbol is written, then it carries the IBAN, the amount, CZK, the recipient and the message")
+    void should_write_the_spayd_text_when_written_without_a_variable_symbol() {
+        assertThat(details.spaydWithoutVariableSymbol(Money.czk(100), SpaydText.message("Obnova ABCD2345"))).isEqualTo(
+                "SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*RN:NADACNI FOND NOVA NADEJE*MSG:OBNOVA ABCD2345");
+    }
 
-        assertThat(donation).endsWith("*RN:" + details.recipientName().value() + "*MSG:" + details.donationMessage().value());
-        assertThat(verification).endsWith("*RN:" + details.recipientName().value() + "*MSG:" + details.accountVerificationMessage().value());
+    @Test
+    @DisplayName("Given a recipient name of symbols only, when a SPAYD text is written, then the empty RN field is left out")
+    void should_leave_out_the_recipient_when_written_given_a_name_of_symbols_only() {
+        PaymentDetails symbolsOnly = PaymentDetails.of(new BankAccount("5544332217/2010", new Iban("CZ2620100000005544332217"), "***"));
+
+        assertThat(symbolsOnly.spaydWithoutVariableSymbol(Money.czk(100), SpaydText.message("OBNOVA ABCD2345"))).isEqualTo(
+                "SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*MSG:OBNOVA ABCD2345");
+    }
+
+    @Test
+    @DisplayName("Given an amount that is not positive or an empty message, when a SPAYD text is written, then it is refused")
+    void should_refuse_when_written_given_an_amount_that_is_not_positive_or_an_empty_message() {
+        assertThatIllegalArgumentException().isThrownBy(() -> details.spaydWithoutVariableSymbol(Money.zero(Currency.CZK), SpaydText.message("OBNOVA")));
+        assertThatIllegalArgumentException().isThrownBy(() -> details.spaydWithoutVariableSymbol(Money.czk(100), SpaydText.message("")));
+    }
+
+    @Test
+    @DisplayName("Given an amount whose AM would be longer than the 10 characters SPAYD allows, when a SPAYD text is written, then it is refused, and 9 999 999,99 Kč is still written")
+    void should_refuse_when_written_given_an_amount_longer_than_the_am_field() {
+        assertThatIllegalArgumentException().isThrownBy(() -> details.spaydWithoutVariableSymbol(Money.czk(1_000_000_000), SpaydText.message("OBNOVA")));
+        assertThat(details.spaydWithoutVariableSymbol(Money.czk(999_999_999), SpaydText.message("OBNOVA"))).contains("*AM:9999999.99*");
     }
 
     @Test
