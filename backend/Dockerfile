@@ -18,7 +18,7 @@ RUN library=$(jar tf /workspace/build/libs/*.jar | grep '^BOOT-INF/lib/webp-imag
 FROM eclipse-temurin:25-jre
 ARG REVISION=dev
 WORKDIR /app
-RUN apt-get update && apt-get install -y --no-install-recommends age && rm -rf /var/lib/apt/lists/* \
+RUN apt-get update && apt-get install -y --no-install-recommends age openssl && rm -rf /var/lib/apt/lists/* \
     && groupadd --system app && useradd --system --gid app --home-dir /app app
 COPY --from=build /workspace/build/libs/*.jar app.jar
 COPY --from=build /workspace/native/ /app/native/
