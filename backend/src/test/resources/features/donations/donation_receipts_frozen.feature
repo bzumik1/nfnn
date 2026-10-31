@@ -156,8 +156,22 @@ Feature: A donor issues receipts of their donations as frozen, signed data
       | receivedOn | amountMinor |
       | 2026-10-05 | 100000      |
     And 1 receipt is stored
+
+  Scenario: Donations received before the first receipt year are listed without a receipt, later ones with one
+    Given today is 2025-12-20
+    And a person "Jana" is registered
+    And the bank account has these movements:
+      | id   | date       | amount | account    | bankCode | name          | variableSymbol |
+      | 2001 | 2025-12-10 | 700.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
+    And the application starts the import
+    And today is 2026-12-20
+    And the bank account has these movements:
+      | id   | date       | amount  | account    | bankCode | name          | variableSymbol |
+      | 2002 | 2026-10-05 | 1000.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
+    And the hourly import runs
     When "Jana" asks for her donations
-    Then the donation received on 2025-12-10 is listed without a receipt
+    Then the response status is 200
+    And the donation received on 2025-12-10 is listed without a receipt
     And the donation received on 2026-10-05 is listed with a receipt
 
   Scenario: The yearly receipt freezes only that year's donations, oldest first

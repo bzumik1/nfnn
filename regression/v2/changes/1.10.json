@@ -580,22 +580,6 @@
   },
   {
     "kind": "added",
-    "path": "POST /api/donations/me/receipts",
-    "scenario": "donations/admin_receipt_signing_key_withdrawal: *",
-    "field": "$*.texts.*.receipt.verification.*",
-    "reason": "1.10 freezes the caption beside the verification QR code and the descriptions of the receipt's images into the receipt texts (plan v3 1.10, lead note 2; text set 5bcf759…), so a receipt issued from now on carries them and the browser prints the frozen words",
-    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
-  },
-  {
-    "kind": "added",
-    "path": "POST /api/donations/me/receipts",
-    "scenario": "donations/admin_receipt_signing_key_withdrawal: *",
-    "field": "$*.texts.*.receipt.*.alt",
-    "reason": "1.10 freezes the caption beside the verification QR code and the descriptions of the receipt's images into the receipt texts (plan v3 1.10, lead note 2; text set 5bcf759…), so a receipt issued from now on carries them and the browser prints the frozen words",
-    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
-  },
-  {
-    "kind": "added",
     "path": "GET /api/admin/donations/receipts/{id}",
     "scenario": "donations/admin_receipts: *",
     "field": "$*.texts.*.receipt.verification.*",
