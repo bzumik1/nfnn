@@ -3,14 +3,18 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   DONATION_ID,
   DONOR_ID,
+  ERASED_RECEIPT_ID,
   GIVING_DONOR_ID,
   LINK_ID,
   MEDIA_ID,
   PAYMENT_ID,
   PERSON_ID,
   READ_TOKEN,
+  RECEIPT_ID,
+  REPLACING_DONOR_ID,
   SIGNED_PERSON_ID,
   UNKNOWN_ID,
+  VERIFICATION_LINK,
   WRITE_TOKEN,
 } from './fake-backend.js';
 import { BROKEN_PHOTO_URL, connect, PHOTO_URL, startApp, textOf, type TestApp } from './support.js';
@@ -54,6 +58,7 @@ describe('Given an administrator connected with the reading permission only', ()
       'nfnn_disconnect_bank_account',
       'nfnn_donor',
       'nfnn_find_donors',
+      'nfnn_issue_receipt',
       'nfnn_log',
       'nfnn_log_files',
       'nfnn_log_levels',
@@ -69,9 +74,12 @@ describe('Given an administrator connected with the reading permission only', ()
       'nfnn_project_order',
       'nfnn_publish_news',
       'nfnn_publish_project',
+      'nfnn_receipt',
       'nfnn_receipt_signature',
+      'nfnn_receipts',
       'nfnn_reconnect_bank_account',
       'nfnn_remove_person',
+      'nfnn_remove_web_signature',
       'nfnn_report',
       'nfnn_request_backup',
       'nfnn_reset_log_level',
@@ -79,6 +87,7 @@ describe('Given an administrator connected with the reading permission only', ()
       'nfnn_send_test_email',
       'nfnn_set_log_level',
       'nfnn_set_project_order',
+      'nfnn_set_web_signature',
       'nfnn_settings',
       'nfnn_since_last_sign_in',
       'nfnn_status',
@@ -91,6 +100,7 @@ describe('Given an administrator connected with the reading permission only', ()
       'nfnn_update_backup_schedule',
       'nfnn_update_founders_note',
       'nfnn_update_news',
+      'nfnn_update_people_footnote',
       'nfnn_update_person',
       'nfnn_update_project',
       'nfnn_update_report_settings',
@@ -100,6 +110,21 @@ describe('Given an administrator connected with the reading permission only', ()
     expect(
       tools.find((tool) => tool.name === 'nfnn_unpair_payment')?.annotations?.destructiveHint,
     ).toBe(true);
+    expect(
+      tools.find((tool) => tool.name === 'nfnn_remove_web_signature')?.annotations?.destructiveHint,
+    ).toBe(true);
+  });
+
+  it('when the tools are listed, then the web signature tools say the image goes up only as a file and is never the receipt signature', async () => {
+    const { tools } = await client.listTools();
+    for (const name of ['nfnn_set_web_signature', 'nfnn_remove_web_signature']) {
+      const description = tools.find((tool) => tool.name === name)?.description;
+      expect(description).toContain('never the receipt signature');
+    }
+    const setting = tools.find((tool) => tool.name === 'nfnn_set_web_signature')?.description;
+    expect(setting).toContain('nfnn_photo_upload_link');
+    expect(setting).toContain('never from a public address');
+    expect(setting).toContain('CHANGE_WEB_SIGNATURE');
   });
 
   it('when the order of the projects is asked, then the chosen order comes with a description of every way of ordering', async () => {
@@ -129,8 +154,56 @@ describe('Given an administrator connected with the reading permission only', ()
       '/api/admin/donations/receipt-signing-keys',
     );
     expect(textOf(result)).toContain(
-      '"receiptSigningKeys":{"currentKeyId":"21fe31df","currentKeyRegisteredAt":"2026-11-13T12:00:00+01:00","currentKeyPublished":true,"unpublishedKeyIds":["39f713d0"],"attention":true}',
+      '"receiptSigningKeys":{"currentKeyId":"21fe31df","currentKeyRegisteredAt":"2026-11-13T12:00:00+01:00","currentKeyPublished":true,"currentKeyWithdrawn":false,"unpublishedKeyIds":["39f713d0"],"auditMismatches":[],"attention":true}',
     );
+  });
+
+  it('when the status is asked after the current key was withdrawn and a key row disagrees with the audit trail, then both are named and need attention', async () => {
+    stack.backend.receiptSigningKeysAnswer = {
+      currentKeyId: '21fe31df',
+      currentKeyPublished: true,
+      keys: [
+        {
+          keyId: '21fe31df',
+          status: 'revoked',
+          registeredAt: '2026-11-13T11:00:00Z',
+          published: true,
+          current: true,
+        },
+      ],
+      auditMismatches: [{ keyId: '39f713d0', kind: 'missing' }],
+    };
+    try {
+      const result = await client.callTool({ name: 'nfnn_status', arguments: {} });
+      expect(textOf(result)).toContain(
+        '"receiptSigningKeys":{"currentKeyId":"21fe31df","currentKeyRegisteredAt":"2026-11-13T12:00:00+01:00","currentKeyPublished":true,"currentKeyWithdrawn":true,"unpublishedKeyIds":[],"auditMismatches":[{"keyId":"39f713d0","kind":"missing"}],"attention":true}',
+      );
+    } finally {
+      stack.backend.receiptSigningKeysAnswer = undefined;
+    }
+  });
+
+  it('when the status is asked of keys that are all published, active and agree with the audit trail, then they need no attention', async () => {
+    stack.backend.receiptSigningKeysAnswer = {
+      currentKeyId: '21fe31df',
+      currentKeyPublished: true,
+      keys: [
+        {
+          keyId: '21fe31df',
+          status: 'active',
+          registeredAt: '2026-11-13T11:00:00Z',
+          published: true,
+          current: true,
+        },
+      ],
+      auditMismatches: [],
+    };
+    try {
+      const result = await client.callTool({ name: 'nfnn_status', arguments: {} });
+      expect(textOf(result)).toContain('"auditMismatches":[],"attention":false}');
+    } finally {
+      stack.backend.receiptSigningKeysAnswer = undefined;
+    }
   });
 
   it('when the status is asked of a backend without the receipt signing keys, then the rest still comes and the key part says it is unavailable', async () => {
@@ -281,6 +354,98 @@ describe('Given an administrator connected with the reading permission only', ()
     expect(card.donations.donations['items']).toHaveLength(20);
   });
 
+  it('when the issued receipts are listed, then the donor, the year of issue and the page pass on, amounts come in crowns and the next page is named', async () => {
+    const first = await client.callTool({ name: 'nfnn_receipts', arguments: {} });
+    const filtered = await client.callTool({
+      name: 'nfnn_receipts',
+      arguments: { donorId: DONOR_ID, issuedIn: 2027, page: 1, limit: 1 },
+    });
+    const paths = stack.backend.requests
+      .map((request) => request.path)
+      .filter((path) => path.startsWith('/api/admin/donations/receipts'));
+    expect(paths).toEqual([
+      '/api/admin/donations/receipts?page=0&limit=50',
+      `/api/admin/donations/receipts?donorId=${DONOR_ID}&issuedIn=2027&page=1&limit=1`,
+    ]);
+    expect(textOf(first)).toContain('"totalAmount":3500');
+    expect(textOf(first)).not.toContain('totalAmountMinor');
+    expect(textOf(first)).toContain('"issuedAt":"2027-01-15T12:00:00+01:00"');
+    expect(textOf(first)).not.toContain('More receipts');
+    expect(textOf(filtered)).toContain(
+      'More receipts (3 in all): call nfnn_receipts again with page 2.',
+    );
+    expect(stack.logLines).toContain(
+      `INFO Tool nfnn_receipts answered donor donor-jana about donor ${DONOR_ID}`,
+    );
+  });
+
+  it('when one issued receipt is read, then its frozen data come with the verification link and without the texts of the PDF', async () => {
+    const result = await client.callTool({
+      name: 'nfnn_receipt',
+      arguments: { receiptId: RECEIPT_ID },
+    });
+    expect(result.isError).toBeFalsy();
+    expect(stack.backend.requests.map((request) => request.path)).toContain(
+      `/api/admin/donations/receipts/${RECEIPT_ID}`,
+    );
+    const receipt = JSON.parse(textOf(result)) as {
+      number: string;
+      verificationLink: string;
+      receipt: Record<string, unknown>;
+    };
+    expect(receipt.number).toBe('2027-000001');
+    expect(receipt.verificationLink).toBe(VERIFICATION_LINK);
+    expect(receipt.receipt['total']).toEqual({ amount: 3500, currency: 'CZK' });
+    expect(receipt.receipt['donor']).toMatchObject({ name: 'Jana Nováková' });
+    expect(receipt.receipt).not.toHaveProperty('texts');
+    expect(textOf(result)).not.toContain('pdf');
+    expect(stack.logLines).toContain(
+      `INFO Tool nfnn_receipt answered donor donor-jana about receipt ${RECEIPT_ID}`,
+    );
+  });
+
+  it('when the receipt of an erased donor is read, then it comes without the name, the address and a verification link, as the administration sends it to a connection', async () => {
+    const result = await client.callTool({
+      name: 'nfnn_receipt',
+      arguments: { receiptId: ERASED_RECEIPT_ID },
+    });
+    expect(result.isError).toBeFalsy();
+    const receipt = JSON.parse(textOf(result)) as {
+      donorErased: boolean;
+      verificationLink: string | null;
+      receipt: Record<string, unknown>;
+    };
+    expect(receipt.donorErased).toBe(true);
+    expect(receipt.verificationLink).toBeNull();
+    expect(receipt.receipt['donor']).toMatchObject({
+      name: 'Vymazaný dárce',
+      address: { street: 'Vymazáno', city: 'Vymazáno', postalCode: '00000' },
+    });
+    expect(textOf(result)).not.toContain('Jana Nováková');
+    expect(textOf(result)).not.toContain('Dlouhá 12');
+  });
+
+  it('when an unknown receipt is read, then the refusal of the administration comes back', async () => {
+    const result = await client.callTool({
+      name: 'nfnn_receipt',
+      arguments: { receiptId: UNKNOWN_ID },
+    });
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toContain('404 donations/receipt-not-found');
+  });
+
+  it('when a receipt is issued with the reading permission only, then nothing reaches the administration and the answer says how to allow changes', async () => {
+    const result = await client.callTool({
+      name: 'nfnn_issue_receipt',
+      arguments: { donorId: DONOR_ID, year: 2026 },
+    });
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toContain('This connection may only read');
+    expect(
+      stack.backend.requests.filter((request) => request.path.endsWith('/receipts')),
+    ).toHaveLength(0);
+  });
+
   it('when the history, the report and the content are asked, then they come from the administration', async () => {
     const actions = await client.callTool({
       name: 'nfnn_admin_actions',
@@ -336,7 +501,7 @@ describe('Given an administrator connected with the reading permission only', ()
     ).toBe(false);
   });
 
-  it('when the people of the foundation are asked, then they come in order with their portraits, web signatures and the founders note', async () => {
+  it('when the people of the foundation are asked, then they come in order with their portraits, web signatures, the founders note and the line under the board', async () => {
     const result = await client.callTool({ name: 'nfnn_people', arguments: {} });
     expect(result.isError).toBeFalsy();
     const text = textOf(result);
@@ -344,6 +509,7 @@ describe('Given an administrator connected with the reading permission only', ()
     expect(text).toContain('"boardNote":"předsedkyně"');
     expect(text).toContain('"fundEmail":"eva@nfnn.cz"');
     expect(text).toContain('"note":"Děkujeme všem, kdo pomáhají s námi."');
+    expect(text).toContain('"footnote":"Web zajišťuje bez nároku na odměnu Petr Vzor."');
     expect(stack.backend.requests.map((request) => request.path)).toContain(
       '/api/admin/content/people',
     );
@@ -361,6 +527,24 @@ describe('Given an administrator connected with the reading permission only', ()
         request.path.startsWith('/api/admin/content/people'),
       ),
     ).toBe(false);
+  });
+
+  it('when a web signature is set or removed with the reading permission only, then nothing reaches the administration and the answer says how to allow changes', async () => {
+    const set = await client.callTool({
+      name: 'nfnn_set_web_signature',
+      arguments: { id: PERSON_ID, imageId: MEDIA_ID },
+    });
+    const removed = await client.callTool({
+      name: 'nfnn_remove_web_signature',
+      arguments: { id: SIGNED_PERSON_ID },
+    });
+    for (const result of [set, removed]) {
+      expect(result.isError).toBe(true);
+      expect(textOf(result)).toContain('may only read, so nothing was changed');
+    }
+    expect(stack.backend.requests.some((request) => request.path.endsWith('/web-signature'))).toBe(
+      false,
+    );
   });
 
   it('when the settings are asked, then they come from the administration with secrets only as set or not', async () => {
@@ -425,6 +609,25 @@ describe('Given an administrator connected with the reading permission only', ()
         request.path.startsWith('/api/admin/operations/logs/backend.log/search'),
       )?.path,
     ).toBe('/api/admin/operations/logs/backend.log/search?pattern=fio&limit=5');
+  });
+
+  it('when the browser error reports are searched for, then their lines come from the administration as the backend wrote them', async () => {
+    const search = textOf(
+      await client.callTool({
+        name: 'nfnn_log_search',
+        arguments: { pattern: 'Browser error' },
+      }),
+    );
+
+    expect(search).toContain(
+      'Browser error kind=pdf-render place=global name=TypeError version=1a2b3c4 browser=safari/18 os=ios display=standalone count=2',
+    );
+    expect(search).toContain('Browser error reports over the hourly cap bucket=general dropped=2');
+    expect(
+      stack.backend.requests.find((request) =>
+        request.path.startsWith('/api/admin/operations/logs/backend.log/search'),
+      )?.path,
+    ).toBe('/api/admin/operations/logs/backend.log/search?pattern=Browser+error&limit=50');
   });
 
   it('when a log name is not one of the files, then the tool lists the files and asks the administration for no window', async () => {
@@ -690,9 +893,10 @@ describe('Given an administrator connected with the writing permission', () => {
     expect(textOf(created)).toContain('"slug":"letni-tabor"');
     const edited = await client.callTool({
       name: 'nfnn_update_news',
-      arguments: { id: UNKNOWN_ID, ...article, slug: 'tabor-2026' },
+      arguments: { id: UNKNOWN_ID, ...article, slug: 'tabor-2026', signerId: PERSON_ID },
     });
     expect(edited.isError).toBeFalsy();
+    expect(textOf(edited)).toContain('"signer":{"id":"' + PERSON_ID + '"');
     const project = {
       title: 'Nová střecha',
       year: 2026,
@@ -713,7 +917,11 @@ describe('Given an administrator connected with the writing permission', () => {
       .map((request) => [request.method, request.path, JSON.parse(request.body)]);
     expect(writes).toEqual([
       ['POST', '/api/admin/content/news', article],
-      ['PUT', `/api/admin/content/news/${UNKNOWN_ID}`, { ...article, slug: 'tabor-2026' }],
+      [
+        'PUT',
+        `/api/admin/content/news/${UNKNOWN_ID}`,
+        { ...article, slug: 'tabor-2026', signerId: PERSON_ID },
+      ],
       ['POST', '/api/admin/content/projects', project],
       ['PUT', `/api/admin/content/projects/${UNKNOWN_ID}`, project],
     ]);
@@ -849,20 +1057,12 @@ describe('Given an administrator connected with the writing permission', () => {
     ]);
   });
 
-  it('when people are removed, then a person without a web signature goes and one with a signature is refused with the reason', async () => {
-    const removed = await client.callTool({
-      name: 'nfnn_remove_person',
-      arguments: { id: PERSON_ID },
-    });
-    expect(removed.isError).toBeFalsy();
-    expect(textOf(removed)).toContain('removed from the people of the foundation');
-
-    const refused = await client.callTool({
-      name: 'nfnn_remove_person',
-      arguments: { id: SIGNED_PERSON_ID },
-    });
-    expect(refused.isError).toBe(true);
-    expect(textOf(refused)).toContain('Podpis jen v prohlížeči');
+  it('when people are removed, then a person goes whether or not they have a web signature', async () => {
+    for (const id of [PERSON_ID, SIGNED_PERSON_ID]) {
+      const removed = await client.callTool({ name: 'nfnn_remove_person', arguments: { id } });
+      expect(removed.isError).toBeFalsy();
+      expect(textOf(removed)).toContain('removed from the people of the foundation');
+    }
     expect(
       stack.backend.requests
         .filter((request) => request.path.startsWith('/api/admin/content/people'))
@@ -873,7 +1073,57 @@ describe('Given an administrator connected with the writing permission', () => {
     ]);
   });
 
-  it('when the people are ordered and the founders note is written and emptied, then the administration gets the order and the text, an empty one as none', async () => {
+  it('when a web signature is set and removed, then the administration gets the image for the person and the removal, and each answer carries the person', async () => {
+    const set = await client.callTool({
+      name: 'nfnn_set_web_signature',
+      arguments: { id: PERSON_ID, imageId: MEDIA_ID },
+    });
+    expect(set.isError).toBeFalsy();
+    expect(textOf(set)).toContain(`"webSignature":{"id":"${MEDIA_ID}"`);
+    const removed = await client.callTool({
+      name: 'nfnn_remove_web_signature',
+      arguments: { id: SIGNED_PERSON_ID },
+    });
+    expect(removed.isError).toBeFalsy();
+    expect(textOf(removed)).toContain('"webSignature":null');
+
+    expect(
+      stack.backend.requests
+        .filter((request) => request.path.endsWith('/web-signature'))
+        .map((request) => [
+          request.method,
+          request.path,
+          request.body === '' ? undefined : JSON.parse(request.body),
+          request.authorization,
+        ]),
+    ).toEqual([
+      [
+        'POST',
+        `/api/admin/content/people/${PERSON_ID}/web-signature`,
+        { imageId: MEDIA_ID },
+        'Bearer api-token-write',
+      ],
+      [
+        'DELETE',
+        `/api/admin/content/people/${SIGNED_PERSON_ID}/web-signature`,
+        undefined,
+        'Bearer api-token-write',
+      ],
+    ]);
+  });
+
+  it('when a web signature names an image that is no id, then the tool refuses it before the administration', async () => {
+    const result = await client.callTool({
+      name: 'nfnn_set_web_signature',
+      arguments: { id: PERSON_ID, imageId: 'https://example.org/podpis.png' },
+    });
+    expect(result.isError).toBe(true);
+    expect(stack.backend.requests.some((request) => request.path.endsWith('/web-signature'))).toBe(
+      false,
+    );
+  });
+
+  it('when the people are ordered and the founders note and the line under the board are written and emptied, then the administration gets the order and the texts, an empty one as none', async () => {
     const ordered = await client.callTool({
       name: 'nfnn_order_people',
       arguments: { memberIds: [PERSON_ID, SIGNED_PERSON_ID] },
@@ -885,6 +1135,15 @@ describe('Given an administrator connected with the writing permission', () => {
       arguments: { text: '  ' },
     });
     expect(textOf(emptied)).toContain('"text":null');
+    await client.callTool({
+      name: 'nfnn_update_people_footnote',
+      arguments: { text: 'Web zajišťuje Petr Vzor.' },
+    });
+    const footnoteEmptied = await client.callTool({
+      name: 'nfnn_update_people_footnote',
+      arguments: { text: ' ' },
+    });
+    expect(textOf(footnoteEmptied)).toContain('"text":null');
 
     const writes = stack.backend.requests
       .filter((request) => request.path.startsWith('/api/admin/content/people'))
@@ -893,6 +1152,8 @@ describe('Given an administrator connected with the writing permission', () => {
       ['PUT', '/api/admin/content/people/order', { memberIds: [PERSON_ID, SIGNED_PERSON_ID] }],
       ['PUT', '/api/admin/content/people/note', { text: 'Děkujeme.' }],
       ['PUT', '/api/admin/content/people/note', { text: null }],
+      ['PUT', '/api/admin/content/people/footnote', { text: 'Web zajišťuje Petr Vzor.' }],
+      ['PUT', '/api/admin/content/people/footnote', { text: null }],
     ]);
   });
 
@@ -926,12 +1187,137 @@ describe('Given an administrator connected with the writing permission', () => {
     ]);
   });
 
+  it('when a yearly receipt and the receipt of one donation are issued, then each asks for its own subject and the issued receipt comes back with its verification link', async () => {
+    const yearly = await client.callTool({
+      name: 'nfnn_issue_receipt',
+      arguments: { donorId: DONOR_ID, year: 2026 },
+    });
+    const single = await client.callTool({
+      name: 'nfnn_issue_receipt',
+      arguments: { donorId: DONOR_ID, donationId: DONATION_ID },
+    });
+    expect(yearly.isError).toBeFalsy();
+    expect(single.isError).toBeFalsy();
+    const calls = stack.backend.requests.filter((request) => request.path.endsWith('/receipts'));
+    expect(calls.map((call) => `${call.method} ${call.path}`)).toEqual([
+      `POST /api/admin/donations/donors/${DONOR_ID}/receipts`,
+      `POST /api/admin/donations/donors/${DONOR_ID}/receipts`,
+    ]);
+    expect(calls.map((call) => JSON.parse(call.body) as unknown)).toEqual([
+      { year: 2026 },
+      { donationId: DONATION_ID },
+    ]);
+    expect(calls[0]?.authorization).toBe('Bearer api-token-write');
+    const issued = JSON.parse(textOf(yearly)) as Record<string, unknown>;
+    expect(issued['kind']).toBe('YEARLY');
+    expect(issued['verificationLink']).toBe(VERIFICATION_LINK);
+    expect(asObject(issued['receipt'])).not.toHaveProperty('texts');
+    expect(asObject(JSON.parse(textOf(single)))['kind']).toBe('SINGLE');
+    expect(stack.logLines).toContain(
+      `INFO Tool nfnn_issue_receipt answered donor donor-jana about donor ${DONOR_ID}`,
+    );
+  });
+
+  it('when a receipt is issued naming both a year and a donation or neither, then the tool refuses it before the administration', async () => {
+    const both = await client.callTool({
+      name: 'nfnn_issue_receipt',
+      arguments: { donorId: DONOR_ID, year: 2026, donationId: DONATION_ID },
+    });
+    const neither = await client.callTool({
+      name: 'nfnn_issue_receipt',
+      arguments: { donorId: DONOR_ID },
+    });
+    expect(both.isError).toBe(true);
+    expect(neither.isError).toBe(true);
+    expect(textOf(both)).toContain('either `year`');
+    expect(textOf(neither)).toContain('either `year`');
+    expect(
+      stack.backend.requests.filter((request) => request.path.endsWith('/receipts')),
+    ).toHaveLength(0);
+    expect(stack.logLines).toContain(
+      `INFO Tool nfnn_issue_receipt refused for donor donor-jana about donor ${DONOR_ID}: receipt-subject`,
+    );
+  });
+
+  it('when a donation id is written in capitals, then the administration gets it in the lowercase it accepts', async () => {
+    const result = await client.callTool({
+      name: 'nfnn_issue_receipt',
+      arguments: { donorId: DONOR_ID.toUpperCase(), donationId: DONATION_ID.toUpperCase() },
+    });
+    expect(result.isError).toBeFalsy();
+    const calls = stack.backend.requests.filter((request) => request.path.endsWith('/receipts'));
+    expect(calls.map((call) => call.path)).toEqual([
+      `/api/admin/donations/donors/${DONOR_ID}/receipts`,
+    ]);
+    expect(calls.map((call) => JSON.parse(call.body) as unknown)).toEqual([
+      { donationId: DONATION_ID },
+    ]);
+  });
+
+  it('when issuing would replace a receipt the donor already holds, then the refusal says it is done only on the web, not that a permission is missing', async () => {
+    const result = await client.callTool({
+      name: 'nfnn_issue_receipt',
+      arguments: { donorId: REPLACING_DONOR_ID, year: 2026 },
+    });
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toContain('403 donations/receipt-replacement-in-browser-only');
+    expect(textOf(result)).toContain('only on the web at /sprava');
+    expect(textOf(result)).not.toContain('connect the application again');
+  });
+
+  it('when the administration refuses to issue a receipt, then the unknown donor and the replacement cap come back as refusals', async () => {
+    const unknown = await client.callTool({
+      name: 'nfnn_issue_receipt',
+      arguments: { donorId: UNKNOWN_ID, year: 2026 },
+    });
+    const capped = await client.callTool({
+      name: 'nfnn_issue_receipt',
+      arguments: { donorId: GIVING_DONOR_ID, year: 2026 },
+    });
+    expect(unknown.isError).toBe(true);
+    expect(textOf(unknown)).toContain('404 donations/donor-not-found');
+    expect(capped.isError).toBe(true);
+    expect(textOf(capped)).toContain('409 donations/receipt-issue-limit');
+  });
+
+  it('when the tools are listed, then issuing a receipt is a change that can be repeated and the receipt tools never name a PDF to download', async () => {
+    const { tools } = await client.listTools();
+    const issue = tools.find((tool) => tool.name === 'nfnn_issue_receipt');
+    expect(issue?.annotations).toMatchObject({
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+    });
+    expect(tools.find((tool) => tool.name === 'nfnn_receipt')?.annotations?.readOnlyHint).toBe(
+      true,
+    );
+    expect(tools.find((tool) => tool.name === 'nfnn_receipts')?.description).toContain(
+      'no name or address',
+    );
+    expect(tools.find((tool) => tool.name === 'nfnn_receipts')?.description).toContain('WITHDRAWN');
+    expect(issue?.description).toContain('only the first receipt');
+    expect(issue?.description).toContain('403 donations/receipt-replacement-in-browser-only');
+    const read = tools.find((tool) => tool.name === 'nfnn_receipt')?.description ?? '';
+    expect(read).toContain('erased');
+    expect(read).not.toContain('anyone can open');
+  });
+
   it('when an argument is malformed, then the tool refuses it before calling the administration', async () => {
     const result = await client.callTool({
       name: 'nfnn_send_report',
       arguments: { month: 'září' },
     });
     expect(result.isError).toBe(true);
+    expect(
+      stack.backend.requests.filter((request) => request.path.includes('/report/send')),
+    ).toHaveLength(0);
+  });
+
+  it('when a month outside the calendar is given, then the tool refuses it before calling the administration', async () => {
+    for (const month of ['2026-13', '2026-00']) {
+      const result = await client.callTool({ name: 'nfnn_send_report', arguments: { month } });
+      expect(result.isError).toBe(true);
+    }
     expect(
       stack.backend.requests.filter((request) => request.path.includes('/report/send')),
     ).toHaveLength(0);
@@ -1066,3 +1452,7 @@ describe('Given an administrator connected with the writing permission', () => {
     expect(link.example).toContain(`X-Upload-Ticket: ${link.headers['X-Upload-Ticket']}`);
   });
 });
+
+function asObject(value: unknown): Record<string, unknown> {
+  return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
+}

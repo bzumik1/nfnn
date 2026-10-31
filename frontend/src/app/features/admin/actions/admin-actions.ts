@@ -42,6 +42,7 @@ const ACTION_NAMES: Record<string, string> = {
   SEND_MONTHLY_REPORT: $localize`:@@admin.actions.action.sendMonthlyReport:Ruční odeslání měsíčního přehledu`,
   CHANGE_RECEIPT_SIGNATURE: $localize`:@@admin.actions.action.changeReceiptSignature:Nahrání podpisu na potvrzení o daru`,
   REMOVE_RECEIPT_SIGNATURE: $localize`:@@admin.actions.action.removeReceiptSignature:Odebrání podpisu z potvrzení o daru`,
+  ISSUE_RECEIPT: $localize`:@@admin.actions.action.issueReceipt:Vystavení potvrzení o daru`,
   CHANGE_ABOUT_PHOTO: $localize`:@@admin.actions.action.changeAboutPhoto:Nastavení fotky v sekci O nás`,
   REMOVE_ABOUT_PHOTO: $localize`:@@admin.actions.action.removeAboutPhoto:Odebrání fotky ze sekce O nás`,
   ADD_PERSON: $localize`:@@admin.actions.action.addPerson:Přidání osoby mezi lidi fondu`,
@@ -49,6 +50,7 @@ const ACTION_NAMES: Record<string, string> = {
   REMOVE_PERSON: $localize`:@@admin.actions.action.removePerson:Odebrání osoby z lidí fondu`,
   ORDER_PEOPLE: $localize`:@@admin.actions.action.orderPeople:Změna pořadí lidí fondu`,
   CHANGE_FOUNDERS_NOTE: $localize`:@@admin.actions.action.changeFoundersNote:Úprava slova zakladatelů`,
+  CHANGE_PEOPLE_FOOTNOTE: $localize`:@@admin.actions.action.changePeopleFootnote:Úprava řádku pod správní radou`,
   CHANGE_WEB_SIGNATURE: $localize`:@@admin.actions.action.changeWebSignature:Nahrání podpisu pro web`,
   REMOVE_WEB_SIGNATURE: $localize`:@@admin.actions.action.removeWebSignature:Odebrání podpisu z webu`,
   CREATE_NEWS: $localize`:@@admin.actions.action.createNews:Napsání aktuality`,
@@ -74,6 +76,8 @@ const ACTION_NAMES: Record<string, string> = {
   CHANGE_SETTINGS: $localize`:@@admin.actions.action.changeSettings:Změna nastavení webu`,
   REGISTER_RECEIPT_SIGNING_KEY: $localize`:@@admin.actions.action.registerReceiptSigningKey:Registrace klíče k ověřovacím QR kódům`,
   ADOPT_RECEIPT_SIGNING_KEY: $localize`:@@admin.actions.action.adoptReceiptSigningKey:Převzetí klíče k ověřovacím QR kódům ze zálohy`,
+  WITHDRAW_RECEIPT_SIGNING_KEY: $localize`:@@admin.actions.action.withdrawReceiptSigningKey:Stažení klíče k ověřovacím QR kódům`,
+  WITHDRAW_RECEIPT_SIGNING_KEY_REFUSED: $localize`:@@admin.actions.action.withdrawReceiptSigningKeyRefused:Odmítnuté stažení klíče k ověřovacím QR kódům`,
 };
 
 const SERVER_ACTOR = '00000000-0000-0000-0000-000000000000';

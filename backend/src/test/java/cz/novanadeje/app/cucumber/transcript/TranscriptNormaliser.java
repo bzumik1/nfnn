@@ -27,6 +27,7 @@ public final class TranscriptNormaliser {
     private static final String TOKEN = "<token>";
     private static final String NUMBER = "#";
     private static final Pattern UUID_SHAPE = Pattern.compile("(?i)\\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\b");
+    private static final Pattern RECEIPT_SIGNING_KEY_IN_PATH = Pattern.compile("(?<=/receipt-signing-keys/)[0-9a-f]{8}(?=/|$)");
     private static final Pattern JWT_SHAPE = Pattern.compile("eyJ[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]*");
     private static final Pattern BACKUP_KEY_SHAPE = Pattern.compile("(?i)(?<![A-Za-z0-9])age-secret-key-1[0-9a-z]{58}(?![A-Za-z0-9])");
     private static final Pattern TOKEN_CANDIDATE = Pattern.compile("(?<![A-Za-z0-9_-])[A-Za-z0-9_-]{32,}(?![A-Za-z0-9_-])");
@@ -58,6 +59,9 @@ public final class TranscriptNormaliser {
     private static final String SPAYD_FIELD = "spayd";
     private static final String QR_MODULES_FIELD = "modules";
     private static final String QR_OF_MASKED_TEXT = "<qr-of-masked-text>";
+    private static final String TIMESTAMP_FIELD = "timestamp";
+    private static final Set<String> BOOT_ERROR_FIELDS = Set.of(TIMESTAMP_FIELD, "status", "error", "path");
+    private static final String TIME = "<time>";
 
     private final Map<String, String> knownValues;
     private final Pattern knownValuePattern;
@@ -154,7 +158,12 @@ public final class TranscriptNormaliser {
             boolean totpEnrolment = raw.has(TOTP_URI_FIELD);
             boolean qrOfRecoveryCode = raw.path(SPAYD_FIELD).isString() && RECOVERY_CODE.matcher(raw.path(SPAYD_FIELD).asString()).find();
             boolean secretSetting = raw.path(SETTING_NAME_FIELD).isString() && SECRET_SETTING.matcher(raw.path(SETTING_NAME_FIELD).asString()).matches();
+            boolean bootError = BOOT_ERROR_FIELDS.stream().allMatch(raw::has);
             for (Map.Entry<String, JsonNode> field : raw.properties()) {
+                if (bootError && TIMESTAMP_FIELD.equals(field.getKey())) {
+                    normalised.put(TIMESTAMP_FIELD, TIME);
+                    continue;
+                }
                 boolean secret = isSecretField(field.getKey(), field.getValue(), totpEnrolment)
                         || secretSetting && SETTING_VALUE_FIELD.equals(field.getKey()) && !field.getValue().isNull();
                 if (qrOfRecoveryCode && TOTP_QR_FIELD.equals(field.getKey()) && field.getValue().isObject()) {
@@ -183,7 +192,7 @@ public final class TranscriptNormaliser {
     public static String template(String uri) {
         int query = uri.indexOf('?');
         String path = query < 0 ? uri : uri.substring(0, query);
-        return UUID_SHAPE.matcher(path).replaceAll("{id}");
+        return RECEIPT_SIGNING_KEY_IN_PATH.matcher(UUID_SHAPE.matcher(path).replaceAll("{id}")).replaceAll("{keyId}");
     }
 
     private static boolean isSecretField(String name, JsonNode value, boolean totpEnrolment) {

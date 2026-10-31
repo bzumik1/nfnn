@@ -1,11 +1,14 @@
 package cz.novanadeje.app.donors.application;
 
 import cz.novanadeje.app.donors.application.event.DonorRegistrationRepeated;
+import cz.novanadeje.app.donors.domain.CompanyIdentifierNotAllowed;
+import cz.novanadeje.app.donors.domain.CompanyIdentifierRequired;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.PasswordHasher;
+import cz.novanadeje.app.donors.domain.PasswordTooWeak;
 import cz.novanadeje.app.donors.domain.RawPassword;
 import cz.novanadeje.app.donors.domain.RegistrationReturn;
 import cz.novanadeje.app.shared.domain.DonorType;
@@ -29,8 +32,10 @@ import java.time.ZoneOffset;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -146,7 +151,61 @@ class DonorRegistrationServiceTest {
         verify(events).publishEvent(new DonorRegistrationRepeated(verified.id().value(), EMAIL, LocaleCode.EN));
         verify(donors, never()).save(any());
         verify(donors, never()).delete(any());
-        verifyNoInteractions(emailVerification, passwordHasher);
+        verifyNoInteractions(emailVerification);
+    }
+
+    @Test
+    @DisplayName("Given the email of a verified donor, when someone registers with it, then the password is hashed as for a new account, so the answer takes as long as for an unknown address")
+    void should_hash_the_password_when_registered_given_verified_email() {
+        Donor verified = donor(LocaleCode.CS);
+        verified.verifyEmail(NOW.minusSeconds(3600));
+        when(donors.findByEmail(EMAIL)).thenReturn(Optional.of(verified));
+
+        service.register(personCommand("jana@example.cz", "another passphrase"));
+
+        verify(passwordHasher).hash(new RawPassword("another passphrase"));
+    }
+
+    @Test
+    @DisplayName("Given the email of a verified donor, when someone registers with a password everyone uses, then it is refused as for an unknown address and the donor is not told")
+    void should_refuse_a_common_password_when_registered_given_verified_email() {
+        Donor verified = donor(LocaleCode.CS);
+        verified.verifyEmail(NOW.minusSeconds(3600));
+        lenient().when(donors.findByEmail(EMAIL)).thenReturn(Optional.of(verified));
+
+        assertThatThrownBy(() -> service.register(personCommand("jana@example.cz", "password1234")))
+                .isInstanceOf(PasswordTooWeak.class)
+                .hasFieldOrPropertyWithValue("code", "donors/password-too-common");
+        verifyNoInteractions(events, emailVerification, passwordHasher);
+        verify(donors, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Given the email of a verified donor, when a company registers with it without an identification number, then it is refused as for an unknown address and the donor is not told")
+    void should_refuse_a_company_without_identifier_when_registered_given_verified_email() {
+        Donor verified = donor(LocaleCode.CS);
+        verified.verifyEmail(NOW.minusSeconds(3600));
+        lenient().when(donors.findByEmail(EMAIL)).thenReturn(Optional.of(verified));
+
+        assertThatThrownBy(() -> service.register(new RegisterDonorCommand(DonorType.COMPANY, "Stavby Novák s.r.o.", null, "Dlouhá 12",
+                "Ústí nad Labem", "400 01", "jana@example.cz", "correct horse battery", "cs", Optional.empty())))
+                .isInstanceOf(CompanyIdentifierRequired.class);
+        verifyNoInteractions(events, emailVerification);
+        verify(donors, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Given the email of a verified donor, when a person registers with it with an identification number, then it is refused as for an unknown address and the donor is not told")
+    void should_refuse_a_person_with_identifier_when_registered_given_verified_email() {
+        Donor verified = donor(LocaleCode.CS);
+        verified.verifyEmail(NOW.minusSeconds(3600));
+        lenient().when(donors.findByEmail(EMAIL)).thenReturn(Optional.of(verified));
+
+        assertThatThrownBy(() -> service.register(new RegisterDonorCommand(DonorType.PERSON, "Jana Nováková", "45274649", "Dlouhá 12",
+                "Ústí nad Labem", "400 01", "jana@example.cz", "correct horse battery", "cs", Optional.empty())))
+                .isInstanceOf(CompanyIdentifierNotAllowed.class);
+        verifyNoInteractions(events, emailVerification);
+        verify(donors, never()).save(any());
     }
 
     @Test

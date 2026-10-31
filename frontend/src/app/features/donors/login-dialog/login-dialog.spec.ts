@@ -19,7 +19,7 @@ import {
   secondFactorRequired,
 } from '../../../core/auth/testing/donor-fixtures';
 import { DialogHistory } from '../../../shared/ui/dialog/dialog-history';
-import { checkerboard } from '../../../shared/ui/qr-code/testing/qr-matrices';
+import { drawsText } from '../../../shared/ui/qr-code/testing/branded-qr';
 import { FakeDialogHistory } from '../../../shared/ui/dialog/testing/fake-dialog-history';
 import { LoginDialog } from './login-dialog';
 
@@ -386,7 +386,6 @@ describe('Given the sign-in dialog', () => {
           currency: 'CZK',
           usableFrom: '2026-10-27',
           spayd: 'SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*MSG:OBNOVA K7MP4RXA',
-          qrCode: checkerboard(25),
         };
 
         async function askForRecovery(): Promise<ReturnType<HttpTestingController['expectOne']>> {
@@ -456,6 +455,25 @@ describe('Given the sign-in dialog', () => {
           expect(element('.recovery-details').compareDocumentPosition(qr)).toBe(
             Node.DOCUMENT_POSITION_FOLLOWING,
           );
+        });
+
+        it('then the QR code is drawn in the browser and carries the payment text the server gave', async () => {
+          (await askForRecovery()).flush(instructions);
+          await settle();
+
+          expect(drawsText(element('.recovery-qr svg[role="img"]'), instructions.spayd)).toBe(true);
+          expect(element('.recovery-qr-failed')).toBeNull();
+        });
+
+        it('and the payment text is too long for a QR code, then an alert says to pay by the details shown', async () => {
+          (await askForRecovery()).flush({ ...instructions, spayd: 'X'.repeat(4000) });
+          await settle();
+
+          expect(element('.recovery-qr svg')).toBeNull();
+          expect(element('.recovery-qr-failed').textContent?.replace(/\s+/g, ' ').trim()).toBe(
+            'QR kód se nepodařilo vykreslit. Zaplaťte prosím podle uvedených údajů.',
+          );
+          expect(element('.recovery-details').textContent).toContain('OBNOVA K7MP4RXA');
         });
 
         it('again while the earlier recovery is open, then the dialog says when it started and asks to pay with that message', async () => {

@@ -1,5 +1,6 @@
 package cz.novanadeje.app.content.domain;
 
+import cz.novanadeje.app.shared.domain.error.RuleViolation;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -43,6 +44,7 @@ class SlugTest {
     @Test
     @DisplayName("Given only punctuation, when a slug is made from it, then there is none")
     void should_refuse_when_made_from_text_given_only_punctuation() {
-        assertThatThrownBy(() -> Slug.fromText("?!…")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> Slug.fromText("?!…"))
+                .isInstanceOf(RuleViolation.class).hasFieldOrPropertyWithValue("code", "content/slug-not-derivable");
     }
 }

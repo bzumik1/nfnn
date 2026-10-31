@@ -47,10 +47,19 @@ describe('Given the dashboard top bar', () => {
     });
   });
 
+  function own(member: unknown): void {
+    http.expectOne('/api/admin/content/people/me').flush({ member });
+  }
+
+  function account(): HTMLElement {
+    return fixture.nativeElement.querySelector('.topbar-donor') as HTMLElement;
+  }
+
   describe('when an administrator sees it in the donor area', () => {
     beforeEach(async () => {
       signIn(['DONOR', 'ADMIN']);
       fixture.detectChanges();
+      own(null);
       await fixture.whenStable();
     });
 
@@ -64,11 +73,64 @@ describe('Given the dashboard top bar', () => {
       signIn(['DONOR', 'ADMIN']);
       fixture.componentRef.setInput('area', 'admin');
       fixture.detectChanges();
+      own(null);
       await fixture.whenStable();
     });
 
     it('then it leads back to their own overview instead', () => {
       expect(links()).toEqual(['Hlavní stránkaDomů → /', 'Můj přehled → /darce/prehled']);
+    });
+
+    it('and they are no person of the foundation, then their name keeps the plain icon', () => {
+      expect(account().querySelector('svg')).not.toBeNull();
+      expect(account().querySelector('app-avatar')).toBeNull();
+      expect(account().textContent?.trim()).toBe('Jana Nováková');
+    });
+  });
+
+  describe('when an administrator linked to a person of the foundation with a portrait sees it', () => {
+    beforeEach(async () => {
+      signIn(['DONOR', 'ADMIN']);
+      fixture.componentRef.setInput('area', 'admin');
+      fixture.detectChanges();
+      own({
+        id: '0199f3e0-0000-7000-8000-00000000c001',
+        name: 'Jana Nováková',
+        portrait: {
+          id: '0199f3e0-0000-7000-8000-00000000c101',
+          url: '/api/content/media/0199f3e0-0000-7000-8000-00000000c101',
+          width: 640,
+          height: 640,
+        },
+      });
+      await fixture.whenStable();
+    });
+
+    it('then the portrait of that person stands beside their name, hidden from the screen reader', () => {
+      const portrait = account().querySelector('app-avatar img') as HTMLImageElement;
+
+      expect(portrait.getAttribute('src')).toBe(
+        '/api/content/media/0199f3e0-0000-7000-8000-00000000c101?w=480',
+      );
+      expect(account().querySelector('app-avatar')!.getAttribute('aria-hidden')).toBe('true');
+      expect(account().querySelector('svg')).toBeNull();
+      expect(account().textContent?.trim()).toBe('Jana Nováková');
+    });
+  });
+
+  describe('when an administrator sees it and their person cannot be read', () => {
+    beforeEach(async () => {
+      signIn(['DONOR', 'ADMIN']);
+      fixture.detectChanges();
+      http
+        .expectOne('/api/admin/content/people/me')
+        .flush(null, { status: 500, statusText: 'Server Error' });
+      await fixture.whenStable();
+    });
+
+    it('then their name keeps the plain icon', () => {
+      expect(account().querySelector('svg')).not.toBeNull();
+      expect(account().textContent?.trim()).toBe('Jana Nováková');
     });
   });
 });

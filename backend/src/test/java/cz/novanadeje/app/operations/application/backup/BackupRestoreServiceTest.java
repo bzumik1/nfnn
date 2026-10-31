@@ -5,6 +5,7 @@ import cz.novanadeje.app.operations.domain.backup.BackupFile;
 import cz.novanadeje.app.operations.domain.backup.BackupKey;
 import cz.novanadeje.app.operations.domain.backup.BackupNotFound;
 import cz.novanadeje.app.operations.domain.backup.BackupRun;
+import cz.novanadeje.app.operations.domain.backup.PublicBackupKey;
 import cz.novanadeje.app.operations.domain.backup.RestorePending;
 import cz.novanadeje.app.operations.domain.backup.RestoreRecordRepository;
 import cz.novanadeje.app.operations.domain.backup.RestoreSource;
@@ -47,7 +48,8 @@ class BackupRestoreServiceTest {
     private final ApplicationRestarter restarter = mock(ApplicationRestarter.class);
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
     private final MutableClock clock = new MutableClock(NOW, ZoneId.of("Europe/Prague"));
-    private final BackupRestoreService service = new BackupRestoreService(store, records, restarter, events, clock);
+    private final PublicBackupKeyPolicy publicKeys = mock(PublicBackupKeyPolicy.class);
+    private final BackupRestoreService service = new BackupRestoreService(store, records, restarter, events, publicKeys, clock);
 
     @Test
     @DisplayName("Given a backup on the server, when an administrator restores it, then a restore request names it and the administrator, it is audited and the backend restarts")
@@ -110,6 +112,20 @@ class BackupRestoreServiceTest {
         verify(store).requestRestore(request);
         verify(restarter).restartAfterCommit();
         verifyNoInteractions(events);
+    }
+
+    @Test
+    @DisplayName("Given a key the policy refuses as public, when a dump is uploaded with it, then it is refused before anything is stored and the backend keeps running")
+    void should_refuse_upload_when_uploaded_given_a_public_key() {
+        InputStream content = new ByteArrayInputStream("age-encryption.org/v1".getBytes(StandardCharsets.US_ASCII));
+        BackupKey key = new BackupKey("AGE-SECRET-KEY-1R45A984EXXAFC85YZSYGY9R6XJTD4E9AKY65ZCRGPDQ89E7ANW8QKT6GWH");
+        when(publicKeys.refuses(key)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.restoreUpload(content, Optional.of(key))).isInstanceOf(PublicBackupKey.class);
+
+        verify(store, never()).storeUpload(any(), any(), any());
+        verify(store, never()).requestRestore(any());
+        verifyNoInteractions(restarter, events);
     }
 
     @Test

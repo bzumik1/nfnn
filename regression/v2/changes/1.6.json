@@ -298,5 +298,12 @@
       }
     },
     "line": "donations.application.receipt.DonationReceiptIssuer: Rendering issued receipt * again for donor *"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "architecture.ReceiptSigningKeyRulesTest > Given the main sources and changelogs, when they are searched for the key tables, then only the key entities, the adoption repository and changelog 021 name them",
+    "reason": "1.6 issues every receipt under a registered signing key, so changelog 022 adds the foreign key from issued_receipt to receipt_signing_key and names the key table; the rule keeps every other file out and now lists 022 as well",
+    "replacement": "architecture.ReceiptSigningKeyRulesTest > Given the main sources and changelogs, when they are searched for the key tables, then only the key entities, the adoption repository, changelog 021 and the foreign key of changelog 022 name them"
   }
 ]

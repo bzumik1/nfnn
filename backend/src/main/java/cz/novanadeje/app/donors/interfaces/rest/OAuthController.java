@@ -84,9 +84,9 @@ class OAuthController {
             };
             return noStore(HttpStatus.OK).body(response);
         } catch (UnsupportedGrantType unsupported) {
-            return noStore(HttpStatus.BAD_REQUEST).body(new TokenErrorResponse("unsupported_grant_type", "grant_type is not supported"));
+            return noStore(HttpStatus.BAD_REQUEST).body(TokenErrorResponse.UNSUPPORTED_GRANT_TYPE);
         } catch (InvalidGrant | InvalidClient | InvalidTarget | InvalidAuthorizationRequest refused) {
-            return noStore(HttpStatus.BAD_REQUEST).body(new TokenErrorResponse(errorCode(refused), refused.getMessage()));
+            return noStore(HttpStatus.BAD_REQUEST).body(tokenError(refused));
         }
     }
 
@@ -100,12 +100,12 @@ class OAuthController {
         return TokenResponse.exchanged(token, clock.instant());
     }
 
-    private static String errorCode(DomainException refused) {
+    private static TokenErrorResponse tokenError(DomainException refused) {
         return switch (refused) {
-            case InvalidGrant grant -> "invalid_grant";
-            case InvalidClient client -> "invalid_client";
-            case InvalidTarget target -> "invalid_target";
-            default -> "invalid_request";
+            case InvalidGrant grant -> TokenErrorResponse.INVALID_GRANT;
+            case InvalidClient client -> TokenErrorResponse.INVALID_CLIENT;
+            case InvalidTarget target -> TokenErrorResponse.INVALID_TARGET;
+            default -> TokenErrorResponse.INVALID_REQUEST;
         };
     }
 

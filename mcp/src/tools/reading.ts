@@ -5,6 +5,7 @@ import {
   answer,
   asRecord,
   plain,
+  receiptView,
   PROJECT_ORDERS,
   text,
   ToolRefusal,
@@ -35,7 +36,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Stav serveru',
       description:
-        'The running backend version and health, the Fio bank import state (covered period, last attempt and success, failures, reported outage), the last backup and test restore, and the key that signs the verification QR codes on receipts (its id, when the server registered it, whether it is published; attention is true when a key fails its seal and is not published, and when that part is unavailable, which leaves the rest of the status as it is).',
+        'The running backend version and health, the Fio bank import state (covered period, last attempt and success, failures, reported outage), the last backup and test restore, and the key that signs the verification QR codes on receipts (its id, when the server registered it, whether it is published and whether an administrator withdrew it, and the keys whose row disagrees with the audit trail: missing when the trail registered, adopted or withdrew a key that has no row, reverted when the row of a withdrawn key is active again; attention is true when a key fails its seal and is not published, when the current key is withdrawn and the server has not yet started with a new seed, when a row disagrees with the audit trail, and when that part is unavailable, which leaves the rest of the status as it is).',
       annotations: READ_ONLY,
     },
     async (ctx) =>
@@ -231,6 +232,72 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
           return text({ account, donations });
         },
         `donor ${donorId}`,
+      ),
+  );
+
+  server.registerTool(
+    'nfnn_receipts',
+    {
+      title: 'Vystavená potvrzení',
+      description:
+        'The issued donation receipts, newest issue first, a page at a time: of every donor or of one (`donorId`), and of every year of issue or of one (`issuedIn`: the year the receipt was issued, which its number starts with, so the yearly receipt for 2026 is issued in 2027). Each item has its id, donorId, number, status (ACTIVE; REPLACED by a newer receipt of the same donation or year; or WITHDRAWN by the foundation), kind (YEARLY or SINGLE), the donation or year it certifies, when it was issued and replaced, its language, the number of gifts and their total, but no name or address: read one whole with nfnn_receipt.',
+      inputSchema: z.object({
+        donorId: UUID.optional().describe('Only the receipts of this donor.'),
+        issuedIn: YEAR.optional().describe('Only the receipts issued in this year.'),
+        page: z.number().int().min(0).max(100_000).default(0),
+        limit: z.number().int().min(1).max(100).default(50),
+      }),
+      annotations: READ_ONLY,
+    },
+    async ({ donorId, issuedIn, page, limit }, ctx) =>
+      answer(
+        deps,
+        ctx,
+        'nfnn_receipts',
+        async ({ apiToken }) => {
+          const params = new URLSearchParams();
+          if (donorId !== undefined) {
+            params.set('donorId', donorId);
+          }
+          if (issuedIn !== undefined) {
+            params.set('issuedIn', String(issuedIn));
+          }
+          params.set('page', String(page));
+          params.set('limit', String(limit));
+          const found = asRecord(
+            await backend.get(`/api/admin/donations/receipts?${params}`, apiToken),
+          );
+          const total = typeof found['total'] === 'number' ? found['total'] : 0;
+          return withHint(
+            text(found),
+            (page + 1) * limit < total
+              ? `More receipts (${total} in all): call nfnn_receipts again with page ${page + 1}.`
+              : undefined,
+          );
+        },
+        donorId === undefined ? undefined : `donor ${donorId}`,
+      ),
+  );
+
+  server.registerTool(
+    'nfnn_receipt',
+    {
+      title: 'Potvrzení o daru',
+      description:
+        "One issued donation receipt whole: its id, donorId, status, kind, number, the donation or year it certifies, when it was issued and replaced, and `receipt`, the data it certifies as they were frozen and signed when it was issued (the foundation, the donor with name, address and variable symbol, the gifts, the total, the signatory and the digest of the signature image on it, the receipt it replaces, the signing key), with `verificationLink`, the address its verification QR code carries. When the donor's personal data were erased (`donorErased`), the receipt stays as issued, but a connection gets it without the donor's name, company identifier and address, which read as the erasure placeholders, and without the verification link, which carries them; only an administrator on the web at /sprava sees them. The PDF is drawn only in a browser (the donor's receipts and /sprava), so this answer is data; the receipt texts frozen with it (the wording of the PDF) are left out.",
+      inputSchema: z.object({ receiptId: UUID }),
+      annotations: READ_ONLY,
+    },
+    async ({ receiptId }, ctx) =>
+      answer(
+        deps,
+        ctx,
+        'nfnn_receipt',
+        async ({ apiToken }) =>
+          text(
+            receiptView(await backend.get(`/api/admin/donations/receipts/${receiptId}`, apiToken)),
+          ),
+        `receipt ${receiptId}`,
       ),
   );
 
@@ -449,7 +516,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Lidé fondu',
       description:
-        'The people of the foundation (Lidé fondu) the home page shows in "Kdo fond vede", in their order: id, name, role, position, onBoard with boardNote, featured, portrait and webSignature (id, url, size, or null), personalEmail and fundEmail (administration data only, never on the site), and the founders note under the cards (null when none). With no people the home page shows its own block. Change them with nfnn_add_person, nfnn_update_person, nfnn_remove_person, nfnn_order_people and nfnn_update_founders_note; a web signature is set and removed only on the web at /sprava/lide-fondu.',
+        'The people of the foundation (Lidé fondu) the home page shows in "Kdo fond vede", in their order: id, name, role, position, onBoard with boardNote, featured, portrait and webSignature (id, url, size, or null), personalEmail and fundEmail (administration data only, never on the site), linkedToAccount (true when one of those e-mails is the confirmed e-mail of an account on the site; the link only shows the portrait at that account and grants nothing), the founders note under the cards and the footnote, the one line under the board line (each null when none). With no people the home page shows its own block. Change them with nfnn_add_person, nfnn_update_person, nfnn_remove_person, nfnn_order_people, nfnn_update_founders_note, nfnn_update_people_footnote, nfnn_set_web_signature and nfnn_remove_web_signature.',
       annotations: READ_ONLY,
     },
     async (ctx) =>
@@ -703,11 +770,21 @@ function receiptSigningKeys(answer: unknown): Record<string, unknown> {
   const keys = Array.isArray(view['keys']) ? view['keys'].map(asRecord) : [];
   const current = keys.find((key) => key['current'] === true);
   const unpublished = keys.filter((key) => key['published'] !== true).map((key) => key['keyId']);
+  const currentKeyWithdrawn = current?.['status'] === 'revoked';
+  const auditMismatches = Array.isArray(view['auditMismatches'])
+    ? view['auditMismatches'].map(asRecord)
+    : [];
   return {
     currentKeyId: view['currentKeyId'],
     currentKeyRegisteredAt: current?.['registeredAt'] ?? null,
     currentKeyPublished: view['currentKeyPublished'],
+    currentKeyWithdrawn,
     unpublishedKeyIds: unpublished,
-    attention: view['currentKeyPublished'] !== true || unpublished.length > 0,
+    auditMismatches,
+    attention:
+      view['currentKeyPublished'] !== true ||
+      unpublished.length > 0 ||
+      currentKeyWithdrawn ||
+      auditMismatches.length > 0,
   };
 }

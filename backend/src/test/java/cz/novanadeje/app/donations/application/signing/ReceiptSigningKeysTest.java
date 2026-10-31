@@ -12,8 +12,11 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -27,10 +30,13 @@ class ReceiptSigningKeysTest {
     private static final Instant NOW = Instant.parse("2026-11-13T11:00:00Z");
 
     private final List<ReceiptSigningKey> stored = new ArrayList<>();
+    private final List<ReceiptSigningKeyId> lockedForIssuing = new ArrayList<>();
     private final ReceiptSigner signer = mock(ReceiptSigner.class);
     private boolean outsideDevelopment;
-    private final ReceiptSigningKeys keys = new ReceiptSigningKeys(new ListedKeys(stored), new PrefixSeals(), signer,
-            id -> outsideDevelopment && id.isPublicTestKey());
+    private final ListedTrail trail = new ListedTrail();
+    private final Set<ReceiptSigningKeyId> keptAside = new HashSet<>();
+    private final ReceiptSigningKeys keys = new ReceiptSigningKeys(new ListedKeys(stored, lockedForIssuing), new PrefixSeals(), signer,
+            id -> outsideDevelopment && id.isPublicTestKey(), trail, () -> Set.copyOf(keptAside));
 
     @BeforeEach
     void ownKey() {
@@ -77,11 +83,104 @@ class ReceiptSigningKeysTest {
         assertThat(keys.overview().currentKeyPublished()).isFalse();
     }
 
-    private record ListedKeys(List<ReceiptSigningKey> stored) implements ReceiptSigningKeyRepository {
+    @Test
+    @DisplayName("Given the history of the keys, when the keys are listed, then the history is read for the registrations, adoptions and withdrawals only")
+    void should_read_the_key_actions_when_listed_given_the_trail() {
+        keys.published();
+
+        assertThat(trail.asked).containsExactly(Set.of("REGISTER_RECEIPT_SIGNING_KEY", "ADOPT_RECEIPT_SIGNING_KEY", "WITHDRAW_RECEIPT_SIGNING_KEY"));
+    }
+
+    @Test
+    @DisplayName("Given a withdrawn key sealed here, when the keys are listed, then it stays published as revoked so its signatures read as withdrawn")
+    void should_publish_as_revoked_when_listed_given_a_withdrawn_key() {
+        stored.add(ReceiptSigningKey.register(EARLIER_PUBLIC_KEY, EARLIER, content -> PrefixSeals.HERE).withdrawn(content -> PrefixSeals.HERE));
+        trail.entries.add(ReceiptSigningKeyHistoryTest.withdrawn("39f713d0"));
+
+        assertThat(keys.published()).extracting(key -> key.id().value() + " " + key.status()).containsExactly("39f713d0 REVOKED", "21fe31df ACTIVE");
+        assertThat(keys.overview().mismatches()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a withdrawn key whose row was put back as active with its old seal, when the keys are listed, then it is published as revoked and the overview flags it as reverted")
+    void should_publish_as_revoked_and_flag_when_listed_given_a_withdrawal_replayed_away() {
+        stored.add(ReceiptSigningKey.register(EARLIER_PUBLIC_KEY, EARLIER, content -> PrefixSeals.HERE));
+        trail.entries.add(ReceiptSigningKeyHistoryTest.withdrawn("39f713d0"));
+
+        assertThat(keys.published()).extracting(key -> key.id().value() + " " + key.status()).containsExactly("39f713d0 REVOKED", "21fe31df ACTIVE");
+        assertThat(keys.overview().mismatches())
+                .containsExactly(new ReceiptSigningKeyMismatch(new ReceiptSigningKeyId("39f713d0"), ReceiptSigningKeyMismatch.Kind.REVERTED));
+    }
+
+    @Test
+    @DisplayName("Given an active row sealed here of a key whose seed this server keeps aside as withdrawn, and no withdrawal in the trail, when the keys are listed, then it is published as revoked and the overview flags it as reverted")
+    void should_publish_as_revoked_and_flag_when_listed_given_a_kept_aside_key_active_after_a_restore() {
+        stored.add(ReceiptSigningKey.register(EARLIER_PUBLIC_KEY, EARLIER, content -> PrefixSeals.HERE));
+        trail.entries.add(ReceiptSigningKeyHistoryTest.registered("39f713d0"));
+        keptAside.add(new ReceiptSigningKeyId("39f713d0"));
+
+        assertThat(keys.published()).extracting(key -> key.id().value() + " " + key.status()).containsExactly("39f713d0 REVOKED", "21fe31df ACTIVE");
+        assertThat(keys.overview().mismatches())
+                .containsExactly(new ReceiptSigningKeyMismatch(new ReceiptSigningKeyId("39f713d0"), ReceiptSigningKeyMismatch.Kind.REVERTED));
+    }
+
+    @Test
+    @DisplayName("Given an earlier key registered in the trail whose row was deleted, when the overview is read, then it flags the key as missing")
+    void should_flag_missing_when_overview_is_read_given_a_deleted_row() {
+        trail.entries.add(ReceiptSigningKeyHistoryTest.registered("21fe31df"));
+        trail.entries.add(ReceiptSigningKeyHistoryTest.adopted("39f713d0"));
+
+        assertThat(keys.overview().mismatches())
+                .containsExactly(new ReceiptSigningKeyMismatch(new ReceiptSigningKeyId("39f713d0"), ReceiptSigningKeyMismatch.Kind.MISSING));
+    }
+
+    @Test
+    @DisplayName("Given the server's own key withdrawn in the trail, when the keys are asked for a withdrawn current key while issuing, then they name it, and none for an active own key")
+    void should_name_withdrawn_current_key_when_asked_given_own_key_withdrawn() {
+        assertThat(keys.withdrawnCurrentKeyHeldForIssuing()).isEmpty();
+
+        trail.entries.add(ReceiptSigningKeyHistoryTest.withdrawn("21fe31df"));
+
+        assertThat(keys.withdrawnCurrentKeyHeldForIssuing()).contains(new ReceiptSigningKeyId("21fe31df"));
+    }
+
+    @Test
+    @DisplayName("Given the server's own row, when the keys are asked for a withdrawn current key while issuing, then the own row is locked for issuing, so a withdrawal committing meanwhile is waited for")
+    void should_lock_the_own_row_for_issuing_when_asked_given_the_own_row() {
+        keys.withdrawnCurrentKeyHeldForIssuing();
+
+        assertThat(lockedForIssuing).containsExactly(new ReceiptSigningKeyId("21fe31df"));
+    }
+
+    @Test
+    @DisplayName("Given the server's own row withdrawn, when the overview is read, then the current key shows as revoked")
+    void should_show_current_key_revoked_when_overview_is_read_given_own_row_withdrawn() {
+        stored.set(0, stored.getFirst().withdrawn(content -> PrefixSeals.HERE));
+
+        assertThat(keys.withdrawnCurrentKeyHeldForIssuing()).contains(new ReceiptSigningKeyId("21fe31df"));
+        assertThat(keys.overview().keys()).singleElement().satisfies(key -> {
+            assertThat(key.status()).isEqualTo(ReceiptSigningKeyStatus.REVOKED);
+            assertThat(key.published()).isTrue();
+            assertThat(key.current()).isTrue();
+        });
+    }
+
+    private record ListedKeys(List<ReceiptSigningKey> stored, List<ReceiptSigningKeyId> lockedForIssuing) implements ReceiptSigningKeyRepository {
 
         @Override
         public List<ReceiptSigningKey> findAll() {
             return List.copyOf(stored);
+        }
+
+        @Override
+        public Optional<ReceiptSigningKey> lockForWithdrawal(ReceiptSigningKeyId id) {
+            throw new UnsupportedOperationException("the list only reads");
+        }
+
+        @Override
+        public Optional<ReceiptSigningKey> lockForIssuing(ReceiptSigningKeyId id) {
+            lockedForIssuing.add(id);
+            return stored.stream().filter(key -> key.id().equals(id)).findFirst();
         }
 
         @Override

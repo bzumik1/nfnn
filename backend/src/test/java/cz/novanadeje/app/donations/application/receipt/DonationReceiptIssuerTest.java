@@ -1,10 +1,13 @@
 package cz.novanadeje.app.donations.application.receipt;
 
+import cz.novanadeje.app.donations.application.signing.ReceiptSigningKeys;
 import cz.novanadeje.app.donations.domain.donation.Donation;
 import cz.novanadeje.app.donations.domain.donation.DonationId;
 import cz.novanadeje.app.donations.domain.donation.DonationNotFound;
 import cz.novanadeje.app.donations.domain.donation.DonationRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
+import cz.novanadeje.app.donations.domain.donor.DonorRecordErased;
+import cz.novanadeje.app.donations.domain.donor.DonorRecordNotFound;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.receipt.ContentDigest;
 import cz.novanadeje.app.donations.domain.receipt.CurrentSignature;
@@ -19,6 +22,7 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptFingerprint;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptIssueLimitReached;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptKind;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptReplacementInBrowserOnly;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatureRepository;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptStatus;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptUnprintable;
@@ -27,6 +31,9 @@ import cz.novanadeje.app.donations.domain.receipt.Receipts;
 import cz.novanadeje.app.donations.domain.receipt.ReplacedReceipt;
 import cz.novanadeje.app.donations.domain.receipt.SignatureImage;
 import cz.novanadeje.app.donations.domain.receipt.proof.ReceiptTooLong;
+import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyId;
+import cz.novanadeje.app.donations.domain.signing.ReceiptSigningPaused;
+import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
@@ -35,12 +42,14 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -50,7 +59,10 @@ import java.time.Year;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
+import static cz.novanadeje.app.donations.application.receipt.AdministrationChannel.BROWSER;
+import static cz.novanadeje.app.donations.application.receipt.AdministrationChannel.CONNECTED_APPLICATION;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.FOUNDATION;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.JANA;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.NOW;
@@ -63,6 +75,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -83,8 +96,10 @@ class DonationReceiptIssuerTest {
     private final DonorRecordRepository donorRecords = mock(DonorRecordRepository.class);
     private final ReceiptFreezer freezer = mock(ReceiptFreezer.class);
     private final ReceiptSignatureRepository signatures = mock(ReceiptSignatureRepository.class);
+    private final ReceiptSigningKeys signingKeys = mock(ReceiptSigningKeys.class);
+    private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
     private final DonationReceiptIssuer issuer = new DonationReceiptIssuer(receipts,
-            new ReceiptRequestReader(donations, donorRecords, new FirstReceiptYear(YEAR_2026)), freezer, signatures, FOUNDATION, SIGNATORY,
+            new ReceiptRequestReader(donations, donorRecords, new FirstReceiptYear(YEAR_2026)), freezer, signatures, signingKeys, FOUNDATION, SIGNATORY, events,
             Clock.fixed(NOW, ZoneOffset.UTC));
 
     @Test
@@ -123,6 +138,41 @@ class DonationReceiptIssuerTest {
         assertThat(frozenDocument().number()).isEqualTo(new ReceiptNumber("2027-000001"));
         assertThat(frozenDocument().signatory()).isEqualTo(SIGNATORY);
         assertThat(frozenDocument().foundation()).isEqualTo(FOUNDATION);
+    }
+
+    @Test
+    @DisplayName("Given the server's own signing key withdrawn and not yet replaced, when a single receipt is issued, then it is refused as paused before the donor is locked, nothing is read, numbered or saved and a WARN names the donor and the key")
+    void should_refuse_before_lock_and_warn_when_issued_given_own_key_withdrawn() {
+        when(signingKeys.withdrawnCurrentKeyHeldForIssuing()).thenReturn(Optional.of(new ReceiptSigningKeyId("21fe31df")));
+        ListAppender<ILoggingEvent> lines = issuerLog();
+        try {
+            assertThatThrownBy(() -> issuer.issueForDonation(JANA, MARCH.id(), TODAY)).isInstanceOf(ReceiptSigningPaused.class)
+                    .hasFieldOrPropertyWithValue("code", "donations/receipt-signing-paused");
+        } finally {
+            ((Logger) LoggerFactory.getLogger(DonationReceiptIssuer.class)).detachAppender(lines);
+        }
+
+        verifyNoInteractions(receipts, donations, donorRecords, freezer, signatures);
+        assertThat(lines.list).singleElement().satisfies(line -> {
+            assertThat(line.getLevel()).isEqualTo(Level.WARN);
+            assertThat(line.getFormattedMessage()).isEqualTo("No receipt is issued to donor " + JANA
+                    + ": the receipt signing key 21fe31df of this server is withdrawn and no new seed has replaced it");
+        });
+    }
+
+    @Test
+    @DisplayName("Given the server's own signing key withdrawn and an active receipt certifying the same data, when the yearly receipt is issued again, then it is refused as paused instead of being returned")
+    void should_refuse_returning_active_receipt_when_issued_again_given_own_key_withdrawn() {
+        ReceiptFingerprint same = ReceiptDocumentFactory.fingerprintForYear(jana(), YEAR_2026, List.of(MARCH, JUNE));
+        givenDonationsOfJana(jana(), JUNE, MARCH);
+        when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.of(yearlyReceipt(same, LocaleCode.CS)));
+        when(signingKeys.withdrawnCurrentKeyHeldForIssuing()).thenReturn(Optional.of(new ReceiptSigningKeyId("21fe31df")));
+
+        assertThatThrownBy(() -> issuer.issueForYear(JANA, YEAR_2026, TODAY)).isInstanceOf(ReceiptSigningPaused.class);
+
+        verify(receipts, never()).lockDonor(any());
+        verify(receipts, never()).findActiveForYear(any(), any());
+        verify(receipts, never()).save(any());
     }
 
     @Test
@@ -351,6 +401,183 @@ class DonationReceiptIssuerTest {
                 .allSatisfy(message -> assertThat(message).isEqualTo("Receipt serial " + serial + " has passed 90 % of the numbering, which ends at 999999"));
     }
 
+    @Test
+    @DisplayName("Given a donor issuing their own receipt, when a new receipt is issued, then no administrator action is published")
+    void should_publish_no_admin_action_when_issued_given_donor_issuing() {
+        givenDonationsOfJana(jana(), MARCH);
+        when(receipts.findActiveForDonation(MARCH.id())).thenReturn(Optional.empty());
+        when(receipts.nextSerial()).thenReturn(1L);
+        givenFreezer();
+
+        issuer.issueForDonation(JANA, MARCH.id(), TODAY);
+
+        verifyNoInteractions(events);
+    }
+
+    @Nested
+    @DisplayName("Given an administrator issuing a donor's receipt")
+    class ByAdministrator {
+
+        private final UUID petr = UUID.fromString("0192f0f1-0000-7000-8000-00000000beef");
+
+        @Test
+        @DisplayName("when a yearly receipt is newly issued, then it is issued as for the donor and audited under the administrator with its number and year")
+        void should_audit_new_yearly_receipt_when_issued_by_administrator() {
+            givenDonationsOfJana(jana(), JUNE, MARCH);
+            when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.empty());
+            when(receipts.nextSerial()).thenReturn(1L);
+            givenFreezer();
+
+            DonationReceipt issued = issuer.issueForYearByAdministrator(petr, BROWSER, JANA, YEAR_2026, TODAY);
+
+            InOrder order = inOrder(receipts, donorRecords, events);
+            order.verify(receipts).lockDonor(JANA);
+            order.verify(donorRecords, atLeastOnce()).findById(JANA);
+            order.verify(receipts).save(issued);
+            order.verify(events).publishEvent(new AdminActionPerformed(petr, "ISSUE_RECEIPT", Optional.of(issued.id().value()),
+                    "Potvrzení 2027-000001 za rok 2026 vystaveno dárci " + JANA.value(), NOW));
+            assertThat(issued.year()).contains(YEAR_2026);
+            assertThat(issued.donor()).isEqualTo(JANA);
+        }
+
+        @Test
+        @DisplayName("when the receipt of one donation is newly issued, then it is audited with the donation it certifies")
+        void should_audit_new_single_receipt_when_issued_by_administrator() {
+            givenDonationsOfJana(jana(), MARCH);
+            when(receipts.findActiveForDonation(MARCH.id())).thenReturn(Optional.empty());
+            when(receipts.nextSerial()).thenReturn(4L);
+            givenFreezer();
+
+            DonationReceipt issued = issuer.issueForDonationByAdministrator(petr, BROWSER, JANA, MARCH.id(), TODAY);
+
+            verify(events).publishEvent(new AdminActionPerformed(petr, "ISSUE_RECEIPT", Optional.of(issued.id().value()),
+                    "Potvrzení 2027-000004 za dar " + MARCH.id().value() + " vystaveno dárci " + JANA.value(), NOW));
+        }
+
+        @Test
+        @DisplayName("when changed data brings a replacement, then the audit names the receipt it replaces")
+        void should_audit_replacement_with_replaced_number_when_issued_by_administrator() {
+            DonationReceipt active = yearlyReceipt(ReceiptDocumentFactory.fingerprintForYear(jana(), YEAR_2026, List.of(MARCH)), LocaleCode.CS);
+            givenDonationsOfJana(jana(), JUNE, MARCH);
+            when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.of(active));
+            when(receipts.nextSerial()).thenReturn(2L);
+            givenFreezer();
+
+            DonationReceipt issued = issuer.issueForYearByAdministrator(petr, BROWSER, JANA, YEAR_2026, TODAY);
+
+            assertThat(issued.supersedes()).contains(active.id());
+            verify(events).publishEvent(new AdminActionPerformed(petr, "ISSUE_RECEIPT", Optional.of(issued.id().value()),
+                    "Potvrzení 2027-000002 za rok 2026 vystaveno dárci " + JANA.value() + "; nahrazuje potvrzení 2027-000001", NOW));
+        }
+
+        @Test
+        @DisplayName("when the active receipt still certifies the same data, then it is returned and nothing is numbered or audited")
+        void should_return_active_receipt_without_audit_when_issued_by_administrator_given_unchanged_data() {
+            DonationReceipt active = yearlyReceipt(ReceiptDocumentFactory.fingerprintForYear(jana(), YEAR_2026, List.of(MARCH, JUNE)), LocaleCode.CS);
+            givenDonationsOfJana(jana(), JUNE, MARCH);
+            when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.of(active));
+
+            assertThat(issuer.issueForYearByAdministrator(petr, BROWSER, JANA, YEAR_2026, TODAY)).isSameAs(active);
+
+            verify(receipts, never()).nextSerial();
+            verify(receipts, never()).save(any());
+            verifyNoInteractions(events);
+        }
+
+        @Test
+        @DisplayName("when the server's own signing key is withdrawn and not yet replaced, then both kinds of receipt are refused as paused before the donor is locked and nothing is read, numbered, saved or audited")
+        void should_refuse_before_lock_when_issued_by_administrator_given_own_key_withdrawn() {
+            when(signingKeys.withdrawnCurrentKeyHeldForIssuing()).thenReturn(Optional.of(new ReceiptSigningKeyId("21fe31df")));
+
+            assertThatThrownBy(() -> issuer.issueForYearByAdministrator(petr, BROWSER, JANA, YEAR_2026, TODAY)).isInstanceOf(ReceiptSigningPaused.class);
+            assertThatThrownBy(() -> issuer.issueForDonationByAdministrator(petr, CONNECTED_APPLICATION, JANA, MARCH.id(), TODAY))
+                    .isInstanceOf(ReceiptSigningPaused.class);
+
+            verifyNoInteractions(receipts, donations, donorRecords, freezer, signatures, events);
+        }
+
+        @Test
+        @DisplayName("when the donor's record is erased, then it is refused under the lock and nothing is numbered, saved or audited")
+        void should_refuse_erased_donor_under_lock_when_issued_by_administrator() {
+            DonorRecord erased = jana();
+            erased.erase(NOW);
+            givenDonationsOfJana(erased, MARCH);
+
+            assertThatThrownBy(() -> issuer.issueForYearByAdministrator(petr, BROWSER, JANA, YEAR_2026, TODAY)).isInstanceOf(DonorRecordErased.class);
+            assertThatThrownBy(() -> issuer.issueForDonationByAdministrator(petr, BROWSER, JANA, MARCH.id(), TODAY)).isInstanceOf(DonorRecordErased.class);
+
+            InOrder order = inOrder(receipts, donorRecords);
+            order.verify(receipts).lockDonor(JANA);
+            order.verify(donorRecords).findById(JANA);
+            verify(receipts, never()).nextSerial();
+            verify(receipts, never()).save(any());
+            verifyNoInteractions(events, freezer);
+        }
+
+        @Test
+        @DisplayName("when the donor has no record in donations, then it is not found and nothing is numbered or audited")
+        void should_not_find_unknown_donor_when_issued_by_administrator() {
+            when(donorRecords.findById(JANA)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> issuer.issueForYearByAdministrator(petr, BROWSER, JANA, YEAR_2026, TODAY)).isInstanceOf(DonorRecordNotFound.class);
+
+            verify(receipts, never()).nextSerial();
+            verifyNoInteractions(events, freezer);
+        }
+
+        @Test
+        @DisplayName("when the donor already got 20 replacements in 24 hours, then the same cap refuses another replacement and nothing is audited")
+        void should_share_donor_cap_when_issued_by_administrator() {
+            DonationReceipt active = yearlyReceipt(ReceiptDocumentFactory.fingerprintForYear(jana(), YEAR_2026, List.of(MARCH)), LocaleCode.CS);
+            givenDonationsOfJana(jana(), JUNE, MARCH);
+            when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.of(active));
+            when(receipts.countReplacementsIssuedAfter(eq(JANA), any())).thenReturn(20L);
+
+            assertThatThrownBy(() -> issuer.issueForYearByAdministrator(petr, BROWSER, JANA, YEAR_2026, TODAY)).isInstanceOf(ReceiptIssueLimitReached.class);
+
+            verify(receipts, never()).nextSerial();
+            verifyNoInteractions(events);
+        }
+
+        @Test
+        @DisplayName("when a connected application asks for a receipt changed data would replace, then it is refused before the cap and nothing is numbered, saved or audited")
+        void should_refuse_replacement_before_cap_when_issued_by_connected_application_given_changed_data() {
+            DonationReceipt active = yearlyReceipt(ReceiptDocumentFactory.fingerprintForYear(jana(), YEAR_2026, List.of(MARCH)), LocaleCode.CS);
+            givenDonationsOfJana(jana(), JUNE, MARCH);
+            when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.of(active));
+
+            assertThatThrownBy(() -> issuer.issueForYearByAdministrator(petr, CONNECTED_APPLICATION, JANA, YEAR_2026, TODAY))
+                    .isInstanceOf(ReceiptReplacementInBrowserOnly.class)
+                    .hasMessageContaining("2027-000001");
+
+            verify(receipts, never()).countReplacementsIssuedAfter(any(), any());
+            verify(receipts, never()).nextSerial();
+            verify(receipts, never()).save(any());
+            assertThat(active.status()).isEqualTo(ReceiptStatus.ACTIVE);
+            verifyNoInteractions(events, freezer);
+        }
+
+        @Test
+        @DisplayName("when a connected application asks for a first receipt or for unchanged data, then the first is issued and audited and the active one comes back")
+        void should_issue_first_and_return_active_when_issued_by_connected_application() {
+            DonationReceipt active = yearlyReceipt(ReceiptDocumentFactory.fingerprintForYear(jana(), YEAR_2026, List.of(MARCH, JUNE)), LocaleCode.CS);
+            givenDonationsOfJana(jana(), JUNE, MARCH);
+            when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.of(active));
+            when(receipts.findActiveForDonation(MARCH.id())).thenReturn(Optional.empty());
+            when(receipts.nextSerial()).thenReturn(2L);
+            givenFreezer();
+
+            assertThat(issuer.issueForYearByAdministrator(petr, CONNECTED_APPLICATION, JANA, YEAR_2026, TODAY)).isSameAs(active);
+            DonationReceipt first = issuer.issueForDonationByAdministrator(petr, CONNECTED_APPLICATION, JANA, MARCH.id(), TODAY);
+
+            assertThat(first.number()).isEqualTo(new ReceiptNumber("2027-000002"));
+            assertThat(first.supersedes()).isEmpty();
+            verify(receipts, times(1)).save(any());
+            verify(events).publishEvent(new AdminActionPerformed(petr, "ISSUE_RECEIPT", Optional.of(first.id().value()),
+                    "Potvrzení 2027-000002 za dar " + MARCH.id().value() + " vystaveno dárci " + JANA.value(), NOW));
+        }
+    }
+
     private DonationReceipt yearlyReceipt(ReceiptFingerprint fingerprint, LocaleCode locale) {
         ReceiptDocument document = ReceiptDocumentFactory.forYear(jana(), YEAR_2026, List.of(MARCH), FOUNDATION, SIGNATORY,
                 new ReceiptNumber("2027-000001"), EARLIER, locale, Optional.empty());
@@ -407,6 +634,13 @@ class DonationReceiptIssuerTest {
             FrozenReceipt frozen = Receipts.frozen(document, signature);
             return frozen;
         });
+    }
+
+    private static ListAppender<ILoggingEvent> issuerLog() {
+        ListAppender<ILoggingEvent> lines = new ListAppender<>();
+        lines.start();
+        ((Logger) LoggerFactory.getLogger(DonationReceiptIssuer.class)).addAppender(lines);
+        return lines;
     }
 
     private DonationReceipt savedReceipt() {

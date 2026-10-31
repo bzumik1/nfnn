@@ -7,7 +7,7 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 record UpdateDonorProfileRequest(
-        @Size(min = 1, max = Donor.MAX_NAME_LENGTH) @PrintableOnReceipt String name,
+        @Size(min = 1, max = Donor.MAX_NAME_LENGTH) @Pattern(regexp = Donor.NOT_BLANK_NAME, message = "{donors.profile.name.blank}") @PrintableOnReceipt String name,
         @Valid AddressRequest address,
         @Pattern(regexp = "cs|en") String preferredLocale
 ) {

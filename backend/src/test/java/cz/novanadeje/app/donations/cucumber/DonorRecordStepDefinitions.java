@@ -27,6 +27,7 @@ import java.time.Clock;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -121,6 +122,38 @@ public class DonorRecordStepDefinitions {
         assertThat(recordOf(alias).companyIdentifier()).contains(companyIdentifier);
     }
 
+    @Then("the stored data of receipt {string} still names the donor as issued:")
+    public void theStoredDataOfReceiptStillNamesTheDonorAsIssued(String number, Map<String, String> expected) {
+        Map<String, String> stored = jdbc.sql("""
+                        select frozen::jsonb #>> '{donor,name}' as donor_name,
+                               (frozen::jsonb #>> '{donor,address,street}') || ', ' || (frozen::jsonb #>> '{donor,address,postalCode}')
+                                       || ' ' || (frozen::jsonb #>> '{donor,address,city}') as donor_address,
+                               frozen::jsonb #>> '{donor,companyIdentifier}' as donor_identifier
+                        from issued_receipt where number = :number""")
+                .param("number", number)
+                .query((row, index) -> Map.of(
+                        "donorName", Objects.toString(row.getString("donor_name"), ""),
+                        "donorAddress", Objects.toString(row.getString("donor_address"), ""),
+                        "donorIdentifier", Objects.toString(row.getString("donor_identifier"), "")))
+                .single();
+        assertThat(stored).isEqualTo(blankForMissing(expected));
+    }
+
+    @Then("bank payment {long} still keeps what the bank statement says:")
+    public void bankPaymentStillKeepsWhatTheBankStatementSays(long transactionId, Map<String, String> expected) {
+        Map<String, String> stored = jdbc.sql("""
+                        select counterparty_name, counterparty_account || '/' || counterparty_bank_code as counterparty_account,
+                               message_for_recipient
+                        from bank_payment where bank_transaction_id = :transactionId""")
+                .param("transactionId", transactionId)
+                .query((row, index) -> Map.of(
+                        "counterpartyName", Objects.toString(row.getString("counterparty_name"), ""),
+                        "counterpartyAccount", Objects.toString(row.getString("counterparty_account"), ""),
+                        "message", Objects.toString(row.getString("message_for_recipient"), "")))
+                .single();
+        assertThat(stored).isEqualTo(blankForMissing(expected));
+    }
+
     @Then("donations keeps {int} donor record(s)")
     public void donationsKeepsDonorRecords(int count) {
         assertThat(jdbc.sql("select count(*) from donor_record").query(Long.class).single()).isEqualTo(count);
@@ -152,6 +185,12 @@ public class DonorRecordStepDefinitions {
     private DonorRecord recordOf(String alias) {
         return donorRecords.findById(new DonorReference(scenarioDonors.idOf(alias)))
                 .orElseThrow(() -> new AssertionError("Donations has no record of \"" + alias + "\""));
+    }
+
+    private static Map<String, String> blankForMissing(Map<String, String> expected) {
+        Map<String, String> filled = new HashMap<>();
+        expected.forEach((key, value) -> filled.put(key, Objects.toString(value, "")));
+        return filled;
     }
 
     private static String personName(String alias) {

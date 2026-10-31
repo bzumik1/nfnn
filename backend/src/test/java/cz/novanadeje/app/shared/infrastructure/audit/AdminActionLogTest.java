@@ -21,7 +21,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @IntegrationTest
 class AdminActionLogTest {
 
-    private static final UUID ADMIN = UUID.fromString("01a18e56-bdb0-775a-bd0a-a60756831369");
     private static final UUID SUBJECT = UUID.fromString("0192f0f1-0000-7000-8000-000000000001");
     private static final Instant AT = Instant.parse("2026-10-22T10:00:00Z");
 
@@ -35,12 +34,13 @@ class AdminActionLogTest {
     @Test
     @DisplayName("Given an admin action published inside a transaction, when it commits, then the action is in admin_action with who, what, on what and when")
     void should_store_action_when_transaction_commits_given_published_event() {
+        UUID admin = UUID.randomUUID();
         transactions.executeWithoutResult(status -> events.publishEvent(
-                new AdminActionPerformed(ADMIN, "PAIR_PAYMENT", Optional.of(SUBJECT), "payment 1001 paired to donor Jana", AT)));
+                new AdminActionPerformed(admin, "PAIR_PAYMENT", Optional.of(SUBJECT), "payment 1001 paired to donor Jana", AT)));
 
         Map<String, Object> row = jdbc.sql("select admin_id, action, subject_id, details, performed_at from admin_action where admin_id = ?")
-                .param(ADMIN).query().singleRow();
-        assertThat(row).containsEntry("admin_id", ADMIN).containsEntry("action", "PAIR_PAYMENT").containsEntry("subject_id", SUBJECT)
+                .param(admin).query().singleRow();
+        assertThat(row).containsEntry("admin_id", admin).containsEntry("action", "PAIR_PAYMENT").containsEntry("subject_id", SUBJECT)
                 .containsEntry("details", "payment 1001 paired to donor Jana");
         assertThat(((Timestamp) row.get("performed_at")).toInstant()).isEqualTo(AT);
     }

@@ -1,0 +1,126 @@
+<app-dialog labelledBy="stazeni-klice-titulek" [wide]="true" (dismissed)="dismiss()">
+  <h2 id="stazeni-klice-titulek" class="ui-dialog__title" i18n="@@admin.signingKey.withdraw.title">
+    Stáhnout klíč <span class="ui-mono">{{ keyId() }}</span
+    >?
+  </h2>
+  <p class="ui-dialog__lead" i18n="@@admin.signingKey.withdraw.lead">
+    Klíč stáhněte, jen když se mohl dostat do cizích rukou, třeba s ukradeným diskem nebo kopií
+    serveru. Stažení nejde vrátit.
+  </p>
+  <ul class="ui-dialog__points withdrawal-points">
+    <li i18n="@@admin.signingKey.withdraw.published">
+      Web klíč dál zveřejňuje, ale jako stažený, takže QR kódům jím podepsaným už nikdo nemá věřit,
+      ani na potvrzeních vydaných dřív. Ta se znovu nepodepisují.
+    </li>
+    @if (current()) {
+      <li i18n="@@admin.signingKey.withdraw.current">
+        Je to klíč, kterým server teď podepisuje. Web se hned restartuje, vytvoří si nový klíč a
+        zveřejní ho; asi minutu nebude odpovídat a do té doby se potvrzení o daru nestáhnou.
+      </li>
+    } @else {
+      <li i18n="@@admin.signingKey.withdraw.earlier">
+        Tímto klíčem server už nepodepisuje, takže web poběží dál beze změny.
+      </li>
+    }
+    <li i18n="@@admin.signingKey.withdraw.record">
+      Stažení se zapíše do historie správy a všem správcům přijde e-mail.
+    </li>
+  </ul>
+  <form
+    #proofForm="ngForm"
+    class="withdrawal-form"
+    appFocusFirstInvalid
+    (ngSubmit)="submit(proofForm)"
+    novalidate
+  >
+    @if (asksCode()) {
+      <app-form-field
+        label="Kód z aplikace"
+        i18n-label="@@admin.signingKey.withdraw.code"
+        [hint]="codeHint"
+        [messages]="codeMessages"
+      >
+        <input
+          #codeField
+          appFormControl
+          id="withdrawal-code"
+          name="code"
+          type="text"
+          inputmode="numeric"
+          autocomplete="one-time-code"
+          placeholder="123456"
+          autofocus
+          [(ngModel)]="code"
+          required
+          pattern="\s*\d{6}\s*"
+          maxlength="8"
+        />
+      </app-form-field>
+      @if (passkeySupported && hasPasskey()) {
+        <p class="withdrawal-alternative">
+          <span i18n="@@admin.signingKey.withdraw.orPasskey">Nebo bez kódu:</span>
+          &ngsp;
+          <button
+            type="button"
+            class="ui-link-button"
+            [disabled]="withdrawing()"
+            (click)="withPasskey()"
+            i18n="@@admin.signingKey.withdraw.withPasskey"
+          >
+            Potvrdit přístupovým klíčem
+          </button>
+        </p>
+      }
+    } @else if (passkeySupported) {
+      <p class="withdrawal-note" i18n="@@admin.signingKey.withdraw.confirmPasskey">
+        Stažení potvrďte svým přístupovým klíčem, i když jste se jím už přihlásili.
+      </p>
+      @if (usesCode()) {
+        <p class="withdrawal-alternative">
+          <span i18n="@@admin.signingKey.withdraw.orCode">Nebo bez přístupového klíče:</span>
+          &ngsp;
+          <button
+            type="button"
+            class="ui-link-button"
+            [disabled]="withdrawing()"
+            (click)="chooseCode()"
+            i18n="@@admin.signingKey.withdraw.chooseCode"
+          >
+            Zadat kód z aplikace
+          </button>
+        </p>
+      }
+    } @else {
+      <p class="withdrawal-note" i18n="@@admin.signingKey.withdraw.passkeyMissing">
+        Stažení se potvrzuje přístupovým klíčem a tento prohlížeč je nepodporuje. Klíč stáhněte v
+        prohlížeči, ve kterém se klíčem přihlašujete.
+      </p>
+    }
+    @if (error()) {
+      <p class="ui-field-error" role="alert">{{ error() }}</p>
+    }
+    <div class="withdrawal-actions">
+      <button
+        type="submit"
+        class="ui-button ui-button--danger"
+        [disabled]="withdrawing() || (!asksCode() && !passkeySupported)"
+      >
+        @if (withdrawing()) {
+          <ng-container i18n="@@admin.signingKey.withdraw.busy">Stahujeme klíč…</ng-container>
+        } @else {
+          <ng-container i18n="@@admin.signingKey.withdraw.submit">Stáhnout klíč</ng-container>
+        }
+      </button>
+      <button
+        type="button"
+        class="ui-button ui-button--quiet"
+        [attr.autofocus]="asksCode() ? null : ''"
+        [disabled]="withdrawing()"
+        (click)="dismiss()"
+        i18n="@@admin.signingKey.withdraw.cancel"
+      >
+        Zrušit
+      </button>
+    </div>
+  </form>
+</app-dialog>

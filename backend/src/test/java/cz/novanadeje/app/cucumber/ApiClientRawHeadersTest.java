@@ -14,4 +14,10 @@ class ApiClientRawHeadersTest {
 
         assertThat(ApiClient.rawHeaders(raw, raw.indexOf("\r\n\r\n")).headerNames()).containsExactlyInAnyOrder("content-type", "x-content-type-options");
     }
+
+    @Test
+    @DisplayName("Given a chunked raw answer, when its body is read for the transcript, then the chunk framing is gone")
+    void should_drop_the_chunk_framing_when_the_body_of_a_chunked_raw_answer_is_read() {
+        assertThat(ApiClient.unchunked("6\r\n{\"a\":1\r\n3;x=y\r\n,\"b\r\n4\r\n\":2}\r\n0\r\n\r\n")).isEqualTo("{\"a\":1,\"b\":2}");
+    }
 }

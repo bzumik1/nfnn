@@ -48,6 +48,7 @@ import { FormControlDirective } from '../../../shared/ui/form-field/form-control
 import { FormField } from '../../../shared/ui/form-field/form-field';
 import { PasswordReveal } from '../../../shared/ui/password-reveal/password-reveal';
 import { QrCode } from '../../../shared/ui/qr-code/qr-code';
+import { encodeText } from '../../../shared/ui/qr-code/qr-encoder';
 import { placeServerErrors } from '../../../shared/ui/form-field/server-errors';
 import { RadioGroup } from '../../../shared/ui/radio-group/radio-group';
 import { formatMinorUnits } from '../../donations/donation-amount';
@@ -74,6 +75,8 @@ interface RegistrationFields {
 }
 
 type RegisterField = 'name' | 'street' | 'city' | 'postalCode';
+
+const RECOVERY_QR_LEVEL = 'H';
 
 type Step = 'login' | 'code' | 'recovery' | 'register' | 'registered' | 'reset' | 'reset-sent';
 
@@ -153,6 +156,17 @@ export class LoginDialog {
   protected readonly verificationResent = signal(false);
   protected readonly challenge = signal<string | null>(null);
   protected readonly recovery = signal<SecondFactorRecovery | null>(null);
+  protected readonly recoveryQr = computed(() => {
+    const spayd = this.recovery()?.spayd;
+    if (spayd === undefined) {
+      return null;
+    }
+    try {
+      return encodeText(spayd, RECOVERY_QR_LEVEL);
+    } catch {
+      return null;
+    }
+  });
   protected readonly error = signal('');
   protected readonly passkeyError = signal('');
   protected readonly filledFromRegister = signal(false);

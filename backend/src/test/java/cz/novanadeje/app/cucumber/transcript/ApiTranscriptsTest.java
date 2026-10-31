@@ -1,14 +1,13 @@
 package cz.novanadeje.app.cucumber.transcript;
 
 import cz.novanadeje.app.operations.domain.settings.Setting;
+import cz.novanadeje.app.support.AsyncTaskTracker;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.core.task.SimpleAsyncTaskExecutor;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -115,8 +114,17 @@ class ApiTranscriptsTest {
     @Test
     @DisplayName("Given an executor that cannot report its work, when the recorder waits for asynchronous work, then it fails instead of skipping the wait")
     void should_fail_when_the_recorder_cannot_wait_for_asynchronous_work() {
-        assertThatThrownBy(() -> ApiTranscriptHooks.awaitIdle(new SimpleAsyncTaskExecutor(), Duration.ofSeconds(1)))
+        assertThatThrownBy(() -> ApiTranscriptHooks.awaitAsynchronousWork(new AsyncTaskTracker()))
                 .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    @DisplayName("Given audit details naming receipt signing keys and a restore id, when the recorder looks for key ids, then it finds the keys and not the first part of the restore id, so a key whose row is gone stays masked")
+    void should_find_the_key_ids_when_audit_details_are_read_given_keys_and_a_restore_id() {
+        assertThat(ApiTranscriptHooks.receiptSigningKeyIdsIn(List.of(
+                "Server převzal klíč k ověřovacím QR 39f713d0 z obnovené zálohy (obnova 019a1b2c-0000-7000-8000-000000000010)",
+                "Server zaregistroval svůj klíč k ověřovacím QR na potvrzeních o daru: 21fe31df")))
+                .containsExactlyInAnyOrder("39f713d0", "21fe31df");
     }
 
     @Test

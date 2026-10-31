@@ -4,6 +4,12 @@ import { ProjectResponse } from '../projects-api';
 
 export type ContentKind = 'news' | 'project';
 
+export interface ContentSigner {
+  name: string;
+  role: string | null;
+  portraitId: string | null;
+}
+
 export interface ContentPage {
   title: string;
   eyebrow: string;
@@ -13,6 +19,7 @@ export interface ContentPage {
   imageAlt: string;
   slug: string;
   backPath: string;
+  signer: ContentSigner | null;
 }
 
 export function newsPage(article: NewsArticleResponse): ContentPage {
@@ -26,6 +33,13 @@ export function newsPage(article: NewsArticleResponse): ContentPage {
     imageAlt: article.coverImage?.alt ?? '',
     slug: article.slug,
     backPath: '/aktuality',
+    signer: article.signer
+      ? {
+          name: article.signer.name,
+          role: article.signer.role,
+          portraitId: article.signer.portrait?.id ?? null,
+        }
+      : null,
   };
 }
 
@@ -39,5 +53,6 @@ export function projectPage(project: ProjectResponse): ContentPage {
     imageAlt: project.coverImage?.alt ?? '',
     slug: project.slug,
     backPath: '/projekty',
+    signer: null,
   };
 }

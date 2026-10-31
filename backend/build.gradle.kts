@@ -46,8 +46,6 @@ dependencies {
 	implementation("io.github.openhtmltopdf:openhtmltopdf-core:${property("openhtmltopdfVersion")}")
 	implementation("io.github.openhtmltopdf:openhtmltopdf-pdfbox:${property("openhtmltopdfVersion")}")
 
-	implementation("com.google.zxing:core:${property("zxingVersion")}")
-
 	implementation("io.github.darkxanter:webp-imageio:${property("webpImageioVersion")}")
 
 	implementation("com.webauthn4j:webauthn4j-core:${property("webauthn4jVersion")}")
@@ -67,6 +65,7 @@ dependencies {
 	testImplementation("org.testcontainers:testcontainers-junit-jupiter")
 	testImplementation("org.testcontainers:testcontainers-postgresql")
 
+	testImplementation("com.google.zxing:core:${property("zxingVersion")}")
 	testImplementation("com.google.zxing:javase:${property("zxingVersion")}")
 	testImplementation("org.assertj:assertj-core")
 	testImplementation("org.awaitility:awaitility")
@@ -101,6 +100,7 @@ tasks.withType<Test> {
 	jvmArgumentProviders.add(JavaAgent(mockitoAgent))
 	environment("TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE", "/var/run/docker.sock")
 	inputs.file("../frontend/src/themes/nova-nadeje/_theme.scss").withPropertyName("siteTheme").withPathSensitivity(PathSensitivity.NONE)
+	inputs.file("../frontend/src/app/core/errors/error-vocabulary.json").withPropertyName("clientErrorVocabulary").withPathSensitivity(PathSensitivity.NONE)
 	inputs.files(fileTree("../shared-cases")).withPropertyName("sharedCases").withPathSensitivity(PathSensitivity.RELATIVE)
 	inputs.files(fileTree("../regression")).withPropertyName("baselineArtefacts").withPathSensitivity(PathSensitivity.RELATIVE)
 }
@@ -115,6 +115,7 @@ val acceptanceTest = tasks.register<Test>("acceptanceTest") {
 	}
 	include("**/*AcceptanceTests.class")
 	enabled = runsCucumber
+	systemProperty("org.apache.juli.logging.UserDataHelper.CONFIG", "INFO_ALL")
 	val transcripts = layout.buildDirectory.dir("api-transcripts")
 	val recording = providers.environmentVariable("API_TRANSCRIPTS").map { it == "record" }.orElse(false)
 	doFirst {

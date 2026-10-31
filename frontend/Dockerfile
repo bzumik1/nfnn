@@ -5,7 +5,8 @@ WORKDIR /workspace
 COPY package.json package-lock.json* ./
 RUN npm ci
 COPY . .
-RUN npm run build -- --configuration=production
+ARG REVISION=dev
+RUN npm run build -- --configuration=production --define "NFNN_APP_REVISION='${REVISION}'"
 
 FROM nginx:1.30-alpine
 RUN mkdir -p /logs

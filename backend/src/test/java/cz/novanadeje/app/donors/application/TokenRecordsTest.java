@@ -2,7 +2,6 @@ package cz.novanadeje.app.donors.application;
 
 import cz.novanadeje.app.donors.domain.OAuthScope;
 import cz.novanadeje.app.donors.domain.Role;
-import cz.novanadeje.app.shared.application.qr.QrMatrix;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -26,7 +25,7 @@ class TokenRecordsTest {
         assertThat(new ExchangedAccessToken("access-secret", NOW, Set.of(OAuthScope.ADMIN_READ)).toString()).doesNotContain("access-secret");
         assertThat(new CodeExchange("code-secret", "https://claude.ai/c", "https://claude.ai/cb", "verifier-secret", "https://nfnn.cz/mcp").toString())
                 .doesNotContain("code-secret", "verifier-secret");
-        assertThat(new SecondFactorEnrolment("TOTPSECRET", "otpauth://totp/x?secret=TOTPSECRET", new QrMatrix(21, "0".repeat(441))).toString())
+        assertThat(new SecondFactorEnrolment("TOTPSECRET", "otpauth://totp/x?secret=TOTPSECRET").toString())
                 .doesNotContain("TOTPSECRET");
     }
 }

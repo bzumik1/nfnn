@@ -1,6 +1,7 @@
 package cz.novanadeje.app.cucumber.transcript;
 
 import cz.novanadeje.app.cucumber.ScenarioDonors;
+import cz.novanadeje.app.support.AsyncTaskTracker;
 import cz.novanadeje.app.support.RecordingMailSender;
 import cz.novanadeje.app.support.RecordingSetupCodeAnnouncer;
 import io.cucumber.java.After;
@@ -9,26 +10,28 @@ import io.cucumber.java.BeforeAll;
 import io.cucumber.java.Scenario;
 import org.springframework.context.ApplicationContext;
 import org.springframework.jdbc.core.simple.JdbcClient;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.time.Duration;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.MatchResult;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class ApiTranscriptHooks {
 
-    private static final String ASYNC_EXECUTOR = "applicationTaskExecutor";
     private static final Duration ASYNC_WAIT = Duration.ofSeconds(15);
     private static final String NUMBERED_VARIABLE_SYMBOL = "<vs:#>";
     private static final String SETUP_CODE = "<setup-code>";
     private static final String RECEIPT_SIGNING_KEY_ID = "<key-id>";
     private static final String SIGNATORY_NAME = "<signatory-name>";
+    private static final Pattern KEY_ID_IN_DETAILS = Pattern.compile("(?<![0-9A-Za-z-])[0-9a-f]{8}(?![0-9A-Za-z-])");
     private static final String SIGNATORY_NAME_PROPERTY = "app.donations.receipt.signatory-name";
     private static final String SIGNING_KEY_PROPERTY = "app.donations.receipt.signing.key";
     private static final int AFTER_EVERY_OTHER_SET_UP = 100_000;
@@ -40,16 +43,19 @@ public class ApiTranscriptHooks {
     private final ScenarioDonors donors;
     private final JdbcClient jdbc;
     private final ApplicationContext context;
+    private final AsyncTaskTracker asyncTasks;
     private LogLineCapture logLines;
 
     public ApiTranscriptHooks(ApiTranscriptRecorder recorder, RecordingMailSender mailSender, RecordingSetupCodeAnnouncer setupCodes,
-                              ScenarioDonors donors, JdbcClient jdbc, ApplicationContext context) {
+                              ScenarioDonors donors, JdbcClient jdbc, ApplicationContext context,
+                              AsyncTaskTracker asyncTasks) {
         this.recorder = recorder;
         this.mailSender = mailSender;
         this.setupCodes = setupCodes;
         this.donors = donors;
         this.jdbc = jdbc;
         this.context = context;
+        this.asyncTasks = asyncTasks;
     }
 
     @BeforeAll
@@ -68,11 +74,11 @@ public class ApiTranscriptHooks {
     }
 
     @After(order = AFTER_EVERY_OTHER_TEAR_DOWN)
-    public void writeTranscript(Scenario scenario) throws InterruptedException {
+    public void writeTranscript(Scenario scenario) {
         if (!ApiTranscripts.recording()) {
             return;
         }
-        awaitIdle(context.getBean(ASYNC_EXECUTOR), ASYNC_WAIT);
+        awaitAsynchronousWork(asyncTasks);
         logLines.detach();
         ScenarioTranscript transcript = recorder.transcript();
         transcript.mails(mailSender.sentInScenario());
@@ -88,6 +94,8 @@ public class ApiTranscriptHooks {
                 .forEach(symbol -> known.put(symbol, NUMBERED_VARIABLE_SYMBOL));
         donors.variableSymbolsByAlias().forEach((alias, symbol) -> known.put(symbol, "<vs:" + alias + ">"));
         jdbc.sql("select key_id from receipt_signing_key").query(String.class).list().forEach(keyId -> known.put(keyId, RECEIPT_SIGNING_KEY_ID));
+        receiptSigningKeyIdsIn(jdbc.sql("select details from admin_action where action like '%RECEIPT_SIGNING_KEY%'").query(String.class).list())
+                .forEach(keyId -> known.put(keyId, RECEIPT_SIGNING_KEY_ID));
         donors.everySecondFactorSecret().forEach(secret -> known.put(secret, TranscriptNormaliser.SECRET));
         Optional.ofNullable(context.getEnvironment().getProperty(SIGNATORY_NAME_PROPERTY)).filter(name -> !name.isBlank())
                 .ifPresent(name -> known.put(name, SIGNATORY_NAME));
@@ -100,23 +108,18 @@ public class ApiTranscriptHooks {
         return known;
     }
 
+    static Set<String> receiptSigningKeyIdsIn(List<String> details) {
+        return details.stream().flatMap(text -> KEY_ID_IN_DETAILS.matcher(text).results().map(MatchResult::group))
+                .collect(Collectors.toUnmodifiableSet());
+    }
+
     static Set<String> signingSeedSpellings(String configuredKey) {
         byte[] seed = Base64.getDecoder().decode(configuredKey.strip());
         return Stream.of(configuredKey.strip(), Base64.getEncoder().withoutPadding().encodeToString(seed),
                 Base64.getUrlEncoder().withoutPadding().encodeToString(seed), HexFormat.of().formatHex(seed)).collect(Collectors.toUnmodifiableSet());
     }
 
-    static void awaitIdle(Object executor, Duration timeout) throws InterruptedException {
-        if (!(executor instanceof ThreadPoolTaskExecutor pool)) {
-            throw new IllegalStateException("The application task executor is a " + executor.getClass().getName()
-                    + ", which cannot report its running work, so the recorder cannot wait for asynchronous mails and log lines");
-        }
-        long deadline = System.nanoTime() + timeout.toNanos();
-        while (pool.getActiveCount() > 0 || !pool.getThreadPoolExecutor().getQueue().isEmpty()) {
-            if (System.nanoTime() > deadline) {
-                throw new IllegalStateException("Asynchronous work did not finish within " + timeout);
-            }
-            Thread.sleep(20);
-        }
+    static void awaitAsynchronousWork(AsyncTaskTracker asyncTasks) {
+        asyncTasks.awaitIdleAfter("the scenario", ASYNC_WAIT);
     }
 }
