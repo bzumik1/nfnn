@@ -48,6 +48,12 @@ public class AdminReceiptsStepDefinitions {
         issue(scenarioDonors.idOf(donor), Map.of("donationId", donationIdOf(donor, receivedOn).toString()));
     }
 
+    @When("{string} issues in the administration for {string} the receipt of the donation of {string} received on {date}")
+    public void issuesInTheAdministrationForTheReceiptOfTheDonationOf(String alias, String donor, String owner, LocalDate receivedOn) {
+        sessions.actAs(alias);
+        issue(scenarioDonors.idOf(donor), Map.of("donationId", donationIdOf(owner, receivedOn).toString()));
+    }
+
     @When("{string} issues in the administration the receipt of the donation of {string} numbered {string}")
     public void issuesInTheAdministrationTheReceiptOfTheDonationNumbered(String alias, String donor, String donationId) {
         sessions.actAs(alias);
@@ -178,6 +184,16 @@ public class AdminReceiptsStepDefinitions {
     @Then("the issued receipt belongs to {string}")
     public void theIssuedReceiptBelongsTo(String alias) {
         assertThat(api.lastResponseJson().get("donorId").asString()).isEqualTo(scenarioDonors.idOf(alias).toString());
+    }
+
+    @Then("the issued receipt says its donor is erased")
+    public void theIssuedReceiptSaysItsDonorIsErased() {
+        assertThat(api.lastResponseJson().get("donorErased").asBoolean()).withFailMessage("Not erased in %s", api.lastResponse().getBody()).isTrue();
+    }
+
+    @Then("no receipt issue is audited")
+    public void noReceiptIssueIsAudited() {
+        assertThat(jdbc.sql("select count(*) from admin_action where action = 'ISSUE_RECEIPT'").query(Long.class).single()).isZero();
     }
 
     @Then("the administration's receipt list counts {int} of {int} receipts:")

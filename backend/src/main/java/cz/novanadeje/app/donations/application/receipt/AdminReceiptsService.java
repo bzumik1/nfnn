@@ -2,6 +2,8 @@ package cz.novanadeje.app.donations.application.receipt;
 
 import cz.novanadeje.app.donations.domain.FoundationCalendar;
 import cz.novanadeje.app.donations.domain.donation.DonationId;
+import cz.novanadeje.app.donations.domain.donor.DonorRecord;
+import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.receipt.ContentDigest;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
@@ -29,26 +31,28 @@ public class AdminReceiptsService {
     private final DonationReceiptIssuer issuer;
     private final DonationReceiptRepository receipts;
     private final ReceiptImageRepository images;
+    private final DonorRecordRepository donorRecords;
     private final FirstReceiptYear firstYear;
     private final Clock clock;
 
     public AdminReceiptsService(DonationReceiptIssuer issuer, DonationReceiptRepository receipts, ReceiptImageRepository images,
-                                FirstReceiptYear firstYear, Clock clock) {
+                                DonorRecordRepository donorRecords, FirstReceiptYear firstYear, Clock clock) {
         this.issuer = issuer;
         this.receipts = receipts;
         this.images = images;
+        this.donorRecords = donorRecords;
         this.firstYear = firstYear;
         this.clock = clock;
     }
 
-    public DonationReceipt issueForDonation(UUID adminId, DonorReference donor, DonationId donation) {
-        return issuer.issueForDonationByAdministrator(adminId, donor, donation, FoundationCalendar.today(clock));
+    public DonationReceipt issueForDonation(UUID adminId, AdministrationChannel channel, DonorReference donor, DonationId donation) {
+        return issuer.issueForDonationByAdministrator(adminId, channel, donor, donation, FoundationCalendar.today(clock));
     }
 
-    public DonationReceipt issueForYear(UUID adminId, DonorReference donor, Year year) {
+    public DonationReceipt issueForYear(UUID adminId, AdministrationChannel channel, DonorReference donor, Year year) {
         LocalDate today = FoundationCalendar.today(clock);
         DonationReceiptService.requireCompletedYear(firstYear, year, today);
-        return issuer.issueForYearByAdministrator(adminId, donor, year, today);
+        return issuer.issueForYearByAdministrator(adminId, channel, donor, year, today);
     }
 
     @Transactional(readOnly = true)
@@ -57,8 +61,11 @@ public class AdminReceiptsService {
     }
 
     @Transactional(readOnly = true)
-    public DonationReceipt receipt(DonationReceiptId id) {
-        return receipts.findById(id).orElseThrow(() -> new ReceiptNotFound(id));
+    public AdminReceiptView receipt(DonationReceiptId id) {
+        DonationReceipt receipt = receipts.findById(id).orElseThrow(() -> new ReceiptNotFound(id));
+        DonorRecord donor = donorRecords.findById(receipt.donor())
+                .orElseThrow(() -> new IllegalStateException("Receipt " + id + " names donor " + receipt.donor() + " without a donor record"));
+        return new AdminReceiptView(receipt, donor.isErased());
     }
 
     @Transactional(readOnly = true)

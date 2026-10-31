@@ -98,6 +98,9 @@ Feature: An administrator or a connected application issues a donor's receipt an
     When "Petr" issues in the administration a receipt of "Jana" naming the year "2026" and the donation "0192f0f1-0000-7000-8000-000000000000"
     Then the response status is 400
     And the problem type ends with "validation"
+    When "Petr" issues in the administration a receipt of "Jana" naming the year "" and the donation ""
+    Then the response status is 400
+    And the problem type ends with "validation"
     When "Petr" issues in the administration the yearly receipt of an unknown donor for 2026
     Then the response status is 404
     And the problem type ends with "donations/donor-not-found"
@@ -107,6 +110,46 @@ Feature: An administrator or a connected application issues a donor's receipt an
     And the problem type ends with "donations/donor-erased"
     And the problem has the title "Dárce je vymazaný"
     And 0 receipts are stored
+
+  Scenario: A donation of another donor is not found for the donor named in the address, and takes no number
+    When "Petr" issues in the administration for "Petr" the receipt of the donation of "Jana" received on 2026-10-01
+    Then the response status is 404
+    And the problem type ends with "donations/donation-not-found"
+    And 0 receipts are stored
+    And no receipt issue is audited
+
+  Scenario: An erased donor's receipt comes to a browser as issued, and to a connected application without the donor's name, address and verification code
+    Given "Jana" issues her yearly receipt for 2026
+    And "Petr" erased the donor "Jana"
+    When "Petr" reads in the administration the receipt "2027-000001"
+    Then the response status is 200
+    And the issued receipt says its donor is erased
+    And the frozen receipt holds:
+      | field                | value         |
+      | donor.name           | Jana Nováková |
+      | donor.address.street | Dlouhá 12     |
+      | donor.variableSymbol | {Jana}        |
+    And the frozen receipt is signed with the server's key
+    Given "Petr" connected the application "https://claude.ai/.well-known/oauth-client" with scope "admin:read"
+    When the connector exchanges the connector token for an API token
+    And the exchanged API token reads the receipt "2027-000001"
+    Then the response status is 200
+    And the answer is JSON that must not be cached
+    And the issued receipt has number "2027-000001"
+    And the issued receipt says its donor is erased
+    And the frozen receipt holds:
+      | field                    | value          |
+      | donor.name               | Vymazaný dárce |
+      | donor.companyIdentifier  | null           |
+      | donor.address.street     | Vymazáno       |
+      | donor.address.city       | Vymazáno       |
+      | donor.address.postalCode | 00000          |
+      | donor.variableSymbol     | {Jana}         |
+      | verification.qrText      | null           |
+    And the frozen receipt lists the gifts:
+      | receivedOn | amountMinor |
+      | 2026-10-01 | 100000      |
+      | 2026-11-15 | 250000      |
 
   Scenario: The administration shares the donor's cap of 20 replacements in 24 hours, which a first issue does not count against
     Given "Jana" changed her address and issued her yearly receipt for 2026 21 times

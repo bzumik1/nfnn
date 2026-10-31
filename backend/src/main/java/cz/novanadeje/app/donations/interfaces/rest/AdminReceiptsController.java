@@ -1,6 +1,8 @@
 package cz.novanadeje.app.donations.interfaces.rest;
 
+import cz.novanadeje.app.donations.application.receipt.AdminReceiptView;
 import cz.novanadeje.app.donations.application.receipt.AdminReceiptsService;
+import cz.novanadeje.app.donations.application.receipt.AdministrationChannel;
 import cz.novanadeje.app.donations.domain.donation.DonationId;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.receipt.ContentDigest;
@@ -37,6 +39,7 @@ import static cz.novanadeje.app.donations.interfaces.rest.DonorDonationsControll
 class AdminReceiptsController {
 
     static final int DEFAULT_LIMIT = 50;
+    private static final String SCOPE_CLAIM = "scope";
     private static final String NOT_STORED_BY_ANY_CACHE = "private, no-store";
     private static final String KEPT_BY_THE_BROWSER = "private, max-age=31536000, immutable";
 
@@ -59,8 +62,11 @@ class AdminReceiptsController {
     }
 
     @GetMapping("/receipts/{id}")
-    ResponseEntity<AdminReceiptResponse> receipt(@PathVariable UUID id) {
-        return notStored(AdminReceiptResponse.from(receipts.receipt(new DonationReceiptId(id))));
+    ResponseEntity<AdminReceiptResponse> receipt(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
+        AdminReceiptView view = receipts.receipt(new DonationReceiptId(id));
+        return notStored(view.donorErased() && channelOf(jwt) == AdministrationChannel.CONNECTED_APPLICATION
+                ? AdminReceiptResponse.withoutErasedDonor(view.receipt())
+                : AdminReceiptResponse.asIssued(view.receipt(), view.donorErased()));
     }
 
     @GetMapping("/receipt-images/{sha256}")
@@ -78,11 +84,16 @@ class AdminReceiptsController {
     ResponseEntity<AdminReceiptResponse> issue(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID donorId,
                                                @Valid @RequestBody ReceiptIssueRequest request) {
         UUID admin = UUID.fromString(jwt.getSubject());
+        AdministrationChannel channel = channelOf(jwt);
         DonorReference donor = new DonorReference(donorId);
         DonationReceipt receipt = request.year() != null
-                ? receipts.issueForYear(admin, donor, Year.of(request.year()))
-                : receipts.issueForDonation(admin, donor, new DonationId(UUID.fromString(request.donationId())));
-        return notStored(AdminReceiptResponse.from(receipt));
+                ? receipts.issueForYear(admin, channel, donor, Year.of(request.year()))
+                : receipts.issueForDonation(admin, channel, donor, new DonationId(UUID.fromString(request.donationId())));
+        return notStored(AdminReceiptResponse.ofLiveDonor(receipt));
+    }
+
+    private static AdministrationChannel channelOf(Jwt jwt) {
+        return jwt.hasClaim(SCOPE_CLAIM) ? AdministrationChannel.CONNECTED_APPLICATION : AdministrationChannel.BROWSER;
     }
 
     private static <T> ResponseEntity<T> notStored(T body) {

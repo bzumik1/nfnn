@@ -1,6 +1,8 @@
 package cz.novanadeje.app.donations.application.receipt;
 
 import cz.novanadeje.app.donations.domain.donation.DonationId;
+import cz.novanadeje.app.donations.domain.donor.DonorRecord;
+import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.receipt.ContentDigest;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
@@ -27,10 +29,13 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static cz.novanadeje.app.donations.application.receipt.AdministrationChannel.BROWSER;
+import static cz.novanadeje.app.donations.application.receipt.AdministrationChannel.CONNECTED_APPLICATION;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.JANA;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.NOW;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.TODAY;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.YEAR_2026;
+import static cz.novanadeje.app.donations.domain.receipt.Receipts.jana;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.yearlyReceiptOf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -47,31 +52,32 @@ class AdminReceiptsServiceTest {
     private final DonationReceiptIssuer issuer = mock(DonationReceiptIssuer.class);
     private final DonationReceiptRepository receipts = mock(DonationReceiptRepository.class);
     private final ReceiptImageRepository images = mock(ReceiptImageRepository.class);
+    private final DonorRecordRepository donorRecords = mock(DonorRecordRepository.class);
     private final DonationReceipt yearly = yearlyReceiptOf(JANA, YEAR_2026);
 
     @Test
     @DisplayName("Given a donation, when an administrator issues its receipt, then the issuer issues it for the administrator with today's Prague date")
     void should_issue_through_issuer_for_administrator_when_issued_given_donation() {
-        when(issuer.issueForDonationByAdministrator(PETR, JANA, MARCH_2026, TODAY)).thenReturn(yearly);
+        when(issuer.issueForDonationByAdministrator(PETR, BROWSER, JANA, MARCH_2026, TODAY)).thenReturn(yearly);
 
-        assertThat(service(NOW).issueForDonation(PETR, JANA, MARCH_2026)).isSameAs(yearly);
+        assertThat(service(NOW).issueForDonation(PETR, BROWSER, JANA, MARCH_2026)).isSameAs(yearly);
     }
 
     @Test
     @DisplayName("Given a completed year, when an administrator issues its yearly receipt, then the issuer issues it for the administrator, by the Prague calendar on New Year's Eve too")
     void should_issue_yearly_receipt_through_issuer_for_administrator_when_issued_given_completed_year() {
-        when(issuer.issueForYearByAdministrator(PETR, JANA, YEAR_2026, TODAY)).thenReturn(yearly);
-        when(issuer.issueForYearByAdministrator(PETR, JANA, YEAR_2026, LocalDate.of(2027, 1, 1))).thenReturn(yearly);
+        when(issuer.issueForYearByAdministrator(PETR, BROWSER, JANA, YEAR_2026, TODAY)).thenReturn(yearly);
+        when(issuer.issueForYearByAdministrator(PETR, BROWSER, JANA, YEAR_2026, LocalDate.of(2027, 1, 1))).thenReturn(yearly);
 
-        assertThat(service(NOW).issueForYear(PETR, JANA, YEAR_2026)).isSameAs(yearly);
-        assertThat(service(Instant.parse("2026-12-31T23:30:00Z")).issueForYear(PETR, JANA, YEAR_2026)).isSameAs(yearly);
+        assertThat(service(NOW).issueForYear(PETR, BROWSER, JANA, YEAR_2026)).isSameAs(yearly);
+        assertThat(service(Instant.parse("2026-12-31T23:30:00Z")).issueForYear(PETR, BROWSER, JANA, YEAR_2026)).isSameAs(yearly);
     }
 
     @Test
     @DisplayName("Given a year that has not ended or comes before the first receipt year, when an administrator issues its yearly receipt, then it is refused before the issuer is asked")
     void should_refuse_year_before_issuer_when_issued_given_unfinished_or_too_early_year() {
-        assertThatThrownBy(() -> service(NOW).issueForYear(PETR, JANA, Year.of(2027))).isInstanceOf(YearNotYetCompleted.class);
-        assertThatThrownBy(() -> service(NOW).issueForYear(PETR, JANA, Year.of(2025))).isInstanceOf(ReceiptBeforeFirstYear.class);
+        assertThatThrownBy(() -> service(NOW).issueForYear(PETR, BROWSER, JANA, Year.of(2027))).isInstanceOf(YearNotYetCompleted.class);
+        assertThatThrownBy(() -> service(NOW).issueForYear(PETR, BROWSER, JANA, Year.of(2025))).isInstanceOf(ReceiptBeforeFirstYear.class);
 
         verifyNoInteractions(issuer);
     }
@@ -87,14 +93,36 @@ class AdminReceiptsServiceTest {
     }
 
     @Test
-    @DisplayName("Given any donor's receipt, when an administrator reads it, then it comes; an unknown id is not found")
+    @DisplayName("Given any donor's receipt, when an administrator reads it, then it comes with its donor still on record; an unknown id is not found")
     void should_read_any_donors_receipt_when_read_given_its_id() {
         DonationReceiptId unknown = DonationReceiptId.newId(NOW);
         when(receipts.findById(yearly.id())).thenReturn(Optional.of(yearly));
         when(receipts.findById(unknown)).thenReturn(Optional.empty());
+        when(donorRecords.findById(JANA)).thenReturn(Optional.of(jana()));
 
-        assertThat(service(NOW).receipt(yearly.id())).isSameAs(yearly);
+        assertThat(service(NOW).receipt(yearly.id())).isEqualTo(new AdminReceiptView(yearly, false));
         assertThatThrownBy(() -> service(NOW).receipt(unknown)).isInstanceOf(ReceiptNotFound.class);
+    }
+
+    @Test
+    @DisplayName("Given a receipt of a donor whose personal data are erased, when an administrator reads it, then it comes as issued and says the donor is erased")
+    void should_say_donor_is_erased_when_read_given_erased_donor_record() {
+        DonorRecord erased = jana();
+        erased.erase(NOW);
+        when(receipts.findById(yearly.id())).thenReturn(Optional.of(yearly));
+        when(donorRecords.findById(JANA)).thenReturn(Optional.of(erased));
+
+        assertThat(service(NOW).receipt(yearly.id())).isEqualTo(new AdminReceiptView(yearly, true));
+    }
+
+    @Test
+    @DisplayName("Given a connected application, when it issues a receipt, then the issuer is told who asks, so that it can refuse a replacement")
+    void should_pass_connected_application_to_issuer_when_issued_given_connected_application() {
+        when(issuer.issueForYearByAdministrator(PETR, CONNECTED_APPLICATION, JANA, YEAR_2026, TODAY)).thenReturn(yearly);
+        when(issuer.issueForDonationByAdministrator(PETR, CONNECTED_APPLICATION, JANA, MARCH_2026, TODAY)).thenReturn(yearly);
+
+        assertThat(service(NOW).issueForYear(PETR, CONNECTED_APPLICATION, JANA, YEAR_2026)).isSameAs(yearly);
+        assertThat(service(NOW).issueForDonation(PETR, CONNECTED_APPLICATION, JANA, MARCH_2026)).isSameAs(yearly);
     }
 
     @Test
@@ -118,6 +146,6 @@ class AdminReceiptsServiceTest {
     }
 
     private AdminReceiptsService service(Instant now) {
-        return new AdminReceiptsService(issuer, receipts, images, new FirstReceiptYear(YEAR_2026), Clock.fixed(now, ZoneOffset.UTC));
+        return new AdminReceiptsService(issuer, receipts, images, donorRecords, new FirstReceiptYear(YEAR_2026), Clock.fixed(now, ZoneOffset.UTC));
     }
 }

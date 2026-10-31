@@ -607,6 +607,24 @@ class JpaDonationReceiptRepositoryTest {
     }
 
     @Test
+    @DisplayName("Given receipts issued on the last day of a year and the first day of the next, when the administration lists one year of issue, then both of its edge days count and the neighbouring years' do not")
+    void should_include_first_and_last_day_when_listed_given_receipts_on_year_edges() {
+        DonorReference jana = storedDonor("4821937560");
+        receipts.save(issued(jana, NOW, yearlyDocumentIssuedOn(Year.of(2023), "2026-000011", LocalDate.of(2026, 12, 31)), Optional.empty()));
+        receipts.save(issued(jana, NOW.plusSeconds(60), yearlyDocumentIssuedOn(Year.of(2024), "2027-000012", LocalDate.of(2027, 1, 1)),
+                Optional.empty()));
+        receipts.save(issued(jana, NOW.plusSeconds(120), yearlyDocumentIssuedOn(Year.of(2025), "2027-000013", LocalDate.of(2027, 12, 31)),
+                Optional.empty()));
+        receipts.save(issued(jana, NOW.plusSeconds(180), yearlyDocumentIssuedOn(YEAR_2026, "2028-000014", LocalDate.of(2028, 1, 1)),
+                Optional.empty()));
+        flushAndClear();
+
+        assertThat(numbersOf(new ReceiptQuery(Optional.empty(), Optional.of(Year.of(2027)), 0, 50))).containsExactly("2", "2027-000013", "2027-000012");
+        assertThat(numbersOf(new ReceiptQuery(Optional.of(jana), Optional.of(Year.of(2026)), 0, 50))).containsExactly("1", "2026-000011");
+        assertThat(numbersOf(new ReceiptQuery(Optional.of(jana), Optional.of(Year.of(2028)), 0, 50))).containsExactly("1", "2028-000014");
+    }
+
+    @Test
     @DisplayName("Given a receipt that shows a signature image, when asked whether any receipt shows an image, then that image does and another does not")
     void should_tell_whether_any_receipt_shows_image_when_asked_given_signed_receipt() {
         DonorReference jana = storedDonor("4821937560");

@@ -51,5 +51,19 @@
     "field": "$.receiptsAvailableFrom",
     "reason": "1.7 (plan v3): the first receipt year (app.donations.receipt.first-year), from which the donor card offers yearly receipts; the fields before it answer as they did",
     "contract": "docs/api-contract.md, Donor accounts"
+  },
+  {
+    "kind": "log-field",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin <id> performed <enum> on <id> through claude.ai",
+    "reason": "1.7: a connected application issues a receipt, so the existing audit line, unchanged in code, now names both a subject and the connected application (v2 recorded a subject only for browser changes and a connected application only with CHANGE_LOG_LEVEL, which has no subject: on nothing through claude.ai)",
+    "contract": "docs/api-contract.md, Audit trail; Issued receipts in the administration",
+    "security": {
+      "approvedIn": "PENDING",
+      "fields": {
+        "<id>": "first the administrator's donor id (UUID), then the subject's id, here the issued receipt's id (UUID)",
+        "<enum>": "the action code, here ISSUE_RECEIPT",
+        "claude.ai": "the client claim of the token, the host of the connected application's client metadata address"
+      }
+    }
   }
 ]

@@ -12,6 +12,7 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptDocument;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptFingerprint;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptIssueLimitReached;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptReplacementInBrowserOnly;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatureRepository;
 import cz.novanadeje.app.donations.domain.receipt.ReplacedReceipt;
 import cz.novanadeje.app.donations.domain.receipt.Signatory;
@@ -77,21 +78,26 @@ public class DonationReceiptIssuer {
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public DonationReceipt issueForDonationByAdministrator(UUID adminId, DonorReference donor, DonationId donation, LocalDate today) {
+    public DonationReceipt issueForDonationByAdministrator(UUID adminId, AdministrationChannel channel, DonorReference donor, DonationId donation,
+                                                          LocalDate today) {
         receipts.lockDonor(donor);
         requests.requireLiveRecord(donor);
-        return issueByAdministrator(adminId, requests.forDonation(donor, donation, today));
+        return issueByAdministrator(adminId, channel, requests.forDonation(donor, donation, today));
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public DonationReceipt issueForYearByAdministrator(UUID adminId, DonorReference donor, Year year, LocalDate today) {
+    public DonationReceipt issueForYearByAdministrator(UUID adminId, AdministrationChannel channel, DonorReference donor, Year year, LocalDate today) {
         receipts.lockDonor(donor);
         requests.requireLiveRecord(donor);
-        return issueByAdministrator(adminId, requests.forYear(donor, year, today));
+        return issueByAdministrator(adminId, channel, requests.forYear(donor, year, today));
     }
 
-    private DonationReceipt issueByAdministrator(UUID adminId, ReceiptRequest request) {
+    private DonationReceipt issueByAdministrator(UUID adminId, AdministrationChannel channel, ReceiptRequest request) {
         Optional<DonationReceipt> active = activeReceipt(request);
+        Optional<DonationReceipt> replaced = active.filter(previous -> !previous.certifies(request.fingerprint()));
+        if (replaced.isPresent() && !channel.mayReplaceReceipts()) {
+            throw new ReceiptReplacementInBrowserOnly(replaced.get().number());
+        }
         DonationReceipt receipt = issue(request, active);
         if (active.filter(previous -> previous.id().equals(receipt.id())).isEmpty()) {
             events.publishEvent(new AdminActionPerformed(adminId, ISSUE_ACTION, Optional.of(receipt.id().value()), auditDetails(receipt, active),
