@@ -3,6 +3,8 @@ import { expect, test } from './fixtures';
 import { administrator, mockDonorApi, problem, session } from './donor-session';
 
 const ADMINISTRATORS = '/api/admin/donors/administrators';
+const PEOPLE = '/api/admin/content/people';
+const PORTRAIT_ID = '019a1c00-0000-7000-8000-00000000c101';
 const PETR_ID = '019a1c00-0000-7000-8000-00000000a002';
 
 const jana = {
@@ -49,12 +51,47 @@ test.describe('Given an administrator on the administrators page', () => {
       },
     );
 
+    await page.route(
+      (url) => url.pathname === PEOPLE,
+      (route) =>
+        route.fulfill({
+          json: {
+            members: [
+              {
+                id: '019a1c00-0000-7000-8000-00000000c001',
+                name: 'Jana Nováková',
+                role: 'Zakladatelka',
+                position: 0,
+                onBoard: true,
+                boardNote: null,
+                featured: true,
+                portrait: {
+                  id: PORTRAIT_ID,
+                  url: `/api/content/media/${PORTRAIT_ID}`,
+                  width: 640,
+                  height: 640,
+                },
+                webSignature: null,
+                personalEmail: 'jana@example.cz',
+                fundEmail: null,
+                linkedToAccount: true,
+              },
+            ],
+            note: null,
+            footnote: null,
+          },
+        }),
+    );
+
     await page.goto('/sprava/spravci');
 
     await expect(page).toHaveTitle('Správci | Správa | Nová naděje – nadační fond');
     await expect(page.getByRole('heading', { level: 1, name: 'Správci' })).toBeFocused();
-    await expect(page.locator('tbody tr')).toHaveCount(1);
-    await expect(page.locator('tbody tr').first()).toContainText('to jste vy');
+    await expect(page.locator('.administrator-row')).toHaveCount(1);
+    await expect(page.locator('.administrator-row').first()).toContainText('To jste vy');
+    await expect(
+      page.locator('.administrator-row').first().locator('app-avatar img'),
+    ).toHaveAttribute('src', `/api/content/media/${PORTRAIT_ID}?w=480`);
 
     await page.getByLabel('E-mail dárce').fill('petr@example.cz');
     await page.getByRole('button', { name: 'Přidat správce' }).click();
@@ -63,10 +100,11 @@ test.describe('Given an administrator on the administrators page', () => {
       'Petr Svoboda je teď správce. Správa se mu otevře, až se přihlásí s kódem z ověřovací aplikace nebo přístupovým klíčem.',
     );
     expect(posted).toEqual([{ email: 'petr@example.cz' }]);
-    await expect(page.locator('tbody tr')).toHaveCount(2);
-    await expect(page.locator('tbody tr').nth(1)).toContainText(
-      'vypnuté, správa se mu otevře jen přístupovým klíčem',
+    await expect(page.locator('.administrator-row')).toHaveCount(2);
+    await expect(page.locator('.administrator-row').nth(1)).toContainText(
+      'Dvoufaktorové ověření vypnuté',
     );
+    await expect(page.locator('.administrator-row').nth(1).locator('app-avatar')).toHaveText('PS');
     await expect(page.getByLabel('E-mail dárce')).toHaveValue('');
   });
 
@@ -131,7 +169,7 @@ test.describe('Given an administrator on the administrators page', () => {
     );
 
     await page.goto('/sprava/spravci');
-    const petrRow = page.locator('tbody tr').nth(1);
+    const petrRow = page.locator('.administrator-row').nth(1);
 
     await petrRow.getByRole('button', { name: 'Vypnout dvoufaktorové ověření' }).click();
     await expect(petrRow).toContainText('Ověřili jste, že žádá majitel účtu');
@@ -147,7 +185,7 @@ test.describe('Given an administrator on the administrators page', () => {
     await expect(page.getByRole('status').filter({ hasNotText: 'Načítáme' })).toContainText(
       'Dvoufaktorové ověření u Petr Svoboda je vypnuté',
     );
-    await expect(petrRow).toContainText('vypnuté, správa se mu otevře jen přístupovým klíčem');
+    await expect(petrRow).toContainText('Správa se mu otevře jen přístupovým klíčem.');
     await expect(
       petrRow.getByRole('button', { name: 'Vypnout dvoufaktorové ověření' }),
     ).toHaveCount(0);
@@ -161,7 +199,7 @@ test.describe('Given an administrator on the administrators page', () => {
     await expect(page.getByRole('status').filter({ hasNotText: 'Načítáme' })).toHaveText(
       'Petr Svoboda už není správce. Všechna jeho přihlášení jsme ukončili.',
     );
-    await expect(page.locator('tbody tr')).toHaveCount(1);
+    await expect(page.locator('.administrator-row')).toHaveCount(1);
     expect(calls).toEqual(['reset', 'DELETE']);
   });
 });

@@ -1,0 +1,9 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/administrators/admin-administrators.spec.ts > Given an administrator on the administrators page > when the list arrives, then every administrator shows name, e-mail and whether two-factor authentication is on, and the signed-in one has no buttons",
+    "reason": "PR #269 (Jakub 2026-10-31): the administrators are listed in the look of the people of the foundation, rows with a round portrait or initials, the e-mail under the name and badges instead of table columns",
+    "replacement": "src/app/features/admin/administrators/admin-administrators.spec.ts > Given an administrator on the administrators page > when the list arrives, then every administrator is a row with a round avatar, the name, the e-mail and badges, and the signed-in one has no buttons"
+  }
+]
