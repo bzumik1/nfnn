@@ -1014,6 +1014,8 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
               preferredLocale: 'cs',
               registeredAt: '2026-10-17T10:00:00Z',
             },
+            yearlyReceiptsAvailableThrough: 2025,
+            receiptsAvailableFrom: 2026,
             bankAccounts: [
               bankAccountItem({
                 donationCount: 2,

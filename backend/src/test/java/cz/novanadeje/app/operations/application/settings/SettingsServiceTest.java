@@ -93,7 +93,8 @@ class SettingsServiceTest {
     @DisplayName("Given the first administrator's e-mail, when an administrator changes it here, then it is refused")
     void should_refuse_when_saved_given_setup_only_setting() {
         assertThatThrownBy(() -> settings.change(ADMIN, List.of(new SettingChange(Setting.ADMIN_EMAILS, "x@example.cz"))))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOfSatisfying(SettingsRejected.class, rejected -> assertThat(rejected.errors())
+                        .containsExactly(SettingError.of(Setting.ADMIN_EMAILS, SettingProblem.NOT_IN_ADMINISTRATION)));
     }
 
     @Test

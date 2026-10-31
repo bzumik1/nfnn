@@ -297,5 +297,16 @@
     "replacement": "test/tools.spec.ts > Given an administrator connected with the reading permission only > when the receipt signature is asked, then it names the signatory, their receipt role and the signatures uploaded per person, without any image",
     "reason": "1.16: the tool reads the signatory and the signatures per person",
     "contract": "docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "kind": "log-field",
+    "line": "content.infrastructure.people.ContentFoundationPeople: Portrait <id> cannot be prepared for print, the receipt is issued without it",
+    "reason": "1.16 round 1 (S-m2): a portrait whose stored image cannot be decoded freezes the receipt without it, and the warning names only the media id",
+    "security": {
+      "approvedIn": "PENDING",
+      "fields": {
+        "<id>": "the media id of the portrait"
+      }
+    }
   }
 ]

@@ -124,12 +124,44 @@ Feature: An administrator connects an application such as Claude to the administ
       | POST   | /api/admin/donations/symbol-claims/{id}/reverse                     |
       | DELETE | /api/admin/donations/symbol-claims/{id}                             |
       | POST   | /api/admin/operations/backups/nfnn-2026-10-23_0300.dump.age/restore |
+      | GET    | /api/admin/operations/backups/nfnn-2026-10-23_0300.dump.age         |
       | POST   | /api/admin/donations/receipt-signatures/{id}                        |
       | POST   | /api/admin/operations/backups/key/reveal                            |
       | POST   | /api/admin/operations/backups/key/confirmation                      |
       | DELETE | /api/admin/donations/receipt-signatures/{id}                        |
       | PUT    | /api/admin/donations/receipt-signatory                              |
       | GET    | /api/admin/donations/receipt-signatures/{id}                        |
+
+  Scenario: A connected application issues a first receipt and gets it again, but replacing an issued receipt is left to the browser
+    Given today is 2026-12-20
+    And the bank account has these movements:
+      | id   | date       | amount  | account    | bankCode | name       | variableSymbol |
+      | 3001 | 2026-11-15 | 2500.00 | 2900233333 | 2010     | Novák Petr | {Petr}         |
+    And the application starts the import
+    And today is 2027-01-15
+    And "Jana" connected the application "https://claude.ai/.well-known/oauth-client" with scope "admin:read admin:write"
+    When the connector exchanges the connector token for an API token
+    And the exchanged API token issues the yearly receipt of "Petr" for 2026
+    Then the response status is 200
+    And the issued receipt has number "2027-000001"
+    When the exchanged API token issues the yearly receipt of "Petr" for 2026
+    Then the response status is 200
+    And the issued receipt has number "2027-000001"
+    When "Petr" changes his address to street "Nová 7", postal code "405 02" and city "Děčín"
+    And the exchanged API token issues the yearly receipt of "Petr" for 2026
+    Then the response status is 403
+    And the problem type ends with "donations/receipt-replacement-in-browser-only"
+    And the problem has the title "Nahradit potvrzení jde jen v prohlížeči"
+    And 1 receipt is stored
+    When "Jana" issues in the administration the yearly receipt of "Petr" for 2026
+    Then the response status is 200
+    And the issued receipt has number "2027-000002"
+    And 1 receipt is active
+    When "Jana" asks for the admin actions
+    Then the admin actions came through these applications:
+      | action        | client    |
+      | ISSUE_RECEIPT |           |
+      | ISSUE_RECEIPT | claude.ai |
 
   Scenario: A donor without the administrator role cannot connect an application
     When "Petr" approves the connection for "https://claude.ai/.well-known/oauth-client" with scope "admin:read" and state "xyz"

@@ -8,6 +8,7 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptDocument;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptKind;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptParty;
 import cz.novanadeje.app.shared.domain.DonorType;
+import cz.novanadeje.app.shared.domain.ErasedPersonalData;
 import cz.novanadeje.app.shared.domain.PostalAddress;
 
 import java.time.LocalDate;
@@ -31,6 +32,13 @@ public record FrozenReceiptResponse(int schemaVersion, ReceiptKind kind, String 
                         frozen.signatureImage().map(ImageResponse::of).orElse(null), frozen.portraitImage().map(ImageResponse::of).orElse(null)),
                 new TextsResponse(frozen.texts().czech(), frozen.texts().english().orElse(null)),
                 new VerificationResponse(frozen.verification().keyId().value(), frozen.verification().qrText()));
+    }
+
+    FrozenReceiptResponse withoutErasedDonor() {
+        DonorResponse erased = new DonorResponse(donor.type(), ErasedPersonalData.NAME, null, AddressResponse.from(ErasedPersonalData.ADDRESS),
+                donor.variableSymbol());
+        return new FrozenReceiptResponse(schemaVersion, kind, number, issuedOn, locale, year, replaces, foundation, erased, gifts, total, signatory,
+                texts, new VerificationResponse(verification.keyId(), null));
     }
 
     public record ReplacedResponse(String number, LocalDate issuedOn) {

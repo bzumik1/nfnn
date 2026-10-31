@@ -8,7 +8,13 @@ import cz.novanadeje.app.donations.domain.receipt.DonationReceiptId;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptKind;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptPage;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptQuery;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
@@ -22,6 +28,8 @@ import java.util.stream.Collectors;
 
 @Repository
 class JpaDonationReceiptRepository implements DonationReceiptRepository {
+
+    private static final Sort NEWEST_ISSUE_FIRST = Sort.by(Sort.Order.desc("issuedAt"), Sort.Order.desc("number"));
 
     private final IssuedReceiptJpaRepository jpa;
 
@@ -92,6 +100,22 @@ class JpaDonationReceiptRepository implements DonationReceiptRepository {
     @Override
     public boolean showsImage(DonorReference donor, ContentDigest image) {
         return jpa.showsImage(donor.value(), image.value());
+    }
+
+    @Override
+    public boolean anyShowsSignatureImage(ContentDigest image) {
+        return jpa.existsBySignatureImageSha256(image.value());
+    }
+
+    @Override
+    public ReceiptPage findNewestFirst(ReceiptQuery query) {
+        Pageable page = PageRequest.of(query.page(), query.limit(), NEWEST_ISSUE_FIRST);
+        Page<IssuedReceiptJpaEntity> found = query.issuedIn()
+                .map(year -> query.donor()
+                        .map(donor -> jpa.findByDonorIdAndIssuedOnBetween(donor.value(), year.atDay(1), year.atMonth(12).atEndOfMonth(), page))
+                        .orElseGet(() -> jpa.findByIssuedOnBetween(year.atDay(1), year.atMonth(12).atEndOfMonth(), page)))
+                .orElseGet(() -> query.donor().map(donor -> jpa.findByDonorId(donor.value(), page)).orElseGet(() -> jpa.findAllBy(page)));
+        return new ReceiptPage(found.stream().map(IssuedReceiptJpaEntity::toDomain).toList(), found.getTotalElements());
     }
 
     @Override

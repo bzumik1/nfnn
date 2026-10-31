@@ -2,6 +2,8 @@ package cz.novanadeje.app.donations.infrastructure.persistence;
 
 import cz.novanadeje.app.donations.domain.receipt.ReceiptKind;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -9,6 +11,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -36,6 +39,16 @@ interface IssuedReceiptJpaRepository extends JpaRepository<IssuedReceiptJpaEntit
 
     @Query("select count(r) > 0 from IssuedReceiptJpaEntity r where r.donorId = :donorId and (r.signatureImageSha256 = :image or r.portraitImageSha256 = :image)")
     boolean showsImage(@Param("donorId") UUID donorId, @Param("image") String image);
+
+    boolean existsBySignatureImageSha256(String signatureImageSha256);
+
+    Page<IssuedReceiptJpaEntity> findAllBy(Pageable page);
+
+    Page<IssuedReceiptJpaEntity> findByDonorId(UUID donorId, Pageable page);
+
+    Page<IssuedReceiptJpaEntity> findByIssuedOnBetween(LocalDate from, LocalDate to, Pageable page);
+
+    Page<IssuedReceiptJpaEntity> findByDonorIdAndIssuedOnBetween(UUID donorId, LocalDate from, LocalDate to, Pageable page);
 
     @Transactional
     @Query(nativeQuery = true, value = "select nextval('donation_receipt_number_seq')")

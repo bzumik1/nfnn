@@ -29,6 +29,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class ConnectedAppsStepDefinitions {
 
+    private static final Map<String, String> TOKEN_ERROR_DESCRIPTIONS = Map.of(
+            "invalid_grant", "The grant is invalid, expired, already used or issued to another client.",
+            "invalid_client", "The client is not known or does not match.",
+            "invalid_target", "Tokens are not issued for the requested resource.",
+            "invalid_request", "The request lacks a parameter or carries one that is not valid.",
+            "unsupported_grant_type", "grant_type is not supported");
     private static final String METADATA_PATH = "/.well-known/oauth-authorization-server";
     private static final String CLIENT_PATH = "/api/donors/oauth/client";
     private static final String AUTHORIZE_PATH = "/api/donors/oauth/authorize";
@@ -407,7 +413,7 @@ public class ConnectedAppsStepDefinitions {
     @Then("the token error is {string}")
     public void theTokenErrorIs(String error) {
         assertThat(api.lastResponseJson().get("error").asString()).isEqualTo(error);
-        assertThat(api.lastResponseJson().get("error_description").asString()).isNotBlank();
+        assertThat(api.lastResponseJson().get("error_description").asString()).isEqualTo(TOKEN_ERROR_DESCRIPTIONS.get(error));
         assertThat(api.lastResponse().getHeaders().getCacheControl()).isEqualTo("no-store");
     }
 

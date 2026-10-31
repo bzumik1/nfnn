@@ -2,6 +2,7 @@ package cz.novanadeje.app.operations.interfaces.rest;
 
 import cz.novanadeje.app.operations.domain.settings.SettingError;
 import cz.novanadeje.app.operations.domain.settings.SettingsRejected;
+import cz.novanadeje.app.shared.interfaces.rest.ProblemMessages;
 import cz.novanadeje.app.shared.interfaces.rest.ProblemTypes;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
@@ -20,10 +21,10 @@ import java.util.Map;
 @RestControllerAdvice(assignableTypes = {SetupController.class, AdminSettingsController.class})
 class SettingsProblemHandler {
 
-    private final MessageSource messages;
+    private final ProblemMessages texts;
 
     SettingsProblemHandler(MessageSource messages) {
-        this.messages = messages;
+        this.texts = new ProblemMessages(messages);
     }
 
     @ExceptionHandler(SettingsRejected.class)
@@ -31,8 +32,8 @@ class SettingsProblemHandler {
         Locale locale = LocaleContextHolder.getLocale();
         ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
         problem.setType(ProblemTypes.of(SettingsRejected.CODE));
-        problem.setTitle(messages.getMessage("problem." + SettingsRejected.CODE + ".title", null, locale));
-        problem.setDetail(messages.getMessage("problem." + SettingsRejected.CODE + ".detail", null, locale));
+        problem.setTitle(texts.text("problem." + SettingsRejected.CODE + ".title", locale));
+        problem.setDetail(texts.text("problem." + SettingsRejected.CODE + ".detail", locale));
         problem.setProperty("errors", errors(rejected.errors(), locale));
         return problem;
     }
@@ -42,7 +43,7 @@ class SettingsProblemHandler {
                 .map(error -> Map.of(
                         "field", error.setting().map(Enum::name).orElse(""),
                         "code", error.problem().code(),
-                        "message", messages.getMessage("operations.settings.problem." + error.problem().code(), null, locale)))
+                        "message", texts.text("operations.settings.problem." + error.problem().code(), locale)))
                 .toList();
     }
 }

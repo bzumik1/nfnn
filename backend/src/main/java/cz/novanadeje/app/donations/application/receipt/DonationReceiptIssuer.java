@@ -11,10 +11,13 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptDocument;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptFingerprint;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptIssueLimitReached;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptReplacementInBrowserOnly;
 import cz.novanadeje.app.donations.domain.receipt.ReplacedReceipt;
+import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +28,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Year;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class DonationReceiptIssuer {
@@ -33,21 +37,24 @@ public class DonationReceiptIssuer {
     private static final long SERIAL_WORTH_A_WARNING = (ReceiptNumber.LAST_SERIAL + 1) / 10 * 9;
     static final int REPLACEMENTS_PER_DONOR_A_DAY = 20;
     private static final Duration ISSUE_LIMIT_WINDOW = Duration.ofHours(24);
+    static final String ISSUE_ACTION = "ISSUE_RECEIPT";
 
     private final DonationReceiptRepository receipts;
     private final ReceiptRequestReader requests;
     private final ReceiptFreezer freezer;
     private final IssuingSignatory signatories;
     private final FoundationIdentity foundation;
+    private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public DonationReceiptIssuer(DonationReceiptRepository receipts, ReceiptRequestReader requests, ReceiptFreezer freezer,
-                                 IssuingSignatory signatories, FoundationIdentity foundation, Clock clock) {
+                                 IssuingSignatory signatories, FoundationIdentity foundation, ApplicationEventPublisher events, Clock clock) {
         this.receipts = receipts;
         this.requests = requests;
         this.freezer = freezer;
         this.signatories = signatories;
         this.foundation = foundation;
+        this.events = events;
         this.clock = clock;
     }
 
@@ -63,8 +70,47 @@ public class DonationReceiptIssuer {
         return issue(requests.forYear(donor, year, today));
     }
 
-    private DonationReceipt issue(ReceiptRequest request) {
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public DonationReceipt issueForDonationByAdministrator(UUID adminId, AdministrationChannel channel, DonorReference donor, DonationId donation,
+                                                          LocalDate today) {
+        receipts.lockDonor(donor);
+        requests.requireLiveRecord(donor);
+        return issueByAdministrator(adminId, channel, requests.forDonation(donor, donation, today));
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public DonationReceipt issueForYearByAdministrator(UUID adminId, AdministrationChannel channel, DonorReference donor, Year year, LocalDate today) {
+        receipts.lockDonor(donor);
+        requests.requireLiveRecord(donor);
+        return issueByAdministrator(adminId, channel, requests.forYear(donor, year, today));
+    }
+
+    private DonationReceipt issueByAdministrator(UUID adminId, AdministrationChannel channel, ReceiptRequest request) {
         Optional<DonationReceipt> active = activeReceipt(request);
+        Optional<DonationReceipt> replaced = active.filter(previous -> !previous.certifies(request.fingerprint()));
+        if (replaced.isPresent() && !channel.mayReplaceReceipts()) {
+            throw new ReceiptReplacementInBrowserOnly(replaced.get().number());
+        }
+        DonationReceipt receipt = issue(request, active);
+        if (active.filter(previous -> previous.id().equals(receipt.id())).isEmpty()) {
+            events.publishEvent(new AdminActionPerformed(adminId, ISSUE_ACTION, Optional.of(receipt.id().value()), auditDetails(receipt, active),
+                    receipt.issuedAt()));
+        }
+        return receipt;
+    }
+
+    private static String auditDetails(DonationReceipt receipt, Optional<DonationReceipt> replaced) {
+        String subject = receipt.year().map(year -> "za rok " + year)
+                .orElseGet(() -> "za dar " + receipt.donation().map(donation -> donation.value().toString()).orElseThrow());
+        return "Potvrzení " + receipt.number() + " " + subject + " vystaveno dárci " + receipt.donor()
+                + replaced.map(old -> "; nahrazuje potvrzení " + old.number()).orElse("");
+    }
+
+    private DonationReceipt issue(ReceiptRequest request) {
+        return issue(request, activeReceipt(request));
+    }
+
+    private DonationReceipt issue(ReceiptRequest request, Optional<DonationReceipt> active) {
         ReceiptFingerprint fingerprint = request.fingerprint();
         if (active.isPresent() && active.get().certifies(fingerprint)) {
             LOG.debug("Returning issued receipt {} again for donor {}", active.get().number(), request.donor());
