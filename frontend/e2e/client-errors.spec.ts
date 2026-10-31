@@ -1,11 +1,19 @@
 import { Request } from '@playwright/test';
 
+import { mockDonorApi } from './donor-session';
 import { expect, test } from './fixtures';
 import {
   openHomeThenLoseNewChunks,
   openPolicyFromFooter,
   chunkLoadPageHeading,
 } from './lost-chunks';
+import {
+  donations,
+  ISSUING,
+  openReceiptsAfterSignIn,
+  yearlyButton,
+  yearlyLine,
+} from './receipt-donations';
 
 const CANARY = 'Zxqv Kanárek 7781,77 Kč 2099-778177';
 
@@ -68,6 +76,46 @@ test.describe('Given a visitor whose open tab is older than the deployed version
     expect(reports).toEqual([
       { kind: 'chunk-load', place: 'navigation', load: 0 },
       { kind: 'chunk-load', place: 'navigation', load: 1 },
+    ]);
+  });
+});
+
+test.describe('Given a signed-in donor whose open tab is older than a deploy that changed the receipt fonts', () => {
+  test('when they download a receipt, then one pdf-load report of closed values reaches the server and the page loads once more and finishes the download', async ({
+    page,
+  }) => {
+    await mockDonorApi(page, { ...donations, receipts: ISSUING });
+    const reports: unknown[] = [];
+    await page.route('/api/operations/client-errors', (route) => {
+      reports.push(route.request().postDataJSON());
+      return route.fulfill({ status: 204 });
+    });
+    let fontsGone = true;
+    await page.route('**/receipt-fonts/**', (route) =>
+      fontsGone ? route.fulfill({ status: 404, body: '' }) : route.continue(),
+    );
+    await openReceiptsAfterSignIn(page);
+    page.once('framenavigated', () => (fontsGone = false));
+
+    const [saved] = await Promise.all([page.waitForEvent('download'), yearlyButton(page).click()]);
+
+    expect(saved.suggestedFilename()).toBe('potvrzeni-o-darech-2025.pdf');
+    await expect(page).toHaveURL(/\/darce\/potvrzeni$/);
+    await expect(yearlyLine(page)).toHaveText(
+      'Potvrzení potvrzeni-o-darech-2025.pdf je stažené. Najdete ho ve stažených souborech.',
+    );
+    expect(reports).toEqual([
+      {
+        kind: 'pdf-load',
+        place: 'global',
+        name: 'NotFoundError',
+        appVersion: 'dev',
+        browser: 'chrome',
+        browserMajor: expect.any(Number),
+        os: expect.stringMatching(/^(windows|macos|linux)$/),
+        display: 'browser',
+        count: 1,
+      },
     ]);
   });
 });

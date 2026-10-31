@@ -1,5 +1,7 @@
 import { inject, Injectable, InjectionToken } from '@angular/core';
-import { defer, from, Observable, of, switchMap, timeout } from 'rxjs';
+import { defer, from, Observable, of, switchMap, tap, timeout } from 'rxjs';
+import { ErrorReporter } from '../../../core/errors/error-reporter';
+import { ErrorKind, ErrorName, errorNameOf } from '../../../core/errors/error-vocabulary';
 import { DownloadedFile } from '../donations-api';
 import { ReceiptSubject } from './frozen-receipt';
 import { ReceiptArt, receiptArt } from './receipt-art';
@@ -29,10 +31,22 @@ export type ReceiptPdfFailureReason =
   'tools-missing' | 'fonts' | 'image' | 'drawing' | 'unprintable' | 'style';
 
 export class ReceiptPdfFailure extends Error {
-  constructor(readonly reason: ReceiptPdfFailureReason) {
+  constructor(
+    readonly reason: ReceiptPdfFailureReason,
+    readonly errorName: ErrorName = 'Other',
+  ) {
     super(`The receipt PDF could not be drawn: ${reason}.`);
   }
 }
+
+const REPORTED_AS: Readonly<Record<ReceiptPdfFailureReason, ErrorKind | null>> = {
+  'tools-missing': 'pdf-load',
+  fonts: 'pdf-load',
+  image: 'pdf-render',
+  drawing: 'pdf-render',
+  style: 'pdf-render',
+  unprintable: null,
+};
 
 export interface ReceiptPdfEnvironment {
   worker(): ReceiptWorker;
@@ -59,6 +73,7 @@ export const RECEIPT_DRAWING_TIMEOUT_MS = 120_000;
 export class ReceiptPdf {
   private readonly api = inject(ReceiptsApi);
   private readonly environment = inject(RECEIPT_PDF_ENVIRONMENT);
+  private readonly reporter = inject(ErrorReporter);
 
   draw(subject: ReceiptSubject): Observable<ReceiptPdfEvent> {
     return new Observable<ReceiptPdfEvent>((subscriber) => {
@@ -86,9 +101,9 @@ export class ReceiptPdf {
               pages = estimatedReceiptPages(issued.receipt.gifts.length, document.bilingual);
             } catch (failure: unknown) {
               subscriber.error(
-                new ReceiptPdfFailure(
-                  failure instanceof ReceiptUnprintable ? 'unprintable' : 'drawing',
-                ),
+                failure instanceof ReceiptUnprintable
+                  ? new ReceiptPdfFailure('unprintable')
+                  : new ReceiptPdfFailure('drawing', errorNameOf(failure)),
               );
               return;
             }
@@ -96,12 +111,17 @@ export class ReceiptPdf {
             let ready = false;
             try {
               worker = this.environment.worker();
-            } catch {
-              subscriber.error(new ReceiptPdfFailure('tools-missing'));
+            } catch (failure: unknown) {
+              subscriber.error(new ReceiptPdfFailure('tools-missing', errorNameOf(failure)));
               return;
             }
-            worker.onerror = () =>
-              subscriber.error(new ReceiptPdfFailure(ready ? 'drawing' : 'tools-missing'));
+            worker.onerror = (event) =>
+              subscriber.error(
+                new ReceiptPdfFailure(
+                  ready ? 'drawing' : 'tools-missing',
+                  errorNameOf((event as Partial<ErrorEvent>).error),
+                ),
+              );
             worker.onmessage = ({ data }) => {
               switch (data.kind) {
                 case 'ready':
@@ -117,6 +137,7 @@ export class ReceiptPdf {
                     subscriber.error(
                       new ReceiptPdfFailure(
                         failure instanceof ReceiptStyleRefused ? 'style' : 'drawing',
+                        errorNameOf(failure),
                       ),
                     );
                   }
@@ -137,7 +158,7 @@ export class ReceiptPdf {
                   subscriber.complete();
                   break;
                 case 'failed':
-                  subscriber.error(new ReceiptPdfFailure(data.reason));
+                  subscriber.error(new ReceiptPdfFailure(data.reason, data.name));
                   break;
               }
             };
@@ -152,10 +173,21 @@ export class ReceiptPdf {
       timeout({
         each: RECEIPT_DRAWING_TIMEOUT_MS,
         with: () => {
-          throw new ReceiptPdfFailure('drawing');
+          throw new ReceiptPdfFailure('drawing', 'TimeoutError');
         },
       }),
+      tap({ error: (failure: unknown) => this.reportFailure(failure) }),
     );
+  }
+
+  private reportFailure(failure: unknown): void {
+    if (!(failure instanceof ReceiptPdfFailure)) {
+      return;
+    }
+    const kind = REPORTED_AS[failure.reason];
+    if (kind !== null) {
+      this.reporter.report(kind, 'global', { name: failure.errorName });
+    }
   }
 
   private art(sha256: string | null): Observable<ReceiptArt | null> {
@@ -166,8 +198,8 @@ export class ReceiptPdf {
       switchMap((image) =>
         defer(() =>
           from(
-            receiptArt(image, sha256).catch(() => {
-              throw new ReceiptPdfFailure('image');
+            receiptArt(image, sha256).catch((failure: unknown) => {
+              throw new ReceiptPdfFailure('image', errorNameOf(failure));
             }),
           ),
         ),
