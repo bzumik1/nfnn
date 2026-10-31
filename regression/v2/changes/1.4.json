@@ -660,5 +660,21 @@
     "test": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when the visitor picked 1 000 Kč and the section opens again while the site stays open, then 1 000 Kč stays chosen and is asked for",
     "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): main (#226) checked that the remembered 1 000 Kč was asked for again at /api/donations/payment-qr; that endpoint is gone, so the test now checks that no request leaves and the QR of 1 000 Kč is drawn from the payment details already held",
     "replacement": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when the visitor picked 1 000 Kč and the section opens again while the site stays open, then 1 000 Kč stays chosen and its QR is drawn from the details already held"
+  },
+  {
+    "path": "POST /api/donors/me/second-factor/setup",
+    "scenario": "donations/admin_receipt_signing_keys: *",
+    "kind": "body",
+    "field": "$.qrCode",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the authenticator set-up answers the secret and the otpauth URI only, and the browser draws the QR from otpauthUri (1.3), so qrCode is removed",
+    "contract": "docs/api-contract.md, Second factor (POST /api/donors/me/second-factor/setup)"
+  },
+  {
+    "path": "POST /api/donors/me/second-factor/setup",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "body",
+    "field": "$.qrCode",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the authenticator set-up answers the secret and the otpauth URI only, and the browser draws the QR from otpauthUri (1.3), so qrCode is removed",
+    "contract": "docs/api-contract.md, Second factor (POST /api/donors/me/second-factor/setup)"
   }
 ]
