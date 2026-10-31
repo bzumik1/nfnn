@@ -212,6 +212,18 @@ describe('Given the browser receipt PDF', () => {
     expect(environment.workers).toHaveLength(0);
   });
 
+  it('when the receipt has no list of gifts, then the drawing fails at once instead of waiting for the timeout', () => {
+    const { gifts: _gifts, ...withoutGifts } = frozenCase(SINGLE_PERSON_CS);
+    draw({ donationId: 'd-1' });
+    http
+      .expectOne('/api/donations/me/receipts')
+      .flush(issued(withoutGifts as unknown as FrozenReceipt));
+
+    expect(failure).toBeInstanceOf(ReceiptPdfFailure);
+    expect((failure as ReceiptPdfFailure).reason).toBe('drawing');
+    expect(environment.workers).toHaveLength(0);
+  });
+
   it('when the browser refuses to start the worker, then the tools are missing', () => {
     vi.spyOn(environment, 'worker').mockImplementation(() => {
       throw new DOMException('blocked', 'SecurityError');
