@@ -26,6 +26,18 @@ const EDGE_ONLY = [
   { method: 'GET', path: '/.well-known/oauth-protected-resource/mcp' },
 ];
 const APP_SHELL = ['/', '/overit'];
+const CLIENT_ERRORS = '/api/operations/client-errors';
+const CLIENT_ERROR_BODY_LIMIT = 4096;
+const CLIENT_ERROR_REPORT = {
+  kind: 'unexpected',
+  place: 'global',
+  name: 'Error',
+  appVersion: 'dev',
+  browser: 'other',
+  os: 'other',
+  display: 'browser',
+  count: 1,
+};
 
 const failures = [];
 const fail = (message) => failures.push(message);
@@ -149,6 +161,28 @@ if (limited) {
   fail(`POST ${signIn.path} never answered 429 within ${SIGN_IN_ATTEMPTS} sign-ins`);
 }
 
+const clientError = (body) => ({
+  method: 'POST',
+  path: CLIENT_ERRORS,
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(body),
+});
+const report = await request(clientError(CLIENT_ERROR_REPORT));
+seen.add(report.status);
+if (report.status !== 204) {
+  fail(`POST ${CLIENT_ERRORS} answered ${report.status} to a valid report, expected 204`);
+}
+expectApiNoStore(`POST ${CLIENT_ERRORS}`, report);
+const oversized = await request(
+  clientError({ ...CLIENT_ERROR_REPORT, padding: 'x'.repeat(CLIENT_ERROR_BODY_LIMIT) }),
+);
+if (oversized.status !== 413) {
+  fail(
+    `POST ${CLIENT_ERRORS} answered ${oversized.status} to a body over ${CLIENT_ERROR_BODY_LIMIT} bytes, expected 413 from nginx`,
+  );
+}
+expectEdgeNoStore(`POST ${CLIENT_ERRORS} over the body limit`, oversized);
+
 for (const probe of EDGE_ONLY) {
   expectEdgeNoStore(`${probe.method} ${probe.path}`, await request(probe));
 }
@@ -170,5 +204,5 @@ if (failures.length > 0) {
   process.exit(1);
 }
 console.log(
-  `edge caching: /api answers ${[...seen].sort().join(', ')} carry no-store for the browser and Cloudflare, /mcp and /.well-known no-store for Cloudflare, the app shell no-cache`,
+  `edge caching: /api answers ${[...seen].sort().join(', ')} carry no-store for the browser and Cloudflare, /mcp and /.well-known no-store for Cloudflare, browser error reports over 4 kB refused by nginx, the app shell no-cache`,
 );
