@@ -69,8 +69,12 @@ public class SettingsService {
 
     @Transactional
     public List<Setting> change(UUID adminId, List<SettingChange> changes) {
-        if (changes.stream().anyMatch(change -> !change.setting().isAdministered())) {
-            throw new IllegalArgumentException("Only settings of the administration change here");
+        List<SettingError> foreign = changes.stream()
+                .filter(change -> !change.setting().isAdministered())
+                .map(change -> SettingError.of(change.setting(), SettingProblem.NOT_IN_ADMINISTRATION))
+                .toList();
+        if (!foreign.isEmpty()) {
+            throw new SettingsRejected(foreign);
         }
         requirePasswordForAnotherMailServer(changes);
         Instant now = clock.instant();

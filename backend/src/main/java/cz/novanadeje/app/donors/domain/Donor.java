@@ -15,6 +15,7 @@ import java.util.Set;
 public final class Donor {
 
     public static final int MAX_NAME_LENGTH = 160;
+    public static final String NOT_BLANK_NAME = "(?s).*\\P{javaWhitespace}.*";
 
     private final DonorId id;
     private final DonorType type;

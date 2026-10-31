@@ -565,6 +565,27 @@ describe('Given a slice file that is not a valid declaration', () => {
     }
   });
 
+  it('when a path starts with a method a client chose itself and a context, then the comparison accepts it', () => {
+    const result = compare(
+      workspace({
+        changes: {
+          '0.9.json': [{ ...body, path: 'QKZW1561 /api/content/news', scenario: anywhere }],
+        },
+      }),
+    );
+    assert.equal(result.status, 0, result.output);
+  });
+
+  it('when a method is a glob or not upper case, then the comparison refuses it', () => {
+    for (const path of [
+      'QKZW* /api/content/news',
+      'Qkzw1561 /api/content/news',
+      '1561 /api/content/news',
+    ]) {
+      refused({ ...body, path, scenario: anywhere }, /entry 1.*path.*METHOD \/api\/<context>\//);
+    }
+  });
+
   it('when a path starts with a context, the actuator, a well-known document or OAuth, then the comparison accepts it', () => {
     for (const path of [
       'GET /api/admin/donors/{id}',
