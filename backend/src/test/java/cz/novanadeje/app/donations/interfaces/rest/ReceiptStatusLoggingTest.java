@@ -20,6 +20,7 @@ import cz.novanadeje.app.shared.domain.UuidV7;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 import cz.novanadeje.app.support.DatabaseCleaner;
 import cz.novanadeje.app.support.RateLimiterWindows;
+import cz.novanadeje.app.support.ReceiptSignatories;
 import cz.novanadeje.app.support.ServerReceiptSigningKey;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -101,6 +102,7 @@ class ReceiptStatusLoggingTest {
     void startFromEmptyTablesAndFreshWindows() {
         new DatabaseCleaner(jdbc).emptyAllTables();
         ServerReceiptSigningKey.storeAfterEmptyTables(context);
+        ReceiptSignatories.chooseAfterEmptyTables(jdbc, clock.instant());
         RateLimiterWindows.reset(context);
     }
 
