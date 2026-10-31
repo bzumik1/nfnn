@@ -1,7 +1,10 @@
 import { sharedCases } from '../../../testing/shared-cases';
 import {
+  fillReceiptText,
   formatReceiptAmount,
+  formatReceiptAmountEn,
   formatReceiptDate,
+  formatReceiptDateEn,
   formatReceiptDonor,
   receiptDisplay,
 } from './receipt-format';
@@ -45,6 +48,83 @@ describe('Given the shared receipt formatting cases of Czech amounts', () => {
       expect(formatReceiptAmount(amount.minor)).toBe(amount.text);
     });
   }
+});
+
+function casesOf(format: string): { name: string; value: string | number; text: string }[] {
+  return FORMATTING.flatMap((sharedCase) => {
+    const input = sharedCase.input as { format: string; amountMinor?: number; date?: string };
+    if (input.format !== format || !('text' in sharedCase.expected)) {
+      return [];
+    }
+    return [
+      {
+        name: sharedCase.name,
+        value: input.amountMinor ?? input.date ?? '',
+        text: sharedCase.expected.text,
+      },
+    ];
+  });
+}
+
+describe('Given the shared receipt formatting cases of English amounts', () => {
+  const amounts = casesOf('englishAmount');
+
+  it('when they are read, then there are some to run', () => {
+    expect(amounts.length).toBeGreaterThan(0);
+  });
+
+  for (const amount of amounts) {
+    it(`when ${amount.name} are formatted, then they read as the bilingual receipt prints them`, () => {
+      expect(formatReceiptAmountEn(Number(amount.value))).toBe(amount.text);
+    });
+  }
+});
+
+describe('Given the shared receipt formatting cases of English dates', () => {
+  const dates = casesOf('englishDate');
+
+  it('when they are read, then there are some to run', () => {
+    expect(dates.length).toBeGreaterThan(0);
+  });
+
+  for (const date of dates) {
+    it(`when ${date.name} is formatted, then it reads as the bilingual receipt prints it`, () => {
+      expect(formatReceiptDateEn(String(date.value))).toBe(date.text);
+    });
+  }
+});
+
+describe('Given the shared receipt formatting cases of Czech dates', () => {
+  const dates = casesOf('czechDate');
+
+  for (const date of dates) {
+    it(`when ${date.name} is formatted, then it reads as v2 printed it with two-digit day and month (plan v3 D11, the listed difference)`, () => {
+      const padded = date.text.replace(/^(\d{1,2})\. (\d{1,2})\. /, (_, day: string, month: string) =>
+        `${day.padStart(2, '0')}. ${month.padStart(2, '0')}. `,
+      );
+      expect(formatReceiptDate(String(date.value))).toBe(padded);
+    });
+  }
+});
+
+describe('Given a receipt text with numbered placeholders', () => {
+  it('when it is filled, then each placeholder takes its value, as often as it appears', () => {
+    expect(fillReceiptText('{0}, dne {1}; {0}', 'V Novém Boru', '15. 03. 2026')).toBe(
+      'V Novém Boru, dne 15. 03. 2026; V Novém Boru',
+    );
+  });
+
+  it('when a value holds braces or a dollar sign, then it is written as it is', () => {
+    expect(fillReceiptText('Jméno: {0}', '{1} $& Nováková')).toBe('Jméno: {1} $& Nováková');
+  });
+
+  it('when it quotes with apostrophes as the server bundle may, then two apostrophes write one and a quoted part stays literal', () => {
+    expect(fillReceiptText("the foundation''s '{0}' {0}", 'X')).toBe("the foundation's {0} X");
+  });
+
+  it('when a placeholder has no value, then it is refused rather than printed', () => {
+    expect(() => fillReceiptText('{0} {1}', 'only one')).toThrow();
+  });
 });
 
 describe('Given a receipt date', () => {

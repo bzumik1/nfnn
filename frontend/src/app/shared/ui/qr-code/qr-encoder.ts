@@ -116,6 +116,7 @@ export function encodeText(text: string, errorCorrection: QrErrorCorrection): Qr
 export function encodeSegments(
   segments: readonly QrSegment[],
   errorCorrection: QrErrorCorrection,
+  minimumVersion = 1,
 ): QrSymbol {
   const version = smallestVersion(segments, errorCorrection);
   const codewords = withErrorCorrection(

@@ -69,3 +69,15 @@ export function receiptDisplay(receipt: SignedReceipt): ReceiptDisplay {
     total: formatReceiptAmount(receipt.totalMinor),
   };
 }
+
+export function formatReceiptAmountEn(amountMinor: number): string {
+  throw new Error(`not implemented ${amountMinor}`);
+}
+
+export function formatReceiptDateEn(day: string): string {
+  throw new Error(`not implemented ${day}`);
+}
+
+export function fillReceiptText(template: string, ...values: readonly string[]): string {
+  throw new Error(`not implemented ${template} ${values.length}`);
+}

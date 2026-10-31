@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nfnn.cz/shared-cases/schemas/receipts/v1/printed.schema.json",
+  "title": "Printed receipt v1 cases: the text a receipt drawn from the frozen receipt of the same name prints, from its v2 sample with the listed difference of D11",
+  "type": "object",
+  "required": ["source", "logic", "cases"],
+  "additionalProperties": false,
+  "properties": {
+    "source": { "$ref": "../../defs/source.schema.json" },
+    "logic": { "type": "string", "minLength": 1 },
+    "cases": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/case" } }
+  },
+  "$defs": {
+    "text": { "type": "string", "minLength": 1, "pattern": "^\\S(.*\\S)?$" },
+    "case": {
+      "type": "object",
+      "required": ["name", "input", "expected"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "input": {
+          "type": "object",
+          "required": ["v2Sample"],
+          "additionalProperties": false,
+          "properties": { "v2Sample": { "type": "string", "pattern": "^(single|yearly)-[a-z0-9-]+$" } }
+        },
+        "expected": {
+          "type": "object",
+          "required": ["body", "tableHeader", "footer", "v2Pages"],
+          "additionalProperties": false,
+          "properties": {
+            "body": { "$ref": "#/$defs/text" },
+            "tableHeader": { "oneOf": [{ "$ref": "#/$defs/text" }, { "type": "null" }] },
+            "footer": { "$ref": "#/$defs/text" },
+            "v2Pages": { "type": "integer", "minimum": 1 }
+          }
+        }
+      }
+    }
+  }
+}
