@@ -11,6 +11,9 @@ export interface ReceiptStyle {
     readonly notice: string;
     readonly noticeBorder: string;
     readonly code: string;
+    readonly codeMark: string;
+    readonly codeStar: string;
+    readonly codeStarFill: string;
   };
   readonly sizes: {
     readonly body: number;
@@ -44,6 +47,9 @@ export const RECEIPT_COLOR_TOKENS = {
   notice: '--receipt-color-notice',
   noticeBorder: '--receipt-color-notice-border',
   code: '--receipt-color-code',
+  codeMark: '--receipt-color-code-mark',
+  codeStar: '--receipt-color-code-star',
+  codeStarFill: '--receipt-color-code-star-fill',
 } as const;
 
 export const RECEIPT_SIZE_TOKENS = {
@@ -76,7 +82,7 @@ const FONT_FILE = /^(?:body|body-bold|heading)\.[0-9a-f]{16}\.ttf$/;
 const QUOTED = /^(['"])(.*)\1$/;
 const PAGE = '#ffffff';
 const MINIMUM_CONTRAST = 4.5;
-const READ_ON_THE_PAGE = ['text', 'muted', 'english', 'code'] as const;
+const READ_ON_THE_PAGE = ['text', 'muted', 'english', 'code', 'codeMark'] as const;
 
 type TokenReader = (token: string) => string;
 

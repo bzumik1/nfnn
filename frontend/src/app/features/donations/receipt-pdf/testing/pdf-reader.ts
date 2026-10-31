@@ -11,6 +11,7 @@ export interface ReadLink {
 
 export interface PlacedText {
   readonly text: string;
+  readonly leftPt: number;
   readonly baselinePt: number;
   readonly sizePt: number;
 }
@@ -129,6 +130,7 @@ export async function readPdf(bytes: Uint8Array): Promise<ReadPdf> {
         if (artifactDepth === 0 && item.str.trim() !== '' && item.transform !== undefined) {
           placed.push({
             text: item.str,
+            leftPt: item.transform[4],
             baselinePt: item.transform[5],
             sizePt: Math.hypot(item.transform[2], item.transform[3]),
           });

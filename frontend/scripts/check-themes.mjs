@@ -88,6 +88,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     '--receipt-color-muted',
     '--receipt-color-english',
     '--receipt-color-code',
+    '--receipt-color-code-mark',
   ];
   const MINIMUM_CONTRAST = 4.5;
 

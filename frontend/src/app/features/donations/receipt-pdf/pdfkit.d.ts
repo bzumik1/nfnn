@@ -96,6 +96,8 @@ declare module 'pdfkit' {
     strokeColor(color: string, opacity?: number): this;
     fillOpacity(opacity: number): this;
     lineWidth(width: number): this;
+    lineCap(cap: 'butt' | 'round' | 'square'): this;
+    lineJoin(join: 'miter' | 'round' | 'bevel'): this;
     moveTo(x: number, y: number): this;
     lineTo(x: number, y: number): this;
     rect(x: number, y: number, width: number, height: number): this;

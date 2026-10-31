@@ -2041,13 +2041,13 @@ describe('Given a signed-in donor in the donor area', () => {
 
         receiptEnvironment.last().say({ kind: 'page', page: 1 });
         await settle();
-        expect(bar()).toEqual(['3', '8']);
+        expect(bar()).toEqual(['3', '7']);
         receiptEnvironment.last().say({ kind: 'page', page: 3 });
         await settle();
-        expect(bar()).toEqual(['5', '8']);
+        expect(bar()).toEqual(['5', '7']);
         receiptEnvironment.last().say({ kind: 'page', page: 7 });
         await settle();
-        expect(bar()).toEqual(['7', '8']);
+        expect(bar()).toEqual(['6', '7']);
       });
 
       it('then a drawing that takes longer than eight seconds can be cancelled, which stops it and frees the button', async () => {

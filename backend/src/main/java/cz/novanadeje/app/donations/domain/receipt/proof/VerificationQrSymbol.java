@@ -5,11 +5,10 @@ import java.util.Optional;
 
 public record VerificationQrSymbol(int version, ErrorCorrection errorCorrection) {
 
-    public static final int LAST_VERSION_AT_MEDIUM = 13;
     public static final int MAX_VERSION = 40;
     public static final int MAX_PROOF_BYTES = 2893;
-    private static final int[] MEDIUM_DATA_CODEWORDS = {16, 28, 44, 64, 86, 108, 124, 154, 182, 216, 254, 290, 334, 365, 415, 453, 507, 563,
-            627, 669, 714, 782, 860, 914, 1000, 1062, 1128, 1193, 1267, 1373, 1455, 1541, 1631, 1725, 1812, 1914, 1992, 2102, 2216, 2334};
+    private static final int[] HIGH_DATA_CODEWORDS = {9, 16, 26, 36, 46, 60, 66, 86, 100, 122, 140, 158, 180, 197, 223, 253, 283, 313, 341, 385,
+            406, 442, 464, 514, 538, 596, 628, 661, 701, 745, 793, 845, 901, 961, 986, 1054, 1096, 1142, 1222, 1276};
     private static final int[] LOW_DATA_CODEWORDS = {19, 34, 55, 80, 108, 136, 156, 194, 232, 274, 324, 370, 428, 461, 523, 589, 647, 721,
             795, 861, 932, 1006, 1094, 1174, 1276, 1370, 1468, 1531, 1631, 1735, 1843, 1955, 2071, 2191, 2306, 2434, 2566, 2702, 2812, 2956};
     private static final int MODE_BITS = 4;
@@ -19,7 +18,6 @@ public record VerificationQrSymbol(int version, ErrorCorrection errorCorrection)
 
     public enum ErrorCorrection {
         L,
-        M,
         H
     }
 
@@ -35,8 +33,11 @@ public record VerificationQrSymbol(int version, ErrorCorrection errorCorrection)
         }
         int addressBytes = ReceiptProofText.ADDRESS.getBytes(StandardCharsets.US_ASCII).length;
         int digits = proofText.length() - ReceiptProofText.ADDRESS.length();
+        return smallest(ErrorCorrection.H, addressBytes, digits).or(() -> smallest(ErrorCorrection.L, addressBytes, digits));
+    }
+
+    private static Optional<VerificationQrSymbol> smallest(ErrorCorrection level, int addressBytes, int digits) {
         for (int version = 1; version <= MAX_VERSION; version++) {
-            ErrorCorrection level = version <= LAST_VERSION_AT_MEDIUM ? ErrorCorrection.M : ErrorCorrection.L;
             if (bits(version, addressBytes, digits) <= Byte.SIZE * dataCodewords(version, level)) {
                 return Optional.of(new VerificationQrSymbol(version, level));
             }
@@ -45,7 +46,7 @@ public record VerificationQrSymbol(int version, ErrorCorrection errorCorrection)
     }
 
     static int dataCodewords(int version, ErrorCorrection level) {
-        return (level == ErrorCorrection.M ? MEDIUM_DATA_CODEWORDS : LOW_DATA_CODEWORDS)[version - 1];
+        return (level == ErrorCorrection.H ? HIGH_DATA_CODEWORDS : LOW_DATA_CODEWORDS)[version - 1];
     }
 
     private static int bits(int version, int bytes, int digits) {

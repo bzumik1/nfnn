@@ -82,8 +82,8 @@ export class ReceiptPdf {
             let pages: number;
             let document: ReceiptDocument;
             try {
-              pages = estimatedReceiptPages(issued.receipt.gifts.length);
               document = receiptDocument(issued.receipt, issued.issuedAt, receiptCaptions());
+              pages = estimatedReceiptPages(issued.receipt.gifts.length, document.bilingual);
             } catch (failure: unknown) {
               subscriber.error(
                 new ReceiptPdfFailure(

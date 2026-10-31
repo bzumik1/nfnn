@@ -295,9 +295,11 @@ export function receiptDocument(
   };
 }
 
-const GIFT_ROWS_PER_PAGE = 33;
-const GIFT_ROWS_THE_REST_TAKES = 20;
+const GIFT_ROWS_PER_PAGE = 41;
+const GIFT_ROWS_THE_REST_TAKES = 28;
+const GIFT_ROWS_THE_BILINGUAL_REST_TAKES = 40;
 
-export function estimatedReceiptPages(gifts: number): number {
-  return Math.max(1, Math.ceil((gifts + GIFT_ROWS_THE_REST_TAKES) / GIFT_ROWS_PER_PAGE));
+export function estimatedReceiptPages(gifts: number, bilingual: boolean): number {
+  const rest = bilingual ? GIFT_ROWS_THE_BILINGUAL_REST_TAKES : GIFT_ROWS_THE_REST_TAKES;
+  return Math.max(1, Math.ceil((gifts + rest) / GIFT_ROWS_PER_PAGE));
 }

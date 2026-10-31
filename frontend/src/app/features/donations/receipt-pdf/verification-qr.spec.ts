@@ -2,6 +2,7 @@ import { sharedCases } from '../../../../testing/shared-cases';
 import { decodeMatrix } from '../../../shared/ui/qr-code/testing/plain-qr-decoder';
 import {
   INLINE_SYMBOL_MM,
+  LAST_INLINE_VERSION,
   MINIMUM_INLINE_MODULE_MM,
   MINIMUM_OWN_AREA_MODULE_MM,
   OWN_AREA_MODULE_MM,
@@ -71,24 +72,24 @@ describe('Given a text that is not a verification proof', () => {
   });
 });
 
-describe('Given the placement of the verification symbol', () => {
-  it('when its sizes are read, then a symbol beside the signature has modules of at least 0.66 mm', () => {
-    expect(MINIMUM_INLINE_MODULE_MM).toBe(0.66);
+describe('Given the largest verification symbol that stands beside the signature', () => {
+  it('when it is placed, then its modules are at least 0.6 mm', () => {
+    const size = 17 + 4 * LAST_INLINE_VERSION;
+
+    expect(MINIMUM_INLINE_MODULE_MM).toBe(0.6);
+    expect(INLINE_SYMBOL_MM / size).toBeGreaterThanOrEqual(MINIMUM_INLINE_MODULE_MM);
   });
 });
 
 describe('Given verification symbols of every version', () => {
-  it('when one up to version 13 is placed, then it fills the 35 mm block, or grows beyond it to keep modules of 0.66 mm', () => {
+  it('when one up to version 15 is placed, then it stands beside the signature at 46.2 mm, and a larger one in its own area', () => {
     for (const encoded of ENCODED.filter((each) => !('refusal' in each.qr))) {
       const symbol = verificationSymbol(encoded.qrText);
       const placement = qrPlacement(symbol);
-      if (symbol.version <= 13) {
+      if (symbol.version <= LAST_INLINE_VERSION) {
         expect(placement.area).toBe('inline');
-        expect(placement.symbolMm).toBeCloseTo(
-          Math.max(INLINE_SYMBOL_MM, MINIMUM_INLINE_MODULE_MM * symbol.size),
-          9,
-        );
-        expect(placement.moduleMm).toBeGreaterThanOrEqual(MINIMUM_INLINE_MODULE_MM - 1e-9);
+        expect(placement.symbolMm).toBe(INLINE_SYMBOL_MM);
+        expect(placement.moduleMm).toBeCloseTo(INLINE_SYMBOL_MM / symbol.size, 9);
       } else {
         expect(placement.area).toBe('own');
         expect(placement.moduleMm).toBeGreaterThanOrEqual(MINIMUM_OWN_AREA_MODULE_MM);
@@ -98,11 +99,11 @@ describe('Given verification symbols of every version', () => {
   });
 });
 
-describe('Given verification symbols above version 13', () => {
+describe('Given verification symbols above version 15', () => {
   it('when they are placed in their own area, then the modules grow up to 0.8 mm as long as the symbol stays within 100 mm, never below 0.6 mm', () => {
-    const own = ENCODED.filter((each) => !('refusal' in each.qr) && each.qr.version > 13).map(
-      (each) => verificationSymbol(each.qrText),
-    );
+    const own = ENCODED.filter(
+      (each) => !('refusal' in each.qr) && each.qr.version > LAST_INLINE_VERSION,
+    ).map((each) => verificationSymbol(each.qrText));
     expect(own.length).toBeGreaterThan(2);
     for (const symbol of own) {
       const placement = qrPlacement(symbol);

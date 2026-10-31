@@ -231,7 +231,7 @@ test.describe('Given a donor whose year holds 120 gifts', () => {
         description: `${warm.join(' ms, ')} ms; median ${warmMedian} ms, ×${SLOWER_COMPUTER} = ${warmMedian * SLOWER_COMPUTER} ms`,
       },
     );
-    expect((await readPdf(cold.pdf)).pages).toHaveLength(5);
+    expect((await readPdf(cold.pdf)).pages).toHaveLength(4);
     expect([cold.milliseconds, ...warm].every(Number.isFinite)).toBe(true);
     expect(warmMedian).toBeLessThanOrEqual(WARM_MEDIAN_BOUND_MS);
   });

@@ -46,6 +46,8 @@ export const YEARLY_40 =
   "A person's year with 40 gifts, Czech. Three are received on 5 May and given in this order: 5,000.00 CZK recorded at 12:00, 100.00 CZK recorded at 8:00 with the higher id and 200.00 CZK recorded at 8:00 with the lower id; v2 lists gifts by the day received, then the time recorded, then the id";
 export const YEARLY_366 =
   "A person's leap year 2028 with one gift on each of its 366 days, English";
+export const YEARLY_LEAP_BILINGUAL =
+  "A person's leap year with gifts on 1 January, 29 February and 31 December, English";
 export const YEARLY_ONE = "A person's year with exactly one gift, Czech";
 export const SINGLE_SIGNATURE =
   'One gift of a person on a receipt that carries the signature image';

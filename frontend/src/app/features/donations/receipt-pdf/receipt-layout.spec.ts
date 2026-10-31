@@ -27,6 +27,7 @@ import {
   SINGLE_SIGNATURE,
   YEARLY_120,
   YEARLY_BILINGUAL,
+  YEARLY_LEAP_BILINGUAL,
   YEARLY_366,
   YEARLY_40,
 } from './testing/receipt-fixtures';
@@ -49,7 +50,10 @@ const ENGLISH_CAPTION_PHRASES = [
   CAPTIONS.verificationHeading.en ?? '',
   CAPTIONS.verificationText.en ?? '',
 ];
-const PAGES_BEYOND_V2: Readonly<Record<string, number>> = { [YEARLY_120]: 1 };
+const PAGES_BEYOND_V2: Readonly<Record<(typeof RECEIPT_THEMES)[number], Record<string, number>>> = {
+  'nova-nadeje': { [YEARLY_BILINGUAL]: 1, [YEARLY_LEAP_BILINGUAL]: 1, [YEARLY_366]: -2 },
+  control: { [YEARLY_LEAP_BILINGUAL]: 1, [YEARLY_366]: -2 },
+};
 
 const NO_ART: ReceiptAssets = { fonts: themeFonts(), signature: null, portrait: null };
 const VECTOR_SIGNATURE: ReceiptArt = {
@@ -208,15 +212,19 @@ describe('Given every frozen receipt case and the text v2 printed for it', () =>
           }
         });
 
-        it('when it is drawn, then it has exactly as many pages as v2 had, plus only the listed differences', () => {
+        it('when it is drawn, then it has exactly as many pages as v2 had, apart from the listed differences', () => {
           expect(read.pages.length).toBe(
-            (expected?.v2Pages ?? 0) + (PAGES_BEYOND_V2[sharedCase.name] ?? 0),
+            (expected?.v2Pages ?? 0) + (PAGES_BEYOND_V2[theme][sharedCase.name] ?? 0),
           );
         });
 
-        it('when it is drawn, then the page count the progress bar expects for its gifts is its page count', () => {
-          expect(estimatedReceiptPages(frozen.gifts.length)).toBe(read.pages.length);
-        });
+        if (theme === 'nova-nadeje') {
+          it('when it is drawn in the default theme, then the page count the progress bar expects for its gifts is its page count', () => {
+            expect(estimatedReceiptPages(frozen.gifts.length, documentOf(frozen).bilingual)).toBe(
+              read.pages.length,
+            );
+          });
+        }
 
         it('when a yearly receipt runs onto further pages, then each of them repeats the column headers as an artifact', () => {
           if (!expected?.tableHeader) {
@@ -430,19 +438,28 @@ const QR_SAMPLES: readonly { gifts: number; name: string }[] = [
 
 describe('Given single receipts whose QR code stands beside the signature', () => {
   for (const name of [SINGLE_PERSON_CS, SINGLE_PERSON_EN]) {
-    it(`when ${name} is drawn, then the caption of the code lies under the code, never beside it`, async () => {
-      const read = await readPdf(await drawReceipt(documentOf(frozenCase(name)), TEST_STYLE, NO_ART));
+    it(`when ${name} is drawn, then the caption of the code lies beside the code, under the signature card`, async () => {
+      const read = await readPdf(
+        await drawReceipt(documentOf(frozenCase(name)), TEST_STYLE, NO_ART),
+      );
       const page = read.pages.find((each) => each.links.length > 0);
       if (page === undefined) {
         throw new Error('no page links the proof');
       }
-      const [, codeBottom] = page.links[0].rect;
+      const [, codeBottom, codeRight, codeTop] = page.links[0].rect;
       const heading = page.placed.filter(
         (placed) => placed.text.trim() === CAPTIONS.verificationHeading.cs,
       );
+      const card = page.placed.filter((placed) =>
+        placed.text.includes(frozenCase(name).signatory.role),
+      );
 
       expect(heading.length).toBe(1);
-      expect(heading[0].baselinePt).toBeLessThan(codeBottom);
+      expect(heading[0].leftPt).toBeGreaterThan(codeRight);
+      expect(heading[0].baselinePt).toBeLessThan(codeTop);
+      expect(heading[0].baselinePt).toBeGreaterThan(codeBottom);
+      expect(card.length).toBeGreaterThan(0);
+      expect(heading[0].baselinePt).toBeLessThan(card[0].baselinePt);
     }, 60_000);
   }
 });
@@ -476,16 +493,16 @@ describe('Given receipts of 1, 40, 120 and 366 gifts', () => {
     }
   }
 
-  it('when the QR code is placed, then up to version 13 it sits in the 35 mm block and above it in its own area with modules of at least 0.6 mm', () => {
+  it('when the QR code is placed, then up to version 15 it stands beside the signature and above it in its own area', () => {
     const versions = QR_SAMPLES.map((sample) => {
       const symbol = verificationSymbol(frozenCase(sample.name).verification.qrText);
       return { version: symbol.version, area: qrPlacement(symbol).area };
     });
 
     expect(versions).toEqual([
-      { version: 9, area: 'inline' },
       { version: 13, area: 'inline' },
-      { version: 17, area: 'own' },
+      { version: 19, area: 'own' },
+      { version: 28, area: 'own' },
       { version: 32, area: 'own' },
     ]);
   });

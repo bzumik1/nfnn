@@ -713,21 +713,22 @@ Plan v3, 1.5 (D6, D7, D9). The proof a receipt's verification QR carries, and th
 
 A varint is minimal LEB128 below 2^53. The signature is Ed25519 (RFC 8032, deterministic) over the message `nfnn.cz/receipt/v1`, a zero byte, the foundation's IČO as 4 bytes and the body, so the same receipt always gives the same text. Every gift is always in the proof (D7). A reader checks, in this order: prefix and text version (`not-a-proof`), digits and chunk widths (`digits`), format byte (`unknown-format`), length (`truncated`), key id among the published keys (`unknown-key`, `revoked-key`), signature (`bad-signature`), and then the body (`reserved-flags`, `non-minimal-varint`, `invalid-text`, `invalid-value`, `trailing-bytes`, `total-mismatch`); a valid proof gives the key id and the receipt.
 
-**QR symbol.** Byte mode for the address and numeric mode for the digits, without an ECI header (one would cost 2 bytes of the largest proof); error correction M while version 13 holds the text, otherwise L from version 14 to 40. The largest proof one symbol holds is 2 893 bytes (`VerificationQrSymbolTest`, which also pins the largest proof of every version against an independent encoder; a yearly receipt of 553 gifts of 200 to 1 500 Kč, three-byte amounts, with the case file's donor takes 2 889, so the limit lies near 550 such gifts depending on the name and address; gifts below 163.84 Kč take a byte less each, so the limit is the byte count, not the gift count); a longer one is refused with 400 `donations/receipt-too-long` ("Potvrzení má příliš mnoho darů pro ověřovací QR kód", detail: write to info@nfnn.cz) and the ERROR line `Receipt <number> needs a verification proof of <n> bytes, more than a QR code holds, so it is not issued` (the receipt number the refused issue had taken, which stays a gap in the numbering; nothing is stored, and an active receipt it would have replaced stays active). Capacity, from the case file:
+**QR symbol.** Byte mode for the address and numeric mode for the digits, without an ECI header (one would cost 2 bytes of the largest proof); error correction H at the smallest version that holds the text, so the receipt can draw the foundation's star in its middle (Jakub 2026-10-31: H holds a proof of up to 1 232 bytes, about 220 gifts, and a receipt rarely has more than 20), otherwise L at the smallest version up to 40, without the star. The largest proof one symbol holds is 2 893 bytes (`VerificationQrSymbolTest`, which also pins the largest proof of every version against an independent encoder; a yearly receipt of 553 gifts of 200 to 1 500 Kč, three-byte amounts, with the case file's donor takes 2 889, so the limit lies near 550 such gifts depending on the name and address; gifts below 163.84 Kč take a byte less each, so the limit is the byte count, not the gift count); a longer one is refused with 400 `donations/receipt-too-long` ("Potvrzení má příliš mnoho darů pro ověřovací QR kód", detail: write to info@nfnn.cz) and the ERROR line `Receipt <number> needs a verification proof of <n> bytes, more than a QR code holds, so it is not issued` (the receipt number the refused issue had taken, which stays a gap in the numbering; nothing is stored, and an active receipt it would have replaced stays active). Capacity, from the case file:
 
 | Receipt | Proof | Symbol |
 |---|---|---|
-| single, 1 gift | 125 B | 8 M |
-| yearly, 12 gifts | 182 B | 10 M |
-| the largest proof at version 13 M (`VerificationQrSymbolTest`) | 302 B | 13 M |
-| yearly, 40 gifts | 323 B | 14 L |
-| yearly, 52 gifts | 383 B | 14 L |
-| yearly, 120 gifts | 723 B | 19 L |
+| single, 1 gift | 125 B | 12 H |
+| yearly, 12 gifts | 182 B | 15 H |
+| the largest proof at version 15 H, the last beside the signature (`VerificationQrSymbolTest`) | 192 B | 15 H |
+| yearly, 40 gifts | 323 B | 20 H |
+| yearly, 52 gifts | 383 B | 22 H |
+| yearly, 120 gifts | 723 B | 31 H |
+| the largest proof at H, version 40 (`VerificationQrSymbolTest`) | 1 232 B | 40 H |
 | yearly, 366 gifts | 1 954 B | 33 L |
-| company, 3 gifts | 147 B | 9 M |
-| yearly replacement, 4 gifts | 147 B | 9 M |
-| single replacement | 130 B | 9 M |
-| long Czech name and address, 2 gifts | 213 B | 11 M |
+| company, 3 gifts | 147 B | 13 H |
+| yearly replacement, 4 gifts | 147 B | 13 H |
+| single replacement | 130 B | 13 H |
+| long Czech name and address, 2 gifts | 213 B | 16 H |
 | yearly, 553 gifts of 200–1 500 Kč | 2 889 B | 40 L |
 | yearly, 554 gifts of 200–1 500 Kč | 2 894 B | refused |
 

@@ -1,4 +1,11 @@
 import PDFDocument, { PdfStructureElement, PdfStructureOptions } from 'pdfkit';
+import {
+  brandedQrLayout,
+  QUIET_ZONE,
+  STAR_BODY,
+  STAR_FACE,
+  STAR_ORIGIN,
+} from '../../../shared/ui/qr-code/qr-branded-layout';
 import { QrSymbol } from '../../../shared/ui/qr-code/qr-encoder';
 import { ReceiptArt } from './receipt-art';
 import { Bilingual, ReceiptDocument, ReceiptGiftRow } from './receipt-document';
@@ -67,7 +74,7 @@ const PARTY_GAP = 6 * MM;
 const NOTICE_PADDING = 3 * MM;
 const CELL_PADDING_X = 2 * MM;
 const HEAD_PADDING_Y = 1.5 * MM;
-const ROW_PADDING_Y = 1.2 * MM;
+const ROW_PADDING_Y = 0.6 * MM;
 const TABLE_GAP = 2 * MM;
 const SIGNATURE_GAP = 5 * MM;
 const CARD_WIDTH = 106 * MM;
@@ -81,8 +88,15 @@ const SIGNATURE_HEIGHT = 18 * MM;
 const BLANK_SIGNATURE = 12 * MM;
 const QR_GAP = 2 * MM;
 const QR_CAPTION_GAP = 5 * MM;
+const CARD_CAPTION_GAP = 3 * MM;
 const OWN_QR_GAP = 8 * MM;
 const QUIET_ZONE_MODULES = 4;
+const STAR_BADGE_SHARE = 0.12;
+const DOT_RADIUS = 0.45;
+const ALIGNMENT_DOT_RADIUS = 0.5;
+const BADGE_LINE_INSET = 0.7;
+const BADGE_LINE_WIDTH = 0.25;
+const STAR_LINE_WIDTH = 20;
 const FOOTER_RULE = 3 * MM;
 const FOOTER_TEXT = 6 * MM;
 const HAIRLINE = 0.5;
@@ -626,17 +640,20 @@ class ReceiptLayout {
     );
   }
 
-  private inlineQrHeight(leftColumn: number): number {
-    const size = qrPlacement(this.symbol).symbolMm * MM;
-    return Math.max(size, this.captionHeight(leftColumn - size - QR_CAPTION_GAP, this.sizes.small));
+  private inlineQrHeight(): number {
+    const placement = qrPlacement(this.symbol);
+    return placement.symbolMm * MM + QUIET_ZONE_MODULES * placement.moduleMm * MM;
   }
 
   private signatureRowHeight(): number {
     const columns = this.signatureColumns();
     const left =
       this.lineHeight(this.document.signature.issuedAt, columns.left) +
-      (this.inlineQr() ? QR_GAP + this.inlineQrHeight(columns.left) : 0);
-    return Math.max(this.cardHeight(), left);
+      (this.inlineQr() ? QR_GAP + this.inlineQrHeight() : 0);
+    const right =
+      this.cardHeight() +
+      (this.inlineQr() ? CARD_CAPTION_GAP + this.captionHeight(CARD_WIDTH, this.sizes.small) : 0);
+    return Math.max(right, left);
   }
 
   private declarationHeight(): number {
@@ -741,14 +758,8 @@ class ReceiptLayout {
     );
     if (this.inlineQr()) {
       const placement = qrPlacement(this.symbol);
-      const size = placement.symbolMm * MM;
       this.qr(this.left, qrTop, placement.moduleMm * MM);
-      this.caption(
-        this.left + size + QR_CAPTION_GAP,
-        qrTop,
-        columns.left - size - QR_CAPTION_GAP,
-        this.sizes.small,
-      );
+      this.caption(columns.card, top + cardHeight + CARD_CAPTION_GAP, CARD_WIDTH, this.sizes.small);
     }
     this.y = top + rowHeight;
   }
@@ -782,21 +793,7 @@ class ReceiptLayout {
     this.tagged(
       'Figure',
       () => {
-        for (let row = 0; row < symbol.size; row++) {
-          let column = 0;
-          while (column < symbol.size) {
-            if (symbol.modules[row * symbol.size + column] !== '1') {
-              column++;
-              continue;
-            }
-            const start = column;
-            while (column < symbol.size && symbol.modules[row * symbol.size + column] === '1') {
-              column++;
-            }
-            this.doc.rect(x + start * module, y + row * module, (column - start) * module, module);
-          }
-        }
-        this.doc.fill(this.colors.code);
+        this.brandedQr(x, y, module);
       },
       link,
       { alt: this.document.verification.alt },
@@ -806,6 +803,58 @@ class ReceiptLayout {
       Contents: new String(this.document.verification.alt),
     });
     link.end();
+  }
+
+  private brandedQr(x: number, y: number, module: number): void {
+    const symbol = this.symbol;
+    const badged = symbol.errorCorrection === 'H';
+    const layout = brandedQrLayout(symbol.size, badged ? STAR_BADGE_SHARE : null);
+    const doc = this.doc;
+    doc.save();
+    doc.translate(x - QUIET_ZONE * module, y - QUIET_ZONE * module);
+    doc.scale(module);
+    for (const position of layout.positions) {
+      if (symbol.modules[position.row * symbol.size + position.column] === '1') {
+        doc.circle(position.cx, position.cy, DOT_RADIUS);
+      }
+    }
+    doc.fill(this.colors.code);
+    for (const finder of layout.finders) {
+      doc.path(finder.ring).fill(this.colors.codeMark, 'even-odd');
+      doc.path(finder.core).fill(this.colors.codeMark);
+    }
+    for (const alignment of layout.alignments) {
+      doc.path(alignment.ring).fill(this.colors.codeMark, 'even-odd');
+      doc.circle(alignment.cx, alignment.cy, ALIGNMENT_DOT_RADIUS).fill(this.colors.codeMark);
+    }
+    if (badged) {
+      this.star(layout.centre, layout.badgeRadius, layout.star);
+    }
+    doc.restore();
+  }
+
+  private star(
+    centre: number,
+    radius: number,
+    star: { readonly x: number; readonly y: number; readonly scale: number },
+  ): void {
+    const doc = this.doc;
+    doc.circle(centre, centre, radius).fill(this.colors.codeMark);
+    doc
+      .circle(centre, centre, radius - BADGE_LINE_INSET)
+      .lineWidth(BADGE_LINE_WIDTH)
+      .stroke(this.colors.codeStarFill);
+    doc.save();
+    doc.translate(star.x, star.y);
+    doc.scale(star.scale);
+    doc.translate(-STAR_ORIGIN.x, -STAR_ORIGIN.y);
+    doc.lineWidth(STAR_LINE_WIDTH).lineCap('round').lineJoin('round');
+    doc.path(STAR_BODY).fill(this.colors.codeStarFill);
+    doc.path(STAR_BODY).stroke(this.colors.codeStar);
+    for (const stroke of STAR_FACE) {
+      doc.path(stroke).stroke(this.colors.codeStar);
+    }
+    doc.restore();
   }
 
   private vector(art: VectorArt, x: number, y: number, width: number, height: number): void {
