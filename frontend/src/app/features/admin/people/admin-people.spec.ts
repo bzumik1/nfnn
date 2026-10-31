@@ -18,6 +18,8 @@ import {
   noReceiptSignature,
   receiptSignatory,
   receiptSignature,
+  SIGNATURE_IMAGE,
+  vectorReceiptSignature,
 } from '../testing/admin-fixtures';
 import { AdminPeople } from './admin-people';
 
@@ -39,6 +41,7 @@ function problem(status: number, type: string, title: string, detail: string) {
 
 async function setUp(
   signatory: ReceiptSignatoryResponse | 'pending' = noReceiptSignatory(),
+  previews: 'none' | 'pending' = 'none',
 ): Promise<{
   fixture: ComponentFixture<AdminPeople>;
   http: HttpTestingController;
@@ -61,6 +64,11 @@ async function setUp(
   fixture.detectChanges();
   if (signatory !== 'pending') {
     http.expectOne(SIGNATORY_URL).flush(signatory);
+    if (previews === 'none') {
+      http
+        .match((request) => request.url.startsWith(RECEIPT_SIGNATURES))
+        .forEach((pending) => pending.flush(noReceiptSignature()));
+    }
   }
   return { fixture, http };
 }
@@ -450,7 +458,7 @@ describe('Given an administrator and two people of the foundation', () => {
       `/api/content/media/${IMAGE_ID}?w=480`,
     );
     expect(button(fixture, 'Odebrat podpis')).toBeTruthy();
-    expect(badges(fixture)).toContain('Podpis na webu');
+    expect(text(fixture, '.person-row:first-child .person-signatures')).toContain('Podpis na webu');
   });
 
   it('when the signature file is not an image, then the page says so and nothing is uploaded', async () => {
@@ -796,6 +804,146 @@ describe('Given an administrator who opens the signatory before the check of who
 
     expect(element<HTMLInputElement>(fixture, '#person-receipt-role').value).toBe(
       'předsedkyně správní rady',
+    );
+  });
+});
+
+describe('Given an administrator and people of the foundation with signatures', () => {
+  let fixture: ComponentFixture<AdminPeople>;
+  let http: HttpTestingController;
+  const WEB_SIGNATURE_ID = '019a0000-0000-7000-8000-00000000d101';
+
+  function receiptPreview(personId: string) {
+    return http.expectOne({ method: 'GET', url: `${RECEIPT_SIGNATURES}${personId}` });
+  }
+
+  function previews(): HTMLElement[] {
+    return Array.from(
+      fixture.nativeElement.querySelectorAll('.person-row') as NodeListOf<HTMLElement>,
+    );
+  }
+
+  beforeEach(async () => {
+    ({ fixture, http } = await setUp(receiptSignatory({ personId: PERSON_ID }), 'pending'));
+    http.expectOne(PEOPLE_URL).flush({
+      members: [
+        person({
+          webSignature: {
+            id: WEB_SIGNATURE_ID,
+            url: `/api/content/media/${WEB_SIGNATURE_ID}`,
+            width: 600,
+            height: 180,
+          },
+        }),
+        ADAM,
+      ],
+      note: null,
+    });
+    await settle(fixture);
+  });
+
+  afterEach(() => verifyLeavingReceiptSignatures(http));
+
+  it('when the list shows, then a person with a web signature shows it labelled with their name and a person without shows none', () => {
+    receiptPreview(PERSON_ID).flush(noReceiptSignature());
+    fixture.detectChanges();
+    const [eva, adam] = previews();
+    const ink = eva.querySelector('.person-signature-ink') as HTMLImageElement;
+
+    expect(ink.getAttribute('src')).toBe(`/api/content/media/${WEB_SIGNATURE_ID}?w=480`);
+    expect(ink.getAttribute('alt')).toBe('Podpis na webu: Eva Vzorová');
+    expect(eva.querySelector('.person-signatures figcaption')?.textContent?.trim()).toBe(
+      'Podpis na webu',
+    );
+    expect(eva.querySelector('.person-badges')?.textContent).not.toContain('Podpis na webu');
+    expect(adam.querySelector('.person-signatures')).toBeNull();
+  });
+
+  it('when the receipt signature is a drawing, then the list draws it labelled with their name from one request', async () => {
+    receiptPreview(PERSON_ID).flush(vectorReceiptSignature());
+    await settle(fixture);
+    const art = previews()[0].querySelector('.person-signature--receipt svg[role="img"]');
+
+    expect(art?.getAttribute('aria-label')).toBe('Podpis na potvrzení: Eva Vzorová');
+    expect(art?.querySelectorAll('path').length).toBe(2);
+    expect(text(fixture, '.person-row:first-child .person-signature--receipt figcaption')).toBe(
+      'Podpis na potvrzení',
+    );
+  });
+
+  it('when the receipt signature is a scan, then the list shows its image labelled with their name', async () => {
+    receiptPreview(PERSON_ID).flush(receiptSignature());
+    await settle(fixture);
+    const scan = previews()[0].querySelector(
+      '.person-signature--receipt img',
+    ) as HTMLImageElement | null;
+
+    expect(scan?.getAttribute('src')).toBe(SIGNATURE_IMAGE);
+    expect(scan?.getAttribute('alt')).toBe('Podpis na potvrzení: Eva Vzorová');
+  });
+
+  it('when the receipt signature cannot be loaded, then a quiet line says so and the list stays usable', async () => {
+    receiptPreview(PERSON_ID).flush(null, { status: 500, statusText: 'Server Error' });
+    await settle(fixture);
+
+    expect(text(fixture, '.person-row:first-child .person-signature--receipt')).toBe(
+      'Podpis na potvrzení Náhled se nepodařilo načíst.',
+    );
+    expect(fixture.nativeElement.querySelector('[role="alert"]:not(:empty)')).toBeNull();
+    expect(rows(fixture)).toEqual(['Eva Vzorová', 'Adam Vzor']);
+    expect(element<HTMLButtonElement>(fixture, `#person-edit-${PERSON_ID}`).disabled).toBe(false);
+  });
+
+  it('when the signatory is read again with the same signatures, then no preview is requested again', async () => {
+    receiptPreview(PERSON_ID).flush(vectorReceiptSignature());
+    await settle(fixture);
+    await click(fixture, `#person-edit-${PERSON_ID}`);
+    receiptPreview(PERSON_ID).flush(vectorReceiptSignature());
+    await settle(fixture);
+
+    await press(fixture, 'Odebrat podpis z potvrzení');
+    await click(fixture, '.signature-confirm .ui-button--danger');
+    http.expectOne({ method: 'DELETE', url: `${RECEIPT_SIGNATURES}${PERSON_ID}` }).flush(null);
+    await settle(fixture);
+    http.expectOne(SIGNATORY_URL).flush(receiptSignatory({ personId: PERSON_ID }));
+    await settle(fixture);
+
+    http.expectNone(`${RECEIPT_SIGNATURES}${PERSON_ID}`);
+    expect(
+      previews()[0].querySelector('.person-signature--receipt svg[role="img"]'),
+    ).not.toBeNull();
+  });
+
+  it('when the receipt signature is replaced, then the list asks for the new one once', async () => {
+    receiptPreview(PERSON_ID).flush(vectorReceiptSignature());
+    await settle(fixture);
+    await click(fixture, `#person-edit-${PERSON_ID}`);
+    receiptPreview(PERSON_ID).flush(vectorReceiptSignature());
+    await settle(fixture);
+    await chooseFile(
+      fixture,
+      '#receipt-signature-file',
+      new File([new Uint8Array(10)], 'podpis.png', { type: 'image/png' }),
+    );
+    http
+      .expectOne({ method: 'POST', url: `${RECEIPT_SIGNATURES}${PERSON_ID}` })
+      .flush(receiptSignature({ uploadedAt: '2026-10-31T10:00:00Z' }));
+    await settle(fixture);
+    const refreshed = receiptSignatory({ personId: PERSON_ID });
+    http.expectOne(SIGNATORY_URL).flush({
+      ...refreshed,
+      signatures: refreshed.signatures.map((summary) => ({
+        ...summary,
+        kind: 'RASTER' as const,
+        uploadedAt: '2026-10-31T10:00:00Z',
+      })),
+    });
+    await settle(fixture);
+
+    receiptPreview(PERSON_ID).flush(receiptSignature({ uploadedAt: '2026-10-31T10:00:00Z' }));
+    await settle(fixture);
+    expect(previews()[0].querySelector('.person-signature--receipt img')?.getAttribute('src')).toBe(
+      SIGNATURE_IMAGE,
     );
   });
 });

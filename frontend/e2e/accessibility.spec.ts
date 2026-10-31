@@ -1620,12 +1620,34 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
             })
           : route.fulfill({ json: vectorSignature }),
     );
+    await page.route(
+      (url) => url.pathname === '/api/admin/donations/receipt-signatory',
+      (route) =>
+        route.fulfill({
+          json: {
+            ...signatory({ signature: true }),
+            signatures: [
+              {
+                personId: SIGNATORY_ID,
+                kind: 'VECTOR',
+                width: 300,
+                height: 100,
+                uploadedAt: '2026-10-23T19:30:00Z',
+              },
+            ],
+          },
+        }),
+    );
     await page.route('**/api/donors/auth/refresh', (route) =>
       route.fulfill(session(200, administrator)),
     );
     await page.goto('/');
     await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
     await page.goto('/sprava/lide-fondu');
+    await expect(
+      page.locator('.people-list').getByRole('img', { name: 'Podpis na potvrzení: Petr Vzorový' }),
+    ).toBeVisible();
+    expect(await violations(page)).toEqual([]);
     await page.getByRole('button', { name: 'Upravit: Petr Vzorový' }).click();
     const card = page.locator('app-receipt-signature');
     await expect(card.getByRole('img', { name: 'Nahraný podpis' })).toBeVisible();

@@ -52,11 +52,6 @@
                       @if (member.onBoard) {
                         <li class="ui-badge ui-badge--success">{{ boardLabel(member) }}</li>
                       }
-                      @if (member.webSignature) {
-                        <li class="ui-badge ui-badge--accent" i18n="@@admin.people.badge.signature">
-                          Podpis na webu
-                        </li>
-                      }
                       @if (signs(member)) {
                         <li class="ui-badge ui-badge--success" i18n="@@admin.people.badge.receipts">
                           Podepisuje potvrzení
@@ -68,6 +63,59 @@
                         </li>
                       }
                     </ul>
+                    @if (webSignatureUrl(member) || receiptPreview(member)) {
+                      <div class="person-signatures">
+                        @if (webSignatureUrl(member); as url) {
+                          <figure class="person-signature">
+                            <figcaption i18n="@@admin.people.list.webSignature">
+                              Podpis na webu
+                            </figcaption>
+                            <img
+                              class="person-signature-ink"
+                              loading="lazy"
+                              [src]="url"
+                              [alt]="webSignatureAlt(member)"
+                              [attr.width]="member.webSignature?.width"
+                              [attr.height]="member.webSignature?.height"
+                            />
+                          </figure>
+                        }
+                        @if (receiptPreview(member); as preview) {
+                          <figure class="person-signature person-signature--receipt">
+                            <figcaption i18n="@@admin.people.list.receiptSignature">
+                              Podpis na potvrzení
+                            </figcaption>
+                            @switch (preview.state) {
+                              @case ('ready') {
+                                @if (preview.state === 'ready') {
+                                  <app-signature-artwork
+                                    class="person-signature-art"
+                                    [signature]="preview.signature"
+                                    [label]="receiptSignatureLabel(member)"
+                                  />
+                                }
+                              }
+                              @case ('error') {
+                                <p
+                                  class="person-signature-note"
+                                  i18n="@@admin.people.list.receiptSignatureFailed"
+                                >
+                                  Náhled se nepodařilo načíst.
+                                </p>
+                              }
+                              @default {
+                                <p
+                                  class="person-signature-note"
+                                  i18n="@@admin.people.list.receiptSignatureLoading"
+                                >
+                                  Načítáme náhled…
+                                </p>
+                              }
+                            }
+                          </figure>
+                        }
+                      </div>
+                    }
                   </div>
                   <div class="person-actions">
                     <button
