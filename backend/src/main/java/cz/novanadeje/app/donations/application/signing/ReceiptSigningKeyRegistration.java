@@ -36,19 +36,21 @@ public class ReceiptSigningKeyRegistration {
     private final FinishedRestores restores;
     private final PublicTestKeyPolicy testKeys;
     private final AdminActionTrail trail;
+    private final WithdrawnSeeds withdrawnSeeds;
     private final ApplicationEventPublisher events;
     private final TransactionOperations transactions;
     private final Clock clock;
 
     public ReceiptSigningKeyRegistration(ReceiptSigner signer, ReceiptSigningKeyRepository keys, RecordSeals seals, FinishedRestores restores,
-                                         PublicTestKeyPolicy testKeys, AdminActionTrail trail, ApplicationEventPublisher events,
-                                         TransactionOperations transactions, Clock clock) {
+                                         PublicTestKeyPolicy testKeys, AdminActionTrail trail, WithdrawnSeeds withdrawnSeeds,
+                                         ApplicationEventPublisher events, TransactionOperations transactions, Clock clock) {
         this.signer = signer;
         this.keys = keys;
         this.seals = seals;
         this.restores = restores;
         this.testKeys = testKeys;
         this.trail = trail;
+        this.withdrawnSeeds = withdrawnSeeds;
         this.events = events;
         this.transactions = transactions;
         this.clock = clock;
@@ -77,7 +79,7 @@ public class ReceiptSigningKeyRegistration {
     private Registration register() {
         Instant now = clock.instant();
         Optional<FinishedRestore> restore = restoreToAdoptFrom(now);
-        ReceiptSigningKeyHistory history = ReceiptSigningKeyHistory.of(trail.findByActions(ReceiptSigningKeyHistory.ACTIONS));
+        ReceiptSigningKeyHistory history = ReceiptSigningKeyHistory.of(trail.findByActions(ReceiptSigningKeyHistory.ACTIONS), withdrawnSeeds.keyIds());
         List<ReceiptSigningKey> stored = keys.findAll();
         List<ReceiptSigningKeyId> testKeyRows = new ArrayList<>();
         List<ReceiptSigningKeyId> broken = new ArrayList<>();

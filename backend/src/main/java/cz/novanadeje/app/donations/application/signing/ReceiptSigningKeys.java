@@ -23,14 +23,16 @@ public class ReceiptSigningKeys {
     private final ReceiptSigner signer;
     private final PublicTestKeyPolicy testKeys;
     private final AdminActionTrail trail;
+    private final WithdrawnSeeds withdrawnSeeds;
 
     public ReceiptSigningKeys(ReceiptSigningKeyRepository keys, RecordSeals seals, ReceiptSigner signer, PublicTestKeyPolicy testKeys,
-                              AdminActionTrail trail) {
+                              AdminActionTrail trail, WithdrawnSeeds withdrawnSeeds) {
         this.keys = keys;
         this.seals = seals;
         this.signer = signer;
         this.testKeys = testKeys;
         this.trail = trail;
+        this.withdrawnSeeds = withdrawnSeeds;
     }
 
     public List<PublishedReceiptKey> published() {
@@ -61,7 +63,7 @@ public class ReceiptSigningKeys {
     }
 
     private ReceiptSigningKeyHistory history() {
-        return ReceiptSigningKeyHistory.of(trail.findByActions(ReceiptSigningKeyHistory.ACTIONS));
+        return ReceiptSigningKeyHistory.of(trail.findByActions(ReceiptSigningKeyHistory.ACTIONS), withdrawnSeeds.keyIds());
     }
 
     private List<PublishedReceiptKey> listed(List<ReceiptSigningKey> rows, ReceiptSigningKeyHistory history) {

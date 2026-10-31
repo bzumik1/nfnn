@@ -23,9 +23,9 @@ public record ReceiptSigningKeyHistory(Set<ReceiptSigningKeyId> recorded, Set<Re
         withdrawn = Set.copyOf(withdrawn);
     }
 
-    public static ReceiptSigningKeyHistory of(List<AdminActionEntry> entries) {
+    public static ReceiptSigningKeyHistory of(List<AdminActionEntry> entries, Set<ReceiptSigningKeyId> keptAside) {
         Set<ReceiptSigningKeyId> recorded = new HashSet<>();
-        Set<ReceiptSigningKeyId> withdrawn = new HashSet<>();
+        Set<ReceiptSigningKeyId> withdrawn = new HashSet<>(keptAside);
         for (AdminActionEntry entry : entries) {
             ReceiptSigningKeyAuditDetails.keyOf(entry).ifPresent(key -> {
                 recorded.add(key);
