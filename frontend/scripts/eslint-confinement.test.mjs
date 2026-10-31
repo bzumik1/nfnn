@@ -207,7 +207,7 @@ describe('Given a library that its adapter may load only lazily', () => {
 describe('Given the libraries only tests may use', () => {
   const devOnly = CONFINED_IMPORTS.find((entry) => entry.examples.includes('vitest'));
 
-  it('when the table is read, then it confines vitest, fast-check, fake-indexeddb, pdfjs-dist, jsQR and Playwright to test support', () => {
+  it('when the table is read, then it confines vitest, fast-check, fake-indexeddb, pdfjs-dist and Playwright to test support', () => {
     assert.ok(devOnly, 'an entry for the dev-only libraries');
     assert.deepEqual(
       [...devOnly.examples].sort(),
@@ -217,8 +217,6 @@ describe('Given the libraries only tests may use', () => {
         'fake-indexeddb',
         'fake-indexeddb/auto',
         'fast-check',
-        'jsqr',
-        'jsqr/dist/jsQR.js',
         'pdfjs-dist',
         'pdfjs-dist/legacy/build/pdf.mjs',
         'vitest',
@@ -230,6 +228,41 @@ describe('Given the libraries only tests may use', () => {
       'sharedCaseSetup',
       'receiptAssetsSetup',
     ]);
+  });
+});
+
+describe('Given the QR reader of the verification page', () => {
+  const jsqr = CONFINED_IMPORTS.find((entry) => entry.examples.includes('jsqr'));
+  const decoding = CONFINED_IMPORTS.find((entry) => entry.examples.includes('./qr-decoding'));
+
+  it('when the table is read, then jsQR is imported only by the QR decoding and tests', () => {
+    assert.ok(jsqr, 'an entry for jsqr');
+    assert.deepEqual(jsqr.allowedIn, [
+      'qrDecoding',
+      'testSupport',
+      'sharedCaseLoader',
+      'sharedCaseSetup',
+      'receiptAssetsSetup',
+    ]);
+  });
+
+  it('when the table is read, then the QR decoding is loaded only by its worker and tests', () => {
+    assert.ok(decoding, 'an entry for qr-decoding');
+    assert.deepEqual(decoding.allowedIn, [
+      'qrDecoderWorker',
+      'testSupport',
+      'sharedCaseLoader',
+      'sharedCaseSetup',
+      'receiptAssetsSetup',
+    ]);
+  });
+
+  it('when the page code imports jsQR, then it is refused', async () => {
+    assert.notDeepEqual(await refusals(projectLint, 'app', staticImport('jsqr')), []);
+  });
+
+  it('when the page code imports the QR decoding, then it is refused', async () => {
+    assert.notDeepEqual(await refusals(projectLint, 'app', staticImport('./qr-decoding')), []);
   });
 });
 

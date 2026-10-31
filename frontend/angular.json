@@ -50,6 +50,7 @@
               "clone",
               "dfa",
               "fast-deep-equal",
+              "jsqr",
               "tiny-inflate",
               "unicode-trie"
             ]

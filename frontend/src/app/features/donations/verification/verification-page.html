@@ -36,15 +36,24 @@
             Ověření potvrzení o daru
           </h1>
           <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.empty.text">
-            Každé potvrzení o daru od fondu Nová naděje nese QR kód. Naskenujte ho fotoaparátem
-            telefonu: otevře se tato stránka a ukáže, jaké údaje v kódu fond podepsal. Porovnejte je
-            pak s papírem.
+            Každé potvrzení o daru od fondu Nová naděje nese QR kód. Načtěte ho tady nebo
+            fotoaparátem telefonu a ukážeme, jaké údaje v kódu fond podepsal. Porovnejte je pak s
+            papírem. Kód čteme jen ve vašem zařízení.
           </p>
         </div>
+        <app-proof-input (found)="verifyProof($event)" />
       }
       @default {
         @if (outcome(); as final) {
           <app-verification-result [outcome]="final" (retry)="retry()" />
+          <button
+            type="button"
+            class="ui-button ui-button--block verify-another"
+            (click)="verifyAnother()"
+            i18n="@@donor.verify.another"
+          >
+            Ověřit další potvrzení
+          </button>
         }
       }
     }

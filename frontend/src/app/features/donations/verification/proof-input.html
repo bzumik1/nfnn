@@ -1,0 +1,114 @@
+<div class="proof-ways">
+  @if (hasCamera) {
+    <section class="proof-way" aria-labelledby="proof-camera-title">
+      <h2 id="proof-camera-title" class="proof-way__title" i18n="@@donor.verify.input.cameraTitle">
+        Načíst fotoaparátem
+      </h2>
+      @if (scan() === 'scanning') {
+        <video
+          #video
+          class="proof-video"
+          autoplay
+          muted
+          playsinline
+          aria-label="Náhled z fotoaparátu"
+          i18n-aria-label="@@donor.verify.input.preview"
+        ></video>
+        <button
+          type="button"
+          class="ui-button ui-button--block proof-stop"
+          (click)="stopScan()"
+          i18n="@@donor.verify.input.stop"
+        >
+          Zastavit skenování
+        </button>
+      } @else {
+        <button
+          #scanButton
+          type="button"
+          class="ui-button ui-button--primary ui-button--block proof-scan"
+          [attr.aria-disabled]="scan() === 'starting' ? 'true' : null"
+          [attr.aria-busy]="scan() === 'starting'"
+          (click)="startScan()"
+          i18n="@@donor.verify.input.scan"
+        >
+          Naskenovat QR kód
+        </button>
+      }
+    </section>
+  }
+
+  <section class="proof-way" aria-labelledby="proof-file-title">
+    <h2 id="proof-file-title" class="proof-way__title" i18n="@@donor.verify.input.fileTitle">
+      Nahrát soubor
+    </h2>
+    <p id="proof-file-hint" class="proof-way__hint" i18n="@@donor.verify.input.fileHint">
+      PDF potvrzení, jak jste ho stáhli z webu fondu, nebo fotka či snímek obrazovky jeho QR kódu.
+    </p>
+    <app-file-button
+      class="proof-file"
+      inputId="proof-file"
+      accept="application/pdf,image/*"
+      describedBy="proof-file-hint"
+      [disabled]="reading()"
+      (chosen)="readFile($event)"
+      ><span i18n="@@donor.verify.input.file">Nahrát PDF nebo fotku</span></app-file-button
+    >
+  </section>
+
+  <section class="proof-way" aria-labelledby="proof-link-title">
+    <h2 id="proof-link-title" class="proof-way__title" i18n="@@donor.verify.input.linkTitle">
+      Vložit odkaz
+    </h2>
+    <form
+      #linkForm="ngForm"
+      class="proof-link-form"
+      novalidate
+      appFocusFirstInvalid
+      (ngSubmit)="verifyLink(linkForm)"
+    >
+      <app-form-field
+        label="Odkaz z QR kódu"
+        i18n-label="@@donor.verify.input.linkLabel"
+        hint="Odkaz začíná https://nfnn.cz/overit#"
+        i18n-hint="@@donor.verify.input.linkHint"
+        [messages]="linkMessages"
+      >
+        <input
+          id="proof-link"
+          name="link"
+          type="text"
+          inputmode="url"
+          autocomplete="off"
+          autocapitalize="off"
+          spellcheck="false"
+          maxlength="8000"
+          required
+          appProofLink
+          appFormControl
+          [(ngModel)]="link"
+        />
+      </app-form-field>
+      <button
+        type="submit"
+        class="ui-button proof-link-submit"
+        i18n="@@donor.verify.input.linkSubmit"
+      >
+        Ověřit odkaz
+      </button>
+    </form>
+  </section>
+</div>
+
+<p class="proof-status" role="status">
+  @if (scan() === 'scanning') {
+    <span i18n="@@donor.verify.input.scanning">Namiřte fotoaparát na QR kód z potvrzení.</span>
+  } @else if (scan() === 'starting') {
+    <span i18n="@@donor.verify.input.starting">Spouštíme fotoaparát…</span>
+  } @else if (reading()) {
+    <span i18n="@@donor.verify.input.reading">Čteme kód ze souboru…</span>
+  }
+</p>
+@if (problem(); as text) {
+  <p class="ui-callout ui-callout--warning proof-problem" role="alert">{{ text }}</p>
+}

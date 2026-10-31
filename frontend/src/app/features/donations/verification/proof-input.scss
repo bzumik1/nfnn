@@ -1,0 +1,62 @@
+:host {
+  display: block;
+  margin-top: var(--space-6);
+  text-align: left;
+}
+
+.proof-ways {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.proof-way {
+  display: grid;
+  gap: var(--space-2);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-divider);
+}
+
+.proof-way__title {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-snug);
+}
+
+.proof-way__hint {
+  color: var(--color-text-soft);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+
+.proof-video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-inverse);
+}
+
+.proof-link-form {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+}
+
+.proof-link-form app-form-field {
+  justify-self: stretch;
+}
+
+.proof-status:empty {
+  display: none;
+}
+
+.proof-status {
+  margin-top: var(--space-4);
+  color: var(--color-text-soft);
+  font-size: var(--text-sm);
+}
+
+.proof-problem {
+  margin-top: var(--space-4);
+}
