@@ -1,11 +1,13 @@
 package cz.novanadeje.app.donations.infrastructure.persistence;
 
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKey;
+import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyId;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyRepository;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 class JpaReceiptSigningKeyRepository implements ReceiptSigningKeyRepository {
@@ -21,6 +23,11 @@ class JpaReceiptSigningKeyRepository implements ReceiptSigningKeyRepository {
     @Override
     public List<ReceiptSigningKey> findAll() {
         return keys.findAll().stream().map(ReceiptSigningKeyJpaEntity::toDomain).toList();
+    }
+
+    @Override
+    public Optional<ReceiptSigningKey> lockForWithdrawal(ReceiptSigningKeyId id) {
+        return keys.findForUpdate(id.value()).map(ReceiptSigningKeyJpaEntity::toDomain);
     }
 
     @Override

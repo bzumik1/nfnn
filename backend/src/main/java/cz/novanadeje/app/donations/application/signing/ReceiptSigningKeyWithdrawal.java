@@ -51,9 +51,8 @@ public class ReceiptSigningKeyWithdrawal {
 
     @Transactional
     public WithdrawnReceiptSigningKey withdraw(UUID adminId, ReceiptSigningKeyId keyId, FreshSecondFactorProof proof) {
-        ReceiptSigningKey key = keys.findAll().stream()
-                .filter(row -> row.id().equals(keyId) && published.publishable(row))
-                .findFirst()
+        ReceiptSigningKey key = keys.lockForWithdrawal(keyId)
+                .filter(published::publishable)
                 .orElseThrow(() -> new ReceiptSigningKeyNotFound(keyId));
         if (key.isWithdrawn()) {
             throw new ReceiptSigningKeyAlreadyWithdrawn(keyId);

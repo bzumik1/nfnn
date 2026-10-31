@@ -224,6 +224,11 @@ class ReceiptSigningKeyWithdrawalTest {
         }
 
         @Override
+        public Optional<ReceiptSigningKey> lockForWithdrawal(ReceiptSigningKeyId id) {
+            return rows.stream().filter(key -> key.id().equals(id)).findFirst();
+        }
+
+        @Override
         public void save(ReceiptSigningKey key) {
             saves++;
             rows.replaceAll(existing -> existing.id().equals(key.id()) ? key : existing);

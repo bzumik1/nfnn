@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -160,6 +161,11 @@ class ReceiptSigningKeysTest {
         @Override
         public List<ReceiptSigningKey> findAll() {
             return List.copyOf(stored);
+        }
+
+        @Override
+        public Optional<ReceiptSigningKey> lockForWithdrawal(ReceiptSigningKeyId id) {
+            throw new UnsupportedOperationException("the list only reads");
         }
 
         @Override

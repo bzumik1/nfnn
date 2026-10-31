@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donations.infrastructure.persistence;
 
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKey;
+import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyId;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyRepository;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyStatus;
 import jakarta.persistence.EntityManager;
@@ -48,6 +49,18 @@ class JpaReceiptSigningKeyRepositoryTest {
         assertThat(keys.findAll()).containsExactlyInAnyOrder(first, second);
         assertThat(jdbc.sql("select status from receipt_signing_key where key_id = ?").param(first.id().value()).query(String.class).single())
                 .isEqualTo("active");
+    }
+
+    @Test
+    @DisplayName("Given two registered keys, when one is locked for a withdrawal, then that key comes back, and an unknown key does not")
+    void should_return_the_named_key_when_locked_for_a_withdrawal_given_two_registered_keys() {
+        ReceiptSigningKey first = ReceiptSigningKey.register(PUBLIC_KEY, NOW, content -> "v1:first");
+        keys.save(first);
+        keys.save(ReceiptSigningKey.register(OTHER_PUBLIC_KEY, NOW.plusSeconds(60), content -> "v1:second"));
+        flushAndClear();
+
+        assertThat(keys.lockForWithdrawal(first.id())).contains(first);
+        assertThat(keys.lockForWithdrawal(new ReceiptSigningKeyId("dac073e0"))).isEmpty();
     }
 
     @Test
