@@ -1,0 +1,18 @@
+[
+  {
+    "path": "POST /api/donors/me/second-factor/setup",
+    "scenario": "donations/admin_receipt_signing_keys: *",
+    "kind": "body",
+    "field": "$.qrCode",
+    "reason": "1.4 removed qrCode from the authenticator set-up (the browser draws the QR from otpauthUri); these two scenario files reached main after 1.4 last merged main, so 1.4.json did not name them",
+    "contract": "docs/api-contract.md, Second factor (POST /api/donors/me/second-factor/setup)"
+  },
+  {
+    "path": "POST /api/donors/me/second-factor/setup",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "body",
+    "field": "$.qrCode",
+    "reason": "1.4 removed qrCode from the authenticator set-up (the browser draws the QR from otpauthUri); these two scenario files reached main after 1.4 last merged main, so 1.4.json did not name them",
+    "contract": "docs/api-contract.md, Second factor (POST /api/donors/me/second-factor/setup)"
+  }
+]
