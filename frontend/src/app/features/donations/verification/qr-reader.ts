@@ -60,6 +60,7 @@ export const QR_READER_ENVIRONMENT = new InjectionToken<QrReaderEnvironment>('QR
 @Injectable({ providedIn: 'root' })
 export class QrReader {
   private readonly environment = inject(QR_READER_ENVIRONMENT);
+  private readonly waiting = new Map<number, (text: string | null) => void>();
   private detector: Promise<QrDetector | null> | null = null;
   private worker: QrWorker | null = null;
   private asked = 0;
@@ -83,36 +84,55 @@ export class QrReader {
   release(): void {
     this.worker?.terminate();
     this.worker = null;
+    const waiting = [...this.waiting.values()];
+    this.waiting.clear();
+    waiting.forEach((answer) => answer(null));
   }
 
   private askWorker(image: QrImage): Promise<string | null> {
-    let worker: QrWorker;
-    try {
-      worker = this.worker ??= this.environment.worker();
-    } catch {
+    const worker = this.startedWorker();
+    if (worker === null) {
       return Promise.resolve(null);
     }
     const id = ++this.asked;
     return new Promise<string | null>((resolve) => {
-      const failed = (): void => {
-        clearTimeout(timer);
+      const timer = setTimeout(() => {
         if (this.worker === worker) {
           this.release();
         }
-        resolve(null);
-      };
-      const timer = setTimeout(failed, QR_WORKER_TIMEOUT_MS);
-      worker.onerror = failed;
-      worker.onmessage = ({ data }) => {
-        if (data.id === id) {
-          clearTimeout(timer);
-          resolve(data.text);
-        }
-      };
+      }, QR_WORKER_TIMEOUT_MS);
+      this.waiting.set(id, (text) => {
+        clearTimeout(timer);
+        resolve(text);
+      });
       const data = new Uint8ClampedArray(image.data);
       worker.postMessage({ id, image: { data, width: image.width, height: image.height } }, [
         data.buffer,
       ]);
     });
+  }
+
+  private startedWorker(): QrWorker | null {
+    if (this.worker !== null) {
+      return this.worker;
+    }
+    let worker: QrWorker;
+    try {
+      worker = this.environment.worker();
+    } catch {
+      return null;
+    }
+    worker.onmessage = ({ data }) => {
+      const answer = this.waiting.get(data.id);
+      this.waiting.delete(data.id);
+      answer?.(data.text);
+    };
+    worker.onerror = () => {
+      if (this.worker === worker) {
+        this.release();
+      }
+    };
+    this.worker = worker;
+    return worker;
   }
 }

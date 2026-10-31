@@ -101,6 +101,53 @@ describe('Given a PDF written elsewhere', () => {
     expect(proofFragmentInPdf(new TextEncoder().encode(`${PROOF_ADDRESS}${DIGITS}`))).toBeNull();
   });
 
+  for (const [name, opening] of [
+    ['literal', '('],
+    ['hex', '<'],
+  ]) {
+    it(`when a 20 MB file repeats ${name} link strings that never close, then it gives nothing at once`, () => {
+      const head = new TextEncoder().encode('%PDF-1.7\n');
+      const run = new TextEncoder().encode(`/URI${opening}`);
+      const bytes = new Uint8Array(20 * 1024 * 1024);
+      bytes.set(head);
+      for (let at = head.length; at + run.length <= bytes.length; at += run.length) {
+        bytes.set(run, at);
+      }
+      const started = performance.now();
+
+      expect(proofFragmentInPdf(bytes)).toBeNull();
+      expect(performance.now() - started).toBeLessThan(2_000);
+    });
+  }
+
+  it('when a hex string far longer than any link comes first, then it skips it and gives the verification link', () => {
+    const bytes = pdfWith(
+      `<< /A << /S /URI /URI <${'41'.repeat(300_000)}> >> >>`,
+      `<< /A << /S /URI /URI (${PROOF_ADDRESS}${DIGITS}) >> >>`,
+    );
+
+    expect(proofFragmentInPdf(bytes)).toBe(DIGITS);
+  });
+
+  it('when the longest possible link is written as UTF-16 hex with line breaks, then it still gives the digits', () => {
+    const longest = '1' + '0'.repeat(7_088);
+    const hex = utf16HexOf(PROOF_ADDRESS + longest).replace(/(.{64})/g, '$1\n');
+    const bytes = pdfWith(`<< /A << /S /URI /URI <${hex}> >> >>`);
+
+    expect(proofFragmentInPdf(bytes)).toBe(longest);
+  });
+
+  it('when the longest possible link escapes every character, then it still gives the digits', () => {
+    const longest = '1' + '0'.repeat(7_088);
+    const escaped = Array.from(
+      PROOF_ADDRESS + longest,
+      (character) => `\\${character.charCodeAt(0).toString(8).padStart(3, '0')}`,
+    ).join('');
+    const bytes = pdfWith(`<< /A << /S /URI /URI (${escaped}) >> >>`);
+
+    expect(proofFragmentInPdf(bytes)).toBe(longest);
+  });
+
   it('when a literal string is never closed, then it gives nothing', () => {
     const bytes = pdfWith(`<< /A << /S /URI /URI (${PROOF_ADDRESS}${DIGITS}`);
 

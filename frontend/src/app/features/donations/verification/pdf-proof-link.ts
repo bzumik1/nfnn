@@ -3,6 +3,9 @@ import { proofFragment } from './proof-link';
 const PDF_HEADER = '%PDF-';
 const HEADER_SEARCH = 1_024;
 const URI_KEY = /\/URI\s*([(<])/g;
+const LONGEST_STRING = 65_536;
+const MOST_LINKS = 64;
+const HEX_CHUNK = 8_192;
 const OCTAL = /^[0-7]{1,3}/;
 const LITERAL_ESCAPES: Readonly<Record<string, string>> = {
   n: '\n',
@@ -20,7 +23,11 @@ export function proofFragmentInPdf(bytes: Uint8Array): string | null {
   if (!text.slice(0, HEADER_SEARCH).includes(PDF_HEADER)) {
     return null;
   }
+  let links = 0;
   for (const match of text.matchAll(URI_KEY)) {
+    if (++links > MOST_LINKS) {
+      return null;
+    }
     const start = match.index + match[0].length;
     const uri = match[1] === '(' ? literalString(text, start) : hexString(text, start);
     const fragment = uri === null ? null : proofFragment(uri);
@@ -35,7 +42,8 @@ function literalString(text: string, start: number): string | null {
   let value = '';
   let depth = 1;
   let at = start;
-  while (at < text.length) {
+  const end = Math.min(text.length, start + LONGEST_STRING);
+  while (at < end) {
     const character = text[at];
     if (character === '\\') {
       const next = text[at + 1] ?? '';
@@ -66,20 +74,24 @@ function literalString(text: string, start: number): string | null {
 }
 
 function hexString(text: string, start: number): string | null {
-  const end = text.indexOf('>', start);
+  const end = text.slice(start, start + LONGEST_STRING).indexOf('>');
   if (end < 0) {
     return null;
   }
-  const hex = text.slice(start, end).replace(/\s+/g, '');
+  const hex = text.slice(start, start + end).replace(/\s+/g, '');
   if (!/^[0-9A-Fa-f]*$/.test(hex)) {
     return null;
   }
   const padded = hex.length % 2 === 0 ? hex : `${hex}0`;
-  const bytes = Array.from({ length: padded.length / 2 }, (_, index) =>
+  const bytes = Uint8Array.from({ length: padded.length / 2 }, (_, index) =>
     Number.parseInt(padded.slice(2 * index, 2 * index + 2), 16),
   );
   if (bytes[0] === 0xfe && bytes[1] === 0xff) {
-    return new TextDecoder('utf-16be').decode(new Uint8Array(bytes.slice(2)));
+    return new TextDecoder('utf-16be').decode(bytes.subarray(2));
   }
-  return String.fromCharCode(...bytes);
+  let value = '';
+  for (let at = 0; at < bytes.length; at += HEX_CHUNK) {
+    value += String.fromCharCode(...bytes.subarray(at, at + HEX_CHUNK));
+  }
+  return value;
 }

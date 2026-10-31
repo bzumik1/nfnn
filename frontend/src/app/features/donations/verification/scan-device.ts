@@ -1,5 +1,6 @@
 import { DOCUMENT } from '@angular/common';
 import { inject, InjectionToken } from '@angular/core';
+import { pictureSize } from './picture-size';
 import type { QrImage } from './qr-image';
 
 export interface ScanDevice {
@@ -13,6 +14,9 @@ export interface ScanDevice {
 const LARGEST_FRAME_SIDE = 1_280;
 const LARGEST_PICTURE_SIDE = 2_400;
 const HAVE_CURRENT_DATA = 2;
+export const LARGEST_PICTURE_PIXELS = 50_000_000;
+
+export class PictureTooLarge extends Error {}
 
 function scaled(width: number, height: number, largest: number): { width: number; height: number } {
   const factor = Math.min(1, largest / Math.max(width, height));
@@ -66,7 +70,19 @@ export const SCAN_DEVICE = new InjectionToken<ScanDevice>('scan device', {
           ? null
           : pixels(document, video, video.videoWidth, video.videoHeight, LARGEST_FRAME_SIDE),
       picture: async (file) => {
-        const bitmap = await createImageBitmap(file);
+        const size = pictureSize(new Uint8Array(await file.arrayBuffer()));
+        if (size === null) {
+          throw new Error('The picture is no PNG, JPEG, GIF or WebP.');
+        }
+        if (size.width * size.height > LARGEST_PICTURE_PIXELS) {
+          throw new PictureTooLarge();
+        }
+        const target = scaled(size.width, size.height, LARGEST_PICTURE_SIDE);
+        const bitmap = await createImageBitmap(file, {
+          resizeWidth: target.width,
+          resizeHeight: target.height,
+          resizeQuality: 'high',
+        });
         try {
           const image = pixels(document, bitmap, bitmap.width, bitmap.height, LARGEST_PICTURE_SIDE);
           if (image === null) {

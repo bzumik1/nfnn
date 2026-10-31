@@ -264,6 +264,13 @@ describe('Given the QR reader of the verification page', () => {
   it('when the page code imports the QR decoding, then it is refused', async () => {
     assert.notDeepEqual(await refusals(projectLint, 'app', staticImport('./qr-decoding')), []);
   });
+
+  for (const module of ['./qr-decoding.js', '../verification/qr-decoding.js']) {
+    it(`when the page code imports the QR decoding as ${module}, with its extension, then it is refused`, async () => {
+      assert.notDeepEqual(await refusals(projectLint, 'app', staticImport(module)), []);
+      assert.notDeepEqual(await refusals(projectLint, 'app', dynamicImport(module)), []);
+    });
+  }
 });
 
 describe('Given the fallback Ed25519 library of the verification page', () => {
@@ -302,6 +309,13 @@ describe('Given pdfkit, which draws the receipts', () => {
       'png-js',
     ]);
   });
+
+  for (const module of ['./receipt-layout.js', '../receipt-pdf/receipt-layout.js']) {
+    it(`when the app imports the receipt layout as ${module}, with its extension, then it is refused`, async () => {
+      assert.notDeepEqual(await refusals(projectLint, 'app', staticImport(module)), []);
+      assert.notDeepEqual(await refusals(projectLint, 'app', dynamicImport(module)), []);
+    });
+  }
 
   it('when the table is read, then only the receipt worker and tests load the receipt layout', () => {
     assert.ok(layout, 'an entry for the receipt layout');

@@ -1,8 +1,13 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import type { QrImage } from './qr-image';
 import { QrReader } from './qr-reader';
-import { LARGEST_FILE_BYTES, ProofInput, SCAN_ATTEMPTS, SCAN_INTERVAL_MS } from './proof-input';
-import { SCAN_DEVICE, type ScanDevice } from './scan-device';
+import {
+  LARGEST_FILE_BYTES,
+  ProofInput,
+  SCAN_INTERVAL_MS,
+  SCAN_TIME_LIMIT_MS,
+} from './proof-input';
+import { PictureTooLarge, SCAN_DEVICE, type ScanDevice } from './scan-device';
 
 const DIGITS = '10031885061882060800046343990168929322040303989858395561963591784434255';
 const LINK = `https://nfnn.cz/overit#${DIGITS}`;
@@ -11,8 +16,20 @@ const FRAME: QrImage = { data: new Uint8ClampedArray(16), width: 2, height: 2 };
 
 class FakeTrack {
   stopped = false;
+  private ended: (() => void) | null = null;
+
   stop(): void {
     this.stopped = true;
+  }
+
+  addEventListener(type: string, listener: () => void): void {
+    if (type === 'ended') {
+      this.ended = listener;
+    }
+  }
+
+  end(): void {
+    this.ended?.();
   }
 }
 
@@ -22,6 +39,9 @@ class FakeDevice implements ScanDevice {
   opening: () => Promise<MediaStream> = () =>
     Promise.resolve({ getTracks: () => [this.track] } as unknown as MediaStream);
   picturing: (file: Blob) => Promise<QrImage> = () => Promise.resolve(FRAME);
+  attaching: (video: HTMLVideoElement) => Promise<void> = () => Promise.resolve();
+  framing: () => QrImage | null = () => FRAME;
+  attachedTo: HTMLVideoElement | null = null;
   framesTaken = 0;
 
   hasCamera(): boolean {
@@ -32,13 +52,15 @@ class FakeDevice implements ScanDevice {
     return this.opening();
   }
 
-  attach(): Promise<void> {
-    return Promise.resolve();
+  attach(video: HTMLVideoElement, stream: MediaStream): Promise<void> {
+    this.attachedTo = video;
+    video.srcObject = stream;
+    return this.attaching(video);
   }
 
   frame(): QrImage | null {
     this.framesTaken++;
-    return FRAME;
+    return this.framing();
   }
 
   picture(file: Blob): Promise<QrImage> {
@@ -49,8 +71,12 @@ class FakeDevice implements ScanDevice {
 class FakeReader {
   answers: (readonly string[])[] = [];
   released = false;
+  waits = false;
 
   read(): Promise<readonly string[]> {
+    if (this.waits) {
+      return new Promise(() => undefined);
+    }
     return Promise.resolve(this.answers.shift() ?? []);
   }
 
@@ -235,19 +261,158 @@ describe('Given the ways to read a receipt code on the verification page', () =>
       expect(device.framesTaken).toBe(taken);
     });
 
-    it('and no code is read for the whole scan, then it stops and says what to try', async () => {
+    it('and no code is read for the whole scan, then it stops, says what to try and focuses the scan button', async () => {
       await render();
 
       button('Naskenovat QR kód')?.click();
       await settle();
-      await vi.advanceTimersByTimeAsync(SCAN_INTERVAL_MS * (SCAN_ATTEMPTS + 2));
+      await vi.advanceTimersByTimeAsync(SCAN_TIME_LIMIT_MS);
       await settle();
 
-      expect(device.framesTaken).toBe(SCAN_ATTEMPTS);
       expect(device.track.stopped).toBe(true);
       expect(alertText()).toBe(
         'QR kód se nepodařilo přečíst. Zkuste to znovu s kódem zblízka a na světle, nebo nahrajte PDF či fotku kódu.',
       );
+      expect(document.activeElement).toBe(button('Naskenovat QR kód'));
+      const taken = device.framesTaken;
+      await vi.advanceTimersByTimeAsync(SCAN_INTERVAL_MS * 3);
+      expect(device.framesTaken).toBe(taken);
+    });
+
+    it('and each read takes long, then the scan still ends when its time is up', async () => {
+      reader.waits = true;
+      await render();
+
+      button('Naskenovat QR kód')?.click();
+      await settle();
+      await vi.advanceTimersByTimeAsync(SCAN_TIME_LIMIT_MS);
+      await settle();
+
+      expect(device.track.stopped).toBe(true);
+      expect(button('Naskenovat QR kód')).toBeDefined();
+    });
+
+    it('and the scan starts, then focus moves from the replaced scan button to the stop button', async () => {
+      await render();
+      button('Naskenovat QR kód')?.focus();
+
+      button('Naskenovat QR kód')?.click();
+      await settle();
+
+      expect(document.activeElement).toBe(button('Zastavit skenování'));
+    });
+
+    it('and the visitor is typing a link when the scan ends, then focus stays in the field', async () => {
+      await render();
+      button('Naskenovat QR kód')?.click();
+      await settle();
+      const field = element().querySelector('#proof-link') as HTMLInputElement;
+      field.focus();
+
+      await vi.advanceTimersByTimeAsync(SCAN_TIME_LIMIT_MS);
+      await settle();
+
+      expect(document.activeElement).toBe(field);
+    });
+
+    it('and they stop it, then the preview lets go of the camera', async () => {
+      await render();
+
+      button('Naskenovat QR kód')?.click();
+      await settle();
+      const video = device.attachedTo;
+      button('Zastavit skenování')?.click();
+      await settle();
+
+      expect(video).not.toBeNull();
+      expect(video?.srcObject).toBeNull();
+    });
+
+    for (const [name, cause] of [
+      [
+        'the preview cannot play',
+        (): void => {
+          device.attaching = () => Promise.reject(new DOMException('', 'NotAllowedError'));
+        },
+      ],
+      [
+        'reading a frame fails',
+        (): void => {
+          device.framing = () => {
+            throw new Error('canvas lost');
+          };
+        },
+      ],
+    ] as const) {
+      it(`and ${name}, then the camera turns off and it says the camera failed`, async () => {
+        cause();
+        await render();
+
+        button('Naskenovat QR kód')?.click();
+        await settle();
+        await vi.advanceTimersByTimeAsync(SCAN_INTERVAL_MS);
+        await settle();
+
+        expect(device.track.stopped).toBe(true);
+        expect(alertText()).toBe(
+          'Fotoaparát se nepodařilo spustit. Zkuste to znovu, nebo nahrajte PDF či fotku kódu.',
+        );
+        expect(button('Naskenovat QR kód')).toBeDefined();
+      });
+    }
+
+    it('and the camera stops by itself, then the scan ends and it says the camera failed', async () => {
+      await render();
+
+      button('Naskenovat QR kód')?.click();
+      await settle();
+      device.track.end();
+      await settle();
+
+      expect(device.track.stopped).toBe(true);
+      expect(alertText()).toBe(
+        'Fotoaparát se nepodařilo spustit. Zkuste to znovu, nebo nahrajte PDF či fotku kódu.',
+      );
+    });
+
+    it('and the tab is hidden, then the camera turns off', async () => {
+      await render();
+      button('Naskenovat QR kód')?.click();
+      await settle();
+
+      Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true });
+      document.dispatchEvent(new Event('visibilitychange'));
+      await settle();
+      Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
+
+      expect(device.track.stopped).toBe(true);
+      expect(button('Naskenovat QR kód')).toBeDefined();
+    });
+
+    it('and a file hands over a code while the camera scans, then the camera turns off', async () => {
+      await render();
+      button('Naskenovat QR kód')?.click();
+      await settle();
+
+      await choose(pdfFile(LINK));
+
+      expect(found).toEqual([DIGITS]);
+      expect(device.track.stopped).toBe(true);
+    });
+
+    it('and the page is left before the camera opens, then the camera is turned off as it opens', async () => {
+      let open: (stream: MediaStream) => void = () => undefined;
+      device.opening = () => new Promise((resolve) => (open = resolve));
+      await render();
+
+      button('Naskenovat QR kód')?.click();
+      await settle();
+      fixture.destroy();
+      open({ getTracks: () => [device.track] } as unknown as MediaStream);
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(device.track.stopped).toBe(true);
     });
 
     it('and the page is left while scanning, then the camera and the reader are released', async () => {
@@ -354,6 +519,34 @@ describe('Given the ways to read a receipt code on the verification page', () =>
       expect(alertText()).toBe(
         'Soubor se nepodařilo otevřít. Nahrajte PDF potvrzení nebo fotku kódu ve formátu JPEG či PNG.',
       );
+    });
+
+    it('and the picture has far more pixels than a photo, then it reads nothing and says so', async () => {
+      device.picturing = () => Promise.reject(new PictureTooLarge());
+      await render();
+
+      await choose(new File(['png'], 'obrovsky.png', { type: 'image/png' }));
+
+      expect(found).toEqual([]);
+      expect(alertText()).toBe(
+        'Obrázek je příliš velký. Nahrajte fotku nebo snímek obrazovky QR kódu do 50 megapixelů.',
+      );
+    });
+
+    it('and the page is left before the file is read, then nothing is handed over', async () => {
+      let picture: (image: QrImage) => void = () => undefined;
+      device.picturing = () => new Promise((resolve) => (picture = resolve));
+      reader.answers = [[LINK]];
+      await render();
+
+      await choose(new File(['jpeg'], 'kod.jpg', { type: 'image/jpeg' }));
+      fixture.destroy();
+      picture(FRAME);
+      for (let round = 0; round < 5; round++) {
+        await Promise.resolve();
+      }
+
+      expect(found).toEqual([]);
     });
 
     it('and the file is too large, then it reads nothing and says so', async () => {

@@ -3,6 +3,7 @@ import type { QrImage } from './qr-image';
 import {
   type QrDetector,
   QR_READER_ENVIRONMENT,
+  QR_WORKER_TIMEOUT_MS,
   QrReader,
   type QrWorker,
   type QrWorkerAnswer,
@@ -17,11 +18,16 @@ class FakeWorker implements QrWorker {
   readonly questions: QrWorkerQuestion[] = [];
   terminated = false;
 
-  constructor(private readonly answer: (question: QrWorkerQuestion) => string | null | 'crash') {}
+  constructor(
+    private readonly answer: (question: QrWorkerQuestion) => string | null | 'crash' | 'silent',
+  ) {}
 
   postMessage(question: QrWorkerQuestion): void {
     this.questions.push(question);
     const text = this.answer(question);
+    if (text === 'silent') {
+      return;
+    }
     queueMicrotask(() => {
       if (text === 'crash') {
         this.onerror?.(new ErrorEvent('error'));
@@ -39,7 +45,7 @@ class FakeWorker implements QrWorker {
 describe('Given the QR reader of the verification page', () => {
   let workers: FakeWorker[];
   let detector: QrDetector | null;
-  let workerAnswer: (question: QrWorkerQuestion) => string | null | 'crash';
+  let workerAnswer: (question: QrWorkerQuestion) => string | null | 'crash' | 'silent';
 
   function reader(): QrReader {
     TestBed.configureTestingModule({
@@ -59,6 +65,10 @@ describe('Given the QR reader of the verification page', () => {
     });
     return TestBed.inject(QrReader);
   }
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   beforeEach(() => {
     workers = [];
@@ -143,6 +153,54 @@ describe('Given the QR reader of the verification page', () => {
       });
 
       await expect(TestBed.inject(QrReader).read(IMAGE)).resolves.toEqual([]);
+    });
+
+    it('and two images are read at once, then each read gets its own answer from the one worker', async () => {
+      workerAnswer = (question) => `https://nfnn.cz/overit#${question.id}`;
+      const qr = reader();
+
+      const both = await Promise.all([qr.read(IMAGE), qr.read(IMAGE)]);
+
+      expect(both).toEqual([['https://nfnn.cz/overit#1'], ['https://nfnn.cz/overit#2']]);
+      expect(workers).toHaveLength(1);
+    });
+
+    it('and the worker does not answer in time, then it gives nothing and the next read starts a new worker', async () => {
+      vi.useFakeTimers();
+      workerAnswer = () => 'silent';
+      const qr = reader();
+
+      const late = qr.read(IMAGE);
+      await vi.advanceTimersByTimeAsync(QR_WORKER_TIMEOUT_MS);
+
+      await expect(late).resolves.toEqual([]);
+      expect(workers[0].terminated).toBe(true);
+      workerAnswer = () => 'https://nfnn.cz/overit#1';
+      await expect(qr.read(IMAGE)).resolves.toEqual(['https://nfnn.cz/overit#1']);
+      expect(workers).toHaveLength(2);
+    });
+
+    it('and the worker stops answering while two reads wait, then both give nothing', async () => {
+      vi.useFakeTimers();
+      workerAnswer = () => 'silent';
+      const qr = reader();
+
+      const both = Promise.all([qr.read(IMAGE), qr.read(IMAGE)]);
+      await vi.advanceTimersByTimeAsync(QR_WORKER_TIMEOUT_MS);
+
+      await expect(both).resolves.toEqual([[], []]);
+    });
+
+    it('and the page is left while a read waits, then the read gives nothing', async () => {
+      workerAnswer = () => 'silent';
+      const qr = reader();
+
+      const waiting = qr.read(IMAGE);
+      await Promise.resolve();
+      await Promise.resolve();
+      qr.release();
+
+      await expect(waiting).resolves.toEqual([]);
     });
 
     it('and the page is left, then the worker is ended', async () => {

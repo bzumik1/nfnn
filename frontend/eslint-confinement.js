@@ -86,8 +86,13 @@ const CONFINED_IMPORTS = [
       'pdfkit and the libraries it brings (fontkit, linebreak, fflate, png-js, @noble/ciphers) draw receipts only in src/app/features/donations/receipt-pdf/receipt-layout.ts, which only the receipt worker loads.',
   },
   {
-    patterns: ['**/receipt-layout', '**/receipt-pdf/receipt-layout'],
-    dynamic: '(?:^|/)receipt-layout$',
+    patterns: [
+      '**/receipt-layout',
+      '**/receipt-pdf/receipt-layout',
+      '**/receipt-layout.js',
+      '**/receipt-pdf/receipt-layout.js',
+    ],
+    dynamic: '(?:^|/)receipt-layout(?:\\.js)?$',
     allowedIn: ['receiptWorker', ...TEST_SCOPES],
     examples: ['./receipt-layout', '../receipt-pdf/receipt-layout'],
     message:
@@ -148,8 +153,13 @@ const CONFINED_IMPORTS = [
       'jsQR reads QR codes only in src/app/features/donations/verification/qr-decoding.ts, which only the QR decoder worker loads, and in tests.',
   },
   {
-    patterns: ['**/qr-decoding', '**/verification/qr-decoding'],
-    dynamic: '(?:^|/)qr-decoding$',
+    patterns: [
+      '**/qr-decoding',
+      '**/verification/qr-decoding',
+      '**/qr-decoding.js',
+      '**/verification/qr-decoding.js',
+    ],
+    dynamic: '(?:^|/)qr-decoding(?:\\.js)?$',
     allowedIn: ['qrDecoderWorker', ...TEST_SCOPES],
     examples: ['./qr-decoding', '../verification/qr-decoding'],
     message:

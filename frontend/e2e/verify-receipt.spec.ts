@@ -388,10 +388,20 @@ test.describe('Given a visitor who opens the verification page without a code', 
     await expect(page.locator('dd').filter({ hasText: DONOR_NAME })).toBeVisible();
     expect(new URL(page.url()).pathname).toBe('/overit');
     expect(new URL(page.url()).hash).toBe('');
+    const pieces = [
+      SINGLE_RECEIPT.fragment.slice(17, 57),
+      SINGLE_RECEIPT.fragment.slice(-40),
+      DONOR_NAME,
+    ];
     for (const request of requests) {
-      expect(request.url()).not.toContain(SINGLE_RECEIPT.fragment.slice(0, 17));
-      expect(request.postData() ?? '').not.toContain(SINGLE_RECEIPT.fragment.slice(0, 17));
-      expect(request.postData() ?? '').not.toContain(DONOR_NAME);
+      const sent = [
+        request.url(),
+        request.postData() ?? '',
+        ...Object.values(await request.allHeaders()),
+      ].join('\n');
+      for (const piece of pieces) {
+        expect(sent).not.toContain(piece);
+      }
     }
     const api = requests.filter((request) => new URL(request.url()).pathname.startsWith('/api/'));
     expect(
