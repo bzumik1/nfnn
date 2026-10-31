@@ -5,8 +5,8 @@ Feature: An administrator keeps the people of the foundation that the About sect
   /sprava/lide-fondu (Jakub 2026-10-30): cards with a portrait for the featured people, the line
   of the board, and the founders' note with the web signatures of the featured people under it.
   A web signature is a separate public image for the site only, never the signature on receipts,
-  and it is set and removed only from a browser. A member's personal and fund e-mails are
-  administration data only and never reach the home page.
+  and a connected application may set and remove it too (Jakub 2026-10-30). A member's personal
+  and fund e-mails are administration data only and never reach the home page.
 
   Background:
     Given today is 2026-10-30
@@ -370,12 +370,13 @@ Feature: An administrator keeps the people of the foundation that the About sect
     Then the response status is 401
     And the problem type ends with "auth/unauthenticated"
 
-  Scenario: A connected application with the writing permission keeps the people and the note but never touches a web signature
+  Scenario: A connected application with the writing permission keeps the people, the note and the web signatures
     Given "Jana" adds a person:
       | name     | Eva Vzorová |
       | featured | true        |
     And "Jana" uploads a 600 by 180 pixel PNG image named "podpis-eva.png"
     And "Jana" sets the web signature of "Eva Vzorová" to the image uploaded as "podpis-eva.png"
+    And "Jana" uploads a 600 by 180 pixel PNG image named "podpis-adam.png"
     And "Jana" connected the application "https://claude.ai/.well-known/oauth-client" with scope "admin:read admin:write"
     When the connector exchanges the connector token for an API token
     And the exchanged API token adds a person:
@@ -403,35 +404,35 @@ Feature: An administrator keeps the people of the foundation that the About sect
     When the exchanged API token updates the person "Eva Vzorová":
       | name     | Eva Nová |
       | featured | true     |
-    Then the response status is 403
-    And the problem type ends with "content/web-signature-in-browser-only"
-    When the exchanged API token updates the person "Eva Vzorová":
-      | name     | Eva Vzorová  |
-      | role     | Zakladatelka |
-      | featured | true         |
     Then the response status is 200
     And the person says:
-      | name            | Eva Vzorová            |
-      | role            | Zakladatelka           |
+      | name            | Eva Nová               |
       | webSignature.id | {image:podpis-eva.png} |
+    When the exchanged API token sets the web signature of "Adam Vzor" to the image uploaded as "podpis-adam.png"
+    Then the response status is 200
+    And the person says:
+      | webSignature.id     | {image:podpis-adam.png} |
+      | webSignature.width  | 600                     |
+      | webSignature.height | 180                     |
     When the exchanged API token removes the web signature of "Eva Vzorová"
-    Then the response status is 403
-    And the problem type ends with "auth/forbidden"
-    When the exchanged API token sets the web signature of "Eva Vzorová" to the image uploaded as "podpis-eva.png"
-    Then the response status is 403
-    And the problem type ends with "auth/forbidden"
-    When the exchanged API token removes the person "Eva Vzorová"
-    Then the response status is 403
-    And the problem type ends with "content/web-signature-in-browser-only"
+    Then the response status is 200
+    And the person says:
+      | webSignature |  |
+    When someone without a token asks for the image uploaded as "podpis-eva.png"
+    Then the response status is 404
     When the exchanged API token removes the person "Adam Vzor"
     Then the response status is 204
+    When someone without a token asks for the image uploaded as "podpis-adam.png"
+    Then the response status is 404
     When "Jana" asks for the people of the foundation
     Then the people of the foundation are:
-      | name        | webSignature.id           |
-      | Eva Vzorová | {image:podpis-eva.png}    |
+      | name     | webSignature |
+      | Eva Nová |              |
     And these admin actions were recorded:
       | action               | client    |
       | REMOVE_PERSON        | claude.ai |
+      | REMOVE_WEB_SIGNATURE | claude.ai |
+      | CHANGE_WEB_SIGNATURE | claude.ai |
       | UPDATE_PERSON        | claude.ai |
       | CHANGE_FOUNDERS_NOTE | claude.ai |
       | ORDER_PEOPLE         | claude.ai |
@@ -443,6 +444,7 @@ Feature: An administrator keeps the people of the foundation that the About sect
   Scenario: A connected application with the reading permission only reads the people but cannot change them
     Given "Jana" adds a person:
       | name | Eva Vzorová |
+    And "Jana" uploads a 600 by 180 pixel PNG image named "podpis-eva.png"
     And "Jana" connected the application "https://claude.ai/.well-known/oauth-client"
     When the connector exchanges the connector token for an API token
     And the exchanged API token asks for the people of the foundation
@@ -451,5 +453,11 @@ Feature: An administrator keeps the people of the foundation that the About sect
       | name        |
       | Eva Vzorová |
     When the exchanged API token removes the person "Eva Vzorová"
+    Then the response status is 403
+    And the problem type ends with "auth/forbidden"
+    When the exchanged API token sets the web signature of "Eva Vzorová" to the image uploaded as "podpis-eva.png"
+    Then the response status is 403
+    And the problem type ends with "auth/forbidden"
+    When the exchanged API token removes the web signature of "Eva Vzorová"
     Then the response status is 403
     And the problem type ends with "auth/forbidden"

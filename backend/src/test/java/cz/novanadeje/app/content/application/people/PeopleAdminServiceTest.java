@@ -12,7 +12,6 @@ import cz.novanadeje.app.content.domain.people.PersonImageInUse;
 import cz.novanadeje.app.content.domain.people.PersonNotFound;
 import cz.novanadeje.app.content.domain.people.PersonRepository;
 import cz.novanadeje.app.content.domain.people.TooManyPeople;
-import cz.novanadeje.app.content.domain.people.WebSignatureInBrowserOnly;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import org.junit.jupiter.api.DisplayName;
@@ -36,7 +35,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
-import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -92,7 +90,7 @@ class PeopleAdminServiceTest {
         Person current = stored(0, Optional.empty());
         when(people.findByIdForUpdate(current.id())).thenReturn(Optional.of(current));
 
-        PersonView view = service().update(ADMIN, current.id(), command(Optional.empty()), true);
+        PersonView view = service().update(ADMIN, current.id(), command(Optional.empty()));
 
         assertThat(view.personalEmail()).contains(new EmailAddress("eva@example.org"));
         assertThat(view.fundEmail()).contains(new EmailAddress("eva@nfnn.cz"));
@@ -129,7 +127,7 @@ class PeopleAdminServiceTest {
         when(media.findSize(OTHER_PORTRAIT)).thenReturn(Optional.of(SQUARE));
         when(media.findSize(SIGNATURE)).thenReturn(Optional.of(INK));
 
-        PersonView view = service().update(ADMIN, current.id(), command(Optional.of(OTHER_PORTRAIT)), true);
+        PersonView view = service().update(ADMIN, current.id(), command(Optional.of(OTHER_PORTRAIT)));
 
         assertThat(view.portrait()).contains(new PersonImageView(OTHER_PORTRAIT, 640, 640));
         assertThat(view.webSignature()).contains(new PersonImageView(SIGNATURE, 600, 180));
@@ -144,16 +142,16 @@ class PeopleAdminServiceTest {
         PersonId unknown = PersonId.newId(NOW);
         when(people.findByIdForUpdate(unknown)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service().update(ADMIN, unknown, command(Optional.empty()), true)).isInstanceOf(PersonNotFound.class);
+        assertThatThrownBy(() -> service().update(ADMIN, unknown, command(Optional.empty()))).isInstanceOf(PersonNotFound.class);
     }
 
     @Test
-    @DisplayName("Given a person with a portrait and a web signature, when they are removed from a browser, then they go first and both images are deleted when unused")
-    void should_remove_the_person_and_their_images_when_removed_from_a_browser_given_both_images() {
+    @DisplayName("Given a person with a portrait and a web signature, when they are removed, then they go first and both images are deleted when unused")
+    void should_remove_the_person_and_their_images_when_removed_given_both_images() {
         Person current = stored(0, Optional.of(PORTRAIT)).signWith(SIGNATURE, BEFORE);
         when(people.findByIdForUpdate(current.id())).thenReturn(Optional.of(current));
 
-        service().remove(ADMIN, current.id(), true);
+        service().remove(ADMIN, current.id());
 
         InOrder order = inOrder(people, media);
         order.verify(people).delete(current.id());
@@ -162,30 +160,6 @@ class PeopleAdminServiceTest {
         AdminActionPerformed action = audited();
         assertThat(action.action()).isEqualTo("REMOVE_PERSON");
         assertThat(action.details()).isEqualTo("Osoba " + current.id() + " odebrána z lidí fondu");
-    }
-
-    @Test
-    @DisplayName("Given a person with a web signature, when a connected application removes them, then it is refused and nothing changes")
-    void should_refuse_the_removal_when_removed_by_a_connection_given_a_web_signature() {
-        Person current = stored(0, Optional.of(PORTRAIT)).signWith(SIGNATURE, BEFORE);
-        when(people.findByIdForUpdate(current.id())).thenReturn(Optional.of(current));
-
-        assertThatThrownBy(() -> service().remove(ADMIN, current.id(), false)).isInstanceOf(WebSignatureInBrowserOnly.class);
-        verify(people, never()).delete(any());
-        verify(media, never()).deleteIfUnused(any());
-        verify(events, never()).publishEvent(any(Object.class));
-    }
-
-    @Test
-    @DisplayName("Given a person without a web signature, when a connected application removes them, then they go with their portrait")
-    void should_remove_the_person_when_removed_by_a_connection_given_no_web_signature() {
-        Person current = stored(0, Optional.of(PORTRAIT));
-        when(people.findByIdForUpdate(current.id())).thenReturn(Optional.of(current));
-
-        service().remove(ADMIN, current.id(), false);
-
-        verify(people).delete(current.id());
-        verify(media).deleteIfUnused(PORTRAIT);
     }
 
     @Test
@@ -261,7 +235,7 @@ class PeopleAdminServiceTest {
         when(people.isAnyonesWebSignature(SIGNATURE)).thenReturn(true);
 
         assertThatThrownBy(() -> service().add(ADMIN, command(Optional.of(SIGNATURE)))).isInstanceOf(PersonImageInUse.class);
-        assertThatThrownBy(() -> service().update(ADMIN, current.id(), command(Optional.of(SIGNATURE)), true))
+        assertThatThrownBy(() -> service().update(ADMIN, current.id(), command(Optional.of(SIGNATURE))))
                 .isInstanceOf(PersonImageInUse.class);
         verify(people, never()).save(any());
         verify(events, never()).publishEvent(any(Object.class));
@@ -281,21 +255,20 @@ class PeopleAdminServiceTest {
     }
 
     @Test
-    @DisplayName("Given a person with a web signature, when a connected application renames them, then it is refused, and a change that keeps the name passes")
-    void should_refuse_the_rename_when_updated_outside_a_browser_given_a_web_signature() {
+    @DisplayName("Given a person with a web signature, when they are renamed, then the new name is stored and the signature stays")
+    void should_keep_the_signature_when_renamed_given_a_web_signature() {
         Person current = stored(0, Optional.empty()).signWith(SIGNATURE, BEFORE);
         when(people.findByIdForUpdate(current.id())).thenReturn(Optional.of(current));
-        lenient().when(media.findSize(SIGNATURE)).thenReturn(Optional.of(INK));
+        when(media.findSize(SIGNATURE)).thenReturn(Optional.of(INK));
 
-        assertThatThrownBy(() -> service().update(ADMIN, current.id(), command(Optional.empty()), false))
-                .isInstanceOf(WebSignatureInBrowserOnly.class);
-        verify(people, never()).save(any());
+        PersonView view = service().update(ADMIN, current.id(), command(Optional.empty()));
 
-        PersonView view = service().update(ADMIN, current.id(), new PersonCommand("  Adam Vzor ", Optional.of("Zakladatel"), true,
-                Optional.empty(), true, Optional.empty(), PersonEmails.NONE), false);
-
-        assertThat(view.role()).contains("Zakladatel");
+        assertThat(view.name()).isEqualTo("Eva Vzorová");
         assertThat(view.webSignature()).contains(new PersonImageView(SIGNATURE, 600, 180));
+        ArgumentCaptor<Person> saved = ArgumentCaptor.forClass(Person.class);
+        verify(people).save(saved.capture());
+        assertThat(saved.getValue().webSignature()).contains(SIGNATURE);
+        verify(media, never()).deleteIfUnused(any());
     }
 
     private AdminActionPerformed audited() {
