@@ -1,0 +1,8 @@
+[
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/receipts/formatting.json",
+    "reason": "1.23 states the Czech receipt dates with a two-digit day and month (01. 01. 2026), as plan v3 D11 decided and the browser prints since 1.9; the runner padded the v2 text instead, so the case file no longer said what receipts print (Phase 1 gate, testovani.md M1)",
+    "contract": ".claude/rules/testing.md, Logic on both sides; docs/frontend-overview.md, receipt PDF"
+  }
+]
