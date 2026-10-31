@@ -1,6 +1,6 @@
 {
   "source": "edited",
-  "logic": "The frozen receipt v1 (plan v3 D10, slice 1.6): what POST /api/donations/me/receipts and GET /api/donations/me/receipts/{id} answer as receipt, and what issued_receipt keeps of each issued receipt for good. One case per sample of the v2 receipt corpus (input.v2Sample names regression/v2/receipts/<sample>.json): input.textsSha256 names the recorded set of receipt texts the receipt freezes (backend/src/test/resources/receipts/texts/<textsSha256>.json, the SHA-256 of that file), and the rest of the input is the receipt as the issuer puts it together (kind, number, day of issue, language, year of a yearly receipt, the receipt it replaces, the foundation, the donor, the gifts in the order v2 lists them, the total, the signatory and the digest of the signature image, or null); the expected value adds schemaVersion 1, the receipt texts frozen at issue, taken from the named set (texts.cs always, texts.en exactly for an English receipt, every receipt.* key of the message bundles but the file names) and the verification: the id of the key that signed it (the backend signs with the RFC 8032 test 1 seed its tests hold, never a key of a server) and the QR text of its proof (shared-cases/verification/payload.json, every gift always). A change of the bundle's texts records a new set and leaves these cases as they are. Amounts are hellers, days ISO dates; the foundation's and the donor's values are those the receipt certifies, so a later change of either never alters an issued receipt. From the frozen receipt alone the v2 receipt data (the sample's data) follows word for word, which the browser's PDF of slice 1.9 renders.",
+  "logic": "The frozen receipt v1 (plan v3 D10, slice 1.6): what POST /api/donations/me/receipts and GET /api/donations/me/receipts/{id} answer as receipt, and what issued_receipt keeps of each issued receipt for good. One case per sample of the v2 receipt corpus (input.v2Sample names regression/v2/receipts/<sample>.json): input.textsSha256 names the recorded set of receipt texts the receipt freezes (backend/src/test/resources/receipts/texts/<textsSha256>.json, the SHA-256 of that file), and the rest of the input is the receipt as the issuer puts it together (kind, number, day of issue, language, year of a yearly receipt, the receipt it replaces, the foundation, the donor, the gifts in the order v2 lists them, the total, the signatory (the name of the person of the foundation who signs and the role printed on receipts, slice 1.16) with the digest of their receipt signature and the digest of their portrait prepared for print (a 600 px square JPEG), each or null); the expected value adds schemaVersion 1, the receipt texts frozen at issue, taken from the named set (texts.cs always, texts.en exactly for an English receipt, every receipt.* key of the message bundles but the file names) and the verification: the id of the key that signed it (the backend signs with the RFC 8032 test 1 seed its tests hold, never a key of a server) and the QR text of its proof (shared-cases/verification/payload.json, every gift always). A change of the bundle's texts records a new set and leaves these cases as they are. Amounts are hellers, days ISO dates; the foundation's and the donor's values are those the receipt certifies, so a later change of either never alters an issued receipt. From the frozen receipt alone the v2 receipt data (the sample's data) follows word for word, which the browser's PDF of slice 1.9 renders.",
   "cases": [
     {
       "name": "History sample: one gift of a person, Czech",
@@ -52,7 +52,8 @@
         "signatory": {
           "name": "Petr Vzorový",
           "role": "předseda správní rady",
-          "signatureImage": null
+          "signatureImage": null,
+          "portraitImage": null
         }
       },
       "expected": {
@@ -102,7 +103,8 @@
         "signatory": {
           "name": "Petr Vzorový",
           "role": "předseda správní rady",
-          "signatureImage": null
+          "signatureImage": null,
+          "portraitImage": null
         },
         "texts": {
           "cs": {
@@ -201,7 +203,8 @@
         "signatory": {
           "name": "Petr Vzorový",
           "role": "předseda správní rady",
-          "signatureImage": null
+          "signatureImage": null,
+          "portraitImage": null
         }
       },
       "expected": {
@@ -256,7 +259,8 @@
         "signatory": {
           "name": "Petr Vzorový",
           "role": "předseda správní rady",
-          "signatureImage": null
+          "signatureImage": null,
+          "portraitImage": null
         },
         "texts": {
           "cs": {
@@ -385,7 +389,8 @@
         "signatory": {
           "name": "Petr Vzorový",
           "role": "předseda správní rady",
-          "signatureImage": null
+          "signatureImage": null,
+          "portraitImage": null
         }
       },
       "expected": {
@@ -438,7 +443,8 @@
         "signatory": {
           "name": "Petr Vzorový",
           "role": "předseda správní rady",
-          "signatureImage": null
+          "signatureImage": null,
+          "portraitImage": null
         },
         "texts": {
           "cs": {
@@ -1127,7 +1133,8 @@
         "signatory": {
           "name": "Petr Vzorový",
           "role": "předseda správní rady",
-          "signatureImage": null
+          "signatureImage": null,
+          "portraitImage": null
         }
       },
       "expected": {
@@ -1772,7 +1779,8 @@
         "signatory": {
           "name": "Petr Vzorový",
           "role": "předseda správní rady",
-          "signatureImage": null
+          "signatureImage": null,
+          "portraitImage": null
         },
         "texts": {
           "cs": {
@@ -1866,7 +1874,8 @@
         "signatory": {
           "name": "Petr Vzorový",
           "role": "předseda správní rady",
-          "signatureImage": null
+          "signatureImage": null,
+          "portraitImage": null
         }
       },
       "expected": {
@@ -1916,7 +1925,8 @@
         "signatory": {
           "name": "Petr Vzorový",
           "role": "předseda správní rady",
-          "signatureImage": null
+          "signatureImage": null,
+          "portraitImage": null
         },
         "texts": {
           "cs": {
@@ -2010,7 +2020,8 @@
         "signatory": {
           "name": "Petr Vzorový",
           "role": "předseda správní rady",
-          "signatureImage": null
+          "signatureImage": null,
+          "portraitImage": null
         }
       },
       "expected": {
@@ -2060,7 +2071,8 @@
         "signatory": {
           "name": "Petr Vzorový",
           "role": "předseda správní rady",
-          "signatureImage": null
+          "signatureImage": null,
+          "portraitImage": null
         },
         "texts": {
           "cs": {
@@ -2186,7 +2198,8 @@
         "signatory": {
           "name": "Petr Vzorový",
           "role": "předseda správní rady",
-          "signatureImage": null
+          "signatureImage": null,
+          "portraitImage": null
         }
       },
       "expected": {
@@ -2236,7 +2249,8 @@
         "signatory": {
           "name": "Petr Vzorový",
           "role": "předseda správní rady",
-          "signatureImage": null
+          "signatureImage": null,
+          "portraitImage": null
         },
         "texts": {
           "cs": {
@@ -2330,7 +2344,8 @@
         "signatory": {
           "name": "Petr Vzorový",
           "role": "předseda správní rady",
-          "signatureImage": null
+          "signatureImage": null,
+          "portraitImage": null
         }
       },
       "expected": {
@@ -2380,7 +2395,8 @@
         "signatory": {
           "name": "Petr Vzorový",
           "role": "předseda správní rady",
-          "signatureImage": null
+          "signatureImage": null,
+          "portraitImage": null
         },
         "texts": {
           "cs": {
@@ -2474,7 +2490,8 @@
         "signatory": {
           "name": "Petr Vzorový",
           "role": "předseda správní rady",
-          "signatureImage": null
+          "signatureImage": null,
+          "portraitImage": null
         }
       },
       "expected": {
@@ -2524,7 +2541,8 @@
         "signatory": {
           "name": "Petr Vzorový",
           "role": "předseda správní rady",
-          "signatureImage": null
+          "signatureImage": null,
+          "portraitImage": null
         },
         "texts": {
           "cs": {
@@ -2620,6 +2638,9 @@
           "role": "předseda správní rady",
           "signatureImage": {
             "sha256": "70dd50e8f73c7cff8798cabe3021346d5a547d10916ef6c94b57935dabd470ef"
+          },
+          "portraitImage": {
+            "sha256": "3c1f1e0a6b2f48d1a0c5e6f7b8d9e0f1a2b3c4d5e6f708192a3b4c5d6e7f8091"
           }
         }
       },
@@ -2672,6 +2693,9 @@
           "role": "předseda správní rady",
           "signatureImage": {
             "sha256": "70dd50e8f73c7cff8798cabe3021346d5a547d10916ef6c94b57935dabd470ef"
+          },
+          "portraitImage": {
+            "sha256": "3c1f1e0a6b2f48d1a0c5e6f7b8d9e0f1a2b3c4d5e6f708192a3b4c5d6e7f8091"
           }
         },
         "texts": {
@@ -2766,7 +2790,8 @@
         "signatory": {
           "name": "Petr Vzorový",
           "role": "předseda správní rady",
-          "signatureImage": null
+          "signatureImage": null,
+          "portraitImage": null
         }
       },
       "expected": {
@@ -2816,7 +2841,8 @@
         "signatory": {
           "name": "Petr Vzorový",
           "role": "předseda správní rady",
-          "signatureImage": null
+          "signatureImage": null,
+          "portraitImage": null
         },
         "texts": {
           "cs": {
@@ -2925,7 +2951,8 @@
         "signatory": {
           "name": "Petr Vzorový",
           "role": "předseda správní rady",
-          "signatureImage": null
+          "signatureImage": null,
+          "portraitImage": null
         }
       },
       "expected": {
@@ -2990,7 +3017,8 @@
         "signatory": {
           "name": "Petr Vzorový",
           "role": "předseda správní rady",
-          "signatureImage": null
+          "signatureImage": null,
+          "portraitImage": null
         },
         "texts": {
           "cs": {
@@ -3279,7 +3307,8 @@
         "signatory": {
           "name": "Petr Vzorový",
           "role": "předseda správní rady",
-          "signatureImage": null
+          "signatureImage": null,
+          "portraitImage": null
         }
       },
       "expected": {
@@ -3524,7 +3553,8 @@
         "signatory": {
           "name": "Petr Vzorový",
           "role": "předseda správní rady",
-          "signatureImage": null
+          "signatureImage": null,
+          "portraitImage": null
         },
         "texts": {
           "cs": {
@@ -5443,7 +5473,8 @@
         "signatory": {
           "name": "Petr Vzorový",
           "role": "předseda správní rady",
-          "signatureImage": null
+          "signatureImage": null,
+          "portraitImage": null
         }
       },
       "expected": {
@@ -7318,7 +7349,8 @@
         "signatory": {
           "name": "Petr Vzorový",
           "role": "předseda správní rady",
-          "signatureImage": null
+          "signatureImage": null,
+          "portraitImage": null
         },
         "texts": {
           "cs": {
@@ -7454,7 +7486,8 @@
         "signatory": {
           "name": "Petr Vzorový",
           "role": "předseda správní rady",
-          "signatureImage": null
+          "signatureImage": null,
+          "portraitImage": null
         }
       },
       "expected": {
@@ -7514,7 +7547,8 @@
         "signatory": {
           "name": "Petr Vzorový",
           "role": "předseda správní rady",
-          "signatureImage": null
+          "signatureImage": null,
+          "portraitImage": null
         },
         "texts": {
           "cs": {

@@ -60,6 +60,11 @@ public final class FrozenReceiptCases {
         return image.isNull() ? Optional.empty() : Optional.of(new ContentDigest(image.get("sha256").asString()));
     }
 
+    public static Optional<ContentDigest> portraitImageOf(JsonNode receipt) {
+        JsonNode image = receipt.get("signatory").get("portraitImage");
+        return image.isNull() ? Optional.empty() : Optional.of(new ContentDigest(image.get("sha256").asString()));
+    }
+
     public static SortedMap<String, String> czechTextsOf(JsonNode receipt) {
         SortedMap<String, String> texts = new TreeMap<>();
         receipt.get("texts").get("cs").properties().forEach(entry -> texts.put(entry.getKey(), entry.getValue().asString()));

@@ -1,6 +1,8 @@
 package cz.novanadeje.app.donations.application.receipt;
 
 import cz.novanadeje.app.donations.domain.receipt.CurrentSignature;
+import cz.novanadeje.app.donations.domain.receipt.PersonReference;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptPersonNotFound;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatureRepository;
 import cz.novanadeje.app.donations.domain.receipt.SignatureArtwork;
 import cz.novanadeje.app.donations.domain.receipt.SignatureImage;
@@ -8,6 +10,7 @@ import cz.novanadeje.app.donations.domain.receipt.SignatureVector;
 import cz.novanadeje.app.donations.domain.receipt.SignatureVectorProblem;
 import cz.novanadeje.app.donations.domain.receipt.UnsupportedSignatureVector;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.shared.application.people.FoundationPeople;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -36,34 +39,54 @@ public class ReceiptSignatureService {
     private final SignatureImageProcessor processor;
     private final SignatureVectorParser vectors;
     private final ReceiptSignatureRepository signatures;
+    private final FoundationPeople people;
     private final ApplicationEventPublisher events;
     private final TransactionTemplate transaction;
     private final Clock clock;
 
     public ReceiptSignatureService(SignatureImageProcessor processor, SignatureVectorParser vectors, ReceiptSignatureRepository signatures,
-                                   ApplicationEventPublisher events, TransactionTemplate transaction, Clock clock) {
+                                   FoundationPeople people, ApplicationEventPublisher events, TransactionTemplate transaction, Clock clock) {
         this.processor = processor;
         this.vectors = vectors;
         this.signatures = signatures;
+        this.people = people;
         this.events = events;
         this.transaction = transaction;
         this.clock = clock;
     }
 
     @Transactional(readOnly = true)
-    public Optional<CurrentSignature> current() {
-        return signatures.current();
+    public Optional<CurrentSignature> currentOf(PersonReference person) {
+        known(person);
+        return signatures.currentOf(person);
     }
 
-    public CurrentSignature upload(UUID adminId, byte[] upload) {
+    public CurrentSignature upload(UUID adminId, PersonReference person, byte[] upload) {
+        known(person);
         SignatureArtwork artwork = isSvg(upload) ? vector(upload) : processor.process(upload);
         Instant now = clock.instant();
         transaction.executeWithoutResult(status -> {
-            signatures.replace(artwork, now);
-            events.publishEvent(new AdminActionPerformed(adminId, CHANGE_ACTION, Optional.empty(), details(artwork), now));
+            if (people.findForUpdate(person.value()).isEmpty()) {
+                throw new ReceiptPersonNotFound(person);
+            }
+            signatures.replace(person, artwork, now);
+            events.publishEvent(new AdminActionPerformed(adminId, CHANGE_ACTION, Optional.empty(), details(person, artwork), now));
         });
         log.info("Admin {} uploaded a {}x{} signature image for receipts", adminId, artwork.width(), artwork.height());
         return new CurrentSignature(artwork, now);
+    }
+
+    @Transactional
+    public void forget(PersonReference person) {
+        if (signatures.remove(person)) {
+            AfterCommit.run(() -> log.info("Receipt signature of removed person {} deleted", person));
+        }
+    }
+
+    private void known(PersonReference person) {
+        if (people.find(person.value()).isEmpty()) {
+            throw new ReceiptPersonNotFound(person);
+        }
     }
 
     private SignatureVector vector(byte[] upload) {
@@ -87,22 +110,23 @@ public class ReceiptSignatureService {
         return at < upload.length && upload[at] == '<';
     }
 
-    private static String details(SignatureArtwork artwork) {
+    private static String details(PersonReference person, SignatureArtwork artwork) {
         return switch (artwork) {
-            case SignatureImage image ->
-                    "Nahrán obrázek podpisu na potvrzení o daru: " + image.width() + " × " + image.height() + " px, SHA-256 " + image.digest();
-            case SignatureVector vector -> "Nahrán vektorový podpis (SVG) na potvrzení o daru, SHA-256 " + vector.digest();
+            case SignatureImage image -> "Nahrán obrázek podpisu na potvrzení o daru u osoby " + person + ": " + image.width() + " × "
+                    + image.height() + " px, SHA-256 " + image.digest();
+            case SignatureVector vector -> "Nahrán vektorový podpis (SVG) na potvrzení o daru u osoby " + person + ", SHA-256 " + vector.digest();
         };
     }
 
     @Transactional
-    public void remove(UUID adminId) {
-        if (!signatures.remove()) {
+    public void remove(UUID adminId, PersonReference person) {
+        known(person);
+        if (!signatures.remove(person)) {
             return;
         }
         Instant now = clock.instant();
         events.publishEvent(new AdminActionPerformed(adminId, REMOVE_ACTION, Optional.empty(),
-                "Obrázek podpisu odebrán; nová potvrzení o daru mají jen čáru a jméno", now));
-        log.info("Admin {} removed the signature image for receipts", adminId);
+                "Obrázek podpisu na potvrzení o daru u osoby " + person + " odebrán", now));
+        AfterCommit.run(() -> log.info("Admin {} removed the signature image for receipts", adminId));
     }
 }

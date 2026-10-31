@@ -6,6 +6,7 @@ Feature: An administrator sees a donor's bank accounts, donations and receipts a
     And a person "Jana" is registered
     And a person "Petr" is registered
     And "Jana" is an administrator
+    And a person of the foundation signs the receipts
 
   Scenario: The donor's donations card lists the record, the bank accounts, the donations and the receipts
     Given the bank account has these movements:

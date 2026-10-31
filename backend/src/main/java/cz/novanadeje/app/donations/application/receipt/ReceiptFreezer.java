@@ -24,8 +24,8 @@ public class ReceiptFreezer {
         this.signer = signer;
     }
 
-    public FrozenReceipt freeze(ReceiptDocument document, Optional<ContentDigest> signatureImage) {
-        return new FrozenReceipt(document, texts.textsFor(document.locale()), signatureImage,
+    public FrozenReceipt freeze(ReceiptDocument document, Optional<ContentDigest> signatureImage, Optional<ContentDigest> portraitImage) {
+        return new FrozenReceipt(document, texts.textsFor(document.locale()), signatureImage, portraitImage,
                 new ReceiptVerification(signer.keyId(), proofs.prove(SignedReceipt.of(document))));
     }
 }

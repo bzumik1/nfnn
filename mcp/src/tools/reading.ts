@@ -36,12 +36,12 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Stav serveru',
       description:
-        'The running backend version and health, the Fio bank import state (covered period, last attempt and success, failures, reported outage), the last backup and test restore, and the key that signs the verification QR codes on receipts (its id, when the server registered it, whether it is published and whether an administrator withdrew it, and the keys whose row disagrees with the audit trail: missing when the trail registered, adopted or withdrew a key that has no row, reverted when the row of a withdrawn key is active again; attention is true when a key fails its seal and is not published, when the current key is withdrawn and the server has not yet started with a new seed, when a row disagrees with the audit trail, and when that part is unavailable, which leaves the rest of the status as it is).',
+        'The running backend version and health, the Fio bank import state (covered period, last attempt and success, failures, reported outage), the last backup and test restore, the key that signs the verification QR codes on receipts (its id, when the server registered it, whether it is published and whether an administrator withdrew it, and the keys whose row disagrees with the audit trail: missing when the trail registered, adopted or withdrew a key that has no row, reverted when the row of a withdrawn key is active again; attention is true when a key fails its seal and is not published, when the current key is withdrawn and the server has not yet started with a new seed, when a row disagrees with the audit trail, and when that part is unavailable, which leaves the rest of the status as it is), and receiptSignatory: ok when a person of the foundation is chosen to sign the receipts, missing when none is, so no receipt can be issued until an administrator chooses one at /sprava/lide-fondu, or unavailable when the backend did not say.',
       annotations: READ_ONLY,
     },
     async (ctx) =>
       answer(deps, ctx, 'nfnn_status', async ({ apiToken }) => {
-        const [info, health, importState, backups, signingKeys] = await Promise.all([
+        const [info, health, importState, backups, signingKeys, signatory] = await Promise.all([
           backend.get('/actuator/info'),
           backend.get('/actuator/health'),
           backend.get('/api/admin/donations/import-state', apiToken),
@@ -49,6 +49,9 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
           backend
             .get('/api/admin/donations/receipt-signing-keys', apiToken)
             .then(receiptSigningKeys, unavailableReceiptSigningKeys),
+          backend
+            .get('/api/admin/donations/receipt-signatory', apiToken)
+            .then(receiptSignatoryState, () => 'unavailable'),
         ]);
         const backupView = asRecord(backups);
         return text({
@@ -59,6 +62,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
           lastTestRestore: backupView['lastTestRestore'],
           backupProblems: backupView['problems'],
           receiptSigningKeys: signingKeys,
+          receiptSignatory: signatory,
         });
       }),
   );
@@ -386,21 +390,13 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Podpis na potvrzeních',
       description:
-        'Whether a signature is uploaded for donation receipts, its kind (RASTER for a scan, VECTOR for an SVG of filled paths), its size in pixels and when it was uploaded (the image and the vector paths themselves are left out). Receipts issued after the upload carry it above the signatory, a scan and a vector alike; uploading and removing it stay on the web (/sprava/nastaveni, "Potvrzení o daru").',
+        'Who signs the donation receipts: the person of the foundation chosen for it (personId, name, receiptRole, the role printed under the name on receipts, chosenAt, and whether that person has a portrait, whether it can be printed and whether they have a receipt signature; portraitPrintable false while a portrait is set means its image cannot be prepared for print, so receipts are issued without it until another portrait is uploaded on the web), or signatory null when none is chosen, in which case no receipt can be issued. Also the receipt signatures uploaded per person: personId, kind (RASTER for a scan, VECTOR for an SVG of filled paths), size in pixels and when it was uploaded; the images themselves are left out. Receipts issued after a change carry the portrait, the signature (a scan and a vector alike), the name and the receipt role. Choosing the signatory and uploading or removing a receipt signature stay on the web (/sprava/lide-fondu).',
       annotations: READ_ONLY,
     },
     async (ctx) =>
-      answer(deps, ctx, 'nfnn_receipt_signature', async ({ apiToken }) => {
-        const {
-          image: _image,
-          vector: _vector,
-          ...signature
-        } = (await backend.get('/api/admin/donations/receipt-signature', apiToken)) as Record<
-          string,
-          unknown
-        >;
-        return text(signature);
-      }),
+      answer(deps, ctx, 'nfnn_receipt_signature', async ({ apiToken }) =>
+        text(await backend.get('/api/admin/donations/receipt-signatory', apiToken)),
+      ),
   );
 
   server.registerTool(
@@ -767,6 +763,11 @@ function unavailableReceiptSigningKeys(failure: unknown): Record<string, unknown
     unavailable: failure instanceof BackendProblem ? failure.message : 'the backend did not answer',
     attention: true,
   };
+}
+
+function receiptSignatoryState(answer: unknown): 'ok' | 'missing' {
+  const signatory = asRecord(answer)['signatory'];
+  return signatory !== null && signatory !== undefined ? 'ok' : 'missing';
 }
 
 function receiptSigningKeys(answer: unknown): Record<string, unknown> {

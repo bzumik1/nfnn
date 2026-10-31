@@ -68,7 +68,7 @@ class AdminHandlerClassificationTest {
     }
 
     @Test
-    @DisplayName("Given the classification, when the security chain decides for a browser administrator and for connected applications, then a browser-only handler refuses every connected application, a connector-reachable one admits the writing permission, and a change needs it")
+    @DisplayName("Given the classification, when the security chain decides for a browser administrator and for connected applications, then a browser-only handler refuses every connected application, also asked with HEAD for a GET, a connector-reachable one admits the writing permission, and a change needs it")
     void should_decide_as_classified_when_asked_given_browser_and_connected_tokens() {
         AuthorizationManager<HttpServletRequest> decisions = apiChain.getFilters().stream()
                 .filter(AuthorizationFilter.class::isInstance)
@@ -80,10 +80,13 @@ class AdminHandlerClassificationTest {
         AdminHandlerReach.CLASSIFIED.forEach((handler, reach) -> {
             String method = handler.substring(0, handler.indexOf(' '));
             String path = PATH_VARIABLE.matcher(handler.substring(handler.indexOf(' ') + 1)).replaceAll(SAMPLE_SEGMENT);
-            for (TokenKind kind : TokenKind.values()) {
-                boolean granted = decisions.authorize(kind::authentication, new MockHttpServletRequest(method, path)).isGranted();
-                if (granted != reach.reachedBy(kind == TokenKind.BROWSER, kind == TokenKind.CONNECTED_WRITING, method)) {
-                    wrong.add(handler + " (" + reach + ") is " + (granted ? "granted" : "refused") + " to " + kind);
+            List<String> sent = "GET".equals(method) ? List.of("GET", "HEAD") : List.of(method);
+            for (String sentMethod : sent) {
+                for (TokenKind kind : TokenKind.values()) {
+                    boolean granted = decisions.authorize(kind::authentication, new MockHttpServletRequest(sentMethod, path)).isGranted();
+                    if (granted != reach.reachedBy(kind == TokenKind.BROWSER, kind == TokenKind.CONNECTED_WRITING, method)) {
+                        wrong.add(sentMethod + " for " + handler + " (" + reach + ") is " + (granted ? "granted" : "refused") + " to " + kind);
+                    }
                 }
             }
         });

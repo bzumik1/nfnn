@@ -65,6 +65,14 @@ public class PeopleStepDefinitions {
         add(fields);
     }
 
+    @When("{string} adds a person whose {word} has a line break")
+    public void addsAPersonWhoseTextHasALineBreak(String alias, String field) {
+        sessions.actAs(alias);
+        Map<String, String> fields = new HashMap<>(Map.of("name", "Eva Vzorová", "onBoard", "true"));
+        fields.put(field, "Eva\nVzorová");
+        add(fields);
+    }
+
     @When("the exchanged API token adds a person:")
     public void theExchangedApiTokenAddsAPerson(Map<String, String> fields) {
         actAsExchangedApiToken();

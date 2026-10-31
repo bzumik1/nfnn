@@ -6,15 +6,15 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Entity
-@Table(name = "donation_receipt_signature")
+@Table(name = "donation_person_receipt_signature")
 class ReceiptSignatureJpaEntity {
 
-    static final short SINGLETON_ID = 1;
-
     @Id
-    private Short id;
+    @Column(name = "person_id")
+    private UUID personId;
 
     @Column(name = "image_sha256", nullable = false, length = 64)
     private String imageSha256;
@@ -31,14 +31,18 @@ class ReceiptSignatureJpaEntity {
     protected ReceiptSignatureJpaEntity() {
     }
 
-    static ReceiptSignatureJpaEntity of(String imageSha256, int width, int height, Instant uploadedAt) {
+    static ReceiptSignatureJpaEntity of(UUID personId, String imageSha256, int width, int height, Instant uploadedAt) {
         ReceiptSignatureJpaEntity entity = new ReceiptSignatureJpaEntity();
-        entity.id = SINGLETON_ID;
+        entity.personId = personId;
         entity.imageSha256 = imageSha256;
         entity.width = (short) width;
         entity.height = (short) height;
         entity.uploadedAt = uploadedAt;
         return entity;
+    }
+
+    UUID personId() {
+        return personId;
     }
 
     String imageSha256() {

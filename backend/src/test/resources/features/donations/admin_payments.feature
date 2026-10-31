@@ -6,6 +6,7 @@ Feature: An administrator pairs bank payments by hand
     And a person "Jana" is registered
     And a person "Petr" is registered
     And "Jana" is an administrator
+    And a person of the foundation signs the receipts
 
   Scenario: The unpaired payments are listed newest first with what the bank sent
     Given the bank account has these movements:

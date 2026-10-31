@@ -26,6 +26,15 @@ import { FormField } from '../../../shared/ui/form-field/form-field';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 import { MAX_IMAGE_BYTES, mediaUrl, NewsApi, UploadedImageResponse } from '../../content/news-api';
 import {
+  AdminApi,
+  MAX_RECEIPT_ROLE_LENGTH,
+  ReceiptSignatoryResponse,
+  ReceiptSignatureResponse,
+  ReceiptSignatureSummaryResponse,
+} from '../admin-api';
+import { ReceiptSignature } from '../receipt-signature/receipt-signature';
+import { SignatureArtwork } from '../receipt-signature/signature-artwork';
+import {
   EMAIL_SHAPE,
   MAX_BOARD_NOTE_LENGTH,
   MAX_EMAIL_LENGTH,
@@ -43,6 +52,16 @@ import { Avatar } from '../../../shared/ui/avatar/avatar';
 
 type LoadState = 'loading' | 'ready' | 'error';
 type Direction = 'up' | 'down';
+
+type ReceiptPreview =
+  | { key: string; state: 'loading' }
+  | { key: string; state: 'ready'; signature: ReceiptSignatureResponse }
+  | { key: string; state: 'error' };
+
+interface ReceiptDraft {
+  signs: boolean;
+  role: string;
+}
 
 interface Draft {
   name: string;
@@ -64,12 +83,14 @@ const NEW_PERSON = 'new';
   selector: 'app-admin-people',
   imports: [
     Avatar,
+    SignatureArtwork,
     FormsModule,
     FormField,
     FormControlDirective,
     FocusFirstInvalid,
     FileButton,
     LiveNotice,
+    ReceiptSignature,
   ],
   templateUrl: './admin-people.html',
   styleUrl: './admin-people.scss',
@@ -77,6 +98,7 @@ const NEW_PERSON = 'new';
 })
 export class AdminPeople {
   private readonly api = inject(PeopleApi);
+  private readonly admin = inject(AdminApi);
   private readonly media = inject(NewsApi);
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
@@ -86,6 +108,7 @@ export class AdminPeople {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly title = viewChild.required<ElementRef<HTMLHeadingElement>>('title');
   private readonly personForm = viewChild<NgForm>('personForm');
+  private readonly receiptTitle = viewChild<ElementRef<HTMLHeadingElement>>('receiptTitle');
 
   protected readonly maxNameLength = MAX_PERSON_NAME_LENGTH;
   protected readonly maxRoleLength = MAX_PERSON_ROLE_LENGTH;
@@ -93,6 +116,7 @@ export class AdminPeople {
   protected readonly maxNoteLength = MAX_FOUNDERS_NOTE_LENGTH;
   protected readonly maxFootnoteLength = MAX_PEOPLE_FOOTNOTE_LENGTH;
   protected readonly maxEmailLength = MAX_EMAIL_LENGTH;
+  protected readonly maxReceiptRoleLength = MAX_RECEIPT_ROLE_LENGTH;
   protected readonly emailShape = EMAIL_SHAPE;
 
   protected readonly state = signal<LoadState>('loading');
@@ -112,9 +136,16 @@ export class AdminPeople {
   protected readonly listNotice = signal<Notice | null>(null);
   protected readonly editorNotice = signal<Notice | null>(null);
   protected readonly noteNotice = signal<Notice | null>(null);
+  protected readonly signatory = signal<ReceiptSignatoryResponse | null>(null);
+  protected readonly signatoryState = signal<LoadState>('loading');
+  protected readonly receiptPreviews = signal<ReadonlyMap<string, ReceiptPreview>>(new Map());
+  protected readonly signatureBusy = signal(false);
+  protected readonly savingReceipt = signal(false);
+  protected readonly receiptNotice = signal<Notice | null>(null);
   protected readonly footnoteNotice = signal<Notice | null>(null);
 
   protected draft: Draft = emptyDraft();
+  protected receiptDraft: ReceiptDraft = { signs: false, role: '' };
   protected noteText = '';
   protected footnoteText = '';
 
@@ -131,6 +162,10 @@ export class AdminPeople {
   protected readonly emailMessages = {
     pattern: $localize`:@@admin.people.email.invalid:Zadejte e-mail ve tvaru jana@example.cz.`,
     maxlength: $localize`:@@admin.people.email.tooLong:E-mail může mít nejvíc ${MAX_EMAIL_LENGTH}:max: znaků.`,
+  };
+  protected readonly receiptRoleMessages = {
+    required: $localize`:@@admin.people.receiptRole.required:Vyplňte prosím funkci, která se vytiskne pod jméno.`,
+    maxlength: $localize`:@@admin.people.receiptRole.tooLong:Funkce může mít nejvíc ${MAX_RECEIPT_ROLE_LENGTH}:max: znaků.`,
   };
   protected readonly noteMessages = {
     maxlength: $localize`:@@admin.people.note.tooLong:Slovo zakladatelů může mít nejvíc ${MAX_FOUNDERS_NOTE_LENGTH}:max: znaků.`,
@@ -153,17 +188,21 @@ export class AdminPeople {
     const signature = this.current()?.webSignature;
     return signature ? mediaUrl(signature.id, PREVIEW_WIDTH) : null;
   });
+  protected readonly signatoryName = computed(() => this.signatory()?.signatory?.name ?? null);
   protected readonly busy = computed(
     () =>
       this.saving() ||
+      this.savingReceipt() ||
       this.removing() ||
       this.uploadingPortrait() ||
       this.uploadingSignature() ||
+      this.signatureBusy() ||
       this.moving(),
   );
 
   constructor() {
     this.load();
+    this.loadSignatory();
     afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
   }
 
@@ -193,11 +232,157 @@ export class AdminPeople {
       });
   }
 
+  protected signs(member: PersonResponse): boolean {
+    return this.signatory()?.signatory?.personId === member.id;
+  }
+
+  protected retrySignatory(): void {
+    this.receiptTitle()?.nativeElement.focus();
+    this.loadSignatory();
+  }
+
+  protected loadSignatory(): void {
+    if (this.signatoryState() !== 'ready') {
+      this.signatoryState.set('loading');
+    }
+    this.admin
+      .receiptSignatory()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (view) => {
+          this.signatory.set(view);
+          this.signatoryState.set('ready');
+          this.loadReceiptPreviews(view.signatures);
+          this.fillReceiptRole();
+        },
+        error: () => {
+          if (this.signatoryState() !== 'ready') {
+            this.signatoryState.set('error');
+          }
+        },
+      });
+  }
+
+  protected receiptPreview(member: PersonResponse): ReceiptPreview | null {
+    return this.receiptPreviews().get(member.id) ?? null;
+  }
+
+  protected webSignatureUrl(member: PersonResponse): string | null {
+    return member.webSignature ? mediaUrl(member.webSignature.id, PREVIEW_WIDTH) : null;
+  }
+
+  protected webSignatureAlt(member: PersonResponse): string {
+    return $localize`:@@admin.people.list.webSignatureAlt:Podpis na webu: ${member.name}:name:`;
+  }
+
+  protected receiptSignatureLabel(member: PersonResponse): string {
+    return $localize`:@@admin.people.list.receiptSignatureAlt:Podpis na potvrzení: ${member.name}:name:`;
+  }
+
+  private loadReceiptPreviews(summaries: ReceiptSignatureSummaryResponse[]): void {
+    const known = this.receiptPreviews();
+    const next = new Map<string, ReceiptPreview>();
+    const missing: { personId: string; key: string }[] = [];
+    for (const summary of summaries) {
+      const key = `${summary.personId}@${summary.uploadedAt}`;
+      const cached = known.get(summary.personId);
+      if (cached !== undefined && cached.key === key && cached.state !== 'error') {
+        next.set(summary.personId, cached);
+      } else {
+        next.set(summary.personId, { key, state: 'loading' });
+        missing.push({ personId: summary.personId, key });
+      }
+    }
+    this.receiptPreviews.set(next);
+    for (const { personId, key } of missing) {
+      this.admin
+        .receiptSignature(personId)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: (signature) =>
+            this.settleReceiptPreview(
+              personId,
+              key,
+              signature.configured ? { key, state: 'ready', signature } : null,
+            ),
+          error: () => this.settleReceiptPreview(personId, key, { key, state: 'error' }),
+        });
+    }
+  }
+
+  private settleReceiptPreview(
+    personId: string,
+    key: string,
+    preview: ReceiptPreview | null,
+  ): void {
+    this.receiptPreviews.update((previews) => {
+      if (previews.get(personId)?.key !== key) {
+        return previews;
+      }
+      const next = new Map(previews);
+      if (preview === null) {
+        next.delete(personId);
+      } else {
+        next.set(personId, preview);
+      }
+      return next;
+    });
+  }
+
+  private fillReceiptRole(): void {
+    const member = this.current();
+    if (member !== null && this.signs(member) && this.receiptDraft.role === '') {
+      this.receiptDraft = { signs: false, role: this.signatory()?.signatory?.receiptRole ?? '' };
+    }
+  }
+
+  protected saveReceipt(form: NgForm): void {
+    const person = this.current();
+    if (person === null || this.busy()) {
+      return;
+    }
+    this.receiptNotice.set(null);
+    if (form.invalid) {
+      return;
+    }
+    this.savingReceipt.set(true);
+    this.admin
+      .chooseReceiptSignatory({ personId: person.id, receiptRole: this.receiptDraft.role.trim() })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (chosen) => {
+          this.savingReceipt.set(false);
+          this.signatory.update((view) => ({
+            signatory: chosen,
+            signatures: view?.signatures ?? [],
+          }));
+          this.receiptDraft = { signs: false, role: chosen.receiptRole };
+          this.receiptNotice.set({
+            kind: 'status',
+            text: $localize`:@@admin.people.receipt.saved:Potvrzení vystavená od teď podepisuje ${chosen.name}:name: s funkcí ${chosen.receiptRole}:role:.`,
+          });
+        },
+        error: (failure: unknown) => {
+          this.savingReceipt.set(false);
+          this.receiptNotice.set({
+            kind: 'alert',
+            text: describeProblem(
+              failure,
+              $localize`:@@admin.people.receipt.failed:Podepisujícího se nepodařilo uložit. Zkuste to prosím znovu.`,
+            ),
+          });
+        },
+      });
+  }
+
   protected startAdding(): void {
     this.open(NEW_PERSON, null);
   }
 
   protected edit(member: PersonResponse): void {
+    if (this.busy()) {
+      return;
+    }
     this.open(member.id, member);
   }
 
@@ -366,6 +551,9 @@ export class AdminPeople {
   }
 
   protected askRemoval(): void {
+    if (this.signatoryState() !== 'ready') {
+      return;
+    }
     this.editorNotice.set(null);
     this.confirmingRemoval.set(true);
     this.focusLater('#person-remove-cancel');
@@ -508,8 +696,13 @@ export class AdminPeople {
     this.listNotice.set(null);
     this.editorNotice.set(null);
     this.signatureNotice.set(null);
+    this.receiptNotice.set(null);
     this.portraitError.set(null);
     this.confirmingRemoval.set(false);
+    this.receiptDraft = {
+      signs: false,
+      role: member && this.signs(member) ? (this.signatory()?.signatory?.receiptRole ?? '') : '',
+    };
     this.draft = member
       ? {
           name: member.name,

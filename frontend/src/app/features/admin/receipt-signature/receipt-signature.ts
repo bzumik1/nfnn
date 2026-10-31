@@ -5,27 +5,27 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  effect,
   ElementRef,
   inject,
   Injector,
+  input,
+  output,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Subscription } from 'rxjs';
 import {
   describeProblem,
   describeProblemWithoutFields,
   problemTypeEndsWith,
-} from '../../../../core/auth/api-problem';
-import { formatBankTime } from '../../../donations/donation-date';
-import {
-  AdminApi,
-  ReceiptSignatureResponse,
-  SignatureVectorPath,
-  SignatureVectorResponse,
-} from '../../admin-api';
-import { Notice } from '../../../../shared/ui/live-notice/live-notice';
-import { FileButton } from '../../../../shared/ui/file-button/file-button';
+} from '../../../core/auth/api-problem';
+import { formatBankTime } from '../../donations/donation-date';
+import { AdminApi, ReceiptSignatureResponse } from '../admin-api';
+import { Notice } from '../../../shared/ui/live-notice/live-notice';
+import { FileButton } from '../../../shared/ui/file-button/file-button';
+import { SignatureArtwork } from './signature-artwork';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -33,14 +33,12 @@ const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const SVG_TYPE = 'image/svg+xml';
 const MAX_BYTES = 10 * 1024 * 1024;
 const MAX_SVG_BYTES = 200 * 1024;
-const HEX_FILL = /^#[0-9a-f]{6}$/;
-const BLACK = '#000000';
 const UNSUPPORTED_VECTOR = '/donations/unsupported-signature-vector';
 const PIXELS = new Intl.NumberFormat('cs-CZ');
 
 @Component({
   selector: 'app-receipt-signature',
-  imports: [FileButton],
+  imports: [FileButton, SignatureArtwork],
   templateUrl: './receipt-signature.html',
   styleUrl: './receipt-signature.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -52,6 +50,12 @@ export class ReceiptSignature {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly removeButton = viewChild<ElementRef<HTMLButtonElement>>('removeButton');
   private readonly removeCancel = viewChild<ElementRef<HTMLButtonElement>>('removeCancel');
+  private readonly heading = viewChild.required<ElementRef<HTMLHeadingElement>>('heading');
+
+  readonly personId = input.required<string>();
+  readonly signs = input(false);
+  readonly changed = output<ReceiptSignatureResponse>();
+  readonly busyChange = output<boolean>();
 
   protected readonly state = signal<LoadState>('loading');
   protected readonly signature = signal<ReceiptSignatureResponse | null>(null);
@@ -60,30 +64,66 @@ export class ReceiptSignature {
   protected readonly confirmingRemoval = signal(false);
   protected readonly notice = signal<Notice | null>(null);
 
+  private pending = new Subscription();
+
   constructor() {
-    this.load();
+    effect(() => {
+      this.personId();
+      untracked(() => {
+        this.cancelPending();
+        this.notice.set(null);
+        this.confirmingRemoval.set(false);
+        this.signature.set(null);
+        this.load();
+      });
+    });
+    this.destroyRef.onDestroy(() => this.pending.unsubscribe());
   }
 
   protected load(): void {
     this.state.set('loading');
-    this.api
-      .receiptSignature()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
+    this.track(
+      this.api.receiptSignature(this.personId()).subscribe({
         next: (signature) => {
           this.signature.set(signature);
           this.state.set('ready');
         },
         error: () => this.state.set('error'),
-      });
+      }),
+    );
   }
 
-  protected viewBox(vector: SignatureVectorResponse): string {
-    return vector.viewBox.join(' ');
+  protected retry(): void {
+    this.heading().nativeElement.focus();
+    this.load();
   }
 
-  protected fill(path: SignatureVectorPath): string {
-    return HEX_FILL.test(path.fill) ? path.fill : BLACK;
+  private track(subscription: Subscription): void {
+    this.pending.add(subscription);
+  }
+
+  private cancelPending(): void {
+    this.pending.unsubscribe();
+    this.pending = new Subscription();
+    this.setUploading(false);
+    this.setRemoving(false);
+  }
+
+  private setUploading(uploading: boolean): void {
+    this.setBusy(() => this.uploading.set(uploading));
+  }
+
+  private setRemoving(removing: boolean): void {
+    this.setBusy(() => this.removing.set(removing));
+  }
+
+  private setBusy(change: () => void): void {
+    const before = this.uploading() || this.removing();
+    change();
+    const after = this.uploading() || this.removing();
+    if (before !== after) {
+      this.busyChange.emit(after);
+    }
   }
 
   protected uploadedLine(signature: ReceiptSignatureResponse): string {
@@ -124,21 +164,22 @@ export class ReceiptSignature {
       });
       return;
     }
-    this.uploading.set(true);
-    this.api
-      .uploadReceiptSignature(file)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
+    this.setUploading(true);
+    this.track(
+      this.api.uploadReceiptSignature(this.personId(), file).subscribe({
         next: (signature) => {
-          this.uploading.set(false);
+          this.setUploading(false);
           this.signature.set(signature);
+          this.changed.emit(signature);
           this.notice.set({
             kind: 'status',
-            text: $localize`:@@admin.signature.saved:Podpis je uložený. Ponesou ho potvrzení vystavená od teď.`,
+            text: this.signs()
+              ? $localize`:@@admin.signature.saved:Podpis je uložený. Ponesou ho potvrzení vystavená od teď.`
+              : $localize`:@@admin.signature.savedNotSigning:Podpis je uložený. Potvrzení ho ponesou, až je bude tato osoba podepisovat.`,
           });
         },
         error: (failure: unknown) => {
-          this.uploading.set(false);
+          this.setUploading(false);
           const describe = problemTypeEndsWith(failure, UNSUPPORTED_VECTOR)
             ? describeProblemWithoutFields
             : describeProblem;
@@ -150,7 +191,8 @@ export class ReceiptSignature {
             ),
           });
         },
-      });
+      }),
+    );
   }
 
   protected askRemoval(): void {
@@ -168,15 +210,11 @@ export class ReceiptSignature {
     if (this.removing()) {
       return;
     }
-    this.removing.set(true);
-    this.api
-      .removeReceiptSignature()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
+    this.setRemoving(true);
+    this.track(
+      this.api.removeReceiptSignature(this.personId()).subscribe({
         next: () => {
-          this.removing.set(false);
-          this.confirmingRemoval.set(false);
-          this.signature.set({
+          const removed: ReceiptSignatureResponse = {
             configured: false,
             kind: null,
             image: null,
@@ -184,10 +222,16 @@ export class ReceiptSignature {
             width: null,
             height: null,
             uploadedAt: null,
-          });
+          };
+          this.setRemoving(false);
+          this.confirmingRemoval.set(false);
+          this.signature.set(removed);
+          this.changed.emit(removed);
           this.notice.set({
             kind: 'status',
-            text: $localize`:@@admin.signature.removed:Podpis je odebraný. Potvrzení vystavená od teď ho nebudou mít.`,
+            text: this.signs()
+              ? $localize`:@@admin.signature.removed:Podpis je odebraný. Potvrzení vystavená od teď ho nebudou mít.`
+              : $localize`:@@admin.signature.removedNotSigning:Podpis je odebraný.`,
           });
           afterNextRender(
             () =>
@@ -198,7 +242,7 @@ export class ReceiptSignature {
           );
         },
         error: (failure: unknown) => {
-          this.removing.set(false);
+          this.setRemoving(false);
           this.confirmingRemoval.set(false);
           this.notice.set({
             kind: 'alert',
@@ -209,7 +253,8 @@ export class ReceiptSignature {
           });
           this.focusRemoveButton();
         },
-      });
+      }),
+    );
   }
 
   private focusRemoveButton(): void {

@@ -19,6 +19,10 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -37,6 +41,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class DonorFrozenReceiptStepDefinitions {
 
+    private static final JsonMapper JSON = JsonMapper.builder().build();
     private static final String RECEIPTS_PATH = "/api/donations/me/receipts";
     private static final String IMAGES_PATH = "/api/donations/me/receipt-images/";
     private static final String QR_PREFIX = "https://nfnn.cz/overit#1";
@@ -47,6 +52,8 @@ public class DonorFrozenReceiptStepDefinitions {
     private final JdbcClient jdbc;
     private final ReceiptSigner signer;
     private final List<JsonNode> issued = new ArrayList<>();
+    private Optional<String> signatureImageSeen = Optional.empty();
+    private Optional<String> portraitImageSeen = Optional.empty();
 
     public DonorFrozenReceiptStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors scenarioDonors, JdbcClient jdbc, ReceiptSigner signer) {
         this.api = api;
@@ -160,6 +167,12 @@ public class DonorFrozenReceiptStepDefinitions {
     public void fetchesTheSignatureImageOfReceipt(String alias, String number) {
         sessions.actAs(alias);
         api.getBytes(IMAGES_PATH + signatureImageOf(number));
+    }
+
+    @When("{string} fetches the portrait image of receipt {string}")
+    public void fetchesThePortraitImageOfReceipt(String alias, String number) {
+        sessions.actAs(alias);
+        api.getBytes(IMAGES_PATH + portraitImageOf(number));
     }
 
     @When("{string} fetches the receipt image {string}")
@@ -322,7 +335,74 @@ public class DonorFrozenReceiptStepDefinitions {
 
     @Then("the frozen receipt shows the current signature image")
     public void theFrozenReceiptShowsTheCurrentSignatureImage() {
-        assertThat(answeredReceipt().get("receipt").get("signatory").get("signatureImage").get("sha256").asString()).isEqualTo(currentSignatureImage());
+        String shown = answeredReceipt().get("receipt").get("signatory").get("signatureImage").get("sha256").asString();
+        assertThat(shown).isEqualTo(currentSignatureImage());
+        signatureImageSeen = Optional.of(shown);
+    }
+
+    @Then("the frozen receipt still shows the signature image it showed before")
+    public void theFrozenReceiptStillShowsTheSignatureImageItShowedBefore() {
+        String before = signatureImageSeen.orElseThrow(() -> new AssertionError("No signature image was seen before"));
+        assertThat(answeredReceipt().get("receipt").get("signatory").get("signatureImage").get("sha256").asString())
+                .isEqualTo(before)
+                .isNotEqualTo(currentSignatureImage());
+    }
+
+    @Then("the frozen receipt shows no portrait")
+    public void theFrozenReceiptShowsNoPortrait() {
+        assertThat(answeredReceipt().get("receipt").get("signatory").get("portraitImage").isNull()).isTrue();
+    }
+
+    @Then("the frozen receipt shows a portrait of the signatory")
+    public void theFrozenReceiptShowsAPortraitOfTheSignatory() {
+        JsonNode portrait = answeredReceipt().get("receipt").get("signatory").get("portraitImage");
+        assertThat(portrait.isNull()).withFailMessage("The frozen receipt shows no portrait").isFalse();
+        String shown = portrait.get("sha256").asString();
+        assertThat(jdbc.sql("select media_type from receipt_image where sha256 = ?").param(shown).query(String.class).single()).isEqualTo("image/jpeg");
+        portraitImageSeen = Optional.of(shown);
+    }
+
+    @Then("the frozen receipt shows another portrait than before")
+    public void theFrozenReceiptShowsAnotherPortraitThanBefore() {
+        String before = portraitImageSeen.orElseThrow(() -> new AssertionError("No portrait was seen before"));
+        theFrozenReceiptShowsAPortraitOfTheSignatory();
+        assertThat(portraitImageSeen).isNotEqualTo(Optional.of(before));
+    }
+
+    @Then("the frozen receipt still shows the portrait it showed before")
+    public void theFrozenReceiptStillShowsThePortraitItShowedBefore() {
+        String before = portraitImageSeen.orElseThrow(() -> new AssertionError("No portrait was seen before"));
+        assertThat(answeredReceipt().get("receipt").get("signatory").get("portraitImage").get("sha256").asString()).isEqualTo(before);
+    }
+
+    @Then("the image is a {int} pixel square JPEG portrait, kept by the browser and never sniffed as another type")
+    public void theImageIsASquareJpegPortrait(int side) throws IOException {
+        HttpHeaders headers = api.lastResponse().getHeaders();
+        assertThat(headers.getContentType()).hasToString("image/jpeg");
+        assertThat(headers.getFirst("X-Content-Type-Options")).isEqualTo("nosniff");
+        assertThat(headers.getCacheControl()).isEqualTo("private, max-age=31536000, immutable");
+        BufferedImage portrait = ImageIO.read(new ByteArrayInputStream(api.lastResponseBytes()));
+        assertThat(portrait.getWidth()).isEqualTo(side);
+        assertThat(portrait.getHeight()).isEqualTo(side);
+        assertThat(sha256(api.lastResponseBytes())).isEqualTo(portraitImageSeen.orElseThrow(() -> new AssertionError("No portrait was seen before")));
+    }
+
+    @Given("the stored portrait of {string} cannot be decoded")
+    public void theStoredPortraitCannotBeDecoded(String name) {
+        int damaged = jdbc.sql("""
+                        update content_media_variant set data = ? where media_id = (select portrait_media_id from content_person where name = ?)""")
+                .param(new byte[] {1, 2, 3, 4})
+                .param(name)
+                .update();
+        assertThat(damaged).isPositive();
+    }
+
+    @Then("the image is the current vector signature as its canonical JSON, never sniffed as another type")
+    public void theImageIsTheCurrentVectorSignature() {
+        assertCanonicalVectorAnswer(currentSignatureImage());
+        JsonNode vector = JSON.readTree(api.lastResponseBytes());
+        assertThat(vector.properties()).extracting(Map.Entry::getKey).containsExactly("viewBox", "paths");
+        assertThat(vector.get("paths").get(0).properties()).extracting(Map.Entry::getKey).containsExactly("d", "fill", "opacity");
     }
 
     @Then("the image is the current signature, kept by the browser")
@@ -334,7 +414,7 @@ public class DonorFrozenReceiptStepDefinitions {
     }
 
     @Then("the image is the current vector signature as its canonical JSON, kept by the browser and never sniffed")
-    public void theImageIsTheCurrentVectorSignature() {
+    public void theImageIsTheCurrentVectorSignatureKeptByTheBrowser() {
         assertCanonicalVectorAnswer(currentSignatureImage());
     }
 
@@ -430,6 +510,10 @@ public class DonorFrozenReceiptStepDefinitions {
         return jdbc.sql("select signature_image_sha256 from issued_receipt where number = ?").param(number).query(String.class).single();
     }
 
+    private String portraitImageOf(String number) {
+        return jdbc.sql("select portrait_image_sha256 from issued_receipt where number = ?").param(number).query(String.class).single();
+    }
+
     private void assertCanonicalVectorAnswer(String digest) {
         HttpHeaders headers = api.lastResponse().getHeaders();
         assertThat(headers.getContentType()).hasToString("application/json");
@@ -447,7 +531,8 @@ public class DonorFrozenReceiptStepDefinitions {
     }
 
     private String currentSignatureImage() {
-        Optional<String> digest = jdbc.sql("select image_sha256 from donation_receipt_signature").query(String.class).optional();
+        Optional<String> digest = jdbc.sql("select s.image_sha256 from donation_person_receipt_signature s"
+                + " join donation_receipt_signatory c on c.person_id = s.person_id").query(String.class).optional();
         return digest.orElseThrow(() -> new AssertionError("No receipt signature is set"));
     }
 

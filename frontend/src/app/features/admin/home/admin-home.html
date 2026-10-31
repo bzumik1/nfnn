@@ -60,6 +60,20 @@
     }
     @if (needsAttention()) {
       <ul class="attention-list">
+        @if (signatoryState() === 'missing') {
+          <li class="attention-item attention-item--danger attention-signatory">
+            <span i18n="@@admin.home.attention.signatory"
+              >Potvrzení o daru nikdo nepodepisuje, a tak je web dárcům nevystaví.</span
+            >
+            &ngsp;
+            <a
+              class="ui-button ui-button--small"
+              routerLink="/sprava/lide-fondu"
+              i18n="@@admin.home.attention.signatory.open"
+              >Vybrat podepisujícího</a
+            >
+          </li>
+        }
         @if (state() === 'error') {
           <li class="attention-item" i18n="@@admin.home.attention.import.failed">
             Stav stahování plateb se nepodařilo zjistit; zkuste to znovu v kartě níže.
@@ -247,16 +261,30 @@
             >
           </li>
         }
-        @if (signatureMissing()) {
+        @if (signatoryState() === 'error') {
+          <li class="attention-item">
+            <span role="alert" i18n="@@admin.home.attention.signatory.failed"
+              >Nepodařilo se zkontrolovat, kdo podepisuje potvrzení o daru.</span
+            >
+            <button
+              type="button"
+              class="ui-button ui-button--small"
+              (click)="loadSignatory()"
+              i18n="@@admin.home.attention.retry"
+            >
+              Zkusit znovu
+            </button>
+          </li>
+        } @else if (signatoryState() === 'unsigned') {
           <li class="attention-item attention-signature">
-            <span i18n="@@admin.home.attention.signature"
-              >Potvrzení o daru zatím nemají nahraný podpis, jen čáru se jménem.</span
+            <span i18n="@@admin.home.attention.signature.person"
+              >Kdo podepisuje potvrzení o daru, zatím nemá nahraný podpis; potvrzení mají jen čáru
+              se jménem.</span
             >
             &ngsp;
             <a
               class="ui-button ui-button--small"
-              routerLink="/sprava/nastaveni"
-              fragment="settings-RECEIPTS"
+              routerLink="/sprava/lide-fondu"
               i18n="@@admin.home.attention.signature.open"
               >Nahrát podpis</a
             >

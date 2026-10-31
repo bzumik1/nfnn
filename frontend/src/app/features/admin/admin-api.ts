@@ -368,6 +368,36 @@ export interface ReceiptSignatureResponse {
   uploadedAt: string | null;
 }
 
+export interface ChosenReceiptSignatoryResponse {
+  personId: string;
+  name: string;
+  receiptRole: string;
+  chosenAt: string;
+  portrait: boolean;
+  portraitPrintable: boolean;
+  signature: boolean;
+}
+
+export interface ReceiptSignatureSummaryResponse {
+  personId: string;
+  kind: ReceiptSignatureKind;
+  width: number;
+  height: number;
+  uploadedAt: string;
+}
+
+export interface ReceiptSignatoryResponse {
+  signatory: ChosenReceiptSignatoryResponse | null;
+  signatures: ReceiptSignatureSummaryResponse[];
+}
+
+export interface ReceiptSignatoryRequest {
+  personId: string;
+  receiptRole: string;
+}
+
+export const MAX_RECEIPT_ROLE_LENGTH = 120;
+
 export type ReceiptSigningKeyStatus = 'active' | 'revoked';
 
 export interface ReceiptSigningKeyResponse {
@@ -805,14 +835,24 @@ export class AdminApi {
     return this.http.put<SettingsSavedResponse>('/api/admin/operations/settings', { changes });
   }
 
-  receiptSignature(): Observable<ReceiptSignatureResponse> {
-    return this.http.get<ReceiptSignatureResponse>(RECEIPT_SIGNATURE_URL);
+  receiptSignatory(): Observable<ReceiptSignatoryResponse> {
+    return this.http.get<ReceiptSignatoryResponse>(RECEIPT_SIGNATORY_URL);
   }
 
-  uploadReceiptSignature(file: File): Observable<ReceiptSignatureResponse> {
+  chooseReceiptSignatory(
+    request: ReceiptSignatoryRequest,
+  ): Observable<ChosenReceiptSignatoryResponse> {
+    return this.http.put<ChosenReceiptSignatoryResponse>(RECEIPT_SIGNATORY_URL, request);
+  }
+
+  receiptSignature(personId: string): Observable<ReceiptSignatureResponse> {
+    return this.http.get<ReceiptSignatureResponse>(receiptSignatureUrl(personId));
+  }
+
+  uploadReceiptSignature(personId: string, file: File): Observable<ReceiptSignatureResponse> {
     const form = new FormData();
     form.append('file', file, file.name);
-    return this.http.post<ReceiptSignatureResponse>(RECEIPT_SIGNATURE_URL, form);
+    return this.http.post<ReceiptSignatureResponse>(receiptSignatureUrl(personId), form);
   }
 
   receiptSigningKeys(): Observable<ReceiptSigningKeysResponse> {
@@ -829,8 +869,8 @@ export class AdminApi {
     );
   }
 
-  removeReceiptSignature(): Observable<void> {
-    return this.http.delete<void>(RECEIPT_SIGNATURE_URL);
+  removeReceiptSignature(personId: string): Observable<void> {
+    return this.http.delete<void>(receiptSignatureUrl(personId));
   }
 
   sendTestEmail(request: AdminTestEmailRequest): Observable<TestEmailResponse> {
@@ -891,7 +931,11 @@ export class AdminApi {
 }
 
 const LOGS_URL = '/api/admin/operations/logs';
-const RECEIPT_SIGNATURE_URL = '/api/admin/donations/receipt-signature';
+const RECEIPT_SIGNATORY_URL = '/api/admin/donations/receipt-signatory';
+
+function receiptSignatureUrl(personId: string): string {
+  return `/api/admin/donations/receipt-signatures/${encodeURIComponent(personId)}`;
+}
 const RECEIPT_SIGNING_KEYS_URL = '/api/admin/donations/receipt-signing-keys';
 const LOGGERS_URL = '/api/admin/operations/loggers';
 const DIAGNOSTICS_URL = '/api/admin/operations/diagnostics';

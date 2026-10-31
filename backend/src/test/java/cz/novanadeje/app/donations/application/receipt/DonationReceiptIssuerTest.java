@@ -22,13 +22,13 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptIssueLimitReached;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptKind;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptReplacementInBrowserOnly;
-import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatureRepository;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatoryMissing;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptStatus;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptUnprintable;
 import cz.novanadeje.app.donations.domain.receipt.Signatory;
 import cz.novanadeje.app.donations.domain.receipt.Receipts;
 import cz.novanadeje.app.donations.domain.receipt.ReplacedReceipt;
-import cz.novanadeje.app.donations.domain.receipt.SignatureImage;
+import cz.novanadeje.app.donations.domain.receipt.Signatory;
 import cz.novanadeje.app.donations.domain.receipt.proof.ReceiptTooLong;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyId;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningPaused;
@@ -40,6 +40,7 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -95,12 +96,17 @@ class DonationReceiptIssuerTest {
     private final DonationRepository donations = mock(DonationRepository.class);
     private final DonorRecordRepository donorRecords = mock(DonorRecordRepository.class);
     private final ReceiptFreezer freezer = mock(ReceiptFreezer.class);
-    private final ReceiptSignatureRepository signatures = mock(ReceiptSignatureRepository.class);
+    private final IssuingSignatory signatories = mock(IssuingSignatory.class);
     private final ReceiptSigningKeys signingKeys = mock(ReceiptSigningKeys.class);
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
     private final DonationReceiptIssuer issuer = new DonationReceiptIssuer(receipts,
-            new ReceiptRequestReader(donations, donorRecords, new FirstReceiptYear(YEAR_2026)), freezer, signatures, signingKeys, FOUNDATION, SIGNATORY, events,
+            new ReceiptRequestReader(donations, donorRecords, new FirstReceiptYear(YEAR_2026)), freezer, signatories, signingKeys, FOUNDATION, events,
             Clock.fixed(NOW, ZoneOffset.UTC));
+
+    @BeforeEach
+    void signedBySignatory() {
+        when(signatories.resolve(NOW)).thenReturn(new SignatoryAtIssue(SIGNATORY, Optional.empty(), Optional.empty()));
+    }
 
     @Test
     @DisplayName("Given no receipt yet, when a single receipt is issued, then the donor is locked first, then the donation and the donor record are read, a new number is taken and the document is frozen, signed and stored as active")
@@ -118,7 +124,7 @@ class DonationReceiptIssuerTest {
         order.verify(donorRecords).findById(JANA);
         order.verify(receipts).findActiveForDonation(MARCH.id());
         order.verify(receipts).nextSerial();
-        order.verify(freezer).freeze(any(), any());
+        order.verify(freezer).freeze(any(), any(), any());
         order.verify(receipts).save(any());
         DonationReceipt saved = savedReceipt();
         assertThat(saved).isSameAs(issued);
@@ -152,7 +158,7 @@ class DonationReceiptIssuerTest {
             ((Logger) LoggerFactory.getLogger(DonationReceiptIssuer.class)).detachAppender(lines);
         }
 
-        verifyNoInteractions(receipts, donations, donorRecords, freezer, signatures);
+        verifyNoInteractions(receipts, donations, donorRecords, freezer, signatories);
         assertThat(lines.list).singleElement().satisfies(line -> {
             assertThat(line.getLevel()).isEqualTo(Level.WARN);
             assertThat(line.getFormattedMessage()).isEqualTo("No receipt is issued to donor " + JANA
@@ -190,7 +196,7 @@ class DonationReceiptIssuerTest {
         verify(receipts, never()).nextSerial();
         verify(receipts, never()).countReplacementsIssuedAfter(any(), any());
         verify(receipts, never()).save(any());
-        verifyNoInteractions(freezer, signatures);
+        verifyNoInteractions(freezer, signatories);
     }
 
     @Test
@@ -249,10 +255,12 @@ class DonationReceiptIssuerTest {
     }
 
     @Test
-    @DisplayName("Given an uploaded signature, when a receipt is issued, then the frozen receipt names the digest of the signature image")
-    void should_freeze_signature_image_digest_when_issued_given_uploaded_signature() {
-        SignatureImage image = new SignatureImage(new byte[]{(byte) 0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n', 1, 2, 3}, 600, 200);
-        when(signatures.currentDigest()).thenReturn(Optional.of(image.digest()));
+    @DisplayName("Given a signatory with a receipt signature and a portrait, when a receipt is issued, then the document prints the signatory and the frozen receipt names the digests of both images")
+    void should_freeze_signatory_and_image_digests_when_issued_given_signatory_with_images() {
+        ContentDigest signature = new ContentDigest("a".repeat(64));
+        ContentDigest portrait = new ContentDigest("b".repeat(64));
+        Signatory petr = new Signatory("Petr Vzorový", "člen správní rady");
+        when(signatories.resolve(NOW)).thenReturn(new SignatoryAtIssue(petr, Optional.of(signature), Optional.of(portrait)));
         givenDonationsOfJana(jana(), MARCH);
         when(receipts.findActiveForDonation(MARCH.id())).thenReturn(Optional.empty());
         when(receipts.nextSerial()).thenReturn(1L);
@@ -260,25 +268,23 @@ class DonationReceiptIssuerTest {
 
         DonationReceipt issued = issuer.issueForDonation(JANA, MARCH.id(), TODAY);
 
-        verify(freezer).freeze(any(), eq(Optional.of(image.digest())));
-        assertThat(issued.frozen().signatureImage()).contains(image.digest());
+        ArgumentCaptor<ReceiptDocument> document = ArgumentCaptor.forClass(ReceiptDocument.class);
+        verify(freezer).freeze(document.capture(), eq(Optional.of(signature)), eq(Optional.of(portrait)));
+        assertThat(document.getValue().signatory()).isEqualTo(petr);
+        assertThat(issued.frozen().signatureImage()).contains(signature);
+        assertThat(issued.frozen().portraitImage()).contains(portrait);
     }
 
     @Test
-    @DisplayName("Given an uploaded vector signature, when a receipt is issued, then the frozen receipt names the digest of its canonical JSON without the vector being read")
-    void should_freeze_vector_digest_without_reading_it_when_issued_given_uploaded_vector_signature() {
-        ContentDigest vector = ContentDigest.of("{\"viewBox\":[0,0,300,100],\"paths\":[]}".getBytes(StandardCharsets.UTF_8));
-        when(signatures.currentDigest()).thenReturn(Optional.of(vector));
+    @DisplayName("Given nobody chosen to sign receipts, when a new receipt is needed, then it is refused before a number is taken and nothing is saved")
+    void should_refuse_before_numbering_when_issued_given_no_signatory() {
+        when(signatories.resolve(NOW)).thenThrow(new ReceiptSignatoryMissing());
         givenDonationsOfJana(jana(), MARCH);
         when(receipts.findActiveForDonation(MARCH.id())).thenReturn(Optional.empty());
-        when(receipts.nextSerial()).thenReturn(1L);
-        givenFreezer();
 
-        DonationReceipt issued = issuer.issueForDonation(JANA, MARCH.id(), TODAY);
-
-        verify(freezer).freeze(any(), eq(Optional.of(vector)));
-        verify(signatures, never()).current();
-        assertThat(issued.frozen().signatureImage()).contains(vector);
+        assertThatThrownBy(() -> issuer.issueForDonation(JANA, MARCH.id(), TODAY)).isInstanceOf(ReceiptSignatoryMissing.class);
+        verify(receipts, never()).nextSerial();
+        verify(receipts, never()).save(any());
     }
 
     @Test
@@ -288,7 +294,7 @@ class DonationReceiptIssuerTest {
         givenDonationsOfJana(jana(), JUNE, MARCH);
         when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.of(active));
         when(receipts.nextSerial()).thenReturn(4L);
-        when(freezer.freeze(any(), any())).thenThrow(new ReceiptTooLong());
+        when(freezer.freeze(any(), any(), any())).thenThrow(new ReceiptTooLong());
 
         assertThatThrownBy(() -> issuer.issueForYear(JANA, YEAR_2026, TODAY)).isInstanceOf(ReceiptTooLong.class);
         verify(receipts, never()).save(any());
@@ -510,7 +516,7 @@ class DonationReceiptIssuerTest {
             assertThatThrownBy(() -> issuer.issueForDonationByAdministrator(petr, CONNECTED_APPLICATION, JANA, MARCH.id(), TODAY))
                     .isInstanceOf(ReceiptSigningPaused.class);
 
-            verifyNoInteractions(receipts, donations, donorRecords, freezer, signatures, events);
+            verifyNoInteractions(receipts, donations, donorRecords, freezer, signatories, events);
         }
 
         @Test
@@ -625,12 +631,10 @@ class DonationReceiptIssuerTest {
     @Test
     @DisplayName("Given a signatory whose name has a character outside the printable set, when a receipt is issued, then it is refused before a number is taken")
     void should_refuse_before_numbering_when_issued_given_an_unprintable_signatory() {
-        DonationReceiptIssuer unprintable = new DonationReceiptIssuer(receipts,
-                new ReceiptRequestReader(donations, donorRecords, new FirstReceiptYear(YEAR_2026)), freezer, signatures, signingKeys, FOUNDATION,
-                new Signatory("Pavel\u0007Vzorový", "předseda správní rady"), events, Clock.fixed(NOW, ZoneOffset.UTC));
+        when(signatories.resolve(NOW)).thenReturn(new SignatoryAtIssue(new Signatory("Pavel\u0007Vzorový", "předseda správní rady"), Optional.empty(), Optional.empty()));
         givenDonationsOfJana(jana(), MARCH);
 
-        assertThatThrownBy(() -> unprintable.issueForYear(JANA, YEAR_2026, TODAY)).isInstanceOf(ReceiptUnprintable.class);
+        assertThatThrownBy(() -> issuer.issueForYear(JANA, YEAR_2026, TODAY)).isInstanceOf(ReceiptUnprintable.class);
 
         verify(receipts, never()).nextSerial();
         verifyNoInteractions(freezer);
@@ -645,10 +649,11 @@ class DonationReceiptIssuerTest {
     }
 
     private void givenFreezer() {
-        when(freezer.freeze(any(), any())).thenAnswer(call -> {
+        when(freezer.freeze(any(), any(), any())).thenAnswer(call -> {
             ReceiptDocument document = call.getArgument(0);
             Optional<ContentDigest> signature = call.getArgument(1);
-            FrozenReceipt frozen = Receipts.frozen(document, signature);
+            Optional<ContentDigest> portrait = call.getArgument(2);
+            FrozenReceipt frozen = Receipts.frozen(document, signature, portrait);
             return frozen;
         });
     }
@@ -668,7 +673,7 @@ class DonationReceiptIssuerTest {
 
     private ReceiptDocument frozenDocument() {
         ArgumentCaptor<ReceiptDocument> frozen = ArgumentCaptor.forClass(ReceiptDocument.class);
-        verify(freezer).freeze(frozen.capture(), any());
+        verify(freezer).freeze(frozen.capture(), any(), any());
         return frozen.getValue();
     }
 }

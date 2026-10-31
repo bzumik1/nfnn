@@ -6,6 +6,7 @@ Feature: Donations keep an erased donor's gifts and issued receipts, and drop th
     And a person "Jana" is registered
     And a person "Petr" is registered
     And "Jana" is an administrator
+    And a person of the foundation signs the receipts
 
   Scenario: Erasing a donor anonymizes the record, drops the bank accounts and answers, and keeps the donations and receipts
     Given the bank account has these movements:

@@ -1,6 +1,5 @@
 package cz.novanadeje.app.shared.infrastructure.schema;
 
-import cz.novanadeje.app.shared.infrastructure.schema.ReviewedRowLoss.Change;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.postgresql.PostgreSQLContainer;
@@ -16,14 +15,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class MigrationOverDataTest {
 
-    private static final String RECEIPT_SWITCH = "donations/024-delete-test-receipts-and-drop-the-server-drawing";
-    private static final String RECEIPT_SWITCH_REASON = "plan v3 1.10: the site is not live, so every receipt issued so far is a test receipt"
-            + " (D12, A2); the browser draws the PDF, and nothing reads the old tables any more";
-
-    static final List<ReviewedRowLoss> REVIEWED_ROW_LOSSES = List.of(
-            new ReviewedRowLoss("donation_receipt", RECEIPT_SWITCH, Change.DROPPED, RECEIPT_SWITCH_REASON),
-            new ReviewedRowLoss("receipt_template", RECEIPT_SWITCH, Change.DROPPED, RECEIPT_SWITCH_REASON),
-            new ReviewedRowLoss("issued_receipt", RECEIPT_SWITCH, Change.EMPTIED, RECEIPT_SWITCH_REASON));
+    static final List<ReviewedRowLoss> REVIEWED_ROW_LOSSES = List.of();
 
     @Test
     @DisplayName("Given a database migrated to the baseline with a row in every table, when the current changelogs run, then they apply and every row is still there but those a reviewed row loss names")

@@ -9,6 +9,7 @@ Feature: An administrator or a connected application issues a donor's receipt an
 
   Background:
     Given today is 2026-12-20
+    And a person of the foundation signs the receipts
     And a person "Jana" is registered
     And a person "Petr" is registered
     And "Petr" is an administrator
@@ -164,7 +165,7 @@ Feature: An administrator or a connected application issues a donor's receipt an
     And 22 receipts are stored
 
   Scenario: The administration lists the issued receipts newest first, a page at a time, by donor and by the year of issue, and reads one with its image
-    Given "Petr" uploads a 600 by 200 pixel JPEG scan named "podpis.jpg" as the receipt signature
+    Given "Petr" has uploaded a 600 by 200 pixel JPEG scan as the receipt signature of the person who signs the receipts
     And "Jana" issues the receipt of her donation received on 2026-10-01
     And "Jana" issues her yearly receipt for 2026
     And today is 2028-01-10

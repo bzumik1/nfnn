@@ -1,0 +1,83 @@
+:host {
+  display: block;
+}
+
+.signatory-status,
+.signatory-error {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.signatory-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  color: var(--color-danger);
+}
+
+.signature-block {
+  margin: 0 0 var(--space-3);
+  max-width: 420px;
+  padding: var(--space-4);
+  background: var(--color-surface-muted);
+  border-radius: var(--radius-sm);
+  forced-color-adjust: none;
+}
+
+.signature-block-caption {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-3);
+}
+
+.signature-block-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: center;
+}
+
+.signature-block-body--portrait {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.signature-block-portrait {
+  display: block;
+  width: var(--space-20);
+  height: var(--space-20);
+  border-radius: var(--radius-round);
+  object-fit: cover;
+  background: var(--color-surface-alt);
+}
+
+.signature-block-for {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.signature-block-signature {
+  min-height: var(--space-12);
+  padding-top: var(--space-1);
+  border-bottom: 1px solid var(--color-border-rule);
+  margin-bottom: var(--space-1-5);
+}
+
+.signature-block-signature app-signature-artwork {
+  max-width: 220px;
+}
+
+.signature-block-name {
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+}
+
+.signature-block-role {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.signatory-gaps,
+.signatory-missing {
+  margin-bottom: var(--space-3);
+}

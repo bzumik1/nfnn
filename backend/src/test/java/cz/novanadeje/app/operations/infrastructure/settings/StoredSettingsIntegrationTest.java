@@ -9,6 +9,8 @@ import cz.novanadeje.app.operations.domain.settings.Setting;
 import cz.novanadeje.app.operations.domain.settings.SettingChange;
 import cz.novanadeje.app.operations.domain.settings.SettingError;
 import cz.novanadeje.app.operations.domain.settings.SettingProblem;
+import cz.novanadeje.app.operations.domain.settings.SettingsRepository;
+import cz.novanadeje.app.operations.domain.settings.StoredSetting;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -42,6 +44,9 @@ class StoredSettingsIntegrationTest {
 
     @Autowired
     private SettingsWriter writer;
+
+    @Autowired
+    private SettingsRepository settings;
 
     @Autowired
     private TransactionTemplate transactions;
@@ -91,6 +96,23 @@ class StoredSettingsIntegrationTest {
         assertThat(next.getProperty("PUBLIC_URL")).isEqualTo("https://nfnn.znamenacek.duckdns.org");
         assertThat(next.getProperty("FIO_TOKEN")).isEqualTo("fio-token");
         assertThat(next.getPropertySources().iterator().next().getName()).isEqualTo(DatabaseSettingsEnvironmentPostProcessor.SOURCE_NAME);
+    }
+
+    @Test
+    @DisplayName("Given the receipt signatory settings stored before they left the catalogue, when the next start and the administration read the settings, then those rows are skipped and the rest loads")
+    void should_skip_retired_signatory_settings_when_read_given_rows_stored_before() throws SQLException {
+        transactions.executeWithoutResult(status -> writer.apply(List.of(new SettingChange(Setting.MAIL_HOST, "smtp.example.cz")), List.of(), NOW));
+        jdbc.sql("insert into operations_setting (name, value, sealed, updated_at) values ('RECEIPT_SIGNATORY_NAME', 'Josef Vzorový', false, now()),"
+                + " ('RECEIPT_SIGNATORY_ROLE', 'předseda správní rady', false, now())").update();
+
+        MockEnvironment next = nextStart(environment.getProperty(DatabaseSettingsEnvironmentPostProcessor.KEY_PROPERTY));
+        new DatabaseSettingsEnvironmentPostProcessor(destination -> destination.get()).postProcessEnvironment(next, null);
+
+        assertThat(next.getProperty("MAIL_HOST")).isEqualTo("smtp.example.cz");
+        assertThat(next.getProperty("RECEIPT_SIGNATORY_NAME")).isNull();
+        assertThat(next.getProperty("RECEIPT_SIGNATORY_ROLE")).isNull();
+        List<StoredSetting> stored = transactions.execute(status -> settings.findAll());
+        assertThat(stored).extracting(StoredSetting::setting).containsExactly(Setting.MAIL_HOST);
     }
 
     @Test

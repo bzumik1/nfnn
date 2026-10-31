@@ -7,10 +7,26 @@ import {
   receiptSigningKeys,
   session,
 } from './donor-session';
-import { noSignature, refusedVector, uploadedSignature, vectorSignature } from './signature-image';
+import { noSignatory, signatory, vectorSignature } from './signature-image';
 
 const SETTINGS = '/api/admin/operations/settings';
-const SIGNATURE = '/api/admin/donations/receipt-signature';
+const SIGNATORY = '/api/admin/donations/receipt-signatory';
+const PEOPLE = '/api/admin/content/people';
+const PERSON_ID = '0199f3e0-0000-7000-8000-00000000c001';
+const PORTRAIT_ID = '0199f3e0-0000-7000-8000-00000000c101';
+const eva = {
+  id: PERSON_ID,
+  name: 'Petr Vzorový',
+  role: null,
+  position: 0,
+  onBoard: true,
+  boardNote: null,
+  featured: true,
+  portrait: { id: PORTRAIT_ID, url: `/api/content/media/${PORTRAIT_ID}`, width: 640, height: 640 },
+  webSignature: null,
+  personalEmail: null,
+  fundEmail: null,
+};
 const SIGNING_KEYS = '/api/admin/donations/receipt-signing-keys';
 
 async function rememberedSession(page: Page): Promise<void> {
@@ -106,7 +122,7 @@ test.describe('Given an administrator on the settings page', () => {
     await page.goto('/sprava/nastaveni');
     await expect(page.getByRole('heading', { level: 2 })).toHaveText([
       'Potvrzení o daru',
-      'Podpis na potvrzeních',
+      'Kdo potvrzení podepisuje',
       'Klíč k ověřovacím QR kódům',
       'Kontaktní formulář',
       'Odesílatel e-mailů',
@@ -154,146 +170,70 @@ test.describe('Given an administrator on the settings page', () => {
     await expect(page.locator('#setting-MAIL_HOST')).toBeVisible();
   });
 
-  test('when they upload a scan of the signature and remove it again, then the receipts card shows it and asks before removing', async ({
+  test('when a person signs the receipts, then the receipts card previews the signature block with the portrait, the signature, the name and the receipt role', async ({
     page,
   }) => {
-    let current: object = noSignature;
-    const methods: string[] = [];
     await page.route(
       (url) => url.pathname === SETTINGS,
       (route) => route.fulfill({ json: adminSettings }),
     );
     await page.route(
-      (url) => url.pathname === SIGNATURE,
-      (route) => {
-        const method = route.request().method();
-        methods.push(method);
-        if (method === 'POST') {
-          current = uploadedSignature;
-        }
-        if (method === 'DELETE') {
-          current = noSignature;
-          return route.fulfill({ status: 204, body: '' });
-        }
-        return route.fulfill({ json: current });
-      },
+      (url) => url.pathname === SIGNATORY,
+      (route) =>
+        route.fulfill({
+          json: signatory({ personId: PERSON_ID, portrait: true, signature: true }),
+        }),
+    );
+    await page.route(
+      (url) => url.pathname === PEOPLE,
+      (route) => route.fulfill({ json: { members: [eva], note: null } }),
+    );
+    await page.route(
+      (url) => url.pathname === `/api/admin/donations/receipt-signatures/${PERSON_ID}`,
+      (route) => route.fulfill({ json: vectorSignature }),
     );
 
     await page.goto('/sprava/nastaveni');
-    const card = page.getByRole('region', { name: 'Podpis na potvrzeních' });
-    await expect(card).toContainText('Podpis není nahraný.');
-
-    await card.getByLabel('Nahrát podpis').setInputFiles({
-      name: 'podpis.jpg',
-      mimeType: 'image/jpeg',
-      buffer: Buffer.from('JPEG'),
-    });
-
-    await expect(card.getByRole('img', { name: 'Nahraný podpis' })).toBeVisible();
-    await expect(card.getByRole('status')).toHaveText(
-      'Podpis je uložený. Ponesou ho potvrzení vystavená od teď.',
+    const card = page.getByRole('region', { name: 'Kdo potvrzení podepisuje' });
+    const block = card.getByRole('figure', { name: 'Náhled podpisu na potvrzení' });
+    await expect(block.locator('img.signature-block-portrait')).toHaveAttribute(
+      'src',
+      `/api/content/media/${PORTRAIT_ID}?w=240`,
     );
-    await expect(card).toContainText('Nahráno 23. 10. 2026 21:30, 600 × 200 px.');
-
-    await card.getByRole('button', { name: 'Odebrat podpis' }).click();
-    await expect(card.getByRole('group', { name: 'Odebrat podpis?' })).toContainText('bez podpisu');
-    await card
-      .getByRole('group', { name: 'Odebrat podpis?' })
-      .getByRole('button', { name: 'Odebrat podpis' })
-      .click();
-
-    await expect(card.getByRole('status')).toHaveText(
-      'Podpis je odebraný. Potvrzení vystavená od teď ho nebudou mít.',
+    await expect(
+      block.getByRole('img', { name: 'Podpis na potvrzení' }).locator('path'),
+    ).toHaveCount(2);
+    await expect(block.locator('.signature-block-for')).toHaveText(
+      'Za Nová naděje - nadační fond:',
     );
-    await expect(card.getByRole('img', { name: 'Nahraný podpis' })).toHaveCount(0);
-    expect(methods).toEqual(['GET', 'POST', 'DELETE']);
+    await expect(block.locator('.signature-block-name')).toHaveText('Petr Vzorový');
+    await expect(block.locator('.signature-block-role')).toHaveText('předseda správní rady');
+    await card.getByRole('link', { name: 'Otevřít lidi fondu' }).click();
+    await expect(page).toHaveURL(/\/sprava\/lide-fondu$/);
   });
 
-  test('when they upload a vector signature, then the card draws it, a refused SVG keeps it with the reason first, and a scan and an SVG replace each other', async ({
+  test('when nobody signs the receipts, then the receipts card warns that no receipt is issued', async ({
     page,
   }) => {
-    let current: object = noSignature;
-    let uploads = 0;
-    const answers: object[] = [vectorSignature, refusedVector, uploadedSignature, vectorSignature];
     await page.route(
       (url) => url.pathname === SETTINGS,
       (route) => route.fulfill({ json: adminSettings }),
     );
     await page.route(
-      (url) => url.pathname === SIGNATURE,
-      (route) => {
-        if (route.request().method() !== 'POST') {
-          return route.fulfill({ json: current });
-        }
-        const answer = answers[uploads++];
-        if (answer === refusedVector) {
-          return route.fulfill({
-            status: 400,
-            contentType: 'application/problem+json',
-            body: JSON.stringify(refusedVector),
-          });
-        }
-        current = answer;
-        return route.fulfill({ json: current });
-      },
+      (url) => url.pathname === SIGNATORY,
+      (route) => route.fulfill({ json: noSignatory }),
     );
 
     await page.goto('/sprava/nastaveni');
-    const card = page.getByRole('region', { name: 'Podpis na potvrzeních' });
-    const saved = card.getByRole('status').filter({ hasText: /\S/ });
-    const alert = card.getByRole('alert').filter({ hasText: /\S/ });
-    await expect(card).toContainText('Podpis není nahraný.');
-
-    await card.getByLabel('Nahrát podpis').setInputFiles({
-      name: 'podpis.svg',
-      mimeType: 'image/svg+xml',
-      buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 100"/>'),
-    });
-
-    const drawing = card.locator('svg.signature-preview');
-    await expect(drawing).toBeVisible();
-    await expect(drawing).toHaveAccessibleName('Nahraný podpis');
-    await expect(drawing.locator('path')).toHaveCount(2);
-    await expect(card).toContainText('Nahráno 23. 10. 2026 21:30, vektorový podpis (SVG).');
-    await expect(saved).toHaveText('Podpis je uložený. Ponesou ho potvrzení vystavená od teď.');
-
-    await card.getByLabel('Nahrát jiný podpis').setInputFiles({
-      name: 'jiny.svg',
-      mimeType: 'image/svg+xml',
-      buffer: Buffer.from('<svg><script/></svg>'),
-    });
-
-    await expect(alert).toHaveText(
-      'SVG nejde použít jako podpis. Soubor obsahuje nepovolený prvek. Ručně psaný podpis v SVG jde, když jsou jeho tahy převedené na vyplněné tvary (path); obrysy s nastavenou tloušťkou čáry (stroke) a efekty web nepřijme a soubor smí mít nejvýš 200 kB. Místo něj můžete nahrát sken JPEG, PNG nebo WebP.',
+    const card = page.getByRole('region', { name: 'Kdo potvrzení podepisuje' });
+    await expect(card.getByRole('alert')).toHaveCount(0);
+    await expect(card.locator('.signatory-missing')).toHaveText(
+      'Potvrzení o daru teď nikdo nepodepisuje, a tak je web dárcům nevystaví. Vyberte u lidí fondu, kdo je podepisuje, a jeho funkci na potvrzení.',
     );
-    await expect(drawing.locator('path')).toHaveCount(2);
-
-    await card.getByLabel('Nahrát jiný podpis').setInputFiles({
-      name: 'podpis.jpg',
-      mimeType: 'image/jpeg',
-      buffer: Buffer.from([0xff, 0xd8, 0xff, 0xe0]),
-    });
-
-    const scan = card.locator('img.signature-preview');
-    await expect(scan).toBeVisible();
-    await expect(drawing).toHaveCount(0);
-    await expect(card).toContainText('Nahráno 23. 10. 2026 21:30, 600 × 200 px.');
-    await expect(saved).toHaveText('Podpis je uložený. Ponesou ho potvrzení vystavená od teď.');
-    await expect(alert).toHaveCount(0);
-
-    await card.getByLabel('Nahrát jiný podpis').setInputFiles({
-      name: 'podpis.svg',
-      mimeType: 'image/svg+xml',
-      buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 100"/>'),
-    });
-
-    await expect(drawing.locator('path')).toHaveCount(2);
-    await expect(scan).toHaveCount(0);
-    await expect(card).toContainText('Nahráno 23. 10. 2026 21:30, vektorový podpis (SVG).');
-    expect(uploads).toBe(4);
+    await expect(card.getByRole('figure')).toHaveCount(0);
   });
 
-  test('when the vector signature is shown in a dark forced-colours mode, then its frame keeps the paper and the ink keeps its colour', async ({
+  test('when the signature block is previewed in a dark forced-colours mode, then it keeps the paper and the ink keeps its colour', async ({
     page,
   }) => {
     await page.emulateMedia({ forcedColors: 'active', colorScheme: 'dark' });
@@ -302,13 +242,16 @@ test.describe('Given an administrator on the settings page', () => {
       (route) => route.fulfill({ json: adminSettings }),
     );
     await page.route(
-      (url) => url.pathname === SIGNATURE,
+      (url) => url.pathname === SIGNATORY,
+      (route) => route.fulfill({ json: signatory({ signature: true }) }),
+    );
+    await page.route(
+      (url) => url.pathname.startsWith('/api/admin/donations/receipt-signatures/'),
       (route) => route.fulfill({ json: vectorSignature }),
     );
 
     await page.goto('/sprava/nastaveni');
-    const card = page.getByRole('region', { name: 'Podpis na potvrzeních' });
-    const frame = card.locator('.signature-frame');
+    const frame = page.locator('.signature-block');
     await expect(frame.locator('path')).toHaveCount(2);
 
     const colours = await frame.evaluate((element) => ({

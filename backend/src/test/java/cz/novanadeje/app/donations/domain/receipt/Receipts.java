@@ -102,7 +102,11 @@ public final class Receipts {
     }
 
     public static FrozenReceipt frozen(ReceiptDocument document, Optional<ContentDigest> signatureImage) {
-        return new FrozenReceipt(document, document.locale() == LocaleCode.EN ? BILINGUAL_TEXTS : CZECH_TEXTS, signatureImage,
+        return frozen(document, signatureImage, Optional.empty());
+    }
+
+    public static FrozenReceipt frozen(ReceiptDocument document, Optional<ContentDigest> signatureImage, Optional<ContentDigest> portraitImage) {
+        return new FrozenReceipt(document, document.locale() == LocaleCode.EN ? BILINGUAL_TEXTS : CZECH_TEXTS, signatureImage, portraitImage,
                 verificationOf(document.number()));
     }
 

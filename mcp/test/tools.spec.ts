@@ -158,6 +158,23 @@ describe('Given an administrator connected with the reading permission only', ()
     );
   });
 
+  it('when the status is asked, then it says whether a person signs the receipts', async () => {
+    expect(textOf(await client.callTool({ name: 'nfnn_status', arguments: {} }))).toContain(
+      '"receiptSignatory":"ok"',
+    );
+    stack.backend.signatoryChosen = false;
+    try {
+      expect(textOf(await client.callTool({ name: 'nfnn_status', arguments: {} }))).toContain(
+        '"receiptSignatory":"missing"',
+      );
+    } finally {
+      stack.backend.signatoryChosen = true;
+    }
+    expect(stack.backend.requests.map((request) => request.path)).toContain(
+      '/api/admin/donations/receipt-signatory',
+    );
+  });
+
   it('when the status is asked after the current key was withdrawn and a key row disagrees with the audit trail, then both are named and need attention', async () => {
     stack.backend.receiptSigningKeysAnswer = {
       currentKeyId: '21fe31df',
@@ -556,17 +573,28 @@ describe('Given an administrator connected with the reading permission only', ()
     );
   });
 
-  it('when the receipt signature is asked, then it says whether one is uploaded, its size and when, without the image itself', async () => {
+  it('when the receipt signature is asked, then it names the signatory, their receipt role and the signatures uploaded per person, without any image', async () => {
     const result = await client.callTool({ name: 'nfnn_receipt_signature', arguments: {} });
     expect(result.isError).toBeFalsy();
     const text = textOf(result);
-    expect(text).toContain('"configured":true');
-    expect(text).toContain('"width":1200');
+    expect(text).toContain(`"personId":"${SIGNED_PERSON_ID}"`);
+    expect(text).toContain('"receiptRole":"předsedkyně správní rady"');
+    expect(text).toContain('"portrait":true');
+    expect(text).toContain('"kind":"VECTOR"');
     expect(text).toContain('"uploadedAt":"2026-10-23T21:30:00+02:00"');
     expect(text).not.toContain('base64');
+    expect(text).not.toContain('viewBox');
     expect(stack.backend.requests.map((request) => request.path)).toContain(
-      '/api/admin/donations/receipt-signature',
+      '/api/admin/donations/receipt-signatory',
     );
+  });
+
+  it('when the tools are listed, then the receipt signature tool says choosing the signatory and the signatures stay on the web', async () => {
+    const { tools } = await client.listTools();
+    const description =
+      tools.find((tool) => tool.name === 'nfnn_receipt_signature')?.description ?? '';
+    expect(description).toContain('stay on the web (/sprava/lide-fondu)');
+    expect(description).toContain('no receipt can be issued');
   });
 
   it('when the tools are listed, then the receipt signature tool says receipts issued after the upload carry a scan and a vector alike', async () => {
@@ -574,21 +602,29 @@ describe('Given an administrator connected with the reading permission only', ()
     const description =
       tools.find((tool) => tool.name === 'nfnn_receipt_signature')?.description ?? '';
     expect(description).toContain(
-      'Receipts issued after the upload carry it above the signatory, a scan and a vector alike;',
+      'Receipts issued after a change carry the portrait, the signature (a scan and a vector alike), the name and the receipt role.',
     );
     expect(description).not.toContain('until then');
   });
 
-  it('when the receipt signature is a vector, then it says so without its paths', async () => {
-    stack.backend.signatureIsVector = true;
+  it('when the receipt signature is asked, then the answer carries portraitPrintable and the description explains a false one', async () => {
+    const text = textOf(await client.callTool({ name: 'nfnn_receipt_signature', arguments: {} }));
+    expect(text).toContain('"portraitPrintable":true');
+    const { tools } = await client.listTools();
+    const description =
+      tools.find((tool) => tool.name === 'nfnn_receipt_signature')?.description ?? '';
+    expect(description).toContain(
+      'portraitPrintable false while a portrait is set means its image cannot be prepared for print, so receipts are issued without it',
+    );
+  });
+
+  it('when no signatory is chosen, then the receipt signature says so', async () => {
+    stack.backend.signatoryChosen = false;
     try {
       const text = textOf(await client.callTool({ name: 'nfnn_receipt_signature', arguments: {} }));
-      expect(text).toContain('"kind":"VECTOR"');
-      expect(text).toContain('"configured":true');
-      expect(text).not.toContain('viewBox');
-      expect(text).not.toContain('M10 80');
+      expect(text).toContain('"signatory":null');
     } finally {
-      stack.backend.signatureIsVector = false;
+      stack.backend.signatoryChosen = true;
     }
   });
 

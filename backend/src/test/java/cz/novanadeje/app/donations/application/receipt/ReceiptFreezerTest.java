@@ -36,6 +36,7 @@ class ReceiptFreezerTest {
 
     private static final Donation MARCH = receivedFromJana(LocalDate.of(2026, 3, 15), 50000);
     private static final ContentDigest SIGNATURE = new ContentDigest("5".repeat(64));
+    private static final ContentDigest PORTRAIT = new ContentDigest("6".repeat(64));
 
     private final ReceiptTextSource texts = mock(ReceiptTextSource.class);
     private final ReceiptProofs proofs = mock(ReceiptProofs.class);
@@ -43,7 +44,7 @@ class ReceiptFreezerTest {
     private final ReceiptFreezer freezer = new ReceiptFreezer(texts, proofs, signer);
 
     @Test
-    @DisplayName("Given a Czech document and a signature image, when it is frozen, then it keeps the document, the Czech texts, the image digest and the proof of the signed receipt under the server's key")
+    @DisplayName("Given a Czech document and a signature image and a portrait, when it is frozen, then it keeps the document, the Czech texts, both image digests and the proof of the signed receipt under the server's key")
     void should_keep_document_texts_image_and_proof_when_frozen_given_czech_document() {
         ReceiptDocument document = singleDocument(jana(), MARCH);
         ReceiptProof proof = verificationOf(FIRST_NUMBER).proof();
@@ -51,27 +52,29 @@ class ReceiptFreezerTest {
         when(signer.keyId()).thenReturn(KEY_ID);
         when(proofs.prove(SignedReceipt.of(document))).thenReturn(proof);
 
-        FrozenReceipt frozen = freezer.freeze(document, Optional.of(SIGNATURE));
+        FrozenReceipt frozen = freezer.freeze(document, Optional.of(SIGNATURE), Optional.of(PORTRAIT));
 
         assertThat(frozen.document()).isEqualTo(document);
         assertThat(frozen.texts()).isEqualTo(CZECH_TEXTS);
         assertThat(frozen.signatureImage()).contains(SIGNATURE);
+        assertThat(frozen.portraitImage()).contains(PORTRAIT);
         assertThat(frozen.verification().keyId()).isEqualTo(KEY_ID);
         assertThat(frozen.verification().proof()).isEqualTo(proof);
     }
 
     @Test
-    @DisplayName("Given an English yearly document without a signature image, when it is frozen, then it keeps both languages' texts and no image")
+    @DisplayName("Given an English yearly document without a signature image or a portrait, when it is frozen, then it keeps both languages' texts and no image")
     void should_keep_both_languages_and_no_image_when_frozen_given_english_document_without_signature() {
         ReceiptDocument document = yearlyDocument(janaSpeakingEnglish(), List.of(MARCH));
         when(texts.textsFor(LocaleCode.EN)).thenReturn(BILINGUAL_TEXTS);
         when(signer.keyId()).thenReturn(KEY_ID);
         when(proofs.prove(SignedReceipt.of(document))).thenReturn(verificationOf(FIRST_NUMBER).proof());
 
-        FrozenReceipt frozen = freezer.freeze(document, Optional.empty());
+        FrozenReceipt frozen = freezer.freeze(document, Optional.empty(), Optional.empty());
 
         assertThat(frozen.texts()).isEqualTo(BILINGUAL_TEXTS);
         assertThat(frozen.signatureImage()).isEmpty();
+        assertThat(frozen.portraitImage()).isEmpty();
     }
 
     @Test
@@ -82,6 +85,6 @@ class ReceiptFreezerTest {
         when(signer.keyId()).thenReturn(KEY_ID);
         when(proofs.prove(SignedReceipt.of(document))).thenThrow(new ReceiptTooLong());
 
-        assertThatThrownBy(() -> freezer.freeze(document, Optional.empty())).isInstanceOf(ReceiptTooLong.class);
+        assertThatThrownBy(() -> freezer.freeze(document, Optional.empty(), Optional.empty())).isInstanceOf(ReceiptTooLong.class);
     }
 }

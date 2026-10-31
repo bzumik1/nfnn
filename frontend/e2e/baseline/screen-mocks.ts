@@ -302,9 +302,6 @@ const overview = {
 const fictionalSettings = {
   ...adminSettings,
   settings: adminSettings.settings.map((setting) => {
-    if (setting.name === 'RECEIPT_SIGNATORY_NAME') {
-      return { ...setting, value: 'Petr Vzorový' };
-    }
     if (setting.name === 'MAIL_USERNAME') {
       return { ...setting, value: 'mailer@example.cz' };
     }

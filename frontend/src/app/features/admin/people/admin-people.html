@@ -52,9 +52,9 @@
                       @if (member.onBoard) {
                         <li class="ui-badge ui-badge--success">{{ boardLabel(member) }}</li>
                       }
-                      @if (member.webSignature) {
-                        <li class="ui-badge ui-badge--accent" i18n="@@admin.people.badge.signature">
-                          Podpis na webu
+                      @if (signs(member)) {
+                        <li class="ui-badge ui-badge--success" i18n="@@admin.people.badge.receipts">
+                          Podepisuje potvrzení
                         </li>
                       }
                       @if (member.linkedToAccount) {
@@ -63,6 +63,59 @@
                         </li>
                       }
                     </ul>
+                    @if (webSignatureUrl(member) || receiptPreview(member)) {
+                      <div class="person-signatures">
+                        @if (webSignatureUrl(member); as url) {
+                          <figure class="person-signature">
+                            <figcaption i18n="@@admin.people.list.webSignature">
+                              Podpis na webu
+                            </figcaption>
+                            <img
+                              class="person-signature-ink"
+                              loading="lazy"
+                              [src]="url"
+                              [alt]="webSignatureAlt(member)"
+                              [attr.width]="member.webSignature?.width"
+                              [attr.height]="member.webSignature?.height"
+                            />
+                          </figure>
+                        }
+                        @if (receiptPreview(member); as preview) {
+                          <figure class="person-signature person-signature--receipt">
+                            <figcaption i18n="@@admin.people.list.receiptSignature">
+                              Podpis na potvrzení
+                            </figcaption>
+                            @switch (preview.state) {
+                              @case ('ready') {
+                                @if (preview.state === 'ready') {
+                                  <app-signature-artwork
+                                    class="person-signature-art"
+                                    [signature]="preview.signature"
+                                    [label]="receiptSignatureLabel(member)"
+                                  />
+                                }
+                              }
+                              @case ('error') {
+                                <p
+                                  class="person-signature-note"
+                                  i18n="@@admin.people.list.receiptSignatureFailed"
+                                >
+                                  Náhled se nepodařilo načíst.
+                                </p>
+                              }
+                              @default {
+                                <p
+                                  class="person-signature-note"
+                                  i18n="@@admin.people.list.receiptSignatureLoading"
+                                >
+                                  Načítáme náhled…
+                                </p>
+                              }
+                            }
+                          </figure>
+                        }
+                      </div>
+                    }
                   </div>
                   <div class="ui-person-row__actions">
                     <button
@@ -339,7 +392,7 @@
                 <button
                   type="button"
                   class="ui-link-button"
-                  [disabled]="saving()"
+                  [disabled]="saving() || signatureBusy()"
                   (click)="cancelEditing()"
                   i18n="@@admin.people.cancel"
                 >
@@ -411,58 +464,181 @@
                 <app-live-notice class="card-notice" [notice]="signatureNotice()" />
               </div>
 
+              <div class="ui-card__body receipt-part">
+                <h3
+                  #receiptTitle
+                  class="part-title"
+                  tabindex="-1"
+                  i18n="@@admin.people.receipt.title"
+                >
+                  Na potvrzení o daru
+                </h3>
+                @switch (signatoryState()) {
+                  @case ('loading') {
+                    <p class="field-status" role="status" i18n="@@admin.people.receipt.loading">
+                      Načítáme, kdo potvrzení podepisuje…
+                    </p>
+                  }
+                  @case ('error') {
+                    <div class="receipt-error" role="alert">
+                      <p i18n="@@admin.people.receipt.loadFailed">
+                        Nepodařilo se zjistit, kdo podepisuje potvrzení.
+                      </p>
+                      <button
+                        type="button"
+                        class="ui-button ui-button--small"
+                        (click)="retrySignatory()"
+                        i18n="@@admin.people.receipt.retry"
+                      >
+                        Zjistit znovu
+                      </button>
+                    </div>
+                  }
+                  @case ('ready') {
+                    <form
+                      #receiptForm="ngForm"
+                      class="receipt-form"
+                      novalidate
+                      appFocusFirstInvalid
+                      (ngSubmit)="saveReceipt(receiptForm)"
+                    >
+                      @if (signs(member)) {
+                        <p class="field-hint" i18n="@@admin.people.receipt.signs">
+                          Tato osoba podepisuje potvrzení o daru. Potvrzení vždy podepisuje jen
+                          jedna osoba; jinou vyberete u ní.
+                        </p>
+                      } @else {
+                        <label class="choice">
+                          <input
+                            id="person-signs-receipts"
+                            type="checkbox"
+                            name="signsReceipts"
+                            aria-describedby="person-signs-receipts-hint"
+                            [(ngModel)]="receiptDraft.signs"
+                          />
+                          <span i18n="@@admin.people.receipt.choose">Podepisuje potvrzení</span>
+                        </label>
+                        <p class="field-hint" id="person-signs-receipts-hint">
+                          @if (signatoryName(); as name) {
+                            <ng-container i18n="@@admin.people.receipt.instead"
+                              >Potvrzení vždy podepisuje jen jedna osoba; teď je to {{ name }}. Po
+                              uložení je bude podepisovat tato osoba.</ng-container
+                            >
+                          } @else {
+                            <ng-container i18n="@@admin.people.receipt.nobody"
+                              >Potvrzení teď nikdo nepodepisuje, a tak je web dárcům
+                              nevystaví.</ng-container
+                            >
+                          }
+                        </p>
+                      }
+                      @if (signs(member) || receiptDraft.signs) {
+                        <app-form-field
+                          label="Funkce na potvrzení"
+                          i18n-label="@@admin.people.receiptRole"
+                          hint="Vytiskne se pod jméno, například předseda správní rady. Role na webu se nemění."
+                          i18n-hint="@@admin.people.receiptRole.hint"
+                          [messages]="receiptRoleMessages"
+                        >
+                          <input
+                            appFormControl
+                            id="person-receipt-role"
+                            name="receiptRole"
+                            type="text"
+                            autocomplete="off"
+                            required
+                            [(ngModel)]="receiptDraft.role"
+                            [maxlength]="maxReceiptRoleLength"
+                          />
+                        </app-form-field>
+                        <div class="form-actions">
+                          <button
+                            type="submit"
+                            class="ui-button ui-button--primary"
+                            [disabled]="busy()"
+                          >
+                            @if (savingReceipt()) {
+                              <ng-container i18n="@@admin.people.saving">Ukládáme…</ng-container>
+                            } @else {
+                              <ng-container i18n="@@admin.people.receipt.save"
+                                >Uložit pro potvrzení</ng-container
+                              >
+                            }
+                          </button>
+                        </div>
+                      }
+                    </form>
+                  }
+                }
+                <app-live-notice class="card-notice" [notice]="receiptNotice()" />
+                <app-receipt-signature
+                  [personId]="member.id"
+                  [signs]="signs(member)"
+                  (changed)="loadSignatory()"
+                  (busyChange)="signatureBusy.set($event)"
+                />
+              </div>
+
               <div class="ui-card__body remove-part">
                 <h3 class="part-title" i18n="@@admin.people.remove.title">Odebrání osoby</h3>
                 <p class="ui-card__intro" i18n="@@admin.people.remove.intro">
-                  Osoba hned zmizí z webu a její portrét a podpis se smažou z databáze; ze záloh
-                  zmizí do 30 dnů.
+                  Osoba hned zmizí z webu a její portrét a podpis na webu se smažou z databáze; ze
+                  záloh zmizí do 30 dnů. Její podpis na potvrzení už žádné další potvrzení neponese;
+                  podpis a portrét na už vystavených potvrzeních o daru zůstávají s nimi.
                 </p>
-                @if (confirmingRemoval()) {
-                  <span
-                    class="confirm"
-                    role="group"
-                    aria-label="Odebrat osobu?"
-                    i18n-aria-label="@@admin.people.remove.confirm.label"
-                  >
-                    <span i18n="@@admin.people.remove.confirm.question"
-                      >Opravdu odebrat z webu osobu {{ member.name }}?</span
-                    >
-                    <button
-                      type="button"
-                      class="ui-button ui-button--danger"
-                      [disabled]="removing()"
-                      (click)="remove()"
-                    >
-                      @if (removing()) {
-                        <ng-container i18n="@@admin.people.removing">Odebíráme…</ng-container>
-                      } @else {
-                        <ng-container i18n="@@admin.people.remove.yes"
-                          >Odebrat a smazat</ng-container
-                        >
-                      }
-                    </button>
-                    <button
-                      id="person-remove-cancel"
-                      type="button"
-                      class="ui-link-button"
-                      [disabled]="removing()"
-                      (click)="cancelRemoval()"
-                      i18n="@@admin.people.remove.no"
-                    >
-                      Zrušit
-                    </button>
-                  </span>
+                @if (signs(member)) {
+                  <p class="ui-callout ui-callout--warning" i18n="@@admin.people.remove.signs">
+                    Osoba podepisuje potvrzení o daru, a tak ji nejde odebrat. Nejdřív vyberte jinou
+                    osobu, která je bude podepisovat.
+                  </p>
                 } @else {
-                  <button
-                    id="person-remove"
-                    type="button"
-                    class="ui-button ui-button--danger-outline"
-                    [disabled]="busy()"
-                    (click)="askRemoval()"
-                    i18n="@@admin.people.remove.open"
-                  >
-                    Odebrat osobu z webu
-                  </button>
+                  @if (confirmingRemoval()) {
+                    <span
+                      class="confirm"
+                      role="group"
+                      aria-label="Odebrat osobu?"
+                      i18n-aria-label="@@admin.people.remove.confirm.label"
+                    >
+                      <span i18n="@@admin.people.remove.confirm.question"
+                        >Opravdu odebrat z webu osobu {{ member.name }}?</span
+                      >
+                      <button
+                        type="button"
+                        class="ui-button ui-button--danger"
+                        [disabled]="removing()"
+                        (click)="remove()"
+                      >
+                        @if (removing()) {
+                          <ng-container i18n="@@admin.people.removing">Odebíráme…</ng-container>
+                        } @else {
+                          <ng-container i18n="@@admin.people.remove.yes"
+                            >Odebrat a smazat</ng-container
+                          >
+                        }
+                      </button>
+                      <button
+                        id="person-remove-cancel"
+                        type="button"
+                        class="ui-link-button"
+                        [disabled]="removing()"
+                        (click)="cancelRemoval()"
+                        i18n="@@admin.people.remove.no"
+                      >
+                        Zrušit
+                      </button>
+                    </span>
+                  } @else {
+                    <button
+                      id="person-remove"
+                      type="button"
+                      class="ui-button ui-button--danger-outline"
+                      [disabled]="busy() || signatoryState() !== 'ready'"
+                      (click)="askRemoval()"
+                      i18n="@@admin.people.remove.open"
+                    >
+                      Odebrat osobu z webu
+                    </button>
+                  }
                 }
               </div>
             }

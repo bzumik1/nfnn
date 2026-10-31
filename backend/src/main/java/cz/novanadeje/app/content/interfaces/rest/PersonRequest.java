@@ -13,10 +13,10 @@ import java.util.Optional;
 import java.util.UUID;
 
 public record PersonRequest(
-        @NotBlank @Size(max = PersonDetails.MAX_NAME_LENGTH) String name,
-        @Size(max = PersonDetails.MAX_ROLE_LENGTH) String role,
+        @NotBlank @Size(max = PersonDetails.MAX_NAME_LENGTH) @Pattern(regexp = PersonDetails.TEXT_PATTERN) String name,
+        @Size(max = PersonDetails.MAX_ROLE_LENGTH) @Pattern(regexp = PersonDetails.TEXT_PATTERN) String role,
         boolean onBoard,
-        @Size(max = PersonDetails.MAX_BOARD_NOTE_LENGTH) String boardNote,
+        @Size(max = PersonDetails.MAX_BOARD_NOTE_LENGTH) @Pattern(regexp = PersonDetails.TEXT_PATTERN) String boardNote,
         boolean featured,
         UUID portraitId,
         @Size(max = EmailAddress.MAX_LENGTH) @Pattern(regexp = "^\\s*$|" + EmailAddress.SHAPE_REGEX) String personalEmail,

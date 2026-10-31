@@ -10,9 +10,15 @@ import cz.novanadeje.app.content.domain.people.PersonId;
 import cz.novanadeje.app.content.domain.people.PersonImageInUse;
 import cz.novanadeje.app.content.domain.people.PersonNotFound;
 import cz.novanadeje.app.content.domain.people.PersonRepository;
+import cz.novanadeje.app.content.domain.people.PersonSignsReceipts;
+import cz.novanadeje.app.content.domain.people.ReceiptPortraitInBrowserOnly;
+import cz.novanadeje.app.content.domain.people.SignatoryNameUnprintable;
 import cz.novanadeje.app.content.domain.people.TooManyPeople;
 import cz.novanadeje.app.shared.application.account.VerifiedAccountEmails;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.shared.application.event.FoundationPersonRemoved;
+import cz.novanadeje.app.shared.application.people.ReceiptSignatoryLookup;
+import cz.novanadeje.app.shared.domain.PrintableText;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -38,14 +44,16 @@ public class PeopleAdminService {
 
     private final PersonRepository people;
     private final MediaImageRepository media;
+    private final ReceiptSignatoryLookup signatories;
     private final ApplicationEventPublisher events;
     private final VerifiedAccountEmails accounts;
     private final Clock clock;
 
-    public PeopleAdminService(PersonRepository people, MediaImageRepository media, ApplicationEventPublisher events, VerifiedAccountEmails accounts,
-                              Clock clock) {
+    public PeopleAdminService(PersonRepository people, MediaImageRepository media, ReceiptSignatoryLookup signatories,
+                              ApplicationEventPublisher events, VerifiedAccountEmails accounts, Clock clock) {
         this.people = people;
         this.media = media;
+        this.signatories = signatories;
         this.events = events;
         this.accounts = accounts;
         this.clock = clock;
@@ -77,10 +85,18 @@ public class PeopleAdminService {
         return view(added);
     }
 
-    public PersonView update(UUID adminId, PersonId id, PersonCommand command) {
+    public PersonView update(UUID adminId, PersonId id, PersonCommand command, boolean connected) {
         Instant now = clock.instant();
         Person current = find(id);
         PersonDetails details = checked(command.toDetails());
+        boolean portraitChanged = !details.portrait().equals(current.details().portrait());
+        boolean unprintableName = !PrintableText.prints(details.name());
+        if ((connected && portraitChanged || unprintableName) && signatories.signsReceipts(id.value())) {
+            if (unprintableName) {
+                throw new SignatoryNameUnprintable(id);
+            }
+            throw new ReceiptPortraitInBrowserOnly();
+        }
         Person edited = current.edit(details, now);
         people.save(edited);
         current.imagesLeftBy(edited).forEach(media::deleteIfUnused);
@@ -91,9 +107,13 @@ public class PeopleAdminService {
     public void remove(UUID adminId, PersonId id) {
         Instant now = clock.instant();
         Person current = find(id);
+        if (signatories.signsReceipts(id.value())) {
+            throw new PersonSignsReceipts(id);
+        }
         people.delete(id);
         current.images().forEach(media::deleteIfUnused);
         publish(adminId, REMOVE_ACTION, "Osoba " + id + " odebrána z lidí fondu", now);
+        events.publishEvent(new FoundationPersonRemoved(id.value(), now));
     }
 
     public List<PersonView> order(UUID adminId, List<PersonId> order) {

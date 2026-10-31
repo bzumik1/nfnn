@@ -311,6 +311,7 @@ public class ConnectedAppsStepDefinitions {
         String target = path.replace("{id}", UUID.randomUUID().toString());
         switch (method) {
             case "POST" -> api.post(target, Map.of());
+            case "PUT" -> api.put(target, Map.of());
             case "DELETE" -> api.delete(target);
             case "GET" -> api.get(target);
             default -> throw new IllegalArgumentException("Unsupported method " + method);

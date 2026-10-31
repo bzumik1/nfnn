@@ -13,6 +13,43 @@
   margin-top: var(--space-6);
 }
 
+.person-signatures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-6);
+  margin-top: var(--space-2);
+}
+
+.person-signature {
+  margin: 0;
+  min-width: 0;
+  max-width: 100%;
+
+  figcaption {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-1);
+  }
+}
+
+.person-signature-ink {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: var(--space-12);
+}
+
+.person-signature-art {
+  width: 160px;
+  max-width: 100%;
+}
+
+.person-signature-note {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
 .list-actions {
   margin-top: var(--space-4);
 }
@@ -113,6 +150,7 @@
 }
 
 .signature-part,
+.receipt-part,
 .remove-part {
   border-top: 1px solid var(--color-divider);
 
@@ -128,4 +166,30 @@
   gap: var(--space-2);
   font-size: var(--text-sm);
   color: var(--color-text);
+}
+
+.receipt-form {
+  max-width: 640px;
+  margin-bottom: var(--space-3);
+
+  .field-hint {
+    margin-bottom: var(--space-4);
+  }
+
+  .form-actions {
+    margin-top: var(--space-3);
+  }
+}
+
+.receipt-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--color-danger);
+}
+
+.receipt-part app-receipt-signature {
+  margin-top: var(--space-5);
 }

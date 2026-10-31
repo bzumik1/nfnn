@@ -125,14 +125,18 @@ Feature: An administrator connects an application such as Claude to the administ
       | DELETE | /api/admin/donations/symbol-claims/{id}                             |
       | POST   | /api/admin/operations/backups/nfnn-2026-10-23_0300.dump.age/restore |
       | GET    | /api/admin/operations/backups/nfnn-2026-10-23_0300.dump.age         |
-      | POST   | /api/admin/donations/receipt-signature                              |
+      | POST   | /api/admin/donations/receipt-signatures/{id}                        |
       | POST   | /api/admin/operations/backups/key/reveal                            |
       | POST   | /api/admin/operations/backups/key/confirmation                      |
-      | DELETE | /api/admin/donations/receipt-signature                              |
+      | DELETE | /api/admin/donations/receipt-signatures/{id}                        |
+      | PUT    | /api/admin/donations/receipt-signatory                              |
+      | GET    | /api/admin/donations/receipt-signatures/{id}                        |
+      | GET    | /api/admin/donations/receipt-images/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee |
       | POST   | /api/admin/donations/receipt-signing-keys/21fe31df/withdrawal       |
 
   Scenario: A connected application issues a first receipt and gets it again, but replacing an issued receipt is left to the browser
     Given today is 2026-12-20
+    And a person of the foundation signs the receipts
     And the bank account has these movements:
       | id   | date       | amount  | account    | bankCode | name       | variableSymbol |
       | 3001 | 2026-11-15 | 2500.00 | 2900233333 | 2010     | Novák Petr | {Petr}         |

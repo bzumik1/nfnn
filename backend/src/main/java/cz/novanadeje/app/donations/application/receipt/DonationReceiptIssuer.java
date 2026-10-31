@@ -13,10 +13,8 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptFingerprint;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptIssueLimitReached;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptReplacementInBrowserOnly;
-import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatureRepository;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptUnprintable;
 import cz.novanadeje.app.donations.domain.receipt.ReplacedReceipt;
-import cz.novanadeje.app.donations.domain.receipt.Signatory;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningPaused;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -47,23 +45,21 @@ public class DonationReceiptIssuer {
     private final DonationReceiptRepository receipts;
     private final ReceiptRequestReader requests;
     private final ReceiptFreezer freezer;
-    private final ReceiptSignatureRepository signatures;
+    private final IssuingSignatory signatories;
     private final ReceiptSigningKeys signingKeys;
     private final FoundationIdentity foundation;
-    private final Signatory signatory;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public DonationReceiptIssuer(DonationReceiptRepository receipts, ReceiptRequestReader requests, ReceiptFreezer freezer,
-                                 ReceiptSignatureRepository signatures, ReceiptSigningKeys signingKeys, FoundationIdentity foundation,
-                                 Signatory signatory, ApplicationEventPublisher events, Clock clock) {
+                                 IssuingSignatory signatories, ReceiptSigningKeys signingKeys, FoundationIdentity foundation,
+                                 ApplicationEventPublisher events, Clock clock) {
         this.receipts = receipts;
         this.requests = requests;
         this.freezer = freezer;
-        this.signatures = signatures;
+        this.signatories = signatories;
         this.signingKeys = signingKeys;
         this.foundation = foundation;
-        this.signatory = signatory;
         this.events = events;
         this.clock = clock;
     }
@@ -141,8 +137,10 @@ public class DonationReceiptIssuer {
     }
 
     private DonationReceipt issueNew(ReceiptRequest request, ReceiptFingerprint fingerprint, Optional<DonationReceipt> replaced) {
-        ReceiptUnprintable.refuseUnlessPrintable(request.record(), foundation, signatory);
-        if (replaced.isPresent() && receipts.countReplacementsIssuedAfter(request.donor(), clock.instant().minus(ISSUE_LIMIT_WINDOW)) >= REPLACEMENTS_PER_DONOR_A_DAY) {
+        Instant issuedAt = clock.instant();
+        SignatoryAtIssue signatory = signatories.resolve(issuedAt);
+        ReceiptUnprintable.refuseUnlessPrintable(request.record(), foundation, signatory.signatory());
+        if (replaced.isPresent() && receipts.countReplacementsIssuedAfter(request.donor(), issuedAt.minus(ISSUE_LIMIT_WINDOW)) >= REPLACEMENTS_PER_DONOR_A_DAY) {
             throw new ReceiptIssueLimitReached(request.donor(), REPLACEMENTS_PER_DONOR_A_DAY);
         }
         long serial = receipts.nextSerial();
@@ -150,11 +148,10 @@ public class DonationReceiptIssuer {
         if (serial >= SERIAL_WORTH_A_WARNING) {
             LOG.warn("Receipt serial {} has passed 90 % of the numbering, which ends at {}", serial, ReceiptNumber.LAST_SERIAL);
         }
-        Instant issuedAt = clock.instant();
         LocaleCode locale = replaced.map(DonationReceipt::locale).orElse(request.record().preferredLocale());
-        ReceiptDocument document = request.document(foundation, signatory, number, locale,
+        ReceiptDocument document = request.document(foundation, signatory.signatory(), number, locale,
                 replaced.map(old -> new ReplacedReceipt(old.number(), old.issuedOn())));
-        FrozenReceipt frozen = freezer.freeze(document, signatures.currentDigest());
+        FrozenReceipt frozen = freezer.freeze(document, signatory.signatureImage(), signatory.portraitImage());
         DonationReceipt issued = DonationReceipt.issue(DonationReceiptId.newId(issuedAt), request.donor(), issuedAt, fingerprint, frozen,
                 replaced.map(DonationReceipt::id));
         replaced.ifPresent(old -> {

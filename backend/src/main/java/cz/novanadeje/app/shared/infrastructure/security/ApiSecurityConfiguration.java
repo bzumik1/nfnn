@@ -29,15 +29,21 @@ class ApiSecurityConfiguration {
             "/api/admin/content/projects/*",
             "/api/admin/donations/donors/*/bank-accounts/*",
             "/api/admin/donations/symbol-claims/*",
-            "/api/admin/donations/receipt-signature"};
+            "/api/admin/donations/receipt-signatures/*"};
     private static final String[] BROWSER_ONLY_POSTS = {
             "/api/admin/donors/administrators",
             "/api/admin/donors/*/second-factor/reset",
             "/api/admin/donations/symbol-claims/*/reverse",
-            "/api/admin/donations/receipt-signature",
+            "/api/admin/donations/receipt-signatures/*",
             "/api/admin/donations/receipt-signing-keys/*/withdrawal",
             "/api/admin/operations/backups/key/reveal",
             "/api/admin/operations/backups/key/confirmation"};
+    private static final String[] BROWSER_ONLY_PUTS = {
+            "/api/admin/donations/receipt-signatory"};
+
+    private static final String[] BROWSER_ONLY_GETS = {
+            "/api/admin/donations/receipt-signatures/*",
+            "/api/admin/donations/receipt-images/*"};
 
     @Bean
     SecurityFilterChain apiSecurityFilterChain(HttpSecurity http, ProblemDetailSecurityErrorHandler errorHandler,
@@ -66,6 +72,9 @@ class ApiSecurityConfiguration {
                         .requestMatchers(HttpMethod.POST, BACKUP_RESTORE).access(administratorInBrowser())
                         .requestMatchers(HttpMethod.DELETE, BROWSER_ONLY_DELETES).access(administratorInBrowser())
                         .requestMatchers(HttpMethod.POST, BROWSER_ONLY_POSTS).access(administratorInBrowser())
+                        .requestMatchers(HttpMethod.PUT, BROWSER_ONLY_PUTS).access(administratorInBrowser())
+                        .requestMatchers(HttpMethod.GET, BROWSER_ONLY_GETS).access(administratorInBrowser())
+                        .requestMatchers(HttpMethod.HEAD, BROWSER_ONLY_GETS).access(administratorInBrowser())
                         .requestMatchers(HttpMethod.GET, "/api/admin/**").hasRole(ADMIN_ROLE)
                         .requestMatchers(HttpMethod.HEAD, "/api/admin/**").hasRole(ADMIN_ROLE)
                         .requestMatchers("/api/admin/**").access(new AdminWriteAuthorizationManager())

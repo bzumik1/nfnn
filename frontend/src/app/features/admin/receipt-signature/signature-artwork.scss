@@ -1,0 +1,11 @@
+:host {
+  display: block;
+}
+
+.signature-artwork {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 120px;
+  object-fit: contain;
+}

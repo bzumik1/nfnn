@@ -56,6 +56,25 @@ class JpaPersonRepositoryTest {
     }
 
     @Test
+    @DisplayName("Given a person stored earlier with a line break in the name, when they are read and renamed, then they read as stored and the new name is saved")
+    void should_read_and_rename_when_read_given_a_stored_line_break() {
+        Person person = person("Eva Vzorová", 0, BEFORE);
+        people.save(person);
+        flushAndClear();
+        entityManager.createNativeQuery("update content_person set name = :name where id = :id")
+                .setParameter("name", "Eva\nVzorová").setParameter("id", person.id().value()).executeUpdate();
+        flushAndClear();
+
+        Person stored = people.findById(person.id()).orElseThrow();
+        assertThat(stored.details().name()).isEqualTo("Eva\nVzorová");
+        assertThat(people.findAllInOrder()).extracting(found -> found.details().name()).containsExactly("Eva\nVzorová");
+
+        people.save(stored.edit(new PersonDetails("Eva Vzorová", Optional.empty(), true, Optional.empty(), false, Optional.empty(), PersonEmails.NONE), NOW));
+        flushAndClear();
+        assertThat(people.findById(person.id())).map(found -> found.details().name()).contains("Eva Vzorová");
+    }
+
+    @Test
     @DisplayName("Given people saved out of order, when all are read, then they come by position and then by the time they were added")
     void should_read_by_position_when_all_are_read_given_people_saved_out_of_order() {
         Person third = person("Hana", 2, NOW);

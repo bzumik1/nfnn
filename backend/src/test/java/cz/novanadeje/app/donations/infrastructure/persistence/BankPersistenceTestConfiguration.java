@@ -13,7 +13,7 @@ import java.time.ZoneId;
 @TestConfiguration(proxyBeanMethods = false)
 @Import({TestcontainersConfiguration.class, JpaBankPaymentRepository.class, JpaBankImportStateRepository.class, JpaDonorRecordRepository.class,
         JpaDonationRepository.class, JpaDonationReceiptRepository.class, JpaReceiptImageRepository.class, JpaMonthlyReportLog.class,
-        JpaSymbolClaimRepository.class, JpaReportSettingsRepository.class, JpaReceiptSignatureRepository.class, JpaImportAlertRepository.class, PostgresPairingLock.class,
+        JpaSymbolClaimRepository.class, JpaReportSettingsRepository.class, JpaReceiptSignatureRepository.class, JpaReceiptSignatoryRepository.class, JpaImportAlertRepository.class, PostgresPairingLock.class,
         JpaReceiptSigningKeyRepository.class})
 class BankPersistenceTestConfiguration {
 

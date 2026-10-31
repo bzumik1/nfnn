@@ -3,6 +3,7 @@ package cz.novanadeje.app.content.domain.people;
 import cz.novanadeje.app.content.domain.media.MediaId;
 
 import java.util.Optional;
+import java.util.stream.Stream;
 
 public record PersonDetails(String name, Optional<String> role, boolean onBoard, Optional<String> boardNote, boolean featured,
                             Optional<MediaId> portrait, PersonEmails emails) {
@@ -10,6 +11,8 @@ public record PersonDetails(String name, Optional<String> role, boolean onBoard,
     public static final int MAX_NAME_LENGTH = 100;
     public static final int MAX_ROLE_LENGTH = 120;
     public static final int MAX_BOARD_NOTE_LENGTH = 60;
+
+    public static final String TEXT_PATTERN = "[^\\p{Cc}]*";
 
     public PersonDetails {
         if (name == null || role == null || boardNote == null || portrait == null || emails == null) {
@@ -29,5 +32,17 @@ public record PersonDetails(String name, Optional<String> role, boolean onBoard,
             throw new IllegalArgumentException("The " + what + " of a person is at most " + maxLength + " characters");
         }
         return stripped;
+    }
+
+    public boolean holdsControlCharacter() {
+        return Stream.of(Optional.of(name), role, boardNote).flatMap(Optional::stream).anyMatch(PersonDetails::hasControlCharacter);
+    }
+
+    public boolean nameOrRoleHoldsControlCharacter() {
+        return Stream.of(Optional.of(name), role).flatMap(Optional::stream).anyMatch(PersonDetails::hasControlCharacter);
+    }
+
+    private static boolean hasControlCharacter(String text) {
+        return text.chars().anyMatch(Character::isISOControl);
     }
 }

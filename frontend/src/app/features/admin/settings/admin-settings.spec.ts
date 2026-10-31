@@ -12,7 +12,7 @@ import { AdminSettings } from './admin-settings';
 const SETTINGS_URL = '/api/admin/operations/settings';
 const TEST_EMAIL_URL = '/api/admin/operations/settings/test-email';
 const STATUS_URL = '/api/operations/setup';
-const SIGNATURE_URL = '/api/admin/donations/receipt-signature';
+const SIGNATORY_URL = '/api/admin/donations/receipt-signatory';
 const SIGNING_KEYS_URL = '/api/admin/donations/receipt-signing-keys';
 
 describe('Given an administrator on the settings page', () => {
@@ -39,7 +39,7 @@ describe('Given an administrator on the settings page', () => {
   });
 
   afterEach(() => {
-    http.match(SIGNATURE_URL);
+    http.match(SIGNATORY_URL);
     http.match(SIGNING_KEYS_URL);
     http.verify();
     vi.useRealTimers();
@@ -114,7 +114,7 @@ describe('Given an administrator on the settings page', () => {
     it('then the everyday parts come first and the technical ones follow under a warning, opened because a secret needs entering again', () => {
       expect(texts('h2')).toEqual([
         'Potvrzení o daru',
-        'Podpis na potvrzeních',
+        'Kdo potvrzení podepisuje',
         'Klíč k ověřovacím QR kódům',
         'Kontaktní formulář',
         'Odesílatel e-mailů',
@@ -393,7 +393,7 @@ describe('Given an administrator sent to the mail settings from another page', (
       (fixture.nativeElement.querySelector('details#technicke-nastaveni') as HTMLDetailsElement)
         .open,
     ).toBe(true);
-    http.match(SIGNATURE_URL);
+    http.match(SIGNATORY_URL);
     http.match(SIGNING_KEYS_URL);
     http.verify();
   });
@@ -421,7 +421,7 @@ describe('Given an administrator sent to the receipt signing key from the overvi
 
     expect(document.activeElement?.id).toBe('klic-k-overovacim-qr');
     expect(document.activeElement?.textContent?.trim()).toBe('Klíč k ověřovacím QR kódům');
-    http.match(SIGNATURE_URL);
+    http.match(SIGNATORY_URL);
     http.match(SIGNING_KEYS_URL);
     http.verify();
   });

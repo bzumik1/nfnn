@@ -3,6 +3,7 @@ Feature: Anyone holding a receipt's proof asks whether the foundation keeps the 
 
   Background:
     Given today is 2026-12-20
+    And a person of the foundation signs the receipts
     And a person "Jana" is registered
     And the bank account has these movements:
       | id   | date       | amount  | account    | bankCode | name          | variableSymbol |

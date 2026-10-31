@@ -12,13 +12,14 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 
-import static cz.novanadeje.app.shared.infrastructure.schema.BaselineDatabase.BASELINE_CHANGELOG;
 import static cz.novanadeje.app.shared.infrastructure.schema.BaselineDatabase.CURRENT_CHANGELOG;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class ReceiptSwitchMigrationTest {
 
+    private static final String BEFORE_SWITCH_CHANGELOG = "migrations/before-receipt-switch-changelog.xml";
+    private static final String BEFORE_SWITCH_DATA = "/migrations/before-receipt-switch-data.sql";
     private static final String DONATION_WITH_TEST_RECEIPTS = "0190a000-0000-7000-8000-000000000023";
     private static final String PAYMENT_OF_THAT_DONATION = "0190a000-0000-7000-8000-000000000020";
     private static final String UNPAIR = "delete from donation where id = '" + DONATION_WITH_TEST_RECEIPTS + "'";
@@ -81,8 +82,8 @@ class ReceiptSwitchMigrationTest {
         }
         var connection = DriverManager.getConnection(postgres.getJdbcUrl().replace("/" + postgres.getDatabaseName(), "/" + database),
                 postgres.getUsername(), postgres.getPassword());
-        BaselineDatabase.migrate(connection, BASELINE_CHANGELOG);
-        BaselineDatabase.fill(connection);
+        BaselineDatabase.migrate(connection, BEFORE_SWITCH_CHANGELOG);
+        BaselineDatabase.fill(connection, BEFORE_SWITCH_DATA);
         execute(connection, "select setval('donation_receipt_number_seq', 41)");
         return connection;
     }

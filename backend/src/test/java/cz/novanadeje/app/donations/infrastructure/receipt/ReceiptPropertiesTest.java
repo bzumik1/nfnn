@@ -28,14 +28,14 @@ class ReceiptPropertiesTest {
             .withUserConfiguration(Support.class);
 
     @Test
-    @DisplayName("Given only application.yml, when the context starts, then the foundation, and the signatory come from the defaults")
+    @DisplayName("Given only application.yml, when the context starts, then the foundation comes from the defaults")
     void should_use_defaults_when_started_given_no_overrides() {
         contexts.run(context -> {
             assertThat(context).hasNotFailed();
             assertThat(context.getBean(FoundationIdentity.class)).isEqualTo(new FoundationIdentity("Nová naděje - nadační fond", "27278794",
                     new PostalAddress("Jiráskova 436", "Nový Bor", "473 01"), "Krajský soud v Ústí nad Labem", "N 78", "5544332217/2010",
                     "V Novém Boru", "Nový Bor"));
-            assertThat(context.getBean(Signatory.class)).isEqualTo(new Signatory("Pavel Znamenáček", "předseda správní rady"));
+            assertThat(context.getBeansOfType(Signatory.class)).isEmpty();
         });
     }
 
@@ -82,18 +82,9 @@ class ReceiptPropertiesTest {
         });
     }
 
-    @Test
-    @DisplayName("Given an empty signatory name, when the context starts, then it fails naming the environment variable")
-    void should_fail_naming_env_var_when_started_given_empty_signatory_name() {
-        contexts.withPropertyValues("app.donations.receipt.signatory-name=").run(context -> {
-            assertThat(context).hasFailed();
-            assertThat(context.getStartupFailure()).rootCause().hasMessageContaining("RECEIPT_SIGNATORY_NAME");
-        });
-    }
-
     @ParameterizedTest
     @ValueSource(strings = {"foundation-name", "foundation-street", "foundation-city", "registry-court",
-            "registry-file", "issue-place", "issue-place-en", "signatory-name", "signatory-role"})
+            "registry-file", "issue-place", "issue-place-en"})
     @DisplayName("Given a printed receipt value with a character the receipt fonts cannot print, when the context starts, then it fails naming the property and the code point")
     void should_fail_naming_property_when_started_given_unprintable_printed_value(String property) {
         contexts.withPropertyValues("app.donations.receipt." + property + "=Nov\u00e1 \ud83d\ude00").run(context -> {

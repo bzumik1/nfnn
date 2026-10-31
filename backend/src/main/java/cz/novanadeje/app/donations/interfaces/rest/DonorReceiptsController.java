@@ -66,7 +66,7 @@ class DonorReceiptsController {
 
     @GetMapping("/receipt-images/{sha256}")
     ResponseEntity<byte[]> image(@AuthenticationPrincipal Jwt jwt, @PathVariable @Pattern(regexp = "[0-9a-f]{64}") String sha256) {
-        StoredReceiptImage image = receipts.signatureImageOf(caller(jwt), new ContentDigest(sha256));
+        StoredReceiptImage image = receipts.imageOf(caller(jwt), new ContentDigest(sha256));
         byte[] content = image.content();
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(image.mediaType()))

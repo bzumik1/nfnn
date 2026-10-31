@@ -68,16 +68,8 @@ insert into donation (id, donor_id, bank_payment_id, received_on, amount_minor, 
 values ('0190a000-0000-7000-8000-000000000023', '0190a000-0000-7000-8000-000000000010',
         '0190a000-0000-7000-8000-000000000020', '2026-01-07', 50000, 'CZK', 'BANK_TRANSFER', 'RECEIVED',
         'VARIABLE_SYMBOL', '2026-01-07T10:00:00Z', null, 'GENERAL', null);
-insert into receipt_template (sha256, content, first_used_at)
-values (repeat('1', 64), '<html></html>', '2026-01-09T10:00:00Z');
 insert into receipt_image (sha256, media_type, content, first_used_at)
 values (repeat('2', 64), 'image/png', '\x89504e47', '2026-01-09T10:00:00Z');
-insert into donation_receipt (id, donor_id, kind, donation_id, receipt_year, number, issued_on, issued_at, locale,
-                              fingerprint, supersedes_id, superseded_at, template_sha256, data, logo_sha256,
-                              signature_sha256, render_profile, pdf_sha256)
-values ('0190a000-0000-7000-8000-000000000024', '0190a000-0000-7000-8000-000000000010', 'SINGLE',
-        '0190a000-0000-7000-8000-000000000023', null, '000001', '2026-01-09', '2026-01-09T10:00:00Z', 'cs',
-        repeat('3', 64), null, null, repeat('1', 64), '{}', repeat('2', 64), repeat('2', 64), 1, repeat('4', 64));
 insert into donation_receipt_signature (id, image_sha256, width, height, uploaded_at)
 values (1, repeat('2', 64), 600, 200, '2026-01-09T10:00:00Z');
 insert into receipt_signing_key (key_id, public_key, registered_at, status, seal)

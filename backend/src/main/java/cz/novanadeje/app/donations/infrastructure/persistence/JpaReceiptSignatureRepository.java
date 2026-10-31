@@ -2,13 +2,17 @@ package cz.novanadeje.app.donations.infrastructure.persistence;
 
 import cz.novanadeje.app.donations.domain.receipt.ContentDigest;
 import cz.novanadeje.app.donations.domain.receipt.CurrentSignature;
+import cz.novanadeje.app.donations.domain.receipt.PersonReference;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatureRepository;
 import cz.novanadeje.app.donations.domain.receipt.SignatureArtwork;
 import cz.novanadeje.app.donations.domain.receipt.SignatureImage;
+import cz.novanadeje.app.donations.domain.receipt.SignatureKind;
+import cz.novanadeje.app.donations.domain.receipt.SignatureSummary;
 import cz.novanadeje.app.donations.domain.receipt.SignatureVector;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -25,26 +29,40 @@ class JpaReceiptSignatureRepository implements ReceiptSignatureRepository {
     }
 
     @Override
-    public Optional<CurrentSignature> current() {
-        return signatures.findById(ReceiptSignatureJpaEntity.SINGLETON_ID).map(stored -> {
-            ReceiptImageJpaEntity image = image(stored);
-            return new CurrentSignature(artwork(image, stored), stored.uploadedAt());
-        });
+    public Optional<CurrentSignature> currentOf(PersonReference person) {
+        return signatures.findById(person.value()).map(stored -> new CurrentSignature(artwork(image(stored), stored), stored.uploadedAt()));
     }
 
     @Override
-    public Optional<ContentDigest> currentDigest() {
-        return signatures.findById(ReceiptSignatureJpaEntity.SINGLETON_ID).map(stored -> new ContentDigest(stored.imageSha256()));
+    public Optional<ContentDigest> digestOf(PersonReference person) {
+        return signatures.findById(person.value()).map(stored -> new ContentDigest(stored.imageSha256()));
     }
 
     @Override
-    public void replace(SignatureArtwork artwork, Instant uploadedAt) {
+    public List<SignatureSummary> summaries() {
+        return signatures.summaries().stream()
+                .map(row -> new SignatureSummary(new PersonReference(row.getPersonId()), kindOf(row.getMediaType()), row.getWidth(), row.getHeight(),
+                        row.getUploadedAt()))
+                .toList();
+    }
+
+    @Override
+    public void replace(PersonReference person, SignatureArtwork artwork, Instant uploadedAt) {
         String digest = artwork.digest().value();
         switch (artwork) {
             case SignatureImage image -> images.insertIfAbsent(digest, PNG, image.png(), uploadedAt);
             case SignatureVector vector -> images.insertIfAbsent(digest, CanonicalSignatureVectors.MEDIA_TYPE, vector.canonicalBytes(), uploadedAt);
         }
-        signatures.save(ReceiptSignatureJpaEntity.of(digest, artwork.width(), artwork.height(), uploadedAt));
+        signatures.save(ReceiptSignatureJpaEntity.of(person.value(), digest, artwork.width(), artwork.height(), uploadedAt));
+    }
+
+    @Override
+    public boolean remove(PersonReference person) {
+        if (!signatures.existsById(person.value())) {
+            return false;
+        }
+        signatures.deleteById(person.value());
+        return true;
     }
 
     private ReceiptImageJpaEntity image(ReceiptSignatureJpaEntity stored) {
@@ -59,12 +77,7 @@ class JpaReceiptSignatureRepository implements ReceiptSignatureRepository {
         return new SignatureImage(image.content(), stored.width(), stored.height());
     }
 
-    @Override
-    public boolean remove() {
-        if (!signatures.existsById(ReceiptSignatureJpaEntity.SINGLETON_ID)) {
-            return false;
-        }
-        signatures.deleteById(ReceiptSignatureJpaEntity.SINGLETON_ID);
-        return true;
+    private static SignatureKind kindOf(String mediaType) {
+        return CanonicalSignatureVectors.MEDIA_TYPE.equals(mediaType) ? SignatureKind.VECTOR : SignatureKind.RASTER;
     }
 }

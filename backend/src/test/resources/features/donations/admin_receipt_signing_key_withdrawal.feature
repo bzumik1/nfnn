@@ -3,6 +3,7 @@ Feature: An administrator withdraws a leaked receipt signing key from the web, w
 
   Background:
     Given today is 2026-11-13
+    And a person of the foundation signs the receipts
     And the backup folder exists
     And the server has started and registered its receipt signing key
     And a person "Jana" is registered

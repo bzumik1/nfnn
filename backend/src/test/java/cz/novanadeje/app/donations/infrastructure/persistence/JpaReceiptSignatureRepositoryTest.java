@@ -2,12 +2,16 @@ package cz.novanadeje.app.donations.infrastructure.persistence;
 
 import cz.novanadeje.app.donations.domain.receipt.ContentDigest;
 import cz.novanadeje.app.donations.domain.receipt.CurrentSignature;
+import cz.novanadeje.app.donations.domain.receipt.PersonReference;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatureRepository;
+import cz.novanadeje.app.donations.domain.receipt.SignatureKind;
+import cz.novanadeje.app.donations.domain.receipt.SignatureSummary;
 import cz.novanadeje.app.donations.domain.receipt.SignatureImage;
 import cz.novanadeje.app.donations.domain.receipt.SignaturePath;
 import cz.novanadeje.app.donations.domain.receipt.SignaturePathData;
 import cz.novanadeje.app.donations.domain.receipt.SignatureVector;
 import cz.novanadeje.app.donations.domain.receipt.SignatureViewBox;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptImageRepository;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -24,6 +28,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import static cz.novanadeje.app.donations.infrastructure.persistence.BankPersistenceTestConfiguration.NOW;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -34,6 +39,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @Import(BankPersistenceTestConfiguration.class)
 class JpaReceiptSignatureRepositoryTest {
 
+    private static final PersonReference PERSON = new PersonReference(UUID.fromString("019a3a00-0000-7000-8000-00000000c001"));
+    private static final PersonReference OTHER = new PersonReference(UUID.fromString("019a3a00-0000-7000-8000-00000000c002"));
     private static final byte[] PNG_HEADER = {(byte) 0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'};
     private static final SignatureImage FIRST = image(1, 600, 200);
     private static final SignatureImage SECOND = image(2, 900, 300);
@@ -44,6 +51,8 @@ class JpaReceiptSignatureRepositoryTest {
     @Autowired
     private ReceiptSignatureRepository signatures;
     @Autowired
+    private ReceiptImageRepository receiptImages;
+    @Autowired
     private JdbcClient jdbc;
     @Autowired
     private EntityManager entityManager;
@@ -51,45 +60,57 @@ class JpaReceiptSignatureRepositoryTest {
     @Test
     @DisplayName("Given nothing uploaded, when the current signature is read, then there is none and removing it changes nothing")
     void should_answer_nothing_when_read_given_nothing_uploaded() {
-        assertThat(signatures.current()).isEmpty();
-        assertThat(signatures.remove()).isFalse();
+        assertThat(signatures.currentOf(PERSON)).isEmpty();
+        assertThat(signatures.remove(PERSON)).isFalse();
     }
 
     @Test
     @DisplayName("Given a signature uploaded, when it is read, then the image, its size and the upload time come back and the image is a receipt image")
     void should_round_trip_when_replaced_given_signature() {
-        signatures.replace(FIRST, NOW);
+        signatures.replace(PERSON, FIRST, NOW);
         flushAndClear();
 
-        assertThat(signatures.current()).contains(new CurrentSignature(FIRST, NOW));
+        assertThat(signatures.currentOf(PERSON)).contains(new CurrentSignature(FIRST, NOW));
         assertThat(jdbc.sql("select media_type from receipt_image where sha256 = ?").param(FIRST.digest().value()).query(String.class).single())
                 .isEqualTo("image/png");
     }
 
     @Test
-    @DisplayName("Given a vector signature uploaded, when it is read, then the same vector comes back from its canonical JSON stored as a receipt image")
-    void should_round_trip_when_replaced_given_vector_signature() {
-        signatures.replace(VECTOR, NOW);
+    @DisplayName("Given a vector signature uploaded, when the receipt images are asked for it, then its canonical bytes come back as stored, as JSON, without being read as a vector")
+    void should_answer_media_type_and_canonical_bytes_when_asked_given_vector_signature() {
+        signatures.replace(PERSON, VECTOR, NOW);
         flushAndClear();
 
-        assertThat(signatures.current()).contains(new CurrentSignature(VECTOR, NOW));
+        assertThat(receiptImages.find(VECTOR.digest())).hasValueSatisfying(image -> {
+            assertThat(image.mediaType()).isEqualTo("application/json");
+            assertThat(image.content()).isEqualTo(VECTOR.canonicalBytes());
+        });
+    }
+
+    @Test
+    @DisplayName("Given a vector signature uploaded, when it is read, then the same vector comes back from its canonical JSON stored as a receipt image")
+    void should_round_trip_when_replaced_given_vector_signature() {
+        signatures.replace(PERSON, VECTOR, NOW);
+        flushAndClear();
+
+        assertThat(signatures.currentOf(PERSON)).contains(new CurrentSignature(VECTOR, NOW));
         Map<String, Object> stored = jdbc.sql("select media_type, content from receipt_image where sha256 = ?").param(VECTOR.digest().value())
                 .query().singleRow();
         assertThat(stored.get("media_type")).isEqualTo("application/json");
         assertThat((byte[]) stored.get("content")).isEqualTo(VECTOR.canonicalJson().getBytes(StandardCharsets.UTF_8));
-        assertThat(jdbc.sql("select width || 'x' || height from donation_receipt_signature").query(String.class).single()).isEqualTo("1200x400");
+        assertThat(jdbc.sql("select width || 'x' || height from donation_person_receipt_signature").query(String.class).single()).isEqualTo("1200x400");
     }
 
     @Test
     @DisplayName("Given a stored vector whose content was changed under its digest, when it is read, then it is a server fault naming only the digest")
     void should_fail_as_server_fault_when_read_given_vector_changed_under_its_digest() {
-        signatures.replace(VECTOR, NOW);
+        signatures.replace(PERSON, VECTOR, NOW);
         flushAndClear();
         String digest = VECTOR.digest().value();
         jdbc.sql("update receipt_image set content = ? where sha256 = ?")
                 .params(VECTOR.canonicalJson().replace("#c0392b", "#000000").getBytes(StandardCharsets.UTF_8), digest).update();
 
-        assertThatThrownBy(() -> signatures.current())
+        assertThatThrownBy(() -> signatures.currentOf(PERSON))
                 .isExactlyInstanceOf(IllegalStateException.class)
                 .hasMessage("The stored signature vector " + digest + " does not match its digest")
                 .hasNoCause();
@@ -103,14 +124,14 @@ class JpaReceiptSignatureRepositoryTest {
     })
     @DisplayName("Given a stored vector that matches its digest but no longer reads as a signature, when it is read, then it is a server fault naming the digest and the exception class only")
     void should_fail_as_server_fault_when_read_given_unreadable_vector_under_its_own_digest(String tampering, String content, String failure) {
-        signatures.replace(VECTOR, NOW);
+        signatures.replace(PERSON, VECTOR, NOW);
         flushAndClear();
         byte[] bytes = content.getBytes(StandardCharsets.UTF_8);
         String digest = ContentDigest.of(bytes).value();
         jdbc.sql("insert into receipt_image (sha256, media_type, content, first_used_at) values (?, 'application/json', ?, now())").params(digest, bytes).update();
-        jdbc.sql("update donation_receipt_signature set image_sha256 = ?").param(digest).update();
+        jdbc.sql("update donation_person_receipt_signature set image_sha256 = ?").param(digest).update();
 
-        assertThatThrownBy(() -> signatures.current())
+        assertThatThrownBy(() -> signatures.currentOf(PERSON))
                 .isExactlyInstanceOf(IllegalStateException.class)
                 .hasMessage("The stored signature vector " + digest + " cannot be read: " + failure)
                 .hasNoCause();
@@ -119,54 +140,39 @@ class JpaReceiptSignatureRepositoryTest {
     @Test
     @DisplayName("Given a stored vector that reads as a signature under its own digest but is not spelled canonically, when it is read, then it is a server fault naming only the digest")
     void should_fail_as_server_fault_when_read_given_vector_not_spelled_canonically() {
-        signatures.replace(VECTOR, NOW);
+        signatures.replace(PERSON, VECTOR, NOW);
         flushAndClear();
         byte[] bytes = VECTOR.canonicalJson().replace(",\"paths\"", ", \"paths\"").getBytes(StandardCharsets.UTF_8);
         String digest = ContentDigest.of(bytes).value();
         jdbc.sql("insert into receipt_image (sha256, media_type, content, first_used_at) values (?, 'application/json', ?, now())").params(digest, bytes).update();
-        jdbc.sql("update donation_receipt_signature set image_sha256 = ?").param(digest).update();
+        jdbc.sql("update donation_person_receipt_signature set image_sha256 = ?").param(digest).update();
 
-        assertThatThrownBy(() -> signatures.current())
+        assertThatThrownBy(() -> signatures.currentOf(PERSON))
                 .isExactlyInstanceOf(IllegalStateException.class)
                 .hasMessage("The stored signature vector " + digest + " is not in its canonical form")
                 .hasNoCause();
     }
 
     @Test
-    @DisplayName("Given a scan uploaded, when the current digest is asked for, then the digest of the scan comes back")
-    void should_answer_scan_digest_when_current_digest_asked_given_scan() {
-        signatures.replace(FIRST, NOW);
-        flushAndClear();
-
-        assertThat(signatures.currentDigest()).contains(FIRST.digest());
-    }
-
-    @Test
-    @DisplayName("Given a vector signature whose content no longer reads, when the current digest is asked for, then its digest comes back without reading the vector")
-    void should_answer_vector_digest_without_reading_it_when_current_digest_asked_given_unreadable_vector() {
-        signatures.replace(VECTOR, NOW);
+    @DisplayName("Given a vector signature of a person whose content no longer reads, when its digest is asked for, then the digest comes back without reading the vector")
+    void should_answer_vector_digest_without_reading_it_when_digest_asked_given_unreadable_vector() {
+        signatures.replace(PERSON, VECTOR, NOW);
         flushAndClear();
         jdbc.sql("update receipt_image set content = ? where sha256 = ?").params("garbage".getBytes(StandardCharsets.UTF_8), VECTOR.digest().value()).update();
 
-        assertThat(signatures.currentDigest()).contains(VECTOR.digest());
-    }
-
-    @Test
-    @DisplayName("Given nothing uploaded, when the current digest is asked for, then there is none")
-    void should_answer_no_digest_when_current_digest_asked_given_nothing_uploaded() {
-        assertThat(signatures.currentDigest()).isEmpty();
+        assertThat(signatures.digestOf(PERSON)).contains(VECTOR.digest());
     }
 
     @Test
     @DisplayName("Given a vector signature, when a scan replaces it, then the scan is current and the vector stays for issued receipts")
     void should_answer_scan_when_replaced_given_earlier_vector() {
-        signatures.replace(VECTOR, NOW);
+        signatures.replace(PERSON, VECTOR, NOW);
         flushAndClear();
 
-        signatures.replace(FIRST, NOW.plusSeconds(60));
+        signatures.replace(PERSON, FIRST, NOW.plusSeconds(60));
         flushAndClear();
 
-        assertThat(signatures.current()).contains(new CurrentSignature(FIRST, NOW.plusSeconds(60)));
+        assertThat(signatures.currentOf(PERSON)).contains(new CurrentSignature(FIRST, NOW.plusSeconds(60)));
         assertThat(jdbc.sql("select count(*) from receipt_image where sha256 = ?").param(VECTOR.digest().value()).query(Long.class).single())
                 .isEqualTo(1L);
     }
@@ -174,15 +180,15 @@ class JpaReceiptSignatureRepositoryTest {
     @Test
     @DisplayName("Given a signature uploaded, when another one replaces it, then one row names the newer one and the older image stays for issued receipts")
     void should_keep_one_row_and_older_image_when_replaced_given_earlier_signature() {
-        signatures.replace(FIRST, NOW);
+        signatures.replace(PERSON, FIRST, NOW);
         flushAndClear();
         Instant later = NOW.plusSeconds(3600);
 
-        signatures.replace(SECOND, later);
+        signatures.replace(PERSON, SECOND, later);
         flushAndClear();
 
-        assertThat(signatures.current()).contains(new CurrentSignature(SECOND, later));
-        assertThat(jdbc.sql("select count(*) from donation_receipt_signature").query(Long.class).single()).isEqualTo(1L);
+        assertThat(signatures.currentOf(PERSON)).contains(new CurrentSignature(SECOND, later));
+        assertThat(jdbc.sql("select count(*) from donation_person_receipt_signature").query(Long.class).single()).isEqualTo(1L);
         assertThat(jdbc.sql("select count(*) from receipt_image where sha256 in (?, ?)").params(FIRST.digest().value(), SECOND.digest().value())
                 .query(Long.class).single()).isEqualTo(2L);
     }
@@ -190,10 +196,10 @@ class JpaReceiptSignatureRepositoryTest {
     @Test
     @DisplayName("Given a signature uploaded, when the same image is uploaded again later, then its receipt image is stored once and keeps the time it was first used")
     void should_store_the_image_once_and_keep_its_first_use_when_uploaded_again_given_the_same_image() {
-        signatures.replace(FIRST, NOW);
+        signatures.replace(PERSON, FIRST, NOW);
         flushAndClear();
 
-        signatures.replace(FIRST, NOW.plusSeconds(60));
+        signatures.replace(PERSON, FIRST, NOW.plusSeconds(60));
         flushAndClear();
 
         assertThat(jdbc.sql("select count(*) from receipt_image where sha256 = ?").param(FIRST.digest().value()).query(Long.class).single())
@@ -205,36 +211,73 @@ class JpaReceiptSignatureRepositoryTest {
     @Test
     @DisplayName("Given a signature uploaded, when it is removed, then none is current and the image stays for issued receipts")
     void should_remove_row_and_keep_image_when_removed_given_signature() {
-        signatures.replace(FIRST, NOW);
+        signatures.replace(PERSON, FIRST, NOW);
         flushAndClear();
 
-        assertThat(signatures.remove()).isTrue();
+        assertThat(signatures.remove(PERSON)).isTrue();
         flushAndClear();
 
-        assertThat(signatures.current()).isEmpty();
+        assertThat(signatures.currentOf(PERSON)).isEmpty();
         assertThat(jdbc.sql("select count(*) from receipt_image where sha256 = ?").param(FIRST.digest().value()).query(Long.class).single())
                 .isEqualTo(1L);
     }
 
     @Test
-    @DisplayName("Given the schema, when a second row is inserted, then the singleton constraint refuses it")
-    void should_refuse_when_inserted_given_second_row() {
-        signatures.replace(FIRST, NOW);
+    @DisplayName("Given the schema, when a row is larger than a receipt signature may be, then the size check refuses it")
+    void should_refuse_when_updated_given_oversized_signature() {
+        signatures.replace(PERSON, FIRST, NOW);
         flushAndClear();
 
-        assertThatThrownBy(() -> jdbc.sql("insert into donation_receipt_signature (id, image_sha256, width, height, uploaded_at) values (2, ?, 1, 1, now())")
-                .param(FIRST.digest().value()).update())
-                .hasMessageContaining("ck_donation_receipt_signature_singleton");
+        assertThatThrownBy(() -> jdbc.sql("update donation_person_receipt_signature set width = 1201").update())
+                .hasMessageContaining("ck_donation_person_receipt_signature_size");
     }
 
     @Test
     @DisplayName("Given the schema, when the row names an image that is not stored, then the foreign key refuses it")
     void should_refuse_when_updated_given_unknown_image() {
-        signatures.replace(FIRST, NOW);
+        signatures.replace(PERSON, FIRST, NOW);
         flushAndClear();
 
-        assertThatThrownBy(() -> jdbc.sql("update donation_receipt_signature set image_sha256 = ?").param("0".repeat(64)).update())
-                .hasMessageContaining("fk_donation_receipt_signature_image");
+        assertThatThrownBy(() -> jdbc.sql("update donation_person_receipt_signature set image_sha256 = ?").param("0".repeat(64)).update())
+                .hasMessageContaining("fk_donation_person_receipt_signature_image");
+    }
+
+    @Test
+    @DisplayName("Given signatures of two people, when each is read, then each person has their own and the summaries list both by kind and size")
+    void should_keep_one_signature_per_person_when_read_given_two_people() {
+        signatures.replace(PERSON, FIRST, NOW);
+        signatures.replace(OTHER, VECTOR, NOW.plusSeconds(60));
+        flushAndClear();
+
+        assertThat(signatures.currentOf(PERSON)).contains(new CurrentSignature(FIRST, NOW));
+        assertThat(signatures.currentOf(OTHER)).contains(new CurrentSignature(VECTOR, NOW.plusSeconds(60)));
+        assertThat(signatures.digestOf(PERSON)).contains(FIRST.digest());
+        assertThat(signatures.digestOf(OTHER)).contains(VECTOR.digest());
+        assertThat(signatures.summaries()).containsExactlyInAnyOrder(
+                new SignatureSummary(PERSON, SignatureKind.RASTER, 600, 200, NOW),
+                new SignatureSummary(OTHER, SignatureKind.VECTOR, 1200, 400, NOW.plusSeconds(60)));
+    }
+
+    @Test
+    @DisplayName("Given signatures of two people, when one is removed, then the other stays")
+    void should_keep_other_signature_when_removed_given_two_people() {
+        signatures.replace(PERSON, FIRST, NOW);
+        signatures.replace(OTHER, SECOND, NOW);
+        flushAndClear();
+
+        assertThat(signatures.remove(PERSON)).isTrue();
+        flushAndClear();
+
+        assertThat(signatures.currentOf(PERSON)).isEmpty();
+        assertThat(signatures.digestOf(PERSON)).isEmpty();
+        assertThat(signatures.currentOf(OTHER)).contains(new CurrentSignature(SECOND, NOW));
+    }
+
+    @Test
+    @DisplayName("Given nothing uploaded, when the digest and the summaries are read, then there are none")
+    void should_answer_nothing_when_digest_and_summaries_read_given_nothing_uploaded() {
+        assertThat(signatures.digestOf(PERSON)).isEmpty();
+        assertThat(signatures.summaries()).isEmpty();
     }
 
     private void flushAndClear() {

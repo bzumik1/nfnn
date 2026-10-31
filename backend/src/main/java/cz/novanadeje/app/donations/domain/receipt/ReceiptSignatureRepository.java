@@ -1,15 +1,18 @@
 package cz.novanadeje.app.donations.domain.receipt;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 public interface ReceiptSignatureRepository {
 
-    Optional<CurrentSignature> current();
+    Optional<CurrentSignature> currentOf(PersonReference person);
 
-    Optional<ContentDigest> currentDigest();
+    Optional<ContentDigest> digestOf(PersonReference person);
 
-    void replace(SignatureArtwork artwork, Instant uploadedAt);
+    List<SignatureSummary> summaries();
 
-    boolean remove();
+    void replace(PersonReference person, SignatureArtwork artwork, Instant uploadedAt);
+
+    boolean remove(PersonReference person);
 }

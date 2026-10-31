@@ -12,6 +12,7 @@ enum AdminHandlerReach {
     CONNECTOR,
     CONNECTOR_SECRETS_IN_BROWSER_ONLY,
     CONNECTOR_REPLACEMENTS_IN_BROWSER_ONLY,
+    CONNECTOR_SIGNATORY_PORTRAIT_IN_BROWSER_ONLY,
     BROWSER_ONLY;
 
     static final Map<String, AdminHandlerReach> CLASSIFIED = classified();
@@ -56,7 +57,7 @@ enum AdminHandlerReach {
         table.put("PUT /api/admin/content/people/order", CONNECTOR);
         table.put("PUT /api/admin/content/people/note", CONNECTOR);
         table.put("PUT /api/admin/content/people/footnote", CONNECTOR);
-        table.put("PUT /api/admin/content/people/{id}", CONNECTOR);
+        table.put("PUT /api/admin/content/people/{id}", CONNECTOR_SIGNATORY_PORTRAIT_IN_BROWSER_ONLY);
         table.put("DELETE /api/admin/content/people/{id}", CONNECTOR);
         table.put("POST /api/admin/content/people/{id}/web-signature", CONNECTOR);
         table.put("DELETE /api/admin/content/people/{id}/web-signature", CONNECTOR);
@@ -81,10 +82,12 @@ enum AdminHandlerReach {
         table.put("GET /api/admin/donations/payments", CONNECTOR);
         table.put("POST /api/admin/donations/payments/{id}/pair", CONNECTOR);
         table.put("POST /api/admin/donations/payments/{id}/unpair", CONNECTOR);
-        table.put("GET /api/admin/donations/receipt-images/{sha256}", CONNECTOR);
-        table.put("GET /api/admin/donations/receipt-signature", CONNECTOR);
-        table.put("POST /api/admin/donations/receipt-signature", BROWSER_ONLY);
-        table.put("DELETE /api/admin/donations/receipt-signature", BROWSER_ONLY);
+        table.put("GET /api/admin/donations/receipt-images/{sha256}", BROWSER_ONLY);
+        table.put("GET /api/admin/donations/receipt-signatory", CONNECTOR);
+        table.put("PUT /api/admin/donations/receipt-signatory", BROWSER_ONLY);
+        table.put("GET /api/admin/donations/receipt-signatures/{personId}", BROWSER_ONLY);
+        table.put("POST /api/admin/donations/receipt-signatures/{personId}", BROWSER_ONLY);
+        table.put("DELETE /api/admin/donations/receipt-signatures/{personId}", BROWSER_ONLY);
         table.put("GET /api/admin/donations/receipt-signing-keys", CONNECTOR);
         table.put("POST /api/admin/donations/receipt-signing-keys/{keyId}/withdrawal", BROWSER_ONLY);
         table.put("GET /api/admin/donations/receipts", CONNECTOR);

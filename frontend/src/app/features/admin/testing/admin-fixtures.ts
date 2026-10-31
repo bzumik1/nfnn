@@ -26,6 +26,8 @@ import {
   MonthOverviewResponse,
   PairedDonationResponse,
   ReceiptSignatureResponse,
+  ChosenReceiptSignatoryResponse,
+  ReceiptSignatoryResponse,
   SignatureVectorResponse,
   ReceiptSigningKeyResponse,
   ReceiptSigningKeysResponse,
@@ -559,18 +561,6 @@ export function settingsView(
         configured: false,
         stored: false,
       }),
-      setting({
-        name: 'RECEIPT_SIGNATORY_NAME',
-        group: 'RECEIPTS',
-        value: 'Pavel Znamenáček',
-        stored: false,
-      }),
-      setting({
-        name: 'RECEIPT_SIGNATORY_ROLE',
-        group: 'RECEIPTS',
-        value: 'předseda správní rady',
-        stored: false,
-      }),
       setting({ name: 'RECEIPT_FIRST_YEAR', group: 'RECEIPTS', value: '2026', stored: false }),
     ],
     secretsCanBeStored: true,
@@ -646,4 +636,45 @@ export function diagnostics(overrides: Partial<DiagnosticsResponse> = {}): Diagn
     logLevelOverrides: [],
     ...overrides,
   };
+}
+
+export const SIGNATORY_ID = '0199f3e0-0000-7000-8000-00000000c001';
+
+export function chosenReceiptSignatory(
+  overrides: Partial<ChosenReceiptSignatoryResponse> = {},
+): ChosenReceiptSignatoryResponse {
+  return {
+    personId: SIGNATORY_ID,
+    name: 'Eva Vzorová',
+    receiptRole: 'předsedkyně správní rady',
+    chosenAt: '2026-10-31T08:00:00Z',
+    portrait: true,
+    portraitPrintable: overrides.portrait ?? true,
+    signature: true,
+    ...overrides,
+  };
+}
+
+export function receiptSignatory(
+  overrides: Partial<ChosenReceiptSignatoryResponse> = {},
+): ReceiptSignatoryResponse {
+  const chosen = chosenReceiptSignatory(overrides);
+  return {
+    signatory: chosen,
+    signatures: chosen.signature
+      ? [
+          {
+            personId: chosen.personId,
+            kind: 'VECTOR',
+            width: 1200,
+            height: 400,
+            uploadedAt: '2026-10-23T19:30:00Z',
+          },
+        ]
+      : [],
+  };
+}
+
+export function noReceiptSignatory(): ReceiptSignatoryResponse {
+  return { signatory: null, signatures: [] };
 }

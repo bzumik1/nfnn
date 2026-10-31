@@ -34,8 +34,8 @@ public class DonorReceiptsService {
         return receipts.findById(id).filter(receipt -> receipt.donor().equals(donor)).orElseThrow(() -> new ReceiptNotFound(id));
     }
 
-    public StoredReceiptImage signatureImageOf(DonorReference donor, ContentDigest digest) {
-        if (!receipts.showsSignatureImage(donor, digest)) {
+    public StoredReceiptImage imageOf(DonorReference donor, ContentDigest digest) {
+        if (!receipts.showsImage(donor, digest)) {
             throw new ReceiptImageNotFound(digest);
         }
         return images.find(digest).orElseThrow(() -> new ReceiptImageNotFound(digest));

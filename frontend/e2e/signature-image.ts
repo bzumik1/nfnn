@@ -53,3 +53,32 @@ export const refusedVector = {
     'Soubor obsahuje nepovolený prvek. Ručně psaný podpis v SVG jde, když jsou jeho tahy převedené na vyplněné tvary (path); obrysy s nastavenou tloušťkou čáry (stroke) a efekty web nepřijme a soubor smí mít nejvýš 200 kB. Místo něj můžete nahrát sken JPEG, PNG nebo WebP.',
   errors: [{ field: 'file', code: 'element', message: 'Soubor obsahuje nepovolený prvek.' }],
 };
+
+export const SIGNATORY_ID = '0199f3e0-0000-7000-8000-00000000c009';
+
+export function signatory(
+  overrides: Partial<{
+    personId: string;
+    name: string;
+    receiptRole: string;
+    portrait: boolean;
+    portraitPrintable: boolean;
+    signature: boolean;
+  }> = {},
+) {
+  return {
+    signatory: {
+      personId: SIGNATORY_ID,
+      name: 'Petr Vzorový',
+      receiptRole: 'předseda správní rady',
+      chosenAt: '2026-10-31T08:00:00Z',
+      portrait: false,
+      portraitPrintable: overrides.portrait ?? false,
+      signature: false,
+      ...overrides,
+    },
+    signatures: [],
+  };
+}
+
+export const noSignatory = { signatory: null, signatures: [] };

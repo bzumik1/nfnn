@@ -26,6 +26,7 @@ import cz.novanadeje.app.shared.domain.PostalAddress;
 import cz.novanadeje.app.shared.domain.UuidV7;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 import cz.novanadeje.app.support.DatabaseCleaner;
+import cz.novanadeje.app.support.ReceiptSignatories;
 import cz.novanadeje.app.support.ServerReceiptSigningKey;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -78,6 +79,7 @@ class AdminSymbolClaimsServiceIntegrationTest {
     void startFromEmptyTables() {
         new DatabaseCleaner(jdbc).emptyAllTables();
         ServerReceiptSigningKey.storeAfterEmptyTables(context);
+        ReceiptSignatories.chooseAfterEmptyTables(jdbc, context.getBean(java.time.Clock.class).instant());
     }
 
     @Test

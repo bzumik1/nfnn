@@ -3,13 +3,13 @@ package cz.novanadeje.app.donations.domain.receipt;
 import java.util.Optional;
 
 public record FrozenReceipt(ReceiptDocument document, ReceiptTextSet texts, Optional<ContentDigest> signatureImage,
-                            ReceiptVerification verification) {
+                            Optional<ContentDigest> portraitImage, ReceiptVerification verification) {
 
     public static final int SCHEMA_VERSION = 1;
 
     public FrozenReceipt {
-        if (document == null || texts == null || signatureImage == null || verification == null) {
-            throw new IllegalArgumentException("A frozen receipt holds its document, texts, signature image or none, and verification");
+        if (document == null || texts == null || signatureImage == null || portraitImage == null || verification == null) {
+            throw new IllegalArgumentException("A frozen receipt holds its document, texts, signature image or none, portrait or none, and verification");
         }
         if (!texts.covers(document.locale())) {
             throw new IllegalArgumentException("A receipt in " + document.locale().tag()

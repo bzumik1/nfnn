@@ -2,6 +2,7 @@ package cz.novanadeje.app.cucumber.transcript;
 
 import cz.novanadeje.app.cucumber.ScenarioDonors;
 import cz.novanadeje.app.support.AsyncTaskTracker;
+import cz.novanadeje.app.support.ReceiptSignatories;
 import cz.novanadeje.app.support.RecordingMailSender;
 import cz.novanadeje.app.support.RecordingSetupCodeAnnouncer;
 import io.cucumber.java.After;
@@ -32,7 +33,6 @@ public class ApiTranscriptHooks {
     private static final String RECEIPT_SIGNING_KEY_ID = "<key-id>";
     private static final String SIGNATORY_NAME = "<signatory-name>";
     private static final Pattern KEY_ID_IN_DETAILS = Pattern.compile("(?<![0-9A-Za-z-])[0-9a-f]{8}(?![0-9A-Za-z-])");
-    private static final String SIGNATORY_NAME_PROPERTY = "app.donations.receipt.signatory-name";
     private static final String SIGNING_KEY_PROPERTY = "app.donations.receipt.signing.key";
     private static final int AFTER_EVERY_OTHER_SET_UP = 100_000;
     private static final int AFTER_EVERY_OTHER_TEAR_DOWN = 0;
@@ -97,7 +97,8 @@ public class ApiTranscriptHooks {
         receiptSigningKeyIdsIn(jdbc.sql("select details from admin_action where action like '%RECEIPT_SIGNING_KEY%'").query(String.class).list())
                 .forEach(keyId -> known.put(keyId, RECEIPT_SIGNING_KEY_ID));
         donors.everySecondFactorSecret().forEach(secret -> known.put(secret, TranscriptNormaliser.SECRET));
-        Optional.ofNullable(context.getEnvironment().getProperty(SIGNATORY_NAME_PROPERTY)).filter(name -> !name.isBlank())
+        known.put(ReceiptSignatories.NAME, SIGNATORY_NAME);
+        jdbc.sql("select p.name from content_person p join donation_receipt_signatory s on s.person_id = p.id").query(String.class).optional()
                 .ifPresent(name -> known.put(name, SIGNATORY_NAME));
         Optional.ofNullable(context.getEnvironment().getProperty(SIGNING_KEY_PROPERTY)).filter(key -> !key.isBlank())
                 .ifPresent(key -> signingSeedSpellings(key).forEach(spelling -> known.put(spelling, TranscriptNormaliser.SECRET)));

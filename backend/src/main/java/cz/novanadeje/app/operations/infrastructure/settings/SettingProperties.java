@@ -21,8 +21,6 @@ final class SettingProperties {
             Map.entry(Setting.FIO_TOKEN, "app.donations.fio.token"),
             Map.entry(Setting.FIO_HISTORY_FROM, "app.donations.import.history-from"),
             Map.entry(Setting.PAIRING_EXCLUDED_ACCOUNTS, "app.donations.pairing.excluded-accounts"),
-            Map.entry(Setting.RECEIPT_SIGNATORY_NAME, "app.donations.receipt.signatory-name"),
-            Map.entry(Setting.RECEIPT_SIGNATORY_ROLE, "app.donations.receipt.signatory-role"),
             Map.entry(Setting.RECEIPT_FIRST_YEAR, "app.donations.receipt.first-year"),
             Map.entry(Setting.ADMIN_EMAILS, "app.donors.administrators.emails")));
 

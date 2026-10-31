@@ -2,7 +2,12 @@ package cz.novanadeje.app.donations.cucumber;
 
 import cz.novanadeje.app.cucumber.ApiClient;
 import cz.novanadeje.app.cucumber.DonorSessions;
+import cz.novanadeje.app.cucumber.ScenarioDonors;
+import cz.novanadeje.app.donations.application.receipt.ReceiptSignatureService;
+import cz.novanadeje.app.donations.domain.receipt.PersonReference;
+import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import io.cucumber.java.en.When;
 import tools.jackson.databind.JsonNode;
 
@@ -17,12 +22,14 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Map;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class AdminReceiptSignatureStepDefinitions {
 
-    private static final String SIGNATURE = "/api/admin/donations/receipt-signature";
+    private static final String SIGNATURES = "/api/admin/donations/receipt-signatures/";
+    private static final String UNKNOWN_PERSON = "0199f3e0-0000-7000-8000-000000000000";
     private static final String PNG_DATA_URI = "data:image/png;base64,";
     private static final String SVG_TYPE = "image/svg+xml";
     private static final String VECTOR_SIGNATURE = """
@@ -50,40 +57,55 @@ public class AdminReceiptSignatureStepDefinitions {
 
     private final ApiClient api;
     private final DonorSessions sessions;
+    private final JdbcClient jdbc;
+    private final ScenarioDonors donors;
+    private final ReceiptSignatureService signatures;
 
-    public AdminReceiptSignatureStepDefinitions(ApiClient api, DonorSessions sessions) {
+    public AdminReceiptSignatureStepDefinitions(ApiClient api, DonorSessions sessions, JdbcClient jdbc, ScenarioDonors donors,
+            ReceiptSignatureService signatures) {
         this.api = api;
         this.sessions = sessions;
+        this.jdbc = jdbc;
+        this.donors = donors;
+        this.signatures = signatures;
+    }
+
+    @Given("{string} has uploaded a {int} by {int} pixel JPEG scan as the receipt signature of the person who signs the receipts")
+    @When("{string} stores a {int} by {int} pixel JPEG scan as the receipt signature of the person who signs the receipts")
+    public void hasUploadedAJpegScanForTheSignatory(String alias, int width, int height) {
+        sessions.actAs(alias);
+        UUID signatory = jdbc.sql("select person_id from donation_receipt_signatory").query(UUID.class).single();
+        signatures.upload(donors.idOf(alias), new PersonReference(signatory), jpeg(width, height));
     }
 
     @When("{string} asks for the receipt signature")
     public void asksForTheReceiptSignature(String alias) {
         sessions.actAs(alias);
-        api.get(SIGNATURE);
+        api.get(signature());
     }
 
     @When("someone without a token asks for the receipt signature")
     public void someoneWithoutATokenAsksForTheReceiptSignature() {
         api.forgetCredentials();
-        api.get(SIGNATURE);
+        api.get(signature());
     }
 
     @When("{string} uploads a {int} by {int} pixel JPEG scan named {string} as the receipt signature")
     public void uploadsAJpegScanAsTheReceiptSignature(String alias, int width, int height, String fileName) {
         sessions.actAs(alias);
-        api.postFile(SIGNATURE, "file", fileName, "image/jpeg", jpeg(width, height));
+        api.postFile(signature(), "file", fileName, "image/jpeg", jpeg(width, height));
     }
 
     @When("{string} uploads the vector signature {string} as the receipt signature")
     public void uploadsTheVectorSignature(String alias, String fileName) {
         sessions.actAs(alias);
-        api.postFile(SIGNATURE, "file", fileName, SVG_TYPE, VECTOR_SIGNATURE.getBytes(StandardCharsets.UTF_8));
+        api.postFile(signature(), "file", fileName, SVG_TYPE, VECTOR_SIGNATURE.getBytes(StandardCharsets.UTF_8));
     }
 
     @When("someone without a token uploads the vector signature {string} as the receipt signature")
     public void someoneWithoutATokenUploadsTheVectorSignature(String fileName) {
         api.forgetCredentials();
-        api.postFile(SIGNATURE, "file", fileName, SVG_TYPE, VECTOR_SIGNATURE.getBytes(StandardCharsets.UTF_8));
+        api.postFile(signature(), "file", fileName, SVG_TYPE, VECTOR_SIGNATURE.getBytes(StandardCharsets.UTF_8));
     }
 
     @When("{string} uploads an SVG signature with {}")
@@ -91,19 +113,37 @@ public class AdminReceiptSignatureStepDefinitions {
         sessions.actAs(alias);
         String svg = REFUSED_VECTORS.get(construct);
         assertThat(svg).as("an SVG with %s", construct).isNotNull();
-        api.postFile(SIGNATURE, "file", "podpis.svg", SVG_TYPE, svg.getBytes(StandardCharsets.UTF_8));
+        api.postFile(signature(), "file", "podpis.svg", SVG_TYPE, svg.getBytes(StandardCharsets.UTF_8));
     }
 
     @When("{string} uploads a text file as the receipt signature")
     public void uploadsATextFileAsTheReceiptSignature(String alias) {
         sessions.actAs(alias);
-        api.postFile(SIGNATURE, "file", "podpis.txt", "text/plain", "Josef Dvořáček".getBytes(StandardCharsets.UTF_8));
+        api.postFile(signature(), "file", "podpis.txt", "text/plain", "Josef Dvořáček".getBytes(StandardCharsets.UTF_8));
     }
 
     @When("{string} removes the receipt signature")
     public void removesTheReceiptSignature(String alias) {
         sessions.actAs(alias);
-        api.delete(SIGNATURE);
+        api.delete(signature());
+    }
+
+    @When("{string} uploads a {int} by {int} pixel JPEG scan as the receipt signature of {string}")
+    public void uploadsAJpegScanAsTheReceiptSignatureOf(String alias, int width, int height, String person) {
+        sessions.actAs(alias);
+        api.postFile(SIGNATURES + personIdOf(person), "file", "podpis.jpg", "image/jpeg", jpeg(width, height));
+    }
+
+    @When("{string} asks for the receipt signature of {string}")
+    public void asksForTheReceiptSignatureOf(String alias, String person) {
+        sessions.actAs(alias);
+        api.get(SIGNATURES + personIdOf(person));
+    }
+
+    @When("{string} uploads a {int} by {int} pixel JPEG scan as the receipt signature of a person who does not exist")
+    public void uploadsAJpegScanForAPersonWhoDoesNotExist(String alias, int width, int height) {
+        sessions.actAs(alias);
+        api.postFile(SIGNATURES + UNKNOWN_PERSON, "file", "podpis.jpg", "image/jpeg", jpeg(width, height));
     }
 
     @Then("the receipt signature is not set")
@@ -150,6 +190,15 @@ public class AdminReceiptSignatureStepDefinitions {
         assertThat(first.get("opacity").decimalValue()).isEqualByComparingTo("0.9");
         assertThat(vector.properties()).extracting(Map.Entry::getKey).containsExactlyInAnyOrder("viewBox", "paths");
         assertThat(first.properties()).extracting(Map.Entry::getKey).containsExactlyInAnyOrder("d", "fill", "opacity");
+    }
+
+    private String signature() {
+        return SIGNATURES + jdbc.sql("select person_id from donation_receipt_signatory").query(UUID.class).optional()
+                .map(UUID::toString).orElse(UNKNOWN_PERSON);
+    }
+
+    private UUID personIdOf(String name) {
+        return jdbc.sql("select id from content_person where name = ?").param(name).query(UUID.class).single();
     }
 
     private static byte[] jpeg(int width, int height) {

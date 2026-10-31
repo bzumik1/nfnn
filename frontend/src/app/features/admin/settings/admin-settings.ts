@@ -25,7 +25,7 @@ import { PasswordReveal } from '../../../shared/ui/password-reveal/password-reve
 import { SETTING_LABELS, settingErrors } from '../../operations/setting-labels';
 import { SettingName, SettingValueRequest, SetupApi } from '../../operations/setup/setup-api';
 import { testEmailNotice } from '../../operations/test-email';
-import { ReceiptSignature } from './receipt-signature/receipt-signature';
+import { ReceiptSignatory } from './receipt-signatory/receipt-signatory';
 import { ReceiptSigningKey } from './receipt-signing-key/receipt-signing-key';
 import { AdminApi, AdminSettingResponse, AdminTestEmailRequest } from '../admin-api';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
@@ -89,8 +89,8 @@ const EVERYDAY: readonly SectionPlan[] = [
   {
     id: 'potvrzeni',
     title: $localize`:@@admin.settings.section.receipts:Potvrzení o daru`,
-    intro: $localize`:@@admin.settings.section.receipts.intro:Kdo potvrzení podepisuje a za které roky si je dárci stáhnou na webu.`,
-    names: ['RECEIPT_SIGNATORY_NAME', 'RECEIPT_SIGNATORY_ROLE', 'RECEIPT_FIRST_YEAR'],
+    intro: $localize`:@@admin.settings.section.receipts.intro:Za které roky si dárci potvrzení stáhnou na webu. Kdo je podepisuje, vyberete u lidí fondu.`,
+    names: ['RECEIPT_FIRST_YEAR'],
   },
   {
     id: 'kontaktni-formular',
@@ -176,7 +176,7 @@ const INPUTS: Partial<Readonly<Record<SettingName, Input>>> = {
     FormField,
     FormControlDirective,
     PasswordReveal,
-    ReceiptSignature,
+    ReceiptSignatory,
     ReceiptSigningKey,
   ],
   templateUrl: './admin-settings.html',

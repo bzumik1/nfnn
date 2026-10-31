@@ -10,7 +10,7 @@ import java.util.regex.Pattern;
 @ConfigurationProperties("app.donations.receipt")
 public record ReceiptProperties(String foundationName, String foundationCompanyIdentifier, String foundationStreet, String foundationCity,
                                 String foundationPostalCode, String registryCourt, String registryFile, String issuePlace,
-                                String issuePlaceEn, String signatoryName, String signatoryRole, Integer firstYear) {
+                                String issuePlaceEn, Integer firstYear) {
 
     private static final String PREFIX = "app.donations.receipt.";
     private static final Pattern COMPANY_IDENTIFIER = Pattern.compile("[0-9]{8}");
@@ -32,8 +32,6 @@ public record ReceiptProperties(String foundationName, String foundationCompanyI
         registryFile = printed(registryFile, PREFIX + "registry-file");
         issuePlace = printed(issuePlace, PREFIX + "issue-place");
         issuePlaceEn = printed(issuePlaceEn, PREFIX + "issue-place-en");
-        signatoryName = printed(signatoryName, "RECEIPT_SIGNATORY_NAME (" + PREFIX + "signatory-name)");
-        signatoryRole = printed(signatoryRole, "RECEIPT_SIGNATORY_ROLE (" + PREFIX + "signatory-role)");
         firstYear = firstYear == null ? DEFAULT_FIRST_YEAR : firstYear;
         if (firstYear < FIRST_FOUR_DIGIT_YEAR || firstYear > LAST_FOUR_DIGIT_YEAR) {
             throw new IllegalArgumentException("RECEIPT_FIRST_YEAR (" + PREFIX + "first-year) must be a four-digit year, but is " + firstYear);

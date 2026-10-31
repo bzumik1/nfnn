@@ -18,15 +18,15 @@ Feature: An administrator changes the settings of the site in the administration
   Scenario: An administrator changes settings, they are stored and audited by name and the backend restarts
     When "Jana" changes the settings:
       | name                      | value           |
-      | RECEIPT_SIGNATORY_NAME    | Alena Horáčková |
+      | MAIL_USERNAME             | alena           |
       | PAIRING_EXCLUDED_ACCOUNTS | 2400000002/2010 |
       | MAIL_PASSWORD             | right-key       |
       | MAIL_HOST                 |                 |
     Then the response status is 202
     And the backend restarts once
-    And the stored "RECEIPT_SIGNATORY_NAME" is "Alena Horáčková"
+    And the stored "MAIL_USERNAME" is "alena"
     And the stored "MAIL_PASSWORD" is sealed
-    And the stored settings are "PUBLIC_URL, MAIL_PORT, MAIL_FROM, CONTACT_RECIPIENT, ADMIN_EMAILS, RECEIPT_SIGNATORY_NAME, PAIRING_EXCLUDED_ACCOUNTS, MAIL_PASSWORD"
+    And the stored settings are "PUBLIC_URL, MAIL_PORT, MAIL_FROM, CONTACT_RECIPIENT, ADMIN_EMAILS, MAIL_USERNAME, PAIRING_EXCLUDED_ACCOUNTS, MAIL_PASSWORD"
     And the administration history records "CHANGE_SETTINGS" by "Jana"
 
   Scenario: A malformed value is named first; a well-formed value the backend would not start with is refused before anything is stored
@@ -41,14 +41,6 @@ Feature: An administrator changes the settings of the site in the administration
       | PAIRING_EXCLUDED_ACCOUNTS | not-an-account |
     Then the response status is 400
     And the problem names the settings "PAIRING_EXCLUDED_ACCOUNTS"
-    And the backend does not restart
-
-  Scenario: A signatory name with a character no receipt can print is refused before anything is stored, so every receipt can still be issued
-    When "Jana" changes the settings:
-      | name                   | value              |
-      | RECEIPT_SIGNATORY_NAME | Alena Horáčková 😀 |
-    Then the response status is 400
-    And the problem names the settings "RECEIPT_SIGNATORY_NAME"
     And the backend does not restart
 
   Scenario: A setting of the first setup only and a setting the site does not know are refused by name or as unknown

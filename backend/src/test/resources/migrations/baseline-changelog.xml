@@ -43,6 +43,7 @@
     <include file="db/changelog/donations/021_register_receipt_signing_keys.xml" relativeToChangelogFile="false"/>
     <include file="db/changelog/donations/022_issue_receipts_as_frozen_data.xml" relativeToChangelogFile="false"/>
     <include file="db/changelog/donations/023_index_issued_receipts_by_issue.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donations/024_switch_receipts_to_the_browser.xml" relativeToChangelogFile="false"/>
     <include file="db/changelog/contact/001_create_contact_message.xml" relativeToChangelogFile="false"/>
     <include file="db/changelog/operations/001_track_backup_alerts.xml" relativeToChangelogFile="false"/>
     <include file="db/changelog/operations/002_store_settings.xml" relativeToChangelogFile="false"/>
