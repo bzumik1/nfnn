@@ -119,6 +119,25 @@ Feature: An administrator withdraws a leaked receipt signing key from the web, w
     When "Jana" asks for the receipt signing keys
     Then the receipt signing keys flag nothing in the audit trail
 
+  Scenario: A key whose seed the server keeps aside as withdrawn stays withdrawn after a backup from before the withdrawal is restored, flagged until it is withdrawn again
+    Given the server signed before with the receipt signing key "39f713d0" registered at "2026-11-01T07:00:00Z", keeps its withdrawn seed aside, and a backup from before that withdrawal was restored
+    When the server starts again
+    Then the server logged the error "Receipt signing key 39f713d0 was withdrawn but its row is active again, so it is published as withdrawn"
+    When a visitor asks for the receipt keys
+    Then the receipt keys are those of the foundation "Nová naděje - nadační fond" "27278794":
+      | keyId    | algorithm | publicKey                                   | status  | registeredAt         |
+      | 39f713d0 | Ed25519   | PUAXw-hDiVqStwqnTRt-vJyYLM8uxJaMwM1V8Sr0Zgw | revoked | 2026-11-01T07:00:00Z |
+      | 21fe31df | Ed25519   | 11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo | active  | 2026-11-13T11:00:00Z |
+    When "Jana" asks for the receipt signing keys
+    Then the receipt signing keys flag in the audit trail:
+      | keyId    | kind     |
+      | 39f713d0 | reverted |
+    When "Jana" withdraws the receipt signing key "39f713d0" with a fresh code
+    Then the response status is 200
+    And the withdrawal answer says the backend restarts: false
+    When "Jana" asks for the receipt signing keys
+    Then the receipt signing keys flag nothing in the audit trail
+
   Scenario: A key row deleted from the database is flagged at the next start
     Given a backup of an earlier server with its receipt signing key registered at "2026-11-01T07:00:00Z" was restored
     And the backup container finished that restore 3 minutes ago under the request "019a1b2c-0000-7000-8000-000000000010"

@@ -8,6 +8,7 @@ import cz.novanadeje.app.support.CompanyLookupPause;
 import cz.novanadeje.app.support.DatabaseCleaner;
 import cz.novanadeje.app.support.FakeCompanyRegistry;
 import cz.novanadeje.app.support.FakeFioClient;
+import cz.novanadeje.app.support.KeptAsideWithdrawnSeeds;
 import cz.novanadeje.app.support.MutableClock;
 import cz.novanadeje.app.support.RateLimiterWindows;
 import cz.novanadeje.app.support.RecordingMailSender;
@@ -76,6 +77,7 @@ public class CommonStepDefinitions {
         CompanyLookupPause.reset(context.getBean(CompanyLookupService.class));
         BackupKeyWordDraws.reseed(context.getBean(BackupKeyWordChallenges.class));
         context.getBean(SwitchablePublicTestKeyPolicy.class).reset();
+        context.getBean(KeptAsideWithdrawnSeeds.class).reset();
     }
 
     private boolean asyncWorkIsDone() {

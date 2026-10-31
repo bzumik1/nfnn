@@ -63,8 +63,9 @@ class ReceiptSigningKeyRegistrationTest {
     private Optional<FinishedRestore> lastRestore = Optional.empty();
     private boolean outsideDevelopment;
     private final ListedTrail trail = new ListedTrail();
+    private final Set<ReceiptSigningKeyId> keptAside = new HashSet<>();
     private final ReceiptSigningKeyRegistration registration = new ReceiptSigningKeyRegistration(signer, keys, seals, () -> lastRestore,
-            id -> outsideDevelopment && id.isPublicTestKey(), trail, events, transactions, Clock.fixed(NOW, ZoneOffset.UTC));
+            id -> outsideDevelopment && id.isPublicTestKey(), trail, () -> Set.copyOf(keptAside), events, transactions, Clock.fixed(NOW, ZoneOffset.UTC));
 
     @BeforeEach
     void ownKeyAndLog() {
@@ -105,7 +106,7 @@ class ReceiptSigningKeyRegistrationTest {
 
         ArgumentCaptor<AdminActionPerformed> audited = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events).publishEvent(audited.capture());
-        assertThat(ReceiptSigningKeyHistory.of(List.of(ReceiptSigningKeyHistoryTest.entryOf(audited.getValue()))).recorded())
+        assertThat(ReceiptSigningKeyHistory.of(List.of(ReceiptSigningKeyHistoryTest.entryOf(audited.getValue())), Set.of()).recorded())
                 .containsExactly(new ReceiptSigningKeyId("21fe31df"));
     }
 
@@ -175,7 +176,7 @@ class ReceiptSigningKeyRegistrationTest {
         verify(events, times(2)).publishEvent(audited.capture());
         AdminActionPerformed adoption = audited.getAllValues().stream().filter(action -> action.action().equals(ReceiptSigningKeyRegistration.ADOPT_ACTION))
                 .findFirst().orElseThrow();
-        assertThat(ReceiptSigningKeyHistory.of(List.of(ReceiptSigningKeyHistoryTest.entryOf(adoption))).recorded())
+        assertThat(ReceiptSigningKeyHistory.of(List.of(ReceiptSigningKeyHistoryTest.entryOf(adoption)), Set.of()).recorded())
                 .containsExactly(new ReceiptSigningKeyId("39f713d0"));
     }
 
@@ -334,6 +335,20 @@ class ReceiptSigningKeyRegistrationTest {
             assertThat(line.message()).isEqualTo("Receipt signing key 39f713d0 was withdrawn but its row is active again, so it is published as withdrawn");
             assertThat(line.insideTransaction()).isFalse();
         });
+    }
+
+    @Test
+    @DisplayName("Given an active row of an earlier key whose seed this server keeps aside as withdrawn and a trail without the withdrawal, when the server starts, then an ERROR after the transaction names it as published withdrawn and nothing is stored")
+    void should_log_error_when_registering_given_a_kept_aside_key_active_after_a_restore() {
+        keys.stored.add(ReceiptSigningKey.register(OWN_PUBLIC_KEY, NOW, content -> seals.seal(ReceiptSigningKey.SEAL_PURPOSE, content)));
+        keys.stored.add(ReceiptSigningKey.register(EARLIER_PUBLIC_KEY, EARLIER, content -> seals.seal(ReceiptSigningKey.SEAL_PURPOSE, content)));
+        keptAside.add(new ReceiptSigningKeyId("39f713d0"));
+
+        registration.registerOwnKey();
+
+        assertThat(keys.saves).isZero();
+        assertThat(lines.written).extracting(Line::level, Line::message).containsExactly(org.assertj.core.groups.Tuple.tuple(Level.ERROR,
+                "Receipt signing key 39f713d0 was withdrawn but its row is active again, so it is published as withdrawn"));
     }
 
     @Test

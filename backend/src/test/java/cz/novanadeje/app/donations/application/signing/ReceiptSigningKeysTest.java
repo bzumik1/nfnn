@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Set;
@@ -31,8 +32,9 @@ class ReceiptSigningKeysTest {
     private final ReceiptSigner signer = mock(ReceiptSigner.class);
     private boolean outsideDevelopment;
     private final ListedTrail trail = new ListedTrail();
+    private final Set<ReceiptSigningKeyId> keptAside = new HashSet<>();
     private final ReceiptSigningKeys keys = new ReceiptSigningKeys(new ListedKeys(stored), new PrefixSeals(), signer,
-            id -> outsideDevelopment && id.isPublicTestKey(), trail);
+            id -> outsideDevelopment && id.isPublicTestKey(), trail, () -> Set.copyOf(keptAside));
 
     @BeforeEach
     void ownKey() {
@@ -102,6 +104,18 @@ class ReceiptSigningKeysTest {
     void should_publish_as_revoked_and_flag_when_listed_given_a_withdrawal_replayed_away() {
         stored.add(ReceiptSigningKey.register(EARLIER_PUBLIC_KEY, EARLIER, content -> PrefixSeals.HERE));
         trail.entries.add(ReceiptSigningKeyHistoryTest.withdrawn("39f713d0"));
+
+        assertThat(keys.published()).extracting(key -> key.id().value() + " " + key.status()).containsExactly("39f713d0 REVOKED", "21fe31df ACTIVE");
+        assertThat(keys.overview().mismatches())
+                .containsExactly(new ReceiptSigningKeyMismatch(new ReceiptSigningKeyId("39f713d0"), ReceiptSigningKeyMismatch.Kind.REVERTED));
+    }
+
+    @Test
+    @DisplayName("Given an active row sealed here of a key whose seed this server keeps aside as withdrawn, and no withdrawal in the trail, when the keys are listed, then it is published as revoked and the overview flags it as reverted")
+    void should_publish_as_revoked_and_flag_when_listed_given_a_kept_aside_key_active_after_a_restore() {
+        stored.add(ReceiptSigningKey.register(EARLIER_PUBLIC_KEY, EARLIER, content -> PrefixSeals.HERE));
+        trail.entries.add(ReceiptSigningKeyHistoryTest.registered("39f713d0"));
+        keptAside.add(new ReceiptSigningKeyId("39f713d0"));
 
         assertThat(keys.published()).extracting(key -> key.id().value() + " " + key.status()).containsExactly("39f713d0 REVOKED", "21fe31df ACTIVE");
         assertThat(keys.overview().mismatches())

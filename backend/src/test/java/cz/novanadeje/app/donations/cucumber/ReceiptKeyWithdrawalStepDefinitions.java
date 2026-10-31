@@ -4,8 +4,13 @@ import cz.novanadeje.app.cucumber.ApiClient;
 import cz.novanadeje.app.cucumber.DonorSessions;
 import cz.novanadeje.app.cucumber.ScenarioDonors;
 import cz.novanadeje.app.cucumber.TotpCodes;
+import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKey;
+import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyId;
+import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyRepository;
 import cz.novanadeje.app.donors.cucumber.DonorPasskeyStepDefinitions;
 import cz.novanadeje.app.operations.infrastructure.backup.BackupProperties;
+import cz.novanadeje.app.shared.application.seal.RecordSeals;
+import cz.novanadeje.app.support.KeptAsideWithdrawnSeeds;
 import cz.novanadeje.app.support.RecordingApplicationRestarter;
 import io.cucumber.datatable.DataTable;
 import io.cucumber.java.Before;
@@ -16,7 +21,9 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import tools.jackson.databind.JsonNode;
 
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.HashMap;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 
@@ -27,6 +34,7 @@ public class ReceiptKeyWithdrawalStepDefinitions {
 
     private static final String KEYS = "/api/admin/donations/receipt-signing-keys/";
     private static final String SEED_REQUEST = "receipt-signing-key.renew";
+    private static final byte[] EARLIER_PUBLIC_KEY = HexFormat.of().parseHex("3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c");
 
     private final ApiClient api;
     private final DonorSessions sessions;
@@ -35,11 +43,15 @@ public class ReceiptKeyWithdrawalStepDefinitions {
     private final DonorPasskeyStepDefinitions passkeys;
     private final JdbcClient jdbc;
     private final RecordingApplicationRestarter restarter;
+    private final ReceiptSigningKeyRepository keys;
+    private final RecordSeals seals;
+    private final KeptAsideWithdrawnSeeds keptAside;
     private final Path seedRequest;
     private final Map<String, Map<String, Object>> copiedRows = new HashMap<>();
 
     public ReceiptKeyWithdrawalStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors donors, TotpCodes totpCodes,
                                                DonorPasskeyStepDefinitions passkeys, JdbcClient jdbc, RecordingApplicationRestarter restarter,
+                                               ReceiptSigningKeyRepository keys, RecordSeals seals, KeptAsideWithdrawnSeeds keptAside,
                                                BackupProperties backups) {
         this.api = api;
         this.sessions = sessions;
@@ -48,6 +60,9 @@ public class ReceiptKeyWithdrawalStepDefinitions {
         this.passkeys = passkeys;
         this.jdbc = jdbc;
         this.restarter = restarter;
+        this.keys = keys;
+        this.seals = seals;
+        this.keptAside = keptAside;
         this.seedRequest = backups.restoreDirectory().resolve(SEED_REQUEST);
     }
 
@@ -130,6 +145,15 @@ public class ReceiptKeyWithdrawalStepDefinitions {
         Map<String, Object> row = copiedRows.get(keyId);
         assertThat(jdbc.sql("update receipt_signing_key set status = ?, seal = ? where key_id = ?").params(row.get("status"), row.get("seal"), keyId)
                 .update()).isEqualTo(1);
+    }
+
+    @Given("the server signed before with the receipt signing key {string} registered at {string}, keeps its withdrawn seed aside, and a backup from before that withdrawal was restored")
+    public void aBackupFromBeforeTheWithdrawalWasRestored(String keyId, String registeredAt) {
+        ReceiptSigningKey earlier = ReceiptSigningKey.register(EARLIER_PUBLIC_KEY, Instant.parse(registeredAt),
+                content -> seals.seal(ReceiptSigningKey.SEAL_PURPOSE, content));
+        assertThat(earlier.id().value()).isEqualTo(keyId);
+        keys.save(earlier);
+        keptAside.keepAside(new ReceiptSigningKeyId(keyId));
     }
 
     @Given("the row of the receipt signing key {string} was deleted in the database")

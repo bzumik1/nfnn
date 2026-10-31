@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -66,7 +67,7 @@ class ReceiptSigningKeyWithdrawalTest {
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
     private final ReceiptSigningKeyWithdrawalRefusals refusals = mock(ReceiptSigningKeyWithdrawalRefusals.class);
     private final ReceiptSigningKeyWithdrawal withdrawal = new ReceiptSigningKeyWithdrawal(stored,
-            new ReceiptSigningKeys(stored, seals, signer, id -> false, trail), seals, freshSecondFactor, refusals, events,
+            new ReceiptSigningKeys(stored, seals, signer, id -> false, trail, Set::of), seals, freshSecondFactor, refusals, events,
             Clock.fixed(NOW, ZoneOffset.UTC));
     private final ListAppender<ILoggingEvent> lines = new ListAppender<>();
 
@@ -116,7 +117,7 @@ class ReceiptSigningKeyWithdrawalTest {
         verify(events, times(2)).publishEvent(published.capture());
         AdminActionPerformed audited = published.getAllValues().stream().filter(AdminActionPerformed.class::isInstance).map(AdminActionPerformed.class::cast)
                 .findFirst().orElseThrow();
-        ReceiptSigningKeyHistory history = ReceiptSigningKeyHistory.of(List.of(ReceiptSigningKeyHistoryTest.entryOf(audited)));
+        ReceiptSigningKeyHistory history = ReceiptSigningKeyHistory.of(List.of(ReceiptSigningKeyHistoryTest.entryOf(audited)), Set.of());
         assertThat(history.isWithdrawn(OWN)).isTrue();
         assertThat(history.recorded()).containsExactly(OWN);
     }

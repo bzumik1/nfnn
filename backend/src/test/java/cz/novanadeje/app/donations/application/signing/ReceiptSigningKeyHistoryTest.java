@@ -11,6 +11,7 @@ import java.time.Instant;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -51,7 +52,7 @@ class ReceiptSigningKeyHistoryTest {
     @Test
     @DisplayName("Given the audit trail names the actions on the keys, when the history reads them, then it knows which keys were recorded and which withdrawn")
     void should_know_recorded_and_withdrawn_keys_when_read_given_the_trail() {
-        ReceiptSigningKeyHistory history = ReceiptSigningKeyHistory.of(List.of(registered("21fe31df"), adopted("39f713d0"), withdrawn("39f713d0")));
+        ReceiptSigningKeyHistory history = ReceiptSigningKeyHistory.of(List.of(registered("21fe31df"), adopted("39f713d0"), withdrawn("39f713d0")), Set.of());
 
         assertThat(history.recorded()).extracting(ReceiptSigningKeyId::value).containsExactlyInAnyOrder("21fe31df", "39f713d0");
         assertThat(history.isWithdrawn(new ReceiptSigningKeyId("39f713d0"))).isTrue();
@@ -59,11 +60,31 @@ class ReceiptSigningKeyHistoryTest {
     }
 
     @Test
+    @DisplayName("Given a key whose seed this server keeps aside as withdrawn and a trail without its withdrawal, as after a backup from before the withdrawal was restored, when the history reads them, then the key is withdrawn and its active row is reported as reverted")
+    void should_count_kept_aside_key_as_withdrawn_when_read_given_a_trail_without_its_withdrawal() {
+        ReceiptSigningKeyHistory history = ReceiptSigningKeyHistory.of(List.of(registered("39f713d0"), registered("21fe31df")),
+                Set.of(new ReceiptSigningKeyId("39f713d0")));
+
+        assertThat(history.isWithdrawn(new ReceiptSigningKeyId("39f713d0"))).isTrue();
+        assertThat(history.isWithdrawn(new ReceiptSigningKeyId("21fe31df"))).isFalse();
+        assertThat(history.mismatches(List.of(active(EARLIER_PUBLIC_KEY), active(OWN_PUBLIC_KEY))))
+                .containsExactly(new ReceiptSigningKeyMismatch(new ReceiptSigningKeyId("39f713d0"), ReceiptSigningKeyMismatch.Kind.REVERTED));
+    }
+
+    @Test
+    @DisplayName("Given a key whose seed this server keeps aside as withdrawn but that has no row and no trail entry, when the rows are checked, then nothing is reported, because a key without a row is not published")
+    void should_not_report_when_checked_given_a_kept_aside_key_without_row() {
+        ReceiptSigningKeyHistory history = ReceiptSigningKeyHistory.of(List.of(), Set.of(new ReceiptSigningKeyId("39f713d0")));
+
+        assertThat(history.mismatches(List.of(active(OWN_PUBLIC_KEY)))).isEmpty();
+    }
+
+    @Test
     @DisplayName("Given an entry of another action or details of another shape, when the history reads them, then it ignores them")
     void should_ignore_other_actions_and_shapes_when_read_given_foreign_entries() {
         ReceiptSigningKeyHistory history = ReceiptSigningKeyHistory.of(List.of(
                 entry(ADMIN, "CHANGE_SETTINGS", "Změněna nastavení: 21fe31df"),
-                entry(ADMIN, ReceiptSigningKeyWithdrawal.ACTION, "Stažen klíč: 21fe31df")));
+                entry(ADMIN, ReceiptSigningKeyWithdrawal.ACTION, "Stažen klíč: 21fe31df")), Set.of());
 
         assertThat(history.recorded()).isEmpty();
         assertThat(history.isWithdrawn(new ReceiptSigningKeyId("21fe31df"))).isFalse();
@@ -72,7 +93,7 @@ class ReceiptSigningKeyHistoryTest {
     @Test
     @DisplayName("Given rows that agree with the trail, when they are checked, then nothing is out of place")
     void should_find_nothing_when_checked_given_rows_that_agree() {
-        ReceiptSigningKeyHistory history = ReceiptSigningKeyHistory.of(List.of(registered("21fe31df"), adopted("39f713d0"), withdrawn("39f713d0")));
+        ReceiptSigningKeyHistory history = ReceiptSigningKeyHistory.of(List.of(registered("21fe31df"), adopted("39f713d0"), withdrawn("39f713d0")), Set.of());
 
         assertThat(history.mismatches(List.of(active(OWN_PUBLIC_KEY), active(EARLIER_PUBLIC_KEY).withdrawn(content -> "seal")))).isEmpty();
     }
@@ -80,7 +101,7 @@ class ReceiptSigningKeyHistoryTest {
     @Test
     @DisplayName("Given a withdrawn key whose row is active again, when the rows are checked, then the key is reported as reverted")
     void should_report_reverted_when_checked_given_a_withdrawn_key_active_again() {
-        ReceiptSigningKeyHistory history = ReceiptSigningKeyHistory.of(List.of(registered("21fe31df"), withdrawn("21fe31df")));
+        ReceiptSigningKeyHistory history = ReceiptSigningKeyHistory.of(List.of(registered("21fe31df"), withdrawn("21fe31df")), Set.of());
 
         assertThat(history.mismatches(List.of(active(OWN_PUBLIC_KEY))))
                 .containsExactly(new ReceiptSigningKeyMismatch(new ReceiptSigningKeyId("21fe31df"), ReceiptSigningKeyMismatch.Kind.REVERTED));
@@ -89,7 +110,7 @@ class ReceiptSigningKeyHistoryTest {
     @Test
     @DisplayName("Given keys the trail registered, adopted or withdrew whose rows are gone, when the rows are checked, then each is reported as missing, in id order")
     void should_report_missing_when_checked_given_recorded_keys_without_rows() {
-        ReceiptSigningKeyHistory history = ReceiptSigningKeyHistory.of(List.of(registered("21fe31df"), adopted("39f713d0"), withdrawn("dac073e0")));
+        ReceiptSigningKeyHistory history = ReceiptSigningKeyHistory.of(List.of(registered("21fe31df"), adopted("39f713d0"), withdrawn("dac073e0")), Set.of());
 
         assertThat(history.mismatches(List.of())).containsExactly(
                 new ReceiptSigningKeyMismatch(new ReceiptSigningKeyId("21fe31df"), ReceiptSigningKeyMismatch.Kind.MISSING),
@@ -100,6 +121,6 @@ class ReceiptSigningKeyHistoryTest {
     @Test
     @DisplayName("Given a row the trail never names, when the rows are checked, then it is not reported, because the seal already judges rows")
     void should_not_report_when_checked_given_a_row_without_trail_entries() {
-        assertThat(ReceiptSigningKeyHistory.of(List.of()).mismatches(List.of(active(OWN_PUBLIC_KEY)))).isEmpty();
+        assertThat(ReceiptSigningKeyHistory.of(List.of(), Set.of()).mismatches(List.of(active(OWN_PUBLIC_KEY)))).isEmpty();
     }
 }

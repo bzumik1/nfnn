@@ -2,6 +2,7 @@ package cz.novanadeje.app.donations.infrastructure.signing;
 
 import cz.novanadeje.app.donations.application.signing.PublicTestKeyPolicy;
 import cz.novanadeje.app.donations.application.signing.ReceiptSigner;
+import cz.novanadeje.app.donations.application.signing.WithdrawnSeeds;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyId;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -19,6 +20,7 @@ import org.springframework.core.env.StandardEnvironment;
 
 import java.util.Base64;
 import java.util.HexFormat;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
@@ -109,15 +111,40 @@ class ReceiptSigningPropertiesTest {
     @ValueSource(strings = {"", "   ", "not base64 at all!", "c2hvcnQtc2VlZA=="})
     @DisplayName("Given a missing, malformed or short seed, when the properties are made, then they fail naming the environment variable without the value")
     void should_fail_naming_env_var_when_made_given_missing_malformed_or_short_seed(String key) {
-        assertThatIllegalArgumentException().isThrownBy(() -> new ReceiptSigningProperties(key))
+        assertThatIllegalArgumentException().isThrownBy(() -> new ReceiptSigningProperties(key, List.of()))
                 .withMessageContaining(NAME)
                 .withMessageNotContaining("c2hvcnQt");
     }
 
     @Test
+    @DisplayName("Given the entrypoint names the keys whose seeds it keeps aside as withdrawn, when the context starts, then the withdrawn seeds name those keys")
+    void should_name_kept_aside_keys_when_started_given_withdrawn_key_ids() {
+        contexts.withPropertyValues("spring.profiles.active=prod", "RECEIPT_SIGNING_KEY=" + SERVER_SEED, "RECEIPT_SIGNING_KEYS_WITHDRAWN=39f713d0,7a1c22e0")
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    assertThat(context.getBean(WithdrawnSeeds.class).keyIds())
+                            .containsExactlyInAnyOrder(new ReceiptSigningKeyId("39f713d0"), new ReceiptSigningKeyId("7a1c22e0"));
+                });
+    }
+
+    @Test
+    @DisplayName("Given no seed kept aside as withdrawn, when the context starts, then the withdrawn seeds name no key")
+    void should_name_no_key_when_started_given_no_withdrawn_key_ids() {
+        contexts.withPropertyValues("spring.profiles.active=prod", "RECEIPT_SIGNING_KEY=" + SERVER_SEED)
+                .run(context -> assertThat(context.getBean(WithdrawnSeeds.class).keyIds()).isEmpty());
+    }
+
+    @Test
+    @DisplayName("Given a withdrawn key id that is not 8 lowercase hex characters, when the properties are made, then they fail naming the environment variable")
+    void should_fail_naming_env_var_when_made_given_malformed_withdrawn_key_id() {
+        assertThatIllegalArgumentException().isThrownBy(() -> new ReceiptSigningProperties(SERVER_SEED, List.of("39f713d0", "NOT-A-KEY")))
+                .withMessageContaining("RECEIPT_SIGNING_KEYS_WITHDRAWN");
+    }
+
+    @Test
     @DisplayName("Given the signing settings, when they are printed, then the seed does not appear")
     void should_mask_seed_when_printed_given_properties() {
-        assertThat(new ReceiptSigningProperties(SERVER_SEED).toString()).doesNotContain(SERVER_SEED).doesNotContain(SERVER_SEED.substring(0, 8));
+        assertThat(new ReceiptSigningProperties(SERVER_SEED, List.of()).toString()).doesNotContain(SERVER_SEED).doesNotContain(SERVER_SEED.substring(0, 8));
     }
 
     private static ApplicationContextInitializer<ConfigurableApplicationContext> withoutSystemEnvironment() {
