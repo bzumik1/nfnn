@@ -13,6 +13,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
+import { ProofInput } from './proof-input';
 import { ReceiptVerifier, type VerificationStep } from './receipt-verifier';
 import { type FinalOutcome, VerificationResult } from './verification-result';
 
@@ -22,7 +23,7 @@ const PAGE_PATH = '/overit';
 
 @Component({
   selector: 'app-verification-page',
-  imports: [VerificationResult],
+  imports: [ProofInput, VerificationResult],
   templateUrl: './verification-page.html',
   styleUrl: './verification-page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -56,6 +57,19 @@ export class VerificationPage {
         }
         this.verify();
       });
+  }
+
+  protected verifyProof(fragment: string): void {
+    this.fragment = fragment;
+    this.verify();
+  }
+
+  protected verifyAnother(): void {
+    this.run++;
+    this.fragment = null;
+    this.step.set(null);
+    this.page.set({ state: 'empty' });
+    this.focusHeading();
   }
 
   protected retry(): void {
