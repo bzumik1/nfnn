@@ -2,23 +2,10 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { PaymentQrResponse } from '../../../donations/payment-qr-api';
-import { checkerboard } from '../../../../shared/ui/qr-code/testing/qr-matrices';
+import { foundationPaymentDetails } from '../../../donations/testing/payment-details-fixtures';
 import { StandingOrder } from './standing-order';
 
-const QR_URL = '/api/donations/payment-qr';
-
-function paymentQr(): PaymentQrResponse {
-  return {
-    spayd: 'SPD*1.0*ACC:CZ2620100000005544332217*AM:100.00*CC:CZK*X-VS:9876543210',
-    qrCode: checkerboard(25),
-    bankAccount: {
-      accountNumber: '5544332217/2010',
-      iban: 'CZ2620100000005544332217',
-      recipientName: 'Nadační fond Nová naděje',
-    },
-  };
-}
+const PAYMENT_DETAILS_URL = '/api/donations/payment-details';
 
 describe('Given the standing order guide of the donor area', () => {
   let fixture: ComponentFixture<StandingOrder>;
@@ -76,7 +63,7 @@ describe('Given the standing order guide of the donor area', () => {
     expect(button.getAttribute('aria-expanded')).toBe('false');
     const panel = document.getElementById(button.getAttribute('aria-controls') ?? '');
     expect(panel?.hidden).toBe(true);
-    http.expectNone(QR_URL);
+    http.expectNone(PAYMENT_DETAILS_URL);
   });
 
   describe('when the donor opens it', () => {
@@ -88,11 +75,13 @@ describe('Given the standing order guide of the donor area', () => {
       expect(element('.standing-toggle')?.getAttribute('aria-expanded')).toBe('true');
       expect(element<HTMLElement>('.standing-panel')?.hidden).toBe(false);
       expect(text('.standing-loading')).toBe('Načítáme číslo účtu…');
-      http.expectOne((request) => request.url === QR_URL);
+      http.expectOne((request) => request.url === PAYMENT_DETAILS_URL);
     });
 
     it('then it lists the account, the variable symbol, any amount and monthly, with copy buttons for the numbers', async () => {
-      http.expectOne((request) => request.url === QR_URL).flush(paymentQr());
+      http
+        .expectOne((request) => request.url === PAYMENT_DETAILS_URL)
+        .flush(foundationPaymentDetails());
       await settle();
 
       expect(text('.standing-lead')).toBe(
@@ -123,7 +112,9 @@ describe('Given the standing order guide of the donor area', () => {
     });
 
     it('then a line for a standing order with an older symbol keeps the way to the bank accounts', async () => {
-      http.expectOne((request) => request.url === QR_URL).flush(paymentQr());
+      http
+        .expectOne((request) => request.url === PAYMENT_DETAILS_URL)
+        .flush(foundationPaymentDetails());
       await settle();
 
       expect(text('.standing-older')).toBe(
@@ -134,7 +125,7 @@ describe('Given the standing order guide of the donor area', () => {
 
     it('and the account cannot be loaded, then an alert says so and trying again asks once more', async () => {
       http
-        .expectOne((request) => request.url === QR_URL)
+        .expectOne((request) => request.url === PAYMENT_DETAILS_URL)
         .flush(null, { status: 500, statusText: 'Server Error' });
       await settle();
 
@@ -147,26 +138,32 @@ describe('Given the standing order guide of the donor area', () => {
       element<HTMLButtonElement>('.standing-retry')!.click();
       await settle();
 
-      http.expectOne((request) => request.url === QR_URL).flush(paymentQr());
+      http
+        .expectOne((request) => request.url === PAYMENT_DETAILS_URL)
+        .flush(foundationPaymentDetails());
       await settle();
       expect(element('.standing-error')).toBeNull();
       expect(text('.standing-details dd .standing-value')).toBe('5544332217/2010');
     });
 
     it('and closes and opens it again, then the account is not asked for again', async () => {
-      http.expectOne((request) => request.url === QR_URL).flush(paymentQr());
+      http
+        .expectOne((request) => request.url === PAYMENT_DETAILS_URL)
+        .flush(foundationPaymentDetails());
       await settle();
 
       await toggle();
       expect(element<HTMLElement>('.standing-panel')?.hidden).toBe(true);
       await toggle();
 
-      http.expectNone(QR_URL);
+      http.expectNone(PAYMENT_DETAILS_URL);
       expect(text('.standing-details dd .standing-value')).toBe('5544332217/2010');
     });
 
     it('and presses Escape inside the panel, then it closes and the focus returns to the button', async () => {
-      http.expectOne((request) => request.url === QR_URL).flush(paymentQr());
+      http
+        .expectOne((request) => request.url === PAYMENT_DETAILS_URL)
+        .flush(foundationPaymentDetails());
       await settle();
 
       element('.standing-panel')!.dispatchEvent(
@@ -199,7 +196,9 @@ describe('Given the standing order guide of the donor area', () => {
 
     it('then the button and the opened guide are brought into view together', async () => {
       await toggle();
-      http.expectOne((request) => request.url === QR_URL).flush(paymentQr());
+      http
+        .expectOne((request) => request.url === PAYMENT_DETAILS_URL)
+        .flush(foundationPaymentDetails());
       await settle();
 
       expect(scrolled).toHaveLength(1);
@@ -212,7 +211,9 @@ describe('Given the standing order guide of the donor area', () => {
 
     it('and closes it again, then nothing scrolls', async () => {
       await toggle();
-      http.expectOne((request) => request.url === QR_URL).flush(paymentQr());
+      http
+        .expectOne((request) => request.url === PAYMENT_DETAILS_URL)
+        .flush(foundationPaymentDetails());
       await settle();
       scrolled = [];
 
@@ -226,7 +227,7 @@ describe('Given the standing order guide of the donor area', () => {
     beforeEach(() => {
       fixture.componentRef.setInput('account', {
         kind: 'ready',
-        account: paymentQr().bankAccount,
+        account: foundationPaymentDetails().account,
       });
     });
 
@@ -264,11 +265,11 @@ describe('Given the standing order guide of the donor area', () => {
     it('then it shows that account and asks for nothing', async () => {
       fixture.componentRef.setInput('account', {
         kind: 'ready',
-        account: paymentQr().bankAccount,
+        account: foundationPaymentDetails().account,
       });
       await toggle();
 
-      http.expectNone(QR_URL);
+      http.expectNone(PAYMENT_DETAILS_URL);
       expect(texts('.standing-details dd .standing-value').slice(0, 2)).toEqual([
         '5544332217/2010',
         '9876543210',
@@ -279,7 +280,7 @@ describe('Given the standing order guide of the donor area', () => {
       fixture.componentRef.setInput('account', { kind: 'loading' });
       await toggle();
 
-      http.expectNone(QR_URL);
+      http.expectNone(PAYMENT_DETAILS_URL);
       expect(text('.standing-loading')).toBe('Načítáme číslo účtu…');
     });
 
@@ -296,7 +297,7 @@ describe('Given the standing order guide of the donor area', () => {
       await settle();
 
       expect(retries).toHaveLength(1);
-      http.expectNone(QR_URL);
+      http.expectNone(PAYMENT_DETAILS_URL);
     });
   });
 });

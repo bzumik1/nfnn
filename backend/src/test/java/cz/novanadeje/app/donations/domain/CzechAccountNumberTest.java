@@ -16,7 +16,8 @@ class CzechAccountNumberTest {
     @CsvSource({
             "5544332217/2010, CZ2620100000005544332217",
             "19-2000145399/0800, CZ6508000000192000145399",
-            "2000145399/0800, CZ7908000000002000145399"
+            "2000145399/0800, CZ7908000000002000145399",
+            "19/0100, CZ7301000000000000000019"
     })
     @DisplayName("Given an account number that passes the modulo 11 check, when its IBAN is derived, then it is the bank code, the prefix and the number with their check digits")
     void should_derive_the_iban_when_derived_given_an_account_number_that_passes_the_check(String accountNumber, String iban) {

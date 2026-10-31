@@ -15,7 +15,7 @@ Feature: A donor who lost the authenticator turns the second factor off by payin
     When "Jana" asks to recover the second factor by payment
     Then the response status is 200
     And the instructions ask for 100 hellers to "5544332217/2010" with a recovery message, valid until "2026-10-31T10:00:00Z", from today
-    And the instructions carry a payment QR code of 1 Kč with the recovery message and no variable symbol
+    And the instructions carry the SPAYD text of 1 Kč with the recovery message and no variable symbol, and no QR code
     When the bank account receives "1.00" with the recovery message from "2000145399/0800" today
     And the hourly import runs
     Then "Jana" has the second factor off
@@ -62,7 +62,7 @@ Feature: A donor who lost the authenticator turns the second factor off by payin
     Then the response status is 200
     And the instructions repeat the open recovery started "2026-10-17T10:00:00Z"
     And the instructions ask for 100 hellers to "5544332217/2010" with a recovery message, valid until "2026-10-31T10:00:00Z", from today
-    And the instructions carry a payment QR code of 1 Kč with the recovery message and no variable symbol
+    And the instructions carry the SPAYD text of 1 Kč with the recovery message and no variable symbol, and no QR code
     When the bank account receives "1.00" with the recovery message from "2000145399/0800" today
     And the hourly import runs
     Then "Jana" has the second factor off

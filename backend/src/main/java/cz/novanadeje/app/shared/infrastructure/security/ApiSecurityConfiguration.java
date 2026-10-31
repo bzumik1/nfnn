@@ -48,7 +48,6 @@ class ApiSecurityConfiguration {
                         .dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.ASYNC).permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/contact/messages").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/operations/client-errors").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/donations/payment-qr").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/donations/payment-details").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/donations/receipt-keys").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/content/**").permitAll()

@@ -9,7 +9,7 @@ Feature: Donor protects the account with a second factor from an authenticator a
     And the donor signed in with email "jana@example.cz" and password "correct horse battery"
     When the donor starts the second factor set-up with password "correct horse battery"
     Then the response status is 200
-    And the set-up answers with a secret, an otpauth link for "jana@example.cz" issued by "Nová naděje" and a QR code of that link
+    And the set-up answers with a secret and an otpauth link for "jana@example.cz" issued by "Nová naděje", and no QR code
     And the donor profile shows roles "DONOR" and the second factor off
     When the donor confirms the second factor with the current code
     Then the response status is 200

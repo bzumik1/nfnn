@@ -5,7 +5,6 @@ import cz.novanadeje.app.cucumber.DonorSessions;
 import cz.novanadeje.app.cucumber.ScenarioDonors;
 import cz.novanadeje.app.cucumber.SecondFactorEnrolments;
 import cz.novanadeje.app.cucumber.TotpCodes;
-import cz.novanadeje.app.shared.QrCodes;
 import cz.novanadeje.app.support.RecordingMailSender;
 import io.cucumber.java.en.And;
 import io.cucumber.java.en.Given;
@@ -159,14 +158,14 @@ public class DonorSecondFactorStepDefinitions {
         }
     }
 
-    @Then("the set-up answers with a secret, an otpauth link for {string} issued by {string} and a QR code of that link")
-    public void theSetUpAnswersWithASecretAnOtpauthLinkAndAQrCode(String account, String issuer) {
+    @Then("the set-up answers with a secret and an otpauth link for {string} issued by {string}, and no QR code")
+    public void theSetUpAnswersWithASecretAndAnOtpauthLinkAndNoQrCode(String account, String issuer) {
         JsonNode body = api.lastResponseJson();
         assertThat(body.get("secret").asString()).matches("[A-Z2-7]{32}");
         String uri = body.get("otpauthUri").asString();
         assertThat(URLDecoder.decode(uri, StandardCharsets.UTF_8))
                 .isEqualTo("otpauth://totp/" + issuer + ":" + account + "?secret=" + secret + "&issuer=" + issuer + "&algorithm=SHA1&digits=6&period=30");
-        assertThat(QrCodes.decode(body.get("qrCode"))).isEqualTo(uri);
+        assertThat(body.has("qrCode")).as("the browser draws the QR code from otpauthUri").isFalse();
     }
 
     @Then("the donor profile shows roles {string} and the second factor {onOff}")
