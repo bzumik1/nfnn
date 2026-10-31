@@ -49,10 +49,14 @@ public class ReceiptSigningKeys {
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
-    public Optional<ReceiptSigningKeyId> withdrawnCurrentKeyHeldForIssuing() {
+    public CurrentKeyForIssuing currentKeyHeldForIssuing() {
         ReceiptSigningKeyId current = signer.keyId();
-        boolean rowWithdrawn = keys.lockForIssuing(current).filter(ReceiptSigningKey::isWithdrawn).isPresent();
-        return rowWithdrawn || history().isWithdrawn(current) ? Optional.of(current) : Optional.empty();
+        Optional<ReceiptSigningKey> row = keys.lockForIssuing(current);
+        if (row.filter(ReceiptSigningKey::isWithdrawn).isPresent() || history().isWithdrawn(current)) {
+            return new CurrentKeyForIssuing(current, CurrentKeyForIssuing.State.WITHDRAWN);
+        }
+        return new CurrentKeyForIssuing(current, row.filter(this::publishable).isPresent()
+                ? CurrentKeyForIssuing.State.PUBLISHED : CurrentKeyForIssuing.State.UNPUBLISHED);
     }
 
     public boolean isCurrent(ReceiptSigningKeyId id) {

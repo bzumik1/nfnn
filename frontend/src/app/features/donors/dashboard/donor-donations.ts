@@ -87,9 +87,11 @@ const UNAUTHENTICATED = 'auth/unauthenticated';
 const RECEIPT_BEFORE_FIRST_YEAR = 'donations/receipt-before-first-year';
 const RECEIPT_UNPRINTABLE_PROBLEM = 'donations/receipt-unprintable';
 const RECEIPT_SIGNING_PAUSED_PROBLEM = 'donations/receipt-signing-paused';
+const RECEIPT_SIGNING_KEY_UNPUBLISHED_PROBLEM = 'donations/receipt-signing-key-unpublished';
 const PROBLEMS_SHOWN_WITH_DETAIL: Readonly<Record<string, string>> = {
   [RECEIPT_UNPRINTABLE_PROBLEM]: RECEIPT_UNPRINTABLE,
   [RECEIPT_SIGNING_PAUSED_PROBLEM]: RECEIPT_FAILED,
+  [RECEIPT_SIGNING_KEY_UNPUBLISHED_PROBLEM]: RECEIPT_FAILED,
 };
 const YEARLY_PROBLEMS_SHOWN_AS_TITLE = [
   'donations/year-not-yet-completed',

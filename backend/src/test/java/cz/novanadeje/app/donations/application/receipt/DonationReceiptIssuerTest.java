@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donations.application.receipt;
 
+import cz.novanadeje.app.donations.application.signing.CurrentKeyForIssuing;
 import cz.novanadeje.app.donations.application.signing.ReceiptSigningKeys;
 import cz.novanadeje.app.donations.domain.donation.Donation;
 import cz.novanadeje.app.donations.domain.donation.DonationId;
@@ -29,8 +30,10 @@ import cz.novanadeje.app.donations.domain.receipt.Signatory;
 import cz.novanadeje.app.donations.domain.receipt.Receipts;
 import cz.novanadeje.app.donations.domain.receipt.ReplacedReceipt;
 import cz.novanadeje.app.donations.domain.receipt.Signatory;
+import cz.novanadeje.app.donations.domain.receipt.YearlyReceiptNotAvailable;
 import cz.novanadeje.app.donations.domain.receipt.proof.ReceiptTooLong;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyId;
+import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyUnpublished;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningPaused;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -50,6 +53,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
@@ -91,6 +96,8 @@ class DonationReceiptIssuerTest {
     private static final Donation JUNE = receivedFromJana(LocalDate.of(2026, 6, 1), 125050);
     private static final LocalDate EARLIER = LocalDate.of(2027, 1, 10);
     private static final Instant EARLIER_AT = Instant.parse("2027-01-10T08:00:00Z");
+    private static final ReceiptSigningKeyId OWN_KEY = new ReceiptSigningKeyId("21fe31df");
+    private static final CurrentKeyForIssuing OWN_KEY_WITHDRAWN = new CurrentKeyForIssuing(OWN_KEY, CurrentKeyForIssuing.State.WITHDRAWN);
 
     private final DonationReceiptRepository receipts = mock(DonationReceiptRepository.class);
     private final DonationRepository donations = mock(DonationRepository.class);
@@ -104,8 +111,9 @@ class DonationReceiptIssuerTest {
             Clock.fixed(NOW, ZoneOffset.UTC));
 
     @BeforeEach
-    void signedBySignatory() {
+    void signedBySignatoryUnderThePublishedOwnKey() {
         when(signatories.resolve(NOW)).thenReturn(new SignatoryAtIssue(SIGNATORY, Optional.empty(), Optional.empty()));
+        when(signingKeys.currentKeyHeldForIssuing()).thenReturn(new CurrentKeyForIssuing(OWN_KEY, CurrentKeyForIssuing.State.PUBLISHED));
     }
 
     @Test
@@ -149,7 +157,7 @@ class DonationReceiptIssuerTest {
     @Test
     @DisplayName("Given the server's own signing key withdrawn and not yet replaced, when a single receipt is issued, then it is refused as paused before the donor is locked, nothing is read, numbered or saved and a WARN names the donor and the key")
     void should_refuse_before_lock_and_warn_when_issued_given_own_key_withdrawn() {
-        when(signingKeys.withdrawnCurrentKeyHeldForIssuing()).thenReturn(Optional.of(new ReceiptSigningKeyId("21fe31df")));
+        when(signingKeys.currentKeyHeldForIssuing()).thenReturn(OWN_KEY_WITHDRAWN);
         ListAppender<ILoggingEvent> lines = issuerLog();
         try {
             assertThatThrownBy(() -> issuer.issueForDonation(JANA, MARCH.id(), TODAY)).isInstanceOf(ReceiptSigningPaused.class)
@@ -172,13 +180,85 @@ class DonationReceiptIssuerTest {
         ReceiptFingerprint same = ReceiptDocumentFactory.fingerprintForYear(jana(), YEAR_2026, List.of(MARCH, JUNE));
         givenDonationsOfJana(jana(), JUNE, MARCH);
         when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.of(yearlyReceipt(same, LocaleCode.CS)));
-        when(signingKeys.withdrawnCurrentKeyHeldForIssuing()).thenReturn(Optional.of(new ReceiptSigningKeyId("21fe31df")));
+        when(signingKeys.currentKeyHeldForIssuing()).thenReturn(OWN_KEY_WITHDRAWN);
 
         assertThatThrownBy(() -> issuer.issueForYear(JANA, YEAR_2026, TODAY)).isInstanceOf(ReceiptSigningPaused.class);
 
         verify(receipts, never()).lockDonor(any());
         verify(receipts, never()).findActiveForYear(any(), any());
         verify(receipts, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Given the server's own signing key not published, when either kind of receipt is issued by the donor or the administration, then it is refused before the donor is locked and nothing is read, numbered, saved or audited")
+    void should_refuse_before_lock_when_issued_given_own_key_unpublished() {
+        when(signingKeys.currentKeyHeldForIssuing()).thenReturn(new CurrentKeyForIssuing(OWN_KEY, CurrentKeyForIssuing.State.UNPUBLISHED));
+        UUID petr = UUID.fromString("019a1c00-0000-7000-8000-00000000a001");
+
+        assertThatThrownBy(() -> issuer.issueForDonation(JANA, MARCH.id(), TODAY)).isInstanceOf(ReceiptSigningKeyUnpublished.class)
+                .hasFieldOrPropertyWithValue("code", "donations/receipt-signing-key-unpublished");
+        assertThatThrownBy(() -> issuer.issueForYear(JANA, YEAR_2026, TODAY)).isInstanceOf(ReceiptSigningKeyUnpublished.class);
+        assertThatThrownBy(() -> issuer.issueForYearByAdministrator(petr, BROWSER, JANA, YEAR_2026, TODAY)).isInstanceOf(ReceiptSigningKeyUnpublished.class);
+        assertThatThrownBy(() -> issuer.issueForDonationByAdministrator(petr, CONNECTED_APPLICATION, JANA, MARCH.id(), TODAY))
+                .isInstanceOf(ReceiptSigningKeyUnpublished.class);
+
+        verifyNoInteractions(receipts, donations, donorRecords, freezer, signatories, events);
+    }
+
+    @Test
+    @DisplayName("Given the donor's record erased after the donor signed in, when the donor issues either kind of receipt with the earlier token, then it is refused under the lock and nothing is numbered, frozen or saved")
+    void should_refuse_erased_record_under_lock_when_donor_issues() {
+        DonorRecord erased = jana();
+        erased.erase(NOW);
+        givenDonationsOfJana(erased, MARCH);
+
+        assertThatThrownBy(() -> issuer.issueForYear(JANA, YEAR_2026, TODAY)).isInstanceOf(DonorRecordErased.class)
+                .hasFieldOrPropertyWithValue("code", "donations/donor-erased");
+        assertThatThrownBy(() -> issuer.issueForDonation(JANA, MARCH.id(), TODAY)).isInstanceOf(DonorRecordErased.class);
+
+        InOrder order = inOrder(receipts, donorRecords);
+        order.verify(receipts).lockDonor(JANA);
+        order.verify(donorRecords).findById(JANA);
+        verify(receipts, never()).nextSerial();
+        verify(receipts, never()).save(any());
+        verifyNoInteractions(freezer, signatories);
+    }
+
+    @Test
+    @DisplayName("Given a donor without a record of donations, when the donor issues the yearly receipt, then the missing record is not refused as erased and the year answers as without receipt")
+    void should_not_refuse_as_erased_when_donor_issues_given_no_record() {
+        when(donorRecords.findById(JANA)).thenReturn(Optional.empty());
+        when(donations.findByDonorNewestFirst(JANA)).thenReturn(List.of());
+
+        assertThatThrownBy(() -> issuer.issueForYear(JANA, YEAR_2026, TODAY)).isInstanceOf(YearlyReceiptNotAvailable.class);
+        verify(receipts, never()).nextSerial();
+    }
+
+    @Test
+    @DisplayName("Given an issue inside a transaction, when the receipt is stored, then the line naming the issued receipt is written only once the transaction commits, and never when it rolls back")
+    void should_log_issued_receipt_only_after_commit_when_issued_in_transaction() {
+        givenDonationsOfJana(jana(), MARCH);
+        when(receipts.findActiveForDonation(MARCH.id())).thenReturn(Optional.empty());
+        when(receipts.nextSerial()).thenReturn(1L);
+        givenFreezer();
+        ListAppender<ILoggingEvent> lines = issuerLog();
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            issuer.issueForDonation(JANA, MARCH.id(), TODAY);
+
+            assertThat(lines.list).isEmpty();
+            List<TransactionSynchronization> afterIssue = TransactionSynchronizationManager.getSynchronizations();
+            afterIssue.forEach(synchronization -> synchronization.afterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK));
+            assertThat(lines.list).isEmpty();
+            afterIssue.forEach(TransactionSynchronization::afterCommit);
+            assertThat(lines.list).singleElement().satisfies(line -> {
+                assertThat(line.getLevel()).isEqualTo(Level.INFO);
+                assertThat(line.getFormattedMessage()).isEqualTo("Issued receipt 2027-000001 (SINGLE) for donor " + JANA);
+            });
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+            ((Logger) LoggerFactory.getLogger(DonationReceiptIssuer.class)).detachAppender(lines);
+        }
     }
 
     @Test
@@ -510,7 +590,7 @@ class DonationReceiptIssuerTest {
         @Test
         @DisplayName("when the server's own signing key is withdrawn and not yet replaced, then both kinds of receipt are refused as paused before the donor is locked and nothing is read, numbered, saved or audited")
         void should_refuse_before_lock_when_issued_by_administrator_given_own_key_withdrawn() {
-            when(signingKeys.withdrawnCurrentKeyHeldForIssuing()).thenReturn(Optional.of(new ReceiptSigningKeyId("21fe31df")));
+            when(signingKeys.currentKeyHeldForIssuing()).thenReturn(OWN_KEY_WITHDRAWN);
 
             assertThatThrownBy(() -> issuer.issueForYearByAdministrator(petr, BROWSER, JANA, YEAR_2026, TODAY)).isInstanceOf(ReceiptSigningPaused.class);
             assertThatThrownBy(() -> issuer.issueForDonationByAdministrator(petr, CONNECTED_APPLICATION, JANA, MARCH.id(), TODAY))

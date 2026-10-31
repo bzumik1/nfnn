@@ -12,6 +12,7 @@ import cz.novanadeje.app.content.domain.people.PersonNotFound;
 import cz.novanadeje.app.content.domain.people.PersonRepository;
 import cz.novanadeje.app.content.domain.people.PersonSignsReceipts;
 import cz.novanadeje.app.content.domain.people.ReceiptPortraitInBrowserOnly;
+import cz.novanadeje.app.content.domain.people.ReceiptSignatoryNameInBrowserOnly;
 import cz.novanadeje.app.content.domain.people.SignatoryNameUnprintable;
 import cz.novanadeje.app.content.domain.people.TooManyPeople;
 import cz.novanadeje.app.shared.application.account.VerifiedAccountEmails;
@@ -90,12 +91,16 @@ public class PeopleAdminService {
         Person current = find(id);
         PersonDetails details = checked(command.toDetails());
         boolean portraitChanged = !details.portrait().equals(current.details().portrait());
+        boolean renamed = !details.name().equals(current.details().name());
         boolean unprintableName = !PrintableText.prints(details.name());
-        if ((connected && portraitChanged || unprintableName) && signatories.signsReceipts(id.value())) {
+        if ((connected && (portraitChanged || renamed) || unprintableName) && signatories.signsReceipts(id.value())) {
             if (unprintableName) {
                 throw new SignatoryNameUnprintable(id);
             }
-            throw new ReceiptPortraitInBrowserOnly();
+            if (portraitChanged) {
+                throw new ReceiptPortraitInBrowserOnly();
+            }
+            throw new ReceiptSignatoryNameInBrowserOnly();
         }
         Person edited = current.edit(details, now);
         people.save(edited);
