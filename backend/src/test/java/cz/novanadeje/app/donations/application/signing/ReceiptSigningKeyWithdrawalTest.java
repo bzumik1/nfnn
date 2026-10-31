@@ -25,6 +25,10 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.SimpleTransactionStatus;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionOperations;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -40,6 +44,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -59,7 +64,8 @@ class ReceiptSigningKeyWithdrawalTest {
     private static final UUID ADMIN = UUID.fromString("019a1c00-0000-7000-8000-00000000a001");
     private static final FreshSecondFactorProof CODE = new FreshSecondFactorProof(Optional.of("123456"), Optional.empty());
 
-    private final StoredKeys stored = new StoredKeys();
+    private final ShortTransactions transactions = new ShortTransactions();
+    private final StoredKeys stored = new StoredKeys(transactions);
     private final NamedSeals seals = new NamedSeals();
     private final ReceiptSigner signer = mock(ReceiptSigner.class);
     private final ListedTrail trail = new ListedTrail();
@@ -68,7 +74,7 @@ class ReceiptSigningKeyWithdrawalTest {
     private final ReceiptSigningKeyWithdrawalRefusals refusals = mock(ReceiptSigningKeyWithdrawalRefusals.class);
     private final ReceiptSigningKeyWithdrawal withdrawal = new ReceiptSigningKeyWithdrawal(stored,
             new ReceiptSigningKeys(stored, seals, signer, id -> false, trail, Set::of), seals, freshSecondFactor, refusals, events,
-            Clock.fixed(NOW, ZoneOffset.UTC));
+            transactions, Clock.fixed(NOW, ZoneOffset.UTC));
     private final ListAppender<ILoggingEvent> lines = new ListAppender<>();
 
     @BeforeEach
@@ -239,16 +245,109 @@ class ReceiptSigningKeyWithdrawalTest {
         assertThat(stored.row(EARLIER_ID).status()).isEqualTo(ReceiptSigningKeyStatus.REVOKED);
     }
 
+    @Test
+    @DisplayName("Given the withdrawal use case, when its public method is inspected, then neither it nor its class carries @Transactional, so no outer transaction holds a connection across its steps")
+    void should_open_no_outer_transaction_when_inspected_given_the_withdrawal_use_case() throws NoSuchMethodException {
+        assertThat(ReceiptSigningKeyWithdrawal.class.isAnnotationPresent(Transactional.class)).isFalse();
+        assertThat(ReceiptSigningKeyWithdrawal.class.getMethod("withdraw", UUID.class, ReceiptSigningKeyId.class, FreshSecondFactorProof.class)
+                .isAnnotationPresent(Transactional.class)).isFalse();
+    }
+
+    @Test
+    @DisplayName("Given an accepted second factor, when an administrator withdraws a key, then the unlocked read and the pause run before any transaction and the second factor, the row lock and the save run in one short transaction")
+    void should_check_the_second_factor_lock_and_save_in_one_short_transaction_when_withdrawn_given_an_accepted_second_factor() {
+        List<Boolean> pausedAskedInTransaction = new ArrayList<>();
+        List<Boolean> secondFactorInTransaction = new ArrayList<>();
+        when(refusals.paused(ADMIN, NOW)).thenAnswer(invocation -> {
+            pausedAskedInTransaction.add(transactions.open);
+            return false;
+        });
+        doAnswer(invocation -> {
+            secondFactorInTransaction.add(transactions.open);
+            return null;
+        }).when(freshSecondFactor).require(ADMIN, CODE);
+
+        withdrawal.withdraw(ADMIN, OWN, CODE);
+
+        assertThat(stored.readsInTransaction).first().isEqualTo(false);
+        assertThat(pausedAskedInTransaction).containsExactly(false);
+        assertThat(secondFactorInTransaction).containsExactly(true);
+        assertThat(stored.locksInTransaction).containsExactly(true);
+        assertThat(stored.savesInTransaction).containsExactly(true);
+        assertThat(transactions.started).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Given a refused second factor, when an administrator withdraws a key, then the transaction that checked it has ended before the refusal is recorded, so a refusal never holds two connections")
+    void should_record_the_refusal_after_the_transaction_ended_when_withdrawn_given_a_refused_second_factor() {
+        RuleViolation refused = new RuleViolation("donors/second-factor-code-rejected", "refused");
+        doThrow(refused).when(freshSecondFactor).require(ADMIN, CODE);
+        List<Boolean> recordedInTransaction = new ArrayList<>();
+        doAnswer(invocation -> {
+            recordedInTransaction.add(transactions.open);
+            return null;
+        }).when(refusals).record(ADMIN, OWN, NOW);
+
+        assertThatThrownBy(() -> withdrawal.withdraw(ADMIN, OWN, CODE)).isSameAs(refused);
+
+        assertThat(recordedInTransaction).containsExactly(false);
+        assertThat(transactions.started).isEqualTo(1);
+        assertThat(transactions.rolledBack).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Given a second factor refused because another withdrawal of the key committed while it was checked, when an administrator withdraws the key, then it is refused as already withdrawn and no refusal is recorded")
+    void should_refuse_as_already_withdrawn_without_recording_when_withdrawn_given_a_withdrawal_committed_during_the_refused_check() {
+        doAnswer(invocation -> {
+            stored.rows.replaceAll(key -> key.id().equals(OWN) ? key.withdrawn(content -> seals.seal(ReceiptSigningKey.SEAL_PURPOSE, content)) : key);
+            throw new RuleViolation("donors/second-factor-code-rejected", "refused");
+        }).when(freshSecondFactor).require(ADMIN, CODE);
+
+        assertThatThrownBy(() -> withdrawal.withdraw(ADMIN, OWN, CODE)).isInstanceOf(ReceiptSigningKeyAlreadyWithdrawn.class);
+
+        verify(refusals, never()).record(any(), any(), any());
+        verify(events, never()).publishEvent(any());
+    }
+
     private static Logger logger() {
         return (Logger) LoggerFactory.getLogger(ReceiptSigningKeyWithdrawal.class);
     }
 
+    private static final class ShortTransactions implements TransactionOperations {
+
+        private boolean open;
+        private int started;
+        private int rolledBack;
+
+        @Override
+        public <T> T execute(TransactionCallback<T> action) {
+            open = true;
+            started++;
+            try {
+                return action.doInTransaction(new SimpleTransactionStatus());
+            } catch (RuntimeException failure) {
+                rolledBack++;
+                throw failure;
+            } finally {
+                open = false;
+            }
+        }
+    }
+
     private static final class StoredKeys implements ReceiptSigningKeyRepository {
 
+        private final ShortTransactions transactions;
         private final List<ReceiptSigningKey> rows = new ArrayList<>();
+        private final List<Boolean> readsInTransaction = new ArrayList<>();
+        private final List<Boolean> locksInTransaction = new ArrayList<>();
+        private final List<Boolean> savesInTransaction = new ArrayList<>();
         private int saves;
         private int locks;
         private boolean withdrawnBeforeLock;
+
+        StoredKeys(ShortTransactions transactions) {
+            this.transactions = transactions;
+        }
 
         ReceiptSigningKey row(ReceiptSigningKeyId id) {
             return rows.stream().filter(key -> key.id().equals(id)).findFirst().orElseThrow();
@@ -256,12 +355,14 @@ class ReceiptSigningKeyWithdrawalTest {
 
         @Override
         public List<ReceiptSigningKey> findAll() {
+            readsInTransaction.add(transactions.open);
             return List.copyOf(rows);
         }
 
         @Override
         public Optional<ReceiptSigningKey> lockForWithdrawal(ReceiptSigningKeyId id) {
             locks++;
+            locksInTransaction.add(transactions.open);
             Optional<ReceiptSigningKey> row = rows.stream().filter(key -> key.id().equals(id)).findFirst();
             return withdrawnBeforeLock ? row.map(key -> key.withdrawn(content -> "here:" + HexFormat.of().formatHex(content).hashCode())) : row;
         }
@@ -274,6 +375,7 @@ class ReceiptSigningKeyWithdrawalTest {
         @Override
         public void save(ReceiptSigningKey key) {
             saves++;
+            savesInTransaction.add(transactions.open);
             rows.replaceAll(existing -> existing.id().equals(key.id()) ? key : existing);
         }
 
