@@ -590,9 +590,27 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
 }
 
 function content(body: string): Record<string, unknown> {
-  const { coverImageId, coverImageAlt, ...fields } = JSON.parse(body) as Record<string, unknown>;
+  const { coverImageId, coverImageAlt, signerId, ...fields } = JSON.parse(body) as Record<
+    string,
+    unknown
+  >;
   return {
     ...fields,
+    ...(typeof signerId === 'string'
+      ? {
+          signer: {
+            id: signerId,
+            name: 'Pavel Vzorový',
+            role: 'Předseda správní rady',
+            portrait: {
+              id: MEDIA_ID,
+              url: `/api/content/media/${MEDIA_ID}`,
+              width: 640,
+              height: 640,
+            },
+          },
+        }
+      : {}),
     coverImage:
       typeof coverImageId === 'string'
         ? {

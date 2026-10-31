@@ -40,14 +40,16 @@ public class NewsAdminService {
     private final NewsArticleRepository news;
     private final MediaImageRepository media;
     private final FormerSlugs formerSlugs;
+    private final NewsSigners signers;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
-    public NewsAdminService(NewsArticleRepository news, MediaImageRepository media, FormerSlugs formerSlugs, ApplicationEventPublisher events,
-                            Clock clock) {
+    public NewsAdminService(NewsArticleRepository news, MediaImageRepository media, FormerSlugs formerSlugs, NewsSigners signers,
+                            ApplicationEventPublisher events, Clock clock) {
         this.news = news;
         this.media = media;
         this.formerSlugs = formerSlugs;
+        this.signers = signers;
         this.events = events;
         this.clock = clock;
     }
@@ -55,12 +57,12 @@ public class NewsAdminService {
     @Transactional(readOnly = true)
     public List<NewsArticleView> list() {
         LocalDate today = today(clock.instant());
-        return news.findAllDraftsFirst().stream().map(article -> NewsArticleView.from(article, today)).toList();
+        return signers.views(news.findAllDraftsFirst(), today);
     }
 
     @Transactional(readOnly = true)
     public NewsArticleView get(NewsArticleId id) {
-        return NewsArticleView.from(require(id), today(clock.instant()));
+        return signers.view(require(id), today(clock.instant()));
     }
 
     public NewsArticleView create(UUID adminId, NewsArticleCommand command) {
@@ -71,7 +73,7 @@ public class NewsAdminService {
         news.save(article);
         formerSlugs.forget(content.slug());
         audit(adminId, CREATE_ACTION, article, "Aktualita " + id + " „" + content.slug() + "“ napsána", now);
-        return NewsArticleView.from(article, today(now));
+        return signers.view(article, today(now));
     }
 
     public NewsArticleView update(UUID adminId, NewsArticleId id, NewsArticleCommand command) {
@@ -83,7 +85,7 @@ public class NewsAdminService {
         rememberFormerSlug(article, edited, now);
         dropUnusedImage(article.content().coverImage(), content.coverImage());
         audit(adminId, UPDATE_ACTION, edited, "Aktualita " + id + " „" + content.slug() + "“ upravena", now);
-        return NewsArticleView.from(edited, today(now));
+        return signers.view(edited, today(now));
     }
 
     public NewsArticleView publish(UUID adminId, NewsArticleId id, LocalDate on) {
@@ -91,7 +93,7 @@ public class NewsAdminService {
         NewsArticle published = require(id).publish(on, now);
         news.save(published);
         audit(adminId, PUBLISH_ACTION, published, "Aktualita " + id + " „" + published.slug() + "“ zveřejněna od " + on, now);
-        return NewsArticleView.from(published, today(now));
+        return signers.view(published, today(now));
     }
 
     public NewsArticleView unpublish(UUID adminId, NewsArticleId id) {
@@ -99,7 +101,7 @@ public class NewsAdminService {
         NewsArticle draft = require(id).unpublish(now);
         news.save(draft);
         audit(adminId, UNPUBLISH_ACTION, draft, "Aktualita " + id + " „" + draft.slug() + "“ stažena z webu", now);
-        return NewsArticleView.from(draft, today(now));
+        return signers.view(draft, today(now));
     }
 
     public void delete(UUID adminId, NewsArticleId id) {
@@ -124,6 +126,7 @@ public class NewsAdminService {
         content.coverImage().filter(image -> !media.exists(image)).ifPresent(image -> {
             throw new MediaNotFound(image);
         });
+        signers.requireExisting(content.signer());
         return content;
     }
 

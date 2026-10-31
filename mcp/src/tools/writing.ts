@@ -99,6 +99,12 @@ const ARTICLE = {
       'One sentence saying what the photo shows, for screen readers and when it does not load; kept only with a photo.',
     ),
 };
+const NEWS = {
+  ...ARTICLE,
+  signerId: UUID.optional().describe(
+    'Id of the person of the foundation who signs the article (nfnn_people): the site shows their portrait, name and role under it. Left out means unsigned. On the web the default is the person linked to the writing administrator; here choose it yourself.',
+  ),
+};
 const PROJECT_CATEGORY = z
   .enum(['CHILDREN', 'ADULTS', 'ANIMALS', 'OTHER'])
   .describe(
@@ -389,8 +395,8 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Napsat aktualitu',
       description:
-        'Creates a news article as a draft (not on the site until nfnn_publish_news); audited as CREATE_NEWS. Texts are Czech, sentence case.',
-      inputSchema: z.object(ARTICLE),
+        'Creates a news article as a draft (not on the site until nfnn_publish_news), signed by a person of the foundation when signerId is given; audited as CREATE_NEWS. Texts are Czech, sentence case; the signature is not written into the body.',
+      inputSchema: z.object(NEWS),
       annotations: WRITING,
     },
     async (article, ctx) =>
@@ -404,8 +410,8 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Upravit aktualitu',
       description:
-        'Replaces the texts and the photo of a news article, draft or published (the published date stays); send every field, read them with nfnn_news_article first. Audited as UPDATE_NEWS.',
-      inputSchema: z.object({ id: UUID, ...ARTICLE }),
+        'Replaces the texts, the photo and the signer of a news article, draft or published (the published date stays); send every field (signerId is signer.id of nfnn_news_article; left out removes the signer), read them with nfnn_news_article first. Audited as UPDATE_NEWS.',
+      inputSchema: z.object({ id: UUID, ...NEWS }),
       annotations: { ...WRITING, idempotentHint: true },
     },
     async ({ id, ...article }, ctx) =>

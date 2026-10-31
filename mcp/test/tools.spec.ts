@@ -701,9 +701,10 @@ describe('Given an administrator connected with the writing permission', () => {
     expect(textOf(created)).toContain('"slug":"letni-tabor"');
     const edited = await client.callTool({
       name: 'nfnn_update_news',
-      arguments: { id: UNKNOWN_ID, ...article, slug: 'tabor-2026' },
+      arguments: { id: UNKNOWN_ID, ...article, slug: 'tabor-2026', signerId: PERSON_ID },
     });
     expect(edited.isError).toBeFalsy();
+    expect(textOf(edited)).toContain('"signer":{"id":"' + PERSON_ID + '"');
     const project = {
       title: 'Nová střecha',
       year: 2026,
@@ -724,7 +725,11 @@ describe('Given an administrator connected with the writing permission', () => {
       .map((request) => [request.method, request.path, JSON.parse(request.body)]);
     expect(writes).toEqual([
       ['POST', '/api/admin/content/news', article],
-      ['PUT', `/api/admin/content/news/${UNKNOWN_ID}`, { ...article, slug: 'tabor-2026' }],
+      [
+        'PUT',
+        `/api/admin/content/news/${UNKNOWN_ID}`,
+        { ...article, slug: 'tabor-2026', signerId: PERSON_ID },
+      ],
       ['POST', '/api/admin/content/projects', project],
       ['PUT', `/api/admin/content/projects/${UNKNOWN_ID}`, project],
     ]);
