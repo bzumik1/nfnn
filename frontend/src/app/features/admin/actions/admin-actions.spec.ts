@@ -128,6 +128,54 @@ describe('Given an administrator on the history page', () => {
     expect(fixture.nativeElement.querySelector('.admin-more')).toBeNull();
   });
 
+  it('when the server registered its receipt signing key, then the row names the server instead of an administrator and the action in Czech', () => {
+    firstPage([
+      adminAction({
+        id: '019a1c00-0000-7000-8000-00000000e010',
+        adminId: '00000000-0000-0000-0000-000000000000',
+        adminName: null,
+        adminEmail: null,
+        action: 'REGISTER_RECEIPT_SIGNING_KEY',
+        subjectId: null,
+        donorId: null,
+        summary:
+          'Server zaregistroval a zveřejnil svůj klíč k ověřovacím QR kódům na potvrzeních o daru (21fe31df).',
+        details: 'Server zaregistroval svůj klíč k ověřovacím QR na potvrzeních o daru: 21fe31df',
+      }),
+    ]);
+
+    const [row] = rows();
+    expect(rowText(row.querySelector('.admin-col') as HTMLElement)).toBe('server');
+    expect(rowText(row)).toContain('Registrace klíče k ověřovacím QR kódům');
+    expect(rowText(row)).not.toContain('správce bez účtu');
+    expect(rowText(row.querySelector('details') as HTMLElement)).not.toContain('Správce:');
+  });
+
+  it('when the server adopted a receipt signing key from a restored backup, then the row names the server and the adoption in Czech', () => {
+    firstPage([
+      adminAction({
+        id: '019a1c00-0000-7000-8000-00000000e011',
+        adminId: '00000000-0000-0000-0000-000000000000',
+        adminName: null,
+        adminEmail: null,
+        action: 'ADOPT_RECEIPT_SIGNING_KEY',
+        subjectId: null,
+        donorId: null,
+        summary:
+          'Server převzal z obnovené zálohy klíč k ověřovacím QR kódům 39f713d0 a zveřejnil ho (obnova 019a1b2c-0000-7000-8000-000000000001).',
+        details:
+          'Server převzal klíč k ověřovacím QR 39f713d0 z obnovené zálohy (obnova 019a1b2c-0000-7000-8000-000000000001)',
+      }),
+    ]);
+
+    const [row] = rows();
+    expect(rowText(row.querySelector('.admin-col') as HTMLElement)).toBe('server');
+    expect(rowText(row)).toContain('Převzetí klíče k ověřovacím QR kódům ze zálohy');
+    expect(rowText(row)).toContain(
+      'Server převzal z obnovené zálohy klíč k ověřovacím QR kódům 39f713d0 a zveřejnil ho (obnova 019a1b2c-0000-7000-8000-000000000001).',
+    );
+  });
+
   it('when a change names the donor it concerned, then the row links to the donor card and a change without a donor does not', () => {
     firstPage([
       paired,

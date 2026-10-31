@@ -49,6 +49,7 @@ public final class TranscriptNormaliser {
     private static final Set<String> SECRET_FIELDS = Set.of("password", "currentpassword", "newpassword", "secret", "otpauthuri",
             "accesstoken", "access_token", "refreshtoken", "refresh_token", "id_token", "token", "recoverycodes", "recoverycode",
             "setupcode", "client_secret", "clientsecret", "code_verifier", "codeverifier", "word");
+    private static final Pattern SIGNING_SEED_FIELD = Pattern.compile("[a-z]*(?:seed|signingkey|privatekey)(?:hex|base64|base64url)?");
     private static final String WORDS_FIELD = "words";
     private static final String CODE_FIELD = "code";
     private static final String CODE_SUFFIX = "code";
@@ -57,9 +58,13 @@ public final class TranscriptNormaliser {
     private static final String SPAYD_FIELD = "spayd";
     private static final String QR_MODULES_FIELD = "modules";
     private static final String QR_OF_MASKED_TEXT = "<qr-of-masked-text>";
+    private static final String TIMESTAMP_FIELD = "timestamp";
+    private static final Set<String> BOOT_ERROR_FIELDS = Set.of(TIMESTAMP_FIELD, "status", "error", "path");
+    private static final String TIME = "<time>";
 
     private final Map<String, String> knownValues;
     private final Pattern knownValuePattern;
+    private final Pattern knownSecretPattern;
     private final Map<String, String> ids = new HashMap<>();
     private final Map<String, String> numberedLabels = new HashMap<>();
     private final Map<String, Integer> labelCounters = new HashMap<>();
@@ -70,7 +75,13 @@ public final class TranscriptNormaliser {
         caseInsensitive.putAll(knownValues);
         this.knownValues = caseInsensitive;
         this.maskedValues.addAll(knownValues.keySet());
-        this.knownValuePattern = knownValues.isEmpty() ? null : Pattern.compile(knownValues.keySet().stream()
+        this.knownValuePattern = alternativesOf(knownValues.keySet());
+        this.knownSecretPattern = alternativesOf(knownValues.entrySet().stream().filter(known -> SECRET.equals(known.getValue())).map(Map.Entry::getKey)
+                .collect(Collectors.toSet()));
+    }
+
+    private static Pattern alternativesOf(Set<String> values) {
+        return values.isEmpty() ? null : Pattern.compile(values.stream()
                 .sorted((first, second) -> second.length() - first.length())
                 .map(Pattern::quote)
                 .collect(Collectors.joining("|", "(?i)(?<![A-Za-z0-9])(?:", ")(?![A-Za-z0-9])")));
@@ -85,6 +96,9 @@ public final class TranscriptNormaliser {
         normalised = replace(JWT_SHAPE, normalised, jwt -> masking(jwt, JWT));
         normalised = replace(BACKUP_KEY_SHAPE, normalised, key -> masking(key, SECRET));
         normalised = recoveryCodesMasked(normalised);
+        if (knownSecretPattern != null) {
+            normalised = replace(knownSecretPattern, normalised, this::label);
+        }
         normalised = replace(TOKEN_CANDIDATE, normalised, candidate -> isRandom(candidate) ? masking(candidate, TOKEN) : candidate);
         if (knownValuePattern != null) {
             normalised = replace(knownValuePattern, normalised, this::label);
@@ -143,7 +157,12 @@ public final class TranscriptNormaliser {
             boolean totpEnrolment = raw.has(TOTP_URI_FIELD);
             boolean qrOfRecoveryCode = raw.path(SPAYD_FIELD).isString() && RECOVERY_CODE.matcher(raw.path(SPAYD_FIELD).asString()).find();
             boolean secretSetting = raw.path(SETTING_NAME_FIELD).isString() && SECRET_SETTING.matcher(raw.path(SETTING_NAME_FIELD).asString()).matches();
+            boolean bootError = BOOT_ERROR_FIELDS.stream().allMatch(raw::has);
             for (Map.Entry<String, JsonNode> field : raw.properties()) {
+                if (bootError && TIMESTAMP_FIELD.equals(field.getKey())) {
+                    normalised.put(TIMESTAMP_FIELD, TIME);
+                    continue;
+                }
                 boolean secret = isSecretField(field.getKey(), field.getValue(), totpEnrolment)
                         || secretSetting && SETTING_VALUE_FIELD.equals(field.getKey()) && !field.getValue().isNull();
                 if (qrOfRecoveryCode && TOTP_QR_FIELD.equals(field.getKey()) && field.getValue().isObject()) {
@@ -180,7 +199,7 @@ public final class TranscriptNormaliser {
             return false;
         }
         String key = name.toLowerCase(Locale.ROOT);
-        if (SECRET_FIELDS.contains(key)) {
+        if (SECRET_FIELDS.contains(key) || SIGNING_SEED_FIELD.matcher(key).matches()) {
             return true;
         }
         if (totpEnrolment && TOTP_QR_FIELD.equals(name)) {

@@ -37,9 +37,14 @@ public final class QrSymbols {
     }
 
     public static ObjectNode describe(String payload, QrMatrix production, ErrorCorrectionLevel level) throws WriterException {
+        assertThat(QrCodes.decode(production)).as("the production matrix scans back").isEqualTo(payload);
+        return describeDecoded(payload, production, level);
+    }
+
+    public static ObjectNode describeDecoded(String payload, QrMatrix production, ErrorCorrectionLevel level) throws WriterException {
         QRCode reference = Encoder.encode(payload, level, PRODUCTION_HINTS);
         assertThat(modulesOf(reference.getMatrix())).as("ZXing's encoder reproduces the production matrix of %s", payload).isEqualTo(production.modules());
-        assertThat(QrCodes.decode(production)).as("the production matrix scans back").isEqualTo(payload);
+        assertThat(decoded(production).getText()).as("the production matrix decodes back").isEqualTo(payload);
         assertThat(production.modules()).as("modules of a %s by %s matrix", production.size(), production.size()).hasSize(production.size() * production.size());
         assertThat(errorCorrectionOf(production)).as("the error correction in the production matrix's format bits").isEqualTo(level);
         assertThat(versionOf(production)).as("the version of the production matrix").isEqualTo(reference.getVersion().getVersionNumber());
@@ -64,6 +69,11 @@ public final class QrSymbols {
             rows.add(production.modules().substring(row * production.size(), (row + 1) * production.size()));
         }
         return symbol;
+    }
+
+    public static QrMatrix encodedByZxing(String payload, ErrorCorrectionLevel level) throws WriterException {
+        ByteMatrix matrix = Encoder.encode(payload, level, PRODUCTION_HINTS).getMatrix();
+        return new QrMatrix(matrix.getWidth(), modulesOf(matrix));
     }
 
     static int maskOf(QrMatrix matrix) {
