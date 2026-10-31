@@ -213,7 +213,8 @@ describe('Given the browser receipt PDF', () => {
   });
 
   it('when the receipt has no list of gifts, then the drawing fails at once instead of waiting for the timeout', () => {
-    const { gifts: _gifts, ...withoutGifts } = frozenCase(SINGLE_PERSON_CS);
+    const withoutGifts: Partial<FrozenReceipt> = { ...frozenCase(SINGLE_PERSON_CS) };
+    Reflect.deleteProperty(withoutGifts, 'gifts');
     draw({ donationId: 'd-1' });
     http
       .expectOne('/api/donations/me/receipts')
