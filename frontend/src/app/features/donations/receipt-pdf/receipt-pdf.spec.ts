@@ -9,6 +9,7 @@ import {
   ReceiptPdfEvent,
   ReceiptPdfFailure,
 } from './receipt-pdf';
+import { ReceiptStyleRefused } from './receipt-style';
 import { FakeReceiptPdfEnvironment } from './testing/fake-receipt-worker';
 import { frozenCase, SINGLE_PERSON_CS, YEARLY_BILINGUAL } from './testing/receipt-fixtures';
 import { SYNTHETIC_SIGNATURE_JSON } from './testing/synthetic-art';
@@ -183,6 +184,43 @@ describe('Given the browser receipt PDF', () => {
     expect(failure).toBeInstanceOf(ReceiptPdfFailure);
     expect((failure as ReceiptPdfFailure).reason).toBe('unprintable');
     expect(environment.workers).toHaveLength(0);
+  });
+
+  it('when the theme gives a style the receipt refuses, then the drawing fails as a style failure instead of waiting for the timeout', () => {
+    vi.spyOn(environment, 'style').mockImplementation(() => {
+      throw new ReceiptStyleRefused('--receipt-color-text has too little contrast');
+    });
+    draw({ year: 2026 });
+    issue(frozenCase(YEARLY_BILINGUAL), { year: 2026 });
+    environment.last().say({ kind: 'ready' });
+
+    expect(failure).toBeInstanceOf(ReceiptPdfFailure);
+    expect((failure as ReceiptPdfFailure).reason).toBe('style');
+  });
+
+  it('when the receipt has no text the document needs, then the drawing fails at once instead of waiting for the timeout', () => {
+    const frozen = frozenCase(SINGLE_PERSON_CS);
+    const cs = { ...frozen.texts.cs };
+    delete cs['receipt.title.single'];
+    draw({ donationId: 'd-1' });
+    http
+      .expectOne('/api/donations/me/receipts')
+      .flush(issued({ ...frozen, texts: { ...frozen.texts, cs } }));
+
+    expect(failure).toBeInstanceOf(ReceiptPdfFailure);
+    expect((failure as ReceiptPdfFailure).reason).toBe('drawing');
+    expect(environment.workers).toHaveLength(0);
+  });
+
+  it('when the browser refuses to start the worker, then the tools are missing', () => {
+    vi.spyOn(environment, 'worker').mockImplementation(() => {
+      throw new DOMException('blocked', 'SecurityError');
+    });
+    draw({ year: 2026 });
+    issue(frozenCase(YEARLY_BILINGUAL), { year: 2026 });
+
+    expect(failure).toBeInstanceOf(ReceiptPdfFailure);
+    expect((failure as ReceiptPdfFailure).reason).toBe('tools-missing');
   });
 
   describe('when the receipt names a signature image', () => {

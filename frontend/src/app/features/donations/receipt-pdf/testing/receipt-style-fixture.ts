@@ -20,6 +20,11 @@ export const TEST_STYLE: ReceiptStyle = {
   },
   sizes: { body: 9.5, small: 7.5, title: 13, heading: 10.5 },
   leading: 1.3,
+  fonts: {
+    body: 'body.0123456789abcdef.ttf',
+    bold: 'body-bold.0123456789abcdef.ttf',
+    heading: 'heading.0123456789abcdef.ttf',
+  },
   margins: {
     top: 15 * POINTS_PER_MM,
     right: 18 * POINTS_PER_MM,

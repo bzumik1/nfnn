@@ -374,6 +374,18 @@ describe('Given a year of 12 gifts with the 3B signature block and a portrait', 
   });
 });
 
+describe('Given the receipt fonts of the default theme, cut from Inter and Playfair Display', () => {
+  it("when a receipt is drawn with them, then the embedded fonts carry the receipt's own family names and none of the reserved font names", async () => {
+    const read = await readPdf(
+      await drawReceipt(documentOf(frozenCase(SINGLE_PERSON_CS)), TEST_STYLE, NO_ART),
+    );
+
+    expect(read.raw).toMatch(/\/BaseFont \/[A-Z]{6}\+NFNNReceiptSans-Regular/);
+    expect(read.raw).toMatch(/\/BaseFont \/[A-Z]{6}\+NFNNReceiptSerif-Bold/);
+    expect(read.raw).not.toMatch(/\/BaseFont \/[A-Z]{6}\+(?:Inter|PlayfairDisplay)/);
+  });
+});
+
 describe('Given the control theme and its own receipt fonts', () => {
   it('when a receipt is drawn with them, then the PDF embeds the control fonts and none of the default theme', async () => {
     const read = await readPdf(
@@ -383,8 +395,18 @@ describe('Given the control theme and its own receipt fonts', () => {
       }),
     );
 
-    expect(read.raw).toMatch(/\+DejaVuSans/);
-    expect(read.raw).not.toMatch(/\+Inter/);
+    expect(read.raw).toMatch(/\+NFNNReceiptControlSans-Regular/);
+    expect(read.raw).not.toMatch(/\+NFNNReceiptSans/);
+  });
+});
+
+describe('Given a style whose text would not show on the white page', () => {
+  it('when a receipt is drawn with it, then the drawing is refused rather than giving a blank page', async () => {
+    const faint = { ...TEST_STYLE, colors: { ...TEST_STYLE.colors, text: '#ffffff' } };
+
+    await expect(
+      drawReceipt(documentOf(frozenCase(SINGLE_PERSON_CS)), faint, NO_ART),
+    ).rejects.toThrow(/contrast/);
   });
 });
 

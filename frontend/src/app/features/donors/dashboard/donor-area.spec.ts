@@ -27,6 +27,7 @@ import {
   twoYearSummary,
 } from '../../donations/testing/donation-fixtures';
 import { IssuedReceipt, ReceiptSubject } from '../../donations/receipt-pdf/frozen-receipt';
+import { ReceiptStyleRefused } from '../../donations/receipt-pdf/receipt-style';
 import { PdfDelivery } from '../../donations/receipt-pdf/pdf-delivery';
 import { RECEIPT_PDF_ENVIRONMENT } from '../../donations/receipt-pdf/receipt-pdf';
 import { ReceiptRestart } from '../../donations/receipt-pdf/receipt-restart';
@@ -1975,6 +1976,22 @@ describe('Given a signed-in donor in the donor area', () => {
 
         expect(text('.yearly-card [role="alert"]')).toBe(
           'PDF se v prohlížeči nepodařilo vytvořit. Zkuste to prosím znovu; když to nepomůže, zkuste jiný prohlížeč nebo nám napište na info@nfnn.cz.',
+        );
+        expect(button('.yearly-pdf').disabled).toBe(false);
+      });
+
+      it('then a theme whose receipt colours would not show stops the drawing with a line that says whom to tell', async () => {
+        vi.spyOn(receiptEnvironment, 'style').mockImplementation(() => {
+          throw new ReceiptStyleRefused('--receipt-color-text has too little contrast');
+        });
+        await downloadYear(2025);
+        receiptRequest({ year: 2025 }).flush(issuedYearly(2025));
+        await settle();
+        receiptEnvironment.last().say({ kind: 'ready' });
+        await settle();
+
+        expect(text('.yearly-card [role="alert"]')).toBe(
+          'PDF teď kvůli chybě na webu nejde vytvořit. Napište nám prosím na info@nfnn.cz, opravíme ji.',
         );
         expect(button('.yearly-pdf').disabled).toBe(false);
       });

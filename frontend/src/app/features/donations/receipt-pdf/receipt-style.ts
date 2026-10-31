@@ -19,6 +19,11 @@ export interface ReceiptStyle {
     readonly heading: number;
   };
   readonly leading: number;
+  readonly fonts: {
+    readonly body: string;
+    readonly bold: string;
+    readonly heading: string;
+  };
   readonly margins: {
     readonly top: number;
     readonly right: number;
@@ -57,6 +62,14 @@ export const RECEIPT_MARGIN_TOKENS = {
 
 export const RECEIPT_LEADING_TOKEN = '--receipt-leading';
 
+export const RECEIPT_FONT_TOKENS = {
+  body: '--receipt-font-body',
+  bold: '--receipt-font-bold',
+  heading: '--receipt-font-heading',
+} as const;
+
+export class ReceiptStyleRefused extends Error {}
+
 export type CssColorToHex = (cssColor: string) => string;
 
 const POINTS_PER_MM = 72 / 25.4;
@@ -88,7 +101,10 @@ function mapped<T extends Record<string, string>, V>(
   ) as { readonly [K in keyof T]: V };
 }
 
-export function resolveReceiptStyle(element: Element, toHex: CssColorToHex): ReceiptStyle {
+export function resolveReceiptStyle(
+  element: Element,
+  toHex: CssColorToHex = canvasColorToHex(),
+): ReceiptStyle {
   const style = getComputedStyle(element);
   const leading = tokenValue(style, RECEIPT_LEADING_TOKEN);
   if (!/^\d+(\.\d+)?$/.test(leading)) {
@@ -104,6 +120,7 @@ export function resolveReceiptStyle(element: Element, toHex: CssColorToHex): Rec
     }),
     sizes: mapped(RECEIPT_SIZE_TOKENS, (token) => measured(style, token, 'pt')),
     leading: Number(leading),
+    fonts: { body: '', bold: '', heading: '' },
     margins: mapped(RECEIPT_MARGIN_TOKENS, (token) => measured(style, token, 'mm') * POINTS_PER_MM),
   };
 }
