@@ -94,6 +94,8 @@ Feature: An administrator withdraws a leaked receipt signing key from the web, w
     And the problem type ends with "donations/receipt-signing-key-not-found"
     When "Jana" withdraws the receipt signing key "NOT-A-KEY" with a fresh code
     Then the response status is 400
+    And the problem type ends with "validation"
+    And the problem lists an error for field "keyId"
     When "Jana" withdraws the receipt signing key "21fe31df" with a fresh code
     Then the response status is 200
     When "Jana" withdraws the receipt signing key "21fe31df" with a fresh code
@@ -159,14 +161,23 @@ Feature: An administrator withdraws a leaked receipt signing key from the web, w
     Then the response status is 401
     And the problem type ends with "auth/unauthenticated"
 
-  Scenario: Five refused second factors of an administrator pause their withdrawals for a quarter of an hour, even with a right code
-    Given "Jana" tried to withdraw the receipt signing key "21fe31df" with a wrong code 5 times
-    When "Jana" withdraws the receipt signing key "21fe31df" with a fresh code
+  Scenario: Five refused second factors of an administrator pause their withdrawals for a quarter of an hour from the refusals, up to and including its last moment, even with a right passkey
+    Given "Jana" added a passkey named "iPhone"
+    And "Jana" tried to withdraw the receipt signing key "21fe31df" with a wrong code 5 times
+    When "Jana" withdraws the receipt signing key "21fe31df" with the passkey "iPhone"
     Then the response status is 409
     And the problem type ends with "donations/receipt-signing-key-withdrawal-paused"
     And the backend is not restarted for a new receipt signing seed
-    When 15 minutes pass
-    And "Jana" withdraws the receipt signing key "21fe31df" with a fresh code
+    When 14 minutes pass
+    And "Jana" withdraws the receipt signing key "21fe31df" with the passkey "iPhone"
+    Then the response status is 409
+    And the problem type ends with "donations/receipt-signing-key-withdrawal-paused"
+    When 1 minute passes
+    And "Jana" withdraws the receipt signing key "21fe31df" with the passkey "iPhone"
+    Then the response status is 409
+    And the problem type ends with "donations/receipt-signing-key-withdrawal-paused"
+    When 1 second passes
+    And "Jana" withdraws the receipt signing key "21fe31df" with the passkey "iPhone"
     Then the response status is 200
 
   Scenario: Guessing at the second factor is stopped after ten attempts from one address

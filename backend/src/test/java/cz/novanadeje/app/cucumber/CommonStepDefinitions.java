@@ -85,12 +85,12 @@ public class CommonStepDefinitions {
         return executor.getCompletedTaskCount() == executor.getTaskCount();
     }
 
-    @When("{int} seconds pass")
+    @When("{int} second(s) pass(es)")
     public void secondsPass(int seconds) {
         clock.advance(Duration.ofSeconds(seconds));
     }
 
-    @When("{int} minutes pass")
+    @When("{int} minute(s) pass(es)")
     public void minutesPass(int minutes) {
         clock.advance(Duration.ofMinutes(minutes));
     }
