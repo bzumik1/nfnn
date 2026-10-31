@@ -2,7 +2,6 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { Observable, Subject } from 'rxjs';
 import { authInterceptor } from '../../../../core/auth/auth-interceptor';
 import { AuthStore } from '../../../../core/auth/auth-store';
 import { PasskeyAuthenticator } from '../../../../core/auth/passkey-authenticator';
@@ -15,7 +14,7 @@ import {
   samplePasskey,
   sampleDonor,
 } from '../../../../core/auth/testing/donor-fixtures';
-import { RestartOutcome, SetupApi } from '../../../operations/setup/setup-api';
+import { RESTART_POLL_MS } from '../../../operations/setup/setup-api';
 import { receiptSigningKey, receiptSigningKeys } from '../../testing/admin-fixtures';
 import { ReceiptSigningKeysResponse } from '../../admin-api';
 import { ReceiptSigningKey } from './receipt-signing-key';
@@ -29,13 +28,9 @@ describe('Given the receipt signing key section of the receipt settings', () => 
   let fixture: ComponentFixture<ReceiptSigningKey>;
   let http: HttpTestingController;
   let passkeys: FakePasskeyAuthenticator;
-  let restarts: Subject<RestartOutcome>;
-  let watched: number;
 
   beforeEach(async () => {
     passkeys = new FakePasskeyAuthenticator();
-    restarts = new Subject<RestartOutcome>();
-    watched = 0;
     await TestBed.configureTestingModule({
       imports: [ReceiptSigningKey],
       providers: [
@@ -43,15 +38,6 @@ describe('Given the receipt signing key section of the receipt settings', () => 
         provideHttpClientTesting(),
         provideRouter([]),
         { provide: PasskeyAuthenticator, useValue: passkeys },
-        {
-          provide: SetupApi,
-          useValue: {
-            watchRestart: (): Observable<RestartOutcome> => {
-              watched++;
-              return restarts;
-            },
-          },
-        },
       ],
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);
@@ -69,7 +55,10 @@ describe('Given the receipt signing key section of the receipt settings', () => 
     fixture.detectChanges();
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    vi.useRealTimers();
+    http.verify();
+  });
 
   const root = () => fixture.nativeElement as HTMLElement;
 
@@ -146,6 +135,28 @@ describe('Given the receipt signing key section of the receipt settings', () => 
       registeredAt: '2026-11-01T07:00:00Z',
       current: false,
     });
+
+  async function poll(body: object | null): Promise<void> {
+    await vi.advanceTimersByTimeAsync(RESTART_POLL_MS);
+    const request = http.expectOne({ method: 'GET', url: SIGNING_KEYS_URL });
+    if (body === null) {
+      request.flush('', { status: 502, statusText: 'Bad Gateway' });
+    } else {
+      request.flush(body);
+    }
+    await vi.advanceTimersByTimeAsync(1);
+    fixture.detectChanges();
+  }
+
+  const renewedKeys = (published = true) =>
+    receiptSigningKeys([
+      earlierKey(),
+      receiptSigningKey({ status: 'revoked', current: false }),
+      receiptSigningKey({ keyId: 'b7e1c2d4', registeredAt: '2026-11-20T09:31:00Z', published }),
+    ]);
+
+  const stillWithdrawnKeys = () =>
+    receiptSigningKeys([earlierKey(), receiptSigningKey({ status: 'revoked' })]);
 
   function withdrawn(
     keys: ReceiptSigningKeysResponse,
@@ -325,43 +336,47 @@ describe('Given the receipt signing key section of the receipt settings', () => 
 
       expect(text('dialog [role="alert"]')).toContain('Kód nesouhlasí');
       expect(rows()['Stav']).toBe('Zveřejněný');
-      expect(watched).toBe(0);
+      http.expectNone({ method: 'GET', url: SIGNING_KEYS_URL });
     });
 
-    it('and a fresh code confirms it, then the key shows as withdrawn while the web restarts, and the new key loads after the restart', async () => {
+    async function confirmWithdrawal(): Promise<void> {
       await type('withdrawal-code', ' 123456 ');
       await submit();
       const request = http.expectOne(WITHDRAW_OWN_URL);
       expect(request.request.body).toEqual({ secondFactorCode: '123456' });
-      request.flush(
-        withdrawn(
-          receiptSigningKeys([earlierKey(), receiptSigningKey({ status: 'revoked' })]),
-          true,
-        ),
-      );
-      await settle();
+      vi.useFakeTimers();
+      request.flush(withdrawn(stillWithdrawnKeys(), true));
+      await vi.advanceTimersByTimeAsync(1);
+      fixture.detectChanges();
+    }
+
+    const restartingLine =
+      'Klíč 21fe31df je stažený. Web se restartuje a vytvoří si nový klíč, obvykle do minuty.';
+
+    it('and a fresh code confirms it, then the key shows as withdrawn while the web restarts, and the new key shows once the web went down and came back', async () => {
+      await confirmWithdrawal();
 
       expect(root().querySelector('dialog')).toBeNull();
       expect(rows()['Stav']).toBe('Stažený');
+      expect(text('[role="status"]:not(:empty)')).toBe(restartingLine);
+      expect(text('[role="alert"]')).toBe('');
+
+      await poll(stillWithdrawnKeys());
+      expect(text('[role="status"]:not(:empty)')).toBe(restartingLine);
+      await poll(null);
+      await poll(renewedKeys());
+
+      expect(rows()['Klíč serveru']).toBe('b7e1c2d4');
       expect(text('[role="status"]:not(:empty)')).toBe(
-        'Klíč 21fe31df je stažený. Web se restartuje a vytvoří si nový klíč, obvykle do minuty.',
+        'Klíč 21fe31df je stažený a web po restartu podepisuje novým klíčem.',
       );
       expect(text('[role="alert"]')).toBe('');
-      expect(watched).toBe(1);
+    });
 
-      restarts.next('restarted');
-      restarts.complete();
-      await settle();
-      await load(
-        receiptSigningKeys([
-          earlierKey(),
-          receiptSigningKey({ status: 'revoked', current: false }),
-          receiptSigningKey({
-            keyId: 'b7e1c2d4',
-            registeredAt: '2026-11-20T09:31:00Z',
-          }),
-        ]),
-      );
+    it('and the web restarts between two checks, then the new key shows as soon as it is the key of the server', async () => {
+      await confirmWithdrawal();
+
+      await poll(renewedKeys());
 
       expect(rows()['Klíč serveru']).toBe('b7e1c2d4');
       expect(text('[role="status"]:not(:empty)')).toBe(
@@ -369,60 +384,83 @@ describe('Given the receipt signing key section of the receipt settings', () => 
       );
     });
 
-    it('and the web comes back still signing with the withdrawn key, then an alert says so and no new key is claimed', async () => {
-      await type('withdrawal-code', '123456');
-      await submit();
-      http
-        .expectOne(WITHDRAW_OWN_URL)
-        .flush(withdrawn(receiptSigningKeys([receiptSigningKey({ status: 'revoked' })]), true));
-      await settle();
+    describe('and the e-mails to the administrators hold the restart up', () => {
+      it('then, while the web still answers with the withdrawn key, it keeps waiting and claims no restart', async () => {
+        await confirmWithdrawal();
 
-      restarts.next('restarted');
-      restarts.complete();
-      await settle();
-      await load(receiptSigningKeys([receiptSigningKey({ status: 'revoked' })]));
+        for (let check = 0; check < 30; check++) {
+          await poll(stillWithdrawnKeys());
+        }
+
+        expect(rows()['Klíč serveru']).toBe('21fe31df');
+        expect(text('[role="status"]:not(:empty)')).toBe(restartingLine);
+        expect(text('[role="alert"]')).toBe('');
+        expect(root().querySelector('.signing-key-slow')).toBeNull();
+      });
+
+      it('and the web then goes down and comes back with a new key, then the new key shows', async () => {
+        await confirmWithdrawal();
+        for (let check = 0; check < 30; check++) {
+          await poll(stillWithdrawnKeys());
+        }
+
+        await poll(null);
+        await poll(renewedKeys());
+
+        expect(rows()['Klíč serveru']).toBe('b7e1c2d4');
+        expect(text('[role="status"]:not(:empty)')).toBe(
+          'Klíč 21fe31df je stažený a web po restartu podepisuje novým klíčem.',
+        );
+      });
+    });
+
+    it('and the web goes down and comes back with the withdrawn key, then an alert says it has no new key and no new key is claimed', async () => {
+      await confirmWithdrawal();
+
+      await poll(null);
+      await poll(stillWithdrawnKeys());
 
       expect(rows()['Klíč serveru']).toBe('21fe31df');
       expect(text('[role="status"]:not(:empty)')).toBe('');
       expect(text('app-live-notice [role="alert"]')).toBe(
-        'Klíč 21fe31df je stažený, ale web po restartu podepisuje pořád jím a nový klíč nemá. Do té doby se potvrzení o daru nestáhnou; obraťte se prosím na technika serveru.',
+        'Klíč 21fe31df je stažený, ale web po restartu nový klíč nemá, takže se potvrzení o daru nestáhnou; obraťte se prosím na technika serveru.',
       );
+      expect(text('app-live-notice [role="alert"]')).not.toContain('podepisuje');
       expect(text('.signing-key-warning')).toBe('');
     });
 
-    it('and the keys cannot be loaded after the restart, then no new key is claimed and a retry is offered', async () => {
-      await type('withdrawal-code', '123456');
-      await submit();
-      http
-        .expectOne(WITHDRAW_OWN_URL)
-        .flush(withdrawn(receiptSigningKeys([receiptSigningKey({ status: 'revoked' })]), true));
-      await settle();
+    it('and the web comes back with a new key that is not published, then it says so instead of claiming the web signs with it', async () => {
+      await confirmWithdrawal();
 
-      restarts.next('restarted');
-      restarts.complete();
-      await settle();
-      await load({}, 503);
+      await poll(null);
+      await poll(renewedKeys(false));
 
+      expect(rows()['Klíč serveru']).toBe('b7e1c2d4');
       expect(text('[role="status"]:not(:empty)')).toBe('');
-      expect(text('.signing-key-error')).toContain('Klíč se nepodařilo načíst.');
+      expect(text('app-live-notice [role="alert"]')).toBe(
+        'Klíč 21fe31df je stažený a web po restartu má nový klíč b7e1c2d4, který ale zatím není zveřejněný.',
+      );
     });
 
-    it('and the web does not come back in time, then an alert says so and a retry watches again', async () => {
-      await type('withdrawal-code', '123456');
-      await submit();
-      http
-        .expectOne(WITHDRAW_OWN_URL)
-        .flush(withdrawn(receiptSigningKeys([receiptSigningKey({ status: 'revoked' })]), true));
-      await settle();
+    it('and the web does not come back in time, then only an alert says so, without the restarting line, and a retry watches again', async () => {
+      await confirmWithdrawal();
 
-      restarts.next('slow');
-      await settle();
+      for (let check = 0; check < 100; check++) {
+        await poll(check < 50 ? stillWithdrawnKeys() : null);
+      }
+      await vi.advanceTimersByTimeAsync(RESTART_POLL_MS);
+      http.expectNone({ method: 'GET', url: SIGNING_KEYS_URL });
+      fixture.detectChanges();
 
       expect(text('.signing-key-slow')).toContain(
         'Klíč je stažený, ale web se po restartu zatím nespustil. Počkejte pár minut a zkuste to znovu.',
       );
+      expect(text('[role="status"]:not(:empty)')).toBe('');
       await click('Zkusit znovu');
-      expect(watched).toBe(2);
+      expect(root().querySelector('.signing-key-slow')).toBeNull();
+      expect(text('[role="status"]:not(:empty)')).toBe(restartingLine);
+      await poll(renewedKeys());
+      expect(rows()['Klíč serveru']).toBe('b7e1c2d4');
     });
 
     it('and it is cancelled, then the dialog closes and nothing is sent', async () => {
@@ -469,7 +507,6 @@ describe('Given the receipt signing key section of the receipt settings', () => 
       expect(root().querySelector('dialog')).toBeNull();
       expect(text('.signing-key-earlier')).toContain('stažený');
       expect(text('[role="status"]:not(:empty)')).toBe('Klíč 39f713d0 je stažený.');
-      expect(watched).toBe(0);
       expect(document.activeElement).toBe(root().querySelector('h2'));
     });
 
