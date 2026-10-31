@@ -9,8 +9,8 @@ export function receiptCaptions(): ReceiptCaptions {
       en: $localize`:@@donor.receipt.pdf.verificationHeadingEnglish:Verification`,
     },
     verificationText: {
-      cs: $localize`:@@donor.receipt.pdf.verificationText:Kód ukáže, co fond podepsal.`,
-      en: $localize`:@@donor.receipt.pdf.verificationTextEnglish:The code shows what the foundation signed.`,
+      cs: $localize`:@@donor.receipt.pdf.verificationText:Načtěte kód telefonem a uvidíte, co fond podepsal.`,
+      en: $localize`:@@donor.receipt.pdf.verificationTextEnglish:Scan the code with a phone to see what the foundation signed.`,
     },
     verificationAlt: $localize`:@@donor.receipt.pdf.verificationAlt:QR kód pro ověření potvrzení na nfnn.cz/overit`,
     signatureAlt: $localize`:@@donor.receipt.pdf.signatureAlt:Podpis`,
