@@ -8,7 +8,7 @@
   },
   {
     "path": "GET /api/admin/content/people*",
-    "scenario": "*",
+    "scenario": "content/manage_people: *",
     "kind": "added",
     "field": "$*.linkedToAccount",
     "reason": "Jakub 2026-10-30: a person of the foundation is linked to the account on the site whose confirmed e-mail is the person's personal or fund e-mail; the link grants nothing and only shows, so every person in the administration's answers says whether it is linked",
@@ -16,7 +16,7 @@
   },
   {
     "path": "POST /api/admin/content/people*",
-    "scenario": "*",
+    "scenario": "content/manage_people: *",
     "kind": "added",
     "field": "$*.linkedToAccount",
     "reason": "Jakub 2026-10-30: a person of the foundation is linked to the account on the site whose confirmed e-mail is the person's personal or fund e-mail; the link grants nothing and only shows, so every person in the administration's answers says whether it is linked",
@@ -24,7 +24,7 @@
   },
   {
     "path": "PUT /api/admin/content/people*",
-    "scenario": "*",
+    "scenario": "content/manage_people: *",
     "kind": "added",
     "field": "$*.linkedToAccount",
     "reason": "Jakub 2026-10-30: a person of the foundation is linked to the account on the site whose confirmed e-mail is the person's personal or fund e-mail; the link grants nothing and only shows, so every person in the administration's answers says whether it is linked",
@@ -32,7 +32,7 @@
   },
   {
     "path": "DELETE /api/admin/content/people*",
-    "scenario": "*",
+    "scenario": "content/manage_people: *",
     "kind": "added",
     "field": "$*.linkedToAccount",
     "reason": "Jakub 2026-10-30: a person of the foundation is linked to the account on the site whose confirmed e-mail is the person's personal or fund e-mail; the link grants nothing and only shows, so every person in the administration's answers says whether it is linked",
