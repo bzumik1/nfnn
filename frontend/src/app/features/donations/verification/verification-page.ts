@@ -13,7 +13,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
-import { ProofInput } from './proof-input';
+import { type FoundProof, ProofInput } from './proof-input';
 import { ReceiptVerifier, type VerificationStep } from './receipt-verifier';
 import { type FinalOutcome, VerificationResult } from './verification-result';
 
@@ -35,6 +35,7 @@ export class VerificationPage {
   private readonly injector = inject(Injector);
   private readonly destroyRef = inject(DestroyRef);
   private fragment: string | null = null;
+  protected readonly scanned = signal(false);
   private run = 0;
 
   protected readonly page = signal<PageState>({ state: 'checking' });
@@ -52,6 +53,7 @@ export class VerificationPage {
       .fragment.pipe(takeUntilDestroyed())
       .subscribe((fragment) => {
         this.fragment = fragment;
+        this.scanned.set(false);
         if (fragment !== null) {
           this.location.replaceState(PAGE_PATH, '', this.location.getState());
         }
@@ -59,8 +61,9 @@ export class VerificationPage {
       });
   }
 
-  protected verifyProof(fragment: string): void {
-    this.fragment = fragment;
+  protected verifyProof(proof: FoundProof): void {
+    this.fragment = proof.fragment;
+    this.scanned.set(proof.scanned);
     this.verify();
   }
 

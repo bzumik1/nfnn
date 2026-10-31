@@ -45,7 +45,7 @@
       }
       @default {
         @if (outcome(); as final) {
-          <app-verification-result [outcome]="final" (retry)="retry()" />
+          <app-verification-result [outcome]="final" [scanned]="scanned()" (retry)="retry()" />
           <button
             type="button"
             class="ui-button ui-button--block verify-another"
