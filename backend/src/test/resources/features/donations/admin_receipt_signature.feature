@@ -202,7 +202,7 @@ Feature: An administrator chooses who signs the donation receipts and uploads th
     When "Jana" asks for the receipt signatory
     Then the response status is 200
     And no receipt signatory is chosen
-    When "Jana" downloads the receipt of her donation received on 2026-10-01
+    When "Jana" issues the receipt of her donation received on 2026-10-01
     Then the response status is 409
     And the problem type ends with "donations/receipt-signatory-missing"
     And the problem's detail starts with "Fond zatím nevybral, kdo potvrzení o daru podepisuje"

@@ -1681,7 +1681,9 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
     await page.goto('/sprava/lide-fondu');
     await expect(
-      page.locator('.ui-person-list').getByRole('img', { name: 'Podpis na potvrzení: Petr Vzorový' }),
+      page
+        .locator('.ui-person-list')
+        .getByRole('img', { name: 'Podpis na potvrzení: Petr Vzorový' }),
     ).toBeVisible();
     expect(await violations(page)).toEqual([]);
     await page.getByRole('button', { name: 'Upravit: Petr Vzorový' }).click();
