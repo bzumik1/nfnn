@@ -9,6 +9,7 @@ Feature: An administrator or a connected application issues a donor's receipt an
 
   Background:
     Given today is 2026-12-20
+    And a person of the foundation signs the receipts
     And a person "Jana" is registered
     And a person "Petr" is registered
     And "Petr" is an administrator

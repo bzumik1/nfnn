@@ -41,18 +41,19 @@ class ReceiptSignatureProblemHandlerTest {
     }
 
     @Test
-    @DisplayName("Given a refused element, when it is answered, then the problem names the file field, the problem's code and the element")
-    void should_name_field_code_and_element_when_answered_given_refused_element() {
+    @DisplayName("Given a refused element, when it is answered, then the problem names the file field and the problem's code but repeats no name the file chose")
+    void should_name_field_and_code_but_not_element_when_answered_given_refused_element() {
         ProblemDetail problem = handle(new UnsupportedSignatureVector(SignatureVectorProblem.ELEMENT, "foreignObject"), CZECH);
 
         assertThat(problem.getStatus()).isEqualTo(400);
         assertThat(problem.getType().toString()).endsWith("/donations/unsupported-signature-vector");
         assertThat(problem.getTitle()).isEqualTo("SVG nejde použít jako podpis");
-        assertThat(problem.getDetail()).isEqualTo("Soubor obsahuje nepovolený prvek „foreignObject“. Ručně psaný podpis v SVG jde, když jsou jeho tahy "
+        assertThat(problem.getDetail()).isEqualTo("Soubor obsahuje nepovolený prvek. Ručně psaný podpis v SVG jde, když jsou jeho tahy "
                 + "převedené na vyplněné tvary (path); obrysy s nastavenou tloušťkou čáry (stroke) a efekty web nepřijme a soubor smí mít nejvýš 200 kB. "
                 + "Místo něj můžete nahrát sken JPEG, PNG nebo WebP.");
         assertThat(fieldError(problem)).containsExactlyInAnyOrderEntriesOf(Map.of(
-                "field", "file", "code", "element", "message", "Soubor obsahuje nepovolený prvek „foreignObject“."));
+                "field", "file", "code", "element", "message", "Soubor obsahuje nepovolený prvek."));
+        assertThat(problem.toString()).doesNotContain("foreignObject");
     }
 
     @Test
@@ -61,9 +62,21 @@ class ReceiptSignatureProblemHandlerTest {
         ProblemDetail problem = handle(new UnsupportedSignatureVector(SignatureVectorProblem.ELEMENT, "script"), Locale.ENGLISH);
 
         assertThat(problem.getTitle()).isEqualTo("The SVG cannot be used as a signature");
-        assertThat(problem.getDetail()).isEqualTo("The file holds the element “script”, which is not allowed. A handwritten signature in SVG is fine when "
+        assertThat(problem.getDetail()).isEqualTo("The file holds an element that is not allowed. A handwritten signature in SVG is fine when "
                 + "its strokes are converted to filled shapes (path); outlines with a set line width (stroke) and effects are refused, and the file may "
                 + "have at most 200 kB. You can upload a scan as a JPEG, PNG or WebP image instead.");
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @EnumSource(SignatureVectorProblem.class)
+    @DisplayName("Given each problem of an SVG signature, when it is answered, then the detail is one text of the bundle that starts with the field error's text")
+    void should_answer_detail_from_bundle_starting_with_reason_when_answered_given_each_problem(SignatureVectorProblem refusal) {
+        for (Locale locale : List.of(CZECH, Locale.ENGLISH)) {
+            ProblemDetail problem = handle(new UnsupportedSignatureVector(refusal, "script"), locale);
+            String detail = messages.getMessage("problem.donations/unsupported-signature-vector.detail." + refusal.code(), null, locale);
+
+            assertThat(problem.getDetail()).isEqualTo(detail).startsWith(fieldError(problem).get("message") + " ").doesNotContain("script");
+        }
     }
 
     @Test

@@ -88,12 +88,12 @@ Feature: An administrator chooses who signs the donation receipts and uploads th
 
     Examples:
       | construct                                      | message                                                                  |
-      | a script                                       | Soubor obsahuje nepovolený prvek „script“.                               |
+      | a script                                       | Soubor obsahuje nepovolený prvek.                                        |
       | an external entity                             | Soubor obsahuje deklaraci DOCTYPE nebo entity, ty SVG podpisu mít nesmí. |
-      | a link                                         | Soubor obsahuje nepovolený atribut „href“.                               |
-      | a style                                        | Soubor obsahuje nepovolený atribut „style“.                              |
-      | a filter                                       | Soubor obsahuje nepovolený prvek „filter“.                               |
-      | an element of another namespace                | Prvek „svg“ nepatří do SVG, patří do jiného jmenného prostoru (xmlns).   |
+      | a link                                         | Soubor obsahuje nepovolený atribut.                                      |
+      | a style                                        | Soubor obsahuje nepovolený atribut.                                      |
+      | a filter                                       | Soubor obsahuje nepovolený prvek.                                        |
+      | an element of another namespace                | Soubor obsahuje prvek z jiného jmenného prostoru (xmlns) než SVG.        |
       | more than 200 kB                               | Soubor je větší než 200 kB.                                              |
       | path data that grows past 256 kB once absolute | Podpis má příliš mnoho tvarů, bodů nebo vnořených skupin.                |
       | malformed path data                            | Tvar má neplatný zápis cesty (atribut d).                                |

@@ -315,13 +315,13 @@ describe('Given the receipt signature part of a person of the foundation', () =>
           type: 'https://nfnn.cz/problems/donations/unsupported-signature-vector',
           title: 'SVG nejde použít jako podpis',
           detail:
-            'Soubor obsahuje nepovolený prvek „script“. Ručně psaný podpis v SVG jde, když jsou jeho tahy převedené na vyplněné tvary (path); obrysy s nastavenou tloušťkou čáry (stroke) a efekty web nepřijme a soubor smí mít nejvýš 200 kB. Místo něj můžete nahrát sken JPEG, PNG nebo WebP.',
+            'Soubor obsahuje nepovolený prvek. Ručně psaný podpis v SVG jde, když jsou jeho tahy převedené na vyplněné tvary (path); obrysy s nastavenou tloušťkou čáry (stroke) a efekty web nepřijme a soubor smí mít nejvýš 200 kB. Místo něj můžete nahrát sken JPEG, PNG nebo WebP.',
           status: 400,
           errors: [
             {
               field: 'file',
               code: 'element',
-              message: 'Soubor obsahuje nepovolený prvek „script“.',
+              message: 'Soubor obsahuje nepovolený prvek.',
             },
           ],
         },
@@ -330,7 +330,7 @@ describe('Given the receipt signature part of a person of the foundation', () =>
       await settle();
 
       expect(text('[role="alert"]:not(:empty)')).toBe(
-        'SVG nejde použít jako podpis. Soubor obsahuje nepovolený prvek „script“. Ručně psaný podpis v SVG jde, když jsou jeho tahy převedené na vyplněné tvary (path); obrysy s nastavenou tloušťkou čáry (stroke) a efekty web nepřijme a soubor smí mít nejvýš 200 kB. Místo něj můžete nahrát sken JPEG, PNG nebo WebP.',
+        'SVG nejde použít jako podpis. Soubor obsahuje nepovolený prvek. Ručně psaný podpis v SVG jde, když jsou jeho tahy převedené na vyplněné tvary (path); obrysy s nastavenou tloušťkou čáry (stroke) a efekty web nepřijme a soubor smí mít nejvýš 200 kB. Místo něj můžete nahrát sken JPEG, PNG nebo WebP.',
       );
       expect(vectorPreview()).toBeNull();
     });

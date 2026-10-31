@@ -34,8 +34,8 @@ class ReceiptSignatureProblemHandler {
         problem.setType(ProblemTypes.of(UnsupportedSignatureVector.CODE));
         problem.setTitle(messages.getMessage("problem." + UnsupportedSignatureVector.CODE + ".title", null, locale));
         String code = refused.problem().code();
-        String reason = messages.getMessage("donations.signatureVector." + code, new Object[] {refused.name().orElse("")}, locale);
-        problem.setDetail(messages.getMessage("problem." + UnsupportedSignatureVector.CODE + ".detail", new Object[] {reason}, locale));
+        String reason = messages.getMessage("donations.signatureVector." + code, null, locale);
+        problem.setDetail(messages.getMessage("problem." + UnsupportedSignatureVector.CODE + ".detail." + code, null, locale));
         problem.setProperty("errors", List.of(Map.of("field", FIELD, "code", code, "message", reason)));
         return problem;
     }

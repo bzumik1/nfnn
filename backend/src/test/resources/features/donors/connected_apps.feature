@@ -134,6 +134,7 @@ Feature: An administrator connects an application such as Claude to the administ
 
   Scenario: A connected application issues a first receipt and gets it again, but replacing an issued receipt is left to the browser
     Given today is 2026-12-20
+    And a person of the foundation signs the receipts
     And the bank account has these movements:
       | id   | date       | amount  | account    | bankCode | name       | variableSymbol |
       | 3001 | 2026-11-15 | 2500.00 | 2900233333 | 2010     | Novák Petr | {Petr}         |
