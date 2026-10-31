@@ -68,6 +68,11 @@ public class ReceiptSignatoryStepDefinitions {
         api.put(SIGNATORY, body(personIdOf(name).orElseThrow(() -> new AssertionError("No person " + name)).toString(), receiptRole));
     }
 
+    @When("{string} chooses {string} to sign the receipts as a role with a line break")
+    public void choosesToSignTheReceiptsAsARoleWithALineBreak(String alias, String name) {
+        choosesToSignTheReceiptsAs(alias, name, "předseda\nsprávní rady");
+    }
+
     @When("{string} chooses a person who does not exist to sign the receipts")
     public void choosesAPersonWhoDoesNotExist(String alias) {
         sessions.actAs(alias);

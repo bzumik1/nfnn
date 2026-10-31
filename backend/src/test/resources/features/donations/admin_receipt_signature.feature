@@ -26,6 +26,7 @@ Feature: An administrator chooses who signs the donation receipts and uploads th
     And "Jana" downloads the receipt of her donation received on 2026-10-01
     And the receipt "Jana" downloaded is the frozen receipt issued to her last
     And the frozen receipt shows no signature image
+    And the frozen receipt shows no portrait
     When "Jana" uploads a 3000 by 1000 pixel JPEG scan named "podpis.jpg" as the receipt signature
     Then the response status is 200
     And the receipt signature is set, 1200 by 400 pixels, uploaded at "2026-12-20T11:00:00Z"
@@ -129,7 +130,7 @@ Feature: An administrator chooses who signs the donation receipts and uploads th
     When "Jana" chooses "Adam Vzor" to sign the receipts as "místopředseda správní rady"
     Then the response status is 200
     And the receipt signatory is "Adam Vzor" as "místopředseda správní rady", with a portrait set and a signature set
-    And the admin action "CHOOSE_RECEIPT_SIGNATORY" by "Jana" is recorded with details containing "funkce na potvrzení: místopředseda správní rady"
+    And the admin action "CHOOSE_RECEIPT_SIGNATORY" by "Jana" is recorded with details containing "Potvrzení o daru podepisuje osoba"
     When "Jana" asks for the receipt signatory
     Then the response status is 200
     And the receipt signatory is "Adam Vzor" as "místopředseda správní rady", with a portrait set and a signature set
@@ -148,6 +149,9 @@ Feature: An administrator chooses who signs the donation receipts and uploads th
     When "Jana" chooses the person "Eva" to sign the receipts as "předseda"
     Then the response status is 400
     And the problem type ends with "validation"
+    When "Jana" chooses "Josef Vzorový" to sign the receipts as a role with a line break
+    Then the response status is 400
+    And the problem lists an error for field "receiptRole"
     When "Jana" uploads a 600 by 200 pixel JPEG scan as the receipt signature of a person who does not exist
     Then the response status is 404
     And the problem type ends with "donations/person-not-found"
@@ -167,6 +171,7 @@ Feature: An administrator chooses who signs the donation receipts and uploads th
     When "Jana" downloads the receipt of her donation received on 2026-10-01
     Then the response status is 409
     And the problem type ends with "donations/receipt-signatory-missing"
+    And the problem's detail starts with "Fond zatím nevybral, kdo potvrzení o daru podepisuje"
     And 0 receipts are stored
 
   Scenario: Removing a person of the foundation deletes their receipt signature in the same step

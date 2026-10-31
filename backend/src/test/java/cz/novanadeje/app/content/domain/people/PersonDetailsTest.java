@@ -60,6 +60,17 @@ class PersonDetailsTest {
     }
 
     @Test
+    @DisplayName("Given a name, a role or a board note holding a control character, when the details are made, then they are refused")
+    void should_refuse_a_text_when_made_given_a_control_character() {
+        assertThatThrownBy(() -> new PersonDetails("Eva\nVzorová", Optional.empty(), false, Optional.empty(), false, Optional.empty(), PersonEmails.NONE))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new PersonDetails("Eva", Optional.of("Zakladatelka\u0007"), false, Optional.empty(), false, Optional.empty(),
+                PersonEmails.NONE)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new PersonDetails("Eva", Optional.empty(), true, Optional.of("před\u0085sedkyně"), false, Optional.empty(),
+                PersonEmails.NONE)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     @DisplayName("Given a personal and a fund e-mail, when the details are made, then both are kept apart")
     void should_keep_both_emails_when_made_given_a_personal_and_a_fund_email() {
         PersonEmails emails = new PersonEmails(Optional.of(new EmailAddress("eva@example.org")), Optional.of(new EmailAddress("eva@nfnn.cz")));

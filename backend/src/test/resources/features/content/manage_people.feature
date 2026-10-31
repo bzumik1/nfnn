@@ -411,6 +411,15 @@ Feature: An administrator keeps the people of the foundation that the About sect
       | name | Adam Vzor |
     Then the response status is 409
     And the problem type ends with "content/too-many-people"
+    When "Jana" adds a person whose name has a line break
+    Then the response status is 400
+    And the problem lists an error for field "name"
+    When "Jana" adds a person whose role has a line break
+    Then the response status is 400
+    And the problem lists an error for field "role"
+    When "Jana" adds a person whose boardNote has a line break
+    Then the response status is 400
+    And the problem lists an error for field "boardNote"
 
   Scenario: A donor without the administrator role and a visitor without a token cannot manage the people
     Given "Jana" adds a person:

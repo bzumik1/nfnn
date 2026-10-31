@@ -11,13 +11,15 @@ public record PersonDetails(String name, Optional<String> role, boolean onBoard,
     public static final int MAX_ROLE_LENGTH = 120;
     public static final int MAX_BOARD_NOTE_LENGTH = 60;
 
+    public static final String TEXT_PATTERN = "[^\\p{Cc}]*";
+
     public PersonDetails {
         if (name == null || role == null || boardNote == null || portrait == null || emails == null) {
             throw new IllegalArgumentException("A person has a name, a role, a board note, a portrait and e-mails (each optional one even when absent)");
         }
         name = name.strip();
-        if (name.isEmpty() || name.length() > MAX_NAME_LENGTH) {
-            throw new IllegalArgumentException("The name of a person has 1 to " + MAX_NAME_LENGTH + " characters");
+        if (name.isEmpty() || name.length() > MAX_NAME_LENGTH || hasControlCharacter(name)) {
+            throw new IllegalArgumentException("The name of a person has 1 to " + MAX_NAME_LENGTH + " characters and no control character");
         }
         role = text(role, "role", MAX_ROLE_LENGTH);
         boardNote = text(boardNote, "board note", MAX_BOARD_NOTE_LENGTH);
@@ -25,9 +27,13 @@ public record PersonDetails(String name, Optional<String> role, boolean onBoard,
 
     private static Optional<String> text(Optional<String> value, String what, int maxLength) {
         Optional<String> stripped = value.map(String::strip).filter(text -> !text.isEmpty());
-        if (stripped.isPresent() && stripped.get().length() > maxLength) {
-            throw new IllegalArgumentException("The " + what + " of a person is at most " + maxLength + " characters");
+        if (stripped.isPresent() && (stripped.get().length() > maxLength || hasControlCharacter(stripped.get()))) {
+            throw new IllegalArgumentException("The " + what + " of a person is at most " + maxLength + " characters with no control character");
         }
         return stripped;
+    }
+
+    private static boolean hasControlCharacter(String text) {
+        return text.chars().anyMatch(Character::isISOControl);
     }
 }
