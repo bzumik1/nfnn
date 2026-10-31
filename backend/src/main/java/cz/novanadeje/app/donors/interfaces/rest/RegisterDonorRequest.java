@@ -24,7 +24,8 @@ record RegisterDonorRequest(
 ) {
 
     RegisterDonorCommand toCommand() {
-        return new RegisterDonorCommand(type, name, companyIdentifier, address.street(), address.city(), address.postalCode(),
+        return new RegisterDonorCommand(type, PrintedInput.of(name), companyIdentifier, PrintedInput.of(address.street()),
+                PrintedInput.of(address.city()), address.postalCode(),
                 email, password, preferredLocale, RegistrationReturn.ofPath(returnTo));
     }
 

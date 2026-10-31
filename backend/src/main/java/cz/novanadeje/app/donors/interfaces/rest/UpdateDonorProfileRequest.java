@@ -14,9 +14,9 @@ record UpdateDonorProfileRequest(
 
     UpdateDonorProfileCommand toCommand() {
         return new UpdateDonorProfileCommand(
-                name,
-                address == null ? null : address.street(),
-                address == null ? null : address.city(),
+                PrintedInput.of(name),
+                address == null ? null : PrintedInput.of(address.street()),
+                address == null ? null : PrintedInput.of(address.city()),
                 address == null ? null : address.postalCode(),
                 preferredLocale
         );
