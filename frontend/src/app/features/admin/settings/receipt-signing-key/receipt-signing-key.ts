@@ -148,7 +148,9 @@ export class ReceiptSigningKey {
           this.stillWithdrawnAfterRestart.set(same);
           this.keys.set(keys);
           this.state.set('ready');
-          this.notice.set(this.afterRestartNotice(keyId, same, withdrawnCurrentKeyId(keys) === null));
+          this.notice.set(
+            this.afterRestartNotice(keyId, same, withdrawnCurrentKeyId(keys) === null),
+          );
         },
         error: () => this.state.set('error'),
       });

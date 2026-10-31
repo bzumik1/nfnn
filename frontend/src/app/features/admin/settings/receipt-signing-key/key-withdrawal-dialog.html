@@ -1,13 +1,13 @@
 <app-dialog labelledBy="stazeni-klice-titulek" [wide]="true" (dismissed)="dismiss()">
-  <h2 id="stazeni-klice-titulek" class="withdrawal-title" i18n="@@admin.signingKey.withdraw.title">
+  <h2 id="stazeni-klice-titulek" class="ui-dialog__title" i18n="@@admin.signingKey.withdraw.title">
     Stáhnout klíč <span class="ui-mono">{{ keyId() }}</span
     >?
   </h2>
-  <p class="withdrawal-lead" i18n="@@admin.signingKey.withdraw.lead">
+  <p class="ui-dialog__lead" i18n="@@admin.signingKey.withdraw.lead">
     Klíč stáhněte, jen když se mohl dostat do cizích rukou, třeba s ukradeným diskem nebo kopií
     serveru. Stažení nejde vrátit.
   </p>
-  <ul class="withdrawal-points">
+  <ul class="ui-dialog__points withdrawal-points">
     <li i18n="@@admin.signingKey.withdraw.published">
       Web klíč dál zveřejňuje, ale jako stažený, takže QR kódům jím podepsaným už nikdo nemá věřit,
       ani na potvrzeních vydaných dřív. Ta se znovu nepodepisují.
@@ -56,7 +56,7 @@
           maxlength="8"
         />
       </app-form-field>
-      @if (passkeySupported) {
+      @if (passkeySupported && hasPasskey()) {
         <p class="withdrawal-alternative">
           <span i18n="@@admin.signingKey.withdraw.orPasskey">Nebo bez kódu:</span>
           &ngsp;
@@ -114,7 +114,7 @@
       <button
         type="button"
         class="ui-button ui-button--quiet"
-        autofocus
+        [attr.autofocus]="asksCode() ? null : ''"
         [disabled]="withdrawing()"
         (click)="dismiss()"
         i18n="@@admin.signingKey.withdraw.cancel"

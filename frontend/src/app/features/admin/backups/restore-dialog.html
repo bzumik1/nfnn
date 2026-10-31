@@ -1,13 +1,13 @@
 <app-dialog labelledBy="restore-title" [wide]="true" (dismissed)="dismiss()">
-  <h2 id="restore-title" class="restore-title" i18n="@@admin.backups.restoreDialog.title">
+  <h2 id="restore-title" class="ui-dialog__title" i18n="@@admin.backups.restoreDialog.title">
     Obnovit databázi ze zálohy?
   </h2>
-  <p class="restore-lead" i18n="@@admin.backups.restoreDialog.lead">
+  <p class="ui-dialog__lead restore-lead" i18n="@@admin.backups.restoreDialog.lead">
     Web se vrátí do stavu z {{ createdAt() }}, ze zálohy
     <span class="file-name">{{ backup().fileName }}</span
     >.
   </p>
-  <ul class="restore-points">
+  <ul class="ui-dialog__points restore-points">
     <li i18n="@@admin.backups.restoreDialog.lost">
       Co přibylo nebo se změnilo po vytvoření zálohy (registrace, aktuality, nastavení, přiřazené
       platby), se ztratí. Platby z banky za posledních 90 dní se při dalším stažení z Fio doplní
