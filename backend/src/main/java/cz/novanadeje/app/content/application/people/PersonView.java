@@ -9,11 +9,12 @@ import java.util.Optional;
 
 public record PersonView(PersonId id, String name, Optional<String> role, int position, boolean onBoard, Optional<String> boardNote,
                          boolean featured, Optional<PersonImageView> portrait, Optional<PersonImageView> webSignature,
-                         Optional<EmailAddress> personalEmail, Optional<EmailAddress> fundEmail) {
+                         Optional<EmailAddress> personalEmail, Optional<EmailAddress> fundEmail, boolean linkedToAccount) {
 
-    static PersonView of(Person person, MediaImageRepository media) {
+    static PersonView of(Person person, MediaImageRepository media, boolean linkedToAccount) {
         return new PersonView(person.id(), person.details().name(), person.details().role(), person.position(), person.details().onBoard(),
                 person.details().boardNote(), person.details().featured(), PersonImageView.of(person.details().portrait(), media),
-                PersonImageView.of(person.webSignature(), media), person.details().emails().personal(), person.details().emails().fund());
+                PersonImageView.of(person.webSignature(), media), person.details().emails().personal(), person.details().emails().fund(),
+                linkedToAccount);
     }
 }

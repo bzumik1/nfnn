@@ -263,6 +263,30 @@ Feature: An administrator keeps the people of the foundation that the About sect
       | CHANGE_PEOPLE_FOOTNOTE | Upraven řádek pod správní radou. |
       | ADD_PERSON             | Přidána osoba mezi lidi fondu.   |
 
+  Scenario: A person whose e-mail is the confirmed e-mail of an account is linked to it, which grants nothing
+    Given a person registered with email "petr@example.cz" and password "correct horse battery" but has not confirmed the e-mail
+    And "Jana" adds a person:
+      | name      | Eva Vzorová     |
+      | fundEmail | jana@example.cz |
+    And "Jana" adds a person:
+      | name          | Petr Vzor       |
+      | personalEmail | petr@example.cz |
+    When "Jana" asks for the people of the foundation
+    Then the people of the foundation are:
+      | name        | linkedToAccount |
+      | Eva Vzorová | true            |
+      | Petr Vzor   | false           |
+    When "Jana" asks for her own person of the foundation
+    Then the response status is 200
+    And her own person of the foundation is "Eva Vzorová"
+    Given a person "Hana" is registered
+    And "Hana" is an administrator
+    When "Hana" asks for her own person of the foundation
+    Then the response status is 200
+    And she has no own person of the foundation
+    When someone without a token asks for the home content
+    Then the people on the home page carry no e-mail address
+
   Scenario: Removing a person deletes their portrait and their web signature, and removing a web signature deletes it
     Given "Jana" uploads a 640 by 640 pixel PNG image named "eva.png"
     And "Jana" adds a person:
@@ -396,6 +420,9 @@ Feature: An administrator keeps the people of the foundation that the About sect
     Then the response status is 403
     And the problem type ends with "auth/forbidden"
     When "Petr" removes the person "Eva Vzorová"
+    Then the response status is 403
+    And the problem type ends with "auth/forbidden"
+    When "Petr" asks for her own person of the foundation
     Then the response status is 403
     And the problem type ends with "auth/forbidden"
     When someone without a token asks for the people of the foundation

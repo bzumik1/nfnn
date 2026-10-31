@@ -41,6 +41,11 @@ class AdminPeopleController {
         return PeopleResponse.from(people.list(), notes.read(), footnotes.read());
     }
 
+    @GetMapping("/me")
+    OwnPersonResponse mine(@AuthenticationPrincipal Jwt jwt) {
+        return new OwnPersonResponse(people.mine(admin(jwt)).map(PersonResponse::from).orElse(null));
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     PersonResponse add(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody PersonRequest request) {

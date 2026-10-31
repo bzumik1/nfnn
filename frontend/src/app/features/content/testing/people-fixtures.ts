@@ -23,6 +23,7 @@ export function person(overrides: Partial<PersonResponse> = {}): PersonResponse 
     webSignature: null,
     personalEmail: null,
     fundEmail: null,
+    linkedToAccount: false,
     ...overrides,
   };
 }

@@ -296,7 +296,14 @@ describe('Given an administrator and two people of the foundation', () => {
   beforeEach(async () => {
     ({ fixture, http } = await setUp());
     http.expectOne(PEOPLE_URL).flush({
-      members: [person({ personalEmail: 'eva@example.org', fundEmail: 'eva@nfnn.cz' }), ADAM],
+      members: [
+        person({
+          personalEmail: 'eva@example.org',
+          fundEmail: 'eva@nfnn.cz',
+          linkedToAccount: true,
+        }),
+        ADAM,
+      ],
       note: 'Děkujeme.',
       footnote: 'Web zajišťuje Petr Vzor.',
     });
@@ -307,7 +314,11 @@ describe('Given an administrator and two people of the foundation', () => {
 
   it('when the page opens, then the list names both in order with their badges and the note and the line under the board are filled in', () => {
     expect(rows(fixture)).toEqual(['Eva Vzorová', 'Adam Vzor']);
-    expect(badges(fixture)).toEqual(['Karta s portrétem', 'Ve správní radě (předsedkyně)']);
+    expect(badges(fixture)).toEqual([
+      'Karta s portrétem',
+      'Ve správní radě (předsedkyně)',
+      'Propojeno s účtem na webu',
+    ]);
     expect(element<HTMLButtonElement>(fixture, `#person-up-${PERSON_ID}`).disabled).toBe(true);
     expect(element<HTMLButtonElement>(fixture, `#person-down-${OTHER_PERSON_ID}`).disabled).toBe(
       true,
