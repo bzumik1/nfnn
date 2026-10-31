@@ -98,12 +98,23 @@
         },
         "signatory": {
           "type": "object",
-          "required": ["name", "role", "signatureImage"],
+          "required": ["name", "role", "signatureImage", "portraitImage"],
           "additionalProperties": false,
           "properties": {
             "name": { "$ref": "#/$defs/text" },
             "role": { "$ref": "#/$defs/text" },
             "signatureImage": {
+              "oneOf": [
+                { "type": "null" },
+                {
+                  "type": "object",
+                  "required": ["sha256"],
+                  "additionalProperties": false,
+                  "properties": { "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" } }
+                }
+              ]
+            },
+            "portraitImage": {
               "oneOf": [
                 { "type": "null" },
                 {

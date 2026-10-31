@@ -1,0 +1,14 @@
+[
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/receipts/v1/frozen.json",
+    "reason": "1.16 (Jakub 2026-10-30, layout 3B; ownership by the lead 2026-10-31): the frozen signatory gains portraitImage beside signatureImage, the digest of the signatory's portrait prepared for print (a 600 px square JPEG) or null; the case with the signature image also carries a portrait. schemaVersion stays 1: every receipt issued before 1.10 is a test receipt that 1.10 deletes, and the signatory is not part of the signed proof",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/schemas/receipts/v1/frozen.schema.json",
+    "reason": "1.16: the schema of the frozen signatory requires portraitImage, null or {sha256}, beside signatureImage",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  }
+]
