@@ -3,12 +3,14 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   DONATION_ID,
   DONOR_ID,
+  ERASED_RECEIPT_ID,
   GIVING_DONOR_ID,
   LINK_ID,
   MEDIA_ID,
   PAYMENT_ID,
   READ_TOKEN,
   RECEIPT_ID,
+  REPLACING_DONOR_ID,
   UNKNOWN_ID,
   VERIFICATION_LINK,
   WRITE_TOKEN,
@@ -313,6 +315,27 @@ describe('Given an administrator connected with the reading permission only', ()
     expect(stack.logLines).toContain(
       `INFO Tool nfnn_receipt answered donor donor-jana about receipt ${RECEIPT_ID}`,
     );
+  });
+
+  it('when the receipt of an erased donor is read, then it comes without the name, the address and a verification link, as the administration sends it to a connection', async () => {
+    const result = await client.callTool({
+      name: 'nfnn_receipt',
+      arguments: { receiptId: ERASED_RECEIPT_ID },
+    });
+    expect(result.isError).toBeFalsy();
+    const receipt = JSON.parse(textOf(result)) as {
+      donorErased: boolean;
+      verificationLink: string | null;
+      receipt: Record<string, unknown>;
+    };
+    expect(receipt.donorErased).toBe(true);
+    expect(receipt.verificationLink).toBeNull();
+    expect(receipt.receipt['donor']).toMatchObject({
+      name: 'Vymazaný dárce',
+      address: { street: 'Vymazáno', city: 'Vymazáno', postalCode: '00000' },
+    });
+    expect(textOf(result)).not.toContain('Jana Nováková');
+    expect(textOf(result)).not.toContain('Dlouhá 12');
   });
 
   it('when an unknown receipt is read, then the refusal of the administration comes back', async () => {
@@ -851,6 +874,32 @@ describe('Given an administrator connected with the writing permission', () => {
     );
   });
 
+  it('when a donation id is written in capitals, then the administration gets it in the lowercase it accepts', async () => {
+    const result = await client.callTool({
+      name: 'nfnn_issue_receipt',
+      arguments: { donorId: DONOR_ID.toUpperCase(), donationId: DONATION_ID.toUpperCase() },
+    });
+    expect(result.isError).toBeFalsy();
+    const calls = stack.backend.requests.filter((request) => request.path.endsWith('/receipts'));
+    expect(calls.map((call) => call.path)).toEqual([
+      `/api/admin/donations/donors/${DONOR_ID}/receipts`,
+    ]);
+    expect(calls.map((call) => JSON.parse(call.body) as unknown)).toEqual([
+      { donationId: DONATION_ID },
+    ]);
+  });
+
+  it('when issuing would replace a receipt the donor already holds, then the refusal says it is done only on the web, not that a permission is missing', async () => {
+    const result = await client.callTool({
+      name: 'nfnn_issue_receipt',
+      arguments: { donorId: REPLACING_DONOR_ID, year: 2026 },
+    });
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toContain('403 donations/receipt-replacement-in-browser-only');
+    expect(textOf(result)).toContain('only on the web at /sprava');
+    expect(textOf(result)).not.toContain('connect the application again');
+  });
+
   it('when the administration refuses to issue a receipt, then the unknown donor and the replacement cap come back as refusals', async () => {
     const unknown = await client.callTool({
       name: 'nfnn_issue_receipt',
@@ -880,6 +929,12 @@ describe('Given an administrator connected with the writing permission', () => {
     expect(tools.find((tool) => tool.name === 'nfnn_receipts')?.description).toContain(
       'no name or address',
     );
+    expect(tools.find((tool) => tool.name === 'nfnn_receipts')?.description).toContain('WITHDRAWN');
+    expect(issue?.description).toContain('only the first receipt');
+    expect(issue?.description).toContain('403 donations/receipt-replacement-in-browser-only');
+    const read = tools.find((tool) => tool.name === 'nfnn_receipt')?.description ?? '';
+    expect(read).toContain('erased');
+    expect(read).not.toContain('anyone can open');
   });
 
   it('when an argument is malformed, then the tool refuses it before calling the administration', async () => {

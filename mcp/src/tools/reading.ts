@@ -239,7 +239,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Vystavená potvrzení',
       description:
-        'The issued donation receipts, newest issue first, a page at a time: of every donor or of one (`donorId`), and of every year of issue or of one (`issuedIn`: the year the receipt was issued, which its number starts with, so the yearly receipt for 2026 is issued in 2027). Each item has its id, donorId, number, status (ACTIVE, or REPLACED by a newer receipt of the same donation or year), kind (YEARLY or SINGLE), the donation or year it certifies, when it was issued and replaced, its language, the number of gifts and their total, but no name or address: read one whole with nfnn_receipt.',
+        'The issued donation receipts, newest issue first, a page at a time: of every donor or of one (`donorId`), and of every year of issue or of one (`issuedIn`: the year the receipt was issued, which its number starts with, so the yearly receipt for 2026 is issued in 2027). Each item has its id, donorId, number, status (ACTIVE; REPLACED by a newer receipt of the same donation or year; or WITHDRAWN by the foundation), kind (YEARLY or SINGLE), the donation or year it certifies, when it was issued and replaced, its language, the number of gifts and their total, but no name or address: read one whole with nfnn_receipt.',
       inputSchema: z.object({
         donorId: UUID.optional().describe('Only the receipts of this donor.'),
         issuedIn: YEAR.optional().describe('Only the receipts issued in this year.'),
@@ -283,7 +283,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Potvrzení o daru',
       description:
-        "One issued donation receipt whole: its id, donorId, status, kind, number, the donation or year it certifies, when it was issued and replaced, and `receipt`, the data it certifies as they were frozen and signed when it was issued (the foundation, the donor with name, address and variable symbol, the gifts, the total, the signatory and the digest of the signature image on it, the receipt it replaces, the signing key), with `verificationLink`, the address its verification QR code carries, which anyone can open on nfnn.cz to check the receipt. The PDF is drawn only in a browser (the donor's receipts and /sprava), so this answer is data; the receipt texts frozen with it (the wording of the PDF) are left out.",
+        "One issued donation receipt whole: its id, donorId, status, kind, number, the donation or year it certifies, when it was issued and replaced, and `receipt`, the data it certifies as they were frozen and signed when it was issued (the foundation, the donor with name, address and variable symbol, the gifts, the total, the signatory and the digest of the signature image on it, the receipt it replaces, the signing key), with `verificationLink`, the address its verification QR code carries. When the donor's personal data were erased (`donorErased`), the receipt stays as issued, but a connection gets it without the donor's name, company identifier and address, which read as the erasure placeholders, and without the verification link, which carries them; only an administrator on the web at /sprava sees them. The PDF is drawn only in a browser (the donor's receipts and /sprava), so this answer is data; the receipt texts frozen with it (the wording of the PDF) are left out.",
       inputSchema: z.object({ receiptId: UUID }),
       annotations: READ_ONLY,
     },

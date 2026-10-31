@@ -16,6 +16,8 @@ export const MEDIA_ID = '019a0000-0000-7000-8000-000000000004';
 export const DONATION_ID = '019a0000-0000-7000-8000-000000000005';
 export const LINK_ID = '019a0000-0000-7000-8000-000000000006';
 export const RECEIPT_ID = '019a0000-0000-7000-8000-000000000007';
+export const REPLACING_DONOR_ID = '019a0000-0000-7000-8000-000000000008';
+export const ERASED_RECEIPT_ID = '019a0000-0000-7000-8000-000000000009';
 export const VERIFICATION_LINK = 'https://nfnn.cz/overit#1003188506188208640000126520415073310';
 const LOG_MATCHES: Record<string, number[]> = {
   'backend.log': [36],
@@ -587,6 +589,8 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
       ];
     case `GET /api/admin/donations/receipts/${RECEIPT_ID}`:
       return [200, issuedReceipt({ year: 2026 })];
+    case `GET /api/admin/donations/receipts/${ERASED_RECEIPT_ID}`:
+      return [200, erasedDonorsReceipt()];
     case `GET /api/admin/donations/receipts/${UNKNOWN_ID}`:
       return [
         404,
@@ -603,6 +607,16 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
       return [
         404,
         problem(404, 'donations/donor-not-found', 'Dárce nenalezen', 'Takového dárce neznáme.'),
+      ];
+    case `POST /api/admin/donations/donors/${REPLACING_DONOR_ID}/receipts`:
+      return [
+        403,
+        problem(
+          403,
+          'donations/receipt-replacement-in-browser-only',
+          'Nahradit potvrzení jde jen v prohlížeči',
+          'Dárce už má platné potvrzení s jinými údaji.',
+        ),
       ];
     case `POST /api/admin/donations/donors/${GIVING_DONOR_ID}/receipts`:
       return [
@@ -636,6 +650,27 @@ interface ReceiptSubject {
   readonly donationId?: string;
 }
 
+function erasedDonorsReceipt(): Record<string, unknown> {
+  const issued = issuedReceipt({ year: 2026 });
+  const receipt = issued['receipt'] as Record<string, unknown>;
+  return {
+    ...issued,
+    id: ERASED_RECEIPT_ID,
+    donorErased: true,
+    receipt: {
+      ...receipt,
+      donor: {
+        type: 'PERSON',
+        name: 'Vymazaný dárce',
+        companyIdentifier: null,
+        address: { street: 'Vymazáno', city: 'Vymazáno', postalCode: '00000' },
+        variableSymbol: '1234567890',
+      },
+      verification: { keyId: '21fe31df', qrText: null },
+    },
+  };
+}
+
 function issuedReceipt(subject: ReceiptSubject): Record<string, unknown> {
   const yearly = subject.year !== undefined;
   const gifts = yearly
@@ -655,6 +690,7 @@ function issuedReceipt(subject: ReceiptSubject): Record<string, unknown> {
     year: subject.year ?? null,
     issuedAt: '2027-01-15T11:00:00Z',
     supersededAt: null,
+    donorErased: false,
     receipt: {
       schemaVersion: 1,
       kind: yearly ? 'YEARLY' : 'SINGLE',
