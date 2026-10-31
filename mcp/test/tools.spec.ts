@@ -1051,6 +1051,16 @@ describe('Given an administrator connected with the writing permission', () => {
     ).toHaveLength(0);
   });
 
+  it('when a month outside the calendar is given, then the tool refuses it before calling the administration', async () => {
+    for (const month of ['2026-13', '2026-00']) {
+      const result = await client.callTool({ name: 'nfnn_send_report', arguments: { month } });
+      expect(result.isError).toBe(true);
+    }
+    expect(
+      stack.backend.requests.filter((request) => request.path.includes('/report/send')),
+    ).toHaveLength(0);
+  });
+
   it('when plain settings are changed, then the administration gets them and a refused value comes back with its reason', async () => {
     const changed = await client.callTool({
       name: 'nfnn_change_settings',

@@ -10,6 +10,9 @@ import cz.novanadeje.app.operations.domain.backup.BackupKeyUnavailable;
 import cz.novanadeje.app.operations.domain.backup.BackupKeyWordCheck;
 import cz.novanadeje.app.operations.domain.settings.Setting;
 import cz.novanadeje.app.operations.domain.settings.SettingChange;
+import cz.novanadeje.app.operations.domain.settings.SettingError;
+import cz.novanadeje.app.operations.domain.settings.SettingProblem;
+import cz.novanadeje.app.operations.domain.settings.SettingsRejected;
 import cz.novanadeje.app.operations.domain.settings.SetupCode;
 import cz.novanadeje.app.operations.domain.settings.SetupCompleted;
 import cz.novanadeje.app.operations.domain.settings.SetupLocked;
@@ -96,8 +99,12 @@ public class SetupService {
     @Transactional
     public List<Setting> complete(SetupAccess access, List<SettingChange> changes, List<BackupKeyWordCheck> backupKeyWords) {
         requireOpen(access);
-        if (changes.stream().anyMatch(change -> !Setting.inSetup().contains(change.setting()))) {
-            throw new IllegalArgumentException("Only settings of the first setup are set here");
+        List<SettingError> foreign = changes.stream()
+                .filter(change -> !Setting.inSetup().contains(change.setting()))
+                .map(change -> SettingError.of(change.setting(), SettingProblem.NOT_IN_SETUP))
+                .toList();
+        if (!foreign.isEmpty()) {
+            throw new SettingsRejected(foreign);
         }
         Instant now = clock.instant();
         backupKeys.confirmInSetup(backupKeyWords, now);

@@ -54,7 +54,7 @@ const PERSON = {
     ),
 };
 const DAY = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
-const MONTH = z.string().regex(/^\d{4}-\d{2}$/);
+const MONTH = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
 const PLAN_TIME = /^([01][0-9]|2[0-3]):[0-5][0-9]$/;
 const PLAIN_SETTING = z.enum([
   'MAIL_HOST',

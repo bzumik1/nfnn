@@ -15,6 +15,7 @@ import cz.novanadeje.app.support.MutableClock;
 import cz.novanadeje.app.support.RateLimiterWindows;
 import cz.novanadeje.app.support.RecordingMailSender;
 import cz.novanadeje.app.support.ServerReceiptSigningKey;
+import cz.novanadeje.app.support.SwitchablePublicBackupKeyPolicy;
 import cz.novanadeje.app.support.SwitchablePublicTestKeyPolicy;
 import io.cucumber.java.Before;
 import io.cucumber.java.BeforeAll;
@@ -76,6 +77,7 @@ public class CommonStepDefinitions {
         CompanyLookupPause.reset(context.getBean(CompanyLookupService.class));
         ClientErrorCapWindows.reset(context.getBean(ClientErrorCap.class));
         BackupKeyWordDraws.reseed(context.getBean(BackupKeyWordChallenges.class));
+        context.getBean(SwitchablePublicBackupKeyPolicy.class).reset();
         context.getBean(SwitchablePublicTestKeyPolicy.class).reset();
     }
 
@@ -129,6 +131,15 @@ public class CommonStepDefinitions {
                 .filter(error -> error.get("field").asString().equals(field))
                 .map(error -> error.get("message").asString()))
                 .contains(message);
+    }
+
+    @Then("the problem's only error for field {string} says {string}")
+    public void theProblemsOnlyErrorForFieldSays(String field, String message) {
+        assertThat(errorFields()).contains(field);
+        assertThat(api.lastResponseJson().get("errors").valueStream()
+                .filter(error -> error.get("field").asString().equals(field))
+                .map(error -> error.get("message").asString()))
+                .containsExactly(message);
     }
 
     private List<String> errorFields() {

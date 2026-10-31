@@ -2,6 +2,9 @@ package cz.novanadeje.app.operations.interfaces.rest;
 
 import cz.novanadeje.app.operations.domain.settings.Setting;
 import cz.novanadeje.app.operations.domain.settings.SettingChange;
+import cz.novanadeje.app.operations.domain.settings.SettingError;
+import cz.novanadeje.app.operations.domain.settings.SettingProblem;
+import cz.novanadeje.app.operations.domain.settings.SettingsRejected;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
@@ -14,7 +17,7 @@ record SettingValueRequest(@NotBlank @Size(max = MAX_NAME_LENGTH) String name, @
     static final int MAX_SETTINGS = 30;
 
     SettingChange toChange() {
-        Setting setting = Setting.named(name).orElseThrow(() -> new IllegalArgumentException("Unknown setting " + name));
+        Setting setting = Setting.named(name).orElseThrow(() -> new SettingsRejected(List.of(SettingError.ofWhole(SettingProblem.UNKNOWN_SETTING))));
         return new SettingChange(setting, value);
     }
 
