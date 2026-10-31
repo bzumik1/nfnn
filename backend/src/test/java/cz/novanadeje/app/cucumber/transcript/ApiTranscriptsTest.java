@@ -72,6 +72,13 @@ class ApiTranscriptsTest {
     }
 
     @Test
+    @DisplayName("Given the receipt signing seed in the environment, when recording starts, then it is refused without naming its value")
+    void should_refuse_to_record_when_the_receipt_signing_seed_is_in_the_environment() {
+        assertThatThrownBy(() -> ApiTranscripts.refuseRealSecrets(Map.of("RECEIPT_SIGNING_KEY", "UExBTlRFRC1TRUVE")))
+                .isInstanceOf(IllegalStateException.class).hasMessageContaining("RECEIPT_SIGNING_KEY").hasMessageNotContaining("UExBTlRFRC1TRUVE");
+    }
+
+    @Test
     @DisplayName("Given a secret under a name Spring binds by relaxed binding, an application variable or SPRING_APPLICATION_JSON, when recording starts, then it is refused")
     void should_refuse_to_record_when_a_secret_could_reach_spring_under_another_name() {
         for (String name : List.of("APP_OPERATIONS_BACKUPKEY_VALUE", "APP_SECURITY_JWT_SECRET", "APP_DONATIONS_FIO_TOKEN", "SPRING_APPLICATION_JSON",
@@ -101,7 +108,7 @@ class ApiTranscriptsTest {
             }
         }
 
-        assertThat(bound).contains("BACKUP_KEY", "JWT_SECRET", "SETTINGS_KEY", "FIO_TOKEN", "MAIL_PASSWORD").allSatisfy(name ->
+        assertThat(bound).contains("BACKUP_KEY", "JWT_SECRET", "SETTINGS_KEY", "FIO_TOKEN", "MAIL_PASSWORD", "RECEIPT_SIGNING_KEY").allSatisfy(name ->
                 assertThatThrownBy(() -> ApiTranscripts.refuseRealSecrets(Map.of(name, "x"))).as(name).isInstanceOf(IllegalStateException.class));
     }
 

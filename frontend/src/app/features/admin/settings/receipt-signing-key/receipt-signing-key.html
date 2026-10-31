@@ -1,0 +1,74 @@
+<section class="ui-card" aria-labelledby="klic-k-overovacim-qr">
+  <h2
+    id="klic-k-overovacim-qr"
+    class="ui-card__title"
+    tabindex="-1"
+    i18n="@@admin.signingKey.title"
+  >
+    Klíč k ověřovacím QR kódům
+  </h2>
+  <div class="ui-card__body">
+    <p class="ui-card__intro" i18n="@@admin.signingKey.intro">
+      Tímto klíčem server podepisuje ověřovací QR kódy na potvrzeních o daru. Jeho veřejnou část web
+      zveřejňuje, aby se podle ní dala potvrzení ověřit. Klíč vytvořil server sám a tady se nedá
+      změnit.
+    </p>
+
+    @switch (state()) {
+      @case ('loading') {
+        <p class="signing-key-status" role="status" i18n="@@admin.signingKey.loading">
+          Načítáme klíč…
+        </p>
+      }
+      @case ('error') {
+        <div class="signing-key-error" role="alert">
+          <p i18n="@@admin.signingKey.loadFailed">Klíč se nepodařilo načíst.</p>
+          <button type="button" class="ui-button" (click)="load()" i18n="@@admin.signingKey.retry">
+            Zkusit znovu
+          </button>
+        </div>
+      }
+      @case ('ready') {
+        @if (current(); as key) {
+          <dl class="ui-data-list signing-key-data">
+            <div>
+              <dt i18n="@@admin.signingKey.keyId">Klíč serveru</dt>
+              <dd class="ui-mono">{{ key.keyId }}</dd>
+            </div>
+            <div>
+              <dt i18n="@@admin.signingKey.registeredAt">Zaregistrovaný</dt>
+              <dd>{{ registeredAt(key.registeredAt) }}</dd>
+            </div>
+            <div>
+              <dt i18n="@@admin.signingKey.state">Stav</dt>
+              @if (key.published) {
+                <dd i18n="@@admin.signingKey.published">Zveřejněný</dd>
+              } @else {
+                <dd i18n="@@admin.signingKey.notPublished">Nezveřejněný</dd>
+              }
+            </div>
+          </dl>
+        } @else if (currentKeyId(); as keyId) {
+          <dl class="ui-data-list signing-key-data">
+            <div>
+              <dt i18n="@@admin.signingKey.keyId">Klíč serveru</dt>
+              <dd class="ui-mono">{{ keyId }}</dd>
+            </div>
+            <div>
+              <dt i18n="@@admin.signingKey.state">Stav</dt>
+              <dd i18n="@@admin.signingKey.notPublished">Nezveřejněný</dd>
+            </div>
+          </dl>
+        }
+        @if (earlier(); as earlier) {
+          <p class="signing-key-earlier">{{ earlier }}</p>
+        }
+        <div role="alert">
+          @if (unpublished(); as unpublished) {
+            <p class="ui-callout ui-callout--danger">{{ unpublished }}</p>
+          }
+        </div>
+      }
+    }
+  </div>
+</section>

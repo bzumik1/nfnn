@@ -26,10 +26,12 @@ import cz.novanadeje.app.shared.domain.PostalAddress;
 import cz.novanadeje.app.shared.domain.UuidV7;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 import cz.novanadeje.app.support.DatabaseCleaner;
+import cz.novanadeje.app.support.ServerReceiptSigningKey;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 import java.time.Instant;
@@ -69,10 +71,13 @@ class AdminSymbolClaimsServiceIntegrationTest {
     private BankPaymentRepository payments;
     @Autowired
     private JdbcClient jdbc;
+    @Autowired
+    private ApplicationContext context;
 
     @BeforeEach
     void startFromEmptyTables() {
         new DatabaseCleaner(jdbc).emptyAllTables();
+        ServerReceiptSigningKey.storeAfterEmptyTables(context);
     }
 
     @Test

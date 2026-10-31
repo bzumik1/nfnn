@@ -100,6 +100,7 @@ test.describe('Given an administrator on the settings page', () => {
     await expect(page.getByRole('heading', { level: 2 })).toHaveText([
       'Potvrzení o daru',
       'Podpis na potvrzeních',
+      'Klíč k ověřovacím QR kódům',
       'Kontaktní formulář',
       'Odesílatel e-mailů',
       'Technické nastavení (pro správce serveru)',

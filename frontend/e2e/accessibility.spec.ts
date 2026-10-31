@@ -1409,6 +1409,35 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
+  test('when the receipt signing key of the server is not published, then the red row on the home page and the alert on the key card break no rule', async ({
+    page,
+  }) => {
+    await page.route(
+      (url) => url.pathname === '/api/admin/donations/receipt-signing-keys',
+      (route) =>
+        route.fulfill({ json: { currentKeyId: '21fe31df', currentKeyPublished: false, keys: [] } }),
+    );
+    await page.route(
+      (url) => url.pathname === '/api/admin/operations/settings',
+      (route) => route.fulfill({ json: adminSettings }),
+    );
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.goto('/');
+    await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
+    await page.goto('/sprava');
+    await expect(page.locator('.attention-signing-key')).toContainText(
+      'Klíč 21fe31df není zveřejněný',
+    );
+    expect(await violations(page)).toEqual([]);
+
+    await page.goto('/sprava/nastaveni');
+    const card = page.getByRole('region', { name: 'Klíč k ověřovacím QR kódům' });
+    await expect(card.getByRole('alert')).toContainText('Klíč 21fe31df není zveřejněný');
+    expect(await violations(page)).toEqual([]);
+  });
+
   test('when an administrator reads the logs, searches, raises a level and opens the thread dump, then the page breaks no rule', async ({
     page,
   }) => {

@@ -26,6 +26,7 @@ const TOTP_CASES = 'qr/totp.json';
 const TOTP_URI_CASES = 'totp/uri.json';
 const RECEIPT_CASES = 'receipts/formatting.json';
 const VECTOR_CASES = 'signature/vector.json';
+const VERIFICATION_CASES = 'verification/payload.json';
 const FINDER_SPAN = 17;
 const MODULES_PER_VERSION = 4;
 
@@ -377,6 +378,48 @@ describe('Given the vector signature cases', () => {
 
     expect(schemaViolations(VECTOR_CASES, file).join('\n')).toMatch(
       /\/cases\/0\/expected\/canonical must match pattern/,
+    );
+  });
+});
+
+describe('Given the verification proof cases', () => {
+  const chunkDigits = [0, 3, 5, 8, 10, 13, 15, 17];
+
+  it('when each encoding case is checked, then its text carries exactly as many digits as its body and signature need', () => {
+    const encodings = sharedCases(VERIFICATION_CASES).flatMap((sharedCase) =>
+      'payloadHex' in sharedCase.expected ? [sharedCase.expected] : [],
+    );
+    expect(encodings.length).toBeGreaterThan(0);
+    for (const proof of encodings) {
+      const bytes = (proof.payloadHex.length + proof.signatureHex.length) / 2;
+      const digits = 17 * Math.floor(bytes / 7) + chunkDigits[bytes % 7];
+      expect(proof.qrText).toHaveLength('https://nfnn.cz/overit#1'.length + digits);
+    }
+  });
+
+  it('when a reading case is rejected for a reason no reader gives, then it is refused', () => {
+    const file = editable(VERIFICATION_CASES);
+    const rejected = file.cases.find((sharedCase) => sharedCase.expected['verdict'] === 'rejected');
+    if (rejected === undefined) {
+      throw new Error(`${VERIFICATION_CASES} holds no rejected reading case`);
+    }
+    rejected.expected['reason'] = 'looks-odd';
+
+    expect(schemaViolations(VERIFICATION_CASES, file).join('\n')).toMatch(
+      /expected\/reason must be equal to one of the allowed values/,
+    );
+  });
+
+  it('when an encoding case names a refusal other than a receipt too long, then it is refused', () => {
+    const file = editable(VERIFICATION_CASES);
+    const encoding = file.cases.find((sharedCase) => 'payloadHex' in sharedCase.expected);
+    if (encoding === undefined) {
+      throw new Error(`${VERIFICATION_CASES} holds no encoding case`);
+    }
+    encoding.expected['qr'] = { refusal: 'donations/rate-limited' };
+
+    expect(schemaViolations(VERIFICATION_CASES, file).join('\n')).toMatch(
+      /expected\/qr\/refusal must be equal to constant/,
     );
   });
 });

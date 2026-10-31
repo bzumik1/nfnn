@@ -110,6 +110,32 @@ describe('Given an administrator connected with the reading permission only', ()
     expect(text).toContain('"outcome":"OK"');
   });
 
+  it('when the status is asked, then it names the receipt signing key with its registration time and flags a key that fails its seal', async () => {
+    const result = await client.callTool({ name: 'nfnn_status', arguments: {} });
+    expect(stack.backend.requests.map((request) => request.path)).toContain(
+      '/api/admin/donations/receipt-signing-keys',
+    );
+    expect(textOf(result)).toContain(
+      '"receiptSigningKeys":{"currentKeyId":"21fe31df","currentKeyRegisteredAt":"2026-11-13T12:00:00+01:00","currentKeyPublished":true,"unpublishedKeyIds":["39f713d0"],"attention":true}',
+    );
+  });
+
+  it('when the status is asked of a backend without the receipt signing keys, then the rest still comes and the key part says it is unavailable', async () => {
+    stack.backend.receiptSigningKeysAvailable = false;
+    try {
+      const result = await client.callTool({ name: 'nfnn_status', arguments: {} });
+      expect(result.isError).toBeFalsy();
+      const text = textOf(result);
+      expect(text).toContain('"revision":"abc1234"');
+      expect(text).toContain('"outcome":"OK"');
+      expect(text).toContain(
+        '"receiptSigningKeys":{"unavailable":"404 not-found: Nenalezeno","attention":true}',
+      );
+    } finally {
+      stack.backend.receiptSigningKeysAvailable = true;
+    }
+  });
+
   it('when the tools are listed, then the overview says it counts the donors who gave in each month', async () => {
     const { tools } = await client.listTools();
     expect(tools.find((tool) => tool.name === 'nfnn_overview')?.description).toContain(

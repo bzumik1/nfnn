@@ -49,6 +49,7 @@ export interface RecordedRequest {
 export class FakeBackend {
   readonly requests: RecordedRequest[] = [];
   metadataAvailable = true;
+  receiptSigningKeysAvailable = true;
   previousSignInAt: string | null = '2026-10-28T20:14:00Z';
   signatureIsVector = false;
   private server: Server | undefined;
@@ -132,6 +133,12 @@ export class FakeBackend {
     ) {
       return [200, VECTOR_SIGNATURE];
     }
+    if (
+      !this.receiptSigningKeysAvailable &&
+      url.pathname === '/api/admin/donations/receipt-signing-keys'
+    ) {
+      return [404, problem(404, 'not-found', 'Nenalezeno')];
+    }
     return adminRoute(request, url, body);
   }
 }
@@ -150,6 +157,30 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
           coveredTo: '2026-10-22',
           lastSucceededAt: '2026-10-23T05:00:00Z',
           consecutiveFailures: 0,
+        },
+      ];
+    case 'GET /api/admin/donations/receipt-signing-keys':
+      return [
+        200,
+        {
+          currentKeyId: '21fe31df',
+          currentKeyPublished: true,
+          keys: [
+            {
+              keyId: '39f713d0',
+              status: 'active',
+              registeredAt: '2026-11-01T07:00:00Z',
+              published: false,
+              current: false,
+            },
+            {
+              keyId: '21fe31df',
+              status: 'active',
+              registeredAt: '2026-11-13T11:00:00Z',
+              published: true,
+              current: true,
+            },
+          ],
         },
       ];
     case 'GET /api/admin/operations/backups':

@@ -9,16 +9,20 @@ import cz.novanadeje.app.donations.domain.donation.DonationStatus;
 import cz.novanadeje.app.donations.domain.donation.PairingMethod;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
+import cz.novanadeje.app.donations.domain.receipt.proof.ReceiptProof;
+import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyId;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.Money;
 import cz.novanadeje.app.shared.domain.PostalAddress;
 import cz.novanadeje.app.shared.domain.UuidV7;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Year;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public final class Receipts {
@@ -35,12 +39,10 @@ public final class Receipts {
             "V Novém Boru", "Nový Bor");
     public static final Signatory SIGNATORY = new Signatory("Pavel Znamenáček", "předseda správní rady");
     public static final ReceiptNumber FIRST_NUMBER = ReceiptNumber.of(Year.of(2027), 1);
-    public static final ContentDigest TEMPLATE_DIGEST = new ContentDigest("1".repeat(64));
-    public static final ContentDigest LOGO_DIGEST = new ContentDigest("2".repeat(64));
-    public static final ContentDigest PDF_DIGEST = new ContentDigest("3".repeat(64));
-    public static final ReceiptSnapshot SNAPSHOT = new ReceiptSnapshot(TEMPLATE_DIGEST, "{\"number\":\"2027-000001\"}", LOGO_DIGEST,
-            Optional.empty(), 1);
-    public static final ReceiptContent SNAPSHOT_CONTENT = new ReceiptContent(SNAPSHOT, PDF_DIGEST);
+    public static final ReceiptSigningKeyId KEY_ID = new ReceiptSigningKeyId("21fe31df");
+    public static final ReceiptTextSet CZECH_TEXTS = ReceiptTextSet.czechOnly(Map.of("receipt.title.single", "Potvrzení o přijetí daru"));
+    public static final ReceiptTextSet BILINGUAL_TEXTS = ReceiptTextSet.bilingual(Map.of("receipt.title.single", "Potvrzení o přijetí daru"),
+            Map.of("receipt.title.single", "Confirmation of a donation received"));
 
     private Receipts() {
     }
@@ -87,8 +89,28 @@ public final class Receipts {
     }
 
     public static DonationReceipt yearlyReceiptOf(DonorReference donor, Year year) {
-        return DonationReceipt.issueForYear(DonationReceiptId.newId(NOW), donor, year, FIRST_NUMBER, TODAY, NOW, LocaleCode.CS,
-                new ReceiptFingerprint("4".repeat(64)), SNAPSHOT_CONTENT, Optional.empty());
+        DonorRecord record = DonorRecord.registerPerson(donor, "Jana Nováková", JANA_ADDRESS, new VariableSymbol("4821937560"), LocaleCode.CS, NOW);
+        Donation donation = donation(donor, year.atDay(1), 50000, DonationStatus.RECEIVED);
+        ReceiptDocument document = ReceiptDocumentFactory.forYear(record, year, List.of(donation), FOUNDATION, SIGNATORY, FIRST_NUMBER, TODAY,
+                LocaleCode.CS, Optional.empty());
+        return DonationReceipt.issue(DonationReceiptId.newId(NOW), donor, NOW, new ReceiptFingerprint("4".repeat(64)), frozen(document),
+                Optional.empty());
+    }
+
+    public static FrozenReceipt frozen(ReceiptDocument document) {
+        return frozen(document, Optional.empty());
+    }
+
+    public static FrozenReceipt frozen(ReceiptDocument document, Optional<ContentDigest> signatureImage) {
+        return new FrozenReceipt(document, document.locale() == LocaleCode.EN ? BILINGUAL_TEXTS : CZECH_TEXTS, signatureImage,
+                verificationOf(document.number()));
+    }
+
+    public static ReceiptVerification verificationOf(ReceiptNumber number) {
+        byte[] body = ("proof of " + number.value()).getBytes(StandardCharsets.UTF_8);
+        byte[] signature = new byte[ReceiptProof.SIGNATURE_BYTES];
+        signature[0] = 1;
+        return new ReceiptVerification(KEY_ID, new ReceiptProof(body, signature));
     }
 
     private static Donation donation(DonorReference donor, LocalDate receivedOn, long amountMinor, DonationStatus status) {

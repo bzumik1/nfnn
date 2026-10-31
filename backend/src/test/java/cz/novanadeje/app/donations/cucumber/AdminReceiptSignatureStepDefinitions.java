@@ -4,11 +4,6 @@ import cz.novanadeje.app.cucumber.ApiClient;
 import cz.novanadeje.app.cucumber.DonorSessions;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
-import org.apache.pdfbox.Loader;
-import org.apache.pdfbox.cos.COSName;
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.pdmodel.PDPage;
-import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import tools.jackson.databind.JsonNode;
 
 import javax.imageio.ImageIO;
@@ -155,21 +150,6 @@ public class AdminReceiptSignatureStepDefinitions {
         assertThat(first.get("opacity").decimalValue()).isEqualByComparingTo("0.9");
         assertThat(vector.properties()).extracting(Map.Entry::getKey).containsExactlyInAnyOrder("viewBox", "paths");
         assertThat(first.properties()).extracting(Map.Entry::getKey).containsExactlyInAnyOrder("d", "fill", "opacity");
-    }
-
-    @Then("the PDF shows {int} image(s)")
-    public void thePdfShowsImages(int count) throws IOException {
-        int images = 0;
-        try (PDDocument document = Loader.loadPDF(api.lastResponseBytes())) {
-            for (PDPage page : document.getPages()) {
-                for (COSName name : page.getResources().getXObjectNames()) {
-                    if (page.getResources().getXObject(name) instanceof PDImageXObject) {
-                        images++;
-                    }
-                }
-            }
-        }
-        assertThat(images).isEqualTo(count);
     }
 
     private static byte[] jpeg(int width, int height) {

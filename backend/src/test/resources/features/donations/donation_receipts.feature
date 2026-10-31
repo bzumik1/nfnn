@@ -32,7 +32,7 @@ Feature: A donor downloads PDF receipts of their donations
     And the PDF says "předseda správní rady"
     And the PDF does not say "Confirmation"
     And 1 receipt is stored
-    And receipt "2027-000001" is kept as its template and data
+    And receipt "2027-000001" is kept as its frozen data
 
   Scenario: Downloading the yearly receipt again serves the same document
     Given today is 2026-12-20

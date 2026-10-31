@@ -26,6 +26,8 @@ import {
   PairedDonationResponse,
   ReceiptSignatureResponse,
   SignatureVectorResponse,
+  ReceiptSigningKeyResponse,
+  ReceiptSigningKeysResponse,
   SymbolClaimResponse,
 } from '../admin-api';
 import { BankAccountItem } from '../../donations/bank-accounts-api';
@@ -453,6 +455,32 @@ export function noReceiptSignature(): ReceiptSignatureResponse {
     width: null,
     height: null,
     uploadedAt: null,
+  };
+}
+
+export function receiptSigningKey(
+  overrides: Partial<ReceiptSigningKeyResponse> = {},
+): ReceiptSigningKeyResponse {
+  return {
+    keyId: '21fe31df',
+    algorithm: 'Ed25519',
+    publicKey: '11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo',
+    status: 'active',
+    registeredAt: '2026-11-13T11:00:00Z',
+    published: true,
+    current: true,
+    ...overrides,
+  };
+}
+
+export function receiptSigningKeys(
+  keys: ReceiptSigningKeyResponse[] = [receiptSigningKey()],
+): ReceiptSigningKeysResponse {
+  const current = keys.find((key) => key.current);
+  return {
+    currentKeyId: current?.keyId ?? '21fe31df',
+    currentKeyPublished: current?.published ?? false,
+    keys,
   };
 }
 
