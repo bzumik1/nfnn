@@ -147,6 +147,40 @@ class ReceiptSigningKeyWithdrawalTest {
     }
 
     @Test
+    @DisplayName("Given a refused second factor, when an administrator withdraws a key, then the refusal is recorded without the row ever being locked, so a refused code never holds the row while it is audited")
+    void should_record_the_refusal_without_locking_when_withdrawn_given_a_refused_second_factor() {
+        doThrow(new RuleViolation("donors/second-factor-code-rejected", "refused")).when(freshSecondFactor).require(ADMIN, CODE);
+
+        assertThatThrownBy(() -> withdrawal.withdraw(ADMIN, OWN, CODE)).isInstanceOf(RuleViolation.class);
+
+        verify(refusals).record(ADMIN, OWN, NOW);
+        assertThat(stored.locks).isZero();
+    }
+
+    @Test
+    @DisplayName("Given five refused second factors of the administrator in the last quarter of an hour, when they withdraw a key, then the row is never locked")
+    void should_not_lock_when_withdrawn_given_five_recent_refusals() {
+        when(refusals.paused(ADMIN, NOW)).thenReturn(true);
+
+        assertThatThrownBy(() -> withdrawal.withdraw(ADMIN, OWN, CODE)).isInstanceOf(ReceiptSigningKeyWithdrawalPaused.class);
+
+        assertThat(stored.locks).isZero();
+    }
+
+    @Test
+    @DisplayName("Given another withdrawal of the key committed while the second factor was checked, when the row is locked, then it is refused as already withdrawn and nothing is stored, audited or announced")
+    void should_refuse_as_already_withdrawn_when_locked_given_a_withdrawal_committed_meanwhile() {
+        stored.withdrawnBeforeLock = true;
+
+        assertThatThrownBy(() -> withdrawal.withdraw(ADMIN, OWN, CODE)).isInstanceOf(ReceiptSigningKeyAlreadyWithdrawn.class);
+
+        verify(freshSecondFactor).require(ADMIN, CODE);
+        assertThat(stored.locks).isEqualTo(1);
+        assertThat(stored.saves).isZero();
+        verify(events, never()).publishEvent(any());
+    }
+
+    @Test
     @DisplayName("Given five refused second factors of the administrator in the last quarter of an hour, when they withdraw a key, then it is refused as paused before any second factor is checked")
     void should_refuse_as_paused_when_withdrawn_given_five_recent_refusals() {
         when(refusals.paused(ADMIN, NOW)).thenReturn(true);
@@ -213,6 +247,8 @@ class ReceiptSigningKeyWithdrawalTest {
 
         private final List<ReceiptSigningKey> rows = new ArrayList<>();
         private int saves;
+        private int locks;
+        private boolean withdrawnBeforeLock;
 
         ReceiptSigningKey row(ReceiptSigningKeyId id) {
             return rows.stream().filter(key -> key.id().equals(id)).findFirst().orElseThrow();
@@ -225,7 +261,9 @@ class ReceiptSigningKeyWithdrawalTest {
 
         @Override
         public Optional<ReceiptSigningKey> lockForWithdrawal(ReceiptSigningKeyId id) {
-            return rows.stream().filter(key -> key.id().equals(id)).findFirst();
+            locks++;
+            Optional<ReceiptSigningKey> row = rows.stream().filter(key -> key.id().equals(id)).findFirst();
+            return withdrawnBeforeLock ? row.map(key -> key.withdrawn(content -> "here:" + HexFormat.of().formatHex(content).hashCode())) : row;
         }
 
         @Override
