@@ -1,6 +1,6 @@
 import { Location } from '@angular/common';
 import { TestBed } from '@angular/core/testing';
-import { Meta } from '@angular/platform-browser';
+import { By, Meta } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import type { SignedReceipt } from './receipt-proof';
@@ -9,6 +9,7 @@ import {
   type VerificationOutcome,
   type VerificationStep,
 } from './receipt-verifier';
+import { ProofInput } from './proof-input';
 import { VerificationPage } from './verification-page';
 
 const SINGLE: SignedReceipt = {
@@ -374,7 +375,7 @@ describe('Given the verification page', () => {
     [
       { state: 'revoked' },
       'Neověřeno: fond tento klíč zneplatnil',
-      'Kód je podepsaný klíčem, který fond přestal používat, protože se mohl dostat do cizích rukou. Potvrzení nepovažujte za ověřené a požádejte fond o nové na info@nfnn.cz.',
+      'Kód je podepsaný klíčem, který fond přestal používat, protože se mohl dostat do cizích rukou. Potvrzení nepovažujte za ověřené a napište fondu na info@nfnn.cz s číslem potvrzení.',
       RED,
       false,
     ],
@@ -423,7 +424,7 @@ describe('Given the verification page', () => {
     [
       { state: 'broken' },
       'Odkaz je neúplný',
-      'Kód se nepřečetl celý, nebo je adresa opsaná s chybou. Naskenujte ho znovu, blíž a se světlem.',
+      'Kód v odkazu není celý, nebo je adresa opsaná s chybou. Otevřete odkaz z PDF potvrzení znovu, nebo načtěte jeho QR kód.',
       AMBER,
       false,
     ],
@@ -487,6 +488,32 @@ describe('Given the verification page', () => {
     expect(heading().textContent?.trim()).toBe('Podepsáno fondem Nová naděje');
     expect(document.activeElement).toBe(heading());
   });
+
+  for (const [way, scanned, copy] of [
+    [
+      'read by the camera or from a photo',
+      true,
+      'Kód se nepřečetl celý, nebo je adresa opsaná s chybou. Naskenujte ho znovu, blíž a se světlem.',
+    ],
+    [
+      'taken from a pasted link or a PDF',
+      false,
+      'Kód v odkazu není celý, nebo je adresa opsaná s chybou. Otevřete odkaz z PDF potvrzení znovu, nebo načtěte jeho QR kód.',
+    ],
+  ] as const) {
+    it(`when a broken code ${way} is verified, then the page says what to do with that code`, async () => {
+      await open('/overit');
+      verifier.answer = () => Promise.resolve({ state: 'broken' });
+
+      harness.fixture.debugElement
+        .query(By.directive(ProofInput))
+        .componentInstance.found.emit({ fragment: '1234', scanned });
+      await settle();
+
+      expect(verifier.calls).toEqual([null, '1234']);
+      expect(lead()).toBe(copy);
+    });
+  }
 
   it('when another code arrives in the address, then that code is verified', async () => {
     await open(`/overit#${FRAGMENT}`, { state: 'broken' });

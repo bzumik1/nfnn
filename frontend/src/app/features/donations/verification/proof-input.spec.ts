@@ -97,6 +97,7 @@ describe('Given the ways to read a receipt code on the verification page', () =>
   let device: FakeDevice;
   let reader: FakeReader;
   let found: string[];
+  let scanned: boolean[];
 
   async function render(): Promise<void> {
     TestBed.configureTestingModule({
@@ -108,7 +109,11 @@ describe('Given the ways to read a receipt code on the verification page', () =>
     });
     fixture = TestBed.createComponent(ProofInput);
     found = [];
-    fixture.componentInstance.found.subscribe((fragment) => found.push(fragment));
+    scanned = [];
+    fixture.componentInstance.found.subscribe((proof) => {
+      found.push(proof.fragment);
+      scanned.push(proof.scanned);
+    });
     fixture.detectChanges();
     await fixture.whenStable();
   }
@@ -217,6 +222,7 @@ describe('Given the ways to read a receipt code on the verification page', () =>
       await settle();
 
       expect(found).toEqual([DIGITS]);
+      expect(scanned).toEqual([true]);
       expect(device.track.stopped).toBe(true);
       expect(button('Zastavit skenování')).toBeUndefined();
     });
@@ -463,6 +469,7 @@ describe('Given the ways to read a receipt code on the verification page', () =>
       await choose(pdfFile('https://nfnn.cz/kontakt', LINK));
 
       expect(found).toEqual([DIGITS]);
+      expect(scanned).toEqual([false]);
     });
 
     it('and the PDF carries no verification link, then it says to upload the PDF from the site', async () => {
@@ -486,6 +493,7 @@ describe('Given the ways to read a receipt code on the verification page', () =>
       await choose(new File(['jpeg'], 'kod.jpg', { type: 'image/jpeg' }));
 
       expect(found).toEqual([DIGITS]);
+      expect(scanned).toEqual([true]);
     });
 
     it('and the photo shows no code, then it says how to take a better one', async () => {
@@ -584,6 +592,7 @@ describe('Given the ways to read a receipt code on the verification page', () =>
       await paste(`  ${LINK}  `);
 
       expect(found).toEqual([DIGITS]);
+      expect(scanned).toEqual([false]);
     });
 
     it('and it is another link, then the field says what a verification link looks like', async () => {

@@ -2535,6 +2535,76 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(savedFiles).toEqual([]);
     });
 
+    it('then a receipt refused because no signatory has been chosen yet shows the title and detail of that problem, which says why no receipt can be issued yet, not to try again at once', async () => {
+      await open('/darce/potvrzeni');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      await downloadYear(2025);
+      receiptRequest({ year: 2025 }).flush(
+        {
+          ...problemBody(
+            'donations/receipt-signatory-missing',
+            'Potvrzení teď nemá kdo podepsat',
+            409,
+          ),
+          detail:
+            'Fond zatím nevybral, kdo potvrzení o daru podepisuje, proto nové potvrzení vystavit nejde. Zkuste to prosím později nebo nám napište na info@nfnn.cz.',
+        },
+        { status: 409, statusText: 'Conflict' },
+      );
+      await settleBlobFailure();
+
+      expect(text('.yearly-card [role="alert"]')).toBe(
+        'Potvrzení teď nemá kdo podepsat. Fond zatím nevybral, kdo potvrzení o daru podepisuje, proto nové potvrzení vystavit nejde. Zkuste to prosím později nebo nám napište na info@nfnn.cz.',
+      );
+      expect(savedFiles).toEqual([]);
+    });
+
+    it('then a receipt refused because the daily limit of new receipts is reached shows the title and detail of that problem, which says when the next one comes', async () => {
+      await open('/darce/potvrzeni');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      await downloadYear(2025);
+      receiptRequest({ year: 2025 }).flush(
+        {
+          ...problemBody('donations/receipt-issue-limit', 'Nové potvrzení teď nejde vydat', 409),
+          detail:
+            'Za posledních 24 hodin jsme vám 20krát vydali nové potvrzení místo dřívějšího, což je nejvíc, kolik za den vydáváme. Další vám vydáme nejdřív 24 hodin po prvním z nich; potvrzení, které už máte, dál platí.',
+        },
+        { status: 409, statusText: 'Conflict' },
+      );
+      await settleBlobFailure();
+
+      expect(text('.yearly-card [role="alert"]')).toBe(
+        'Nové potvrzení teď nejde vydat. Za posledních 24 hodin jsme vám 20krát vydali nové potvrzení místo dřívějšího, což je nejvíc, kolik za den vydáváme. Další vám vydáme nejdřív 24 hodin po prvním z nich; potvrzení, které už máte, dál platí.',
+      );
+      expect(savedFiles).toEqual([]);
+    });
+
+    it('then a receipt refused because the receipt holds too many gifts for its verification code shows the title and detail of that problem, which says whom to write to', async () => {
+      await open('/darce/potvrzeni');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      await downloadYear(2025);
+      receiptRequest({ year: 2025 }).flush(
+        {
+          ...problemBody(
+            'donations/receipt-too-long',
+            'Potvrzení má příliš mnoho darů pro ověřovací QR kód',
+            409,
+          ),
+          detail: 'O potvrzení s tolika dary nám prosím napište na info@nfnn.cz.',
+        },
+        { status: 409, statusText: 'Conflict' },
+      );
+      await settleBlobFailure();
+
+      expect(text('.yearly-card [role="alert"]')).toBe(
+        'Potvrzení má příliš mnoho darů pro ověřovací QR kód. O potvrzení s tolika dary nám prosím napište na info@nfnn.cz.',
+      );
+      expect(savedFiles).toEqual([]);
+    });
+
     it('then an issued receipt with a character no receipt can print asks the donor to write to the foundation, not to try another browser', async () => {
       await open('/darce/potvrzeni');
       await respond(twoYearSummary(), twoYearDonations());

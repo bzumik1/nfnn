@@ -322,6 +322,9 @@ describe('Given the receipt signing key section of the receipt settings', () => 
       expect(text('dialog .withdrawal-points')).toContain(
         'Je to klíč, kterým server teď podepisuje. Web se hned restartuje',
       );
+      expect(text('dialog .withdrawal-points')).toContain(
+        'Dárcům, kteří kvůli potvrzení s tímto klíčem napíšou na info@nfnn.cz, odpovězte, že ho stránka nfnn.cz/overit už neověří a nové potvrzení jim web zatím vydat neumí. Údaje potvrzení jim můžete potvrdit sami podle jeho čísla.',
+      );
       expect(document.activeElement).toBe(root().querySelector('#withdrawal-code'));
       expect(root().querySelectorAll('dialog [autofocus]')).toHaveLength(1);
       expect(buttons()).not.toContain('Potvrdit přístupovým klíčem');

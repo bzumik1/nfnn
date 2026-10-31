@@ -25,6 +25,11 @@ import type { QrImage } from './qr-image';
 import { QrReader } from './qr-reader';
 import { PictureTooLarge, SCAN_DEVICE } from './scan-device';
 
+export interface FoundProof {
+  readonly fragment: string;
+  readonly scanned: boolean;
+}
+
 export const SCAN_INTERVAL_MS = 250;
 export const SCAN_TIME_LIMIT_MS = 120_000;
 export const LARGEST_FILE_BYTES = 20 * 1024 * 1024;
@@ -82,7 +87,7 @@ export class ProofInput {
   private limitTimer: ReturnType<typeof setTimeout> | null = null;
   private scanRun = 0;
 
-  readonly found = output<string>();
+  readonly found = output<FoundProof>();
 
   protected readonly hasCamera = this.device.hasCamera();
   protected readonly scan = signal<Scan>('idle');
@@ -170,7 +175,7 @@ export class ProofInput {
     try {
       if (file.type === PDF_TYPE || PDF_NAME.test(file.name)) {
         const fragment = proofFragmentInPdf(new Uint8Array(await file.arrayBuffer()));
-        this.handOver(fragment, PDF_WITHOUT_LINK);
+        this.handOver(fragment, PDF_WITHOUT_LINK, false);
         return;
       }
       let image: QrImage;
@@ -181,7 +186,7 @@ export class ProofInput {
         this.problem.set({ way: 'file', text });
         return;
       }
-      this.handOverCodes(await this.reader.read(image), PICTURE_WITHOUT_CODE);
+      this.handOverCodes(await this.reader.read(image), PICTURE_WITHOUT_CODE, true);
     } catch {
       this.problem.set({ way: 'file', text: FILE_UNREADABLE });
     } finally {
@@ -195,7 +200,7 @@ export class ProofInput {
     }
     const fragment = proofFragment(this.link);
     if (fragment !== null) {
-      this.handOverFound(fragment);
+      this.handOverFound(fragment, false);
     }
   }
 
@@ -221,7 +226,7 @@ export class ProofInput {
     }
     const fragment = firstProof(codes);
     if (fragment !== null) {
-      this.handOverFound(fragment);
+      this.handOverFound(fragment, true);
       return;
     }
     if (codes.length > 0) {
@@ -247,26 +252,26 @@ export class ProofInput {
     afterNextRender(() => this.focusIfLost(this.scanButton()), { injector: this.injector });
   }
 
-  private handOverCodes(codes: readonly string[], noCode: string): void {
+  private handOverCodes(codes: readonly string[], noCode: string, scanned: boolean): void {
     const fragment = firstProof(codes);
-    this.handOver(fragment, codes.length > 0 ? FOREIGN_CODE : noCode);
+    this.handOver(fragment, codes.length > 0 ? FOREIGN_CODE : noCode, scanned);
   }
 
-  private handOver(fragment: string | null, otherwise: string): void {
+  private handOver(fragment: string | null, otherwise: string, scanned: boolean): void {
     if (fragment === null) {
       this.problem.set({ way: 'file', text: otherwise });
       return;
     }
-    this.handOverFound(fragment);
+    this.handOverFound(fragment, scanned);
   }
 
-  private handOverFound(fragment: string): void {
+  private handOverFound(fragment: string, scanned: boolean): void {
     if (this.destroyRef.destroyed) {
       return;
     }
     this.stopCamera();
     this.problem.set(null);
-    this.found.emit(fragment);
+    this.found.emit({ fragment, scanned });
   }
 
   private stopCamera(): void {
