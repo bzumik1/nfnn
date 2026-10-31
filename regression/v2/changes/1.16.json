@@ -360,129 +360,6 @@
   },
   {
     "path": "POST /api/donations/me/receipts",
-    "scenario": "donations/admin_receipts: The administration lists the issued receipts newest first, a page at a time, by donor and by the year of issue, and reads one with its image*",
-    "kind": "body",
-    "field": "$.id",
-    "reason": "1.16: the signature is uploaded for the person who signs (POST /api/admin/donations/receipt-signatures/{personId}) instead of the singleton, so the person's id is numbered first and the masked ids after it move by one; the answers are the same",
-    "contract": "docs/api-contract.md, Receipt signatory and signatures"
-  },
-  {
-    "path": "POST /api/donations/me/receipts",
-    "scenario": "donations/admin_receipts: The administration lists the issued receipts newest first, a page at a time, by donor and by the year of issue, and reads one with its image*",
-    "kind": "body",
-    "field": "$.donationId",
-    "reason": "1.16: the signature is uploaded for the person who signs (POST /api/admin/donations/receipt-signatures/{personId}) instead of the singleton, so the person's id is numbered first and the masked ids after it move by one; the answers are the same",
-    "contract": "docs/api-contract.md, Receipt signatory and signatures"
-  },
-  {
-    "path": "GET /api/admin/donations/receipts",
-    "scenario": "donations/admin_receipts: The administration lists the issued receipts newest first, a page at a time, by donor and by the year of issue, and reads one with its image*",
-    "kind": "body",
-    "field": "$.items[*].id",
-    "reason": "1.16: the signature is uploaded for the person who signs (POST /api/admin/donations/receipt-signatures/{personId}) instead of the singleton, so the person's id is numbered first and the masked ids after it move by one; the answers are the same",
-    "contract": "docs/api-contract.md, Receipt signatory and signatures"
-  },
-  {
-    "path": "GET /api/admin/donations/receipts",
-    "scenario": "donations/admin_receipts: The administration lists the issued receipts newest first, a page at a time, by donor and by the year of issue, and reads one with its image*",
-    "kind": "body",
-    "field": "$.items[*].donationId",
-    "reason": "1.16: the signature is uploaded for the person who signs (POST /api/admin/donations/receipt-signatures/{personId}) instead of the singleton, so the person's id is numbered first and the masked ids after it move by one; the answers are the same",
-    "contract": "docs/api-contract.md, Receipt signatory and signatures"
-  },
-  {
-    "path": "GET /api/admin/donations/receipts/{id}",
-    "scenario": "donations/admin_receipts: The administration lists the issued receipts newest first, a page at a time, by donor and by the year of issue, and reads one with its image*",
-    "kind": "body",
-    "field": "$.id",
-    "reason": "1.16: the signature is uploaded for the person who signs (POST /api/admin/donations/receipt-signatures/{personId}) instead of the singleton, so the person's id is numbered first and the masked ids after it move by one; the answers are the same",
-    "contract": "docs/api-contract.md, Receipt signatory and signatures"
-  },
-  {
-    "path": "GET /api/admin/donations/receipts/{id}",
-    "scenario": "donations/admin_receipts: The administration lists the issued receipts newest first, a page at a time, by donor and by the year of issue, and reads one with its image*",
-    "kind": "body",
-    "field": "$.instance",
-    "reason": "1.16: the signature is uploaded for the person who signs (POST /api/admin/donations/receipt-signatures/{personId}) instead of the singleton, so the person's id is numbered first and the masked ids after it move by one; the answers are the same",
-    "contract": "docs/api-contract.md, Receipt signatory and signatures"
-  },
-  {
-    "path": "POST /api/donations/me/receipts",
-    "scenario": "donations/donation_receipts_frozen: Another donor's receipt and the signature image it shows answer as not found*",
-    "kind": "body",
-    "field": "$.id",
-    "reason": "1.16: the signature is uploaded for the person who signs (POST /api/admin/donations/receipt-signatures/{personId}) instead of the singleton, so the person's id is numbered first and the masked ids after it move by one; the answers are the same",
-    "contract": "docs/api-contract.md, Receipt signatory and signatures"
-  },
-  {
-    "path": "POST /api/donations/me/receipts",
-    "scenario": "donations/donation_receipts_frozen: Another donor's receipt and the signature image it shows answer as not found*",
-    "kind": "body",
-    "field": "$.donationId",
-    "reason": "1.16: the signature is uploaded for the person who signs (POST /api/admin/donations/receipt-signatures/{personId}) instead of the singleton, so the person's id is numbered first and the masked ids after it move by one; the answers are the same",
-    "contract": "docs/api-contract.md, Receipt signatory and signatures"
-  },
-  {
-    "path": "GET /api/donations/me/receipts/{id}",
-    "scenario": "donations/donation_receipts_frozen: Another donor's receipt and the signature image it shows answer as not found*",
-    "kind": "body",
-    "field": "$.instance",
-    "reason": "1.16: the signature is uploaded for the person who signs (POST /api/admin/donations/receipt-signatures/{personId}) instead of the singleton, so the person's id is numbered first and the masked ids after it move by one; the answers are the same",
-    "contract": "docs/api-contract.md, Receipt signatory and signatures"
-  },
-  {
-    "path": "POST /api/donations/me/receipts",
-    "scenario": "donations/donation_receipts_frozen: The donor fetches the signature image their receipt shows, and later receipts show the image current when they are issued*",
-    "kind": "body",
-    "field": "$.id",
-    "reason": "1.16: the signature is uploaded for the person who signs (POST /api/admin/donations/receipt-signatures/{personId}) instead of the singleton, so the person's id is numbered first and the masked ids after it move by one; the answers are the same",
-    "contract": "docs/api-contract.md, Receipt signatory and signatures"
-  },
-  {
-    "path": "GET /api/donations/me/receipts/{id}",
-    "scenario": "donations/donation_receipts_frozen: The donor fetches the signature image their receipt shows, and later receipts show the image current when they are issued*",
-    "kind": "body",
-    "field": "$.id",
-    "reason": "1.16: the signature is uploaded for the person who signs (POST /api/admin/donations/receipt-signatures/{personId}) instead of the singleton, so the person's id is numbered first and the masked ids after it move by one; the answers are the same",
-    "contract": "docs/api-contract.md, Receipt signatory and signatures"
-  },
-  {
-    "path": "POST /api/donations/me/receipts",
-    "scenario": "donations/admin_receipts: The administration lists the issued receipts newest first, a page at a time, by donor and by the year of issue, and reads one with its image*",
-    "kind": "request",
-    "reason": "1.16: the signature is uploaded for the person who signs (POST /api/admin/donations/receipt-signatures/{personId}) instead of the singleton, so the person's id is numbered first and the masked ids after it move by one; the answers are the same (the donation id or receipt id in the request)",
-    "contract": "docs/api-contract.md, Receipt signatory and signatures"
-  },
-  {
-    "path": "GET /api/admin/donations/receipts/{id}",
-    "scenario": "donations/admin_receipts: The administration lists the issued receipts newest first, a page at a time, by donor and by the year of issue, and reads one with its image*",
-    "kind": "request",
-    "reason": "1.16: the signature is uploaded for the person who signs (POST /api/admin/donations/receipt-signatures/{personId}) instead of the singleton, so the person's id is numbered first and the masked ids after it move by one; the answers are the same (the donation id or receipt id in the request)",
-    "contract": "docs/api-contract.md, Receipt signatory and signatures"
-  },
-  {
-    "path": "POST /api/donations/me/receipts",
-    "scenario": "donations/donation_receipts_frozen: Another donor's receipt and the signature image it shows answer as not found*",
-    "kind": "request",
-    "reason": "1.16: the signature is uploaded for the person who signs (POST /api/admin/donations/receipt-signatures/{personId}) instead of the singleton, so the person's id is numbered first and the masked ids after it move by one; the answers are the same (the donation id or receipt id in the request)",
-    "contract": "docs/api-contract.md, Receipt signatory and signatures"
-  },
-  {
-    "path": "GET /api/donations/me/receipts/{id}",
-    "scenario": "donations/donation_receipts_frozen: Another donor's receipt and the signature image it shows answer as not found*",
-    "kind": "request",
-    "reason": "1.16: the signature is uploaded for the person who signs (POST /api/admin/donations/receipt-signatures/{personId}) instead of the singleton, so the person's id is numbered first and the masked ids after it move by one; the answers are the same (the donation id or receipt id in the request)",
-    "contract": "docs/api-contract.md, Receipt signatory and signatures"
-  },
-  {
-    "path": "GET /api/donations/me/receipts/{id}",
-    "scenario": "donations/donation_receipts_frozen: The donor fetches the signature image their receipt shows, and later receipts show the image current when they are issued*",
-    "kind": "request",
-    "reason": "1.16: the signature is uploaded for the person who signs (POST /api/admin/donations/receipt-signatures/{personId}) instead of the singleton, so the person's id is numbered first and the masked ids after it move by one; the answers are the same (the donation id or receipt id in the request)",
-    "contract": "docs/api-contract.md, Receipt signatory and signatures"
-  },
-  {
-    "path": "POST /api/donations/me/receipts",
     "scenario": "donations/donation_receipts_frozen: *",
     "kind": "added",
     "field": "$.receipt.signatory.portraitImage",
@@ -546,32 +423,6 @@
     "contract": "docs/api-contract.md, Issued receipts as frozen data"
   },
   {
-    "scenario": "donations/admin_receipts: *",
-    "kind": "logs",
-    "line": "donations.application.pairing.PaymentPairingService: Donor * learned sender account link *",
-    "reason": "1.16: the person id in the signature's path is numbered before the learned account link, so the link's masked id moves by one; the line is the same",
-    "contract": "docs/api-contract.md, Receipt signatory and signatures",
-    "security": {
-      "approvedIn": "PENDING",
-      "fields": {
-        "<id>": "the donor id, then the learned account link id; the same line as in v2, only the masked numbering moves"
-      }
-    }
-  },
-  {
-    "scenario": "donations/donation_receipts_frozen: *",
-    "kind": "logs",
-    "line": "donations.application.pairing.PaymentPairingService: Donor * learned sender account link *",
-    "reason": "1.16: the person id in the signature's path is numbered before the learned account link, so the link's masked id moves by one; the line is the same",
-    "contract": "docs/api-contract.md, Receipt signatory and signatures",
-    "security": {
-      "approvedIn": "PENDING",
-      "fields": {
-        "<id>": "the donor id, then the learned account link id; the same line as in v2, only the masked numbering moves"
-      }
-    }
-  },
-  {
     "kind": "retired",
     "suite": "frontend-vitest",
     "test": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when every source of the attention card answers > then an uploaded signature or one that cannot be checked adds no row",
@@ -584,5 +435,47 @@
     "test": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when every source of the attention card answers > then receipts without an uploaded signature get a row leading to the receipt settings",
     "replacement": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when every source of the attention card answers > then a signatory without an uploaded signature gets a row leading to the people of the foundation",
     "reason": "1.16 (Jakub 2026-10-30): the receipt signature belongs to the person who signs, so the attention row about it names the signatory and leads to the people of the foundation instead of the receipt settings"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/accessibility.spec.ts > Given a visitor who relies on WCAG 2.2 AA > when an administrator sees a vector signature and an SVG is refused, then the settings page breaks no rule",
+    "replacement": "e2e/accessibility.spec.ts > Given a visitor who relies on WCAG 2.2 AA > when an administrator sees a vector receipt signature of a person and an SVG is refused, then the people page breaks no rule",
+    "reason": "1.16 (Jakub 2026-10-30, layout 3B): the 1.14 receipt signature moved from the settings card to the people of the foundation, one per person, and #247 keeps names from the file out of every answer; this 1.14 test was rewritten for that"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/admin-settings.spec.ts > Given an administrator on the settings page > when they upload a vector signature, then the card draws it, a refused SVG keeps it with the reason first, and a scan and an SVG replace each other",
+    "replacement": "e2e/admin-people.spec.ts > Given an administrator who chooses who signs the receipts > when they upload a vector receipt signature, then the part draws it, a refused SVG keeps it with the reason first, and a scan and an SVG replace each other",
+    "reason": "1.16 (Jakub 2026-10-30, layout 3B): the 1.14 receipt signature moved from the settings card to the people of the foundation, one per person, and #247 keeps names from the file out of every answer; this 1.14 test was rewritten for that"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/settings/receipt-signature/receipt-signature.spec.ts > Given the signature section of the receipt settings > when the hint is read, then it says a handwritten SVG signature is fine as filled shapes and only strokes and effects are refused, before the scan",
+    "replacement": "src/app/features/admin/receipt-signature/receipt-signature.spec.ts > Given the receipt signature part of a person of the foundation > when the hint is read, then it says the signature is not public, a handwritten SVG is fine as filled shapes and only strokes and effects are refused, before the scan",
+    "reason": "1.16 (Jakub 2026-10-30, layout 3B): the 1.14 receipt signature moved from the settings card to the people of the foundation, one per person, and #247 keeps names from the file out of every answer; this 1.14 test was rewritten for that"
+  },
+  {
+    "kind": "retired",
+    "suite": "mcp-vitest",
+    "test": "test/tools.spec.ts > Given an administrator connected with the reading permission only > when the receipt signature is a vector, then it says so without its paths",
+    "replacement": "test/tools.spec.ts > Given an administrator connected with the reading permission only > when the receipt signature is asked, then it names the signatory, their receipt role and the signatures uploaded per person, without any image",
+    "reason": "1.16 (Jakub 2026-10-30, layout 3B): the 1.14 receipt signature moved from the settings card to the people of the foundation, one per person, and #247 keeps names from the file out of every answer; this 1.14 test was rewritten for that"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.persistence.JpaReceiptSignatureRepositoryTest > Given a scan uploaded, when the current scan is asked for, then the scan comes back",
+    "replacement": "donations.infrastructure.persistence.JpaReceiptSignatureRepositoryTest > Given a scan uploaded for the chosen signatory, when the current scan is asked for, then the scan comes back",
+    "reason": "1.16 (Jakub 2026-10-30, layout 3B): the 1.14 receipt signature moved from the settings card to the people of the foundation, one per person, and #247 keeps names from the file out of every answer; this 1.14 test was rewritten for that"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.SignatureVectorTest > Given a refusal naming an overlong element, when it is made, then the name is cut to forty characters",
+    "replacement": "donations.interfaces.rest.ReceiptSignatureProblemHandlerTest > Given a refused element, when it is answered, then the problem names the file field and the problem's code but repeats no name the file chose",
+    "reason": "1.16 (Jakub 2026-10-30, layout 3B): the 1.14 receipt signature moved from the settings card to the people of the foundation, one per person, and #247 keeps names from the file out of every answer; this 1.14 test was rewritten for that"
   }
 ]

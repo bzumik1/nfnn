@@ -371,7 +371,7 @@ Feature: A donor issues receipts of their donations as frozen, signed data
     And a person "Jana" is registered
     And "Jana" is an administrator
     And a person "Petr" is registered
-    And "Jana" uploads a 600 by 200 pixel JPEG scan named "podpis.jpg" as the receipt signature
+    And the person who signs the receipts has a 600 by 200 pixel scan as their receipt signature
     And the bank account has these movements:
       | id   | date       | amount  | account    | bankCode | name          | variableSymbol |
       | 2001 | 2026-10-01 | 1000.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
@@ -409,7 +409,7 @@ Feature: A donor issues receipts of their donations as frozen, signed data
     And the application starts the import
     And "Jana" issues the receipt of her donation received on 2026-10-01
     And the frozen receipt shows no signature image
-    When "Jana" uploads a 600 by 200 pixel JPEG scan named "podpis.jpg" as the receipt signature
+    When the person who signs the receipts has a 600 by 200 pixel scan as their receipt signature
     And today is 2027-01-15
     And "Jana" issues her yearly receipt for 2026
     Then the response status is 200
@@ -499,8 +499,8 @@ Feature: A donor issues receipts of their donations as frozen, signed data
     And "Jana" adds a person:
       | name     | Adam Vzor |
       | portrait | prvni.png |
-    And "Jana" chooses "Adam Vzor" to sign the receipts as "místopředseda správní rady"
     And the stored portrait of "Adam Vzor" cannot be decoded
+    And "Jana" chooses "Adam Vzor" to sign the receipts as "místopředseda správní rady"
     And the bank account has these movements:
       | id   | date       | amount  | account    | bankCode | name          | variableSymbol |
       | 2001 | 2026-10-01 | 1000.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
