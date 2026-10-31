@@ -295,6 +295,9 @@ export function receiptDocument(
   };
 }
 
+const GIFT_ROWS_PER_PAGE = 33;
+const GIFT_ROWS_THE_REST_TAKES = 20;
+
 export function estimatedReceiptPages(gifts: number): number {
-  return gifts > 0 ? 1 : 0;
+  return Math.max(1, Math.ceil((gifts + GIFT_ROWS_THE_REST_TAKES) / GIFT_ROWS_PER_PAGE));
 }

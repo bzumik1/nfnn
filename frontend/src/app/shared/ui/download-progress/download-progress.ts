@@ -13,13 +13,12 @@ export const CANCEL_OFFERED_AFTER_MS = 8000;
   selector: 'app-download-progress',
   templateUrl: './download-progress.html',
   styleUrl: './download-progress.scss',
-  host: { class: 'download-progress' },
+  host: { class: 'download-progress', '[class.download-progress--compact]': 'compact()' },
 })
 export class DownloadProgress {
   readonly progress = input<DownloadProgressState | null>(null);
-  readonly openLabel = input.required<string>();
+  readonly compact = input(false);
   readonly cancelled = output<void>();
-  readonly opened = output<void>();
 
   protected readonly slow = signal(false);
   private readonly running = computed(() => this.progress()?.kind === 'running');

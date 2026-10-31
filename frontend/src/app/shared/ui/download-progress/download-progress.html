@@ -1,4 +1,8 @@
-<p class="ui-form-status download-progress-line" role="status">
+<p
+  class="download-progress-line"
+  [class.download-progress-line--done]="progress()?.kind === 'done'"
+  role="status"
+>
   @if (progress(); as progress) {
     <span>{{ progress.text }}</span>
   }
@@ -23,13 +27,5 @@
         </button>
       }
     </div>
-  } @else if (progress.kind === 'ready') {
-    <button
-      type="button"
-      class="ui-button ui-button--primary ui-button--small download-progress-open"
-      (click)="opened.emit()"
-    >
-      {{ openLabel() }}
-    </button>
   }
 }

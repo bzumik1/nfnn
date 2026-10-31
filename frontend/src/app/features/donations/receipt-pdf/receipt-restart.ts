@@ -23,7 +23,7 @@ export class ReceiptRestart {
   }
 
   resumes(download: string): boolean {
-    return download === '';
+    return this.read() === download;
   }
 
   finished(): void {

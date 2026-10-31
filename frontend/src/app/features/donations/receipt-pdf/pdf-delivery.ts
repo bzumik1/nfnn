@@ -38,7 +38,7 @@ export class PdfDelivery {
   async share(file: DownloadedFile): Promise<PdfShareOutcome> {
     if (!this.canShare(file) || this.navigator.share === undefined) {
       this.save(file);
-      return 'shared';
+      return 'saved';
     }
     try {
       await this.navigator.share({ files: [this.asFile(file)], title: file.fileName });

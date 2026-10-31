@@ -42,12 +42,17 @@
                   <button
                     type="button"
                     class="ui-button ui-button--small yearly-pdf"
+                    [attr.data-receipt-download]="donations.yearlyTarget(group.year)"
                     [disabled]="donations.yearlyDownloading(group.year)"
                     [attr.aria-busy]="donations.yearlyDownloading(group.year)"
                     (click)="donations.downloadYearlyReceipt(group.year)"
                   >
                     @if (donations.yearlyDownloading(group.year)) {
                       <span i18n="@@donor.dashboard.receipt.preparing">Připravujeme PDF…</span>
+                    } @else if (donations.yearlyReady(group.year)) {
+                      <span i18n="@@donor.dashboard.yearly.open"
+                        >Otevřít potvrzení za rok {{ group.year }} (PDF)</span
+                      >
                     } @else {
                       <span i18n="@@donor.dashboard.yearly.pdf"
                         >Stáhnout potvrzení za rok {{ group.year }} (PDF)</span
@@ -57,9 +62,7 @@
                   <app-download-progress
                     class="receipt-saved"
                     [progress]="donations.yearlyProgress(group.year)"
-                    [openLabel]="donations.openReceiptLabel"
                     (cancelled)="donations.cancelYearlyReceipt(group.year)"
-                    (opened)="donations.openYearlyReceipt(group.year)"
                   />
                 </div>
               }

@@ -4,7 +4,12 @@ import { DownloadedFile } from '../donations-api';
 import { ReceiptSubject } from './frozen-receipt';
 import { ReceiptArt, receiptArt } from './receipt-art';
 import { receiptCaptions } from './receipt-captions';
-import { ReceiptDocument, receiptDocument, ReceiptUnprintable } from './receipt-document';
+import {
+  estimatedReceiptPages,
+  ReceiptDocument,
+  receiptDocument,
+  ReceiptUnprintable,
+} from './receipt-document';
 import { resolveReceiptStyle, ReceiptStyle, ReceiptStyleRefused } from './receipt-style';
 import { ReceiptWorker } from './receipt-worker-messages';
 import { ReceiptsApi } from './receipts-api';
@@ -12,7 +17,12 @@ import { ReceiptsApi } from './receipts-api';
 export type ReceiptPdfPhase = 'data' | 'tools' | 'drawing';
 
 export type ReceiptPdfEvent =
-  | { readonly kind: 'phase'; readonly phase: ReceiptPdfPhase; readonly page: number }
+  | {
+      readonly kind: 'phase';
+      readonly phase: ReceiptPdfPhase;
+      readonly page: number;
+      readonly pages: number;
+    }
   | { readonly kind: 'done'; readonly file: DownloadedFile };
 
 export type ReceiptPdfFailureReason =
@@ -53,7 +63,7 @@ export class ReceiptPdf {
   draw(subject: ReceiptSubject): Observable<ReceiptPdfEvent> {
     return new Observable<ReceiptPdfEvent>((subscriber) => {
       let worker: ReceiptWorker | null = null;
-      subscriber.next({ kind: 'phase', phase: 'data', page: 0 });
+      subscriber.next({ kind: 'phase', phase: 'data', page: 0, pages: 0 });
       const subscription = this.api
         .issue(subject)
         .pipe(
@@ -69,7 +79,8 @@ export class ReceiptPdf {
         )
         .subscribe({
           next: ({ issued, signature, portrait }) => {
-            subscriber.next({ kind: 'phase', phase: 'tools', page: 0 });
+            const pages = estimatedReceiptPages(issued.receipt.gifts.length);
+            subscriber.next({ kind: 'phase', phase: 'tools', page: 0, pages });
             let document: ReceiptDocument;
             try {
               document = receiptDocument(issued.receipt, issued.issuedAt, receiptCaptions());
@@ -110,7 +121,7 @@ export class ReceiptPdf {
                   }
                   break;
                 case 'page':
-                  subscriber.next({ kind: 'phase', phase: 'drawing', page: data.page });
+                  subscriber.next({ kind: 'phase', phase: 'drawing', page: data.page, pages });
                   break;
                 case 'done':
                   subscriber.next({

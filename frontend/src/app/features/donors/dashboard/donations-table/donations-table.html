@@ -67,12 +67,19 @@
               <button
                 type="button"
                 class="download-btn"
+                [attr.data-receipt-download]="donations.singleTarget(item)"
                 [disabled]="donations.singleDownloading(item)"
                 [attr.aria-busy]="donations.singleDownloading(item)"
                 (click)="donations.downloadSingleReceipt(item)"
               >
                 @if (donations.singleDownloading(item)) {
                   <span i18n="@@donor.dashboard.receipt.preparing">Připravujeme PDF…</span>
+                } @else if (donations.singleReady(item)) {
+                  <span i18n="@@donor.dashboard.payments.open">Otevřít PDF</span>
+                  <span class="visually-hidden" i18n="@@donor.dashboard.payments.openOf"
+                    >, dar z {{ formatDate(item.receivedAt) }},
+                    {{ crowns(item.amountMinor) }}&nbsp;Kč</span
+                  >
                 } @else {
                   <span i18n="@@donor.dashboard.payments.download">Stáhnout PDF</span>
                   <span class="visually-hidden" i18n="@@donor.dashboard.payments.downloadOf"
@@ -84,9 +91,8 @@
               <app-download-progress
                 class="receipt-saved"
                 [progress]="donations.singleProgress(item)"
-                [openLabel]="donations.openReceiptLabel"
+                [compact]="true"
                 (cancelled)="donations.cancelSingleReceipt(item)"
-                (opened)="donations.openSingleReceipt(item)"
               />
             } @else {
               @switch (missingReceipt(item)) {
