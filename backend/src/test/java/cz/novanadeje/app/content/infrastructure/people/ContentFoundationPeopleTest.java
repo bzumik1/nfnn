@@ -64,6 +64,19 @@ class ContentFoundationPeopleTest {
     }
 
     @Test
+    @DisplayName("Given a person stored with a line break in the name, when they are looked up, then they say their name must be corrected first")
+    void should_say_name_needs_correcting_when_looked_up_given_a_stored_line_break() {
+        givenPeople();
+        PersonDetails stored = new PersonDetails("Eva\nUkázková", Optional.empty(), false, Optional.empty(), false, Optional.empty(), PersonEmails.NONE);
+        when(people.findById(WITHOUT_PORTRAIT)).thenReturn(Optional.of(new Person(WITHOUT_PORTRAIT, stored, 0, Optional.empty(), AT, AT)));
+        when(people.findByIdForUpdate(WITHOUT_PORTRAIT)).thenReturn(Optional.of(new Person(WITHOUT_PORTRAIT, stored, 0, Optional.empty(), AT, AT)));
+
+        assertThat(foundationPeople.find(WITHOUT_PORTRAIT.value())).hasValueSatisfying(person -> assertThat(person.needsCorrection()).isTrue());
+        assertThat(foundationPeople.findForUpdate(WITHOUT_PORTRAIT.value())).hasValueSatisfying(person -> assertThat(person.needsCorrection()).isTrue());
+        assertThat(foundationPeople.find(WITH_PORTRAIT.value())).hasValueSatisfying(person -> assertThat(person.needsCorrection()).isFalse());
+    }
+
+    @Test
     @DisplayName("Given a person with a portrait in several sizes, when the portrait for print is asked for twice, then it is cut from the largest size once and the same bytes come back")
     void should_prepare_largest_variant_once_when_asked_twice_given_portrait() {
         givenPeople();

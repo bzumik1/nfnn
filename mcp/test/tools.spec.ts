@@ -561,7 +561,7 @@ describe('Given an administrator connected with the reading permission only', ()
     );
   });
 
-  it('when the signatory has a portrait that cannot be printed, then the receipt signature says so and the description explains it', async () => {
+  it('when the receipt signature is asked, then the answer carries portraitPrintable and the description explains a false one', async () => {
     const text = textOf(await client.callTool({ name: 'nfnn_receipt_signature', arguments: {} }));
     expect(text).toContain('"portraitPrintable":true');
     const { tools } = await client.listTools();

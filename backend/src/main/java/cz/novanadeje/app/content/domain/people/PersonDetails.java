@@ -38,6 +38,10 @@ public record PersonDetails(String name, Optional<String> role, boolean onBoard,
         return Stream.of(Optional.of(name), role, boardNote).flatMap(Optional::stream).anyMatch(PersonDetails::hasControlCharacter);
     }
 
+    public boolean nameOrRoleHoldsControlCharacter() {
+        return Stream.of(Optional.of(name), role).flatMap(Optional::stream).anyMatch(PersonDetails::hasControlCharacter);
+    }
+
     private static boolean hasControlCharacter(String text) {
         return text.chars().anyMatch(Character::isISOControl);
     }

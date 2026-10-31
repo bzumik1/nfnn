@@ -71,6 +71,7 @@ public class AdminReceiptSignatureStepDefinitions {
     }
 
     @Given("{string} has uploaded a {int} by {int} pixel JPEG scan as the receipt signature of the person who signs the receipts")
+    @When("{string} stores a {int} by {int} pixel JPEG scan as the receipt signature of the person who signs the receipts")
     public void hasUploadedAJpegScanForTheSignatory(String alias, int width, int height) {
         sessions.actAs(alias);
         UUID signatory = jdbc.sql("select person_id from donation_receipt_signatory").query(UUID.class).single();

@@ -74,6 +74,17 @@ class PersonDetailsTest {
     }
 
     @Test
+    @DisplayName("Given a control character in the name, the role or only the board note, when asked whether the printed texts hold one, then only the name and the role count")
+    void should_count_only_name_and_role_when_asked_given_a_control_character() {
+        PersonDetails name = new PersonDetails("Eva\nVzorová", Optional.empty(), false, Optional.empty(), false, Optional.empty(), PersonEmails.NONE);
+        PersonDetails role = new PersonDetails("Eva", Optional.of("Zakladatelka\u0007"), false, Optional.empty(), false, Optional.empty(), PersonEmails.NONE);
+        PersonDetails note = new PersonDetails("Eva", Optional.empty(), true, Optional.of("před\u0085sedkyně"), false, Optional.empty(), PersonEmails.NONE);
+
+        assertThat(List.of(name, role)).allMatch(PersonDetails::nameOrRoleHoldsControlCharacter);
+        assertThat(note.nameOrRoleHoldsControlCharacter()).isFalse();
+    }
+
+    @Test
     @DisplayName("Given a personal and a fund e-mail, when the details are made, then both are kept apart")
     void should_keep_both_emails_when_made_given_a_personal_and_a_fund_email() {
         PersonEmails emails = new PersonEmails(Optional.of(new EmailAddress("eva@example.org")), Optional.of(new EmailAddress("eva@nfnn.cz")));

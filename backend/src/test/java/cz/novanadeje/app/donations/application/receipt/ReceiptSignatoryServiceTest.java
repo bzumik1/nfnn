@@ -2,6 +2,7 @@ package cz.novanadeje.app.donations.application.receipt;
 
 import cz.novanadeje.app.donations.domain.receipt.PersonReference;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptPersonNotFound;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatoryNeedsRenaming;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatory;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatoryRepository;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatureRepository;
@@ -120,6 +121,18 @@ class ReceiptSignatoryServiceTest {
         when(people.findForUpdate(OTHER.value())).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.choose(ADMIN, OTHER, "předseda")).isInstanceOf(ReceiptPersonNotFound.class);
+
+        verify(signatories, never()).choose(any());
+        verifyNoInteractions(events);
+    }
+
+    @Test
+    @DisplayName("Given a person whose stored name or role holds a control character, when an administrator chooses them, then it is refused until they are renamed and nothing changes")
+    void should_refuse_until_renamed_when_chosen_given_a_control_character() {
+        when(people.findForUpdate(CHAIR.value())).thenReturn(Optional.of(new FoundationPerson(CHAIR.value(), "Josef\nVzorový", false, true)));
+
+        assertThatThrownBy(() -> service.choose(ADMIN, CHAIR, "předseda")).isInstanceOf(ReceiptSignatoryNeedsRenaming.class)
+                .hasMessageNotContaining("Josef");
 
         verify(signatories, never()).choose(any());
         verifyNoInteractions(events);

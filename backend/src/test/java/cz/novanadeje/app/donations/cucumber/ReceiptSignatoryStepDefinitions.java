@@ -26,6 +26,7 @@ public class ReceiptSignatoryStepDefinitions {
     private final DonorSessions sessions;
     private final JdbcClient jdbc;
     private final MutableClock clock;
+    private Optional<UUID> personWithALineBreak = Optional.empty();
 
     public ReceiptSignatoryStepDefinitions(ApiClient api, DonorSessions sessions, JdbcClient jdbc, MutableClock clock) {
         this.api = api;
@@ -48,6 +49,24 @@ public class ReceiptSignatoryStepDefinitions {
     @Given("no person of the foundation signs the receipts")
     public void noPersonOfTheFoundationSignsTheReceipts() {
         jdbc.sql("delete from donation_receipt_signatory").update();
+    }
+
+    @Given("the stored name of {string} holds a line break")
+    public void theStoredNameHoldsALineBreak(String name) {
+        UUID person = personIdOf(name).orElseThrow(() -> new AssertionError("No person " + name));
+        jdbc.sql("update content_person set name = replace(name, ' ', chr(10)) where id = ?").param(person).update();
+        personWithALineBreak = Optional.of(person);
+    }
+
+    @When("{string} chooses the person whose stored name holds a line break to sign the receipts as {string}")
+    public void choosesThePersonWithALineBreak(String alias, String receiptRole) {
+        sessions.actAs(alias);
+        api.put(SIGNATORY, body(personWithALineBreak.orElseThrow().toString(), receiptRole));
+    }
+
+    @When("the stored name of that person is corrected to {string}")
+    public void theStoredNameIsCorrectedTo(String name) {
+        jdbc.sql("update content_person set name = ? where id = ?").param(name).param(personWithALineBreak.orElseThrow()).update();
     }
 
     @When("{string} asks for the receipt signatory")

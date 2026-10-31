@@ -2,6 +2,7 @@ package cz.novanadeje.app.donations.application.receipt;
 
 import cz.novanadeje.app.donations.domain.receipt.PersonReference;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptPersonNotFound;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatoryNeedsRenaming;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatory;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatoryRepository;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatureRepository;
@@ -52,6 +53,9 @@ public class ReceiptSignatoryService {
     @Transactional
     public ChosenSignatoryView choose(UUID adminId, PersonReference person, String receiptRole) {
         FoundationPerson known = people.findForUpdate(person.value()).orElseThrow(() -> new ReceiptPersonNotFound(person));
+        if (known.needsCorrection()) {
+            throw new ReceiptSignatoryNeedsRenaming(person);
+        }
         Instant now = clock.instant();
         ReceiptSignatory chosen = new ReceiptSignatory(person, receiptRole, now);
         signatories.choose(chosen);

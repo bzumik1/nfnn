@@ -76,6 +76,7 @@ class ContentFoundationPeople implements FoundationPeople {
     }
 
     private static FoundationPerson foundationPerson(UUID personId, Person person) {
-        return new FoundationPerson(personId, person.details().name(), person.details().portrait().isPresent());
+        return new FoundationPerson(personId, person.details().name(), person.details().portrait().isPresent(),
+                person.details().nameOrRoleHoldsControlCharacter());
     }
 }

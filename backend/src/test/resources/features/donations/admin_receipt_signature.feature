@@ -159,6 +159,16 @@ Feature: An administrator chooses who signs the donation receipts and uploads th
     Then the receipt signatory is "Josef Vzorový" as "předseda správní rady", with a portrait missing and a signature missing
     And the receipt signatures list none
 
+  Scenario: A person whose stored name holds a line break signs no receipt until the name is corrected
+    Given the stored name of "Josef Vzorový" holds a line break
+    When "Jana" chooses the person whose stored name holds a line break to sign the receipts as "předseda správní rady"
+    Then the response status is 409
+    And the problem type ends with "donations/signatory-needs-renaming"
+    And the problem's detail starts with "Jméno nebo role této osoby obsahuje zalomení řádku"
+    When the stored name of that person is corrected to "Josef Vzorový"
+    And "Jana" chooses "Josef Vzorový" to sign the receipts as "předseda správní rady"
+    Then the response status is 200
+
   Scenario: Without a chosen signatory no receipt is issued, and the administration and the donor are told why
     Given no person of the foundation signs the receipts
     And the bank account has these movements:
