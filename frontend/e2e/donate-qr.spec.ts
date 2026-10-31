@@ -142,6 +142,10 @@ test.describe('Given a visitor on the home page', () => {
       viewport: { width: 390, height: 844 },
       permissions: ['clipboard-read', 'clipboard-write'],
     });
+    test.skip(
+      ({ browserName }) => browserName !== 'chromium',
+      'Only Chromium grants the clipboard permissions; the device checklist copies on the iPhone',
+    );
 
     test('when they copy the amount, then the clipboard holds it and the bank details come before the QR code', async ({
       page,

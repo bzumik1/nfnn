@@ -14,7 +14,7 @@ CLAUDE_CODE_REMOTE=true CLAUDE_PROJECT_DIR=$PWD bash .claude/hooks/session-start
 Run `npm ci` again after a merge to `main` that changed a `package-lock.json`, or `format:check` may pass locally on an older Prettier than CI's.
 
 ## Playwright
-The preinstalled Chromium (`/opt/pw-browsers`) is older than the build Playwright pins, so `npm run e2e` reports a missing executable: run `npx playwright install --only-shell chromium` once (seconds: headless runs need only the headless shell, not the full browser). `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD` only stops the npm postinstall, not this.
+The preinstalled Chromium (`/opt/pw-browsers`) is older than the build Playwright pins, so `npm run e2e` reports a missing executable: run `npx playwright install --with-deps --only-shell chromium webkit` once (headless runs need only Chromium's headless shell, not the full browser; WebKit is for the `iphone` project, and `--with-deps` installs its system libraries, about a minute). `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD` only stops the npm postinstall, not this.
 
 ## Gradle (backend)
 1. Maven Central answers HTTP 429 from the cloud. Write `/tmp/mirror.gradle.kts`:
