@@ -127,6 +127,17 @@ public record AdminActionFacts(String summaryKey, Map<String, String> values) {
                 variant("edited", "Fotka " + ID + " v sekci O nás upravena")));
         shapes.put("REMOVE_ABOUT_PHOTO", List.of(
                 full("Fotka " + ID + " v sekci O nás odebrána")));
+        shapes.put("ADD_PERSON", List.of(full("Osoba " + ID + " přidána mezi lidi fondu")));
+        shapes.put("UPDATE_PERSON", List.of(full("Osoba " + ID + " v lidech fondu upravena")));
+        shapes.put("REMOVE_PERSON", List.of(full("Osoba " + ID + " odebrána z lidí fondu")));
+        shapes.put("ORDER_PEOPLE", List.of(full("Pořadí lidí fondu změněno")));
+        shapes.put("CHANGE_FOUNDERS_NOTE", List.of(
+                full("Slovo zakladatelů upraveno"),
+                variant("removed", "Slovo zakladatelů odebráno")));
+        shapes.put("CHANGE_WEB_SIGNATURE", List.of(full("Podpis " + ID + " na webu u osoby " + ID + " nastaven")));
+        shapes.put("REMOVE_WEB_SIGNATURE", List.of(full("Podpis na webu u osoby " + ID + " odebrán")));
+        shapes.put("CHANGE_PROJECT_ORDER", List.of(
+                full("Řazení projektů na webu změněno z (?<fromOrder>[A-Z_]+) na (?<toOrder>[A-Z_]+)")));
         content(shapes, "NEWS", "Aktualita", "News article", List.of("napsána", "upravena", "zveřejněna od", "stažena z webu", "smazána"));
         content(shapes, "PROJECT", "Projekt", "Project", List.of("napsán", "upraven", "zveřejněn od", "stažen z webu", "smazán"));
         shapes.put("CHANGE_BACKUP_SCHEDULE", List.of(
