@@ -13,7 +13,9 @@ interface MediaImageJpaRepository extends JpaRepository<MediaImageJpaEntity, UUI
 
     String UNUSED = "not exists (select 1 from content_news n where n.cover_media_id = m.id)"
             + " and not exists (select 1 from content_project p where p.cover_media_id = m.id)"
-            + " and not exists (select 1 from content_about a where a.photo_media_id = m.id)";
+            + " and not exists (select 1 from content_about a where a.photo_media_id = m.id)"
+            + " and not exists (select 1 from content_person r where r.portrait_media_id = m.id)"
+            + " and not exists (select 1 from content_person s where s.web_signature_media_id = m.id)";
 
     @Query("select new cz.novanadeje.app.content.domain.media.MediaSize(m.width, m.height) from MediaImageJpaEntity m where m.id = :id")
     Optional<MediaSize> findSizeById(UUID id);

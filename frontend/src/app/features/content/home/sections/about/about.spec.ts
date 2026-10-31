@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { aboutPhoto, ABOUT_PHOTO_ID } from '../../../testing/about-fixtures';
+import { PORTRAIT_ID, publicPeople, SIGNATURE_ID } from '../../../testing/people-fixtures';
 import { About } from './about';
 
 describe('Given the about section', () => {
@@ -136,6 +137,103 @@ describe('Given the about section', () => {
       expect(image.getAttribute('srcset')).toBe(
         `/api/content/media/${ABOUT_PHOTO_ID}?w=480 480w, /api/content/media/${ABOUT_PHOTO_ID}?w=1440 700w`,
       );
+    });
+  });
+
+  describe('when an administrator keeps the people of the foundation', () => {
+    function board(): HTMLElement {
+      return (fixture.nativeElement as HTMLElement).querySelector('.board')!;
+    }
+
+    function text(element: Element | null): string {
+      return element?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+    }
+
+    beforeEach(async () => {
+      fixture.componentRef.setInput('people', publicPeople());
+      fixture.detectChanges();
+      await fixture.whenStable();
+    });
+
+    it('then the featured people replace the built-in cards in their order, with their roles', () => {
+      expect(text(board().querySelector('h3'))).toBe('Kdo fond vede');
+      expect(
+        Array.from(board().querySelectorAll('.board-person')).map((person) => [
+          text(person.querySelector('.board-name')),
+          text(person.querySelector('.board-role')),
+        ]),
+      ).toEqual([
+        ['Eva Vzorová', 'Zakladatelka a předsedkyně správní rady'],
+        ['Adam Vzor', 'Zakladatel a člen správní rady'],
+      ]);
+      expect(board().querySelector('img[src^="/images/"]')).toBeNull();
+    });
+
+    it('then a portrait loads late from the stored copy and stays out of the screen reader, and a card without one shows the initials instead', () => {
+      const portrait = board().querySelector('.board-person img')!;
+
+      expect(portrait.getAttribute('src')).toBe(`/api/content/media/${PORTRAIT_ID}?w=480`);
+      expect(portrait.getAttribute('alt')).toBe('');
+      expect(portrait.getAttribute('loading')).toBe('lazy');
+      expect(portrait.getAttribute('width')).toBe('160');
+      const initials = board().querySelectorAll('.board-person')[1].querySelector('.board-photo')!;
+      expect(initials.getAttribute('aria-hidden')).toBe('true');
+      expect(text(initials)).toBe('AV');
+    });
+
+    it('then the board line names every member with no-break spaces inside the names and the notes in parentheses', () => {
+      const line = board().querySelector('.board-members')!;
+
+      expect(line.textContent).toBe(
+        'Správní rada: Eva\u00a0Vzorová (předsedkyně), Adam\u00a0Vzor, Hana\u00a0Vzorová.',
+      );
+    });
+
+    it('then the founders note follows the cards in its paragraphs, with the signatures side by side and a name under each', () => {
+      const note = board().querySelector('.founders-note')!;
+
+      expect(Array.from(note.querySelectorAll('.founders-note-text')).map(text)).toEqual([
+        'Fond jsme založili, abychom pomáhali konkrétním dětem.',
+        'Děkujeme všem, kdo pomáhají s námi.',
+      ]);
+      const signatures = Array.from(note.querySelectorAll('.signature'));
+      expect(
+        signatures.map((signature) => text(signature.querySelector('.signature-name'))),
+      ).toEqual(['Eva Vzorová']);
+      const ink = signatures[0].querySelector('img')!;
+      expect(ink.getAttribute('src')).toBe(`/api/content/media/${SIGNATURE_ID}?w=480`);
+      expect(ink.getAttribute('alt')).toBe('');
+      expect(ink.getAttribute('width')).toBe('600');
+      expect(ink.getAttribute('height')).toBe('180');
+      expect(
+        board().querySelector('.board-people')!.compareDocumentPosition(note) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+
+    it('then the line under the board follows the board line as its own paragraph', () => {
+      const line = board().querySelector('.board-members')!;
+      const footnote = board().querySelector('.board-footnote')!;
+
+      expect(text(footnote)).toBe('Web zajišťuje bez nároku na odměnu Petr Vzor.');
+      expect(
+        line.compareDocumentPosition(footnote) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+
+    it('and there is no note, nobody featured, nobody on the board and no line under it, then only the heading stays', async () => {
+      fixture.componentRef.setInput(
+        'people',
+        publicPeople({ featured: [], board: [], note: null, footnote: null }),
+      );
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(board().querySelector('.board-people')).toBeNull();
+      expect(board().querySelector('.founders-note')).toBeNull();
+      expect(board().querySelector('.board-members')).toBeNull();
+      expect(board().querySelector('.board-footnote')).toBeNull();
+      expect(text(board().querySelector('h3'))).toBe('Kdo fond vede');
     });
   });
 });

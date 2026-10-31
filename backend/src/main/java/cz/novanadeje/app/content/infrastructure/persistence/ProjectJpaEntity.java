@@ -2,6 +2,7 @@ package cz.novanadeje.app.content.infrastructure.persistence;
 
 import cz.novanadeje.app.content.domain.media.MediaId;
 import cz.novanadeje.app.content.domain.project.Project;
+import cz.novanadeje.app.content.domain.project.ProjectCategory;
 import cz.novanadeje.app.content.domain.project.ProjectId;
 import cz.novanadeje.app.content.domain.project.ProjectContent;
 import cz.novanadeje.app.content.domain.Slug;
@@ -30,6 +31,9 @@ class ProjectJpaEntity {
 
     @Column(name = "year", nullable = false)
     private int year;
+
+    @Column(name = "category", nullable = false, length = 16)
+    private String category;
 
     @Column(name = "tag", length = ProjectContent.MAX_TAG_LENGTH)
     private String tag;
@@ -64,6 +68,7 @@ class ProjectJpaEntity {
         entity.slug = article.slug().value();
         entity.title = article.content().title();
         entity.year = article.content().year();
+        entity.category = article.content().category().name();
         entity.tag = article.content().tag().orElse(null);
         entity.perex = article.content().perex();
         entity.body = article.content().body();
@@ -76,7 +81,7 @@ class ProjectJpaEntity {
     }
 
     Project toDomain() {
-        ProjectContent content = new ProjectContent(new Slug(slug), title, year, Optional.ofNullable(tag), perex, body,
+        ProjectContent content = new ProjectContent(new Slug(slug), title, year, ProjectCategory.valueOf(category), Optional.ofNullable(tag), perex, body,
                 Optional.ofNullable(coverMediaId).map(MediaId::new), Optional.ofNullable(coverImageAlt));
         return new Project(new ProjectId(id), content, Optional.ofNullable(publishedOn), createdAt, updatedAt);
     }

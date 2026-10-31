@@ -15,8 +15,10 @@ import { problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { ProjectsApi, ProjectResponse } from '../../content/projects-api';
+import { projectCategoryLabel } from '../../content/project-category';
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
+import { ProjectOrderCard } from './project-order-card';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -25,7 +27,7 @@ const FORBIDDEN = 'auth/forbidden';
 
 @Component({
   selector: 'app-admin-projects',
-  imports: [RouterLink, LiveNotice],
+  imports: [RouterLink, LiveNotice, ProjectOrderCard],
   templateUrl: './admin-projects.html',
   styleUrl: './admin-projects.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -39,6 +41,7 @@ export class AdminProjects {
   private readonly injector = inject(Injector);
   private readonly title = viewChild.required<ElementRef<HTMLHeadingElement>>('title');
 
+  protected readonly categoryLabel = projectCategoryLabel;
   protected readonly state = signal<LoadState>('loading');
   protected readonly items = signal<ProjectResponse[]>([]);
   protected readonly notice = signal<Notice | null>(null);
@@ -57,6 +60,10 @@ export class AdminProjects {
 
   protected load(): void {
     this.state.set('loading');
+    this.fetch();
+  }
+
+  private fetch(): void {
     this.api
       .list()
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -77,6 +84,10 @@ export class AdminProjects {
           this.state.set('error');
         },
       });
+  }
+
+  protected refresh(): void {
+    this.fetch();
   }
 
   protected publishedOn(item: ProjectResponse): string | null {

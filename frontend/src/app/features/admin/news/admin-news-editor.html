@@ -170,6 +170,20 @@
                 ></textarea>
               </app-form-field>
 
+              <app-form-field
+                label="Podepsáno"
+                i18n-label="@@admin.newsEditor.signer"
+                hint="Pod článkem se ukáže portrét, jméno a role toho, kdo aktualitu podepisuje. U nové aktuality je předvybraný člen fondu propojený s vaším účtem."
+                i18n-hint="@@admin.newsEditor.signer.hint"
+              >
+                <select appFormControl id="news-signer" name="signer" [(ngModel)]="signerId">
+                  <option value="" i18n="@@admin.newsEditor.signer.none">Bez podpisu</option>
+                  @for (person of signers(); track person.id) {
+                    <option [value]="person.id">{{ person.name }}</option>
+                  }
+                </select>
+              </app-form-field>
+
               <div class="image-field">
                 <p class="field-label" i18n="@@admin.newsEditor.image">Fotka (nepovinné)</p>
                 @if (previewUrl(); as url) {
