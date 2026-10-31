@@ -117,18 +117,28 @@ export function withHint(result: CallToolResult, hint: string | undefined): Call
   return result;
 }
 
+export function receiptView(answer: unknown): Record<string, unknown> {
+  const issued = asRecord(answer);
+  const { texts: _texts, ...receipt } = asRecord(issued['receipt']);
+  return { ...issued, receipt, verificationLink: asRecord(receipt['verification'])['qrText'] };
+}
+
 export function asRecord(value: unknown): Record<string, unknown> {
   return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
 }
 
+const IN_BROWSER_ONLY = '-in-browser-only';
+
 export function describeProblem(problem: BackendProblem): string {
   const { status, type, title, detail, errors } = problem.problem;
   const hint =
-    status === 403
-      ? ' The connection lacks the permission for this action; connect the application again with the "admin:write" permission, or sign in as an administrator with the second factor.'
-      : status === 429
-        ? ' Too many requests from this address; wait a moment.'
-        : '';
+    status === 403 && type.endsWith(IN_BROWSER_ONLY)
+      ? ' This is done only on the web at /sprava, by an administrator signed in there.'
+      : status === 403
+        ? ' The connection lacks the permission for this action; connect the application again with the "admin:write" permission, or sign in as an administrator with the second factor.'
+        : status === 429
+          ? ' Too many requests from this address; wait a moment.'
+          : '';
   const sentence = `The administration refused the request (${status} ${type}): ${title}${detail ? ` – ${detail}` : ''}`;
   const fields = errors.length > 0 ? ` ${errors.join(' ')}` : '';
   return `${sentence.endsWith('.') ? sentence : `${sentence}.`}${fields}${hint}`;

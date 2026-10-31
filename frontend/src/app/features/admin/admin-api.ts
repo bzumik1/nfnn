@@ -211,6 +211,33 @@ export interface AdminDonorDetailResponse {
   bankAccounts: BankAccountItem[];
   donations: DonationListResponse;
   receipts: AdminReceiptResponse[];
+  yearlyReceiptsAvailableThrough: number;
+  receiptsAvailableFrom: number;
+}
+
+export type ReceiptIssueRequest = { year: number } | { donationId: string };
+
+export type IssuedReceiptStatus = 'ACTIVE' | 'REPLACED' | 'WITHDRAWN';
+
+export interface AdminFrozenReceiptResponse {
+  number: string;
+  issuedOn: string;
+  replaces: { number: string; issuedOn: string } | null;
+  verification: { keyId: string; qrText: string };
+}
+
+export interface AdminIssuedReceiptResponse {
+  id: string;
+  donorId: string;
+  status: IssuedReceiptStatus;
+  kind: ReceiptKind;
+  number: string;
+  donationId: string | null;
+  year: number | null;
+  issuedAt: string;
+  supersededAt: string | null;
+  donorErased: boolean;
+  receipt: AdminFrozenReceiptResponse;
 }
 
 export interface ReportSectionsResponse {
@@ -338,10 +365,22 @@ export interface ReceiptSigningKeyResponse {
   current: boolean;
 }
 
+export type ReceiptSigningKeyMismatchKind = 'missing' | 'reverted';
+
+export interface ReceiptSigningKeyMismatch {
+  keyId: string;
+  kind: ReceiptSigningKeyMismatchKind;
+}
+
 export interface ReceiptSigningKeysResponse {
   currentKeyId: string;
   currentKeyPublished: boolean;
   keys: ReceiptSigningKeyResponse[];
+  auditMismatches: ReceiptSigningKeyMismatch[];
+}
+
+export interface ReceiptSigningKeyWithdrawalResponse extends ReceiptSigningKeysResponse {
+  restarting: boolean;
 }
 
 export type BackupKind = 'DAILY' | 'REQUESTED' | 'BEFORE_RESTORE' | 'OTHER';
@@ -405,10 +444,12 @@ export interface BackupKeyStatus {
   confirmedAt: string | null;
 }
 
-export interface BackupKeyRevealRequest {
+export interface FreshSecondFactorRequest {
   secondFactorCode?: string;
   passkey?: PasskeyConfirmation;
 }
+
+export type BackupKeyRevealRequest = FreshSecondFactorRequest;
 
 export interface BackupKeyResponse {
   key: string;
@@ -679,6 +720,16 @@ export class AdminApi {
     );
   }
 
+  issueReceipt(
+    donorId: string,
+    request: ReceiptIssueRequest,
+  ): Observable<AdminIssuedReceiptResponse> {
+    return this.http.post<AdminIssuedReceiptResponse>(
+      `/api/admin/donations/donors/${encodeURIComponent(donorId)}/receipts`,
+      request,
+    );
+  }
+
   disconnectDonorAccount(donorId: string, linkId: string): Observable<void> {
     return this.http.post<void>(`${donorAccountUrl(donorId, linkId)}/disconnect`, null);
   }
@@ -751,6 +802,16 @@ export class AdminApi {
 
   receiptSigningKeys(): Observable<ReceiptSigningKeysResponse> {
     return this.http.get<ReceiptSigningKeysResponse>(RECEIPT_SIGNING_KEYS_URL);
+  }
+
+  withdrawReceiptSigningKey(
+    keyId: string,
+    proof: FreshSecondFactorRequest,
+  ): Observable<ReceiptSigningKeyWithdrawalResponse> {
+    return this.http.post<ReceiptSigningKeyWithdrawalResponse>(
+      `${RECEIPT_SIGNING_KEYS_URL}/${encodeURIComponent(keyId)}/withdrawal`,
+      proof,
+    );
   }
 
   removeReceiptSignature(): Observable<void> {

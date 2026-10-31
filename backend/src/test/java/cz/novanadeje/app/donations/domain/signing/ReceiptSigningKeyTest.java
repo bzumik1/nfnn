@@ -5,9 +5,12 @@ import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HexFormat;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class ReceiptSigningKeyTest {
 
@@ -52,5 +55,36 @@ class ReceiptSigningKeyTest {
         assertThat(new ReceiptSigningKey(key.id(), HexFormat.of().parseHex(OTHER_PUBLIC_KEY), key.registeredAt(), key.status(), key.seal())
                 .idMatchesPublicKey()).isFalse();
         assertThat(new ReceiptSigningKey(key.id(), new byte[31], key.registeredAt(), key.status(), key.seal()).idMatchesPublicKey()).isFalse();
+    }
+
+    @Test
+    @DisplayName("Given an active key, when it is withdrawn, then it keeps its id, public key and registration time, turns revoked and is sealed again over the revoked content")
+    void should_turn_revoked_and_seal_again_when_withdrawn_given_an_active_key() {
+        ReceiptSigningKey key = ReceiptSigningKey.register(HexFormat.of().parseHex(PUBLIC_KEY), REGISTERED_AT, content -> "seal");
+
+        List<String> sealedContents = new ArrayList<>();
+        ReceiptSigningKey withdrawn = key.withdrawn(content -> {
+            sealedContents.add(new String(content, StandardCharsets.UTF_8));
+            return "sealed-revoked";
+        });
+
+        assertThat(withdrawn.id()).isEqualTo(key.id());
+        assertThat(withdrawn.publicKey()).isEqualTo(key.publicKey());
+        assertThat(withdrawn.registeredAt()).isEqualTo(key.registeredAt());
+        assertThat(withdrawn.status()).isEqualTo(ReceiptSigningKeyStatus.REVOKED);
+        assertThat(withdrawn.isWithdrawn()).isTrue();
+        assertThat(key.isWithdrawn()).isFalse();
+        assertThat(withdrawn.seal()).isEqualTo("sealed-revoked");
+        assertThat(sealedContents).containsExactly("21fe31df\n" + PUBLIC_KEY + "\n2026-11-13T11:00:00Z\nrevoked");
+    }
+
+    @Test
+    @DisplayName("Given a key already withdrawn, when it is withdrawn again, then it refuses as already withdrawn")
+    void should_refuse_when_withdrawn_given_a_key_already_withdrawn() {
+        ReceiptSigningKey withdrawn = ReceiptSigningKey.register(HexFormat.of().parseHex(PUBLIC_KEY), REGISTERED_AT, content -> "seal")
+                .withdrawn(content -> "seal");
+
+        assertThatThrownBy(() -> withdrawn.withdrawn(content -> "again")).isInstanceOf(ReceiptSigningKeyAlreadyWithdrawn.class)
+                .hasFieldOrPropertyWithValue("code", "donations/receipt-signing-key-already-withdrawn");
     }
 }

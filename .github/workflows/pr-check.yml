@@ -867,7 +867,18 @@ jobs:
           [ -z "$(sudo find "$backups" \( -name '*.dump' -o -name work \))" ] || { echo "::error::a backup, a restore or a test restore left an unencrypted copy in the backups folder"; sudo find "$backups"; exit 1; }
           curl -fsS --max-time 10 http://localhost:8089/ | grep -q '<app-root'
 
-      - name: An administrator signed in with the second factor uploads a JPEG and a WebP photo, which the read-only backend stores as WebP
+          echo "A request for a new receipt signing seed that names another key than the seed's, planted by the app user, is removed and changes nothing"
+          kept_seed=$(sudo cat "$secrets/receipt-signing-key")
+          docker exec -u app nfnn-backend sh -c "printf '%s' '00000000' > /restore/receipt-signing-key.renew"
+          docker restart nfnn-backend
+          docker compose up -d --wait --wait-timeout 300 backend
+          [ ! -e "$restore/receipt-signing-key.renew" ] || { echo "::error::the request for a new receipt signing seed was left in the restore folder"; exit 1; }
+          [ "$(sudo cat "$secrets/receipt-signing-key")" = "$kept_seed" ] || { echo "::error::a request naming another key replaced the receipt signing seed"; exit 1; }
+          [ -z "$(sudo find "$secrets" -maxdepth 1 -name 'receipt-signing-key.withdrawn-*')" ] || { echo "::error::a request naming another key kept a seed aside"; sudo ls -la "$secrets"; exit 1; }
+          docker logs nfnn-backend 2>&1 | grep -q "names the key 00000000, which is not the key of the seed" || { echo "::error::the entrypoint did not say that it ignored the request naming another key"; exit 1; }
+          curl -fsS --max-time 10 http://localhost:8089/ | grep -q '<app-root'
+
+      - name: An administrator signed in with the second factor uploads a JPEG and a WebP photo, which the read-only backend stores as WebP, and withdraws the server's receipt signing key, which the next start replaces
         run: |
           echo "Mail goes to the probe's own mail catcher, the MAIL_HOST of the first setup, on the stack's network"
           docker run -d --name nfnn-probe-mail --network nfnn-edge -p 127.0.0.1:8025:8025 axllent/mailpit:v1.31.5 > /dev/null
@@ -891,11 +902,15 @@ jobs:
           [ -n "$token" ] || { echo "::error::no verification e-mail reached the mail catcher"; exit 1; }
           session=$(curl -fsS --max-time 30 -H "$client" -H 'Content-Type: application/json' --data "{\"token\":\"$token\"}" "$api/donors/auth/email-verification/confirm" | jq -r '.accessToken')
           enrolment=$(curl -fsS --max-time 30 -H "$client" -H "Authorization: Bearer $session" -H 'Content-Type: application/json' --data "{\"password\":\"$password\"}" "$api/donors/me/second-factor/setup")
-          code=$(TOTP_SECRET="$(echo "$enrolment" | jq -r '.secret')" python3 -c '
+          totp() {
+            TOTP_SECRET="$(echo "$enrolment" | jq -r '.secret')" TOTP_STEPS_AHEAD="$1" python3 -c '
           import base64, hashlib, hmac, os, struct, time
-          digest = hmac.new(base64.b32decode(os.environ["TOTP_SECRET"]), struct.pack(">Q", int(time.time()) // 30), hashlib.sha1).digest()
+          step = int(time.time()) // 30 + int(os.environ["TOTP_STEPS_AHEAD"])
+          digest = hmac.new(base64.b32decode(os.environ["TOTP_SECRET"]), struct.pack(">Q", step), hashlib.sha1).digest()
           offset = digest[-1] & 15
-          print("%06d" % ((struct.unpack(">I", digest[offset:offset + 4])[0] & 0x7FFFFFFF) % 1000000))')
+          print("%06d" % ((struct.unpack(">I", digest[offset:offset + 4])[0] & 0x7FFFFFFF) % 1000000))'
+          }
+          code=$(totp 0)
           admin=$(curl -fsS --max-time 30 -H "$client" -H "Authorization: Bearer $session" -H 'Content-Type: application/json' --data "{\"code\":\"$code\"}" "$api/donors/me/second-factor/confirm" | jq -r '.accessToken')
           ACCESS_TOKEN="$admin" python3 -c 'import base64, json, os, sys; payload = os.environ["ACCESS_TOKEN"].split(".")[1]; sys.exit("ADMIN" not in json.loads(base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4)))["roles"])' || { echo "::error::the session opened with the second factor does not carry ADMIN"; exit 1; }
           for photo in frontend/public/images/og-image.jpg:image/jpeg frontend/public/images/news-1.webp:image/webp; do
@@ -912,6 +927,52 @@ jobs:
             echo "::error::the backend could not load the WebP codec's native library"
             exit 1
           fi
+
+          echo "Withdrawing the server's own receipt signing key with a fresh code tells the administrator, restarts the backend, keeps the seed aside, registers a new key and passes the withdrawn id to Java"
+          secrets="$RUNNER_TEMP/nfnn/secrets"
+          restore="$RUNNER_TEMP/nfnn/restore"
+          withdrawn_seed=$(sudo cat "$secrets/receipt-signing-key" | tr -d '\n')
+          withdrawn_key=$(curl -fsS --max-time 10 -H "$client" -H "Authorization: Bearer $admin" "$api/admin/donations/receipt-signing-keys" | jq -r '.currentKeyId')
+          echo "$withdrawn_key" | grep -qxE '[0-9a-f]{8}' || { echo "::error::the administration names no current receipt signing key (got $withdrawn_key)"; exit 1; }
+          restarts=$(docker inspect -f '{{.RestartCount}}' nfnn-backend)
+          withdrawal=$(curl -sS -w '\n%{http_code}' --max-time 30 -H "$client" -H "Authorization: Bearer $admin" -H 'Content-Type: application/json' --data "{\"secondFactorCode\":\"$(totp 1)\"}" "$api/admin/donations/receipt-signing-keys/$withdrawn_key/withdrawal")
+          [ "$(echo "$withdrawal" | tail -n 1)" = 200 ] || { echo "::error::withdrawing the receipt signing key $withdrawn_key answered $(echo "$withdrawal" | tail -n 1): $(echo "$withdrawal" | head -n -1)"; exit 1; }
+          [ "$(echo "$withdrawal" | head -n -1 | jq -r '.restarting')" = true ] || { echo "::error::withdrawing the server's own key must restart the backend"; exit 1; }
+          notice=
+          for _ in $(seq 60); do
+            notice=$(curl -fsS --max-time 5 'http://127.0.0.1:8025/api/v1/search?query=to%3Aspravce%40example.cz%20subject%3A%22Kl%C3%AD%C4%8D%20k%20ov%C4%9B%C5%99ovac%C3%ADm%22' | jq -r '.messages_count')
+            [ "$notice" = 1 ] && break
+            sleep 1
+          done
+          [ "$notice" = 1 ] || { echo "::error::the administrator got no notice of the withdrawn receipt signing key"; exit 1; }
+          for _ in $(seq 120); do
+            [ "$(docker inspect -f '{{.RestartCount}}' nfnn-backend)" -gt "$restarts" ] && break
+            sleep 1
+          done
+          [ "$(docker inspect -f '{{.RestartCount}}' nfnn-backend)" -gt "$restarts" ] || { echo "::error::the backend did not restart after the withdrawal of its own receipt signing key"; exit 1; }
+          docker compose up -d --wait --wait-timeout 300 backend
+          [ ! -e "$restore/receipt-signing-key.renew" ] || { echo "::error::the request for a new receipt signing seed was left in the restore folder"; exit 1; }
+          [ "$(sudo stat -c '%a %U' "$secrets/receipt-signing-key.withdrawn-$withdrawn_key")" = '600 root' ] || { echo "::error::the withdrawn seed must be kept as secrets/receipt-signing-key.withdrawn-$withdrawn_key, owned by root with mode 600"; sudo ls -la "$secrets"; exit 1; }
+          [ "$(sudo cat "$secrets/receipt-signing-key.withdrawn-$withdrawn_key" | tr -d '\n')" = "$withdrawn_seed" ] || { echo "::error::the kept withdrawn seed is not the seed the server signed with"; exit 1; }
+          [ "$(sudo stat -c '%a %U' "$secrets/receipt-signing-key")" = '600 root' ] || { echo "::error::secrets/receipt-signing-key must be generated again, owned by root with mode 600"; exit 1; }
+          renewed_seed=$(sudo cat "$secrets/receipt-signing-key" | tr -d '\n')
+          [ "$renewed_seed" != "$withdrawn_seed" ] || { echo "::error::the receipt signing seed was not replaced after the withdrawal"; exit 1; }
+          [ "$(echo "$renewed_seed" | base64 -d | wc -c)" = 32 ] || { echo "::error::the new receipt signing seed must be a 32-byte Ed25519 seed in base64"; exit 1; }
+          docker logs nfnn-backend 2>&1 | grep -q "the receipt signing key $withdrawn_key was withdrawn in the administration" || { echo "::error::the entrypoint did not say that it replaced the withdrawn seed"; exit 1; }
+          renewed_key=$(grep -oE 'Receipt signing key [0-9a-f]{8} registered and published' "$RUNNER_TEMP/nfnn/logs/backend.log" | tail -n 1 | cut -d' ' -f4)
+          [ -n "$renewed_key" ] && [ "$renewed_key" != "$withdrawn_key" ] || { echo "::error::the backend did not register a new receipt signing key after the seed was replaced"; exit 1; }
+          docker exec --privileged nfnn-backend sh -c 'tr "\0" "\n" < /proc/1/environ' | grep -qxE "RECEIPT_SIGNING_KEYS_WITHDRAWN=([0-9a-f]{8},)*$withdrawn_key(,[0-9a-f]{8})*" || { echo "::error::the entrypoint did not pass the withdrawn key $withdrawn_key to Java as RECEIPT_SIGNING_KEYS_WITHDRAWN"; exit 1; }
+          listed=$(curl -fsS --max-time 10 http://localhost:8089/api/donations/receipt-keys | jq -r '.keys[] | .keyId + " " + .status' | sort)
+          [ "$listed" = "$(printf '%s\n%s\n' "$withdrawn_key revoked" "$renewed_key active" | sort)" ] || { echo "::error::the receipt keys must list $withdrawn_key as revoked and $renewed_key as active (got $listed)"; exit 1; }
+          seed_spellings="$RUNNER_TEMP/receipt-seed-spellings"
+          for seed in "$withdrawn_seed" "$renewed_seed"; do
+            echo "$seed"; echo "${seed%%=*}"; echo "${seed%%=*}" | tr '+/' '-_'; echo "$seed" | base64 -d | od -An -tx1 | tr -d ' \n'; echo
+          done > "$seed_spellings"
+          if grep -qiF -f "$seed_spellings" "$RUNNER_TEMP/nfnn/logs/backend.log" || docker logs nfnn-backend 2>&1 | grep -qiF -f "$seed_spellings"; then
+            echo "::error::neither the withdrawn nor the new receipt signing seed may reach backend.log or the container log (Base64, unpadded, Base64url or hex)"
+            exit 1
+          fi
+          rm -f "$seed_spellings"
 
       - name: Hashed bundles are cached for good and a missing file answers 404, never the app
         run: |

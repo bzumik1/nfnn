@@ -733,12 +733,34 @@ describe('Given an administrator on the administration home', () => {
         [administrator()],
         backupsView(),
         importState({ lastSucceededAt: '2026-10-18T08:05:30Z' }),
-        { currentKeyId: '21fe31df', currentKeyPublished: false, keys: [] },
+        { currentKeyId: '21fe31df', currentKeyPublished: false, keys: [], auditMismatches: [] },
       );
 
       expect(items()).toEqual([
         'Klíč 21fe31df není zveřejněný, proto se QR kódy jím podepsané neověří. Jeho záznam v databázi chybí nebo neprošel kontrolou pečeti (změna mimo web nebo záloha jiného serveru, kterou server nepřevzal); obraťte se na technika serveru. Otevřít nastavení',
       ]);
+    });
+
+    it('then a withdrawn key of the server and key rows that disagree with the audit trail get a red row leading to the settings', async () => {
+      await sources(
+        paymentList([]),
+        [administrator()],
+        backupsView(),
+        importState({ lastSucceededAt: '2026-10-18T08:05:30Z' }),
+        {
+          ...receiptSigningKeys([receiptSigningKey({ status: 'revoked' })]),
+          auditMismatches: [{ keyId: '39f713d0', kind: 'missing' }],
+        },
+      );
+
+      expect(items()).toEqual([
+        'Klíč serveru 21fe31df je stažený a server zatím nemá nový, takže se potvrzení o daru teď nestáhnou. Nový klíč si server vytvoří při startu; když se to nestane do pár minut, obraťte se na technika serveru. Klíč 39f713d0 je v historii správy, ale jeho záznam v databázi chybí (změna mimo web). QR kódy jím podepsané se neověří; obraťte se na technika serveru. Otevřít nastavení',
+      ]);
+      const row = attention().querySelector('.attention-list > li') as HTMLElement;
+      expect(row.classList).toContain('attention-item--danger');
+      expect(row.querySelector('a')?.getAttribute('href')).toBe(
+        '/sprava/nastaveni#klic-k-overovacim-qr',
+      );
     });
 
     it('then receipts without an uploaded signature get a row leading to the receipt settings', async () => {

@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donations.interfaces.rest;
 
 import cz.novanadeje.app.donations.application.admin.AdminDonorAccountsService;
+import cz.novanadeje.app.donations.application.receipt.AdminReceiptsService;
 import cz.novanadeje.app.donations.domain.donation.DonationPurpose;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkId;
@@ -26,16 +27,18 @@ class AdminDonorAccountsController {
     private static final String PURPOSE_KEY_PREFIX = "donation.purpose.";
 
     private final AdminDonorAccountsService donorAccounts;
+    private final AdminReceiptsService receipts;
     private final MessageSource messages;
 
-    AdminDonorAccountsController(AdminDonorAccountsService donorAccounts, MessageSource messages) {
+    AdminDonorAccountsController(AdminDonorAccountsService donorAccounts, AdminReceiptsService receipts, MessageSource messages) {
         this.donorAccounts = donorAccounts;
+        this.receipts = receipts;
         this.messages = messages;
     }
 
     @GetMapping
     AdminDonorDetailResponse detail(@PathVariable UUID donorId) {
-        return AdminDonorDetailResponse.from(donorAccounts.view(new DonorReference(donorId)), this::purposeText);
+        return AdminDonorDetailResponse.from(donorAccounts.view(new DonorReference(donorId)), receipts.receiptYears(), this::purposeText);
     }
 
     @PostMapping("/bank-accounts/{linkId}/disconnect")

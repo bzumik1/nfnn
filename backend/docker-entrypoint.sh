@@ -16,6 +16,16 @@
 # key replaces the generated backup key only when it matches that record (the previous key is kept
 # as backup-key.replaced-<time>), so the backups made before and after the restore open with the
 # same key and the app user, who can write to /restore, cannot plant a key of its own.
+# After an administrator withdrew the server's own receipt signing key, the backend leaves its key id
+# as /restore/receipt-signing-key.renew and restarts; this start then keeps the withdrawn seed as
+# receipt-signing-key.withdrawn-<key id> and generates a new one, which the backend registers as its
+# new key. The marker only ever replaces the seed by a fresh random one, never by a seed of its own,
+# and only when it names the key of the seed in secrets/ (the id is the first 4 bytes of SHA-256 of
+# the Ed25519 public key, computed with openssl), so a stray marker cannot file a seed under another
+# key's id. Every start passes the ids of the kept seeds, computed from their content, to Java as
+# RECEIPT_SIGNING_KEYS_WITHDRAWN (public ids, no secret): those files are root's and in no backup,
+# so a restored database that has an active row of such a key gets it published as withdrawn and
+# flagged. A marker planted by the app user can only add a withdrawal, never take one back.
 # The superuser's password stays with the database and the backup.
 # Java starts only once the database named in DB_URL accepts TCP connections, for at most
 # DATABASE_PATIENCE_SECONDS (two minutes; then it starts anyway and fails as before): nfnn-postgres
@@ -36,6 +46,7 @@ REQUEST_PATIENCE_MINUTES=${REQUEST_PATIENCE_MINUTES:-5}
 BACKUP_KEY_FILE="$SECRETS_DIR/backup-key"
 ADOPTED_BACKUP_KEY="$RESTORE_DIR/backup-key.adopt"
 ADOPTED_KEY_RECORD=${ADOPTED_KEY_RECORD:-/backups/status/adopted-key}
+RECEIPT_SEED_RENEWAL="$RESTORE_DIR/receipt-signing-key.renew"
 DATABASE_PATIENCE_SECONDS=${DATABASE_PATIENCE_SECONDS:-120}
 
 generate_secret() {
@@ -80,6 +91,56 @@ adopt_backup_key() {
     echo "WARNING: the backup key entered with the restored backup is now the server's backup key; the previous one is kept as $replaced"
   fi
   rm -f "$candidate"
+}
+
+receipt_key_id() {
+  public_key=$({ printf '\060\056\002\001\000\060\005\006\003\053\145\160\004\042\004\040'; head -c 64 "$1" 2>/dev/null | base64 -d 2>/dev/null; } \
+    | openssl pkey -inform DER -pubout -outform DER 2>/dev/null | base64 | tr -d '\n')
+  case "$public_key" in
+    MCowBQYDK2VwAyEA????????????????????????????????????????????) ;;
+    *) return 1 ;;
+  esac
+  printf '%s' "$public_key" | base64 -d | tail -c 32 | openssl dgst -sha256 -binary | head -c 4 | od -An -tx1 | tr -d ' \n'
+}
+
+withdrawn_receipt_key_ids() {
+  ids=
+  for kept in "$SECRETS_DIR"/receipt-signing-key.withdrawn-*; do
+    [ -f "$kept" ] || continue
+    kept_id=$(receipt_key_id "$kept" || true)
+    if [ -n "$kept_id" ]; then
+      ids="${ids:+$ids,}$kept_id"
+    else
+      echo "WARNING: $kept holds no Ed25519 seed; its key is not passed on as withdrawn" >&2
+    fi
+  done
+  printf '%s' "$ids"
+}
+
+renew_receipt_signing_key() {
+  [ -f "$RECEIPT_SEED_RENEWAL" ] || return 0
+  key_id=$(head -c 16 "$RECEIPT_SEED_RENEWAL" 2>/dev/null | tr -d '\n' || true)
+  setpriv --reuid=app --regid=app --clear-groups rm -f "$RECEIPT_SEED_RENEWAL" 2>/dev/null || rm -f "$RECEIPT_SEED_RENEWAL" 2>/dev/null \
+    || echo "Could not remove $RECEIPT_SEED_RENEWAL; it is checked again at the next start"
+  case "$key_id" in
+    [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]) ;;
+    *)
+      echo "The request for a new receipt signing seed in $RESTORE_DIR names no key id; the server keeps its seed"
+      return 0
+      ;;
+  esac
+  [ -s "$SECRETS_DIR/receipt-signing-key" ] || return 0
+  if [ "$(receipt_key_id "$SECRETS_DIR/receipt-signing-key" || true)" != "$key_id" ]; then
+    echo "The request for a new receipt signing seed in $RESTORE_DIR names the key $key_id, which is not the key of the seed in $SECRETS_DIR; the server keeps its seed"
+    return 0
+  fi
+  withdrawn="$SECRETS_DIR/receipt-signing-key.withdrawn-$key_id"
+  if [ -e "$withdrawn" ]; then
+    withdrawn="$withdrawn-$(date -u +%Y%m%dT%H%M%SZ)"
+  fi
+  mv "$SECRETS_DIR/receipt-signing-key" "$withdrawn"
+  chmod 600 "$withdrawn"
+  echo "WARNING: the receipt signing key $key_id was withdrawn in the administration; its seed is kept as $withdrawn and a new one is generated"
 }
 
 restore_due() {
@@ -145,6 +206,7 @@ if [ "$(id -u)" = 0 ]; then
   if [ -d "$SECRETS_DIR" ]; then
     generate_secret jwt-secret
     generate_secret settings-key
+    renew_receipt_signing_key
     generate_secret receipt-signing-key
     generate_backup_key
   fi
@@ -155,7 +217,9 @@ if [ "$(id -u)" = 0 ]; then
     SETTINGS_KEY=${SETTINGS_KEY:-$(cat "$SECRETS_DIR/settings-key")}
     BACKUP_KEY=${BACKUP_KEY:-$(grep -m 1 '^AGE-SECRET-KEY-' "$BACKUP_KEY_FILE" || true)}
     RECEIPT_SIGNING_KEY=${RECEIPT_SIGNING_KEY:-$(cat "$SECRETS_DIR/receipt-signing-key")}
-    export JWT_SECRET SETTINGS_KEY BACKUP_KEY RECEIPT_SIGNING_KEY
+    kept_aside=$(withdrawn_receipt_key_ids)
+    RECEIPT_SIGNING_KEYS_WITHDRAWN=${RECEIPT_SIGNING_KEYS_WITHDRAWN:-}${RECEIPT_SIGNING_KEYS_WITHDRAWN:+${kept_aside:+,}}$kept_aside
+    export JWT_SECRET SETTINGS_KEY BACKUP_KEY RECEIPT_SIGNING_KEY RECEIPT_SIGNING_KEYS_WITHDRAWN
     if [ -z "${DB_PASSWORD:-}" ]; then
       waited=0
       until [ -f "$SECRETS_DIR/db-password.ready" ] && [ -s "$SECRETS_DIR/db-app-password" ]; do

@@ -39,6 +39,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.groups.Tuple.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -62,8 +63,10 @@ class ReceiptSigningKeyRegistrationTest {
     private final LinesWithTransaction lines = new LinesWithTransaction(transactions);
     private Optional<FinishedRestore> lastRestore = Optional.empty();
     private boolean outsideDevelopment;
+    private final ListedTrail trail = new ListedTrail();
+    private final Set<ReceiptSigningKeyId> keptAside = new HashSet<>();
     private final ReceiptSigningKeyRegistration registration = new ReceiptSigningKeyRegistration(signer, keys, seals, () -> lastRestore,
-            id -> outsideDevelopment && id.isPublicTestKey(), events, transactions, Clock.fixed(NOW, ZoneOffset.UTC));
+            id -> outsideDevelopment && id.isPublicTestKey(), trail, () -> Set.copyOf(keptAside), events, transactions, Clock.fixed(NOW, ZoneOffset.UTC));
 
     @BeforeEach
     void ownKeyAndLog() {
@@ -95,6 +98,17 @@ class ReceiptSigningKeyRegistrationTest {
         assertThat(audited.getValue().adminId()).isEqualTo(AdminActionPerformed.SERVER);
         assertThat(audited.getValue().action()).isEqualTo(ReceiptSigningKeyRegistration.ACTION);
         assertThat(audited.getValue().details()).isEqualTo("Server zaregistroval svůj klíč k ověřovacím QR na potvrzeních o daru: 21fe31df");
+    }
+
+    @Test
+    @DisplayName("Given no registered key, when the server registers its own, then the history read back from that audit entry records the key")
+    void should_record_key_in_history_read_back_when_registering_given_no_registered_key() {
+        registration.registerOwnKey();
+
+        ArgumentCaptor<AdminActionPerformed> audited = ArgumentCaptor.forClass(AdminActionPerformed.class);
+        verify(events).publishEvent(audited.capture());
+        assertThat(ReceiptSigningKeyHistory.of(List.of(ReceiptSigningKeyHistoryTest.entryOf(audited.getValue())), Set.of()).recorded())
+                .containsExactly(new ReceiptSigningKeyId("21fe31df"));
     }
 
     @Test
@@ -149,6 +163,22 @@ class ReceiptSigningKeyRegistrationTest {
             assertThat(line.message()).isEqualTo("Receipt signing key 39f713d0 from a restored backup is sealed again and published");
             assertThat(line.insideTransaction()).isFalse();
         });
+    }
+
+    @Test
+    @DisplayName("Given a key sealed under the settings key the backup carried and a fresh restore, when the server adopts it, then the history read back from that audit entry records the key")
+    void should_record_key_in_history_read_back_when_adopting_given_carried_key_and_a_fresh_restore() {
+        keys.stored.add(ReceiptSigningKey.register(EARLIER_PUBLIC_KEY, EARLIER, content -> seals.carried(content)));
+        lastRestore = Optional.of(new FinishedRestore(RESTORE, NOW.minus(Duration.ofMinutes(3))));
+
+        registration.registerOwnKey();
+
+        ArgumentCaptor<AdminActionPerformed> audited = ArgumentCaptor.forClass(AdminActionPerformed.class);
+        verify(events, times(2)).publishEvent(audited.capture());
+        AdminActionPerformed adoption = audited.getAllValues().stream().filter(action -> action.action().equals(ReceiptSigningKeyRegistration.ADOPT_ACTION))
+                .findFirst().orElseThrow();
+        assertThat(ReceiptSigningKeyHistory.of(List.of(ReceiptSigningKeyHistoryTest.entryOf(adoption)), Set.of()).recorded())
+                .containsExactly(new ReceiptSigningKeyId("39f713d0"));
     }
 
     @ParameterizedTest
@@ -293,6 +323,79 @@ class ReceiptSigningKeyRegistrationTest {
         verify(events, times(1)).publishEvent(any(AdminActionPerformed.class));
     }
 
+    @Test
+    @DisplayName("Given a withdrawn earlier key whose row was put back as active, when the server starts, then an ERROR after the transaction names it as published withdrawn")
+    void should_log_error_when_registering_given_a_withdrawal_replayed_away() {
+        keys.stored.add(ReceiptSigningKey.register(EARLIER_PUBLIC_KEY, EARLIER, content -> seals.seal(ReceiptSigningKey.SEAL_PURPOSE, content)));
+        trail.entries.add(ReceiptSigningKeyHistoryTest.withdrawn("39f713d0"));
+
+        registration.registerOwnKey();
+
+        assertThat(lines.written).filteredOn(line -> line.message().contains("39f713d0")).singleElement().satisfies(line -> {
+            assertThat(line.level()).isEqualTo(Level.ERROR);
+            assertThat(line.message()).isEqualTo("Receipt signing key 39f713d0 was withdrawn but its row is active again, so it is published as withdrawn");
+            assertThat(line.insideTransaction()).isFalse();
+        });
+    }
+
+    @Test
+    @DisplayName("Given an active row of an earlier key whose seed this server keeps aside as withdrawn and a trail without the withdrawal, when the server starts, then an ERROR after the transaction names it as published withdrawn and nothing is stored")
+    void should_log_error_when_registering_given_a_kept_aside_key_active_after_a_restore() {
+        keys.stored.add(ReceiptSigningKey.register(OWN_PUBLIC_KEY, NOW, content -> seals.seal(ReceiptSigningKey.SEAL_PURPOSE, content)));
+        keys.stored.add(ReceiptSigningKey.register(EARLIER_PUBLIC_KEY, EARLIER, content -> seals.seal(ReceiptSigningKey.SEAL_PURPOSE, content)));
+        keptAside.add(new ReceiptSigningKeyId("39f713d0"));
+
+        registration.registerOwnKey();
+
+        assertThat(keys.saves).isZero();
+        assertThat(lines.written).extracting(Line::level, Line::message).containsExactly(tuple(Level.ERROR,
+                "Receipt signing key 39f713d0 was withdrawn but its row is active again, so it is published as withdrawn"));
+    }
+
+    @Test
+    @DisplayName("Given an earlier key in the audit trail whose row was deleted, when the server starts, then an ERROR after the transaction names it as missing")
+    void should_log_error_when_registering_given_a_recorded_key_without_row() {
+        trail.entries.add(ReceiptSigningKeyHistoryTest.adopted("39f713d0"));
+
+        registration.registerOwnKey();
+
+        assertThat(lines.written).filteredOn(line -> line.message().contains("39f713d0")).singleElement().satisfies(line -> {
+            assertThat(line.level()).isEqualTo(Level.ERROR);
+            assertThat(line.message()).isEqualTo("Receipt signing key 39f713d0 is in the audit trail but its row is missing");
+            assertThat(line.insideTransaction()).isFalse();
+        });
+    }
+
+    @Test
+    @DisplayName("Given the server's own key was withdrawn and its row deleted, when the server starts with the same seed, then it registers nothing, audits nothing and an ERROR says it signs nothing")
+    void should_not_register_again_when_registering_given_own_key_withdrawn_and_row_deleted() {
+        trail.entries.add(ReceiptSigningKeyHistoryTest.registered("21fe31df"));
+        trail.entries.add(ReceiptSigningKeyHistoryTest.withdrawn("21fe31df"));
+
+        registration.registerOwnKey();
+
+        assertThat(keys.stored).isEmpty();
+        verify(events, never()).publishEvent(any(AdminActionPerformed.class));
+        assertThat(lines.written).extracting(Line::level, Line::message).containsExactlyInAnyOrder(
+                tuple(Level.ERROR, "Receipt signing key 21fe31df is in the audit trail but its row is missing"),
+                tuple(Level.ERROR,
+                        "Receipt signing key 21fe31df of this server is withdrawn, so the server signs no receipt until it starts with a new seed"));
+    }
+
+    @Test
+    @DisplayName("Given the server's own key row withdrawn, when the server starts with the same seed, then it stores nothing and an ERROR says it signs nothing")
+    void should_log_error_when_registering_given_own_row_withdrawn() {
+        keys.stored.add(ReceiptSigningKey.register(OWN_PUBLIC_KEY, EARLIER, content -> seals.seal(ReceiptSigningKey.SEAL_PURPOSE, content))
+                .withdrawn(content -> seals.seal(ReceiptSigningKey.SEAL_PURPOSE, content)));
+        trail.entries.add(ReceiptSigningKeyHistoryTest.withdrawn("21fe31df"));
+
+        registration.registerOwnKey();
+
+        assertThat(keys.saves).isZero();
+        assertThat(lines.written).extracting(Line::level, Line::message).containsExactly(tuple(Level.ERROR,
+                "Receipt signing key 21fe31df of this server is withdrawn, so the server signs no receipt until it starts with a new seed"));
+    }
+
     private static Logger logger() {
         return (Logger) LoggerFactory.getLogger(ReceiptSigningKeyRegistration.class);
     }
@@ -342,6 +445,16 @@ class ReceiptSigningKeyRegistrationTest {
         @Override
         public List<ReceiptSigningKey> findAll() {
             return List.copyOf(stored);
+        }
+
+        @Override
+        public Optional<ReceiptSigningKey> lockForWithdrawal(ReceiptSigningKeyId id) {
+            throw new UnsupportedOperationException("the registrar withdraws nothing");
+        }
+
+        @Override
+        public Optional<ReceiptSigningKey> lockForIssuing(ReceiptSigningKeyId id) {
+            throw new UnsupportedOperationException("the registrar issues nothing");
         }
 
         @Override

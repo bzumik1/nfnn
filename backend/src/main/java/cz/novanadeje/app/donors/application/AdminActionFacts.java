@@ -119,10 +119,22 @@ public record AdminActionFacts(String summaryKey, Map<String, String> values) {
         shapes.put("CHANGE_RECEIPT_SIGNATURE", List.of(
                 full("Nahrán obrázek podpisu na potvrzení o daru: (?<width>\\d+) × (?<height>\\d+) px, SHA-256 \\S+"),
                 full("Signature image for receipts uploaded: (?<width>\\d+)x(?<height>\\d+) px, SHA-256 \\S+")));
+        String issued = " vystaveno dárci " + DONOR_ID;
+        String replacing = "; nahrazuje potvrzení (?<replaced>\\d{4}-\\d{6})";
+        String number = "Potvrzení (?<number>\\d{4}-\\d{6}) ";
+        shapes.put("ISSUE_RECEIPT", List.of(
+                variant("yearlyReplacing", number + "za rok (?<year>\\d{4})" + issued + replacing),
+                variant("yearly", number + "za rok (?<year>\\d{4})" + issued),
+                variant("replacing", number + "za dar " + ID + issued + replacing),
+                full(number + "za dar " + ID + issued)));
         shapes.put("REGISTER_RECEIPT_SIGNING_KEY", List.of(
                 full("Server zaregistroval svůj klíč k ověřovacím QR na potvrzeních o daru: (?<key>[0-9a-f]{8})")));
         shapes.put("ADOPT_RECEIPT_SIGNING_KEY", List.of(
                 full("Server převzal klíč k ověřovacím QR (?<key>[0-9a-f]{8}) z obnovené zálohy \\(obnova (?<restore>[0-9A-Za-z:.-]{1,40})\\)")));
+        shapes.put("WITHDRAW_RECEIPT_SIGNING_KEY", List.of(
+                full("Stažen klíč k ověřovacím QR (?<key>[0-9a-f]{8}) \\(ověřeno druhým faktorem\\)")));
+        shapes.put("WITHDRAW_RECEIPT_SIGNING_KEY_REFUSED", List.of(
+                full("Klíč k ověřovacím QR (?<key>[0-9a-f]{8}) se nestáhl: druhý faktor nesouhlasil")));
         shapes.put("REMOVE_RECEIPT_SIGNATURE", List.of(
                 full("Obrázek podpisu odebrán; .*"),
                 full("Signature image for receipts removed; .*")));

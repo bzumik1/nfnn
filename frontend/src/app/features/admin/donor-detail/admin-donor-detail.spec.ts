@@ -11,6 +11,7 @@ import {
   adminReceipt,
   donorAccount,
   donorDetail,
+  issuedReceipt,
 } from '../testing/admin-fixtures';
 import { AdminDonorDetail } from './admin-donor-detail';
 
@@ -19,6 +20,7 @@ const LINK_ID = '0192f0c4-0000-7000-8000-000000000001';
 const ACCOUNT_URL = `/api/admin/donors/${DONOR_ID}`;
 const DETAIL_URL = `/api/admin/donations/donors/${DONOR_ID}`;
 const LINK_URL = `${DETAIL_URL}/bank-accounts/${LINK_ID}`;
+const ISSUE_URL = `${DETAIL_URL}/receipts`;
 
 function problem(status: number, type: string, title: string, detail: string) {
   return {
@@ -435,7 +437,9 @@ describe('Given an administrator on a donor card', () => {
       'Z žádného účtu zatím nepřišla platba s variabilním symbolem dárce.',
     );
     expect(sectionText('Dary')).toContain('Dárce zatím nemá žádný přiřazený dar.');
-    expect(sectionText('Vydaná potvrzení')).toContain('Dárce si zatím žádné potvrzení nestáhl.');
+    expect(sectionText('Vydaná potvrzení')).toContain(
+      'Dárci zatím nikdo žádné potvrzení nevystavil.',
+    );
   });
 
   it('when a yearly receipt was replaced, then the receipts card names the year and the replacement', async () => {
@@ -459,6 +463,281 @@ describe('Given an administrator on a donor card', () => {
     expect(receipts).toContain('Rok 2025');
     expect(receipts).toContain('anglicky');
     expect(receipts).toContain('nahrazeno novějším');
+  });
+
+  function issueSelect(): HTMLSelectElement {
+    return section('Vydaná potvrzení').querySelector('select') as HTMLSelectElement;
+  }
+
+  function optionLabels(): string[] {
+    return Array.from(issueSelect().options).map((option) =>
+      (option.textContent ?? '').replace(/\s+/g, ' ').trim(),
+    );
+  }
+
+  async function choose(label: string): Promise<void> {
+    const select = issueSelect();
+    const option = Array.from(select.options).find(
+      (candidate) => (candidate.textContent ?? '').replace(/\s+/g, ' ').trim() === label,
+    );
+    if (option === undefined) {
+      throw new Error(`No option "${label}" in ${optionLabels().join(', ')}`);
+    }
+    select.value = option.value;
+    select.dispatchEvent(new Event('change'));
+    await settle();
+  }
+
+  function receiptsNotice(kind: 'status' | 'alert'): string {
+    return (
+      section('Vydaná potvrzení').querySelector(`app-live-notice [role="${kind}"]`)?.textContent ??
+      ''
+    )
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  const withYearAndOlderGifts = () =>
+    donorDetail({
+      yearlyReceiptsAvailableThrough: 2026,
+      receiptsAvailableFrom: 2026,
+      donations: {
+        items: [
+          adminDonation(),
+          adminDonation({
+            id: '0192f0f1-0000-7000-8000-000000000002',
+            receivedAt: '2026-10-10',
+            amountMinor: 50000,
+            receiptNumber: '2026-000001',
+          }),
+          adminDonation({
+            id: '0192f0f1-0000-7000-8000-000000000003',
+            receivedAt: '2026-09-01',
+            amountMinor: 100,
+            accountVerification: true,
+            receiptAvailable: false,
+          }),
+          adminDonation({
+            id: '0192f0f1-0000-7000-8000-000000000004',
+            receivedAt: '2025-12-20',
+            amountMinor: 20000,
+            receiptAvailable: false,
+          }),
+          adminDonation({
+            id: '0192f0f1-0000-7000-8000-000000000005',
+            receivedAt: '2026-08-01',
+            status: 'REFUNDED',
+            receiptAvailable: false,
+          }),
+        ],
+        totalAmountMinor: 100100,
+        currency: 'CZK',
+        count: 4,
+      },
+    });
+
+  it('when the donations part arrives, then the receipts card offers the yearly receipts of completed years with gifts and the receipts of single donations', async () => {
+    await loaded(donorAccount(), withYearAndOlderGifts());
+
+    expect(optionLabels()).toEqual([
+      'Roční potvrzení za rok 2026',
+      'Dar z 12. 10. 2026, 300 Kč',
+      'Dar z 10. 10. 2026, 500 Kč',
+    ]);
+    expect(issueSelect().labels?.[0]?.textContent?.trim()).toBe('Potvrzení k vystavení');
+    expect(button(section('Vydaná potvrzení'), 'Vystavit potvrzení').disabled).toBe(false);
+  });
+
+  it('when a receipt is issued, then the button names the wait, the choice is posted and the status line names the number, the time and that it is valid', async () => {
+    await loaded();
+    await choose('Dar z 10. 10. 2026, 500 Kč');
+
+    button(section('Vydaná potvrzení'), 'Vystavit potvrzení').click();
+    await settle();
+
+    const waiting = button(section('Vydaná potvrzení'), 'Vystavujeme potvrzení…');
+    expect(waiting.disabled).toBe(true);
+    expect(issueSelect().disabled).toBe(true);
+    const request = http.expectOne(ISSUE_URL);
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ donationId: '0192f0f1-0000-7000-8000-000000000002' });
+    request.flush(issuedReceipt({ donationId: '0192f0f1-0000-7000-8000-000000000002' }));
+    await settle();
+
+    expect(receiptsNotice('status')).toBe(
+      'Vystavili jsme potvrzení 2026-000002 z 17. 10. 2026 11:00. Je platné.',
+    );
+    const notice = section('Vydaná potvrzení').querySelector('app-live-notice') as HTMLElement;
+    expect(document.activeElement).toBe(notice);
+    expect(button(section('Vydaná potvrzení'), 'Vystavit potvrzení').disabled).toBe(false);
+    http.expectOne(DETAIL_URL).flush(
+      donorDetail({
+        receipts: [
+          adminReceipt({ id: '019a1c00-0000-7000-8000-00000000f002', number: '2026-000002' }),
+          adminReceipt(),
+        ],
+      }),
+    );
+    await settle();
+    expect(sectionText('Vydaná potvrzení')).toContain('2026-000002');
+    expect(receiptsNotice('status')).toContain('2026-000002');
+  });
+
+  it('when a yearly receipt is chosen, then the year is posted alone', async () => {
+    await loaded(donorAccount(), withYearAndOlderGifts());
+
+    button(section('Vydaná potvrzení'), 'Vystavit potvrzení').click();
+    fixture.detectChanges();
+
+    const request = http.expectOne(ISSUE_URL);
+    expect(request.request.body).toEqual({ year: 2026 });
+    request.flush(
+      issuedReceipt({ kind: 'YEARLY', donationId: null, year: 2026, number: '2027-000001' }),
+    );
+    await settle();
+    expect(receiptsNotice('status')).toContain('Vystavili jsme potvrzení 2027-000001');
+    http.expectOne(DETAIL_URL).flush(withYearAndOlderGifts());
+    await settle();
+  });
+
+  it('when the same data return the receipt already issued, then the status line says that it still holds and no number was taken', async () => {
+    await loaded();
+    await choose('Dar z 10. 10. 2026, 500 Kč');
+
+    button(section('Vydaná potvrzení'), 'Vystavit potvrzení').click();
+    fixture.detectChanges();
+    http.expectOne(ISSUE_URL).flush(
+      issuedReceipt({
+        id: '019a1c00-0000-7000-8000-00000000f001',
+        number: '2026-000001',
+        donationId: '0192f0f1-0000-7000-8000-000000000002',
+      }),
+    );
+    await settle();
+
+    expect(receiptsNotice('status')).toBe(
+      'Potvrzení 2026-000001 z 17. 10. 2026 11:00 dál platí: údaje se nezměnily, nové číslo jsme nevydali.',
+    );
+    http.expectOne(DETAIL_URL).flush(donorDetail());
+    await settle();
+  });
+
+  it('when the receipt replaces an older one, then the status line names the replaced number', async () => {
+    await loaded();
+    await choose('Dar z 10. 10. 2026, 500 Kč');
+
+    button(section('Vydaná potvrzení'), 'Vystavit potvrzení').click();
+    fixture.detectChanges();
+    http.expectOne(ISSUE_URL).flush(
+      issuedReceipt({
+        donationId: '0192f0f1-0000-7000-8000-000000000002',
+        receipt: {
+          number: '2026-000002',
+          issuedOn: '2026-10-17',
+          replaces: { number: '2026-000001', issuedOn: '2026-10-17' },
+          verification: { keyId: '21fe31df', qrText: 'https://nfnn.cz/overit#1' },
+        },
+      }),
+    );
+    await settle();
+
+    expect(receiptsNotice('status')).toBe(
+      'Vystavili jsme potvrzení 2026-000002 z 17. 10. 2026 11:00, které nahrazuje potvrzení 2026-000001. Je platné.',
+    );
+    http.expectOne(DETAIL_URL).flush(donorDetail());
+    await settle();
+  });
+
+  it('when issuing is refused, then the alert shows the backend title and detail and the button comes back', async () => {
+    await loaded();
+
+    button(section('Vydaná potvrzení'), 'Vystavit potvrzení').click();
+    fixture.detectChanges();
+    const refusal = problem(
+      409,
+      'donations/receipt-issue-limit',
+      'Příliš mnoho nových potvrzení',
+      'Další půjde vystavit zítra.',
+    );
+    http.expectOne(ISSUE_URL).flush(refusal.body, refusal.options);
+    await settle();
+
+    expect(receiptsNotice('alert')).toBe(
+      'Příliš mnoho nových potvrzení. Další půjde vystavit zítra.',
+    );
+    expect(receiptsNotice('status')).toBe('');
+    const again = button(section('Vydaná potvrzení'), 'Vystavit potvrzení');
+    expect(again.disabled).toBe(false);
+    expect(document.activeElement).toBe(again);
+  });
+
+  it('when issuing fails without an answer, then the alert says what to do next', async () => {
+    await loaded();
+
+    button(section('Vydaná potvrzení'), 'Vystavit potvrzení').click();
+    fixture.detectChanges();
+    http.expectOne(ISSUE_URL).error(new ProgressEvent('error'));
+    await settle();
+
+    expect(receiptsNotice('alert')).toBe(
+      'Potvrzení se nepodařilo vystavit. Zkuste to prosím znovu.',
+    );
+  });
+
+  it('when the donor has no gift to certify, then no receipt is offered and the card says why', async () => {
+    await loaded(
+      donorAccount(),
+      donorDetail({ donations: { items: [], totalAmountMinor: 0, currency: 'CZK', count: 0 } }),
+    );
+    expect(section('Vydaná potvrzení').querySelector('select')).toBeNull();
+    expect(buttonNames(section('Vydaná potvrzení'))).not.toContain('Vystavit potvrzení');
+    expect(sectionText('Vydaná potvrzení')).toContain(
+      'Dárce nemá žádný dar, za který by šlo potvrzení vystavit.',
+    );
+  });
+
+  it('when the donor is erased, then the receipts card keeps the receipts issued before and its notice line but offers no issuing for gifts a donor on record would get', async () => {
+    const erased = donorDetail();
+    await loaded(donorAccount({ erasedAt: '2026-10-20T08:00:00Z' }), {
+      ...erased,
+      donor: { ...erased.donor, erasedAt: '2026-10-20T08:00:00Z' },
+    });
+    const receipts = section('Vydaná potvrzení');
+    expect(receipts.querySelector('app-live-notice [role="status"]')).not.toBeNull();
+    expect(receipts.querySelector('app-live-notice [role="alert"]')).not.toBeNull();
+    expect(sectionText('Vydaná potvrzení')).toContain('2026-000001');
+    expect(receipts.querySelector('select')).toBeNull();
+    expect(buttonNames(receipts)).not.toContain('Vystavit potvrzení');
+    expect(sectionText('Vydaná potvrzení')).not.toContain('za který by šlo');
+  });
+
+  it('when gifts lie in the year after the last completed one, then that year is not offered as a yearly receipt while its gifts are offered singly', async () => {
+    await loaded(
+      donorAccount(),
+      donorDetail({
+        yearlyReceiptsAvailableThrough: 2026,
+        receiptsAvailableFrom: 2026,
+        donations: {
+          items: [
+            adminDonation({
+              id: '0192f0f1-0000-7000-8000-000000000007',
+              receivedAt: '2027-01-05',
+              amountMinor: 70000,
+            }),
+            adminDonation(),
+          ],
+          totalAmountMinor: 100000,
+          currency: 'CZK',
+          count: 2,
+        },
+      }),
+    );
+
+    expect(optionLabels()).toEqual([
+      'Roční potvrzení za rok 2026',
+      'Dar z 05. 01. 2027, 700 Kč',
+      'Dar z 12. 10. 2026, 300 Kč',
+    ]);
   });
 
   it('when the second factor is turned off after the confirmation, then the account reloads and the status says what happened', async () => {
