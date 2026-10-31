@@ -8,6 +8,7 @@ public final class ProtectedLoggers {
             "org.hibernate.orm.jdbc.bind",
             "org.hibernate.orm.jdbc.extract",
             "org.hibernate.internal.util.EntityPrinter",
+            "org.springframework.web.method",
             "org.springframework.web.servlet.mvc.method.annotation",
             "org.springframework.web.client",
             "org.apache.coyote",
