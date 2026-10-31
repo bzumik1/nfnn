@@ -1,5 +1,5 @@
 import { BackupKeyWordCheck } from '../backup-key/backup-key-word-check';
-import { HttpClient, HttpEvent, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpEvent, HttpHeaders } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import {
   catchError,
@@ -13,6 +13,8 @@ import {
   take,
   timer,
 } from 'rxjs';
+import { WITHOUT_ACCESS_TOKEN } from '../../../core/auth/auth-interceptor';
+import { AuthStore } from '../../../core/auth/auth-store';
 
 export type SettingName =
   | 'PUBLIC_URL'
@@ -120,9 +122,12 @@ export interface SettingsSavedResponse {
 @Injectable({ providedIn: 'root' })
 export class SetupApi {
   private readonly http = inject(HttpClient);
+  private readonly auth = inject(AuthStore);
 
   status(): Observable<SetupStatusResponse> {
-    return this.http.get<SetupStatusResponse>('/api/operations/setup');
+    return this.http.get<SetupStatusResponse>('/api/operations/setup', {
+      context: new HttpContext().set(WITHOUT_ACCESS_TOKEN, true),
+    });
   }
 
   unlock(code: string): Observable<void> {
@@ -183,8 +188,16 @@ export class SetupApi {
       ),
       filter((probe) => probe.up && (probe.wentDown || probe.index >= RESTART_GRACE_POLLS)),
       take(1),
+      concatMap(() => this.renewedSession()),
       map((): RestartOutcome => 'restarted'),
       defaultIfEmpty<RestartOutcome, RestartOutcome>('slow'),
     );
+  }
+
+  private renewedSession(): Observable<unknown> {
+    if (this.auth.currentAccessToken() === null) {
+      return of(null);
+    }
+    return this.auth.refresh().pipe(catchError(() => of(null)));
   }
 }

@@ -1,6 +1,9 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { Observable, Subject, throwError } from 'rxjs';
+import { WITHOUT_ACCESS_TOKEN } from '../../../core/auth/auth-interceptor';
+import { AuthStore } from '../../../core/auth/auth-store';
 import { RESTART_POLL_MS, RestartOutcome, SetupApi } from './setup-api';
 
 const STATUS_URL = '/api/operations/setup';
@@ -100,6 +103,14 @@ describe('Given the setup API', () => {
     });
   });
 
+  it('when the setup status is asked for, then the request goes without the access token', () => {
+    api.status().subscribe();
+
+    const request = http.expectOne(STATUS_URL);
+    expect(request.request.context.get(WITHOUT_ACCESS_TOKEN)).toBe(true);
+    request.flush({ required: false, codeRequired: true });
+  });
+
   describe('when it watches a restart', () => {
     let outcome: RestartOutcome | null;
 
@@ -148,5 +159,80 @@ describe('Given the setup API', () => {
 
       expect(outcome).toBe('slow');
     });
+  });
+});
+
+describe('Given an open session while the setup API watches a restart', () => {
+  let api: SetupApi;
+  let http: HttpTestingController;
+  let refreshes: Subject<string>;
+  let refresh: () => Observable<string>;
+  let outcome: RestartOutcome | null;
+
+  beforeEach(() => {
+    refreshes = new Subject<string>();
+    refresh = vi.fn(() => refreshes);
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        {
+          provide: AuthStore,
+          useValue: {
+            currentAccessToken: () => 'token-of-the-old-address',
+            refresh: () => refresh(),
+          },
+        },
+      ],
+    });
+    api = TestBed.inject(SetupApi);
+    http = TestBed.inject(HttpTestingController);
+    vi.useFakeTimers();
+    outcome = null;
+    api.watchRestart().subscribe((result) => (outcome = result));
+  });
+
+  afterEach(() => {
+    http.verify();
+    vi.useRealTimers();
+  });
+
+  async function poll(answer: 'up' | 'down'): Promise<void> {
+    await vi.advanceTimersByTimeAsync(RESTART_POLL_MS);
+    const request = http.expectOne(STATUS_URL);
+    if (answer === 'up') {
+      request.flush({ required: false, codeRequired: true });
+    } else {
+      request.flush('', { status: 502, statusText: 'Bad Gateway' });
+    }
+  }
+
+  it('when the backend answers again, then the session is refreshed before the restart counts as done', async () => {
+    await poll('down');
+    await poll('up');
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(outcome).toBeNull();
+
+    refreshes.next('token-of-the-new-address');
+    refreshes.complete();
+
+    expect(outcome).toBe('restarted');
+  });
+
+  it('when the refresh is refused, then the restart still counts as done', async () => {
+    refresh = vi.fn(() => throwError(() => new Error('refused')));
+
+    await poll('down');
+    await poll('up');
+
+    expect(outcome).toBe('restarted');
+  });
+
+  it('when the backend is down, then the session is not refreshed', async () => {
+    await poll('down');
+    await poll('down');
+
+    expect(refresh).not.toHaveBeenCalled();
+    expect(outcome).toBeNull();
   });
 });

@@ -446,6 +446,10 @@ describe('Given an administrator on the backups page', () => {
       await vi.advanceTimersByTimeAsync(RESTART_POLL_MS);
       http.expectOne(SETUP_URL).flush({ required: false, codeRequired: false, lastRestore: null });
       await settle();
+      http
+        .expectOne('/api/donors/auth/refresh')
+        .flush(authResponse('token-2', sampleDonor({ roles: ['DONOR', 'ADMIN'] })));
+      await settle();
 
       http.expectOne(BACKUPS_URL).flush(
         backupsView({

@@ -13,6 +13,7 @@ const SETTINGS_URL = '/api/admin/operations/settings';
 const TEST_EMAIL_URL = '/api/admin/operations/settings/test-email';
 const STATUS_URL = '/api/operations/setup';
 const SIGNATORY_URL = '/api/admin/donations/receipt-signatory';
+const REFRESH_URL = '/api/donors/auth/refresh';
 const SIGNING_KEYS_URL = '/api/admin/donations/receipt-signing-keys';
 
 describe('Given an administrator on the settings page', () => {
@@ -278,7 +279,13 @@ describe('Given an administrator on the settings page', () => {
       await vi.advanceTimersByTimeAsync(RESTART_POLL_MS);
       http.expectOne(STATUS_URL).flush({ required: false, codeRequired: true });
       await vi.advanceTimersByTimeAsync(1);
-      http.expectOne(SETTINGS_URL).flush(settingsView());
+      http
+        .expectOne(REFRESH_URL)
+        .flush(authResponse('token-2', sampleDonor({ roles: ['DONOR', 'ADMIN'] })));
+      await vi.advanceTimersByTimeAsync(1);
+      const reload = http.expectOne(SETTINGS_URL);
+      expect(reload.request.headers.get('Authorization')).toBe('Bearer token-2');
+      reload.flush(settingsView());
       await vi.advanceTimersByTimeAsync(1);
       fixture.detectChanges();
 

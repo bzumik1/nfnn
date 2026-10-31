@@ -230,6 +230,7 @@
         />
       </app-form-field>
       @if (confirmation() === 'password') {
+        <app-account-username [email]="accountEmail()" />
         <app-form-field
           label="Současné heslo"
           i18n-label="@@donor.account.currentPassword"

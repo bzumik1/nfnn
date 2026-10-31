@@ -62,7 +62,7 @@ Mimo očíslované úkoly:
 | 19 | Opravy konektoru z auditu, fotky přes konektor | #115, #118 |
 | | **Blok 4: spuštění na nfnn.cz** | |
 | 13 | Skutečný obsah úvodní stránky | zbývá, viz níže |
-| 14 | Přechod na nfnn.cz: canonical, `og:*`, `robots.txt`, `sitemap.xml` | #99; krok na serveru zbývá, viz níže |
+| 14 | Přechod na nfnn.cz: canonical, `og:*`, `robots.txt`, `sitemap.xml`; web na nfnn.cz přes Cloudflare (31. 10. 2026) | #99 |
 | 15 | Bezpečnostní revize před spuštěním a oprava jejího nálezu (token připojené aplikace jen pro správu) | #100 |
 | 16 | Zálohy mimo server a hlídání dostupnosti | zbývá, viz níže |
 
@@ -79,7 +79,6 @@ Zbývá před spuštěním na nfnn.cz:
 
 - Skutečný obsah úvodní stránky (texty, příběhy, čísla, fotky) od Jakuba a Pavla; rozhodnout o „100 % transparentně“ a o vlastních fotkách místo fotobanky (fotku v O nás už nahraje správce v `/sprava/o-nas`).
 - Řádek „Výroční zprávy“ v O nás, až budou PDF.
-- Přechod na doménu nfnn.cz na serveru (postup v `deploy/README.md`).
 - Hlídání dostupnosti zvenčí; kopie záloh mimo server až po spuštění (zálohy jsou už šifrované; Jakub vybírá úložiště: Cloudflare R2, iCloud přes zkratku v iPhonu, nebo obojí).
 - Sběrné účty a vlastní účty fondu vyloučit z párování (`/sprava/nastaveni`).
 - Odemčení historie ve Fio a hluboký import do 1. 1. 2027, aby potvrzení za rok 2026 obsahovala všechny dary.

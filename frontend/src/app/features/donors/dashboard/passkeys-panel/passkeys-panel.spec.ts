@@ -188,6 +188,22 @@ describe('Given the passkeys panel of the sign-in card', () => {
       expect(element('form')).toBeNull();
     });
 
+    it('then the account e-mail stands before the password as its hidden user name, so the browser fills it instead of the key name', async () => {
+      const fields = Array.from(element('form').querySelectorAll('input'));
+      const userName = fields.find(
+        (field) => field.autocomplete === 'username',
+      ) as HTMLInputElement;
+
+      expect(userName.value).toBe('jana@example.cz');
+      expect(userName.hidden).toBe(true);
+      expect(fields.indexOf(userName)).toBeLessThan(
+        fields.indexOf(element('#passkey-password') as HTMLInputElement),
+      );
+      expect(fields.indexOf(userName)).toBeGreaterThan(
+        fields.indexOf(element('#passkey-name') as HTMLInputElement),
+      );
+    });
+
     it('then the name and the password are required', async () => {
       await fillIn('#passkey-name', '');
       await submit();

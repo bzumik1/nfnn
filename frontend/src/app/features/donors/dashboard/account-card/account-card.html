@@ -104,6 +104,7 @@
               Na novou adresu pošleme odkaz. Účet se na ni přepne, až ho otevřete; do té doby platí
               současná adresa.
             </p>
+            <app-account-username [email]="accountEmail()" />
             <app-form-field
               label="Nový e-mail"
               i18n-label="@@donor.account.newEmail"
@@ -253,6 +254,7 @@
               </p>
             }
             @if (hasPassword()) {
+              <app-account-username [email]="accountEmail()" />
               <app-form-field
                 label="Současné heslo"
                 i18n-label="@@donor.account.currentPassword"
@@ -372,6 +374,7 @@
                 vám jiný správce.
               </p>
             }
+            <app-account-username [email]="accountEmail()" />
             <app-form-field
               label="Současné heslo"
               i18n-label="@@donor.account.currentPassword"
@@ -518,6 +521,7 @@
               napište a kód z aplikace vám vypneme.
             </p>
             @if (hasPassword()) {
+              <app-account-username [email]="accountEmail()" />
               <app-form-field
                 label="Současné heslo"
                 i18n-label="@@donor.account.currentPassword"
@@ -704,6 +708,7 @@
               </p>
             }
             @if (hasPassword()) {
+              <app-account-username [email]="accountEmail()" />
               <app-form-field
                 label="Současné heslo"
                 i18n-label="@@donor.account.currentPassword"
