@@ -452,6 +452,11 @@ class ReceiptSigningKeyRegistrationTest {
         }
 
         @Override
+        public Optional<ReceiptSigningKey> lockForIssuing(ReceiptSigningKeyId id) {
+            throw new UnsupportedOperationException("the registrar issues nothing");
+        }
+
+        @Override
         public void save(ReceiptSigningKey key) {
             saves++;
             stored.removeIf(existing -> existing.id().equals(key.id()));

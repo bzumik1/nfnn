@@ -267,6 +267,11 @@ class ReceiptSigningKeyWithdrawalTest {
         }
 
         @Override
+        public Optional<ReceiptSigningKey> lockForIssuing(ReceiptSigningKeyId id) {
+            throw new UnsupportedOperationException("a withdrawal issues nothing");
+        }
+
+        @Override
         public void save(ReceiptSigningKey key) {
             saves++;
             rows.replaceAll(existing -> existing.id().equals(key.id()) ? key : existing);

@@ -126,9 +126,9 @@ class DonationReceiptIssuerTest {
     }
 
     @Test
-    @DisplayName("Given the server's own signing key withdrawn and not yet replaced, when a single receipt is issued, then it is refused as paused before the donor is locked, nothing is read, numbered or saved and an ERROR names the donor and the key")
-    void should_refuse_before_lock_and_log_when_issued_given_own_key_withdrawn() {
-        when(signingKeys.withdrawnCurrentKey()).thenReturn(Optional.of(new ReceiptSigningKeyId("21fe31df")));
+    @DisplayName("Given the server's own signing key withdrawn and not yet replaced, when a single receipt is issued, then it is refused as paused before the donor is locked, nothing is read, numbered or saved and a WARN names the donor and the key")
+    void should_refuse_before_lock_and_warn_when_issued_given_own_key_withdrawn() {
+        when(signingKeys.withdrawnCurrentKeyHeldForIssuing()).thenReturn(Optional.of(new ReceiptSigningKeyId("21fe31df")));
         ListAppender<ILoggingEvent> lines = issuerLog();
         try {
             assertThatThrownBy(() -> issuer.issueForDonation(JANA, MARCH.id(), TODAY)).isInstanceOf(ReceiptSigningPaused.class)
@@ -139,7 +139,7 @@ class DonationReceiptIssuerTest {
 
         verifyNoInteractions(receipts, donations, donorRecords, freezer, signatures);
         assertThat(lines.list).singleElement().satisfies(line -> {
-            assertThat(line.getLevel()).isEqualTo(Level.ERROR);
+            assertThat(line.getLevel()).isEqualTo(Level.WARN);
             assertThat(line.getFormattedMessage()).isEqualTo("No receipt is issued to donor " + JANA
                     + ": the receipt signing key 21fe31df of this server is withdrawn and no new seed has replaced it");
         });
@@ -151,7 +151,7 @@ class DonationReceiptIssuerTest {
         ReceiptFingerprint same = ReceiptDocumentFactory.fingerprintForYear(jana(), YEAR_2026, List.of(MARCH, JUNE));
         givenDonationsOfJana(jana(), JUNE, MARCH);
         when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.of(yearlyReceipt(same, LocaleCode.CS)));
-        when(signingKeys.withdrawnCurrentKey()).thenReturn(Optional.of(new ReceiptSigningKeyId("21fe31df")));
+        when(signingKeys.withdrawnCurrentKeyHeldForIssuing()).thenReturn(Optional.of(new ReceiptSigningKeyId("21fe31df")));
 
         assertThatThrownBy(() -> issuer.issueForYear(JANA, YEAR_2026, TODAY)).isInstanceOf(ReceiptSigningPaused.class);
 

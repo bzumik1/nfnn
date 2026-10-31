@@ -64,6 +64,18 @@ class JpaReceiptSigningKeyRepositoryTest {
     }
 
     @Test
+    @DisplayName("Given two registered keys, when one is locked for issuing, then that key comes back, and an unknown key does not")
+    void should_return_the_named_key_when_locked_for_issuing_given_two_registered_keys() {
+        ReceiptSigningKey first = ReceiptSigningKey.register(PUBLIC_KEY, NOW, content -> "v1:first");
+        keys.save(first);
+        keys.save(ReceiptSigningKey.register(OTHER_PUBLIC_KEY, NOW.plusSeconds(60), content -> "v1:second"));
+        flushAndClear();
+
+        assertThat(keys.lockForIssuing(first.id())).contains(first);
+        assertThat(keys.lockForIssuing(new ReceiptSigningKeyId("dac073e0"))).isEmpty();
+    }
+
+    @Test
     @DisplayName("Given a registered key, when it is saved again with a new seal, then one row holds the new seal and the rest stays")
     void should_keep_one_row_with_new_seal_when_saved_again_given_registered_key() {
         ReceiptSigningKey key = ReceiptSigningKey.register(PUBLIC_KEY, NOW, content -> "v1:earlier-server");

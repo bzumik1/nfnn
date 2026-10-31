@@ -30,11 +30,12 @@ class ReceiptSigningKeysTest {
     private static final Instant NOW = Instant.parse("2026-11-13T11:00:00Z");
 
     private final List<ReceiptSigningKey> stored = new ArrayList<>();
+    private final List<ReceiptSigningKeyId> lockedForIssuing = new ArrayList<>();
     private final ReceiptSigner signer = mock(ReceiptSigner.class);
     private boolean outsideDevelopment;
     private final ListedTrail trail = new ListedTrail();
     private final Set<ReceiptSigningKeyId> keptAside = new HashSet<>();
-    private final ReceiptSigningKeys keys = new ReceiptSigningKeys(new ListedKeys(stored), new PrefixSeals(), signer,
+    private final ReceiptSigningKeys keys = new ReceiptSigningKeys(new ListedKeys(stored, lockedForIssuing), new PrefixSeals(), signer,
             id -> outsideDevelopment && id.isPublicTestKey(), trail, () -> Set.copyOf(keptAside));
 
     @BeforeEach
@@ -134,13 +135,21 @@ class ReceiptSigningKeysTest {
     }
 
     @Test
-    @DisplayName("Given the server's own key withdrawn in the trail, when the keys are asked for a withdrawn current key, then they name it, and none for an active own key")
+    @DisplayName("Given the server's own key withdrawn in the trail, when the keys are asked for a withdrawn current key while issuing, then they name it, and none for an active own key")
     void should_name_withdrawn_current_key_when_asked_given_own_key_withdrawn() {
-        assertThat(keys.withdrawnCurrentKey()).isEmpty();
+        assertThat(keys.withdrawnCurrentKeyHeldForIssuing()).isEmpty();
 
         trail.entries.add(ReceiptSigningKeyHistoryTest.withdrawn("21fe31df"));
 
-        assertThat(keys.withdrawnCurrentKey()).contains(new ReceiptSigningKeyId("21fe31df"));
+        assertThat(keys.withdrawnCurrentKeyHeldForIssuing()).contains(new ReceiptSigningKeyId("21fe31df"));
+    }
+
+    @Test
+    @DisplayName("Given the server's own row, when the keys are asked for a withdrawn current key while issuing, then the own row is locked for issuing, so a withdrawal committing meanwhile is waited for")
+    void should_lock_the_own_row_for_issuing_when_asked_given_the_own_row() {
+        keys.withdrawnCurrentKeyHeldForIssuing();
+
+        assertThat(lockedForIssuing).containsExactly(new ReceiptSigningKeyId("21fe31df"));
     }
 
     @Test
@@ -148,7 +157,7 @@ class ReceiptSigningKeysTest {
     void should_show_current_key_revoked_when_overview_is_read_given_own_row_withdrawn() {
         stored.set(0, stored.getFirst().withdrawn(content -> PrefixSeals.HERE));
 
-        assertThat(keys.withdrawnCurrentKey()).contains(new ReceiptSigningKeyId("21fe31df"));
+        assertThat(keys.withdrawnCurrentKeyHeldForIssuing()).contains(new ReceiptSigningKeyId("21fe31df"));
         assertThat(keys.overview().keys()).singleElement().satisfies(key -> {
             assertThat(key.status()).isEqualTo(ReceiptSigningKeyStatus.REVOKED);
             assertThat(key.published()).isTrue();
@@ -156,7 +165,7 @@ class ReceiptSigningKeysTest {
         });
     }
 
-    private record ListedKeys(List<ReceiptSigningKey> stored) implements ReceiptSigningKeyRepository {
+    private record ListedKeys(List<ReceiptSigningKey> stored, List<ReceiptSigningKeyId> lockedForIssuing) implements ReceiptSigningKeyRepository {
 
         @Override
         public List<ReceiptSigningKey> findAll() {
@@ -166,6 +175,12 @@ class ReceiptSigningKeysTest {
         @Override
         public Optional<ReceiptSigningKey> lockForWithdrawal(ReceiptSigningKeyId id) {
             throw new UnsupportedOperationException("the list only reads");
+        }
+
+        @Override
+        public Optional<ReceiptSigningKey> lockForIssuing(ReceiptSigningKeyId id) {
+            lockedForIssuing.add(id);
+            return stored.stream().filter(key -> key.id().equals(id)).findFirst();
         }
 
         @Override
