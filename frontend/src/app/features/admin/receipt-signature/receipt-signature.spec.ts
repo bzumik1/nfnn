@@ -239,6 +239,8 @@ describe('Given the receipt signature part of a person of the foundation', () =>
     expect(text('[role="alert"]:not(:empty)')).toContain('Podpis se nepodařilo načíst.');
 
     button('Zkusit znovu').click();
+    await settle();
+    expect(document.activeElement).toBe(fixture.nativeElement.querySelector('h4'));
     await load(noReceiptSignature());
     expect(text('.signature-state')).toContain('Podpis není nahraný.');
   });
@@ -426,6 +428,21 @@ describe('Given the receipt signature part of a person of the foundation', () =>
         'Podpis se nepodařilo odebrat. Zkuste to prosím znovu.',
       );
       expect(document.activeElement).toBe(button('Odebrat podpis z potvrzení'));
+    });
+
+    it('then the part is busy while the removal runs', async () => {
+      const busy: boolean[] = [];
+      fixture.componentInstance.busyChange.subscribe((value) => busy.push(value));
+      (
+        fixture.nativeElement.querySelector('.signature-confirm .ui-button--danger') as HTMLElement
+      ).click();
+      await settle();
+      expect(busy).toEqual([true]);
+
+      http.expectOne({ method: 'DELETE', url: SIGNATURE_URL }).flush(null);
+      await settle();
+
+      expect(busy).toEqual([true, false]);
     });
 
     it('then on confirming it removes the signature and says so', async () => {

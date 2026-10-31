@@ -1,5 +1,7 @@
 <div class="receipt-signature">
-  <h4 class="signature-title" i18n="@@admin.signature.title">Podpis na potvrzení</h4>
+  <h4 #heading class="signature-title" tabindex="-1" i18n="@@admin.signature.title">
+    Podpis na potvrzení
+  </h4>
   <div>
     <p id="receipt-signature-hint" class="signature-hint" i18n="@@admin.signature.personHint">
       Tiskne se nad jméno na potvrzeních, která tato osoba podepisuje, vystavených po nahrání; ta už
@@ -18,7 +20,7 @@
       @case ('error') {
         <div class="signature-error" role="alert">
           <p i18n="@@admin.signature.loadFailed">Podpis se nepodařilo načíst.</p>
-          <button type="button" class="ui-button" (click)="load()" i18n="@@admin.signature.retry">
+          <button type="button" class="ui-button" (click)="retry()" i18n="@@admin.signature.retry">
             Zkusit znovu
           </button>
         </div>

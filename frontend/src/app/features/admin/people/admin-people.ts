@@ -95,6 +95,7 @@ export class AdminPeople {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly title = viewChild.required<ElementRef<HTMLHeadingElement>>('title');
   private readonly personForm = viewChild<NgForm>('personForm');
+  private readonly receiptTitle = viewChild<ElementRef<HTMLHeadingElement>>('receiptTitle');
 
   protected readonly maxNameLength = MAX_PERSON_NAME_LENGTH;
   protected readonly maxRoleLength = MAX_PERSON_ROLE_LENGTH;
@@ -219,6 +220,11 @@ export class AdminPeople {
 
   protected signs(member: PersonResponse): boolean {
     return this.signatory()?.signatory?.personId === member.id;
+  }
+
+  protected retrySignatory(): void {
+    this.receiptTitle()?.nativeElement.focus();
+    this.loadSignatory();
   }
 
   protected loadSignatory(): void {

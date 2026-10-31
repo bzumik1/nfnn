@@ -1,5 +1,11 @@
 <section class="ui-card" aria-labelledby="receipt-signatory-title">
-  <h2 id="receipt-signatory-title" class="ui-card__title" i18n="@@admin.signatory.title">
+  <h2
+    #heading
+    id="receipt-signatory-title"
+    class="ui-card__title"
+    tabindex="-1"
+    i18n="@@admin.signatory.title"
+  >
     Kdo potvrzení podepisuje
   </h2>
   <div class="ui-card__body">
@@ -12,7 +18,7 @@
       @case ('error') {
         <div class="signatory-error" role="alert">
           <p i18n="@@admin.signatory.loadFailed">Nepodařilo se načíst, kdo potvrzení podepisuje.</p>
-          <button type="button" class="ui-button" (click)="load()" i18n="@@admin.signatory.retry">
+          <button type="button" class="ui-button" (click)="retry()" i18n="@@admin.signatory.retry">
             Zkusit znovu
           </button>
         </div>

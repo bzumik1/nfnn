@@ -344,7 +344,7 @@
                 <button
                   type="button"
                   class="ui-link-button"
-                  [disabled]="saving()"
+                  [disabled]="saving() || signatureBusy()"
                   (click)="cancelEditing()"
                   i18n="@@admin.people.cancel"
                 >
@@ -417,7 +417,14 @@
               </div>
 
               <div class="ui-card__body receipt-part">
-                <h3 class="part-title" i18n="@@admin.people.receipt.title">Na potvrzení o daru</h3>
+                <h3
+                  #receiptTitle
+                  class="part-title"
+                  tabindex="-1"
+                  i18n="@@admin.people.receipt.title"
+                >
+                  Na potvrzení o daru
+                </h3>
                 @switch (signatoryState()) {
                   @case ('loading') {
                     <p class="field-status" role="status" i18n="@@admin.people.receipt.loading">
@@ -432,7 +439,7 @@
                       <button
                         type="button"
                         class="ui-button ui-button--small"
-                        (click)="loadSignatory()"
+                        (click)="retrySignatory()"
                         i18n="@@admin.people.receipt.retry"
                       >
                         Zjistit znovu

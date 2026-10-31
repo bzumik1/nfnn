@@ -17,6 +17,7 @@ import {
   noReceiptSignatory,
   noReceiptSignature,
   receiptSignatory,
+  receiptSignature,
 } from '../testing/admin-fixtures';
 import { AdminPeople } from './admin-people';
 
@@ -680,6 +681,7 @@ describe('Given an administrator and two people of the foundation, one of whom s
     expect(element<HTMLButtonElement>(fixture, `#person-edit-${OTHER_PERSON_ID}`).disabled).toBe(
       true,
     );
+    expect(findButton(fixture, 'Zavřít bez uložení')?.disabled).toBe(true);
     http
       .expectOne({ method: 'POST', url: `${RECEIPT_SIGNATURES}${PERSON_ID}` })
       .flush(null, { status: 500, statusText: 'Server Error' });
@@ -687,6 +689,32 @@ describe('Given an administrator and two people of the foundation, one of whom s
     expect(element<HTMLButtonElement>(fixture, `#person-edit-${OTHER_PERSON_ID}`).disabled).toBe(
       false,
     );
+  });
+
+  it('when a receipt signature removal runs, then no other person can be opened and the editor cannot be closed until it is done', async () => {
+    await click(fixture, `#person-edit-${PERSON_ID}`);
+    http
+      .expectOne({ method: 'GET', url: `${RECEIPT_SIGNATURES}${PERSON_ID}` })
+      .flush(receiptSignature());
+    await settle(fixture);
+
+    await press(fixture, 'Odebrat podpis z potvrzení');
+    await click(fixture, '.signature-confirm .ui-button--danger');
+
+    expect(element<HTMLButtonElement>(fixture, `#person-edit-${OTHER_PERSON_ID}`).disabled).toBe(
+      true,
+    );
+    expect(findButton(fixture, 'Zavřít bez uložení')?.disabled).toBe(true);
+    http.expectOne({ method: 'DELETE', url: `${RECEIPT_SIGNATURES}${PERSON_ID}` }).flush(null);
+    await settle(fixture);
+    http
+      .match(SIGNATORY_URL)
+      .forEach((request) => request.flush(receiptSignatory({ personId: PERSON_ID })));
+    await settle(fixture);
+    expect(element<HTMLButtonElement>(fixture, `#person-edit-${OTHER_PERSON_ID}`).disabled).toBe(
+      false,
+    );
+    expect(findButton(fixture, 'Zavřít bez uložení')?.disabled).toBe(false);
   });
 
   it('when they let another person sign without a receipt role, then the field says so and nothing is sent', async () => {
@@ -729,6 +757,7 @@ describe('Given an administrator whose check of who signs the receipts fails', (
     await click(fixture, `#person-edit-${OTHER_PERSON_ID}`);
 
     await press(fixture, 'Zjistit znovu');
+    expect(document.activeElement?.textContent?.trim()).toBe('Na potvrzení o daru');
     http.expectOne(SIGNATORY_URL).flush(receiptSignatory({ personId: PERSON_ID }));
     await settle(fixture);
 

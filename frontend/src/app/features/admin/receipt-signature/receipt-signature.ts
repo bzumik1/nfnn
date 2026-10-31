@@ -50,6 +50,7 @@ export class ReceiptSignature {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly removeButton = viewChild<ElementRef<HTMLButtonElement>>('removeButton');
   private readonly removeCancel = viewChild<ElementRef<HTMLButtonElement>>('removeCancel');
+  private readonly heading = viewChild.required<ElementRef<HTMLHeadingElement>>('heading');
 
   readonly personId = input.required<string>();
   readonly signs = input(false);
@@ -92,6 +93,11 @@ export class ReceiptSignature {
     );
   }
 
+  protected retry(): void {
+    this.heading().nativeElement.focus();
+    this.load();
+  }
+
   private track(subscription: Subscription): void {
     this.pending.add(subscription);
   }
@@ -100,13 +106,23 @@ export class ReceiptSignature {
     this.pending.unsubscribe();
     this.pending = new Subscription();
     this.setUploading(false);
-    this.removing.set(false);
+    this.setRemoving(false);
   }
 
   private setUploading(uploading: boolean): void {
-    if (this.uploading() !== uploading) {
-      this.uploading.set(uploading);
-      this.busyChange.emit(uploading);
+    this.setBusy(() => this.uploading.set(uploading));
+  }
+
+  private setRemoving(removing: boolean): void {
+    this.setBusy(() => this.removing.set(removing));
+  }
+
+  private setBusy(change: () => void): void {
+    const before = this.uploading() || this.removing();
+    change();
+    const after = this.uploading() || this.removing();
+    if (before !== after) {
+      this.busyChange.emit(after);
     }
   }
 
@@ -194,7 +210,7 @@ export class ReceiptSignature {
     if (this.removing()) {
       return;
     }
-    this.removing.set(true);
+    this.setRemoving(true);
     this.track(
       this.api.removeReceiptSignature(this.personId()).subscribe({
         next: () => {
@@ -207,7 +223,7 @@ export class ReceiptSignature {
             height: null,
             uploadedAt: null,
           };
-          this.removing.set(false);
+          this.setRemoving(false);
           this.confirmingRemoval.set(false);
           this.signature.set(removed);
           this.changed.emit(removed);
@@ -226,7 +242,7 @@ export class ReceiptSignature {
           );
         },
         error: (failure: unknown) => {
-          this.removing.set(false);
+          this.setRemoving(false);
           this.confirmingRemoval.set(false);
           this.notice.set({
             kind: 'alert',

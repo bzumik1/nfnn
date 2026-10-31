@@ -1,6 +1,14 @@
 /// <reference types="@angular/localize" />
 
-import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  ElementRef,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { forkJoin, map, Observable, of } from 'rxjs';
@@ -34,12 +42,18 @@ export class ReceiptSignatory {
   private readonly api = inject(AdminApi);
   private readonly people = inject(PeopleApi);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly heading = viewChild.required<ElementRef<HTMLHeadingElement>>('heading');
 
   protected readonly state = signal<LoadState>('loading');
   protected readonly block = signal<SignatureBlock | null>(null);
   protected readonly signatureLabel = $localize`:@@admin.signatory.signatureAlt:Podpis na potvrzení`;
 
   constructor() {
+    this.load();
+  }
+
+  protected retry(): void {
+    this.heading().nativeElement.focus();
     this.load();
   }
 

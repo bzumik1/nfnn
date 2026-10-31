@@ -118,6 +118,8 @@ describe('Given the receipt settings card that shows who signs the receipts', ()
 
     expect(text('[role="alert"]')).toContain('Nepodařilo se načíst, kdo potvrzení podepisuje.');
     (fixture.nativeElement.querySelector('[role="alert"] button') as HTMLButtonElement).click();
+    await settle();
+    expect(document.activeElement).toBe(fixture.nativeElement.querySelector('h2'));
     http.expectOne(SIGNATORY_URL).flush(noReceiptSignatory());
     await settle();
     expect(text('.signatory-missing')).toContain('nikdo nepodepisuje');
