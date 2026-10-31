@@ -66,7 +66,9 @@ public class ReceiptSignatoryService {
         return people.find(chosen.person().value()).map(person -> view(chosen, person, signed));
     }
 
-    private static ChosenSignatoryView view(ReceiptSignatory chosen, FoundationPerson person, boolean signed) {
-        return new ChosenSignatoryView(chosen.person(), person.name(), chosen.receiptRole(), chosen.chosenAt(), person.hasPortrait(), signed);
+    private ChosenSignatoryView view(ReceiptSignatory chosen, FoundationPerson person, boolean signed) {
+        boolean printable = person.hasPortrait() && people.printPortraitOf(chosen.person().value()).isPresent();
+        return new ChosenSignatoryView(chosen.person(), person.name(), chosen.receiptRole(), chosen.chosenAt(), person.hasPortrait(), printable,
+                signed);
     }
 }

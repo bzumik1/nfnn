@@ -10,6 +10,7 @@ import cz.novanadeje.app.donations.domain.receipt.SignatureSummary;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.people.FoundationPeople;
 import cz.novanadeje.app.shared.application.people.FoundationPerson;
+import cz.novanadeje.app.shared.application.people.PrintPortrait;
 import cz.novanadeje.app.support.MutableClock;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -64,9 +65,22 @@ class ReceiptSignatoryServiceTest {
         when(signatories.current()).thenReturn(Optional.of(new ReceiptSignatory(CHAIR, "předseda správní rady", EARLIER)));
         when(signatures.summaries()).thenReturn(List.of(new SignatureSummary(CHAIR, SignatureKind.RASTER, 600, 200, EARLIER)));
         when(people.find(CHAIR.value())).thenReturn(Optional.of(new FoundationPerson(CHAIR.value(), "Josef Vzorový", true)));
+        when(people.printPortraitOf(CHAIR.value())).thenReturn(Optional.of(new PrintPortrait(new byte[] {(byte) 0xff, (byte) 0xd8, 0}, PrintPortrait.SIDE)));
 
         assertThat(service.view().chosen())
-                .contains(new ChosenSignatoryView(CHAIR, "Josef Vzorový", "předseda správní rady", EARLIER, true, true));
+                .contains(new ChosenSignatoryView(CHAIR, "Josef Vzorový", "předseda správní rady", EARLIER, true, true, true));
+    }
+
+    @Test
+    @DisplayName("Given a signatory whose portrait cannot be prepared for print, when viewed, then the portrait is named as set but not printable")
+    void should_name_portrait_unprintable_when_viewed_given_portrait_that_cannot_be_prepared() {
+        when(signatories.current()).thenReturn(Optional.of(new ReceiptSignatory(CHAIR, "předseda správní rady", EARLIER)));
+        when(signatures.summaries()).thenReturn(List.of());
+        when(people.find(CHAIR.value())).thenReturn(Optional.of(new FoundationPerson(CHAIR.value(), "Josef Vzorový", true)));
+        when(people.printPortraitOf(CHAIR.value())).thenReturn(Optional.empty());
+
+        assertThat(service.view().chosen())
+                .contains(new ChosenSignatoryView(CHAIR, "Josef Vzorový", "předseda správní rady", EARLIER, true, false, false));
     }
 
     @Test
@@ -87,7 +101,7 @@ class ReceiptSignatoryServiceTest {
 
         ChosenSignatoryView chosen = service.choose(ADMIN, CHAIR, "  předseda správní rady ");
 
-        assertThat(chosen).isEqualTo(new ChosenSignatoryView(CHAIR, "Josef Vzorový", "předseda správní rady", NOW, false, false));
+        assertThat(chosen).isEqualTo(new ChosenSignatoryView(CHAIR, "Josef Vzorový", "předseda správní rady", NOW, false, false, false));
         verify(signatories).choose(new ReceiptSignatory(CHAIR, "předseda správní rady", NOW));
         ArgumentCaptor<AdminActionPerformed> published = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events).publishEvent(published.capture());

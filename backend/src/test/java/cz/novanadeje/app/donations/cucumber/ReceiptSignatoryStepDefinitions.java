@@ -104,8 +104,16 @@ public class ReceiptSignatoryStepDefinitions {
         assertThat(chosen.get("name").asString()).isEqualTo(name);
         assertThat(chosen.get("receiptRole").asString()).isEqualTo(receiptRole);
         assertThat(chosen.get("portrait").asBoolean()).isEqualTo(yes(portrait));
+        assertThat(chosen.get("portraitPrintable").asBoolean()).isEqualTo(yes(portrait));
         assertThat(chosen.get("signature").asBoolean()).isEqualTo(yes(signature));
         assertThat(chosen.get("chosenAt").asString()).isNotBlank();
+    }
+
+    @Then("the receipt signatory has a portrait that cannot be printed")
+    public void theReceiptSignatoryHasAPortraitThatCannotBePrinted() {
+        JsonNode chosen = api.lastResponseJson().get("signatory");
+        assertThat(chosen.get("portrait").asBoolean()).isTrue();
+        assertThat(chosen.get("portraitPrintable").asBoolean()).isFalse();
     }
 
     @Then("the receipt signatures list a {word} signature of {string}, {int} by {int} pixels")

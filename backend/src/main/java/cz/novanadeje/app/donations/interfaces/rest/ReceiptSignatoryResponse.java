@@ -16,11 +16,12 @@ record ReceiptSignatoryResponse(ChosenResponse signatory, List<SignatureResponse
                 view.signatures().stream().map(SignatureResponse::from).toList());
     }
 
-    record ChosenResponse(UUID personId, String name, String receiptRole, Instant chosenAt, boolean portrait, boolean signature) {
+    record ChosenResponse(UUID personId, String name, String receiptRole, Instant chosenAt, boolean portrait, boolean portraitPrintable,
+                         boolean signature) {
 
         static ChosenResponse from(ChosenSignatoryView view) {
             return new ChosenResponse(view.person().value(), view.name(), view.receiptRole(), view.chosenAt(), view.hasPortrait(),
-                    view.hasSignature());
+                    view.portraitPrintable(), view.hasSignature());
         }
     }
 

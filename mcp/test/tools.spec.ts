@@ -561,6 +561,17 @@ describe('Given an administrator connected with the reading permission only', ()
     );
   });
 
+  it('when the signatory has a portrait that cannot be printed, then the receipt signature says so and the description explains it', async () => {
+    const text = textOf(await client.callTool({ name: 'nfnn_receipt_signature', arguments: {} }));
+    expect(text).toContain('"portraitPrintable":true');
+    const { tools } = await client.listTools();
+    const description =
+      tools.find((tool) => tool.name === 'nfnn_receipt_signature')?.description ?? '';
+    expect(description).toContain(
+      'portraitPrintable false while a portrait is set means its image cannot be prepared for print, so receipts are issued without it',
+    );
+  });
+
   it('when no signatory is chosen, then the receipt signature says so', async () => {
     stack.backend.signatoryChosen = false;
     try {

@@ -62,6 +62,7 @@ export function signatory(
     name: string;
     receiptRole: string;
     portrait: boolean;
+    portraitPrintable: boolean;
     signature: boolean;
   }> = {},
 ) {
@@ -72,6 +73,7 @@ export function signatory(
       receiptRole: 'předseda správní rady',
       chosenAt: '2026-10-31T08:00:00Z',
       portrait: false,
+      portraitPrintable: overrides.portrait ?? false,
       signature: false,
       ...overrides,
     },

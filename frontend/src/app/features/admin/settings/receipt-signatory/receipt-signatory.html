@@ -48,9 +48,18 @@
               </div>
             </div>
           </figure>
-          @if (!block.signatory.portrait || !block.signatory.signature) {
+          @if (
+            !block.signatory.portrait ||
+            !block.signatory.portraitPrintable ||
+            !block.signatory.signature
+          ) {
             <p class="ui-callout ui-callout--warning signatory-gaps">
-              @if (!block.signatory.portrait && !block.signatory.signature) {
+              @if (block.signatory.portrait && !block.signatory.portraitPrintable) {
+                <ng-container i18n="@@admin.signatory.gap.portraitUnprintable"
+                  >Portrét této osoby nejde připravit pro tisk, a tak potvrzení vycházejí bez fotky.
+                  Nahrajte u lidí fondu jiný portrét.</ng-container
+                >
+              } @else if (!block.signatory.portrait && !block.signatory.signature) {
                 <ng-container i18n="@@admin.signatory.gap.both"
                   >Osoba nemá portrét ani podpis na potvrzení. Potvrzení budou mít jen čáru se
                   jménem a funkcí.</ng-container

@@ -374,6 +374,7 @@ export interface ChosenReceiptSignatoryResponse {
   receiptRole: string;
   chosenAt: string;
   portrait: boolean;
+  portraitPrintable: boolean;
   signature: boolean;
 }
 

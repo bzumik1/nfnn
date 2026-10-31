@@ -512,6 +512,8 @@ Feature: A donor issues receipts of their donations as frozen, signed data
       | signatory.name | Adam Vzor                  |
       | signatory.role | místopředseda správní rady |
     And the frozen receipt shows no portrait
+    When "Jana" asks for the receipt signatory
+    Then the receipt signatory has a portrait that cannot be printed
 
   Scenario: A company's receipt freezes its seat and identification number
     Given today is 2026-12-20

@@ -98,6 +98,20 @@ describe('Given the receipt settings card that shows who signs the receipts', ()
     );
   });
 
+  it('when the portrait of the signatory cannot be prepared for print, then the card says the receipts go out without it', async () => {
+    http
+      .expectOne(SIGNATORY_URL)
+      .flush(receiptSignatory({ portrait: true, portraitPrintable: false }));
+    await settle();
+    http.expectOne(PEOPLE_URL).flush({ members: [person()], note: null });
+    http.expectOne(SIGNATURE_URL).flush(vectorReceiptSignature());
+    await settle();
+
+    expect(text('.signatory-gaps')).toBe(
+      'Portrét této osoby nejde připravit pro tisk, a tak potvrzení vycházejí bez fotky. Nahrajte u lidí fondu jiný portrét.',
+    );
+  });
+
   it('when the signatory cannot be loaded, then it says so and loads again on request', async () => {
     http.expectOne(SIGNATORY_URL).flush(null, { status: 500, statusText: 'Error' });
     await settle();

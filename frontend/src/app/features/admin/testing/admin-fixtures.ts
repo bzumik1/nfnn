@@ -648,6 +648,7 @@ export function chosenReceiptSignatory(
     receiptRole: 'předsedkyně správní rady',
     chosenAt: '2026-10-31T08:00:00Z',
     portrait: true,
+    portraitPrintable: overrides.portrait ?? true,
     signature: true,
     ...overrides,
   };

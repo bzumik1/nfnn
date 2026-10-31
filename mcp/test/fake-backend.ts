@@ -408,6 +408,7 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
             receiptRole: 'předsedkyně správní rady',
             chosenAt: '2026-10-31T08:00:00Z',
             portrait: true,
+            portraitPrintable: true,
             signature: true,
           },
           signatures: [
