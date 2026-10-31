@@ -42,6 +42,7 @@ const ACTION_NAMES: Record<string, string> = {
   SEND_MONTHLY_REPORT: $localize`:@@admin.actions.action.sendMonthlyReport:Ruční odeslání měsíčního přehledu`,
   CHANGE_RECEIPT_SIGNATURE: $localize`:@@admin.actions.action.changeReceiptSignature:Nahrání podpisu na potvrzení o daru`,
   REMOVE_RECEIPT_SIGNATURE: $localize`:@@admin.actions.action.removeReceiptSignature:Odebrání podpisu z potvrzení o daru`,
+  ISSUE_RECEIPT: $localize`:@@admin.actions.action.issueReceipt:Vystavení potvrzení o daru`,
   CHANGE_ABOUT_PHOTO: $localize`:@@admin.actions.action.changeAboutPhoto:Nastavení fotky v sekci O nás`,
   REMOVE_ABOUT_PHOTO: $localize`:@@admin.actions.action.removeAboutPhoto:Odebrání fotky ze sekce O nás`,
   ADD_PERSON: $localize`:@@admin.actions.action.addPerson:Přidání osoby mezi lidi fondu`,

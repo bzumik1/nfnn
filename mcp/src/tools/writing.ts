@@ -6,6 +6,7 @@ import {
   answerChange,
   asRecord,
   plain,
+  receiptView,
   PROJECT_ORDERS,
   text,
   ToolRefusal,
@@ -498,6 +499,51 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
               : { photoId, photoAlt: photoAlt ?? null, caption: caption ?? null },
           ),
         ),
+      ),
+  );
+
+  server.registerTool(
+    'nfnn_issue_receipt',
+    {
+      title: 'Vystavit potvrzení',
+      description:
+        "Issues a donor's donation receipt, as \"Vystavit potvrzení\" on the donor card at /sprava does: the yearly receipt of a completed year (`year`, from the first receipt year) or the receipt of one donation (`donationId`, one of the donor's donations in nfnn_donor with receiptAvailable), never both. A connection issues only the first receipt of a donation or year: the same data give back the receipt already issued with its number, so calling it again changes nothing, but when the donor's name, address or gifts changed since, the replacement with a new number, which would make the receipt the donor holds REPLACED for good, is issued only by an administrator on the web at /sprava (403 donations/receipt-replacement-in-browser-only, and the receipt already issued stays valid). So this tool never changes or withdraws anything that exists. The answer is that of nfnn_receipt. An erased donor gets none (409 donations/donor-erased). A new number is audited as ISSUE_RECEIPT, naming this application.",
+      inputSchema: z.object({
+        donorId: UUID,
+        year: z
+          .number()
+          .int()
+          .min(2000)
+          .max(2100)
+          .optional()
+          .describe('The completed year of a yearly receipt.'),
+        donationId: UUID.optional().describe('The donation of a receipt for one donation.'),
+      }),
+      annotations: { ...WRITING, idempotentHint: true },
+    },
+    async ({ donorId, year, donationId }, ctx) =>
+      answerChange(
+        deps,
+        ctx,
+        'nfnn_issue_receipt',
+        async ({ apiToken }) => {
+          if ((year === undefined) === (donationId === undefined)) {
+            throw new ToolRefusal(
+              'receipt-subject',
+              'Name either `year` (the yearly receipt of a completed year) or `donationId` (the receipt of one donation), one of them; nothing was issued.',
+            );
+          }
+          return text(
+            receiptView(
+              await backend.post(
+                `/api/admin/donations/donors/${donorId.toLowerCase()}/receipts`,
+                apiToken,
+                year === undefined ? { donationId: donationId?.toLowerCase() } : { year },
+              ),
+            ),
+          );
+        },
+        `donor ${donorId}`,
       ),
   );
 

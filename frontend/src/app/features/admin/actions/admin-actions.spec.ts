@@ -243,6 +243,20 @@ describe('Given an administrator on the history page', () => {
     expect(rowText(removed)).toContain('Odebrání podpisu z potvrzení o daru');
   });
 
+  it('when a receipt was issued, then the change is named in Czech, not by its code', () => {
+    firstPage([
+      adminAction({
+        action: 'ISSUE_RECEIPT',
+        summary: 'Dárci Jana Nováková vystaveno roční potvrzení 2027-000001 za rok 2026.',
+        client: 'claude.ai',
+      }),
+    ]);
+
+    const issued = rowText(rows()[0]);
+    expect(issued).toContain('Vystavení potvrzení o daru');
+    expect(issued).not.toContain('ISSUE_RECEIPT');
+  });
+
   it('when a change came through a connected application, then the row names the application and a change on the web names none', () => {
     firstPage([adminAction({ action: 'CHANGE_LOG_LEVEL', client: 'claude.ai' }), granted]);
 
