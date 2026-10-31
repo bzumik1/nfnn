@@ -26,7 +26,7 @@ public record Slug(String value) {
             trimmed = trimmed.substring(0, MAX_LENGTH).replaceAll("-+$", "");
         }
         if (trimmed.isEmpty()) {
-            throw new IllegalArgumentException("No slug can be made from the text");
+            throw new SlugNotDerivable();
         }
         return new Slug(trimmed);
     }

@@ -260,15 +260,47 @@
         </div>
 
         <div class="purpose">
+          <h3 i18n="@@content.privacy.clientErrors.title">Hlášení chyb z prohlížeče</h3>
+          <p i18n="@@content.privacy.clientErrors.intro">
+            Když se ve vašem prohlížeči na webu něco nepovede, například se nepodaří vytvořit PDF
+            nebo kód QR, nenačte se část stránky nebo nevyjde ověření potvrzení, prohlížeč nám o tom
+            pošle krátké hlášení, abychom chybu mohli najít a opravit. Hlášení obsahuje jen hodnoty
+            z pevného seznamu: druh chyby, místo v aplikaci, kde nastala, obecný název chyby
+            (například TypeError), verzi webu, druh prohlížeče a číslo jeho hlavní verze, druh
+            operačního systému, zda web běží v prohlížeči, nebo jako aplikace na ploše, a kolikrát
+            se chyba opakovala.
+          </p>
+          <p i18n="@@content.privacy.clientErrors.never">
+            Hlášení nikdy neobsahuje text chybové zprávy, adresu stránky, vaše jméno, e&#8209;mail,
+            částky, čísla potvrzení ani jiné údaje, které jste zadali nebo které na stránce vidíte.
+            Prohlížeč ho posílá bez přihlašovacích údajů. Hlášení nenese váš účet ani IP adresu;
+            podle času by šlo přiřadit k ostatním záznamům serveru z téže chvíle, a to děláme jen
+            při hledání konkrétní chyby. Server ho zapíše jako jeden řádek do provozního záznamu
+            (logu) aplikace, který se automaticky maže nejpozději po 14 dnech; kopii v záznamu
+            kontejneru na serveru, kterou čte jen jeho správce, mažeme, jakmile překročí nastavený
+            objem.
+          </p>
+          <dl class="basis">
+            <dt i18n="@@content.privacy.data.basisLabel">Právní základ</dt>
+            <dd i18n="@@content.privacy.clientErrors.basis">
+              Náš oprávněný zájem na tom, aby web spolehlivě fungoval a abychom jeho chyby mohli
+              opravit (čl.&nbsp;6 odst.&nbsp;1 písm.&nbsp;f) GDPR).
+            </dd>
+          </dl>
+        </div>
+
+        <div class="purpose">
           <h3 i18n="@@content.privacy.ipAddress.title">IP adresa a záznamy serveru</h3>
           <p i18n="@@content.privacy.ipAddress.limits">
-            Abychom přihlášení, registraci, kontaktní formulář a obnovu hesla ochránili před
-            zneužitím, počítáme žádosti z každé IP adresy: během 15 minut od prvního pokusu z ní
-            přijmeme nejvýš deset pokusů o přihlášení a během jedné hodiny od první žádosti nejvýš
-            pět registrací, pět zpráv z formuláře a pět žádostí o obnovu hesla. Adresu k tomu držíme
-            jen v operační paměti serveru a do databáze ji neukládáme. Nejpozději hodinu po první
-            žádosti ji k tomu přestaneme používat a server ji pak z paměti odstraní při průběžném
-            úklidu, nejpozději při svém restartu.
+            Abychom přihlášení, registraci, kontaktní formulář, obnovu hesla a hlášení chyb z
+            prohlížeče ochránili před zneužitím, počítáme žádosti z každé IP adresy: během 15 minut
+            od prvního pokusu z ní přijmeme nejvýš deset pokusů o přihlášení a 30 hlášení chyb a
+            během jedné hodiny od první žádosti nejvýš pět registrací, pět zpráv z formuláře a pět
+            žádostí o obnovu hesla. U adresy IPv6 počítáme celou síť /64, tedy blok adres, který
+            poskytovatel připojení přiděluje jedné přípojce. Adresu k tomu držíme jen v operační
+            paměti serveru a do databáze ji neukládáme. Nejpozději hodinu po první žádosti ji k tomu
+            přestaneme používat a server ji pak z paměti odstraní při průběžném úklidu, nejpozději
+            při svém restartu.
           </p>
           <p i18n="@@content.privacy.ipAddress.logs">
             Na serveru, na kterém web běží, zapisují každý požadavek do svého provozního záznamu
@@ -344,6 +376,10 @@
             zprávy z kontaktního formuláře v databázi webu jeden rok od odeslání, kopii doručenou
             e&#8209;mailem jen po dobu potřebnou k vyřízení dotazu,
           </li>
+          <li i18n="@@content.privacy.retention.clientErrors">
+            hlášení chyb z prohlížeče v provozním záznamu aplikace nejdéle 14 dní, v záznamu
+            kontejneru na serveru do jeho automatického smazání podle objemu,
+          </li>
           <li i18n="@@content.privacy.retention.ipAddress">
             IP adresu pro omezení počtu žádostí hodinu od první žádosti (v operační paměti nejdéle
             do restartu serveru), v provozních záznamech serveru do jejich automatického smazání.
@@ -353,8 +389,8 @@
           Jakmile údaje přestaneme potřebovat, smažeme je.
         </p>
         <p i18n="@@content.privacy.retention.backups">
-          Databázi webu každý den zálohujeme a zálohy uchováváme přibližně jeden měsíc. Smazané
-          údaje proto ze záloh zmizí nejpozději po této době.
+          Databázi webu každý den zálohujeme na náš server a zálohy na serveru mažeme přibližně po
+          jednom měsíci. Smazané údaje proto ze záloh zmizí nejpozději po této době.
         </p>
       </section>
 
@@ -461,9 +497,14 @@
           zbytečného odkladu, nejpozději do jednoho měsíce.
         </p>
         <p i18n="@@content.privacy.rights.accountDeletion">
-          Zrušení dárcovského účtu zatím vyřizujeme na základě žádosti zaslané e&#8209;mailem. Údaje
-          účtu poté smažeme, záznamy o vašich darech a vystavená potvrzení o daru si však musíme
-          ponechat po dobu stanovenou účetními a daňovými předpisy.
+          Zrušení dárcovského účtu zatím vyřizujeme na základě žádosti zaslané e&#8209;mailem.
+          Jméno, adresu, e&#8209;mail, přihlašovací údaje a bankovní účty vašeho účtu poté vymažeme
+          a účet už nepůjde použít. Vystavená potvrzení o daru jsou účetní doklady: na našem serveru
+          je ponecháme beze změny, tedy i s vaším jménem a adresou (u firmy i s IČO), jak na nich
+          stojí, po dobu stanovenou účetními a daňovými předpisy. Stejně dlouho ponecháme záznamy o
+          přijatých platbách a darech s tím, co o platbě uvádí výpis z banky, včetně čísla účtu a
+          jména plátce. Na serveru zůstane i záznam o tom, co správci webu udělali, včetně vašeho
+          výmazu; může uvádět i číslo vašeho bankovního účtu.
         </p>
       </section>
 

@@ -29,6 +29,18 @@ const STATUS_PATH = '/api/donations/receipts/status';
 const STATUS_BODY_LIMIT = 1024;
 const APP_SHELL = ['/', '/overit'];
 const NOT_INDEXED = ['/overit', '/overit/'];
+const CLIENT_ERRORS = '/api/operations/client-errors';
+const CLIENT_ERROR_BODY_LIMIT = 4096;
+const CLIENT_ERROR_REPORT = {
+  kind: 'unexpected',
+  place: 'global',
+  name: 'Error',
+  appVersion: 'dev',
+  browser: 'other',
+  os: 'other',
+  display: 'browser',
+  count: 1,
+};
 
 const failures = [];
 const fail = (message) => failures.push(message);
@@ -47,6 +59,7 @@ async function request({ method, path, headers = {}, body }) {
     edge: response.headers.get(EDGE_HEADER) ?? '',
     setCookie: response.headers.get('set-cookie') ?? '',
     robots: response.headers.get('x-robots-tag') ?? '',
+    etag: response.headers.get('etag') ?? '',
     text,
   };
 }
@@ -110,8 +123,25 @@ for (const [path, cacheControl] of OWN_CACHE_CONTROL) {
     path,
     headers: { Authorization: `Bearer ${ACCESS_TOKEN}` },
   });
-  if (signedIn.status !== 200 || signedIn.text !== answer.text) {
+  if (
+    signedIn.status !== 200 ||
+    signedIn.text !== answer.text ||
+    signedIn.cacheControl !== answer.cacheControl ||
+    signedIn.setCookie !== ''
+  ) {
     fail(`${label} answers a signed-in donor otherwise than an anonymous visitor`);
+  }
+  if (answer.etag !== '') {
+    const revalidated = await request({
+      method: 'GET',
+      path,
+      headers: { 'If-None-Match': answer.etag },
+    });
+    if (revalidated.status !== 304 || revalidated.cacheControl !== cacheControl) {
+      fail(
+        `${label} answered ${revalidated.status} with Cache-Control "${revalidated.cacheControl}" to If-None-Match ${answer.etag}, expected 304 with "${cacheControl}"`,
+      );
+    }
   }
 }
 
@@ -160,6 +190,28 @@ if (oversized.status !== 413) {
 }
 expectEdgeNoStore(`POST ${STATUS_PATH} over ${STATUS_BODY_LIMIT} bytes`, oversized);
 
+const clientError = (body) => ({
+  method: 'POST',
+  path: CLIENT_ERRORS,
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(body),
+});
+const report = await request(clientError(CLIENT_ERROR_REPORT));
+seen.add(report.status);
+if (report.status !== 204) {
+  fail(`POST ${CLIENT_ERRORS} answered ${report.status} to a valid report, expected 204`);
+}
+expectApiNoStore(`POST ${CLIENT_ERRORS}`, report);
+const oversizedReport = await request(
+  clientError({ ...CLIENT_ERROR_REPORT, padding: 'x'.repeat(CLIENT_ERROR_BODY_LIMIT) }),
+);
+if (oversizedReport.status !== 413) {
+  fail(
+    `POST ${CLIENT_ERRORS} answered ${oversizedReport.status} to a body over ${CLIENT_ERROR_BODY_LIMIT} bytes, expected 413 from nginx`,
+  );
+}
+expectEdgeNoStore(`POST ${CLIENT_ERRORS} over the body limit`, oversizedReport);
+
 for (const probe of EDGE_ONLY) {
   expectEdgeNoStore(`${probe.method} ${probe.path}`, await request(probe));
 }
@@ -189,5 +241,5 @@ if (failures.length > 0) {
   process.exit(1);
 }
 console.log(
-  `edge caching: /api answers ${[...seen].sort().join(', ')} carry no-store for the browser and Cloudflare, /mcp and /.well-known no-store for Cloudflare, the app shell no-cache`,
+  `edge caching: /api answers ${[...seen].sort().join(', ')} carry no-store for the browser and Cloudflare, /mcp and /.well-known no-store for Cloudflare, browser error reports over 4 kB refused by nginx, the app shell no-cache`,
 );

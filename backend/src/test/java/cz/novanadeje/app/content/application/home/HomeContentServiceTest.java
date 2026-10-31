@@ -28,6 +28,10 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 
+import cz.novanadeje.app.content.application.news.NewsSigners;
+import cz.novanadeje.app.content.domain.media.MediaImageRepository;
+import cz.novanadeje.app.content.domain.people.PersonRepository;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -46,7 +50,8 @@ class HomeContentServiceTest {
     private final ProjectOrderRepository projectOrders = mock(ProjectOrderRepository.class);
     private final AboutService about = mock(AboutService.class);
     private final PublicPeopleService people = mock(PublicPeopleService.class);
-    private final HomeContentService service = new HomeContentService(news, projects, projectOrders, about, people,
+    private final NewsSigners signers = new NewsSigners(mock(PersonRepository.class), mock(MediaImageRepository.class));
+    private final HomeContentService service = new HomeContentService(news, signers, projects, projectOrders, about, people,
             Clock.fixed(LATE_EVENING_UTC, ZoneOffset.UTC));
 
     @Test
@@ -96,7 +101,7 @@ class HomeContentServiceTest {
     @Test
     @DisplayName("Given the people of the foundation, when the home content is read, then it carries them, and without people it carries none")
     void should_carry_the_people_when_read_given_people_of_the_foundation() {
-        PublicPeopleView shown = new PublicPeopleView(List.of(), List.of(new BoardMemberView("Eva Vzorová", Optional.empty())), Optional.empty());
+        PublicPeopleView shown = new PublicPeopleView(List.of(), List.of(new BoardMemberView("Eva Vzorová", Optional.empty())), Optional.empty(), Optional.empty());
         when(news.findVisibleNewestFirst(eq(PRAGUE_DAY), eq(0), anyInt())).thenReturn(List.of());
         when(projects.findVisible(eq(PRAGUE_DAY), any(), eq(0), anyInt())).thenReturn(List.of());
         when(about.read()).thenReturn(new AboutView(Optional.empty()));

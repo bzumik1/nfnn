@@ -125,6 +125,8 @@ class AdminActionFactsTest {
                 arguments("ORDER_PEOPLE", "Pořadí lidí fondu změněno", "ORDER_PEOPLE", Map.of()),
                 arguments("CHANGE_FOUNDERS_NOTE", "Slovo zakladatelů upraveno", "CHANGE_FOUNDERS_NOTE", Map.of()),
                 arguments("CHANGE_FOUNDERS_NOTE", "Slovo zakladatelů odebráno", "CHANGE_FOUNDERS_NOTE.removed", Map.of()),
+                arguments("CHANGE_PEOPLE_FOOTNOTE", "Řádek pod správní radou upraven", "CHANGE_PEOPLE_FOOTNOTE", Map.of()),
+                arguments("CHANGE_PEOPLE_FOOTNOTE", "Řádek pod správní radou odebrán", "CHANGE_PEOPLE_FOOTNOTE.removed", Map.of()),
                 arguments("CHANGE_WEB_SIGNATURE", "Podpis " + OTHER + " na webu u osoby " + OTHER + " nastaven", "CHANGE_WEB_SIGNATURE", Map.of()),
                 arguments("REMOVE_WEB_SIGNATURE", "Podpis na webu u osoby " + OTHER + " odebrán", "REMOVE_WEB_SIGNATURE", Map.of()),
                 arguments("CHANGE_PROJECT_ORDER", "Řazení projektů na webu změněno z YEAR_THEN_CATEGORY na CATEGORY_THEN_YEAR", "CHANGE_PROJECT_ORDER",

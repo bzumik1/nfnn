@@ -39,12 +39,15 @@
         autocomplete="off"
         [value]="customText()"
         [attr.aria-invalid]="showAmountHint()"
-        [attr.aria-describedby]="showAmountHint() ? amountHintId() : null"
+        [attr.aria-describedby]="customAmountDescription()"
         (input)="enterCustomAmount($event)"
         (blur)="leaveCustomAmount()"
       />
       <span class="custom-amount-currency" aria-hidden="true" i18n="@@home.donate.amount.currency"
         >Kč</span
+      >
+      <span class="visually-hidden" [id]="redrawHintId()" i18n="@@home.donate.qr.redrawHint"
+        >QR kód se překreslí, když přestanete psát.</span
       >
     </div>
     @if (showAmountHint()) {
@@ -66,9 +69,9 @@
       <div class="bank-row">
         <span class="bank-key" i18n="@@home.donate.bank.account">Číslo účtu</span>
         <span class="bank-value-wrap">
-          <span class="bank-value">{{ account.accountNumber }}</span>
+          <span class="bank-value">{{ account.number }}</span>
           <app-copy-button
-            [value]="account.accountNumber"
+            [value]="account.number"
             what="číslo účtu"
             i18n-what="@@home.donate.bank.copyAccount"
           />
@@ -122,12 +125,12 @@
 <ng-content select="[afterBankDetails]" />
 
 <div class="qr">
-  <div class="qr-code" [attr.aria-busy]="state().kind === 'loading'">
-    @if (shownQr(); as qr) {
+  <div #qrBox class="qr-code" tabindex="-1" [attr.aria-busy]="busy()">
+    @if (qrMatrix(); as matrix) {
       <app-qr-code
         class="qr-image"
-        [class.qr-image-stale]="state().kind === 'loading'"
-        [matrix]="qr.qrCode"
+        [class.qr-image-stale]="redrawing()"
+        [matrix]="matrix"
         label="QR platba na účet Nadačního fondu Nová naděje"
         i18n-label="@@home.donate.qr.imageAlt"
       />
@@ -150,8 +153,8 @@
       Načtěte QR kód mobilní bankovní aplikací pro okamžitou platbu přímo na účet nadačního fondu.
       Na telefonu si ho uložte a v bankovní aplikaci otevřete z galerie.
     </p>
-    @if (shownQr()) {
-      <button type="button" class="qr-save" [disabled]="saving() || !qr()" (click)="saveQr()">
+    @if (qrMatrix()) {
+      <button type="button" class="qr-save" [disabled]="saving() || redrawing()" (click)="saveQr()">
         @if (saving()) {
           <ng-container i18n="@@home.donate.qr.saving">Připravujeme obrázek…</ng-container>
         } @else {
@@ -164,16 +167,33 @@
         <span>{{ saved }}</span>
       }
     </p>
-    @if (state().kind === 'failed') {
-      <div class="ui-callout ui-callout--danger qr-error">
-        <p i18n="@@home.donate.qr.error">
-          QR platbu se nepodařilo připravit. Zkuste to prosím znovu.
-        </p>
-        <button type="button" class="qr-retry" (click)="retry()" i18n="@@home.donate.qr.retry">
-          Zkusit znovu
-        </button>
-      </div>
-    }
+    <div [attr.role]="failureAlerts() ? null : 'status'">
+      @if (failure(); as failure) {
+        <div
+          class="ui-callout ui-callout--danger qr-error"
+          [attr.role]="failureAlerts() ? 'alert' : null"
+        >
+          @if (failure === 'refused') {
+            <p i18n="@@home.donate.qr.refused">
+              QR kód teď nejde vytvořit. Zaplaťte prosím podle bankovního spojení.
+            </p>
+          } @else {
+            <p i18n="@@home.donate.qr.error">
+              QR platbu se nepodařilo připravit. Zkuste to prosím znovu.
+            </p>
+          }
+          <button
+            #retryButton
+            type="button"
+            class="qr-retry"
+            (click)="retry()"
+            i18n="@@home.donate.qr.retry"
+          >
+            Zkusit znovu
+          </button>
+        </div>
+      }
+    </div>
   </div>
   <p class="visually-hidden qr-announcement" role="status">
     @if (announcedAmount(); as announced) {

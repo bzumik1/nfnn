@@ -49,6 +49,7 @@ const ACTION_NAMES: Record<string, string> = {
   REMOVE_PERSON: $localize`:@@admin.actions.action.removePerson:Odebrání osoby z lidí fondu`,
   ORDER_PEOPLE: $localize`:@@admin.actions.action.orderPeople:Změna pořadí lidí fondu`,
   CHANGE_FOUNDERS_NOTE: $localize`:@@admin.actions.action.changeFoundersNote:Úprava slova zakladatelů`,
+  CHANGE_PEOPLE_FOOTNOTE: $localize`:@@admin.actions.action.changePeopleFootnote:Úprava řádku pod správní radou`,
   CHANGE_WEB_SIGNATURE: $localize`:@@admin.actions.action.changeWebSignature:Nahrání podpisu pro web`,
   REMOVE_WEB_SIGNATURE: $localize`:@@admin.actions.action.removeWebSignature:Odebrání podpisu z webu`,
   CREATE_NEWS: $localize`:@@admin.actions.action.createNews:Napsání aktuality`,

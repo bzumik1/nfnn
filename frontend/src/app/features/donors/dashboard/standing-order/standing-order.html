@@ -50,9 +50,9 @@
         <div class="standing-row">
           <dt i18n="@@home.donate.bank.account">Číslo účtu</dt>
           <dd>
-            <span class="standing-value">{{ state.account.accountNumber }}</span>
+            <span class="standing-value">{{ state.account.number }}</span>
             <app-copy-button
-              [value]="state.account.accountNumber"
+              [value]="state.account.number"
               what="číslo účtu"
               i18n-what="@@home.donate.bank.copyAccount"
             />

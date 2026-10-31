@@ -1,0 +1,23 @@
+[
+  {
+    "kind": "log-field",
+    "line": "shared.interfaces.rest.ApiExceptionHandler: A multipart body could not be read (MalformedStreamException)",
+    "scenario": "operations/request_text_in_logs: *",
+    "reason": "1.15 answers a multipart body that cannot be read as 400 validation instead of a 500 with an ERROR stack trace, and logs one WARN line so that a server-side failure (a full /tmp, a missing upload directory) is not silent (security review of 1.15, round 2, m4; reliability.md); the line names only the simple class name of the deepest cause, never its message or anything the client sent",
+    "contract": "docs/security-overview.md, Logs; docs/api-contract.md, error conventions",
+    "security": {
+      "approvedIn": "PR #236, Jakub 2026-10-30",
+      "fields": {
+        "MalformedStreamException": "the simple class name of the deepest cause of the MultipartException, here Tomcat's fileupload refusing a malformed body; another class name in production, such as IOException when a part cannot be written to /tmp; never the exception's message"
+      }
+    }
+  },
+  {
+    "path": "POST /api/operations/client-errors",
+    "scenario": "operations/client_error_reports: *",
+    "kind": "body",
+    "field": "$",
+    "reason": "The test client's raw POST now decodes a chunked answer as its raw GET already does in 1.15, so the transcript records the problem as JSON instead of its chunk framing; main recorded the framing, whose chunk sizes vary from run to run (the push check's second recording of main failed on it). Nothing the server sends changes",
+    "contract": "docs/api-contract.md, POST /api/operations/client-errors"
+  }
+]

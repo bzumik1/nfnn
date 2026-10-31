@@ -40,6 +40,9 @@ class AresCompanyRegistryTest {
             "nazevCastiObce":"Malá Strana","psc":11800,"textovaAdresa":"Letenská 525/15, Malá Strana, 11800 Praha 1",
             "standardizaceAdresy":true,"typCisloDomovni":1},"pravniForma":"325","dic":"CZ00006947"}""";
 
+    private static final Duration FUNCTIONAL_TIMEOUT = Duration.ofSeconds(30);
+    private static final Duration STALL_TIMEOUT = Duration.ofSeconds(2);
+
     private final MutableClock clock = new MutableClock(Instant.parse("2026-10-24T10:00:00Z"), ZoneOffset.UTC);
     private final Map<String, Answer> answers = new ConcurrentHashMap<>();
     private final AtomicInteger requests = new AtomicInteger();
@@ -56,8 +59,7 @@ class AresCompanyRegistryTest {
         });
         server.setExecutor(Executors.newVirtualThreadPerTaskExecutor());
         server.start();
-        registry = new AresCompanyRegistry(HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NEVER).build(),
-                URI.create("http://127.0.0.1:" + port() + "/ekonomicke-subjekty/"), true, Duration.ofSeconds(2), clock);
+        registry = localRegistry(FUNCTIONAL_TIMEOUT);
         answers.put(MINISTRY.value(), Answer.json(200, MINISTRY_JSON));
     }
 
@@ -197,10 +199,11 @@ class AresCompanyRegistryTest {
         answers.put(MINISTRY.value(), new Answer(200, "application/json", MINISTRY_JSON, Duration.ofSeconds(6)));
         CompanyIdentifier silent = new CompanyIdentifier("10000062");
         answers.put(silent.value(), Answer.silentFor(Duration.ofSeconds(6)));
+        AresCompanyRegistry impatient = localRegistry(STALL_TIMEOUT);
         long started = System.nanoTime();
 
-        assertThatThrownBy(() -> registry.find(MINISTRY)).isInstanceOf(CompanyRegistryUnavailable.class).hasMessage("timeout");
-        assertThatThrownBy(() -> registry.find(silent)).isInstanceOf(CompanyRegistryUnavailable.class).hasMessage("timeout");
+        assertThatThrownBy(() -> impatient.find(MINISTRY)).isInstanceOf(CompanyRegistryUnavailable.class).hasMessage("timeout");
+        assertThatThrownBy(() -> impatient.find(silent)).isInstanceOf(CompanyRegistryUnavailable.class).hasMessage("timeout");
 
         assertThat(Duration.ofNanos(System.nanoTime() - started)).isLessThan(Duration.ofMillis(5_500));
     }
@@ -230,6 +233,11 @@ class AresCompanyRegistryTest {
     @DisplayName("Given the production register, when its address is read, then it is the fixed https address of ARES")
     void should_use_fixed_https_address_given_production_register() {
         assertThat(AresCompanyRegistry.ARES).hasToString("https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/");
+    }
+
+    private AresCompanyRegistry localRegistry(Duration timeout) {
+        return new AresCompanyRegistry(HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NEVER).build(),
+                URI.create("http://127.0.0.1:" + port() + "/ekonomicke-subjekty/"), true, timeout, clock);
     }
 
     private int port() {

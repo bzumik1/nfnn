@@ -33,15 +33,19 @@ describe('Given the API of the people of the foundation', () => {
 
   afterEach(() => http.verify());
 
-  it('when the people are loaded, then it asks the administration and hands the members and the note on', () => {
+  it('when the people are loaded, then it asks the administration and hands the members, the note and the line under the board on', () => {
     let received: PeopleResponse | undefined;
     api.load().subscribe((response) => (received = response));
 
     const call = http.expectOne(PEOPLE);
     expect(call.request.method).toBe('GET');
-    call.flush({ members: [person()], note: 'Děkujeme.' });
+    call.flush({ members: [person()], note: 'Děkujeme.', footnote: 'Web zajišťuje Petr Vzor.' });
 
-    expect(received).toEqual({ members: [person()], note: 'Děkujeme.' });
+    expect(received).toEqual({
+      members: [person()],
+      note: 'Děkujeme.',
+      footnote: 'Web zajišťuje Petr Vzor.',
+    });
   });
 
   it('when a person is added and updated, then every field goes in the body, the e-mails too', () => {
@@ -57,19 +61,24 @@ describe('Given the API of the people of the foundation', () => {
     updated.flush(person());
   });
 
-  it('when the people are ordered, the note is saved and a person is removed, then each goes to its own address', () => {
+  it('when the people are ordered, the note and the line under the board are saved and a person is removed, then each goes to its own address', () => {
     api.order([OTHER_PERSON_ID, PERSON_ID]).subscribe();
     api.saveNote(null).subscribe();
+    api.saveFootnote('Web zajišťuje Petr Vzor.').subscribe();
     api.remove(PERSON_ID).subscribe();
 
     const order = http.expectOne(`${PEOPLE}/order`);
     expect(order.request.method).toBe('PUT');
     expect(order.request.body).toEqual({ memberIds: [OTHER_PERSON_ID, PERSON_ID] });
-    order.flush({ members: [], note: null });
+    order.flush({ members: [], note: null, footnote: null });
     const note = http.expectOne(`${PEOPLE}/note`);
     expect(note.request.method).toBe('PUT');
     expect(note.request.body).toEqual({ text: null });
     note.flush({ text: null });
+    const footnote = http.expectOne(`${PEOPLE}/footnote`);
+    expect(footnote.request.method).toBe('PUT');
+    expect(footnote.request.body).toEqual({ text: 'Web zajišťuje Petr Vzor.' });
+    footnote.flush({ text: 'Web zajišťuje Petr Vzor.' });
     const removed = http.expectOne(`${PEOPLE}/${PERSON_ID}`);
     expect(removed.request.method).toBe('DELETE');
     removed.flush(null);

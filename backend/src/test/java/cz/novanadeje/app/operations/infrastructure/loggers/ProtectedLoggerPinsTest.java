@@ -1,5 +1,6 @@
 package cz.novanadeje.app.operations.infrastructure.loggers;
 
+import cz.novanadeje.app.operations.domain.loggers.LogLevel;
 import cz.novanadeje.app.operations.domain.loggers.ProtectedLoggers;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -7,7 +8,6 @@ import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
 import org.springframework.core.io.ClassPathResource;
 
 import java.util.Properties;
-import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -20,8 +20,10 @@ class ProtectedLoggerPinsTest {
         yaml.setResources(new ClassPathResource("application.yml"));
         Properties properties = yaml.getObject();
 
-        for (String name : ProtectedLoggers.NAMES) {
-            assertThat(properties.getProperty("logging.level." + name)).as(name).isIn(Set.of("INFO", "WARN", "ERROR", "OFF"));
-        }
+        ProtectedLoggers.PINS.forEach((name, pin) -> {
+            String configured = properties.getProperty("logging.level." + name);
+            assertThat(configured).as(name).isNotNull();
+            assertThat(LogLevel.valueOf(configured)).as(name).isGreaterThanOrEqualTo(pin);
+        });
     }
 }

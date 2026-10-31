@@ -128,6 +128,19 @@ Feature: The first setup asks for the settings in the browser and stores them wi
       | name               | value |
       | RECEIPT_FIRST_YEAR | 2026  |
     Then the response status is 400
+    And the problem names the settings "RECEIPT_FIRST_YEAR"
+    And the problem's error for field "RECEIPT_FIRST_YEAR" says "Tato hodnota se v prvním nastavení nevyplňuje; nastavíte ji potom ve Správě v části Nastavení."
+    And the stored settings are ""
+
+  Scenario: A setting the site does not know is refused in the setup without repeating its name
+    Given the requests come directly from the home network
+    When the first setup is completed with:
+      | name                 | value |
+      | NFNN_NO_SUCH_SETTING | 2026  |
+    Then the response status is 400
+    And the problem type ends with "operations/invalid-settings"
+    And the problem's error for field "" says "Takové nastavení web nezná."
+    And the problem does not repeat "NFNN_NO_SUCH_SETTING"
     And the stored settings are ""
 
   Scenario: A test e-mail goes through the typed server to the typed first administrator before anything is saved

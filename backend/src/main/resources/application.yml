@@ -41,6 +41,10 @@ spring:
   web:
     locale: cs
     locale-resolver: accept_header
+  mvc:
+    formcontent:
+      filter:
+        enabled: false
   servlet:
     multipart:
       max-file-size: 10MB
@@ -185,11 +189,19 @@ logging:
     org.hibernate.orm.jdbc.bind: INFO
     org.hibernate.orm.jdbc.extract: INFO
     org.hibernate.internal.util.EntityPrinter: INFO
-    org.springframework.web.servlet.mvc.method.annotation: INFO
     org.springframework.web.method: INFO
+    org.springframework.web.servlet.mvc.method.annotation: INFO
     org.springframework.web.client: INFO
+    org.springframework.web.servlet.DispatcherServlet: INFO
+    org.springframework.web.filter.ForwardedHeaderFilter: INFO
+    org.springframework.security.web.FilterChainProxy: INFO
+    org.springframework.security.web.firewall: INFO
+    org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter: INFO
+    org.apache.catalina.core.ContainerBase: INFO
     org.apache.coyote: INFO
+    org.apache.coyote.http11.Http11Processor: WARN
     org.apache.tomcat.util.http: INFO
+    org.apache.tomcat.util.http.parser.Cookie: WARN
     org.postgresql: INFO
     jakarta.mail: INFO
     cz.novanadeje.app: INFO

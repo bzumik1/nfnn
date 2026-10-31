@@ -1,0 +1,97 @@
+[
+  {
+    "path": "PUT /api/admin/content/people/footnote",
+    "scenario": "content/manage_people: *",
+    "kind": "added",
+    "reason": "Jakub 2026-10-30: under the board line of Kdo fond vede the site shows one optional line kept at /sprava/lide-fondu (the volunteer who runs the site), also written by the connector's nfnn_update_people_footnote; v2 had no such endpoint",
+    "contract": "docs/api-contract.md, content — public CMS; MCP connector"
+  },
+  {
+    "path": "GET /api/admin/content/people",
+    "scenario": "content/manage_people: *",
+    "kind": "added",
+    "field": "$.footnote",
+    "reason": "Jakub 2026-10-30: the people of the foundation carry the optional line under the board, or null while none is written; the fields before it answer as they did",
+    "contract": "docs/api-contract.md, content — public CMS"
+  },
+  {
+    "path": "PUT /api/admin/content/people/order",
+    "scenario": "content/manage_people: *",
+    "kind": "added",
+    "field": "$.footnote",
+    "reason": "Jakub 2026-10-30: the people of the foundation carry the optional line under the board, or null while none is written; the fields before it answer as they did",
+    "contract": "docs/api-contract.md, content — public CMS"
+  },
+  {
+    "path": "GET /api/content/home",
+    "scenario": "content/manage_people: *",
+    "kind": "added",
+    "field": "$.people.footnote",
+    "reason": "Jakub 2026-10-30: the people on the home page carry the optional line under the board, or null while none is written; the fields before it answer as they did",
+    "contract": "docs/api-contract.md, content — public CMS"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "content.application.people.PublicPeopleServiceTest > Given featured people, board members and a note, when the public view is read, then the cards, the board line and the note with the featured signatures come in order",
+    "reason": "Jakub 2026-10-30: the people of the foundation carry an optional line under the board line of Kdo fond vede (the volunteer who runs the site), so the test that reads or writes the people now covers that line too and its name says so",
+    "replacement": "content.application.people.PublicPeopleServiceTest > Given featured people, board members, a note and a footnote, when the public view is read, then the cards, the board line, the note with the featured signatures and the footnote come in order",
+    "contract": "docs/api-contract.md, content — public CMS"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "content.application.people.PublicPeopleServiceTest > Given people with signatures but no note, when the public view is read, then it has no note and so no signatures",
+    "reason": "Jakub 2026-10-30: the people of the foundation carry an optional line under the board line of Kdo fond vede (the volunteer who runs the site), so the test that reads or writes the people now covers that line too and its name says so",
+    "replacement": "content.application.people.PublicPeopleServiceTest > Given people with signatures but no note and no footnote, when the public view is read, then it has no note, so no signatures, and no footnote",
+    "contract": "docs/api-contract.md, content — public CMS"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/people/admin-people.spec.ts > Given an administrator and two people of the foundation > when the page opens, then the list names both in order with their badges and the note is filled in",
+    "reason": "Jakub 2026-10-30: the people of the foundation carry an optional line under the board line of Kdo fond vede (the volunteer who runs the site), so the test that reads or writes the people now covers that line too and its name says so",
+    "replacement": "src/app/features/admin/people/admin-people.spec.ts > Given an administrator and two people of the foundation > when the page opens, then the list names both in order with their badges and the note and the line under the board are filled in",
+    "contract": "docs/api-contract.md, content — public CMS"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/people-api.spec.ts > Given the API of the people of the foundation > when the people are loaded, then it asks the administration and hands the members and the note on",
+    "reason": "Jakub 2026-10-30: the people of the foundation carry an optional line under the board line of Kdo fond vede (the volunteer who runs the site), so the test that reads or writes the people now covers that line too and its name says so",
+    "replacement": "src/app/features/content/people-api.spec.ts > Given the API of the people of the foundation > when the people are loaded, then it asks the administration and hands the members, the note and the line under the board on",
+    "contract": "docs/api-contract.md, content — public CMS"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/people-api.spec.ts > Given the API of the people of the foundation > when the people are ordered, the note is saved and a person is removed, then each goes to its own address",
+    "reason": "Jakub 2026-10-30: the people of the foundation carry an optional line under the board line of Kdo fond vede (the volunteer who runs the site), so the test that reads or writes the people now covers that line too and its name says so",
+    "replacement": "src/app/features/content/people-api.spec.ts > Given the API of the people of the foundation > when the people are ordered, the note and the line under the board are saved and a person is removed, then each goes to its own address",
+    "contract": "docs/api-contract.md, content — public CMS"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when an administrator keeps the people of the foundation > and there is no note, nobody featured and nobody on the board, then only the heading stays",
+    "reason": "Jakub 2026-10-30: the people of the foundation carry an optional line under the board line of Kdo fond vede (the volunteer who runs the site), so the test that reads or writes the people now covers that line too and its name says so",
+    "replacement": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when an administrator keeps the people of the foundation > and there is no note, nobody featured, nobody on the board and no line under it, then only the heading stays",
+    "contract": "docs/api-contract.md, content — public CMS"
+  },
+  {
+    "kind": "retired",
+    "suite": "mcp-vitest",
+    "test": "test/tools.spec.ts > Given an administrator connected with the reading permission only > when the people of the foundation are asked, then they come in order with their portraits, web signatures and the founders note",
+    "reason": "Jakub 2026-10-30: the people of the foundation carry an optional line under the board line of Kdo fond vede (the volunteer who runs the site), so the test that reads or writes the people now covers that line too and its name says so",
+    "replacement": "test/tools.spec.ts > Given an administrator connected with the reading permission only > when the people of the foundation are asked, then they come in order with their portraits, web signatures, the founders note and the line under the board",
+    "contract": "docs/api-contract.md, content — public CMS"
+  },
+  {
+    "kind": "retired",
+    "suite": "mcp-vitest",
+    "test": "test/tools.spec.ts > Given an administrator connected with the writing permission > when the people are ordered and the founders note is written and emptied, then the administration gets the order and the text, an empty one as none",
+    "reason": "Jakub 2026-10-30: the people of the foundation carry an optional line under the board line of Kdo fond vede (the volunteer who runs the site), so the test that reads or writes the people now covers that line too and its name says so",
+    "replacement": "test/tools.spec.ts > Given an administrator connected with the writing permission > when the people are ordered and the founders note and the line under the board are written and emptied, then the administration gets the order and the texts, an empty one as none",
+    "contract": "docs/api-contract.md, content — public CMS"
+  }
+]

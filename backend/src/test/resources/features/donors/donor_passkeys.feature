@@ -180,6 +180,15 @@ Feature: A donor signs in with a passkey instead of the password
     And the problem type ends with "validation"
     And the passkeys of "Jana" are "iPhone"
 
+  Scenario: A passkey name with a control character is refused with the site's own text, without the name
+    Given "Jana" added a passkey named "iPhone"
+    When "Jana" renames the passkey "iPhone" of "Jana" to a name with a control character
+    Then the response status is 400
+    And the problem type ends with "validation"
+    And the problem says "Neplatné údaje": "Některou ze zadaných hodnot nejde přijmout. Zkontrolujte je prosím a zkuste to znovu."
+    And the problem does not repeat "nfnn-client-value"
+    And the passkeys of "Jana" are "iPhone"
+
   Scenario: A donor keeps at most ten passkeys
     Given "Jana" added 10 passkeys
     When "Jana" adds a passkey named "Jedenáctý"

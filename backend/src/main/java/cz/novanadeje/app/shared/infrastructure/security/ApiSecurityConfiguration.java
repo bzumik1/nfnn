@@ -27,7 +27,6 @@ class ApiSecurityConfiguration {
             "/api/admin/donors/*/passkeys",
             "/api/admin/content/news/*",
             "/api/admin/content/projects/*",
-            "/api/admin/content/people/*/web-signature",
             "/api/admin/donations/donors/*/bank-accounts/*",
             "/api/admin/donations/symbol-claims/*",
             "/api/admin/donations/receipt-signature"};
@@ -36,7 +35,6 @@ class ApiSecurityConfiguration {
             "/api/admin/donors/*/second-factor/reset",
             "/api/admin/donations/symbol-claims/*/reverse",
             "/api/admin/donations/receipt-signature",
-            "/api/admin/content/people/*/web-signature",
             "/api/admin/operations/backups/key/reveal",
             "/api/admin/operations/backups/key/confirmation"};
 
@@ -49,7 +47,8 @@ class ApiSecurityConfiguration {
                 .authorizeHttpRequests(requests -> requests
                         .dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.ASYNC).permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/contact/messages").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/donations/payment-qr").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/operations/client-errors").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/donations/payment-details").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/donations/receipt-keys").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/donations/receipts/status").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/content/**").permitAll()

@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.DateTimeException;
 import java.time.YearMonth;
 import java.util.UUID;
 
@@ -55,11 +54,7 @@ class AdminReportController {
     }
 
     private static ReportMonth parseMonth(String month) {
-        try {
-            return new ReportMonth(YearMonth.parse(month));
-        } catch (DateTimeException invalid) {
-            throw new IllegalArgumentException("The month is written as YYYY-MM, not '" + month + "'");
-        }
+        return new ReportMonth(YearMonth.parse(month));
     }
 
     private static UUID admin(Jwt jwt) {

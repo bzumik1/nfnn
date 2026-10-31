@@ -100,6 +100,7 @@ describe('Given the privacy policy page', () => {
       'Dárcovský účet',
       'Evidence darů a potvrzení o daru',
       'Kontaktní formulář',
+      'Hlášení chyb z prohlížeče',
       'IP adresa a záznamy serveru',
     ]);
   });
@@ -244,12 +245,45 @@ describe('Given the privacy policy page', () => {
   it('when it renders, then it names the sign-in and registration limits next to the contact form and password reset', () => {
     const ipAddress = purposeText('IP adresa a záznamy serveru');
 
-    expect(ipAddress).toContain('přihlášení, registraci, kontaktní formulář a obnovu hesla');
     expect(ipAddress).toContain(
-      'během 15 minut od prvního pokusu z ní přijmeme nejvýš deset pokusů o přihlášení',
+      'přihlášení, registraci, kontaktní formulář, obnovu hesla a hlášení chyb z prohlížeče',
+    );
+    expect(ipAddress).toContain(
+      'během 15 minut od prvního pokusu z ní přijmeme nejvýš deset pokusů o přihlášení a 30 hlášení chyb',
     );
     expect(ipAddress).toContain(
       'nejvýš pět registrací, pět zpráv z formuláře a pět žádostí o obnovu hesla',
+    );
+  });
+
+  it('when it renders, then it says an IPv6 address is counted by its /64 network, the block of one connection', () => {
+    expect(purposeText('IP adresa a záznamy serveru')).toContain(
+      'U adresy IPv6 počítáme celou síť /64, tedy blok adres, který poskytovatel připojení přiděluje jedné přípojce.',
+    );
+  });
+
+  it('when it renders, then it lists the only values a browser error report holds and what it never holds', () => {
+    const reports = purposeText('Hlášení chyb z prohlížeče');
+
+    expect(reports).toContain(
+      'druh chyby, místo v aplikaci, kde nastala, obecný název chyby (například TypeError), verzi webu, druh prohlížeče a číslo jeho hlavní verze, druh operačního systému, zda web běží v prohlížeči, nebo jako aplikace na ploše, a kolikrát se chyba opakovala',
+    );
+    expect(reports).toContain(
+      'nikdy neobsahuje text chybové zprávy, adresu stránky, vaše jméno, e‑mail, částky, čísla potvrzení',
+    );
+    expect(reports).toContain(
+      'Hlášení nenese váš účet ani IP adresu; podle času by šlo přiřadit k ostatním záznamům serveru z téže chvíle, a to děláme jen při hledání konkrétní chyby.',
+    );
+    expect(reports).not.toContain('nespojíme');
+    expect(reports).toContain('nejpozději po 14 dnech');
+    expect(reports).toContain(
+      'kopii v záznamu kontejneru na serveru, kterou čte jen jeho správce, mažeme, jakmile překročí nastavený objem',
+    );
+  });
+
+  it('when it renders, then the retention of browser error reports is listed with the rest', () => {
+    expect(sectionText('Jak dlouho údaje uchováváme')).toContain(
+      'hlášení chyb z prohlížeče v provozním záznamu aplikace nejdéle 14 dní, v záznamu kontejneru na serveru do jeho automatického smazání podle objemu,',
     );
   });
 
@@ -267,6 +301,31 @@ describe('Given the privacy policy page', () => {
       'Z databáze webu ji automaticky smažeme jeden rok po odeslání.',
     );
     expect(sectionText('Jak dlouho údaje uchováváme')).toContain('zálohy');
+  });
+
+  it('when it renders, then it says an erasure keeps the issued receipts on the server unchanged, with the name and address on them, and the history of the administrators', () => {
+    const erasure =
+      texts('#prava p').find((paragraph) => paragraph.includes('Zrušení dárcovského účtu')) ?? '';
+
+    expect(erasure).toContain(
+      'Jméno, adresu, e‑mail, přihlašovací údaje a bankovní účty vašeho účtu poté vymažeme a účet už nepůjde použít.',
+    );
+    expect(erasure).toContain(
+      'Vystavená potvrzení o daru jsou účetní doklady: na našem serveru je ponecháme beze změny, tedy i s vaším jménem a adresou (u firmy i s IČO), jak na nich stojí, po dobu stanovenou účetními a daňovými předpisy.',
+    );
+    expect(erasure).toContain(
+      'Stejně dlouho ponecháme záznamy o přijatých platbách a darech s tím, co o platbě uvádí výpis z banky, včetně čísla účtu a jména plátce.',
+    );
+    expect(erasure).toContain(
+      'Na serveru zůstane i záznam o tom, co správci webu udělali, včetně vašeho výmazu; může uvádět i číslo vašeho bankovního účtu.',
+    );
+    expect(erasure).not.toContain('zařízení');
+  });
+
+  it('when it renders, then it says the backups on the server are deleted after about a month, so deleted data leave them by then', () => {
+    expect(texts('#uchovavani p')).toContain(
+      'Databázi webu každý den zálohujeme na náš server a zálohy na serveru mažeme přibližně po jednom měsíci. Smazané údaje proto ze záloh zmizí nejpozději po této době.',
+    );
   });
 
   it('when it renders, then it names the e-mail and network providers and the transfer to the USA', () => {

@@ -1,5 +1,6 @@
 import { expect, test } from './fixtures';
-import { mockDonorApi, openSignInDialog, paymentQr, problem, session } from './donor-session';
+import { mockDonorApi, openSignInDialog, paymentDetails, problem, session } from './donor-session';
+import { drawnModulesMatch, PAYMENT_QR_500_WITH_SYMBOL } from './qr-matrices';
 
 test.describe('Given a visitor who wants a donor account', () => {
   test('when they register as a person, then the dialog asks them to confirm the e-mail and nobody is signed in', async ({
@@ -302,14 +303,12 @@ test.describe('Given a visitor who wants a donor account', () => {
   }) => {
     await page.addInitScript(() => localStorage.setItem('nfnn.donor-session', '1'));
     await page.route('**/api/donors/auth/refresh', (route) => route.fulfill(session(200)));
-    const requestedSymbols: (string | null)[] = [];
+    const authorizations: (string | undefined)[] = [];
     await page.route(
-      (url) => url.pathname === '/api/donations/payment-qr',
+      (url) => url.pathname === '/api/donations/payment-details',
       async (route) => {
-        requestedSymbols.push(new URL(route.request().url()).searchParams.get('variableSymbol'));
-        await route.fulfill({
-          json: { ...paymentQr, spayd: `${paymentQr.spayd}*X-VS:1234567890` },
-        });
+        authorizations.push(route.request().headers()['authorization']);
+        await route.fulfill({ json: paymentDetails });
       },
     );
 
@@ -317,6 +316,8 @@ test.describe('Given a visitor who wants a donor account', () => {
 
     await expect(page.locator('#prispet')).toContainText('Variabilní symbol');
     await expect(page.locator('#prispet')).toContainText('1234567890');
-    await expect.poll(() => requestedSymbols).toEqual(['1234567890', '1234567890', '1234567890']);
+    const qrCode = page.getByRole('img', { name: 'QR platba na účet Nadačního fondu Nová naděje' });
+    await expect.poll(() => drawnModulesMatch(qrCode, PAYMENT_QR_500_WITH_SYMBOL)).toBe(true);
+    expect(authorizations).toEqual([undefined]);
   });
 });
