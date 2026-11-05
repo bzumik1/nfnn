@@ -9,6 +9,9 @@ const KEPT_NOTE = /Údaje účtu z \d{2}\. \d{2}\. \d{4} · nemusí být aktuál
 const PICTURE_NEVER_LOADED =
   /^(?:Error: Response not Ok \(fetchAndCacheOnce\): request for http:\/\/localhost:\d+\/images\/[\w-]+\.webp returned response 504 Gateway Timeout|Failed to load resource: net::ERR_FAILED) \(http:\/\/localhost:\d+\/(?:ngsw-worker\.js|images\/[\w-]+\.webp)\)$/;
 
+const KEPT_DETAILS_AGE_MS = 10 * 60_000;
+const SETTLED_OFFLINE = { timeout: 10_000 };
+
 const OFFLINE_REQUESTS = new RegExp(`${APP_API_OFFLINE.source}|${PICTURE_NEVER_LOADED.source}`);
 
 test.describe('Given a visitor who opened the site once with a connection', () => {
@@ -18,7 +21,10 @@ test.describe('Given a visitor who opened the site once with a connection', () =
       (route) =>
         route.fulfill({
           json: FOUNDATION_PAYMENT_DETAILS,
-          headers: { Date: new Date().toUTCString(), 'Cache-Control': 'private, max-age=300' },
+          headers: {
+            Date: new Date(Date.now() - KEPT_DETAILS_AGE_MS).toUTCString(),
+            'Cache-Control': 'private, max-age=300',
+          },
         }),
     );
     await page.goto('/');
@@ -38,7 +44,7 @@ test.describe('Given a visitor who opened the site once with a connection', () =
       await page.reload();
 
       const label = page.getByRole('button', { name: /^Offline/ });
-      await expect(label).toBeVisible();
+      await expect(label).toBeVisible(SETTLED_OFFLINE);
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
       await expect(page.locator('#prispet .qr-code svg[role="img"]')).toBeVisible();
       await expect(page.locator('#prispet .bank [role="note"]')).toHaveText(KEPT_NOTE);
@@ -51,6 +57,12 @@ test.describe('Given a visitor who opened the site once with a connection', () =
       const sheet = page.getByRole('dialog', { name: 'Jste offline' });
       await expect(sheet).toBeVisible();
       await expect(sheet).toContainText('Bez připojení můžete jen prohlížet.');
+      await page.keyboard.press('Escape');
+
+      await page.locator('app-site-footer').scrollIntoViewIfNeeded();
+      const unseen = page.locator('img.is-unavailable').first();
+      await expect(unseen).toBeAttached();
+      await expect(unseen).toHaveAttribute('alt');
     });
   });
 
@@ -69,7 +81,7 @@ test.describe('Given a visitor who opened the site once with a connection', () =
       await page.reload();
 
       const label = page.getByRole('button', { name: /^Offline/ });
-      await expect(label).toBeVisible();
+      await expect(label).toBeVisible(SETTLED_OFFLINE);
       await expect(page.locator('#prispet .qr-code svg[role="img"]')).toBeVisible();
       await expect(page.locator('#prispet .bank [role="note"]')).toHaveText(KEPT_NOTE);
 
@@ -77,7 +89,9 @@ test.describe('Given a visitor who opened the site once with a connection', () =
 
       const sheet = page.getByRole('dialog', { name: 'Server neodpovídá' });
       await expect(sheet).toBeVisible();
-      await expect(sheet).toContainText('Server fondu teď neodpovídá; zkuste to za chvíli.');
+      await expect(sheet).toContainText(
+        'Připojení k internetu máte, ale server fondu teď neodpovídá. Zkoušíme to znovu sami.',
+      );
     });
   });
 });

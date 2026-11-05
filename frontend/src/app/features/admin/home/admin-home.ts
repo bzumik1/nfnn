@@ -40,6 +40,7 @@ import {
   unpublishedKeysSentence,
 } from '../settings/receipt-signing-key/unpublished-keys';
 import { signingKeyWarnings } from '../settings/receipt-signing-key/key-warnings';
+import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 
 type SignatoryState = 'loading' | 'ok' | 'missing' | 'unsigned' | 'error';
 type LoadState = 'loading' | 'ready' | 'error';
@@ -109,7 +110,7 @@ const FAILURE_LABELS: Record<ImportFailureKind, string> = {
 
 @Component({
   selector: 'app-admin-home',
-  imports: [RouterLink, CopyButton],
+  imports: [NeedsConnection, RouterLink, CopyButton],
   templateUrl: './admin-home.html',
   styleUrl: './admin-home.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -15,7 +15,13 @@
     @case ('error') {
       <div class="ui-load-state ui-load-state--error" role="alert">
         <p i18n="@@admin.about.error.text">Fotku se nepodařilo načíst.</p>
-        <button type="button" class="ui-button" (click)="load()" i18n="@@admin.about.error.retry">
+        <button
+          appNeedsConnection
+          type="button"
+          class="ui-button"
+          (click)="load()"
+          i18n="@@admin.about.error.retry"
+        >
           Zkusit znovu
         </button>
       </div>

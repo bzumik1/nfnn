@@ -1,0 +1,16 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/core/navigation/connectivity.spec.ts > Given the connectivity of the browser > when the browser says it is offline, then the app is offline",
+    "reason": "Slice 2.7 (plan v3): whether the app is offline comes from the API's answers and a probe in core/connectivity/Connectivity, never from navigator.onLine alone; the browser's word is only browserSaysOffline() for the error reporter and the chunk-load recovery",
+    "replacement": "src/app/core/connectivity/connectivity.spec.ts > Given the connectivity of the app > when the browser says it is offline, then that word alone is told to whoever only needs it, as the error reports do"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/core/navigation/connectivity.spec.ts > Given the connectivity of the browser > when the browser says it is online, then the app is not offline",
+    "reason": "Slice 2.7 (plan v3): core/navigation/connectivity.ts is replaced by Connectivity, whose browserSaysOffline() answers false while the browser says it is online",
+    "replacement": "src/app/core/connectivity/connectivity.spec.ts > Given the connectivity of the app > when the browser says it is offline, then that word alone is told to whoever only needs it, as the error reports do"
+  }
+]

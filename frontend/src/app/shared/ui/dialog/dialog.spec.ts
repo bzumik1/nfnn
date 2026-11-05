@@ -173,6 +173,20 @@ describe('Given a dialog opened from a button', () => {
 
     expect(document.activeElement?.id).toBe('opener');
   });
+
+  it('when it goes away after the button that opened it is gone, then the focus goes to the page content instead of being lost', () => {
+    const main = document.createElement('main');
+    main.id = 'obsah';
+    main.tabIndex = -1;
+    document.body.appendChild(main);
+    fixture.nativeElement.querySelector('#opener').remove();
+
+    host.open.set(false);
+    fixture.detectChanges();
+
+    expect(document.activeElement).toBe(main);
+    main.remove();
+  });
 });
 
 @Component({

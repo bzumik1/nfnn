@@ -10,6 +10,13 @@
   padding-bottom: calc(var(--space-7) + var(--floating-notice-height) + var(--space-8));
 }
 
+:host-context(.is-offline) .footer {
+  padding-bottom: calc(
+    var(--space-7) + var(--floating-notice-height) + var(--offline-pill-height) + var(--space-8) +
+      var(--space-4) + env(safe-area-inset-bottom)
+  );
+}
+
 .footer-top {
   display: flex;
   justify-content: space-between;

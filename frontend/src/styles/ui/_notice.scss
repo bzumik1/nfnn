@@ -128,3 +128,17 @@
     padding-bottom: calc(var(--floating-notice-height) + var(--space-8));
   }
 }
+
+.is-offline {
+  scroll-padding-bottom: calc(
+    var(--floating-notice-height) + var(--offline-pill-height) + var(--space-8) + var(--space-4) +
+      env(safe-area-inset-bottom)
+  );
+
+  body:not(:has(app-site-footer)) {
+    padding-bottom: calc(
+      var(--floating-notice-height) + var(--offline-pill-height) + var(--space-8) + var(--space-4) +
+        env(safe-area-inset-bottom)
+    );
+  }
+}

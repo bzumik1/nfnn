@@ -46,3 +46,7 @@
 .offline-sheet-status {
   margin-top: var(--space-3);
 }
+
+.offline-sheet-status .offline-sheet-warning {
+  color: var(--color-warning);
+}

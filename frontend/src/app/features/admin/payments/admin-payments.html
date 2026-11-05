@@ -130,6 +130,7 @@
     }
     @if (incomingLabel(); as label) {
       &ngsp;<button
+        appNeedsConnection
         type="button"
         class="ui-button ui-button--small ui-button--primary payments-incoming"
         (click)="showIncoming()"
@@ -342,6 +343,7 @@
               >Zobrazeno {{ items().length }} z {{ total() }}.</span
             >
             <button
+              appNeedsConnection
               type="button"
               class="ui-button ui-button--small"
               [disabled]="loadingMore()"
@@ -490,6 +492,7 @@
 
     <div class="pair-actions">
       <button
+        appNeedsConnection
         type="button"
         class="pair-submit"
         [disabled]="selectedDonor() === null || busy()"

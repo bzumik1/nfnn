@@ -36,6 +36,7 @@
         <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
           <p i18n="@@admin.symbolClaims.error.text">Odpovědi se nepodařilo načíst.</p>
           <button
+            appNeedsConnection
             type="button"
             class="ui-button ui-button--small"
             (click)="load()"

@@ -676,7 +676,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.route('**/api/**', (route) => route.abort('internetdisconnected'));
     await page.reload();
     const label = page.getByRole('button', { name: /^Offline/ });
-    await expect(label).toBeVisible();
+    await expect(label).toBeVisible({ timeout: 10_000 });
     await expect(page.locator('#prispet .bank [role="note"]')).toBeVisible();
     await expect(page.getByRole('button', { name: /^Odeslat zprávu/ })).toHaveAttribute(
       'aria-disabled',

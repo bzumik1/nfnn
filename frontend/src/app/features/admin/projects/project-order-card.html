@@ -21,6 +21,7 @@
         <div class="ui-load-state ui-load-state--inset ui-load-state--error" role="alert">
           <p i18n="@@admin.projects.order.error">Řazení se nepodařilo načíst.</p>
           <button
+            appNeedsConnection
             type="button"
             class="ui-button"
             (click)="load()"

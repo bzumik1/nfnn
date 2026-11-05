@@ -130,6 +130,7 @@
           <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
             <p i18n="@@admin.donorDetail.account.error.text">Účet se nepodařilo načíst.</p>
             <button
+              appNeedsConnection
               type="button"
               class="ui-button ui-button--small"
               (click)="loadAccount()"
@@ -413,6 +414,7 @@
               Účty, dary a potvrzení se nepodařilo načíst.
             </p>
             <button
+              appNeedsConnection
               type="button"
               class="ui-button ui-button--small"
               (click)="loadDonations()"
@@ -572,6 +574,7 @@
                               dárce. Zapnout?</span
                             >
                             <button
+                              appNeedsConnection
                               type="button"
                               class="ui-button ui-button--small"
                               [disabled]="busy()"

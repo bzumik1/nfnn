@@ -217,6 +217,7 @@
       <p class="recovery-offer">
         <span i18n="@@donor.login.recovery.offer">Nemáte telefon s aplikací?</span>
         <button
+          appNeedsConnection
           type="button"
           class="link-btn recovery-start"
           [disabled]="loading()"
@@ -290,6 +291,7 @@
         @if (emailNotVerified()) {
           <p class="form-note">
             <button
+              appNeedsConnection
               type="button"
               class="link-btn"
               [disabled]="loading()"
@@ -325,6 +327,7 @@
       @if (passkeysSupported) {
         <p class="divider" i18n="@@donor.login.passkey.or">nebo</p>
         <button
+          appNeedsConnection
           type="button"
           class="passkey-btn"
           [disabled]="loading()"
@@ -379,6 +382,7 @@
         </p>
         <div class="sent-actions">
           <button
+            appNeedsConnection
             type="button"
             class="ui-button ui-button--block registration-resend"
             [disabled]="loading()"
@@ -748,6 +752,7 @@
           E-mail nedorazil? Podívejte se do nevyžádané pošty, nebo si ho nechte poslat znovu.
         </p>
         <button
+          appNeedsConnection
           type="button"
           class="ui-button ui-button--block reset-resend"
           [disabled]="loading()"

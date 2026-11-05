@@ -12,7 +12,13 @@
     @case ('error') {
       <div class="ui-load-state ui-load-state--error" role="alert">
         <p i18n="@@admin.logs.error.text">Logy a diagnostiku se nepodařilo načíst.</p>
-        <button type="button" class="ui-button" (click)="load()" i18n="@@admin.logs.error.retry">
+        <button
+          appNeedsConnection
+          type="button"
+          class="ui-button"
+          (click)="load()"
+          i18n="@@admin.logs.error.retry"
+        >
           Zkusit znovu
         </button>
       </div>
@@ -62,6 +68,7 @@
                   </td>
                   <td class="row-actions">
                     <button
+                      appNeedsConnection
                       type="button"
                       class="ui-button"
                       [attr.aria-label]="openLabel(file)"
@@ -125,6 +132,7 @@
                 }
               </button>
               <button
+                appNeedsConnection
                 type="button"
                 class="ui-button ui-button--quiet browser-errors"
                 [disabled]="searchState() === 'loading'"
@@ -166,7 +174,12 @@
                   <ul class="match-list">
                     @for (match of matches(); track match.offset) {
                       <li>
-                        <button type="button" class="match" (click)="showMatch(match)">
+                        <button
+                          appNeedsConnection
+                          type="button"
+                          class="match"
+                          (click)="showMatch(match)"
+                        >
                           {{ match.line }}
                         </button>
                       </li>
@@ -174,6 +187,7 @@
                   </ul>
                   @if (result.moreOlder) {
                     <button
+                      appNeedsConnection
                       type="button"
                       class="ui-button"
                       [disabled]="searchState() === 'loading'"
@@ -189,6 +203,7 @@
 
             <div class="pager">
               <button
+                appNeedsConnection
                 type="button"
                 class="ui-button"
                 [disabled]="windowState() === 'loading' || !window()?.hasOlder"
@@ -198,6 +213,7 @@
                 ← Starší
               </button>
               <button
+                appNeedsConnection
                 type="button"
                 class="ui-button"
                 [disabled]="windowState() === 'loading' || !window()?.hasNewer"
@@ -207,6 +223,7 @@
                 Novější →
               </button>
               <button
+                appNeedsConnection
                 type="button"
                 class="ui-button"
                 [disabled]="windowState() === 'loading'"
@@ -356,6 +373,7 @@
                   <td class="row-actions">
                     @if (entry.override) {
                       <button
+                        appNeedsConnection
                         type="button"
                         class="ui-button"
                         [disabled]="resetting() !== null"
@@ -443,6 +461,7 @@
           }
           <div class="actions">
             <button
+              appNeedsConnection
               type="button"
               class="ui-button"
               [disabled]="diagnosticsState() === 'loading'"
@@ -455,6 +474,7 @@
               }
             </button>
             <button
+              appNeedsConnection
               type="button"
               class="ui-button"
               [disabled]="threadsState() === 'loading'"

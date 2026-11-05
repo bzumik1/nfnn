@@ -14,6 +14,7 @@
         <div class="ui-load-state ui-load-state--error" role="alert">
           <p i18n="@@admin.home.since.error.text">Co je od minula nového, se nepodařilo zjistit.</p>
           <button
+            appNeedsConnection
             type="button"
             class="ui-button"
             (click)="loadSince()"
@@ -125,6 +126,7 @@
               >Platby čekající na přiřazení se nepodařilo zjistit.</span
             >
             <button
+              appNeedsConnection
               type="button"
               class="ui-button ui-button--small"
               (click)="loadUnpaired()"
@@ -201,6 +203,7 @@
               >Klíč k ověřovacím QR kódům se nepodařilo zkontrolovat.</span
             >
             <button
+              appNeedsConnection
               type="button"
               class="ui-button ui-button--small"
               (click)="loadSigningKeys()"
@@ -241,6 +244,7 @@
               >Správce se nepodařilo zkontrolovat.</span
             >
             <button
+              appNeedsConnection
               type="button"
               class="ui-button ui-button--small"
               (click)="loadAdministrators()"
@@ -267,6 +271,7 @@
               >Nepodařilo se zkontrolovat, kdo podepisuje potvrzení o daru.</span
             >
             <button
+              appNeedsConnection
               type="button"
               class="ui-button ui-button--small"
               (click)="loadSignatory()"
@@ -309,6 +314,7 @@
           <div class="ui-load-state ui-load-state--error" role="alert">
             <p i18n="@@admin.home.import.error.text">Stav importu se nepodařilo načíst.</p>
             <button
+              appNeedsConnection
               type="button"
               class="ui-button"
               (click)="load()"
@@ -397,6 +403,7 @@
           <div class="ui-load-state ui-load-state--error" role="alert">
             <p i18n="@@admin.home.backups.error.text">Stav záloh se nepodařilo načíst.</p>
             <button
+              appNeedsConnection
               type="button"
               class="ui-button"
               (click)="loadBackups()"
@@ -454,6 +461,7 @@
         <div class="ui-load-state ui-load-state--error" role="alert">
           <p i18n="@@admin.home.overview.error.text">Dary po měsících se nepodařilo načíst.</p>
           <button
+            appNeedsConnection
             type="button"
             class="ui-button"
             (click)="loadOverview()"

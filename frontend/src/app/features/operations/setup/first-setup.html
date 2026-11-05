@@ -22,6 +22,7 @@
             Po instalaci se web chvíli spouští. Počkejte prosím minutu a zkuste to znovu.
           </p>
           <button
+            appNeedsConnection
             type="button"
             class="ui-button ui-button--primary ui-button--block"
             (click)="load()"
@@ -297,6 +298,7 @@
             </p>
             <div class="test-row">
               <button
+                appNeedsConnection
                 #testEmailButton
                 type="button"
                 class="ui-button"
@@ -432,6 +434,7 @@
                     Klíč k zálohám se nepodařilo načíst.
                   </p>
                   <button
+                    appNeedsConnection
                     type="button"
                     class="ui-button ui-button--small"
                     (click)="loadBackupKey()"
@@ -470,6 +473,7 @@
               </p>
               <div class="mail-unverified-actions">
                 <button
+                  appNeedsConnection
                   type="button"
                   class="ui-button ui-button--small"
                   (click)="sendTestEmailFromWarning(setupForm)"
@@ -478,6 +482,7 @@
                   Poslat zkušební e-mail
                 </button>
                 <button
+                  appNeedsConnection
                   type="button"
                   class="ui-button ui-button--small ui-button--quiet"
                   [disabled]="saving()"
@@ -580,6 +585,7 @@
             znovu. Když se nespustí ani pak, podívejte se do logu kontejneru nfnn-backend v ZimaOS.
           </p>
           <button
+            appNeedsConnection
             type="button"
             class="ui-button ui-button--primary ui-button--block"
             (click)="checkAgain()"
@@ -744,6 +750,7 @@
             znovu.
           </p>
           <button
+            appNeedsConnection
             type="button"
             class="ui-button ui-button--primary ui-button--block"
             (click)="watchRestore()"

@@ -138,6 +138,7 @@
                 <span i18n="@@admin.backups.key.orPasskey">Nebo bez kódu:</span>
                 &ngsp;
                 <button
+                  appNeedsConnection
                   type="button"
                   class="ui-link-button"
                   [disabled]="revealing()"
@@ -204,6 +205,7 @@
       } @else {
         <div class="key-actions">
           <button
+            appNeedsConnection
             #showButton
             type="button"
             class="ui-button ui-button--primary"

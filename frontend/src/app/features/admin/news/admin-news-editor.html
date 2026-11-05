@@ -20,6 +20,7 @@
       <div class="ui-load-state ui-load-state--error" role="alert">
         <p i18n="@@admin.newsEditor.error.text">Aktualitu se nepodařilo načíst.</p>
         <button
+          appNeedsConnection
           type="button"
           class="ui-button"
           (click)="retry()"
@@ -343,6 +344,7 @@
                   }
                 </button>
                 <button
+                  appNeedsConnection
                   type="button"
                   class="ui-button ui-button--quiet"
                   [disabled]="busy()"

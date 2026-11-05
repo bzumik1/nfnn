@@ -24,6 +24,7 @@
       </button>
     </div>
     <button
+      appNeedsConnection
       #addButton
       type="button"
       class="ui-button ui-button--primary accounts-add"
@@ -51,6 +52,7 @@
       <div class="ui-callout ui-callout--danger accounts-load-error" role="alert">
         <p i18n="@@donor.bankAccounts.error.load">Bankovní účty se nepodařilo načíst.</p>
         <button
+          appNeedsConnection
           type="button"
           class="ui-button accounts-retry"
           (click)="retry()"
@@ -132,6 +134,7 @@
               @if (confirming() !== account.id) {
                 @if (offersReconnect(account)) {
                   <button
+                    appNeedsConnection
                     type="button"
                     class="ui-button account-action"
                     [id]="actionButtonId(account)"
@@ -350,6 +353,7 @@
             nemusíte nechávat otevřené.
           </p>
           <button
+            appNeedsConnection
             type="button"
             class="watch-again"
             (click)="watchAgain()"

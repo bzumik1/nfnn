@@ -1,3 +1,5 @@
+/// <reference types="@angular/localize" />
+
 import { DestroyRef, Directive, DOCUMENT, effect, ElementRef, inject } from '@angular/core';
 
 import { Connectivity } from '../../../core/connectivity/connectivity';

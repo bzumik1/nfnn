@@ -5,6 +5,7 @@
   @if (connectionsError()) {
     <p class="ui-field-error" role="alert">{{ connectionsError() }}</p>
     <button
+      appNeedsConnection
       type="button"
       class="ui-button connections-retry"
       (click)="loadConnections()"

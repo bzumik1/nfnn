@@ -19,6 +19,7 @@
             znovu.
           </p>
           <button
+            appNeedsConnection
             type="button"
             class="ui-button ui-button--primary"
             (click)="watchRestore()"
@@ -45,6 +46,7 @@
         <div class="ui-load-state ui-load-state--error" role="alert">
           <p i18n="@@admin.backups.error.text">Stav záloh se nepodařilo načíst.</p>
           <button
+            appNeedsConnection
             type="button"
             class="ui-button"
             (click)="load()"
@@ -144,6 +146,7 @@
             </div>
             <div class="actions">
               <button
+                appNeedsConnection
                 type="button"
                 class="ui-button ui-button--primary"
                 [disabled]="actionsDisabled()"
@@ -156,6 +159,7 @@
                 }
               </button>
               <button
+                appNeedsConnection
                 type="button"
                 class="ui-button"
                 [disabled]="actionsDisabled()"
@@ -231,6 +235,7 @@
                     </td>
                     <td class="row-actions">
                       <button
+                        appNeedsConnection
                         type="button"
                         class="ui-button"
                         [disabled]="downloading() !== null"

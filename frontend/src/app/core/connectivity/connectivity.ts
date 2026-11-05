@@ -108,10 +108,12 @@ export class Connectivity {
     if (outcome.status >= 300) {
       this.reached();
     } else if (Number.isFinite(date)) {
-      if (this.serverNow() - date <= FRESH_ANSWER_MS) {
+      if (this.serverNow() - date > FRESH_ANSWER_MS) {
+        this.doubt();
+      } else if (this.offlineFor() === null) {
         this.reached();
       } else {
-        this.doubt();
+        this.probe().subscribe();
       }
     }
   }

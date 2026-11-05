@@ -261,6 +261,17 @@ describe('Given the payment details store', () => {
     });
   });
 
+  it('when the browser refuses to keep the details, then the details from the server are still shown', () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('full', 'QuotaExceededError');
+    });
+
+    store.load();
+    http.expectOne(PAYMENT_DETAILS_URL).flush(foundationPaymentDetails());
+
+    expect(store.state()).toEqual({ kind: 'ready', details: foundationPaymentDetails() });
+  });
+
   describe('Given details kept from an earlier visit', () => {
     const written = Date.parse('2026-10-12T08:00:00Z');
 
@@ -282,6 +293,35 @@ describe('Given the payment details store', () => {
     it('when nothing answers, then the kept details are shown and said to be kept, with the time they were written', () => {
       store.load();
       http.expectOne(PAYMENT_DETAILS_URL).error(new ProgressEvent('error'), { status: 0 });
+
+      expect(store.state()).toEqual({ kind: 'ready', details: foundationPaymentDetails() });
+      expect(store.age()).toEqual({ writtenAt: written, kept: true });
+    });
+
+    it('when the server answers with details that fail the check or with a problem, then nothing kept is shown, so a changed account never shows the old one', () => {
+      store.load();
+      http.expectOne(PAYMENT_DETAILS_URL).flush(movedAccountWithForeignIban());
+      expect(store.state()).toEqual({ kind: 'failed' });
+
+      store.load();
+      http.expectOne(PAYMENT_DETAILS_URL).flush(
+        { type: 'https://nfnn.cz/problems/rate-limited', title: 'Too many', status: 429 },
+        {
+          status: 429,
+          statusText: 'Too Many Requests',
+          headers: { 'Content-Type': 'application/problem+json' },
+        },
+      );
+      expect(store.state()).toEqual({ kind: 'failed' });
+    });
+
+    it('when the server is down behind the edge, then the kept details are shown', () => {
+      store.load();
+      http.expectOne(PAYMENT_DETAILS_URL).flush('origin down', {
+        status: 522,
+        statusText: '',
+        headers: { 'Content-Type': 'text/html' },
+      });
 
       expect(store.state()).toEqual({ kind: 'ready', details: foundationPaymentDetails() });
       expect(store.age()).toEqual({ writtenAt: written, kept: true });

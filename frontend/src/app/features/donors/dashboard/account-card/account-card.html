@@ -37,6 +37,7 @@
             >
             <span class="account-pending-actions">
               <button
+                appNeedsConnection
                 #resendButton
                 type="button"
                 class="ui-button account-resend"
@@ -52,6 +53,7 @@
                 }
               </button>
               <button
+                appNeedsConnection
                 type="button"
                 class="ui-button ui-button--quiet account-cancel-change"
                 [disabled]="pendingAction() !== null"

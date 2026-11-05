@@ -9,6 +9,7 @@
     <p class="ui-field-error" role="alert">{{ loadError() }}</p>
     @if (passkeys() === null) {
       <button
+        appNeedsConnection
         type="button"
         class="ui-button passkeys-action"
         (click)="load()"

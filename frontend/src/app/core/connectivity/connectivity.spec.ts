@@ -84,9 +84,10 @@ describe('Given the connectivity of the app', () => {
   });
 
   afterEach(() => {
-    http.verify();
     vi.useRealTimers();
     vi.restoreAllMocks();
+    delete (document as { visibilityState?: DocumentVisibilityState }).visibilityState;
+    http.verify();
   });
 
   describe('when a request reaches nothing', () => {
@@ -127,15 +128,73 @@ describe('Given the connectivity of the app', () => {
       expect(connectivity.offline()).toBe(false);
     });
 
-    it('and the probe hangs, then it gives up after 10 s and the app is offline', () => {
+    it('and the probe hangs, then the app is offline after 3 s', () => {
       http.expectOne(PROBE_PATH);
 
       vi.advanceTimersByTime(OFFLINE_AFTER_MS);
       expect(connectivity.offline()).toBe(true);
-
-      vi.advanceTimersByTime(PROBE_TIMEOUT_MS);
-      expect(connectivity.cause()).toBe('network');
     });
+  });
+
+  it('when the server answers 522 and the probe then hangs, then the probe is cancelled after 10 s and the cause becomes the network', () => {
+    start();
+    ask(PROFILE);
+    answers(PROFILE, 522, { 'Content-Type': 'text/html' });
+    const probe = http.expectOne(PROBE_PATH);
+
+    vi.advanceTimersByTime(OFFLINE_AFTER_MS);
+    expect(connectivity.cause()).toBe('server');
+
+    vi.advanceTimersByTime(PROBE_TIMEOUT_MS - OFFLINE_AFTER_MS - 1);
+    expect(probe.cancelled).toBe(false);
+    vi.advanceTimersByTime(1);
+    expect(probe.cancelled).toBe(true);
+    expect(connectivity.cause()).toBe('network');
+  });
+
+  for (const status of [500, 519, 531]) {
+    it(`when a request gets ${status} as a page of the proxy, then that is no gateway failure and the server counts as reachable`, () => {
+      start();
+      ask(PROFILE);
+      answers(PROFILE, status, { 'Content-Type': 'text/html' });
+
+      vi.advanceTimersByTime(OFFLINE_AFTER_MS);
+      http.expectNone(PROBE_PATH);
+      expect(connectivity.offline()).toBe(false);
+    });
+  }
+
+  for (const status of [503, 504]) {
+    it(`when the backend itself answers ${status} with a problem, then the server is reachable and nothing is probed`, () => {
+      start();
+      ask(PROFILE);
+      answers(PROFILE, status, { 'Content-Type': 'application/problem+json' });
+
+      vi.advanceTimersByTime(OFFLINE_AFTER_MS);
+      http.expectNone(PROBE_PATH);
+      expect(connectivity.offline()).toBe(false);
+    });
+  }
+
+  it('when a gateway answer carries no content type, then it counts as a gateway failure', () => {
+    start();
+    ask(PROFILE);
+    http.expectOne(PROFILE).flush(null, { status: 502, statusText: 'Bad Gateway' });
+
+    http.expectOne(PROBE_PATH);
+    vi.advanceTimersByTime(OFFLINE_AFTER_MS);
+    expect(connectivity.offline()).toBe(true);
+  });
+
+  it('when a gateway answer comes while the browser says it is offline, then the cause is the network', () => {
+    start();
+    onLine = false;
+    ask(PROFILE);
+    answers(PROFILE, 522, { 'Content-Type': 'text/html' });
+    http.expectOne(PROBE_PATH);
+
+    vi.advanceTimersByTime(OFFLINE_AFTER_MS);
+    expect(connectivity.cause()).toBe('network');
   });
 
   for (const status of [502, 503, 504, 520, 521, 522, 523, 524, 530]) {
@@ -173,7 +232,7 @@ describe('Given the connectivity of the app', () => {
     start();
     ask(HOME);
     answers(HOME, 504, { 'Content-Type': 'text/plain' });
-    networkFails(PROBE_PATH);
+    http.expectOne(PROBE_PATH);
 
     vi.advanceTimersByTime(OFFLINE_AFTER_MS);
     expect(connectivity.cause()).toBe('network');
@@ -246,20 +305,34 @@ describe('Given the connectivity of the app', () => {
       goOffline();
     });
 
-    it('then it probes every 30 s and is online again at the first answer', () => {
-      vi.advanceTimersByTime(PROBE_EVERY_MS);
+    it('then it probes every 30 s and is online again at the first answer, and then stops probing', () => {
+      vi.advanceTimersByTime(PROBE_EVERY_MS - 1);
+      http.expectNone(PROBE_PATH);
+      vi.advanceTimersByTime(1);
       networkFails(PROBE_PATH);
       expect(connectivity.offline()).toBe(true);
 
       vi.advanceTimersByTime(PROBE_EVERY_MS);
       answers(PROBE_PATH);
       expect(connectivity.offline()).toBe(false);
+
+      vi.advanceTimersByTime(PROBE_EVERY_MS * 3);
+      http.expectNone(PROBE_PATH);
     });
 
     it('and any request is answered, then it is online at once', () => {
       ask(HOME);
       answers(HOME, 404);
 
+      expect(connectivity.offline()).toBe(false);
+    });
+
+    it('and the service worker answers from a copy it kept seconds ago, then the app stays offline until the probe reaches the server', () => {
+      ask(HOME);
+      answers(HOME, 200, { Date: new Date(Date.now() - 2_000).toUTCString() });
+      expect(connectivity.offline()).toBe(true);
+
+      answers(PROBE_PATH);
       expect(connectivity.offline()).toBe(false);
     });
 

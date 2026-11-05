@@ -2,6 +2,7 @@ import {
   HttpClient,
   HttpEventType,
   HttpHeaderResponse,
+  HttpHeaders,
   provideHttpClient,
   withInterceptors,
 } from '@angular/common/http';
@@ -88,11 +89,12 @@ describe('Given the connectivity interceptor', () => {
     expect(shown.oldest()).toBeNull();
   });
 
-  it('when the live stream opens and later breaks off, then the opening counts as contact and the break as a lost connection', () => {
+  it('when the live stream opens and later breaks off, then the break after its headers still counts as a lost connection', () => {
     client
       .get('/api/live', { observe: 'events', reportProgress: true, responseType: 'text' })
       .subscribe({ error: () => undefined });
     const stream = http.expectOne('/api/live');
+    stream.event(new HttpHeaderResponse({ status: 200, headers: new HttpHeaders({}) }));
     stream.event({ type: HttpEventType.DownloadProgress, partialText: 'event:', loaded: 6 });
     stream.error(new ProgressEvent('error'), { status: 0, statusText: '' });
 

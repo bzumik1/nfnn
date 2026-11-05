@@ -18,6 +18,7 @@ import { NewsApi, NewsArticleResponse } from '../news-api';
 import { NewsCard } from '../news-card/news-card';
 import { ProjectCard } from '../home/sections/projects/project-card';
 import { ProjectResponse, ProjectsApi } from '../projects-api';
+import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 
 export const PAGE_SIZE = 10;
 
@@ -31,7 +32,7 @@ interface ListPage {
 
 @Component({
   selector: 'app-content-list',
-  imports: [RouterLink, NewsCard, ProjectCard],
+  imports: [NeedsConnection, RouterLink, NewsCard, ProjectCard],
   templateUrl: './content-list.html',
   styleUrl: './content-list.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -1,3 +1,5 @@
+/// <reference types="@angular/localize" />
+
 import {
   afterRenderEffect,
   ChangeDetectionStrategy,
@@ -5,9 +7,11 @@ import {
   computed,
   DOCUMENT,
   effect,
+  ElementRef,
   inject,
   signal,
   untracked,
+  viewChild,
 } from '@angular/core';
 
 import { Connectivity } from '../../core/connectivity/connectivity';
@@ -15,6 +19,7 @@ import { formatDataTime } from '../../core/connectivity/data-time';
 import { ShownAnswers } from '../../core/connectivity/shown-answers';
 import { Dialog } from '../../shared/ui/dialog/dialog';
 import { DialogAnnouncer } from '../../shared/ui/dialog/dialog-announcer';
+import { keepRoomForOfflinePill } from './offline-pill-room';
 
 type TryOutcome = 'trying' | 'reached' | 'still-offline';
 
@@ -34,6 +39,9 @@ export class OfflineStatus {
   protected readonly sheetOpen = signal(false);
   protected readonly tryOutcome = signal<TryOutcome | null>(null);
   protected readonly announcement = signal<string | null>(null);
+  protected readonly serverDown = computed(() => this.connectivity.cause() === 'server');
+  private readonly pill = viewChild<ElementRef<HTMLElement>>('pill');
+  private readonly closeButton = viewChild<ElementRef<HTMLButtonElement>>('closeButton');
 
   protected readonly dataTime = computed(() => {
     const oldest = this.shown.oldest();
@@ -64,8 +72,19 @@ export class OfflineStatus {
     });
     afterRenderEffect((onCleanup) => {
       const message = this.announcement();
-      if (message && this.document.querySelector('dialog[open]')) {
+      if (message && !this.sheetOpen() && this.document.querySelector('dialog[open]')) {
         onCleanup(this.dialogAnnouncer.announce(message));
+      }
+    });
+    afterRenderEffect((onCleanup) => {
+      const pill = this.pill()?.nativeElement;
+      if (pill) {
+        onCleanup(keepRoomForOfflinePill(this.document, pill));
+      }
+    });
+    afterRenderEffect(() => {
+      if (this.tryOutcome() === 'reached') {
+        untracked(() => this.closeButton()?.nativeElement.focus());
       }
     });
   }
@@ -80,6 +99,9 @@ export class OfflineStatus {
   }
 
   protected tryAgain(): void {
+    if (this.tryOutcome() === 'trying') {
+      return;
+    }
     this.tryOutcome.set('trying');
     this.connectivity.tryAgain().subscribe((reached) => {
       if (!reached || this.connectivity.offline()) {

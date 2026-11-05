@@ -13,7 +13,13 @@
     @case ('error') {
       <div class="ui-load-state ui-load-state--error" role="alert">
         <p i18n="@@admin.people.error.text">Lidi fondu se nepodařilo načíst.</p>
-        <button type="button" class="ui-button" (click)="load()" i18n="@@admin.people.error.retry">
+        <button
+          appNeedsConnection
+          type="button"
+          class="ui-button"
+          (click)="load()"
+          i18n="@@admin.people.error.retry"
+        >
           Zkusit znovu
         </button>
       </div>
@@ -119,6 +125,7 @@
                   </div>
                   <div class="ui-person-row__actions">
                     <button
+                      appNeedsConnection
                       type="button"
                       class="ui-button ui-button--small ui-button--quiet"
                       [id]="'person-up-' + member.id"
@@ -130,6 +137,7 @@
                       <span i18n="@@admin.people.move.up">Výš</span>
                     </button>
                     <button
+                      appNeedsConnection
                       type="button"
                       class="ui-button ui-button--small ui-button--quiet"
                       [id]="'person-down-' + member.id"
@@ -449,6 +457,7 @@
                   </app-file-button>
                   @if (member.webSignature) {
                     <button
+                      appNeedsConnection
                       type="button"
                       class="ui-button ui-button--small ui-button--danger-outline"
                       [disabled]="busy()"
@@ -490,6 +499,7 @@
                         Nepodařilo se zjistit, kdo podepisuje potvrzení.
                       </p>
                       <button
+                        appNeedsConnection
                         type="button"
                         class="ui-button ui-button--small"
                         (click)="retrySignatory()"

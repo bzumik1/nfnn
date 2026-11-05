@@ -1,4 +1,5 @@
 import { DestroyRef, DOCUMENT, inject, Injectable, signal } from '@angular/core';
+import { isUnreachable } from '../../core/connectivity/connectivity';
 import {
   PaymentDetails,
   PaymentDetailsApi,
@@ -79,7 +80,7 @@ export class PaymentDetailsStore {
     this.current.set({ kind: 'loading' });
     this.api.details({ pastBrowserCache }).subscribe({
       next: (written) => this.hold(written),
-      error: () => this.fallBack(),
+      error: (failure: unknown) => this.fallBack(failure),
     });
   }
 
@@ -91,8 +92,8 @@ export class PaymentDetailsStore {
     this.keep(written);
   }
 
-  private fallBack(): void {
-    const kept = this.kept();
+  private fallBack(failure: unknown): void {
+    const kept = isUnreachable(failure) ? this.kept() : null;
     if (kept === null) {
       this.current.set({ kind: 'failed' });
       return;

@@ -16,6 +16,7 @@ import { NeedsConnection } from './needs-connection';
     <button type="button" class="remove" appNeedsConnection (click)="removed = removed + 1">
       Odebrat
     </button>
+    <button type="button" class="busy" appNeedsConnection aria-disabled="false">Obnovit</button>
   `,
 })
 class Host {
@@ -107,11 +108,20 @@ describe('Given a control that needs a connection', () => {
       expect(fixture.componentInstance.submitted).toBe(1);
     });
 
+    it('and the connection comes back, then a control that said it was enabled says so again', async () => {
+      const busy = element().querySelector('button.busy') as HTMLButtonElement;
+      expect(busy.getAttribute('aria-disabled')).toBe('true');
+
+      await connection(true);
+
+      expect(busy.getAttribute('aria-disabled')).toBe('false');
+    });
+
     it('and it stays offline, then each control has one hint of its own', async () => {
       await connection(false);
 
-      expect(hints()).toHaveLength(2);
-      expect(new Set(hints().map((hint) => hint.id)).size).toBe(2);
+      expect(hints()).toHaveLength(3);
+      expect(new Set(hints().map((hint) => hint.id)).size).toBe(3);
     });
   });
 });

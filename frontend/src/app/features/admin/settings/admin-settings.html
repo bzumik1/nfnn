@@ -17,6 +17,7 @@
       <div class="ui-load-state ui-load-state--error" role="alert">
         <p i18n="@@admin.settings.error.text">Nastavení se nepodařilo načíst.</p>
         <button
+          appNeedsConnection
           type="button"
           class="ui-button"
           (click)="load()"
@@ -47,6 +48,7 @@
           </p>
         </details>
         <button
+          appNeedsConnection
           type="button"
           class="ui-button"
           (click)="checkAgain()"
@@ -231,6 +233,7 @@
                     </p>
                     <div class="test-row">
                       <button
+                        appNeedsConnection
                         type="button"
                         class="ui-button"
                         aria-describedby="settings-test-email-hint"
@@ -311,6 +314,7 @@
               </p>
               <div class="confirm-actions">
                 <button
+                  appNeedsConnection
                   type="button"
                   class="ui-button ui-button--primary"
                   [disabled]="saving()"

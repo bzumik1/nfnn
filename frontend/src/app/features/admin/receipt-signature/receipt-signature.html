@@ -20,7 +20,13 @@
       @case ('error') {
         <div class="signature-error" role="alert">
           <p i18n="@@admin.signature.loadFailed">Podpis se nepodařilo načíst.</p>
-          <button type="button" class="ui-button" (click)="retry()" i18n="@@admin.signature.retry">
+          <button
+            appNeedsConnection
+            type="button"
+            class="ui-button"
+            (click)="retry()"
+            i18n="@@admin.signature.retry"
+          >
             Zkusit znovu
           </button>
         </div>
