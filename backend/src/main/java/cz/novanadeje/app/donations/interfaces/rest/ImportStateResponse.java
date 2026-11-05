@@ -1,7 +1,6 @@
 package cz.novanadeje.app.donations.interfaces.rest;
 
 import cz.novanadeje.app.donations.application.importing.ImportStatusView;
-import cz.novanadeje.app.donations.domain.importing.BankImportState;
 import cz.novanadeje.app.donations.domain.importing.ImportFailureKind;
 
 import java.time.Instant;
@@ -15,12 +14,9 @@ public record ImportStateResponse(LocalDate coveredFrom, LocalDate coveredTo, In
     }
 
     static ImportStateResponse from(ImportStatusView view) {
-        BankImportState state = view.state();
-        LastFailure failure = state.lastFailureKind()
-                .map(kind -> new LastFailure(kind, state.lastFailureMessage().orElse(null), state.lastAttemptedAt().orElse(null)))
-                .orElse(null);
-        return new ImportStateResponse(state.coverage().coveredFrom(), state.coverage().coveredTo(), state.lastAttemptedAt().orElse(null),
-                state.lastSucceededAt().orElse(null), failure, state.consecutiveFailures(), state.reportedOutage().orElse(null),
+        ImportStateRow stored = ImportStateRow.from(view.state());
+        return new ImportStateResponse(stored.coveredFrom(), stored.coveredTo(), stored.lastAttemptedAt(), stored.lastSucceededAt(),
+                stored.lastFailure(), stored.consecutiveFailures(), stored.reportedOutage(),
                 view.historyImport().map(HistoryImportResponse::from).orElse(null), view.defaultHistoryFrom());
     }
 }
