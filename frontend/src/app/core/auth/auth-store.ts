@@ -1,6 +1,8 @@
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
+import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
 import {
   catchError,
+  defer,
   finalize,
   firstValueFrom,
   from,
@@ -8,12 +10,23 @@ import {
   Observable,
   of,
   share,
+  Subscription,
   switchMap,
   tap,
   throwError,
+  timeout,
 } from 'rxjs';
 import { AuthApi } from './auth-api';
 import { PasskeyAuthenticator } from './passkey-authenticator';
+import {
+  isSessionRefreshed,
+  REFRESH_LOCK_NAME,
+  REFRESH_LOCK_WAIT_MS,
+  REFRESH_REQUEST_TIMEOUT_MS,
+  SESSION_CHANNEL,
+  sessionRefreshed,
+  TAB_LOCKS,
+} from './session-tabs';
 import {
   AuthResponse,
   ChangePasswordRequest,
@@ -34,16 +47,28 @@ export const SESSION_HINT_KEY = 'nfnn.donor-session';
 export class AuthStore {
   private readonly api = inject(AuthApi);
   private readonly passkeys = inject(PasskeyAuthenticator);
+  private readonly locks = inject(TAB_LOCKS);
+  private readonly channel = inject(SESSION_CHANNEL)();
   private readonly currentDonor = signal<Donor | null>(null);
   private readonly currentStatus = signal<AuthStatus>('unknown');
   private accessToken: string | null = null;
   private refreshInFlight: Observable<string> | null = null;
   private restoring: Promise<void> | null = null;
+  private adoptions = 0;
 
   readonly donor = this.currentDonor.asReadonly();
   readonly status = this.currentStatus.asReadonly();
   readonly signedIn = computed(() => this.currentDonor() !== null);
   readonly isAdmin = computed(() => this.currentDonor()?.roles.includes('ADMIN') ?? false);
+
+  constructor() {
+    this.channel?.addEventListener('message', (event) => {
+      if (isSessionRefreshed(event.data)) {
+        this.adopt(event.data.response);
+      }
+    });
+    inject(DestroyRef).onDestroy(() => this.channel?.close());
+  }
 
   currentAccessToken(): string | null {
     return this.accessToken;
@@ -80,11 +105,18 @@ export class AuthStore {
 
   refresh(): Observable<string> {
     if (this.refreshInFlight === null) {
-      this.refreshInFlight = this.api.refresh().pipe(
-        map((response) => this.adopt(response)),
-        map(() => this.accessToken as string),
+      const seen = this.adoptions;
+      this.refreshInFlight = this.underRefreshLock(() =>
+        defer(() =>
+          this.adoptions !== seen && this.accessToken !== null
+            ? of(this.accessToken)
+            : this.requestRefresh(),
+        ),
+      ).pipe(
         catchError((failure: unknown) => {
-          this.forget();
+          if (isRefusal(failure)) {
+            this.forget();
+          }
           return throwError(() => failure);
         }),
         finalize(() => {
@@ -101,7 +133,7 @@ export class AuthStore {
       this.restoring = hasSessionHint()
         ? firstValueFrom(this.refresh()).then(
             () => undefined,
-            () => undefined,
+            (failure: unknown) => this.restoreLater(failure),
           )
         : Promise.resolve(this.forget());
     }
@@ -174,6 +206,62 @@ export class AuthStore {
     return this.api.disableSecondFactor(request).pipe(map((response) => this.adopt(response)));
   }
 
+  private requestRefresh(): Observable<string> {
+    return this.api.refresh().pipe(
+      timeout(REFRESH_REQUEST_TIMEOUT_MS),
+      map((response) => {
+        this.adopt(response);
+        this.channel?.postMessage(sessionRefreshed(response));
+        return response.accessToken;
+      }),
+    );
+  }
+
+  private underRefreshLock<T>(work: () => Observable<T>): Observable<T> {
+    const locks = this.locks;
+    if (locks === null) {
+      return work();
+    }
+    return new Observable<T>((subscriber) => {
+      const waiting = new AbortController();
+      const giveUp = setTimeout(() => waiting.abort(), REFRESH_LOCK_WAIT_MS);
+      let running: Subscription | null = null;
+      locks
+        .request(
+          REFRESH_LOCK_NAME,
+          { signal: waiting.signal },
+          () =>
+            new Promise<void>((release) => {
+              clearTimeout(giveUp);
+              if (subscriber.closed) {
+                release();
+                return;
+              }
+              running = work().pipe(finalize(release)).subscribe(subscriber);
+            }),
+        )
+        .catch((failure: unknown) => {
+          clearTimeout(giveUp);
+          subscriber.error(failure);
+        });
+      return () => {
+        clearTimeout(giveUp);
+        waiting.abort();
+        running?.unsubscribe();
+      };
+    });
+  }
+
+  private restoreLater(failure: unknown): void {
+    if (isRefusal(failure)) {
+      return;
+    }
+    this.restoring = null;
+    if (this.currentStatus() === 'unknown') {
+      this.currentStatus.set('anonymous');
+    }
+  }
+
   private reloadProfile(): Observable<void> {
     return this.api.profile().pipe(
       tap((donor) => this.currentDonor.set(donor)),
@@ -183,6 +271,7 @@ export class AuthStore {
   }
 
   private adopt(response: AuthResponse): Donor {
+    this.adoptions++;
     this.accessToken = response.accessToken;
     this.currentDonor.set(response.user);
     this.currentStatus.set('signed-in');
@@ -196,6 +285,16 @@ export class AuthStore {
     this.currentStatus.set('anonymous');
     rememberSession(false);
   }
+}
+
+function isRefusal(failure: unknown): boolean {
+  return (
+    failure instanceof HttpErrorResponse &&
+    failure.status >= 400 &&
+    failure.status < 500 &&
+    failure.status !== 408 &&
+    failure.status !== 429
+  );
 }
 
 function hasSessionHint(): boolean {
