@@ -141,8 +141,8 @@ describe('Given an administrator and an About section without a photo', () => {
     upload.flush(uploadedImage({ width: 1413, height: 1884 }));
     await settle(fixture);
 
-    expect(element<HTMLImageElement>(fixture, '.photo-preview').getAttribute('src')).toBe(
-      `/api/content/media/${IMAGE_ID}?w=480`,
+    expect(element<HTMLImageElement>(fixture, '.frame img').getAttribute('src')).toBe(
+      `/api/content/media/${IMAGE_ID}?w=960`,
     );
     expect(text(fixture, '[role="status"]:not(:empty)')).toBe(
       'Fotka je nahraná. Na web se dostane, až ji uložíte.',
@@ -205,7 +205,7 @@ describe('Given an administrator and an About section without a photo', () => {
     expect(text(fixture, '.field-error[role="alert"]')).toBe(
       'Soubor je příliš velký. Nahrát jde soubor nejvýš 10 MB.',
     );
-    expect(fixture.nativeElement.querySelector('.photo-preview')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.frame img')).toBeNull();
   });
 });
 
@@ -222,10 +222,8 @@ describe('Given an administrator and an About section with a saved photo', () =>
   afterEach(() => http.verify());
 
   it('when the page opens, then it shows the photo with its texts and offers to replace and remove it', () => {
-    const preview = element<HTMLImageElement>(fixture, '.photo-preview');
-    expect(preview.getAttribute('src')).toBe(`/api/content/media/${ABOUT_PHOTO_ID}?w=480`);
-    expect(preview.getAttribute('width')).toBe('1413');
-    expect(preview.getAttribute('height')).toBe('1884');
+    const preview = element<HTMLImageElement>(fixture, '.frame img');
+    expect(preview.getAttribute('src')).toBe(`/api/content/media/${ABOUT_PHOTO_ID}?w=960`);
     expect(element<HTMLInputElement>(fixture, '#about-photo-alt').value).toBe(
       'Malý chlapec v náručí dvou dospělých',
     );
@@ -247,6 +245,36 @@ describe('Given an administrator and an About section with a saved photo', () =>
     });
   });
 
+  it('when they tap a spot on the photo and save, then the point is placed before the About section is saved', async () => {
+    expect(text(fixture, '#about-focal-point-hint')).toContain(
+      'Web dnes ukazuje celou fotku, takže bod zatím nic neořízne',
+    );
+    expect(fixture.nativeElement.querySelector('figure.preview')).toBeNull();
+    const frame = element<HTMLButtonElement>(fixture, 'button.frame');
+    frame.querySelector('img')!.getBoundingClientRect = () => new DOMRect(0, 0, 300, 400);
+    frame.dispatchEvent(new MouseEvent('click', { clientX: 150, clientY: 100, detail: 1 }));
+    await settle(fixture);
+    await submit(fixture);
+
+    const placing = http.expectOne(`${MEDIA_URL}/${ABOUT_PHOTO_ID}`);
+    expect(placing.request.method).toBe('PUT');
+    expect(placing.request.body).toEqual({ focalPoint: { x: 50, y: 25 } });
+    http.expectNone(ABOUT_URL);
+    placing.flush({
+      id: ABOUT_PHOTO_ID,
+      url: `/api/content/media/${ABOUT_PHOTO_ID}`,
+      width: 1413,
+      height: 1884,
+      focalPoint: { x: 50, y: 25 },
+    });
+    await settle(fixture);
+    http.expectOne(ABOUT_URL).flush({ photo: aboutPhoto({ focalPoint: { x: 50, y: 25 } }) });
+    await settle(fixture);
+
+    expect(text(fixture, '.picker-status')).toBe('Bod výřezu: 50 % zleva, 25 % shora.');
+    expect(text(fixture, '.ui-notice--status')).toBe('Uloženo. Fotka je na webu v sekci O nás.');
+  });
+
   it('when the server refuses the save, then the page carries its words', async () => {
     await submit(fixture);
     const refusal = problem(
@@ -265,12 +293,14 @@ describe('Given an administrator and an About section with a saved photo', () =>
   it('when they start removing and cancel, then nothing is sent and focus returns to the button', async () => {
     await click(fixture, 'Odebrat fotku z webu');
 
-    expect(text(fixture, '[role="group"]')).toContain('Opravdu fotku odebrat z webu a smazat?');
+    expect(text(fixture, '.remove-card [role="group"]')).toContain(
+      'Opravdu fotku odebrat z webu a smazat?',
+    );
     expect(document.activeElement).toBe(button(fixture, 'Zrušit'));
 
     await click(fixture, 'Zrušit');
 
-    expect(fixture.nativeElement.querySelector('[role="group"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.remove-card [role="group"]')).toBeNull();
     expect(document.activeElement).toBe(button(fixture, 'Odebrat fotku z webu'));
   });
 
@@ -287,7 +317,7 @@ describe('Given an administrator and an About section with a saved photo', () =>
     expect(text(fixture, '.ui-notice--status')).toBe(
       'Fotku jsme z webu odebrali a smazali. Sekce O nás ukazuje zase ilustrační fotku.',
     );
-    expect(fixture.nativeElement.querySelector('.photo-preview')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.frame img')).toBeNull();
     expect(findButton(fixture, 'Odebrat fotku z webu')).toBeNull();
     expect(document.activeElement).toBe(element(fixture, '#about-photo'));
   });
@@ -302,7 +332,7 @@ describe('Given an administrator and an About section with a saved photo', () =>
     expect(text(fixture, '.remove-card .ui-notice--alert')).toBe(
       'Chyba serveru. Zkuste to později.',
     );
-    expect(fixture.nativeElement.querySelector('.photo-preview')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.frame img')).not.toBeNull();
     expect(document.activeElement).toBe(button(fixture, 'Odebrat fotku z webu'));
   });
 });

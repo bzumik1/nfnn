@@ -13,6 +13,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Observable, of, switchMap } from 'rxjs';
 import { FormsModule, NgForm } from '@angular/forms';
 import { Router } from '@angular/router';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
@@ -23,6 +24,9 @@ import { FocusFirstInvalid } from '../../../shared/ui/form-field/focus-first-inv
 import { FormControlDirective } from '../../../shared/ui/form-field/form-control';
 import { FormField } from '../../../shared/ui/form-field/form-field';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
+import { FocalPoint } from '../../../shared/ui/focal-point/focal-point';
+import { PhotosApi } from '../../content/photos-api';
+import { FocalPointPicker } from '../focal-point-picker/focal-point-picker';
 import {
   AboutApi,
   AboutPhotoResponse,
@@ -30,7 +34,7 @@ import {
   MAX_ABOUT_CAPTION_LENGTH,
   MAX_ABOUT_PHOTO_ALT_LENGTH,
 } from '../../content/about-api';
-import { MAX_IMAGE_BYTES, mediaUrl, NewsApi } from '../../content/news-api';
+import { MAX_IMAGE_BYTES, NewsApi } from '../../content/news-api';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -38,11 +42,11 @@ interface ChosenPhoto {
   readonly id: string;
   readonly width: number;
   readonly height: number;
+  readonly focalPoint: FocalPoint | null;
 }
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const FORBIDDEN = 'auth/forbidden';
-const PREVIEW_WIDTH = 480;
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 @Component({
@@ -54,6 +58,7 @@ const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
     FocusFirstInvalid,
     FileButton,
     LiveNotice,
+    FocalPointPicker,
   ],
   templateUrl: './admin-about.html',
   styleUrl: './admin-about.scss',
@@ -62,6 +67,7 @@ const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 export class AdminAbout {
   private readonly api = inject(AboutApi);
   private readonly media = inject(NewsApi);
+  private readonly photos = inject(PhotosApi);
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
   private readonly loginDialog = inject(LoginDialogService);
@@ -97,13 +103,19 @@ export class AdminAbout {
     maxlength: $localize`:@@admin.about.caption.tooLong:Popisek může mít nejvíc ${MAX_ABOUT_CAPTION_LENGTH}:max: znaků.`,
   };
 
-  protected readonly previewUrl = computed(() => {
-    const photo = this.chosen();
-    return photo ? mediaUrl(photo.id, PREVIEW_WIDTH) : null;
-  });
   protected readonly photoUnsaved = computed(
     () => (this.chosen()?.id ?? null) !== (this.saved()?.id ?? null),
   );
+  protected readonly focalPointUnsaved = computed(() => {
+    const photo = this.chosen();
+    if (!photo) {
+      return false;
+    }
+    const saved = this.saved();
+    const savedPoint = saved?.id === photo.id ? saved.focalPoint : null;
+    return photo.focalPoint?.x !== savedPoint?.x || photo.focalPoint?.y !== savedPoint?.y;
+  });
+  protected readonly focalPointHint = $localize`:@@admin.about.focalPoint.hint:Web dnes ukazuje celou fotku, takže bod zatím nic neořízne; použije se, až sekce O nás začne fotku ořezávat.`;
   protected readonly busy = computed(() => this.saving() || this.removing() || this.uploading());
 
   constructor() {
@@ -160,7 +172,12 @@ export class AdminAbout {
       .subscribe({
         next: (uploaded) => {
           this.uploading.set(false);
-          this.chosen.set({ id: uploaded.id, width: uploaded.width, height: uploaded.height });
+          this.chosen.set({
+            id: uploaded.id,
+            width: uploaded.width,
+            height: uploaded.height,
+            focalPoint: null,
+          });
         },
         error: (failure: unknown) => {
           this.uploading.set(false);
@@ -185,6 +202,10 @@ export class AdminAbout {
     }
     this.saving.set(true);
     this.send({ photoId: photo.id, photoAlt: text(this.photoAlt), caption: text(this.caption) });
+  }
+
+  protected focalPointChanged(point: FocalPoint | null): void {
+    this.chosen.update((photo) => photo && { ...photo, focalPoint: point });
   }
 
   protected askRemoval(): void {
@@ -237,9 +258,11 @@ export class AdminAbout {
   }
 
   private send(request: AboutRequest): void {
-    this.api
-      .save(request)
-      .pipe(takeUntilDestroyed(this.destroyRef))
+    this.placeFocalPoint()
+      .pipe(
+        switchMap(() => this.api.save(request)),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
         next: (about) => {
           this.saving.set(false);
@@ -262,9 +285,20 @@ export class AdminAbout {
       });
   }
 
+  private placeFocalPoint(): Observable<unknown> {
+    const photo = this.chosen();
+    return photo && this.focalPointUnsaved()
+      ? this.photos.placeFocalPoint(photo.id, photo.focalPoint)
+      : of(null);
+  }
+
   private show(photo: AboutPhotoResponse | null): void {
     this.saved.set(photo);
-    this.chosen.set(photo ? { id: photo.id, width: photo.width, height: photo.height } : null);
+    this.chosen.set(
+      photo
+        ? { id: photo.id, width: photo.width, height: photo.height, focalPoint: photo.focalPoint }
+        : null,
+    );
     this.photoAlt = photo?.alt ?? '';
     this.caption = photo?.caption ?? '';
     this.aboutForm()?.form.markAsPristine();

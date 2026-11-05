@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { FocalPoint } from '../../shared/ui/focal-point/focal-point';
 
 export interface AboutPhotoResponse {
   id: string;
@@ -9,6 +10,7 @@ export interface AboutPhotoResponse {
   height: number;
   alt: string | null;
   caption: string | null;
+  focalPoint: FocalPoint | null;
 }
 
 export interface AboutResponse {

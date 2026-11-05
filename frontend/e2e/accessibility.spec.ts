@@ -1999,7 +1999,9 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await expect(
       page.getByRole('heading', { level: 1, name: 'Fotka v sekci O nás' }),
     ).toBeFocused();
-    await expect(page.locator('.photo-preview')).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Fotka, klepnutím nastavíte bod výřezu' }),
+    ).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
 
@@ -2187,7 +2189,9 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
     await page.goto(`/sprava/aktuality/${articleId}`);
     await expect(page.getByRole('heading', { level: 1, name: 'Úprava aktuality' })).toBeFocused();
-    await expect(page.locator('.image-preview')).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Fotka, klepnutím nastavíte bod výřezu' }),
+    ).toBeVisible();
     await page.getByRole('button', { name: 'Náhled', exact: true }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Stránka aktuality' })).toBeVisible();
 
@@ -2281,7 +2285,9 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
     await page.goto(`/sprava/projekty/${projectId}`);
     await expect(page.getByRole('heading', { level: 1, name: 'Úprava projektu' })).toBeFocused();
-    await expect(page.locator('.image-preview')).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Fotka, klepnutím nastavíte bod výřezu' }),
+    ).toBeVisible();
     await page.getByRole('button', { name: 'Náhled', exact: true }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Stránka projektu' })).toBeVisible();
 

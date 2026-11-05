@@ -10,6 +10,7 @@ export function aboutPhoto(overrides: Partial<AboutPhotoResponse> = {}): AboutPh
     height: 1884,
     alt: 'Malý chlapec v náručí dvou dospělých',
     caption: 'Kde to všechno začalo',
+    focalPoint: null,
     ...overrides,
   };
 }
