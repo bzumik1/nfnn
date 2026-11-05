@@ -1,6 +1,6 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { signal } from '@angular/core';
+import { signal, WritableSignal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { CompactLayout } from '../../../core/layout/compact-layout';
@@ -48,8 +48,10 @@ describe('Given the payment panel on a phone or a tablet', () => {
   let sharesFiles: (file: File) => boolean;
   let downloads: Downloaded[];
   let blobs: Map<string, Blob>;
+  let compactLayout: WritableSignal<boolean>;
 
   beforeEach(async () => {
+    compactLayout = signal(true);
     shared = [];
     shareRefusal = null;
     shareAnswer = null;
@@ -94,7 +96,7 @@ describe('Given the payment panel on a phone or a tablet', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         provideRouter([]),
-        { provide: CompactLayout, useValue: { isCompact: signal(true).asReadonly() } },
+        { provide: CompactLayout, useValue: { isCompact: compactLayout.asReadonly() } },
       ],
     }).compileComponents();
     vi.useFakeTimers();
@@ -288,6 +290,26 @@ describe('Given the payment panel on a phone or a tablet', () => {
     await settle();
 
     expect(handoffStatus()).toBe('');
+  });
+
+  it('when the tablet turns to the computer layout and back while the phone offers the file, then the buttons come back ready and the answer still says how to pay without the bank', async () => {
+    const answer = deferred();
+    shareAnswer = answer.promise;
+    shareRefusal = new DOMException('Share canceled', 'AbortError');
+    await openWithQr();
+    await tap('Otevřít v aplikaci banky');
+
+    compactLayout.set(false);
+    await settle();
+    expect(element('.bank-app')).toBeNull();
+    expect(element('.qr').hidden).toBe(false);
+    compactLayout.set(true);
+    answer.resolve();
+    await settle();
+
+    expect(qrRegion().hidden).toBe(true);
+    expect(element<HTMLButtonElement>('.bank-app-open').getAttribute('aria-disabled')).toBeNull();
+    expect(handoffStatus()).toContain('Neotevřela se vám banka?');
   });
 
   it('when the visitor picks 1 000 Kč and taps Otevřít v aplikaci banky, then the file holds the payment of 1 000 Kč', async () => {
