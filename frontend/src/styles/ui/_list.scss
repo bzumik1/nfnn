@@ -66,6 +66,18 @@ div.ui-list__row {
   white-space: nowrap;
 }
 
+.ui-list__count {
+  min-width: var(--space-5);
+  padding: var(--space-0-5) var(--space-1-5);
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-snug);
+  text-align: center;
+}
+
 .ui-list__chevron {
   grid-column: 4;
   grid-row: 1 / span 2;

@@ -293,6 +293,9 @@
       </ul>
     }
   </section>
+  @if (compact()) {
+    <app-admin-section-rows class="sections" [label]="sectionsLabel" [groups]="sections()" />
+  }
 
   <div class="admin-status">
     <section class="ui-card" aria-labelledby="admin-import-title">

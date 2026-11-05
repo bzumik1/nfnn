@@ -1,6 +1,15 @@
-<div class="admin-shell">
-  <app-dashboard-top-bar area="admin" [wide]="true" />
-  <app-side-nav navId="admin-nav" [groups]="groups" [label]="navLabel" [menuLabel]="menuLabel">
-    <router-outlet />
-  </app-side-nav>
-</div>
+<app-header />
+
+<app-side-nav navId="admin-nav" [groups]="groups" [label]="navLabel" [panel]="!compact()">
+  <div class="admin-content">
+    @if (lock.locked()) {
+      @if (lock.panel; as panel) {
+        <ng-container *ngComponentOutlet="panel" />
+      }
+    } @else {
+      <router-outlet />
+    }
+  </div>
+</app-side-nav>
+
+<app-tab-bar />

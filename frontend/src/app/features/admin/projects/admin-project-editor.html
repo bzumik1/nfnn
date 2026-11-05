@@ -1,7 +1,9 @@
 <div class="ui-page container">
-  <p class="ui-crumbs">
-    <a routerLink="/sprava/projekty" i18n="@@admin.projectEditor.backToProjects">← Projekty</a>
-  </p>
+  @if (!compact()) {
+    <p class="ui-crumbs">
+      <a routerLink="/sprava/projekty" i18n="@@admin.projectEditor.backToProjects">← Projekty</a>
+    </p>
+  }
   <h1 #title class="ui-page-title" tabindex="-1">
     @if (isNew()) {
       <ng-container i18n="@@admin.projectEditor.heading.new">Nový projekt</ng-container>
