@@ -122,11 +122,13 @@ jobs:
         env:
           API_TRANSCRIPTS: record
 
-      - name: Every suite ran its scenarios
+      - name: Every feature ran its scenarios
         run: |
-          for suite in $(find src/test/java -name '*AcceptanceTests.java' -printf '%f\n' | sed 's/\.java$//'); do
-            grep -lqF "$suite" build/test-results/acceptanceTest/*.xml 2> /dev/null || { echo "::error::$suite wrote no test result"; ls build/test-results/acceptanceTest; exit 1; }
+          missing=0
+          for feature in $(cd src/test/resources && find features -name '*.feature' | sort); do
+            grep -lqF "$feature" build/test-results/acceptanceTest/*.xml 2> /dev/null || { echo "::error::$feature wrote no test result"; missing=1; }
           done
+          exit $missing
 
       - name: Keep test reports
         if: failure()
