@@ -67,6 +67,7 @@ export class HistoryImport {
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
   private readonly fromInput = viewChild<ElementRef<HTMLInputElement>>('fromInput');
+  private readonly submitButton = viewChild<ElementRef<HTMLButtonElement>>('submitButton');
   private polling: Subscription | null = null;
 
   readonly state = input.required<ImportStateResponse>();
@@ -166,6 +167,9 @@ export class HistoryImport {
 
   protected checkAgain(): void {
     this.watch();
+    afterNextRender(() => this.submitButton()?.nativeElement.focus(), {
+      injector: this.injector,
+    });
   }
 
   private refuseFrom(form: NgForm, error: 'min' | 'max'): void {

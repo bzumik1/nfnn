@@ -415,11 +415,14 @@ describe('Given the part for older bank payments on the import card', () => {
         expect(busy()).toBe(true);
       });
 
-      it('and they press "Zjistit výsledek", then it asks again and shows the result', async () => {
+      it('and they press "Zjistit výsledek", then focus moves to the busy button, it asks again and shows the result', async () => {
+        checkAgain()?.focus();
         checkAgain()?.click();
         await settle();
 
         expect(checkAgain()).toBeNull();
+        expect(document.activeElement).toBe(button());
+        expect(busy()).toBe(true);
         await poll(
           historyImport({ status: 'COMPLETED', added: 0, finishedAt: '2026-11-05T10:03:00Z' }),
         );
