@@ -70,7 +70,7 @@ describe('Given the header of the app', () => {
     return fixture.nativeElement as HTMLElement;
   }
 
-  it('when a question waits in the account, then the account button shows how many and names them, except on the page that holds them', async () => {
+  it('when a question waits in the account, then the account link shows how many and names them, except on the page that holds them', async () => {
     donor.set(sampleDonor({ name: 'Jana Nováková' }));
     TestBed.inject(AccountBadges).show('/darce/ucty', {
       count: 1,
@@ -78,7 +78,7 @@ describe('Given the header of the app', () => {
     });
 
     const header = await openAt('/darce/prehled');
-    const account = header.querySelector('button.account-button')!;
+    const account = header.querySelector('a.account-button')!;
 
     expect(account.querySelector('.account-badge')?.textContent?.trim()).toBe('1');
     expect(account.querySelector('.account-badge')?.getAttribute('aria-hidden')).toBe('true');
@@ -104,7 +104,7 @@ describe('Given the header of the app', () => {
     expect(loginOpen).toHaveBeenCalledWith('login', expect.anything());
   });
 
-  it('when the visitor signs in from the header, then the focus lands on the button Účet that took the place of Přihlásit se', async () => {
+  it('when the visitor signs in from the header, then the focus lands on the account link Účet that took the place of Přihlásit se', async () => {
     const header = await openAt('/o-nas');
     document.body.appendChild(header);
     header.querySelector<HTMLButtonElement>('button.sign-in')!.click();
@@ -115,25 +115,8 @@ describe('Given the header of the app', () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(document.activeElement).toBe(header.querySelector('button.account-button'));
+    expect(document.activeElement).toBe(header.querySelector('a.account-button'));
     header.remove();
-  });
-
-  it('when the session ends while the account sheet is open, then the sheet closes and stays closed at the next sign-in', async () => {
-    donor.set(sampleDonor({ name: 'Jana Nováková' }));
-    const header = await openAt('/o-nas');
-    header.querySelector<HTMLButtonElement>('button.account-button')!.click();
-    fixture.detectChanges();
-
-    donor.set(null);
-    fixture.detectChanges();
-
-    expect(header.querySelector('app-account-sheet')).toBeNull();
-
-    donor.set(sampleDonor({ name: 'Jana Nováková' }));
-    fixture.detectChanges();
-
-    expect(header.querySelector('app-account-sheet')).toBeNull();
   });
 
   it('when the page has a light head, then the logo is the blue one, and over a photo or a dark head the white one', async () => {
@@ -146,27 +129,30 @@ describe('Given the header of the app', () => {
     expect(logo(await openAt('/aktuality/clanek'))).toBe('/images/logo-on-dark.svg');
   });
 
-  it('when a donor is signed in, then the initials of their name stand for a button named Účet that opens their account sheet', async () => {
+  it('when a donor is signed in, then the initials of their name stand for a link named Účet that opens Můj přehled at once, with no sheet over the page', async () => {
     donor.set(sampleDonor({ name: 'Jana Marie Nováková' }));
     const header = await openAt('/o-nas');
-    const account = header.querySelector<HTMLButtonElement>('button.account-button')!;
+    const account = header.querySelector<HTMLAnchorElement>('a.account-button')!;
 
     expect(account.querySelector('.visually-hidden')?.textContent?.trim()).toBe('Účet');
     expect(account.querySelector('[aria-hidden="true"]')?.textContent?.trim()).toBe('JN');
-    expect(account.getAttribute('aria-haspopup')).toBe('dialog');
+    expect(account.getAttribute('href')).toBe('/darce/prehled');
+    expect(account.hasAttribute('aria-haspopup')).toBe(false);
     expect(header.querySelector('button.sign-in')).toBeNull();
 
-    account.click();
+    account.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(header.querySelector('app-account-sheet dialog')).not.toBeNull();
+    expect(TestBed.inject(Router).url).toBe('/darce/prehled');
+    expect(document.querySelector('dialog')).toBeNull();
   });
 
-  it('when the donor keeps no name, then the account button shows a person', async () => {
+  it('when the donor keeps no name, then the account link shows a person', async () => {
     donor.set(sampleDonor({ name: ' ' }));
     const header = await openAt('/o-nas');
 
-    expect(header.querySelector('button.account-button svg')).not.toBeNull();
+    expect(header.querySelector('a.account-button svg')).not.toBeNull();
   });
 
   it('when a tab root is open, then there is no back button', async () => {
@@ -203,7 +189,7 @@ describe('Given the header of the app', () => {
     expect(header.querySelector('button.back-button')).not.toBeNull();
   });
 
-  it('when an administrator linked to a person of the foundation with a portrait is signed in, then the account button shows that portrait', async () => {
+  it('when an administrator linked to a person of the foundation with a portrait is signed in, then the account link shows that portrait', async () => {
     donor.set(sampleDonor({ name: 'Jana Nováková' }));
     admin.set(true);
     const header = await openAt('/o-nas');
@@ -224,7 +210,7 @@ describe('Given the header of the app', () => {
       });
     fixture.detectChanges();
 
-    const account = header.querySelector<HTMLButtonElement>('button.account-button')!;
+    const account = header.querySelector<HTMLAnchorElement>('a.account-button')!;
     expect(account.querySelector('img')?.getAttribute('src')).toBe(
       '/api/content/media/0199f3e0-0000-7000-8000-00000000c101?w=480',
     );
@@ -242,7 +228,7 @@ describe('Given the header of the app', () => {
       .flush({ member: null });
     fixture.detectChanges();
 
-    const account = header.querySelector<HTMLButtonElement>('button.account-button')!;
+    const account = header.querySelector<HTMLAnchorElement>('a.account-button')!;
     expect(account.querySelector('img')).toBeNull();
     expect(account.querySelector('[aria-hidden="true"]')?.textContent?.trim()).toBe('JN');
   });
