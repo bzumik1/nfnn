@@ -24,7 +24,7 @@ describe('Given the projects API', () => {
 
   afterEach(() => http.verify());
 
-  it('when an project is published, then it posts the date with the version read to the publish endpoint and hands the project on', () => {
+  it('when a project is published, then it posts the date with the version read to the publish endpoint and hands the project on', () => {
     let received: ProjectResponse | undefined;
     api
       .publish(project().id, '2026-10-20', '9d4b2e7a1c0f5836')
