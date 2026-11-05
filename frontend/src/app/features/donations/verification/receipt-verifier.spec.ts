@@ -6,6 +6,11 @@ import {
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { authInterceptor } from '../../../core/auth/auth-interceptor';
+import {
+  closedReport,
+  recordClientErrors,
+  SentClientErrors,
+} from '../../../core/errors/testing/client-error-reports';
 import { RECEIPT_KEY_STORAGE } from './receipt-key-store';
 import { ReceiptVerifier, type VerificationOutcome } from './receipt-verifier';
 import {
@@ -33,9 +38,11 @@ const REFUSALS: readonly { readonly status: number; readonly statusText: string 
 describe('Given the receipt verifier', () => {
   let verifier: ReceiptVerifier;
   let http: HttpTestingController;
+  let reports: SentClientErrors;
 
   beforeEach(() => {
     localStorage.clear();
+    reports = recordClientErrors();
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(withInterceptors([authInterceptor])),
@@ -50,6 +57,7 @@ describe('Given the receipt verifier', () => {
   afterEach(() => {
     http.verify();
     localStorage.clear();
+    vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
 
@@ -98,6 +106,7 @@ describe('Given the receipt verifier', () => {
   it('when the code is cut off, then the link is broken and nothing is asked', async () => {
     expect(await verifier.verify(SINGLE.fragment.slice(0, 40))).toEqual({ state: 'broken' });
     expect(await verifier.verify('1003188a')).toEqual({ state: 'broken' });
+    expect(reports.bodies()).toEqual([]);
   });
 
   it('when the code has a newer text version or format, then the page says it is older than the code', async () => {
@@ -185,6 +194,7 @@ describe('Given the receipt verifier', () => {
       (await request(KEYS)).flush(KEY_LIST);
 
       expect(await outcome).toEqual({ state: 'invalid' });
+      expect(reports.bodies()).toEqual([]);
     });
 
     it('and the list marks the key revoked, then the outcome is revoked and no status is asked for', async () => {
@@ -384,5 +394,6 @@ describe('Given the receipt verifier', () => {
     vi.spyOn(crypto.subtle, 'digest').mockRejectedValue(new Error('broken crypto'));
 
     expect(await verifier.verify(SINGLE.fragment)).toEqual({ state: 'failed' });
+    expect(reports.bodies()).toEqual([closedReport('verify-signature', 'Error')]);
   });
 });

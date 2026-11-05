@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import type { QrImage } from './qr-image';
-import { QrReader } from './qr-reader';
+import { QrReader, QrReaderOutdated } from './qr-reader';
 import {
   LARGEST_FILE_BYTES,
   ProofInput,
@@ -72,8 +72,12 @@ class FakeReader {
   answers: (readonly string[])[] = [];
   released = false;
   waits = false;
+  outdated = false;
 
   read(): Promise<readonly string[]> {
+    if (this.outdated) {
+      return Promise.reject(new QrReaderOutdated());
+    }
     if (this.waits) {
       return new Promise(() => undefined);
     }
@@ -361,6 +365,22 @@ describe('Given the ways to read a receipt code on the verification page', () =>
       });
     }
 
+    it('and the reader of this page cannot start, then the camera turns off and it says to reload the page', async () => {
+      reader.outdated = true;
+      await render();
+
+      button('Naskenovat QR kód')?.click();
+      await settle();
+      await vi.advanceTimersByTimeAsync(SCAN_INTERVAL_MS);
+      await settle();
+
+      expect(device.track.stopped).toBe(true);
+      expect(alertText()).toBe(
+        'Web se mezitím aktualizoval. Obnovte prosím stránku a načtěte kód znovu.',
+      );
+      expect(button('Naskenovat QR kód')).toBeDefined();
+    });
+
     it('and the camera stops by itself, then the scan ends and it says the camera failed', async () => {
       await render();
 
@@ -496,6 +516,18 @@ describe('Given the ways to read a receipt code on the verification page', () =>
       expect(found).toEqual([]);
       expect(alertText()).toBe(
         'Na obrázku jsme QR kód nenašli. Vyfoťte kód zblízka a ostře, nebo nahrajte PDF potvrzení.',
+      );
+    });
+
+    it('and the reader of this page cannot start, then it says to reload the page', async () => {
+      reader.outdated = true;
+      await render();
+
+      await choose(new File(['jpeg'], 'kod.jpg', { type: 'image/jpeg' }));
+
+      expect(found).toEqual([]);
+      expect(alertText()).toBe(
+        'Web se mezitím aktualizoval. Obnovte prosím stránku a načtěte kód znovu.',
       );
     });
 

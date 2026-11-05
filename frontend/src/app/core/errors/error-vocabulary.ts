@@ -77,3 +77,11 @@ export const ERROR_VOCABULARY = {
   operatingSystems: OPERATING_SYSTEMS,
   displayModes: DISPLAY_MODES,
 } as const;
+
+const ALLOWED_NAMES: ReadonlySet<string> = new Set(ERROR_NAMES);
+
+export function errorNameOf(error: unknown): ErrorName {
+  const name =
+    typeof error === 'object' && error !== null && 'name' in error ? error.name : undefined;
+  return typeof name === 'string' && ALLOWED_NAMES.has(name) ? (name as ErrorName) : 'Other';
+}

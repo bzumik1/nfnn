@@ -1,10 +1,16 @@
 import { TestBed } from '@angular/core/testing';
+import {
+  closedReport,
+  recordClientErrors,
+  SentClientErrors,
+} from '../../../core/errors/testing/client-error-reports';
 import type { QrImage } from './qr-image';
 import {
   type QrDetector,
   QR_READER_ENVIRONMENT,
   QR_WORKER_TIMEOUT_MS,
   QrReader,
+  QrReaderOutdated,
   type QrWorker,
   type QrWorkerAnswer,
   type QrWorkerQuestion,
@@ -17,6 +23,7 @@ class FakeWorker implements QrWorker {
   onerror: ((event: ErrorEvent) => void) | null = null;
   readonly questions: QrWorkerQuestion[] = [];
   terminated = false;
+  lastError: ErrorEvent | null = null;
 
   constructor(
     private readonly answer: (question: QrWorkerQuestion) => string | null | 'crash' | 'silent',
@@ -30,7 +37,7 @@ class FakeWorker implements QrWorker {
     }
     queueMicrotask(() => {
       if (text === 'crash') {
-        this.onerror?.(new ErrorEvent('error'));
+        this.onerror?.((this.lastError = new ErrorEvent('error', { cancelable: true })));
         return;
       }
       this.onmessage?.(new MessageEvent('message', { data: { id: question.id, text } }));
@@ -66,11 +73,16 @@ describe('Given the QR reader of the verification page', () => {
     return TestBed.inject(QrReader);
   }
 
+  let reports: SentClientErrors;
+
   afterEach(() => {
     vi.useRealTimers();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
   beforeEach(() => {
+    reports = recordClientErrors();
     workers = [];
     detector = null;
     workerAnswer = () => 'https://nfnn.cz/overit#1';
@@ -135,6 +147,42 @@ describe('Given the QR reader of the verification page', () => {
       await expect(qr.read(IMAGE)).resolves.toEqual(['https://nfnn.cz/overit#1']);
       expect(workers).toHaveLength(2);
       expect(workers[0].terminated).toBe(true);
+      expect(reports.bodies()).toEqual([closedReport('qr-encode', 'Other')]);
+    });
+
+    it('and the worker crashes, then the error stops there, so the page does not report it a second time', async () => {
+      workerAnswer = () => 'crash';
+
+      await reader().read(IMAGE);
+
+      expect(workers[0].lastError?.defaultPrevented).toBe(true);
+    });
+
+    it('and every new worker fails before it answers, then after three it stops starting them and the read says the page is out of date', async () => {
+      workerAnswer = () => 'crash';
+      const qr = reader();
+
+      await expect(qr.read(IMAGE)).resolves.toEqual([]);
+      await expect(qr.read(IMAGE)).resolves.toEqual([]);
+      await expect(qr.read(IMAGE)).resolves.toEqual([]);
+      await expect(qr.read(IMAGE)).rejects.toBeInstanceOf(QrReaderOutdated);
+      await expect(qr.read(IMAGE)).rejects.toBeInstanceOf(QrReaderOutdated);
+      expect(workers).toHaveLength(3);
+    });
+
+    it('and a worker that answered before crashes, then the count of failed starts begins again', async () => {
+      const qr = reader();
+      workerAnswer = () => 'crash';
+      await qr.read(IMAGE);
+      await qr.read(IMAGE);
+      workerAnswer = () => 'https://nfnn.cz/overit#1';
+      await qr.read(IMAGE);
+      workerAnswer = () => 'crash';
+      await qr.read(IMAGE);
+      await qr.read(IMAGE);
+
+      await expect(qr.read(IMAGE)).resolves.toEqual([]);
+      expect(workers).toHaveLength(5);
     });
 
     it('and the worker cannot be started, then it gives nothing', async () => {
@@ -153,6 +201,7 @@ describe('Given the QR reader of the verification page', () => {
       });
 
       await expect(TestBed.inject(QrReader).read(IMAGE)).resolves.toEqual([]);
+      expect(reports.bodies()).toEqual([closedReport('qr-encode', 'Error')]);
     });
 
     it('and two images are read at once, then each read gets its own answer from the one worker', async () => {
