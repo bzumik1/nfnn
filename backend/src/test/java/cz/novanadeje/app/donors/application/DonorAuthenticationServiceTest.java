@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.SessionKind;
 import cz.novanadeje.app.donors.domain.DeviceDescription;
 import cz.novanadeje.app.donors.domain.CompanyIdentifier;
 import cz.novanadeje.app.donors.domain.Donor;
@@ -66,7 +67,7 @@ class DonorAuthenticationServiceTest {
     private static final int CHALLENGE_ATTEMPTS = 5;
     private static final TotpSecret SECRET = new TotpSecret("GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ");
     private static final IssuedTokens TOKENS = new IssuedTokens("access", NOW.plus(Duration.ofMinutes(15)), "refresh", NOW.plus(Duration.ofDays(14)),
-            Set.of(Role.DONOR));
+            Set.of(Role.DONOR), SessionKind.REMEMBERED);
 
     @Mock
     private DonorRepository donors;
@@ -101,10 +102,10 @@ class DonorAuthenticationServiceTest {
         when(donors.findByEmail(EMAIL)).thenReturn(Optional.of(unverified));
         when(passwordHasher.matches(new RawPassword("correct horse battery"), HASH)).thenReturn(true);
 
-        assertThatThrownBy(() -> service.login("jana@example.cz", "correct horse battery", DeviceDescription.UNKNOWN))
+        assertThatThrownBy(() -> service.login("jana@example.cz", "correct horse battery", DeviceDescription.UNKNOWN, SessionKind.REMEMBERED))
                 .isInstanceOfSatisfying(EmailNotVerified.class, refused -> assertThat(refused.code()).isEqualTo("auth/email-not-verified"));
 
-        verify(sessions, never()).signIn(any(), anyBoolean(), any());
+        verify(sessions, never()).signIn(any(), anyBoolean(), any(), any());
     }
 
     @Test
@@ -115,7 +116,7 @@ class DonorAuthenticationServiceTest {
         when(donors.findByEmail(EMAIL)).thenReturn(Optional.of(unverified));
         when(passwordHasher.matches(any(), any())).thenReturn(false);
 
-        assertThatThrownBy(() -> service.login("jana@example.cz", "wrong horse battery", DeviceDescription.UNKNOWN)).isInstanceOf(InvalidCredentials.class);
+        assertThatThrownBy(() -> service.login("jana@example.cz", "wrong horse battery", DeviceDescription.UNKNOWN, SessionKind.REMEMBERED)).isInstanceOf(InvalidCredentials.class);
     }
 
     @Test
@@ -127,10 +128,10 @@ class DonorAuthenticationServiceTest {
         erased.erase(NOW.plusSeconds(5));
         when(donors.findByEmail(erased.email())).thenReturn(Optional.of(erased));
 
-        assertThatThrownBy(() -> service.login(erased.email().value(), "correct horse battery", DeviceDescription.UNKNOWN)).isInstanceOf(InvalidCredentials.class);
+        assertThatThrownBy(() -> service.login(erased.email().value(), "correct horse battery", DeviceDescription.UNKNOWN, SessionKind.REMEMBERED)).isInstanceOf(InvalidCredentials.class);
 
         verify(passwordHasher, never()).matches(any(), eq(HASH));
-        verify(sessions, never()).signIn(any(), anyBoolean(), any());
+        verify(sessions, never()).signIn(any(), anyBoolean(), any(), any());
     }
 
     @Test
@@ -138,9 +139,9 @@ class DonorAuthenticationServiceTest {
     void should_open_session_when_logged_in_given_matching_password() {
         when(donors.findByEmail(EMAIL)).thenReturn(Optional.of(donor));
         when(passwordHasher.matches(new RawPassword("correct horse battery"), HASH)).thenReturn(true);
-        when(sessions.signIn(donor, false, DeviceDescription.UNKNOWN)).thenReturn(TOKENS);
+        when(sessions.signIn(donor, false, DeviceDescription.UNKNOWN, SessionKind.REMEMBERED)).thenReturn(TOKENS);
 
-        AuthenticatedDonor result = service.login("jana@example.cz", "correct horse battery", DeviceDescription.UNKNOWN);
+        AuthenticatedDonor result = service.login("jana@example.cz", "correct horse battery", DeviceDescription.UNKNOWN, SessionKind.REMEMBERED);
 
         assertThat(result.donor().companyIdentifier()).isEqualTo("45274649");
         assertThat(result.tokens().refreshToken()).isEqualTo("refresh");
@@ -152,10 +153,10 @@ class DonorAuthenticationServiceTest {
         when(donors.findByEmail(EMAIL)).thenReturn(Optional.of(donor));
         when(passwordHasher.matches(any(), any())).thenReturn(false);
 
-        assertThatThrownBy(() -> service.login("jana@example.cz", "wrong horse battery", DeviceDescription.UNKNOWN))
+        assertThatThrownBy(() -> service.login("jana@example.cz", "wrong horse battery", DeviceDescription.UNKNOWN, SessionKind.REMEMBERED))
                 .isInstanceOf(InvalidCredentials.class);
 
-        verify(sessions, never()).signIn(any(), anyBoolean(), any());
+        verify(sessions, never()).signIn(any(), anyBoolean(), any(), any());
     }
 
     @Test
@@ -163,7 +164,7 @@ class DonorAuthenticationServiceTest {
     void should_refuse_when_logged_in_given_unknown_email() {
         when(donors.findByEmail(EMAIL)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.login("jana@example.cz", "correct horse battery", DeviceDescription.UNKNOWN))
+        assertThatThrownBy(() -> service.login("jana@example.cz", "correct horse battery", DeviceDescription.UNKNOWN, SessionKind.REMEMBERED))
                 .isInstanceOf(InvalidCredentials.class);
     }
 
@@ -173,7 +174,7 @@ class DonorAuthenticationServiceTest {
         when(donors.findByEmail(EMAIL)).thenReturn(Optional.empty());
         ArgumentCaptor<PasswordHash> compared = ArgumentCaptor.forClass(PasswordHash.class);
 
-        assertThatThrownBy(() -> service.login("jana@example.cz", "correct horse battery", DeviceDescription.UNKNOWN))
+        assertThatThrownBy(() -> service.login("jana@example.cz", "correct horse battery", DeviceDescription.UNKNOWN, SessionKind.REMEMBERED))
                 .isInstanceOf(InvalidCredentials.class);
 
         verify(passwordHasher).matches(eq(new RawPassword("correct horse battery")), compared.capture());
@@ -182,13 +183,13 @@ class DonorAuthenticationServiceTest {
         BCryptPasswordEncoder bcrypt = new BCryptPasswordEncoder(12);
         assertThat(bcrypt.matches("correct horse battery", unknownDonorHash)).isFalse();
         assertThat(bcrypt.matches(UUID.randomUUID().toString(), unknownDonorHash)).isFalse();
-        verify(sessions, never()).signIn(any(), anyBoolean(), any());
+        verify(sessions, never()).signIn(any(), anyBoolean(), any(), any());
     }
 
     @Test
     @DisplayName("Given a malformed e-mail, when a donor signs in, then it is refused")
     void should_refuse_when_logged_in_given_malformed_email() {
-        assertThatThrownBy(() -> service.login("not an email", "correct horse battery", DeviceDescription.UNKNOWN))
+        assertThatThrownBy(() -> service.login("not an email", "correct horse battery", DeviceDescription.UNKNOWN, SessionKind.REMEMBERED))
                 .isInstanceOf(InvalidCredentials.class);
     }
 
@@ -199,7 +200,7 @@ class DonorAuthenticationServiceTest {
         when(passwordHasher.matches(new RawPassword("correct horse battery"), HASH)).thenReturn(true);
         when(secondFactors.findByDonor(donor.id())).thenReturn(Optional.of(enabledFactor()));
 
-        assertThatThrownBy(() -> service.login("jana@example.cz", "correct horse battery", DeviceDescription.UNKNOWN))
+        assertThatThrownBy(() -> service.login("jana@example.cz", "correct horse battery", DeviceDescription.UNKNOWN, SessionKind.REMEMBERED))
                 .isInstanceOfSatisfying(SecondFactorRequired.class, required -> {
                     ArgumentCaptor<SecondFactorChallenge> stored = ArgumentCaptor.forClass(SecondFactorChallenge.class);
                     verify(challenges).save(stored.capture());
@@ -210,7 +211,7 @@ class DonorAuthenticationServiceTest {
                     assertThat(required.extensions()).containsEntry("challenge", required.challenge());
                 });
 
-        verify(sessions, never()).signIn(any(), anyBoolean(), any());
+        verify(sessions, never()).signIn(any(), anyBoolean(), any(), any());
     }
 
     @Test
@@ -219,9 +220,9 @@ class DonorAuthenticationServiceTest {
         when(donors.findByEmail(EMAIL)).thenReturn(Optional.of(donor));
         when(passwordHasher.matches(new RawPassword("correct horse battery"), HASH)).thenReturn(true);
         when(secondFactors.findByDonor(donor.id())).thenReturn(Optional.of(SecondFactor.enrol(donor.id(), SECRET, NOW)));
-        when(sessions.signIn(donor, false, DeviceDescription.UNKNOWN)).thenReturn(TOKENS);
+        when(sessions.signIn(donor, false, DeviceDescription.UNKNOWN, SessionKind.REMEMBERED)).thenReturn(TOKENS);
 
-        AuthenticatedDonor result = service.login("jana@example.cz", "correct horse battery", DeviceDescription.UNKNOWN);
+        AuthenticatedDonor result = service.login("jana@example.cz", "correct horse battery", DeviceDescription.UNKNOWN, SessionKind.REMEMBERED);
 
         assertThat(result.donor().secondFactor().enabled()).isFalse();
         verifyNoInteractions(challenges);
@@ -236,11 +237,11 @@ class DonorAuthenticationServiceTest {
         when(challenges.findBySecretHash(secret.hash())).thenReturn(Optional.of(challenge));
         when(donors.findById(donor.id())).thenReturn(Optional.of(donor));
         when(secondFactors.findByDonor(donor.id())).thenReturn(Optional.of(factor));
-        when(sessions.signIn(donor, true, DeviceDescription.UNKNOWN)).thenReturn(TOKENS);
+        when(sessions.signIn(donor, true, DeviceDescription.UNKNOWN, SessionKind.REMEMBERED)).thenReturn(TOKENS);
         when(challenges.reserveAttempt(challenge.id(), NOW, CHALLENGE_ATTEMPTS)).thenReturn(true);
         when(challenges.markUsed(challenge.id(), NOW)).thenReturn(true);
 
-        AuthenticatedDonor result = service.completeSecondFactor(secret.value(), codeAt(NOW), DeviceDescription.UNKNOWN);
+        AuthenticatedDonor result = service.completeSecondFactor(secret.value(), codeAt(NOW), DeviceDescription.UNKNOWN, SessionKind.REMEMBERED);
 
         assertThat(result.tokens()).isEqualTo(TOKENS);
         assertThat(factor.lastUsedStep()).hasValue(Totp.stepAt(NOW));
@@ -259,11 +260,11 @@ class DonorAuthenticationServiceTest {
         when(secondFactors.findByDonor(donor.id())).thenReturn(Optional.of(factor));
         when(challenges.reserveAttempt(challenge.id(), NOW, CHALLENGE_ATTEMPTS)).thenReturn(false);
 
-        assertThatThrownBy(() -> service.completeSecondFactor(secret.value(), codeAt(NOW), DeviceDescription.UNKNOWN)).isInstanceOf(InvalidSecondFactorChallenge.class);
+        assertThatThrownBy(() -> service.completeSecondFactor(secret.value(), codeAt(NOW), DeviceDescription.UNKNOWN, SessionKind.REMEMBERED)).isInstanceOf(InvalidSecondFactorChallenge.class);
 
         assertThat(factor.lastUsedStep()).isNotEqualTo(OptionalLong.of(Totp.stepAt(NOW)));
         verify(secondFactors, never()).save(any());
-        verify(sessions, never()).signIn(any(), anyBoolean(), any());
+        verify(sessions, never()).signIn(any(), anyBoolean(), any(), any());
     }
 
     @Test
@@ -277,9 +278,9 @@ class DonorAuthenticationServiceTest {
         when(challenges.reserveAttempt(challenge.id(), NOW, CHALLENGE_ATTEMPTS)).thenReturn(true);
         when(challenges.markUsed(challenge.id(), NOW)).thenReturn(false);
 
-        assertThatThrownBy(() -> service.completeSecondFactor(secret.value(), codeAt(NOW), DeviceDescription.UNKNOWN)).isInstanceOf(InvalidSecondFactorChallenge.class);
+        assertThatThrownBy(() -> service.completeSecondFactor(secret.value(), codeAt(NOW), DeviceDescription.UNKNOWN, SessionKind.REMEMBERED)).isInstanceOf(InvalidSecondFactorChallenge.class);
 
-        verify(sessions, never()).signIn(any(), anyBoolean(), any());
+        verify(sessions, never()).signIn(any(), anyBoolean(), any(), any());
     }
 
     @Test
@@ -292,12 +293,12 @@ class DonorAuthenticationServiceTest {
         when(secondFactors.findByDonor(donor.id())).thenReturn(Optional.of(enabledFactor()));
         when(challenges.reserveAttempt(challenge.id(), NOW, CHALLENGE_ATTEMPTS)).thenReturn(true);
 
-        assertThatThrownBy(() -> service.completeSecondFactor(secret.value(), "000000", DeviceDescription.UNKNOWN)).isInstanceOf(InvalidSecondFactorCode.class);
+        assertThatThrownBy(() -> service.completeSecondFactor(secret.value(), "000000", DeviceDescription.UNKNOWN, SessionKind.REMEMBERED)).isInstanceOf(InvalidSecondFactorCode.class);
 
         verify(challenges).reserveAttempt(challenge.id(), NOW, CHALLENGE_ATTEMPTS);
         verify(challenges, never()).markUsed(any(), any());
         verify(secondFactors, never()).save(any());
-        verify(sessions, never()).signIn(any(), anyBoolean(), any());
+        verify(sessions, never()).signIn(any(), anyBoolean(), any(), any());
     }
 
     @Test
@@ -317,10 +318,10 @@ class DonorAuthenticationServiceTest {
         }
         when(challenges.findBySecretHash(exhausted.hash())).thenReturn(Optional.of(failed));
 
-        assertThatThrownBy(() -> service.completeSecondFactor(expired.value(), codeAt(NOW), DeviceDescription.UNKNOWN)).isInstanceOf(InvalidSecondFactorChallenge.class);
-        assertThatThrownBy(() -> service.completeSecondFactor(spent.value(), codeAt(NOW), DeviceDescription.UNKNOWN)).isInstanceOf(InvalidSecondFactorChallenge.class);
-        assertThatThrownBy(() -> service.completeSecondFactor(exhausted.value(), codeAt(NOW), DeviceDescription.UNKNOWN)).isInstanceOf(InvalidSecondFactorChallenge.class);
-        assertThatThrownBy(() -> service.completeSecondFactor("not a challenge", codeAt(NOW), DeviceDescription.UNKNOWN)).isInstanceOf(InvalidSecondFactorChallenge.class);
+        assertThatThrownBy(() -> service.completeSecondFactor(expired.value(), codeAt(NOW), DeviceDescription.UNKNOWN, SessionKind.REMEMBERED)).isInstanceOf(InvalidSecondFactorChallenge.class);
+        assertThatThrownBy(() -> service.completeSecondFactor(spent.value(), codeAt(NOW), DeviceDescription.UNKNOWN, SessionKind.REMEMBERED)).isInstanceOf(InvalidSecondFactorChallenge.class);
+        assertThatThrownBy(() -> service.completeSecondFactor(exhausted.value(), codeAt(NOW), DeviceDescription.UNKNOWN, SessionKind.REMEMBERED)).isInstanceOf(InvalidSecondFactorChallenge.class);
+        assertThatThrownBy(() -> service.completeSecondFactor("not a challenge", codeAt(NOW), DeviceDescription.UNKNOWN, SessionKind.REMEMBERED)).isInstanceOf(InvalidSecondFactorChallenge.class);
 
         verifyNoInteractions(secondFactors, sessions);
     }

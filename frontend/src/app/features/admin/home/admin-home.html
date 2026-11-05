@@ -45,6 +45,9 @@
       }
     }
   </section>
+  @if (compact()) {
+    <app-admin-section-rows class="sections" [label]="sectionsLabel" [groups]="sections()" />
+  }
   <section class="ui-card attention" aria-labelledby="admin-attention-title">
     <h2 id="admin-attention-title" class="ui-card__title" i18n="@@admin.home.attention.title">
       Co potřebuje vaši pozornost

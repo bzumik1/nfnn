@@ -95,7 +95,9 @@
             </span>
             <span class="ui-list__title">{{ item.label }}</span>
             @if (badges.badgeOf(item.path); as badge) {
-              <span class="ui-list__value account-count" aria-hidden="true">{{ badge.count }}</span>
+              <span class="ui-list__value ui-list__count account-count" aria-hidden="true">{{
+                badge.count
+              }}</span>
               <span class="visually-hidden">{{ badge.description }}</span>
             }
             @if (item.icon === 'admin') {

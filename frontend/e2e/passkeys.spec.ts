@@ -104,6 +104,7 @@ test.describe('Given a donor with a passkey', () => {
             userHandle: 'dXNlcg',
           },
         },
+        session: 'BROWSER',
       },
     ]);
   });

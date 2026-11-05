@@ -62,6 +62,7 @@ import {
   ChangedMeanwhileDialog,
   ChangedMeanwhileState,
 } from '../changed-meanwhile/changed-meanwhile-dialog';
+import { CompactLayout } from '../../../core/layout/compact-layout';
 
 type LoadState = 'loading' | 'ready' | 'error';
 type EditorMode = 'edit' | 'preview';
@@ -99,6 +100,7 @@ const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminNewsEditor implements GuardsUnsavedChanges {
+  protected readonly compact = inject(CompactLayout).isCompact;
   private readonly api = inject(NewsApi);
   private readonly photos = inject(PhotosApi);
   private readonly peopleApi = inject(PeopleApi);

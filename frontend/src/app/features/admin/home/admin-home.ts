@@ -41,6 +41,13 @@ import {
 } from '../settings/receipt-signing-key/unpublished-keys';
 import { signingKeyWarnings } from '../settings/receipt-signing-key/key-warnings';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
+import { CompactLayout } from '../../../core/layout/compact-layout';
+import { ADMIN_DAILY, ADMIN_MORE_PATH, ADMIN_PAYMENTS_PATH } from '../shell/admin-sections';
+import {
+  AdminSectionRows,
+  SectionIcon,
+  SectionRowGroup,
+} from '../shell/section-rows/admin-section-rows';
 
 type SignatoryState = 'loading' | 'ok' | 'missing' | 'unsigned' | 'error';
 type LoadState = 'loading' | 'ready' | 'error';
@@ -110,7 +117,7 @@ const FAILURE_LABELS: Record<ImportFailureKind, string> = {
 
 @Component({
   selector: 'app-admin-home',
-  imports: [NeedsConnection, RouterLink, CopyButton],
+  imports: [NeedsConnection, RouterLink, CopyButton, AdminSectionRows],
   templateUrl: './admin-home.html',
   styleUrl: './admin-home.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -125,6 +132,9 @@ export class AdminHome {
   private readonly title = viewChild.required<ElementRef<HTMLHeadingElement>>('title');
 
   protected readonly donor = this.auth.donor;
+  protected readonly compact = inject(CompactLayout).isCompact;
+  protected readonly sectionsLabel = $localize`:@@admin.home.sections.nav:Sekce správy`;
+  protected readonly sections = computed(() => sectionRows(this.unpaired()?.count ?? 0));
   protected readonly state = signal<LoadState>('loading');
   protected readonly importState = signal<ImportStateResponse | null>(null);
   protected readonly overviewState = signal<LoadState>('loading');
@@ -567,5 +577,50 @@ function unpairedText({ count, totalMinor }: UnpairedSummary): string {
       return $localize`:@@admin.home.attention.unpaired.few:${count}:count: platby čekají na přiřazení dárci (${total}:total:).`;
     case 'other':
       return $localize`:@@admin.home.attention.unpaired.many:${count}:count: plateb čeká na přiřazení dárci (${total}:total:).`;
+  }
+}
+
+const DAILY_ICONS: Readonly<Record<string, SectionIcon>> = {
+  [ADMIN_PAYMENTS_PATH]: 'payments',
+  '/sprava/darci': 'donors',
+  '/sprava/aktuality': 'news',
+  '/sprava/projekty': 'projects',
+};
+
+function sectionRows(unpaired: number): readonly SectionRowGroup[] {
+  return [
+    {
+      id: 'admin-home-daily',
+      label: ADMIN_DAILY.label ?? '',
+      rows: ADMIN_DAILY.items.map((item) => ({
+        ...item,
+        icon: DAILY_ICONS[item.path],
+        ...(item.path === ADMIN_PAYMENTS_PATH
+          ? { badge: { count: unpaired, description: unpairedBadge(unpaired) } }
+          : {}),
+      })),
+    },
+    {
+      id: 'admin-home-more',
+      label: $localize`:@@admin.home.sections.more.group:Občas a pro technika`,
+      rows: [
+        {
+          path: ADMIN_MORE_PATH,
+          label: $localize`:@@admin.home.sections.more.row:Lidé fondu, správci, zálohy, nastavení…`,
+          icon: 'more',
+        },
+      ],
+    },
+  ];
+}
+
+function unpairedBadge(count: number): string {
+  switch (pluralCategory(count)) {
+    case 'one':
+      return $localize`:@@admin.home.sections.unpaired.one:${count}:count: platba čeká na přiřazení`;
+    case 'few':
+      return $localize`:@@admin.home.sections.unpaired.few:${count}:count: platby čekají na přiřazení`;
+    default:
+      return $localize`:@@admin.home.sections.unpaired.many:${count}:count: plateb čeká na přiřazení`;
   }
 }
