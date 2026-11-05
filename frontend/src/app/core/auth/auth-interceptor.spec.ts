@@ -146,6 +146,20 @@ describe('Given the auth interceptor', () => {
     expect(store.signedIn()).toBe(false);
   });
 
+  it('when the server says the session ended but the refresh succeeds, then the request is sent again with the new token', () => {
+    signIn('token-1');
+    let received: unknown;
+    client.get('/api/donors/me').subscribe((body) => (received = body));
+
+    http
+      .expectOne('/api/donors/me')
+      .flush(problem('auth/session-ended'), { status: 401, statusText: 'Unauthorized' });
+    http.expectOne('/api/donors/auth/refresh').flush(authResponse('token-2'));
+    http.expectOne('/api/donors/me').flush(sampleDonor());
+
+    expect(received).toEqual(sampleDonor());
+  });
+
   it('when the refresh fails for a server error, then the failure reaches the caller and the donor stays signed in', () => {
     signIn('token-1');
     let failure: unknown;

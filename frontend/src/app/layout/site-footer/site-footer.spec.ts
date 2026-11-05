@@ -1,12 +1,20 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
+import { CompactLayout } from '../../core/layout/compact-layout';
 import { SiteFooter } from './site-footer';
 
 describe('Given the site footer', () => {
+  const compact = signal(false);
+
   beforeEach(async () => {
+    compact.set(false);
     await TestBed.configureTestingModule({
       imports: [SiteFooter],
-      providers: [provideRouter([{ path: '**', children: [] }])],
+      providers: [
+        provideRouter([{ path: '**', children: [] }]),
+        { provide: CompactLayout, useValue: { isCompact: compact.asReadonly() } },
+      ],
     }).compileComponents();
     vi.useFakeTimers();
   });
@@ -36,13 +44,23 @@ describe('Given the site footer', () => {
       link.textContent?.trim(),
     ]);
     expect(links).toEqual([
-      ['/#uvod', 'Domů'],
-      ['/#o-nas', 'O nás'],
-      ['/#projekty', 'Kde pomáháme'],
-      ['/#aktuality', 'Aktuality'],
-      ['/#kontakt', 'Kontakt'],
-      ['/#prispet', 'Přispět'],
+      ['/o-nas', 'O nás'],
+      ['/aktuality', 'Aktuality'],
+      ['/projekty', 'Pomáháme'],
+      ['/prispet', 'Přispět'],
+      ['/o-nas#kontakt', 'Kontakt'],
     ]);
+  });
+
+  it('when it renders on a phone, then it links only to the contact, because the tab bar holds the sections', () => {
+    compact.set(true);
+    const fixture = TestBed.createComponent(SiteFooter);
+    fixture.detectChanges();
+
+    const links = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('nav a')).map(
+      (link) => link.textContent?.trim(),
+    );
+    expect(links).toEqual(['Kontakt']);
   });
 
   it('when it renders, then the logo is its variant for the dark footer, whose star keeps its face', () => {

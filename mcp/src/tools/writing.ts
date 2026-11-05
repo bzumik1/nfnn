@@ -115,9 +115,17 @@ const PROJECT = {
   year: z.number().int().min(2005).max(2100),
   category: PROJECT_CATEGORY,
 };
+const EXPECTED_VERSION = z
+  .string()
+  .regex(/^[0-9a-f]{16}$/)
+  .optional()
+  .describe(
+    'The `version` of the record as the reading tool answered it. Given, the change is made only if nobody changed the record since: otherwise it is refused (409 …/changed-meanwhile) with the version stored now and the current record, so read it again and decide. Left out, the change applies to the record as it is now.',
+  );
 const ACCOUNT_LINK = z.object({
   donorId: UUID,
   linkId: UUID.describe("Id of the account link from the donor's card (nfnn_donor)."),
+  expectedVersion: EXPECTED_VERSION,
 });
 
 export function registerWritingTools(server: McpServer, deps: ToolDependencies): void {
@@ -129,19 +137,22 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
       title: 'Spárovat platbu',
       description:
         "Pairs an unpaired bank payment with a donor by hand (audited as PAIR_PAYMENT); the donation then counts in the donor's overview and receipts.",
-      inputSchema: z.object({ paymentId: UUID, donorId: UUID }),
+      inputSchema: z.object({ paymentId: UUID, donorId: UUID, expectedVersion: EXPECTED_VERSION }),
       annotations: WRITING,
     },
-    async ({ paymentId, donorId }, ctx) =>
+    async ({ paymentId, donorId, expectedVersion }, ctx) =>
       answerChange(
         deps,
         ctx,
         'nfnn_pair_payment',
         async ({ apiToken }) =>
           text(
-            await backend.post(`/api/admin/donations/payments/${paymentId}/pair`, apiToken, {
-              donorId,
-            }),
+            await backend.post(
+              `/api/admin/donations/payments/${paymentId}/pair`,
+              apiToken,
+              { donorId },
+              expectedVersion,
+            ),
           ),
         `payment ${paymentId}, donor ${donorId}`,
       ),
@@ -153,16 +164,23 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
       title: 'Zrušit spárování platby',
       description:
         "Removes the donation of a paired payment, so the payment is unpaired again; audited as UNPAIR_PAYMENT. Refused while a single receipt certifies the donation (409 donations/donation-has-receipt), and refused to a connection while the donor's active yearly receipt lists the donation (403 donations/receipt-withdrawal-in-browser-only), because unpairing it withdraws that receipt, which an administrator does only on the web at /sprava/platby.",
-      inputSchema: z.object({ paymentId: UUID }),
+      inputSchema: z.object({ paymentId: UUID, expectedVersion: EXPECTED_VERSION }),
       annotations: { ...WRITING, destructiveHint: true },
     },
-    async ({ paymentId }, ctx) =>
+    async ({ paymentId, expectedVersion }, ctx) =>
       answerChange(
         deps,
         ctx,
         'nfnn_unpair_payment',
         async ({ apiToken }) =>
-          text(await backend.post(`/api/admin/donations/payments/${paymentId}/unpair`, apiToken)),
+          text(
+            await backend.post(
+              `/api/admin/donations/payments/${paymentId}/unpair`,
+              apiToken,
+              undefined,
+              expectedVersion,
+            ),
+          ),
         `payment ${paymentId}`,
       ),
   );
@@ -203,17 +221,22 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
       title: 'Zveřejnit aktualitu',
       description:
         'Puts a news article on the site from the given day (YYYY-MM-DD, past or future); audited as PUBLISH_NEWS.',
-      inputSchema: z.object({ id: UUID, publishedOn: DAY }),
+      inputSchema: z.object({ id: UUID, publishedOn: DAY, expectedVersion: EXPECTED_VERSION }),
       annotations: WRITING,
     },
-    async ({ id, publishedOn }, ctx) =>
+    async ({ id, publishedOn, expectedVersion }, ctx) =>
       answerChange(
         deps,
         ctx,
         'nfnn_publish_news',
         async ({ apiToken }) =>
           text(
-            await backend.post(`/api/admin/content/news/${id}/publish`, apiToken, { publishedOn }),
+            await backend.post(
+              `/api/admin/content/news/${id}/publish`,
+              apiToken,
+              { publishedOn },
+              expectedVersion,
+            ),
           ),
         `news ${id}`,
       ),
@@ -225,16 +248,23 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
       title: 'Stáhnout aktualitu z webu',
       description:
         'Takes a news article off the site (it becomes a draft again); audited as UNPUBLISH_NEWS.',
-      inputSchema: z.object({ id: UUID }),
+      inputSchema: z.object({ id: UUID, expectedVersion: EXPECTED_VERSION }),
       annotations: WRITING,
     },
-    async ({ id }, ctx) =>
+    async ({ id, expectedVersion }, ctx) =>
       answerChange(
         deps,
         ctx,
         'nfnn_unpublish_news',
         async ({ apiToken }) =>
-          text(await backend.post(`/api/admin/content/news/${id}/unpublish`, apiToken)),
+          text(
+            await backend.post(
+              `/api/admin/content/news/${id}/unpublish`,
+              apiToken,
+              undefined,
+              expectedVersion,
+            ),
+          ),
         `news ${id}`,
       ),
   );
@@ -245,19 +275,22 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
       title: 'Zveřejnit projekt',
       description:
         'Puts a project on the site from the given day (YYYY-MM-DD); audited as PUBLISH_PROJECT.',
-      inputSchema: z.object({ id: UUID, publishedOn: DAY }),
+      inputSchema: z.object({ id: UUID, publishedOn: DAY, expectedVersion: EXPECTED_VERSION }),
       annotations: WRITING,
     },
-    async ({ id, publishedOn }, ctx) =>
+    async ({ id, publishedOn, expectedVersion }, ctx) =>
       answerChange(
         deps,
         ctx,
         'nfnn_publish_project',
         async ({ apiToken }) =>
           text(
-            await backend.post(`/api/admin/content/projects/${id}/publish`, apiToken, {
-              publishedOn,
-            }),
+            await backend.post(
+              `/api/admin/content/projects/${id}/publish`,
+              apiToken,
+              { publishedOn },
+              expectedVersion,
+            ),
           ),
         `project ${id}`,
       ),
@@ -269,16 +302,23 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
       title: 'Stáhnout projekt z webu',
       description:
         'Takes a project off the site (it becomes a draft again); audited as UNPUBLISH_PROJECT.',
-      inputSchema: z.object({ id: UUID }),
+      inputSchema: z.object({ id: UUID, expectedVersion: EXPECTED_VERSION }),
       annotations: WRITING,
     },
-    async ({ id }, ctx) =>
+    async ({ id, expectedVersion }, ctx) =>
       answerChange(
         deps,
         ctx,
         'nfnn_unpublish_project',
         async ({ apiToken }) =>
-          text(await backend.post(`/api/admin/content/projects/${id}/unpublish`, apiToken)),
+          text(
+            await backend.post(
+              `/api/admin/content/projects/${id}/unpublish`,
+              apiToken,
+              undefined,
+              expectedVersion,
+            ),
+          ),
         `project ${id}`,
       ),
   );
@@ -381,12 +421,20 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
           unpairedPayments: z.boolean(),
           bankImport: z.boolean(),
         }),
+        expectedVersion: EXPECTED_VERSION,
       }),
       annotations: { ...WRITING, idempotentHint: true },
     },
-    async (settings, ctx) =>
+    async ({ expectedVersion, ...settings }, ctx) =>
       answerChange(deps, ctx, 'nfnn_update_report_settings', async ({ apiToken }) =>
-        text(await backend.put('/api/admin/donations/report/settings', apiToken, settings)),
+        text(
+          await backend.put(
+            '/api/admin/donations/report/settings',
+            apiToken,
+            settings,
+            expectedVersion,
+          ),
+        ),
       ),
   );
 
@@ -411,16 +459,18 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
       title: 'Upravit aktualitu',
       description:
         'Replaces the texts, the photo and the signer of a news article, draft or published (the published date stays); send every field (signerId is signer.id of nfnn_news_article; left out removes the signer), read them with nfnn_news_article first. Audited as UPDATE_NEWS.',
-      inputSchema: z.object({ id: UUID, ...NEWS }),
+      inputSchema: z.object({ id: UUID, ...NEWS, expectedVersion: EXPECTED_VERSION }),
       annotations: { ...WRITING, idempotentHint: true },
     },
-    async ({ id, ...article }, ctx) =>
+    async ({ id, expectedVersion, ...article }, ctx) =>
       answerChange(
         deps,
         ctx,
         'nfnn_update_news',
         async ({ apiToken }) =>
-          text(await backend.put(`/api/admin/content/news/${id}`, apiToken, article)),
+          text(
+            await backend.put(`/api/admin/content/news/${id}`, apiToken, article, expectedVersion),
+          ),
         `news ${id}`,
       ),
   );
@@ -446,16 +496,23 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
       title: 'Upravit projekt',
       description:
         'Replaces the texts, the year, the category and the photo of a project (the published date stays); send every field, read them with nfnn_project first. Audited as UPDATE_PROJECT.',
-      inputSchema: z.object({ id: UUID, ...PROJECT }),
+      inputSchema: z.object({ id: UUID, ...PROJECT, expectedVersion: EXPECTED_VERSION }),
       annotations: { ...WRITING, idempotentHint: true },
     },
-    async ({ id, ...project }, ctx) =>
+    async ({ id, expectedVersion, ...project }, ctx) =>
       answerChange(
         deps,
         ctx,
         'nfnn_update_project',
         async ({ apiToken }) =>
-          text(await backend.put(`/api/admin/content/projects/${id}`, apiToken, project)),
+          text(
+            await backend.put(
+              `/api/admin/content/projects/${id}`,
+              apiToken,
+              project,
+              expectedVersion,
+            ),
+          ),
         `project ${id}`,
       ),
   );
@@ -789,7 +846,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
       inputSchema: ACCOUNT_LINK,
       annotations: { ...WRITING, idempotentHint: true },
     },
-    async ({ donorId, linkId }, ctx) =>
+    async ({ donorId, linkId, expectedVersion }, ctx) =>
       answerChange(
         deps,
         ctx,
@@ -798,6 +855,8 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
           await backend.post(
             `/api/admin/donations/donors/${donorId}/bank-accounts/${linkId}/disconnect`,
             apiToken,
+            undefined,
+            expectedVersion,
           );
           return plain('Pairing from the account is turned off for the donor.');
         },
@@ -814,7 +873,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
       inputSchema: ACCOUNT_LINK,
       annotations: { ...WRITING, idempotentHint: true },
     },
-    async ({ donorId, linkId }, ctx) =>
+    async ({ donorId, linkId, expectedVersion }, ctx) =>
       answerChange(
         deps,
         ctx,
@@ -823,6 +882,8 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
           await backend.post(
             `/api/admin/donations/donors/${donorId}/bank-accounts/${linkId}/reconnect`,
             apiToken,
+            undefined,
+            expectedVersion,
           );
           return plain(
             "Pairing from the account is on again; it starts with the next payment carrying the donor's symbol.",

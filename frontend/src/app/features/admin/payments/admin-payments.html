@@ -512,3 +512,10 @@
     </div>
   </app-dialog>
 }
+@if (changedMeanwhile()) {
+  <app-changed-meanwhile-dialog
+    subject="payment"
+    (reloadChosen)="reloadAfterChange()"
+    (dismissed)="reloadAfterChange()"
+  />
+}

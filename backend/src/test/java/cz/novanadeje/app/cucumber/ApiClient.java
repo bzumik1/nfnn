@@ -27,10 +27,19 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.IntConsumer;
 
 @Component
 @ScenarioScope
@@ -71,6 +80,22 @@ public class ApiClient {
 
     public ResponseEntity<String> put(String path, Map<String, ?> body) {
         return exchange(HttpMethod.PUT, path, body);
+    }
+
+    public ResponseEntity<String> post(String path, Map<String, ?> body, Map<String, String> headers) {
+        return exchange(HttpMethod.POST, path, body, headers);
+    }
+
+    public ResponseEntity<String> put(String path, Map<String, ?> body, Map<String, String> headers) {
+        return exchange(HttpMethod.PUT, path, body, headers);
+    }
+
+    public ResponseEntity<String> delete(String path, Map<String, String> headers) {
+        return exchange(HttpMethod.DELETE, path, null, headers);
+    }
+
+    public static Map<String, String> ifMatch(String version) {
+        return Map.of(HttpHeaders.IF_MATCH, "\"" + version + "\"");
     }
 
     public ResponseEntity<String> postFile(String path, String fieldName, String fileName, String contentType, byte[] bytes) {
@@ -286,16 +311,58 @@ public class ApiClient {
     }
 
     private ResponseEntity<String> exchange(HttpMethod method, String path, Map<String, ?> body) {
-        RestClient.RequestBodySpec request = client.method(method)
-                .uri(path)
-                .headers(this::addDefaultHeaders);
-        if (body != null) {
-            request = request.contentType(MediaType.APPLICATION_JSON).body(body);
-        }
-        lastResponse = request.retrieve().toEntity(String.class);
+        return exchange(method, path, body, Map.of());
+    }
+
+    private ResponseEntity<String> exchange(HttpMethod method, String path, Map<String, ?> body, Map<String, String> headers) {
+        lastResponse = unrecorded(new PreparedRequest(method, path, body, headers));
         lastResponseBytes = null;
-        record(method.name(), path, Map.of(), body == null ? null : jsonMapper.valueToTree(body));
+        record(method.name(), path, headers, body == null ? null : jsonMapper.valueToTree(body));
         return lastResponse;
+    }
+
+    private ResponseEntity<String> unrecorded(PreparedRequest prepared) {
+        RestClient.RequestBodySpec request = client.method(prepared.method())
+                .uri(prepared.path())
+                .headers(this::addDefaultHeaders)
+                .headers(sent -> prepared.headers().forEach(sent::set));
+        if (prepared.body() != null) {
+            request = request.contentType(MediaType.APPLICATION_JSON).body(prepared.body());
+        }
+        return request.retrieve().toEntity(String.class);
+    }
+
+    public List<ResponseEntity<String>> sendOneAfterAnother(List<PreparedRequest> requests, IntConsumer afterStarting, Runnable afterAllStarted) {
+        ExecutorService threads = Executors.newFixedThreadPool(requests.size());
+        try {
+            List<Future<ResponseEntity<String>>> pending = new ArrayList<>();
+            for (int index = 0; index < requests.size(); index++) {
+                PreparedRequest prepared = requests.get(index);
+                pending.add(threads.submit(() -> unrecorded(prepared)));
+                afterStarting.accept(index + 1);
+            }
+            afterAllStarted.run();
+            List<ResponseEntity<String>> responses = new ArrayList<>();
+            for (int index = 0; index < requests.size(); index++) {
+                PreparedRequest prepared = requests.get(index);
+                lastResponse = pending.get(index).get(30, TimeUnit.SECONDS);
+                lastResponseBytes = null;
+                record(prepared.method().name(), prepared.path(), prepared.headers(),
+                        prepared.body() == null ? null : jsonMapper.valueToTree(prepared.body()));
+                responses.add(lastResponse);
+            }
+            return responses;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted while sending requests one after another", e);
+        } catch (ExecutionException | TimeoutException e) {
+            throw new IllegalStateException("A request sent one after another failed", e);
+        } finally {
+            threads.shutdownNow();
+        }
+    }
+
+    public record PreparedRequest(HttpMethod method, String path, Map<String, ?> body, Map<String, String> headers) {
     }
 
     private void record(String method, String path, Map<String, String> extraHeaders, JsonNode requestBody) {

@@ -89,7 +89,7 @@ test.describe('Given a donor with a passkey', () => {
     await page.getByRole('button', { name: 'Přihlásit se přístupovým klíčem' }).click();
 
     await expect(page.getByRole('dialog')).toHaveCount(0);
-    await expect(page.locator('.nav-login', { hasText: 'Můj přehled' })).toBeVisible();
+    await expect(page.getByRole('banner').getByRole('button', { name: 'Účet' })).toBeVisible();
     expect(answers).toEqual([
       {
         challenge: CHALLENGE,

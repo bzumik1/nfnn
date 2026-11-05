@@ -32,6 +32,11 @@ class JpaProjectRepository implements ProjectRepository {
     }
 
     @Override
+    public Optional<Project> findByIdForUpdate(ProjectId id) {
+        return jpa.findByIdForUpdate(id.value()).map(ProjectJpaEntity::toDomain);
+    }
+
+    @Override
     public Optional<Project> findBySlug(Slug slug) {
         return jpa.findBySlug(slug.value()).map(ProjectJpaEntity::toDomain);
     }

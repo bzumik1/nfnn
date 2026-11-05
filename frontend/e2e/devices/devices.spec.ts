@@ -2,7 +2,7 @@ import { test as base } from '../fixtures';
 import { requestsInFlight, settled } from '../settled';
 import { layoutChecks } from './layout-checks';
 import type { DeviceOptions } from './poses';
-import { runStep, SETTLE_TIMEOUT_MS, stepTitle } from './run-step';
+import { finishedAnimations, runStep, scrollToEnd, SETTLE_TIMEOUT_MS, stepTitle } from './run-step';
 import { STEPS } from './steps';
 import { playwrightUi } from './ui';
 
@@ -37,6 +37,19 @@ test.describe('Given the site on a phone or a tablet', () => {
           settle: async () => {
             await settled(page, inFlight, SETTLE_TIMEOUT_MS);
             await page.evaluate(() => document.fonts.ready);
+            await page.evaluate(finishedAnimations);
+          },
+          scrollToEnd: async () => {
+            const scrolled = await page.evaluate(scrollToEnd);
+            if (scrolled) {
+              await page.evaluate(
+                () =>
+                  new Promise((resolve) =>
+                    requestAnimationFrame(() => requestAnimationFrame(resolve)),
+                  ),
+              );
+            }
+            return scrolled;
           },
           checks: () => layoutChecks(page, pageErrors),
           screenshot: () => page.screenshot({ animations: 'disabled', scale: 'css' }),

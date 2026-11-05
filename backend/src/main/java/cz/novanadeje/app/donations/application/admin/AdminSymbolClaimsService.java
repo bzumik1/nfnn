@@ -1,5 +1,9 @@
 package cz.novanadeje.app.donations.application.admin;
 
+import cz.novanadeje.app.donations.application.sync.AdminSyncRows.SymbolClaimRow;
+import cz.novanadeje.app.shared.application.version.ExpectedVersion;
+import cz.novanadeje.app.donations.domain.ChangedMeanwhile;
+import cz.novanadeje.app.donations.application.sync.AdminDonationsRows;
 import cz.novanadeje.app.donations.application.pairing.PairingLock;
 import cz.novanadeje.app.donations.domain.donation.Donation;
 import cz.novanadeje.app.donations.domain.donation.DonationId;
@@ -45,16 +49,18 @@ public class AdminSymbolClaimsService {
     private final DonationReceiptRepository receipts;
     private final PairingLock lock;
     private final ApplicationEventPublisher events;
+    private final AdminDonationsRows rows;
     private final Clock clock;
 
     public AdminSymbolClaimsService(SymbolClaimRepository claims, DonationRepository donations, DonorRecordRepository donorRecords,
-                                    DonationReceiptRepository receipts, PairingLock lock, ApplicationEventPublisher events, Clock clock) {
+                                    DonationReceiptRepository receipts, PairingLock lock, ApplicationEventPublisher events, AdminDonationsRows rows, Clock clock) {
         this.claims = claims;
         this.donations = donations;
         this.donorRecords = donorRecords;
         this.receipts = receipts;
         this.lock = lock;
         this.events = events;
+        this.rows = rows;
         this.clock = clock;
     }
 
@@ -65,14 +71,16 @@ public class AdminSymbolClaimsService {
                 .collect(Collectors.toMap(DonorRecord::id, Function.identity()));
         Map<SymbolClaimId, Long> counts = donations.countBySymbolClaims(all.stream().map(SymbolClaim::id).toList());
         return all.stream()
-                .map(claim -> new SymbolClaimView(claim, Optional.ofNullable(donorsById.get(claim.donor())), counts.getOrDefault(claim.id(), 0L)))
+                .map(claim -> new SymbolClaimView(claim, Optional.ofNullable(donorsById.get(claim.donor())), counts.getOrDefault(claim.id(), 0L),
+                        rows.symbolClaim(claim).version()))
                 .toList();
     }
 
-    public void reverse(UUID adminId, SymbolClaimId claimId) {
+    public void reverse(UUID adminId, SymbolClaimId claimId, ExpectedVersion expected) {
         lock.acquire();
         Instant now = clock.instant();
         SymbolClaim claim = claims.findById(claimId).orElseThrow(() -> new SymbolClaimNotFound(claimId));
+        requireUnchanged(claim, expected);
         SymbolClaim reversed = claim.reverse(now);
         receipts.lockDonor(claim.donor());
         List<Donation> paired = donations.findBySymbolClaim(claimId);
@@ -87,10 +95,11 @@ public class AdminSymbolClaimsService {
         log.info("Admin {} reversed symbol claim {} of donor {}: {} donations deleted", adminId, claimId, claim.donor(), paired.size());
     }
 
-    public void reset(UUID adminId, SymbolClaimId claimId) {
+    public void reset(UUID adminId, SymbolClaimId claimId, ExpectedVersion expected) {
         lock.acquire();
         Instant now = clock.instant();
         SymbolClaim claim = claims.findById(claimId).orElseThrow(() -> new SymbolClaimNotFound(claimId));
+        requireUnchanged(claim, expected);
         if (claim.isConfirmed()) {
             throw new SymbolClaimStillConfirmed(claimId);
         }
@@ -99,5 +108,12 @@ public class AdminSymbolClaimsService {
                 "Odpověď Ne " + claimId + " dárce " + claim.donor() + " u symbolu " + claim.symbol().value()
                         + " smazána; účet se dárce může zeptat znovu", now));
         log.info("Admin {} deleted declined symbol claim {} of donor {}", adminId, claimId, claim.donor());
+    }
+
+    private void requireUnchanged(SymbolClaim claim, ExpectedVersion expected) {
+        SymbolClaimRow current = rows.symbolClaim(claim);
+        if (!expected.admits(current.version())) {
+            throw new ChangedMeanwhile(current.version(), current);
+        }
     }
 }

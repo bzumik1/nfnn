@@ -56,15 +56,7 @@ async function adminPage(ui: Ui, path: string): Promise<void> {
 async function openSignInDialog(ui: Ui): Promise<void> {
   await mockDonorApi(ui.routes);
   await ui.goto('/');
-  const header = { css: '.nav-login' };
-  const menu = { css: '.mobile-menu-btn' };
-  await ui.waitVisible({ css: `${header.css}, ${menu.css}` });
-  if (await ui.isVisible(header)) {
-    await ui.click(header);
-  } else {
-    await ui.click(menu);
-    await ui.click({ css: '.mobile-login' });
-  }
+  await ui.click({ css: 'header button.sign-in' });
   await ui.waitVisible(DIALOG);
 }
 
@@ -79,19 +71,20 @@ async function openSideMenu(ui: Ui): Promise<string | void> {
 
 export const STEPS: Step[] = [
   { id: 'home', title: 'the home page', open: (ui) => publicPage(ui, '/') },
+  { id: 'about', title: 'the About tab', open: (ui) => publicPage(ui, '/o-nas') },
   {
-    id: 'home-donate',
-    title: 'the Přispět section with 1 000 Kč chosen',
+    id: 'donate',
+    title: 'the Přispět tab with 1 000 Kč chosen',
     open: async (ui) => {
       await servePaymentDetails(ui.routes);
-      await publicPage(ui, '/#prispet');
+      await publicPage(ui, '/prispet');
+      await ui.scrollToTop({ css: '#prispet' });
       await ui.click({ css: '#prispet button', text: '1 000 Kč' });
       if (await ui.isVisible(OTHER_DEVICE)) {
         await ui.waitVisible({ css: '#prispet .bank-app-open:not([disabled])' });
       } else {
         await ui.waitVisible(DONATE_QR);
       }
-      await ui.scrollToTop({ css: '#prispet' });
     },
   },
   {
@@ -99,7 +92,7 @@ export const STEPS: Step[] = [
     title: 'the Přispět section with the QR code unfolded for another device',
     open: async (ui) => {
       await servePaymentDetails(ui.routes);
-      await publicPage(ui, '/#prispet');
+      await publicPage(ui, '/prispet');
       if (!(await ui.isVisible(OTHER_DEVICE))) {
         return NOT_ON_THIS_DEVICE;
       }
@@ -113,25 +106,12 @@ export const STEPS: Step[] = [
     title: 'the Přispět QR code opened large',
     open: async (ui) => {
       await servePaymentDetails(ui.routes);
-      await publicPage(ui, '/#prispet');
+      await publicPage(ui, '/prispet');
       if (await ui.isVisible(OTHER_DEVICE)) {
         await ui.click(OTHER_DEVICE);
       }
       await ui.click({ css: '#prispet button.zoomable' });
       await ui.waitVisible({ css: 'dialog[open] .zoom-qr [role="img"]' });
-    },
-  },
-  {
-    id: 'site-menu',
-    title: 'the site menu',
-    open: async (ui) => {
-      await publicPage(ui, '/');
-      const button = { css: '.mobile-menu-btn' };
-      if (!(await ui.isVisible(button))) {
-        return NOT_ON_THIS_DEVICE;
-      }
-      await ui.click(button);
-      await ui.waitVisible({ css: '#mobile-menu' });
     },
   },
   { id: 'sign-in', title: 'the sign-in dialog', open: openSignInDialog },
@@ -197,11 +177,21 @@ export const STEPS: Step[] = [
     open: (ui) => donorPage(ui, '/darce/udaje'),
   },
   {
-    id: 'donor-menu',
-    title: "the donor's account menu",
+    id: 'donor-device-data-delete',
+    title: 'the dialog that deletes the data on this device',
+    open: async (ui) => {
+      await donorPage(ui, '/darce/udaje');
+      await ui.click({ css: 'app-device-data-card button', text: 'Smazat data z tohoto zařízení' });
+      await ui.waitVisible({ css: 'dialog[open] h2', text: 'Smazat data z tohoto zařízení?' });
+    },
+  },
+  {
+    id: 'account-sheet',
+    title: "the donor's account sheet",
     open: async (ui) => {
       await donorPage(ui, '/darce/prehled');
-      return openSideMenu(ui);
+      await ui.click({ css: 'header button.account-button' });
+      await ui.waitVisible({ css: 'dialog[open] a' });
     },
   },
   { id: 'admin-home', title: 'the administration', open: (ui) => adminPage(ui, '/sprava') },
@@ -232,6 +222,31 @@ export const STEPS: Step[] = [
       await mockYearlyReceipts(ui.routes, { donors: FOUR_DONORS, erasedDonors: 1 });
       await adminPage(ui, '/sprava/hromadna-potvrzeni');
       await ui.waitVisible({ css: '.donors-table tbody tr' });
+    },
+  },
+  {
+    id: 'admin-changed-meanwhile',
+    title: 'the sheet of a write refused because someone else saved meanwhile',
+    open: async (ui) => {
+      await adminPage(ui, '/sprava/prehledy');
+      await ui.routes.route(
+        (url) => url.pathname === '/api/admin/donations/report/settings',
+        (route) =>
+          route.fulfill({
+            status: 409,
+            contentType: 'application/problem+json',
+            json: {
+              type: 'https://nfnn.cz/problems/donations/changed-meanwhile',
+              title: 'Mezitím se to změnilo',
+              detail: 'Nastavení mezitím změnil někdo jiný.',
+              status: 409,
+              version: '9e4b2d7c1a0f6358',
+              current: { recipients: ['info@nfnn.cz'], changedAt: '2026-10-20T08:15:00Z' },
+            },
+          }),
+      );
+      await ui.click({ css: 'form.settings-form button[type="submit"]' });
+      await ui.waitVisible(DIALOG);
     },
   },
   {

@@ -1,7 +1,13 @@
 <div role="status">
   @if (notice.shown()) {
     <div #bar class="ui-notice ui-notice--status ui-notice--floating">
-      <p class="ui-notice__text" i18n="@@layout.signedOut.message">Odhlásili jste se.</p>
+      @if (notice.reason() === 'device-data-deleted') {
+        <p class="ui-notice__text" i18n="@@layout.signedOut.deviceDataDeleted">
+          Data z tohoto zařízení jsme smazali a odhlásili jsme vás.
+        </p>
+      } @else {
+        <p class="ui-notice__text" i18n="@@layout.signedOut.message">Odhlásili jste se.</p>
+      }
       <button
         type="button"
         class="ui-button ui-button--small signed-out-close"

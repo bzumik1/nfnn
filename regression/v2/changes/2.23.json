@@ -1,0 +1,842 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/contact/accounting-details/accounting-details.spec.ts > Given the details an accountant needs in the contact section > when the foundation account has not arrived > then the account row leads to Přispět instead of a number, and the IBAN row waits",
+    "reason": "Slice 2.23: the About page has no payment panel, which used to load the foundation account, so the accounting details ask for it themselves (they showed no IBAN on /o-nas otherwise)",
+    "replacement": "src/app/features/contact/accounting-details/accounting-details.spec.ts > Given the details an accountant needs in the contact section > when the foundation account has not arrived > then it asks for the account itself, and until it comes the account row leads to Přispět instead of a number and the IBAN row waits"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/home.spec.ts > Given the home page > Given a signed-in donor > when the page opens, then the donate section says who pays and with which symbol",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the test moves to the page that now holds the section and names it",
+    "replacement": "src/app/features/content/donate-page/donate-page.spec.ts > Given the Přispět page > Given a signed-in donor > when the page opens, then the donate section says who pays and with which symbol"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/home.spec.ts > Given the home page > Given a signed-in donor > when the page opens, then the drawn QR payment carries their variable symbol",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the test moves to the page that now holds the section and names it",
+    "replacement": "src/app/features/content/donate-page/donate-page.spec.ts > Given the Přispět page > Given a signed-in donor > when the page opens, then the drawn QR payment carries their variable symbol"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/home.spec.ts > Given the home page > when nobody is signed in, then the payment details are asked for once and the drawn QR payment carries no variable symbol",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the test moves to the page that now holds the section and names it",
+    "replacement": "src/app/features/content/donate-page/donate-page.spec.ts > Given the Přispět page > when nobody is signed in, then the payment details are asked for once and the drawn QR payment carries no variable symbol"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/home.spec.ts > Given the home page > when the home content arrives, then the news and the projects show it and link to their pages",
+    "reason": "Slice 2.23 (plan v3 2.1): the home page no longer lists news and projects and the built-in placeholder cards are gone (the site never claims what it does not have); the Aktuality and Pomáháme tabs list what is published and say so when nothing is",
+    "replacement": "e2e/content-pages.spec.ts > Given a visitor on the Aktuality and Pomáháme tabs > when news and projects are published, then the tabs list them and each card leads to its page"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/home.spec.ts > Given the home page > when the home content carries a photo for the About section, then the section shows it instead of the placeholder",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the test moves to the page that now holds the section and names it",
+    "replacement": "src/app/features/content/about-page/about-page.spec.ts > Given the About page > when the home content carries a photo for the About section, then the section shows it instead of the placeholder"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/home.spec.ts > Given the home page > when the home content carries the people of the foundation, then the block of who runs it shows them instead of its own cards",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the test moves to the page that now holds the section and names it",
+    "replacement": "src/app/features/content/about-page/about-page.spec.ts > Given the About page > when the home content carries the people of the foundation, then the block of who runs it shows them instead of its own cards"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/home.spec.ts > Given the home page > when the home content has no About photo or cannot be loaded, then the About section keeps its placeholder photo",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the test moves to the page that now holds the section and names it",
+    "replacement": "src/app/features/content/about-page/about-page.spec.ts > Given the About page > when the home content has no About photo or cannot be loaded, then the About section keeps its placeholder photo"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/home.spec.ts > Given the home page > when the home content is empty or cannot be loaded, then the placeholder cards stay",
+    "reason": "Slice 2.23 (plan v3 2.1): the home page no longer lists news and projects and the built-in placeholder cards are gone (the site never claims what it does not have); the Aktuality and Pomáháme tabs list what is published and say so when nothing is",
+    "replacement": "e2e/content-pages.spec.ts > Given a visitor on the Aktuality and Pomáháme tabs > when nothing is published yet, then each tab says so and leads back to the home page"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/home.spec.ts > Given the home page > when the home content keeps no people of the foundation, then the block of who runs it keeps its own cards",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the test moves to the page that now holds the section and names it",
+    "replacement": "src/app/features/content/about-page/about-page.spec.ts > Given the About page > when the home content keeps no people of the foundation, then the block of who runs it keeps its own cards"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/news/news.spec.ts > Given the news section > when it renders, then no link leads nowhere",
+    "reason": "Slice 2.23 (plan v3 2.1): the home page no longer lists news and projects and the built-in placeholder cards are gone (the site never claims what it does not have); the Aktuality and Pomáháme tabs list what is published and say so when nothing is",
+    "replacement": "src/app/features/content/news-card/news-card.spec.ts > Given the card of a news article > when it is shown on the site, then its title leads to the article"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/news/news.spec.ts > Given the news section > when it renders, then the photos are decorative because each title follows them",
+    "reason": "Slice 2.23 (plan v3 2.1): the home page no longer lists news and projects and the built-in placeholder cards are gone (the site never claims what it does not have); the Aktuality and Pomáháme tabs list what is published and say so when nothing is",
+    "replacement": "src/app/features/content/news-card/news-card.spec.ts > Given the card of a news article > when it is shown on the site, then its title leads to the article"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/news/news.spec.ts > Given the news section > when it renders, then the photos are small WebP files that wait until they are near",
+    "reason": "Slice 2.23 (plan v3 2.1): the home page no longer lists news and projects and the built-in placeholder cards are gone (the site never claims what it does not have); the Aktuality and Pomáháme tabs list what is published and say so when nothing is",
+    "replacement": "src/app/features/content/news-card/news-card.spec.ts > Given the card of a news article > when it is shown on the site, then its title leads to the article"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/news/news.spec.ts > Given the news section > when only the placeholder cards show, then no link offers a list of articles that does not exist yet",
+    "reason": "Slice 2.23 (plan v3 2.1): the home page no longer lists news and projects and the built-in placeholder cards are gone (the site never claims what it does not have); the Aktuality and Pomáháme tabs list what is published and say so when nothing is",
+    "replacement": "src/app/features/content/list/content-list.spec.ts > Given a visitor opening the list of news > when nothing is published yet, then the page says so"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/news/news.spec.ts > Given the news section > when only the placeholder cards show, then their dates are written like the real ones and nothing invites to read on",
+    "reason": "Slice 2.23 (plan v3 2.1): the home page no longer lists news and projects and the built-in placeholder cards are gone (the site never claims what it does not have); the Aktuality and Pomáháme tabs list what is published and say so when nothing is",
+    "replacement": "src/app/features/content/list/content-list.spec.ts > Given a visitor opening the list of news > when nothing is published yet, then the page says so"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/news/news.spec.ts > Given the news section with published articles > when the articles arrive, then each card shows the tag, the date, the perex and a link to the article",
+    "reason": "Slice 2.23 (plan v3 2.1): the home page no longer lists news and projects and the built-in placeholder cards are gone (the site never claims what it does not have); the Aktuality and Pomáháme tabs list what is published and say so when nothing is",
+    "replacement": "src/app/features/content/list/content-list.spec.ts > Given a visitor opening the list of news > when the first page arrives > then the page is named, each article links to itself and the count of pages shows"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/projects/projects.spec.ts > Given the projects section > when it renders, then every child has a plain card that offers nothing to click",
+    "reason": "Slice 2.23 (plan v3 2.1): the home page no longer lists news and projects and the built-in placeholder cards are gone (the site never claims what it does not have); the Aktuality and Pomáháme tabs list what is published and say so when nothing is",
+    "replacement": "src/app/features/content/home/sections/projects/project-card.spec.ts > Given the card of a project > when it is shown on the site, then its title leads to the project"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/projects/projects.spec.ts > Given the projects section > when it renders, then the photos are decorative and the card titles name the children",
+    "reason": "Slice 2.23 (plan v3 2.1): the home page no longer lists news and projects and the built-in placeholder cards are gone (the site never claims what it does not have); the Aktuality and Pomáháme tabs list what is published and say so when nothing is",
+    "replacement": "src/app/features/content/home/sections/projects/project-card.spec.ts > Given the card of a project > when it is shown on the site, then its title leads to the project"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/projects/projects.spec.ts > Given the projects section > when it renders, then the photos are small WebP files that wait until they are near",
+    "reason": "Slice 2.23 (plan v3 2.1): the home page no longer lists news and projects and the built-in placeholder cards are gone (the site never claims what it does not have); the Aktuality and Pomáháme tabs list what is published and say so when nothing is",
+    "replacement": "src/app/features/content/home/sections/projects/project-card.spec.ts > Given the card of a project > when it is shown on the site, then its title leads to the project"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/projects/projects.spec.ts > Given the projects section > when only the placeholder cards show, then no card invites the visitor to read on",
+    "reason": "Slice 2.23 (plan v3 2.1): the home page no longer lists news and projects and the built-in placeholder cards are gone (the site never claims what it does not have); the Aktuality and Pomáháme tabs list what is published and say so when nothing is",
+    "replacement": "src/app/features/content/list/content-list.spec.ts > Given a visitor opening the list of projects > when nothing is published yet, then the page says so"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/projects/projects.spec.ts > Given the projects section > when only the placeholder cards show, then no link offers a list of projects that does not exist yet",
+    "reason": "Slice 2.23 (plan v3 2.1): the home page no longer lists news and projects and the built-in placeholder cards are gone (the site never claims what it does not have); the Aktuality and Pomáháme tabs list what is published and say so when nothing is",
+    "replacement": "src/app/features/content/list/content-list.spec.ts > Given a visitor opening the list of projects > when nothing is published yet, then the page says so"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/projects/projects.spec.ts > Given the projects section > when only the placeholder cards show, then the lead calls them examples rather than real stories",
+    "reason": "Slice 2.23 (plan v3 2.1): the home page no longer lists news and projects and the built-in placeholder cards are gone (the site never claims what it does not have); the Aktuality and Pomáháme tabs list what is published and say so when nothing is",
+    "replacement": "src/app/features/content/list/content-list.spec.ts > Given a visitor opening the list of projects > when nothing is published yet, then the page says so"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/projects/projects.spec.ts > Given the projects section with published projects > when the projects arrive, then each card shows the tag, the year, the perex and a link to the project",
+    "reason": "Slice 2.23 (plan v3 2.1): the home page no longer lists news and projects and the built-in placeholder cards are gone (the site never claims what it does not have); the Aktuality and Pomáháme tabs list what is published and say so when nothing is",
+    "replacement": "src/app/features/content/list/content-list.spec.ts > Given a visitor opening the list of projects > when the projects arrive, then each project card links to its page"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/privacy-policy/privacy-policy.spec.ts > Given the privacy policy page > when it renders, then the contact section links to the contact form on the home page",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the test moves to the page that now holds the section and names it",
+    "replacement": "src/app/features/content/privacy-policy/privacy-policy.spec.ts > Given the privacy policy page > when it renders, then the contact section links to the contact form on the About page"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the area opens > then the top bar shows the name of the donor without a greeting and a way back to the home page",
+    "reason": "Slice 2.23: the donor top bar and the account menu give way to the app header with the account button and the account sheet",
+    "replacement": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the area opens > then the header offers the account under the initials of the donor and the logo leads home"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/site-header/site-header.spec.ts > Given the site header on a computer > when it renders without a session, then Založit účet stands beside Přihlásit se and opens the registration",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E V1): the site header with its section links and phone menu is replaced by the app header (logo, Přihlásit se or the account button, a back button deeper in a tab), which scrolls away with the page, and the floating tab bar, so there is no menu any more and each check moves to the header or the tab bar; registration is now reached from the sign-in dialog's second tab",
+    "replacement": "src/app/features/donors/login-dialog/login-dialog.spec.ts > Given the sign-in dialog > when a visitor opened it from the donate section > after switching from the sign-in tab, then the registration still leads back there"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/site-header/site-header.spec.ts > Given the site header on a computer > when it renders, then the logo leads home and the links name each section, the donate one as Přispět",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E V1): the site header with its section links and phone menu is replaced by the app header (logo, Přihlásit se or the account button, a back button deeper in a tab), which scrolls away with the page, and the floating tab bar, so there is no menu any more and each check moves to the header or the tab bar",
+    "replacement": "src/app/layout/tab-bar/tab-bar.spec.ts > Given the tab bar > when it renders, then four named tabs with their labels lead to the sections in one named navigation"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/site-header/site-header.spec.ts > Given the site header on a computer > when the visitor is signed in, then the header no longer offers Založit účet",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E V1): the site header with its section links and phone menu is replaced by the app header (logo, Přihlásit se or the account button, a back button deeper in a tab), which scrolls away with the page, and the floating tab bar, so there is no menu any more and each check moves to the header or the tab bar",
+    "replacement": "src/app/layout/app-header/app-header.spec.ts > Given the header of the app > when a donor is signed in, then the initials of their name stand for a button named Účet that opens their account sheet"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/site-header/site-header.spec.ts > Given the site header on a computer > when the visitor signs in, then the page stays, the header offers the overview and no control is left highlighted",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E V1): the site header with its section links and phone menu is replaced by the app header (logo, Přihlásit se or the account button, a back button deeper in a tab), which scrolls away with the page, and the floating tab bar, so there is no menu any more and each check moves to the header or the tab bar",
+    "replacement": "e2e/donor-account.spec.ts > Given a visitor who wants a donor account > when they sign in from the home page, then the page stays, the header offers their account, the focus lands on it and no ring shows after a click"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/site-header/site-header.spec.ts > Given the site header on a phone > when Esc is pressed in the open menu, then it closes and the focus is back on its button",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E V1): the site header with its section links and phone menu is replaced by the app header (logo, Přihlásit se or the account button, a back button deeper in a tab), which scrolls away with the page, and the floating tab bar, so there is no menu any more and each check moves to the header or the tab bar",
+    "replacement": "src/app/layout/tab-bar/tab-bar.spec.ts > Given the tab bar > when it renders, then four named tabs with their labels lead to the sections in one named navigation"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/site-header/site-header.spec.ts > Given the site header on a phone > when a link in the menu is clicked, then the menu closes",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E V1): the site header with its section links and phone menu is replaced by the app header (logo, Přihlásit se or the account button, a back button deeper in a tab), which scrolls away with the page, and the floating tab bar, so there is no menu any more and each check moves to the header or the tab bar",
+    "replacement": "src/app/layout/tab-bar/tab-bar.spec.ts > Given the tab bar > when another tab is pressed, then the app opens it and the tab left behind keeps the page seen in it"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/site-header/site-header.spec.ts > Given the site header on a phone > when it renders, then its navigation is named for screen readers",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E V1): the site header with its section links and phone menu is replaced by the app header (logo, Přihlásit se or the account button, a back button deeper in a tab), which scrolls away with the page, and the floating tab bar, so there is no menu any more and each check moves to the header or the tab bar",
+    "replacement": "src/app/layout/tab-bar/tab-bar.spec.ts > Given the tab bar > when it renders, then four named tabs with their labels lead to the sections in one named navigation"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/site-header/site-header.spec.ts > Given the site header on a phone > when the button is pressed, then the menu opens and the button says it closes it",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E V1): the site header with its section links and phone menu is replaced by the app header (logo, Přihlásit se or the account button, a back button deeper in a tab), which scrolls away with the page, and the floating tab bar, so there is no menu any more and each check moves to the header or the tab bar",
+    "replacement": "src/app/layout/tab-bar/tab-bar.spec.ts > Given the tab bar > when it renders, then four named tabs with their labels lead to the sections in one named navigation"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/site-header/site-header.spec.ts > Given the site header on a phone > when the focus moves from the open menu back to its button, then the menu stays open",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E V1): the site header with its section links and phone menu is replaced by the app header (logo, Přihlásit se or the account button, a back button deeper in a tab), which scrolls away with the page, and the floating tab bar, so there is no menu any more and each check moves to the header or the tab bar",
+    "replacement": "e2e/accessibility-keyboard.spec.ts > Given a visitor on a phone who uses only the keyboard > when they Tab to the end of the About page, then the tab bar hides no focused control"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/site-header/site-header.spec.ts > Given the site header on a phone > when the focus moves past the last link of the open menu, then the menu closes so nothing hides the focused control",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E V1): the site header with its section links and phone menu is replaced by the app header (logo, Přihlásit se or the account button, a back button deeper in a tab), which scrolls away with the page, and the floating tab bar, so there is no menu any more and each check moves to the header or the tab bar",
+    "replacement": "e2e/accessibility-keyboard.spec.ts > Given a visitor on a phone who uses only the keyboard > when they Tab to the end of the About page, then the tab bar hides no focused control"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/site-header/site-header.spec.ts > Given the site header on a phone > when the menu is closed, then its button says it opens the menu and is not expanded",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E V1): the site header with its section links and phone menu is replaced by the app header (logo, Přihlásit se or the account button, a back button deeper in a tab), which scrolls away with the page, and the floating tab bar, so there is no menu any more and each check moves to the header or the tab bar",
+    "replacement": "src/app/layout/tab-bar/tab-bar.spec.ts > Given the tab bar > when it renders, then four named tabs with their labels lead to the sections in one named navigation"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/site-header/site-header.spec.ts > Given the site header on a phone > when the menu opens, then it lists the sections without a separate home link and the donate one as Přispět",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E V1): the site header with its section links and phone menu is replaced by the app header (logo, Přihlásit se or the account button, a back button deeper in a tab), which scrolls away with the page, and the floating tab bar, so there is no menu any more and each check moves to the header or the tab bar",
+    "replacement": "src/app/layout/tab-bar/tab-bar.spec.ts > Given the tab bar > when it renders, then four named tabs with their labels lead to the sections in one named navigation"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/site-header/site-header.spec.ts > Given the site header on a phone > when the page outside the menu is clicked, then the menu closes",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E V1): the site header with its section links and phone menu is replaced by the app header (logo, Přihlásit se or the account button, a back button deeper in a tab), which scrolls away with the page, and the floating tab bar, so there is no menu any more and each check moves to the header or the tab bar",
+    "replacement": "src/app/layout/tab-bar/tab-bar.spec.ts > Given the tab bar > when it renders, then four named tabs with their labels lead to the sections in one named navigation"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/site-header/site-header.spec.ts > Given the site header on a phone > when the visitor opens the menu without an account, then Založit účet closes the menu and opens the registration",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E V1): the site header with its section links and phone menu is replaced by the app header (logo, Přihlásit se or the account button, a back button deeper in a tab), which scrolls away with the page, and the floating tab bar, so there is no menu any more and each check moves to the header or the tab bar; registration is now reached from the sign-in dialog's second tab",
+    "replacement": "src/app/features/donors/login-dialog/login-dialog.spec.ts > Given the sign-in dialog > when a visitor opened it from the donate section > after switching from the sign-in tab, then the registration still leads back there"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/site-header/site-header.spec.ts > Given the site header on a phone > when the visitor signs in from the menu, then the menu closes and the sign-in dialog opens",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E V1): the site header with its section links and phone menu is replaced by the app header (logo, Přihlásit se or the account button, a back button deeper in a tab), which scrolls away with the page, and the floating tab bar, so there is no menu any more and each check moves to the header or the tab bar",
+    "replacement": "src/app/layout/app-header/app-header.spec.ts > Given the header of the app > when nobody is signed in, then the logo leads home and Přihlásit se opens the sign-in"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/site-header/site-header.spec.ts > Given the site header on a phone > when the visitor signs in from the menu, then the page stays and the focus waits quietly at the top of the header",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E V1): the site header with its section links and phone menu is replaced by the app header (logo, Přihlásit se or the account button, a back button deeper in a tab), which scrolls away with the page, and the floating tab bar, so there is no menu any more and each check moves to the header or the tab bar",
+    "replacement": "e2e/donor-account.spec.ts > Given a visitor who wants a donor account > when they sign in from the home page, then the page stays, the header offers their account, the focus lands on it and no ring shows after a click"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/site-header/site-header.spec.ts > Given the site header on the pages of news and projects > when an article of the news is open, then Aktuality leads to the list and is marked as the current place",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E V1): the site header with its section links and phone menu is replaced by the app header (logo, Přihlásit se or the account button, a back button deeper in a tab), which scrolls away with the page, and the floating tab bar, so there is no menu any more and each check moves to the header or the tab bar",
+    "replacement": "src/app/layout/tab-bar/tab-bar.spec.ts > Given the tab bar > when a page deeper in a tab is open, then that tab is marked current but not as the page itself, which is deeper"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/site-header/site-header.spec.ts > Given the site header on the pages of news and projects > when the home page is open, then every item leads to its section and none is marked",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E V1): the site header with its section links and phone menu is replaced by the app header (logo, Přihlásit se or the account button, a back button deeper in a tab), which scrolls away with the page, and the floating tab bar, so there is no menu any more and each check moves to the header or the tab bar",
+    "replacement": "src/app/layout/tab-bar/tab-bar.spec.ts > Given the tab bar > when the landing page is open, then no tab is the current page"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/site-header/site-header.spec.ts > Given the site header on the pages of news and projects > when the list of projects is open, then Kde pomáháme leads to the list and is marked, also in the phone menu",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E V1): the site header with its section links and phone menu is replaced by the app header (logo, Přihlásit se or the account button, a back button deeper in a tab), which scrolls away with the page, and the floating tab bar, so there is no menu any more and each check moves to the header or the tab bar",
+    "replacement": "src/app/layout/tab-bar/tab-bar.spec.ts > Given the tab bar > when it renders, then four named tabs with their labels lead to the sections in one named navigation"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/site-header/site-header.spec.ts > Given the site header over the dark top of a page > when a page other than home is at its top, then the logo is its variant for a dark background, whose star keeps its face",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E V1): the site header with its section links and phone menu is replaced by the app header (logo, Přihlásit se or the account button, a back button deeper in a tab), which scrolls away with the page, and the floating tab bar, so there is no menu any more and each check moves to the header or the tab bar",
+    "replacement": "src/app/layout/app-header/app-header.spec.ts > Given the header of the app > when the page has a light head, then the logo is the blue one, and over a photo or a dark head the white one"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/site-header/site-header.spec.ts > Given the site header over the dark top of a page > when the home page is at its top, then the logo keeps its colours over the bright photo",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E V1): the site header with its section links and phone menu is replaced by the app header (logo, Přihlásit se or the account button, a back button deeper in a tab), which scrolls away with the page, and the floating tab bar, so there is no menu any more and each check moves to the header or the tab bar",
+    "replacement": "src/app/layout/app-header/app-header.spec.ts > Given the header of the app > when the page has a light head, then the logo is the blue one, and over a photo or a dark head the white one"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/site-header/site-header.spec.ts > Given the site header over the dark top of a page > when the menu opens over the page, then the bar turns light and the logo keeps its colours",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E V1): the site header with its section links and phone menu is replaced by the app header (logo, Přihlásit se or the account button, a back button deeper in a tab), which scrolls away with the page, and the floating tab bar, so there is no menu any more and each check moves to the header or the tab bar",
+    "replacement": "src/app/layout/app-header/app-header.spec.ts > Given the header of the app > when the page has a light head, then the logo is the blue one, and over a photo or a dark head the white one"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/accessibility-keyboard.spec.ts > Given a visitor in a window too narrow for the header links > when they open the home page 800 px wide, then the header offers the menu button instead of the links",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E V1): the site header with its section links and phone menu is replaced by the app header (logo, Přihlásit se or the account button, a back button deeper in a tab), which scrolls away with the page, and the floating tab bar, so there is no menu any more and each check moves to the header or the tab bar",
+    "replacement": "e2e/accessibility-keyboard.spec.ts > Given a visitor whose browser shows text twice as large on a computer > when they open the About page, then the header and the four tabs stay on screen"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/accessibility-keyboard.spec.ts > Given a visitor on a phone who uses only the keyboard > when they Tab past the last item of the open menu, then the menu closes and nothing hides the focused control",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E V1): the site header with its section links and phone menu is replaced by the app header (logo, Přihlásit se or the account button, a back button deeper in a tab), which scrolls away with the page, and the floating tab bar, so there is no menu any more and each check moves to the header or the tab bar",
+    "replacement": "e2e/accessibility-keyboard.spec.ts > Given a visitor on a phone who uses only the keyboard > when they Tab to the end of the About page, then the tab bar hides no focused control"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/accessibility-keyboard.spec.ts > Given a visitor who uses only the keyboard or a screen reader > when they follow a menu link to a section, then the section takes the focus and Tab continues inside it",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E V1): the site header with its section links and phone menu is replaced by the app header (logo, Přihlásit se or the account button, a back button deeper in a tab), which scrolls away with the page, and the floating tab bar, so there is no menu any more and each check moves to the header or the tab bar",
+    "replacement": "e2e/accessibility-keyboard.spec.ts > Given a visitor who uses only the keyboard or a screen reader > when they follow the footer link to the contact section, then the section takes the focus and Tab continues inside it"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/accessibility-keyboard.spec.ts > Given a visitor whose browser shows text twice as large on a computer > when they open the home page with the usual text size, then the header keeps every link in one line",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E V1): the site header with its section links and phone menu is replaced by the app header (logo, Přihlásit se or the account button, a back button deeper in a tab), which scrolls away with the page, and the floating tab bar, so there is no menu any more and each check moves to the header or the tab bar",
+    "replacement": "e2e/accessibility-keyboard.spec.ts > Given a visitor whose browser shows text twice as large on a computer > when they open the About page, then the header and the four tabs stay on screen"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/accessibility-keyboard.spec.ts > Given a visitor whose browser shows text twice as large on a computer > when they open the home page, then the header links that no longer fit move into the menu, which shows every one of them on screen",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E V1): the site header with its section links and phone menu is replaced by the app header (logo, Přihlásit se or the account button, a back button deeper in a tab), which scrolls away with the page, and the floating tab bar, so there is no menu any more and each check moves to the header or the tab bar",
+    "replacement": "e2e/accessibility-keyboard.spec.ts > Given a visitor whose browser shows text twice as large on a computer > when they open the About page, then the header and the four tabs stay on screen"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/accessibility.spec.ts > Given a visitor on a phone who relies on WCAG 2.2 AA > when they open the menu, then its button says so, nothing breaks the rules and Esc closes it",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E V1): the site header with its section links and phone menu is replaced by the app header (logo, Přihlásit se or the account button, a back button deeper in a tab), which scrolls away with the page, and the floating tab bar, so there is no menu any more and each check moves to the header or the tab bar",
+    "replacement": "e2e/accessibility.spec.ts > Given a visitor who relies on WCAG 2.2 AA > when a signed-in donor opens the account sheet on a phone, then the sheet breaks no rule and Esc returns the focus to the account button"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/accessibility.spec.ts > Given a visitor who relies on WCAG 2.2 AA > when an administrator keeps the people of the foundation and the home page shows them, then the section, the page, the editor and the removal confirmation break no rule",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the test moves to the page that now holds the section and names it",
+    "replacement": "e2e/accessibility.spec.ts > Given a visitor who relies on WCAG 2.2 AA > when an administrator keeps the people of the foundation and the About page shows them, then the section, the page, the editor and the removal confirmation break no rule"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/accessibility.spec.ts > Given a visitor who relies on WCAG 2.2 AA > when an administrator sets the About photo and the home page shows it, then the page, its removal confirmation and the section break no rule",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the test moves to the page that now holds the section and names it",
+    "replacement": "e2e/accessibility.spec.ts > Given a visitor who relies on WCAG 2.2 AA > when an administrator sets the About photo and the About page shows it, then the page, its removal confirmation and the section break no rule"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/accessibility.spec.ts > Given a visitor who relies on WCAG 2.2 AA > when the home page shows published news and projects and they open both pages, then nothing breaks the rules",
+    "reason": "Slice 2.23 (plan v3 2.1): the home page no longer lists news and projects and the built-in placeholder cards are gone (the site never claims what it does not have); the Aktuality and Pomáháme tabs list what is published and say so when nothing is",
+    "replacement": "e2e/accessibility.spec.ts > Given a visitor who relies on WCAG 2.2 AA > when published news and projects are listed and they open both pages, then nothing breaks the rules"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/admin-about.spec.ts > Given a visitor and an About section with a photo > when they open the home page, then the section shows the whole photo with its description and caption instead of the placeholder",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the test moves to the page that now holds the section and names it",
+    "replacement": "e2e/admin-about.spec.ts > Given a visitor and an About section with a photo > when they open the About page, then the section shows the whole photo with its description and caption instead of the placeholder"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/admin-people.spec.ts > Given a visitor and people of the foundation kept in the administration > when they open the home page, then \"Kdo fond vede\" shows the cards, the founders note with the signature and the board line instead of the built-in block",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the test moves to the page that now holds the section and names it",
+    "replacement": "e2e/admin-people.spec.ts > Given a visitor and people of the foundation kept in the administration > when they open the About page, then \"Kdo fond vede\" shows the cards, the founders note with the signature and the board line instead of the built-in block"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/app-update.spec.ts > Given a visitor whose page was opened before the server changed its API > when the home page loads, then every API call names the app revision",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the test moves to the page that now holds the section and names it",
+    "replacement": "e2e/app-update.spec.ts > Given a visitor whose page was opened before the server changed its API > when the About page loads, then every API call names the app revision"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/contact-form.spec.ts > Given a signed-in donor who goes back to the home page > when they reach the contact form, then their name and e-mail are filled in and can be changed",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the test moves to the page that now holds the section and names it",
+    "replacement": "e2e/contact-form.spec.ts > Given a signed-in donor who goes back to the About page > when they reach the contact form, then their name and e-mail are filled in and can be changed"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/contact-form.spec.ts > Given a visitor on the home page > on a phone > when they reach the contact section, then the heading, the e-mail address and the address are there to read",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the test moves to the page that now holds the section and names it",
+    "replacement": "e2e/contact-form.spec.ts > Given a visitor on the About page > on a phone > when they reach the contact section, then the heading, the e-mail address and the address are there to read"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/contact-form.spec.ts > Given a visitor on the home page > when the API refuses the e-mail address, then the e-mail field says so and takes the focus",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the test moves to the page that now holds the section and names it",
+    "replacement": "e2e/contact-form.spec.ts > Given a visitor on the About page > when the API refuses the e-mail address, then the e-mail field says so and takes the focus"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/contact-form.spec.ts > Given a visitor on the home page > when the API refuses the message, then the form stays with an explanation",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the test moves to the page that now holds the section and names it",
+    "replacement": "e2e/contact-form.spec.ts > Given a visitor on the About page > when the API refuses the message, then the form stays with an explanation"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/contact-form.spec.ts > Given a visitor on the home page > when they send a contact message, then the site posts it to the API and thanks them",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the test moves to the page that now holds the section and names it",
+    "replacement": "e2e/contact-form.spec.ts > Given a visitor on the About page > when they send a contact message, then the site posts it to the API and thanks them"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/contact-form.spec.ts > Given a visitor on the home page > when they send the form empty, then each field says what is missing and the first one takes the focus",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the test moves to the page that now holds the section and names it",
+    "replacement": "e2e/contact-form.spec.ts > Given a visitor on the About page > when they send the form empty, then each field says what is missing and the first one takes the focus"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/contact-form.spec.ts > Given an accountant on the home page > when they copy the IČO and the IBAN from Údaje pro účetní, then the clipboard holds each as typed into accounting",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the test moves to the page that now holds the section and names it",
+    "replacement": "e2e/contact-form.spec.ts > Given an accountant on the About page > when they copy the IČO and the IBAN from Údaje pro účetní, then the clipboard holds each as typed into accounting"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/content-pages.spec.ts > Given a visitor on the home page > when news and projects are published, then the home page links to their whole lists",
+    "reason": "Slice 2.23 (plan v3 2.1): the home page no longer lists news and projects and the built-in placeholder cards are gone (the site never claims what it does not have); the Aktuality and Pomáháme tabs list what is published and say so when nothing is",
+    "replacement": "e2e/content-pages.spec.ts > Given a visitor on the Aktuality and Pomáháme tabs > when news and projects are published, then the tabs list them and each card leads to its page"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/content-pages.spec.ts > Given a visitor on the home page > when news and projects are published, then the home page shows them and each card leads to its page",
+    "reason": "Slice 2.23 (plan v3 2.1): the home page no longer lists news and projects and the built-in placeholder cards are gone (the site never claims what it does not have); the Aktuality and Pomáháme tabs list what is published and say so when nothing is",
+    "replacement": "e2e/content-pages.spec.ts > Given a visitor on the Aktuality and Pomáháme tabs > when news and projects are published, then the tabs list them and each card leads to its page"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/content-pages.spec.ts > Given a visitor on the home page > when nothing is published yet, then the placeholder cards stay and lead nowhere",
+    "reason": "Slice 2.23 (plan v3 2.1): the home page no longer lists news and projects and the built-in placeholder cards are gone (the site never claims what it does not have); the Aktuality and Pomáháme tabs list what is published and say so when nothing is",
+    "replacement": "e2e/content-pages.spec.ts > Given a visitor on the Aktuality and Pomáháme tabs > when nothing is published yet, then each tab says so and leads back to the home page"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/content-pages.spec.ts > Given a visitor on the home page > when the address is one the article had before, then the article shows under its current address",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the test moves to the page that now holds the section and names it",
+    "replacement": "e2e/content-pages.spec.ts > Given a visitor on the Aktuality and Pomáháme tabs > when the address is one the article had before, then the article shows under its current address"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/content-pages.spec.ts > Given a visitor on the home page > when the address names an article that is not published, then the page says it was not found and keeps the address",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the test moves to the page that now holds the section and names it",
+    "replacement": "e2e/content-pages.spec.ts > Given a visitor on the Aktuality and Pomáháme tabs > when the address names an article that is not published, then the page says it was not found and keeps the address"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/content-pages.spec.ts > Given a visitor reading a news article > when they look at the header, then Aktuality is marked as the current place and leads to the list",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E V1): the site header with its section links and phone menu is replaced by the app header (logo, Přihlásit se or the account button, a back button deeper in a tab), which scrolls away with the page, and the floating tab bar, so there is no menu any more and each check moves to the header or the tab bar",
+    "replacement": "e2e/content-pages.spec.ts > Given a visitor reading a news article > when they look at the tabs, then Aktuality is marked as the current place and leads to the list"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the Přispět section with 1 000 Kč chosen, then nothing is cut off, stacked, covered or too small",
+    "reason": "Slice 2.23: the device steps follow the new shell (the Přispět tab instead of the home section, the account sheet instead of the account menu, the About tab instead of the site menu, which is gone)",
+    "replacement": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the Přispět tab with 1 000 Kč chosen, then nothing is cut off, stacked, covered or too small"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the Přispět section with 1 000 Kč chosen, then nothing is cut off, stacked, covered or too small #2",
+    "reason": "Slice 2.23: the device steps follow the new shell (the Přispět tab instead of the home section, the account sheet instead of the account menu, the About tab instead of the site menu, which is gone)",
+    "replacement": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the Přispět tab with 1 000 Kč chosen, then nothing is cut off, stacked, covered or too small #2"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the Přispět section with 1 000 Kč chosen, then nothing is cut off, stacked, covered or too small #3",
+    "reason": "Slice 2.23: the device steps follow the new shell (the Přispět tab instead of the home section, the account sheet instead of the account menu, the About tab instead of the site menu, which is gone)",
+    "replacement": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the Přispět tab with 1 000 Kč chosen, then nothing is cut off, stacked, covered or too small #3"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the Přispět section with 1 000 Kč chosen, then nothing is cut off, stacked, covered or too small #4",
+    "reason": "Slice 2.23: the device steps follow the new shell (the Přispět tab instead of the home section, the account sheet instead of the account menu, the About tab instead of the site menu, which is gone)",
+    "replacement": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the Přispět tab with 1 000 Kč chosen, then nothing is cut off, stacked, covered or too small #4"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the Přispět section with 1 000 Kč chosen, then nothing is cut off, stacked, covered or too small #5",
+    "reason": "Slice 2.23: the device steps follow the new shell (the Přispět tab instead of the home section, the account sheet instead of the account menu, the About tab instead of the site menu, which is gone)",
+    "replacement": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the Přispět tab with 1 000 Kč chosen, then nothing is cut off, stacked, covered or too small #5"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the Přispět section with 1 000 Kč chosen, then nothing is cut off, stacked, covered or too small #6",
+    "reason": "Slice 2.23: the device steps follow the new shell (the Přispět tab instead of the home section, the account sheet instead of the account menu, the About tab instead of the site menu, which is gone)",
+    "replacement": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the Přispět tab with 1 000 Kč chosen, then nothing is cut off, stacked, covered or too small #6"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the Přispět section with 1 000 Kč chosen, then nothing is cut off, stacked, covered or too small #7",
+    "reason": "Slice 2.23: the device steps follow the new shell (the Přispět tab instead of the home section, the account sheet instead of the account menu, the About tab instead of the site menu, which is gone)",
+    "replacement": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the Přispět tab with 1 000 Kč chosen, then nothing is cut off, stacked, covered or too small #7"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the donor's account menu, then nothing is cut off, stacked, covered or too small",
+    "reason": "Slice 2.23: the device steps follow the new shell (the Přispět tab instead of the home section, the account sheet instead of the account menu, the About tab instead of the site menu, which is gone)",
+    "replacement": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the donor's account sheet, then nothing is cut off, stacked, covered or too small"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the donor's account menu, then nothing is cut off, stacked, covered or too small #2",
+    "reason": "Slice 2.23: the device steps follow the new shell (the Přispět tab instead of the home section, the account sheet instead of the account menu, the About tab instead of the site menu, which is gone)",
+    "replacement": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the donor's account sheet, then nothing is cut off, stacked, covered or too small #2"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the donor's account menu, then nothing is cut off, stacked, covered or too small #3",
+    "reason": "Slice 2.23: the device steps follow the new shell (the Přispět tab instead of the home section, the account sheet instead of the account menu, the About tab instead of the site menu, which is gone)",
+    "replacement": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the donor's account sheet, then nothing is cut off, stacked, covered or too small #3"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the donor's account menu, then nothing is cut off, stacked, covered or too small #4",
+    "reason": "Slice 2.23: the device steps follow the new shell (the Přispět tab instead of the home section, the account sheet instead of the account menu, the About tab instead of the site menu, which is gone)",
+    "replacement": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the donor's account sheet, then nothing is cut off, stacked, covered or too small #4"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the donor's account menu, then nothing is cut off, stacked, covered or too small #5",
+    "reason": "Slice 2.23: the device steps follow the new shell (the Přispět tab instead of the home section, the account sheet instead of the account menu, the About tab instead of the site menu, which is gone)",
+    "replacement": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the donor's account sheet, then nothing is cut off, stacked, covered or too small #5"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the donor's account menu, then nothing is cut off, stacked, covered or too small #6",
+    "reason": "Slice 2.23: the device steps follow the new shell (the Přispět tab instead of the home section, the account sheet instead of the account menu, the About tab instead of the site menu, which is gone)",
+    "replacement": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the donor's account sheet, then nothing is cut off, stacked, covered or too small #6"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the donor's account menu, then nothing is cut off, stacked, covered or too small #7",
+    "reason": "Slice 2.23: the device steps follow the new shell (the Přispět tab instead of the home section, the account sheet instead of the account menu, the About tab instead of the site menu, which is gone)",
+    "replacement": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the donor's account sheet, then nothing is cut off, stacked, covered or too small #7"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the site menu, then nothing is cut off, stacked, covered or too small",
+    "reason": "Slice 2.23: the device steps follow the new shell (the Přispět tab instead of the home section, the account sheet instead of the account menu, the About tab instead of the site menu, which is gone)",
+    "replacement": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the About tab, then nothing is cut off, stacked, covered or too small"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the site menu, then nothing is cut off, stacked, covered or too small #2",
+    "reason": "Slice 2.23: the device steps follow the new shell (the Přispět tab instead of the home section, the account sheet instead of the account menu, the About tab instead of the site menu, which is gone)",
+    "replacement": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the About tab, then nothing is cut off, stacked, covered or too small #2"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the site menu, then nothing is cut off, stacked, covered or too small #3",
+    "reason": "Slice 2.23: the device steps follow the new shell (the Přispět tab instead of the home section, the account sheet instead of the account menu, the About tab instead of the site menu, which is gone)",
+    "replacement": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the About tab, then nothing is cut off, stacked, covered or too small #3"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the site menu, then nothing is cut off, stacked, covered or too small #4",
+    "reason": "Slice 2.23: the device steps follow the new shell (the Přispět tab instead of the home section, the account sheet instead of the account menu, the About tab instead of the site menu, which is gone)",
+    "replacement": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the About tab, then nothing is cut off, stacked, covered or too small #4"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the site menu, then nothing is cut off, stacked, covered or too small #5",
+    "reason": "Slice 2.23: the device steps follow the new shell (the Přispět tab instead of the home section, the account sheet instead of the account menu, the About tab instead of the site menu, which is gone)",
+    "replacement": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the About tab, then nothing is cut off, stacked, covered or too small #5"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the site menu, then nothing is cut off, stacked, covered or too small #6",
+    "reason": "Slice 2.23: the device steps follow the new shell (the Přispět tab instead of the home section, the account sheet instead of the account menu, the About tab instead of the site menu, which is gone)",
+    "replacement": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the About tab, then nothing is cut off, stacked, covered or too small #6"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the site menu, then nothing is cut off, stacked, covered or too small #7",
+    "reason": "Slice 2.23: the device steps follow the new shell (the Přispět tab instead of the home section, the account sheet instead of the account menu, the About tab instead of the site menu, which is gone)",
+    "replacement": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the About tab, then nothing is cut off, stacked, covered or too small #7"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/donate-qr.spec.ts > Given a visitor on the home page > on a phone > with the clipboard allowed > when they copy the amount, then the clipboard holds it and the bank details come before the QR code",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the test moves to the page that now holds the section and names it",
+    "replacement": "e2e/donate-qr.spec.ts > Given a visitor on the Přispět page > on a phone > with the clipboard allowed > when they copy the amount, then the clipboard holds it and the bank details come before the QR code"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/donate-qr.spec.ts > Given a visitor on the home page > on a phone > with the clipboard allowed > when they copy the amount, then the clipboard holds it and the bank details come before the QR code #2",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the test moves to the page that now holds the section and names it",
+    "replacement": "e2e/donate-qr.spec.ts > Given a visitor on the Přispět page > on a phone > with the clipboard allowed > when they copy the amount, then the clipboard holds it and the bank details come before the QR code #2"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/donate-qr.spec.ts > Given a visitor on the home page > when they Tab past the amounts, then the line before paying, the copy buttons and then the QR follow in the order they see",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the test moves to the page that now holds the section and names it",
+    "replacement": "e2e/donate-qr.spec.ts > Given a visitor on the Přispět page > when they Tab past the amounts, then the line before paying, the copy buttons and then the QR follow in the order they see"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/donate-qr.spec.ts > Given a visitor on the home page > when they Tab past the amounts, then the line before paying, the copy buttons and then the QR follow in the order they see #2",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the test moves to the page that now holds the section and names it",
+    "replacement": "e2e/donate-qr.spec.ts > Given a visitor on the Přispět page > when they Tab past the amounts, then the line before paying, the copy buttons and then the QR follow in the order they see #2"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/donate-qr.spec.ts > Given a visitor on the home page > when they choose 1 000 Kč and back 500 Kč, then the browser draws each QR payment from one answer of payment details and never asks for a server QR",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the test moves to the page that now holds the section and names it",
+    "replacement": "e2e/donate-qr.spec.ts > Given a visitor on the Přispět page > when they choose 1 000 Kč and back 500 Kč, then the browser draws each QR payment from one answer of payment details and never asks for a server QR"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/donate-qr.spec.ts > Given a visitor on the home page > when they choose 1 000 Kč and back 500 Kč, then the browser draws each QR payment from one answer of payment details and never asks for a server QR #2",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the test moves to the page that now holds the section and names it",
+    "replacement": "e2e/donate-qr.spec.ts > Given a visitor on the Přispět page > when they choose 1 000 Kč and back 500 Kč, then the browser draws each QR payment from one answer of payment details and never asks for a server QR #2"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/donate-qr.spec.ts > Given a visitor on the home page > when they enter their own amount, open the privacy policy and come back to Přispět, then the same amount stays chosen in the field, the bank details and the QR",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the test moves to the page that now holds the section and names it",
+    "replacement": "e2e/donate-qr.spec.ts > Given a visitor on the Přispět page > when they enter their own amount, open the privacy policy and come back to Přispět, then the same amount stays chosen in the field, the bank details and the QR"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/donate-qr.spec.ts > Given a visitor on the home page > when they enter their own amount, open the privacy policy and come back to Přispět, then the same amount stays chosen in the field, the bank details and the QR #2",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the test moves to the page that now holds the section and names it",
+    "replacement": "e2e/donate-qr.spec.ts > Given a visitor on the Přispět page > when they enter their own amount, open the privacy policy and come back to Přispět, then the same amount stays chosen in the field, the bank details and the QR #2"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/donate-qr.spec.ts > Given a visitor on the home page > when they save the QR code, then a PNG image of it downloads",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the test moves to the page that now holds the section and names it",
+    "replacement": "e2e/donate-qr.spec.ts > Given a visitor on the Přispět page > when they save the QR code, then a PNG image of it downloads"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/donate-qr.spec.ts > Given a visitor on the home page > when they save the QR code, then a PNG image of it downloads #2",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the test moves to the page that now holds the section and names it",
+    "replacement": "e2e/donate-qr.spec.ts > Given a visitor on the Přispět page > when they save the QR code, then a PNG image of it downloads #2"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/donate-qr.spec.ts > Given a visitor on the home page > when they type an amount, then its QR payment is drawn and announced once they stop typing",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the test moves to the page that now holds the section and names it",
+    "replacement": "e2e/donate-qr.spec.ts > Given a visitor on the Přispět page > when they type an amount, then its QR payment is drawn and announced once they stop typing"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/donate-qr.spec.ts > Given a visitor on the home page > when they type an amount, then its QR payment is drawn and announced once they stop typing #2",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the test moves to the page that now holds the section and names it",
+    "replacement": "e2e/donate-qr.spec.ts > Given a visitor on the Přispět page > when they type an amount, then its QR payment is drawn and announced once they stop typing #2"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/donor-account.spec.ts > Given a visitor who wants a donor account > when they come back with a remembered session to the home page, then the QR payment carries their variable symbol",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the test moves to the page that now holds the section and names it",
+    "replacement": "e2e/donor-account.spec.ts > Given a visitor who wants a donor account > when they come back with a remembered session to the Přispět page, then the QR payment carries their variable symbol"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/donor-account.spec.ts > Given a visitor who wants a donor account > when they sign in from the home page, then the page stays, the header offers their overview and nothing stays highlighted",
+    "reason": "Slice 2.23: the donor top bar and the account menu give way to the app header with the account button and the account sheet",
+    "replacement": "e2e/donor-account.spec.ts > Given a visitor who wants a donor account > when they sign in from the home page, then the page stays, the header offers their account, the focus lands on it and no ring shows after a click"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/home-stats.spec.ts > Given a visitor on the home page > when the figures have not been seen yet, then a screen reader still reads the final ones",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the test moves to the page that now holds the section and names it",
+    "replacement": "e2e/home-stats.spec.ts > Given a visitor on the About page > when the figures have not been seen yet, then a screen reader still reads the final ones"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/home-stats.spec.ts > Given a visitor on the home page > when the figures scroll into view, then they count up from zero to their values",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the test moves to the page that now holds the section and names it",
+    "replacement": "e2e/home-stats.spec.ts > Given a visitor on the About page > when the figures scroll into view, then they count up from zero to their values"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/privacy-policy.spec.ts > Given a visitor at the bottom of the home page > when they click the privacy policy link in the footer, then the policy opens scrolled to the top",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the test moves to the page that now holds the section and names it",
+    "replacement": "e2e/privacy-policy.spec.ts > Given a visitor at the bottom of the About page > when they click the privacy policy link in the footer, then the policy opens scrolled to the top"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/donate-qr.spec.ts > Given a visitor on the home page > on a phone > when the bank details show, then the QR code waits folded under them until the visitor pays from another device",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the phone journeys of 2.23c move to the Přispět tab and name it",
+    "replacement": "e2e/donate-qr.spec.ts > Given a visitor on the Přispět page > on a phone > when the bank details show, then the QR code waits folded under them until the visitor pays from another device"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/donate-qr.spec.ts > Given a visitor on the home page > on a phone > when the bank details show, then the QR code waits folded under them until the visitor pays from another device #2",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the phone journeys of 2.23c move to the Přispět tab and name it",
+    "replacement": "e2e/donate-qr.spec.ts > Given a visitor on the Přispět page > on a phone > when the bank details show, then the QR code waits folded under them until the visitor pays from another device #2"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/donate-qr.spec.ts > Given a visitor on the home page > on a phone > when the payment details failed and the visitor retries, then the focus waits on the bank buttons and then rests on Otevřít v aplikaci banky",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the phone journeys of 2.23c move to the Přispět tab and name it",
+    "replacement": "e2e/donate-qr.spec.ts > Given a visitor on the Přispět page > on a phone > when the payment details failed and the visitor retries, then the focus waits on the bank buttons and then rests on Otevřít v aplikaci banky"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/donate-qr.spec.ts > Given a visitor on the home page > on a phone > when the payment details failed and the visitor retries, then the focus waits on the bank buttons and then rests on Otevřít v aplikaci banky #2",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the phone journeys of 2.23c move to the Přispět tab and name it",
+    "replacement": "e2e/donate-qr.spec.ts > Given a visitor on the Přispět page > on a phone > when the payment details failed and the visitor retries, then the focus waits on the bank buttons and then rests on Otevřít v aplikaci banky #2"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/donate-qr.spec.ts > Given a visitor on the home page > on a phone > when the browser cannot hand the payment file to an app, then Otevřít v aplikaci banky downloads platba.spayd with the payment of the chosen amount",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the phone journeys of 2.23c move to the Přispět tab and name it",
+    "replacement": "e2e/donate-qr.spec.ts > Given a visitor on the Přispět page > on a phone > when the browser cannot hand the payment file to an app, then Otevřít v aplikaci banky downloads platba.spayd with the payment of the chosen amount"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/donate-qr.spec.ts > Given a visitor on the home page > on a phone > when the browser cannot hand the payment file to an app, then Otevřít v aplikaci banky downloads platba.spayd with the payment of the chosen amount #2",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the phone journeys of 2.23c move to the Přispět tab and name it",
+    "replacement": "e2e/donate-qr.spec.ts > Given a visitor on the Přispět page > on a phone > when the browser cannot hand the payment file to an app, then Otevřít v aplikaci banky downloads platba.spayd with the payment of the chosen amount #2"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/donate-qr.spec.ts > Given a visitor on the home page > on a phone > on a phone that shares files > when the visitor taps Otevřít v aplikaci banky and closes the offer, then the phone was offered platba.spayd and the page says how to pay without the bank app",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the phone journeys of 2.23c move to the Přispět tab and name it",
+    "replacement": "e2e/donate-qr.spec.ts > Given a visitor on the Přispět page > on a phone > on a phone that shares files > when the visitor taps Otevřít v aplikaci banky and closes the offer, then the phone was offered platba.spayd and the page says how to pay without the bank app"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/donate-qr.spec.ts > Given a visitor on the home page > on a phone > on a phone that shares files > when the visitor taps Otevřít v aplikaci banky and closes the offer, then the phone was offered platba.spayd and the page says how to pay without the bank app #2",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the phone journeys of 2.23c move to the Přispět tab and name it",
+    "replacement": "e2e/donate-qr.spec.ts > Given a visitor on the Přispět page > on a phone > on a phone that shares files > when the visitor taps Otevřít v aplikaci banky and closes the offer, then the phone was offered platba.spayd and the page says how to pay without the bank app #2"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/donate-qr.spec.ts > Given a visitor on the home page > on a phone > on a phone that shares files > when the visitor taps Poslat QR jako obrázek, then the phone is offered the PNG of the QR",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the phone journeys of 2.23c move to the Přispět tab and name it",
+    "replacement": "e2e/donate-qr.spec.ts > Given a visitor on the Přispět page > on a phone > on a phone that shares files > when the visitor taps Poslat QR jako obrázek, then the phone is offered the PNG of the QR"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/donate-qr.spec.ts > Given a visitor on the home page > on a phone > on a phone that shares files > when the visitor taps Poslat QR jako obrázek, then the phone is offered the PNG of the QR #2",
+    "reason": "Slice 2.23 (plan v3 2.1, variant E, Jakub 2026-10-31): the one-page home splits into the landing page and the tabs O nás, Aktuality, Pomáháme and Přispět, so the phone journeys of 2.23c move to the Přispět tab and name it",
+    "replacement": "e2e/donate-qr.spec.ts > Given a visitor on the Přispět page > on a phone > on a phone that shares files > when the visitor taps Poslat QR jako obrázek, then the phone is offered the PNG of the QR #2"
+  }
+]

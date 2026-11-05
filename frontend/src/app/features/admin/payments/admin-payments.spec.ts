@@ -303,6 +303,45 @@ describe('Given an administrator on the bank payments page', () => {
       expect(text('.admin-tabs')).toBe('Čekají na přiřazení (2) Přiřazené');
     });
 
+    it('then an unpairing names the version read and, when the payment changed meanwhile, the sheet offers to read it again', async () => {
+      await listResponds(
+        paymentList([unpairedPayment({ donation: pairedDonation() })], {
+          availableYears: [2026],
+        }),
+        PAIRED_PAGE,
+      );
+      button('Zrušit přiřazení').click();
+      await settle();
+      element('.confirm .ui-button--danger').click();
+      await settle();
+
+      const request = http.expectOne(`/api/admin/donations/payments/${PAYMENT_ID}/unpair`);
+      expect(request.request.headers.get('If-Match')).toBe(`"${unpairedPayment().version}"`);
+      const refused = problem(
+        409,
+        'donations/changed-meanwhile',
+        'Mezitím se to změnilo',
+        'Platbu mezitím změnil někdo jiný.',
+      );
+      request.flush(
+        { ...refused.body, version: '1b2c3d4e5f607182', current: { id: PAYMENT_ID } },
+        refused.options,
+      );
+      await settle();
+
+      expect(document.querySelector('dialog')?.textContent).toContain(
+        'automatické párování plateb z banky',
+      );
+      button('Načíst aktuální stav').click();
+      await settle();
+      await listResponds(paymentList([], { availableYears: [] }), PAIRED_PAGE);
+
+      expect(document.querySelector('dialog')).toBeNull();
+      expect(text('[role="status"]:not(:empty)')).toBe(
+        'Načetli jsme aktuální stav plateb. Zkontrolujte platbu a rozhodněte znovu.',
+      );
+    });
+
     it('then a refused unpairing shows the backend reason as an alert', async () => {
       await listResponds(
         paymentList([unpairedPayment({ donation: pairedDonation() })], {
@@ -572,6 +611,42 @@ describe('Given an administrator on the bank payments page', () => {
       expect(dialog().querySelector('[role="alert"]:not(:empty)')?.textContent?.trim()).toBe(
         'Platba už je přiřazená. Obnovte prosím seznam.',
       );
+    });
+
+    it('when someone else changed the payment meanwhile, then the pairing names the version read, the sheet says so and reloading reads the list again', async () => {
+      (dialog().querySelector('input[type="radio"]') as HTMLInputElement).click();
+      await settle();
+      button('Přiřadit dárci Jana Nováková').click();
+      await settle();
+      const pairing = http.expectOne(`/api/admin/donations/payments/${PAYMENT_ID}/pair`);
+      expect(pairing.request.headers.get('If-Match')).toBe(`"${unpairedPayment().version}"`);
+      const refused = problem(
+        409,
+        'donations/changed-meanwhile',
+        'Mezitím se to změnilo',
+        'Platbu mezitím změnil někdo jiný.',
+      );
+      pairing.flush(
+        { ...refused.body, version: '1b2c3d4e5f607182', current: { id: PAYMENT_ID } },
+        refused.options,
+      );
+      await settle();
+
+      const sheet = document.querySelector('dialog');
+      expect(sheet?.querySelector('h2')?.textContent?.trim()).toBe('Mezitím se to změnilo');
+      expect(sheet?.textContent).toContain('Vaši změnu jsme proto neprovedli');
+      expect(sheet?.querySelector('.pair-result')).toBeNull();
+
+      button('Načíst aktuální stav').click();
+      await settle();
+      await listResponds(paymentList([]));
+
+      expect(document.querySelector('dialog')).toBeNull();
+      expect(text('[role="alert"]:not(:empty)')).toBe('');
+      expect(text('[role="status"]:not(:empty)')).toBe(
+        'Načetli jsme aktuální stav plateb. Zkontrolujte platbu a rozhodněte znovu.',
+      );
+      expect(document.activeElement).toBe(element('app-live-notice'));
     });
 
     it('then two donors of the same name are told apart by their e-mails', async () => {

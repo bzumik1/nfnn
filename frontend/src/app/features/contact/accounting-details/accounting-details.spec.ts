@@ -99,15 +99,16 @@ describe('Given the details an accountant needs in the contact section', () => {
   describe('when the foundation account has not arrived', () => {
     beforeEach(show);
 
-    it('then the account row leads to Přispět instead of a number, and the IBAN row waits', () => {
+    it('then it asks for the account itself, and until it comes the account row leads to Přispět instead of a number and the IBAN row waits', () => {
       const account = Array.from(root().querySelectorAll('dt')).find(
         (term) => text(term) === 'Číslo účtu',
       )!;
       const link = account.nextElementSibling!.querySelector('a')!;
 
       expect(text(link)).toBe('Najdete ho v sekci Přispět');
-      expect(link.getAttribute('href')).toBe('/#prispet');
+      expect(link.getAttribute('href')).toBe('/prispet');
       expect(rows().map(([label]) => label)).not.toContain('IBAN');
+      http.expectOne('/api/donations/payment-details');
     });
 
     it('and it arrives later, then the number and the IBAN appear', async () => {

@@ -442,6 +442,7 @@ const adminAnswers: Record<string, unknown> = {
       sendHour: 7,
       sections: { donors: true, donations: true, unpairedPayments: true, bankImport: true },
       changedAt: null,
+      version: '0d7e5b2c84a1f936',
     },
     sentReports: [{ month: '2026-09', sentAt: '2026-10-01T05:00:12Z' }],
     nextReport: { month: '2026-10', dueOn: '2026-11-01' },

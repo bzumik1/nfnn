@@ -15,6 +15,7 @@ import cz.novanadeje.app.content.domain.people.PersonId;
 import cz.novanadeje.app.content.domain.people.PersonRepository;
 import cz.novanadeje.app.content.domain.Slug;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -121,6 +122,17 @@ class JpaNewsArticleRepositoryTest {
         flushAndClear();
 
         assertThat(news.findById(article.id())).hasValueSatisfying(found -> assertThat(found.content().signer()).isEmpty());
+    }
+
+    @Test
+    @DisplayName("Given an article saved, when it is read for a change, then it comes back whole with its row locked, and an unknown id finds nothing")
+    void should_find_and_lock_the_row_when_read_for_update_given_an_article_saved() {
+        NewsArticle stored = save(article("zamcena", NOW), Optional.of(LocalDate.parse("2026-10-20")));
+        flushAndClear();
+
+        assertThat(news.findByIdForUpdate(stored.id())).contains(stored);
+        assertThat(entityManager.getLockMode(entityManager.find(NewsArticleJpaEntity.class, stored.id().value()))).isEqualTo(LockModeType.PESSIMISTIC_WRITE);
+        assertThat(news.findByIdForUpdate(NewsArticleId.newId(NOW))).isEmpty();
     }
 
     private NewsArticle save(NewsArticle article, Optional<LocalDate> publishedOn) {

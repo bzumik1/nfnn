@@ -20,8 +20,11 @@ import {
 import { routes } from './app.routes';
 import { authInterceptor } from './core/auth/auth-interceptor';
 import { AuthStore } from './core/auth/auth-store';
+import { SESSION_DEVICE } from './core/auth/session-device';
 import { ReportingErrorHandler } from './core/errors/reporting-error-handler';
 import { ChunkLoadRecovery } from './core/reload/chunk-load-recovery';
+import { BackTarget } from './core/navigation/back-target';
+import { TabMemory } from './core/navigation/tab-memory';
 import { CanonicalLink } from './core/seo/canonical-link';
 import { AppInstall } from './core/install/app-install';
 import { AlertNotificationClicks } from './core/push/alert-notification-clicks';
@@ -32,6 +35,7 @@ import { serviceWorkerBypassInterceptor } from './core/updates/service-worker-by
 import { versionInterceptor } from './core/version/version-interceptor';
 import { pagePinchLockAtStart } from './core/zoom/page-pinch-lock';
 import { systemTextSizeAtStart } from './core/zoom/system-text-size';
+import { DeviceCopies } from './device-copies';
 import { DialogHistory } from './shared/ui/dialog/dialog-history';
 
 const scrollOptions: InMemoryScrollingOptions = {
@@ -59,8 +63,16 @@ export const dialogHistoryAtStart: EnvironmentProviders = provideAppInitializer(
   () => void inject(DialogHistory),
 );
 
+export const deviceCopies: Provider = { provide: SESSION_DEVICE, useExisting: DeviceCopies };
+
+export const navigationAtStart: EnvironmentProviders = provideAppInitializer(() => {
+  inject(BackTarget);
+  inject(TabMemory);
+});
+
 export const appConfig: ApplicationConfig = {
   providers: [
+    deviceCopies,
     provideBrowserGlobalErrorListeners(),
     appErrorHandler,
     provideRouter(routes, inMemoryScrolling, chunkLoadRecoveryFeature),
@@ -79,5 +91,6 @@ export const appConfig: ApplicationConfig = {
     dialogHistoryAtStart,
     pagePinchLockAtStart,
     systemTextSizeAtStart,
+    navigationAtStart,
   ],
 };

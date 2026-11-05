@@ -72,12 +72,13 @@ export class DialogHistory {
     this.settle();
   }
 
-  handOver(url: string): void {
+  handOver(url: string): boolean {
     const owned = this.owned;
     this.release();
     if (owned > 0) {
       this.location.replaceState(url);
     }
+    return owned > 0;
   }
 
   release(): void {

@@ -2,7 +2,7 @@
   <div class="two-col ui-container">
     <div class="about-text">
       <p class="ui-eyebrow" i18n="@@home.about.eyebrow">O nás</p>
-      <h2 class="title" i18n="@@home.about.title">Vznik a poslání</h2>
+      <h1 class="title" i18n="@@home.about.title">Vznik a poslání</h1>
       <p class="paragraph" i18n="@@home.about.p3">
         Nejsme velká organizace, ale snažíme se řešit přímou a účinnou pomoc konkrétním dětem –
         zdravotní a kompenzační pomůcky, přístroje, které jim umožňují další rozvoj v běžném životě
@@ -17,9 +17,7 @@
         5. září 2005. Dne 28. října 2005 byl zapsán do nadačního rejstříku vedeného Krajským soudem
         v Ústí nad Labem.
       </p>
-      <a class="link-arrow" routerLink="/" fragment="projekty" i18n="@@home.about.link"
-        >Kde pomáháme →</a
-      >
+      <a class="link-arrow" routerLink="/projekty" i18n="@@home.about.link">Kde pomáháme →</a>
     </div>
     @if (photo(); as photo) {
       <figure class="about-figure" [style.--about-photo-ratio]="photo.width / photo.height">

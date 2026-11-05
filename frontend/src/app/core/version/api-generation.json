@@ -1,5 +1,5 @@
 {
-  "generation": 1,
+  "generation": 2,
   "postsAcrossGenerations": [
     "/api/donors/auth/refresh",
     "/api/donors/auth/logout",

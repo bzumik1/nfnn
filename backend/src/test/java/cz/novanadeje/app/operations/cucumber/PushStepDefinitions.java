@@ -31,6 +31,7 @@ import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.HexFormat;
@@ -179,6 +180,25 @@ public class PushStepDefinitions {
     public void turnsPushAlertsOffForOnTheDevice(String alias, String owner, String device) {
         sessions.actAs(alias);
         api.delete(SUBSCRIPTIONS + "/" + device(owner, device).subscriptionId());
+    }
+
+    @When("{string} signs out the device {string} from the device {string}")
+    public void signsOutTheDeviceFromTheDevice(String alias, String device, String from) {
+        actOnDevice(alias, device(alias, from).deviceId());
+        api.delete("/api/donors/me/devices/" + device(alias, device).deviceId());
+    }
+
+    @When("{string} signs out every other device from the device {string}")
+    public void signsOutEveryOtherDeviceFromTheDevice(String alias, String from) {
+        actOnDevice(alias, device(alias, from).deviceId());
+        api.delete("/api/donors/me/devices");
+    }
+
+    @Then("{string} has push subscriptions on the devices {string}")
+    public void hasPushSubscriptionsOnTheDevices(String alias, String names) {
+        List<UUID> expected = Arrays.stream(names.split(",\\s*")).map(name -> device(alias, name).deviceId()).toList();
+        assertThat(jdbc.sql("select device_id from operations_push_subscription where administrator_id = ?").param(donors.idOf(alias))
+                .query(UUID.class).list()).containsExactlyInAnyOrderElementsOf(expected);
     }
 
     @Then("the push settings carry the server's public key")

@@ -143,9 +143,13 @@ export function asRecord(value: unknown): Record<string, unknown> {
 }
 
 const IN_BROWSER_ONLY = '-in-browser-only';
+const CHANGED_MEANWHILE = '/changed-meanwhile';
 
 export function describeProblem(problem: BackendProblem): string {
-  const { status, type, title, detail, errors } = problem.problem;
+  const { status, type, title, detail, errors, version, current } = problem.problem;
+  if (status === 409 && type.endsWith(CHANGED_MEANWHILE)) {
+    return `The administration refused the request (${status} ${type}): ${title}${detail ? ` – ${detail}` : ''} Nothing was changed. The version stored now is ${version ?? 'unknown'} and the record is now ${asText(current ?? null)}; decide again from it, and pass that version as expectedVersion to make the change over it.`;
+  }
   const hint =
     status === 403 && type.endsWith(IN_BROWSER_ONLY)
       ? ' This is done only on the web at /sprava, by an administrator signed in there.'

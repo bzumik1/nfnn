@@ -60,38 +60,38 @@ public class AdminDonorAccountsStepDefinitions {
 
     @When("{string} turns off the pairing from bank account {string} of {string}")
     public void turnsOffThePairingFromBankAccountOf(String alias, String accountNumber, String donorAlias) {
-        UUID link = linkOf(alias, donorAlias, accountNumber, item -> !item.get("status").asString().equals("DISCONNECTED"));
-        api.post(accountPath(donorAlias, link) + "/disconnect", Map.of());
+        JsonNode link = linkOf(alias, donorAlias, accountNumber, item -> !item.get("status").asString().equals("DISCONNECTED"));
+        api.post(accountPath(donorAlias, idOf(link)) + "/disconnect", Map.of(), ApiClient.ifMatch(link.get("version").asString()));
     }
 
     @When("{string} turns on the pairing from bank account {string} of {string}")
     public void turnsOnThePairingFromBankAccountOf(String alias, String accountNumber, String donorAlias) {
-        UUID link = linkOf(alias, donorAlias, accountNumber, item -> item.get("status").asString().equals("DISCONNECTED"));
-        api.post(accountPath(donorAlias, link) + "/reconnect", Map.of());
+        JsonNode link = linkOf(alias, donorAlias, accountNumber, item -> item.get("status").asString().equals("DISCONNECTED"));
+        api.post(accountPath(donorAlias, idOf(link)) + "/reconnect", Map.of(), ApiClient.ifMatch(link.get("version").asString()));
     }
 
     @When("{string} turns off the pairing from the disconnected bank account {string} of {string}")
     public void turnsOffThePairingFromTheDisconnectedBankAccountOf(String alias, String accountNumber, String donorAlias) {
-        UUID link = linkOf(alias, donorAlias, accountNumber, item -> item.get("status").asString().equals("DISCONNECTED"));
-        api.post(accountPath(donorAlias, link) + "/disconnect", Map.of());
+        JsonNode link = linkOf(alias, donorAlias, accountNumber, item -> item.get("status").asString().equals("DISCONNECTED"));
+        api.post(accountPath(donorAlias, idOf(link)) + "/disconnect", Map.of(), ApiClient.ifMatch(link.get("version").asString()));
     }
 
     @When("{string} turns off the pairing from an unknown bank account of {string}")
     public void turnsOffThePairingFromAnUnknownBankAccountOf(String alias, String donorAlias) {
         sessions.actAs(alias);
-        api.post(accountPath(donorAlias, UNKNOWN) + "/disconnect", Map.of());
+        api.post(accountPath(donorAlias, UNKNOWN) + "/disconnect", Map.of(), ApiClient.ifMatch(DonationRowVersions.MATCHING_NOTHING));
     }
 
     @When("{string} removes bank account {string} of {string}")
     public void removesBankAccountOf(String alias, String accountNumber, String donorAlias) {
-        UUID link = linkOf(alias, donorAlias, accountNumber, item -> true);
-        api.delete(accountPath(donorAlias, link));
+        JsonNode link = linkOf(alias, donorAlias, accountNumber, item -> true);
+        api.delete(accountPath(donorAlias, idOf(link)), ApiClient.ifMatch(link.get("version").asString()));
     }
 
     @When("{string} removes an unknown bank account of {string}")
     public void removesAnUnknownBankAccountOf(String alias, String donorAlias) {
         sessions.actAs(alias);
-        api.delete(accountPath(donorAlias, UNKNOWN));
+        api.delete(accountPath(donorAlias, UNKNOWN), ApiClient.ifMatch(DonationRowVersions.MATCHING_NOTHING));
     }
 
     @Then("the donations card names {string} with the variable symbol of {string}")
@@ -165,12 +165,15 @@ public class AdminDonorAccountsStepDefinitions {
                 .noneMatch(claim -> claim.symbol().equals(new VariableSymbol(symbol)));
     }
 
-    private UUID linkOf(String alias, String donorAlias, String accountNumber, Predicate<JsonNode> condition) {
+    private static UUID idOf(JsonNode link) {
+        return UUID.fromString(link.get("id").asString());
+    }
+
+    private JsonNode linkOf(String alias, String donorAlias, String accountNumber, Predicate<JsonNode> condition) {
         opensTheDonationsOf(alias, donorAlias);
         return bankAccounts().stream()
                 .filter(item -> item.get("accountNumber").asString().equals(accountNumber))
                 .filter(condition)
-                .map(item -> UUID.fromString(item.get("id").asString()))
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("\"" + donorAlias + "\" has no such bank account " + accountNumber + " in "
                         + api.lastResponse().getBody()));

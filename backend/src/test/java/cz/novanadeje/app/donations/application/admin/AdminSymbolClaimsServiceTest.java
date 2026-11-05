@@ -1,5 +1,10 @@
 package cz.novanadeje.app.donations.application.admin;
 
+import cz.novanadeje.app.shared.infrastructure.json.RowVersionsFixture;
+import cz.novanadeje.app.shared.application.version.ExpectedVersion;
+import cz.novanadeje.app.donations.application.sync.AdminDonationsRows;
+import cz.novanadeje.app.donations.application.sync.AdminSyncRows.SymbolClaimRow;
+import cz.novanadeje.app.donations.domain.ChangedMeanwhile;
 import cz.novanadeje.app.donations.application.pairing.PairingLock;
 import cz.novanadeje.app.donations.domain.bank.BankPayment;
 import cz.novanadeje.app.donations.domain.bank.SenderAccount;
@@ -80,7 +85,7 @@ class AdminSymbolClaimsServiceTest {
     private final PairingLock lock = mock(PairingLock.class);
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
     private final AdminSymbolClaimsService service = new AdminSymbolClaimsService(claims, donations, donorRecords, receipts, lock, events,
-            Clock.fixed(NOW, ZoneOffset.UTC));
+            new AdminDonationsRows(RowVersionsFixture.canonical(), donations, donorRecords), Clock.fixed(NOW, ZoneOffset.UTC));
 
     @BeforeEach
     void twoClaimsAreStored() {
@@ -115,7 +120,7 @@ class AdminSymbolClaimsServiceTest {
     void should_delete_donations_and_decline_when_reversed_given_uncovered_confirmed_claim() {
         when(receipts.existsYearlyIssuedSince(any(), any(), any())).thenReturn(false);
 
-        service.reverse(ADMIN, confirmed.id());
+        service.reverse(ADMIN, confirmed.id(), ExpectedVersion.none());
 
         InOrder order = inOrder(lock, receipts, donations, claims, events);
         order.verify(lock).acquire();
@@ -144,7 +149,7 @@ class AdminSymbolClaimsServiceTest {
     void should_refuse_when_reversed_given_single_receipt_of_claimed_donation() {
         when(receipts.findDonationsWithReceipt(List.of(marchDonation.id(), septemberDonation.id()))).thenReturn(Set.of(septemberDonation.id()));
 
-        assertThatThrownBy(() -> service.reverse(ADMIN, confirmed.id())).isInstanceOf(SymbolClaimHasReceipt.class);
+        assertThatThrownBy(() -> service.reverse(ADMIN, confirmed.id(), ExpectedVersion.none())).isInstanceOf(SymbolClaimHasReceipt.class);
 
         verify(donations, never()).delete(any());
         verify(claims, never()).save(any());
@@ -157,7 +162,7 @@ class AdminSymbolClaimsServiceTest {
         when(receipts.existsYearlyIssuedSince(janaId, Year.of(2025), ANSWERED)).thenReturn(false);
         when(receipts.existsYearlyIssuedSince(janaId, Year.of(2026), ANSWERED)).thenReturn(true);
 
-        assertThatThrownBy(() -> service.reverse(ADMIN, confirmed.id())).isInstanceOf(SymbolClaimHasReceipt.class);
+        assertThatThrownBy(() -> service.reverse(ADMIN, confirmed.id(), ExpectedVersion.none())).isInstanceOf(SymbolClaimHasReceipt.class);
 
         verify(donations, never()).delete(any());
         verify(claims, never()).save(any());
@@ -166,7 +171,7 @@ class AdminSymbolClaimsServiceTest {
     @Test
     @DisplayName("Given a declined claim, when reversed, then it is refused because only a confirmed answer can be reversed")
     void should_refuse_when_reversed_given_declined_claim() {
-        assertThatThrownBy(() -> service.reverse(ADMIN, declined.id())).isInstanceOf(SymbolClaimNotConfirmed.class);
+        assertThatThrownBy(() -> service.reverse(ADMIN, declined.id(), ExpectedVersion.none())).isInstanceOf(SymbolClaimNotConfirmed.class);
 
         verify(claims, never()).save(any());
         verify(events, never()).publishEvent(any());
@@ -178,14 +183,14 @@ class AdminSymbolClaimsServiceTest {
         SymbolClaimId unknown = SymbolClaimId.newId(NOW);
         when(claims.findById(unknown)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.reverse(ADMIN, unknown)).isInstanceOf(SymbolClaimNotFound.class);
-        assertThatThrownBy(() -> service.reset(ADMIN, unknown)).isInstanceOf(SymbolClaimNotFound.class);
+        assertThatThrownBy(() -> service.reverse(ADMIN, unknown, ExpectedVersion.none())).isInstanceOf(SymbolClaimNotFound.class);
+        assertThatThrownBy(() -> service.reset(ADMIN, unknown, ExpectedVersion.none())).isInstanceOf(SymbolClaimNotFound.class);
     }
 
     @Test
     @DisplayName("Given a declined claim, when reset, then the lock is taken, the claim is deleted and the action is audited")
     void should_delete_claim_and_audit_when_reset_given_declined_claim() {
-        service.reset(ADMIN, declined.id());
+        service.reset(ADMIN, declined.id(), ExpectedVersion.none());
 
         InOrder order = inOrder(lock, claims, events);
         order.verify(lock).acquire();
@@ -201,9 +206,40 @@ class AdminSymbolClaimsServiceTest {
     @Test
     @DisplayName("Given a confirmed claim, when reset, then it is refused because the confirmed answer has to be reversed first")
     void should_refuse_when_reset_given_confirmed_claim() {
-        assertThatThrownBy(() -> service.reset(ADMIN, confirmed.id())).isInstanceOf(SymbolClaimStillConfirmed.class);
+        assertThatThrownBy(() -> service.reset(ADMIN, confirmed.id(), ExpectedVersion.none())).isInstanceOf(SymbolClaimStillConfirmed.class);
 
         verify(claims, never()).delete(any());
         verify(events, never()).publishEvent(any());
+    }
+
+    @Test
+    @DisplayName("Given an answer changed since an administrator read it, when they reverse or reset it with the version they read, then the lock comes first and it is refused with the current version and row, deleting, saving and auditing nothing")
+    void should_refuse_with_the_current_answer_when_reversed_or_reset_given_a_stale_version() {
+        AdminDonationsRows rows = new AdminDonationsRows(RowVersionsFixture.canonical(), donations, donorRecords);
+        String confirmedNow = rows.symbolClaim(confirmed).version();
+        String declinedNow = rows.symbolClaim(declined).version();
+
+        assertThatThrownBy(() -> service.reverse(ADMIN, confirmed.id(), ExpectedVersion.of("0000000000000000")))
+                .isInstanceOfSatisfying(ChangedMeanwhile.class, refusal -> assertRefusedWith(refusal, confirmed, confirmedNow));
+        assertThatThrownBy(() -> service.reset(ADMIN, declined.id(), ExpectedVersion.of("0000000000000000")))
+                .isInstanceOfSatisfying(ChangedMeanwhile.class, refusal -> assertRefusedWith(refusal, declined, declinedNow));
+
+        InOrder order = inOrder(lock, claims);
+        order.verify(lock).acquire();
+        order.verify(claims).findById(confirmed.id());
+        verify(receipts, never()).lockDonor(any());
+        verify(donations, never()).delete(any());
+        verify(claims, never()).save(any());
+        verify(claims, never()).delete(any());
+        verify(events, never()).publishEvent(any());
+    }
+
+    private static void assertRefusedWith(ChangedMeanwhile refusal, SymbolClaim claim, String current) {
+        assertThat(refusal.extensions()).containsEntry("version", current);
+        assertThat(refusal.extensions().get("current")).isInstanceOfSatisfying(SymbolClaimRow.class, row -> {
+            assertThat(row.id()).isEqualTo(claim.id().value());
+            assertThat(row.answer()).isEqualTo(claim.answer());
+            assertThat(row.version()).isEqualTo(current);
+        });
     }
 }
