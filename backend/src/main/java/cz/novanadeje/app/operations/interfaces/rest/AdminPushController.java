@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
@@ -40,7 +41,7 @@ class AdminPushController {
 
     @GetMapping
     PushResponse view(@AuthenticationPrincipal Jwt jwt) {
-        return PushResponse.from(push.view(admin(jwt)));
+        return PushResponse.from(push.view(admin(jwt), sessionDevice(jwt)));
     }
 
     @PostMapping("/subscriptions")
@@ -71,10 +72,10 @@ class AdminPushController {
     }
 
     private static UUID device(Jwt jwt) {
-        String session = jwt.getClaimAsString(SESSION_CLAIM);
-        if (session == null || !DEVICE_ID.matcher(session).matches()) {
-            throw new PushDeviceRequired();
-        }
-        return UUID.fromString(session);
+        return sessionDevice(jwt).orElseThrow(PushDeviceRequired::new);
+    }
+
+    private static Optional<UUID> sessionDevice(Jwt jwt) {
+        return Optional.ofNullable(jwt.getClaimAsString(SESSION_CLAIM)).filter(session -> DEVICE_ID.matcher(session).matches()).map(UUID::fromString);
     }
 }

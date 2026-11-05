@@ -1,0 +1,45 @@
+[
+  {
+    "path": "GET /api/admin/operations/push",
+    "scenario": "operations/admin_push: *",
+    "kind": "added",
+    "field": "$.openAlerts",
+    "reason": "Plan v3 slice 2.28: the push settings list the open operational alerts (bank import, backups, mail) with their start, so /sprava/upozorneni and the app's badge show what is wrong now",
+    "contract": "docs/api-contract.md, Push alerts of the administration"
+  },
+  {
+    "path": "GET /api/admin/operations/push",
+    "scenario": "operations/admin_push: *",
+    "kind": "added",
+    "field": "$.subscriptions[*].current",
+    "reason": "Plan v3 slice 2.28: each device says whether it is the device of the asking browser session (its sid), so /sprava/upozorneni shows the switch of this device apart from the others",
+    "contract": "docs/api-contract.md, Push alerts of the administration"
+  },
+  {
+    "scenario": "operations/admin_push: A device turns push alerts on under the server's key, and the test alert reaches it encrypted with nothing but its kind",
+    "kind": "removed",
+    "reason": "Plan v3 slice 2.28: the test alert now also carries the notification the browser shows (a fixed Czech title and text of its kind, its tag and the route it opens), so the scenario is renamed and checks the whole message",
+    "contract": "docs/api-contract.md, Push alerts of the administration; docs/security-overview.md, Push alerts"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/operations/admin_push.feature > An administrator turns push alerts on for a device, chooses which alerts it gets and sends a test alert - A device turns push alerts on under the server's key, and the test alert reaches it encrypted with nothing but its kind",
+    "reason": "Plan v3 slice 2.28: the test alert carries the notification to show, so the scenario is renamed",
+    "replacement": "feature_classpath_features/operations/admin_push.feature > An administrator turns push alerts on for a device, chooses which alerts it gets and sends a test alert - A device turns push alerts on under the server's key, and the test alert reaches it encrypted with its kind, the count and the notification to show"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "operations.infrastructure.push.WebPushDeliveryTest > Given a test alert, when the browser decrypts what the push service got, then it reads exactly the version, the kind and the count, and nothing else",
+    "reason": "Plan v3 slice 2.28: the message also carries the fixed Czech notification of its kind and the route it opens",
+    "replacement": "operations.infrastructure.push.WebPushDeliveryTest > Given a test alert, when the browser decrypts what the push service got, then it reads the version, the kind, the count and the fixed Czech notification of that kind, which opens its fixed route"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "operations.infrastructure.push.WebPushDeliveryTest > Given two alerts of different lengths, when they are delivered, then their bodies have the same length, so the push service cannot tell them apart by size",
+    "reason": "Plan v3 slice 2.28: every kind with its notification is padded to one length, so the test covers all seven kinds at the largest count",
+    "replacement": "operations.infrastructure.push.WebPushDeliveryTest > Given every kind of alert with the largest count, when they are delivered, then their bodies have the same length, so the push service cannot tell them apart by size"
+  }
+]

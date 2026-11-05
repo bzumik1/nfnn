@@ -21,6 +21,7 @@ import cz.novanadeje.app.donations.domain.importing.ImportOutage;
 import cz.novanadeje.app.donations.domain.importing.ImportPeriod;
 import cz.novanadeje.app.donations.domain.importing.ImportPlan;
 import cz.novanadeje.app.donations.domain.importing.ImportRecovery;
+import cz.novanadeje.app.shared.application.event.OperationalAlertRaised;
 import cz.novanadeje.app.shared.domain.Money;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,6 +33,7 @@ import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -46,6 +48,7 @@ import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -65,13 +68,15 @@ class BankStatementRecorderTest {
     private ImportAlertRepository alerts;
     @Mock
     private SecondFactorRecoveryPayments recoveries;
+    @Mock
+    private ApplicationEventPublisher events;
 
     private BankStatementRecorder recorder;
     private ListAppender<ILoggingEvent> log;
 
     @BeforeEach
     void setUp() {
-        recorder = new BankStatementRecorder(payments, pairing, states, alerts, recoveries);
+        recorder = new BankStatementRecorder(payments, pairing, states, alerts, recoveries, events);
         log = new ListAppender<>();
         log.start();
         logger().addAppender(log);
@@ -244,6 +249,34 @@ class BankStatementRecorderTest {
         recorder.record(new BankStatement(HOURLY_REQUEST, Optional.empty(), List.of(), 0), new ImportPlan(HOURLY_REQUEST, false), NOW);
 
         verifyNoInteractions(alerts);
+        verifyNoInteractions(events);
+    }
+
+    @Test
+    @DisplayName("Given two recorded failures, when a third one is recorded, then the administration is told that the bank import alert opened")
+    void should_raise_operational_alert_when_failure_recorded_given_third_failure_in_a_row() {
+        BankImportState state = stateCovering("2026-07-18", "2026-10-15");
+        state.failed(ImportFailureKind.TRANSPORT, "timed out", NOW.minusSeconds(7200));
+        state.failed(ImportFailureKind.TRANSPORT, "timed out", NOW.minusSeconds(3600));
+
+        recorder.recordFailure(ImportFailureKind.TRANSPORT, "timed out", NOW);
+        recorder.recordFailure(ImportFailureKind.TRANSPORT, "timed out", NOW.plusSeconds(3600));
+
+        verify(events).publishEvent(OperationalAlertRaised.opened(OperationalAlertRaised.Area.BANK_IMPORT, NOW));
+        verifyNoMoreInteractions(events);
+    }
+
+    @Test
+    @DisplayName("Given a reported outage, when a statement is recorded, then the administration is told that the bank import alert is resolved")
+    void should_resolve_operational_alert_when_recorded_given_reported_outage() {
+        BankImportState state = stateCovering("2026-07-18", "2026-10-15");
+        state.failed(ImportFailureKind.UNAUTHORIZED, "refused with HTTP 401", NOW.minusSeconds(3600));
+        noMovementsKnownAndNothingPaired();
+
+        recorder.record(new BankStatement(HOURLY_REQUEST, Optional.empty(), List.of(), 0), new ImportPlan(HOURLY_REQUEST, false), NOW);
+
+        verify(events).publishEvent(OperationalAlertRaised.resolved(OperationalAlertRaised.Area.BANK_IMPORT, NOW));
+        verifyNoMoreInteractions(events);
     }
 
     private BankImportState stateCovering(String from, String to) {

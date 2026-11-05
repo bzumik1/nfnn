@@ -6,7 +6,7 @@ Feature: An administrator turns push alerts on for a device, chooses which alert
     And a person "Jana" is registered
     And "Jana" is an administrator
 
-  Scenario: A device turns push alerts on under the server's key, and the test alert reaches it encrypted with nothing but its kind
+  Scenario: A device turns push alerts on under the server's key, and the test alert reaches it encrypted with its kind, the count and the notification to show
     When "Jana" asks for the push settings
     Then the response status is 200
     And the push settings carry the server's public key
@@ -25,7 +25,7 @@ Feature: An administrator turns push alerts on for a device, chooses which alert
     And the test push alert reached 1, failed for 0 and removed 0 devices
     And the device "telefon" of "Jana" received the push alert:
       """
-      {"v":1,"kind":"test","count":0}
+      {"v":1,"kind":"test","count":0,"notification":{"title":"Zkušební upozornění","body":"Upozornění ze Správy Nové naděje na tomto zařízení fungují.","tag":"nfnn-test","renotify":true,"lang":"cs","icon":"/icon-192.png","data":{"kind":"test","count":0,"onActionClick":{"default":{"operation":"focusLastFocusedOrOpen","url":"/sprava/upozorneni"}}}}}
       """
     When "Jana" asks for the push settings
     Then the push settings list the devices:

@@ -1,5 +1,6 @@
 package cz.novanadeje.app.operations.application.push;
 
+import cz.novanadeje.app.operations.application.alerts.OperationalAlertService;
 import cz.novanadeje.app.operations.domain.push.PushAlerts;
 import cz.novanadeje.app.operations.domain.push.PushClientKeys;
 import cz.novanadeje.app.operations.domain.push.PushEndpoint;
@@ -31,22 +32,25 @@ public class PushSubscriptionService {
     private final PushSubscriptionRepository subscriptions;
     private final PushKeyService keys;
     private final PushSender sender;
+    private final OperationalAlertService alerts;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public PushSubscriptionService(PushSubscriptionRepository subscriptions, PushKeyService keys, PushSender sender,
-                                   ApplicationEventPublisher events, Clock clock) {
+                                   OperationalAlertService alerts, ApplicationEventPublisher events, Clock clock) {
         this.subscriptions = subscriptions;
         this.keys = keys;
         this.sender = sender;
+        this.alerts = alerts;
         this.events = events;
         this.clock = clock;
     }
 
     @Transactional
-    public PushView view(UUID administratorId) {
-        return new PushView(keys.current().publicKey(),
-                subscriptions.findAllOf(administratorId).stream().map(PushSubscriptionView::of).toList());
+    public PushView view(UUID administratorId, Optional<UUID> deviceId) {
+        return new PushView(keys.current().publicKey(), subscriptions.findAllOf(administratorId).stream()
+                .map(subscription -> PushSubscriptionView.of(subscription, deviceId.filter(subscription.deviceId()::equals).isPresent())).toList(),
+                alerts.open());
     }
 
     @Transactional
