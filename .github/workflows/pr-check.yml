@@ -97,20 +97,14 @@ jobs:
           retention-days: 1
 
   acceptance:
-    name: Cucumber (${{ matrix.suite }})
+    name: Cucumber
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: ${{ github.event_name == 'push' && 35 || 25 }}
-    strategy:
-      fail-fast: false
-      matrix:
-        suite: [Donors, OtherContexts]
     defaults:
       run:
         working-directory: backend
-    env:
-      SUITE: ${{ matrix.suite }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -123,23 +117,22 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v6
 
-      - name: Run the suite's scenarios, recording the API transcripts
-        run: ./gradlew acceptanceTest -PacceptanceSuite="$SUITE"
+      - name: Run the scenarios, one suite per fork, recording the API transcripts
+        run: ./gradlew acceptanceTest
         env:
           API_TRANSCRIPTS: record
 
-      - name: The suite ran its scenarios
+      - name: Every suite ran its scenarios
         run: |
-          if ! ls build/test-results/acceptanceTest/*.xml > /dev/null 2>&1; then
-            echo "::error::${SUITE}AcceptanceTests wrote no test result"
-            exit 1
-          fi
+          for suite in $(find src/test/java -name '*AcceptanceTests.java' -printf '%f\n' | sed 's/\.java$//'); do
+            grep -lqF "$suite" build/test-results/acceptanceTest/*.xml 2> /dev/null || { echo "::error::$suite wrote no test result"; ls build/test-results/acceptanceTest; exit 1; }
+          done
 
       - name: Keep test reports
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: backend-test-reports-${{ matrix.suite }}
+          name: backend-test-reports-acceptance
           path: backend/build/reports/
           retention-days: 14
 
@@ -147,13 +140,13 @@ jobs:
         with:
           node-version: "24"
 
-      - name: List the suite's scenarios for the test inventory
+      - name: List the scenarios for the test inventory
         run: node ../scripts/test-inventory.mjs --part=backend-shard --junit=backend/build/test-results/acceptanceTest --out="$GITHUB_WORKSPACE/backend/build/backend-inventory.json"
 
       - name: Keep the transcripts and the scenario list for the backend recording
         uses: actions/upload-artifact@v7
         with:
-          name: backend-part-${{ matrix.suite }}
+          name: backend-part-acceptance
           path: |
             backend/build/api-transcripts/
             backend/build/backend-inventory.json
@@ -164,65 +157,10 @@ jobs:
         if: github.event_name == 'push'
         run: |
           cp -R build/api-transcripts "$RUNNER_TEMP/first-recording"
-          ./gradlew acceptanceTest -PacceptanceSuite="$SUITE" --rerun
+          ./gradlew acceptanceTest --rerun
           node ../scripts/compare-recordings.mjs "$RUNNER_TEMP/first-recording" build/api-transcripts
         env:
           API_TRANSCRIPTS: record
-
-  backend-recording:
-    name: Nahrávka backendu
-    needs: [backend, acceptance]
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-
-      - uses: actions/setup-node@v7
-        with:
-          node-version: "24"
-
-      - uses: actions/download-artifact@v8
-        with:
-          pattern: backend-part-*
-          path: ${{ runner.temp }}/parts
-
-      - name: Every acceptance suite ran in a job of its own
-        run: |
-          suites=$(find backend/src/test/java -name '*AcceptanceTests.java' -printf '%f\n' | sed 's/AcceptanceTests\.java$//' | sort | tr '\n' ' ')
-          parts=$(find "$RUNNER_TEMP/parts" -mindepth 1 -maxdepth 1 -type d -name 'backend-part-*' -printf '%f\n' | sed 's/^backend-part-//' | grep -vx tests | sort | tr '\n' ' ')
-          if [ "$suites" != "$parts" ]; then
-            echo "::error::the job acceptance must run exactly the suites in the test sources ($suites), but ran $parts"
-            exit 1
-          fi
-          [ -f "$RUNNER_TEMP/parts/backend-part-tests/backend-inventory.json" ] || { echo "::error::the unit and integration tests left no test list"; exit 1; }
-
-      - name: Join the transcripts and the test lists into one recording
-        run: |
-          recording="$RUNNER_TEMP/recording"
-          mkdir -p "$recording/api-transcripts"
-          for part in "$RUNNER_TEMP"/parts/backend-part-*/; do
-            [ -d "$part/api-transcripts" ] || continue
-            (cd "$part/api-transcripts" && find . -type f) | while read -r file; do
-              if [ -e "$recording/api-transcripts/$file" ]; then
-                echo "::error::two suites recorded api-transcripts/${file#./}"
-                exit 1
-              fi
-              mkdir -p "$(dirname "$recording/api-transcripts/$file")"
-              cp "$part/api-transcripts/$file" "$recording/api-transcripts/$file"
-            done
-          done
-          lists=$(find "$RUNNER_TEMP/parts" -name backend-inventory.json | sort | paste -sd, -)
-          node scripts/test-inventory.mjs --part=backend --backend="$lists" --out="$recording/backend-inventory.json"
-
-      - name: Keep the transcripts and the test list for the v2 comparison
-        uses: actions/upload-artifact@v7
-        with:
-          name: backend-recording
-          path: ${{ runner.temp }}/recording/
-          if-no-files-found: error
-          retention-days: ${{ github.event_name == 'push' && 90 || 3 }}
 
   frontend:
     needs: changes
@@ -308,13 +246,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { browser: chromium, shard: 1/4, projects: "--project=chromium --project=baseline", install: "chromium" }
-          - { browser: chromium, shard: 2/4, projects: "--project=chromium --project=baseline", install: "chromium" }
-          - { browser: chromium, shard: 3/4, projects: "--project=chromium --project=baseline", install: "chromium" }
-          - { browser: chromium, shard: 4/4, projects: "--project=chromium --project=baseline", install: "chromium" }
-          - { browser: webkit, shard: 1/3, projects: "--project=iphone --project=device-*", install: "webkit chromium" }
-          - { browser: webkit, shard: 2/3, projects: "--project=iphone --project=device-*", install: "webkit chromium" }
-          - { browser: webkit, shard: 3/3, projects: "--project=iphone --project=device-*", install: "webkit chromium" }
+          - { browser: chromium, shard: 1/2, projects: "--project=chromium --project=baseline", install: "chromium" }
+          - { browser: chromium, shard: 2/2, projects: "--project=chromium --project=baseline", install: "chromium" }
+          - { browser: webkit, shard: 1/2, projects: "--project=iphone --project=device-*", install: "webkit chromium" }
+          - { browser: webkit, shard: 2/2, projects: "--project=iphone --project=device-*", install: "webkit chromium" }
     defaults:
       run:
         working-directory: frontend
@@ -527,7 +462,7 @@ jobs:
 
   compare-v2:
     name: Srovnání s v2
-    needs: [backend-recording, frontend, mcp, main-recording]
+    needs: [backend, acceptance, frontend, mcp, main-recording]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -564,8 +499,38 @@ jobs:
 
       - uses: actions/download-artifact@v8
         with:
+          pattern: backend-part-*
+          path: ${{ runner.temp }}/parts
+
+      - name: Join the transcripts and the test lists into one backend recording
+        run: |
+          recording="$RUNNER_TEMP/recording"
+          mkdir -p "$recording/api-transcripts"
+          [ -f "$RUNNER_TEMP/parts/backend-part-tests/backend-inventory.json" ] || { echo "::error::the unit and integration tests left no test list"; exit 1; }
+          [ -d "$RUNNER_TEMP/parts/backend-part-acceptance/api-transcripts" ] || { echo "::error::the scenarios left no transcripts"; exit 1; }
+          for part in "$RUNNER_TEMP"/parts/backend-part-*/; do
+            [ -d "$part/api-transcripts" ] || continue
+            (cd "$part/api-transcripts" && find . -type f) | while read -r file; do
+              if [ -e "$recording/api-transcripts/$file" ]; then
+                echo "::error::two backend parts recorded api-transcripts/${file#./}"
+                exit 1
+              fi
+              mkdir -p "$(dirname "$recording/api-transcripts/$file")"
+              cp "$part/api-transcripts/$file" "$recording/api-transcripts/$file"
+            done
+          done
+          lists=$(find "$RUNNER_TEMP/parts" -name backend-inventory.json | sort | paste -sd, -)
+          node scripts/test-inventory.mjs --part=backend --backend="$lists" --out="$recording/backend-inventory.json"
+          mkdir -p backend/build
+          cp -R "$recording/api-transcripts" "$recording/backend-inventory.json" backend/build/
+
+      - name: Keep the transcripts and the test list as the backend recording, the base of later PRs on a push to main
+        uses: actions/upload-artifact@v7
+        with:
           name: backend-recording
-          path: backend/build
+          path: ${{ runner.temp }}/recording/
+          if-no-files-found: error
+          retention-days: ${{ github.event_name == 'push' && 90 || 3 }}
 
       - uses: actions/download-artifact@v8
         with:
@@ -641,7 +606,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        part: [journeys, restores, keys]
+        part: [journeys, keys]
     steps:
       - uses: actions/checkout@v7
         with:
@@ -748,7 +713,7 @@ jobs:
         uses: docker/bake-action@v7
         env:
           CACHE_FROM_GHA: "true"
-          CACHE_TO_GHA: ${{ github.event_name == 'push' }}
+          CACHE_TO_GHA: ${{ github.event_name == 'push' && matrix.part == 'journeys' }}
           DOCKER_BUILD_RECORD_UPLOAD: "false"
         with:
           source: .
@@ -1038,7 +1003,7 @@ jobs:
           curl -fsS --max-time 10 http://localhost:8089/ | grep -q '<app-root'
 
       - name: Restores from the restore folder and from the administration, and a failed restore
-        if: matrix.part == 'restores'
+        if: matrix.part == 'journeys'
         run: |
           echo "The restore probes start from a requested backup of this stack, as the journeys part takes it"
           backups="$RUNNER_TEMP/nfnn/backups"
@@ -1477,7 +1442,7 @@ jobs:
 
   gate:
     if: always()
-    needs: [changes, backend, acceptance, backend-recording, frontend, e2e, e2e-report, mcp, main-recording, compare-v2, stack, release]
+    needs: [changes, backend, acceptance, frontend, e2e, e2e-report, mcp, main-recording, compare-v2, stack, release]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
