@@ -26,6 +26,10 @@ export const ADMIN_SECTIONS: readonly SideNavGroup[] = [
     id: 'admin-nav-occasional',
     label: $localize`:@@admin.nav.group.occasional:Občas`,
     items: [
+      {
+        path: '/sprava/hromadna-potvrzeni',
+        label: $localize`:@@admin.nav.yearlyReceipts:Hromadná potvrzení`,
+      },
       { path: '/sprava/o-nas', label: $localize`:@@admin.nav.about:Fotka v sekci O nás` },
       { path: '/sprava/lide-fondu', label: $localize`:@@admin.nav.people:Lidé fondu` },
       { path: '/sprava/spravci', label: $localize`:@@admin.nav.administrators:Správci` },

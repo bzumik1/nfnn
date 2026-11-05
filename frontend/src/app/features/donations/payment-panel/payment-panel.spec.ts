@@ -8,10 +8,12 @@ import { QrCode } from '../../../shared/ui/qr-code/qr-code';
 import { encodeText } from '../../../shared/ui/qr-code/qr-encoder';
 import { QrMatrix } from '../../../shared/ui/qr-code/qr-matrix';
 import { foundationPaymentDetails, paymentQrCase } from '../testing/payment-details-fixtures';
+import { LocalPaymentRoute } from './local-payment-route';
 import { PaymentPanel } from './payment-panel';
 
 const PAYMENT_DETAILS_URL = '/api/donations/payment-details';
 const REDRAW_MS = 400;
+const RESERVATION_ID = '6f1c1e9a-3c1b-4f53-9d55-0d0a9b1f2c11';
 const QR_OF_500 = paymentQrCase('500 Kč without a variable symbol');
 const QR_OF_1000 = paymentQrCase('1 000 Kč without a variable symbol');
 const QR_OF_500_FOR_JANA = paymentQrCase('500 Kč with a ten-digit variable symbol');
@@ -374,6 +376,74 @@ describe('Given the payment panel on a phone or a tablet', () => {
     expect(handoffStatus()).toBe(
       'Soubor platba.spayd je ve stažených souborech. Některé bankovní aplikace po jeho otevření nabídnou platbu. Neotevřela se vám banka? Zkopírujte údaje výše do bankovní aplikace, nebo pošlete QR jako obrázek a v bance zvolte platbu z obrázku.',
     );
+  });
+
+  describe('when the browser cannot share the file and the service worker serves payment files', () => {
+    let reservations: { readonly payment: string; readonly answer: (id: string | null) => void }[];
+    let opened: string[];
+
+    beforeEach(() => {
+      sharesFiles = (file) => file.type !== 'application/x-shortpaymentdescriptor';
+      reservations = [];
+      opened = [];
+      vi.spyOn(LocalPaymentRoute.prototype, 'reserve').mockImplementation(
+        (payment: string) =>
+          new Promise((answer) => {
+            reservations.push({ payment, answer });
+          }),
+      );
+      vi.spyOn(LocalPaymentRoute.prototype, 'open').mockImplementation((id: string) => {
+        opened.push(id);
+      });
+    });
+
+    it('then the tap reserves the payment of the chosen amount, opens it from the device, downloads nothing and a line says what to do if no bank opened', async () => {
+      await openWithQr();
+
+      await tap('Otevřít v aplikaci banky');
+      expect(reservations.map((reservation) => reservation.payment)).toEqual([QR_OF_500.spayd]);
+      reservations[0].answer(RESERVATION_ID);
+      await settle();
+
+      expect(shared).toEqual([]);
+      expect(downloads).toEqual([]);
+      expect(opened).toEqual([RESERVATION_ID]);
+      expect(handoffStatus()).toBe(
+        'Neotevřela se vám banka? Zkopírujte údaje výše do bankovní aplikace, nebo pošlete QR jako obrázek a v bance zvolte platbu z obrázku.',
+      );
+    });
+
+    it('and the worker reserves nothing, then platba.spayd downloads as before', async () => {
+      await openWithQr();
+
+      await tap('Otevřít v aplikaci banky');
+      reservations[0].answer(null);
+      await settle();
+
+      expect(opened).toEqual([]);
+      expect(downloads.map((download) => download.name)).toEqual(['platba.spayd']);
+      expect(await readText(downloads[0].blob as Blob)).toBe(QR_OF_500.spayd);
+      expect(handoffStatus()).toContain('Soubor platba.spayd je ve stažených souborech.');
+    });
+
+    for (const [name, id] of [
+      ['reserves the earlier payment', RESERVATION_ID],
+      ['reserves nothing', null],
+    ] as const) {
+      it(`and the visitor picks another amount before the worker ${name}, then the earlier payment neither opens nor downloads and nothing is said`, async () => {
+        await openWithQr();
+
+        await tap('Otevřít v aplikaci banky');
+        await tap('1 000 Kč');
+        await settle(REDRAW_MS);
+        reservations[0].answer(id);
+        await settle();
+
+        expect(opened).toEqual([]);
+        expect(downloads).toEqual([]);
+        expect(handoffStatus()).toBe('');
+      });
+    }
   });
 
   it('when the visitor taps Poslat QR jako obrázek, then the phone is offered the PNG of the QR drawn for the chosen amount', async () => {

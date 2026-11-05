@@ -44,6 +44,7 @@ const SIGNED_IN_PAGES = [
   '/sprava',
   '/sprava/platby',
   '/sprava/darci',
+  '/sprava/hromadna-potvrzeni',
   '/sprava/spravci',
   '/sprava/starsi-symboly',
   '/sprava/prehledy',

@@ -9,6 +9,7 @@ import {
 } from '../baseline/screen-mocks';
 import { administrator, donor, mockDonorApi, session } from '../donor-session';
 import { serveReceiptKeys, serveReceiptStatus, SINGLE_RECEIPT } from '../receipt-verification';
+import { FOUR_DONORS, mockYearlyReceipts } from '../yearly-receipts';
 import type { Ui } from './ui';
 
 export interface Step {
@@ -222,7 +223,16 @@ export const STEPS: Step[] = [
   {
     id: 'admin-alerts',
     title: 'the push alerts in the administration',
-    open: (page) => adminPage(page, '/sprava/upozorneni'),
+    open: (ui) => adminPage(ui, '/sprava/upozorneni'),
+  },
+  {
+    id: 'admin-yearly-receipts',
+    title: 'the bulk receipts in the administration',
+    open: async (ui) => {
+      await mockYearlyReceipts(ui.routes, { donors: FOUR_DONORS, erasedDonors: 1 });
+      await adminPage(ui, '/sprava/hromadna-potvrzeni');
+      await ui.waitVisible({ css: '.donors-table tbody tr' });
+    },
   },
   {
     id: 'admin-settings',

@@ -1363,9 +1363,11 @@ jobs:
           docker cp nfnn-frontend:/usr/share/nginx/html "$RUNNER_TEMP/frontend-html"
           node frontend/scripts/probe-asset-caching.mjs http://localhost:8089 "$RUNNER_TEMP/frontend-html" frontend/nginx.conf
 
-      - name: The operator's flag in the logs folder turns the service worker off and back on
+      - name: The image's worker carries the payment route, and the operator's flag in the logs folder turns the service worker off and back on
         if: matrix.part == 'journeys'
         run: |
+          route=frontend/service-worker/payment-route.js
+          cmp -s -n "$(wc -c < "$route")" "$route" "$RUNNER_TEMP/frontend-html/ngsw-worker.js" || { echo "::error::the image's ngsw-worker.js must begin with the payment route of $route (npm run build prepends it)"; exit 1; }
           flag="$RUNNER_TEMP/nfnn/logs/service-worker.off"
           safety=$(sha256sum < "$RUNNER_TEMP/frontend-html/safety-worker.js")
           worker=$(sha256sum < "$RUNNER_TEMP/frontend-html/ngsw-worker.js")
