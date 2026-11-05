@@ -128,6 +128,7 @@ test.describe('Given a visitor on the home page', () => {
           'Kopírovat částku',
           'Kopírovat IBAN',
           'založíte účet',
+          'Zvětšit: QR platba na účet Nadačního fondu Nová naděje',
           'Uložit QR kód',
         ];
     const reached: string[] = [];
@@ -135,7 +136,10 @@ test.describe('Given a visitor on the home page', () => {
       await page.keyboard.press('Tab');
       reached.push(
         await page.evaluate(
-          () => document.activeElement?.textContent?.replace(/\s+/g, ' ').trim() ?? '',
+          () =>
+            document.activeElement?.textContent?.replace(/\s+/g, ' ').trim() ||
+            document.activeElement?.getAttribute('aria-label') ||
+            '',
         ),
       );
     }

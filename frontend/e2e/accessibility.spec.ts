@@ -64,6 +64,7 @@ import {
 } from './signature-image';
 
 const WCAG_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
+const PAGE_PINCH_STOPPED_JAKUB_2026_10_31 = 'meta-viewport';
 
 async function askAboutAnOlderSymbol(page: Page): Promise<void> {
   let confirmed = false;
@@ -111,7 +112,10 @@ async function violations(page: Page): Promise<string[]> {
           animation.effect?.getTiming().iterations === Infinity,
       ),
   );
-  const results = await new AxeBuilder({ page }).withTags(WCAG_AA).analyze();
+  const results = await new AxeBuilder({ page })
+    .withTags(WCAG_AA)
+    .disableRules([PAGE_PINCH_STOPPED_JAKUB_2026_10_31])
+    .analyze();
   return results.violations.flatMap((violation) =>
     violation.nodes.map((node) => `${violation.id}: ${node.target.join(' ')}`),
   );
@@ -215,8 +219,18 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
     expect(await violations(page)).toEqual([]);
 
+    await page.getByRole('button', { name: /^Zvětšit: QR platba/ }).click();
+    await expect(page.getByRole('dialog', { name: 'Zvětšený QR kód' })).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+
     await page.goto('/aktuality/zahrada-pro-deti');
     await expect(page.getByRole('heading', { level: 1, name: 'Zahrada pro děti' })).toBeFocused();
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.getByRole('button', { name: 'Zvětšit fotku' }).click();
+    await expect(page.getByRole('dialog', { name: 'Zvětšená fotka' })).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
 

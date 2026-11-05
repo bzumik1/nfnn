@@ -21,6 +21,8 @@ import { CopyButton } from '../../../shared/ui/copy-button/copy-button';
 import { QrCode } from '../../../shared/ui/qr-code/qr-code';
 import { encodeText } from '../../../shared/ui/qr-code/qr-encoder';
 import { QrMatrix } from '../../../shared/ui/qr-code/qr-matrix';
+import { ZoomQr } from '../../../shared/ui/zoom-viewer/zoom-content';
+import { Zoomable } from '../../../shared/ui/zoom-viewer/zoomable';
 import { formatCrowns } from '../donation-amount';
 import { formatIban } from '../iban-format';
 import { PaymentAccount, PaymentDetails } from '../payment-details-api';
@@ -77,7 +79,7 @@ export type PaymentAccountState =
 
 @Component({
   selector: 'app-payment-panel',
-  imports: [CopyButton, NgTemplateOutlet, QrCode],
+  imports: [CopyButton, NgTemplateOutlet, QrCode, Zoomable],
   templateUrl: './payment-panel.html',
   styleUrl: './payment-panel.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -161,6 +163,12 @@ export class PaymentPanel {
   protected readonly drawnCrowns = computed(() => {
     const amount = this.drawnAmount();
     return amount === null ? '' : formatCrowns(amount);
+  });
+
+  protected readonly qrLabel = $localize`:@@home.donate.qr.imageAlt:QR platba na účet Nadačního fondu Nová naděje`;
+  protected readonly zoomedQr = computed<ZoomQr | null>(() => {
+    const matrix = this.qrMatrix();
+    return matrix ? { kind: 'qr', matrix, label: this.qrLabel } : null;
   });
 
   protected readonly busy = computed(() => this.state().kind === 'loading' || this.redrawing());

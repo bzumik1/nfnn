@@ -102,6 +102,24 @@ export const STEPS: Step[] = [
     },
   },
   {
+    id: 'qr-viewer',
+    title: 'the Přispět QR code opened large',
+    open: async (page) => {
+      await servePaymentDetails(page);
+      await publicPage(page, '/#prispet');
+      const otherDevice = page
+        .locator('#prispet')
+        .getByRole('button', { name: /Platíte z jiného zařízení\?/ });
+      if (await otherDevice.isVisible()) {
+        await otherDevice.click();
+      }
+      await page.getByRole('button', { name: /^Zvětšit: QR platba/ }).click();
+      await expect(
+        page.getByRole('dialog', { name: 'Zvětšený QR kód' }).getByRole('img'),
+      ).toBeVisible();
+    },
+  },
+  {
     id: 'site-menu',
     title: 'the site menu',
     open: async (page) => {
@@ -137,6 +155,17 @@ export const STEPS: Step[] = [
     id: 'news-article',
     title: 'a news article',
     open: (page) => publicPage(page, `/aktuality/${article.slug}`),
+  },
+  {
+    id: 'photo-viewer',
+    title: 'the photo of a news article opened large',
+    open: async (page) => {
+      await publicPage(page, `/aktuality/${article.slug}`);
+      await page.getByRole('button', { name: /^Zvětšit fotku/ }).click();
+      await expect(
+        page.getByRole('dialog', { name: 'Zvětšená fotka' }).getByRole('img'),
+      ).toBeVisible();
+    },
   },
   {
     id: 'project',

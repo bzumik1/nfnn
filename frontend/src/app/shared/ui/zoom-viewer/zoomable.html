@@ -1,0 +1,12 @@
+<button
+  type="button"
+  class="zoomable"
+  aria-haspopup="dialog"
+  [attr.aria-label]="label()"
+  (click)="open.set(true)"
+>
+  <ng-content />
+</button>
+@if (open()) {
+  <app-zoom-viewer [content]="content()" (closed)="open.set(false)" />
+}
