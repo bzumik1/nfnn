@@ -15,6 +15,7 @@ import {
   provideRouter,
   withInMemoryScrolling,
   withNavigationErrorHandler,
+  withPreloading,
 } from '@angular/router';
 
 import { routes } from './app.routes';
@@ -25,6 +26,8 @@ import { PublicSessionIdle } from './core/auth/public-session-idle';
 import { ReportingErrorHandler } from './core/errors/reporting-error-handler';
 import { ChunkLoadRecovery } from './core/reload/chunk-load-recovery';
 import { BackTarget } from './core/navigation/back-target';
+import { keptPublicAnswersInterceptor } from './core/navigation/kept-public-answers';
+import { TabPagesPreloading } from './core/navigation/tab-preloading';
 import { TabMemory } from './core/navigation/tab-memory';
 import { CanonicalLink } from './core/seo/canonical-link';
 import { AppInstall } from './core/install/app-install';
@@ -44,13 +47,20 @@ const scrollOptions: InMemoryScrollingOptions = {
 
 const inMemoryScrolling: InMemoryScrollingFeature = withInMemoryScrolling(scrollOptions);
 
+export const tabPagesPreloading = withPreloading(TabPagesPreloading);
+
 export const chunkLoadRecoveryFeature: NavigationErrorHandlerFeature = withNavigationErrorHandler(
   (error) => void inject(ChunkLoadRecovery).handleNavigationError(error),
 );
 
 export const appHttpClient: EnvironmentProviders = provideHttpClient(
   withXhr(),
-  withInterceptors([authInterceptor, versionInterceptor, serviceWorkerBypassInterceptor]),
+  withInterceptors([
+    keptPublicAnswersInterceptor,
+    authInterceptor,
+    versionInterceptor,
+    serviceWorkerBypassInterceptor,
+  ]),
 );
 
 export const appErrorHandler: Provider = {
@@ -74,7 +84,7 @@ export const appConfig: ApplicationConfig = {
     deviceCopies,
     provideBrowserGlobalErrorListeners(),
     appErrorHandler,
-    provideRouter(routes, inMemoryScrolling, chunkLoadRecoveryFeature),
+    provideRouter(routes, inMemoryScrolling, chunkLoadRecoveryFeature, tabPagesPreloading),
     appHttpClient,
     provideAppServiceWorker(),
     provideAppInitializer(() => {

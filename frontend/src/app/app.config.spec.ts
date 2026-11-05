@@ -1,7 +1,9 @@
-import { HttpBackend, HttpXhrBackend } from '@angular/common/http';
-import { ErrorHandler } from '@angular/core';
+import { HttpBackend, HttpClient, HttpXhrBackend } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { Component, ErrorHandler } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter, Router } from '@angular/router';
+import { provideRouter, Router, RouterPreloader } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 
 import {
   appConfig,
@@ -10,8 +12,10 @@ import {
   chunkLoadRecoveryFeature,
   dialogHistoryAtStart,
   navigationAtStart,
+  tabPagesPreloading,
 } from './app.config';
 import { BackTarget } from './core/navigation/back-target';
+import { LOADED_AHEAD } from './core/navigation/tab-preloading';
 import { TabMemory } from './core/navigation/tab-memory';
 import { ReportingErrorHandler } from './core/errors/reporting-error-handler';
 import { ExternalNavigation } from './core/navigation/external-navigation';
@@ -24,6 +28,50 @@ describe('Given the HTTP client of the app', () => {
     TestBed.configureTestingModule({ providers: [appHttpClient] });
 
     expect(TestBed.inject(HttpBackend)).toBeInstanceOf(HttpXhrBackend);
+  });
+});
+
+describe('Given the public content the app has already shown', () => {
+  it('when a page asks for it again, then the app answers from memory at once and asks the server in the background', async () => {
+    TestBed.configureTestingModule({ providers: [appHttpClient, provideHttpClientTesting()] });
+    const http = TestBed.inject(HttpClient);
+    const backend = TestBed.inject(HttpTestingController);
+    const first = firstValueFrom(http.get('/api/content/home'));
+    backend.expectOne('/api/content/home').flush({ news: [] });
+    await first;
+
+    expect(await firstValueFrom(http.get('/api/content/home'))).toEqual({ news: [] });
+
+    backend.expectOne('/api/content/home').flush({ news: [] });
+    backend.verify();
+  });
+});
+
+describe('Given the pages behind the tab bar', () => {
+  @Component({ template: '' })
+  class Landing {}
+
+  it('when the app has shown its first page, then the tab pages load ahead and every other page waits', async () => {
+    const tabPage = vi.fn(() => Promise.resolve(Landing));
+    const otherPage = vi.fn(() => Promise.resolve(Landing));
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter(
+          [
+            { path: '', pathMatch: 'full', component: Landing },
+            { path: 'aktuality', data: LOADED_AHEAD, loadComponent: tabPage },
+            { path: 'zasady-ochrany-osobnich-udaju', loadComponent: otherPage },
+          ],
+          tabPagesPreloading,
+        ),
+      ],
+    });
+
+    await TestBed.inject(Router).navigateByUrl('/');
+    await firstValueFrom(TestBed.inject(RouterPreloader).preload());
+
+    expect(tabPage).toHaveBeenCalledTimes(1);
+    expect(otherPage).not.toHaveBeenCalled();
   });
 });
 

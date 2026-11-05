@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { adminGuard } from './core/auth/admin-guard';
 import { APP_ENTRY_PATH, appEntryGuard } from './core/auth/app-entry-guard';
 import { donorGuard } from './core/auth/donor-guard';
+import { LOADED_AHEAD } from './core/navigation/tab-preloading';
 
 export const routes: Routes = [
   {
@@ -22,6 +23,7 @@ export const routes: Routes = [
   },
   {
     path: '',
+    data: LOADED_AHEAD,
     loadComponent: () => import('./layout/public-shell/public-shell').then((m) => m.PublicShell),
     children: [
       {
@@ -62,6 +64,7 @@ export const routes: Routes = [
       },
       {
         path: '',
+        data: LOADED_AHEAD,
         loadChildren: () =>
           import('./features/content/content.routes').then((m) => m.contentRoutes),
       },
