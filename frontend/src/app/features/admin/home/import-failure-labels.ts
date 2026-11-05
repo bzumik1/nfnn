@@ -53,4 +53,12 @@ export const HISTORY_NEXT_STEPS: Record<ImportFailureKind, ImportNextStep> = {
     text: $localize`:@@admin.home.history.next.transport:Banka teď neodpovídá. Starší platby se samy znovu nenačtou: za chvíli stiskněte „Načíst starší platby“ znovu; pokud to trvá déle, zkontrolujte připojení serveru k internetu.`,
     link: null,
   },
+  INVALID_RESPONSE: {
+    text: $localize`:@@admin.home.history.next.invalidResponse:Za chvíli stiskněte „Načíst starší platby“ znovu; když se to opakuje, může jít o změnu na straně Fio a technik najde podrobnosti v logu.`,
+    link: 'logs',
+  },
+  UNEXPECTED: {
+    text: $localize`:@@admin.home.history.next.unexpected:Starší platby se samy znovu nenačtou: za chvíli stiskněte „Načíst starší platby“ znovu. Když se chyba opakuje, pošlete technikovi čas z této zprávy; podrobnosti najde v logu.`,
+    link: 'logs',
+  },
 };

@@ -368,6 +368,34 @@ describe('Given the part for older bank payments on the import card', () => {
       expect(fixture.nativeElement.querySelector('.history-next-step')).toBeNull();
     });
 
+    it.each([
+      [
+        'UNEXPECTED',
+        'Neočekávaná chyba',
+        'Starší platby se samy znovu nenačtou: za chvíli stiskněte „Načíst starší platby“ znovu. Když se chyba opakuje, pošlete technikovi čas z této zprávy; podrobnosti najde v logu.',
+      ],
+      [
+        'INVALID_RESPONSE',
+        'Fio poslalo odpověď, které web nerozumí',
+        'Za chvíli stiskněte „Načíst starší platby“ znovu; když se to opakuje, může jít o změnu na straně Fio a technik najde podrobnosti v logu.',
+      ],
+    ] as const)(
+      'then a run that ended as %s says to press the button again and leads to the logs',
+      async (failure, reason, step) => {
+        await poll(
+          historyImport({ status: 'FAILED', failure, finishedAt: '2026-11-05T10:00:30Z' }),
+        );
+
+        expect(alert()).toBe(
+          `Platby se nepodařilo stáhnout (05. 11. 2026 11:00). Důvod: ${reason}. Co udělat: ${step}`,
+        );
+        expect(text('.history-next-step')).toBe('Otevřít logy');
+        expect(
+          fixture.nativeElement.querySelector('.history-next-step a')?.getAttribute('href'),
+        ).toBe('/sprava/logy');
+      },
+    );
+
     it('then a run the bank refused the token for leads to the settings', async () => {
       await poll(
         historyImport({
