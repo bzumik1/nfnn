@@ -24,6 +24,7 @@ export class CopyButton {
   readonly value = input.required<string>();
   readonly what = input.required<string>();
   readonly label = input<string | null>(null);
+  readonly copiedStatus = input<string | null>(null);
 
   protected readonly state = signal<CopyState>('idle');
   private reset: ReturnType<typeof setTimeout> | undefined;
@@ -35,7 +36,7 @@ export class CopyButton {
   protected status(): string {
     switch (this.state()) {
       case 'copied':
-        return $localize`:@@ui.copy.copied:Zkopírováno.`;
+        return this.copiedStatus() ?? $localize`:@@ui.copy.copied:Zkopírováno.`;
       case 'failed':
         return $localize`:@@ui.copy.failed:Zkopírovat se nepodařilo, opište si údaj prosím ručně.`;
       default:

@@ -90,3 +90,34 @@
 .ui-button--primary.ui-button--block {
   box-shadow: var(--shadow-cta);
 }
+
+.ui-pill-button {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-accent);
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-border-accent);
+  border-radius: var(--radius-pill);
+  padding: var(--space-1-5) var(--space-3-5);
+  min-height: 32px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background var(--duration-base),
+    border-color var(--duration-base),
+    color var(--duration-base);
+
+  &:hover {
+    border-color: var(--color-accent);
+  }
+
+  &[aria-disabled='true'] {
+    cursor: progress;
+  }
+}
+
+.ui-pill-button--done {
+  color: var(--color-success);
+  border-color: var(--color-success);
+}

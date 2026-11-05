@@ -1,0 +1,42 @@
+@if (canShare()) {
+  <button
+    type="button"
+    class="ui-pill-button share-button"
+    [attr.aria-disabled]="state() === 'sharing' ? 'true' : null"
+    (click)="share()"
+  >
+    <svg
+      class="share-icon"
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M12 15V3" />
+      <path d="m7 8 5-5 5 5" />
+      <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" />
+    </svg>
+    <span i18n="@@ui.share.action">Sdílet</span>
+  </button>
+  @if (state() === 'failed') {
+    <p class="share-failed" role="alert" i18n="@@ui.share.failed">
+      Sdílení se nepodařilo. Odkaz na stránku si můžete zkopírovat.
+    </p>
+    <app-copy-button
+      [value]="url()"
+      [what]="copyWhat"
+      [label]="copyLabel"
+      [copiedStatus]="copiedStatus"
+    />
+  }
+} @else {
+  <app-copy-button
+    [value]="url()"
+    [what]="copyWhat"
+    [label]="copyLabel"
+    [copiedStatus]="copiedStatus"
+  />
+}

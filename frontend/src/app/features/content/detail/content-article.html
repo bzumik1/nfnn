@@ -54,6 +54,9 @@
         </div>
       </footer>
     }
+    @if (!preview()) {
+      <app-share-button class="share" [pageTitle]="page().title" [url]="shareUrl()" />
+    }
     <p class="actions-lead" i18n="@@content.detail.donateLead">
       Chcete pomoct dalším dětem? Přispějte na jejich pomůcky.
     </p>

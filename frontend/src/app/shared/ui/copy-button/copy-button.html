@@ -1,4 +1,9 @@
-<button type="button" class="copy-button" [class.is-copied]="state() === 'copied'" (click)="copy()">
+<button
+  type="button"
+  class="ui-pill-button copy-button"
+  [class.ui-pill-button--done]="state() === 'copied'"
+  (click)="copy()"
+>
   @if (state() === 'copied') {
     <span i18n="@@ui.copy.done">Zkopírováno</span>
   } @else if (label(); as text) {

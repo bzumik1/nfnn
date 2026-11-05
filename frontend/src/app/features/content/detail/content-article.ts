@@ -7,8 +7,10 @@ import {
   viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { canonicalAddress } from '../../../core/seo/canonical-link';
 import { Avatar } from '../../../shared/ui/avatar/avatar';
 import { Markdown } from '../../../shared/ui/markdown/markdown';
+import { ShareButton } from '../../../shared/ui/share-button/share-button';
 import { mediaUrl } from '../news-api';
 import { ContentKind, ContentPage } from './content-page';
 
@@ -18,7 +20,7 @@ const PORTRAIT_WIDTH = 480;
 
 @Component({
   selector: 'app-content-article',
-  imports: [RouterLink, Markdown, Avatar],
+  imports: [RouterLink, Markdown, Avatar, ShareButton],
   templateUrl: './content-article.html',
   styleUrl: './content-article.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -43,6 +45,10 @@ export class ContentArticle {
     const id = this.page().signer?.portraitId;
     return id ? mediaUrl(id, PORTRAIT_WIDTH) : null;
   });
+
+  protected readonly shareUrl = computed(() =>
+    canonicalAddress(`${this.page().backPath}/${this.page().slug}`),
+  );
 
   focusHeading(): void {
     this.heading()?.nativeElement.focus();
