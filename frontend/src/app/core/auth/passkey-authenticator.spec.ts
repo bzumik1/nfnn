@@ -103,6 +103,47 @@ describe('Given the passkey authenticator', () => {
     });
   });
 
+  it('when the authenticator also answers PRF or other extension results, then none of them is in what goes to the server', async () => {
+    const prfOutput = new Uint8Array(32).fill(0x5a);
+    const extensions = {
+      prf: { enabled: true, results: { first: prfOutput.buffer } },
+      credProps: { rk: true },
+    };
+    const get = vi.fn().mockResolvedValue({
+      id: 'Y3JlZA',
+      type: 'public-key',
+      rawId: bytes(99, 114, 101, 100),
+      response: {
+        clientDataJSON: bytes(1),
+        authenticatorData: bytes(2),
+        signature: bytes(3),
+        userHandle: null,
+      },
+      getClientExtensionResults: () => extensions,
+    });
+    const create = vi.fn().mockResolvedValue({
+      id: 'Y3JlZA',
+      type: 'public-key',
+      rawId: bytes(99, 114, 101, 100),
+      response: {
+        clientDataJSON: bytes(1),
+        attestationObject: bytes(5),
+        getTransports: () => ['internal'],
+      },
+      getClientExtensionResults: () => extensions,
+    });
+    const authenticator = authenticatorIn(fakeWindow({ get, create }));
+
+    const wire = JSON.stringify([
+      await authenticator.get(passkeySignInOptions()),
+      await authenticator.create(passkeyCreationOptions()),
+    ]);
+
+    expect(wire).not.toContain('clientExtensionResults');
+    expect(wire).not.toContain('prf');
+    expect(wire).not.toContain(toBase64Url(prfOutput.buffer));
+  });
+
   describe('when the browser refuses the ceremony', () => {
     it('then a dismissed prompt is cancelled and a known device is already registered', async () => {
       const dismissed = new Error('dismissed');

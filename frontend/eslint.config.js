@@ -6,6 +6,9 @@ const angular = require('angular-eslint');
 const prettier = require('eslint-config-prettier');
 const { confinedImports } = require('./eslint-confinement');
 
+const DEVICE_CRYPTO_STORES_NOTHING =
+  'The device crypto core keeps everything in memory and stores nothing ("Cizí počítač"); its caller stores the sealed records and wraps (frontend.md, Device copies).';
+
 module.exports = defineConfig([
   {
     files: ['**/*.ts', '**/*.mts'],
@@ -78,6 +81,40 @@ module.exports = defineConfig([
             },
           ],
         },
+      ],
+    },
+  },
+  {
+    files: ['src/app/core/device/crypto/**/*.ts'],
+    ignores: ['src/app/core/device/crypto/**/*.spec.ts'],
+    rules: {
+      'no-restricted-globals': [
+        'error',
+        ...['indexedDB', 'localStorage', 'sessionStorage', 'caches', 'cookieStore'].map((name) => ({
+          name,
+          message: DEVICE_CRYPTO_STORES_NOTHING,
+        })),
+      ],
+      'no-restricted-properties': [
+        'error',
+        ...['window', 'self', 'globalThis'].flatMap((object) =>
+          [
+            'indexedDB',
+            'localStorage',
+            'sessionStorage',
+            'caches',
+            'cookieStore',
+            'document',
+            'navigator',
+          ].map((property) => ({
+            object,
+            property,
+            message: DEVICE_CRYPTO_STORES_NOTHING,
+          })),
+        ),
+        { object: 'document', property: 'cookie', message: DEVICE_CRYPTO_STORES_NOTHING },
+        { object: 'navigator', property: 'storage', message: DEVICE_CRYPTO_STORES_NOTHING },
+        { object: 'navigator', property: 'credentials', message: DEVICE_CRYPTO_STORES_NOTHING },
       ],
     },
   },
