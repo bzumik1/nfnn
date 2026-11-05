@@ -14,6 +14,7 @@ import cz.novanadeje.app.content.domain.people.PersonRepository;
 import cz.novanadeje.app.content.domain.people.TooManyPeople;
 import cz.novanadeje.app.content.domain.people.PersonSignsReceipts;
 import cz.novanadeje.app.content.domain.people.ReceiptPortraitInBrowserOnly;
+import cz.novanadeje.app.content.domain.people.ReceiptSignatoryNameInBrowserOnly;
 import cz.novanadeje.app.content.domain.people.SignatoryNameUnprintable;
 import cz.novanadeje.app.shared.application.account.VerifiedAccountEmails;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
@@ -249,17 +250,45 @@ class PeopleAdminServiceTest {
     }
 
     @Test
-    @DisplayName("Given the person who signs the receipts, when a connected application renames them keeping the portrait or a browser changes the portrait, then both pass")
-    void should_rename_and_change_the_portrait_when_allowed_given_the_person_signs_receipts() {
+    @DisplayName("Given the person who signs the receipts, when a connected application renames them, then it is refused and nothing changes")
+    void should_refuse_the_rename_when_renamed_by_a_connection_given_the_person_signs_receipts() {
+        Person current = stored(0, Optional.of(PORTRAIT));
+        when(people.findByIdForUpdate(current.id())).thenReturn(Optional.of(current));
+        when(signatories.signsReceipts(current.id().value())).thenReturn(true);
+        lenient().when(media.findSize(PORTRAIT)).thenReturn(Optional.of(SQUARE));
+
+        assertThatThrownBy(() -> service().update(ADMIN, current.id(), command(Optional.of(PORTRAIT)), true))
+                .isInstanceOf(ReceiptSignatoryNameInBrowserOnly.class)
+                .hasFieldOrPropertyWithValue("code", "content/receipt-signatory-name-in-browser-only");
+        verify(people, never()).save(any());
+        verify(media, never()).deleteIfUnused(any());
+        verify(events, never()).publishEvent(any(Object.class));
+    }
+
+    @Test
+    @DisplayName("Given the person who signs the receipts, when a connected application changes their other details keeping the name and the portrait or a browser renames them and changes the portrait, then both pass")
+    void should_change_other_details_and_rename_when_allowed_given_the_person_signs_receipts() {
         Person current = stored(0, Optional.of(PORTRAIT));
         when(people.findByIdForUpdate(current.id())).thenReturn(Optional.of(current));
         lenient().when(signatories.signsReceipts(current.id().value())).thenReturn(true);
         when(media.findSize(PORTRAIT)).thenReturn(Optional.of(SQUARE));
         when(media.findSize(OTHER_PORTRAIT)).thenReturn(Optional.of(SQUARE));
 
+        assertThat(service().update(ADMIN, current.id(), renamed("Adam Vzor"), true).role()).contains("Zakladatelka");
+        PersonView renamed = service().update(ADMIN, current.id(), command(Optional.of(OTHER_PORTRAIT)), false);
+        assertThat(renamed.name()).isEqualTo("Eva Vzorová");
+        assertThat(renamed.portrait()).contains(new PersonImageView(OTHER_PORTRAIT, 640, 640));
+    }
+
+    @Test
+    @DisplayName("Given a person who does not sign the receipts, when a connected application renames them, then it passes")
+    void should_rename_when_renamed_by_a_connection_given_the_person_does_not_sign() {
+        Person current = stored(0, Optional.of(PORTRAIT));
+        when(people.findByIdForUpdate(current.id())).thenReturn(Optional.of(current));
+        when(signatories.signsReceipts(current.id().value())).thenReturn(false);
+        when(media.findSize(PORTRAIT)).thenReturn(Optional.of(SQUARE));
+
         assertThat(service().update(ADMIN, current.id(), command(Optional.of(PORTRAIT)), true).name()).isEqualTo("Eva Vzorová");
-        assertThat(service().update(ADMIN, current.id(), command(Optional.of(OTHER_PORTRAIT)), false).portrait())
-                .contains(new PersonImageView(OTHER_PORTRAIT, 640, 640));
     }
 
     @Test

@@ -17,6 +17,7 @@ import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
 import cz.novanadeje.app.donations.domain.receipt.YearlyReceiptNotAvailable;
+import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyUnpublished;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.Money;
 import cz.novanadeje.app.shared.domain.PostalAddress;
@@ -30,7 +31,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.IllegalTransactionStateException;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -124,20 +124,20 @@ class DonationReceiptIssuerConcurrencyTest {
     }
 
     @Test
-    @DisplayName("Given the server's signing key is not registered, when a receipt is issued, then the database refuses it, nothing is stored and its number stays a gap")
-    void should_store_nothing_when_issued_given_unregistered_signing_key() {
+    @DisplayName("Given the server's signing key is not registered, when a receipt is issued, then it is refused as unpublished before a number is taken and nothing is stored, and once the key is registered the receipt takes the first number")
+    void should_refuse_before_numbering_when_issued_given_unregistered_signing_key() {
         DonorRecord jana = storedJana();
         Donation donation = storedDonation(jana, 7005, LocalDate.of(2026, 3, 15), 50000);
         LocalDate today = FoundationCalendar.today(Clock.systemUTC());
         jdbc.sql("delete from receipt_signing_key").update();
 
         assertThatThrownBy(() -> issuer.issueForDonation(jana.id(), donation.id(), today))
-                .isInstanceOf(DataIntegrityViolationException.class)
-                .hasMessageContaining("fk_issued_receipt_signing_key");
+                .isInstanceOf(ReceiptSigningKeyUnpublished.class)
+                .hasFieldOrPropertyWithValue("code", "donations/receipt-signing-key-unpublished");
         assertThat(storedReceipts()).isZero();
 
         ServerReceiptSigningKey.storeAfterEmptyTables(context);
-        assertThat(issuer.issueForDonation(jana.id(), donation.id(), today).number().value()).endsWith("-000002");
+        assertThat(issuer.issueForDonation(jana.id(), donation.id(), today).number().value()).endsWith("-000001");
     }
 
     @Test

@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donations.application.receipt;
 
+import cz.novanadeje.app.donations.application.signing.CurrentKeyForIssuing;
 import cz.novanadeje.app.donations.application.signing.ReceiptSigningKeys;
 import cz.novanadeje.app.donations.domain.donation.DonationId;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
@@ -15,6 +16,7 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptReplacementInBrowserOnly;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptUnprintable;
 import cz.novanadeje.app.donations.domain.receipt.ReplacedReceipt;
+import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyUnpublished;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningPaused;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -66,22 +68,24 @@ public class DonationReceiptIssuer {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public DonationReceipt issueForDonation(DonorReference donor, DonationId donation, LocalDate today) {
-        refuseWhileOwnKeyIsWithdrawn(donor);
+        refuseUnlessOwnKeyIsPublished(donor);
         receipts.lockDonor(donor);
+        requests.refuseErasedRecord(donor);
         return issue(requests.forDonation(donor, donation, today));
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public DonationReceipt issueForYear(DonorReference donor, Year year, LocalDate today) {
-        refuseWhileOwnKeyIsWithdrawn(donor);
+        refuseUnlessOwnKeyIsPublished(donor);
         receipts.lockDonor(donor);
+        requests.refuseErasedRecord(donor);
         return issue(requests.forYear(donor, year, today));
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public DonationReceipt issueForDonationByAdministrator(UUID adminId, AdministrationChannel channel, DonorReference donor, DonationId donation,
                                                           LocalDate today) {
-        refuseWhileOwnKeyIsWithdrawn(donor);
+        refuseUnlessOwnKeyIsPublished(donor);
         receipts.lockDonor(donor);
         requests.requireLiveRecord(donor);
         return issueByAdministrator(adminId, channel, requests.forDonation(donor, donation, today));
@@ -89,17 +93,24 @@ public class DonationReceiptIssuer {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public DonationReceipt issueForYearByAdministrator(UUID adminId, AdministrationChannel channel, DonorReference donor, Year year, LocalDate today) {
-        refuseWhileOwnKeyIsWithdrawn(donor);
+        refuseUnlessOwnKeyIsPublished(donor);
         receipts.lockDonor(donor);
         requests.requireLiveRecord(donor);
         return issueByAdministrator(adminId, channel, requests.forYear(donor, year, today));
     }
 
-    private void refuseWhileOwnKeyIsWithdrawn(DonorReference donor) {
-        signingKeys.withdrawnCurrentKeyHeldForIssuing().ifPresent(key -> {
-            LOG.warn("No receipt is issued to donor {}: the receipt signing key {} of this server is withdrawn and no new seed has replaced it", donor, key);
-            throw new ReceiptSigningPaused(key);
-        });
+    private void refuseUnlessOwnKeyIsPublished(DonorReference donor) {
+        CurrentKeyForIssuing key = signingKeys.currentKeyHeldForIssuing();
+        switch (key.state()) {
+            case PUBLISHED -> {
+            }
+            case WITHDRAWN -> {
+                LOG.warn("No receipt is issued to donor {}: the receipt signing key {} of this server is withdrawn and no new seed has replaced it", donor,
+                        key.id());
+                throw new ReceiptSigningPaused(key.id());
+            }
+            case UNPUBLISHED -> throw new ReceiptSigningKeyUnpublished(key.id());
+        }
     }
 
     private DonationReceipt issueByAdministrator(UUID adminId, AdministrationChannel channel, ReceiptRequest request) {
@@ -159,8 +170,8 @@ public class DonationReceiptIssuer {
             receipts.save(old);
         });
         receipts.save(issued);
-        LOG.info("Issued receipt {} ({}) for donor {}{}", number, issued.kind(), request.donor(),
-                replaced.map(old -> " replacing " + old.number()).orElse(""));
+        String replacing = replaced.map(old -> " replacing " + old.number()).orElse("");
+        AfterCommit.run(() -> LOG.info("Issued receipt {} ({}) for donor {}{}", number, issued.kind(), request.donor(), replacing));
         return issued;
     }
 
