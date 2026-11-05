@@ -222,7 +222,7 @@ describe('Given the payment panel on a phone or a tablet', () => {
       'Platíte z jiného zařízení? Naskenujte kód aplikací banky',
     );
     expect(squashed('.qr-caption')).toBe('QR platba na účet Nadačního fondu Nová naděje, 500 Kč.');
-    expect(element('.qr-caption').getAttribute('aria-hidden')).toBe('true');
+    expect(element('.qr-caption').getAttribute('aria-hidden')).toBeNull();
     expect(element('.qr-save')).toBeNull();
 
     otherDevice().click();
