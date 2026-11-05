@@ -89,6 +89,9 @@ describe('Given the auth store of one tab over the real device vault', () => {
 
       await vi.waitFor(() => expect(vault.opened()?.account.userHandle).toBe(PETR.userHandle));
       expect(vault.locked()).toBe(false);
+      const reloaded = anotherTab();
+      await reloaded.restored(PETR);
+      expect(reloaded.opened()?.store.copyId).toBe(vault.opened()?.store.copyId);
     });
   });
 });

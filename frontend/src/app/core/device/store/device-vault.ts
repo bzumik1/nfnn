@@ -110,6 +110,7 @@ export class DeviceVault implements SessionDevice {
   private queue: Promise<unknown> = Promise.resolve();
   private persistAsked = false;
   private pendingSalt: string | null = null;
+  private sessionsWritten = new Set<string>();
   private readonly copies = new WeakMap<AccountStore, OpenCopy>();
 
   readonly opened = this.openedCopy.asReadonly();
@@ -276,7 +277,10 @@ export class DeviceVault implements SessionDevice {
     const entries = await storage.entries();
     const entry = entryFor(entries, tags);
     const opening = entry === null ? null : await this.openExisting(storage, entry, secret);
-    if (entry !== null && opening === null && !refusedBy(entry.wraps, secret)) {
+    if (
+      opening === 'undecided' ||
+      (entry !== null && opening === null && !refusedBy(entry.wraps, secret))
+    ) {
       await this.committed(storage, withoutSessions(entries));
       this.lockedCopy.set(true);
       return;
@@ -316,8 +320,8 @@ export class DeviceVault implements SessionDevice {
     const salt = await this.saltOf(storage);
     const tags = await accountTags(salt, account);
     const entry = entryFor(entries, tags);
-    const opening =
-      entry === null ? null : await this.openExisting(storage, entry, { kind: 'none' });
+    const found = entry === null ? null : await this.openExisting(storage, entry, { kind: 'none' });
+    const opening = found === 'undecided' ? null : found;
     const others = entries.filter((candidate) => candidate.copyId !== entry?.copyId);
     if (opening !== null) {
       await this.committed(
@@ -363,7 +367,7 @@ export class DeviceVault implements SessionDevice {
     storage: DeviceStorage,
     entry: RegistryEntry,
     secret: SignInSecret,
-  ): Promise<Opening | null> {
+  ): Promise<Opening | null | 'undecided'> {
     const sessionWrap = entry.wraps.find((wrap) => wrap.kind === 'session');
     const sessionKey = sessionWrap === undefined ? null : await storage.sessionKey(entry.copyId);
     if (sessionWrap !== undefined && sessionKey !== null) {
@@ -375,11 +379,18 @@ export class DeviceVault implements SessionDevice {
     if (secret.kind === 'password') {
       const passwordWrap = entry.wraps.find((wrap) => wrap.kind === 'password');
       if (passwordWrap !== undefined) {
-        const copy = await refusedAsNull(
-          openWithPassword(entry, passwordWrap, secret.password, this.derivation),
-        );
-        if (copy !== null) {
-          return { copy, by: 'password' };
+        try {
+          const copy = await refusedAsNull(
+            openWithPassword(entry, passwordWrap, secret.password, this.derivation),
+          );
+          if (copy !== null) {
+            return { copy, by: 'password' };
+          }
+        } catch (failure: unknown) {
+          if (failure instanceof PasswordKeyFailure) {
+            return 'undecided';
+          }
+          throw failure;
         }
       }
     }
@@ -541,14 +552,29 @@ export class DeviceVault implements SessionDevice {
     await this.afterRemoval(storage);
   }
 
+  private async dropSessionsWritten(storage: DeviceStorage): Promise<void> {
+    const written = (await storage.entries()).filter((entry) =>
+      this.sessionsWritten.has(entry.copyId),
+    );
+    const change = withoutSessions(written);
+    if ((change.putEntries ?? []).length > 0 || (change.deleteCopies ?? []).length > 0) {
+      await this.committed(storage, change);
+      await this.afterRemoval(storage);
+    }
+  }
+
   private async committed(storage: DeviceStorage, change: StorageChange): Promise<void> {
     await storage.write(change);
+    for (const { copyId } of change.putSessionKeys ?? []) {
+      this.sessionsWritten.add(copyId);
+    }
     for (const copyId of change.deleteCopies ?? []) {
       this.announce(copyId, 'deleted');
     }
   }
 
   private async withMemoryFallback(open: () => Promise<void>): Promise<void> {
+    this.sessionsWritten = new Set();
     try {
       await open();
     } catch (failure: unknown) {
@@ -557,7 +583,7 @@ export class DeviceVault implements SessionDevice {
       if (storage?.kind !== 'indexed-db') {
         throw failure;
       }
-      await this.endSessions(storage).catch(() => undefined);
+      await this.dropSessionsWritten(storage).catch(() => undefined);
       this.reporter.report('device-store-open', 'global', failure);
       this.sharedStorage = Promise.resolve(new MemoryDeviceStorage());
       await open();
@@ -687,7 +713,7 @@ async function refusedAsNull(opening: Promise<OpenCopy>): Promise<OpenCopy | nul
   try {
     return await opening;
   } catch (failure: unknown) {
-    if (failure instanceof CopyRefused || failure instanceof PasswordKeyFailure) {
+    if (failure instanceof CopyRefused) {
       return null;
     }
     throw failure;

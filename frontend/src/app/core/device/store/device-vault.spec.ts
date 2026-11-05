@@ -6,7 +6,7 @@ import { type DeviceAccount, userHandleOf } from '../../auth/session-device';
 import { TAB_LOCKS } from '../../auth/session-tabs';
 import { ErrorReporter } from '../../errors/error-reporter';
 import type { PrfReading } from '../crypto/prf';
-import type { PasswordKeyQuestion } from '../crypto/password-key';
+import { PasswordKeyFailure, type PasswordKeyQuestion } from '../crypto/password-key';
 import { SmallArgon2Derivation } from '../crypto/testing/password-key-derivations';
 import type { CopyContents } from './account-store';
 import { DEVICE_DATABASE, type DeviceStorage, type StorageChange } from './device-storage';
@@ -69,7 +69,12 @@ class GatedDerivation extends SmallArgon2Derivation {
     this.release();
   }
 
+  failing: PasswordKeyFailure | null = null;
+
   override async derive(question: PasswordKeyQuestion) {
+    if (this.failing !== null) {
+      throw this.failing;
+    }
     const gate = this.gate;
     const derived = super.derive(question);
     if (gate !== null) {
@@ -193,6 +198,24 @@ describe('Given the device vault over IndexedDB with real WebCrypto', () => {
 
       expect(persist).toHaveBeenCalledTimes(1);
       expect(localStorage.getItem(DEVICE_COPY_MARKER_KEY)).toBe('1');
+    });
+
+    it('and she signs out and the password key cannot be derived at the next sign-in, then her copy is kept locked, not replaced', async () => {
+      const copyId = vault.opened()!.store.copyId;
+      await vault.replaceContents(vault.opened()!.store, contentsOf(CANARY));
+      await vault.signedOut(JANA);
+      derivation.failing = new PasswordKeyFailure('timeout');
+
+      await vault.signedIn(JANA, { kind: 'password', password: PASSWORD });
+
+      expect(vault.opened()).toBeNull();
+      expect(vault.locked()).toBe(true);
+      expect((await storedEntries()).map((entry) => entry.copyId)).toEqual([copyId]);
+      derivation.failing = null;
+      await vault.signedOut(JANA);
+      await vault.signedIn(JANA, { kind: 'password', password: PASSWORD });
+      expect(vault.opened()?.store.copyId).toBe(copyId);
+      expect(vault.opened()?.reason).toBe('sign-in');
     });
 
     it('then every change ran under the Web Lock of the vault', () => {
@@ -688,6 +711,27 @@ describe('Given the device vault over IndexedDB with real WebCrypto', () => {
 
       expect(await storedEntries()).toEqual([]);
       await vi.waitFor(() => expect(other.opened()).toBeNull());
+    });
+
+    it('and another tab cannot read the records at its reload, then that tab moves to memory and leaves her session wrap alone', async () => {
+      await vault.signedIn(JANA, { kind: 'none' });
+      opener.mockImplementation(async () => {
+        const storage = await openIdbDeviceStorage();
+        return Object.assign(Object.create(storage) as DeviceStorage, {
+          records: async () => {
+            throw new DOMException('The read failed', 'UnknownError');
+          },
+        });
+      });
+      const other = anotherTab();
+
+      await other.restored(JANA);
+
+      expect(other.mode()).toBe('memory');
+      expect(vault.opened()).not.toBeNull();
+      expect((await storedEntries()).flatMap((entry) => entry.wraps.map((w) => w.kind))).toEqual([
+        'session',
+      ]);
     });
   });
 
