@@ -20,6 +20,9 @@
       <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" />
     </svg>
     <span i18n="@@ui.share.action">Sdílet</span>
+    @if (subject(); as named) {
+      <span class="visually-hidden"> {{ named }}</span>
+    }
   </button>
 }
 @if (refused()) {
@@ -34,8 +37,10 @@
     [value]="url()"
     [what]="copyWhat"
     [label]="copyLabel"
+    [labelDetail]="subject()"
     [copiedStatus]="copiedStatus"
     [failedStatus]="copyFailedStatus"
     align="start"
+    [tone]="tone()"
   />
 }

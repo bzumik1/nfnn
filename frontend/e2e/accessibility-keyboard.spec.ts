@@ -343,7 +343,7 @@ test.describe('Given a visitor on a phone who uses only the keyboard', () => {
     await page.keyboard.press('Enter');
 
     await expect(page).toHaveURL(/\/aktuality$/);
-    await expect(page.getByRole('heading', { level: 1, name: 'Aktuality' })).toBeFocused();
+    await expect(page.getByRole('heading', { level: 1, name: 'Co je u nás nového' })).toBeFocused();
     await expect(tabs.getByRole('link', { name: 'Aktuality' })).toHaveAttribute(
       'aria-current',
       'page',

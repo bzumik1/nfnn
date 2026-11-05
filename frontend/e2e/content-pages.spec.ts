@@ -77,11 +77,20 @@ test.describe('Given a visitor on the Aktuality and Pomáháme tabs', () => {
     await page.goto('/aktuality');
 
     await expect(page).toHaveTitle('Aktuality | Nová naděje – nadační fond');
-    const news = page.locator('.news-card');
+    const news = page.locator('.featured');
     await expect(news).toHaveCount(1);
-    await expect(news.locator('.news-tag')).toHaveText('Projekt');
-    await expect(news.locator('.news-date')).toHaveText('20. 10. 2026');
+    await expect(news.locator('.featured-tag')).toHaveText('Projekt');
+    await expect(news.locator('.featured-date')).toHaveText('20. 10. 2026');
     await expect(news.locator('img')).toBeVisible();
+    const stories = page.getByRole('region', { name: 'Příběhy z roku 2024' });
+    await expect(stories.getByRole('link', { name: 'Dominik, 7 let' })).toHaveAttribute(
+      'href',
+      '/projekty/dominik-7-let',
+    );
+    await expect(stories.getByRole('link', { name: 'Příběh v Pomáháme' })).toHaveAttribute(
+      'href',
+      '/projekty?rok=2024',
+    );
 
     await page.getByRole('link', { name: 'Zahrada pro děti' }).click();
 
@@ -96,7 +105,7 @@ test.describe('Given a visitor on the Aktuality and Pomáháme tabs', () => {
     await page.getByRole('link', { name: '← Všechny aktuality' }).click();
 
     await expect(page).toHaveURL('/aktuality');
-    await expect(page.getByRole('heading', { level: 1, name: 'Aktuality' })).toBeFocused();
+    await expect(page.getByRole('heading', { level: 1, name: 'Co je u nás nového' })).toBeFocused();
     await openSection(page, 'Pomáháme');
 
     await expect(page).toHaveURL('/projekty');
@@ -189,7 +198,7 @@ test.describe('Given a visitor reading a news article', () => {
     await news.click();
 
     await expect(page).toHaveURL(/\/aktuality$/);
-    await expect(page.getByRole('heading', { level: 1, name: 'Aktuality' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Co je u nás nového' })).toBeVisible();
     await expect(tabs.getByRole('link', { name: 'Pomáháme' })).toHaveAttribute('href', '/projekty');
   });
 
@@ -199,7 +208,7 @@ test.describe('Given a visitor reading a news article', () => {
     await page.getByRole('banner').getByRole('button', { name: 'Zpět' }).click();
 
     await expect(page).toHaveURL(/\/aktuality$/);
-    await expect(page.getByRole('heading', { level: 1, name: 'Aktuality' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Co je u nás nového' })).toBeVisible();
   });
 });
 
@@ -236,7 +245,8 @@ test.describe('Given a visitor paging through the news', () => {
 
     await page.goto('/aktuality');
 
-    await expect(page.locator('.news-card')).toHaveCount(10);
+    await expect(page.locator('.featured')).toHaveCount(1);
+    await expect(page.locator('.news-card')).toHaveCount(9);
     await expect(page.getByText('Strana 1 z 2')).toBeVisible();
     await expect(page.getByRole('link', { name: '← Novější' })).toHaveCount(0);
     await page
@@ -250,7 +260,7 @@ test.describe('Given a visitor paging through the news', () => {
     await page.getByRole('link', { name: '← Novější' }).click();
 
     await expect(page).toHaveURL('/aktuality');
-    await expect(page.locator('.news-card')).toHaveCount(10);
+    await expect(page.locator('.news-card')).toHaveCount(9);
     expect(asked).toEqual(['0/10', '1/10', '0/10']);
   });
 });
@@ -304,6 +314,17 @@ test.describe('Given a visitor in a browser that can share', () => {
     await expect
       .poll(() => sharedPages(page))
       .toEqual([{ title: project.title, url: `https://nfnn.cz/projekty/${project.slug}` }]);
+  });
+  test('when they share an article from Aktuality, then its button names it and the device gets its title with its address on nfnn.cz', async ({
+    page,
+  }) => {
+    await page.goto('/aktuality');
+    await page.getByRole('button', { name: `Sdílet ${article.title}`, exact: true }).click();
+
+    await expect
+      .poll(() => sharedPages(page))
+      .toEqual([{ title: article.title, url: `https://nfnn.cz/aktuality/${article.slug}` }]);
+    await expect(page).toHaveURL('/aktuality');
   });
 });
 

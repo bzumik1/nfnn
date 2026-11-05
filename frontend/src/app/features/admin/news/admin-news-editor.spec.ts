@@ -681,7 +681,13 @@ describe('Given an administrator editing a published news article', () => {
       Array.from(fixture.nativeElement.querySelectorAll('figure.preview figcaption')).map(
         (caption) => (caption as HTMLElement).textContent?.trim(),
       ),
-    ).toEqual(['Karta v Aktualitách', 'Nahoře v článku']);
+    ).toEqual([
+      'Velká zpráva na počítači',
+      'Velká zpráva na telefonu',
+      'Starší zpráva na počítači',
+      'Karta v Aktualitách',
+      'Nahoře v článku',
+    ]);
 
     await tapPhoto(168, 45);
     expect(text(fixture, '.picker-status')).toBe('Bod výřezu: 42 % zleva, 18 % shora.');
