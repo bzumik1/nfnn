@@ -518,6 +518,7 @@ function shootEach(screens: Screen[]): void {
         ]);
 
         if (!screen.region) {
+          await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
           await expect(page).toHaveScreenshot(`${screen.name}-${width}.png`, {
             fullPage: !screen.viewportOnly,
             mask: (screen.masked ?? []).map((selector) => page.locator(selector)),
