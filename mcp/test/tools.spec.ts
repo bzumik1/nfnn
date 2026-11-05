@@ -58,6 +58,7 @@ describe('Given an administrator connected with the reading permission only', ()
       'nfnn_disconnect_bank_account',
       'nfnn_donor',
       'nfnn_find_donors',
+      'nfnn_import_history',
       'nfnn_issue_receipt',
       'nfnn_log',
       'nfnn_log_files',
@@ -461,6 +462,25 @@ describe('Given an administrator connected with the reading permission only', ()
     expect(
       stack.backend.requests.filter((request) => request.path.endsWith('/receipts')),
     ).toHaveLength(0);
+  });
+
+  it('when older bank payments are requested with the reading permission only, then nothing reaches the administration and the answer says how to allow changes', async () => {
+    const result = await client.callTool({
+      name: 'nfnn_import_history',
+      arguments: { from: '2026-01-01' },
+    });
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toContain('This connection may only read');
+    expect(
+      stack.backend.requests.filter((request) => request.path.endsWith('/import/history')),
+    ).toHaveLength(0);
+  });
+
+  it('when the status is asked, then the bank import names the last run of older payments and the default day', async () => {
+    const text = textOf(await client.callTool({ name: 'nfnn_status', arguments: {} }));
+    expect(text).toContain('"historyImport":{"from":"2026-01-01"');
+    expect(text).toContain('"status":"COMPLETED"');
+    expect(text).toContain('"defaultHistoryFrom":"2026-01-01"');
   });
 
   it('when the history, the report and the content are asked, then they come from the administration', async () => {
@@ -868,6 +888,41 @@ describe('Given an administrator connected with the writing permission', () => {
       .map((request) => request.body);
     expect(bodies).toContain('{"month":"2026-09"}');
     expect(bodies).toContain('{"kind":"TEST_RESTORE"}');
+  });
+
+  it('when older bank payments are requested from a day, then the day is posted to the history import and the queued run comes back', async () => {
+    const result = await client.callTool({
+      name: 'nfnn_import_history',
+      arguments: { from: '2025-06-01' },
+    });
+    expect(result.isError).toBeFalsy();
+    expect(textOf(result)).toContain('"status":"QUEUED"');
+    expect(textOf(result)).toContain('"from":"2025-06-01"');
+    const posted = stack.backend.requests.filter(
+      (request) =>
+        request.method === 'POST' && request.path === '/api/admin/donations/import/history',
+    );
+    expect(posted.map((request) => request.body)).toEqual(['{"from":"2025-06-01"}']);
+  });
+
+  it('when older bank payments are requested with a malformed day, then the tool refuses it before calling the administration', async () => {
+    const result = await client.callTool({
+      name: 'nfnn_import_history',
+      arguments: { from: '1. 1. 2026' },
+    });
+    expect(result.isError).toBe(true);
+    expect(
+      stack.backend.requests.filter((request) => request.path.endsWith('/import/history')),
+    ).toHaveLength(0);
+  });
+
+  it('when the tools are listed, then loading older payments is a repeatable change that names the unlock and its audit', async () => {
+    const { tools } = await client.listTools();
+    const tool = tools.find((candidate) => candidate.name === 'nfnn_import_history');
+    expect(tool?.title).toBe('Načíst starší platby');
+    expect(tool?.annotations).toMatchObject({ readOnlyHint: false });
+    expect(tool?.description).toContain('HISTORY_LOCKED');
+    expect(tool?.description).toContain('REQUEST_HISTORY_IMPORT');
   });
 
   it('when the report settings change, then the whole settings reach the administration', async () => {

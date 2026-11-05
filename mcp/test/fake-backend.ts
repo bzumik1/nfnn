@@ -158,6 +158,18 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
           coveredTo: '2026-10-22',
           lastSucceededAt: '2026-10-23T05:00:00Z',
           consecutiveFailures: 0,
+          historyImport: {
+            from: '2026-01-01',
+            to: '2026-10-23',
+            needsUnlockedHistory: true,
+            requestedAt: '2026-10-23T05:10:00Z',
+            startsAt: '2026-10-23T05:10:20Z',
+            status: 'COMPLETED',
+            failure: null,
+            added: 12,
+            finishedAt: '2026-10-23T05:11:00Z',
+          },
+          defaultHistoryFrom: '2026-01-01',
         },
       ];
     case 'GET /api/admin/donations/receipt-signing-keys':
@@ -710,6 +722,21 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
       return [
         200,
         { month: (JSON.parse(body) as { month: string }).month, sentAt: '2026-10-23T06:30:00Z' },
+      ];
+    case 'POST /api/admin/donations/import/history':
+      return [
+        202,
+        {
+          from: (JSON.parse(body) as { from: string }).from,
+          to: '2026-10-23',
+          needsUnlockedHistory: true,
+          requestedAt: '2026-10-23T06:30:00Z',
+          startsAt: '2026-10-23T06:30:20Z',
+          status: 'QUEUED',
+          failure: null,
+          added: null,
+          finishedAt: null,
+        },
       ];
     case 'POST /api/admin/operations/backups/requests':
       return [202, { requestId: UNKNOWN_ID, kind: (JSON.parse(body) as { kind: string }).kind }];
