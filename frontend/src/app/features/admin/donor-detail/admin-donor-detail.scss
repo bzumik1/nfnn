@@ -349,3 +349,7 @@ td.amount {
   color: var(--color-accent);
   font-weight: var(--weight-semibold);
 }
+
+.donations-card--rows {
+  overflow: clip;
+}
