@@ -46,6 +46,14 @@
     "contract": "docs/api-contract.md, Push alerts of the administration"
   },
   {
+    "path": "POST /api/admin/operations/push/subscriptions",
+    "scenario": "operations/admin_push: A browser key that is no point on the curve, a session without a device and the eleventh device are refused*",
+    "kind": "body",
+    "field": "$.detail",
+    "reason": "Plan v3 slice 2.28 after slice 2.9: every new sign-in names its device, so the refusal of a session without one says to sign out and sign in again instead of waiting",
+    "contract": "docs/api-contract.md, Push alerts of the administration"
+  },
+  {
     "kind": "log-field",
     "line": "operations.application.push.PushSender: Push subscription <id> failed <n> times in a row",
     "reason": "Plan v3 slice 2.27 brought this warning; 2.28's retry scenarios are the first to record it",

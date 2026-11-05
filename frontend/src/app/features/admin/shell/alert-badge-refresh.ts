@@ -14,23 +14,32 @@ export class AlertBadgeRefresh {
   private lastReadAt = Number.NEGATIVE_INFINITY;
 
   watch(destroyRef: DestroyRef): void {
-    this.read();
+    let closed = false;
+    const shown = (count: number): void => {
+      if (!closed) {
+        this.badge.show(count);
+      }
+    };
+    this.read(shown);
     const visible = (): void => {
       if (
         this.document.visibilityState === 'visible' &&
         Date.now() - this.lastReadAt >= ALERT_BADGE_REFRESH_GAP_MS
       ) {
-        this.read();
+        this.read(shown);
       }
     };
     this.document.addEventListener('visibilitychange', visible);
-    destroyRef.onDestroy(() => this.document.removeEventListener('visibilitychange', visible));
+    destroyRef.onDestroy(() => {
+      closed = true;
+      this.document.removeEventListener('visibilitychange', visible);
+    });
   }
 
-  private read(): void {
+  private read(shown: (count: number) => void): void {
     this.lastReadAt = Date.now();
     this.api.push().subscribe({
-      next: (view) => this.badge.show(view.openAlerts?.length ?? 0),
+      next: (view) => shown(view.openAlerts?.length ?? 0),
       error: () => undefined,
     });
   }

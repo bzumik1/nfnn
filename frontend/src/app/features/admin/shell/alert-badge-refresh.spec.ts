@@ -59,6 +59,15 @@ describe('Given the administration open in a tab', () => {
     expect(badge.show).toHaveBeenCalledWith(1);
   });
 
+  it('when the administration closes before the answer comes, then the badge is left as it is', () => {
+    const answer = http.expectOne(PUSH_URL);
+    ended();
+
+    answer.flush(adminPush({ openAlerts: [{ area: 'mail', since: '2026-11-04T05:15:00Z' }] }));
+
+    expect(badge.show).not.toHaveBeenCalled();
+  });
+
   it('when the settings cannot be read, then the badge is left as it is and nothing is shown', () => {
     http.expectOne(PUSH_URL).flush(null, { status: 500, statusText: 'Error' });
 

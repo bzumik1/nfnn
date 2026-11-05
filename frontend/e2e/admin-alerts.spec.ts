@@ -254,7 +254,7 @@ test.describe('Given an administrator on the alerts page of a device with a serv
 
     const device = page.getByRole('region', { name: 'Toto zařízení' });
     await expect(device).toContainText(
-      'Toto přihlášení zatím nerozlišuje zařízení, a proto na něm upozornění zapnout nejde.',
+      'Toto přihlášení je starší, než web začal rozlišovat zařízení, a proto na něm upozornění zapnout nejde.',
     );
     await expect(device.getByRole('button')).toHaveCount(0);
     expect((await deviceRecord(page)).permissionRequests).toBe(0);

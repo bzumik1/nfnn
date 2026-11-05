@@ -22,9 +22,14 @@ import java.util.Deque;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Component
 public class ObservedMailSender {
+
+    private static final Pattern SERVER_REPLY = Pattern.compile("(\\d{3})[ -]?(\\d\\.\\d{1,3}\\.\\d{1,3})?");
+    private static final Set<String> UNKNOWN_ADDRESS_CODES = Set.of("550", "551", "553");
 
     private final JavaMailSender mailSender;
     private final ApplicationEventPublisher events;
@@ -55,7 +60,16 @@ public class ObservedMailSender {
         List<Throwable> chain = causesOf(refused);
         return chain.stream().anyMatch(ObservedMailSender::namesRefusedRecipients)
                 && chain.stream().noneMatch(cause -> cause instanceof MailAuthenticationException || cause instanceof AuthenticationFailedException
-                || cause instanceof IOException);
+                || cause instanceof IOException || refusedForAnotherReason(cause));
+    }
+
+    private static boolean refusedForAnotherReason(Throwable cause) {
+        Matcher reply = cause.getMessage() == null ? null : SERVER_REPLY.matcher(cause.getMessage());
+        if (reply == null || !reply.lookingAt()) {
+            return false;
+        }
+        boolean unknownAddress = UNKNOWN_ADDRESS_CODES.contains(reply.group(1));
+        return reply.group(2) == null ? !unknownAddress : !reply.group(2).startsWith("5.1.");
     }
 
     private static boolean namesRefusedRecipients(Throwable cause) {

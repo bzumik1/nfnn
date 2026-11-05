@@ -210,7 +210,7 @@ describe('Given an administrator on the alerts page', () => {
     await open(adminPush({ deviceSession: false }));
 
     expect(sectionText('Toto zařízení')).toContain(
-      'Toto přihlášení zatím nerozlišuje zařízení, a proto na něm upozornění zapnout nejde.',
+      'Toto přihlášení je starší, než web začal rozlišovat zařízení, a proto na něm upozornění zapnout nejde.',
     );
     expect(() => button('Zapnout upozornění na tomto zařízení')).toThrow();
     expect(push.requestPermission).not.toHaveBeenCalled();
@@ -222,7 +222,9 @@ describe('Given an administrator on the alerts page', () => {
     delete older.deviceSession;
     await open(older);
 
-    expect(sectionText('Toto zařízení')).toContain('Toto přihlášení zatím nerozlišuje zařízení');
+    expect(sectionText('Toto zařízení')).toContain(
+      'Toto přihlášení je starší, než web začal rozlišovat zařízení',
+    );
   });
 
   it('when an older server sends no open alerts, then the page treats them as none', async () => {
