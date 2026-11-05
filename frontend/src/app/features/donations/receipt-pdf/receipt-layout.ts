@@ -8,6 +8,7 @@ import {
 } from '../../../shared/ui/qr-code/qr-branded-layout';
 import { QrSymbol } from '../../../shared/ui/qr-code/qr-encoder';
 import { ReceiptArt } from './receipt-art';
+import { ReceiptBundleOptions, ReceiptPdfInfo } from './receipt-bundle-options';
 import { Bilingual, ReceiptDocument, ReceiptGiftRow } from './receipt-document';
 import { RECEIPT_LOGO } from './receipt-logo';
 import { checkedReceiptStyle, ReceiptStyle } from './receipt-style';
@@ -113,13 +114,6 @@ function joined(chunks: readonly Uint8Array[]): Uint8Array {
     offset += chunk.length;
   }
   return bytes;
-}
-
-export interface ReceiptPdfInfo {
-  readonly title: string;
-  readonly author: string;
-  readonly subject: string;
-  readonly createdAt: string;
 }
 
 type PdfImage = ReturnType<PDFDocument['openImage']>;
@@ -1030,11 +1024,6 @@ export async function drawReceipt(
 export interface ReceiptBundleItem {
   readonly document: ReceiptDocument;
   readonly artwork: ReceiptArtwork;
-}
-
-export interface ReceiptBundleOptions {
-  readonly info: ReceiptPdfInfo;
-  readonly duplex: boolean;
 }
 
 export async function drawReceiptBundle(

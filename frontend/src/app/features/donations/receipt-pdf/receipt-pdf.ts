@@ -1,5 +1,16 @@
 import { inject, Injectable, InjectionToken } from '@angular/core';
-import { defer, from, Observable, of, switchMap, tap, timeout } from 'rxjs';
+import {
+  concatMap,
+  defer,
+  from,
+  Observable,
+  of,
+  Subscriber,
+  switchMap,
+  tap,
+  timeout,
+  toArray,
+} from 'rxjs';
 import { ErrorReporter } from '../../../core/errors/error-reporter';
 import { ErrorKind, ErrorName, errorNameOf } from '../../../core/errors/error-vocabulary';
 import { DownloadedFile } from '../donations-api';
@@ -12,8 +23,13 @@ import {
   ReceiptUnprintable,
 } from './receipt-document';
 import { resolveReceiptStyle, ReceiptStyle, ReceiptStyleRefused } from './receipt-style';
-import { ReceiptWorker } from './receipt-worker-messages';
-import { ReceiptSource } from './receipts-api';
+import {
+  ReceiptWorker,
+  ReceiptWorkerMessage,
+  ReceiptWorkerRequest,
+} from './receipt-worker-messages';
+import { ReceiptImageBytes, ReceiptSource } from './receipts-api';
+import { IssuedReceipt } from './frozen-receipt';
 
 export type ReceiptPdfPhase = 'data' | 'tools' | 'drawing';
 
@@ -68,6 +84,37 @@ export const RECEIPT_PDF_ENVIRONMENT = new InjectionToken<ReceiptPdfEnvironment>
 
 export const RECEIPT_DRAWING_TIMEOUT_MS = 120_000;
 
+export interface ReceiptBundleSource {
+  readonly receipts: readonly IssuedReceipt[];
+  readonly duplex: boolean;
+  readonly title: string;
+  readonly fileName: string;
+  image(sha256: string): Observable<ReceiptImageBytes>;
+}
+
+export type ReceiptBundleEvent =
+  | { readonly kind: 'images'; readonly done: number; readonly total: number }
+  | { readonly kind: 'tools' }
+  | { readonly kind: 'drawing'; readonly receipt: number; readonly receipts: number }
+  | { readonly kind: 'done'; readonly file: DownloadedFile };
+
+function pdfFile(bytes: Uint8Array, fileName: string): DownloadedFile {
+  return {
+    blob: new Blob([bytes as Uint8Array<ArrayBuffer>], { type: 'application/pdf' }),
+    fileName,
+  };
+}
+
+function latestIssuedAt(receipts: readonly IssuedReceipt[]): string {
+  return receipts
+    .map((issued) => issued.issuedAt)
+    .reduce((latest, issuedAt) => (Date.parse(issuedAt) > Date.parse(latest) ? issuedAt : latest));
+}
+
+function bundleSubject(receipts: number): string {
+  return $localize`:@@admin.yearlyReceipts.pdf.subject:${receipts}:count: potvrzení`;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ReceiptPdf {
   private readonly environment = inject(RECEIPT_PDF_ENVIRONMENT);
@@ -106,62 +153,16 @@ export class ReceiptPdf {
               return;
             }
             subscriber.next({ kind: 'phase', phase: 'tools', page: 0, pages });
-            let ready = false;
-            try {
-              worker = this.environment.worker();
-            } catch (failure: unknown) {
-              subscriber.error(new ReceiptPdfFailure('tools-missing', errorNameOf(failure)));
-              return;
-            }
-            worker.onerror = (event) => {
-              event.preventDefault();
-              subscriber.error(
-                new ReceiptPdfFailure(
-                  ready ? 'drawing' : 'tools-missing',
-                  errorNameOf((event as Partial<ErrorEvent>).error),
-                ),
-              );
-            };
-            worker.onmessage = ({ data }) => {
-              switch (data.kind) {
-                case 'ready':
-                  ready = true;
-                  try {
-                    worker?.postMessage({
-                      document,
-                      style: this.environment.style(),
-                      signature,
-                      portrait,
-                    });
-                  } catch (failure: unknown) {
-                    subscriber.error(
-                      new ReceiptPdfFailure(
-                        failure instanceof ReceiptStyleRefused ? 'style' : 'drawing',
-                        errorNameOf(failure),
-                      ),
-                    );
-                  }
-                  break;
-                case 'page':
-                  subscriber.next({ kind: 'phase', phase: 'drawing', page: data.page, pages });
-                  break;
-                case 'done':
-                  subscriber.next({
-                    kind: 'done',
-                    file: {
-                      blob: new Blob([data.bytes as Uint8Array<ArrayBuffer>], {
-                        type: 'application/pdf',
-                      }),
-                      fileName: document.fileName,
-                    },
-                  });
-                  subscriber.complete();
-                  break;
-                case 'failed':
-                  subscriber.error(new ReceiptPdfFailure(data.reason, data.name));
-                  break;
-              }
-            };
+            worker = this.inWorker(
+              subscriber,
+              () => ({ document, style: this.environment.style(), signature, portrait }),
+              (message) => {
+                if (message.kind === 'page') {
+                  subscriber.next({ kind: 'phase', phase: 'drawing', page: message.page, pages });
+                }
+              },
+              (bytes) => subscriber.next({ kind: 'done', file: pdfFile(bytes, document.fileName) }),
+            );
           },
           error: (failure: unknown) => subscriber.error(failure),
         });
@@ -180,6 +181,153 @@ export class ReceiptPdf {
     );
   }
 
+  drawBundle(source: ReceiptBundleSource): Observable<ReceiptBundleEvent> {
+    return new Observable<ReceiptBundleEvent>((subscriber) => {
+      let worker: ReceiptWorker | null = null;
+      const digests = [
+        ...new Set(
+          source.receipts.flatMap((issued) =>
+            [
+              issued.receipt.signatory.signatureImage?.sha256,
+              issued.receipt.signatory.portraitImage?.sha256,
+            ].filter((sha256): sha256 is string => sha256 !== undefined),
+          ),
+        ),
+      ];
+      const art: Record<string, ReceiptArt> = {};
+      subscriber.next({ kind: 'images', done: 0, total: digests.length });
+      const subscription = from(digests)
+        .pipe(
+          concatMap((sha256) =>
+            this.art(source, sha256).pipe(
+              tap((drawn) => {
+                if (drawn !== null) {
+                  art[sha256] = drawn;
+                }
+              }),
+            ),
+          ),
+          tap(() =>
+            subscriber.next({
+              kind: 'images',
+              done: Object.keys(art).length,
+              total: digests.length,
+            }),
+          ),
+          toArray(),
+        )
+        .subscribe({
+          next: () => {
+            let documents: ReceiptDocument[];
+            try {
+              const captions = receiptCaptions();
+              documents = source.receipts.map((issued) =>
+                receiptDocument(issued.receipt, issued.issuedAt, captions),
+              );
+            } catch (failure: unknown) {
+              subscriber.error(
+                failure instanceof ReceiptUnprintable
+                  ? new ReceiptPdfFailure('unprintable')
+                  : new ReceiptPdfFailure('drawing', errorNameOf(failure)),
+              );
+              return;
+            }
+            const receipts = documents.length;
+            subscriber.next({ kind: 'tools' });
+            worker = this.inWorker(
+              subscriber,
+              () => ({
+                kind: 'bundle',
+                documents,
+                art,
+                options: {
+                  duplex: source.duplex,
+                  info: {
+                    title: source.title,
+                    author: documents[0]?.author ?? '',
+                    subject: bundleSubject(receipts),
+                    createdAt: latestIssuedAt(source.receipts),
+                  },
+                },
+                style: this.environment.style(),
+              }),
+              (message) => {
+                if (message.kind === 'receipt') {
+                  subscriber.next({ kind: 'drawing', receipt: message.index + 1, receipts });
+                }
+              },
+              (bytes) => subscriber.next({ kind: 'done', file: pdfFile(bytes, source.fileName) }),
+            );
+          },
+          error: (failure: unknown) => subscriber.error(failure),
+        });
+      return () => {
+        subscription.unsubscribe();
+        worker?.terminate();
+      };
+    }).pipe(
+      timeout({
+        each: RECEIPT_DRAWING_TIMEOUT_MS,
+        with: () => {
+          throw new ReceiptPdfFailure('drawing', 'TimeoutError');
+        },
+      }),
+      tap({ error: (failure: unknown) => this.reportFailure(failure) }),
+    );
+  }
+
+  private inWorker<T>(
+    subscriber: Subscriber<T>,
+    request: () => ReceiptWorkerRequest,
+    progressed: (message: ReceiptWorkerMessage) => void,
+    done: (bytes: Uint8Array) => void,
+  ): ReceiptWorker | null {
+    let ready = false;
+    let worker: ReceiptWorker;
+    try {
+      worker = this.environment.worker();
+    } catch (failure: unknown) {
+      subscriber.error(new ReceiptPdfFailure('tools-missing', errorNameOf(failure)));
+      return null;
+    }
+    worker.onerror = (event) => {
+      event.preventDefault();
+      subscriber.error(
+        new ReceiptPdfFailure(
+          ready ? 'drawing' : 'tools-missing',
+          errorNameOf((event as Partial<ErrorEvent>).error),
+        ),
+      );
+    };
+    worker.onmessage = ({ data }) => {
+      switch (data.kind) {
+        case 'ready':
+          ready = true;
+          try {
+            worker.postMessage(request());
+          } catch (failure: unknown) {
+            subscriber.error(
+              new ReceiptPdfFailure(
+                failure instanceof ReceiptStyleRefused ? 'style' : 'drawing',
+                errorNameOf(failure),
+              ),
+            );
+          }
+          break;
+        case 'done':
+          done(data.bytes);
+          subscriber.complete();
+          break;
+        case 'failed':
+          subscriber.error(new ReceiptPdfFailure(data.reason, data.name));
+          break;
+        default:
+          progressed(data);
+      }
+    };
+    return worker;
+  }
+
   private reportFailure(failure: unknown): void {
     if (!(failure instanceof ReceiptPdfFailure)) {
       return;
@@ -190,7 +338,10 @@ export class ReceiptPdf {
     }
   }
 
-  private art(source: ReceiptSource, sha256: string | null): Observable<ReceiptArt | null> {
+  private art(
+    source: Pick<ReceiptSource, 'image'>,
+    sha256: string | null,
+  ): Observable<ReceiptArt | null> {
     if (sha256 === null) {
       return of(null);
     }

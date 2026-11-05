@@ -9,8 +9,8 @@ import {
   drawReceiptBundle,
   ReceiptArtwork,
   ReceiptBundleItem,
-  ReceiptPdfInfo,
 } from './receipt-layout';
+import { ReceiptPdfInfo } from './receipt-bundle-options';
 import { readPdf, ReadPdf, ReadPage, readXmp } from './testing/pdf-reader';
 import {
   frozenCase,
