@@ -794,46 +794,6 @@
   },
   {
     "path": "GET /api/admin/*",
-    "scenario": "content/place_photo_focal_point: *",
-    "kind": "headers",
-    "field": "nfnn-api",
-    "reason": "2.18 bumps the API generation from 1 to 2 (.claude/rules/backend.md, API versions and compatibility): a browser session's administration write must now name the row version it read, which an app of generation 1 does not send, so every /api answer names generation 2 and a write from an older tab is refused with 426 app/update-required instead of 428",
-    "contract": "docs/api-contract.md, Conventions (Versions)"
-  },
-  {
-    "path": "GET /api/content/*",
-    "scenario": "content/place_photo_focal_point: *",
-    "kind": "headers",
-    "field": "nfnn-api",
-    "reason": "2.18 bumps the API generation from 1 to 2 (.claude/rules/backend.md, API versions and compatibility): a browser session's administration write must now name the row version it read, which an app of generation 1 does not send, so every /api answer names generation 2 and a write from an older tab is refused with 426 app/update-required instead of 428",
-    "contract": "docs/api-contract.md, Conventions (Versions)"
-  },
-  {
-    "path": "POST /api/admin/*",
-    "scenario": "content/place_photo_focal_point: *",
-    "kind": "headers",
-    "field": "nfnn-api",
-    "reason": "2.18 bumps the API generation from 1 to 2 (.claude/rules/backend.md, API versions and compatibility): a browser session's administration write must now name the row version it read, which an app of generation 1 does not send, so every /api answer names generation 2 and a write from an older tab is refused with 426 app/update-required instead of 428",
-    "contract": "docs/api-contract.md, Conventions (Versions)"
-  },
-  {
-    "path": "POST /api/donors/*",
-    "scenario": "content/place_photo_focal_point: *",
-    "kind": "headers",
-    "field": "nfnn-api",
-    "reason": "2.18 bumps the API generation from 1 to 2 (.claude/rules/backend.md, API versions and compatibility): a browser session's administration write must now name the row version it read, which an app of generation 1 does not send, so every /api answer names generation 2 and a write from an older tab is refused with 426 app/update-required instead of 428",
-    "contract": "docs/api-contract.md, Conventions (Versions)"
-  },
-  {
-    "path": "PUT /api/admin/*",
-    "scenario": "content/place_photo_focal_point: *",
-    "kind": "headers",
-    "field": "nfnn-api",
-    "reason": "2.18 bumps the API generation from 1 to 2 (.claude/rules/backend.md, API versions and compatibility): a browser session's administration write must now name the row version it read, which an app of generation 1 does not send, so every /api answer names generation 2 and a write from an older tab is refused with 426 app/update-required instead of 428",
-    "contract": "docs/api-contract.md, Conventions (Versions)"
-  },
-  {
-    "path": "GET /api/admin/*",
     "scenario": "donations/admin_activity_since: *",
     "kind": "headers",
     "field": "nfnn-api",
@@ -1411,14 +1371,6 @@
   {
     "path": "POST /api/donors/*",
     "scenario": "donations/donor_bank_accounts: *",
-    "kind": "headers",
-    "field": "nfnn-api",
-    "reason": "2.18 bumps the API generation from 1 to 2 (.claude/rules/backend.md, API versions and compatibility): a browser session's administration write must now name the row version it read, which an app of generation 1 does not send, so every /api answer names generation 2 and a write from an older tab is refused with 426 app/update-required instead of 428",
-    "contract": "docs/api-contract.md, Conventions (Versions)"
-  },
-  {
-    "path": "DELETE /api/admin/*",
-    "scenario": "donations/donor_device_sync: *",
     "kind": "headers",
     "field": "nfnn-api",
     "reason": "2.18 bumps the API generation from 1 to 2 (.claude/rules/backend.md, API versions and compatibility): a browser session's administration write must now name the row version it read, which an app of generation 1 does not send, so every /api answer names generation 2 and a write from an older tab is refused with 426 app/update-required instead of 428",
@@ -1899,46 +1851,6 @@
   {
     "path": "PUT /api/donors/*",
     "scenario": "donors/donor_credentials: *",
-    "kind": "headers",
-    "field": "nfnn-api",
-    "reason": "2.18 bumps the API generation from 1 to 2 (.claude/rules/backend.md, API versions and compatibility): a browser session's administration write must now name the row version it read, which an app of generation 1 does not send, so every /api answer names generation 2 and a write from an older tab is refused with 426 app/update-required instead of 428",
-    "contract": "docs/api-contract.md, Conventions (Versions)"
-  },
-  {
-    "path": "DELETE /api/donors/*",
-    "scenario": "donors/donor_devices: *",
-    "kind": "headers",
-    "field": "nfnn-api",
-    "reason": "2.18 bumps the API generation from 1 to 2 (.claude/rules/backend.md, API versions and compatibility): a browser session's administration write must now name the row version it read, which an app of generation 1 does not send, so every /api answer names generation 2 and a write from an older tab is refused with 426 app/update-required instead of 428",
-    "contract": "docs/api-contract.md, Conventions (Versions)"
-  },
-  {
-    "path": "GET /api/admin/*",
-    "scenario": "donors/donor_devices: *",
-    "kind": "headers",
-    "field": "nfnn-api",
-    "reason": "2.18 bumps the API generation from 1 to 2 (.claude/rules/backend.md, API versions and compatibility): a browser session's administration write must now name the row version it read, which an app of generation 1 does not send, so every /api answer names generation 2 and a write from an older tab is refused with 426 app/update-required instead of 428",
-    "contract": "docs/api-contract.md, Conventions (Versions)"
-  },
-  {
-    "path": "GET /api/donors/*",
-    "scenario": "donors/donor_devices: *",
-    "kind": "headers",
-    "field": "nfnn-api",
-    "reason": "2.18 bumps the API generation from 1 to 2 (.claude/rules/backend.md, API versions and compatibility): a browser session's administration write must now name the row version it read, which an app of generation 1 does not send, so every /api answer names generation 2 and a write from an older tab is refused with 426 app/update-required instead of 428",
-    "contract": "docs/api-contract.md, Conventions (Versions)"
-  },
-  {
-    "path": "POST /api/donors/*",
-    "scenario": "donors/donor_devices: *",
-    "kind": "headers",
-    "field": "nfnn-api",
-    "reason": "2.18 bumps the API generation from 1 to 2 (.claude/rules/backend.md, API versions and compatibility): a browser session's administration write must now name the row version it read, which an app of generation 1 does not send, so every /api answer names generation 2 and a write from an older tab is refused with 426 app/update-required instead of 428",
-    "contract": "docs/api-contract.md, Conventions (Versions)"
-  },
-  {
-    "path": "PUT /api/donors/*",
-    "scenario": "donors/donor_devices: *",
     "kind": "headers",
     "field": "nfnn-api",
     "reason": "2.18 bumps the API generation from 1 to 2 (.claude/rules/backend.md, API versions and compatibility): a browser session's administration write must now name the row version it read, which an app of generation 1 does not send, so every /api answer names generation 2 and a write from an older tab is refused with 426 app/update-required instead of 428",
