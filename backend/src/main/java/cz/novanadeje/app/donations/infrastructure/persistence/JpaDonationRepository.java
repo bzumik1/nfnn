@@ -7,6 +7,9 @@ import cz.novanadeje.app.donations.domain.donation.DonationRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkId;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimId;
+import cz.novanadeje.app.shared.application.event.LiveFeed;
+import cz.novanadeje.app.shared.application.event.StoredDataChanged;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
@@ -22,14 +25,17 @@ import java.util.stream.Collectors;
 class JpaDonationRepository implements DonationRepository {
 
     private final DonationJpaRepository jpa;
+    private final ApplicationEventPublisher events;
 
-    JpaDonationRepository(DonationJpaRepository jpa) {
+    JpaDonationRepository(DonationJpaRepository jpa, ApplicationEventPublisher events) {
         this.jpa = jpa;
+        this.events = events;
     }
 
     @Override
     public void save(Donation donation) {
         jpa.saveAndFlush(DonationJpaEntity.fromDomain(donation));
+        changed(donation.donor());
     }
 
     @Override
@@ -44,8 +50,14 @@ class JpaDonationRepository implements DonationRepository {
 
     @Override
     public void delete(DonationId id) {
+        Optional<DonorReference> donor = jpa.findById(id.value()).map(entity -> entity.toDomain().donor());
         jpa.deleteById(id.value());
         jpa.flush();
+        donor.ifPresent(this::changed);
+    }
+
+    private void changed(DonorReference donor) {
+        events.publishEvent(StoredDataChanged.ofDonor(LiveFeed.DONATIONS, donor.value()));
     }
 
     @Override

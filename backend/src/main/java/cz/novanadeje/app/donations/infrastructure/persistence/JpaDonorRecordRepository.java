@@ -8,7 +8,10 @@ import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLink;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkId;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
+import cz.novanadeje.app.shared.application.event.LiveFeed;
+import cz.novanadeje.app.shared.application.event.StoredDataChanged;
 import cz.novanadeje.app.shared.infrastructure.search.AccentFolding;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 
@@ -25,10 +28,12 @@ class JpaDonorRecordRepository implements DonorRecordRepository {
 
     private final DonorRecordJpaRepository jpa;
     private final DonorSenderAccountJpaRepository accounts;
+    private final ApplicationEventPublisher events;
 
-    JpaDonorRecordRepository(DonorRecordJpaRepository jpa, DonorSenderAccountJpaRepository accounts) {
+    JpaDonorRecordRepository(DonorRecordJpaRepository jpa, DonorSenderAccountJpaRepository accounts, ApplicationEventPublisher events) {
         this.jpa = jpa;
         this.accounts = accounts;
+        this.events = events;
     }
 
     @Override
@@ -46,12 +51,17 @@ class JpaDonorRecordRepository implements DonorRecordRepository {
             }
             stored.get().updateFrom(link);
             accounts.saveAndFlush(stored.get());
+            accountsChanged(donor);
             return true;
         }
-        return accounts.insertIgnoringLiveDuplicate(link.id().value(), donor.value(), link.account().accountNumber(),
+        boolean saved = accounts.insertIgnoringLiveDuplicate(link.id().value(), donor.value(), link.account().accountNumber(),
                 link.account().bankCode(), link.status().name(), link.provedBy().map(BankPaymentId::value).orElse(null),
                 link.provedAt().orElse(null), link.validFrom().orElse(null), link.validTo().orElse(null), link.createdAt(),
                 link.disconnectedAt().orElse(null)) == 1;
+        if (saved) {
+            accountsChanged(donor);
+        }
+        return saved;
     }
 
     @Override
@@ -61,12 +71,18 @@ class JpaDonorRecordRepository implements DonorRecordRepository {
                 .orElseThrow(() -> new IllegalArgumentException("Sender account link " + link + " is not stored for donor " + donor));
         accounts.delete(stored);
         accounts.flush();
+        accountsChanged(donor);
     }
 
     @Override
     public void deleteSenderAccountLinksOf(DonorReference donor) {
         accounts.deleteAll(accounts.findByDonorIdOrderByCreatedAtAscIdAsc(donor.value()));
         accounts.flush();
+        accountsChanged(donor);
+    }
+
+    private void accountsChanged(DonorReference donor) {
+        events.publishEvent(StoredDataChanged.ofDonor(LiveFeed.BANK_ACCOUNTS, donor.value()));
     }
 
     @Override

@@ -63,13 +63,67 @@ public class LiveStreamHub implements SmartLifecycle {
     }
 
     public <C extends LiveConnection> LiveOpening<C> open(LiveSubscriber subscriber, Function<Duration, C> connections) {
-        return new LiveOpening.Full<>();
+        Instant now = clock.instant();
+        Duration lifetime = Duration.between(now, subscriber.expiresAt());
+        List<LiveStream> evicted = new ArrayList<>();
+        LiveStream stream;
+        C connection;
+        synchronized (this) {
+            if (!running || lifetime.isNegative() || lifetime.isZero() || endedBefore(subscriber, now)) {
+                return new LiveOpening.SessionEnded<>();
+            }
+            List<LiveStream> ofDonor = streams.stream().filter(each -> each.subscriber.donor().equals(subscriber.donor()))
+                    .sorted(Comparator.comparingLong(each -> each.sequence)).toList();
+            int surplus = ofDonor.size() - properties.streamsPerDonor() + 1;
+            int limit = subscriber.administrator() ? properties.streams() : properties.streamsForDonors();
+            if (streams.size() - Math.max(0, surplus) >= limit) {
+                return new LiveOpening.Full<>();
+            }
+            for (int index = 0; index < surplus; index++) {
+                LiveStream oldest = ofDonor.get(index);
+                streams.remove(oldest);
+                evicted.add(oldest);
+            }
+            connection = connections.apply(lifetime.plus(TIMEOUT_MARGIN));
+            stream = new LiveStream(++opened, subscriber, connection);
+            streams.add(stream);
+        }
+        evicted.forEach(LiveStream::close);
+        LiveStream opening = stream;
+        connection.onEnd(() -> forget(opening));
+        stream.expiry = executor.schedule(stream::close, lifetime.toMillis(), TimeUnit.MILLISECONDS);
+        long heartbeat = properties.heartbeat().toMillis();
+        stream.heartbeat = executor.scheduleAtFixedRate(stream::heartbeat, heartbeat, heartbeat, TimeUnit.MILLISECONDS);
+        stream.send(REVISION_EVENT, Map.of("revision", revision));
+        return new LiveOpening.Opened<>(connection);
     }
 
     public void publish(StoredDataChanged change) {
+        List<LiveStream> due = new ArrayList<>();
+        synchronized (this) {
+            for (LiveStream stream : streams) {
+                if (stream.wants(change) && stream.pending.add(change.feed()) && !stream.flushQueued) {
+                    stream.flushQueued = true;
+                    due.add(stream);
+                }
+            }
+        }
+        due.forEach(stream -> executor.execute(stream::flush));
     }
 
     public void endSessions(DonorSessionsEnded ended) {
+        Instant cutoff = ended.endedAt().truncatedTo(ChronoUnit.SECONDS);
+        List<LiveStream> closing;
+        synchronized (this) {
+            Instant now = clock.instant();
+            sessionsEnded.values().removeIf(at -> at.plus(sessionEndMemory).isBefore(now));
+            sessionsEnded.merge(ended.donorId(), cutoff, (earlier, later) -> earlier.isAfter(later) ? earlier : later);
+            closing = streams.stream()
+                    .filter(stream -> stream.subscriber.donor().equals(ended.donorId()) && stream.subscriber.issuedAt().isBefore(cutoff))
+                    .toList();
+            streams.removeAll(closing);
+        }
+        closing.forEach(LiveStream::close);
     }
 
     synchronized int openStreams() {
