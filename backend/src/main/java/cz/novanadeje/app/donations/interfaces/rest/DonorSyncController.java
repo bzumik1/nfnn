@@ -56,7 +56,7 @@ class DonorSyncController {
         DonorSyncSnapshot snapshot = sync.snapshotOf(DonorReference.of(jwt.getSubject()));
         Map<String, SyncChunk> chunks = projection.chunksOf(snapshot).stream().collect(Collectors.toMap(SyncChunk::id, Function.identity()));
         List<String> asked = ids.stream().distinct().toList();
-        return notStored(new DonorSyncChunksResponse(snapshot.donor().value(), asked.stream().filter(chunks::containsKey).map(chunks::get).toList(),
+        return notStored(new DonorSyncChunksResponse(snapshot.donor().value(), DonorSyncSummaryResponse.from(snapshot), asked.stream().filter(chunks::containsKey).map(chunks::get).toList(),
                 asked.stream().filter(id -> !chunks.containsKey(id)).toList()));
     }
 

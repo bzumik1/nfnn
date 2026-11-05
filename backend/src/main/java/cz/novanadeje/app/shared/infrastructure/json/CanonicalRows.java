@@ -2,6 +2,7 @@ package cz.novanadeje.app.shared.infrastructure.json;
 
 import tools.jackson.databind.JsonNode;
 
+import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -12,6 +13,7 @@ import java.util.Map;
 public final class CanonicalRows {
 
     private static final char FIRST_PRINTABLE = 0x20;
+    private static final BigInteger LARGEST_SAFE_INTEGER = BigInteger.valueOf(9_007_199_254_740_991L);
 
     private CanonicalRows() {
     }
@@ -36,9 +38,9 @@ public final class CanonicalRows {
         } else if (node.isBoolean()) {
             text.append(node.booleanValue());
         } else if (node.isIntegralNumber()) {
-            text.append(node.bigIntegerValue());
+            text.append(safeInteger(node.bigIntegerValue()));
         } else if (node.isNumber()) {
-            throw new IllegalArgumentException("Sync rows hold integers only");
+            throw new IllegalStateException("Sync rows hold integers only");
         } else if (node.isString()) {
             string(node.stringValue(), text);
         } else if (node.isArray()) {
@@ -64,8 +66,15 @@ public final class CanonicalRows {
             }
             text.append('}');
         } else {
-            throw new IllegalArgumentException("Sync rows hold JSON values only");
+            throw new IllegalStateException("Sync rows hold JSON values only");
         }
+    }
+
+    private static BigInteger safeInteger(BigInteger value) {
+        if (value.abs().compareTo(LARGEST_SAFE_INTEGER) > 0) {
+            throw new IllegalStateException("Sync rows hold integers within the safe range of a JavaScript number only");
+        }
+        return value;
     }
 
     private static void string(String value, StringBuilder text) {

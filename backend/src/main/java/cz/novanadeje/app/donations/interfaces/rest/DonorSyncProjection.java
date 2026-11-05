@@ -23,6 +23,15 @@ class DonorSyncProjection {
     static final String BANK_ACCOUNTS = "bank-accounts";
     static final String SYMBOL_CLAIMS = "symbol-claims";
 
+    private static final Comparator<BankAccountView> BY_ACCOUNT_THEN_CREATION = Comparator
+            .comparing((BankAccountView view) -> view.link().account().display())
+            .thenComparing(view -> view.link().createdAt())
+            .thenComparing(view -> view.link().id().value().toString());
+    private static final Comparator<SymbolClaim> BY_ACCOUNT_THEN_SYMBOL = Comparator
+            .comparing((SymbolClaim claim) -> claim.account().display())
+            .thenComparing(claim -> claim.symbol().value())
+            .thenComparing(claim -> claim.id().value().toString());
+
     private final JsonMapper json;
 
     DonorSyncProjection(JsonMapper json) {
@@ -34,10 +43,10 @@ class DonorSyncProjection {
         snapshot.donations().forEach(donation -> rowsOf(chunks, DONATIONS + donation.receivedYear().getValue()).add(SyncRows.DonationRow.from(donation)));
         snapshot.receipts().forEach(receipt -> rowsOf(chunks, RECEIPTS + yearOf(receipt).getValue()).add(DonorReceiptResponse.from(receipt)));
         snapshot.bankAccounts().stream()
-                .sorted(Comparator.comparing((BankAccountView view) -> view.link().id().value().toString()))
+                .sorted(BY_ACCOUNT_THEN_CREATION)
                 .forEach(view -> rowsOf(chunks, BANK_ACCOUNTS).add(SyncRows.BankAccountRow.from(view)));
         snapshot.symbolClaims().stream()
-                .sorted(Comparator.comparing((SymbolClaim claim) -> claim.id().value().toString()))
+                .sorted(BY_ACCOUNT_THEN_SYMBOL)
                 .forEach(claim -> rowsOf(chunks, SYMBOL_CLAIMS).add(SyncRows.SymbolClaimRow.from(claim)));
         return chunks.entrySet().stream().map(chunk -> SyncChunk.of(chunk.getKey(), json.valueToTree(chunk.getValue()))).toList();
     }

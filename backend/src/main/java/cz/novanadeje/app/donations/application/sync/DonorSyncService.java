@@ -6,6 +6,8 @@ import cz.novanadeje.app.donations.domain.FoundationCalendar;
 import cz.novanadeje.app.donations.domain.donation.Donation;
 import cz.novanadeje.app.donations.domain.donation.DonationRepository;
 import cz.novanadeje.app.donations.domain.donation.DonationSummary;
+import cz.novanadeje.app.donations.domain.donor.DonorRecord;
+import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimRepository;
 import cz.novanadeje.app.donations.domain.importing.BankImportStateRepository;
@@ -22,6 +24,7 @@ import java.util.List;
 @Service
 public class DonorSyncService {
 
+    private final DonorRecordRepository records;
     private final DonationRepository donations;
     private final DonationReceiptRepository receipts;
     private final SymbolClaimRepository claims;
@@ -30,8 +33,9 @@ public class DonorSyncService {
     private final Clock clock;
     private final FirstReceiptYear firstYear;
 
-    public DonorSyncService(DonationRepository donations, DonationReceiptRepository receipts, SymbolClaimRepository claims,
+    public DonorSyncService(DonorRecordRepository records, DonationRepository donations, DonationReceiptRepository receipts, SymbolClaimRepository claims,
                             BankImportStateRepository importStates, DonorBankAccountsService bankAccounts, Clock clock, FirstReceiptYear firstYear) {
+        this.records = records;
         this.donations = donations;
         this.receipts = receipts;
         this.claims = claims;
@@ -43,10 +47,15 @@ public class DonorSyncService {
 
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public DonorSyncSnapshot snapshotOf(DonorReference donor) {
+        if (records.findById(donor).filter(DonorRecord::isErased).isPresent()) {
+            return new DonorSyncSnapshot(donor, List.of(), summaryOf(List.of()), List.of(), List.of(), List.of(), importStates.current().lastSucceededAt());
+        }
         List<Donation> gifts = donations.findByDonorNewestFirst(donor);
-        DonationSummaryView summary = new DonationSummaryView(DonationSummary.of(gifts), ReceiptCalendar.lastCompleted(FoundationCalendar.today(clock)),
-                firstYear.year());
-        return new DonorSyncSnapshot(donor, gifts, summary, receipts.findByDonorNewestFirst(donor), bankAccounts.listBankAccounts(donor),
+        return new DonorSyncSnapshot(donor, gifts, summaryOf(gifts), receipts.findByDonorNewestFirst(donor), bankAccounts.listBankAccounts(donor),
                 claims.findByDonor(donor), importStates.current().lastSucceededAt());
+    }
+
+    private DonationSummaryView summaryOf(List<Donation> gifts) {
+        return new DonationSummaryView(DonationSummary.of(gifts), ReceiptCalendar.lastCompleted(FoundationCalendar.today(clock)), firstYear.year());
     }
 }
