@@ -501,6 +501,42 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
   );
 
   server.registerTool(
+    'nfnn_set_photo_focal_point',
+    {
+      title: 'Bod výřezu fotky',
+      description:
+        'Marks on a photo the spot that must stay visible (a face, say) as percentages from its left and top edge: the site then crops every shape it shows the photo in (the card in a list, the top of an article, the About section) around that spot, and around the centre again with focalPoint null, as it does for a photo without one. The point belongs to the photo, so every news article, project and the About section that show it crop alike; a photo put in place of another (coverImageId of nfnn_update_news or nfnn_update_project, photoId of nfnn_update_about) starts without one. The current point is the focalPoint of the photo in nfnn_news_article, nfnn_project and nfnn_about. Audited as CHANGE_PHOTO_FOCAL_POINT; placing the point a photo already has changes nothing.',
+      inputSchema: z.object({
+        photoId: UUID.describe(
+          'Id of an uploaded photo: the coverImage of a news article or project, the About photo, or one just uploaded.',
+        ),
+        focalPoint: z
+          .object({
+            x: z
+              .number()
+              .int()
+              .min(0)
+              .max(100)
+              .describe('Percent from the left edge of the photo.'),
+            y: z.number().int().min(0).max(100).describe('Percent from the top edge of the photo.'),
+          })
+          .nullable()
+          .describe('The spot to keep in view; null crops around the centre again.'),
+      }),
+      annotations: { ...WRITING, idempotentHint: true },
+    },
+    async ({ photoId, focalPoint }, ctx) =>
+      answerChange(
+        deps,
+        ctx,
+        'nfnn_set_photo_focal_point',
+        async ({ apiToken }) =>
+          text(await backend.put(`/api/admin/content/media/${photoId}`, apiToken, { focalPoint })),
+        `photo ${photoId}`,
+      ),
+  );
+
+  server.registerTool(
     'nfnn_issue_receipt',
     {
       title: 'Vystavit potvrzení',
