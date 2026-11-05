@@ -21,17 +21,24 @@ export default defineConfig<DeviceOptions>({
   use: {
     baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:4200',
     trace: 'on-first-retry',
+    serviceWorkers: 'block',
   },
   projects: [
     {
       name: 'chromium',
-      testIgnore: /baseline\/|devices\/devices\.spec\.ts$/,
+      testIgnore: /baseline\/|pwa\/|devices\/devices\.spec\.ts$/,
       use: { ...devices['Desktop Chrome'] },
     },
     {
       name: 'iphone',
       testMatch: /(receipt-pdf|verify-receipt|donate-qr|second-factor)\.spec\.ts$/,
       use: { ...devices['iPhone 15'] },
+    },
+    {
+      name: 'pwa',
+      default: false,
+      testMatch: /pwa\/.*\.spec\.ts$/,
+      use: { ...devices['Desktop Chrome'], channel: 'chromium', serviceWorkers: 'allow' },
     },
     ...POSES.map((pose) => ({
       name: `${DEVICE_PROJECT_PREFIX}${pose.id}`,

@@ -115,3 +115,7 @@ export function fakeCameraShowing(dataUrl: string): void {
     },
   });
 }
+
+export function qrCodeY4m(qrText: string): Buffer {
+  throw new Error(`qrCodeY4m: a camera frame of ${qrText.length} characters is not built yet`);
+}
