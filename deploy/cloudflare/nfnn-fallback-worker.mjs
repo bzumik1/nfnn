@@ -36,6 +36,7 @@ function fallbackPage(request) {
       'retry-after': '120',
       'content-security-policy': FALLBACK_POLICY,
       'x-content-type-options': 'nosniff',
+      'strict-transport-security': 'max-age=63072000',
       'referrer-policy': 'strict-origin-when-cross-origin',
       'x-robots-tag': 'noindex',
       'nfnn-fallback': 'outage',

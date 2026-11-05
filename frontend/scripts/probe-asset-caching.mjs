@@ -80,8 +80,8 @@ function expectedContentType(file) {
   return file.endsWith('.ttf') ? 'font/ttf' : null;
 }
 
-async function request(path) {
-  const response = await fetch(new URL(path, baseUrl), { redirect: 'manual' });
+async function request(path, headers = {}) {
+  const response = await fetch(new URL(path, baseUrl), { redirect: 'manual', headers });
   const body = await response.text();
   return {
     status: response.status,
@@ -221,6 +221,23 @@ for (const path of APP_ROUTES) {
   }
   if (answer.validator === '') {
     fail(`the app route ${path} carries neither ETag nor Last-Modified`);
+  }
+}
+
+const revalidated = ['/', `/${built.find((file) => file.startsWith('images/'))}`];
+for (const path of revalidated) {
+  const first = await request(path, { 'accept-encoding': 'gzip' });
+  const again = await request(path, {
+    'accept-encoding': 'gzip',
+    'if-none-match': first.validator,
+  });
+  if (again.status !== 304) {
+    fail(`${path} answered ${again.status} to If-None-Match with its own ETag, expected 304`);
+  }
+  if (again.edge !== first.edge || first.edge === '') {
+    fail(
+      `${path} lost its Cloudflare-CDN-Cache-Control on the 304 ("${again.edge}", the 200 had "${first.edge}")`,
+    );
   }
 }
 

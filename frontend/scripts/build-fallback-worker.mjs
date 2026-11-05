@@ -94,16 +94,15 @@ export async function buildFallbackWorker() {
   const accountNumber = details.account.number;
   const iban = details.account.iban.replace(/(.{4})(?=.)/g, '$1 ');
   const page = readFileSync(PAGE_TEMPLATE, 'utf8')
-    .replace('{{ logo }}', logoSvg())
-    .replace(
-      '{{ qr }}',
+    .replace('{{ logo }}', () => logoSvg())
+    .replace('{{ qr }}', () =>
       qrSvg(
         encodeText(textWithoutAmount, 'H'),
         `QR kód platby na účet ${accountNumber} bez částky`,
       ),
     )
-    .replace('{{ accountNumber }}', escapeHtml(accountNumber))
-    .replace('{{ iban }}', escapeHtml(iban));
+    .replace('{{ accountNumber }}', () => escapeHtml(accountNumber))
+    .replace('{{ iban }}', () => escapeHtml(iban));
   const styles = [...page.matchAll(/<style>([\s\S]*?)<\/style>/g)];
   if (styles.length !== 1 || /\{\{ ?\w+ ?\}\}/.test(page)) {
     throw new Error('the fallback page needs exactly one <style> block and no placeholder left');

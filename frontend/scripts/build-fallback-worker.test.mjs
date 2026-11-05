@@ -11,9 +11,13 @@ const sharedCase = (file, name) =>
   ).cases.find((candidate) => candidate.name === name);
 
 const served = sharedCase('payment/details.json', "the foundation's account").expected;
-const donationText = sharedCase('payment/spayd.json', '1 000 Kč without a variable symbol').expected
-  .spayd;
-const textWithoutAmount = donationText.replace(/\*AM:[^*]+/, '');
+const configured = (name) =>
+  new RegExp(`\\$\\{${name}:([^}]+)\\}`).exec(
+    readFileSync(
+      new URL('../../backend/src/main/resources/application.yml', import.meta.url),
+      'utf8',
+    ),
+  )?.[1];
 
 const built = await buildFallbackWorker();
 const worker = (await import(`data:text/javascript,${encodeURIComponent(built)}`)).default;
@@ -87,25 +91,35 @@ describe('Given the fallback Worker built from this checkout', () => {
     );
   });
 
-  it('when it is read, then it holds no comment, import or reference to another origin', () => {
+  it('when it is read, then it holds no import or reference to another origin', () => {
     assert.doesNotMatch(built, /^\s*import\s/m);
     assert.doesNotMatch(built, /https?:\/\/(?!nfnn\.cz\b|www\.w3\.org\/2000\/svg)/);
+  });
+
+  it("when the backend's configured account is read, then the shared case the page is built from names the same account", () => {
+    assert.equal(served.account.number, configured('BANK_ACCOUNT_NUMBER'));
+    assert.equal(served.account.iban, configured('BANK_IBAN'));
   });
 
   describe('when the origin answers a page normally', () => {
     it('then the visitor gets the origin answer unchanged', async () => {
       const answer = new Response('<app-root></app-root>', { status: 200 });
       originAnswer = () => answer;
-      const response = await worker.fetch(navigation('/aktuality/zprava'), {}, context());
+      const request = navigation('/aktuality/zprava');
+      const response = await worker.fetch(request, {}, context());
       assert.equal(response, answer);
       assert.equal(originRequests.length, 1);
+      assert.equal(originRequests[0], request);
     });
   });
 
-  for (const status of [502, 503, 504, 520, 521, 522, 523, 524, 525, 526, 530]) {
+  for (const status of [502, 503, 504, 520, 521, 522, 523, 524, 525, 526, 527, 530]) {
     it(`when the origin answers a page navigation with ${status}, then the visitor gets the fallback page`, async () => {
       originAnswer = () => new Response('down', { status });
-      const response = await worker.fetch(navigation('/darce/prehled'), {}, context());
+      const request = navigation('/darce/prehled');
+      const response = await worker.fetch(request, {}, context());
+      assert.equal(originRequests.length, 1);
+      assert.equal(originRequests[0], request);
       assert.equal(response.status, 503);
       assert.equal(response.headers.get('nfnn-fallback'), 'outage');
       assert.match(await response.text(), /Web je dočasně nedostupný/);
@@ -128,15 +142,26 @@ describe('Given the fallback Worker built from this checkout', () => {
     assert.equal(response.status, 503);
   });
 
+  it('when the origin answers an outage with a body, then the Worker cancels that body', async () => {
+    let cancelled = false;
+    originAnswer = () =>
+      new Response(new ReadableStream({ cancel: () => (cancelled = true) }), { status: 502 });
+    await worker.fetch(navigation('/'), {}, context());
+    assert.equal(cancelled, true);
+  });
+
   it('when a HEAD request for a page meets an outage, then the fallback headers come without a body', async () => {
     originAnswer = () => new Response(null, { status: 521 });
-    const response = await worker.fetch(navigation('/', { method: 'HEAD' }), {}, context());
+    const request = navigation('/', { method: 'HEAD' });
+    const response = await worker.fetch(request, {}, context());
+    assert.equal(originRequests.length, 1);
+    assert.equal(originRequests[0], request);
     assert.equal(response.status, 503);
     assert.equal(response.headers.get('nfnn-fallback'), 'outage');
     assert.equal(await response.text(), '');
   });
 
-  for (const status of [200, 304, 404, 500]) {
+  for (const status of [200, 304, 404, 429, 500, 501, 505]) {
     it(`when the origin answers a page navigation with ${status}, then that answer passes through`, async () => {
       const answer = new Response(status === 304 ? null : 'origin', { status });
       originAnswer = () => answer;
@@ -171,12 +196,28 @@ describe('Given the fallback Worker built from this checkout', () => {
     assert.equal(await worker.fetch(script, {}, context()), answer);
   });
 
-  it('when a form is posted to a page path during an outage, then the error passes through', async () => {
-    const answer = new Response('down', { status: 502 });
-    originAnswer = () => answer;
-    const post = navigation('/kontakt', { method: 'POST', body: 'x' });
-    assert.equal(await worker.fetch(post, {}, context()), answer);
-  });
+  for (const headers of [
+    { accept: 'text/html', 'sec-fetch-mode': 'cors' },
+    { accept: 'text/html', 'sec-fetch-mode': 'no-cors' },
+    {},
+  ]) {
+    it(`when a request with ${JSON.stringify(headers)} meets an outage, then its error passes through`, async () => {
+      const answer = new Response('down', { status: 522 });
+      originAnswer = () => answer;
+      const request = new Request('https://nfnn.cz/aktuality', { headers });
+      assert.equal(await worker.fetch(request, {}, context()), answer);
+    });
+  }
+
+  for (const method of ['POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']) {
+    it(`when a ${method} to a page path meets an outage, then the error passes through`, async () => {
+      const answer = new Response('down', { status: 502 });
+      originAnswer = () => answer;
+      const body = method === 'OPTIONS' ? undefined : 'x';
+      const request = navigation('/kontakt', { method, body });
+      assert.equal(await worker.fetch(request, {}, context()), answer);
+    });
+  }
 
   it('when a request passes, then the Worker forwards the very request it received', async () => {
     const request = navigation('/api/donors/auth/login', { method: 'POST', body: '{}' });
@@ -198,6 +239,7 @@ describe('Given the fallback Worker built from this checkout', () => {
       assert.equal(response.headers.get('retry-after'), '120');
       assert.equal(response.headers.get('x-robots-tag'), 'noindex');
       assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
+      assert.equal(response.headers.get('strict-transport-security'), 'max-age=63072000');
     });
 
     it('then its policy allows nothing but its own stylesheet, by hash', async () => {
@@ -231,8 +273,14 @@ describe('Given the fallback Worker built from this checkout', () => {
       const { html } = await fallbackPage();
       const svg = /<svg[^>]*class="qr"[\s\S]*?<\/svg>/.exec(html)?.[0];
       assert.ok(svg, 'a QR code drawn as inline SVG');
-      assert.equal(decode(svg), textWithoutAmount);
-      assert.doesNotMatch(textWithoutAmount, /\*AM:/);
+      const [header, version, ...fields] = decode(svg).split('*');
+      assert.deepEqual([header, version], ['SPD', '1.0']);
+      assert.deepEqual(Object.fromEntries(fields.map((field) => field.split(/:(.*)/s, 2))), {
+        ACC: served.account.iban,
+        CC: served.currency,
+        RN: served.account.recipientName,
+        MSG: served.messages.donation,
+      });
       assert.match(svg, /role="img"/);
       assert.match(svg, /aria-label="[^"]+"/);
     });
