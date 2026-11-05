@@ -1,0 +1,73 @@
+<section class="ui-card ui-card--padded device-data" aria-labelledby="device-data-title">
+  <h2 id="device-data-title" class="ui-card__title" i18n="@@donor.deviceData.title">
+    Data v tomto zařízení
+  </h2>
+
+  @if (memoryOnly()) {
+    <p class="device-data-state" i18n="@@donor.deviceData.memoryOnly">
+      V tomto prohlížeči se nic neukládá. Vaše data jsou jen v paměti této stránky a po jejím
+      zavření zmizí.
+    </p>
+  } @else if (storedAt(); as storedAt) {
+    <p class="device-data-state" i18n="@@donor.deviceData.stored">
+      Uloženo v zařízení · aktualizováno <span class="device-data-time">{{ storedAt }}</span>
+    </p>
+  } @else if (saving()) {
+    <p class="device-data-state" i18n="@@donor.deviceData.saving">Data se ukládají do zařízení…</p>
+  } @else {
+    <p class="device-data-state" i18n="@@donor.deviceData.nothing">
+      V tomto zařízení zatím nic uloženo není.
+    </p>
+  }
+
+  @if (!memoryOnly()) {
+    <p class="device-data-about" i18n="@@donor.deviceData.about">
+      Kopie vašich darů a potvrzení se v tomto prohlížeči ukládá zašifrovaně a klíč k ní zná jen
+      toto zařízení. Po odhlášení zůstane zamčená vaším heslem nebo přístupovým klíčem; když jste se
+      přihlásili jinak, odhlášením se smaže.
+    </p>
+  }
+
+  <div class="device-data-actions">
+    <button
+      type="button"
+      class="ui-button device-data-reload"
+      [disabled]="reloading() || deleting()"
+      [attr.aria-describedby]="offline() ? 'device-data-offline' : null"
+      (click)="reload()"
+    >
+      @if (reloading()) {
+        <span i18n="@@donor.deviceData.reloading">Načítáme data…</span>
+      } @else {
+        <span i18n="@@donor.deviceData.reload">Načíst data znovu</span>
+      }
+    </button>
+    <button
+      type="button"
+      class="ui-button ui-button--danger-outline device-data-delete"
+      [disabled]="deleting()"
+      (click)="askToDelete()"
+      i18n="@@donor.deviceData.delete"
+    >
+      Smazat data z tohoto zařízení
+    </button>
+  </div>
+  @if (offline()) {
+    <p
+      id="device-data-offline"
+      class="device-data-offline"
+      i18n="@@donor.deviceData.needsConnection"
+    >
+      Potřebuje připojení.
+    </p>
+  }
+  <app-live-notice [notice]="notice()" />
+</section>
+
+@if (confirming()) {
+  <app-delete-device-data-dialog
+    [deleting]="deleting()"
+    (confirmed)="confirmDelete()"
+    (cancelled)="cancelDelete()"
+  />
+}

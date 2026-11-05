@@ -333,7 +333,8 @@ export class LoginDialog {
     if (challenge === null || !this.readyToSend(form)) {
       return;
     }
-    this.auth.completeSecondFactor(challenge, this.code.trim()).subscribe({
+    const password = this.password === '' ? undefined : this.password;
+    this.auth.completeSecondFactor(challenge, this.code.trim(), password).subscribe({
       next: () => this.enterPortal(),
       error: (failure: unknown) => {
         if (problemTypeEndsWith(failure, INVALID_SECOND_FACTOR_CHALLENGE)) {

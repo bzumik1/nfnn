@@ -1,0 +1,37 @@
+<app-dialog labelledBy="device-data-delete-title" (dismissed)="cancelled.emit()">
+  <h2
+    id="device-data-delete-title"
+    class="ui-dialog__title"
+    i18n="@@donor.deviceData.deleteDialog.title"
+  >
+    Smazat data z tohoto zařízení?
+  </h2>
+  <p class="ui-dialog__lead" i18n="@@donor.deviceData.deleteDialog.lead">
+    Vaše dary a údaje se z tohoto zařízení smažou a odhlásíme vás tady. Na serveru zůstává vše, jak
+    je.
+  </p>
+  <div class="device-data-dialog-actions">
+    <button
+      type="button"
+      class="ui-button ui-button--danger device-data-confirm"
+      [disabled]="deleting()"
+      (click)="confirmed.emit()"
+    >
+      @if (deleting()) {
+        <span i18n="@@donor.deviceData.deleteDialog.deleting">Mažeme data…</span>
+      } @else {
+        <span i18n="@@donor.deviceData.deleteDialog.confirm">Smazat a odhlásit</span>
+      }
+    </button>
+    <button
+      type="button"
+      class="ui-button ui-button--quiet device-data-cancel"
+      autofocus
+      [disabled]="deleting()"
+      (click)="cancelled.emit()"
+      i18n="@@donor.deviceData.deleteDialog.cancel"
+    >
+      Zrušit
+    </button>
+  </div>
+</app-dialog>

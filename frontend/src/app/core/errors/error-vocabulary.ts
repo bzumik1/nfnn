@@ -9,6 +9,9 @@ export const ERROR_KINDS = [
   'boot',
   'sw-install',
   'sw-unrecoverable',
+  'device-store-open',
+  'device-store-evicted',
+  'device-copy-mismatch',
 ] as const;
 
 export const ERROR_PLACES = ['global', 'navigation', 'start-up', 'service-worker'] as const;

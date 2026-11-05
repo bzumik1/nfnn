@@ -3017,6 +3017,7 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(texts('h2')).toEqual([
         'Údaje na potvrzení o daru',
         'Přihlášení a zabezpečení',
+        'Data v tomto zařízení',
         'Smazání účtu',
       ]);
       expect(texts('app-account-card .account-row dt')).toEqual([

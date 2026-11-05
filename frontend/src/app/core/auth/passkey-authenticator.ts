@@ -1,5 +1,6 @@
 import { DOCUMENT } from '@angular/common';
 import { inject, Injectable } from '@angular/core';
+import { prfReadingOf, type PrfReading } from '../device/crypto/prf';
 import {
   PasskeyAssertionCredential,
   PasskeyCreationOptions,
@@ -9,6 +10,11 @@ import {
 } from './donor';
 
 export type PasskeyFailure = 'cancelled' | 'already-registered' | 'unsupported' | 'failed';
+
+export interface WithPrf<T> {
+  readonly credential: T;
+  readonly prf: PrfReading | null;
+}
 
 export class PasskeyCeremonyError extends Error {
   constructor(readonly reason: PasskeyFailure) {
@@ -29,6 +35,31 @@ export class PasskeyAuthenticator {
   }
 
   async create(options: PasskeyCreationOptions): Promise<PasskeyRegistrationCredential> {
+    return (await this.created(options, null)).credential;
+  }
+
+  createWithPrf(
+    options: PasskeyCreationOptions,
+    prfInput: Uint8Array<ArrayBuffer> | null,
+  ): Promise<WithPrf<PasskeyRegistrationCredential>> {
+    return this.created(options, prfInput);
+  }
+
+  async get(options: PasskeySignInOptions): Promise<PasskeyAssertionCredential> {
+    return (await this.asserted(options, null)).credential;
+  }
+
+  getWithPrf(
+    options: PasskeySignInOptions,
+    prfInput: Uint8Array<ArrayBuffer> | null,
+  ): Promise<WithPrf<PasskeyAssertionCredential>> {
+    return this.asserted(options, prfInput);
+  }
+
+  private async created(
+    options: PasskeyCreationOptions,
+    prfInput: Uint8Array<ArrayBuffer> | null,
+  ): Promise<WithPrf<PasskeyRegistrationCredential>> {
     const credential = await this.run(() =>
       this.credentials().create({
         publicKey: {
@@ -40,24 +71,34 @@ export class PasskeyAuthenticator {
           excludeCredentials: options.excludeCredentials.map(descriptorOf),
           authenticatorSelection: options.authenticatorSelection,
           attestation: options.attestation,
+          ...prfExtension(prfInput),
         },
       }),
     );
     const response = credential.response as AuthenticatorAttestationResponse;
     return {
-      id: credential.id,
-      rawId: toBase64Url(credential.rawId),
-      type: 'public-key',
-      response: {
-        clientDataJSON: toBase64Url(response.clientDataJSON),
-        attestationObject: toBase64Url(response.attestationObject),
-        transports:
-          typeof response.getTransports === 'function' ? [...response.getTransports()] : [],
+      credential: {
+        id: credential.id,
+        rawId: toBase64Url(credential.rawId),
+        type: 'public-key',
+        response: {
+          clientDataJSON: toBase64Url(response.clientDataJSON),
+          attestationObject: toBase64Url(response.attestationObject),
+          transports:
+            typeof response.getTransports === 'function' ? [...response.getTransports()] : [],
+        },
       },
+      prf:
+        prfInput === null || typeof response.getAuthenticatorData !== 'function'
+          ? null
+          : readingOrNull(() => prfReadingOf(credential, response.getAuthenticatorData(), [])),
     };
   }
 
-  async get(options: PasskeySignInOptions): Promise<PasskeyAssertionCredential> {
+  private async asserted(
+    options: PasskeySignInOptions,
+    prfInput: Uint8Array<ArrayBuffer> | null,
+  ): Promise<WithPrf<PasskeyAssertionCredential>> {
     const credential = await this.run(() =>
       this.credentials().get({
         publicKey: {
@@ -66,20 +107,27 @@ export class PasskeyAuthenticator {
           timeout: options.timeout,
           userVerification: options.userVerification,
           allowCredentials: options.allowCredentials.map(descriptorOf),
+          ...prfExtension(prfInput),
         },
       }),
     );
     const response = credential.response as AuthenticatorAssertionResponse;
     return {
-      id: credential.id,
-      rawId: toBase64Url(credential.rawId),
-      type: 'public-key',
-      response: {
-        clientDataJSON: toBase64Url(response.clientDataJSON),
-        authenticatorData: toBase64Url(response.authenticatorData),
-        signature: toBase64Url(response.signature),
-        userHandle: response.userHandle === null ? null : toBase64Url(response.userHandle),
+      credential: {
+        id: credential.id,
+        rawId: toBase64Url(credential.rawId),
+        type: 'public-key',
+        response: {
+          clientDataJSON: toBase64Url(response.clientDataJSON),
+          authenticatorData: toBase64Url(response.authenticatorData),
+          signature: toBase64Url(response.signature),
+          userHandle: response.userHandle === null ? null : toBase64Url(response.userHandle),
+        },
       },
+      prf:
+        prfInput === null
+          ? null
+          : readingOrNull(() => prfReadingOf(credential, response.authenticatorData, [])),
     };
   }
 
@@ -101,6 +149,20 @@ export class PasskeyAuthenticator {
       throw new PasskeyCeremonyError('cancelled');
     }
     return credential as PublicKeyCredential;
+  }
+}
+
+function prfExtension(prfInput: Uint8Array<ArrayBuffer> | null): {
+  extensions?: AuthenticationExtensionsClientInputs;
+} {
+  return prfInput === null ? {} : { extensions: { prf: { eval: { first: prfInput } } } };
+}
+
+function readingOrNull(read: () => PrfReading | null): PrfReading | null {
+  try {
+    return read();
+  } catch {
+    return null;
   }
 }
 

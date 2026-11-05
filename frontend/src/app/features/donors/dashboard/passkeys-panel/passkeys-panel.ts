@@ -16,7 +16,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { FormsModule, NgForm } from '@angular/forms';
-import { from, Observable, of, switchMap } from 'rxjs';
+import { from, map, Observable, of, switchMap } from 'rxjs';
 import { describeProblem, problemTypeEndsWith } from '../../../../core/auth/api-problem';
 import { AuthApi } from '../../../../core/auth/auth-api';
 import { AuthStore } from '../../../../core/auth/auth-store';
@@ -27,6 +27,7 @@ import {
   PasskeyFailure,
 } from '../../../../core/auth/passkey-authenticator';
 import { deviceName } from '../../../../core/auth/device-name';
+import { deviceAccountOf, SESSION_DEVICE } from '../../../../core/auth/session-device';
 import { formatDonationDate } from '../../../donations/donation-date';
 import { FocusFirstInvalid } from '../../../../shared/ui/form-field/focus-first-invalid';
 import { FormControlDirective } from '../../../../shared/ui/form-field/form-control';
@@ -55,7 +56,9 @@ export class PasskeysPanel {
   private readonly auth = inject(AuthStore);
   private readonly authApi = inject(AuthApi);
   private readonly authenticator = inject(PasskeyAuthenticator);
+  private readonly device = inject(SESSION_DEVICE);
   private readonly document = inject(DOCUMENT);
+  private prfInput: Uint8Array<ArrayBuffer> | null = null;
   private readonly injector = inject(Injector);
 
   readonly labelledBy = input<string | null>(null);
@@ -158,6 +161,7 @@ export class PasskeysPanel {
     this.renaming.set(null);
     this.name = deviceName(this.document);
     this.password = '';
+    void this.device.prfInput().then((input) => (this.prfInput = input));
     this.adding.set(true);
     afterNextRender(() => this.nameField()?.nativeElement.focus(), { injector: this.injector });
   }
@@ -177,8 +181,20 @@ export class PasskeysPanel {
       .pipe(
         switchMap((confirmation) => this.authApi.passkeyCreationOptions(confirmation)),
         switchMap((options) =>
-          from(this.authenticator.create(options)).pipe(
-            switchMap((credential) => this.authApi.addPasskey(options.challenge, name, credential)),
+          from(this.authenticator.createWithPrf(options, this.prfInput)).pipe(
+            switchMap(({ credential, prf }) =>
+              this.authApi.addPasskey(options.challenge, name, credential).pipe(
+                map((passkey) => {
+                  const donor = this.auth.donor();
+                  if (prf !== null && donor !== null) {
+                    void this.device.passkeyAdded(deviceAccountOf(donor), prf);
+                  } else {
+                    prf?.output.fill(0);
+                  }
+                  return passkey;
+                }),
+              ),
+            ),
           ),
         ),
       )
