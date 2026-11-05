@@ -4,8 +4,6 @@ import cz.novanadeje.app.shared.application.version.RowVersions;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
-import tools.jackson.databind.node.ArrayNode;
-import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 
 import java.util.List;
@@ -23,21 +21,14 @@ class CanonicalRowVersions implements RowVersions {
 
     @Override
     public String versionOf(List<?> rows) {
-        return versionOfTree(json.valueToTree(rows));
+        JsonNode tree = json.valueToTree(rows);
+        tree.values().forEach(CanonicalRowVersions::removeVersion);
+        return CanonicalRows.sha256(tree).substring(0, VERSION_HEX_LENGTH);
     }
 
-    static String versionOfTree(JsonNode rows) {
-        ArrayNode withoutVersions = JsonNodeFactory.instance.arrayNode();
-        rows.values().forEach(row -> withoutVersions.add(withoutVersion(row)));
-        return CanonicalRows.sha256(withoutVersions).substring(0, VERSION_HEX_LENGTH);
-    }
-
-    private static JsonNode withoutVersion(JsonNode row) {
-        if (!row.isObject()) {
-            return row;
+    private static void removeVersion(JsonNode row) {
+        if (row instanceof ObjectNode object) {
+            object.remove(VERSION_FIELD);
         }
-        ObjectNode copy = ((ObjectNode) row).deepCopy();
-        copy.remove(VERSION_FIELD);
-        return copy;
     }
 }
