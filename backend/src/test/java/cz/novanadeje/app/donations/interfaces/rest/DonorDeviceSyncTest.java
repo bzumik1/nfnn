@@ -225,8 +225,8 @@ class DonorDeviceSyncTest {
     private String change(Random random, UUID jana, UUID petr) {
         List<UUID> gifts = idsOf("select id from donation where donor_id = :donor order by id", jana);
         List<UUID> links = idsOf("select id from donor_sender_account where donor_id = :donor and status <> 'DISCONNECTED' order by id", jana);
-        List<UUID> claims = idsOf("select id from donor_symbol_claim c where donor_id = :donor "
-                + "and not exists (select 1 from donation d where d.symbol_claim_id = c.id) order by id", jana);
+        List<UUID> declined = idsOf("select id from donor_symbol_claim where donor_id = :donor and answer = 'DECLINED' order by id", jana);
+        List<UUID> confirmed = idsOf("select id from donor_symbol_claim where donor_id = :donor and answer = 'CONFIRMED' order by id", jana);
         List<String> possible = new ArrayList<>(List.of("a bank gift", "a gift recorded by hand", "a bank import", "time passing", "a linked account",
                 "a symbol answer"));
         if (!gifts.isEmpty()) {
@@ -235,7 +235,10 @@ class DonorDeviceSyncTest {
         if (!links.isEmpty()) {
             possible.add("a disconnected account");
         }
-        if (!claims.isEmpty()) {
+        if (!declined.isEmpty()) {
+            possible.add("a reset symbol answer");
+        }
+        if (!confirmed.isEmpty()) {
             possible.add("a reversed symbol answer");
         }
         String operation = possible.get(random.nextInt(possible.size()));
@@ -257,10 +260,17 @@ class DonorDeviceSyncTest {
             case "a gift from a linked account" -> pointAtLinkAndClaim(pick(random, gifts), jana, random);
             case "a disconnected account" -> jdbc.sql("update donor_sender_account set status = 'DISCONNECTED', valid_to = greatest(coalesce(valid_from, :day), :day), disconnected_at = :at where id = :id")
                     .param("day", LocalDate.ofInstant(clock.instant(), FoundationZone.ZONE)).param("at", Timestamp.from(clock.instant())).param("id", pick(random, links)).update();
-            case "a reversed symbol answer" -> jdbc.sql("delete from donor_symbol_claim where id = :id").param("id", pick(random, claims)).update();
+            case "a reset symbol answer" -> jdbc.sql("delete from donor_symbol_claim where id = :id").param("id", pick(random, declined)).update();
+            case "a reversed symbol answer" -> reverseSymbolAnswer(pick(random, confirmed));
             default -> throw new IllegalStateException("Unknown operation " + operation);
         }
         return operation;
+    }
+
+    private void reverseSymbolAnswer(UUID claim) {
+        jdbc.sql("delete from donation where symbol_claim_id = :claim").param("claim", claim).update();
+        jdbc.sql("update donor_symbol_claim set answer = 'DECLINED', answered_at = :at where id = :claim")
+                .param("at", Timestamp.from(clock.instant())).param("claim", claim).update();
     }
 
     private static UUID pick(Random random, List<UUID> ids) {

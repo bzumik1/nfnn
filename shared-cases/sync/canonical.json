@@ -13,18 +13,18 @@
               null,
               false
             ],
-            "\ud83d\ude00": 1,
+            "😀": 1,
             "a": {
               "z": 0,
               "y": -12
             },
-            "\u00e9": 3,
+            "é": 3,
             "Z": 4
           }
         ]
       },
       "expected": {
-        "canonical": "[{\"Z\":4,\"a\":{\"y\":-12,\"z\":0},\"b\":[true,null,false],\"\u00e9\":3,\"\ud83d\ude00\":1,\"\uffff\":2}]",
+        "canonical": "[{\"Z\":4,\"a\":{\"y\":-12,\"z\":0},\"b\":[true,null,false],\"é\":3,\"😀\":1,\"\uffff\":2}]",
         "rowsSha256": "3e0568610efd6c61e6132a7ebffd11f25534ee4a218ca7d9ae94cacc2ab9278d"
       }
     },
@@ -33,16 +33,16 @@
       "input": {
         "rows": [
           {
-            "name": "Jana Nov\u00e1kov\u00e1",
-            "street": "Dlouh\u00e1 12",
-            "amount": "1\u00a0000 K\u010d",
+            "name": "Jana Nováková",
+            "street": "Dlouhá 12",
+            "amount": "1\u00a0000 Kč",
             "note": "a\u2028b\u2029c",
-            "city": "\u010cesk\u00e1 L\u00edpa"
+            "city": "Česká Lípa"
           }
         ]
       },
       "expected": {
-        "canonical": "[{\"amount\":\"1\u00a0000 K\u010d\",\"city\":\"\u010cesk\u00e1 L\u00edpa\",\"name\":\"Jana Nov\u00e1kov\u00e1\",\"note\":\"a\u2028b\u2029c\",\"street\":\"Dlouh\u00e1 12\"}]",
+        "canonical": "[{\"amount\":\"1\u00a0000 Kč\",\"city\":\"Česká Lípa\",\"name\":\"Jana Nováková\",\"note\":\"a\u2028b\u2029c\",\"street\":\"Dlouhá 12\"}]",
         "rowsSha256": "45770660b4098ec3679747261d94e806a03a97d8f291d3d1027ab8feab424685"
       }
     },
@@ -76,13 +76,13 @@
       "name": "Characters beyond U+FFFF, a skin tone and a combining accent pass as they are",
       "input": {
         "rows": [
-          "\ud83d\udc4d\ud83c\udffd",
+          "👍🏽",
           "e\u0301",
-          "\ud834\udd1e"
+          "𝄞"
         ]
       },
       "expected": {
-        "canonical": "[\"\ud83d\udc4d\ud83c\udffd\",\"e\u0301\",\"\ud834\udd1e\"]",
+        "canonical": "[\"👍🏽\",\"e\u0301\",\"𝄞\"]",
         "rowsSha256": "ca06a972db9b0993376475b0ac55015ee77eebaf5e9176ed5848ed327157bc88"
       }
     },
