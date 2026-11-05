@@ -109,6 +109,10 @@
   }
 }
 
+html:has(app-tab-bar) .ui-notice--floating {
+  bottom: calc(var(--tab-bar-clearance) + var(--space-2));
+}
+
 .ui-notice--floating.ui-notice--alert {
   border-color: var(--color-danger-border);
 }
@@ -123,6 +127,12 @@
 
 .has-floating-notice {
   scroll-padding-bottom: calc(var(--floating-notice-height) + var(--space-8));
+
+  &:has(app-tab-bar) {
+    scroll-padding-bottom: calc(
+      var(--floating-notice-height) + var(--space-8) + var(--tab-bar-clearance)
+    );
+  }
 
   body:not(:has(app-site-footer)) {
     padding-bottom: calc(var(--floating-notice-height) + var(--space-8));

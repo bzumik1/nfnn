@@ -1,5 +1,12 @@
 import { expect, test } from './fixtures';
-import { mockDonorApi, openSignInDialog, paymentDetails, problem, session } from './donor-session';
+import {
+  mockDonorApi,
+  openAccountItem,
+  openSignInDialog,
+  paymentDetails,
+  problem,
+  session,
+} from './donor-session';
 import { drawnModulesMatch, PAYMENT_QR_500_WITH_SYMBOL } from './qr-matrices';
 
 test.describe('Given a visitor who wants a donor account', () => {
@@ -205,13 +212,16 @@ test.describe('Given a visitor who wants a donor account', () => {
     await page.locator('#login-password').fill('correct horse battery');
     await page.getByRole('dialog').locator('.ui-button--block').click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
-    await page.locator('.nav-login', { hasText: 'Můj přehled' }).click();
+    await openAccountItem(page, 'Můj přehled');
     await expect(page).toHaveURL(/\/darce\/prehled$/);
 
-    await page.locator('.topbar-logout').click();
+    await page.getByRole('banner').getByRole('button', { name: 'Účet' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Odhlásit se' }).click();
 
     await expect(page).toHaveURL(/\/$/);
-    await expect(page.locator('.nav-login')).toHaveText('Přihlásit se');
+    await expect(
+      page.getByRole('banner').getByRole('button', { name: 'Přihlásit se' }),
+    ).toBeVisible();
     await expect(page.getByRole('status').getByText('Odhlásili jste se.')).toBeVisible();
 
     await page.getByRole('button', { name: 'Zavřít' }).click();
@@ -230,16 +240,20 @@ test.describe('Given a visitor who wants a donor account', () => {
     await page.locator('#login-password').fill('correct horse battery');
     await page.getByRole('dialog').locator('.ui-button--block').click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
-    await page.locator('.nav-login', { hasText: 'Můj přehled' }).click();
+    await openAccountItem(page, 'Můj přehled');
     await expect(page).toHaveURL(/\/darce\/prehled$/);
 
-    await page.getByRole('link', { name: 'Hlavní stránka' }).click();
+    await page
+      .getByRole('banner')
+      .getByRole('link', { name: 'Nová naděje – nadační fond' })
+      .click();
 
     await expect(page).toHaveURL(/\/$/);
-    await expect(page.locator('.nav-login')).toHaveText('Můj přehled');
+    await openAccountItem(page, 'Můj přehled');
+    await expect(page).toHaveURL(/\/darce\/prehled$/);
   });
 
-  test('when they sign in from the home page, then the page stays, the header offers their overview and nothing stays highlighted', async ({
+  test('when they sign in from the home page, then the page stays, the header offers their account, the focus lands on it and no ring shows after a click', async ({
     page,
   }) => {
     await page.route('**/api/donors/auth/login', (route) => route.fulfill(session(200)));
@@ -252,10 +266,10 @@ test.describe('Given a visitor who wants a donor account', () => {
 
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(page).toHaveURL(/\/$/);
-    await expect(page.locator('.nav-login')).toHaveText('Můj přehled');
-    await expect(page.locator('.nav-login')).not.toBeFocused();
-    await expect(page.locator('nav.nav')).toBeFocused();
-    await expect(page.locator('nav.nav')).toHaveCSS('outline-style', 'none');
+    const account = page.getByRole('banner').getByRole('button', { name: 'Účet' });
+    await expect(account).toBeVisible();
+    await expect(account).toBeFocused();
+    await expect(account).toHaveCSS('outline-style', 'none');
   });
 
   test('when they open the portal without a session and sign in, then the portal opens', async ({
@@ -271,7 +285,10 @@ test.describe('Given a visitor who wants a donor account', () => {
     await page.getByRole('dialog').locator('.ui-button--block').click();
 
     await expect(page).toHaveURL(/\/darce\/prehled$/);
-    await expect(page.locator('.topbar-donor')).toContainText('Jana Nováková');
+    await expect(page.getByRole('heading', { level: 1, name: 'Můj přehled' })).toBeVisible();
+    await expect(page.getByRole('banner').getByRole('button', { name: 'Účet' })).toContainText(
+      'JN',
+    );
   });
 
   test('when they open the portal without a session, then they land on the home page with the sign-in dialog', async ({
@@ -295,10 +312,13 @@ test.describe('Given a visitor who wants a donor account', () => {
 
     await page.goto('/darce/prehled');
 
-    await expect(page.locator('.topbar-donor')).toContainText('Jana Nováková');
+    await expect(page.getByRole('heading', { level: 1, name: 'Můj přehled' })).toBeVisible();
+    await expect(page.getByRole('banner').getByRole('button', { name: 'Účet' })).toContainText(
+      'JN',
+    );
   });
 
-  test('when they come back with a remembered session to the home page, then the QR payment carries their variable symbol', async ({
+  test('when they come back with a remembered session to the Přispět page, then the QR payment carries their variable symbol', async ({
     page,
   }) => {
     await page.addInitScript(() => localStorage.setItem('nfnn.donor-session', '1'));
@@ -312,7 +332,7 @@ test.describe('Given a visitor who wants a donor account', () => {
       },
     );
 
-    await page.goto('/');
+    await page.goto('/prispet');
 
     await expect(page.locator('#prispet')).toContainText('Variabilní symbol');
     await expect(page.locator('#prispet')).toContainText('1234567890');

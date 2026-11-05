@@ -1,0 +1,72 @@
+<header
+  #header
+  class="app-header"
+  tabindex="-1"
+  [class.app-header--on-dark]="onDark()"
+  [class.app-header--on-photo]="onPhoto()"
+>
+  <div class="app-header-inner">
+    @if (parent()) {
+      <button type="button" class="back-button" [attr.aria-label]="backLabel" (click)="back()">
+        <svg
+          aria-hidden="true"
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.25"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <polyline points="15 18 9 12 15 6" />
+        </svg>
+      </button>
+    }
+    <a class="brand" [class.brand--after-back]="parent()" routerLink="/">
+      <img
+        [src]="onDark() ? '/images/logo-on-dark.svg' : '/images/logo.svg'"
+        alt="Nová naděje – nadační fond"
+        i18n-alt="@@layout.header.logoAlt"
+        width="115"
+        height="40"
+      />
+    </a>
+    @if (auth.signedIn()) {
+      <button type="button" class="account-button" aria-haspopup="dialog" (click)="openAccount()">
+        <span class="visually-hidden" i18n="@@layout.header.account">Účet</span>
+        @if (accountBadge(); as badge) {
+          &ngsp;<span class="visually-hidden">{{ badge.description }}</span>
+          <span class="account-badge" aria-hidden="true">{{ badge.count }}</span>
+        }
+        @if (portrait(); as source) {
+          <img class="account-portrait" [src]="source" alt="" width="44" height="44" />
+        } @else if (initials(); as letters) {
+          <span class="account-initials" aria-hidden="true">{{ letters }}</span>
+        } @else {
+          <svg
+            aria-hidden="true"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="8" r="4" />
+            <path d="M4 21a8 8 0 0 1 16 0" />
+          </svg>
+        }
+      </button>
+    } @else {
+      <button type="button" class="sign-in" (click)="openLogin()" i18n="@@layout.header.nav.login">
+        Přihlásit se
+      </button>
+    }
+  </div>
+</header>
+@if (accountOpen()) {
+  <app-account-sheet [portrait]="portrait()" (closed)="closeAccount()" />
+}

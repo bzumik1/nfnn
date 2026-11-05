@@ -2,11 +2,11 @@ import { expect, test } from './fixtures';
 
 const policyHeading = { level: 1, name: 'Zásady ochrany osobních údajů' } as const;
 
-test.describe('Given a visitor at the bottom of the home page', () => {
+test.describe('Given a visitor at the bottom of the About page', () => {
   test('when they click the privacy policy link in the footer, then the policy opens scrolled to the top', async ({
     page,
   }) => {
-    await page.goto('/');
+    await page.goto('/o-nas');
     const footerLink = page
       .getByRole('contentinfo')
       .getByRole('link', { name: 'Zásady ochrany osobních údajů' });
@@ -25,7 +25,7 @@ test.describe('Given a visitor at the contact form', () => {
   test('when they click the policy link under the submit button, then the policy opens', async ({
     page,
   }) => {
-    await page.goto('/');
+    await page.goto('/o-nas');
     const form = page.locator('#kontakt form');
 
     await form.getByRole('link', { name: 'zásady ochrany osobních údajů' }).click();
@@ -50,11 +50,11 @@ test.describe('Given a visitor with a direct link to the privacy policy', () => 
     await page.goto('/zasady-ochrany-osobnich-udaju');
 
     await page
-      .getByRole('navigation')
+      .getByRole('banner')
       .getByRole('link', { name: 'Nová naděje – nadační fond' })
       .click();
 
-    await expect(page).toHaveURL(/\/#uvod$/);
+    await expect(page).toHaveURL(/\/$/);
     await expect(page).toHaveTitle('Nová naděje – nadační fond');
   });
 });

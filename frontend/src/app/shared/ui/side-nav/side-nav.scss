@@ -12,6 +12,11 @@
   align-items: start;
 }
 
+.side-nav-layout--alone {
+  max-width: none;
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .side-nav {
   position: sticky;
   top: var(--top-bar-height);

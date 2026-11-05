@@ -131,7 +131,7 @@ test.describe('Given the app registered its own service worker on a phone that c
       reachedNetwork.push(route.request().url());
       return route.abort();
     });
-    await page.goto('/#prispet');
+    await page.goto('/prispet');
     await page.getByRole('button', { name: '1 000 Kč' }).click();
 
     const opened = page.waitForEvent('download');

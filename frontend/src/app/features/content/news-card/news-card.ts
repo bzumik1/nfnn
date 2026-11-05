@@ -4,15 +4,8 @@ import { FocalPointCrop } from '../../../shared/ui/focal-point/focal-point';
 import { formatDonationDate } from '../../donations/donation-date';
 import { mediaUrl, NewsArticleResponse } from '../news-api';
 
-export type NewsPlaceholder = 'dominik' | 'report' | 'autism';
-
 const CARD_WIDTH = 480;
 const CARD_WIDTH_SHARP = 960;
-const PLACEHOLDER_IMAGES: Record<NewsPlaceholder, string> = {
-  dominik: '/images/news-1.webp',
-  report: '/images/news-2.webp',
-  autism: '/images/news-2.webp',
-};
 
 @Component({
   selector: 'app-news-card',
@@ -22,27 +15,21 @@ const PLACEHOLDER_IMAGES: Record<NewsPlaceholder, string> = {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class NewsCard {
-  readonly item = input<NewsArticleResponse | null>(null);
-  readonly placeholder = input<NewsPlaceholder | null>(null);
+  readonly item = input.required<NewsArticleResponse>();
   readonly linked = input(true);
 
-  protected readonly placeholderImage = computed(() => {
-    const key = this.placeholder();
-    return key ? PLACEHOLDER_IMAGES[key] : '';
-  });
-
   protected readonly date = computed(() => {
-    const publishedOn = this.item()?.publishedOn;
+    const publishedOn = this.item().publishedOn;
     return publishedOn ? formatDonationDate(publishedOn) : '';
   });
 
   protected readonly image = computed(() => {
-    const cover = this.item()?.coverImage;
+    const cover = this.item().coverImage;
     return cover ? mediaUrl(cover.id, CARD_WIDTH) : null;
   });
 
   protected readonly imageSet = computed(() => {
-    const cover = this.item()?.coverImage;
+    const cover = this.item().coverImage;
     return cover
       ? `${mediaUrl(cover.id, CARD_WIDTH)} ${CARD_WIDTH}w, ${mediaUrl(cover.id, CARD_WIDTH_SHARP)} ${CARD_WIDTH_SHARP}w`
       : null;
