@@ -123,6 +123,13 @@ async function violations(page: Page): Promise<string[]> {
   );
 }
 
+const FEED_SIGNER = {
+  id: 'signer',
+  name: 'Petr Vzorový',
+  role: 'Předseda správní rady',
+  portrait: null,
+};
+
 test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
   test.beforeEach(async ({ page }) => {
     await mockDonorApi(page);
@@ -256,7 +263,16 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
       (route) =>
         route.fulfill({
           json: {
-            items: [article, { ...article, id: 'older', slug: 'starsi', title: 'Starší zpráva' }],
+            items: [
+              { ...article, signer: FEED_SIGNER },
+              {
+                ...article,
+                id: 'older',
+                slug: 'starsi',
+                title: 'Starší zpráva',
+                signer: FEED_SIGNER,
+              },
+            ],
             page: 0,
             size: 10,
             total: 2,
@@ -276,6 +292,19 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await expect(page.locator('.featured')).toHaveCount(1);
     await expect(page.locator('.news-card')).toHaveCount(1);
     await expect(page.locator('.story')).toHaveCount(1);
+
+    expect(await violations(page)).toEqual([]);
+    await expect(page.locator('.featured .signer-name')).toHaveText('Petr Vzorový');
+
+    await page.route(
+      (url) => url.pathname === '/api/content/news',
+      (route) => route.fulfill({ status: 503, body: '' }),
+      { times: 1 },
+    );
+    await page.goto('/aktuality?strana=2');
+    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toHaveText(
+      'Aktuality se nepodařilo načíst.',
+    );
 
     expect(await violations(page)).toEqual([]);
 

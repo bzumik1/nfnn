@@ -49,6 +49,7 @@
         }
       </p>
       <button
+        #retryButton
         type="button"
         class="retry ui-cta ui-cta--ghost"
         (click)="retry()"
@@ -60,122 +61,11 @@
 
     @if (state() === 'ready') {
       @if (featured(); as lead) {
-        <article class="featured" [class.featured--photo]="featuredImage()">
-          @if (featuredImage(); as src) {
-            <img
-              class="featured-photo"
-              [src]="src"
-              [srcset]="featuredImageSet()"
-              sizes="(max-width: 1100px) 100vw, 1040px"
-              width="1040"
-              height="480"
-              alt=""
-              fetchpriority="high"
-              [appFocalPoint]="lead.coverImage?.focalPoint"
-              focalShape="newsFeatured"
-            />
-          }
-          <div class="featured-text">
-            <p class="featured-meta">
-              @if (lead.tag) {
-                <span class="featured-tag">{{ lead.tag }}</span
-                >&ngsp;
-              }
-              <span class="featured-date">{{ featuredDate() }}</span>
-            </p>
-            <h2 class="featured-title">
-              <a class="featured-link" [routerLink]="['/aktuality', lead.slug]">{{ lead.title }}</a>
-            </h2>
-            <p class="featured-perex">{{ lead.perex }}</p>
-            <div class="featured-foot">
-              @if (lead.signer; as signer) {
-                <div class="signer">
-                  <app-avatar
-                    class="signer-photo"
-                    [name]="signer.name"
-                    [src]="featuredPortrait()"
-                    [size]="40"
-                  />
-                  <p class="signer-text">
-                    <span class="signer-name">{{ signer.name }}</span>
-                    @if (signer.role) {
-                      <span class="signer-role">{{ signer.role }}</span>
-                    }
-                  </p>
-                </div>
-              }
-              <div class="featured-actions">
-                <app-share-button
-                  class="featured-share"
-                  tone="dark"
-                  [pageTitle]="lead.title"
-                  [url]="featuredShareUrl()"
-                  [subject]="lead.title"
-                />
-                <span class="featured-more" aria-hidden="true" i18n="@@content.news.featured.more"
-                  >Číst celé →</span
-                >
-              </div>
-            </div>
-          </div>
-        </article>
+        <app-featured-news [item]="lead" />
       }
 
       @if (stories(); as year) {
-        <section class="stories" aria-labelledby="news-stories-title">
-          <div class="section-head">
-            <h2 id="news-stories-title" class="section-title" i18n="@@content.news.stories.title">
-              Příběhy z roku {{ year.year }}
-            </h2>
-            <a
-              class="stories-all"
-              routerLink="/projekty"
-              [queryParams]="{ rok: year.year }"
-              i18n="@@content.news.stories.all"
-              >{year.projects.length, plural,
-                one {Příběh v Pomáháme}
-                few {Všechny {{ year.projects.length }} v Pomáháme}
-                other {Všech {{ year.projects.length }} v Pomáháme}
-              }</a
-            >
-          </div>
-          <ul class="stories-strip" [attr.aria-label]="storiesLabel">
-            @for (item of year.projects; track item.id) {
-              <li class="story">
-                <div class="story-photo">
-                  @if (storyImage(item); as src) {
-                    <img
-                      loading="lazy"
-                      [src]="src"
-                      [srcset]="storyImageSet(item)"
-                      width="72"
-                      height="72"
-                      alt=""
-                      [appFocalPoint]="item.coverImage?.focalPoint"
-                      focalShape="storyTile"
-                    />
-                  } @else {
-                    <svg class="story-heart" viewBox="0 0 24 24" aria-hidden="true">
-                      <path
-                        d="M12 20s-7-4.35-7-10a4 4 0 0 1 7-2.65A4 4 0 0 1 19 10c0 5.65-7 10-7 10z"
-                      />
-                    </svg>
-                  }
-                </div>
-                <div class="story-text">
-                  @if (item.tag) {
-                    <span class="story-tag">{{ item.tag }}</span>
-                  }
-                  <h3 class="story-title">
-                    <a class="story-link" [routerLink]="['/projekty', item.slug]">{{
-                      item.title
-                    }}</a>
-                  </h3>
-                </div>
-              </li>
-            }
-          </ul>
-        </section>
+        <app-year-stories class="stories-block" [stories]="year" />
       }
 
       @if (older().length > 0) {

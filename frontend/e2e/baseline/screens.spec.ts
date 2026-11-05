@@ -145,7 +145,9 @@ const SCREENS: Screen[] = [
       await unfoldPaymentQr(page);
     },
   }),
-  publicPage('news', '/aktuality'),
+  publicPage('news', '/aktuality', {
+    ready: (page) => elementsShown(page, ['.featured', '.story']),
+  }),
   publicPage('news-article', `/aktuality/${article.slug}`),
   publicPage('projects', '/projekty'),
   publicPage('project', `/projekty/${project.slug}`),

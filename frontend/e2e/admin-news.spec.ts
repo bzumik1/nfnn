@@ -194,9 +194,10 @@ test.describe('Given an administrator managing the news', () => {
     await page.getByRole('button', { name: 'Fotka, klepnutím nastavíte bod výřezu' }).click();
     await expect(page.getByText('Bod výřezu: 50 % zleva, 50 % shora.')).toBeVisible();
     await expect(page.getByRole('figure')).toHaveText([
-      'Velká zpráva na počítači',
-      'Velká zpráva na telefonu',
-      'Starší zpráva na počítači',
+      'Velká zpráva, široká',
+      'Velká zpráva, středně široká',
+      'Velká zpráva, na výšku',
+      'Starší zpráva, fotka vedle textu',
       'Karta v Aktualitách',
       'Nahoře v článku',
     ]);

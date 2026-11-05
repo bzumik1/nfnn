@@ -87,7 +87,7 @@ test.describe('Given a visitor on the Aktuality and Pomáháme tabs', () => {
       'href',
       '/projekty/dominik-7-let',
     );
-    await expect(stories.getByRole('link', { name: 'Příběh v Pomáháme' })).toHaveAttribute(
+    await expect(stories.getByRole('link', { name: 'Zobrazit v Pomáháme' })).toHaveAttribute(
       'href',
       '/projekty?rok=2024',
     );
@@ -351,6 +351,22 @@ test.describe('Given a visitor in a browser that cannot share', () => {
     );
   });
 
+  test('when they copy the link of an article from Aktuality, then the clipboard holds its address and the page stays', async ({
+    page,
+  }) => {
+    await page.goto('/aktuality');
+
+    await page
+      .getByRole('button', { name: `Kopírovat odkaz ${article.title}`, exact: true })
+      .click();
+
+    await expect(page.getByRole('button', { name: 'Zkopírováno' })).toBeVisible();
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+      `https://nfnn.cz/aktuality/${article.slug}`,
+    );
+    await expect(page).toHaveURL('/aktuality');
+  });
+
   test('when they copy the link of a project, then the clipboard holds its address on nfnn.cz', async ({
     page,
   }) => {
@@ -362,5 +378,52 @@ test.describe('Given a visitor in a browser that cannot share', () => {
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
       `https://nfnn.cz/projekty/${project.slug}`,
     );
+  });
+});
+
+test.describe('Given a visitor whose connection drops while they page through Aktuality', () => {
+  test('when the next page cannot come, then the page says the connection is missing and trying again online loads it', async ({
+    page,
+    context,
+  }) => {
+    await mockDonorApi(page);
+    await publishedContent(page);
+    await page.route(
+      (url) => url.pathname === '/api/content/news',
+      (route) => {
+        const index = Number(new URL(route.request().url()).searchParams.get('page'));
+        return route.fulfill({
+          json: {
+            items: [{ ...article, id: `news-${index}`, title: `Aktualita na straně ${index + 1}` }],
+            page: index,
+            size: 10,
+            total: 25,
+            hasMore: index < 2,
+          },
+        });
+      },
+    );
+    await page.goto('/aktuality');
+    await expect(page.locator('.featured')).toHaveCount(1);
+    await page.route(
+      (url) => url.pathname === '/api/content/news',
+      (route) => route.abort('internetdisconnected'),
+      { times: 1 },
+    );
+    await context.setOffline(true);
+
+    await page.getByRole('link', { name: 'Starší →' }).click();
+
+    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toHaveText(
+      'Bez připojení se aktuality nenačetly. Až budete online, zkuste to znovu.',
+    );
+
+    await context.setOffline(false);
+    await page.getByRole('button', { name: 'Zkusit znovu' }).click();
+
+    await expect(
+      page.getByRole('heading', { level: 3, name: 'Aktualita na straně 2' }),
+    ).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Co je u nás nového' })).toBeFocused();
   });
 });

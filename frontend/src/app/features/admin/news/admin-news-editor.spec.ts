@@ -682,9 +682,10 @@ describe('Given an administrator editing a published news article', () => {
         (caption) => (caption as HTMLElement).textContent?.trim(),
       ),
     ).toEqual([
-      'Velká zpráva na počítači',
-      'Velká zpráva na telefonu',
-      'Starší zpráva na počítači',
+      'Velká zpráva, široká',
+      'Velká zpráva, středně široká',
+      'Velká zpráva, na výšku',
+      'Starší zpráva, fotka vedle textu',
       'Karta v Aktualitách',
       'Nahoře v článku',
     ]);

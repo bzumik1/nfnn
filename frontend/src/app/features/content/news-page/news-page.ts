@@ -4,6 +4,7 @@ import {
   Component,
   computed,
   DestroyRef,
+  effect,
   ElementRef,
   inject,
   Injector,
@@ -12,24 +13,17 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { catchError, EMPTY, expand, map, Observable, of, reduce, Subscription } from 'rxjs';
+import { EMPTY, expand, map, Observable, reduce, Subscription } from 'rxjs';
 import { Connectivity } from '../../../core/navigation/connectivity';
-import { canonicalAddress } from '../../../core/seo/canonical-link';
-import { Avatar } from '../../../shared/ui/avatar/avatar';
-import { FocalPointCrop } from '../../../shared/ui/focal-point/focal-point';
-import { ShareButton } from '../../../shared/ui/share-button/share-button';
-import { formatDonationDate } from '../../donations/donation-date';
-import { mediaUrl, NewsApi, NewsArticleResponse } from '../news-api';
+import { FeaturedNews } from '../featured-news/featured-news';
+import { NewsApi, NewsArticleResponse } from '../news-api';
 import { NewsCard } from '../news-card/news-card';
 import { ProjectResponse, ProjectsApi } from '../projects-api';
+import { StoriesOfYear, storiesOfNewestYear, YearStories } from '../year-stories/year-stories';
 
 export const PAGE_SIZE = 10;
 export const PROJECTS_PAGE_SIZE = 50;
 export const MAX_PROJECT_PAGES = 20;
-
-const FEATURED_WIDTHS = [640, 960, 1440];
-const STORY_WIDTH = 160;
-const PORTRAIT_WIDTH = 160;
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -38,14 +32,11 @@ interface NewsList {
   total: number;
 }
 
-export interface YearStories {
-  year: number;
-  projects: ProjectResponse[];
-}
+type StoriesState = { kind: 'loading' } | { kind: 'settled'; stories: StoriesOfYear | null };
 
 @Component({
   selector: 'app-news-page',
-  imports: [RouterLink, NewsCard, Avatar, ShareButton, FocalPointCrop],
+  imports: [RouterLink, NewsCard, FeaturedNews, YearStories],
   templateUrl: './news-page.html',
   styleUrl: './news-page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -58,14 +49,29 @@ export class NewsPage {
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
   private readonly heading = viewChild<ElementRef<HTMLHeadingElement>>('heading');
-  private loads = new Subscription();
+  private readonly retryButton = viewChild<ElementRef<HTMLButtonElement>>('retryButton');
+  private newsLoad = Subscription.EMPTY;
+  private projectsLoad = Subscription.EMPTY;
+  private storiesKept = false;
+  private focusAfterRetry = false;
 
-  protected readonly state = signal<LoadState>('loading');
+  private readonly newsState = signal<LoadState>('loading');
+  private readonly storiesState = signal<StoriesState>({ kind: 'loading' });
   protected readonly offline = signal(false);
   protected readonly pageNumber = signal(1);
   protected readonly list = signal<NewsList>({ items: [], total: 0 });
-  protected readonly stories = signal<YearStories | null>(null);
 
+  protected readonly state = computed<LoadState>(() => {
+    const news = this.newsState();
+    if (news !== 'ready') {
+      return news;
+    }
+    return this.pageNumber() === 1 && this.storiesState().kind === 'loading' ? 'loading' : 'ready';
+  });
+  protected readonly stories = computed(() => {
+    const stories = this.storiesState();
+    return this.pageNumber() === 1 && stories.kind === 'settled' ? stories.stories : null;
+  });
   protected readonly pageCount = computed(() =>
     Math.max(1, Math.ceil(this.list().total / PAGE_SIZE)),
   );
@@ -83,83 +89,68 @@ export class NewsPage {
   });
   protected readonly olderQuery = computed(() => ({ strana: this.pageNumber() + 1 }));
 
-  protected readonly featuredDate = computed(() => {
-    const publishedOn = this.featured()?.publishedOn;
-    return publishedOn ? formatDonationDate(publishedOn) : '';
-  });
-  protected readonly featuredImage = computed(() => {
-    const cover = this.featured()?.coverImage;
-    return cover ? mediaUrl(cover.id, FEATURED_WIDTHS[1]) : null;
-  });
-  protected readonly featuredImageSet = computed(() => {
-    const cover = this.featured()?.coverImage;
-    return cover
-      ? FEATURED_WIDTHS.map((width) => `${mediaUrl(cover.id, width)} ${width}w`).join(', ')
-      : null;
-  });
-  protected readonly featuredPortrait = computed(() => {
-    const portrait = this.featured()?.signer?.portrait;
-    return portrait ? mediaUrl(portrait.id, PORTRAIT_WIDTH) : null;
-  });
-  protected readonly featuredShareUrl = computed(() => {
-    const featured = this.featured();
-    return featured ? canonicalAddress(`/aktuality/${featured.slug}`) : '';
-  });
-
-  protected readonly pagesLabel = $localize`:@@content.news.pages:Stránky aktualit`;
-  protected readonly storiesLabel = $localize`:@@content.news.stories.list:Příběhy roku`;
+  protected readonly pagesLabel = $localize`:@@content.list.news.pages:Stránky aktualit`;
 
   constructor() {
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((query) => {
       this.pageNumber.set(pageFrom(query.get('strana')));
       this.load();
     });
-    this.destroyRef.onDestroy(() => this.loads.unsubscribe());
+    this.destroyRef.onDestroy(() => {
+      this.newsLoad.unsubscribe();
+      this.projectsLoad.unsubscribe();
+    });
     afterNextRender(() => this.heading()?.nativeElement.focus(), { injector: this.injector });
+    effect(() => {
+      const state = this.state();
+      if (state === 'loading' || !this.focusAfterRetry) {
+        return;
+      }
+      this.focusAfterRetry = false;
+      afterNextRender(
+        () => (state === 'error' ? this.retryButton() : this.heading())?.nativeElement.focus(),
+        { injector: this.injector },
+      );
+    });
   }
 
   protected retry(): void {
+    this.focusAfterRetry = true;
     this.load();
   }
 
-  protected storyImage(item: ProjectResponse): string | null {
-    return item.coverImage ? mediaUrl(item.coverImage.id, STORY_WIDTH) : null;
-  }
-
-  protected storyImageSet(item: ProjectResponse): string | null {
-    return item.coverImage
-      ? `${mediaUrl(item.coverImage.id, STORY_WIDTH)} 1x, ${mediaUrl(item.coverImage.id, STORY_WIDTH * 2)} 2x`
-      : null;
-  }
-
   private load(): void {
-    this.loads.unsubscribe();
-    this.loads = new Subscription();
-    this.state.set('loading');
-    this.loads.add(
-      this.newsApi.published(this.pageNumber() - 1, PAGE_SIZE).subscribe({
-        next: (page) => {
-          this.list.set({ items: page.items, total: page.total });
-          this.state.set('ready');
-        },
-        error: () => {
-          this.offline.set(this.connectivity.isOffline());
-          this.state.set('error');
-        },
-      }),
-    );
-    if (this.pageNumber() !== 1) {
-      this.stories.set(null);
+    this.newsLoad.unsubscribe();
+    this.newsState.set('loading');
+    this.newsLoad = this.newsApi.published(this.pageNumber() - 1, PAGE_SIZE).subscribe({
+      next: (page) => {
+        this.list.set({ items: page.items, total: page.total });
+        this.newsState.set('ready');
+      },
+      error: () => {
+        this.offline.set(this.connectivity.isOffline());
+        this.newsState.set('error');
+      },
+    });
+    if (this.pageNumber() === 1) {
+      this.loadStories();
+    }
+  }
+
+  private loadStories(): void {
+    if (this.storiesKept || !this.projectsLoad.closed) {
       return;
     }
-    this.loads.add(
-      this.publishedProjects()
-        .pipe(
-          map(storiesOfNewestYear),
-          catchError(() => of(null)),
-        )
-        .subscribe((stories) => this.stories.set(stories)),
-    );
+    this.storiesState.set({ kind: 'loading' });
+    this.projectsLoad = this.publishedProjects()
+      .pipe(map(storiesOfNewestYear))
+      .subscribe({
+        next: (stories) => {
+          this.storiesKept = true;
+          this.storiesState.set({ kind: 'settled', stories });
+        },
+        error: () => this.storiesState.set({ kind: 'settled', stories: null }),
+      });
   }
 
   private publishedProjects(): Observable<ProjectResponse[]> {
@@ -169,17 +160,15 @@ export class NewsPage {
           ? this.projectsApi.published(page.page + 1, PROJECTS_PAGE_SIZE)
           : EMPTY,
       ),
-      reduce((all, page) => [...all, ...page.items], [] as ProjectResponse[]),
+      reduce(
+        (all, page) => [
+          ...all,
+          ...page.items.filter((item) => !all.some((kept) => kept.id === item.id)),
+        ],
+        [] as ProjectResponse[],
+      ),
     );
   }
-}
-
-export function storiesOfNewestYear(projects: ProjectResponse[]): YearStories | null {
-  if (projects.length === 0) {
-    return null;
-  }
-  const year = Math.max(...projects.map((item) => item.year));
-  return { year, projects: projects.filter((item) => item.year === year) };
 }
 
 function pageFrom(value: string | null): number {
