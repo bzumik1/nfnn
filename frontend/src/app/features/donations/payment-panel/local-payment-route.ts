@@ -1,40 +1,44 @@
 import { DOCUMENT } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { firstValueFrom, timeout } from 'rxjs';
 import { ExternalNavigation } from '../../../core/navigation/external-navigation';
-import { SPAYD_MEDIA_TYPE } from './bank-handoff';
 
 const PAYMENT_ROUTE = '/platba.spayd';
-const PROBE_TIMEOUT_MS = 2_000;
+const RESERVATION = 'nfnn-payment-file';
+const RESERVATION_TIMEOUT_MS = 2_000;
+const RESERVATION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 @Injectable({ providedIn: 'root' })
 export class LocalPaymentRoute {
-  private readonly http = inject(HttpClient);
   private readonly document = inject(DOCUMENT);
   private readonly navigation = inject(ExternalNavigation);
 
-  async open(spaydText: string): Promise<boolean> {
-    if (!(await this.answered())) {
-      return false;
+  reserve(spaydText: string): Promise<string | null> {
+    const worker = this.document.defaultView?.navigator.serviceWorker?.controller;
+    if (!worker) {
+      return Promise.resolve(null);
     }
-    this.navigation.assign(`${PAYMENT_ROUTE}?${new URLSearchParams({ data: spaydText })}`);
-    return true;
+    return new Promise((resolve) => {
+      const channel = new MessageChannel();
+      const settle = (id: string | null): void => {
+        clearTimeout(timer);
+        channel.port1.close();
+        resolve(id);
+      };
+      const timer = setTimeout(() => settle(null), RESERVATION_TIMEOUT_MS);
+      channel.port1.onmessage = (event: MessageEvent<unknown>) => settle(reservationId(event.data));
+      worker.postMessage({ type: RESERVATION, payment: spaydText }, [channel.port2]);
+    });
   }
 
-  private async answered(): Promise<boolean> {
-    if (!this.document.defaultView?.navigator.serviceWorker?.controller) {
-      return false;
-    }
-    try {
-      const response = await firstValueFrom(
-        this.http
-          .head(PAYMENT_ROUTE, { observe: 'response', responseType: 'text' })
-          .pipe(timeout(PROBE_TIMEOUT_MS)),
-      );
-      return response.headers.get('Content-Type')?.startsWith(SPAYD_MEDIA_TYPE) ?? false;
-    } catch {
-      return false;
-    }
+  open(id: string): void {
+    this.navigation.assign(`${PAYMENT_ROUTE}?${new URLSearchParams({ id })}`);
   }
+}
+
+function reservationId(reply: unknown): string | null {
+  if (typeof reply !== 'object' || reply === null) {
+    return null;
+  }
+  const { type, id } = reply as { type?: unknown; id?: unknown };
+  return type === RESERVATION && typeof id === 'string' && RESERVATION_ID.test(id) ? id : null;
 }

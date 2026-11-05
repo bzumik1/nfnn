@@ -7,6 +7,7 @@ import { runInNewContext } from 'node:vm';
 import {
   PAYMENT_ROUTE_SCRIPT,
   wrapServiceWorker,
+  unwrappedServiceWorkers,
   wrapServiceWorkers,
 } from './wrap-service-worker.mjs';
 
@@ -14,47 +15,76 @@ const ORIGIN = 'https://nfnn.cz';
 const PAYMENT =
   'SPD*1.0*ACC:CZ6520100000005544332217*AM:500.00*CC:CZK*MSG:DAR NOVA NADEJE*X-VS:1234567890';
 
-function installedRoute() {
+function installedRoute(clock = { now: 0 }) {
   const listeners = [];
   const self = {
     location: new URL(`${ORIGIN}/ngsw-worker.js`),
+    crypto: globalThis.crypto,
     addEventListener: (type, listener) => listeners.push({ type, listener }),
   };
-  runInNewContext(PAYMENT_ROUTE_SCRIPT, { self, URL, URLSearchParams, Response, Headers });
+  const Date = { now: () => clock.now };
+  runInNewContext(PAYMENT_ROUTE_SCRIPT, { self, URL, URLSearchParams, Response, Headers, Date });
   return listeners;
 }
 
-function dispatch(listeners, request) {
-  let answer = null;
+function dispatch(listeners, type, event) {
   let stopped = false;
-  const event = {
-    request,
-    respondWith: (response) => {
-      answer = Promise.resolve(response);
-    },
-    stopImmediatePropagation: () => {
-      stopped = true;
-    },
-  };
-  for (const { type, listener } of listeners) {
-    if (type === 'fetch') {
-      listener(event);
-      if (stopped) {
-        break;
-      }
+  const dispatched = { ...event, stopImmediatePropagation: () => (stopped = true) };
+  for (const listener of listeners.filter((entry) => entry.type === type)) {
+    listener.listener(dispatched);
+    if (stopped) {
+      break;
     }
   }
+  return stopped;
+}
+
+function fetched(listeners, request) {
+  let answer = null;
+  const stopped = dispatch(listeners, 'fetch', {
+    request,
+    respondWith: (response) => (answer = Promise.resolve(response)),
+  });
   return { answer, stopped };
 }
 
-function routeAddress(data) {
-  return `${ORIGIN}/platba.spayd?${new URLSearchParams({ data })}`;
+function reserved(listeners, data) {
+  const replies = [];
+  const stopped = dispatch(listeners, 'message', {
+    data,
+    ports: [{ postMessage: (reply) => replies.push(reply) }],
+  });
+  return { replies: JSON.parse(JSON.stringify(replies)), stopped };
+}
+
+function reservationOf(listeners, payment = PAYMENT) {
+  const { replies } = reserved(listeners, { type: 'nfnn-payment-file', payment });
+  return replies[0].id;
+}
+
+function fileAddress(id) {
+  return `${ORIGIN}/platba.spayd?${new URLSearchParams({ id })}`;
+}
+
+async function assertRefused(response, status) {
+  assert.equal(response.status, status);
+  assert.equal(response.headers.get('content-type'), 'text/plain; charset=utf-8');
+  assert.equal(response.headers.get('cache-control'), 'no-store');
+  assert.equal(
+    response.headers.get('content-security-policy'),
+    "default-src 'none'; sandbox; frame-ancestors 'none'",
+  );
+  assert.equal(response.headers.get('content-disposition'), null);
 }
 
 describe('Given the payment route of the service worker', () => {
-  describe('when the page opens the payment file of a valid SPAYD text', () => {
+  describe('when the page reserves a valid SPAYD text and opens the payment file of its id', () => {
     it('then the worker answers it itself with the text as a payment file the browser never renders', async () => {
-      const { answer, stopped } = dispatch(installedRoute(), new Request(routeAddress(PAYMENT)));
+      const route = installedRoute();
+      const id = reservationOf(route);
+      assert.match(id, /^[0-9a-f-]{36}$/);
+
+      const { answer, stopped } = fetched(route, new Request(fileAddress(id)));
 
       assert.equal(stopped, true);
       const response = await answer;
@@ -68,76 +98,146 @@ describe('Given the payment route of the service worker', () => {
       assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
       assert.equal(
         response.headers.get('content-security-policy'),
-        "default-src 'none'; sandbox allow-downloads",
+        "default-src 'none'; sandbox allow-downloads; frame-ancestors 'none'",
       );
       assert.equal(await response.text(), PAYMENT);
     });
+
+    it('and opens it a second time, then the worker refuses it, because an id serves once', async () => {
+      const route = installedRoute();
+      const id = reservationOf(route);
+      await fetched(route, new Request(fileAddress(id))).answer;
+
+      await assertRefused(await fetched(route, new Request(fileAddress(id))).answer, 404);
+    });
   });
 
-  describe('when the page asks whether the route is there', () => {
-    it('then a HEAD request is answered with the payment media type and no body', async () => {
-      const { answer, stopped } = dispatch(
-        installedRoute(),
-        new Request(`${ORIGIN}/platba.spayd`, { method: 'HEAD' }),
-      );
+  describe('when the page opens an id after thirty seconds', () => {
+    it('then the reservation is gone and the worker refuses it', async () => {
+      const clock = { now: 1_000 };
+      const route = installedRoute(clock);
+      const id = reservationOf(route);
 
-      assert.equal(stopped, true);
-      const response = await answer;
-      assert.equal(response.status, 200);
-      assert.match(response.headers.get('content-type'), /^application\/x-shortpaymentdescriptor/);
-      assert.equal(response.headers.get('cache-control'), 'no-store');
-      assert.equal(await response.text(), '');
+      clock.now += 30_000;
+
+      await assertRefused(await fetched(route, new Request(fileAddress(id))).answer, 404);
+    });
+
+    it('and just before, then the payment file is still served', async () => {
+      const clock = { now: 1_000 };
+      const route = installedRoute(clock);
+      const id = reservationOf(route);
+
+      clock.now += 29_999;
+
+      assert.equal((await fetched(route, new Request(fileAddress(id))).answer).status, 200);
     });
   });
 
   for (const [name, address] of [
-    ['no text', `${ORIGIN}/platba.spayd`],
-    ['an empty text', routeAddress('')],
-    ['a text without the SPAYD header', routeAddress('ACC:CZ6520100000005544332217*AM:500.00')],
-    ['a header alone', routeAddress('SPD*1.0*')],
-    ['a line break', routeAddress(`${PAYMENT}\n<script>`)],
-    ['a letter outside ASCII', routeAddress(`${PAYMENT}*MSG:NADĚJE`)],
-    ['a text over 1 000 characters', routeAddress(`${PAYMENT}*X-INFO:${'A'.repeat(1000)}`)],
-    ['two texts', `${routeAddress(PAYMENT)}&data=${encodeURIComponent(PAYMENT)}`],
+    ['no id', `${ORIGIN}/platba.spayd`],
+    ['an id nobody reserved', fileAddress('6f1c1e9a-3c1b-4f53-9d55-0d0a9b1f2c11')],
+    [
+      'a payment written into the address instead of an id',
+      `${ORIGIN}/platba.spayd?${new URLSearchParams({ data: PAYMENT })}`,
+    ],
   ]) {
-    describe(`when the page opens the payment file of ${name}`, () => {
-      it('then the worker refuses it with 400 as plain text and writes no payment file', async () => {
-        const { answer, stopped } = dispatch(installedRoute(), new Request(address));
+    describe(`when something opens the payment file with ${name}`, () => {
+      it('then the worker refuses it with 404 as sandboxed plain text', async () => {
+        const route = installedRoute();
+        reservationOf(route);
+
+        const { answer, stopped } = fetched(route, new Request(address));
 
         assert.equal(stopped, true);
-        const response = await answer;
-        assert.equal(response.status, 400);
-        assert.equal(response.headers.get('content-type'), 'text/plain; charset=utf-8');
-        assert.equal(response.headers.get('cache-control'), 'no-store');
-        assert.equal(response.headers.get('content-disposition'), null);
+        await assertRefused(await answer, 404);
       });
     });
   }
 
-  describe('when something posts to the route', () => {
-    it('then the worker answers 405 and names the methods it allows', async () => {
-      const { answer, stopped } = dispatch(
-        installedRoute(),
-        new Request(routeAddress(PAYMENT), { method: 'POST', body: PAYMENT }),
-      );
+  describe('when a reserved id comes with another parameter or twice', () => {
+    it('then the worker refuses it', async () => {
+      const route = installedRoute();
+      const id = reservationOf(route);
 
-      assert.equal(stopped, true);
-      const response = await answer;
-      assert.equal(response.status, 405);
-      assert.equal(response.headers.get('allow'), 'GET, HEAD');
+      await assertRefused(
+        await fetched(route, new Request(`${fileAddress(id)}&data=${encodeURIComponent(PAYMENT)}`))
+          .answer,
+        404,
+      );
+      const again = reservationOf(route);
+      await assertRefused(
+        await fetched(route, new Request(`${fileAddress(again)}&id=${again}`)).answer,
+        404,
+      );
     });
   });
+
+  for (const [name, payment] of [
+    ['an empty text', ''],
+    ['a text without the SPAYD header', 'ACC:CZ6520100000005544332217*AM:500.00'],
+    ['a header alone', 'SPD*1.0*'],
+    ['a line break', `${PAYMENT}\n<script>`],
+    [
+      'a script that would also parse as JavaScript',
+      'SPD*1.0*0;function SPD(){};alert(document.domain)',
+    ],
+    ['a lower-case letter', `${PAYMENT}*MSG:dar`],
+    ['a letter outside ASCII', `${PAYMENT}*MSG:NADĚJE`],
+    ['a text over 1 000 characters', `${PAYMENT}*X-INFO:${'A'.repeat(1000)}`],
+    ['no text at all', undefined],
+  ]) {
+    describe(`when the page asks to reserve ${name}`, () => {
+      it('then the worker answers without an id', () => {
+        const { replies, stopped } = reserved(installedRoute(), {
+          type: 'nfnn-payment-file',
+          payment,
+        });
+
+        assert.equal(stopped, true);
+        assert.deepEqual(replies, [{ type: 'nfnn-payment-file', id: null }]);
+      });
+    });
+  }
+
+  describe('when the page sends Angular a message of its own', () => {
+    it('then the route leaves it to the Angular worker', () => {
+      const { replies, stopped } = reserved(installedRoute(), {
+        action: 'CHECK_FOR_UPDATES',
+        nonce: 1,
+      });
+
+      assert.equal(stopped, false);
+      assert.deepEqual(replies, []);
+    });
+  });
+
+  for (const method of ['HEAD', 'POST']) {
+    describe(`when something sends ${method} to the route`, () => {
+      it('then the worker answers 405, names GET as the method it allows and keeps the reservation', async () => {
+        const route = installedRoute();
+        const id = reservationOf(route);
+        const init = method === 'POST' ? { method, body: PAYMENT } : { method };
+
+        const response = await fetched(route, new Request(fileAddress(id), init)).answer;
+
+        await assertRefused(response, 405);
+        assert.equal(response.headers.get('allow'), 'GET');
+        assert.equal((await fetched(route, new Request(fileAddress(id))).answer).status, 200);
+      });
+    });
+  }
 
   for (const address of [
     `${ORIGIN}/`,
     `${ORIGIN}/platba.spayd/`,
     `${ORIGIN}/platba.spayd.js`,
     `${ORIGIN}/api/platba.spayd`,
-    `https://example.com/platba.spayd?data=${encodeURIComponent(PAYMENT)}`,
+    `https://example.com/platba.spayd?id=6f1c1e9a-3c1b-4f53-9d55-0d0a9b1f2c11`,
   ]) {
     describe(`when the page asks for ${address}`, () => {
       it('then the route leaves the request to the Angular worker', () => {
-        const { answer, stopped } = dispatch(installedRoute(), new Request(address));
+        const { answer, stopped } = fetched(installedRoute(), new Request(address));
 
         assert.equal(stopped, false);
         assert.equal(answer, null);
@@ -204,15 +304,41 @@ describe('Given a built Angular service worker', () => {
     });
   });
 
+  describe('when a build has ngsw.json but its worker lacks the route or is missing', () => {
+    it('then the check names it, and a wrapped build or one without a manifest passes', () => {
+      for (const build of ['frontend', 'control-theme', 'missing', 'development']) {
+        mkdirSync(join(folder, build, 'browser'), { recursive: true });
+      }
+      for (const build of ['frontend', 'control-theme', 'missing']) {
+        writeFileSync(join(folder, build, 'browser', 'ngsw.json'), '{}');
+      }
+      writeFileSync(join(folder, 'frontend', 'browser', 'ngsw-worker.js'), ANGULAR_WORKER);
+      wrapServiceWorker(join(folder, 'frontend', 'browser', 'ngsw-worker.js'));
+      writeFileSync(join(folder, 'control-theme', 'browser', 'ngsw-worker.js'), ANGULAR_WORKER);
+      writeFileSync(join(folder, 'development', 'browser', 'index.html'), '');
+
+      assert.deepEqual(
+        unwrappedServiceWorkers(folder)
+          .map((file) => file.slice(folder.length + 1))
+          .sort(),
+        [
+          join('control-theme', 'browser', 'ngsw-worker.js'),
+          join('missing', 'browser', 'ngsw-worker.js'),
+        ],
+      );
+    });
+  });
+
   describe('when the wrapped worker starts', () => {
-    it('then its route is registered before the Angular listener', () => {
+    it('then its route is registered before the Angular listeners', () => {
       const worker = join(folder, 'ngsw-worker.js');
       writeFileSync(worker, ANGULAR_WORKER);
       wrapServiceWorker(worker);
-      const types = [];
+      const listeners = [];
       const self = {
         location: new URL(`${ORIGIN}/ngsw-worker.js`),
-        addEventListener: (type, listener) => types.push({ type, listener }),
+        crypto: globalThis.crypto,
+        addEventListener: (type, listener) => listeners.push({ type, listener }),
       };
 
       runInNewContext(readFileSync(worker, 'utf8'), {
@@ -221,10 +347,14 @@ describe('Given a built Angular service worker', () => {
         URLSearchParams,
         Response,
         Headers,
+        Date,
       });
 
-      assert.equal(types.length, 2);
-      const { stopped } = dispatch(types, new Request(routeAddress(PAYMENT)));
+      assert.deepEqual(
+        listeners.map((entry) => entry.type),
+        ['message', 'fetch', 'fetch'],
+      );
+      const { stopped } = fetched(listeners, new Request(fileAddress(reservationOf(listeners))));
       assert.equal(stopped, true);
     });
   });

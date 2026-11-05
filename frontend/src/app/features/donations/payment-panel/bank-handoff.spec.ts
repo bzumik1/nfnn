@@ -86,7 +86,7 @@ describe('Given a payment handed to a bank app', () => {
 
       const outcome = await handOver(spaydFile(SPAYD), 'QR platba', () => {
         opened.push('asked');
-        return Promise.resolve(true);
+        return Promise.resolve('opened');
       });
 
       expect(outcome).toBe('shared');
@@ -142,7 +142,9 @@ describe('Given a payment handed to a bank app', () => {
     it('when the site opens the payment itself, then it is opened there and nothing downloads', async () => {
       const downloads = recordDownloads();
 
-      const outcome = await handOver(spaydFile(SPAYD), 'QR platba', () => Promise.resolve(true));
+      const outcome = await handOver(spaydFile(SPAYD), 'QR platba', () =>
+        Promise.resolve('opened'),
+      );
 
       expect(outcome).toBe('opened');
       expect(downloads).toEqual([]);
@@ -151,10 +153,21 @@ describe('Given a payment handed to a bank app', () => {
     it('when the site cannot open the payment itself, then the file downloads as before', async () => {
       const downloads = recordDownloads();
 
-      const outcome = await handOver(spaydFile(SPAYD), 'QR platba', () => Promise.resolve(false));
+      const outcome = await handOver(spaydFile(SPAYD), 'QR platba', () => Promise.resolve(null));
 
       expect(outcome).toBe('downloaded');
       expect(downloads.map((download) => download.name)).toEqual(['platba.spayd']);
+    });
+
+    it('when the visitor moved on while the site was getting ready, then neither the payment opens nor the file downloads', async () => {
+      const downloads = recordDownloads();
+
+      const outcome = await handOver(spaydFile(SPAYD), 'QR platba', () =>
+        Promise.resolve('dismissed'),
+      );
+
+      expect(outcome).toBe('dismissed');
+      expect(downloads).toEqual([]);
     });
   });
 

@@ -22,11 +22,12 @@ export function sharesImages(): boolean {
 export async function handOver(
   file: File,
   title: string,
-  openLocally: () => Promise<boolean> = () => Promise.resolve(false),
+  openLocally: () => Promise<Handoff | null> = () => Promise.resolve(null),
 ): Promise<Handoff> {
   if (!deviceShares(file)) {
-    if (await openLocally()) {
-      return 'opened';
+    const local = await openLocally();
+    if (local !== null) {
+      return local;
     }
     saveBlob({ blob: file, fileName: file.name });
     return 'downloaded';

@@ -322,7 +322,7 @@ export class PaymentPanel {
     this.handingOff.set(true);
     try {
       const handoff = await handOver(spaydFile(payment.spayd), this.shareTitle, () =>
-        this.localPaymentRoute.open(payment.spayd),
+        this.openOnDevice(payment.spayd, () => this.payment() === payment),
       );
       if (this.payment() === payment) {
         this.handoffNotice.set(bankNotice(handoff));
@@ -330,6 +330,21 @@ export class PaymentPanel {
     } finally {
       this.handingOff.set(false);
     }
+  }
+
+  private async openOnDevice(
+    spaydText: string,
+    stillChosen: () => boolean,
+  ): Promise<Handoff | null> {
+    const id = await this.localPaymentRoute.reserve(spaydText);
+    if (!stillChosen()) {
+      return 'dismissed';
+    }
+    if (id === null) {
+      return null;
+    }
+    this.localPaymentRoute.open(id);
+    return 'opened';
   }
 
   async sendQrImage(): Promise<void> {
@@ -458,6 +473,8 @@ function bankNotice(handoff: Handoff): HandoffNotice | null {
       return null;
     case 'downloaded':
       return 'spaydDownloaded';
+    case 'opened':
+      return 'bankNotOpened';
     default:
       return 'bankNotOpened';
   }
