@@ -79,6 +79,7 @@ public class DonorSecondFactorService {
         }
         Instant now = clock.instant();
         factor.confirm(code, now);
+        sessions.requireLasting(donor, device);
         secondFactors.save(factor);
         signOuts.endAllOf(donorId, device.session(), DeviceSignOutReason.CREDENTIALS_CHANGED, now);
         events.publishEvent(new DonorSecondFactorEnabled(donorId.value(), donor.email(), donor.preferredLocale()));
@@ -93,6 +94,7 @@ public class DonorSecondFactorService {
         SecondFactor factor = secondFactors.findByDonor(donorId).filter(SecondFactor::isEnabled).orElseThrow(SecondFactorNotEnabled::new);
         Instant now = clock.instant();
         factor.check(code, now);
+        sessions.requireLasting(donor, device);
         secondFactors.delete(donorId);
         signOuts.endAllOf(donorId, device.session(), DeviceSignOutReason.CREDENTIALS_CHANGED, now);
         events.publishEvent(new DonorSecondFactorDisabled(donorId.value(), donor.email(), donor.preferredLocale()));

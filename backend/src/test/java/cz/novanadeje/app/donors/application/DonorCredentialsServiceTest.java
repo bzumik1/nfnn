@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donors.application;
 
 import cz.novanadeje.app.donors.domain.SessionKind;
+import cz.novanadeje.app.donors.domain.SessionEnded;
 import cz.novanadeje.app.donors.domain.DeviceDescription;
 import java.util.UUID;
 import cz.novanadeje.app.donors.domain.DeviceId;
@@ -46,6 +47,8 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -147,6 +150,25 @@ class DonorCredentialsServiceTest {
 
         verify(donors, never()).save(any());
         verifyNoInteractions(signOuts, sessions);
+    }
+
+    @Test
+    @DisplayName("Given a session that has ended, when the password is changed or removed, then it is refused as ended before anything is hashed, stored, signed out or announced")
+    void should_refuse_as_ended_and_change_nothing_when_password_changed_or_removed_given_ended_session() {
+        Donor donor = donor();
+        when(donors.findById(DONOR)).thenReturn(Optional.of(donor));
+        when(passwordHasher.matches(new RawPassword(CURRENT), OLD_HASH)).thenReturn(true);
+        when(passkeys.countByDonor(DONOR)).thenReturn(1);
+        doThrow(new SessionEnded()).when(sessions).requireLasting(donor, DEVICE);
+
+        assertThatThrownBy(() -> service.changePassword(DONOR, false, Confirmation.withPassword(CURRENT), NEXT, DEVICE)).isInstanceOf(SessionEnded.class);
+        assertThatThrownBy(() -> service.removePassword(DONOR, false, Confirmation.withPassword(CURRENT), DEVICE)).isInstanceOf(SessionEnded.class);
+
+        assertThat(donor.passwordHash()).contains(OLD_HASH);
+        verify(passwordHasher, never()).hash(any());
+        verify(donors, never()).save(any());
+        verify(sessions, never()).continueOn(any(), anyBoolean(), any());
+        verifyNoInteractions(signOuts, events);
     }
 
     @Test

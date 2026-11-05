@@ -56,14 +56,15 @@ public class DonorSessionService {
         return issue(newDevice(donor, description, kind, now), secondFactorVerified, roles, now).tokens();
     }
 
+    @Transactional(readOnly = true)
+    public void requireLasting(Donor donor, RequestingDevice requesting) {
+        lastingDevice(donor, requesting, clock.instant());
+    }
+
     @Transactional
     public IssuedTokens continueOn(Donor donor, boolean secondFactorVerified, RequestingDevice requesting) {
         Instant now = clock.instant();
-        Optional<DonorDevice> own = requesting.session().flatMap(devices::findById).filter(found -> found.belongsTo(donor.id()));
-        if (own.isPresent() && !lasts(own.get(), now)) {
-            throw new SessionEnded();
-        }
-        DonorDevice device = own
+        DonorDevice device = lastingDevice(donor, requesting, now)
                 .map(found -> {
                     found.recordUse(now);
                     devices.save(found);
@@ -166,6 +167,14 @@ public class DonorSessionService {
             token.successorId().ifPresent(successor -> refreshTokens.revokeIfUnused(successor, now));
             token.deviceId().ifPresent(device -> signOuts.end(token.donorId(), device, DeviceSignOutReason.SIGNED_OUT, now));
         });
+    }
+
+    private Optional<DonorDevice> lastingDevice(Donor donor, RequestingDevice requesting, Instant now) {
+        Optional<DonorDevice> own = requesting.session().flatMap(devices::findById).filter(found -> found.belongsTo(donor.id()));
+        if (own.isPresent() && !lasts(own.get(), now)) {
+            throw new SessionEnded();
+        }
+        return own;
     }
 
     private boolean lasts(DonorDevice device, Instant now) {

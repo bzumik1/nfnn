@@ -815,6 +815,29 @@ class DonorSessionServiceTest {
     }
 
     @Test
+    @DisplayName("Given a session whose device just ended, when a credential change asks whether it lasts, then it is refused as ended before anything changes")
+    void should_refuse_as_ended_when_asked_to_last_given_its_device_just_ended() {
+        DonorDevice ended = deviceOf(SessionKind.BROWSER, NOW.minus(Duration.ofMinutes(20)));
+        ended.end(DeviceSignOutReason.REMOTE_SIGN_OUT, NOW.minusSeconds(5));
+        when(devices.findById(DEVICE)).thenReturn(Optional.of(ended));
+
+        assertThatThrownBy(() -> service.requireLasting(donor(), new RequestingDevice(Optional.of(DEVICE), DeviceDescription.UNKNOWN)))
+                .isInstanceOf(SessionEnded.class);
+        verify(devices, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Given a public-computer session within its twelve hours or a session that names no device, when a credential change asks whether it lasts, then it may go on")
+    void should_let_it_go_on_when_asked_to_last_given_a_lasting_session_or_no_device() {
+        when(devices.findById(DEVICE)).thenReturn(Optional.of(deviceOf(SessionKind.PUBLIC, NOW.minus(Duration.ofHours(11)))));
+
+        service.requireLasting(donor(), new RequestingDevice(Optional.of(DEVICE), DeviceDescription.UNKNOWN));
+        service.requireLasting(donor(), new RequestingDevice(Optional.empty(), DeviceDescription.UNKNOWN));
+
+        verify(devices, never()).save(any());
+    }
+
+    @Test
     @DisplayName("Given a session that names no device of the donor, when it continues after a credential change, then the new device lasts only for this browser session")
     void should_continue_as_a_browser_session_when_continued_given_no_device_of_the_donor() {
         when(accessTokens.issue(eq(DONOR), eq(Set.of(Role.DONOR)), any(DeviceId.class), eq(NOW))).thenReturn(new IssuedAccessToken("access", NOW.plus(Duration.ofMinutes(15))));
