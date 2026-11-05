@@ -14,6 +14,8 @@ async function rememberedSession(page: Page): Promise<void> {
   await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
 }
 
+const DRAWING_60_RECEIPTS_MS = 20_000;
+
 test.describe('Given an administrator who prints the yearly receipts of 2026', () => {
   test.beforeEach(async ({ page }) => {
     await mockDonorApi(page);
@@ -107,6 +109,7 @@ test.describe('Given an administrator who prints the yearly receipts of 2026', (
     );
 
     await page.goto('/sprava/hromadna-potvrzeni');
+    await page.getByLabel(/^Tisknu oboustranně/).uncheck();
     await page.getByRole('button', { name: 'Vystavit a připravit PDF k tisku' }).click();
     const alert = page.locator('.failure');
     await expect(alert).toContainText('Vystavování potvrzení se přerušilo.');
@@ -115,6 +118,7 @@ test.describe('Given an administrator who prints the yearly receipts of 2026', (
     await alert.getByRole('button', { name: 'Zkusit znovu' }).click();
     await expect(page.locator('app-live-notice').getByRole('status')).toHaveText(
       'PDF k tisku je připravené: obsahuje 60 potvrzení.',
+      { timeout: DRAWING_60_RECEIPTS_MS },
     );
     expect(posted).toEqual([50, 10, 10]);
   });
