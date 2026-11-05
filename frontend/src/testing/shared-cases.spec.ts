@@ -428,7 +428,7 @@ describe('Given a shared case file without its schema', () => {
 });
 
 describe('Given the sync manifest cases', () => {
-  it('when the rows of each chunk are written as canonical JSON and hashed as a device will, then they give the chunk\'s rowsSha256 and count', async () => {
+  it("when the rows of each chunk are written as canonical JSON and hashed as a device will, then they give the chunk's rowsSha256 and count", async () => {
     const chunks = sharedCases(SYNC_CASES).flatMap((sharedCase) => sharedCase.expected.chunks);
     const digests = await Promise.all(chunks.map((chunk) => sha256Hex(canonicalJson(chunk.rows))));
 

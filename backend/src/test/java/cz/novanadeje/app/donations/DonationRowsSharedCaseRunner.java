@@ -5,8 +5,10 @@ import cz.novanadeje.app.sharedcases.CaseRows;
 import cz.novanadeje.app.sharedcases.SharedCaseRunner;
 import cz.novanadeje.app.support.DatabaseCleaner;
 import cz.novanadeje.app.support.MutableClock;
+import cz.novanadeje.app.support.RateLimiterWindows;
 import org.junit.jupiter.api.AfterEach;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -34,6 +36,8 @@ public abstract class DonationRowsSharedCaseRunner extends SharedCaseRunner {
     private MutableClock clock;
     @Autowired
     private MonthlyReportSender reportSender;
+    @Autowired
+    private ConfigurableApplicationContext context;
 
     @AfterEach
     void truncate() {
@@ -43,6 +47,7 @@ public abstract class DonationRowsSharedCaseRunner extends SharedCaseRunner {
     protected CaseRows writeRows(JsonNode input) {
         CaseRows rows = CaseRows.fromJson(input);
         rows.write(jdbc, clock);
+        RateLimiterWindows.reset(context);
         return rows;
     }
 

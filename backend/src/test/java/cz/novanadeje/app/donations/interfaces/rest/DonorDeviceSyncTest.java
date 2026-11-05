@@ -12,7 +12,6 @@ import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -64,7 +63,7 @@ class DonorDeviceSyncTest {
     @Autowired
     private MutableClock clock;
     @Autowired
-    private ConfigurableApplicationContext context;
+    private DonorSyncRateLimiter syncRateLimiter;
 
     @AfterEach
     void truncate() {
@@ -122,7 +121,7 @@ class DonorDeviceSyncTest {
         answer(jana, get(MANIFEST));
         long[] millis = new long[TIMED_RUNS];
         for (int run = 0; run < TIMED_RUNS; run++) {
-            RateLimiterWindows.reset(context);
+            RateLimiterWindows.reset(List.of(syncRateLimiter));
             long start = System.nanoTime();
             answer(jana, get(MANIFEST));
             millis[run] = Duration.ofNanos(System.nanoTime() - start).toMillis();
@@ -263,7 +262,7 @@ class DonorDeviceSyncTest {
         }
 
         private List<String> sync() throws Exception {
-            RateLimiterWindows.reset(context);
+            RateLimiterWindows.reset(List.of(syncRateLimiter));
             manifest = answer(donor, get(MANIFEST));
             Map<String, String> listed = new LinkedHashMap<>();
             manifest.get("chunks").forEach(chunk -> listed.put(chunk.get("id").asString(), chunk.get("rowsSha256").asString()));

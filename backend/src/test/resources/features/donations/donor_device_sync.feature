@@ -6,6 +6,8 @@ Feature: A donor's device keeps a copy of the donor's data by downloading only t
 
   Scenario: A device gets a chunk of donations per year, with the summary, and never another donor's gifts
     Given today is 2026-10-20
+    And the foundation wants bank history from 2025-01-01
+    And the bank history is unlocked
     And a person "Jana" is registered
     And a person "Petr" is registered
     And the bank account has these movements:
@@ -41,6 +43,8 @@ Feature: A donor's device keeps a copy of the donor's data by downloading only t
 
   Scenario: A new payment changes only the chunk of its year, and an unchanged manifest downloads nothing
     Given today is 2026-10-20
+    And the foundation wants bank history from 2025-01-01
+    And the bank history is unlocked
     And a person "Jana" is registered
     And the bank account has these movements:
       | id   | date       | amount | account    | bankCode | name          | variableSymbol |
@@ -67,6 +71,8 @@ Feature: A donor's device keeps a copy of the donor's data by downloading only t
 
   Scenario: An unpaired gift leaves its chunk, and the chunk of a year without gifts leaves the device
     Given today is 2026-10-20
+    And the foundation wants bank history from 2025-01-01
+    And the bank history is unlocked
     And a person "Jana" is registered
     And a person "Petr" is registered
     And "Jana" is an administrator
