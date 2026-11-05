@@ -13,7 +13,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Observable, of, switchMap } from 'rxjs';
+import { Observable, of, switchMap, tap } from 'rxjs';
 import { FormsModule, NgForm } from '@angular/forms';
 import { Title } from '@angular/platform-browser';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -50,7 +50,7 @@ import { projectCategoryLabel } from '../../content/project-category';
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 import { FocalPoint } from '../../../shared/ui/focal-point/focal-point';
-import { PhotosApi } from '../../content/photos-api';
+import { PhotoResponse, PhotosApi } from '../../content/photos-api';
 import { FocalPointPicker, PreviewShape } from '../focal-point-picker/focal-point-picker';
 import { ContentPreview, PreviewContent } from '../content-preview/content-preview';
 import { GuardsUnsavedChanges } from '../unsaved-changes/unsaved-changes-guard';
@@ -405,6 +405,25 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
       this.sendPublish(existing.id, date);
       return;
     }
+    if (existing && !this.edited() && !this.coverUnsaved() && this.focalPointUnsaved()) {
+      this.placeFocalPoint()
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: () => {
+            if (needsPublish) {
+              this.sendPublish(existing.id, date);
+              return;
+            }
+            this.saving.set(null);
+            this.notice.set({ kind: 'status', text: this.savedText(existing, false) });
+          },
+          error: (failure: unknown) => {
+            this.saving.set(null);
+            this.saveFailed(failure);
+          },
+        });
+      return;
+    }
     const request = this.request();
     const call = this.placeFocalPoint().pipe(
       switchMap(() =>
@@ -474,8 +493,18 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
   private placeFocalPoint(): Observable<unknown> {
     const cover = this.coverImage();
     return cover && this.focalPointUnsaved()
-      ? this.photos.placeFocalPoint(cover.id, cover.focalPoint)
+      ? this.photos
+          .placeFocalPoint(cover.id, cover.focalPoint)
+          .pipe(tap((photo) => this.keepPlacedPoint(photo)))
       : of(null);
+  }
+
+  private keepPlacedPoint(photo: PhotoResponse): void {
+    this.project.update((saved) =>
+      saved?.coverImage?.id === photo.id
+        ? { ...saved, coverImage: { ...saved.coverImage, focalPoint: photo.focalPoint } }
+        : saved,
+    );
   }
 
   protected removeImage(): void {

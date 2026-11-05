@@ -13,7 +13,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Observable, of, switchMap } from 'rxjs';
+import { Observable, of, switchMap, tap } from 'rxjs';
 import { FormsModule, NgForm } from '@angular/forms';
 import { Router } from '@angular/router';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
@@ -25,7 +25,7 @@ import { FormControlDirective } from '../../../shared/ui/form-field/form-control
 import { FormField } from '../../../shared/ui/form-field/form-field';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 import { FocalPoint } from '../../../shared/ui/focal-point/focal-point';
-import { PhotosApi } from '../../content/photos-api';
+import { PhotoResponse, PhotosApi } from '../../content/photos-api';
 import { FocalPointPicker } from '../focal-point-picker/focal-point-picker';
 import {
   AboutApi,
@@ -47,6 +47,8 @@ interface ChosenPhoto {
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const FORBIDDEN = 'auth/forbidden';
+const SAVED = $localize`:@@admin.about.saved:Uloženo. Fotka je na webu v sekci O nás.`;
+const SAVE_FAILED = $localize`:@@admin.about.save.failed:Fotku se nepodařilo uložit. Zkuste to prosím znovu.`;
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 @Component({
@@ -201,6 +203,10 @@ export class AdminAbout {
       return;
     }
     this.saving.set(true);
+    if (!this.photoUnsaved() && form.pristine && this.focalPointUnsaved()) {
+      this.placeOnlyFocalPoint();
+      return;
+    }
     this.send({ photoId: photo.id, photoAlt: text(this.photoAlt), caption: text(this.caption) });
   }
 
@@ -269,18 +275,30 @@ export class AdminAbout {
           this.show(about.photo);
           this.notice.set({
             kind: 'status',
-            text: $localize`:@@admin.about.saved:Uloženo. Fotka je na webu v sekci O nás.`,
+            text: SAVED,
           });
         },
         error: (failure: unknown) => {
           this.saving.set(false);
           this.notice.set({
             kind: 'alert',
-            text: describeProblem(
-              failure,
-              $localize`:@@admin.about.save.failed:Fotku se nepodařilo uložit. Zkuste to prosím znovu.`,
-            ),
+            text: describeProblem(failure, SAVE_FAILED),
           });
+        },
+      });
+  }
+
+  private placeOnlyFocalPoint(): void {
+    this.placeFocalPoint()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.saving.set(false);
+          this.notice.set({ kind: 'status', text: SAVED });
+        },
+        error: (failure: unknown) => {
+          this.saving.set(false);
+          this.notice.set({ kind: 'alert', text: describeProblem(failure, SAVE_FAILED) });
         },
       });
   }
@@ -288,8 +306,16 @@ export class AdminAbout {
   private placeFocalPoint(): Observable<unknown> {
     const photo = this.chosen();
     return photo && this.focalPointUnsaved()
-      ? this.photos.placeFocalPoint(photo.id, photo.focalPoint)
+      ? this.photos
+          .placeFocalPoint(photo.id, photo.focalPoint)
+          .pipe(tap((placed) => this.keepPlacedPoint(placed)))
       : of(null);
+  }
+
+  private keepPlacedPoint(placed: PhotoResponse): void {
+    this.saved.update((saved) =>
+      saved?.id === placed.id ? { ...saved, focalPoint: placed.focalPoint } : saved,
+    );
   }
 
   private show(photo: AboutPhotoResponse | null): void {

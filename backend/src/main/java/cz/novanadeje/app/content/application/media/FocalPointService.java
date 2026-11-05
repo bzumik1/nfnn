@@ -1,10 +1,12 @@
 package cz.novanadeje.app.content.application.media;
 
 import cz.novanadeje.app.content.domain.media.FocalPoint;
+import cz.novanadeje.app.content.domain.media.FocalPointOnPersonImage;
 import cz.novanadeje.app.content.domain.media.MediaId;
 import cz.novanadeje.app.content.domain.media.MediaImageRepository;
 import cz.novanadeje.app.content.domain.media.MediaNotFound;
 import cz.novanadeje.app.content.domain.media.MediaSize;
+import cz.novanadeje.app.content.domain.people.PersonRepository;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -22,17 +24,22 @@ public class FocalPointService {
     static final String ACTION = "CHANGE_PHOTO_FOCAL_POINT";
 
     private final MediaImageRepository media;
+    private final PersonRepository people;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
-    public FocalPointService(MediaImageRepository media, ApplicationEventPublisher events, Clock clock) {
+    public FocalPointService(MediaImageRepository media, PersonRepository people, ApplicationEventPublisher events, Clock clock) {
         this.media = media;
+        this.people = people;
         this.events = events;
         this.clock = clock;
     }
 
     public PhotoView place(UUID adminId, MediaId id, Optional<FocalPoint> point) {
         MediaSize size = media.findSize(id).orElseThrow(() -> new MediaNotFound(id));
+        if (people.isAnyonesPortrait(id) || people.isAnyonesWebSignature(id)) {
+            throw new FocalPointOnPersonImage(id);
+        }
         Optional<FocalPoint> current = Optional.ofNullable(media.findFocalPoints(List.of(id)).get(id));
         if (!current.equals(point)) {
             media.placeFocalPoint(id, point);

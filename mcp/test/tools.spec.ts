@@ -1100,7 +1100,8 @@ describe('Given an administrator connected with the writing permission', () => {
     const description = tools.find(
       (tool) => tool.name === 'nfnn_set_photo_focal_point',
     )?.description;
-    expect(description).toContain('around the centre');
+    expect(description).toContain('as before with focalPoint null');
+    expect(description).toContain('content/focal-point-on-person-image');
     expect(description).toContain('CHANGE_PHOTO_FOCAL_POINT');
     expect(description).toContain('nfnn_update_news');
   });

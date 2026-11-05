@@ -136,21 +136,42 @@ Feature: An administrator marks on a photo the spot that must stay visible, and 
       | coverImage.id         | {uploaded} |
       | coverImage.focalPoint |            |
 
-  Scenario Outline: A point outside the photo, half a point or an unknown photo is refused and nothing changes
+  Scenario Outline: A point outside the photo or half a point is refused and the photo keeps its point
     Given "Jana" uploads a 1600 by 1000 pixel PNG image named "zahrada.png"
+    And "Jana" creates a news article:
+      | title      | Zahrada pro děti |
+      | perex      | Krátce.          |
+      | body       | Text.            |
+      | coverImage | {uploaded}       |
     And "Jana" places the focal point of the image uploaded as "zahrada.png" at 42 % from the left and 18 % from the top
     When "Jana" sends the focal point of the image uploaded as "zahrada.png" as <body>
     Then the response status is 400
     And the problem lists an error for field "<field>"
-    When "Jana" places the focal point of the image uploaded as "zahrada.png" at 50 % from the left and 50 % from the top
-    Then the photo says:
-      | focalPoint.x | 50 |
+    When "Jana" asks for the news article "zahrada-pro-deti"
+    Then the news article says:
+      | coverImage.focalPoint.x | 42 |
+      | coverImage.focalPoint.y | 18 |
 
     Examples:
       | body                                | field        |
       | {"focalPoint": {"x": 101, "y": 50}} | focalPoint.x |
       | {"focalPoint": {"x": 50, "y": -1}}  | focalPoint.y |
       | {"focalPoint": {"x": 50}}           | focalPoint.y |
+
+  Scenario: A portrait or a web signature of a person of the foundation takes no focal point
+    Given "Jana" uploads a 640 by 640 pixel PNG image named "eva.png"
+    And "Jana" adds a person:
+      | name     | Eva Vzorová |
+      | onBoard  | false       |
+      | featured | false       |
+      | portrait | eva.png     |
+    When "Jana" places the focal point of the image uploaded as "eva.png" at 42 % from the left and 18 % from the top
+    Then the response status is 400
+    And the problem type ends with "content/focal-point-on-person-image"
+    When "Jana" asks for the admin actions
+    Then the admin actions are:
+      | action     | summary                        |
+      | ADD_PERSON | Přidána osoba mezi lidi fondu. |
 
   Scenario: An unknown photo has no focal point to place
     When "Jana" places the focal point of the image "0199f3e0-0000-7000-8000-000000000000" at 50 % from the left and 50 % from the top

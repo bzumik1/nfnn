@@ -679,7 +679,23 @@ describe('Given an administrator editing a published project', () => {
     await settle(fixture);
   }
 
-  it('when they tap a spot on the photo and save, then the point is placed on the photo before the project is saved', async () => {
+  function placed(focalPoint: { x: number; y: number } | null) {
+    return {
+      id: IMAGE_ID,
+      url: `/api/content/media/${IMAGE_ID}`,
+      width: 1600,
+      height: 1000,
+      focalPoint,
+    };
+  }
+
+  function leavingIsHeld(): boolean {
+    const unload = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(unload);
+    return unload.defaultPrevented;
+  }
+
+  it('when they only tap a spot on the photo and save, then only the photo gets the point and the project is not saved again', async () => {
     await loaded();
     expect(
       Array.from(fixture.nativeElement.querySelectorAll('figure.preview figcaption')).map(
@@ -689,35 +705,49 @@ describe('Given an administrator editing a published project', () => {
 
     await tapPhoto(168, 45);
     expect(text(fixture, '.picker-status')).toBe('Bod výřezu: 42 % zleva, 18 % shora.');
-    const unload = new Event('beforeunload', { cancelable: true });
-    window.dispatchEvent(unload);
-    expect(unload.defaultPrevented).toBe(true);
+    expect(leavingIsHeld()).toBe(true);
 
     await submit(fixture);
     const placing = http.expectOne(`${MEDIA_URL}/${IMAGE_ID}`);
     expect(placing.request.method).toBe('PUT');
     expect(placing.request.body).toEqual({ focalPoint: { x: 42, y: 18 } });
-    http.expectNone(`${PROJECTS_URL}/${project().id}`);
-    placing.flush({
-      id: IMAGE_ID,
-      url: `/api/content/media/${IMAGE_ID}`,
-      width: 1600,
-      height: 1000,
-      focalPoint: { x: 42, y: 18 },
-    });
-    await settle(fixture);
-    const saving = http.expectOne(`${PROJECTS_URL}/${project().id}`);
-    expect(saving.request.method).toBe('PUT');
-    const cover = project().coverImage!;
-    saving.flush(project({ coverImage: { ...cover, focalPoint: { x: 42, y: 18 } } }));
+    placing.flush(placed({ x: 42, y: 18 }));
     await settle(fixture);
 
+    http.expectNone(`${PROJECTS_URL}/${project().id}`);
     expect(text(fixture, '[role="status"]:not(:empty)')).toBe(
       'Změny jsme uložili a na webu už jsou.',
     );
-    const after = new Event('beforeunload', { cancelable: true });
-    window.dispatchEvent(after);
-    expect(after.defaultPrevented).toBe(false);
+    expect(leavingIsHeld()).toBe(false);
+  });
+
+  it('when they change a text and the point and the save of the project fails, then the point counts as saved and the next save sends only the project', async () => {
+    await loaded();
+    await type(fixture, '#projects-perex', 'Nový souhrn.');
+    await tapPhoto(168, 45);
+    await submit(fixture);
+
+    http.expectOne(`${MEDIA_URL}/${IMAGE_ID}`).flush(placed({ x: 42, y: 18 }));
+    await settle(fixture);
+    http
+      .expectOne(`${PROJECTS_URL}/${project().id}`)
+      .flush(null, { status: 500, statusText: 'Server Error' });
+    await settle(fixture);
+    expect(text(fixture, '.ui-action-bar [role="alert"]')).toBe(
+      'Projekt se nepodařilo uložit. Zkuste to prosím znovu.',
+    );
+
+    await submit(fixture);
+    http.expectNone(`${MEDIA_URL}/${IMAGE_ID}`);
+    const saving = http.expectOne(`${PROJECTS_URL}/${project().id}`);
+    expect(saving.request.body.perex).toBe('Nový souhrn.');
+    const cover = project().coverImage!;
+    saving.flush(
+      project({ perex: 'Nový souhrn.', coverImage: { ...cover, focalPoint: { x: 42, y: 18 } } }),
+    );
+    await settle(fixture);
+
+    expect(leavingIsHeld()).toBe(false);
   });
 
   it('when they clear a saved point, then the photo is sent without one', async () => {
@@ -734,16 +764,9 @@ describe('Given an administrator editing a published project', () => {
 
     const placing = http.expectOne(`${MEDIA_URL}/${IMAGE_ID}`);
     expect(placing.request.body).toEqual({ focalPoint: null });
-    placing.flush({
-      id: IMAGE_ID,
-      url: `/api/content/media/${IMAGE_ID}`,
-      width: 1600,
-      height: 1000,
-      focalPoint: null,
-    });
+    placing.flush(placed(null));
     await settle(fixture);
-    http.expectOne(`${PROJECTS_URL}/${project().id}`).flush(project());
-    await settle(fixture);
+    http.expectNone(`${PROJECTS_URL}/${project().id}`);
 
     expect(text(fixture, '.picker-status')).toBe('Bez bodu výřezu: web fotku ořízne jako dosud.');
   });

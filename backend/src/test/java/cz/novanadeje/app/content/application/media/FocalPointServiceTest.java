@@ -4,7 +4,9 @@ import cz.novanadeje.app.content.domain.media.FocalPoint;
 import cz.novanadeje.app.content.domain.media.MediaId;
 import cz.novanadeje.app.content.domain.media.MediaImageRepository;
 import cz.novanadeje.app.content.domain.media.MediaNotFound;
+import cz.novanadeje.app.content.domain.media.FocalPointOnPersonImage;
 import cz.novanadeje.app.content.domain.media.MediaSize;
+import cz.novanadeje.app.content.domain.people.PersonRepository;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -41,9 +43,11 @@ class FocalPointServiceTest {
     private MediaImageRepository media;
     @Mock
     private ApplicationEventPublisher events;
+    @Mock
+    private PersonRepository people;
 
     private FocalPointService service() {
-        return new FocalPointService(media, events, Clock.fixed(NOW, ZoneOffset.UTC));
+        return new FocalPointService(media, people, events, Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
     @Test
@@ -99,5 +103,28 @@ class FocalPointServiceTest {
 
         assertThatThrownBy(() -> service().place(ADMIN, PHOTO, Optional.of(new FocalPoint(50, 50)))).isInstanceOf(MediaNotFound.class);
         verifyNoInteractions(events);
+    }
+
+    @Test
+    @DisplayName("Given a portrait of a person of the foundation, when a focal point is placed on it, then it is refused and nothing is stored or audited")
+    void should_refuse_the_point_when_placed_given_a_portrait() {
+        when(media.findSize(PHOTO)).thenReturn(Optional.of(new MediaSize(640, 640)));
+        when(people.isAnyonesPortrait(PHOTO)).thenReturn(true);
+
+        assertThatThrownBy(() -> service().place(ADMIN, PHOTO, Optional.of(new FocalPoint(42, 18))))
+                .isInstanceOf(FocalPointOnPersonImage.class);
+
+        verify(media, never()).placeFocalPoint(any(), any());
+        verifyNoInteractions(events);
+    }
+
+    @Test
+    @DisplayName("Given a web signature of a person of the foundation, when a focal point is placed on it, then it is refused")
+    void should_refuse_the_point_when_placed_given_a_web_signature() {
+        when(media.findSize(PHOTO)).thenReturn(Optional.of(new MediaSize(600, 200)));
+        when(people.isAnyonesWebSignature(PHOTO)).thenReturn(true);
+
+        assertThatThrownBy(() -> service().place(ADMIN, PHOTO, Optional.of(new FocalPoint(42, 18))))
+                .isInstanceOf(FocalPointOnPersonImage.class);
     }
 }

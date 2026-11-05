@@ -245,7 +245,7 @@ describe('Given an administrator and an About section with a saved photo', () =>
     });
   });
 
-  it('when they tap a spot on the photo and save, then the point is placed before the About section is saved', async () => {
+  it('when they only tap a spot on the photo and save, then only the photo gets the point and the About section is not saved again', async () => {
     expect(text(fixture, '#about-focal-point-hint')).toContain(
       'Web dnes ukazuje celou fotku, takže bod zatím nic neořízne',
     );
@@ -259,7 +259,6 @@ describe('Given an administrator and an About section with a saved photo', () =>
     const placing = http.expectOne(`${MEDIA_URL}/${ABOUT_PHOTO_ID}`);
     expect(placing.request.method).toBe('PUT');
     expect(placing.request.body).toEqual({ focalPoint: { x: 50, y: 25 } });
-    http.expectNone(ABOUT_URL);
     placing.flush({
       id: ABOUT_PHOTO_ID,
       url: `/api/content/media/${ABOUT_PHOTO_ID}`,
@@ -268,11 +267,30 @@ describe('Given an administrator and an About section with a saved photo', () =>
       focalPoint: { x: 50, y: 25 },
     });
     await settle(fixture);
-    http.expectOne(ABOUT_URL).flush({ photo: aboutPhoto({ focalPoint: { x: 50, y: 25 } }) });
-    await settle(fixture);
+    http.expectNone(ABOUT_URL);
 
     expect(text(fixture, '.picker-status')).toBe('Bod výřezu: 50 % zleva, 25 % shora.');
     expect(text(fixture, '.ui-notice--status')).toBe('Uloženo. Fotka je na webu v sekci O nás.');
+  });
+
+  it('when they change the caption and tap a spot, then the point is placed first and the section is saved with the caption', async () => {
+    await type(fixture, '#about-photo-caption', 'Jiný popisek');
+    const frame = element<HTMLButtonElement>(fixture, 'button.frame');
+    frame.querySelector('img')!.getBoundingClientRect = () => new DOMRect(0, 0, 300, 400);
+    frame.dispatchEvent(new MouseEvent('click', { clientX: 150, clientY: 100, detail: 1 }));
+    await settle(fixture);
+    await submit(fixture);
+
+    http.expectNone(ABOUT_URL);
+    http.expectOne(`${MEDIA_URL}/${ABOUT_PHOTO_ID}`).flush({
+      id: ABOUT_PHOTO_ID,
+      url: `/api/content/media/${ABOUT_PHOTO_ID}`,
+      width: 1413,
+      height: 1884,
+      focalPoint: { x: 50, y: 25 },
+    });
+    await settle(fixture);
+    expect(http.expectOne(ABOUT_URL).request.body.caption).toBe('Jiný popisek');
   });
 
   it('when the server refuses the save, then the page carries its words', async () => {
