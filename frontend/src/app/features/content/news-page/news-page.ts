@@ -13,7 +13,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { EMPTY, expand, map, Observable, reduce, Subscription } from 'rxjs';
+import { EMPTY, expand, map, Observable, reduce, Subscription, timeout } from 'rxjs';
 import { Connectivity } from '../../../core/navigation/connectivity';
 import { FeaturedNews } from '../featured-news/featured-news';
 import { NewsApi, NewsArticleResponse } from '../news-api';
@@ -24,6 +24,7 @@ import { StoriesOfYear, storiesOfNewestYear, YearStories } from '../year-stories
 export const PAGE_SIZE = 10;
 export const PROJECTS_PAGE_SIZE = 50;
 export const MAX_PROJECT_PAGES = 20;
+export const STORIES_WAIT_MS = 4000;
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -143,7 +144,7 @@ export class NewsPage {
     }
     this.storiesState.set({ kind: 'loading' });
     this.projectsLoad = this.publishedProjects()
-      .pipe(map(storiesOfNewestYear))
+      .pipe(timeout({ first: STORIES_WAIT_MS }), map(storiesOfNewestYear))
       .subscribe({
         next: (stories) => {
           this.storiesKept = true;
@@ -160,13 +161,13 @@ export class NewsPage {
           ? this.projectsApi.published(page.page + 1, PROJECTS_PAGE_SIZE)
           : EMPTY,
       ),
-      reduce(
-        (all, page) => [
-          ...all,
-          ...page.items.filter((item) => !all.some((kept) => kept.id === item.id)),
-        ],
-        [] as ProjectResponse[],
-      ),
+      reduce((all, page) => {
+        for (const item of page.items) {
+          all.set(item.id, all.get(item.id) ?? item);
+        }
+        return all;
+      }, new Map<string, ProjectResponse>()),
+      map((all) => [...all.values()]),
     );
   }
 }

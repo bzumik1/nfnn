@@ -7,7 +7,7 @@ import { Connectivity } from '../../../core/navigation/connectivity';
 import { ProjectResponse } from '../projects-api';
 import { newsArticle } from '../testing/news-fixtures';
 import { project } from '../testing/project-fixtures';
-import { MAX_PROJECT_PAGES, NewsPage } from './news-page';
+import { MAX_PROJECT_PAGES, NewsPage, STORIES_WAIT_MS } from './news-page';
 
 const NEWS = (page: number) => `/api/content/news?page=${page}&size=10`;
 const PROJECTS = (page: number) => `/api/content/projects?page=${page}&size=50`;
@@ -240,6 +240,31 @@ describe('Given a visitor opening Aktuality', () => {
     expect(root.querySelector('.stories')).not.toBeNull();
   });
 
+  it('when the projects never answer, then the news show without the stories once the wait is over', async () => {
+    vi.useFakeTimers();
+    try {
+      ({ fixture, http } = await setUp());
+      root = fixture.nativeElement;
+      http.expectOne(NEWS(0)).flush(page([lookBack2025, lookBack2024], 0, 2));
+      const projects = http.expectOne(PROJECTS(0));
+      await vi.advanceTimersByTimeAsync(STORIES_WAIT_MS - 1);
+      fixture.detectChanges();
+
+      expect(text(root, '.list-state')).toBe('Načítáme aktuality…');
+
+      await vi.advanceTimersByTimeAsync(1);
+      fixture.detectChanges();
+
+      expect(projects.cancelled).toBe(true);
+      expect(text(root, '.list-state')).toBe('');
+      expect(text(root, '.featured h2')).toBe('Ohlédnutí za rokem 2025');
+      expect(root.querySelector('.stories')).toBeNull();
+      expect(root.querySelector('[role="alert"]')).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('when the projects run on past the pages it reads, then it stops asking', async () => {
     ({ fixture, http } = await setUp());
     root = fixture.nativeElement;
@@ -421,7 +446,10 @@ describe('Given a visitor opening Aktuality', () => {
     await settle(fixture);
 
     expect(text(root, '[role="alert"]')).toBe('Aktuality se nepodařilo načíst.');
-    (root.querySelector('.retry') as HTMLButtonElement).click();
+    const retry = root.querySelector('.retry') as HTMLButtonElement;
+    retry.focus();
+    expect(document.activeElement).toBe(retry);
+    retry.click();
     fixture.detectChanges();
     http.expectOne(NEWS(0)).flush(page([lookBack2025], 0, 1));
     await settle(fixture);

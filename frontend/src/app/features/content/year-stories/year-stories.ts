@@ -9,6 +9,8 @@ export interface StoriesOfYear {
   projects: ProjectResponse[];
 }
 
+let nextId = 0;
+
 interface StoryTile {
   project: ProjectResponse;
   image: string | null;
@@ -23,6 +25,8 @@ interface StoryTile {
 })
 export class YearStories {
   readonly stories = input.required<StoriesOfYear>();
+
+  protected readonly titleId = `year-stories-title-${++nextId}`;
 
   protected readonly tiles = computed<StoryTile[]>(() =>
     this.stories().projects.map((project) => ({

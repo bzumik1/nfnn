@@ -296,6 +296,13 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
     await expect(page.locator('.featured .signer-name')).toHaveText('Petr Vzorový');
 
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+    const featured = page.locator('.featured');
+    await featured.getByRole('button', { name: /^Kopírovat odkaz/ }).click();
+    await expect(featured.getByRole('button', { name: 'Zkopírováno' })).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+
     await page.route(
       (url) => url.pathname === '/api/content/news',
       (route) => route.fulfill({ status: 503, body: '' }),

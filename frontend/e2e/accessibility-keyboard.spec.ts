@@ -298,6 +298,56 @@ for (const width of [320, 390]) {
       expect(await widerThanScreen(page)).toBe(0);
     });
 
+    test('when they open Aktuality, then the leading article keeps its signer, Sdílet and Číst celé inside its card', async ({
+      page,
+    }) => {
+      await page.route(
+        (url) => url.pathname === '/api/content/news',
+        (route) =>
+          route.fulfill({
+            json: {
+              items: [
+                {
+                  id: '0199f3e0-0000-7000-8000-00000000c002',
+                  slug: 'ohlednuti-za-rokem-2025',
+                  title: 'Ohlédnutí za rokem 2025',
+                  tag: 'Výroční ohlédnutí',
+                  perex: 'I v roce 2025 jsme díky vám mohli přinášet naději.',
+                  body: 'První odstavec.',
+                  coverImage: null,
+                  signer: {
+                    id: 'signer',
+                    name: 'Petr Vzorový',
+                    role: 'Předseda správní rady',
+                    portrait: null,
+                  },
+                  publishedOn: '2026-02-15',
+                  createdAt: '2026-02-14T09:00:00Z',
+                  updatedAt: '2026-02-15T07:30:00Z',
+                },
+              ],
+              page: 0,
+              size: 10,
+              total: 1,
+              hasMore: false,
+            },
+          }),
+      );
+      await page.goto('/aktuality');
+      await page.addStyleTag({ content: 'html { font-size: 200%; }' });
+      const card = page.locator('app-featured-news article');
+      const more = card.getByRole('link', { name: 'Číst celé Ohlédnutí za rokem 2025' });
+      await expect(more).toBeVisible();
+
+      const cardBox = (await card.boundingBox())!;
+      for (const part of [card.getByText('Petr Vzorový'), card.getByRole('button'), more]) {
+        const box = (await part.boundingBox())!;
+        expect(box.x).toBeGreaterThanOrEqual(cardBox.x);
+        expect(box.x + box.width).toBeLessThanOrEqual(cardBox.x + cardBox.width);
+      }
+      expect(await widerThanScreen(page)).toBe(0);
+    });
+
     test('when they look at the tabs, then no label breaks inside a word and the end of the page stays above the bar', async ({
       page,
     }) => {

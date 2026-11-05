@@ -1,6 +1,6 @@
-<section class="stories" aria-labelledby="year-stories-title">
+<section class="stories" [attr.aria-labelledby]="titleId">
   <div class="section-head">
-    <h2 id="year-stories-title" class="section-title" i18n="@@content.news.stories.title">
+    <h2 class="section-title" [id]="titleId" i18n="@@content.news.stories.title">
       Příběhy z roku {{ stories().year }}
     </h2>
     <a
