@@ -208,25 +208,27 @@ describe('Given the part for older bank payments on the import card', () => {
       expect(fieldError()).toContain('Zadejte prosím den');
     });
 
-    it('and a day after today is typed, then nothing is posted and the field says so', async () => {
+    it('and a day after today is typed, then nothing is posted, the field says so and takes focus', async () => {
       await changeDate('2026-11-06');
       await submit();
 
       http.expectNone(HISTORY_URL);
       expect(dateField().getAttribute('aria-invalid')).toBe('true');
       expect(fieldError()).toBe('Zvolte prosím den nejpozději dnes.');
+      expect(document.activeElement).toBe(dateField());
     });
 
-    it('and a day before 2000 is typed, then nothing is posted and the field says so', async () => {
+    it('and a day before 2000 is typed, then nothing is posted, the field says so and takes focus', async () => {
       await changeDate('1999-12-31');
       await submit();
 
       http.expectNone(HISTORY_URL);
       expect(dateField().getAttribute('aria-invalid')).toBe('true');
       expect(fieldError()).toBe('Zvolte prosím den nejdříve 01. 01. 2000.');
+      expect(document.activeElement).toBe(dateField());
     });
 
-    it('and the server finds the day too early, then the field says so and the alert stays empty', async () => {
+    it('and the server finds the day too early, then the field says so, takes focus and the alert stays empty', async () => {
       await submit();
       const refused = problem('history-start-too-early', 400);
       http.expectOne(HISTORY_URL).flush(refused.body, refused.options);
@@ -236,9 +238,10 @@ describe('Given the part for older bank payments on the import card', () => {
       expect(dateField().getAttribute('aria-invalid')).toBe('true');
       expect(alert()).toBe('');
       expect(busy()).toBe(false);
+      expect(document.activeElement).toBe(dateField());
     });
 
-    it('and the server finds the day in the future, then the field says so and the alert stays empty', async () => {
+    it('and the server finds the day in the future, then the field says so, takes focus and the alert stays empty', async () => {
       await submit();
       const refused = problem('history-start-in-future', 400);
       http.expectOne(HISTORY_URL).flush(refused.body, refused.options);
@@ -246,6 +249,7 @@ describe('Given the part for older bank payments on the import card', () => {
 
       expect(fieldError()).toBe('Zvolte prosím den nejpozději dnes.');
       expect(alert()).toBe('');
+      expect(document.activeElement).toBe(dateField());
     });
 
     it('and the server refuses otherwise, then its problem is the alert and the button is free again', async () => {

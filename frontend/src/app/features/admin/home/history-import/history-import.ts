@@ -4,11 +4,14 @@ import {
   Component,
   computed,
   DestroyRef,
+  ElementRef,
   inject,
+  Injector,
   input,
   linkedSignal,
   output,
   signal,
+  viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule, NgForm } from '@angular/forms';
@@ -62,6 +65,8 @@ const FROM_MESSAGES: FieldMessages = {
 export class HistoryImport {
   private readonly api = inject(AdminApi);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly injector = inject(Injector);
+  private readonly fromInput = viewChild<ElementRef<HTMLInputElement>>('fromInput');
   private polling: Subscription | null = null;
 
   readonly state = input.required<ImportStateResponse>();
@@ -119,9 +124,9 @@ export class HistoryImport {
     }
     this.refusal.set(null);
     if (form.valid && this.from() > this.today) {
-      markFrom(form, 'max');
+      this.refuseFrom(form, 'max');
     } else if (form.valid && this.from() < EARLIEST_DAY) {
-      markFrom(form, 'min');
+      this.refuseFrom(form, 'min');
     }
     if (form.invalid) {
       return;
@@ -142,11 +147,11 @@ export class HistoryImport {
         error: (failure: unknown) => {
           this.requesting.set(false);
           if (problemTypeEndsWith(failure, TOO_EARLY)) {
-            markFrom(form, 'min');
+            this.refuseFrom(form, 'min');
             return;
           }
           if (problemTypeEndsWith(failure, IN_FUTURE)) {
-            markFrom(form, 'max');
+            this.refuseFrom(form, 'max');
             return;
           }
           this.refusal.set(
@@ -161,6 +166,13 @@ export class HistoryImport {
 
   protected checkAgain(): void {
     this.watch();
+  }
+
+  private refuseFrom(form: NgForm, error: 'min' | 'max'): void {
+    const control = form.controls['from'];
+    control?.setErrors({ [error]: true });
+    control?.markAsTouched();
+    afterNextRender(() => this.fromInput()?.nativeElement.focus(), { injector: this.injector });
   }
 
   private watch(): void {
@@ -183,12 +195,6 @@ export class HistoryImport {
         complete: () => this.stillRunning.set(isActive(this.run())),
       });
   }
-}
-
-function markFrom(form: NgForm, error: 'min' | 'max'): void {
-  const control = form.controls['from'];
-  control?.setErrors({ [error]: true });
-  control?.markAsTouched();
 }
 
 function isActive(run: HistoryImportResponse | null | undefined): boolean {
