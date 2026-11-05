@@ -3,6 +3,7 @@ import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { Dialog } from './dialog';
+import { SuspendsDialogs } from './dialog-suspension';
 import { DialogAnnouncer } from './dialog-announcer';
 import { DialogHistory } from './dialog-history';
 import { DIALOG_PRESENTATION, DialogPresentation } from './dialog-presentation';
@@ -611,5 +612,79 @@ describe('Given a page with an open dialog in the browser history', () => {
     await settled();
     expect(fixture.nativeElement.querySelector('dialog')).toBeNull();
     expect(location.path()).toBe('/sprava/platby');
+  });
+});
+
+@Component({
+  imports: [Dialog, SuspendsDialogs],
+  template: `
+    <div [appSuspendsDialogs]="suspended()">
+      @if (open()) {
+        <app-dialog labelledBy="kept-title" (dismissed)="dismissals = dismissals + 1">
+          <h2 id="kept-title">Odejít bez uložení?</h2>
+        </app-dialog>
+      }
+    </div>
+  `,
+})
+class KeptPageHost {
+  readonly open = signal(false);
+  readonly suspended = signal(false);
+  dismissals = 0;
+}
+
+describe('Given a dialog inside a part of the page that something may cover for a while', () => {
+  let fixture: ComponentFixture<KeptPageHost>;
+  let host: KeptPageHost;
+
+  const native = () => fixture.nativeElement.querySelector('dialog') as HTMLDialogElement;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({ imports: [KeptPageHost] }).compileComponents();
+    fixture = TestBed.createComponent(KeptPageHost);
+    host = fixture.componentInstance;
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+  });
+
+  afterEach(() => fixture.nativeElement.remove());
+
+  describe('when the dialog is open and that part gets covered', () => {
+    beforeEach(async () => {
+      host.open.set(true);
+      fixture.detectChanges();
+      host.suspended.set(true);
+      fixture.detectChanges();
+      await fixture.whenStable();
+    });
+
+    it('then the dialog steps aside without asking to be dismissed, so it blocks nothing in front', () => {
+      expect(native().open).toBe(false);
+      expect(host.dismissals).toBe(0);
+    });
+
+    it('and that part is uncovered again, then the same dialog opens as a modal dialog again', async () => {
+      host.suspended.set(false);
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(native().open).toBe(true);
+      expect(host.dismissals).toBe(0);
+    });
+  });
+
+  it('when a dialog asks to open while that part is covered, then it waits and opens once it is uncovered', async () => {
+    host.suspended.set(true);
+    fixture.detectChanges();
+    host.open.set(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(native().open).toBe(false);
+
+    host.suspended.set(false);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(native().open).toBe(true);
   });
 });

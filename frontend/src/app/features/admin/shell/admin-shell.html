@@ -28,7 +28,13 @@
       }
     }
     @if (!lock.locked() || lock.keepsPage()) {
-      <div class="admin-page" [hidden]="lock.locked()" [attr.inert]="lock.locked() ? '' : null">
+      <div
+        #page
+        class="admin-page"
+        [hidden]="lock.locked()"
+        [attr.inert]="lock.locked() ? '' : null"
+        [appSuspendsDialogs]="lock.locked()"
+      >
         <router-outlet />
       </div>
     }

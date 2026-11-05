@@ -2,7 +2,7 @@ import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter, Router } from '@angular/router';
+import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { AuthStore } from '../../../core/auth/auth-store';
 import type { Donor } from '../../../core/auth/donor';
@@ -18,6 +18,7 @@ describe('Given the panel of the locked administration', () => {
     passkeyUnlocks: ReturnType<typeof vi.fn>;
     unlockWithPasskey: ReturnType<typeof vi.fn>;
     unlockWithPassword: ReturnType<typeof vi.fn>;
+    signOut: ReturnType<typeof vi.fn>;
   };
   let logout: ReturnType<typeof vi.fn>;
   let online: boolean;
@@ -35,6 +36,7 @@ describe('Given the panel of the locked administration', () => {
       passkeyUnlocks: vi.fn(async () => options.passkey),
       unlockWithPasskey: vi.fn(async () => true),
       unlockWithPassword: vi.fn(() => of(undefined)),
+      signOut: vi.fn(async () => undefined),
     };
     logout = vi.fn(() => of(undefined));
     TestBed.configureTestingModule({
@@ -49,6 +51,7 @@ describe('Given the panel of the locked administration', () => {
       ],
     });
     fixture = TestBed.createComponent(AdministrationLockPanel);
+    document.body.appendChild(fixture.nativeElement);
     await settle();
   }
 
@@ -81,6 +84,7 @@ describe('Given the panel of the locked administration', () => {
   });
 
   afterEach(() => {
+    fixture?.nativeElement.remove();
     TestBed.inject(HttpTestingController).verify();
     vi.restoreAllMocks();
   });
@@ -96,6 +100,10 @@ describe('Given the panel of the locked administration', () => {
         'Použít heslo',
         'Odhlásit se z tohoto zařízení',
       ]);
+    });
+
+    it('then the focus moves to its heading, so a screen reader says at once that the administration locked', () => {
+      expect(document.activeElement).toBe(element('h1'));
     });
 
     it('then nothing asks for the passkey until the button is pressed', () => {
@@ -157,10 +165,14 @@ describe('Given the panel of the locked administration', () => {
       it('and both are sent, then the server checks them and the panel clears the fields', async () => {
         type('#zamek-heslo', 'správné heslo');
         type('#zamek-kod', ' 482913 ');
+        await settle();
         element('form')!.dispatchEvent(new Event('submit'));
         await settle();
 
         expect(lock.unlockWithPassword).toHaveBeenCalledWith('správné heslo', '482913');
+        await settle();
+        expect((element('#zamek-heslo') as HTMLInputElement).value).toBe('');
+        expect((element('#zamek-kod') as HTMLInputElement).value).toBe('');
       });
 
       it('and the code is not six digits, then the field says so and nothing is sent', async () => {
@@ -196,11 +208,12 @@ describe('Given the panel of the locked administration', () => {
         expect(element('[role="alert"]')?.textContent).toContain('Kód nesouhlasí');
       });
 
-      it('and Zpět is pressed, then the first view comes back', async () => {
+      it('and Zpět is pressed, then the first view comes back with the focus on its heading', async () => {
         element('button.lock-back')!.click();
         await settle();
 
         expect(element('h1')?.textContent?.trim()).toBe('Správa je zamčená');
+        expect(document.activeElement).toBe(element('h1'));
       });
     });
   });
@@ -223,8 +236,7 @@ describe('Given the panel of the locked administration', () => {
       element('button.lock-sign-out')!.click();
       await settle();
 
-      expect(logout).toHaveBeenCalledOnce();
-      expect(TestBed.inject(Router).url).toBe('/');
+      expect(lock.signOut).toHaveBeenCalledOnce();
     });
   });
 });

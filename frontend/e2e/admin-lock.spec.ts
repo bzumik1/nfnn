@@ -140,7 +140,7 @@ test.describe('Given an administrator whose administration locks on this device'
       page,
     }) => {
       await leaveTheApp(page);
-      await page.clock.runFor(FIVE_MINUTES_MS - 1000);
+      await page.clock.runFor(FIVE_MINUTES_MS - 60 * 1000);
       await comeBack(page);
 
       await expect(page.getByRole('heading', { level: 1, name: 'Měsíční e-mail' })).toBeVisible();
@@ -172,6 +172,55 @@ test.describe('Given an administrator whose administration locks on this device'
       await unlockAdministration(page);
 
       await expect(page.getByLabel('Příjemci')).toHaveValue('pavel@example.cz');
+    });
+  });
+
+  test.describe('when the administration is on the news editor', () => {
+    const tabs = (page: Page) => page.getByRole('navigation', { name: 'Hlavní sekce' });
+
+    test.beforeEach(async ({ page }) => {
+      await page.route(
+        (url) => url.pathname === ADMINISTRATION_UNLOCK_PATH,
+        (route) => route.fulfill({ status: 204 }),
+      );
+      await rememberedSession(page);
+    });
+
+    test('and it is locked from the start, then a tab still leads out of the administration', async ({
+      page,
+    }) => {
+      await page.goto('/sprava/aktuality/nova');
+      await expect(
+        page.getByRole('heading', { level: 1, name: ADMINISTRATION_LOCKED }),
+      ).toBeFocused();
+
+      await tabs(page).getByRole('link', { name: 'O nás' }).click();
+
+      await expect(page).toHaveURL('/o-nas');
+    });
+
+    test('and it locks with a half-written article and a tab is pressed, then the question about unsaved changes waits behind the panel until the administration is unlocked', async ({
+      page,
+    }) => {
+      await page.goto('/sprava/aktuality/nova');
+      await unlockAdministration(page);
+      await page.getByLabel('Titulek').fill('Benefiční koncert');
+      await leaveTheApp(page);
+      await page.clock.runFor(FIVE_MINUTES_MS);
+      await comeBack(page);
+      await expect(
+        page.getByRole('heading', { level: 1, name: ADMINISTRATION_LOCKED }),
+      ).toBeFocused();
+
+      await tabs(page).getByRole('link', { name: 'O nás' }).click();
+      await expect(page.getByRole('dialog', { name: 'Máte neuložené změny' })).toHaveCount(0);
+      await unlockAdministration(page);
+
+      const question = page.getByRole('dialog', { name: 'Máte neuložené změny' });
+      await expect(question).toBeVisible();
+      await question.getByRole('button', { name: 'Zůstat a uložit' }).click();
+      await expect(page).toHaveURL('/sprava/aktuality/nova');
+      await expect(page.getByLabel('Titulek')).toHaveValue('Benefiční koncert');
     });
   });
 

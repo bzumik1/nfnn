@@ -15,7 +15,6 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule, NgForm } from '@angular/forms';
-import { Router } from '@angular/router';
 import { describeProblem } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { PasskeyAuthenticator } from '../../../core/auth/passkey-authenticator';
@@ -56,7 +55,6 @@ type View = 'locked' | 'password';
 export class AdministrationLockPanel {
   private readonly lock = inject(AdministrationLockService);
   private readonly auth = inject(AuthStore);
-  private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
   private readonly window = inject(DOCUMENT).defaultView;
@@ -83,6 +81,7 @@ export class AdministrationLockPanel {
   protected code = '';
 
   constructor() {
+    afterNextRender(() => this.heading()?.nativeElement.focus(), { injector: this.injector });
     const supported = inject(PasskeyAuthenticator).supported();
     if (supported) {
       void this.lock.passkeyUnlocks().then((unlocks) => this.passkeyUnlocks.set(unlocks));
@@ -149,17 +148,12 @@ export class AdministrationLockPanel {
       });
   }
 
-  protected signOut(): void {
+  protected async signOut(): Promise<void> {
     if (this.busy()) {
       return;
     }
     this.busy.set(true);
-    this.auth.logout().subscribe({
-      next: () => void this.router.navigateByUrl('/'),
-      error: () => {
-        this.busy.set(false);
-        void this.router.navigateByUrl('/');
-      },
-    });
+    await this.lock.signOut();
+    this.busy.set(false);
   }
 }

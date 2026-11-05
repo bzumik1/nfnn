@@ -128,11 +128,16 @@ describe('Given the privacy policy page', () => {
   it('when it renders, then the cookies section says that administrators keep an encrypted copy of the administration on their devices, how it locks, and when it goes', () => {
     const [paragraph] = texts('#cookies .administration-copy');
 
-    expect(paragraph).toContain('kopii údajů správy (dárci, jejich dary, platby a potvrzení)');
+    expect(paragraph).toContain(
+      'kopii údajů správy (dárci a jejich bankovní účty, dary, platby a potvrzení)',
+    );
     expect(paragraph).toContain('každé takové zařízení se zapíše do historie změn správy');
     expect(paragraph).toContain('zamkne při každém spuštění aplikace a po pěti minutách mimo ni');
     expect(paragraph).toContain(
-      'Když správci roli odebereme, kopie správy se z jeho zařízení smaže',
+      'heslem jde odemknout jen tehdy, když server ověří i kód z ověřovací aplikace',
+    );
+    expect(paragraph).toContain(
+      'Když správci roli odebereme, aplikace mu kopii správy už neotevře ani do ní nic nestáhne',
     );
   });
 

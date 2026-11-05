@@ -59,6 +59,8 @@ export interface CspViolation {
 }
 
 export const ADMINISTRATION_UNLOCK_PATH = '/api/admin/donors/devices/current/unlock';
+export const ADMINISTRATION_COPY_RECORD_PATH =
+  '/api/admin/donors/devices/current/administration-copy';
 export const ADMINISTRATION_LOCKED = 'Správa je zamčená';
 
 export async function unlockAdministration(page: Page): Promise<void> {
@@ -78,6 +80,10 @@ export const test = base.extend<{
   administrationUnlock: [
     async ({ page, unlocksAdministration, offlineApi }, use) => {
       void offlineApi;
+      await page.route(
+        (url) => url.pathname === ADMINISTRATION_COPY_RECORD_PATH,
+        (route) => route.fulfill({ status: 204 }),
+      );
       if (unlocksAdministration) {
         await page.route(
           (url) => url.pathname === ADMINISTRATION_UNLOCK_PATH,
