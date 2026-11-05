@@ -10,21 +10,26 @@ import {
   Observable,
   of,
   share,
-  Subscription,
   switchMap,
   tap,
   throwError,
   timeout,
+  TimeoutError,
 } from 'rxjs';
 import { AuthApi } from './auth-api';
 import { PasskeyAuthenticator } from './passkey-authenticator';
 import {
   isSessionRefreshed,
+  isSignedOut,
   REFRESH_LOCK_NAME,
   REFRESH_LOCK_WAIT_MS,
   REFRESH_REQUEST_TIMEOUT_MS,
   SESSION_CHANNEL,
   sessionRefreshed,
+  SignedOut,
+  SessionRefreshed,
+  signedOut,
+  SLOW_RESTORE_PAUSE_MS,
   TAB_LOCKS,
 } from './session-tabs';
 import {
@@ -64,7 +69,9 @@ export class AuthStore {
   constructor() {
     this.channel?.addEventListener('message', (event) => {
       if (isSessionRefreshed(event.data)) {
-        this.adopt(event.data.response);
+        this.adoptAnnounced(event.data.response);
+      } else if (isSignedOut(event.data)) {
+        this.forget();
       }
     });
     inject(DestroyRef).onDestroy(() => this.channel?.close());
@@ -122,7 +129,7 @@ export class AuthStore {
         finalize(() => {
           this.refreshInFlight = null;
         }),
-        share(),
+        share({ resetOnRefCountZero: false }),
       );
     }
     return this.refreshInFlight;
@@ -141,9 +148,13 @@ export class AuthStore {
   }
 
   logout(): Observable<void> {
-    return this.api.logout().pipe(
-      catchError(() => of(undefined)),
-      tap(() => this.forget()),
+    const signOut = () => this.api.logout().pipe(catchError(() => of(undefined)));
+    return this.underRefreshLock(signOut).pipe(
+      catchError(() => signOut()),
+      tap(() => {
+        this.forget();
+        this.announce(signedOut());
+      }),
       map(() => undefined),
     );
   }
@@ -211,7 +222,7 @@ export class AuthStore {
       timeout(REFRESH_REQUEST_TIMEOUT_MS),
       map((response) => {
         this.adopt(response);
-        this.channel?.postMessage(sessionRefreshed(response));
+        this.announce(sessionRefreshed(response));
         return response.accessToken;
       }),
     );
@@ -225,7 +236,6 @@ export class AuthStore {
     return new Observable<T>((subscriber) => {
       const waiting = new AbortController();
       const giveUp = setTimeout(() => waiting.abort(), REFRESH_LOCK_WAIT_MS);
-      let running: Subscription | null = null;
       locks
         .request(
           REFRESH_LOCK_NAME,
@@ -237,7 +247,15 @@ export class AuthStore {
                 release();
                 return;
               }
-              running = work().pipe(finalize(release)).subscribe(subscriber);
+              subscriber.add(
+                work()
+                  .pipe(finalize(release))
+                  .subscribe({
+                    next: (value) => subscriber.next(value),
+                    error: (failure: unknown) => subscriber.error(failure),
+                    complete: () => subscriber.complete(),
+                  }),
+              );
             }),
         )
         .catch((failure: unknown) => {
@@ -247,7 +265,6 @@ export class AuthStore {
       return () => {
         clearTimeout(giveUp);
         waiting.abort();
-        running?.unsubscribe();
       };
     });
   }
@@ -256,10 +273,30 @@ export class AuthStore {
     if (isRefusal(failure)) {
       return;
     }
-    this.restoring = null;
     if (this.currentStatus() === 'unknown') {
       this.currentStatus.set('anonymous');
     }
+    if (isSlow(failure)) {
+      setTimeout(() => (this.restoring = null), SLOW_RESTORE_PAUSE_MS);
+    } else {
+      this.restoring = null;
+    }
+  }
+
+  private announce(message: SessionRefreshed | SignedOut): void {
+    try {
+      this.channel?.postMessage(message);
+    } catch {
+      return;
+    }
+  }
+
+  private adoptAnnounced(response: AuthResponse): void {
+    const current = this.currentDonor();
+    if (current !== null && current.id !== response.user.id) {
+      return;
+    }
+    this.adopt(response);
   }
 
   private reloadProfile(): Observable<void> {
@@ -294,6 +331,13 @@ function isRefusal(failure: unknown): boolean {
     failure.status < 500 &&
     failure.status !== 408 &&
     failure.status !== 429
+  );
+}
+
+function isSlow(failure: unknown): boolean {
+  return (
+    failure instanceof TimeoutError ||
+    (failure instanceof DOMException && failure.name === 'AbortError')
   );
 }
 

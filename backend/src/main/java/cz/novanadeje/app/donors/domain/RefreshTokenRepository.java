@@ -19,6 +19,8 @@ public interface RefreshTokenRepository {
 
     boolean revokeIfUnused(UUID tokenId, Instant at);
 
+    boolean supersedeIfUnused(UUID tokenId, Instant at);
+
     boolean markUsed(UUID tokenId, Instant at);
 
     List<RefreshToken> findUsableClientTokensOf(DonorId donorId, Instant now);

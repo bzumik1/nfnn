@@ -153,9 +153,32 @@ class RefreshTokenTest {
         assertThat(token.mayBeReissuedAt(NOW)).isFalse();
     }
 
+    @Test
+    @DisplayName("Given a used token whose own lifetime ended, when it is presented within the grace, then it may not be reissued")
+    void should_refuse_reissue_when_presented_within_the_grace_given_an_expired_token() {
+        Instant issued = NOW.minus(Duration.ofDays(14));
+        RefreshToken token = RefreshToken.reconstitute(UUID.randomUUID(), DONOR, RefreshTokenSecret.generate().hash(), issued, NOW, false, null,
+                Set.of(), issued, NOW.minusSeconds(10), null, UUID.randomUUID(), null);
+
+        assertThat(token.mayBeReissuedAt(NOW)).isFalse();
+    }
+
+    @Test
+    @DisplayName("Given an unused token, when the grace supersedes it, then it is revoked and remembered as superseded")
+    void should_revoke_and_mark_superseded_when_superseded_given_an_unused_token() {
+        RefreshToken token = RefreshToken.issue(RefreshTokenSecret.generate(), DONOR, NOW, Duration.ofDays(14), false);
+
+        assertThat(token.isSuperseded()).isFalse();
+        token.supersede(NOW.plusSeconds(10));
+
+        assertThat(token.isSuperseded()).isTrue();
+        assertThat(token.revokedAt()).contains(NOW.plusSeconds(10));
+        assertThat(token.isUsableAt(NOW.plusSeconds(20))).isFalse();
+    }
+
     private static RefreshToken rotated(ClientId client, Instant usedAt, Instant revokedAt, UUID successor) {
         Instant issued = usedAt.minus(Duration.ofDays(1));
         return RefreshToken.reconstitute(UUID.randomUUID(), DONOR, RefreshTokenSecret.generate().hash(), issued, issued.plus(Duration.ofDays(14)),
-                false, client, Set.of(), issued, usedAt, revokedAt, successor);
+                false, client, Set.of(), issued, usedAt, revokedAt, successor, null);
     }
 }

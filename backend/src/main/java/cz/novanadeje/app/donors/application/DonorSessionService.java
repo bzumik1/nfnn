@@ -55,6 +55,9 @@ public class DonorSessionService {
         Instant now = clock.instant();
         RefreshToken token = refreshTokens.findBySecretHashForUpdate(RefreshTokenSecret.fromValue(presentedSecret).hash())
                 .orElseThrow(InvalidRefreshToken::new);
+        if (token.isSuperseded()) {
+            throw replay(token, now);
+        }
         if (token.isUsed()) {
             return reissueWithinReuseGrace(token, now);
         }
@@ -63,19 +66,28 @@ public class DonorSessionService {
         }
         Donor donor = donors.findById(token.donorId()).orElseThrow(InvalidRefreshToken::new);
         if (!refreshTokens.markUsed(token.id(), now)) {
-            refreshTokens.revokeAllOf(token.donorId(), now);
-            throw new InvalidRefreshToken();
+            throw replay(token, now);
         }
         return succeed(token, donor, now);
     }
 
     private RefreshedSession reissueWithinReuseGrace(RefreshToken token, Instant now) {
-        Optional<Donor> donor = token.mayBeReissuedAt(now) ? donors.findById(token.donorId()) : Optional.empty();
-        if (donor.isEmpty() || !refreshTokens.revokeIfUnused(token.successorId().orElseThrow(), now)) {
-            refreshTokens.revokeAllOf(token.donorId(), now);
-            throw new InvalidRefreshToken();
+        if (!token.mayBeReissuedAt(now)) {
+            throw replay(token, now);
+        }
+        Optional<Donor> donor = donors.findById(token.donorId());
+        boolean supersededUnused = donor.isPresent() && token.successorId()
+                .map(successor -> refreshTokens.supersedeIfUnused(successor, now))
+                .orElse(false);
+        if (!supersededUnused) {
+            throw replay(token, now);
         }
         return succeed(token, donor.get(), now);
+    }
+
+    private InvalidRefreshToken replay(RefreshToken token, Instant now) {
+        refreshTokens.revokeAllOf(token.donorId(), now);
+        return new InvalidRefreshToken();
     }
 
     private RefreshedSession succeed(RefreshToken token, Donor donor, Instant now) {
@@ -86,9 +98,10 @@ public class DonorSessionService {
 
     @Transactional
     public void close(String presentedSecret) {
-        refreshTokens.findBySecretHash(RefreshTokenSecret.fromValue(presentedSecret).hash()).ifPresent(token -> {
-            token.revoke(clock.instant());
-            refreshTokens.save(token);
+        Instant now = clock.instant();
+        refreshTokens.findBySecretHashForUpdate(RefreshTokenSecret.fromValue(presentedSecret).hash()).ifPresent(token -> {
+            refreshTokens.revokeIfUnused(token.id(), now);
+            token.successorId().ifPresent(successor -> refreshTokens.revokeIfUnused(successor, now));
         });
     }
 

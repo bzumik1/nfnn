@@ -181,6 +181,31 @@ class JpaRefreshTokenRepositoryTest {
         assertThat(refreshTokens.findById(revoked.id()).orElseThrow().revokedAt()).contains(NOW.plusSeconds(10));
     }
 
+    @Test
+    @DisplayName("Given an unused, a used and a revoked token, when each is superseded if unused, then only the unused one is revoked and remembered as superseded")
+    void should_supersede_only_the_unused_token_when_superseded_if_unused_given_unused_used_and_revoked_tokens() {
+        RefreshToken unused = RefreshToken.issue(RefreshTokenSecret.generate(), jana, NOW, TTL, false);
+        RefreshToken used = RefreshToken.issue(RefreshTokenSecret.generate(), jana, NOW, TTL, false);
+        used.markUsed(NOW.plusSeconds(10));
+        RefreshToken revoked = RefreshToken.issue(RefreshTokenSecret.generate(), jana, NOW, TTL, false);
+        revoked.revoke(NOW.plusSeconds(10));
+        for (RefreshToken token : new RefreshToken[]{unused, used, revoked}) {
+            refreshTokens.save(token);
+        }
+        flushAndClear();
+
+        assertThat(refreshTokens.supersedeIfUnused(unused.id(), NOW.plusSeconds(30))).isTrue();
+        assertThat(refreshTokens.supersedeIfUnused(used.id(), NOW.plusSeconds(30))).isFalse();
+        assertThat(refreshTokens.supersedeIfUnused(revoked.id(), NOW.plusSeconds(30))).isFalse();
+        flushAndClear();
+
+        RefreshToken superseded = refreshTokens.findById(unused.id()).orElseThrow();
+        assertThat(superseded.isSuperseded()).isTrue();
+        assertThat(superseded.revokedAt()).contains(NOW.plusSeconds(30));
+        assertThat(refreshTokens.findById(used.id()).orElseThrow().isSuperseded()).isFalse();
+        assertThat(refreshTokens.findById(revoked.id()).orElseThrow().isSuperseded()).isFalse();
+    }
+
     private DonorId donor(String email, String variableSymbol) {
         Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null,
                 new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new EmailAddress(email), new PasswordHash("$hash"),

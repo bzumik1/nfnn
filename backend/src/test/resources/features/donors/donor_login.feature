@@ -49,13 +49,24 @@ Feature: Donor signs in and keeps a session
     And the donor refreshes the session
     Then the response status is 200
     And the response carries an access token and a refresh cookie
-    When the donor refreshes the session with the refresh cookie of the lost answer
-    Then the response status is 401
-    And the problem type ends with "auth/invalid-refresh-token"
     When the donor refreshes the session
     Then the response status is 200
     When the donor asks for the profile
     Then the response status is 200
+
+  Scenario: The refresh cookie of a lost answer, presented after the grace replaced it, ends every session
+    Given the donor signed in with email "jana@example.cz" and password "correct horse battery"
+    When the donor refreshes the session but the answer is lost
+    Then the response status is 200
+    When 10 seconds pass
+    And the donor refreshes the session
+    Then the response status is 200
+    When the donor refreshes the session with the refresh cookie of the lost answer
+    Then the response status is 401
+    And the problem type ends with "auth/invalid-refresh-token"
+    When the donor refreshes the session
+    Then the response status is 401
+    And the problem type ends with "auth/invalid-refresh-token"
 
   Scenario: A refresh repeated 60 seconds after its lost answer ends every session
     Given the donor signed in with email "jana@example.cz" and password "correct horse battery"
@@ -90,6 +101,20 @@ Feature: Donor signs in and keeps a session
     And the refresh cookie is cleared
     When the donor refreshes the session with the previous refresh cookie
     Then the response status is 401
+
+  Scenario: Signing out after a refresh whose answer was lost ends the session within 60 seconds too
+    Given the donor signed in with email "jana@example.cz" and password "correct horse battery"
+    When the donor refreshes the session but the answer is lost
+    Then the response status is 200
+    When the donor signs out
+    Then the response status is 204
+    When 10 seconds pass
+    And the donor refreshes the session with the previous refresh cookie
+    Then the response status is 401
+    And the problem type ends with "auth/invalid-refresh-token"
+    When the donor refreshes the session with the refresh cookie of the lost answer
+    Then the response status is 401
+    And the problem type ends with "auth/invalid-refresh-token"
 
   Scenario: The donor changes the name and address on the profile
     Given the donor signed in with email "jana@example.cz" and password "correct horse battery"

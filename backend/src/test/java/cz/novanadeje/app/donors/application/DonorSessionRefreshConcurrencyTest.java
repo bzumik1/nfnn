@@ -30,6 +30,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 @IntegrationTest
 class DonorSessionRefreshConcurrencyTest {
@@ -59,8 +60,8 @@ class DonorSessionRefreshConcurrencyTest {
     }
 
     @Test
-    @DisplayName("Given two tabs that present the same refresh cookie at the same moment, when both refresh, then both get a session, only the later one stays usable and no session of the donor is ended")
-    void should_give_both_a_session_and_keep_the_later_one_when_refreshed_at_once_given_the_same_cookie() throws Exception {
+    @DisplayName("Given two tabs that present the same refresh cookie at the same moment, when both refresh, then both get a session, only one of the two stays usable and no session of the donor is ended")
+    void should_give_both_a_session_and_keep_one_usable_when_refreshed_at_once_given_the_same_cookie() throws Exception {
         String cookie = new TransactionTemplate(transactionManager).execute(status -> sessions.open(jana, false).refreshToken());
         CountDownLatch rowHeld = new CountDownLatch(1);
         CountDownLatch release = new CountDownLatch(1);
@@ -70,13 +71,14 @@ class DonorSessionRefreshConcurrencyTest {
                 jdbc.sql("select id from donor_refresh_token where secret_hash = ? for update")
                         .param(RefreshTokenSecret.fromValue(cookie).hash()).query(Object.class).single();
                 rowHeld.countDown();
-                await(release);
+                waitFor(release);
             }));
             assertThat(rowHeld.await(30, TimeUnit.SECONDS)).isTrue();
 
             Future<RefreshedSession> first = callers.submit(() -> sessions.refresh(cookie));
             Future<RefreshedSession> second = callers.submit(() -> sessions.refresh(cookie));
-            Thread.sleep(300);
+            await().until(() -> jdbc.sql("select count(*) from pg_stat_activity where datname = current_database() and wait_event_type = 'Lock'")
+                    .query(Long.class).single() >= 2);
             release.countDown();
             holder.get(30, TimeUnit.SECONDS);
 
@@ -92,7 +94,7 @@ class DonorSessionRefreshConcurrencyTest {
         }
     }
 
-    private static void await(CountDownLatch latch) {
+    private static void waitFor(CountDownLatch latch) {
         try {
             latch.await(30, TimeUnit.SECONDS);
         } catch (InterruptedException interrupted) {

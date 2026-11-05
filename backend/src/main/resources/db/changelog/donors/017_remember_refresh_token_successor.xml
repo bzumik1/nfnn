@@ -8,6 +8,7 @@
     <changeSet id="017-remember-refresh-token-successor" author="nfnn">
         <addColumn tableName="donor_refresh_token">
             <column name="successor_id" type="uuid"/>
+            <column name="superseded_at" type="timestamp with time zone"/>
         </addColumn>
         <addForeignKeyConstraint baseTableName="donor_refresh_token" baseColumnNames="successor_id"
                                  referencedTableName="donor_refresh_token" referencedColumnNames="id"

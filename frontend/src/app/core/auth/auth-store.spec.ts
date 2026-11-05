@@ -9,6 +9,9 @@ import {
   REFRESH_LOCK_WAIT_MS,
   REFRESH_REQUEST_TIMEOUT_MS,
   SESSION_CHANNEL,
+  sessionRefreshed,
+  signedOut,
+  SLOW_RESTORE_PAUSE_MS,
   TAB_LOCKS,
 } from './session-tabs';
 import { FakeSessionChannel, FakeTabLocks } from './testing/fake-session-tabs';
@@ -378,7 +381,7 @@ describe('Given the auth store in one of several tabs of the browser', () => {
     expect(locks.requested).toEqual(['nfnn-refresh']);
     expect(tokens).toEqual(['token-2']);
     expect(channel.posted).toEqual([
-      { kind: 'session-refreshed', response: authResponse('token-2') },
+      { kind: 'session-refreshed', version: 1, response: authResponse('token-2') },
     ]);
   });
 
@@ -405,7 +408,7 @@ describe('Given the auth store in one of several tabs of the browser', () => {
 
     const restored = store.restore();
     await vi.waitFor(() => expect(locks.waitingCount).toBe(1));
-    channel.deliverFromAnotherTab({ kind: 'session-refreshed', response: authResponse('token-4') });
+    channel.deliverFromAnotherTab(sessionRefreshed(authResponse('token-4')));
     release();
     await restored;
 
@@ -416,10 +419,9 @@ describe('Given the auth store in one of several tabs of the browser', () => {
   });
 
   it('when another tab announces a fresh session, then this tab takes it over', () => {
-    channel.deliverFromAnotherTab({
-      kind: 'session-refreshed',
-      response: authResponse('token-5', sampleDonor({ roles: ['DONOR', 'ADMIN'] })),
-    });
+    channel.deliverFromAnotherTab(
+      sessionRefreshed(authResponse('token-5', sampleDonor({ roles: ['DONOR', 'ADMIN'] }))),
+    );
 
     expect(store.status()).toBe('signed-in');
     expect(store.isAdmin()).toBe(true);
@@ -431,10 +433,30 @@ describe('Given the auth store in one of several tabs of the browser', () => {
     for (const message of [
       null,
       'session-refreshed',
-      { kind: 'session-refreshed' },
-      { kind: 'session-refreshed', response: { accessToken: '', user: sampleDonor() } },
-      { kind: 'session-refreshed', response: { accessToken: 'token-6', user: null } },
-      { kind: 'signed-out', response: authResponse('token-7') },
+      { kind: 'session-refreshed', version: 1 },
+      { kind: 'session-refreshed', response: authResponse('token-6') },
+      { kind: 'session-refreshed', version: 2, response: authResponse('token-6') },
+      {
+        ...sessionRefreshed(authResponse('token-6')),
+        response: { ...authResponse(''), user: sampleDonor() },
+      },
+      {
+        ...sessionRefreshed(authResponse('token-6')),
+        response: { ...authResponse('token-6'), user: null },
+      },
+      {
+        ...sessionRefreshed(authResponse('token-6')),
+        response: { ...authResponse('token-6'), user: { ...sampleDonor(), roles: undefined } },
+      },
+      {
+        ...sessionRefreshed(authResponse('token-6')),
+        response: { ...authResponse('token-6'), user: { ...sampleDonor(), id: 7 } },
+      },
+      {
+        ...sessionRefreshed(authResponse('token-6')),
+        response: { user: sampleDonor(), accessToken: 'token-6' },
+      },
+      { kind: 'session-refreshed-later', version: 1, response: authResponse('token-7') },
     ]) {
       channel.deliverFromAnotherTab(message);
     }
@@ -450,9 +472,12 @@ describe('Given the auth store in one of several tabs of the browser', () => {
     store.refresh().subscribe({ error: (reason: unknown) => (failure = reason) });
     await vi.advanceTimersByTimeAsync(0);
     const request = http.expectOne('/api/donors/auth/refresh');
+    let cancelledAtRelease: boolean | undefined;
+    locks.onRelease = () => (cancelledAtRelease = request.cancelled);
 
     await vi.advanceTimersByTimeAsync(REFRESH_REQUEST_TIMEOUT_MS);
 
+    expect(cancelledAtRelease).toBe(true);
     expect(request.cancelled).toBe(true);
     expect(failure).toBeInstanceOf(TimeoutError);
     expect(locks.isHeld).toBe(false);
@@ -512,6 +537,154 @@ describe('Given the auth store in one of several tabs of the browser', () => {
     expect(store.signedIn()).toBe(false);
     expect(localStorage.getItem(SESSION_HINT_KEY)).toBeNull();
     expect(localStorage.getItem('nfnn.receipt-keys')).toBe('{"keys":[]}');
+  });
+
+  it('when the only caller leaves while the refresh is on its way, then the request still runs to its answer, the session is adopted and the lock released', async () => {
+    signInFirst();
+    const caller = store.refresh().subscribe();
+    await vi.waitFor(() => expect(locks.isHeld).toBe(true));
+    const request = http.expectOne('/api/donors/auth/refresh');
+
+    caller.unsubscribe();
+
+    expect(request.cancelled).toBe(false);
+    request.flush(authResponse('token-9'));
+    await vi.waitFor(() => expect(locks.isHeld).toBe(false));
+    expect(store.currentAccessToken()).toBe('token-9');
+    expect(channel.posted).toEqual([sessionRefreshed(authResponse('token-9'))]);
+  });
+
+  it('when the only caller leaves while this tab waits for the lock, then the refresh still runs once the lock is free', async () => {
+    signInFirst();
+    const release = locks.holdForAnotherTab();
+    const caller = store.refresh().subscribe();
+    await vi.waitFor(() => expect(locks.waitingCount).toBe(1));
+
+    caller.unsubscribe();
+    release();
+
+    await vi.waitFor(() =>
+      http.expectOne('/api/donors/auth/refresh').flush(authResponse('token-10')),
+    );
+    await vi.waitFor(() => expect(store.currentAccessToken()).toBe('token-10'));
+  });
+
+  describe.each([400, 401, 403])('when the server refuses the refresh with status %i', (status) => {
+    it('then the session and its hint are forgotten', async () => {
+      signInFirst();
+      store.refresh().subscribe({ error: () => undefined });
+      await vi.waitFor(() =>
+        http
+          .expectOne('/api/donors/auth/refresh')
+          .flush(problem('auth/invalid-refresh-token'), { status, statusText: 'Refused' }),
+      );
+
+      await vi.waitFor(() => expect(store.signedIn()).toBe(false));
+      expect(localStorage.getItem(SESSION_HINT_KEY)).toBeNull();
+    });
+  });
+
+  describe.each([0, 408, 429, 500, 502, 503, 504])(
+    'when the refresh fails with status %i',
+    (status) => {
+      it('then the session and its hint are kept for the next try', async () => {
+        signInFirst();
+        let failure: unknown;
+        store.refresh().subscribe({ error: (reason: unknown) => (failure = reason) });
+        await vi.waitFor(() =>
+          http.expectOne('/api/donors/auth/refresh').flush(null, { status, statusText: 'Failed' }),
+        );
+
+        await vi.waitFor(() => expect(failure).toBeDefined());
+        expect(store.signedIn()).toBe(true);
+        expect(store.currentAccessToken()).toBe('token-1');
+        expect(localStorage.getItem(SESSION_HINT_KEY)).toBe('1');
+      });
+    },
+  );
+
+  it('when a restore times out, then a restore right after does not wait again, and one after the pause tries again', async () => {
+    localStorage.setItem(SESSION_HINT_KEY, '1');
+    vi.useFakeTimers();
+
+    const first = store.restore();
+    await vi.advanceTimersByTimeAsync(0);
+    http.expectOne('/api/donors/auth/refresh');
+    await vi.advanceTimersByTimeAsync(REFRESH_REQUEST_TIMEOUT_MS);
+    await first;
+
+    await store.restore();
+    http.expectNone('/api/donors/auth/refresh');
+    expect(store.status()).toBe('anonymous');
+    expect(localStorage.getItem(SESSION_HINT_KEY)).toBe('1');
+
+    await vi.advanceTimersByTimeAsync(SLOW_RESTORE_PAUSE_MS);
+    const third = store.restore();
+    await vi.advanceTimersByTimeAsync(0);
+    http.expectOne('/api/donors/auth/refresh').flush(authResponse('token-11'));
+    await third;
+    expect(store.currentAccessToken()).toBe('token-11');
+  });
+
+  it('when the donor signs out, then the sign-out waits for the refresh lock and the other tabs are told', async () => {
+    signInFirst();
+    const release = locks.holdForAnotherTab();
+    let done = false;
+
+    store.logout().subscribe(() => (done = true));
+    await vi.waitFor(() => expect(locks.waitingCount).toBe(1));
+    http.expectNone('/api/donors/auth/logout');
+
+    release();
+    await vi.waitFor(() =>
+      http
+        .expectOne('/api/donors/auth/logout')
+        .flush(null, { status: 204, statusText: 'No Content' }),
+    );
+    await vi.waitFor(() => expect(done).toBe(true));
+    expect(store.signedIn()).toBe(false);
+    expect(localStorage.getItem(SESSION_HINT_KEY)).toBeNull();
+    expect(channel.posted).toEqual([signedOut()]);
+    await vi.waitFor(() => expect(locks.isHeld).toBe(false));
+  });
+
+  it('when another tab keeps the lock too long, then the sign-out is sent anyway', async () => {
+    signInFirst();
+    locks.holdForAnotherTab();
+    vi.useFakeTimers();
+    let done = false;
+    store.logout().subscribe(() => (done = true));
+
+    await vi.advanceTimersByTimeAsync(REFRESH_LOCK_WAIT_MS);
+
+    http
+      .expectOne('/api/donors/auth/logout')
+      .flush(null, { status: 204, statusText: 'No Content' });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(done).toBe(true);
+    expect(store.signedIn()).toBe(false);
+    expect(channel.posted).toEqual([signedOut()]);
+  });
+
+  it('when another tab signs out, then this tab forgets the session and its hint', () => {
+    signInFirst();
+
+    channel.deliverFromAnotherTab(signedOut());
+
+    expect(store.status()).toBe('anonymous');
+    expect(store.currentAccessToken()).toBeNull();
+    expect(localStorage.getItem(SESSION_HINT_KEY)).toBeNull();
+  });
+
+  it('when another tab announces the session of another donor, then this tab keeps its own', () => {
+    signInFirst();
+
+    channel.deliverFromAnotherTab(
+      sessionRefreshed(authResponse('token-12', sampleDonor({ id: 'another-donor' }))),
+    );
+
+    expect(store.currentAccessToken()).toBe('token-1');
+    expect(store.donor()?.id).toBe(sampleDonor().id);
   });
 
   it('when the store goes away, then it closes its session channel', () => {

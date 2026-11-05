@@ -1,4 +1,4 @@
-import { SessionChannel, TabLocks } from '../session-tabs';
+import { REFRESH_LOCK_NAME, SessionChannel, TabLocks } from '../session-tabs';
 
 type Grant = () => void;
 
@@ -6,6 +6,7 @@ export class FakeTabLocks implements TabLocks {
   private held = false;
   private readonly waiting: Grant[] = [];
   readonly requested: string[] = [];
+  onRelease: () => void = () => undefined;
 
   get isHeld(): boolean {
     return this.held;
@@ -51,11 +52,12 @@ export class FakeTabLocks implements TabLocks {
   holdForAnotherTab(): () => void {
     let release: () => void = () => undefined;
     const held = new Promise<void>((done) => (release = done));
-    void this.request('nfnn-refresh', {}, () => held);
+    void this.request(REFRESH_LOCK_NAME, {}, () => held);
     return release;
   }
 
   private releaseNext(): void {
+    this.onRelease();
     this.held = false;
     this.waiting.shift()?.();
   }

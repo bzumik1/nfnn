@@ -213,18 +213,48 @@ class DonorSessionServiceTest {
     void should_revoke_token_when_closed_given_known_token() {
         RefreshTokenSecret secret = RefreshTokenSecret.generate();
         RefreshToken existing = RefreshToken.issue(secret, DONOR, NOW.minus(Duration.ofDays(1)), REFRESH_TTL, false);
-        when(refreshTokens.findBySecretHash(secret.hash())).thenReturn(Optional.of(existing));
+        when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(existing));
 
         service.close(secret.value());
 
-        assertThat(existing.isRevoked()).isTrue();
-        verify(refreshTokens).save(existing);
+        verify(refreshTokens).revokeIfUnused(existing.id(), NOW);
+        verify(refreshTokens, never()).revokeAllOf(any(), any());
+    }
+
+    @Test
+    @DisplayName("Given a used token whose successor another tab just received, when the session is closed with it, then the unused successor is revoked too")
+    void should_revoke_the_unused_successor_when_closed_given_a_used_token() {
+        RefreshTokenSecret secret = RefreshTokenSecret.generate();
+        UUID successor = UUID.randomUUID();
+        RefreshToken used = rotated(secret, NOW.minusSeconds(5), successor, false);
+        when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(used));
+
+        service.close(secret.value());
+
+        verify(refreshTokens).revokeIfUnused(used.id(), NOW);
+        verify(refreshTokens).revokeIfUnused(successor, NOW);
+        verify(refreshTokens, never()).revokeAllOf(any(), any());
+    }
+
+    @Test
+    @DisplayName("Given a token the reuse grace superseded, when it is presented, then every session of the donor ends, because two holders of the session exist")
+    void should_revoke_every_session_when_presented_given_a_token_superseded_by_the_grace() {
+        RefreshTokenSecret secret = RefreshTokenSecret.generate();
+        RefreshToken superseded = RefreshToken.issue(secret, DONOR, NOW.minusSeconds(30), REFRESH_TTL, false);
+        superseded.supersede(NOW.minusSeconds(20));
+        when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(superseded));
+
+        assertThatThrownBy(() -> service.refresh(secret.value()))
+                .isInstanceOf(InvalidRefreshToken.class);
+
+        verify(refreshTokens).revokeAllOf(DONOR, NOW);
+        verify(accessTokens, never()).issue(any(), any(), any());
     }
 
     @Test
     @DisplayName("Given an unknown token, when the session is closed, then nothing happens")
     void should_do_nothing_when_closed_given_unknown_token() {
-        when(refreshTokens.findBySecretHash(any())).thenReturn(Optional.empty());
+        when(refreshTokens.findBySecretHashForUpdate(any())).thenReturn(Optional.empty());
 
         service.close(RefreshTokenSecret.generate().value());
 
@@ -301,12 +331,12 @@ class DonorSessionServiceTest {
         RefreshToken used = rotated(secret, NOW.minusSeconds(59), successor, true);
         when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(used));
         when(donors.findById(DONOR)).thenReturn(Optional.of(administrator()));
-        when(refreshTokens.revokeIfUnused(successor, NOW)).thenReturn(true);
+        when(refreshTokens.supersedeIfUnused(successor, NOW)).thenReturn(true);
         when(accessTokens.issue(DONOR, Set.of(Role.DONOR, Role.ADMIN), NOW)).thenReturn(new IssuedAccessToken("access3", NOW.plus(Duration.ofMinutes(15))));
 
         RefreshedSession refreshed = service.refresh(secret.value());
 
-        verify(refreshTokens).revokeIfUnused(successor, NOW);
+        verify(refreshTokens).supersedeIfUnused(successor, NOW);
         verify(refreshTokens, never()).revokeAllOf(any(), any());
         verify(refreshTokens, never()).markUsed(any(), any());
         ArgumentCaptor<RefreshToken> saved = ArgumentCaptor.forClass(RefreshToken.class);
@@ -326,7 +356,7 @@ class DonorSessionServiceTest {
         RefreshToken used = rotated(secret, NOW.minusSeconds(10), successor, false);
         when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(used));
         when(donors.findById(DONOR)).thenReturn(Optional.of(donor()));
-        when(refreshTokens.revokeIfUnused(successor, NOW)).thenReturn(false);
+        when(refreshTokens.supersedeIfUnused(successor, NOW)).thenReturn(false);
 
         assertThatThrownBy(() -> service.refresh(secret.value()))
                 .isInstanceOf(InvalidRefreshToken.class);
@@ -348,14 +378,32 @@ class DonorSessionServiceTest {
                 .isInstanceOf(InvalidRefreshToken.class);
 
         verify(refreshTokens).revokeAllOf(DONOR, NOW);
-        verify(refreshTokens, never()).revokeIfUnused(any(), any());
+        verify(refreshTokens, never()).supersedeIfUnused(any(), any());
+        verify(accessTokens, never()).issue(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("Given a token used 10 seconds ago whose donor no longer exists, when it is presented again, then no session is issued and the successor is left to the revocation of every session")
+    void should_issue_nothing_when_presented_again_within_the_reuse_grace_given_an_erased_donor() {
+        RefreshTokenSecret secret = RefreshTokenSecret.generate();
+        UUID successor = UUID.randomUUID();
+        RefreshToken used = rotated(secret, NOW.minusSeconds(10), successor, false);
+        when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(used));
+        when(donors.findById(DONOR)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.refresh(secret.value()))
+                .isInstanceOf(InvalidRefreshToken.class);
+
+        verify(refreshTokens, never()).supersedeIfUnused(any(), any());
+        verify(refreshTokens).revokeAllOf(DONOR, NOW);
+        verify(refreshTokens, never()).save(any());
         verify(accessTokens, never()).issue(any(), any(), any());
     }
 
     private static RefreshToken rotated(RefreshTokenSecret secret, Instant usedAt, UUID successor, boolean secondFactorVerified) {
         Instant issued = usedAt.minus(Duration.ofDays(1));
         return RefreshToken.reconstitute(UUID.randomUUID(), DONOR, secret.hash(), issued, issued.plus(REFRESH_TTL), secondFactorVerified, null,
-                Set.of(), issued, usedAt, null, successor);
+                Set.of(), issued, usedAt, null, successor, null);
     }
 
     private static Donor administrator() {

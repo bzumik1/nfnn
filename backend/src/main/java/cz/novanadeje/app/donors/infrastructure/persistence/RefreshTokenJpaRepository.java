@@ -28,6 +28,14 @@ interface RefreshTokenJpaRepository extends JpaRepository<RefreshTokenJpaEntity,
     @Query("update RefreshTokenJpaEntity t set t.revokedAt = :at where t.id = :id and t.usedAt is null and t.revokedAt is null")
     int revokeIfUnused(@Param("id") UUID id, @Param("at") Instant at);
 
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("update RefreshTokenJpaEntity t set t.revokedAt = :at, t.supersededAt = :at where t.id = :id and t.usedAt is null and t.revokedAt is null")
+    int supersedeIfUnused(@Param("id") UUID id, @Param("at") Instant at);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select t.id from RefreshTokenJpaEntity t where t.donorId = :donorId order by t.id")
+    List<UUID> lockAllOfInIdOrder(@Param("donorId") UUID donorId);
+
     @Query("select t from RefreshTokenJpaEntity t where t.donorId = :donorId and t.clientId is not null and t.usedAt is null"
             + " and t.revokedAt is null and t.expiresAt > :now order by t.issuedAt desc")
     List<RefreshTokenJpaEntity> findUsableClientTokensOf(@Param("donorId") UUID donorId, @Param("now") Instant now);
