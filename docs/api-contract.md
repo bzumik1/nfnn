@@ -929,7 +929,7 @@ A donor sees the accounts their payments without a symbol are paired from and ca
 }
 ```
 
-- One item per link (`donor_sender_account` row), live ones first, then newest first; a reconnected account appears twice, the old period as `DISCONNECTED`. An excluded account appears only when it was learned before it was excluded; it keeps its donations and pairs nothing more.
+- One item per link (`donor_sender_account` row), live ones first, then newest first, links learned at the same instant (one import) by account number, so the order never depends on their random ids; a reconnected account appears twice, the old period as `DISCONNECTED`. An excluded account appears only when it was learned before it was excluded; it keeps its donations and pairs nothing more.
 - `status`: `ACTIVE` pairs payments; `AWAITING_PAYMENT` was reconnected and waits for a payment with the symbol booked from `connectedFrom`; `DISCONNECTED` ended on `disconnectedOn` (its last paired booking day, the Prague date of the disconnect).
 - `verifiedOn` is the Prague date the proving payment was paired, null while awaiting. `connectedFrom` is the link's first booking day, null when it pairs the account's whole history.
 - `donationCount`, `totalAmountMinor` and `lastDonationOn` cover the `RECEIVED` donations paired by account (`paired_by = SENDER_ACCOUNT`) through this link (`donation.sender_account_id`); donations paired by symbol or by a confirmed symbol are not counted here, so the dashboard's „N darů bez VS“ stays true.

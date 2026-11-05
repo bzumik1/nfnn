@@ -1,0 +1,55 @@
+import { argon2id as hashWasmArgon2id } from 'hash-wasm';
+import {
+  PASSWORD_KEY_LENGTH,
+  type PasswordKeyAnswer,
+  type PasswordKeyFailureReason,
+  type PasswordKeyQuestion,
+} from './password-key-protocol';
+
+export interface Argon2idInput {
+  readonly password: Uint8Array<ArrayBuffer>;
+  readonly salt: Uint8Array<ArrayBuffer>;
+  readonly memoryKiB: number;
+  readonly iterations: number;
+  readonly parallelism: number;
+  readonly hashLength: number;
+}
+
+export async function argon2id(input: Argon2idInput): Promise<Uint8Array<ArrayBuffer>> {
+  const tag = await hashWasmArgon2id({
+    password: input.password,
+    salt: input.salt,
+    memorySize: input.memoryKiB,
+    iterations: input.iterations,
+    parallelism: input.parallelism,
+    hashLength: input.hashLength,
+    outputType: 'binary',
+  });
+  return new Uint8Array(tag);
+}
+
+export async function argon2WorkerAnswer(
+  question: PasswordKeyQuestion,
+  now: () => number = () => performance.now(),
+): Promise<PasswordKeyAnswer> {
+  try {
+    const started = now();
+    const key = await argon2id({
+      password: question.password,
+      salt: question.salt,
+      memoryKiB: question.parameters.memoryKiB,
+      iterations: question.parameters.iterations,
+      parallelism: question.parameters.parallelism,
+      hashLength: PASSWORD_KEY_LENGTH,
+    });
+    return { key, elapsedMs: now() - started };
+  } catch (failure: unknown) {
+    return { failure: argon2FailureOf(failure) };
+  } finally {
+    question.password.fill(0);
+  }
+}
+
+export function argon2FailureOf(failure: unknown): PasswordKeyFailureReason {
+  return failure instanceof RangeError ? 'memory' : 'failed';
+}
