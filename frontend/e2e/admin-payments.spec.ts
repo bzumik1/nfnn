@@ -191,14 +191,18 @@ test.describe('Given an administrator with an unpaired bank payment', () => {
         });
       },
     );
+    let announce: () => void = () => undefined;
+    const announced = new Promise<void>((resolve) => (announce = resolve));
     await page.route(
       (url) => url.pathname === '/api/live',
-      (route) =>
-        route.fulfill({
+      async (route) => {
+        await announced;
+        await route.fulfill({
           contentType: 'text/event-stream',
           headers: { 'Cache-Control': 'no-store' },
-          body: 'event:revision\ndata:{"revision":"e2e"}\n\n',
-        }),
+          body: 'event:revision\ndata:{"revision":"e2e"}\n\nevent:changed\ndata:{"feed":"payments"}\n\n',
+        });
+      },
     );
     await signIn(page, administrator);
     await page.getByRole('link', { name: 'Správa' }).click();
@@ -207,6 +211,7 @@ test.describe('Given an administrator with an unpaired bank payment', () => {
     await expect(rows).toHaveCount(1);
 
     arrived = true;
+    announce();
 
     const offer = page.getByRole('status').getByRole('button', { name: 'Zobrazit 1 novou platbu' });
     await expect(offer).toBeVisible();

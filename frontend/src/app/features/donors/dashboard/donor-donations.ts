@@ -160,7 +160,9 @@ export class DonorDonations {
   readonly bankDataArrived = signal(0);
 
   private readonly incoming = signal<IncomingDonations | null>(null);
-  readonly incomingCount = computed(() => this.incoming()?.added ?? 0);
+  readonly incomingCount = computed(() =>
+    this.checkingBank() ? 0 : (this.incoming()?.added ?? 0),
+  );
 
   readonly bankAccounts = signal<readonly BankAccountItem[]>([]);
   readonly accountsWithQuestion = computed(() =>

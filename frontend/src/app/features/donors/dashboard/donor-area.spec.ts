@@ -461,13 +461,14 @@ describe('Given a signed-in donor in the donor area', () => {
       ).toHaveLength(2);
     });
 
-    it('then the donor checking the bank shows the new gifts at once and the button goes away', async () => {
+    it('then the donor checking the bank hides the button while the check runs, so pressing it cannot leave focus on the disabled check button, and shows the new gifts at once', async () => {
       await openGifts();
       live.hint('donations');
       await respond(twoYearSummary(), withNewGifts(newGift));
 
       element('.bank-check-btn')?.click();
       await settle();
+      expect(text('.bank-check-incoming')).toBe('');
       http
         .expectOne({ method: 'POST', url: BANK_CHECK_URL })
         .flush({ bankDataAsOf: LATER, checking: false });

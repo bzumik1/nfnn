@@ -270,7 +270,8 @@ export class AdminPayments {
       this.state() !== 'ready' ||
       this.pairing() !== null ||
       this.unpairing() !== null ||
-      this.busy()
+      this.busy() ||
+      this.loadingMore()
     ) {
       this.refreshWhenIdle = this.state() === 'ready';
       return;
@@ -290,7 +291,10 @@ export class AdminPayments {
       return;
     }
     const shown = new Set(this.items().map((item) => item.id));
-    const added = outcome.list.items.filter((item) => !shown.has(item.id)).length;
+    const fresh = outcome.list.items;
+    const lastShown = fresh.reduce((last, item, index) => (shown.has(item.id) ? index : last), -1);
+    const above = shown.size === 0 ? fresh : fresh.slice(0, Math.max(lastShown, 0));
+    const added = above.filter((item) => !shown.has(item.id)).length;
     if (added > 0) {
       this.incoming.set({ list: outcome.list, added });
       if (this.filter() === 'unpaired' && !this.filtered()) {
@@ -298,16 +302,11 @@ export class AdminPayments {
       }
       return;
     }
-    const fresh = new Map(outcome.list.items.map((item) => [item.id, item]));
-    const windowEnd = outcome.list.items.length;
+    const freshIds = new Set(fresh.map((item) => item.id));
     this.items.update((current) =>
-      current.flatMap((item, index) => {
-        const updated = fresh.get(item.id);
-        if (updated !== undefined) {
-          return [updated];
-        }
-        return index < windowEnd || current.length <= PAGE_SIZE ? [] : [item];
-      }),
+      current.length <= PAGE_SIZE
+        ? fresh
+        : fresh.concat(current.slice(fresh.length).filter((item) => !freshIds.has(item.id))),
     );
     this.total.set(outcome.list.total);
     if (this.filter() === 'unpaired' && !this.filtered()) {
@@ -338,6 +337,7 @@ export class AdminPayments {
           this.items.update((current) => [...current, ...list.items]);
           this.total.set(list.total);
           this.loadingMore.set(false);
+          this.refreshIfMissed();
           this.focusAfterRender(
             () =>
               this.host.nativeElement.querySelectorAll<HTMLElement>('.payments-card tbody tr')[
@@ -349,6 +349,7 @@ export class AdminPayments {
           this.loadingMore.set(false);
           if (!this.leaveOnRefusal(failure)) {
             this.moreFailed.set(true);
+            this.refreshIfMissed();
           }
         },
       });

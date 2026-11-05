@@ -205,6 +205,40 @@ describe('Given the live updates of a signed-in browser', () => {
       expect(donations.count()).toBe(1);
     });
 
+    it('then a page that starts listening after the stream closed is not told to read again when the stream reopens', () => {
+      send(request, REVISION);
+      subscriptions.splice(0).forEach((subscription) => subscription.unsubscribe());
+      TestBed.tick();
+      expect(request.cancelled).toBe(true);
+
+      const payments = listen(['payments']);
+      send(stream(), REVISION);
+
+      expect(payments.count()).toBe(0);
+    });
+
+    it('then an answer that the client asks for again, as after a refreshed token, is read from its own start', () => {
+      send(request, '{"status":401}');
+      request.event({ type: HttpEventType.Sent });
+      send(request, REVISION);
+
+      expect(live.connected()).toBe(true);
+    });
+
+    it('then a stream that ends in an error after a while starts its retries again from a second', () => {
+      request.flush('Bad Gateway', { status: 502, statusText: 'Bad Gateway' });
+      vi.advanceTimersByTime(LIVE_RETRY_FIRST_MS);
+      const again = stream();
+      send(again, REVISION);
+      vi.advanceTimersByTime(LIVE_SHORT_STREAM_MS);
+      again.error(new ProgressEvent('error'));
+
+      vi.advanceTimersByTime(LIVE_RETRY_FIRST_MS - 1);
+      http.expectNone(LIVE);
+      vi.advanceTimersByTime(1);
+      stream();
+    });
+
     it('then failures are retried later and later, up to a minute apart', () => {
       request.flush('Bad Gateway', { status: 502, statusText: 'Bad Gateway' });
 

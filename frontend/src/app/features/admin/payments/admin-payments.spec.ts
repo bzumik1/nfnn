@@ -384,6 +384,22 @@ describe('Given an administrator on the bank payments page', () => {
       expect(incoming()).toBe('Zobrazit 5 nových plateb');
     });
 
+    it('then a payment that moves up into the page from below the shown ones, as when one of a longer list leaves, joins them without a button, because nothing arrived', async () => {
+      const older = unpairedPayment({
+        id: '019a1c00-0000-7000-8000-000000000999',
+        bankTransactionId: 999,
+        bookedOn: '2026-09-01',
+        counterpartyName: 'Starší odesílatel',
+      });
+
+      live.hint('payments');
+      await listResponds(paymentList([shown, older]));
+
+      expect(incoming()).toBe('');
+      expect(rows()).toHaveLength(2);
+      expect(rows()[1]).toContain('Starší odesílatel');
+    });
+
     it('then a payment that someone else paired leaves the list at once and no button shows', async () => {
       live.hint('payments');
       await listResponds(paymentList([]));
@@ -739,6 +755,24 @@ describe('Given an administrator on the bank payments page', () => {
       expect(document.activeElement).toBe(fixture.nativeElement.querySelectorAll('tbody tr')[50]);
       expect(fixture.nativeElement.querySelector('.payments-more button')).toBeNull();
       expect(text('.payments-more')).toBe('');
+    });
+
+    it('then a live change while the next page loads is read only once that page has arrived', async () => {
+      const live = TestBed.inject(LiveUpdates) as unknown as FakeLiveUpdates;
+      button('Načíst další').click();
+      await settle();
+
+      live.hint('payments');
+      http.expectNone(`${PAYMENTS_URL}?${PAIRED_PAGE}`);
+
+      await listResponds(
+        paymentList(
+          [unpairedPayment({ id: 'p50', bookedOn: '2026-01-02', donation: pairedDonation() })],
+          { total: 51 },
+        ),
+        'pairing=paired&offset=50&limit=50',
+      );
+      http.expectOne(`${PAYMENTS_URL}?${PAIRED_PAGE}`);
     });
 
     it('then a failed next page says so and keeps the button for another try', async () => {

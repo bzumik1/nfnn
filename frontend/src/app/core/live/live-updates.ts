@@ -27,12 +27,13 @@ export class LiveUpdates {
   private readonly listeners = signal(0);
   private readonly visible = signal(true);
   private readonly streaming = signal(false);
-  private readonly hints = new Subject<LiveFeed | null>();
+  private readonly hints = new Subject<LiveFeed | Resync>();
   private stream: Subscription | null = null;
   private retry: ReturnType<typeof setTimeout> | null = null;
   private hiding: ReturnType<typeof setTimeout> | null = null;
   private failures = 0;
-  private everStreamed = false;
+  private joined = 0;
+  private missedSince: number | null = null;
   private refusedFor: unknown = null;
 
   readonly connected = this.streaming.asReadonly();
@@ -49,9 +50,14 @@ export class LiveUpdates {
 
   changes(feeds: readonly LiveFeed[]): Observable<void> {
     return new Observable<void>((subscriber) => {
+      const joinedAt = ++this.joined;
       this.listeners.update((count) => count + 1);
       const hints = this.hints
-        .pipe(filter((feed) => feed === null || feeds.includes(feed)))
+        .pipe(
+          filter((hint) =>
+            typeof hint === 'object' ? joinedAt <= hint.listenersSince : feeds.includes(hint),
+          ),
+        )
         .subscribe(() => subscriber.next());
       return () => {
         hints.unsubscribe();
@@ -94,7 +100,7 @@ export class LiveUpdates {
 
   private connect(): void {
     const startedAt = Date.now();
-    const reader = new EventStreamReader();
+    let reader = new EventStreamReader();
     let ended = false;
     const end = (failure: unknown) => {
       if (!ended) {
@@ -103,7 +109,13 @@ export class LiveUpdates {
       }
     };
     this.stream = this.api.stream().subscribe({
-      next: (event) => this.read(reader, event),
+      next: (event) => {
+        if (event.type === HttpEventType.Sent) {
+          reader = new EventStreamReader();
+        } else {
+          this.read(reader, event);
+        }
+      },
       error: (failure: unknown) => end(failure),
       complete: () => end(null),
     });
@@ -120,10 +132,10 @@ export class LiveUpdates {
   private handle(event: StreamEvent): void {
     if (event.event === REVISION_EVENT) {
       this.streaming.set(true);
-      if (this.everStreamed) {
-        this.hints.next(null);
+      if (this.missedSince !== null) {
+        this.hints.next({ listenersSince: this.missedSince });
+        this.missedSince = null;
       }
-      this.everStreamed = true;
       return;
     }
     if (event.event === CHANGED_EVENT) {
@@ -137,13 +149,16 @@ export class LiveUpdates {
   private ended(failure: unknown, startedAt: number): void {
     const streamed = this.streaming();
     this.stream = null;
-    this.streaming.set(false);
+    this.lost(streamed);
     if (failure instanceof HttpErrorResponse && REFUSED.has(failure.status)) {
       this.refusedFor = this.auth.donor();
       return;
     }
-    if (failure === null && streamed && Date.now() - startedAt >= LIVE_SHORT_STREAM_MS) {
+    const lasted = streamed && Date.now() - startedAt >= LIVE_SHORT_STREAM_MS;
+    if (lasted) {
       this.failures = 0;
+    }
+    if (failure === null && lasted) {
       this.scheduleReconnect(Math.random() * LIVE_RECONNECT_SPREAD_MS);
       return;
     }
@@ -169,8 +184,19 @@ export class LiveUpdates {
     const stream = this.stream;
     this.stream = null;
     stream?.unsubscribe();
+    this.lost(this.streaming());
+  }
+
+  private lost(streamed: boolean): void {
+    if (streamed) {
+      this.missedSince ??= this.joined;
+    }
     this.streaming.set(false);
   }
+}
+
+interface Resync {
+  readonly listenersSince: number;
 }
 
 function feedOf(data: string): LiveFeed | null {
