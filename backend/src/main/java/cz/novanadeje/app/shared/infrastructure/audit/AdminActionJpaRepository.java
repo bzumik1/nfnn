@@ -14,5 +14,7 @@ interface AdminActionJpaRepository extends JpaRepository<AdminActionJpaEntity, U
 
     List<AdminActionJpaEntity> findByActionInOrderByPerformedAtAscIdAsc(Collection<String> actions);
 
+    List<AdminActionJpaEntity> findAllByOrderByPerformedAtDescIdDesc();
+
     long countByAdminIdAndActionAndPerformedAtGreaterThanEqual(UUID adminId, String action, Instant since);
 }

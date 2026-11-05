@@ -70,10 +70,36 @@ export const STEPS: Step[] = [
       await servePaymentDetails(page);
       await publicPage(page, '/#prispet');
       await page.locator('#prispet').getByRole('button', { name: '1 000 Kč' }).click();
-      await expect(page.locator('#prispet .qr-code').getByRole('img')).toBeVisible();
+      const otherDevice = page
+        .locator('#prispet')
+        .getByRole('button', { name: /Platíte z jiného zařízení\?/ });
+      if (await otherDevice.isVisible()) {
+        await expect(page.locator('#prispet .bank-app-open')).toBeEnabled();
+      } else {
+        await expect(page.locator('#prispet .qr-code').getByRole('img')).toBeVisible();
+      }
       await page
         .locator('#prispet')
         .evaluate((section) => section.scrollIntoView({ behavior: 'instant' }));
+    },
+  },
+  {
+    id: 'home-donate-other-device',
+    title: 'the Přispět section with the QR code unfolded for another device',
+    open: async (page) => {
+      await servePaymentDetails(page);
+      await publicPage(page, '/#prispet');
+      const otherDevice = page
+        .locator('#prispet')
+        .getByRole('button', { name: /Platíte z jiného zařízení\?/ });
+      if (!(await otherDevice.isVisible())) {
+        return NOT_ON_THIS_DEVICE;
+      }
+      await otherDevice.click();
+      await expect(page.locator('#prispet .qr-code').getByRole('img')).toBeVisible();
+      await otherDevice.evaluate((toggle) =>
+        toggle.scrollIntoView({ block: 'start', behavior: 'instant' }),
+      );
     },
   },
   {
@@ -82,6 +108,12 @@ export const STEPS: Step[] = [
     open: async (page) => {
       await servePaymentDetails(page);
       await publicPage(page, '/#prispet');
+      const otherDevice = page
+        .locator('#prispet')
+        .getByRole('button', { name: /Platíte z jiného zařízení\?/ });
+      if (await otherDevice.isVisible()) {
+        await otherDevice.click();
+      }
       await page.getByRole('button', { name: /^Zvětšit: QR platba/ }).click();
       await expect(
         page.getByRole('dialog', { name: 'Zvětšený QR kód' }).getByRole('img'),

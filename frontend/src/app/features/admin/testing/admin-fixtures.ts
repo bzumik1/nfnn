@@ -227,6 +227,7 @@ export function adminReceipt(overrides: Partial<AdminReceiptResponse> = {}): Adm
     active: true,
     withdrawnAt: null,
     withdrawalReason: null,
+    keyId: '21fe31df',
     ...overrides,
   };
 }

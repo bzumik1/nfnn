@@ -357,6 +357,19 @@ class JpaBankPaymentRepositoryTest {
                 .containsExactly(1004L, 1002L, 1003L);
     }
 
+    @Test
+    @DisplayName("Given paired and unpaired payments, when every payment is listed newest first, then all come, newest booking and highest transaction first")
+    void should_list_every_payment_newest_first_when_all_listed_given_paired_and_unpaired_payments() {
+        BankPayment paired = payment(1001, "2026-10-16", JANA_ACCOUNT, null);
+        payments.saveAll(List.of(paired, payment(1002, "2026-10-15", JANA_ACCOUNT, null), payment(1004, "2026-10-15", JANA_ACCOUNT, null),
+                payment(1003, "2025-12-31", JANA_ACCOUNT, null)));
+        pair(paired, PairingMethod.SENDER_ACCOUNT);
+        flushAndClear();
+
+        assertThat(payments.findAllNewestFirst()).extracting(payment -> payment.transactionId().value())
+                .containsExactly(1001L, 1004L, 1002L, 1003L);
+    }
+
     private void pair(BankPayment payment, PairingMethod method) {
         DonorRecord jana = DonorRecord.registerPerson(new DonorReference(UuidV7.generate(NOW)), "Jana Nováková",
                 new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new VariableSymbol("4821937560"), LocaleCode.CS, NOW);

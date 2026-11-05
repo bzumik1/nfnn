@@ -24,6 +24,8 @@ public interface BankPaymentRepository {
 
     List<BankPayment> findUnpairedNewestFirst();
 
+    List<BankPayment> findAllNewestFirst();
+
     List<BankPayment> findUnpairedByMatchingVariableSymbol(VariableSymbol symbol);
 
     List<BankPayment> findUnpairedWithoutSymbolBySenderAccount(SenderAccount account);

@@ -209,6 +209,7 @@ export interface AdminReceiptResponse {
   active: boolean;
   withdrawnAt: string | null;
   withdrawalReason: ReceiptWithdrawalReason | null;
+  keyId: string;
 }
 
 export interface AdminDonorDetailResponse {

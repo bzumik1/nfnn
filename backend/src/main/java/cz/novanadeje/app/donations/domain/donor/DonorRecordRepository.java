@@ -26,6 +26,8 @@ public interface DonorRecordRepository {
 
     List<DonorRecord> findByIds(Collection<DonorReference> ids);
 
+    List<DonorRecord> findAll();
+
     List<DonorRecord> searchByNameOrSymbol(String query, int limit);
 
     long countRegisteredBefore(Instant end);

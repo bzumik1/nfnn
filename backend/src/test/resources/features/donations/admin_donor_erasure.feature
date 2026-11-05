@@ -32,8 +32,8 @@ Feature: Donations keep an erased donor's gifts and issued receipts, and drop th
     And the donor's bank accounts are none
     And the donor's donations total 85100 in 4 donations
     And the donor's receipts are:
-      | number      | kind   | donationReceivedOn | year | issuedOn   | active |
-      | 2026-000001 | SINGLE | 2026-10-10         |      | 2026-10-17 | true   |
+      | number      | kind   | donationReceivedOn | year | issuedOn   | active | keyId    |
+      | 2026-000001 | SINGLE | 2026-10-10         |      | 2026-10-17 | true   | 21fe31df |
     And the stored data of receipt "2026-000001" still names the donor as issued:
       | donorName       | Petr Svoboda                     |
       | donorAddress    | Dlouhá 12, 400 01 Ústí nad Labem |

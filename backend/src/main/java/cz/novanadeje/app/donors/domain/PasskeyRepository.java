@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donors.domain;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public interface PasskeyRepository {
@@ -14,6 +15,8 @@ public interface PasskeyRepository {
     List<Passkey> findByDonor(DonorId donorId);
 
     int countByDonor(DonorId donorId);
+
+    Map<DonorId, Integer> countByDonors();
 
     void delete(PasskeyId id);
 

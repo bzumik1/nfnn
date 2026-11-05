@@ -100,6 +100,8 @@ enum AdminHandlerReach {
         table.put("PUT /api/admin/donations/report/settings", CONNECTOR);
         table.put("GET /api/admin/donations/symbol-claims", CONNECTOR);
         table.put("DELETE /api/admin/donations/symbol-claims/{id}", BROWSER_ONLY);
+        table.put("GET /api/admin/donations/sync", BROWSER_ONLY);
+        table.put("GET /api/admin/donations/sync/chunks", BROWSER_ONLY);
         table.put("POST /api/admin/donations/symbol-claims/{id}/reverse", BROWSER_ONLY);
         table.put("GET /api/admin/donors", CONNECTOR);
         table.put("GET /api/admin/donors/actions", CONNECTOR);
@@ -107,6 +109,8 @@ enum AdminHandlerReach {
         table.put("POST /api/admin/donors/administrators", BROWSER_ONLY);
         table.put("DELETE /api/admin/donors/administrators/{donorId}", BROWSER_ONLY);
         table.put("GET /api/admin/donors/me/previous-sign-in", CONNECTOR);
+        table.put("GET /api/admin/donors/sync", BROWSER_ONLY);
+        table.put("GET /api/admin/donors/sync/chunks", BROWSER_ONLY);
         table.put("GET /api/admin/donors/{donorId}", CONNECTOR);
         table.put("DELETE /api/admin/donors/{donorId}", BROWSER_ONLY);
         table.put("DELETE /api/admin/donors/{donorId}/passkeys", BROWSER_ONLY);

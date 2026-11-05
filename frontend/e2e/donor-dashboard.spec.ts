@@ -281,7 +281,7 @@ test.describe('Given a signed-in donor', () => {
     const toggle = card.getByRole('button', { name: 'Jak nastavit trvalý příkaz' });
     const toggleTop = (await toggle.boundingBox())!.y;
     expect(toggleTop).toBeGreaterThan((await card.locator('.bank').boundingBox())!.y);
-    expect(toggleTop).toBeLessThan((await card.locator('.qr').boundingBox())!.y);
+    expect(toggleTop).toBeLessThan((await card.locator('.bank-app').boundingBox())!.y);
 
     await toggle.click();
 

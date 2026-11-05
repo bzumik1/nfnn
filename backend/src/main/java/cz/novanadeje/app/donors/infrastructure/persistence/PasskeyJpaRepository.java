@@ -15,6 +15,9 @@ interface PasskeyJpaRepository extends JpaRepository<PasskeyJpaEntity, UUID> {
 
     List<PasskeyJpaEntity> findByDonorIdOrderByCreatedAtAscIdAsc(UUID donorId);
 
+    @Query("select passkey.donorId, count(passkey) from PasskeyJpaEntity passkey group by passkey.donorId")
+    List<Object[]> countPerDonor();
+
     int countByDonorId(UUID donorId);
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
