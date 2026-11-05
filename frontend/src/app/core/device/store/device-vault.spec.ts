@@ -497,6 +497,19 @@ describe('Given the device vault over IndexedDB with real WebCrypto', () => {
       expect(vault.opened()?.store.contents()).toEqual(contentsOf(CANARY));
     });
 
+    it('and she signs in with a passkey that never wrapped this copy, then the copy stays locked and her password still opens it', async () => {
+      await vault.signedIn(JANA, {
+        kind: 'prf',
+        reading: { ...prfReading(), credentialId: 'another-synced-passkey' },
+      });
+
+      expect(vault.opened()).toBeNull();
+      expect(vault.locked()).toBe(true);
+      await vault.signedOut(JANA);
+      await vault.signedIn(JANA, { kind: 'password', password: PASSWORD });
+      expect(vault.opened()?.store.contents()).toEqual(contentsOf(CANARY));
+    });
+
     it('and the page is loaded again, then the locked copy is kept and no new one is made', async () => {
       await anotherTab().restored(JANA);
 
@@ -661,6 +674,47 @@ describe('Given the device vault over IndexedDB with real WebCrypto', () => {
       expect(entries).toHaveLength(1);
       expect(vault.opened()?.store.copyId).toBe(entries[0].copyId);
       expect(other.opened()?.store.copyId).toBe(entries[0].copyId);
+    });
+  });
+
+  describe('when Jana signed in by the e-mail link, so her copy has only a session wrap', () => {
+    it('and her session is lost in one tab, then the copy is deleted and the other tab closes it', async () => {
+      await vault.signedIn(JANA, { kind: 'none' });
+      const other = anotherTab();
+      await other.restored(JANA);
+      expect(other.opened()).not.toBeNull();
+
+      await vault.sessionLost();
+
+      expect(await storedEntries()).toEqual([]);
+      await vi.waitFor(() => expect(other.opened()).toBeNull());
+    });
+  });
+
+  describe('when the storage refuses a write after the copy was stored', () => {
+    it('then the session wrap left in IndexedDB is dropped before the copy moves to memory', async () => {
+      const storage = new FailingWrites();
+      storage.failing = false;
+      opener.mockImplementation(async () => storage);
+      const realWrite = storage.write.bind(storage);
+      let state: 'before' | 'stored' | 'refused' = 'before';
+      storage.write = async (change) => {
+        if (state === 'stored') {
+          state = 'refused';
+          throw new DOMException('The quota is full', 'QuotaExceededError');
+        }
+        if ((change.putSessionKeys ?? []).length > 0) {
+          state = 'stored';
+        }
+        return realWrite(change);
+      };
+
+      await vault.signedIn(JANA, { kind: 'password', password: PASSWORD });
+
+      expect(state).toBe('refused');
+      expect(vault.mode()).toBe('memory');
+      expect(vault.opened()).not.toBeNull();
+      expect(await storage.entries()).toEqual([]);
     });
   });
 

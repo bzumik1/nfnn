@@ -43,6 +43,43 @@ describe('Given the device copies of the app, loaded only when a session first n
     expect(downloads).toBe(1);
   });
 
+  describe('when the code of the vault cannot be loaded', () => {
+    beforeEach(() => {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          { provide: DeviceVault, useValue: vault },
+          {
+            provide: DonorCopyDownload,
+            useFactory: () => {
+              throw new TypeError('Failed to fetch dynamically imported module');
+            },
+          },
+        ],
+      });
+      copies = TestBed.inject(DeviceCopies);
+    });
+
+    it('and a donor signs in with a passkey, then the PRF output is zeroed', async () => {
+      const output = new Uint8Array(32).fill(9);
+      const reading = { credentialId: 'Y3JlZA', userHandle: JANA.userHandle, output };
+
+      await expect(copies.signedIn(JANA, { kind: 'prf', reading })).rejects.toThrow(TypeError);
+
+      expect([...output].every((byte) => byte === 0)).toBe(true);
+    });
+
+    it('and a donor adds a passkey, then its PRF output is zeroed', async () => {
+      const output = new Uint8Array(32).fill(9);
+
+      await expect(
+        copies.passkeyAdded(JANA, { credentialId: 'Y3JlZA', userHandle: JANA.userHandle, output }),
+      ).rejects.toThrow(TypeError);
+
+      expect([...output].every((byte) => byte === 0)).toBe(true);
+    });
+  });
+
   it('when another tab signs out before this tab needed a copy, then nothing is loaded', async () => {
     copies.signedOutElsewhere();
     await Promise.resolve();

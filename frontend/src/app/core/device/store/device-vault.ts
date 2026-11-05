@@ -276,8 +276,8 @@ export class DeviceVault implements SessionDevice {
     const entries = await storage.entries();
     const entry = entryFor(entries, tags);
     const opening = entry === null ? null : await this.openExisting(storage, entry, secret);
-    if (entry !== null && opening === null && secret.kind === 'none') {
-      await storage.write(withoutSessions(entries));
+    if (entry !== null && opening === null && !refusedBy(entry.wraps, secret)) {
+      await this.committed(storage, withoutSessions(entries));
       this.lockedCopy.set(true);
       return;
     }
@@ -290,7 +290,8 @@ export class DeviceVault implements SessionDevice {
       wraps.splice(0, wraps.length, ...withoutPrfOf(wraps, secret.reading.credentialId));
       wraps.push(await copy.wrapWithPrf(secret.reading.credentialId, secret.reading.output));
     }
-    await storage.write(
+    await this.committed(
+      storage,
       joined(withoutSessions(others), {
         deleteCopies: entry !== null && opening === null ? [entry.copyId] : [],
         putEntries: [{ copyId: copy.copyId, kind: 'donor', ...tags, wraps }],
@@ -319,7 +320,8 @@ export class DeviceVault implements SessionDevice {
       entry === null ? null : await this.openExisting(storage, entry, { kind: 'none' });
     const others = entries.filter((candidate) => candidate.copyId !== entry?.copyId);
     if (opening !== null) {
-      await storage.write(
+      await this.committed(
+        storage,
         joined(withoutSessions(others), {
           putEntries: entry!.lookupTag === tags.lookupTag ? [] : [{ ...entry!, ...tags }],
         }),
@@ -330,7 +332,7 @@ export class DeviceVault implements SessionDevice {
       return;
     }
     if (entry !== null) {
-      await storage.write(withoutSessions(entries));
+      await this.committed(storage, withoutSessions(entries));
       this.lockedCopy.set(true);
       return;
     }
@@ -339,7 +341,8 @@ export class DeviceVault implements SessionDevice {
     }
     const copy = await OpenCopy.create();
     const sessionKey = await generateSessionKey();
-    await storage.write(
+    await this.committed(
+      storage,
       joined(withoutSessions(others), {
         putEntries: [
           {
@@ -530,8 +533,19 @@ export class DeviceVault implements SessionDevice {
     if (storage === null) {
       return;
     }
-    await storage.write(withoutSessions(await storage.entries()));
+    const change = withoutSessions(await storage.entries());
+    if ((change.putEntries ?? []).length === 0 && (change.deleteCopies ?? []).length === 0) {
+      return;
+    }
+    await this.committed(storage, change);
     await this.afterRemoval(storage);
+  }
+
+  private async committed(storage: DeviceStorage, change: StorageChange): Promise<void> {
+    await storage.write(change);
+    for (const copyId of change.deleteCopies ?? []) {
+      this.announce(copyId, 'deleted');
+    }
   }
 
   private async withMemoryFallback(open: () => Promise<void>): Promise<void> {
@@ -543,6 +557,7 @@ export class DeviceVault implements SessionDevice {
       if (storage?.kind !== 'indexed-db') {
         throw failure;
       }
+      await this.endSessions(storage).catch(() => undefined);
       this.reporter.report('device-store-open', 'global', failure);
       this.sharedStorage = Promise.resolve(new MemoryDeviceStorage());
       await open();
@@ -643,6 +658,19 @@ function joined(first: StorageChange, second: StorageChange): StorageChange {
 
 function isDonor(entry: RegistryEntry): boolean {
   return entry.kind === 'donor';
+}
+
+function refusedBy(wraps: readonly KeyWrap[], secret: SignInSecret): boolean {
+  switch (secret.kind) {
+    case 'password':
+      return wraps.some((wrap) => wrap.kind === 'password');
+    case 'prf':
+      return wraps.some(
+        (wrap) => wrap.kind === 'prf' && wrap.credentialId === secret.reading.credentialId,
+      );
+    case 'none':
+      return false;
+  }
 }
 
 function withoutPrfOf(wraps: readonly KeyWrap[], credentialId: string): KeyWrap[] {

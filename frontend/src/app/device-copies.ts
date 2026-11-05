@@ -19,7 +19,15 @@ export class DeviceCopies implements SessionDevice {
   }
 
   signedIn(account: DeviceAccount, secret: SignInSecret): Promise<void> {
-    return this.vault().then((vault) => vault.signedIn(account, secret));
+    return this.vault().then(
+      (vault) => vault.signedIn(account, secret),
+      (failure: unknown) => {
+        if (secret.kind === 'prf') {
+          secret.reading.output.fill(0);
+        }
+        throw failure;
+      },
+    );
   }
 
   restored(account: DeviceAccount): Promise<void> {
@@ -50,7 +58,13 @@ export class DeviceCopies implements SessionDevice {
   }
 
   passkeyAdded(account: DeviceAccount, reading: PrfReading): Promise<void> {
-    return this.vault().then((vault) => vault.passkeyAdded(account, reading));
+    return this.vault().then(
+      (vault) => vault.passkeyAdded(account, reading),
+      (failure: unknown) => {
+        reading.output.fill(0);
+        throw failure;
+      },
+    );
   }
 
   private vault(): Promise<SessionDevice> {

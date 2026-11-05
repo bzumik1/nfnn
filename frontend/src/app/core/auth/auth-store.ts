@@ -352,10 +352,7 @@ export class AuthStore {
   private adoptRestored(response: AuthResponse): Donor {
     const before = this.currentDonor();
     const donor = this.adopt(response);
-    if (before !== null && before.id !== donor.id) {
-      const switched = this.device.signedOut(deviceAccountOf(before));
-      void switched.then(() => this.device.restored(deviceAccountOf(donor)));
-    } else if (before === null) {
+    if (before === null || before.id !== donor.id) {
       void this.device.restored(deviceAccountOf(donor));
     }
     return donor;

@@ -4,6 +4,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { authInterceptor } from '../../../../core/auth/auth-interceptor';
 import { AuthStore } from '../../../../core/auth/auth-store';
 import { PasskeyAuthenticator } from '../../../../core/auth/passkey-authenticator';
+import { deviceAccountOf, SESSION_DEVICE } from '../../../../core/auth/session-device';
 import {
   authResponse,
   FakePasskeyAuthenticator,
@@ -569,5 +570,85 @@ describe('Given the passkeys panel of a donor without a password', () => {
     await settle();
 
     expect(texts('.passkey-name')).toEqual(['iPhone', 'MacBook']);
+  });
+});
+
+describe('Given the passkeys panel on a device that keeps a copy of the donor data', () => {
+  const PRF_INPUT = new Uint8Array(32).fill(3);
+  let http: HttpTestingController;
+  let passkeys: FakePasskeyAuthenticator;
+  let added: { account: unknown; output: Uint8Array }[];
+
+  beforeEach(async () => {
+    passkeys = new FakePasskeyAuthenticator();
+    passkeys.prfOutput = new Uint8Array(32).fill(9);
+    added = [];
+    await TestBed.configureTestingModule({
+      imports: [PasskeysPanel],
+      providers: [
+        provideHttpClient(withInterceptors([authInterceptor])),
+        provideHttpClientTesting(),
+        { provide: PasskeyAuthenticator, useValue: passkeys },
+        {
+          provide: SESSION_DEVICE,
+          useValue: {
+            prfInput: async () => PRF_INPUT,
+            signedIn: async () => undefined,
+            restored: async () => undefined,
+            signedOut: async () => undefined,
+            signedOutElsewhere: () => undefined,
+            sessionLost: async () => undefined,
+            passwordChanged: async () => undefined,
+            passwordRemoved: async () => undefined,
+            passkeyAdded: async (account: unknown, reading: { output: Uint8Array }) =>
+              void added.push({ account, output: new Uint8Array(reading.output) }),
+          },
+        },
+      ],
+    }).compileComponents();
+    http = TestBed.inject(HttpTestingController);
+    TestBed.inject(AuthStore).login('jana@example.cz', 'correct horse battery').subscribe();
+    http.expectOne('/api/donors/auth/login').flush(authResponse('token-1'));
+  });
+
+  afterEach(() => http.verify());
+
+  it('when the donor adds a passkey, then the device input goes to the ceremony and the PRF output to the copy', async () => {
+    const fixture = TestBed.createComponent(PasskeysPanel);
+    const root = fixture.nativeElement as HTMLElement;
+    const settle = async () => {
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+    };
+    await settle();
+    http.expectOne(PASSKEYS_URL).flush({ items: [IPHONE] });
+    await settle();
+    Array.from(root.querySelectorAll('button'))
+      .find((button) => button.textContent?.includes('Přidat přístupový klíč'))
+      ?.click();
+    await settle();
+    for (const [selector, value] of [
+      ['#passkey-name', 'MacBook'],
+      ['#passkey-password', 'correct horse battery'],
+    ]) {
+      const input = root.querySelector(selector) as HTMLInputElement;
+      input.value = value;
+      input.dispatchEvent(new Event('input'));
+    }
+    await settle();
+    root.querySelector('form')!.dispatchEvent(new Event('submit'));
+    await settle();
+
+    http.expectOne(OPTIONS_URL).flush(passkeyCreationOptions());
+    await vi.waitFor(() => expect(passkeys.created).toHaveLength(1));
+    await settle();
+    http.expectOne(PASSKEYS_URL).flush(samplePasskey({ id: 'new', name: 'MacBook' }));
+    await settle();
+
+    expect(passkeys.prfInputs).toEqual([PRF_INPUT]);
+    expect(added).toEqual([
+      { account: deviceAccountOf(sampleDonor()), output: new Uint8Array(32).fill(9) },
+    ]);
   });
 });

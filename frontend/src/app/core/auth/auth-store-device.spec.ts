@@ -279,7 +279,7 @@ describe('Given the auth store on a device that keeps a copy of the donor data',
     expect(device.calls).toEqual([['sessionLost']]);
   });
 
-  it('when a refresh answers for another donor, then the copy of the first is closed as after a sign-out and the copy of the other opens', async () => {
+  it('when a refresh answers for another donor, then the device opens the copy of the other, which closes the first', async () => {
     signIn();
 
     store.refresh().subscribe();
@@ -287,12 +287,7 @@ describe('Given the auth store on a device that keeps a copy of the donor data',
       http.expectOne('/api/donors/auth/refresh').flush(authResponse('token-10', PETR_DONOR)),
     );
 
-    await vi.waitFor(() =>
-      expect(device.calls).toEqual([
-        ['signedOut', JANA],
-        ['restored', PETR],
-      ]),
-    );
+    await vi.waitFor(() => expect(device.calls).toEqual([['restored', PETR]]));
   });
 
   it('when a passkey sign-in is abandoned after the authenticator answered, then the PRF output is zeroed', async () => {
