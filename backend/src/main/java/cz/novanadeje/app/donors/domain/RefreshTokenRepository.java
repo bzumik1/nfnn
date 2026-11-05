@@ -13,6 +13,12 @@ public interface RefreshTokenRepository {
 
     Optional<RefreshToken> findById(UUID id);
 
+    Optional<RefreshToken> findBySecretHashForUpdate(String secretHash);
+
+    void recordSuccessor(UUID tokenId, UUID successorId);
+
+    boolean revokeIfUnused(UUID tokenId, Instant at);
+
     boolean markUsed(UUID tokenId, Instant at);
 
     List<RefreshToken> findUsableClientTokensOf(DonorId donorId, Instant now);

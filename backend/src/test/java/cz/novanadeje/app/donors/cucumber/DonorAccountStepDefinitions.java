@@ -27,6 +27,8 @@ public class DonorAccountStepDefinitions {
     private final DonorRegistrations registrations;
     private String currentRefreshCookie;
     private String previousRefreshCookie;
+    private String lostRefreshCookie;
+    private String keptRefreshCookie;
 
     public DonorAccountStepDefinitions(ApiClient api, DonorRegistrations registrations) {
         this.api = api;
@@ -120,6 +122,32 @@ public class DonorAccountStepDefinitions {
     @When("the donor refreshes the session with the previous refresh cookie")
     public void theDonorRefreshesWithThePreviousCookie() {
         api.sendCookie(previousRefreshCookie);
+        api.post(REFRESH_PATH, Map.of());
+    }
+
+    @When("the donor refreshes the session but the answer is lost")
+    public void theDonorRefreshesButTheAnswerIsLost() {
+        api.sendCookie(currentRefreshCookie);
+        ResponseEntity<String> response = api.post(REFRESH_PATH, Map.of());
+        if (response.getStatusCode().is2xxSuccessful()) {
+            lostRefreshCookie = refreshSetCookie(response).split(";", 2)[0];
+        }
+    }
+
+    @When("the donor refreshes the session with the refresh cookie of the lost answer")
+    public void theDonorRefreshesWithTheLostCookie() {
+        api.sendCookie(lostRefreshCookie);
+        api.post(REFRESH_PATH, Map.of());
+    }
+
+    @When("the donor keeps the refresh cookie aside")
+    public void theDonorKeepsTheRefreshCookieAside() {
+        keptRefreshCookie = currentRefreshCookie;
+    }
+
+    @When("the donor refreshes the session with the kept refresh cookie")
+    public void theDonorRefreshesWithTheKeptCookie() {
+        api.sendCookie(keptRefreshCookie);
         api.post(REFRESH_PATH, Map.of());
     }
 

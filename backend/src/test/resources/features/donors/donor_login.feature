@@ -33,7 +33,50 @@ Feature: Donor signs in and keeps a session
     Then the response status is 200
     And the response carries an access token and a refresh cookie
     And the refresh cookie differs from the previous one
-    When the donor refreshes the session with the previous refresh cookie
+    When 2 minutes pass
+    And the donor refreshes the session with the previous refresh cookie
+    Then the response status is 401
+    And the problem type ends with "auth/invalid-refresh-token"
+    When the donor refreshes the session
+    Then the response status is 401
+    And the problem type ends with "auth/invalid-refresh-token"
+
+  Scenario: A refresh whose answer was lost is repeated within 60 seconds and keeps the session
+    Given the donor signed in with email "jana@example.cz" and password "correct horse battery"
+    When the donor refreshes the session but the answer is lost
+    Then the response status is 200
+    When 59 seconds pass
+    And the donor refreshes the session
+    Then the response status is 200
+    And the response carries an access token and a refresh cookie
+    When the donor refreshes the session with the refresh cookie of the lost answer
+    Then the response status is 401
+    And the problem type ends with "auth/invalid-refresh-token"
+    When the donor refreshes the session
+    Then the response status is 200
+    When the donor asks for the profile
+    Then the response status is 200
+
+  Scenario: A refresh repeated 60 seconds after its lost answer ends every session
+    Given the donor signed in with email "jana@example.cz" and password "correct horse battery"
+    When the donor refreshes the session but the answer is lost
+    Then the response status is 200
+    When 60 seconds pass
+    And the donor refreshes the session
+    Then the response status is 401
+    And the problem type ends with "auth/invalid-refresh-token"
+    When the donor refreshes the session with the refresh cookie of the lost answer
+    Then the response status is 401
+    And the problem type ends with "auth/invalid-refresh-token"
+
+  Scenario: A refresh repeated after the next refresh token was used ends every session
+    Given the donor signed in with email "jana@example.cz" and password "correct horse battery"
+    And the donor keeps the refresh cookie aside
+    When the donor refreshes the session
+    Then the response status is 200
+    When the donor refreshes the session
+    Then the response status is 200
+    When the donor refreshes the session with the kept refresh cookie
     Then the response status is 401
     And the problem type ends with "auth/invalid-refresh-token"
     When the donor refreshes the session

@@ -72,6 +72,6 @@ class RefreshTokenJpaEntity {
     RefreshToken toDomain() {
         Set<OAuthScope> scopes = scope == null ? Set.of() : OAuthScope.parse(scope);
         return RefreshToken.reconstitute(id, new DonorId(donorId), secretHash, issuedAt, expiresAt, secondFactorVerified,
-                clientId == null ? null : new ClientId(clientId), scopes, grantedAt, usedAt, revokedAt);
+                clientId == null ? null : new ClientId(clientId), scopes, grantedAt, usedAt, revokedAt, null);
     }
 }
