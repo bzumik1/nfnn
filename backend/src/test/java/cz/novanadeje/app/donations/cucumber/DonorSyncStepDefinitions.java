@@ -49,9 +49,8 @@ public class DonorSyncStepDefinitions {
         sessions.actAs(alias);
         device.downloaded = List.of();
         device.removed = List.of();
-        if (api.get(MANIFEST_PATH).getStatusCode().value() != 200) {
-            return;
-        }
+        ResponseEntity<String> answered = api.get(MANIFEST_PATH);
+        assertThat(answered.getStatusCode().value()).withFailMessage("The manifest answered %s", answered.getBody()).isEqualTo(200);
         JsonNode manifest = api.lastResponseJson();
         Map<String, JsonNode> listed = new TreeMap<>();
         manifest.get("chunks").forEach(chunk -> listed.put(chunk.get("id").asString(), chunk));
@@ -70,6 +69,7 @@ public class DonorSyncStepDefinitions {
         assertThat(answer.getStatusCode().value()).withFailMessage("The chunks answered %s", answer.getBody()).isEqualTo(200);
         JsonNode chunks = api.lastResponseJson();
         assertThat(chunks.get("subject")).isEqualTo(manifest.get("subject"));
+        assertThat(chunks.get("summary")).withFailMessage("The chunks came with another summary than their manifest: %s", chunks).isEqualTo(manifest.get("summary"));
         assertThat(chunks.get("missing").isEmpty()).withFailMessage("Chunks went missing during a sync: %s", chunks).isTrue();
         chunks.get("chunks").forEach(chunk -> {
             JsonNode inManifest = listed.get(chunk.get("id").asString());

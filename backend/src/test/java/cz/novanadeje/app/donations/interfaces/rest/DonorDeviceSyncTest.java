@@ -1,8 +1,11 @@
 package cz.novanadeje.app.donations.interfaces.rest;
 
 import cz.novanadeje.app.donations.DonationRowsContext;
-import cz.novanadeje.app.sharedcases.CaseRows;
+import cz.novanadeje.app.donations.domain.donor.DonorReference;
+import cz.novanadeje.app.donations.domain.donor.SymbolClaimRepository;
+import cz.novanadeje.app.shared.domain.FoundationZone;
 import cz.novanadeje.app.shared.infrastructure.json.CanonicalRows;
+import cz.novanadeje.app.sharedcases.CaseRows;
 import cz.novanadeje.app.support.DatabaseCleaner;
 import cz.novanadeje.app.support.MutableClock;
 import cz.novanadeje.app.support.RateLimiterWindows;
@@ -15,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.test.util.AopTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import tools.jackson.databind.JsonNode;
@@ -38,6 +42,8 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
@@ -48,11 +54,18 @@ class DonorDeviceSyncTest {
     private static final int DEFAULT_SEEDS = 30;
     private static final int OPERATIONS = 24;
     private static final int DEVICES = 3;
+    private static final int SYNC_ATTEMPTS = 3;
     private static final int TIMED_DONATIONS = 1_000;
+    private static final int WARM_UP_RUNS = 5;
     private static final int TIMED_RUNS = 21;
     private static final long MANIFEST_BUDGET_MILLIS = 50;
     private static final String MANIFEST = "/api/donations/me/sync";
     private static final String CHUNKS = "/api/donations/me/sync/chunks";
+    private static final List<List<String>> ACCOUNTS = List.of(List.of("2900233333", "2010"), List.of("2900244444", "0800"),
+            List.of("1234567", "0800"), List.of("7654321", "0800"));
+    private static final List<String> SYMBOLS = List.of("6123456789", "7012345678", "8123456780");
+    private static final Runnable NOTHING_MEANWHILE = () -> {
+    };
 
     private final JsonMapper json = JsonMapper.builder().build();
 
@@ -64,6 +77,8 @@ class DonorDeviceSyncTest {
     private MutableClock clock;
     @Autowired
     private DonorSyncRateLimiter syncRateLimiter;
+    @Autowired
+    private SymbolClaimRepository symbolClaims;
 
     @AfterEach
     void truncate() {
@@ -71,7 +86,7 @@ class DonorDeviceSyncTest {
     }
 
     @TestFactory
-    @DisplayName("Given seeded random changes to the gifts of two donors, when three devices of one donor sync at random moments, then each device ends with what a fresh download gives")
+    @DisplayName("Given seeded random changes to the gifts, bank accounts and symbol answers of two donors, when three devices of one donor sync at random moments, some while a change lands between the manifest and the chunks, then each device ends with what a fresh download gives")
     Stream<DynamicTest> should_hold_what_a_fresh_download_gives_when_three_devices_sync_at_random_moments_given_seeded_random_changes() {
         int seeds = Optional.ofNullable(System.getenv(SEEDS_VARIABLE)).map(Integer::parseInt).orElse(DEFAULT_SEEDS);
         return IntStream.rangeClosed(1, seeds).mapToObj(seed -> DynamicTest.dynamicTest(
@@ -108,6 +123,45 @@ class DonorDeviceSyncTest {
     }
 
     @Test
+    @DisplayName("Given a symbol answer committed by another transaction while the backend reads the donor's rows, when it answers the manifest, then the answer holds the rows as they stood when its read began")
+    void should_answer_the_rows_as_they_stood_when_the_read_began_when_the_backend_answers_the_manifest_given_a_change_committed_meanwhile() throws Exception {
+        CaseRows rows = CaseRows.fromJson(json.readTree(TWO_DONORS));
+        rows.write(jdbc, clock);
+        UUID jana = rows.donorId("jana");
+        insertManualGift(UUID.randomUUID(), jana, LocalDate.parse("2026-03-10"), 50_000);
+        SymbolClaimRepository spy = AopTestUtils.getUltimateTargetObject(symbolClaims);
+        doAnswer(call -> {
+            Thread meanwhile = Thread.ofPlatform().start(() -> answerSymbol(UUID.randomUUID(), jana, ACCOUNTS.getFirst(), SYMBOLS.getFirst(), "CONFIRMED"));
+            meanwhile.join();
+            return call.callRealMethod();
+        }).when(spy).findByDonor(any(DonorReference.class));
+
+        Map<String, String> answered = digests(answer(jana, get(MANIFEST)));
+
+        assertThat(jdbc.sql("select count(*) from donor_symbol_claim").query(Integer.class).single()).as("the answer committed meanwhile").isEqualTo(1);
+        assertThat(answered.keySet()).as("the chunks of an answer whose read began before the symbol answer").containsExactly("donations:2026");
+    }
+
+    @Test
+    @DisplayName("Given bank accounts and symbol answers whose ids sort against their numbers, when the device asks for the chunks, then their rows come by account number and symbol, not by id")
+    void should_list_rows_by_account_number_and_symbol_when_the_device_asks_for_the_chunks_given_ids_that_sort_against_them() throws Exception {
+        CaseRows rows = CaseRows.fromJson(json.readTree(TWO_DONORS));
+        rows.write(jdbc, clock);
+        UUID jana = rows.donorId("jana");
+        linkAccount(new UUID(0, 2), jana, ACCOUNTS.get(2), "ACTIVE", LocalDate.parse("2026-05-01"));
+        linkAccount(new UUID(0, 1), jana, ACCOUNTS.get(3), "ACTIVE", LocalDate.parse("2026-05-01"));
+        answerSymbol(new UUID(0, 4), jana, ACCOUNTS.get(2), SYMBOLS.get(0), "CONFIRMED");
+        answerSymbol(new UUID(0, 3), jana, ACCOUNTS.get(2), SYMBOLS.get(1), "DECLINED");
+
+        JsonNode bodies = answer(jana, get(CHUNKS).param("ids", "bank-accounts,symbol-claims"));
+
+        assertThat(bodies.get("chunks").get(0).get("rows").valueStream().map(row -> row.get("accountNumber").asString()).toList())
+                .containsExactly("1234567/0800", "7654321/0800");
+        assertThat(bodies.get("chunks").get(1).get("rows").valueStream().map(row -> row.get("variableSymbol").asString()).toList())
+                .containsExactly(SYMBOLS.get(0), SYMBOLS.get(1));
+    }
+
+    @Test
     @DisplayName("Given a donor with a thousand gifts, when the device asks for the manifest, then the backend answers within 50 ms")
     void should_answer_within_50_ms_when_the_device_asks_for_the_manifest_given_a_donor_with_a_thousand_gifts() throws Exception {
         CaseRows rows = CaseRows.fromJson(json.readTree(TWO_DONORS));
@@ -115,10 +169,18 @@ class DonorDeviceSyncTest {
         UUID jana = rows.donorId("jana");
         Random random = new Random(20261105L);
         for (int gift = 0; gift < TIMED_DONATIONS; gift++) {
-            insertManualGift(new UUID(random.nextLong(), random.nextLong()), jana, LocalDate.of(2016 + random.nextInt(11), 1 + random.nextInt(12), 1 + random.nextInt(28)),
-                    100 + random.nextInt(1_000_000));
+            LocalDate day = LocalDate.of(2016 + random.nextInt(11), 1 + random.nextInt(12), 1 + random.nextInt(28));
+            UUID id = new UUID(random.nextLong(), random.nextLong());
+            if (random.nextBoolean()) {
+                insertBankGift(id, jana, day, 100 + random.nextInt(1_000_000), random.nextLong(1, Long.MAX_VALUE));
+            } else {
+                insertManualGift(id, jana, day, 100 + random.nextInt(1_000_000));
+            }
         }
-        answer(jana, get(MANIFEST));
+        for (int run = 0; run < WARM_UP_RUNS; run++) {
+            RateLimiterWindows.reset(List.of(syncRateLimiter));
+            answer(jana, get(MANIFEST));
+        }
         long[] millis = new long[TIMED_RUNS];
         for (int run = 0; run < TIMED_RUNS; run++) {
             RateLimiterWindows.reset(List.of(syncRateLimiter));
@@ -144,8 +206,12 @@ class DonorDeviceSyncTest {
             operations.add(change(random, jana, petr));
             for (Device device : devices) {
                 if (random.nextInt(10) < 4) {
-                    device.sync();
-                    assertThat(device.sync()).as("a second sync right after the first, seed %d after %s", seed, operations).isEmpty();
+                    if (random.nextInt(4) == 0) {
+                        device.sync(() -> operations.add("meanwhile " + change(random, jana, petr)));
+                    } else {
+                        device.sync();
+                        assertThat(device.sync()).as("a second sync right after the first, seed %d after %s", seed, operations).isEmpty();
+                    }
                 }
             }
         }
@@ -157,45 +223,117 @@ class DonorDeviceSyncTest {
     }
 
     private String change(Random random, UUID jana, UUID petr) {
-        List<UUID> janasGifts = jdbc.sql("select id from donation where donor_id = :donor order by id").param("donor", jana).query(UUID.class).list();
-        int kind = random.nextInt(janasGifts.isEmpty() ? 2 : 7);
+        List<UUID> gifts = idsOf("select id from donation where donor_id = :donor order by id", jana);
+        List<UUID> links = idsOf("select id from donor_sender_account where donor_id = :donor and status <> 'DISCONNECTED' order by id", jana);
+        List<UUID> claims = idsOf("select id from donor_symbol_claim c where donor_id = :donor "
+                + "and not exists (select 1 from donation d where d.symbol_claim_id = c.id) order by id", jana);
+        List<String> possible = new ArrayList<>(List.of("a bank gift", "a gift recorded by hand", "a bank import", "time passing", "a linked account",
+                "a symbol answer"));
+        if (!gifts.isEmpty()) {
+            possible.addAll(List.of("an unpairing", "a refund", "a corrected amount", "a gift from a linked account"));
+        }
+        if (!links.isEmpty()) {
+            possible.add("a disconnected account");
+        }
+        if (!claims.isEmpty()) {
+            possible.add("a reversed symbol answer");
+        }
+        String operation = possible.get(random.nextInt(possible.size()));
         UUID id = new UUID(random.nextLong(), random.nextLong());
         LocalDate day = LocalDate.of(2024 + random.nextInt(3), 1 + random.nextInt(12), 1 + random.nextInt(28));
         long amount = 100 + random.nextInt(100_000);
-        switch (kind) {
-            case 0 -> insertBankGift(id, jana, day, amount, random.nextLong(1, Long.MAX_VALUE));
-            case 1 -> insertManualGift(id, random.nextBoolean() ? jana : petr, day, amount);
-            case 2 -> unpair(janasGifts.get(random.nextInt(janasGifts.size())));
-            case 3 -> jdbc.sql("update donation set status = 'REFUNDED' where id = :id").param("id", janasGifts.get(random.nextInt(janasGifts.size()))).update();
-            case 4 -> jdbc.sql("update donation set amount_minor = :amount where id = :id and source = 'MANUAL'")
-                    .param("amount", amount).param("id", janasGifts.get(random.nextInt(janasGifts.size()))).update();
-            case 5 -> recordBankImport();
-            default -> clock.advance(Duration.ofHours(1 + random.nextInt(24 * 60)));
+        List<String> account = ACCOUNTS.get(random.nextInt(ACCOUNTS.size()));
+        switch (operation) {
+            case "a bank gift" -> insertBankGift(id, jana, day, amount, random.nextLong(1, Long.MAX_VALUE));
+            case "a gift recorded by hand" -> insertManualGift(id, random.nextBoolean() ? jana : petr, day, amount);
+            case "a bank import" -> recordBankImport();
+            case "time passing" -> clock.advance(Duration.ofHours(1 + random.nextInt(24 * 60)));
+            case "a linked account" -> linkAccount(id, random.nextBoolean() ? jana : petr, account, random.nextBoolean() ? "ACTIVE" : "AWAITING_PAYMENT", day);
+            case "a symbol answer" -> answerSymbol(id, jana, account, SYMBOLS.get(random.nextInt(SYMBOLS.size())), random.nextBoolean() ? "CONFIRMED" : "DECLINED");
+            case "an unpairing" -> unpair(pick(random, gifts));
+            case "a refund" -> jdbc.sql("update donation set status = 'REFUNDED' where id = :id").param("id", pick(random, gifts)).update();
+            case "a corrected amount" -> jdbc.sql("update donation set amount_minor = :amount where id = :id and source = 'MANUAL'")
+                    .param("amount", amount).param("id", pick(random, gifts)).update();
+            case "a gift from a linked account" -> pointAtLinkAndClaim(pick(random, gifts), jana, random);
+            case "a disconnected account" -> jdbc.sql("update donor_sender_account set status = 'DISCONNECTED', valid_to = greatest(coalesce(valid_from, :day), :day), disconnected_at = :at where id = :id")
+                    .param("day", LocalDate.ofInstant(clock.instant(), FoundationZone.ZONE)).param("at", Timestamp.from(clock.instant())).param("id", pick(random, links)).update();
+            case "a reversed symbol answer" -> jdbc.sql("delete from donor_symbol_claim where id = :id").param("id", pick(random, claims)).update();
+            default -> throw new IllegalStateException("Unknown operation " + operation);
         }
-        return switch (kind) {
-            case 0 -> "a bank gift";
-            case 1 -> "a gift recorded by hand";
-            case 2 -> "an unpairing";
-            case 3 -> "a refund";
-            case 4 -> "a corrected amount";
-            case 5 -> "a bank import";
-            default -> "time passing";
-        };
+        return operation;
+    }
+
+    private static UUID pick(Random random, List<UUID> ids) {
+        return ids.get(random.nextInt(ids.size()));
+    }
+
+    private List<UUID> idsOf(String query, UUID donor) {
+        return jdbc.sql(query).param("donor", donor).query(UUID.class).list();
+    }
+
+    private void linkAccount(UUID id, UUID donor, List<String> account, String status, LocalDate from) {
+        Optional<UUID> proof = status.equals("ACTIVE") ? Optional.of(insertPayment(account, from, 100, Math.abs(id.getLeastSignificantBits()) + 1)) : Optional.empty();
+        jdbc.sql("insert into donor_sender_account (id, donor_id, account_number, bank_code, learned_from_payment_id, learned_at, status, valid_from, valid_to, "
+                        + "created_at, disconnected_at) values (:id, :donor, :number, :bank, :proof, :provedAt, :status, :from, null, :created, null) on conflict do nothing")
+                .param("id", id)
+                .param("donor", donor)
+                .param("number", account.get(0))
+                .param("bank", account.get(1))
+                .param("proof", proof.orElse(null))
+                .param("provedAt", proof.map(ignored -> Timestamp.from(clock.instant())).orElse(null))
+                .param("status", status)
+                .param("from", from)
+                .param("created", Timestamp.from(clock.instant()))
+                .update();
+    }
+
+    private void pointAtLinkAndClaim(UUID gift, UUID donor, Random random) {
+        List<UUID> links = idsOf("select id from donor_sender_account where donor_id = :donor order by id", donor);
+        List<UUID> confirmed = idsOf("select id from donor_symbol_claim where donor_id = :donor and answer = 'CONFIRMED' order by id", donor);
+        if (links.isEmpty()) {
+            return;
+        }
+        boolean bySymbol = !confirmed.isEmpty() && random.nextBoolean();
+        jdbc.sql("update donation set paired_by = :pairedBy, sender_account_id = :link, symbol_claim_id = :claim where id = :id and source = 'BANK_TRANSFER'")
+                .param("pairedBy", bySymbol ? "CONFIRMED_SYMBOL" : "SENDER_ACCOUNT")
+                .param("link", pick(random, links))
+                .param("claim", bySymbol ? pick(random, confirmed) : null)
+                .param("id", gift)
+                .update();
+    }
+
+    private void answerSymbol(UUID id, UUID donor, List<String> account, String symbol, String answer) {
+        jdbc.sql("insert into donor_symbol_claim (id, donor_id, account_number, bank_code, variable_symbol, answer, answered_at) "
+                        + "values (:id, :donor, :number, :bank, :symbol, :answer, :at) on conflict do nothing")
+                .param("id", id)
+                .param("donor", donor)
+                .param("number", account.get(0))
+                .param("bank", account.get(1))
+                .param("symbol", symbol)
+                .param("answer", answer)
+                .param("at", Timestamp.from(clock.instant()))
+                .update();
     }
 
     private void insertBankGift(UUID id, UUID donor, LocalDate day, long amount, long transaction) {
+        insertGift(id, donor, Optional.of(insertPayment(ACCOUNTS.getFirst(), day, amount, transaction)), day, amount);
+    }
+
+    private UUID insertPayment(List<String> account, LocalDate day, long amount, long transaction) {
         UUID payment = UUID.randomUUID();
         jdbc.sql("insert into bank_payment (id, bank_transaction_id, booked_on, amount_minor, currency, sender_account_number, sender_bank_code, "
                         + "counterparty_account, counterparty_bank_code, counterparty_name, variable_symbol, matching_variable_symbol, constant_symbol, "
                         + "specific_symbol, message_for_recipient, transaction_type, imported_at, unpaired_by_admin_at) values (:id, :transaction, :booked, "
-                        + ":amount, 'CZK', '2900233333', '2010', '2900233333', '2010', null, null, null, null, null, null, 'Bezhotovostní příjem', :imported, null)")
+                        + ":amount, 'CZK', :number, :bank, :number, :bank, null, null, null, null, null, null, 'Bezhotovostní příjem', :imported, null)")
                 .param("id", payment)
                 .param("transaction", transaction)
                 .param("booked", day)
                 .param("amount", amount)
+                .param("number", account.get(0))
+                .param("bank", account.get(1))
                 .param("imported", Timestamp.from(clock.instant()))
                 .update();
-        insertGift(id, donor, Optional.of(payment), day, amount);
+        return payment;
     }
 
     private void insertManualGift(UUID id, UUID donor, LocalDate day, long amount) {
@@ -262,27 +400,42 @@ class DonorDeviceSyncTest {
         }
 
         private List<String> sync() throws Exception {
-            RateLimiterWindows.reset(List.of(syncRateLimiter));
-            manifest = answer(donor, get(MANIFEST));
-            Map<String, String> listed = new LinkedHashMap<>();
-            manifest.get("chunks").forEach(chunk -> listed.put(chunk.get("id").asString(), chunk.get("rowsSha256").asString()));
-            chunks.keySet().retainAll(listed.keySet());
-            List<String> wanted = listed.entrySet().stream()
-                    .filter(entry -> !chunks.containsKey(entry.getKey()) || !chunks.get(entry.getKey()).get("rowsSha256").asString().equals(entry.getValue()))
-                    .map(Map.Entry::getKey)
-                    .toList();
-            if (!wanted.isEmpty()) {
+            return sync(NOTHING_MEANWHILE);
+        }
+
+        private List<String> sync(Runnable meanwhile) throws Exception {
+            List<String> downloaded = new ArrayList<>();
+            Runnable beforeChunks = meanwhile;
+            for (int attempt = 0; attempt < SYNC_ATTEMPTS; attempt++) {
+                RateLimiterWindows.reset(List.of(syncRateLimiter));
+                manifest = answer(donor, get(MANIFEST));
+                Map<String, String> listed = new LinkedHashMap<>();
+                manifest.get("chunks").forEach(chunk -> listed.put(chunk.get("id").asString(), chunk.get("rowsSha256").asString()));
+                chunks.keySet().retainAll(listed.keySet());
+                List<String> wanted = listed.entrySet().stream()
+                        .filter(entry -> !chunks.containsKey(entry.getKey()) || !chunks.get(entry.getKey()).get("rowsSha256").asString().equals(entry.getValue()))
+                        .map(Map.Entry::getKey)
+                        .toList();
+                if (wanted.isEmpty()) {
+                    return downloaded;
+                }
+                beforeChunks.run();
+                beforeChunks = NOTHING_MEANWHILE;
                 JsonNode bodies = answer(donor, get(CHUNKS).param("ids", String.join(",", wanted)));
-                assertThat(bodies.get("missing").isEmpty()).isTrue();
-                bodies.get("chunks").forEach(body -> {
+                boolean asListed = bodies.get("missing").isEmpty() && bodies.get("summary").equals(manifest.get("summary"));
+                for (JsonNode body : bodies.get("chunks")) {
                     String id = body.get("id").asString();
-                    assertThat(body.get("rowsSha256").asString()).as("the chunk %s and its manifest entry", id).isEqualTo(listed.get(id));
-                    assertThat(CanonicalRows.sha256(body.get("rows"))).as("the digest of the rows of %s", id).isEqualTo(listed.get(id));
+                    assertThat(CanonicalRows.sha256(body.get("rows"))).as("the digest of the rows of %s", id).isEqualTo(body.get("rowsSha256").asString());
                     assertThat(body.get("count").asInt()).isEqualTo(body.get("rows").size());
                     chunks.put(id, body);
-                });
+                    downloaded.add(id);
+                    asListed = asListed && body.get("rowsSha256").asString().equals(listed.get(id));
+                }
+                if (asListed) {
+                    return downloaded;
+                }
             }
-            return wanted;
+            throw new AssertionError("The device found its copy changed meanwhile in " + SYNC_ATTEMPTS + " syncs in a row");
         }
 
         private Map<String, Object> copy() {

@@ -127,6 +127,67 @@ Feature: A donor's device keeps a copy of the donor's data by downloading only t
     And a device of "Jana" syncs
     Then the device downloaded no chunk
 
+  Scenario: A receipt comes in the chunk of the year it certifies, not of the year it was issued, and a replacement keeps the receipt it replaces beside it
+    Given today is 2026-12-20
+    And a person "Jana" is registered
+    And the bank account has these movements:
+      | id   | date       | amount  | account    | bankCode | name          | variableSymbol |
+      | 2001 | 2026-10-01 | 1000.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
+      | 2002 | 2026-11-15 | 2500.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
+    And the application starts the import
+    And today is 2027-01-15
+    When "Jana" issues the receipt of her donation received on 2026-10-01
+    And "Jana" issues her yearly receipt for 2026
+    And a device of "Jana" syncs
+    Then the device downloaded the chunks "bank-accounts, donations:2026, receipts:2026"
+    And the device holds the chunk "receipts:2026" with 2 rows
+    When "Jana" changes her address to street "Nová 7", postal code "405 02" and city "Děčín"
+    And "Jana" issues her yearly receipt for 2026
+    And a device of "Jana" syncs
+    Then the device downloaded the chunks "receipts:2026"
+    And the device removed no chunk
+    And the device holds the chunk "receipts:2026" with 3 rows
+    And the device's chunk "receipts:2026" holds every receipt "Jana" lists for 2026
+
+  Scenario: The device of an erased donor finds no chunk left while the token it holds is still valid
+    Given today is 2026-10-20
+    And a person "Jana" is registered
+    And a person "Petr" is registered
+    And "Petr" is an administrator
+    And the bank account has these movements:
+      | id   | date       | amount | account    | bankCode | name          | variableSymbol | message                               |
+      | 1002 | 2026-09-10 | 500.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |                                       |
+      | 1003 | 2026-10-05 | 1.00   | 2900233333 | 2010     | Nováková Jana | {Jana}         | OVERENI UCTU NADACNI FOND NOVA NADEJE |
+    And the application starts the import
+    And "Jana" issues the receipt of her donation received on 2026-09-10
+    And a device of "Jana" syncs
+    And the device downloaded the chunks "bank-accounts, donations:2026, receipts:2026"
+    When "Petr" erased the donor "Jana"
+    And a device of "Jana" syncs
+    Then the device downloaded no chunk
+    And the device removed the chunks "bank-accounts, donations:2026, receipts:2026"
+    And the device's summary totals 0 minor CZK in 0 donations
+
+  Scenario: The chunks come in the asked order, a repeated chunk once, up to 64 in one request, and no cache keeps an answer
+    Given today is 2026-10-20
+    And the foundation wants bank history from 2025-01-01
+    And the bank history is unlocked
+    And a person "Jana" is registered
+    And the bank account has these movements:
+      | id   | date       | amount | account    | bankCode | name          | variableSymbol |
+      | 1001 | 2025-11-30 | 100.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
+      | 1002 | 2026-03-10 | 500.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
+    And the application starts the import
+    When "Jana" asks for the sync chunks "donations:2026,donations:2025,donations:2026,receipts:2026"
+    Then the response status is 200
+    And the answer is JSON that must not be cached
+    And the chunks answer holds "donations:2026, donations:2025" and lists "receipts:2026" as missing
+    When "Jana" asks for 64 sync chunks
+    Then the response status is 200
+    When "Jana" asks for her sync manifest
+    Then the response status is 200
+    And the answer is JSON that must not be cached
+
   Scenario: Asking for chunks that are not chunk ids, too many or none is refused
     Given a person "Jana" is registered
     When "Jana" asks for the sync chunks "donations:26"

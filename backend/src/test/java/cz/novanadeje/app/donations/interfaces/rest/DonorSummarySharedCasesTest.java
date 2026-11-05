@@ -24,7 +24,7 @@ class DonorSummarySharedCasesTest extends DonationRowsSharedCaseRunner {
 
     @Override
     protected String when() {
-        return "when the backend reads the donor's donations with the real query and summarizes them, for the summary endpoint and the sync manifest alike";
+        return "when the backend reads the donor's donations with the real query and summarizes them";
     }
 
     @Override

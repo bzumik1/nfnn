@@ -11,6 +11,7 @@ import {
   topicSchemas,
 } from './shared-cases';
 import { parseVectorArt } from '../app/features/donations/receipt-pdf/vector-art';
+import { rowsSha256 } from '../app/features/donations/sync/canonical-rows';
 
 interface EditableCaseFile {
   source: string;
@@ -31,26 +32,6 @@ const VERIFICATION_CASES = 'verification/payload.json';
 const SYNC_CASES = 'sync/manifest.json';
 const FINDER_SPAN = 17;
 const MODULES_PER_VERSION = 4;
-
-function canonicalJson(value: unknown): string {
-  if (Array.isArray(value)) {
-    return `[${value.map(canonicalJson).join(',')}]`;
-  }
-  if (value !== null && typeof value === 'object') {
-    const members = Object.entries(value).sort(([first], [second]) =>
-      first < second ? -1 : first > second ? 1 : 0,
-    );
-    return `{${members.map(([name, member]) => `${JSON.stringify(name)}:${canonicalJson(member)}`).join(',')}}`;
-  }
-  return JSON.stringify(value);
-}
-
-async function sha256Hex(text: string): Promise<string> {
-  const digest = new Uint8Array(
-    await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)),
-  );
-  return Array.from(digest, (byte) => byte.toString(16).padStart(2, '0')).join('');
-}
 
 function editable(caseFile: string): EditableCaseFile {
   return structuredClone(sharedCaseContent(caseFile)) as EditableCaseFile;
@@ -430,17 +411,11 @@ describe('Given a shared case file without its schema', () => {
 describe('Given the sync manifest cases', () => {
   it("when the rows of each chunk are written as canonical JSON and hashed as a device will, then they give the chunk's rowsSha256 and count", async () => {
     const chunks = sharedCases(SYNC_CASES).flatMap((sharedCase) => sharedCase.expected.chunks);
-    const digests = await Promise.all(chunks.map((chunk) => sha256Hex(canonicalJson(chunk.rows))));
+    const digests = await Promise.all(chunks.map((chunk) => rowsSha256(chunk.rows)));
 
     expect(chunks.length).toBeGreaterThan(0);
     expect(digests).toEqual(chunks.map((chunk) => chunk.rowsSha256));
     expect(chunks.map((chunk) => chunk.rows.length)).toEqual(chunks.map((chunk) => chunk.count));
-  });
-
-  it('when a member name sorts differently by code unit than by code point, then the canonical JSON orders it by code unit', () => {
-    expect(canonicalJson({ '\u{1F600}': 1, '\uFFFF': 2, b: [true, null, 'x\n'], a: 0 })).toBe(
-      '{"a":0,"b":[true,null,"x\\n"],"\u{1F600}":1,"\uFFFF":2}',
-    );
   });
 
   it('when a chunk names a digest in upper case, then it is refused', () => {

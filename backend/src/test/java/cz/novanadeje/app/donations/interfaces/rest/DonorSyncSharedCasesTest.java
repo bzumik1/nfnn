@@ -58,6 +58,7 @@ class DonorSyncSharedCasesTest extends DonationRowsSharedCaseRunner {
         if (!ids.isEmpty()) {
             JsonNode bodies = answerAs(donor, "ROLE_DONOR", get("/api/donations/me/sync/chunks").param("ids", String.join(",", ids)));
             assertThat(bodies.get("subject")).isEqualTo(manifest.get("subject"));
+            assertThat(bodies.get("summary")).as("the summary of the chunks and of their manifest").isEqualTo(manifest.get("summary"));
             assertThat(bodies.get("missing").isEmpty()).as("chunks the manifest listed went missing: %s", bodies.get("missing")).isTrue();
             assertThat(bodies.get("chunks").size()).isEqualTo(ids.size());
             for (int index = 0; index < ids.size(); index++) {
