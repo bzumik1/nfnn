@@ -1,4 +1,5 @@
 import type { CopyIdentity, KeyWrap } from './copy-keys';
+import { base64UrlToBytes, bytesToBase64Url, framed, randomBytes } from './device-bytes';
 
 export type CopyKind = 'donor' | 'administration';
 
@@ -19,17 +20,37 @@ export interface RegistryEntryInput {
 }
 
 export function newDeviceSalt(): string {
-  throw new Error('not implemented');
+  return bytesToBase64Url(randomBytes(32));
 }
 
 export async function lookupTag(deviceSalt: string, email: string): Promise<string> {
-  throw new Error('not implemented');
+  return tagOf('nfnn-lookup-v1', deviceSalt, email.trim().toLowerCase());
 }
 
 export async function userHandleTag(deviceSalt: string, userHandle: string): Promise<string> {
-  throw new Error('not implemented');
+  return tagOf('nfnn-user-handle-v1', deviceSalt, base64UrlToBytes(userHandle));
 }
 
 export async function registryEntry(input: RegistryEntryInput): Promise<RegistryEntry> {
-  throw new Error('not implemented');
+  return {
+    copyId: input.copy.copyId,
+    copySalt: input.copy.copySalt,
+    kind: input.kind,
+    lookupTag: await lookupTag(input.deviceSalt, input.email),
+    userHandleTag:
+      input.userHandle === null ? null : await userHandleTag(input.deviceSalt, input.userHandle),
+    wraps: [...input.wraps],
+  };
+}
+
+async function tagOf(
+  label: string,
+  deviceSalt: string,
+  value: string | Uint8Array,
+): Promise<string> {
+  const digest = await crypto.subtle.digest(
+    'SHA-256',
+    framed(label, base64UrlToBytes(deviceSalt), value),
+  );
+  return bytesToBase64Url(new Uint8Array(digest));
 }

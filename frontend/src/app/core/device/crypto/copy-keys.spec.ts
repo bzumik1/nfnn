@@ -226,7 +226,7 @@ describe('Given a new device copy', () => {
 
       const opened = await openWithPrf(copy, wrap, PRF_OUTPUT);
 
-      expect(await opened.openRecord(GIFTS_2026, sealed)).toEqual(utf8('{}'));
+      expect(new TextDecoder().decode(await opened.openRecord(GIFTS_2026, sealed))).toBe('{}');
       expect(wrap).toMatchObject({ kind: 'prf', credentialId: CREDENTIAL });
     });
 

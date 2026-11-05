@@ -20,6 +20,8 @@ const RECEIPT_LAYOUT = 'src/app/features/donations/receipt-pdf/receipt-layout.ts
 const RECEIPT_WORKER = 'src/app/features/donations/receipt-pdf/receipt-pdf.worker.ts';
 const QR_DECODING = 'src/app/features/donations/verification/qr-decoding.ts';
 const QR_DECODER_WORKER = 'src/app/features/donations/verification/qr-decoder.worker.ts';
+const ARGON2 = 'src/app/core/device/crypto/argon2.ts';
+const ARGON2_WORKER = 'src/app/core/device/crypto/argon2.worker.ts';
 const COMPUTED_IMPORTS_ALLOWED_IN = ['routes'];
 
 const SCOPES = {
@@ -34,6 +36,8 @@ const SCOPES = {
   receiptWorker: { files: [RECEIPT_WORKER], within: 'app' },
   qrDecoding: { files: [QR_DECODING], within: 'app' },
   qrDecoderWorker: { files: [QR_DECODER_WORKER], within: 'app' },
+  argon2: { files: [ARGON2], within: 'app' },
+  argon2Worker: { files: [ARGON2_WORKER], within: 'app' },
 };
 
 const NODE_SETUPS = ['sharedCaseSetup', 'receiptAssetsSetup'];
@@ -164,6 +168,22 @@ const CONFINED_IMPORTS = [
     examples: ['./qr-decoding', '../verification/qr-decoding'],
     message:
       'The QR decoding carries jsQR, so only the QR decoder worker (qr-decoder.worker.ts) and tests load it; the app starts the worker instead.',
+  },
+  {
+    patterns: ['hash-wasm', 'hash-wasm/*'],
+    dynamic: '^hash-wasm(?:/.*)?$',
+    allowedIn: ['argon2', ...TEST_SCOPES],
+    examples: ['hash-wasm', 'hash-wasm/dist/argon2.umd.min.js'],
+    message:
+      'hash-wasm derives the password key of a device copy only in src/app/core/device/crypto/argon2.ts, which only the Argon2id worker loads, and in tests.',
+  },
+  {
+    patterns: ['**/argon2', '**/crypto/argon2', '**/argon2.js', '**/crypto/argon2.js'],
+    dynamic: '(?:^|/)argon2(?:\\.js)?$',
+    allowedIn: ['argon2Worker', ...TEST_SCOPES],
+    examples: ['./argon2', '../crypto/argon2'],
+    message:
+      'Argon2id carries hash-wasm and its WebAssembly, so only the Argon2id worker (argon2.worker.ts) and tests load it; the app asks WorkerPasswordKeyDerivation instead.',
   },
 ];
 

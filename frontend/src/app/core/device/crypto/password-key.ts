@@ -1,3 +1,5 @@
+import { utf8 } from './device-bytes';
+
 export interface Argon2Parameters {
   readonly algorithm: 'argon2id';
   readonly version: 19;
@@ -54,7 +56,7 @@ export interface MeasuredPasswordKey {
 }
 
 export function passwordBytes(password: string): Uint8Array<ArrayBuffer> {
-  throw new Error('not implemented');
+  return utf8(password.normalize('NFC'));
 }
 
 export async function deriveWithMeasuredParameters(
@@ -63,7 +65,22 @@ export async function deriveWithMeasuredParameters(
   salt: Uint8Array<ArrayBuffer>,
   now: () => number = () => performance.now(),
 ): Promise<MeasuredPasswordKey> {
-  throw new Error('not implemented');
+  const started = now();
+  try {
+    const key = await deriveWithParameters(derivation, password, salt, STRONG_PASSWORD_PARAMETERS);
+    if (now() - started <= STRONG_PARAMETERS_BUDGET_MS) {
+      return { key, parameters: STRONG_PASSWORD_PARAMETERS };
+    }
+    key.fill(0);
+  } catch (failure: unknown) {
+    if (!(failure instanceof PasswordKeyFailure)) {
+      throw failure;
+    }
+  }
+  return {
+    key: await deriveWithParameters(derivation, password, salt, STANDARD_PASSWORD_PARAMETERS),
+    parameters: STANDARD_PASSWORD_PARAMETERS,
+  };
 }
 
 export async function deriveWithParameters(
@@ -72,7 +89,12 @@ export async function deriveWithParameters(
   salt: Uint8Array<ArrayBuffer>,
   parameters: Argon2Parameters,
 ): Promise<Uint8Array<ArrayBuffer>> {
-  throw new Error('not implemented');
+  const bytes = passwordBytes(password);
+  try {
+    return await derivation.derive({ password: bytes, salt, parameters });
+  } finally {
+    bytes.fill(0);
+  }
 }
 
 export type WorkerFactory = () => Worker;
@@ -85,6 +107,24 @@ export class WorkerPasswordKeyDerivation implements PasswordKeyDerivation {
   ) {}
 
   derive(question: PasswordKeyQuestion): Promise<Uint8Array<ArrayBuffer>> {
-    throw new Error('not implemented');
+    const worker = this.startWorker();
+    return new Promise<Uint8Array<ArrayBuffer>>((resolve, reject) => {
+      const timer = setTimeout(() => finish(new PasswordKeyFailure('timeout')), this.timeoutMs);
+      const finish = (outcome: Uint8Array<ArrayBuffer> | PasswordKeyFailure): void => {
+        clearTimeout(timer);
+        worker.onmessage = null;
+        worker.onerror = null;
+        worker.terminate();
+        if (outcome instanceof PasswordKeyFailure) {
+          reject(outcome);
+        } else {
+          resolve(outcome);
+        }
+      };
+      worker.onmessage = ({ data }: MessageEvent<PasswordKeyAnswer>) =>
+        finish('key' in data ? new Uint8Array(data.key) : new PasswordKeyFailure(data.failure));
+      worker.onerror = () => finish(new PasswordKeyFailure('failed'));
+      worker.postMessage(question);
+    });
   }
 }

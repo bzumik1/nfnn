@@ -1,8 +1,9 @@
 import { argon2id as hashWasmArgon2id } from 'hash-wasm';
-import type {
-  PasswordKeyAnswer,
-  PasswordKeyFailureReason,
-  PasswordKeyQuestion,
+import {
+  PASSWORD_KEY_LENGTH,
+  type PasswordKeyAnswer,
+  type PasswordKeyFailureReason,
+  type PasswordKeyQuestion,
 } from './password-key';
 
 export interface Argon2idInput {
@@ -30,9 +31,25 @@ export async function argon2id(input: Argon2idInput): Promise<Uint8Array<ArrayBu
 export async function argon2WorkerAnswer(
   question: PasswordKeyQuestion,
 ): Promise<PasswordKeyAnswer> {
-  throw new Error('not implemented');
+  try {
+    return {
+      key: await argon2id({
+        password: question.password,
+        salt: question.salt,
+        memoryKiB: question.parameters.memoryKiB,
+        iterations: question.parameters.iterations,
+        parallelism: question.parameters.parallelism,
+        hashLength: PASSWORD_KEY_LENGTH,
+      }),
+    };
+  } catch (failure: unknown) {
+    return { failure: argon2FailureOf(failure) };
+  }
 }
 
 export function argon2FailureOf(failure: unknown): PasswordKeyFailureReason {
-  throw new Error('not implemented');
+  if (failure instanceof RangeError) {
+    return 'memory';
+  }
+  return failure instanceof Error && /memory/i.test(failure.message) ? 'memory' : 'failed';
 }
