@@ -134,6 +134,12 @@ export const adminRoutes: Routes = [
         loadComponent: () => import('./backups/admin-backups').then((m) => m.AdminBackups),
       },
       {
+        path: 'upozorneni',
+        data: { parent: ADMIN_MORE_PATH },
+        title: $localize`:@@admin.alerts.pageTitle:Upozornění na telefon | Správa | Nová naděje – nadační fond`,
+        loadComponent: () => import('./alerts/admin-alerts').then((m) => m.AdminAlerts),
+      },
+      {
         path: 'logy',
         data: { parent: ADMIN_MORE_PATH },
         title: $localize`:@@admin.logs.pageTitle:Logy a diagnostika | Správa | Nová naděje – nadační fond`,

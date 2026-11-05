@@ -100,6 +100,12 @@ public class TestSupportConfiguration {
     }
 
     @Bean
+    @Primary
+    public RecordingPushRetryTimer recordingPushRetryTimer() {
+        return new RecordingPushRetryTimer();
+    }
+
+    @Bean
     public static CachingPasswordHashers cachingPasswordHashers() {
         return new CachingPasswordHashers();
     }

@@ -1,0 +1,117 @@
+<section class="news-page">
+  <header class="ui-intro ui-intro--light">
+    <div class="ui-container">
+      <p class="ui-eyebrow" i18n="@@content.news.eyebrow">Aktuality</p>
+      <h1 #heading class="ui-intro__title" tabindex="-1" i18n="@@content.news.title">
+        Co je u nás nového
+      </h1>
+      <p class="ui-intro__lead" i18n="@@content.news.lead">
+        Zprávy o tom, komu jsme pomohli, co chystáme a jak naložíme s vašimi dary.
+      </p>
+    </div>
+  </header>
+
+  <div class="content ui-container">
+    <p class="list-state" role="status">
+      @if (state() === 'loading') {
+        <span i18n="@@content.list.news.loading">Načítáme aktuality…</span>
+      } @else if (state() === 'ready' && empty()) {
+        @if (pastLastPage()) {
+          <span i18n="@@content.list.pastEnd">Tato strana neexistuje.</span>
+        } @else {
+          <span i18n="@@content.list.news.empty">Zatím tu žádná aktualita není.</span>
+        }
+      }
+    </p>
+
+    @if (state() === 'ready' && empty()) {
+      <p class="next-step">
+        @if (pastLastPage()) {
+          <a class="ui-cta ui-cta--ghost" routerLink="/aktuality" i18n="@@content.list.firstPage"
+            >Na první stranu</a
+          >
+        } @else {
+          <a class="ui-cta ui-cta--ghost" routerLink="/" i18n="@@content.list.home"
+            >Zpět na úvodní stránku</a
+          >
+        }
+      </p>
+    }
+
+    @if (state() === 'error') {
+      <p class="list-error" role="alert">
+        @if (offline()) {
+          <ng-container i18n="@@content.news.offline"
+            >Bez připojení se aktuality nenačetly. Až budete online, zkuste to znovu.</ng-container
+          >
+        } @else {
+          <ng-container i18n="@@content.news.error">Aktuality se nepodařilo načíst.</ng-container>
+        }
+      </p>
+      <button
+        #retryButton
+        type="button"
+        class="retry ui-cta ui-cta--ghost"
+        (click)="retry()"
+        i18n="@@content.list.retry"
+      >
+        Zkusit znovu
+      </button>
+    }
+
+    @if (state() === 'ready') {
+      @if (featured(); as lead) {
+        <app-featured-news [item]="lead" />
+      }
+
+      @if (stories(); as year) {
+        <app-year-stories class="stories-block" [stories]="year" />
+      }
+
+      @if (older().length > 0) {
+        <section class="older" aria-labelledby="news-older-title">
+          @if (featured()) {
+            <h2 id="news-older-title" class="section-title" i18n="@@content.news.older.title">
+              Starší zprávy
+            </h2>
+          } @else {
+            <h2 id="news-older-title" class="visually-hidden" i18n="@@content.news.older.page">
+              Zprávy na straně {{ pageNumber() }}
+            </h2>
+          }
+          <div class="grid">
+            @for (item of older(); track item.id) {
+              <app-news-card [item]="item" />
+            }
+          </div>
+        </section>
+      }
+
+      @if (pageCount() > 1 && !empty()) {
+        <nav class="pages" [attr.aria-label]="pagesLabel">
+          @if (pageNumber() > 1) {
+            <a
+              class="ui-cta ui-cta--ghost"
+              routerLink="/aktuality"
+              [queryParams]="newerQuery()"
+              i18n="@@content.list.newer"
+              >← Novější</a
+            >
+          }
+          <span class="pages-position" i18n="@@content.list.position"
+            >Strana {{ pageNumber() }} z {{ pageCount() }}</span
+          >
+          @if (pageNumber() < pageCount()) {
+            <a
+              class="ui-cta ui-cta--ghost"
+              routerLink="/aktuality"
+              [queryParams]="olderQuery()"
+              i18n="@@content.list.older"
+              >Starší →</a
+            >
+          }
+        </nav>
+      }
+    }
+  </div>
+</section>

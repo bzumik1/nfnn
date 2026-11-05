@@ -21,3 +21,7 @@
     text-align: left;
   }
 }
+
+:host(.is-on-dark) .copy-status {
+  color: var(--color-on-image);
+}

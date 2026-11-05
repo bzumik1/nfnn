@@ -40,6 +40,59 @@ async function publicPage(ui: Ui, path: string): Promise<void> {
   await visit(ui, path);
 }
 
+const signer = {
+  id: 'signer',
+  name: 'Petr Vzorový',
+  role: 'Předseda správní rady',
+  portrait: null,
+};
+const FEED_NEWS = Array.from({ length: 10 }, (_, index) => ({
+  ...article,
+  id: `feed-${index}`,
+  slug: `zprava-${index}`,
+  title: index === 0 ? 'Ohlédnutí za rokem 2025' : `Ohlédnutí za rokem ${2025 - index}`,
+  signer,
+}));
+const FEED_STORIES = [
+  'Děti s rakovinou na Ukrajině',
+  'Bezbariérový přístup do školy',
+  'Rehabilitace po úrazu',
+  'Sofinka',
+  'Miki a jeho první krůčky',
+  'Kompenzační pomůcky pro Nelinku',
+].map((title, index) => ({
+  ...project,
+  id: `story-${index}`,
+  slug: `pribeh-${index}`,
+  year: 2025,
+  title,
+}));
+
+async function newsFeed(ui: Ui): Promise<void> {
+  await mockDonorApi(ui.routes);
+  await mockPublicContent(ui.routes);
+  await ui.routes.route(
+    (url) => url.pathname === '/api/content/news',
+    (route) =>
+      route.fulfill({ json: { items: FEED_NEWS, page: 0, size: 10, total: 23, hasMore: true } }),
+  );
+  await ui.routes.route(
+    (url) => url.pathname === '/api/content/projects',
+    (route) =>
+      route.fulfill({
+        json: {
+          items: FEED_STORIES,
+          page: 0,
+          size: 50,
+          total: FEED_STORIES.length,
+          hasMore: false,
+        },
+      }),
+  );
+  await visit(ui, '/aktuality');
+  await ui.waitVisible({ css: '.story' });
+}
+
 async function donorPage(ui: Ui, path: string): Promise<void> {
   await mockDonorApi(ui.routes, donorWithDonations);
   await rememberedSession(ui, donor);
@@ -116,6 +169,11 @@ export const STEPS: Step[] = [
     },
   },
   { id: 'news', title: 'the news list', open: (ui) => publicPage(ui, '/aktuality') },
+  {
+    id: 'news-feed',
+    title: 'the news feed with signers, the stories of the year and paging',
+    open: newsFeed,
+  },
   {
     id: 'news-article',
     title: 'a news article',
@@ -234,6 +292,11 @@ export const STEPS: Step[] = [
     id: 'admin-actions',
     title: 'the history of changes in the administration',
     open: (ui) => adminPage(ui, '/sprava/historie'),
+  },
+  {
+    id: 'admin-alerts',
+    title: 'the push alerts in the administration',
+    open: (ui) => adminPage(ui, '/sprava/upozorneni'),
   },
   {
     id: 'admin-yearly-receipts',

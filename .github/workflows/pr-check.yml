@@ -192,7 +192,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: frontend
@@ -211,7 +211,7 @@ jobs:
 
       - name: Start installing Playwright's Chromium headless shell for the control theme while the checks run
         run: |
-          (npx playwright install --with-deps --only-shell chromium > "$RUNNER_TEMP/playwright-install.log" 2>&1; echo $? > "$RUNNER_TEMP/playwright-install.status") &
+          (scripts/install-playwright-browsers.sh --only-shell chromium > "$RUNNER_TEMP/playwright-install.log" 2>&1; echo $? > "$RUNNER_TEMP/playwright-install.status") &
 
       - name: Formatting follows Prettier
         run: npm run format:check
@@ -249,7 +249,7 @@ jobs:
 
       - name: Playwright's Chromium headless shell is installed
         run: |
-          for _ in $(seq 300); do
+          for _ in $(seq 1200); do
             [ -s "$RUNNER_TEMP/playwright-install.status" ] && break
             sleep 1
           done
@@ -267,7 +267,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -294,7 +294,7 @@ jobs:
 
       - name: Start installing the shard's browsers while the app builds
         run: |
-          (npx playwright install --with-deps --only-shell $BROWSERS > "$RUNNER_TEMP/playwright-install.log" 2>&1; echo $? > "$RUNNER_TEMP/playwright-install.status") &
+          (scripts/install-playwright-browsers.sh --only-shell $BROWSERS > "$RUNNER_TEMP/playwright-install.log" 2>&1; echo $? > "$RUNNER_TEMP/playwright-install.status") &
         env:
           BROWSERS: ${{ matrix.install }}
 
@@ -303,7 +303,7 @@ jobs:
 
       - name: The shard's browsers are installed
         run: |
-          for _ in $(seq 400); do
+          for _ in $(seq 1200); do
             [ -s "$RUNNER_TEMP/playwright-install.status" ] && break
             sleep 1
           done
@@ -378,7 +378,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: frontend
@@ -397,7 +397,7 @@ jobs:
 
       - name: Pull the nginx image, with Playwright's full Chromium installing in the background
         run: |
-          (npx playwright install --with-deps --no-shell chromium > "$RUNNER_TEMP/playwright-install.log" 2>&1; echo $? > "$RUNNER_TEMP/playwright-install.status") &
+          (scripts/install-playwright-browsers.sh --no-shell chromium > "$RUNNER_TEMP/playwright-install.log" 2>&1; echo $? > "$RUNNER_TEMP/playwright-install.status") &
           image=$(sed -n 's/^FROM \(nginx:[^ ]*\)$/\1/p' Dockerfile)
           [ -n "$image" ] || { echo "::error::frontend/Dockerfile names no nginx base image"; exit 1; }
           docker pull --quiet "$image"
@@ -407,7 +407,7 @@ jobs:
 
       - name: Playwright's Chromium is installed
         run: |
-          for _ in $(seq 300); do
+          for _ in $(seq 1200); do
             [ -s "$RUNNER_TEMP/playwright-install.status" ] && break
             sleep 1
           done
@@ -485,7 +485,7 @@ jobs:
         working-directory: frontend
         run: |
           npm ci
-          npx playwright install --with-deps --only-shell chromium
+          scripts/install-playwright-browsers.sh --only-shell chromium
 
       - name: The screens of main and of the change differ only where the description declares
         env:
@@ -1173,6 +1173,12 @@ jobs:
           docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "insert into donor_device (id, donor_id, platform, browser, session_kind, signed_in_at, last_used_at) values ('019a0000-0000-7000-8000-000000000005', '019a0000-0000-7000-8000-000000000007', 'IPHONE', 'SAFARI', 'APP', now(), now())"
           docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "insert into donor_refresh_token (id, donor_id, secret_hash, issued_at, granted_at, expires_at, device_id) select '019a0000-0000-7000-8000-000000000006', donor_id, 'ci-session-in-the-dump', now(), now(), now() + interval '400 days', id from donor_device where id = '019a0000-0000-7000-8000-000000000005'"
           [ "$(live_sessions)" -ge 2 ] || { echo "::error::the dump to restore holds no signed-in device, so the restore cannot show that it ends them"; exit 1; }
+          usable_links() {
+            docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select (select count(*) from donor_password_reset_token where used_at is null and expires_at > now()) + (select count(*) from donor_email_verification_token where used_at is null and expires_at > now())"
+          }
+          docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "insert into donor_password_reset_token (id, donor_id, secret_hash, issued_at, expires_at) select '019a0000-0000-7000-8000-000000000007', id, repeat('7', 64), now(), now() + interval '1 day' from donor order by id limit 1"
+          docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "insert into donor_email_verification_token (id, donor_id, secret_hash, issued_at, expires_at) select '019a0000-0000-7000-8000-000000000008', id, repeat('8', 64), now(), now() + interval '1 day' from donor order by id limit 1"
+          [ "$(usable_links)" -ge 2 ] || { echo "::error::the dump to restore holds no usable reset or verification link, so the restore cannot show that it spends them"; exit 1; }
           docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "update databasechangeloglock set locked = true, lockgranted = now(), lockedby = 'ci, as a dump taken while Liquibase runs'"
           docker exec nfnn-backend sh -c 'touch /backups/requests/ci-lock.backup'
           wait_for "grep -q '^request=ci-lock$' $backups/status/backup" 60 "the backup with the Liquibase lock held did not run"
@@ -1193,6 +1199,11 @@ jobs:
           [ "$(count_rows "action = 'BACKUP_RESTORED' and admin_id = '019a0000-0000-7000-8000-000000000002'")" = 1 ] || { echo "::error::the finished restore is not recorded in the administration history"; exit 1; }
           [ "$(live_sessions)" = 0 ] || { echo "::error::the restore kept a refresh token or a signed-in device of the backup, so a cookie from before the restore would still sign in"; exit 1; }
           [ "$(docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select end_reason from donor_device where id = '019a0000-0000-7000-8000-000000000005'")" = EXPIRED ] || { echo "::error::the restore did not end the device of the backup as expired"; exit 1; }
+          [ "$(usable_links)" = 0 ] || { echo "::error::the restore kept a reset or verification link of the backup usable, so a link used after the backup would work again"; exit 1; }
+          sessions_ended=$(sed -n 's/^sessions_ended=//p' "$backups/status/restore")
+          secrets_spent=$(sed -n 's/^one_time_secrets_spent=//p' "$backups/status/restore")
+          [ "${sessions_ended:-0}" -ge 1 ] && [ "${secrets_spent:-0}" -ge 2 ] || { echo "::error::the restore status does not count the sessions it ended and the one-time secrets it spent"; cat "$backups/status/restore"; exit 1; }
+          [ "$(count_rows "action = 'BACKUP_RESTORED' and details like '%; ukončená přihlášení: $sessions_ended, zneplatněné jednorázové odkazy a kódy: $secrets_spent'")" = 1 ] || { echo "::error::the administration history does not name what the restore revoked"; exit 1; }
           docker exec nfnn-postgres psql -U novanadeje -d postgres -tA -c "select datname from pg_database" | grep -q nfnn_restore && { echo "::error::a staging or retired database was left behind"; exit 1; }
           [ "$(docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select count(*) from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'public' and c.relowner <> 'novanadeje_app'::regrole")" = 0 ] || { echo "::error::the restored database must belong to novanadeje_app, or the backend cannot migrate it"; exit 1; }
           [ "$(docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select pg_get_userbyid(datdba) from pg_database where datname = 'novanadeje'")" = novanadeje_app ] || { echo "::error::the restored database must belong to novanadeje_app"; exit 1; }

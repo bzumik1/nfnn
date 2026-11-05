@@ -39,6 +39,7 @@ import {
   withoutSessionStorage,
 } from './lost-chunks';
 import { serveNewerApiGeneration, updateNotice } from './app-update';
+import { fakePushDevice } from './push-device';
 import {
   CHANGED_AMOUNT,
   forgetKeyList,
@@ -128,6 +129,13 @@ async function violations(page: Page): Promise<string[]> {
     violation.nodes.map((node) => `${violation.id}: ${node.target.join(' ')}`),
   );
 }
+
+const FEED_SIGNER = {
+  id: 'signer',
+  name: 'Petr Vzorový',
+  role: 'Předseda správní rady',
+  portrait: null,
+};
 
 test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
   test.beforeEach(async ({ page }) => {
@@ -262,18 +270,57 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.route(
       (url) => url.pathname === '/api/content/news',
       (route) =>
-        route.fulfill({ json: { items: [article], page: 1, size: 10, total: 1, hasMore: false } }),
+        route.fulfill({
+          json: {
+            items: [
+              { ...article, signer: FEED_SIGNER },
+              {
+                ...article,
+                id: 'older',
+                slug: 'starsi',
+                title: 'Starší zpráva',
+                signer: FEED_SIGNER,
+              },
+            ],
+            page: 0,
+            size: 10,
+            total: 2,
+            hasMore: false,
+          },
+        }),
       { times: 1 },
     );
     await page.route(
       (url) => url.pathname === '/api/content/projects',
       (route) =>
-        route.fulfill({ json: { items: [project], page: 1, size: 10, total: 1, hasMore: false } }),
-      { times: 1 },
+        route.fulfill({ json: { items: [project], page: 0, size: 10, total: 1, hasMore: false } }),
+      { times: 2 },
     );
 
     await page.goto('/aktuality');
+    await expect(page.locator('.featured')).toHaveCount(1);
     await expect(page.locator('.news-card')).toHaveCount(1);
+    await expect(page.locator('.story')).toHaveCount(1);
+
+    expect(await violations(page)).toEqual([]);
+    await expect(page.locator('.featured .signer-name')).toHaveText('Petr Vzorový');
+
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+    const featured = page.locator('.featured');
+    await featured.getByRole('button', { name: /^Kopírovat odkaz/ }).click();
+    await expect(featured.getByRole('button', { name: 'Zkopírováno' })).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.route(
+      (url) => url.pathname === '/api/content/news',
+      (route) => route.fulfill({ status: 503, body: '' }),
+      { times: 1 },
+    );
+    await page.goto('/aktuality?strana=2');
+    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toHaveText(
+      'Aktuality se nepodařilo načíst.',
+    );
 
     expect(await violations(page)).toEqual([]);
 
@@ -315,7 +362,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
         route.fulfill({ json: { items: [], page: 0, size: 10, total: 0, hasMore: false } }),
     );
     await page.goto('/aktuality?strana=2');
-    await expect(page.getByRole('heading', { level: 1, name: 'Aktuality' })).toBeFocused();
+    await expect(page.getByRole('heading', { level: 1, name: 'Co je u nás nového' })).toBeFocused();
     await expect(page.getByText('Strana 2 z 3')).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
@@ -1811,6 +1858,58 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
     await page.getByRole('button', { name: 'Zálohovat teď' }).click();
     await expect(page.getByRole('button', { name: 'Zálohujeme…' })).toBeDisabled();
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when an administrator manages the alerts of their devices, then the page with this device subscribed and another listed breaks no rule', async ({
+    page,
+  }) => {
+    await fakePushDevice(page, { subscribedWith: `B${'E'.repeat(86)}` });
+    await mockDonorApi(page);
+    const device = {
+      service: 'google',
+      alerts: { bankImport: true, backups: true, mail: true },
+      createdAt: '2026-11-01T09:00:00Z',
+      lastDeliveredAt: '2026-11-03T09:05:00Z',
+      failuresInARow: 0,
+    };
+    await page.route(
+      (url) => url.pathname === '/api/admin/operations/push',
+      (route) =>
+        route.fulfill({
+          json: {
+            publicKey: `B${'E'.repeat(86)}`,
+            deviceSession: true,
+            subscriptions: [
+              { ...device, id: 'push-phone', service: 'apple', current: false, failuresInARow: 2 },
+              { ...device, id: 'push-this-device', current: true },
+            ],
+            openAlerts: [{ area: 'backups', since: '2026-11-04T05:15:00Z' }],
+          },
+        }),
+    );
+    await page.route(
+      (url) => url.pathname === '/api/admin/operations/push/test',
+      (route) => route.fulfill({ json: { delivered: 2, failed: 0, removed: 0 } }),
+    );
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.goto('/');
+    await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
+    await page.goto('/sprava/upozorneni');
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Upozornění na telefon' }),
+    ).toBeFocused();
+    await expect(page.getByRole('checkbox')).toHaveCount(6);
+    expect(await violations(page)).toEqual([]);
+
+    await page
+      .getByRole('button', { name: 'Poslat zkušební upozornění na všechna moje zařízení' })
+      .click();
+    await expect(page.getByRole('status').filter({ hasText: /\S/ })).toHaveText(
+      /^Zkušební upozornění jsme předali k doručení na 2 zařízení\./,
+    );
     expect(await violations(page)).toEqual([]);
   });
 
