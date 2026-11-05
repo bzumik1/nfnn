@@ -155,6 +155,7 @@ export class AdminDonorDetail {
   );
   protected readonly receipts = computed(() => this.detail()?.receipts ?? []);
   private readonly withdrawnKeyIds = signal<ReadonlySet<string>>(new Set());
+  private withdrawnKeysRequested = false;
   protected readonly total = computed(() =>
     this.crowns(this.detail()?.donations.totalAmountMinor ?? 0),
   );
@@ -182,7 +183,6 @@ export class AdminDonorDetail {
     this.pdfs.whenReceiptReplaced((receiptId) => this.receiptReplaced(receiptId));
     this.loadAccount();
     this.loadDonations();
-    this.loadWithdrawnKeys();
     afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
   }
 
@@ -222,12 +222,17 @@ export class AdminDonorDetail {
         next: (detail) => {
           this.detail.set(detail);
           this.donationsState.set('ready');
+          this.loadWithdrawnKeysFor(detail);
         },
         error: (failure: unknown) => this.donationsState.set(this.stateAfter(failure)),
       });
   }
 
-  private loadWithdrawnKeys(): void {
+  private loadWithdrawnKeysFor(detail: AdminDonorDetailResponse): void {
+    if (this.withdrawnKeysRequested || !detail.receipts.some((receipt) => receipt.active)) {
+      return;
+    }
+    this.withdrawnKeysRequested = true;
     this.receiptKeys
       .list()
       .pipe(
@@ -254,6 +259,10 @@ export class AdminDonorDetail {
     return this.withdrawnKeyIds().has(receipt.keyId);
   }
 
+  protected withdrawnKeyNoteId(receipt: AdminReceiptResponse): string {
+    return `receipt-key-note-${receipt.id}`;
+  }
+
   private receiptReplaced(receiptId: string): void {
     const number = this.receipts().find((receipt) => receipt.id === receiptId)?.number ?? '';
     this.cardNotice.set({
@@ -272,7 +281,10 @@ export class AdminDonorDetail {
       .donorDonations(this.donorId)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (detail) => this.detail.set(detail),
+        next: (detail) => {
+          this.detail.set(detail);
+          this.loadWithdrawnKeysFor(detail);
+        },
         error: (failure: unknown) => this.donationsState.set(this.stateAfter(failure)),
       });
   }

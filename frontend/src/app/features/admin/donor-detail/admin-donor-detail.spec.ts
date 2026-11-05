@@ -1082,6 +1082,12 @@ describe('Given an administrator on a donor card', () => {
 
     expect(navigate).toHaveBeenCalledWith('/darce/prehled');
   });
+  it('when the donor has no valid receipt, then the card does not read the published key list', async () => {
+    await loaded(donorAccount(), donorDetail({ receipts: [adminReceipt({ active: false })] }));
+
+    expect(http.match(KEYS_URL)).toHaveLength(0);
+  });
+
   describe('when the receipts card lists a receipt signed with a key the foundation withdrew', () => {
     const REVOKED_NOTE =
       'QR na tomto potvrzení podepsal zneplatněný klíč. Stránka /overit ho ukáže jako zneplatněné.';
@@ -1121,6 +1127,22 @@ describe('Given an administrator on a donor card', () => {
 
       expect(rowNote('2026-000001')).toBe(REVOKED_NOTE);
       expect(rowNote('2027-000001')).toBeNull();
+      const buttons = Array.from(
+        section('Vydaná potvrzení').querySelectorAll<HTMLButtonElement>('button.receipt-pdf'),
+      );
+      const warned = buttons.find((candidate) => candidate.textContent?.includes('2026-000001'));
+      const described = warned?.getAttribute('aria-describedby') ?? '';
+      expect(
+        section('Vydaná potvrzení')
+          .querySelector(`[id="${described}"]`)
+          ?.textContent?.replace(/\s+/g, ' ')
+          .trim(),
+      ).toBe(REVOKED_NOTE);
+      expect(
+        buttons
+          .find((candidate) => candidate.textContent?.includes('2027-000001'))
+          ?.hasAttribute('aria-describedby'),
+      ).toBe(false);
     });
 
     it('then a list that names the key valid shows no warning', async () => {
