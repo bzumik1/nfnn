@@ -166,6 +166,15 @@ jobs:
         env:
           E2E_DIST: dist/frontend/browser
 
+      - name: Keep the screens of the phones and tablets with their layout checks
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: zarizeni
+          path: frontend/test-results/device-report/
+          if-no-files-found: ignore
+          retention-days: 3
+
       - name: List the end-to-end tests for the test inventory
         run: npx playwright test --list --reporter=json > "$RUNNER_TEMP/inventory/frontend-playwright.json"
 

@@ -18,6 +18,13 @@ A Phase 1 slice proves "screenshots equal" against its merge base, not against t
 2. Read `report.md` in the output folder and open the crops (`crops/<shot>-base|head|diff.png`) of every differing shot. A difference the slice did not mean to make is a bug; one it meant is named in the PR with its crop. Never in the repository: the script refuses an output folder inside it.
 3. A new state for Phase 1 goes into `SCREENS` only when it existed at `BASELINE_COMMIT` and is recorded from there, twice with the same pixels, with the slice's spec patch `regression/v2/additions/<slice>.patch` (`--patch=… --v2-only --base-only`, then `screens-manifest.mjs --add`; `testing.md`); otherwise into `SCREENS_SINCE_V2`.
 
+## Phones and tablets
+The device projects (`testing.md`, Phones and tablets) check boxes, not pixels, so before handing over a visible change look at their screens too, as t3code has an agent review its simulator shots:
+1. In `frontend/`: `npm run e2e:devices` (WebKit and Chromium's headless shell installed, skill `cloud-session`). A new page or state the change adds gets its step in `e2e/devices/steps.ts`.
+2. Open `test-results/device-report/index.html`, or read the PNGs under `test-results/device-report/<pose>/<step>.png` (one per pose and step, in CSS pixels; red frame: a finding, amber: a known one). For a PR, CI keeps the same folder as the artifact `zarizeni`.
+3. Report only what a visitor would notice: text clipped, overlapping or cut mid-word where it should wrap, a column so narrow it holds a word per line, controls overlapping, cut off or under the header, the bottom bar or a dialog edge, content hidden behind fixed chrome, unreadable contrast, large unexplained gaps, error states that should not be there. Leave out the fixture content itself, the status-bar strip at the very top (`frontend-overview.md`, Shell), content scrolling under the fixed header, a dialog's backdrop over the page, and wrapping onto more lines at 200 % text. Prefer no finding to a speculative one.
+4. A finding the change caused is fixed in the PR; one it did not cause goes to Jakub with its screen, and stays out of `known-findings.ts` until he decides.
+
 ## Headers
 The dev server sends no security headers, so a change to the Content-Security-Policy, to `nginx.conf`, or anything that adds an inline script, an external resource or a new kind of embed is checked against the production nginx:
 1. `npm run build`; pull `nginx:1.30-alpine` (in the cloud `mirror.gcr.io/library/nginx:1.30-alpine`, tagged back) or whatever `frontend/Dockerfile` names.
