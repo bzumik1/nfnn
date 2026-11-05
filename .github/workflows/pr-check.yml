@@ -210,7 +210,7 @@ jobs:
         run: node scripts/check-receipt-chunks.mjs dist/frontend/browser
 
       - name: List the end-to-end tests for the test inventory
-        run: npx playwright test --list --reporter=json > "$RUNNER_TEMP/inventory/frontend-playwright.json"
+        run: npx playwright test --list --project='*' --reporter=json > "$RUNNER_TEMP/inventory/frontend-playwright.json"
 
       - name: Keep the test lists for the v2 comparison
         uses: actions/upload-artifact@v7
@@ -348,6 +348,61 @@ jobs:
         run: |
           npx playwright test --list --reporter=json > "$RUNNER_TEMP/e2e-listed.json"
           node scripts/check-e2e-shards.mjs "$RUNNER_TEMP/e2e-listed.json" "$RUNNER_TEMP/e2e-merged.json"
+
+  pwa:
+    name: Web jako aplikace
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+
+      - name: Start installing Playwright's Chromium and pulling the nginx image while the app builds
+        run: |
+          (npx playwright install --with-deps chromium > "$RUNNER_TEMP/playwright-install.log" 2>&1; echo $? > "$RUNNER_TEMP/playwright-install.status") &
+          image=$(sed -n 's/^FROM \(nginx:[^ ]*\)$/\1/p' Dockerfile)
+          [ -n "$image" ] || { echo "::error::frontend/Dockerfile names no nginx base image"; exit 1; }
+          docker pull --quiet "$image"
+
+      - name: Build
+        run: npm run build
+
+      - name: Playwright's Chromium is installed
+        run: |
+          for _ in $(seq 300); do
+            [ -s "$RUNNER_TEMP/playwright-install.status" ] && break
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/playwright-install.log"
+          [ "$(cat "$RUNNER_TEMP/playwright-install.status" 2>/dev/null)" = 0 ] || { echo "::error::Playwright's Chromium was not installed (log above)"; exit 1; }
+
+      - name: The production build behind the real nginx works as a web app
+        run: npx playwright test --project=pwa --reporter=github,list
+        env:
+          E2E_DIST: dist/frontend/browser
+
+      - name: Keep the traces of failed web app tests
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: pwa-results
+          path: frontend/test-results/
+          if-no-files-found: ignore
+          retention-days: 3
 
   mcp:
     needs: changes
@@ -1444,7 +1499,7 @@ jobs:
 
   gate:
     if: always()
-    needs: [changes, backend, acceptance, frontend, e2e, e2e-report, mcp, main-recording, compare-v2, stack, release]
+    needs: [changes, backend, acceptance, frontend, e2e, e2e-report, pwa, mcp, main-recording, compare-v2, stack, release]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

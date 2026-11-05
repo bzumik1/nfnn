@@ -32,15 +32,18 @@ function chunk(type: string, data: Buffer): Buffer {
   return Buffer.concat([length, body, crc]);
 }
 
-export function qrCodePng(qrText: string, pixelsPerModule = 6): Buffer {
+interface QrCodeLuma {
+  readonly side: number;
+  readonly luma: Buffer;
+}
+
+function qrCodeLuma(qrText: string, pixelsPerModule: number): QrCodeLuma {
   const symbol = qrText.startsWith(VERIFICATION_ADDRESS)
     ? verificationSymbol(qrText)
     : encodeText(qrText, 'M');
   const side = (symbol.size + 2 * QUIET_ZONE) * pixelsPerModule;
-  const rows: Buffer[] = [];
+  const luma = Buffer.alloc(side * side, 0xff);
   for (let y = 0; y < side; y++) {
-    const row = Buffer.alloc(side + 1, 0xff);
-    row[0] = 0;
     const moduleRow = Math.floor(y / pixelsPerModule) - QUIET_ZONE;
     for (let x = 0; x < side; x++) {
       const moduleColumn = Math.floor(x / pixelsPerModule) - QUIET_ZONE;
@@ -50,9 +53,37 @@ export function qrCodePng(qrText: string, pixelsPerModule = 6): Buffer {
         moduleRow < symbol.size &&
         moduleColumn < symbol.size;
       if (inside && symbol.modules.charAt(moduleRow * symbol.size + moduleColumn) === '1') {
-        row[x + 1] = 0;
+        luma[y * side + x] = 0;
       }
     }
+  }
+  return { side, luma };
+}
+
+export function qrCodeY4m(qrText: string, width = 640, height = 480): Buffer {
+  const pixelsPerModule = Math.max(1, Math.floor((height - 40) / qrCodeLuma(qrText, 1).side));
+  const { side, luma } = qrCodeLuma(qrText, pixelsPerModule);
+  const frameLuma = Buffer.alloc(width * height, 0xff);
+  const left = Math.floor((width - side) / 2);
+  const top = Math.floor((height - side) / 2);
+  for (let y = 0; y < side; y++) {
+    luma.copy(frameLuma, (top + y) * width + left, y * side, (y + 1) * side);
+  }
+  const chroma = Buffer.alloc((width / 2) * (height / 2) * 2, 0x80);
+  return Buffer.concat([
+    Buffer.from(`YUV4MPEG2 W${width} H${height} F10:1 Ip A1:1 C420jpeg\n`, 'latin1'),
+    Buffer.from('FRAME\n', 'latin1'),
+    frameLuma,
+    chroma,
+  ]);
+}
+
+export function qrCodePng(qrText: string, pixelsPerModule = 6): Buffer {
+  const { side, luma } = qrCodeLuma(qrText, pixelsPerModule);
+  const rows: Buffer[] = [];
+  for (let y = 0; y < side; y++) {
+    const row = Buffer.alloc(side + 1);
+    luma.copy(row, 1, y * side, (y + 1) * side);
     rows.push(row);
   }
   const header = Buffer.alloc(13);
@@ -114,8 +145,4 @@ export function fakeCameraShowing(dataUrl: string): void {
       },
     },
   });
-}
-
-export function qrCodeY4m(qrText: string): Buffer {
-  throw new Error(`qrCodeY4m: a camera frame of ${qrText.length} characters is not built yet`);
 }
