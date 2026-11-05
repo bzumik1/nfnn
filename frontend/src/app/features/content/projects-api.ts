@@ -1,11 +1,14 @@
 import { HttpClient } from '@angular/common/http';
+import { ifMatch } from '../../core/version/row-version';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { FocalPoint } from '../../shared/ui/focal-point/focal-point';
 
 export interface CoverImageResponse {
   id: string;
   url: string;
   alt: string | null;
+  focalPoint: FocalPoint | null;
 }
 
 export type ProjectCategory = 'CHILDREN' | 'ADULTS' | 'ANIMALS' | 'OTHER';
@@ -43,6 +46,7 @@ export interface ProjectResponse {
   live: boolean;
   createdAt: string;
   updatedAt: string;
+  version?: string;
 }
 
 export interface ProjectListResponse {
@@ -123,20 +127,28 @@ export class ProjectsApi {
     return this.http.post<ProjectResponse>(ADMIN_PROJECTS, request);
   }
 
-  update(id: string, request: ProjectRequest): Observable<ProjectResponse> {
-    return this.http.put<ProjectResponse>(`${ADMIN_PROJECTS}/${id}`, request);
+  update(id: string, request: ProjectRequest, version: string): Observable<ProjectResponse> {
+    return this.http.put<ProjectResponse>(`${ADMIN_PROJECTS}/${id}`, request, ifMatch(version));
   }
 
-  publish(id: string, publishedOn: string): Observable<ProjectResponse> {
-    return this.http.post<ProjectResponse>(`${ADMIN_PROJECTS}/${id}/publish`, { publishedOn });
+  publish(id: string, publishedOn: string, version: string): Observable<ProjectResponse> {
+    return this.http.post<ProjectResponse>(
+      `${ADMIN_PROJECTS}/${id}/publish`,
+      { publishedOn },
+      ifMatch(version),
+    );
   }
 
-  unpublish(id: string): Observable<ProjectResponse> {
-    return this.http.post<ProjectResponse>(`${ADMIN_PROJECTS}/${id}/unpublish`, {});
+  unpublish(id: string, version: string): Observable<ProjectResponse> {
+    return this.http.post<ProjectResponse>(
+      `${ADMIN_PROJECTS}/${id}/unpublish`,
+      {},
+      ifMatch(version),
+    );
   }
 
-  delete(id: string): Observable<void> {
-    return this.http.delete<void>(`${ADMIN_PROJECTS}/${id}`);
+  delete(id: string, version: string): Observable<void> {
+    return this.http.delete<void>(`${ADMIN_PROJECTS}/${id}`, ifMatch(version));
   }
 
   order(): Observable<ProjectOrderResponse> {

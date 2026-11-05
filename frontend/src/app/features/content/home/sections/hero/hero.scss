@@ -45,7 +45,7 @@
   z-index: 2;
   max-width: var(--content-max);
   margin: 0 auto;
-  padding: 0 var(--space-8) var(--space-22);
+  padding: 0 var(--space-8) calc(var(--tab-bar-clearance) + var(--space-10));
   width: 100%;
   animation: fadeInUp var(--duration-entrance) ease both;
 }
@@ -81,43 +81,13 @@
   gap: var(--space-4);
 }
 
-.hero-scroll {
-  position: absolute;
-  bottom: 32px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 2;
-}
-
-.hero-scroll-mouse {
-  width: 26px;
-  height: 42px;
-  border: 2px solid color-mix(in srgb, var(--color-on-image) 40%, transparent);
-  border-radius: var(--radius-xl);
-  display: flex;
-  justify-content: center;
-  padding-top: var(--space-1-75);
-}
-
-.hero-scroll-dot {
-  width: 4px;
-  height: 7px;
-  background: var(--color-on-image);
-  border-radius: var(--radius-xs);
-  animation: scrollDot 1.8s infinite;
-}
-
 @include bp.down(tablet) {
   .hero-content {
-    padding: 0 var(--space-5) var(--space-16);
+    padding: 0 var(--space-5) calc(var(--tab-bar-clearance) + var(--space-6));
   }
 
   .hero-btns {
     flex-direction: column;
     gap: var(--space-3);
-  }
-
-  .hero-scroll {
-    display: none;
   }
 }

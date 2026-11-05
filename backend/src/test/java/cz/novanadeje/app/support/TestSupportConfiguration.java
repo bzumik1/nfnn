@@ -95,6 +95,12 @@ public class TestSupportConfiguration {
     }
 
     @Bean
+    @Primary
+    public RecordingPushTransport recordingPushTransport() {
+        return new RecordingPushTransport();
+    }
+
+    @Bean
     public static CachingPasswordHashers cachingPasswordHashers() {
         return new CachingPasswordHashers();
     }

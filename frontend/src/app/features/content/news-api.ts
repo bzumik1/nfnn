@@ -1,11 +1,14 @@
 import { HttpClient } from '@angular/common/http';
+import { ifMatch } from '../../core/version/row-version';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { FocalPoint } from '../../shared/ui/focal-point/focal-point';
 
 export interface CoverImageResponse {
   id: string;
   url: string;
   alt: string | null;
+  focalPoint: FocalPoint | null;
 }
 
 export interface NewsSignerResponse {
@@ -27,6 +30,7 @@ export interface NewsArticleResponse {
   live: boolean;
   createdAt: string;
   updatedAt: string;
+  version?: string;
   signer: NewsSignerResponse | null;
 }
 
@@ -104,20 +108,32 @@ export class NewsApi {
     return this.http.post<NewsArticleResponse>(ADMIN_NEWS, request);
   }
 
-  update(id: string, request: NewsArticleRequest): Observable<NewsArticleResponse> {
-    return this.http.put<NewsArticleResponse>(`${ADMIN_NEWS}/${id}`, request);
+  update(
+    id: string,
+    request: NewsArticleRequest,
+    version: string,
+  ): Observable<NewsArticleResponse> {
+    return this.http.put<NewsArticleResponse>(`${ADMIN_NEWS}/${id}`, request, ifMatch(version));
   }
 
-  publish(id: string, publishedOn: string): Observable<NewsArticleResponse> {
-    return this.http.post<NewsArticleResponse>(`${ADMIN_NEWS}/${id}/publish`, { publishedOn });
+  publish(id: string, publishedOn: string, version: string): Observable<NewsArticleResponse> {
+    return this.http.post<NewsArticleResponse>(
+      `${ADMIN_NEWS}/${id}/publish`,
+      { publishedOn },
+      ifMatch(version),
+    );
   }
 
-  unpublish(id: string): Observable<NewsArticleResponse> {
-    return this.http.post<NewsArticleResponse>(`${ADMIN_NEWS}/${id}/unpublish`, {});
+  unpublish(id: string, version: string): Observable<NewsArticleResponse> {
+    return this.http.post<NewsArticleResponse>(
+      `${ADMIN_NEWS}/${id}/unpublish`,
+      {},
+      ifMatch(version),
+    );
   }
 
-  delete(id: string): Observable<void> {
-    return this.http.delete<void>(`${ADMIN_NEWS}/${id}`);
+  delete(id: string, version: string): Observable<void> {
+    return this.http.delete<void>(`${ADMIN_NEWS}/${id}`, ifMatch(version));
   }
 
   uploadImage(file: File): Observable<UploadedImageResponse> {

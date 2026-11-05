@@ -34,12 +34,16 @@ interface IssuedReceiptJpaRepository extends JpaRepository<IssuedReceiptJpaEntit
 
     Optional<IssuedReceiptJpaEntity> findByDonorIdAndReceiptYearAndStatus(UUID donorId, Integer receiptYear, ReceiptStatus status);
 
+    List<IssuedReceiptJpaEntity> findByReceiptYearAndStatus(Integer receiptYear, ReceiptStatus status);
+
     Optional<IssuedReceiptJpaEntity> findFirstByDonorIdAndReceiptYearAndStatusAndWithdrawalReasonOrderByIssuedAtDescNumberDesc(UUID donorId,
             Integer receiptYear, ReceiptStatus status, ReceiptWithdrawalReason withdrawalReason);
 
     List<SingleReceiptNumber> findByDonorIdAndKindAndStatus(UUID donorId, ReceiptKind kind, ReceiptStatus status);
 
     List<IssuedReceiptJpaEntity> findByDonorIdOrderByIssuedAtDescNumberDesc(UUID donorId);
+
+    List<IssuedReceiptJpaEntity> findAllByOrderByIssuedAtDescNumberDesc();
 
     @Query("select count(r) > 0 from IssuedReceiptJpaEntity r where r.donorId = :donorId and (r.signatureImageSha256 = :image or r.portraitImageSha256 = :image)")
     boolean showsImage(@Param("donorId") UUID donorId, @Param("image") String image);

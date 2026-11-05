@@ -28,14 +28,17 @@ public class NewsStepDefinitions {
     private final ScenarioDonors scenarioDonors;
     private final JdbcClient jdbc;
     private final UploadedImages images;
+    private final ContentRowVersions versions;
     private final Map<String, String> articleIdsBySlug = new LinkedHashMap<>();
 
-    public NewsStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors scenarioDonors, JdbcClient jdbc, UploadedImages images) {
+    public NewsStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors scenarioDonors, JdbcClient jdbc, UploadedImages images,
+                               ContentRowVersions versions) {
         this.api = api;
         this.sessions = sessions;
         this.scenarioDonors = scenarioDonors;
         this.jdbc = jdbc;
         this.images = images;
+        this.versions = versions;
     }
 
     @When("{string} creates a news article:")
@@ -54,26 +57,30 @@ public class NewsStepDefinitions {
     @When("{string} changes the news article {string}:")
     public void changesTheNewsArticle(String alias, String slug, Map<String, String> fields) {
         sessions.actAs(alias);
-        api.put(ADMIN_NEWS + "/" + articleId(slug), articleBody(fields));
+        String id = articleId(slug);
+        api.put(ADMIN_NEWS + "/" + id, articleBody(fields), ApiClient.ifMatch(versions.ofArticle(id)));
         rememberArticle();
     }
 
     @When("{string} publishes the news article {string} on {date}")
     public void publishesTheNewsArticleOn(String alias, String slug, LocalDate publishedOn) {
         sessions.actAs(alias);
-        api.post(ADMIN_NEWS + "/" + articleIdOrRandom(slug) + "/publish", Map.of("publishedOn", publishedOn.toString()));
+        String id = articleIdOrRandom(slug);
+        api.post(ADMIN_NEWS + "/" + id + "/publish", Map.of("publishedOn", publishedOn.toString()), ApiClient.ifMatch(versions.ofArticle(id)));
     }
 
     @When("{string} withdraws the news article {string}")
     public void withdrawsTheNewsArticle(String alias, String slug) {
         sessions.actAs(alias);
-        api.post(ADMIN_NEWS + "/" + articleId(slug) + "/unpublish", Map.of());
+        String id = articleId(slug);
+        api.post(ADMIN_NEWS + "/" + id + "/unpublish", Map.of(), ApiClient.ifMatch(versions.ofArticle(id)));
     }
 
     @When("{string} deletes the news article {string}")
     public void deletesTheNewsArticle(String alias, String slug) {
         sessions.actAs(alias);
-        api.delete(ADMIN_NEWS + "/" + articleId(slug));
+        String id = articleId(slug);
+        api.delete(ADMIN_NEWS + "/" + id, ApiClient.ifMatch(versions.ofArticle(id)));
     }
 
     @When("{string} asks for the news articles")
@@ -96,7 +103,7 @@ public class NewsStepDefinitions {
             assertThat(api.lastResponse().getStatusCode().value()).isEqualTo(201);
             rememberArticle();
             api.post(ADMIN_NEWS + "/" + api.lastResponseJson().get("id").asString() + "/publish",
-                    Map.of("publishedOn", firstDate.plusDays(i - 1).toString()));
+                    Map.of("publishedOn", firstDate.plusDays(i - 1).toString()), ApiClient.ifMatch(api.lastResponseJson().get("version").asString()));
             assertThat(api.lastResponse().getStatusCode().value()).isEqualTo(200);
         }
     }

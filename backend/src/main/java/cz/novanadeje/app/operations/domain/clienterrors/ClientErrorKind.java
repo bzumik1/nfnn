@@ -8,7 +8,13 @@ public enum ClientErrorKind implements ClientErrorTerm {
     PDF_LOAD("pdf-load"),
     QR_ENCODE("qr-encode"),
     VERIFY_PARSE("verify-parse"),
-    VERIFY_SIGNATURE("verify-signature");
+    VERIFY_SIGNATURE("verify-signature"),
+    BOOT("boot"),
+    SW_INSTALL("sw-install"),
+    SW_UNRECOVERABLE("sw-unrecoverable"),
+    DEVICE_STORE_OPEN("device-store-open"),
+    DEVICE_STORE_EVICTED("device-store-evicted"),
+    DEVICE_COPY_MISMATCH("device-copy-mismatch");
 
     private final String wire;
 

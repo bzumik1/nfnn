@@ -7,6 +7,7 @@ import {
   asRecord,
   plain,
   receiptView,
+  yearlyReceiptsView,
   PROJECT_ORDERS,
   text,
   ToolRefusal,
@@ -114,9 +115,17 @@ const PROJECT = {
   year: z.number().int().min(2005).max(2100),
   category: PROJECT_CATEGORY,
 };
+const EXPECTED_VERSION = z
+  .string()
+  .regex(/^[0-9a-f]{16}$/)
+  .optional()
+  .describe(
+    'The `version` of the record as the reading tool answered it. Given, the change is made only if nobody changed the record since: otherwise it is refused (409 …/changed-meanwhile) with the version stored now and the current record, so read it again and decide. Left out, the change applies to the record as it is now.',
+  );
 const ACCOUNT_LINK = z.object({
   donorId: UUID,
   linkId: UUID.describe("Id of the account link from the donor's card (nfnn_donor)."),
+  expectedVersion: EXPECTED_VERSION,
 });
 
 export function registerWritingTools(server: McpServer, deps: ToolDependencies): void {
@@ -128,19 +137,22 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
       title: 'Spárovat platbu',
       description:
         "Pairs an unpaired bank payment with a donor by hand (audited as PAIR_PAYMENT); the donation then counts in the donor's overview and receipts.",
-      inputSchema: z.object({ paymentId: UUID, donorId: UUID }),
+      inputSchema: z.object({ paymentId: UUID, donorId: UUID, expectedVersion: EXPECTED_VERSION }),
       annotations: WRITING,
     },
-    async ({ paymentId, donorId }, ctx) =>
+    async ({ paymentId, donorId, expectedVersion }, ctx) =>
       answerChange(
         deps,
         ctx,
         'nfnn_pair_payment',
         async ({ apiToken }) =>
           text(
-            await backend.post(`/api/admin/donations/payments/${paymentId}/pair`, apiToken, {
-              donorId,
-            }),
+            await backend.post(
+              `/api/admin/donations/payments/${paymentId}/pair`,
+              apiToken,
+              { donorId },
+              expectedVersion,
+            ),
           ),
         `payment ${paymentId}, donor ${donorId}`,
       ),
@@ -152,16 +164,23 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
       title: 'Zrušit spárování platby',
       description:
         "Removes the donation of a paired payment, so the payment is unpaired again; audited as UNPAIR_PAYMENT. Refused while a single receipt certifies the donation (409 donations/donation-has-receipt), and refused to a connection while the donor's active yearly receipt lists the donation (403 donations/receipt-withdrawal-in-browser-only), because unpairing it withdraws that receipt, which an administrator does only on the web at /sprava/platby.",
-      inputSchema: z.object({ paymentId: UUID }),
+      inputSchema: z.object({ paymentId: UUID, expectedVersion: EXPECTED_VERSION }),
       annotations: { ...WRITING, destructiveHint: true },
     },
-    async ({ paymentId }, ctx) =>
+    async ({ paymentId, expectedVersion }, ctx) =>
       answerChange(
         deps,
         ctx,
         'nfnn_unpair_payment',
         async ({ apiToken }) =>
-          text(await backend.post(`/api/admin/donations/payments/${paymentId}/unpair`, apiToken)),
+          text(
+            await backend.post(
+              `/api/admin/donations/payments/${paymentId}/unpair`,
+              apiToken,
+              undefined,
+              expectedVersion,
+            ),
+          ),
         `payment ${paymentId}`,
       ),
   );
@@ -217,17 +236,22 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
       title: 'Zveřejnit aktualitu',
       description:
         'Puts a news article on the site from the given day (YYYY-MM-DD, past or future); audited as PUBLISH_NEWS.',
-      inputSchema: z.object({ id: UUID, publishedOn: DAY }),
+      inputSchema: z.object({ id: UUID, publishedOn: DAY, expectedVersion: EXPECTED_VERSION }),
       annotations: WRITING,
     },
-    async ({ id, publishedOn }, ctx) =>
+    async ({ id, publishedOn, expectedVersion }, ctx) =>
       answerChange(
         deps,
         ctx,
         'nfnn_publish_news',
         async ({ apiToken }) =>
           text(
-            await backend.post(`/api/admin/content/news/${id}/publish`, apiToken, { publishedOn }),
+            await backend.post(
+              `/api/admin/content/news/${id}/publish`,
+              apiToken,
+              { publishedOn },
+              expectedVersion,
+            ),
           ),
         `news ${id}`,
       ),
@@ -239,16 +263,23 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
       title: 'Stáhnout aktualitu z webu',
       description:
         'Takes a news article off the site (it becomes a draft again); audited as UNPUBLISH_NEWS.',
-      inputSchema: z.object({ id: UUID }),
+      inputSchema: z.object({ id: UUID, expectedVersion: EXPECTED_VERSION }),
       annotations: WRITING,
     },
-    async ({ id }, ctx) =>
+    async ({ id, expectedVersion }, ctx) =>
       answerChange(
         deps,
         ctx,
         'nfnn_unpublish_news',
         async ({ apiToken }) =>
-          text(await backend.post(`/api/admin/content/news/${id}/unpublish`, apiToken)),
+          text(
+            await backend.post(
+              `/api/admin/content/news/${id}/unpublish`,
+              apiToken,
+              undefined,
+              expectedVersion,
+            ),
+          ),
         `news ${id}`,
       ),
   );
@@ -259,19 +290,22 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
       title: 'Zveřejnit projekt',
       description:
         'Puts a project on the site from the given day (YYYY-MM-DD); audited as PUBLISH_PROJECT.',
-      inputSchema: z.object({ id: UUID, publishedOn: DAY }),
+      inputSchema: z.object({ id: UUID, publishedOn: DAY, expectedVersion: EXPECTED_VERSION }),
       annotations: WRITING,
     },
-    async ({ id, publishedOn }, ctx) =>
+    async ({ id, publishedOn, expectedVersion }, ctx) =>
       answerChange(
         deps,
         ctx,
         'nfnn_publish_project',
         async ({ apiToken }) =>
           text(
-            await backend.post(`/api/admin/content/projects/${id}/publish`, apiToken, {
-              publishedOn,
-            }),
+            await backend.post(
+              `/api/admin/content/projects/${id}/publish`,
+              apiToken,
+              { publishedOn },
+              expectedVersion,
+            ),
           ),
         `project ${id}`,
       ),
@@ -283,16 +317,23 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
       title: 'Stáhnout projekt z webu',
       description:
         'Takes a project off the site (it becomes a draft again); audited as UNPUBLISH_PROJECT.',
-      inputSchema: z.object({ id: UUID }),
+      inputSchema: z.object({ id: UUID, expectedVersion: EXPECTED_VERSION }),
       annotations: WRITING,
     },
-    async ({ id }, ctx) =>
+    async ({ id, expectedVersion }, ctx) =>
       answerChange(
         deps,
         ctx,
         'nfnn_unpublish_project',
         async ({ apiToken }) =>
-          text(await backend.post(`/api/admin/content/projects/${id}/unpublish`, apiToken)),
+          text(
+            await backend.post(
+              `/api/admin/content/projects/${id}/unpublish`,
+              apiToken,
+              undefined,
+              expectedVersion,
+            ),
+          ),
         `project ${id}`,
       ),
   );
@@ -395,12 +436,20 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
           unpairedPayments: z.boolean(),
           bankImport: z.boolean(),
         }),
+        expectedVersion: EXPECTED_VERSION,
       }),
       annotations: { ...WRITING, idempotentHint: true },
     },
-    async (settings, ctx) =>
+    async ({ expectedVersion, ...settings }, ctx) =>
       answerChange(deps, ctx, 'nfnn_update_report_settings', async ({ apiToken }) =>
-        text(await backend.put('/api/admin/donations/report/settings', apiToken, settings)),
+        text(
+          await backend.put(
+            '/api/admin/donations/report/settings',
+            apiToken,
+            settings,
+            expectedVersion,
+          ),
+        ),
       ),
   );
 
@@ -425,16 +474,18 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
       title: 'Upravit aktualitu',
       description:
         'Replaces the texts, the photo and the signer of a news article, draft or published (the published date stays); send every field (signerId is signer.id of nfnn_news_article; left out removes the signer), read them with nfnn_news_article first. Audited as UPDATE_NEWS.',
-      inputSchema: z.object({ id: UUID, ...NEWS }),
+      inputSchema: z.object({ id: UUID, ...NEWS, expectedVersion: EXPECTED_VERSION }),
       annotations: { ...WRITING, idempotentHint: true },
     },
-    async ({ id, ...article }, ctx) =>
+    async ({ id, expectedVersion, ...article }, ctx) =>
       answerChange(
         deps,
         ctx,
         'nfnn_update_news',
         async ({ apiToken }) =>
-          text(await backend.put(`/api/admin/content/news/${id}`, apiToken, article)),
+          text(
+            await backend.put(`/api/admin/content/news/${id}`, apiToken, article, expectedVersion),
+          ),
         `news ${id}`,
       ),
   );
@@ -460,16 +511,23 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
       title: 'Upravit projekt',
       description:
         'Replaces the texts, the year, the category and the photo of a project (the published date stays); send every field, read them with nfnn_project first. Audited as UPDATE_PROJECT.',
-      inputSchema: z.object({ id: UUID, ...PROJECT }),
+      inputSchema: z.object({ id: UUID, ...PROJECT, expectedVersion: EXPECTED_VERSION }),
       annotations: { ...WRITING, idempotentHint: true },
     },
-    async ({ id, ...project }, ctx) =>
+    async ({ id, expectedVersion, ...project }, ctx) =>
       answerChange(
         deps,
         ctx,
         'nfnn_update_project',
         async ({ apiToken }) =>
-          text(await backend.put(`/api/admin/content/projects/${id}`, apiToken, project)),
+          text(
+            await backend.put(
+              `/api/admin/content/projects/${id}`,
+              apiToken,
+              project,
+              expectedVersion,
+            ),
+          ),
         `project ${id}`,
       ),
   );
@@ -516,6 +574,44 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
   );
 
   server.registerTool(
+    'nfnn_set_photo_focal_point',
+    {
+      title: 'Bod výřezu fotky',
+      description:
+        'Marks on a photo the spot that must stay visible (a face, say) as percentages from its left and top edge: the site then crops every shape it shows the photo in (the card in a list, the top of an article) around that spot, and as before with focalPoint null, as it does for a photo without one; the About photo is still shown whole, so its point takes effect once that section crops it. A portrait or web signature of a person of the foundation takes no point (400 content/focal-point-on-person-image). The point belongs to the photo, so every news article, project and the About section that show it crop alike; a photo put in place of another (coverImageId of nfnn_update_news or nfnn_update_project, photoId of nfnn_update_about) starts without one. The current point is the focalPoint of the photo in nfnn_news_article, nfnn_project and nfnn_about. Audited as CHANGE_PHOTO_FOCAL_POINT; placing the point a photo already has changes nothing.',
+      inputSchema: z.object({
+        photoId: UUID.describe(
+          'Id of an uploaded photo: the coverImage of a news article or project, the About photo, or one just uploaded.',
+        ),
+        focalPoint: z
+          .object({
+            x: z
+              .number()
+              .int()
+              .min(0)
+              .max(100)
+              .describe('Percent from the left edge of the photo.'),
+            y: z.number().int().min(0).max(100).describe('Percent from the top edge of the photo.'),
+          })
+          .nullable()
+          .describe(
+            'The spot to keep in view; null removes it and the photo is cropped as before.',
+          ),
+      }),
+      annotations: { ...WRITING, idempotentHint: true },
+    },
+    async ({ photoId, focalPoint }, ctx) =>
+      answerChange(
+        deps,
+        ctx,
+        'nfnn_set_photo_focal_point',
+        async ({ apiToken }) =>
+          text(await backend.put(`/api/admin/content/media/${photoId}`, apiToken, { focalPoint })),
+        `photo ${photoId}`,
+      ),
+  );
+
+  server.registerTool(
     'nfnn_issue_receipt',
     {
       title: 'Vystavit potvrzení',
@@ -558,6 +654,43 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
         },
         `donor ${donorId}`,
       ),
+  );
+
+  server.registerTool(
+    'nfnn_issue_receipts',
+    {
+      title: 'Vystavit roční potvrzení hromadně',
+      description:
+        'Issues the yearly receipts of a completed year to up to 50 donors at once (`donorIds`, each once), as "Vystavit a připravit PDF k tisku" on the page "Hromadná potvrzení" at /sprava does; nfnn_yearly_receipts lists the donors of a year. Each donor goes through the same issuer as nfnn_issue_receipt, one after another: a first receipt is ISSUED with a new number, a receipt whose data are unchanged comes back UNCHANGED, and a donor is SKIPPED with the problem code when nothing can be issued: donations/donor-erased, donations/donor-not-found, donations/yearly-receipt-not-available (no gift that year), donations/receipt-issue-limit, and donations/receipt-replacement-in-browser-only when the donor\'s name, address or gifts changed since the active receipt, whose replacement only an administrator on the web at /sprava issues (the active receipt stays valid). Calling it again changes nothing that was issued. The answer lists, in the order asked, each donor\'s outcome, problem and receipt id and number (read one whole with nfnn_receipt), with the counts. The PDF to print is drawn only in a browser. New numbers are audited as ISSUE_RECEIPT, and the run as ISSUE_RECEIPTS with its counts, naming this application.',
+      inputSchema: z.object({
+        year: z
+          .number()
+          .int()
+          .min(2000)
+          .max(2100)
+          .describe('The completed year of the yearly receipts.'),
+        donorIds: z.array(UUID).min(1).max(50).describe('The donors, at most 50, each once.'),
+      }),
+      annotations: { ...WRITING, idempotentHint: true },
+    },
+    async ({ year, donorIds }, ctx) =>
+      answerChange(deps, ctx, 'nfnn_issue_receipts', async ({ apiToken }) => {
+        const ids = donorIds.map((id) => id.toLowerCase());
+        if (new Set(ids).size !== ids.length) {
+          throw new ToolRefusal(
+            'repeated-donor',
+            'Name each donor in `donorIds` once; nothing was issued.',
+          );
+        }
+        return text(
+          yearlyReceiptsView(
+            await backend.post('/api/admin/donations/receipts/yearly', apiToken, {
+              year,
+              donorIds: ids,
+            }),
+          ),
+        );
+      }),
   );
 
   server.registerTool(
@@ -728,7 +861,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
       inputSchema: ACCOUNT_LINK,
       annotations: { ...WRITING, idempotentHint: true },
     },
-    async ({ donorId, linkId }, ctx) =>
+    async ({ donorId, linkId, expectedVersion }, ctx) =>
       answerChange(
         deps,
         ctx,
@@ -737,6 +870,8 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
           await backend.post(
             `/api/admin/donations/donors/${donorId}/bank-accounts/${linkId}/disconnect`,
             apiToken,
+            undefined,
+            expectedVersion,
           );
           return plain('Pairing from the account is turned off for the donor.');
         },
@@ -753,7 +888,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
       inputSchema: ACCOUNT_LINK,
       annotations: { ...WRITING, idempotentHint: true },
     },
-    async ({ donorId, linkId }, ctx) =>
+    async ({ donorId, linkId, expectedVersion }, ctx) =>
       answerChange(
         deps,
         ctx,
@@ -762,6 +897,8 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
           await backend.post(
             `/api/admin/donations/donors/${donorId}/bank-accounts/${linkId}/reconnect`,
             apiToken,
+            undefined,
+            expectedVersion,
           );
           return plain(
             "Pairing from the account is on again; it starts with the next payment carrying the donor's symbol.",
@@ -820,6 +957,32 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
           example: `curl -sS -T photo.jpg -H '${PHOTO_UPLOAD_HEADER}: ${ticket}' -H 'Content-Type: image/jpeg' ${url}`,
         });
       }),
+  );
+
+  server.registerTool(
+    'nfnn_set_push_alerts',
+    {
+      title: 'Nastavit upozornění přes push',
+      description:
+        'Chooses which push alerts one device of the connected administrator gets (its id from nfnn_push_alerts): bankImport, backups and mail, each true or false, all three given. Audited as CHANGE_PUSH_ALERTS. A device is turned on or off only on the web at /sprava.',
+      inputSchema: z.object({
+        id: z.string().uuid(),
+        bankImport: z.boolean(),
+        backups: z.boolean(),
+        mail: z.boolean(),
+      }),
+      annotations: WRITING,
+    },
+    async ({ id, bankImport, backups, mail }, ctx) =>
+      answerChange(deps, ctx, 'nfnn_set_push_alerts', async ({ apiToken }) =>
+        text(
+          await backend.put(`/api/admin/operations/push/subscriptions/${id}/alerts`, apiToken, {
+            bankImport,
+            backups,
+            mail,
+          }),
+        ),
+      ),
   );
 
   server.registerTool(

@@ -12,6 +12,8 @@ public interface ProjectRepository {
 
     Optional<Project> findById(ProjectId id);
 
+    Optional<Project> findByIdForUpdate(ProjectId id);
+
     Optional<Project> findBySlug(Slug slug);
 
     boolean isSlugTakenByAnother(Slug slug, ProjectId except);

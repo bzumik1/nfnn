@@ -331,3 +331,24 @@ describe('Given pdfkit, which draws the receipts', () => {
     ]);
   });
 });
+
+describe('Given idb, which reaches IndexedDB for the device copies', () => {
+  const idb = CONFINED_IMPORTS.find((entry) => entry.examples.includes('idb'));
+
+  it('when the table is read, then idb is imported only by the IndexedDB adapter and tests', () => {
+    assert.ok(idb, 'an entry for idb');
+    assert.deepEqual(idb.allowedIn, [
+      'idbStorage',
+      'testSupport',
+      'sharedCaseLoader',
+      'sharedCaseSetup',
+      'receiptAssetsSetup',
+    ]);
+    assert.deepEqual(SCOPES.idbStorage.files, ['src/app/core/device/store/idb-device-storage.ts']);
+  });
+
+  it('when the vault or a page imports idb, then it is refused', async () => {
+    assert.notDeepEqual(await refusals(projectLint, 'app', staticImport('idb')), []);
+    assert.notDeepEqual(await refusals(projectLint, 'app', dynamicImport('idb')), []);
+  });
+});

@@ -81,9 +81,22 @@ public class AdminActionsStepDefinitions {
 
     @Then("the admin actions are:")
     public void theAdminActionsAre(DataTable table) {
-        List<Map<String, String>> expected = table.asMaps().stream()
+        assertThat(actualActions(table)).containsExactlyElementsOf(expectedActions(table));
+    }
+
+    @Then("the admin actions are, in any order of those performed at the same moment:")
+    public void theAdminActionsAreInAnyOrder(DataTable table) {
+        assertThat(actualActions(table)).containsExactlyInAnyOrderElementsOf(expectedActions(table));
+    }
+
+    private List<Map<String, String>> expectedActions(DataTable table) {
+        return table.asMaps().stream()
                 .map(row -> row.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, cell -> resolveIds(cell.getValue()))))
                 .toList();
+    }
+
+    private List<Map<String, String>> actualActions(DataTable table) {
+        List<Map<String, String>> expected = expectedActions(table);
         List<Map<String, String>> actual = new ArrayList<>();
         api.lastResponseJson().get("items").forEach(item -> {
             Map<String, String> row = new HashMap<>();
@@ -96,7 +109,7 @@ public class AdminActionsStepDefinitions {
             }
             actual.add(row);
         });
-        assertThat(actual).containsExactlyElementsOf(expected);
+        return actual;
     }
 
     @Then("the admin actions came through these applications:")
@@ -135,7 +148,7 @@ public class AdminActionsStepDefinitions {
     }
 
     private String resolveIds(String details) {
-        String resolved = details;
+        String resolved = details == null ? "" : details;
         for (String alias : List.of("Jana", "Petr", "Eva")) {
             String id = scenarioDonors.findIdOf(alias).map(UUID::toString).orElse(alias);
             resolved = resolved.replace("<" + alias + ">", id);

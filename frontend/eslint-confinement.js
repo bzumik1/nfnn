@@ -22,6 +22,8 @@ const QR_DECODING = 'src/app/features/donations/verification/qr-decoding.ts';
 const QR_DECODER_WORKER = 'src/app/features/donations/verification/qr-decoder.worker.ts';
 const ARGON2 = 'src/app/core/device/crypto/argon2.ts';
 const ARGON2_WORKER = 'src/app/core/device/crypto/argon2.worker.ts';
+const SERVICE_WORKER_ADAPTER = 'src/app/core/updates/angular-service-worker.ts';
+const IDB_STORAGE = 'src/app/core/device/store/idb-device-storage.ts';
 const COMPUTED_IMPORTS_ALLOWED_IN = ['routes'];
 
 const SCOPES = {
@@ -38,6 +40,8 @@ const SCOPES = {
   qrDecoderWorker: { files: [QR_DECODER_WORKER], within: 'app' },
   argon2: { files: [ARGON2], within: 'app' },
   argon2Worker: { files: [ARGON2_WORKER], within: 'app' },
+  serviceWorkerAdapter: { files: [SERVICE_WORKER_ADAPTER], within: 'app' },
+  idbStorage: { files: [IDB_STORAGE], within: 'app' },
 };
 
 const NODE_SETUPS = ['sharedCaseSetup', 'receiptAssetsSetup'];
@@ -184,6 +188,22 @@ const CONFINED_IMPORTS = [
     examples: ['./argon2', '../crypto/argon2'],
     message:
       'Argon2id carries hash-wasm and its WebAssembly, so only the Argon2id worker (argon2.worker.ts) and tests load it; the app asks WorkerPasswordKeyDerivation instead.',
+  },
+  {
+    patterns: ['@angular/service-worker', '@angular/service-worker/*'],
+    dynamic: '^@angular/service-worker(?:/.*)?$',
+    allowedIn: ['serviceWorkerAdapter', ...TEST_SCOPES],
+    examples: ['@angular/service-worker', '@angular/service-worker/config'],
+    message:
+      'The Angular service worker is registered and read only in src/app/core/updates/angular-service-worker.ts; the app asks AppUpdates through SERVICE_WORKER_UPDATES.',
+  },
+  {
+    patterns: ['idb', 'idb/*'],
+    dynamic: '^idb(?:/.*)?$',
+    allowedIn: ['idbStorage', ...TEST_SCOPES],
+    examples: ['idb', 'idb/with-async-ittr'],
+    message:
+      'idb reaches IndexedDB only in src/app/core/device/store/idb-device-storage.ts, the adapter behind DeviceStorage, and in tests; the app asks DeviceVault instead.',
   },
 ];
 

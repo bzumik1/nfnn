@@ -19,8 +19,22 @@ export const RECEIPT_ID = '019a0000-0000-7000-8000-000000000017';
 export const REPLACING_DONOR_ID = '019a0000-0000-7000-8000-000000000018';
 export const ERASED_RECEIPT_ID = '019a0000-0000-7000-8000-000000000019';
 export const VERIFICATION_LINK = 'https://nfnn.cz/overit#1003188506188208640000126520415073310';
+export const STALE_VERSION = '0000000000000000';
+export const CURRENT_VERSION = '5e1c0a9f3b7d2486';
 export const PERSON_ID = '019a0000-0000-7000-8000-000000000007';
 export const SIGNED_PERSON_ID = '019a0000-0000-7000-8000-000000000008';
+export const PUSH_SUBSCRIPTION_ID = '019a0000-0000-7000-8000-000000000027';
+const STORED_NOW: Record<string, unknown> = {
+  'PUT /api/admin/donations/report/settings': {
+    recipients: ['info@nfnn.cz'],
+    sendDay: 5,
+    sendHour: 7,
+    sections: { donors: true, donations: false, unpairedPayments: false, bankImport: false },
+    changedAt: '2026-10-17T10:00:00Z',
+    sentReports: [],
+    version: CURRENT_VERSION,
+  },
+};
 const LOG_MATCHES: Record<string, number[]> = {
   'backend.log': [36],
   'backend.log.2026-10-22.0.gz': [70, 50, 10],
@@ -36,6 +50,7 @@ export interface RecordedRequest {
   readonly accept: string | undefined;
   readonly contentType: string | undefined;
   readonly forwardedFor: string | undefined;
+  readonly ifMatch: string | undefined;
   readonly body: string;
 }
 
@@ -84,6 +99,7 @@ export class FakeBackend {
       accept: request.headers['accept'],
       contentType: request.headers['content-type'],
       forwardedFor: request.headers['x-forwarded-for'] as string | undefined,
+      ifMatch: request.headers['if-match'],
       body,
     };
     this.requests.push(recorded);
@@ -116,6 +132,25 @@ export class FakeBackend {
     }
     if (request.method !== 'GET' && token !== 'api-token-write') {
       return [403, problem(403, 'auth/forbidden', 'Přístup odepřen', 'Chybí oprávnění.')];
+    }
+    const stale =
+      request.ifMatch === `"${STALE_VERSION}"`
+        ? STORED_NOW[`${request.method} ${url.pathname}`]
+        : undefined;
+    if (stale !== undefined) {
+      return [
+        409,
+        {
+          ...problem(
+            409,
+            'donations/changed-meanwhile',
+            'Mezitím se to změnilo',
+            'Někdo jiný nebo automatické párování to mezitím změnil.',
+          ),
+          version: CURRENT_VERSION,
+          current: stale,
+        },
+      ];
     }
     if (request.method === 'GET' && url.pathname === '/api/admin/donors/me/previous-sign-in') {
       return [200, { previousSignInAt: this.previousSignInAt }];
@@ -385,6 +420,19 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
       const about = JSON.parse(body) as Record<string, unknown>;
       return [200, { photo: about['photoId'] === null ? null : aboutPhoto(about) }];
     }
+    case `PUT /api/admin/content/media/${MEDIA_ID}`: {
+      const photo = JSON.parse(body) as Record<string, unknown>;
+      return [
+        200,
+        {
+          id: MEDIA_ID,
+          url: `/api/content/media/${MEDIA_ID}`,
+          width: 1600,
+          height: 1200,
+          focalPoint: photo['focalPoint'] ?? null,
+        },
+      ];
+    }
     case 'POST /api/admin/content/news':
       return [201, { id: UNKNOWN_ID, slug: 'letni-tabor', ...content(body) }];
     case `PUT /api/admin/content/news/${UNKNOWN_ID}`:
@@ -548,6 +596,37 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
           text: '2026-10-23T10:00:02 INFO third line\n',
         },
       ];
+    case 'GET /api/admin/operations/push':
+      return [
+        200,
+        {
+          publicKey: 'BPushPublicKeyOfTheFakeBackend',
+          subscriptions: [
+            {
+              id: PUSH_SUBSCRIPTION_ID,
+              service: 'google',
+              alerts: { bankImport: true, backups: true, mail: true },
+              createdAt: '2026-11-05T06:00:00Z',
+              lastDeliveredAt: '2026-11-05T06:05:00Z',
+              failuresInARow: 0,
+            },
+          ],
+        },
+      ];
+    case `PUT /api/admin/operations/push/subscriptions/${PUSH_SUBSCRIPTION_ID}/alerts`:
+      return [
+        200,
+        {
+          id: PUSH_SUBSCRIPTION_ID,
+          service: 'google',
+          alerts: JSON.parse(body) as { bankImport: boolean; backups: boolean; mail: boolean },
+          createdAt: '2026-11-05T06:00:00Z',
+          lastDeliveredAt: null,
+          failuresInARow: 0,
+        },
+      ];
+    case `PUT /api/admin/operations/push/subscriptions/${UNKNOWN_ID}/alerts`:
+      return [404, problem(404, 'operations/push-subscription-not-found', 'Zařízení nenalezeno')];
     case 'GET /api/admin/operations/loggers':
       return [
         200,
@@ -678,6 +757,53 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
           'Potvrzení nenalezeno',
           'Takové potvrzení u vás nemáme.',
         ),
+      ];
+    case 'GET /api/admin/donations/receipts/yearly':
+      return [
+        200,
+        {
+          year: Number(url.searchParams.get('year') ?? '2026'),
+          yearlyReceiptsAvailableThrough: 2026,
+          receiptsAvailableFrom: 2026,
+          donors: [
+            {
+              donorId: DONOR_ID,
+              name: 'Jana Nováková',
+              type: 'PERSON',
+              giftCount: 2,
+              totalAmountMinor: 350000,
+              receipt: { id: RECEIPT_ID, number: '2027-000001', issuedAt: '2027-01-15T11:00:00Z' },
+            },
+          ],
+          erasedDonors: 1,
+        },
+      ];
+    case 'POST /api/admin/donations/receipts/yearly':
+      return [
+        200,
+        {
+          year: 2026,
+          results: [
+            {
+              donorId: DONOR_ID,
+              outcome: 'ISSUED',
+              problem: null,
+              replacedNumber: null,
+              receipt: issuedReceipt({ year: 2026 }),
+            },
+            {
+              donorId: UNKNOWN_ID,
+              outcome: 'SKIPPED',
+              problem: 'donations/donor-not-found',
+              replacedNumber: null,
+              receipt: null,
+            },
+          ],
+          issued: 1,
+          replaced: 0,
+          unchanged: 0,
+          skipped: 1,
+        },
       ];
     case `POST /api/admin/donations/donors/${DONOR_ID}/receipts`:
       return [200, issuedReceipt(JSON.parse(body || '{}') as ReceiptSubject)];

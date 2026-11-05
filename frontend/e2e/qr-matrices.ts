@@ -9,6 +9,7 @@ export interface QrMatrixFixture {
 
 interface PaymentQrCase {
   name: string;
+  input: { spayd?: string };
   expected: { size?: number; matrix?: string[] };
 }
 
@@ -47,6 +48,14 @@ function paymentQr(name: string): QrMatrixFixture {
     throw new Error(`shared-cases/qr/payment.json has no QR symbol for the case ${name}`);
   }
   return { size, modules: matrix.join('') };
+}
+
+export function paymentSpayd(name: string): string {
+  const spayd = PAYMENT_QR_CASES.cases.find((sharedCase) => sharedCase.name === name)?.input.spayd;
+  if (spayd === undefined) {
+    throw new Error(`shared-cases/qr/payment.json has no SPAYD text for the case ${name}`);
+  }
+  return spayd;
 }
 
 export const PAYMENT_QR_500 = paymentQr('500 Kč without a variable symbol');

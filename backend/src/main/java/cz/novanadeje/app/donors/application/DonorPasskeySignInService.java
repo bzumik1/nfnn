@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.DeviceDescription;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.InvalidPasskey;
@@ -54,7 +55,7 @@ public class DonorPasskeySignInService {
     }
 
     @Transactional(noRollbackFor = InvalidPasskey.class)
-    public AuthenticatedDonor signIn(String challenge, PasskeyAssertion assertion) {
+    public AuthenticatedDonor signIn(String challenge, PasskeyAssertion assertion, DeviceDescription device) {
         Instant now = clock.instant();
         LinkSecret secret = parse(challenge);
         PasskeyChallenge issued = challenges.findByChallengeHash(secret.hash())
@@ -74,7 +75,7 @@ public class DonorPasskeySignInService {
         passkey.recordSignIn(signCount, now);
         passkeys.save(passkey);
         log.info("Donor {} signed in with passkey {}", donor.id(), passkey.id());
-        return views.authenticated(donor, sessions.signIn(donor, true));
+        return views.authenticated(donor, sessions.signIn(donor, true, device));
     }
 
     private static LinkSecret parse(String challenge) {

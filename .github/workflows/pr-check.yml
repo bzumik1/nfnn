@@ -1363,6 +1363,26 @@ jobs:
           docker cp nfnn-frontend:/usr/share/nginx/html "$RUNNER_TEMP/frontend-html"
           node frontend/scripts/probe-asset-caching.mjs http://localhost:8089 "$RUNNER_TEMP/frontend-html" frontend/nginx.conf
 
+      - name: The image's worker carries the payment route, and the operator's flag in the logs folder turns the service worker off and back on
+        if: matrix.part == 'journeys'
+        run: |
+          route=frontend/service-worker/payment-route.js
+          cmp -s -n "$(wc -c < "$route")" "$route" "$RUNNER_TEMP/frontend-html/ngsw-worker.js" || { echo "::error::the image's ngsw-worker.js must begin with the payment route of $route (npm run build prepends it)"; exit 1; }
+          flag="$RUNNER_TEMP/nfnn/logs/service-worker.off"
+          safety=$(sha256sum < "$RUNNER_TEMP/frontend-html/safety-worker.js")
+          worker=$(sha256sum < "$RUNNER_TEMP/frontend-html/ngsw-worker.js")
+          sudo touch "$flag"
+          headers=$(curl -sS --max-time 10 -o /dev/null -D - http://localhost:8089/ngsw.json | tr -d '\r')
+          echo "$headers" | head -n 1 | grep -q ' 404' || { echo "::error::with the flag set /ngsw.json must answer 404, so every worker removes itself"; echo "$headers"; exit 1; }
+          echo "$headers" | grep -qix 'cloudflare-cdn-cache-control: no-store' || { echo "::error::the 404 of /ngsw.json must not be kept by Cloudflare"; echo "$headers"; exit 1; }
+          type=$(curl -fsS --max-time 10 -o "$RUNNER_TEMP/served-worker.js" -w '%{content_type}' http://localhost:8089/ngsw-worker.js)
+          echo "$type" | grep -qE '^(text|application)/javascript' || { echo "::error::with the flag set /ngsw-worker.js must still be a script (got $type)"; exit 1; }
+          [ "$(sha256sum < "$RUNNER_TEMP/served-worker.js")" = "$safety" ] || { echo "::error::with the flag set /ngsw-worker.js must serve safety-worker.js"; exit 1; }
+          sudo rm "$flag"
+          [ "$(curl -sS --max-time 10 -o /dev/null -w '%{http_code}' http://localhost:8089/ngsw.json)" = 200 ] || { echo "::error::without the flag /ngsw.json must answer 200 again"; exit 1; }
+          curl -fsS --max-time 10 -o "$RUNNER_TEMP/served-worker.js" http://localhost:8089/ngsw-worker.js
+          [ "$(sha256sum < "$RUNNER_TEMP/served-worker.js")" = "$worker" ] || { echo "::error::without the flag /ngsw-worker.js must serve the app's worker again"; exit 1; }
+
       - name: API, connector and discovery answers stay out of the browser's and Cloudflare's caches
         if: matrix.part == 'journeys'
         run: |

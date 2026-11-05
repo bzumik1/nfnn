@@ -33,6 +33,12 @@ class MediaImageJpaEntity {
     @Column(name = "uploaded_at", nullable = false)
     private Instant uploadedAt;
 
+    @Column(name = "focal_x")
+    private Short focalX;
+
+    @Column(name = "focal_y")
+    private Short focalY;
+
     @OneToMany(mappedBy = "media", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @OrderBy("width asc")
     private List<MediaVariantJpaEntity> variants = new ArrayList<>();

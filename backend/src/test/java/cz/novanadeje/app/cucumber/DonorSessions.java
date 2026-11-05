@@ -65,6 +65,10 @@ public class DonorSessions {
         api.authorize(renewed);
     }
 
+    public String bearerOf(String alias) {
+        return "Bearer " + validAccessTokenOf(alias);
+    }
+
     public String refreshCookieOf(String alias) {
         String cookie = refreshCookies.get(alias);
         assertThat(cookie).withFailMessage("%s has not signed in through the API in this scenario", alias).isNotNull();

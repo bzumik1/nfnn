@@ -13,10 +13,12 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Observable, of, switchMap, tap } from 'rxjs';
 import { FormsModule, NgForm } from '@angular/forms';
 import { Title } from '@angular/platform-browser';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
+import { DirtyForms } from '../../../core/updates/dirty-forms';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { FocusFirstInvalid } from '../../../shared/ui/form-field/focus-first-invalid';
@@ -35,7 +37,6 @@ import {
   MAX_TAG_LENGTH,
   MAX_TITLE_LENGTH,
   MAX_YEAR,
-  mediaUrl,
   MIN_YEAR,
   PROJECT_CATEGORIES,
   ProjectCategory,
@@ -48,9 +49,21 @@ import {
 import { projectCategoryLabel } from '../../content/project-category';
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
+import { FocalPoint } from '../../../shared/ui/focal-point/focal-point';
+import { PhotoResponse, PhotosApi } from '../../content/photos-api';
+import { FocalPointPicker, PreviewShape } from '../focal-point-picker/focal-point-picker';
 import { ContentPreview, PreviewContent } from '../content-preview/content-preview';
 import { GuardsUnsavedChanges } from '../unsaved-changes/unsaved-changes-guard';
 import { UnsavedChangesDialog } from '../unsaved-changes/unsaved-changes-dialog';
+import {
+  isChangedMeanwhile,
+  savedAtInRefusal,
+  versionInRefusal,
+} from '../../../core/version/row-version';
+import {
+  ChangedMeanwhileDialog,
+  ChangedMeanwhileState,
+} from '../changed-meanwhile/changed-meanwhile-dialog';
 
 type LoadState = 'loading' | 'ready' | 'error';
 type EditorMode = 'edit' | 'preview';
@@ -62,7 +75,6 @@ const FORBIDDEN = 'auth/forbidden';
 const NOT_FOUND = 'content/project-not-found';
 const SLUG_TAKEN = 'content/slug-taken';
 const EDIT_TITLE = $localize`:@@admin.projectEditor.pageTitle.edit:Úprava projektu | Správa | Nová naděje – nadační fond`;
-const PREVIEW_WIDTH = 480;
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 @Component({
@@ -77,8 +89,10 @@ const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
     MarkdownToolbar,
     FileButton,
     UnsavedChangesDialog,
+    ChangedMeanwhileDialog,
     ContentPreview,
     ActionBar,
+    FocalPointPicker,
   ],
   templateUrl: './admin-project-editor.html',
   styleUrl: './admin-project-editor.scss',
@@ -87,6 +101,7 @@ const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 })
 export class AdminProjectEditor implements GuardsUnsavedChanges {
   private readonly api = inject(ProjectsApi);
+  private readonly photos = inject(PhotosApi);
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -118,6 +133,8 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
   protected readonly categoryLabel = projectCategoryLabel;
 
   protected readonly state = signal<LoadState>('loading');
+  protected readonly changedMeanwhile = signal<ChangedMeanwhileState | null>(null);
+  private refusedDelete = false;
   protected readonly project = signal<ProjectResponse | null>(null);
   protected readonly mode = signal<EditorMode>('edit');
   protected readonly preview = signal<PreviewContent | null>(null);
@@ -201,7 +218,28 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
   protected readonly coverUnsaved = computed(
     () => (this.coverImage()?.id ?? null) !== (this.project()?.coverImage?.id ?? null),
   );
-  protected readonly unsaved = computed(() => this.edited() || this.coverUnsaved());
+  protected readonly focalPointUnsaved = computed(() => {
+    const cover = this.coverImage();
+    if (!cover) {
+      return false;
+    }
+    const saved = this.project()?.coverImage;
+    const savedPoint = saved?.id === cover.id ? saved.focalPoint : null;
+    return !samePoint(cover.focalPoint, savedPoint);
+  });
+  protected readonly unsaved = computed(
+    () => this.edited() || this.coverUnsaved() || this.focalPointUnsaved(),
+  );
+  protected readonly focalShapes: readonly PreviewShape[] = [
+    {
+      shape: 'projectCard',
+      label: $localize`:@@admin.projectEditor.focalPoint.card:Karta v Projektech`,
+    },
+    {
+      shape: 'articleTop',
+      label: $localize`:@@admin.projectEditor.focalPoint.top:Nahoře v článku`,
+    },
+  ];
   protected readonly publicUrl = computed(() => {
     const project = this.project();
     return project?.live ? `/projekty/${project.slug}` : null;
@@ -215,10 +253,6 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
       default:
         return $localize`:@@admin.projectEditor.publishDate.hint.draft:Projekt zatím vidíte jen vy. Tlačítko Uložit a zveřejnit ho pustí na web s tímto datem, s pozdějším datem až ten den.`;
     }
-  });
-  protected readonly previewUrl = computed(() => {
-    const image = this.coverImage();
-    return image ? mediaUrl(image.id, PREVIEW_WIDTH) : null;
   });
   private readonly slugOrDraft = signal('');
   protected readonly publicAddressHint = computed(() => {
@@ -239,6 +273,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
   });
 
   constructor() {
+    this.destroyRef.onDestroy(inject(DirtyForms).register(() => !this.discarded && this.unsaved()));
     const id = this.route.snapshot.paramMap.get('id');
     if (id === null) {
       this.state.set('ready');
@@ -255,7 +290,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
     });
   }
 
-  protected load(id: string): void {
+  protected load(id: string, loaded?: () => void): void {
     this.state.set('loading');
     this.api
       .get(id)
@@ -264,6 +299,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
         next: (project) => {
           this.show(project);
           this.state.set('ready');
+          loaded?.();
         },
         error: (failure: unknown) => {
           if (problemTypeEndsWith(failure, UNAUTHENTICATED)) {
@@ -379,18 +415,42 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
     const needsPublish = publish && existing?.publishedOn !== date;
     this.saving.set(publish ? 'publish' : 'save');
     if (existing && needsPublish && !this.unsaved()) {
-      this.sendPublish(existing.id, date);
+      this.sendPublish(existing.id, date, existing.version ?? '');
       return;
     }
-    const call = existing
-      ? this.api.update(existing.id, this.request())
-      : this.api.create(this.request());
+    if (existing && !this.edited() && !this.coverUnsaved() && this.focalPointUnsaved()) {
+      this.placeFocalPoint()
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: () => {
+            if (needsPublish) {
+              this.sendPublish(existing.id, date, existing.version ?? '');
+              return;
+            }
+            this.saving.set(null);
+            this.notice.set({ kind: 'status', text: this.savedText(existing, false) });
+          },
+          error: (failure: unknown) => {
+            this.saving.set(null);
+            this.saveFailed(failure);
+          },
+        });
+      return;
+    }
+    const request = this.request();
+    const call = this.placeFocalPoint().pipe(
+      switchMap(() =>
+        existing
+          ? this.api.update(existing.id, request, existing.version ?? '')
+          : this.api.create(request),
+      ),
+    );
     call.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (project) => {
         this.saved(project, existing === null);
         if (needsPublish) {
           this.publishDate = date;
-          this.sendPublish(project.id, date);
+          this.sendPublish(project.id, date, project.version ?? '');
           return;
         }
         this.saving.set(null);
@@ -398,6 +458,16 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
       },
       error: (failure: unknown) => {
         this.saving.set(null);
+        if (existing && isChangedMeanwhile(failure)) {
+          this.changedMeanwhile.set({
+            version: versionInRefusal(failure),
+            draft: true,
+            overwrite: true,
+            publish,
+            savedAt: savedAtInRefusal(failure),
+          });
+          return;
+        }
         this.saveFailed(failure);
       },
     });
@@ -427,7 +497,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
       .subscribe({
         next: (uploaded) => {
           this.uploading.set(false);
-          this.coverImage.set({ id: uploaded.id, url: uploaded.url, alt: null });
+          this.coverImage.set({ id: uploaded.id, url: uploaded.url, alt: null, focalPoint: null });
         },
         error: (failure: unknown) => {
           this.uploading.set(false);
@@ -441,15 +511,36 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
       });
   }
 
+  protected focalPointChanged(point: FocalPoint | null): void {
+    this.coverImage.update((cover) => cover && { ...cover, focalPoint: point });
+  }
+
+  private placeFocalPoint(): Observable<unknown> {
+    const cover = this.coverImage();
+    return cover && this.focalPointUnsaved()
+      ? this.photos
+          .placeFocalPoint(cover.id, cover.focalPoint)
+          .pipe(tap((photo) => this.keepPlacedPoint(photo)))
+      : of(null);
+  }
+
+  private keepPlacedPoint(photo: PhotoResponse): void {
+    this.project.update((saved) =>
+      saved?.coverImage?.id === photo.id
+        ? { ...saved, coverImage: { ...saved.coverImage, focalPoint: photo.focalPoint } }
+        : saved,
+    );
+  }
+
   protected removeImage(): void {
     this.coverImage.set(null);
     this.coverImageAlt = '';
     this.uploadError.set(null);
   }
 
-  private sendPublish(id: string, date: string): void {
+  private sendPublish(id: string, date: string, version: string): void {
     this.api
-      .publish(id, date)
+      .publish(id, date, version)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (project) => {
@@ -465,6 +556,10 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
         },
         error: (failure: unknown) => {
           this.saving.set(null);
+          if (isChangedMeanwhile(failure)) {
+            this.changedMeanwhile.set(this.actionRefused(failure));
+            return;
+          }
           this.notice.set({
             kind: 'alert',
             text: describeProblem(
@@ -484,7 +579,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
     this.notice.set(null);
     this.unpublishing.set(true);
     this.api
-      .unpublish(existing.id)
+      .unpublish(existing.id, existing.version ?? '')
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (project) => {
@@ -498,6 +593,10 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
         },
         error: (failure: unknown) => {
           this.unpublishing.set(false);
+          if (isChangedMeanwhile(failure)) {
+            this.changedMeanwhile.set(this.actionRefused(failure));
+            return;
+          }
           this.notice.set({
             kind: 'alert',
             text: describeProblem(
@@ -527,7 +626,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
     }
     this.deleting.set(true);
     this.api
-      .delete(existing.id)
+      .delete(existing.id, existing.version ?? '')
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
@@ -538,6 +637,11 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
         error: (failure: unknown) => {
           this.deleting.set(false);
           this.confirmingDelete.set(false);
+          if (isChangedMeanwhile(failure)) {
+            this.refusedDelete = true;
+            this.changedMeanwhile.set(this.actionRefused(failure));
+            return;
+          }
           this.deleteNotice.set({
             kind: 'alert',
             text: describeProblem(
@@ -548,6 +652,59 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
           this.focusDeleteButton();
         },
       });
+  }
+
+  protected overwriteAfterChange(): void {
+    this.refusedDelete = false;
+    const changed = this.changedMeanwhile();
+    const version = changed?.version;
+    const form = this.projectForm();
+    this.changedMeanwhile.set(null);
+    if (!changed || !version || !form) {
+      return;
+    }
+    this.publishRequested = changed.publish;
+    this.project.update((saved) => (saved ? { ...saved, version } : saved));
+    this.submit(form);
+  }
+
+  protected reloadAfterChange(): void {
+    this.refusedDelete = false;
+    const saved = this.project();
+    const discardedEdits = this.changedMeanwhile()?.draft === true;
+    this.changedMeanwhile.set(null);
+    if (!saved) {
+      return;
+    }
+    this.projectForm()?.form.markAsPristine();
+    this.edited.set(false);
+    this.load(saved.id, () => {
+      this.notice.set({
+        kind: 'status',
+        text: discardedEdits
+          ? $localize`:@@admin.projectEditor.reloaded.discarded:Vaše úpravy jsme zahodili a načetli novější verzi projektu.`
+          : $localize`:@@admin.projectEditor.reloaded:Načetli jsme aktuální stav projektu. Zkontrolujte ho a rozhodněte znovu.`,
+      });
+      afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
+    });
+  }
+
+  private actionRefused(failure: unknown): ChangedMeanwhileState {
+    return {
+      version: null,
+      draft: this.unsaved(),
+      overwrite: false,
+      publish: false,
+      savedAt: savedAtInRefusal(failure),
+    };
+  }
+
+  protected keepDraftAfterChange(): void {
+    this.changedMeanwhile.set(null);
+    if (this.refusedDelete) {
+      this.refusedDelete = false;
+      this.focusDeleteButton();
+    }
   }
 
   private focusDeleteButton(): void {
@@ -681,4 +838,8 @@ function todayIso(): string {
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');
   return `${now.getFullYear()}-${month}-${day}`;
+}
+
+function samePoint(a: FocalPoint | null, b: FocalPoint | null): boolean {
+  return a?.x === b?.x && a?.y === b?.y;
 }

@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.infrastructure.persistence;
 
+import cz.novanadeje.app.donors.domain.DeviceId;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.RefreshToken;
 import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
@@ -69,9 +70,29 @@ class JpaRefreshTokenRepository implements RefreshTokenRepository {
     }
 
     @Override
+    public void lockAllOf(DonorId donorId) {
+        jpa.lockAllOfInIdOrder(donorId.value());
+    }
+
+    @Override
     public void revokeAllOf(DonorId donorId, Instant at) {
         jpa.lockAllOfInIdOrder(donorId.value());
         jpa.revokeAllOf(donorId.value(), at);
         events.publishEvent(new DonorSessionsEnded(donorId.value(), at));
+    }
+
+    @Override
+    public void revokeAllOfDevice(DeviceId deviceId, Instant at) {
+        jpa.revokeAllOfDevice(deviceId.value(), at);
+    }
+
+    @Override
+    public void revokeDevicelessBrowserTokensOf(DonorId donorId, Instant at) {
+        jpa.revokeDevicelessBrowserTokensOf(donorId.value(), at);
+    }
+
+    @Override
+    public int deleteSpentBefore(Instant cutoff) {
+        return jpa.deleteSpentBefore(cutoff);
     }
 }

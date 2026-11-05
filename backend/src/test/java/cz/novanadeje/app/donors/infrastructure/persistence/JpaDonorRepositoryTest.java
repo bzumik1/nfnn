@@ -138,6 +138,26 @@ class JpaDonorRepositoryTest {
     }
 
     @Test
+    @DisplayName("Given an administrator and two plain donors, when every donor is listed, then each comes once by id, the administrator with the role")
+    void should_list_every_donor_once_by_id_when_all_listed_given_administrator_among_them() {
+        Donor admin = donor("andrea@example.cz", "4821937590");
+        admin.verifyEmail(NOW);
+        admin.grantAdministration();
+        Donor jana = donor("jana@example.cz", "4821937591");
+        Donor petr = donor("petr@example.cz", "4821937592");
+        donors.save(jana);
+        donors.save(admin);
+        donors.save(petr);
+        flushAndClear();
+
+        List<Donor> all = donors.findAll();
+
+        assertThat(all).extracting(donor -> donor.id().value())
+                .containsExactlyElementsOf(java.util.stream.Stream.of(admin, jana, petr).map(donor -> donor.id().value()).sorted().toList());
+        assertThat(all).filteredOn(Donor::isAdministrator).extracting(Donor::id).containsExactly(admin.id());
+    }
+
+    @Test
     @DisplayName("Given saved donors, when some ids and an unknown id are looked up, then only the saved ones come")
     void should_find_saved_donors_when_looked_up_by_ids_given_unknown_id_among_them() {
         Donor jana = donor("jana@example.cz", "4821937580");

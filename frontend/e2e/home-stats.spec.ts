@@ -1,10 +1,10 @@
 import { expect, test } from './fixtures';
 
-test.describe('Given a visitor on the home page', () => {
+test.describe('Given a visitor on the About page', () => {
   test('when the figures scroll into view, then they count up from zero to their values', async ({
     page,
   }) => {
-    await page.goto('/');
+    await page.goto('/o-nas');
     const figures = page.locator('app-stats-bar [aria-hidden="true"]');
     await expect(figures).toHaveText(['0', '0+', '0%', '2005']);
 
@@ -19,7 +19,7 @@ test.describe('Given a visitor on the home page', () => {
   test('when the figures have not been seen yet, then a screen reader still reads the final ones', async ({
     page,
   }) => {
-    await page.goto('/');
+    await page.goto('/o-nas');
 
     await expect(page.locator('app-stats-bar')).toMatchAriaSnapshot(
       '- text: /\\d+ let pomáháme 200\\+ podpořených dětí 100% transparentně 2005 rok vzniku/',
@@ -33,7 +33,7 @@ test.describe('Given a visitor who asks for reduced motion', () => {
   test('when the home page opens, then the figures stand at their values without counting', async ({
     page,
   }) => {
-    await page.goto('/');
+    await page.goto('/o-nas');
 
     await expect(page.locator('app-stats-bar [aria-hidden="true"]')).toHaveText([
       /^\d+$/,

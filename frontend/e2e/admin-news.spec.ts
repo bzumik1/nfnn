@@ -25,6 +25,7 @@ function article(overrides: Record<string, unknown> = {}) {
     live: true,
     createdAt: '2026-10-19T09:00:00Z',
     updatedAt: '2026-10-20T07:30:00Z',
+    version: '4c9e1a7b20d3f856',
     ...overrides,
   };
 }
@@ -98,7 +99,9 @@ test.describe('Given an administrator managing the news', () => {
     await expect(page).toHaveURL(`/sprava/aktuality/${ARTICLE_ID}`);
     await expect(page.getByRole('heading', { level: 1, name: 'Úprava aktuality' })).toBeFocused();
     await expect(page.getByLabel('Titulek')).toHaveValue('Zahrada pro děti');
-    await expect(page.locator('.image-preview')).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Fotka, klepnutím nastavíte bod výřezu' }),
+    ).toBeVisible();
     await expect(page.locator('.publish-state .ui-badge')).toHaveText('Na webu');
     await expect(
       page.getByRole('link', { name: 'Otevřít na webu (v novém okně)' }),
@@ -118,9 +121,26 @@ test.describe('Given an administrator managing the news', () => {
           json: { id: IMAGE_ID, url: `/api/content/media/${IMAGE_ID}`, width: 1600, height: 1000 },
         }),
     );
+    const placed: unknown[] = [];
+    await page.route(
+      (url) => url.pathname === `${MEDIA}/${IMAGE_ID}`,
+      (route) => {
+        placed.push(route.request().postDataJSON());
+        return route.fulfill({
+          json: {
+            id: IMAGE_ID,
+            url: `/api/content/media/${IMAGE_ID}`,
+            width: 1600,
+            height: 1000,
+            focalPoint: { x: 50, y: 50 },
+          },
+        });
+      },
+    );
     await page.route(
       (url) => url.pathname === NEWS,
       (route) => {
+        expect(placed).toHaveLength(1);
         created.push(route.request().postDataJSON());
         return route.fulfill({ status: 201, json: draft({ coverImage: article().coverImage }) });
       },
@@ -165,9 +185,15 @@ test.describe('Given an administrator managing the news', () => {
       mimeType: 'image/png',
       buffer: TINY_PNG,
     });
-    await expect(page.locator('.image-preview')).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Fotka, klepnutím nastavíte bod výřezu' }),
+    ).toBeVisible();
     await expect(page.getByRole('button', { name: 'Odebrat fotku' })).toBeVisible();
     await page.getByLabel('Popis fotky').fill('Lidé na koncertě');
+    await expect(page.getByText('Bez bodu výřezu: web fotku ořízne jako dosud.')).toBeVisible();
+    await page.getByRole('button', { name: 'Fotka, klepnutím nastavíte bod výřezu' }).click();
+    await expect(page.getByText('Bod výřezu: 50 % zleva, 50 % shora.')).toBeVisible();
+    await expect(page.getByRole('figure')).toHaveText(['Karta v Aktualitách', 'Nahoře v článku']);
 
     await page.getByRole('button', { name: 'Náhled', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Náhled', exact: true })).toHaveAttribute(
@@ -189,6 +215,7 @@ test.describe('Given an administrator managing the news', () => {
       'Aktualitu jsme uložili jako koncept. Na web ji dostanete tlačítkem Uložit a zveřejnit.',
     );
     await expect(page).toHaveURL(`/sprava/aktuality/${DRAFT_ID}`);
+    expect(placed).toEqual([{ focalPoint: { x: 50, y: 50 } }]);
     expect(created).toEqual([
       {
         title: 'Benefiční koncert',
@@ -315,6 +342,54 @@ test.describe('Given an administrator managing the news', () => {
       'Aktualitu „Zahrada pro děti“ jsme smazali.',
     );
     expect(deleted).toBe(1);
+  });
+
+  test('when someone else saved the article while they were editing it, then the sheet says so and keeping their version saves it over the other one', async ({
+    page,
+  }) => {
+    const theirs = article({ title: 'Zahrada pro děti a rodiče', version: '7a0f3c9e5d1b2846' });
+    const versionsSent: (string | null)[] = [];
+    await page.route(
+      (url) => url.pathname === `${NEWS}/${ARTICLE_ID}`,
+      (route) => {
+        if (route.request().method() !== 'PUT') {
+          return route.fulfill({ json: article() });
+        }
+        const sent = route.request().headers()['if-match'] ?? null;
+        versionsSent.push(sent);
+        if (sent !== `"${theirs.version}"`) {
+          return route.fulfill({
+            status: 409,
+            contentType: 'application/problem+json',
+            json: {
+              type: 'https://nfnn.cz/problems/content/changed-meanwhile',
+              title: 'Mezitím se to změnilo',
+              detail: 'Aktualitu mezitím uložil někdo jiný.',
+              status: 409,
+              version: theirs.version,
+              current: { ...theirs },
+            },
+          });
+        }
+        return route.fulfill({
+          json: article({ title: 'Zahrada pro všechny děti', version: 'c3e8a1f05b9d7264' }),
+        });
+      },
+    );
+
+    await page.goto(`/sprava/aktuality/${ARTICLE_ID}`);
+    await page.getByLabel('Titulek').fill('Zahrada pro všechny děti');
+    await page.getByRole('button', { name: 'Uložit a ukázat na webu' }).click();
+
+    const sheet = page.getByRole('dialog', { name: 'Mezitím se to změnilo' });
+    await expect(sheet).toContainText('Vaše úpravy jsme neuložili a zůstávají ve formuláři.');
+    await sheet.getByRole('button', { name: 'Uložit svou verzi místo novější' }).click();
+
+    await expect(sheet).toBeHidden();
+    await expect(page.locator('.ui-action-bar .ui-notice--status')).toHaveText(
+      'Změny jsme uložili a na webu už jsou.',
+    );
+    expect(versionsSent).toEqual([`"${article().version}"`, `"${theirs.version}"`]);
   });
 
   test('when they leave an edited article by the side menu, then the page asks first and leaves only on request', async ({

@@ -1,4 +1,5 @@
 import {
+  AdminBankAccountItem,
   AdminActionResponse,
   AdminActivitySinceResponse,
   DiagnosticsResponse,
@@ -33,8 +34,13 @@ import {
   ReceiptSigningKeyResponse,
   ReceiptSigningKeysResponse,
   SymbolClaimResponse,
+  YearlyIssuedReceipt,
+  YearlyReceiptCandidate,
+  YearlyReceiptCandidatesResponse,
+  YearlyReceiptResult,
+  YearlyReceiptsIssueResponse,
 } from '../admin-api';
-import { BankAccountItem } from '../../donations/bank-accounts-api';
+import { frozenCase, YEARLY_ONE } from '../../donations/receipt-pdf/testing/receipt-fixtures';
 import { DonationItem } from '../../donations/donations-api';
 
 export function importState(overrides: Partial<ImportStateResponse> = {}): ImportStateResponse {
@@ -74,6 +80,7 @@ export function unpairedPayment(
 ): AdminPaymentResponse {
   return {
     id: '019a1c00-0000-7000-8000-000000001001',
+    version: '3f2a9c4e1b7d6085',
     bankTransactionId: 1001,
     bookedOn: '2026-10-10',
     amountMinor: 50000,
@@ -138,6 +145,7 @@ export function administrator(
 export function symbolClaim(overrides: Partial<SymbolClaimResponse> = {}): SymbolClaimResponse {
   return {
     id: '019a1c00-0000-7000-8000-00000000c001',
+    version: 'a41e7c0d95b3f268',
     donorId: '01a18e56-bdb0-775a-bd0a-a60756831369',
     donorName: 'Jana Nováková',
     account: '1234567/0800',
@@ -187,9 +195,12 @@ export function donorAccount(overrides: Partial<DonorAccountResponse> = {}): Don
   };
 }
 
-export function adminBankAccount(overrides: Partial<BankAccountItem> = {}): BankAccountItem {
+export function adminBankAccount(
+  overrides: Partial<AdminBankAccountItem> = {},
+): AdminBankAccountItem {
   return {
     id: '0192f0c4-0000-7000-8000-000000000001',
+    version: '6c1b0e5f3a7d2c90',
     accountNumber: '2900233333/2010',
     status: 'ACTIVE',
     verifiedOn: '2026-10-17',
@@ -241,6 +252,7 @@ export function adminReceipt(overrides: Partial<AdminReceiptResponse> = {}): Adm
     active: true,
     withdrawnAt: null,
     withdrawalReason: null,
+    keyId: '21fe31df',
     ...overrides,
   };
 }
@@ -323,6 +335,7 @@ export function reportView(overrides: Partial<AdminReportResponse> = {}): AdminR
       sendHour: 7,
       sections: { donors: true, donations: true, unpairedPayments: true, bankImport: true },
       changedAt: null,
+      version: '0d7e5b2c84a1f936',
     },
     sentReports: [],
     nextReport: { month: '2026-09', dueOn: '2026-10-01' },
@@ -701,4 +714,81 @@ export function receiptSignatory(
 
 export function noReceiptSignatory(): ReceiptSignatoryResponse {
   return { signatory: null, signatures: [] };
+}
+
+export function yearlyCandidate(
+  overrides: Partial<YearlyReceiptCandidate> = {},
+): YearlyReceiptCandidate {
+  return {
+    donorId: '01a18e56-bdb0-775a-bd0a-a60756831369',
+    name: 'Jana Nováková',
+    type: 'PERSON',
+    giftCount: 3,
+    totalAmountMinor: 150000,
+    receipt: null,
+    ...overrides,
+  };
+}
+
+export function yearlyReceiptCandidates(
+  overrides: Partial<YearlyReceiptCandidatesResponse> = {},
+): YearlyReceiptCandidatesResponse {
+  return {
+    year: 2026,
+    donors: [yearlyCandidate()],
+    erasedDonors: 0,
+    yearlyReceiptsAvailableThrough: 2026,
+    receiptsAvailableFrom: 2025,
+    ...overrides,
+  };
+}
+
+export function yearlyIssuedReceipt(
+  donorId: string,
+  number: string,
+  overrides: Partial<YearlyIssuedReceipt> = {},
+): YearlyIssuedReceipt {
+  const base = frozenCase(YEARLY_ONE);
+  return {
+    id: `receipt-${number}`,
+    donorId,
+    status: 'ACTIVE',
+    kind: 'YEARLY',
+    number,
+    donationId: null,
+    year: 2026,
+    issuedAt: '2027-01-15T09:30:00Z',
+    supersededAt: null,
+    withdrawnAt: null,
+    withdrawalReason: null,
+    donorErased: false,
+    receipt: { ...base, number, year: 2026 },
+    ...overrides,
+  };
+}
+
+export function yearlyResult(overrides: Partial<YearlyReceiptResult> = {}): YearlyReceiptResult {
+  const donorId = overrides.donorId ?? '01a18e56-bdb0-775a-bd0a-a60756831369';
+  return {
+    donorId,
+    outcome: 'ISSUED',
+    problem: null,
+    replacedNumber: null,
+    receipt: yearlyIssuedReceipt(donorId, '2027-000001'),
+    ...overrides,
+  };
+}
+
+export function yearlyReceiptsIssued(
+  overrides: Partial<YearlyReceiptsIssueResponse> = {},
+): YearlyReceiptsIssueResponse {
+  return {
+    year: 2026,
+    results: [yearlyResult()],
+    issued: 1,
+    replaced: 0,
+    unchanged: 0,
+    skipped: 0,
+    ...overrides,
+  };
 }

@@ -1,15 +1,18 @@
 import { Routes } from '@angular/router';
 import { adminGuard } from './core/auth/admin-guard';
+import { APP_ENTRY_PATH, appEntryGuard } from './core/auth/app-entry-guard';
 import { donorGuard } from './core/auth/donor-guard';
 
 export const routes: Routes = [
   {
     path: 'darce',
     canActivate: [donorGuard],
+    data: { head: 'light', parent: '/', backOnWide: false },
     loadComponent: () => import('./layout/donor-shell/donor-shell').then((m) => m.DonorShell),
     loadChildren: () => import('./features/donors/donors.routes').then((m) => m.donorsRoutes),
   },
   { path: 'donor', redirectTo: 'darce' },
+  { path: APP_ENTRY_PATH, canActivate: [appEntryGuard], children: [] },
   {
     path: 'sprava',
     canActivate: [adminGuard],
@@ -28,12 +31,14 @@ export const routes: Routes = [
       },
       {
         path: 'pripojeni',
+        data: { tabBar: false },
         title: $localize`:@@donor.connect.pageTitle:Připojení aplikace | Nová naděje – nadační fond`,
         loadComponent: () =>
           import('./features/donors/connect-app/connect-app').then((m) => m.ConnectApp),
       },
       {
         path: 'prvni-nastaveni',
+        data: { tabBar: false },
         title: $localize`:@@operations.setup.pageTitle:První nastavení | Nová naděje – nadační fond`,
         loadComponent: () =>
           import('./features/operations/setup/first-setup').then((m) => m.FirstSetup),

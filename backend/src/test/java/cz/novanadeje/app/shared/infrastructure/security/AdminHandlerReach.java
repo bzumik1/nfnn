@@ -45,6 +45,7 @@ enum AdminHandlerReach {
         table.put("GET /api/admin/content/about", CONNECTOR);
         table.put("PUT /api/admin/content/about", CONNECTOR);
         table.put("POST /api/admin/content/media", CONNECTOR);
+        table.put("PUT /api/admin/content/media/{id}", CONNECTOR);
         table.put("GET /api/admin/content/news", CONNECTOR);
         table.put("POST /api/admin/content/news", CONNECTOR);
         table.put("GET /api/admin/content/news/{id}", CONNECTOR);
@@ -93,12 +94,16 @@ enum AdminHandlerReach {
         table.put("POST /api/admin/donations/receipt-signing-keys/{keyId}/withdrawal", BROWSER_ONLY);
         table.put("GET /api/admin/donations/receipts", CONNECTOR);
         table.put("GET /api/admin/donations/receipts/{id}", CONNECTOR);
+        table.put("GET /api/admin/donations/receipts/yearly", CONNECTOR);
+        table.put("POST /api/admin/donations/receipts/yearly", CONNECTOR_REPLACEMENTS_IN_BROWSER_ONLY);
         table.put("GET /api/admin/donations/report", CONNECTOR);
         table.put("POST /api/admin/donations/report/send", CONNECTOR);
         table.put("POST /api/admin/donations/import/history", CONNECTOR);
         table.put("PUT /api/admin/donations/report/settings", CONNECTOR);
         table.put("GET /api/admin/donations/symbol-claims", CONNECTOR);
         table.put("DELETE /api/admin/donations/symbol-claims/{id}", BROWSER_ONLY);
+        table.put("GET /api/admin/donations/sync", BROWSER_ONLY);
+        table.put("GET /api/admin/donations/sync/chunks", BROWSER_ONLY);
         table.put("POST /api/admin/donations/symbol-claims/{id}/reverse", BROWSER_ONLY);
         table.put("GET /api/admin/donors", CONNECTOR);
         table.put("GET /api/admin/donors/actions", CONNECTOR);
@@ -106,6 +111,8 @@ enum AdminHandlerReach {
         table.put("POST /api/admin/donors/administrators", BROWSER_ONLY);
         table.put("DELETE /api/admin/donors/administrators/{donorId}", BROWSER_ONLY);
         table.put("GET /api/admin/donors/me/previous-sign-in", CONNECTOR);
+        table.put("GET /api/admin/donors/sync", BROWSER_ONLY);
+        table.put("GET /api/admin/donors/sync/chunks", BROWSER_ONLY);
         table.put("GET /api/admin/donors/{donorId}", CONNECTOR);
         table.put("DELETE /api/admin/donors/{donorId}", BROWSER_ONLY);
         table.put("DELETE /api/admin/donors/{donorId}/passkeys", BROWSER_ONLY);
@@ -125,6 +132,11 @@ enum AdminHandlerReach {
         table.put("GET /api/admin/operations/logs", CONNECTOR);
         table.put("GET /api/admin/operations/logs/{name}", CONNECTOR);
         table.put("GET /api/admin/operations/logs/{name}/search", CONNECTOR);
+        table.put("GET /api/admin/operations/push", CONNECTOR);
+        table.put("POST /api/admin/operations/push/subscriptions", BROWSER_ONLY);
+        table.put("DELETE /api/admin/operations/push/subscriptions/{id}", BROWSER_ONLY);
+        table.put("PUT /api/admin/operations/push/subscriptions/{id}/alerts", CONNECTOR);
+        table.put("POST /api/admin/operations/push/test", BROWSER_ONLY);
         table.put("GET /api/admin/operations/settings", CONNECTOR);
         table.put("PUT /api/admin/operations/settings", CONNECTOR_SECRETS_IN_BROWSER_ONLY);
         table.put("POST /api/admin/operations/settings/test-email", CONNECTOR_SECRETS_IN_BROWSER_ONLY);

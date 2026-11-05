@@ -1,0 +1,26 @@
+[
+  {
+    "path": "GET /api/admin/donations/donors/{id}",
+    "scenario": "donations/admin_donor_accounts: *",
+    "kind": "added",
+    "field": "$.receipts[*].keyId",
+    "reason": "Phase 1 handover card 6 (Jakub 2026-11-05, 'Upozornit u tlačítka'): the donor card names the key each receipt's verification QR is signed with, so the browser warns under 'Stáhnout PDF' when the published key list names that key revoked",
+    "contract": "docs/api-contract.md, Donor accounts"
+  },
+  {
+    "path": "GET /api/admin/donations/donors/{id}",
+    "scenario": "donations/admin_donor_erasure: *",
+    "kind": "added",
+    "field": "$.receipts[*].keyId",
+    "reason": "Phase 1 handover card 6 (Jakub 2026-11-05, 'Upozornit u tlačítka'): the donor card names the key each receipt's verification QR is signed with, so the browser warns under 'Stáhnout PDF' when the published key list names that key revoked",
+    "contract": "docs/api-contract.md, Donor accounts"
+  },
+  {
+    "path": "GET /api/admin/donations/donors/{id}",
+    "scenario": "donations/admin_payments: Unpairing a gift on the donor's yearly receipt*",
+    "kind": "added",
+    "field": "$.receipts[*].keyId",
+    "reason": "Phase 1 handover card 6 (Jakub 2026-11-05, 'Upozornit u tlačítka'): the donor card names the key each receipt's verification QR is signed with, so the browser warns under 'Stáhnout PDF' when the published key list names that key revoked",
+    "contract": "docs/api-contract.md, Donor accounts"
+  }
+]

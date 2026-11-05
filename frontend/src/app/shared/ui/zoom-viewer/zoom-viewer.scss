@@ -1,0 +1,120 @@
+.zoom-viewer {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  color: var(--color-on-inverse);
+}
+
+.zoom-stage {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  container-type: size;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  position: relative;
+  cursor: zoom-in;
+
+  &:focus-visible {
+    outline: none;
+  }
+
+  &:focus-visible::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    outline: 3px solid var(--color-focus-ring);
+    outline-offset: calc(-1 * var(--space-1));
+  }
+
+  &.is-zoomed {
+    cursor: grab;
+  }
+
+  &.is-zoomed:active {
+    cursor: grabbing;
+  }
+}
+
+.zoom-content {
+  display: grid;
+  place-items: center;
+  transform-origin: center;
+
+  &.is-easing {
+    transition: transform var(--duration-base) ease;
+  }
+}
+
+.zoom-photo {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100cqw;
+  max-height: 100cqh;
+}
+
+.zoom-qr {
+  width: calc(min(100cqw, 100cqh) - var(--space-8));
+  border-radius: var(--radius-card);
+  overflow: hidden;
+}
+
+.zoom-tools {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-4) calc(var(--space-4) + env(safe-area-inset-bottom));
+}
+
+.zoom-tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--space-12);
+  height: var(--space-12);
+  padding: 0 var(--space-3);
+  border: 1px solid color-mix(in srgb, var(--color-on-inverse) 35%, transparent);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-on-inverse) 12%, transparent);
+  color: var(--color-on-inverse);
+  font: inherit;
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: var(--numeric-figures);
+  cursor: pointer;
+  transition: background var(--duration-fast);
+
+  svg {
+    width: var(--space-6);
+    height: var(--space-6);
+  }
+
+  @media (hover: hover) {
+    &:hover:not([aria-disabled='true']) {
+      background: color-mix(in srgb, var(--color-on-inverse) 22%, transparent);
+    }
+  }
+
+  &[aria-disabled='true'] {
+    opacity: 0.4;
+    cursor: default;
+  }
+}
+
+.zoom-level {
+  min-width: calc(var(--space-12) * 2);
+}
+
+@media (forced-colors: active) {
+  .zoom-stage:focus-visible::after {
+    outline-color: Highlight;
+  }
+}

@@ -22,8 +22,18 @@
 }
 
 html {
+  touch-action: manipulation;
   scroll-behavior: smooth;
   scroll-padding-top: calc(var(--header-height) + var(--space-4));
+}
+
+html.follows-system-text-size {
+  font: -apple-system-body;
+  font-family: var(--font-sans);
+}
+
+html:has(app-tab-bar) {
+  scroll-padding-bottom: var(--tab-bar-clearance);
 }
 
 :focus-visible {
@@ -94,18 +104,6 @@ body {
 ::-webkit-scrollbar-thumb {
   background: var(--color-accent);
   border-radius: var(--radius-scrollbar);
-}
-
-@keyframes scrollDot {
-  0%,
-  100% {
-    transform: translateY(0);
-    opacity: 1;
-  }
-  50% {
-    transform: translateY(10px);
-    opacity: 0.4;
-  }
 }
 
 @keyframes fadeInUp {

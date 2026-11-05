@@ -14,26 +14,37 @@
         aria-label="Odkazy v patičce"
         i18n-aria-label="@@layout.footer.navLabel"
       >
-        <a routerLink="/" fragment="uvod" i18n="@@layout.header.nav.home">Domů</a>
-        <a routerLink="/" fragment="o-nas" i18n="@@layout.header.nav.about">O nás</a>
-        <a
-          [class.is-current]="current() === 'projekty'"
-          [routerLink]="current() === 'projekty' ? '/projekty' : '/'"
-          [fragment]="current() === 'projekty' ? undefined : 'projekty'"
-          [attr.aria-current]="current() === 'projekty' ? 'page' : null"
-          i18n="@@layout.header.nav.projects"
-          >Kde pomáháme</a
-        >
-        <a
-          [class.is-current]="current() === 'aktuality'"
-          [routerLink]="current() === 'aktuality' ? '/aktuality' : '/'"
-          [fragment]="current() === 'aktuality' ? undefined : 'aktuality'"
-          [attr.aria-current]="current() === 'aktuality' ? 'page' : null"
-          i18n="@@layout.header.nav.news"
-          >Aktuality</a
-        >
-        <a routerLink="/" fragment="kontakt" i18n="@@layout.header.nav.contact">Kontakt</a>
-        <a routerLink="/" fragment="prispet" i18n="@@layout.header.nav.donate">Přispět</a>
+        @if (!compact()) {
+          <a
+            routerLink="/o-nas"
+            routerLinkActive="is-current"
+            ariaCurrentWhenActive="page"
+            i18n="@@layout.header.nav.about"
+            >O nás</a
+          >
+          <a
+            routerLink="/aktuality"
+            routerLinkActive="is-current"
+            ariaCurrentWhenActive="page"
+            i18n="@@layout.header.nav.news"
+            >Aktuality</a
+          >
+          <a
+            routerLink="/projekty"
+            routerLinkActive="is-current"
+            ariaCurrentWhenActive="page"
+            i18n="@@layout.tabs.projects"
+            >Pomáháme</a
+          >
+          <a
+            routerLink="/prispet"
+            routerLinkActive="is-current"
+            ariaCurrentWhenActive="page"
+            i18n="@@layout.header.nav.donate"
+            >Přispět</a
+          >
+        }
+        <a routerLink="/o-nas" fragment="kontakt" i18n="@@layout.header.nav.contact">Kontakt</a>
       </nav>
     </div>
     <div class="footer-bottom">

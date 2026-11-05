@@ -149,7 +149,7 @@ Feature: A donor's device keeps a copy of the donor's data by downloading only t
     And the device holds the chunk "receipts:2026" with 3 rows
     And the device's chunk "receipts:2026" holds every receipt "Jana" lists for 2026
 
-  Scenario: The device of an erased donor finds no chunk left while the token it holds is still valid
+  Scenario: The device of an erased donor is signed out, so its token gets neither the manifest nor a chunk
     Given today is 2026-10-20
     And a person "Jana" is registered
     And a person "Petr" is registered
@@ -163,10 +163,12 @@ Feature: A donor's device keeps a copy of the donor's data by downloading only t
     And a device of "Jana" syncs
     And the device downloaded the chunks "bank-accounts, donations:2026, receipts:2026"
     When "Petr" erased the donor "Jana"
-    And a device of "Jana" syncs
-    Then the device downloaded no chunk
-    And the device removed the chunks "bank-accounts, donations:2026, receipts:2026"
-    And the device's summary totals 0 minor CZK in 0 donations
+    And "Jana" asks for her sync manifest
+    Then the response status is 401
+    And the problem type ends with "auth/session-ended"
+    When "Jana" asks for the sync chunks "donations:2026"
+    Then the response status is 401
+    And the problem type ends with "auth/session-ended"
 
   Scenario: The chunks come in the asked order, a repeated chunk once, up to 64 in one request, and no cache keeps an answer
     Given today is 2026-10-20

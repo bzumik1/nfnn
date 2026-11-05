@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   barContrastProblems,
+  manifestProblems,
   receiptTokensOutsideRoot,
   themeAssetProblems,
 } from './check-themes.mjs';
@@ -288,5 +289,99 @@ describe('Given the files each theme serves', () => {
         'the build configuration control-theme serves src/themes/nova-nadeje/assets, the files of another theme',
       ],
     );
+  });
+});
+
+const THEME_COLOURS = `
+  :root {
+    --color-accent: #2563eb;
+    --color-surface: #ffffff;
+  }
+  @media (prefers-contrast: more) {
+    :root { --color-accent: #1d4ed8; }
+  }
+`;
+
+const MANIFEST = {
+  id: '/aplikace',
+  name: 'Nová naděje – nadační fond',
+  short_name: 'Nová naděje',
+  lang: 'cs',
+  start_url: '/aplikace',
+  scope: '/',
+  display: 'standalone',
+  theme_color: '#2563eb',
+  background_color: '#ffffff',
+  icons: [
+    { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+    { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+    { src: '/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+  ],
+};
+
+const ICON_SIZES = new Map([
+  ['icon-192.png', [192, 192]],
+  ['icon-512.png', [512, 512]],
+  ['icon-maskable-512.png', [512, 512]],
+]);
+
+describe('Given the web app manifest of a theme', () => {
+  const problemsOf = (manifest, iconSizes = ICON_SIZES, source = THEME_COLOURS) =>
+    manifestProblems({ theme: 'control', manifest, source, iconSizes });
+
+  it('when it opens /aplikace standalone in Czech with the theme colours and icons it carries, then nothing is reported', () => {
+    assert.deepEqual(problemsOf(MANIFEST), []);
+  });
+
+  it('when it is missing, then it is reported', () => {
+    assert.deepEqual(problemsOf(null), ['theme control has no assets/manifest.webmanifest']);
+  });
+
+  it('when it starts elsewhere, opens in a browser tab or names another language, then each is reported', () => {
+    assert.deepEqual(
+      problemsOf({
+        ...MANIFEST,
+        id: '/',
+        start_url: '/darce',
+        scope: '/darce/',
+        display: 'browser',
+        lang: 'en',
+      }),
+      [
+        'theme control: manifest id is /, not /aplikace',
+        'theme control: manifest start_url is /darce, not /aplikace',
+        'theme control: manifest scope is /darce/, not /',
+        'theme control: manifest display is browser, not standalone',
+        'theme control: manifest lang is en, not cs',
+      ],
+    );
+  });
+
+  it('when its colours differ from the accent and surface the theme sets in its top-level :root, then both are reported', () => {
+    assert.deepEqual(
+      problemsOf({ ...MANIFEST, theme_color: '#1d4ed8', background_color: '#000000' }),
+      [
+        'theme control: manifest theme_color #1d4ed8 is not --color-accent #2563eb',
+        'theme control: manifest background_color #000000 is not --color-surface #ffffff',
+      ],
+    );
+  });
+
+  it('when an icon is missing from the theme, has other pixels than it says or the set lacks a size or a maskable icon, then each is reported', () => {
+    const icons = [
+      { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+      { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+      { src: '/icon-gone.png', sizes: '256x256', type: 'image/png', purpose: 'any' },
+    ];
+    const sizes = new Map([
+      ['icon-192.png', [192, 192]],
+      ['icon-512.png', [500, 500]],
+    ]);
+
+    assert.deepEqual(problemsOf({ ...MANIFEST, icons }, sizes), [
+      'theme control: manifest icon /icon-512.png is 500x500, not 512x512',
+      'theme control: manifest icon /icon-gone.png is not a PNG in assets/',
+      'theme control: manifest has no maskable icon of 512x512',
+    ]);
   });
 });

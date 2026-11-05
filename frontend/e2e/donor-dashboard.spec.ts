@@ -281,7 +281,7 @@ test.describe('Given a signed-in donor', () => {
     const toggle = card.getByRole('button', { name: 'Jak nastavit trvalý příkaz' });
     const toggleTop = (await toggle.boundingBox())!.y;
     expect(toggleTop).toBeGreaterThan((await card.locator('.bank').boundingBox())!.y);
-    expect(toggleTop).toBeLessThan((await card.locator('.qr').boundingBox())!.y);
+    expect(toggleTop).toBeLessThan((await card.locator('.bank-app').boundingBox())!.y);
 
     await toggle.click();
 
@@ -505,7 +505,7 @@ test.describe('Given a signed-in donor', () => {
     await page.getByLabel('Současné heslo').fill('wrong horse battery');
     await page.getByRole('button', { name: 'Poslat potvrzovací odkaz' }).click();
 
-    await expect(page.getByRole('alert')).toContainText(
+    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toContainText(
       'Nesprávné současné heslo. Zadejte prosím heslo, kterým se teď přihlašujete.',
     );
     await expect(page.getByLabel('Nový e-mail')).toHaveValue('jana.nova@example.cz');

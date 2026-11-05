@@ -3,6 +3,8 @@ package cz.novanadeje.app.donations.interfaces.rest;
 import cz.novanadeje.app.donations.application.receipt.AdminReceiptView;
 import cz.novanadeje.app.donations.application.receipt.AdminReceiptsService;
 import cz.novanadeje.app.donations.application.receipt.AdministrationChannel;
+import cz.novanadeje.app.donations.application.receipt.YearlyReceiptsRun;
+import cz.novanadeje.app.donations.application.receipt.YearlyReceiptsService;
 import cz.novanadeje.app.donations.domain.donation.DonationId;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.receipt.ContentDigest;
@@ -43,9 +45,25 @@ class AdminReceiptsController {
     private static final String NOT_STORED_BY_ANY_CACHE = "private, no-store";
 
     private final AdminReceiptsService receipts;
+    private final YearlyReceiptsService yearlyReceipts;
 
-    AdminReceiptsController(AdminReceiptsService receipts) {
+    AdminReceiptsController(AdminReceiptsService receipts, YearlyReceiptsService yearlyReceipts) {
         this.receipts = receipts;
+        this.yearlyReceipts = yearlyReceipts;
+    }
+
+    @GetMapping("/receipts/yearly")
+    ResponseEntity<YearlyReceiptCandidatesResponse> yearlyCandidates(
+            @RequestParam(required = false) @Min(FIRST_FOUR_DIGIT_YEAR) @Max(LAST_FOUR_DIGIT_YEAR) Integer year
+    ) {
+        return notStored(YearlyReceiptCandidatesResponse.from(year == null ? yearlyReceipts.candidatesOfLastCompletedYear() : yearlyReceipts.candidates(Year.of(year))));
+    }
+
+    @PostMapping("/receipts/yearly")
+    ResponseEntity<YearlyReceiptsResponse> issueYearly(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody YearlyReceiptsRequest request) {
+        YearlyReceiptsRun run = yearlyReceipts.issue(UUID.fromString(jwt.getSubject()), channelOf(jwt), Year.of(request.year()),
+                request.donorIds().stream().map(DonorReference::new).toList());
+        return notStored(YearlyReceiptsResponse.from(run));
     }
 
     @GetMapping("/receipts")

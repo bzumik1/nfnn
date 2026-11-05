@@ -215,6 +215,26 @@ class JpaDonationReceiptRepositoryTest {
     }
 
     @Test
+    @DisplayName("Given yearly receipts of two donors, one replaced, and a receipt of another year, when the active receipts of a year are read, then each donor's active one of that year comes back")
+    void should_find_each_donors_active_yearly_receipt_when_year_read_given_receipts_of_several_donors() {
+        DonorReference jana = storedDonor("4821937560");
+        DonorReference petr = storedDonor("7310945528");
+        DonationReceipt replaced = yearly(jana, YEAR_2025, "2026-000001", Optional.empty());
+        receipts.save(replaced);
+        replaced.markSuperseded(NOW.plusSeconds(60));
+        receipts.save(replaced);
+        receipts.save(yearly(jana, YEAR_2025, "2026-000002", Optional.of(replaced.id())));
+        receipts.save(yearly(petr, YEAR_2025, "2026-000003", Optional.empty()));
+        receipts.save(yearly(petr, Year.of(2024), "2026-000004", Optional.empty()));
+        flushAndClear();
+
+        assertThat(receipts.findActiveForYearOfEveryDonor(YEAR_2025))
+                .extracting(receipt -> receipt.donor() + " " + receipt.number().value())
+                .containsExactlyInAnyOrder(jana + " 2026-000002", petr + " 2026-000003");
+        assertThat(receipts.findActiveForYearOfEveryDonor(Year.of(2023))).isEmpty();
+    }
+
+    @Test
     @DisplayName("Given a receipt replaced by a newer one, when the active receipt is read, then the replaced one is left out and keeps its status and time")
     void should_leave_out_replaced_receipt_when_active_read_given_replacement() {
         DonorReference jana = storedDonor("4821937560");
@@ -409,6 +429,30 @@ class JpaDonationReceiptRepositoryTest {
                 march.id(), new ReceiptNumber("2026-000002"),
                 june.id(), new ReceiptNumber("2026-000003")));
         assertThat(receipts.findActiveSingleNumbersFor(storedDonor("1111111111"))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given receipts of two donors, active, replaced and withdrawn, when every receipt is listed newest first, then all come, latest issue and higher number first")
+    void should_list_every_receipt_newest_first_when_all_listed_given_receipts_of_two_donors() {
+        DonorReference jana = storedDonor("4821937560");
+        DonorReference petr = storedDonor("7310945528");
+        Donation march = storedDonation(jana, LocalDate.of(2026, 3, 15));
+        DonationReceipt replaced = single(jana, march, "2026-000001");
+        receipts.save(replaced);
+        replaced.markSuperseded(NOW.plusSeconds(60));
+        receipts.save(replaced);
+        DonationReceipt sameInstantHigher = single(jana, march, "2026-000002");
+        receipts.save(sameInstantHigher);
+        DonationReceipt withdrawn = issued(petr, NOW.plusSeconds(120), yearlyDocument(YEAR_2025, "2026-000003", Optional.empty()), Optional.empty());
+        receipts.save(withdrawn);
+        withdrawn.withdrawBecauseDonationsChanged(NOW.plusSeconds(180));
+        receipts.save(withdrawn);
+        DonationReceipt earliest = issued(petr, NOW.minusSeconds(60), yearlyDocument(YEAR_2026, "2026-000004", Optional.empty()), Optional.empty());
+        receipts.save(earliest);
+        flushAndClear();
+
+        assertThat(receipts.findAllNewestFirst()).extracting(receipt -> receipt.number().value())
+                .containsExactly("2026-000003", "2026-000002", "2026-000001", "2026-000004");
     }
 
     @Test

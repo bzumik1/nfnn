@@ -3,7 +3,7 @@ import { expect, test } from './fixtures';
 import { mockDonorApi, openDonorSection, openSignInDialog, signIn } from './donor-session';
 import {
   chunkLoadNotice,
-  openHomeThenLoseNewChunks,
+  openAboutThenLoseNewChunks,
   openPolicyFromFooter,
   withoutSessionStorage,
 } from './lost-chunks';
@@ -36,10 +36,11 @@ async function clippedTexts(page: Page): Promise<string[]> {
 async function settledOverlapWithBar(page: Page): Promise<number> {
   const overlap = () =>
     page.evaluate(() => {
-      const bar = document.querySelector('app-chunk-load-notice .chunk-load-bar')!;
-      return Math.round(
-        document.activeElement!.getBoundingClientRect().bottom - bar.getBoundingClientRect().top,
-      );
+      const bar = document
+        .querySelector('app-chunk-load-notice .chunk-load-bar')!
+        .getBoundingClientRect();
+      const focused = document.activeElement!.getBoundingClientRect();
+      return Math.round(Math.min(focused.bottom, bar.bottom) - Math.max(focused.top, bar.top));
     });
   let previous = await overlap();
   for (let check = 0; check < 30; check += 1) {
@@ -62,11 +63,11 @@ test.describe('Given a visitor who uses only the keyboard or a screen reader', (
     await mockDonorApi(page);
   });
 
-  test('when they follow a menu link to a section, then the section takes the focus and Tab continues inside it', async ({
+  test('when they follow the footer link to the contact section, then the section takes the focus and Tab continues inside it', async ({
     page,
   }) => {
-    await page.goto('/');
-    await page.locator('.desktop-nav').getByRole('link', { name: 'Kontakt' }).click();
+    await page.goto('/o-nas');
+    await page.getByRole('contentinfo').getByRole('link', { name: 'Kontakt' }).click();
 
     await expect(page.locator('#kontakt')).toBeFocused();
     await page.keyboard.press('Tab');
@@ -76,7 +77,7 @@ test.describe('Given a visitor who uses only the keyboard or a screen reader', (
   test('when they open another page from the footer, then its heading takes the focus', async ({
     page,
   }) => {
-    await page.goto('/');
+    await page.goto('/o-nas');
     await page.getByRole('link', { name: 'Zásady ochrany osobních údajů' }).last().click();
 
     await expect(
@@ -140,12 +141,15 @@ test.describe('Given a visitor who uses only the keyboard or a screen reader', (
 
     await card.getByRole('button', { name: 'Jiná částka' }).focus();
     const order: string[] = [];
-    for (let step = 0; step < 6; step++) {
+    for (let step = 0; step < 7; step++) {
       await page.keyboard.press('Tab');
       order.push(
-        await page.evaluate(() =>
-          (document.activeElement as HTMLElement).textContent!.replace(/\s+/g, ' ').trim(),
-        ),
+        await page.evaluate(() => {
+          const focused = document.activeElement as HTMLElement;
+          return (
+            focused.textContent!.replace(/\s+/g, ' ').trim() || focused.getAttribute('aria-label')!
+          );
+        }),
       );
     }
     expect(order).toEqual([
@@ -154,6 +158,7 @@ test.describe('Given a visitor who uses only the keyboard or a screen reader', (
       'Kopírovat variabilní symbol',
       'Kopírovat IBAN',
       'Jak nastavit trvalý příkaz',
+      'Zvětšit: QR platba na účet Nadačního fondu Nová naděje',
       'Uložit QR kód',
     ]);
   });
@@ -193,74 +198,132 @@ test.describe('Given a visitor who uses only the keyboard or a screen reader', (
   });
 });
 
-test.describe('Given a visitor in a window too narrow for the header links', () => {
-  test.use({ viewport: { width: 800, height: 900 } });
-
-  test('when they open the home page 800 px wide, then the header offers the menu button instead of the links', async ({
-    page,
-  }) => {
-    await page.goto('/');
-
-    await expect(page.getByRole('button', { name: 'Otevřít menu' })).toBeVisible();
-    await expect(page.locator('.desktop-nav')).toBeHidden();
-  });
-});
-
 test.describe('Given a visitor whose browser shows text twice as large on a computer', () => {
-  test('when they open the home page, then the header links that no longer fit move into the menu, which shows every one of them on screen', async ({
+  test('when they open the About page, then the header and the four tabs stay on screen', async ({
     page,
   }) => {
-    await page.goto('/');
+    await mockDonorApi(page);
+    await page.goto('/o-nas');
     await page.addStyleTag({ content: 'html { font-size: 200%; }' });
 
-    await expect(page.locator('.desktop-nav')).toBeHidden();
-    await page.getByRole('button', { name: 'Otevřít menu' }).click();
-
-    const menu = page.locator('#mobile-menu');
-    await expect(menu).toBeVisible();
-    const items = await menu.locator('a, button').evaluateAll((elements) =>
-      elements.map((element) => ({
-        text: element.textContent!.trim(),
-        ...element.getBoundingClientRect().toJSON(),
-      })),
+    const tabs = page.getByRole('navigation', { name: 'Hlavní sekce' }).getByRole('link');
+    await expect(tabs).toHaveText(['O nás', 'Aktuality', 'Pomáháme', 'Přispět']);
+    const boxes = await tabs.evaluateAll((elements) =>
+      elements.map((element) => element.getBoundingClientRect().toJSON()),
     );
-    expect(items.map((item) => item.text)).toEqual([
-      'O nás',
-      'Kde pomáháme',
-      'Aktuality',
-      'Kontakt',
-      'Přispět',
-      'Přihlásit se',
-      'Založit účet',
-    ]);
-    for (const item of items) {
-      expect(item.left, item.text).toBeGreaterThanOrEqual(0);
-      expect(item.right, item.text).toBeLessThanOrEqual(1280);
+    for (const box of boxes) {
+      expect(box.left).toBeGreaterThanOrEqual(0);
+      expect(box.right).toBeLessThanOrEqual(1280);
+      expect(box.bottom).toBeLessThanOrEqual(800);
     }
+    const signIn = await page
+      .getByRole('banner')
+      .getByRole('button', { name: 'Přihlásit se' })
+      .boundingBox();
+    expect(signIn!.x + signIn!.width).toBeLessThanOrEqual(1280);
     expect(await widerThanScreen(page)).toBe(0);
   });
-
-  test('when they open the home page with the usual text size, then the header keeps every link in one line', async ({
-    page,
-  }) => {
-    await page.goto('/');
-
-    await expect(page.getByRole('button', { name: 'Otevřít menu' })).toBeHidden();
-    const header = await page.locator('nav.nav').boundingBox();
-    const items = await page.locator('.desktop-nav > *').evaluateAll((elements) =>
-      elements.map((element) => ({
-        text: element.textContent!.trim(),
-        ...element.getBoundingClientRect().toJSON(),
-      })),
-    );
-    expect(items).toHaveLength(7);
-    for (const item of items) {
-      expect(item.top, item.text).toBeGreaterThanOrEqual(header!.y);
-      expect(item.bottom, item.text).toBeLessThanOrEqual(header!.y + header!.height);
-      expect(item.right, item.text).toBeLessThanOrEqual(1280);
-    }
-  });
 });
+
+async function splitWords(page: Page, selector: string): Promise<string[]> {
+  return page.locator(selector).evaluateAll((elements) =>
+    elements.flatMap((element) => {
+      const text = element.firstChild;
+      if (text === null || text.nodeType !== Node.TEXT_NODE) {
+        return [];
+      }
+      const content = text.textContent ?? '';
+      const split: string[] = [];
+      for (const match of content.matchAll(/\S+/g)) {
+        const range = document.createRange();
+        range.setStart(text, match.index);
+        range.setEnd(text, match.index + match[0].length);
+        const lines = new Set(
+          Array.from(range.getClientRects()).map((rect) => Math.round(rect.top)),
+        );
+        if (lines.size > 1) {
+          split.push(match[0]);
+        }
+      }
+      return split;
+    }),
+  );
+}
+
+for (const width of [320, 390]) {
+  test.describe(`Given a visitor on a phone ${width} px wide whose browser shows text twice as large`, () => {
+    test.use({ viewport: { width, height: 844 } });
+
+    test.beforeEach(async ({ page }) => {
+      await page.route(
+        (url) => url.pathname === '/api/content/news/zahrada-pro-deti',
+        (route) =>
+          route.fulfill({
+            json: {
+              id: '0199f3e0-0000-7000-8000-00000000c001',
+              slug: 'zahrada-pro-deti',
+              title: 'Zahrada pro děti',
+              tag: 'Projekt',
+              perex: 'Stavíme zahradu, kde si děti budou hrát.',
+              body: 'První odstavec.',
+              coverImage: null,
+              publishedOn: '2026-10-20',
+              createdAt: '2026-10-19T09:00:00Z',
+              updatedAt: '2026-10-20T07:30:00Z',
+            },
+          }),
+      );
+    });
+
+    test('when they open an article signed out, then the back button, the logo and Přihlásit se stay on screen side by side', async ({
+      page,
+    }) => {
+      await page.goto('/aktuality/zahrada-pro-deti');
+      await page.addStyleTag({ content: 'html { font-size: 200%; }' });
+      const banner = page.getByRole('banner');
+      const boxes = await Promise.all(
+        [
+          banner.getByRole('button', { name: 'Zpět' }),
+          banner.getByRole('link').first(),
+          banner.getByRole('button', { name: 'Přihlásit se' }),
+        ].map(async (control) => (await control.boundingBox())!),
+      );
+
+      for (const box of boxes) {
+        expect(box.x).toBeGreaterThanOrEqual(0);
+        expect(box.x + box.width).toBeLessThanOrEqual(width);
+      }
+      expect(boxes[0].x + boxes[0].width).toBeLessThanOrEqual(boxes[1].x);
+      expect(boxes[1].x + boxes[1].width).toBeLessThanOrEqual(boxes[2].x);
+      expect(await widerThanScreen(page)).toBe(0);
+    });
+
+    test('when they look at the tabs, then no label breaks inside a word and the end of the page stays above the bar', async ({
+      page,
+    }) => {
+      await page.goto('/aktuality/zahrada-pro-deti');
+      await page.addStyleTag({ content: 'html { font-size: 200%; }' });
+      await expect(page.getByRole('heading', { level: 1, name: 'Zahrada pro děti' })).toBeVisible();
+
+      expect(await splitWords(page, 'app-tab-bar .tab-label')).toEqual([]);
+      await expect
+        .poll(() =>
+          page.evaluate(() => {
+            window.scrollTo(0, document.documentElement.scrollHeight);
+            const bar = document.querySelector('app-tab-bar nav')!.getBoundingClientRect();
+            const last = Array.from(
+              document.querySelectorAll('main a, main button, main p, main h2'),
+            )
+              .map((element) => element.getBoundingClientRect())
+              .filter((box) => box.height > 0)
+              .reduce((lowest, box) => Math.max(lowest, box.bottom), 0);
+            return Math.round(last - bar.top);
+          }),
+        )
+        .toBeLessThanOrEqual(0);
+    });
+  });
+}
 
 test.describe('Given a visitor on a phone who uses only the keyboard', () => {
   test.use({ viewport: { width: 390, height: 844 } });
@@ -269,20 +332,37 @@ test.describe('Given a visitor on a phone who uses only the keyboard', () => {
     await mockDonorApi(page);
   });
 
-  test('when they Tab past the last item of the open menu, then the menu closes and nothing hides the focused control', async ({
+  test('when they reach the tabs at the bottom and open Aktuality with Enter, then the tab is marked as the current one and the heading of its page takes the focus', async ({
     page,
   }) => {
-    await page.goto('/');
-    await page.getByRole('button', { name: 'Otevřít menu' }).click();
-    await page.locator('#mobile-menu .mobile-register').focus();
+    await page.goto('/o-nas');
+    const tabs = page.getByRole('navigation', { name: 'Hlavní sekce' });
+    await expect(tabs.getByRole('link', { name: 'O nás' })).toHaveAttribute('aria-current', 'page');
+    await tabs.getByRole('link', { name: 'Aktuality' }).focus();
 
-    await page.keyboard.press('Tab');
+    await page.keyboard.press('Enter');
 
-    await expect(page.locator('#mobile-menu')).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Otevřít menu' })).toHaveAttribute(
-      'aria-expanded',
-      'false',
+    await expect(page).toHaveURL(/\/aktuality$/);
+    await expect(page.getByRole('heading', { level: 1, name: 'Aktuality' })).toBeFocused();
+    await expect(tabs.getByRole('link', { name: 'Aktuality' })).toHaveAttribute(
+      'aria-current',
+      'page',
     );
+  });
+
+  test('when they Tab to the end of the About page, then the tab bar hides no focused control', async ({
+    page,
+  }) => {
+    await page.goto('/o-nas');
+    const footerLinks = page.getByRole('contentinfo').getByRole('link');
+    await footerLinks.last().focus();
+
+    const covered = await page.evaluate(() => {
+      const focused = document.activeElement!.getBoundingClientRect();
+      const bar = document.querySelector('app-tab-bar nav')!.getBoundingClientRect();
+      return focused.bottom > bar.top && focused.top < bar.bottom;
+    });
+    expect(covered).toBe(false);
   });
 });
 
@@ -293,7 +373,7 @@ for (const width of [320, 390, 1280]) {
     test.beforeEach(async ({ page }) => {
       await mockDonorApi(page);
       await withoutSessionStorage(page);
-      await openHomeThenLoseNewChunks(page);
+      await openAboutThenLoseNewChunks(page);
       await openPolicyFromFooter(page);
       await expect(chunkLoadNotice(page)).toBeVisible();
     });
@@ -340,12 +420,11 @@ for (const width of [320, 390, 1280]) {
     test('when they open the sign-in dialog, then the page behind it does not move', async ({
       page,
     }) => {
-      test.skip(width < 900, 'the header shows the sign-in button from 900 px');
       await page.setViewportSize({ width, height: 560 });
       await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
       const before = await page.evaluate(() => window.scrollY);
 
-      await page.locator('.nav-login').click();
+      await page.getByRole('banner').getByRole('button', { name: 'Přihlásit se' }).click();
       await expect(page.getByRole('dialog')).toBeVisible();
       await page.keyboard.press('Tab');
       await page.keyboard.press('Tab');
@@ -360,7 +439,7 @@ test.describe('Given a visitor who zooms to 400 % or sets wider text spacing', (
     await mockDonorApi(page);
   });
 
-  for (const path of ['/', '/zasady-ochrany-osobnich-udaju', '/neexistuje']) {
+  for (const path of ['/', '/o-nas', '/prispet', '/zasady-ochrany-osobnich-udaju', '/neexistuje']) {
     test(`when they open ${path} 320 px wide, then nothing runs off the screen and no text is cut off with wider spacing`, async ({
       page,
     }) => {

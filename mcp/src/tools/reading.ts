@@ -284,6 +284,30 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
   );
 
   server.registerTool(
+    'nfnn_yearly_receipts',
+    {
+      title: 'Dárci k ročním potvrzením',
+      description:
+        'The donors whose received gifts fall in a completed year, to issue their yearly receipts with nfnn_issue_receipts, as the page "Hromadná potvrzení" at /sprava/hromadna-potvrzeni lists them: each with donorId, name, type, the number and total of their gifts that year and `receipt`, the active yearly receipt of that year (id, number, issuedAt) or null when none was issued yet. Erased donors are only counted (erasedDonors), since they get no receipt. Without `year` it lists the last completed year; the answer names it and the years that can be asked (receiptsAvailableFrom through yearlyReceiptsAvailableThrough). The running year is refused (400 donations/year-not-yet-completed), as is a year before the first receipt year.',
+      inputSchema: z.object({
+        year: YEAR.optional().describe(
+          'The completed year; the last completed year when left out.',
+        ),
+      }),
+      annotations: READ_ONLY,
+    },
+    async ({ year }, ctx) =>
+      answer(deps, ctx, 'nfnn_yearly_receipts', async ({ apiToken }) =>
+        text(
+          await backend.get(
+            `/api/admin/donations/receipts/yearly${year === undefined ? '' : `?year=${year}`}`,
+            apiToken,
+          ),
+        ),
+      ),
+  );
+
+  server.registerTool(
     'nfnn_receipt',
     {
       title: 'Potvrzení o daru',
@@ -463,7 +487,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Aktualita',
       description:
-        'One news article whole, draft or published: every field nfnn_update_news takes, with its text and photo, and live (whether the site shows it today; false for a draft and before its published date).',
+        'One news article whole, draft or published: every field nfnn_update_news takes, with its text and photo (coverImage.focalPoint is the spot the site crops around, set with nfnn_set_photo_focal_point), and live (whether the site shows it today; false for a draft and before its published date).',
       inputSchema: z.object({ id: UUID }),
       annotations: READ_ONLY,
     },
@@ -482,7 +506,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Projekt',
       description:
-        'One project whole, draft or published: every field nfnn_update_project takes, with its text, year, category and photo, and live (whether the site shows it today; false for a draft and before its published date).',
+        'One project whole, draft or published: every field nfnn_update_project takes, with its text, year, category and photo (coverImage.focalPoint as for news), and live (whether the site shows it today; false for a draft and before its published date).',
       inputSchema: z.object({ id: UUID }),
       annotations: READ_ONLY,
     },
@@ -502,7 +526,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Fotka v sekci O nás',
       description:
-        'The photo the home page shows in its About section: its id, size in pixels, alt (read by screen readers) and caption (shown under it to every visitor), or photo null while the site shows its placeholder photo. Change it with nfnn_update_about.',
+        'The photo the home page shows in its About section: its id, size in pixels, alt (read by screen readers) and caption (shown under it to every visitor) and focalPoint (set with nfnn_set_photo_focal_point), or photo null while the site shows its placeholder photo. Change it with nfnn_update_about.',
       annotations: READ_ONLY,
     },
     async (ctx) =>
@@ -666,6 +690,23 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
       answer(deps, ctx, 'nfnn_log_levels', async ({ apiToken }) =>
         text(await backend.get('/api/admin/operations/loggers', apiToken)),
       ),
+  );
+
+  server.registerTool(
+    'nfnn_push_alerts',
+    {
+      title: 'Upozornění přes push',
+      description:
+        'The devices on which the connected administrator gets push alerts (the push service, when each was turned on, the last delivery and the failures in a row) and which alerts each gets: bankImport (the bank import is failing), backups (a backup is missing or failed) and mail (e-mail cannot be sent). Change the switches with nfnn_set_push_alerts; a device is turned on, turned off and sent a test alert only on the web at /sprava.',
+      annotations: READ_ONLY,
+    },
+    async (ctx) =>
+      answer(deps, ctx, 'nfnn_push_alerts', async ({ apiToken }) => {
+        const push = (await backend.get('/api/admin/operations/push', apiToken)) as {
+          subscriptions: unknown[];
+        };
+        return text({ subscriptions: push.subscriptions });
+      }),
   );
 
   server.registerTool(

@@ -1,20 +1,18 @@
 package cz.novanadeje.app.operations.application.settings;
 
-import cz.novanadeje.app.operations.domain.settings.Setting;
-
 import java.util.Optional;
 
-class ReversibleSealer implements SecretSealer {
+public class ReversibleSealer implements SecretSealer {
 
     private final String prefix;
     private boolean available = true;
     private boolean readable = true;
 
-    ReversibleSealer() {
+    public ReversibleSealer() {
         this("sealed:");
     }
 
-    ReversibleSealer(String keyName) {
+    public ReversibleSealer(String keyName) {
         this.prefix = keyName;
     }
 
@@ -24,24 +22,24 @@ class ReversibleSealer implements SecretSealer {
     }
 
     @Override
-    public String seal(Setting setting, String value) {
-        return prefix + setting + ":" + new StringBuilder(value).reverse();
+    public String seal(String purpose, String value) {
+        return prefix + purpose + ":" + new StringBuilder(value).reverse();
     }
 
     @Override
-    public Optional<String> unseal(Setting setting, String sealed) {
-        String expected = prefix + setting + ":";
+    public Optional<String> unseal(String purpose, String sealed) {
+        String expected = prefix + purpose + ":";
         if (!readable || !sealed.startsWith(expected)) {
             return Optional.empty();
         }
         return Optional.of(new StringBuilder(sealed.substring(expected.length())).reverse().toString());
     }
 
-    void withoutKey() {
+    public void withoutKey() {
         available = false;
     }
 
-    void withAnotherKey() {
+    public void withAnotherKey() {
         readable = false;
     }
 }

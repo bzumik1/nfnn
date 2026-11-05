@@ -34,6 +34,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.BiFunction;
@@ -58,7 +59,6 @@ public final class ScenarioTranscript {
     private static final Pattern TAG = Pattern.compile("(?s)<[^>]*>");
     private static final Pattern HREF = Pattern.compile("(?i)\\bhref\\s*=\\s*\"([^\"]*)\"");
     private static final Pattern WHITESPACE = Pattern.compile("[\\s\\u00a0]+");
-    private static final String INSTANT_SUFFIX = "At";
     private static final Pattern REQUEST_COOKIE_VALUE = Pattern.compile("([^=;\\s]+)=[^;]*");
 
     private static final Set<String> MACHINE_DEPENDENT_BODIES = Set.of("GET /api/admin/operations/diagnostics", "GET /api/admin/operations/diagnostics/threads");
@@ -135,7 +135,7 @@ public final class ScenarioTranscript {
         new TreeMap<>(exchange.requestHeaders()).forEach((name, value) -> {
             if (REQUEST_HEADERS.contains(name.toLowerCase(Locale.ROOT))) {
                 requestHeaders.put(name, "cookie".equalsIgnoreCase(name) ? normaliser.text(REQUEST_COOKIE_VALUE.matcher(value).replaceAll("$1=" + TranscriptNormaliser.SECRET))
-                        : normaliser.text(value));
+                        : "if-match".equalsIgnoreCase(name) ? normaliser.ifMatch(normaliser.text(value)) : normaliser.text(value));
             }
         });
         if (!requestHeaders.isEmpty()) {
@@ -258,22 +258,23 @@ public final class ScenarioTranscript {
         if (node.isArray()) {
             List<JsonNode> elements = new ArrayList<>();
             node.values().forEach(element -> elements.add(settled(template, element, path + "[]")));
-            return isUnordered(template, path) ? withTiesSorted(elements) : NODES.arrayNode().addAll(elements);
+            Optional<UnorderedTie> tie = unorderedTie(template, path);
+            return tie.isPresent() ? withTiesSorted(elements, tie.get().orderedBy()) : NODES.arrayNode().addAll(elements);
         }
         return node;
     }
 
-    private boolean isUnordered(String template, String path) {
-        return unorderedTies.stream().anyMatch(tie -> tie.request().equals(template) && tie.path().equals(path));
+    private Optional<UnorderedTie> unorderedTie(String template, String path) {
+        return unorderedTies.stream().filter(tie -> tie.request().equals(template) && tie.path().equals(path)).findFirst();
     }
 
-    private static ArrayNode withTiesSorted(List<JsonNode> elements) {
+    private static ArrayNode withTiesSorted(List<JsonNode> elements, List<String> orderedBy) {
         ArrayNode settled = NODES.arrayNode();
         int start = 0;
         while (start < elements.size()) {
             int end = start + 1;
-            Map<String, JsonNode> stamp = instants(elements.get(start));
-            while (end < elements.size() && !stamp.isEmpty() && stamp.equals(instants(elements.get(end)))) {
+            Map<String, JsonNode> stamp = orderingFields(elements.get(start), orderedBy);
+            while (end < elements.size() && !stamp.isEmpty() && stamp.equals(orderingFields(elements.get(end), orderedBy))) {
                 end++;
             }
             elements.subList(start, end).stream().sorted(Comparator.comparing(ScenarioTranscript::contentKey)).forEach(settled::add);
@@ -282,14 +283,14 @@ public final class ScenarioTranscript {
         return settled;
     }
 
-    private static Map<String, JsonNode> instants(JsonNode element) {
-        Map<String, JsonNode> instants = new TreeMap<>();
+    private static Map<String, JsonNode> orderingFields(JsonNode element, List<String> orderedBy) {
+        Map<String, JsonNode> fields = new TreeMap<>();
         if (element.isObject()) {
             element.properties().stream()
-                    .filter(field -> field.getKey().endsWith(INSTANT_SUFFIX) && field.getValue().isString())
-                    .forEach(field -> instants.put(field.getKey(), field.getValue()));
+                    .filter(field -> orderedBy.contains(field.getKey()))
+                    .forEach(field -> fields.put(field.getKey(), field.getValue()));
         }
-        return instants;
+        return fields;
     }
 
     private static ArrayNode sortedByContent(JsonNode array) {

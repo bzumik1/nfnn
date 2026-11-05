@@ -14,7 +14,7 @@ import {
 import {
   chunkLoadNotice,
   chunkLoadPageHeading,
-  openHomeThenLoseNewChunks,
+  openAboutThenLoseNewChunks,
   openPolicyFromFooter,
   withoutSessionStorage,
 } from './lost-chunks';
@@ -27,6 +27,10 @@ const BLACK = '0, 0, 0';
 
 const PUBLIC_PAGES = [
   '/',
+  '/o-nas',
+  '/aktuality',
+  '/projekty',
+  '/prispet',
   '/zasady-ochrany-osobnich-udaju',
   '/neexistuje',
   '/obnova-hesla',
@@ -44,6 +48,7 @@ const SIGNED_IN_PAGES = [
   '/sprava',
   '/sprava/platby',
   '/sprava/darci',
+  '/sprava/hromadna-potvrzeni',
   '/sprava/spravci',
   '/sprava/starsi-symboly',
   '/sprava/prehledy',
@@ -172,7 +177,7 @@ test.describe('Given the site built with another theme', () => {
   test('when the first page cannot be loaded, then its page of its own shows no colour or font of the default theme', async ({
     page,
   }) => {
-    await openHomeThenLoseNewChunks(page);
+    await openAboutThenLoseNewChunks(page);
     await openPolicyFromFooter(page);
     await expect(page.getByRole('heading', chunkLoadPageHeading)).toBeVisible();
 
@@ -183,7 +188,7 @@ test.describe('Given the site built with another theme', () => {
     page,
   }) => {
     await withoutSessionStorage(page);
-    await openHomeThenLoseNewChunks(page);
+    await openAboutThenLoseNewChunks(page);
     await openPolicyFromFooter(page);
     await expect(chunkLoadNotice(page)).toBeVisible();
 
@@ -194,7 +199,7 @@ test.describe('Given the site built with another theme', () => {
     page,
   }) => {
     await serveNewerApiGeneration(page);
-    await page.goto('/');
+    await page.goto('/o-nas');
     await expect(updateNotice(page)).toBeVisible();
 
     expect(await lookOfTheReferenceTheme(page)).toEqual([]);
@@ -204,6 +209,21 @@ test.describe('Given the site built with another theme', () => {
     page,
   }) => {
     await openSignInDialog(page);
+
+    expect(await lookOfTheReferenceTheme(page)).toEqual([]);
+  });
+
+  test('when an administrator opens the account sheet, then it shows no colour or font of the default theme', async ({
+    page,
+  }) => {
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.goto('/');
+    await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
+    await page.goto('/o-nas');
+    await page.getByRole('banner').getByRole('button', { name: 'Účet' }).click();
+    await expect(page.getByRole('dialog')).toBeVisible();
 
     expect(await lookOfTheReferenceTheme(page)).toEqual([]);
   });

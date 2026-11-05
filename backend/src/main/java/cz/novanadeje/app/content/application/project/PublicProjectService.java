@@ -1,5 +1,6 @@
 package cz.novanadeje.app.content.application.project;
 
+import cz.novanadeje.app.content.domain.media.MediaImageRepository;
 import cz.novanadeje.app.content.domain.project.Project;
 import cz.novanadeje.app.content.domain.project.ProjectNotFound;
 import cz.novanadeje.app.content.domain.project.ProjectOrderRepository;
@@ -23,12 +24,14 @@ public class PublicProjectService {
     private final ProjectRepository projects;
     private final ProjectOrderRepository orders;
     private final FormerSlugs formerSlugs;
+    private final MediaImageRepository media;
     private final Clock clock;
 
-    public PublicProjectService(ProjectRepository projects, ProjectOrderRepository orders, FormerSlugs formerSlugs, Clock clock) {
+    public PublicProjectService(ProjectRepository projects, ProjectOrderRepository orders, FormerSlugs formerSlugs, MediaImageRepository media, Clock clock) {
         this.projects = projects;
         this.orders = orders;
         this.formerSlugs = formerSlugs;
+        this.media = media;
         this.clock = clock;
     }
 
@@ -37,7 +40,7 @@ public class PublicProjectService {
             throw new IllegalArgumentException("The page is 0 or more and the size 1 to " + MAX_PAGE_SIZE);
         }
         LocalDate today = today();
-        List<ProjectView> items = projects.findVisible(today, orders.current(), page * size, size).stream().map(project -> ProjectView.from(project, today)).toList();
+        List<ProjectView> items = ProjectView.all(projects.findVisible(today, orders.current(), page * size, size), today, media);
         return new ProjectPage(items, page, size, projects.countVisible(today));
     }
 
@@ -47,7 +50,7 @@ public class PublicProjectService {
                 .or(() -> formerSlugs.project(slug).flatMap(projects::findById))
                 .filter(found -> found.isVisibleOn(today))
                 .orElseThrow(() -> new ProjectNotFound(slug));
-        return ProjectView.from(project, today);
+        return ProjectView.of(project, today, media);
     }
 
     private LocalDate today() {

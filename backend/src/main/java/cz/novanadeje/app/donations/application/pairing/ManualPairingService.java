@@ -1,6 +1,11 @@
 package cz.novanadeje.app.donations.application.pairing;
 
 import cz.novanadeje.app.donations.application.receipt.AdministrationChannel;
+import cz.novanadeje.app.donations.application.sync.AdminDonationsRows;
+import cz.novanadeje.app.donations.application.sync.AdminSyncRows.DonationRow;
+import cz.novanadeje.app.donations.application.sync.AdminSyncRows.PaymentRow;
+import cz.novanadeje.app.donations.application.sync.AdminSyncRows.PaymentWithGift;
+import cz.novanadeje.app.donations.domain.ChangedMeanwhile;
 import cz.novanadeje.app.donations.domain.bank.BankPayment;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentAlreadyPaired;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentId;
@@ -21,6 +26,7 @@ import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
 import cz.novanadeje.app.donations.domain.receipt.FirstReceiptYear;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptWithdrawalInBrowserOnly;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.shared.application.version.ExpectedVersion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -51,11 +57,12 @@ public class ManualPairingService {
     private final PairingLock lock;
     private final ApplicationEventPublisher events;
     private final FirstReceiptYear firstYear;
+    private final AdminDonationsRows rows;
     private final Clock clock;
 
     public ManualPairingService(BankPaymentRepository payments, DonorRecordRepository donorRecords, DonationRepository donations,
                                 DonationReceiptRepository receipts, PairingLock lock, ApplicationEventPublisher events, FirstReceiptYear firstYear,
-                                Clock clock) {
+                                AdminDonationsRows rows, Clock clock) {
         this.payments = payments;
         this.donorRecords = donorRecords;
         this.donations = donations;
@@ -63,13 +70,15 @@ public class ManualPairingService {
         this.lock = lock;
         this.events = events;
         this.firstYear = firstYear;
+        this.rows = rows;
         this.clock = clock;
     }
 
-    public ManualPairingResult pair(UUID adminId, BankPaymentId paymentId, DonorReference donorId) {
+    public ManualPairingResult pair(UUID adminId, BankPaymentId paymentId, DonorReference donorId, ExpectedVersion expected) {
         lock.acquire();
         Instant now = clock.instant();
         BankPayment payment = payments.findById(paymentId).orElseThrow(() -> new BankPaymentNotFound(paymentId));
+        requireUnchanged(payment, expected);
         if (donations.existsForBankPayment(paymentId)) {
             throw new BankPaymentAlreadyPaired(paymentId);
         }
@@ -84,10 +93,11 @@ public class ManualPairingService {
         return new ManualPairingResult(donation.id(), changedYearlyReceipts(donor.id(), donation.receivedYear()));
     }
 
-    public List<Year> unpair(UUID adminId, AdministrationChannel channel, BankPaymentId paymentId) {
+    public List<Year> unpair(UUID adminId, AdministrationChannel channel, BankPaymentId paymentId, ExpectedVersion expected) {
         lock.acquire();
         Instant now = clock.instant();
         BankPayment payment = payments.findById(paymentId).orElseThrow(() -> new BankPaymentNotFound(paymentId));
+        requireUnchanged(payment, expected);
         Donation donation = donations.findByBankPayment(paymentId).orElseThrow(() -> new BankPaymentNotPaired(paymentId));
         receipts.lockDonor(donation.donor());
         if (receipts.existsForDonation(donation.id())) {
@@ -112,6 +122,14 @@ public class ManualPairingService {
                         + " zrušeno, protože z něj byl odebrán dar " + donation.id() + " platby " + payment.transactionId(), now)));
         log.info("Admin {} unpaired bank payment {} from donor {}", adminId, payment.transactionId(), donation.donor());
         return withdrawn.map(yearly -> List.of(donation.receivedYear())).orElse(List.of());
+    }
+
+    private void requireUnchanged(BankPayment payment, ExpectedVersion expected) {
+        PaymentRow current = rows.currentPayment(payment);
+        if (!expected.admits(current.version())) {
+            DonationRow gift = donations.findByBankPayment(payment.id()).map(DonationRow::from).orElse(null);
+            throw new ChangedMeanwhile(current.version(), new PaymentWithGift(current, gift));
+        }
     }
 
     private List<Year> changedYearlyReceipts(DonorReference donor, Year year) {

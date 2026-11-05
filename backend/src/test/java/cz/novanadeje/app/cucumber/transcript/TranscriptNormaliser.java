@@ -49,7 +49,7 @@ public final class TranscriptNormaliser {
     private static final String ID_FIELD = "id";
     private static final Set<String> SECRET_FIELDS = Set.of("password", "currentpassword", "newpassword", "secret", "otpauthuri",
             "accesstoken", "access_token", "refreshtoken", "refresh_token", "id_token", "token", "recoverycodes", "recoverycode",
-            "setupcode", "client_secret", "clientsecret", "code_verifier", "codeverifier", "word");
+            "setupcode", "client_secret", "clientsecret", "code_verifier", "codeverifier", "word", "p256dh", "auth");
     private static final Pattern SIGNING_SEED_FIELD = Pattern.compile("[a-z]*(?:seed|signingkey|privatekey)(?:hex|base64|base64url)?");
     private static final String WORDS_FIELD = "words";
     private static final String CODE_FIELD = "code";
@@ -63,12 +63,15 @@ public final class TranscriptNormaliser {
     private static final Set<String> BOOT_ERROR_FIELDS = Set.of(TIMESTAMP_FIELD, "status", "error", "path");
     private static final String TIME = "<time>";
     private static final String ROWS_DIGEST_FIELD = "rowsSha256";
+    private static final String VERSION_FIELD = "version";
+    private static final Pattern ROW_VERSION = Pattern.compile("(?<![0-9a-f])[0-9a-f]{16}(?![0-9a-f])");
 
     private final Map<String, String> knownValues;
     private final Pattern knownValuePattern;
     private final Pattern knownSecretPattern;
     private final Map<String, String> ids = new HashMap<>();
     private final Map<String, String> rowsDigests = new HashMap<>();
+    private final Map<String, String> rowVersions = new HashMap<>();
     private final Map<String, String> numberedLabels = new HashMap<>();
     private final Map<String, Integer> labelCounters = new HashMap<>();
     private final Set<String> maskedValues = new TreeSet<>();
@@ -164,6 +167,10 @@ public final class TranscriptNormaliser {
             for (Map.Entry<String, JsonNode> field : raw.properties()) {
                 if (bootError && TIMESTAMP_FIELD.equals(field.getKey())) {
                     normalised.put(TIMESTAMP_FIELD, TIME);
+                    continue;
+                }
+                if (VERSION_FIELD.equals(field.getKey()) && field.getValue().isString() && ROW_VERSION.matcher(field.getValue().asString()).matches()) {
+                    normalised.put(VERSION_FIELD, rowVersion(field.getValue().asString()));
                     continue;
                 }
                 if (ROWS_DIGEST_FIELD.equals(field.getKey()) && field.getValue().isString()) {
@@ -271,6 +278,14 @@ public final class TranscriptNormaliser {
             return label;
         }
         return numberedLabels.computeIfAbsent(value, ignored -> label.replace(NUMBER, String.valueOf(labelCounters.merge(label, 1, Integer::sum))));
+    }
+
+    public String ifMatch(String raw) {
+        return replace(ROW_VERSION, raw, this::rowVersion);
+    }
+
+    private String rowVersion(String raw) {
+        return rowVersions.computeIfAbsent(raw, ignored -> "<version:" + (rowVersions.size() + 1) + ">");
     }
 
     private String rowsDigest(String raw) {

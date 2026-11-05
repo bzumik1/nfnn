@@ -56,6 +56,11 @@ class JpaDonationReceiptRepository implements DonationReceiptRepository {
     }
 
     @Override
+    public List<DonationReceipt> findActiveForYearOfEveryDonor(Year year) {
+        return jpa.findByReceiptYearAndStatus(year.getValue(), ReceiptStatus.ACTIVE).stream().map(IssuedReceiptJpaEntity::toDomain).toList();
+    }
+
+    @Override
     public Optional<DonationReceipt> findLatestOutdatedForYear(DonorReference donor, Year year) {
         return jpa.findFirstByDonorIdAndReceiptYearAndStatusAndWithdrawalReasonOrderByIssuedAtDescNumberDesc(donor.value(), year.getValue(),
                         ReceiptStatus.WITHDRAWN, ReceiptWithdrawalReason.DONATIONS_CHANGED)
@@ -99,6 +104,11 @@ class JpaDonationReceiptRepository implements DonationReceiptRepository {
     public Map<DonationId, ReceiptNumber> findActiveSingleNumbersFor(DonorReference donor) {
         return jpa.findByDonorIdAndKindAndStatus(donor.value(), ReceiptKind.SINGLE, ReceiptStatus.ACTIVE).stream()
                 .collect(Collectors.toUnmodifiableMap(row -> new DonationId(row.getDonationId()), row -> new ReceiptNumber(row.getNumber())));
+    }
+
+    @Override
+    public List<DonationReceipt> findAllNewestFirst() {
+        return jpa.findAllByOrderByIssuedAtDescNumberDesc().stream().map(IssuedReceiptJpaEntity::toDomain).toList();
     }
 
     @Override

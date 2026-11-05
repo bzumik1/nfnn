@@ -47,4 +47,32 @@ describe("Given the app's HTTP client", () => {
     });
     expect(version.mustUpdate()).toBe(false);
   });
+
+  it('when a donor call is refreshed and retried, then the call, the refresh and the retry all go past the service worker', () => {
+    const store = TestBed.inject(AuthStore);
+    store.login('jana@example.cz', 'correct horse battery').subscribe();
+    const login = http.expectOne('/api/donors/auth/login');
+    expect(login.request.headers.get('ngsw-bypass')).toBe('true');
+    login.flush(authResponse('token-1'));
+
+    client.get('/api/donors/me').subscribe();
+    const first = http.expectOne('/api/donors/me');
+    expect(first.request.headers.get('ngsw-bypass')).toBe('true');
+    first.flush(problem('auth/expired-token'), { status: 401, statusText: 'Unauthorized' });
+    const refresh = http.expectOne('/api/donors/auth/refresh');
+    expect(refresh.request.headers.get('ngsw-bypass')).toBe('true');
+    refresh.flush(authResponse('token-2'));
+
+    const retried = http.expectOne('/api/donors/me');
+    expect(retried.request.headers.get('ngsw-bypass')).toBe('true');
+    retried.flush(sampleDonor());
+  });
+
+  it('when the app reads public news, then the service worker may answer it', () => {
+    client.get('/api/content/news', { params: { page: 0, size: 6 } }).subscribe();
+
+    const news = http.expectOne('/api/content/news?page=0&size=6');
+    expect(news.request.headers.has('ngsw-bypass')).toBe(false);
+    news.flush({ items: [], page: 0, size: 6, total: 0 });
+  });
 });

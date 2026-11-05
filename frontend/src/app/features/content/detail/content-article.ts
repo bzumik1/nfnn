@@ -9,18 +9,22 @@ import {
 import { RouterLink } from '@angular/router';
 import { canonicalAddress } from '../../../core/seo/canonical-link';
 import { Avatar } from '../../../shared/ui/avatar/avatar';
+import { FocalPointCrop } from '../../../shared/ui/focal-point/focal-point';
 import { Markdown } from '../../../shared/ui/markdown/markdown';
 import { ShareButton } from '../../../shared/ui/share-button/share-button';
+import { ZoomPhoto } from '../../../shared/ui/zoom-viewer/zoom-content';
+import { Zoomable } from '../../../shared/ui/zoom-viewer/zoomable';
 import { mediaUrl } from '../news-api';
 import { ContentKind, ContentPage } from './content-page';
 
 const IMAGE_WIDTH = 960;
 const IMAGE_WIDTHS = [480, 960, 1440];
+const ENLARGED_WIDTH = IMAGE_WIDTHS[IMAGE_WIDTHS.length - 1];
 const PORTRAIT_WIDTH = 480;
 
 @Component({
   selector: 'app-content-article',
-  imports: [RouterLink, Markdown, Avatar, ShareButton],
+  imports: [RouterLink, Markdown, Avatar, ShareButton, Zoomable, FocalPointCrop],
   templateUrl: './content-article.html',
   styleUrl: './content-article.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -39,6 +43,13 @@ export class ContentArticle {
   protected readonly imageSet = computed(() => {
     const id = this.page().imageId;
     return id ? IMAGE_WIDTHS.map((width) => `${mediaUrl(id, width)} ${width}w`).join(', ') : null;
+  });
+
+  protected readonly enlarged = computed<ZoomPhoto | null>(() => {
+    const id = this.page().imageId;
+    return id
+      ? { kind: 'photo', src: mediaUrl(id, ENLARGED_WIDTH), alt: this.page().imageAlt }
+      : null;
   });
 
   protected readonly signerPortrait = computed(() => {

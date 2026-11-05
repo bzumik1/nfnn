@@ -20,7 +20,8 @@ public enum ClientErrorBucket {
             case PDF_RENDER -> PDF_RENDER;
             case PDF_LOAD -> PDF_LOAD;
             case VERIFY_SIGNATURE -> VERIFY_SIGNATURE;
-            case UNEXPECTED, CHUNK_LOAD, QR_ENCODE, VERIFY_PARSE -> GENERAL;
+            case UNEXPECTED, CHUNK_LOAD, QR_ENCODE, VERIFY_PARSE, BOOT, SW_INSTALL, SW_UNRECOVERABLE,
+                 DEVICE_STORE_OPEN, DEVICE_STORE_EVICTED, DEVICE_COPY_MISMATCH -> GENERAL;
         };
     }
 

@@ -1,0 +1,21 @@
+[
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/sync/admin-manifest.json",
+    "reason": "2.17 adds the administration's device sync: database rows and an administrator give the manifest of GET /api/admin/donations/sync (subject, administrator, chunks with id, rowsSha256 and count) joined with the rows /sync/chunks answers for each chunk. Only the chunks of payments, gifts and donor records are specified here (payments:, donations: and donor-records: by month; donor records by the Prague month of registration, an erased donor as erasure leaves it, the placeholder name and address, and the payments of its gifts without the payer's account, name and message (the first review round)), the other chunks come from the admin_device_sync features; rowsSha256 is computed over the rows as aliased, so each side computes it from the case itself. The backend (AdminSyncSharedCasesTest) writes the rows and asks both endpoints with the real queries; the browser (shared-cases.spec.ts) hashes every chunk's rows as a device will, and reads the cases into the administration's device copy from 2.18. A new file with its schema; the source is edited",
+    "contract": "docs/api-contract.md, Device sync of the administration; .claude/rules/testing.md, Logic on both sides"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/schemas/sync/admin-manifest.schema.json",
+    "reason": "2.17: the schema of the new administration sync manifest cases (the rows of schemas/defs/rows.schema.json as input; the manifest with its payments, donations and donor-records chunks and their rows as the expected value)",
+    "contract": "docs/api-contract.md, Device sync of the administration"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.interfaces.rest.AdminOverviewSharedCasesTest > Given *, when the backend selects its rows with the real queries and compiles the year overview, then the administration gets the expected overview",
+    "replacement": "donations.interfaces.rest.AdminOverviewSharedCasesTest > Given an empty database in March, when the backend selects its rows with the real queries and compiles the year overview, alone and in the administration's sync manifest for every offered year, then the administration gets the expected overview, and the manifest's summary of that year and of every other offered year is the overview of that year",
+    "reason": "2.17 renames every admin-overview case test: each case now also asks the administration's sync manifest and checks every offered year of its summary against /overview?year=, so the when and then of each name say so; every case still runs under its new name"
+  }
+]

@@ -10,6 +10,8 @@ import { inject } from '@angular/core';
 import { catchError, tap, throwError } from 'rxjs';
 
 import { APP_REVISION } from '../errors/app-revision';
+import { mayComeFromServiceWorker } from '../updates/service-worker-bypass';
+import { SERVICE_WORKER_UPDATES } from '../updates/service-worker-updates';
 import { POSTS_ACROSS_GENERATIONS } from './api-generation';
 import { APP_API_HEADER, APP_REVISION_HEADER, ServerVersion } from './server-version';
 
@@ -24,6 +26,8 @@ export const versionInterceptor: HttpInterceptorFn = (request, next) => {
     return next(request);
   }
   const version = inject(ServerVersion);
+  const mayBeAKeptCopy =
+    inject(SERVICE_WORKER_UPDATES).isEnabled && mayComeFromServiceWorker(request);
   if (version.mustUpdate() && changesData(request)) {
     return throwError(() => updateRequired(request));
   }
@@ -35,12 +39,15 @@ export const versionInterceptor: HttpInterceptorFn = (request, next) => {
   });
   return next(named).pipe(
     tap((event) => {
-      if (event.type === HttpEventType.ResponseHeader || event.type === HttpEventType.Response) {
+      if (
+        !mayBeAKeptCopy &&
+        (event.type === HttpEventType.ResponseHeader || event.type === HttpEventType.Response)
+      ) {
         version.observe(event.headers);
       }
     }),
     catchError((failure: unknown) => {
-      if (failure instanceof HttpErrorResponse && failure.status !== 0) {
+      if (!mayBeAKeptCopy && failure instanceof HttpErrorResponse && failure.status !== 0) {
         version.observe(failure.headers);
       }
       return throwError(() => failure);

@@ -7,12 +7,16 @@ import {
   HistoryImportResponse,
   ImportStateResponse,
   ReceiptSigningKeysResponse,
+  YearlyReceiptCandidatesResponse,
+  YearlyReceiptsIssueResponse,
 } from './admin-api';
 import {
   activitySince,
   historyImport,
   importState,
   receiptSigningKeys,
+  yearlyReceiptCandidates,
+  yearlyReceiptsIssued,
 } from './testing/admin-fixtures';
 
 describe('Given the administration API', () => {
@@ -75,6 +79,37 @@ describe('Given the administration API', () => {
     request.flush({ ...receiptSigningKeys(), restarting: true });
 
     expect(received).toBe(true);
+  });
+
+  it('when the yearly receipt candidates of a year are requested, then the year travels as a parameter', () => {
+    let received: YearlyReceiptCandidatesResponse | undefined;
+    api.yearlyReceiptCandidates(2026).subscribe((response) => (received = response));
+
+    const request = http.expectOne('/api/admin/donations/receipts/yearly?year=2026');
+    expect(request.request.method).toBe('GET');
+    request.flush(yearlyReceiptCandidates());
+
+    expect(received).toEqual(yearlyReceiptCandidates());
+  });
+
+  it('when the yearly receipt candidates are requested without a year, then no year is sent and the server picks the last completed one', () => {
+    api.yearlyReceiptCandidates(null).subscribe();
+
+    const request = http.expectOne('/api/admin/donations/receipts/yearly');
+    expect(request.request.params.keys()).toEqual([]);
+    request.flush(yearlyReceiptCandidates());
+  });
+
+  it('when yearly receipts are issued, then the year and the donors are posted and the outcomes handed on', () => {
+    let received: YearlyReceiptsIssueResponse | undefined;
+    api.issueYearlyReceipts(2026, ['d-1', 'd-2']).subscribe((response) => (received = response));
+
+    const request = http.expectOne('/api/admin/donations/receipts/yearly');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ year: 2026, donorIds: ['d-1', 'd-2'] });
+    request.flush(yearlyReceiptsIssued());
+
+    expect(received).toEqual(yearlyReceiptsIssued());
   });
 
   it('when the previous sign-in is requested, then it asks the endpoint of the signed-in administrator', () => {

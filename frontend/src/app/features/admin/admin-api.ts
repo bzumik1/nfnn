@@ -1,10 +1,12 @@
 import { BackupKeyWordCheck } from '../operations/backup-key/backup-key-word-check';
+import { ifMatch } from '../../core/version/row-version';
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
 import { BankAccountItem } from '../donations/bank-accounts-api';
 import { DonationListResponse, DownloadedFile, downloadedFile } from '../donations/donations-api';
 import { PasskeyConfirmation } from '../../core/auth/donor';
+import { IssuedReceipt } from '../donations/receipt-pdf/frozen-receipt';
 import {
   MailServerRequest,
   TestEmailResponse,
@@ -69,6 +71,7 @@ export interface PairedDonationResponse {
 
 export interface AdminPaymentResponse {
   id: string;
+  version: string;
   bankTransactionId: number;
   bookedOn: string;
   amountMinor: number;
@@ -135,6 +138,7 @@ export type SymbolClaimAnswer = 'CONFIRMED' | 'DECLINED';
 
 export interface SymbolClaimResponse {
   id: string;
+  version: string;
   donorId: string;
   donorName: string | null;
   account: string;
@@ -224,11 +228,16 @@ export interface AdminReceiptResponse {
   active: boolean;
   withdrawnAt: string | null;
   withdrawalReason: ReceiptWithdrawalReason | null;
+  keyId: string;
+}
+
+export interface AdminBankAccountItem extends BankAccountItem {
+  version: string;
 }
 
 export interface AdminDonorDetailResponse {
   donor: AdminDonorRecordResponse;
-  bankAccounts: BankAccountItem[];
+  bankAccounts: AdminBankAccountItem[];
   donations: DonationListResponse;
   receipts: AdminReceiptResponse[];
   yearlyReceiptsAvailableThrough: number;
@@ -262,6 +271,55 @@ export interface AdminIssuedReceiptResponse {
   receipt: AdminFrozenReceiptResponse;
 }
 
+export interface YearlyReceiptCandidateReceipt {
+  id: string;
+  number: string;
+  issuedAt: string;
+}
+
+export interface YearlyReceiptCandidate {
+  donorId: string;
+  name: string;
+  type: 'PERSON' | 'COMPANY';
+  giftCount: number;
+  totalAmountMinor: number;
+  receipt: YearlyReceiptCandidateReceipt | null;
+}
+
+export interface YearlyReceiptCandidatesResponse {
+  year: number;
+  donors: YearlyReceiptCandidate[];
+  erasedDonors: number;
+  yearlyReceiptsAvailableThrough: number;
+  receiptsAvailableFrom: number;
+}
+
+export type YearlyReceiptOutcome = 'ISSUED' | 'UNCHANGED' | 'REPLACED' | 'SKIPPED';
+
+export interface YearlyIssuedReceipt extends IssuedReceipt {
+  donorId: string;
+  withdrawnAt: string | null;
+  withdrawalReason: ReceiptWithdrawalReason | null;
+  donorErased: boolean;
+}
+
+export interface YearlyReceiptResult {
+  donorId: string;
+  outcome: YearlyReceiptOutcome;
+  problem: string | null;
+  replacedNumber: string | null;
+  receipt: YearlyIssuedReceipt | null;
+}
+
+export interface YearlyReceiptsIssueResponse {
+  year: number;
+  results: YearlyReceiptResult[];
+  issued: number;
+  replaced: number;
+  unchanged: number;
+  skipped: number;
+}
+
 export interface ReportSectionsResponse {
   donors: boolean;
   donations: boolean;
@@ -275,6 +333,7 @@ export interface ReportSettingsResponse {
   sendHour: number;
   sections: ReportSectionsResponse;
   changedAt: string | null;
+  version: string;
 }
 
 export interface ReportSettingsRequest {
@@ -641,6 +700,8 @@ export interface DiagnosticsResponse {
   logLevelOverrides: LogOverrideResponse[];
 }
 
+const YEARLY_RECEIPTS = '/api/admin/donations/receipts/yearly';
+
 @Injectable({ providedIn: 'root' })
 export class AdminApi {
   private readonly http = inject(HttpClient);
@@ -677,17 +738,23 @@ export class AdminApi {
     });
   }
 
-  pairPayment(paymentId: string, donorId: string): Observable<PairPaymentResponse> {
+  pairPayment(
+    paymentId: string,
+    donorId: string,
+    version: string,
+  ): Observable<PairPaymentResponse> {
     return this.http.post<PairPaymentResponse>(
       `/api/admin/donations/payments/${encodeURIComponent(paymentId)}/pair`,
       { donorId },
+      ifMatch(version),
     );
   }
 
-  unpairPayment(paymentId: string): Observable<UnpairPaymentResponse> {
+  unpairPayment(paymentId: string, version: string): Observable<UnpairPaymentResponse> {
     return this.http.post<UnpairPaymentResponse>(
       `/api/admin/donations/payments/${encodeURIComponent(paymentId)}/unpair`,
       null,
+      ifMatch(version),
     );
   }
 
@@ -720,16 +787,18 @@ export class AdminApi {
     return this.http.get<SymbolClaimListResponse>('/api/admin/donations/symbol-claims');
   }
 
-  reverseSymbolClaim(claimId: string): Observable<void> {
+  reverseSymbolClaim(claimId: string, version: string): Observable<void> {
     return this.http.post<void>(
       `/api/admin/donations/symbol-claims/${encodeURIComponent(claimId)}/reverse`,
       null,
+      ifMatch(version),
     );
   }
 
-  deleteSymbolClaim(claimId: string): Observable<void> {
+  deleteSymbolClaim(claimId: string, version: string): Observable<void> {
     return this.http.delete<void>(
       `/api/admin/donations/symbol-claims/${encodeURIComponent(claimId)}`,
+      ifMatch(version),
     );
   }
 
@@ -759,8 +828,15 @@ export class AdminApi {
     return this.http.get<AdminReportResponse>('/api/admin/donations/report');
   }
 
-  changeReportSettings(request: ReportSettingsRequest): Observable<ReportSettingsResponse> {
-    return this.http.put<ReportSettingsResponse>('/api/admin/donations/report/settings', request);
+  changeReportSettings(
+    request: ReportSettingsRequest,
+    version: string,
+  ): Observable<ReportSettingsResponse> {
+    return this.http.put<ReportSettingsResponse>(
+      '/api/admin/donations/report/settings',
+      request,
+      ifMatch(version),
+    );
   }
 
   sendReport(month: string): Observable<SendReportResponse> {
@@ -801,16 +877,36 @@ export class AdminApi {
     );
   }
 
-  disconnectDonorAccount(donorId: string, linkId: string): Observable<void> {
-    return this.http.post<void>(`${donorAccountUrl(donorId, linkId)}/disconnect`, null);
+  yearlyReceiptCandidates(year: number | null): Observable<YearlyReceiptCandidatesResponse> {
+    const params: Record<string, string> = year === null ? {} : { year: String(year) };
+    return this.http.get<YearlyReceiptCandidatesResponse>(YEARLY_RECEIPTS, { params });
   }
 
-  reconnectDonorAccount(donorId: string, linkId: string): Observable<void> {
-    return this.http.post<void>(`${donorAccountUrl(donorId, linkId)}/reconnect`, null);
+  issueYearlyReceipts(
+    year: number,
+    donorIds: readonly string[],
+  ): Observable<YearlyReceiptsIssueResponse> {
+    return this.http.post<YearlyReceiptsIssueResponse>(YEARLY_RECEIPTS, { year, donorIds });
   }
 
-  removeDonorAccount(donorId: string, linkId: string): Observable<void> {
-    return this.http.delete<void>(donorAccountUrl(donorId, linkId));
+  disconnectDonorAccount(donorId: string, linkId: string, version: string): Observable<void> {
+    return this.http.post<void>(
+      `${donorAccountUrl(donorId, linkId)}/disconnect`,
+      null,
+      ifMatch(version),
+    );
+  }
+
+  reconnectDonorAccount(donorId: string, linkId: string, version: string): Observable<void> {
+    return this.http.post<void>(
+      `${donorAccountUrl(donorId, linkId)}/reconnect`,
+      null,
+      ifMatch(version),
+    );
+  }
+
+  removeDonorAccount(donorId: string, linkId: string, version: string): Observable<void> {
+    return this.http.delete<void>(donorAccountUrl(donorId, linkId), ifMatch(version));
   }
 
   backups(): Observable<AdminBackupsResponse> {

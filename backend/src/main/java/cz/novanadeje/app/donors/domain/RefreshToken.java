@@ -25,10 +25,11 @@ public final class RefreshToken {
     private Instant revokedAt;
     private final UUID successorId;
     private Instant supersededAt;
+    private final DeviceId deviceId;
 
     private RefreshToken(UUID id, DonorId donorId, String secretHash, Instant issuedAt, Instant expiresAt, boolean secondFactorVerified,
                          ClientId clientId, Set<OAuthScope> scopes, Instant grantedAt, Instant usedAt, Instant revokedAt, UUID successorId,
-                         Instant supersededAt) {
+                         Instant supersededAt, DeviceId deviceId) {
         this.id = id;
         this.donorId = donorId;
         this.secretHash = secretHash;
@@ -42,24 +43,29 @@ public final class RefreshToken {
         this.revokedAt = revokedAt;
         this.successorId = successorId;
         this.supersededAt = supersededAt;
+        this.deviceId = deviceId;
     }
 
-    public static RefreshToken issue(RefreshTokenSecret secret, DonorId donorId, Instant issuedAt, Duration lifetime, boolean secondFactorVerified) {
+    public static RefreshToken issue(RefreshTokenSecret secret, DonorId donorId, DeviceId deviceId, Instant issuedAt, Duration lifetime,
+                                     boolean secondFactorVerified) {
+        if (deviceId == null) {
+            throw new IllegalArgumentException("A browser refresh token belongs to a device");
+        }
         return new RefreshToken(UuidV7.generate(issuedAt), donorId, secret.hash(), issuedAt, issuedAt.plus(lifetime), secondFactorVerified, null,
-                Set.of(), issuedAt, null, null, null, null);
+                Set.of(), issuedAt, null, null, null, null, deviceId);
     }
 
     public static RefreshToken issueForClient(RefreshTokenSecret secret, DonorId donorId, ClientId clientId, Set<OAuthScope> scopes,
                                               Instant grantedAt, Instant issuedAt, Duration lifetime) {
         return new RefreshToken(UuidV7.generate(issuedAt), donorId, secret.hash(), issuedAt, issuedAt.plus(lifetime), true, clientId, scopes,
-                grantedAt, null, null, null, null);
+                grantedAt, null, null, null, null, null);
     }
 
     public static RefreshToken reconstitute(UUID id, DonorId donorId, String secretHash, Instant issuedAt, Instant expiresAt,
                                             boolean secondFactorVerified, ClientId clientId, Set<OAuthScope> scopes, Instant grantedAt,
-                                            Instant usedAt, Instant revokedAt, UUID successorId, Instant supersededAt) {
+                                            Instant usedAt, Instant revokedAt, UUID successorId, Instant supersededAt, DeviceId deviceId) {
         return new RefreshToken(id, donorId, secretHash, issuedAt, expiresAt, secondFactorVerified, clientId, scopes, grantedAt, usedAt, revokedAt,
-                successorId, supersededAt);
+                successorId, supersededAt, deviceId);
     }
 
     public boolean secondFactorVerified() {
@@ -156,5 +162,9 @@ public final class RefreshToken {
 
     public Optional<Instant> supersededAt() {
         return Optional.ofNullable(supersededAt);
+    }
+
+    public Optional<DeviceId> deviceId() {
+        return Optional.ofNullable(deviceId);
     }
 }

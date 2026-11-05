@@ -26,9 +26,11 @@ import { DIALOG_PRESENTATION, DialogPresentation } from './dialog-presentation';
 })
 export class Dialog implements AfterViewInit, OnDestroy {
   readonly labelledBy = input.required<string>();
+  readonly describedBy = input<string | null>(null);
   readonly wide = input(false);
   readonly presentation = input<DialogPresentation>('auto');
   readonly pushesHistory = input(true);
+  readonly dismissible = input(true);
   readonly dismissed = output<void>();
   protected readonly announcer = inject(DialogAnnouncer);
 
@@ -71,7 +73,23 @@ export class Dialog implements AfterViewInit, OnDestroy {
   }
 
   protected dismiss(): void {
-    this.dismissed.emit();
+    if (this.dismissible()) {
+      this.dismissed.emit();
+    }
+  }
+
+  protected onClose(): void {
+    if (this.dismissible()) {
+      this.dismissed.emit();
+    } else if (!this.destroyed) {
+      this.element().nativeElement.showModal();
+    }
+  }
+
+  protected onCancel(event: Event): void {
+    if (!this.dismissible()) {
+      event.preventDefault();
+    }
   }
 
   protected onPointerDown(event: Event): void {

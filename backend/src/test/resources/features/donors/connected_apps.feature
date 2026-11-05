@@ -154,6 +154,13 @@ Feature: An administrator connects an application such as Claude to the administ
       | GET    | /api/admin/donations/receipt-signatures/{id}                        |
       | GET    | /api/admin/donations/receipt-images/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee |
       | POST   | /api/admin/donations/receipt-signing-keys/21fe31df/withdrawal       |
+      | POST   | /api/admin/operations/push/subscriptions                            |
+      | DELETE | /api/admin/operations/push/subscriptions/{id}                       |
+      | POST   | /api/admin/operations/push/test                                     |
+      | GET    | /api/admin/donations/sync                                           |
+      | GET    | /api/admin/donations/sync/chunks                                    |
+      | GET    | /api/admin/donors/sync                                              |
+      | GET    | /api/admin/donors/sync/chunks                                       |
 
   Scenario: A connected application issues a first receipt and gets it again, but replacing an issued receipt is left to the browser
     Given today is 2026-12-20

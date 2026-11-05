@@ -1,7 +1,7 @@
 import { expect, test } from './fixtures';
-import { mockDonorApi, signIn } from './donor-session';
+import { mockDonorApi, openSection, signIn } from './donor-session';
 
-test.describe('Given a visitor on the home page', () => {
+test.describe('Given a visitor on the About page', () => {
   test('when they send a contact message, then the site posts it to the API and thanks them', async ({
     page,
   }) => {
@@ -11,7 +11,7 @@ test.describe('Given a visitor on the home page', () => {
       await route.fulfill({ status: 202 });
     });
 
-    await page.goto('/');
+    await page.goto('/o-nas');
     await page.locator('#contact-name').fill('Jana Nováková');
     await page.locator('#contact-email').fill('jana@example.cz');
     await page.locator('#contact-message').fill('Mám dotaz k projektu.');
@@ -47,7 +47,7 @@ test.describe('Given a visitor on the home page', () => {
       }),
     );
 
-    await page.goto('/');
+    await page.goto('/o-nas');
     await page.locator('#contact-name').fill('Jana Nováková');
     await page.locator('#contact-email').fill('jana@example.c');
     await page.locator('#contact-message').fill('Dobrý den.');
@@ -67,7 +67,7 @@ test.describe('Given a visitor on the home page', () => {
       route.fulfill({ status: 429, contentType: 'application/problem+json', body: '{}' }),
     );
 
-    await page.goto('/');
+    await page.goto('/o-nas');
     await page.locator('#contact-name').fill('Jana Nováková');
     await page.locator('#contact-email').fill('jana@example.cz');
     await page.locator('#contact-message').fill('Ještě jedna.');
@@ -91,7 +91,7 @@ test.describe('Given a visitor on the home page', () => {
       await route.fulfill({ status: 202 });
     });
 
-    await page.goto('/');
+    await page.goto('/o-nas');
     await page.locator('#contact-email').fill('jana@');
     await page.getByRole('button', { name: 'Odeslat zprávu' }).click();
 
@@ -112,7 +112,7 @@ test.describe('Given a visitor on the home page', () => {
     test('when they reach the contact section, then the heading, the e-mail address and the address are there to read', async ({
       page,
     }) => {
-      await page.goto('/');
+      await page.goto('/o-nas');
 
       await expect(page.getByRole('heading', { name: 'Kontaktujte nás' })).toBeVisible();
       await expect(
@@ -123,14 +123,18 @@ test.describe('Given a visitor on the home page', () => {
   });
 });
 
-test.describe('Given a signed-in donor who goes back to the home page', () => {
+test.describe('Given a signed-in donor who goes back to the About page', () => {
   test('when they reach the contact form, then their name and e-mail are filled in and can be changed', async ({
     page,
   }) => {
     await mockDonorApi(page);
     await signIn(page);
 
-    await page.getByRole('link', { name: 'Hlavní stránka' }).click();
+    await page
+      .getByRole('banner')
+      .getByRole('link', { name: 'Nová naděje – nadační fond' })
+      .click();
+    await openSection(page, 'O nás');
     await page.locator('#kontakt').scrollIntoViewIfNeeded();
 
     await expect(page.locator('#contact-name')).toHaveValue('Jana Nováková');
@@ -140,14 +144,14 @@ test.describe('Given a signed-in donor who goes back to the home page', () => {
   });
 });
 
-test.describe('Given an accountant on the home page', () => {
+test.describe('Given an accountant on the About page', () => {
   test.use({ permissions: ['clipboard-read', 'clipboard-write'] });
 
   test('when they copy the IČO and the IBAN from Údaje pro účetní, then the clipboard holds each as typed into accounting', async ({
     page,
   }) => {
     await mockDonorApi(page);
-    await page.goto('/');
+    await page.goto('/o-nas');
     const details = page.locator('#kontakt').getByRole('definition');
     await expect(page.locator('#kontakt')).toContainText('CZ26 2010 0000 0055 4433 2217');
 

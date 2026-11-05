@@ -47,4 +47,17 @@ interface RefreshTokenJpaRepository extends JpaRepository<RefreshTokenJpaEntity,
     @Modifying
     @Query("update RefreshTokenJpaEntity t set t.revokedAt = :at where t.donorId = :donorId and t.revokedAt is null")
     void revokeAllOf(@Param("donorId") UUID donorId, @Param("at") Instant at);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("update RefreshTokenJpaEntity t set t.revokedAt = :at where t.deviceId = :deviceId and t.revokedAt is null")
+    int revokeAllOfDevice(@Param("deviceId") UUID deviceId, @Param("at") Instant at);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("update RefreshTokenJpaEntity t set t.revokedAt = :at where t.donorId = :donorId and t.deviceId is null and t.clientId is null"
+            + " and t.revokedAt is null")
+    int revokeDevicelessBrowserTokensOf(@Param("donorId") UUID donorId, @Param("at") Instant at);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("delete from RefreshTokenJpaEntity t where t.revokedAt < :cutoff or t.expiresAt < :cutoff")
+    int deleteSpentBefore(@Param("cutoff") Instant cutoff);
 }

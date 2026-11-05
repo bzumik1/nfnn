@@ -8,7 +8,10 @@ import {
   LINK_ID,
   MEDIA_ID,
   PAYMENT_ID,
+  CURRENT_VERSION,
+  STALE_VERSION,
   PERSON_ID,
+  PUSH_SUBSCRIPTION_ID,
   READ_TOKEN,
   RECEIPT_ID,
   REPLACING_DONOR_ID,
@@ -60,6 +63,7 @@ describe('Given an administrator connected with the reading permission only', ()
       'nfnn_find_donors',
       'nfnn_import_history',
       'nfnn_issue_receipt',
+      'nfnn_issue_receipts',
       'nfnn_log',
       'nfnn_log_files',
       'nfnn_log_levels',
@@ -75,6 +79,7 @@ describe('Given an administrator connected with the reading permission only', ()
       'nfnn_project_order',
       'nfnn_publish_news',
       'nfnn_publish_project',
+      'nfnn_push_alerts',
       'nfnn_receipt',
       'nfnn_receipt_signature',
       'nfnn_receipts',
@@ -87,7 +92,9 @@ describe('Given an administrator connected with the reading permission only', ()
       'nfnn_send_report',
       'nfnn_send_test_email',
       'nfnn_set_log_level',
+      'nfnn_set_photo_focal_point',
       'nfnn_set_project_order',
+      'nfnn_set_push_alerts',
       'nfnn_set_web_signature',
       'nfnn_settings',
       'nfnn_since_last_sign_in',
@@ -106,6 +113,7 @@ describe('Given an administrator connected with the reading permission only', ()
       'nfnn_update_project',
       'nfnn_update_report_settings',
       'nfnn_upload_photo',
+      'nfnn_yearly_receipts',
     ]);
     expect(tools.find((tool) => tool.name === 'nfnn_status')?.annotations?.readOnlyHint).toBe(true);
     expect(
@@ -126,6 +134,18 @@ describe('Given an administrator connected with the reading permission only', ()
     expect(setting).toContain('nfnn_photo_upload_link');
     expect(setting).toContain('never from a public address');
     expect(setting).toContain('CHANGE_WEB_SIGNATURE');
+  });
+
+  it('when the push alerts are asked, then the devices of the connected administrator come with their switches and the description says turning a device on or off stays on the web', async () => {
+    const result = await client.callTool({ name: 'nfnn_push_alerts', arguments: {} });
+    expect(result.isError).toBeFalsy();
+    expect(textOf(result)).toContain(`"id":"${PUSH_SUBSCRIPTION_ID}"`);
+    expect(textOf(result)).toContain('"bankImport":true');
+    expect(textOf(result)).not.toContain('publicKey');
+    const { tools } = await client.listTools();
+    const description = tools.find((tool) => tool.name === 'nfnn_push_alerts')?.description;
+    expect(description).toContain('nfnn_set_push_alerts');
+    expect(description).toContain('only on the web');
   });
 
   it('when the order of the projects is asked, then the chosen order comes with a description of every way of ordering', async () => {
@@ -450,6 +470,18 @@ describe('Given an administrator connected with the reading permission only', ()
     });
     expect(result.isError).toBe(true);
     expect(textOf(result)).toContain('404 donations/receipt-not-found');
+  });
+
+  it('when the yearly receipts are issued with the reading permission only, then nothing reaches the administration', async () => {
+    const result = await client.callTool({
+      name: 'nfnn_issue_receipts',
+      arguments: { year: 2026, donorIds: [DONOR_ID] },
+    });
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toContain('This connection may only read');
+    expect(
+      stack.backend.requests.filter((request) => request.path.endsWith('/receipts/yearly')),
+    ).toHaveLength(0);
   });
 
   it('when a receipt is issued with the reading permission only, then nothing reaches the administration and the answer says how to allow changes', async () => {
@@ -842,6 +874,155 @@ describe('Given an administrator connected with the writing permission', () => {
     );
   });
 
+  it('when a payment is paired from the version read, then the administration receives it as If-Match, and without one no If-Match is sent', async () => {
+    await client.callTool({
+      name: 'nfnn_pair_payment',
+      arguments: { paymentId: PAYMENT_ID, donorId: DONOR_ID, expectedVersion: CURRENT_VERSION },
+    });
+    await client.callTool({
+      name: 'nfnn_pair_payment',
+      arguments: { paymentId: PAYMENT_ID, donorId: DONOR_ID },
+    });
+    const calls = stack.backend.requests.filter((request) => request.path.endsWith('/pair'));
+    expect(calls.map((call) => call.ifMatch)).toEqual([`"${CURRENT_VERSION}"`, undefined]);
+  });
+
+  it('when every tool that takes the version read is called with one, then the administration receives it as If-Match and never in the body', async () => {
+    const article = { title: 'Letní tábor', perex: 'Krátce o táboře.', body: 'Text.' };
+    const project = { ...article, year: 2026, category: 'CHILDREN' };
+    const settings = {
+      recipients: ['info@nfnn.cz'],
+      sendDay: 1,
+      sendHour: 7,
+      sections: { donors: true, donations: true, unpairedPayments: true, bankImport: true },
+    };
+    const link = { donorId: DONOR_ID, linkId: LINK_ID };
+    const tools: [string, Record<string, unknown>, string, string, unknown][] = [
+      [
+        'nfnn_pair_payment',
+        { paymentId: PAYMENT_ID, donorId: DONOR_ID },
+        'POST',
+        `/api/admin/donations/payments/${PAYMENT_ID}/pair`,
+        { donorId: DONOR_ID },
+      ],
+      [
+        'nfnn_unpair_payment',
+        { paymentId: PAYMENT_ID },
+        'POST',
+        `/api/admin/donations/payments/${PAYMENT_ID}/unpair`,
+        undefined,
+      ],
+      [
+        'nfnn_publish_news',
+        { id: UNKNOWN_ID, publishedOn: '2026-10-20' },
+        'POST',
+        `/api/admin/content/news/${UNKNOWN_ID}/publish`,
+        { publishedOn: '2026-10-20' },
+      ],
+      [
+        'nfnn_unpublish_news',
+        { id: UNKNOWN_ID },
+        'POST',
+        `/api/admin/content/news/${UNKNOWN_ID}/unpublish`,
+        undefined,
+      ],
+      [
+        'nfnn_publish_project',
+        { id: UNKNOWN_ID, publishedOn: '2026-10-20' },
+        'POST',
+        `/api/admin/content/projects/${UNKNOWN_ID}/publish`,
+        { publishedOn: '2026-10-20' },
+      ],
+      [
+        'nfnn_unpublish_project',
+        { id: UNKNOWN_ID },
+        'POST',
+        `/api/admin/content/projects/${UNKNOWN_ID}/unpublish`,
+        undefined,
+      ],
+      [
+        'nfnn_update_report_settings',
+        settings,
+        'PUT',
+        '/api/admin/donations/report/settings',
+        settings,
+      ],
+      [
+        'nfnn_update_news',
+        { id: UNKNOWN_ID, ...article, signerId: PERSON_ID },
+        'PUT',
+        `/api/admin/content/news/${UNKNOWN_ID}`,
+        { ...article, signerId: PERSON_ID },
+      ],
+      [
+        'nfnn_update_project',
+        { id: UNKNOWN_ID, ...project },
+        'PUT',
+        `/api/admin/content/projects/${UNKNOWN_ID}`,
+        project,
+      ],
+      [
+        'nfnn_disconnect_bank_account',
+        link,
+        'POST',
+        `/api/admin/donations/donors/${DONOR_ID}/bank-accounts/${LINK_ID}/disconnect`,
+        undefined,
+      ],
+      [
+        'nfnn_reconnect_bank_account',
+        link,
+        'POST',
+        `/api/admin/donations/donors/${DONOR_ID}/bank-accounts/${LINK_ID}/reconnect`,
+        undefined,
+      ],
+    ];
+
+    const sent = [];
+    for (const [name, args] of tools) {
+      const before = stack.backend.requests.length;
+      await client.callTool({ name, arguments: { ...args, expectedVersion: CURRENT_VERSION } });
+      const requests = stack.backend.requests
+        .slice(before)
+        .filter((request) => request.path.startsWith('/api/admin/'));
+      sent.push(
+        requests.map((request) => [
+          name,
+          request.method,
+          request.path,
+          request.ifMatch,
+          request.body === '' ? undefined : JSON.parse(request.body),
+        ]),
+      );
+    }
+
+    expect(sent).toEqual(
+      tools.map(([name, , method, path, body]) => [
+        [name, method, path, `"${CURRENT_VERSION}"`, body],
+      ]),
+    );
+  });
+
+  it('when someone changed the record since the version read, then the tool answers the refusal with the version stored now and the current record', async () => {
+    const stale = await client.callTool({
+      name: 'nfnn_update_report_settings',
+      arguments: {
+        recipients: ['info@nfnn.cz'],
+        sendDay: 1,
+        sendHour: 7,
+        sections: { donors: true, donations: true, unpairedPayments: true, bankImport: true },
+        expectedVersion: STALE_VERSION,
+      },
+    });
+    expect(stale.isError).toBe(true);
+    expect(textOf(stale)).toContain('409 donations/changed-meanwhile');
+    expect(textOf(stale)).toContain(`The version stored now is ${CURRENT_VERSION}`);
+    expect(textOf(stale)).toContain('"sendDay":5');
+    expect(textOf(stale)).toContain('"sentReports":[]');
+    const call = stack.backend.requests.find((request) => request.ifMatch !== undefined);
+    expect(call?.method).toBe('PUT');
+    expect(JSON.parse(call?.body ?? '{}')).not.toHaveProperty('expectedVersion');
+  });
+
   it('when the administration refuses, then the tool answers an error with the Czech title and detail', async () => {
     const unknown = await client.callTool({
       name: 'nfnn_pair_payment',
@@ -1089,6 +1270,59 @@ describe('Given an administrator connected with the writing permission', () => {
     ]);
   });
 
+  it('when a focal point is placed on a photo and then removed, then the administration gets the point and then none, and the answer carries the photo', async () => {
+    const placed = await client.callTool({
+      name: 'nfnn_set_photo_focal_point',
+      arguments: { photoId: MEDIA_ID, focalPoint: { x: 42, y: 18 } },
+    });
+    expect(placed.isError).toBeFalsy();
+    expect(textOf(placed)).toContain('"focalPoint":{"x":42,"y":18}');
+    const removed = await client.callTool({
+      name: 'nfnn_set_photo_focal_point',
+      arguments: { photoId: MEDIA_ID, focalPoint: null },
+    });
+    expect(removed.isError).toBeFalsy();
+    expect(textOf(removed)).toContain('"focalPoint":null');
+
+    const writes = stack.backend.requests
+      .filter((request) => request.path === `/api/admin/content/media/${MEDIA_ID}`)
+      .map((request) => [request.method, JSON.parse(request.body), request.authorization]);
+    expect(writes).toEqual([
+      ['PUT', { focalPoint: { x: 42, y: 18 } }, 'Bearer api-token-write'],
+      ['PUT', { focalPoint: null }, 'Bearer api-token-write'],
+    ]);
+  });
+
+  it('when a focal point outside the photo is placed, then nothing reaches the administration', async () => {
+    const outside = await client.callTool({
+      name: 'nfnn_set_photo_focal_point',
+      arguments: { photoId: MEDIA_ID, focalPoint: { x: 101, y: 50 } },
+    });
+    const fraction = await client.callTool({
+      name: 'nfnn_set_photo_focal_point',
+      arguments: { photoId: MEDIA_ID, focalPoint: { x: 42.5, y: 50 } },
+    });
+
+    expect(outside.isError).toBe(true);
+    expect(fraction.isError).toBe(true);
+    expect(
+      stack.backend.requests.filter((request) =>
+        request.path.startsWith('/api/admin/content/media'),
+      ),
+    ).toEqual([]);
+  });
+
+  it('when the tools are listed, then the focal point tool says what the point does and that a replaced photo starts without one', async () => {
+    const { tools } = await client.listTools();
+    const description = tools.find(
+      (tool) => tool.name === 'nfnn_set_photo_focal_point',
+    )?.description;
+    expect(description).toContain('as before with focalPoint null');
+    expect(description).toContain('content/focal-point-on-person-image');
+    expect(description).toContain('CHANGE_PHOTO_FOCAL_POINT');
+    expect(description).toContain('nfnn_update_news');
+  });
+
   it('when the About photo is set without texts, then they go as empty', async () => {
     await client.callTool({ name: 'nfnn_update_about', arguments: { photoId: MEDIA_ID } });
 
@@ -1298,6 +1532,70 @@ describe('Given an administrator connected with the writing permission', () => {
     ]);
   });
 
+  it('when the donors of a year are listed and their yearly receipts issued at once, then the list names the year and the issue answers each outcome with the number but no frozen data', async () => {
+    const listed = await client.callTool({ name: 'nfnn_yearly_receipts', arguments: {} });
+    const ofYear = await client.callTool({
+      name: 'nfnn_yearly_receipts',
+      arguments: { year: 2026 },
+    });
+    const issued = await client.callTool({
+      name: 'nfnn_issue_receipts',
+      arguments: { year: 2026, donorIds: [DONOR_ID.toUpperCase(), UNKNOWN_ID] },
+    });
+    expect(listed.isError).toBeFalsy();
+    expect(issued.isError).toBeFalsy();
+    const calls = stack.backend.requests.filter((request) =>
+      request.path.startsWith('/api/admin/donations/receipts/yearly'),
+    );
+    expect(calls.map((call) => `${call.method} ${call.path}`)).toEqual([
+      'GET /api/admin/donations/receipts/yearly',
+      'GET /api/admin/donations/receipts/yearly?year=2026',
+      'POST /api/admin/donations/receipts/yearly',
+    ]);
+    expect(JSON.parse(calls[2]?.body ?? '{}')).toEqual({
+      year: 2026,
+      donorIds: [DONOR_ID, UNKNOWN_ID],
+    });
+    expect(calls[2]?.authorization).toBe('Bearer api-token-write');
+    const donors = JSON.parse(textOf(ofYear)) as Record<string, unknown>;
+    expect(donors['erasedDonors']).toBe(1);
+    expect(textOf(ofYear)).toContain('"totalAmount":3500');
+    const run = JSON.parse(textOf(issued)) as Record<string, unknown>;
+    expect(run['results']).toEqual([
+      expect.objectContaining({
+        donorId: DONOR_ID,
+        outcome: 'ISSUED',
+        receiptId: RECEIPT_ID,
+        number: '2027-000001',
+      }),
+      expect.objectContaining({
+        donorId: UNKNOWN_ID,
+        outcome: 'SKIPPED',
+        problem: 'donations/donor-not-found',
+        receiptId: null,
+        number: null,
+      }),
+    ]);
+    expect(textOf(issued)).not.toContain('"receipt"');
+    expect(run['issued']).toBe(1);
+    expect(stack.logLines).toContain('INFO Tool nfnn_issue_receipts answered donor donor-jana');
+  });
+
+  it('when the yearly receipts name a donor twice, then nothing reaches the administration', async () => {
+    const result = await client.callTool({
+      name: 'nfnn_issue_receipts',
+      arguments: { year: 2026, donorIds: [DONOR_ID, DONOR_ID.toUpperCase()] },
+    });
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toContain('Name each donor in `donorIds` once');
+    expect(
+      stack.backend.requests.filter((request) => request.path.endsWith('/receipts/yearly')),
+    ).toHaveLength(0);
+    expect(stack.logLines).toContain(
+      'INFO Tool nfnn_issue_receipts refused for donor donor-jana: repeated-donor',
+    );
+  });
+
   it('when a yearly receipt and the receipt of one donation are issued, then each asks for its own subject and the issued receipt comes back with its verification link', async () => {
     const yearly = await client.callTool({
       name: 'nfnn_issue_receipt',
@@ -1488,6 +1786,28 @@ describe('Given an administrator connected with the writing permission', () => {
       ).toHaveLength(0);
     },
   );
+
+  it('when the push alerts of a device are switched, then the administration gets the PUT of all three switches and an unknown device is explained', async () => {
+    const switched = await client.callTool({
+      name: 'nfnn_set_push_alerts',
+      arguments: { id: PUSH_SUBSCRIPTION_ID, bankImport: false, backups: true, mail: false },
+    });
+    expect(switched.isError).toBeFalsy();
+    expect(textOf(switched)).toContain('"bankImport":false');
+    const put = stack.backend.requests.find((request) => request.method === 'PUT');
+    expect(put?.path).toBe(
+      `/api/admin/operations/push/subscriptions/${PUSH_SUBSCRIPTION_ID}/alerts`,
+    );
+    expect(put?.body).toBe('{"bankImport":false,"backups":true,"mail":false}');
+    expect(put?.authorization).toBe('Bearer api-token-write');
+
+    const unknown = await client.callTool({
+      name: 'nfnn_set_push_alerts',
+      arguments: { id: UNKNOWN_ID, bankImport: true, backups: true, mail: true },
+    });
+    expect(unknown.isError).toBe(true);
+    expect(textOf(unknown)).toContain('404 operations/push-subscription-not-found');
+  });
 
   it('when a log level is raised and reset, then the administration gets the PUT and DELETE and a missing override is explained', async () => {
     const raised = await client.callTool({

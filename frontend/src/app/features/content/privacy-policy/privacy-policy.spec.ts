@@ -116,6 +116,15 @@ describe('Given the privacy policy page', () => {
     expect(sectionText('Účinnost')).toContain('účinné od 5. listopadu 2026');
   });
 
+  it('when it renders, then the cookies section gives the encrypted copy of the donor data a paragraph of its own: what it holds, when sign-out keeps it, how to delete it and that the server is unaffected', () => {
+    expect(texts('#cookies .device-copy')).toEqual([
+      'Po přihlášení si portál do vašeho prohlížeče uloží zašifrovanou kopii údajů o vašich darech, potvrzeních a bankovních účtech. Klíč k ní zná jen vaše zařízení. Když jste se přihlásili heslem, zůstane kopie po odhlášení zamčená tímto heslem; po přihlášení přístupovým klíčem zůstane jen tehdy, když to klíč umí, jinak se odhlášením smaže. Smazat ji můžete kdykoli v dárcovském portálu v části Údaje a zabezpečení tlačítkem „Smazat data z tohoto zařízení“; údaje na serveru tím nezměníte.',
+    ]);
+    expect(sectionText('Cookies')).toContain(
+      'a po přihlášení zašifrovanou kopii vašich údajů, viz níže.',
+    );
+  });
+
   it('when it renders, then the cookies section names the verification keys kept in the browser', () => {
     const cookies = sectionText('Cookies');
 
@@ -136,6 +145,16 @@ describe('Given the privacy policy page', () => {
 
     expect(passkey).toContain('veřejnou část přístupového klíče');
     expect(passkey).toContain('otisk prstu ani snímek obličeje k nám nikdy nedorazí');
+  });
+
+  it('when it renders, then it says which signed-in devices are kept, without the browser header, and for how long', () => {
+    const device = texts('li').find((item) => item.includes('na kterém se přihlásíte'));
+    const retention = texts('li').find((item) => item.includes('přihlášená zařízení'));
+
+    expect(device).toContain('druh zařízení a prohlížeče');
+    expect(device).toContain('celý popis, který o sobě prohlížeč posílá, neukládáme');
+    expect(retention).toContain('14 dní nepoužijete, se odhlásí samo');
+    expect(retention).toContain('odhlášená zařízení ještě 400 dní');
   });
 
   it('when it renders, then it says a gift is assigned by the variable symbol and by a bank account the donor proved', () => {
@@ -378,8 +397,10 @@ describe('Given the privacy policy page', () => {
     expect(link.textContent!.trim()).toBe('info@nfnn.cz');
   });
 
-  it('when it renders, then the contact section links to the contact form on the home page', () => {
-    const link = fixture.nativeElement.querySelector('a[href="/#kontakt"]') as HTMLAnchorElement;
+  it('when it renders, then the contact section links to the contact form on the About page', () => {
+    const link = fixture.nativeElement.querySelector(
+      'a[href="/o-nas#kontakt"]',
+    ) as HTMLAnchorElement;
 
     expect(link.textContent!.trim()).toBe('kontaktní formulář');
   });

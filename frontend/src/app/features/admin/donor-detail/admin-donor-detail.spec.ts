@@ -19,6 +19,11 @@ import { PdfDelivery } from '../../donations/receipt-pdf/pdf-delivery';
 import { RECEIPT_PDF_ENVIRONMENT } from '../../donations/receipt-pdf/receipt-pdf';
 import { FakeReceiptPdfEnvironment } from '../../donations/receipt-pdf/testing/fake-receipt-worker';
 import { frozenCase, SINGLE_PERSON_CS } from '../../donations/receipt-pdf/testing/receipt-fixtures';
+import {
+  keyListWith,
+  OTHER_KEY,
+  TEST_KEY,
+} from '../../donations/verification/testing/verification-fixtures';
 import { AdminDonorDetail } from './admin-donor-detail';
 
 const DONOR_ID = '01a18e56-bdb0-775a-bd0a-a60756831369';
@@ -27,6 +32,7 @@ const ACCOUNT_URL = `/api/admin/donors/${DONOR_ID}`;
 const DETAIL_URL = `/api/admin/donations/donors/${DONOR_ID}`;
 const LINK_URL = `${DETAIL_URL}/bank-accounts/${LINK_ID}`;
 const ISSUE_URL = `${DETAIL_URL}/receipts`;
+const KEYS_URL = '/api/donations/receipt-keys';
 
 function problem(status: number, type: string, title: string, detail: string) {
   return {
@@ -71,6 +77,7 @@ describe('Given an administrator on a donor card', () => {
   });
 
   afterEach(() => {
+    http.match(KEYS_URL).forEach((request) => request.flush(keyListWith([TEST_KEY])));
     http.verify();
     vi.restoreAllMocks();
     vi.useRealTimers();
@@ -845,7 +852,13 @@ describe('Given an administrator on a donor card', () => {
     );
     http.expectOne(DETAIL_URL).flush(
       donorDetail({
-        bankAccounts: [adminBankAccount({ status: 'DISCONNECTED', disconnectedOn: '2026-10-22' })],
+        bankAccounts: [
+          adminBankAccount({
+            status: 'DISCONNECTED',
+            disconnectedOn: '2026-10-22',
+            version: '5e8d2a1c7b3f9046',
+          }),
+        ],
       }),
     );
     await settle();
@@ -858,6 +871,7 @@ describe('Given an administrator on a donor card', () => {
     fixture.detectChanges();
     const reconnect = http.expectOne(`${LINK_URL}/reconnect`);
     expect(reconnect.request.method).toBe('POST');
+    expect(reconnect.request.headers.get('If-Match')).toBe('"5e8d2a1c7b3f9046"');
     reconnect.flush(null, { status: 204, statusText: 'No Content' });
     fixture.detectChanges();
     expect(text('.ui-notice--status')).toBe(
@@ -865,6 +879,41 @@ describe('Given an administrator on a donor card', () => {
     );
     http.expectOne(DETAIL_URL).flush(donorDetail());
     await settle();
+  });
+
+  it('when the account changed meanwhile, then turning the pairing off named the version read, the sheet names the donor and reading again says so', async () => {
+    await loaded();
+
+    button(section('Bankovní účty'), 'Vypnout párování').click();
+    fixture.detectChanges();
+    button(section('Bankovní účty'), 'Ano, vypnout').click();
+    fixture.detectChanges();
+    const disconnect = http.expectOne(`${LINK_URL}/disconnect`);
+    expect(disconnect.request.headers.get('If-Match')).toBe(`"${adminBankAccount().version}"`);
+    const refusal = problem(
+      409,
+      'donations/changed-meanwhile',
+      'Mezitím se to změnilo',
+      'Účet mezitím změnil někdo jiný.',
+    );
+    disconnect.flush(
+      { ...refusal.body, version: '1b2c3d4e5f607182', current: { id: LINK_ID } },
+      refusal.options,
+    );
+    await settle();
+
+    expect(document.querySelector('app-changed-meanwhile-dialog dialog')?.textContent).toContain(
+      'sám dárce',
+    );
+    button(document.body, 'Načíst aktuální stav').click();
+    fixture.detectChanges();
+    http.expectOne(DETAIL_URL).flush(donorDetail());
+    await settle();
+
+    expect(document.querySelector('app-changed-meanwhile-dialog')).toBeNull();
+    expect(text('.ui-notice--status')).toBe(
+      'Načetli jsme aktuální stav účtů dárce. Zkontrolujte účet a rozhodněte znovu.',
+    );
   });
 
   it('when the account is removed after the confirmation, then the request is a DELETE and the status names the deleted donations', async () => {
@@ -880,6 +929,7 @@ describe('Given an administrator on a donor card', () => {
 
     const request = http.expectOne(LINK_URL);
     expect(request.request.method).toBe('DELETE');
+    expect(request.request.headers.get('If-Match')).toBe(`"${adminBankAccount().version}"`);
     request.flush(null, { status: 204, statusText: 'No Content' });
     fixture.detectChanges();
 
@@ -1075,6 +1125,86 @@ describe('Given an administrator on a donor card', () => {
 
     expect(navigate).toHaveBeenCalledWith('/darce/prehled');
   });
+  it('when the donor has no valid receipt, then the card does not read the published key list', async () => {
+    await loaded(donorAccount(), donorDetail({ receipts: [adminReceipt({ active: false })] }));
+
+    expect(http.match(KEYS_URL)).toHaveLength(0);
+  });
+
+  describe('when the receipts card lists a receipt signed with a key the foundation withdrew', () => {
+    const REVOKED_NOTE =
+      'QR na tomto potvrzení podepsal zneplatněný klíč. Stránka /overit ho ukáže jako zneplatněné.';
+
+    function rowNote(number: string): string | null {
+      const row = Array.from(
+        section('Vydaná potvrzení').querySelectorAll('tbody tr') as NodeListOf<HTMLTableRowElement>,
+      ).find((candidate) => candidate.textContent?.includes(number));
+      const note = row?.querySelector('.receipt-key-note');
+      return note === null || note === undefined
+        ? null
+        : (note.textContent ?? '').replace(/\s+/g, ' ').trim();
+    }
+
+    beforeEach(async () => {
+      await loaded(
+        donorAccount(),
+        donorDetail({
+          receipts: [
+            adminReceipt({ number: '2027-000001', keyId: OTHER_KEY.keyId }),
+            adminReceipt({
+              id: '019a1c00-0000-7000-8000-00000000f002',
+              number: '2026-000001',
+              keyId: TEST_KEY.keyId,
+            }),
+          ],
+        }),
+      );
+    });
+
+    it('then the published list read without the token names the old key withdrawn, and only its row warns under the button what /overit shows', async () => {
+      const keys = http.expectOne(KEYS_URL);
+      expect(keys.request.method).toBe('GET');
+      expect(keys.request.headers.has('Authorization')).toBe(false);
+      keys.flush(keyListWith([{ ...TEST_KEY, status: 'revoked' }, OTHER_KEY]));
+      await settle();
+
+      expect(rowNote('2026-000001')).toBe(REVOKED_NOTE);
+      expect(rowNote('2027-000001')).toBeNull();
+      const buttons = Array.from(
+        section('Vydaná potvrzení').querySelectorAll<HTMLButtonElement>('button.receipt-pdf'),
+      );
+      const warned = buttons.find((candidate) => candidate.textContent?.includes('2026-000001'));
+      const described = warned?.getAttribute('aria-describedby') ?? '';
+      expect(
+        section('Vydaná potvrzení')
+          .querySelector(`[id="${described}"]`)
+          ?.textContent?.replace(/\s+/g, ' ')
+          .trim(),
+      ).toBe(REVOKED_NOTE);
+      expect(
+        buttons
+          .find((candidate) => candidate.textContent?.includes('2027-000001'))
+          ?.hasAttribute('aria-describedby'),
+      ).toBe(false);
+    });
+
+    it('then a list that names the key valid shows no warning', async () => {
+      http.expectOne(KEYS_URL).flush(keyListWith([TEST_KEY, OTHER_KEY]));
+      await settle();
+
+      expect(rowNote('2026-000001')).toBeNull();
+      expect(rowNote('2027-000001')).toBeNull();
+    });
+
+    it('then a list that cannot be read shows no warning and the PDF is still offered', async () => {
+      http.expectOne(KEYS_URL).flush(null, { status: 503, statusText: 'Unavailable' });
+      await settle();
+
+      expect(rowNote('2026-000001')).toBeNull();
+      expect(section('Vydaná potvrzení').querySelectorAll('button.receipt-pdf').length).toBe(2);
+    });
+  });
+
   describe('when the receipts card lists a valid receipt and a replaced one', () => {
     const VALID_ID = '019a1c00-0000-7000-8000-00000000f001';
     const REPLACED_ID = '019a1c00-0000-7000-8000-00000000f003';

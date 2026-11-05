@@ -12,11 +12,17 @@ export function project(overrides: Partial<ProjectResponse> = {}): ProjectRespon
     tag: 'Projekt',
     perex: 'Stavíme zahradu, kde si děti z domova budou hrát a pěstovat.',
     body: 'První odstavec textu.\n\nDruhý odstavec textu.',
-    coverImage: { id: IMAGE_ID, url: `/api/content/media/${IMAGE_ID}`, alt: null },
+    coverImage: {
+      id: IMAGE_ID,
+      url: `/api/content/media/${IMAGE_ID}`,
+      alt: null,
+      focalPoint: null,
+    },
     publishedOn: '2026-10-20',
     live: true,
     createdAt: '2026-10-19T09:00:00Z',
     updatedAt: '2026-10-20T07:30:00Z',
+    version: '8e2d6b0f13a7c594',
     ...overrides,
   };
 }

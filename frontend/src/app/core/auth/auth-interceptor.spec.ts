@@ -130,6 +130,36 @@ describe('Given the auth interceptor', () => {
     expect(store.signedIn()).toBe(false);
   });
 
+  it('when the device was signed out elsewhere, then the refresh is refused, the failure reaches the caller and the session is forgotten', () => {
+    signIn('token-1');
+    let failure: unknown;
+    client.get('/api/donors/me').subscribe({ error: (reason: unknown) => (failure = reason) });
+
+    http
+      .expectOne('/api/donors/me')
+      .flush(problem('auth/session-ended'), { status: 401, statusText: 'Unauthorized' });
+    http
+      .expectOne('/api/donors/auth/refresh')
+      .flush(problem('auth/invalid-refresh-token'), { status: 401, statusText: 'Unauthorized' });
+
+    expect((failure as HttpErrorResponse).status).toBe(401);
+    expect(store.signedIn()).toBe(false);
+  });
+
+  it('when the server says the session ended but the refresh succeeds, then the request is sent again with the new token', () => {
+    signIn('token-1');
+    let received: unknown;
+    client.get('/api/donors/me').subscribe((body) => (received = body));
+
+    http
+      .expectOne('/api/donors/me')
+      .flush(problem('auth/session-ended'), { status: 401, statusText: 'Unauthorized' });
+    http.expectOne('/api/donors/auth/refresh').flush(authResponse('token-2'));
+    http.expectOne('/api/donors/me').flush(sampleDonor());
+
+    expect(received).toEqual(sampleDonor());
+  });
+
   it('when the refresh fails for a server error, then the failure reaches the caller and the donor stays signed in', () => {
     signIn('token-1');
     let failure: unknown;

@@ -40,7 +40,7 @@ class DonorSecondFactorController {
     ResponseEntity<AuthResponse> confirm(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody SecondFactorCodeRequest request,
                                          HttpServletRequest http) {
         limiter.check(http.getRemoteAddr());
-        return SessionResponses.opened(HttpStatus.OK, secondFactors.confirm(DonorId.of(jwt.getSubject()), request.code()), clock.instant());
+        return SessionResponses.opened(HttpStatus.OK, secondFactors.confirm(DonorId.of(jwt.getSubject()), request.code(), SessionDevices.requesting(jwt, http)), clock.instant());
     }
 
     @PostMapping("/disable")
@@ -48,6 +48,6 @@ class DonorSecondFactorController {
                                          HttpServletRequest http) {
         limiter.check(http.getRemoteAddr());
         return SessionResponses.opened(HttpStatus.OK,
-                secondFactors.disable(DonorId.of(jwt.getSubject()), request.confirmation(), request.code()), clock.instant());
+                secondFactors.disable(DonorId.of(jwt.getSubject()), request.confirmation(), request.code(), SessionDevices.requesting(jwt, http)), clock.instant());
     }
 }

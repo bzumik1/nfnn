@@ -179,7 +179,7 @@ test.describe('Given a signed-in donor whose verified account sent payments with
       `symbol ${SYMBOL} · účet …5399/0800`,
     ]);
 
-    await openDonorSection(page, 'Přehled');
+    await openDonorSection(page, 'Můj přehled');
 
     await expect(page.locator('.stat-value').first()).toHaveText('1 401 Kč');
   });

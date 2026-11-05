@@ -7,6 +7,7 @@ export class FakeDialogHistory {
   closed = 0;
   released = 0;
   opened = 0;
+  ownsEntry = true;
 
   open(listener: DialogHistoryListener): void {
     this.opened++;
@@ -27,9 +28,10 @@ export class FakeDialogHistory {
     this.closed++;
   }
 
-  handOver(url: string): void {
+  handOver(url: string): boolean {
     this.listener = null;
     this.handedOver.push(url);
+    return this.ownsEntry;
   }
 
   release(): void {

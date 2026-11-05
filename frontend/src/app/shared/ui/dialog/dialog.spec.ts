@@ -13,7 +13,12 @@ import { FakeDialogHistory } from './testing/fake-dialog-history';
   template: `
     <button type="button" id="opener" (click)="open.set(true)">Otevřít</button>
     @if (open()) {
-      <app-dialog labelledBy="title" [wide]="wide()" (dismissed)="dismissals = dismissals + 1">
+      <app-dialog
+        labelledBy="title"
+        [wide]="wide()"
+        [dismissible]="dismissible()"
+        (dismissed)="dismissals = dismissals + 1"
+      >
         <h2 id="title">Název</h2>
         <input id="first" />
       </app-dialog>
@@ -23,6 +28,7 @@ import { FakeDialogHistory } from './testing/fake-dialog-history';
 class Host {
   readonly open = signal(false);
   readonly wide = signal(false);
+  readonly dismissible = signal(true);
   dismissals = 0;
 }
 
@@ -119,6 +125,39 @@ describe('Given a dialog opened from a button', () => {
     (fixture.nativeElement.querySelector('#first') as HTMLInputElement).click();
 
     expect(host.dismissals).toBe(0);
+  });
+
+  describe('when the page holds it open while something runs', () => {
+    beforeEach(() => {
+      host.dismissible.set(false);
+      fixture.detectChanges();
+    });
+
+    it('then Esc is refused and it stays open', () => {
+      const cancel = new Event('cancel', { cancelable: true });
+
+      native().dispatchEvent(cancel);
+
+      expect(cancel.defaultPrevented).toBe(true);
+      expect(host.dismissals).toBe(0);
+    });
+
+    it('then the close button is disabled and the backdrop does nothing', () => {
+      const close = fixture.nativeElement.querySelector('.dialog-close') as HTMLButtonElement;
+      native().dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+      native().dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+      expect(close.disabled).toBe(true);
+      expect(host.dismissals).toBe(0);
+      expect(native().open).toBe(true);
+    });
+
+    it('and the browser closes it anyway, then it opens again without asking to be dismissed', () => {
+      native().close();
+
+      expect(native().open).toBe(true);
+      expect(host.dismissals).toBe(0);
+    });
   });
 
   it('when it should be wide, then the panel widens', () => {

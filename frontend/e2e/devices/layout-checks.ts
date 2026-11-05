@@ -9,9 +9,11 @@ export interface Check {
 
 export const MINIMUM_TARGET_PX = 24;
 const STACKED_SHARE = 0.25;
+
+export const LIMITS = { minimumTarget: MINIMUM_TARGET_PX, stackedShare: STACKED_SHARE };
 const LISTED = 6;
 
-interface Findings {
+export interface Findings {
   pageWidth: number;
   viewportWidth: number;
   wideElements: string[];
@@ -23,7 +25,7 @@ interface Findings {
   clippedText: string[];
 }
 
-function collectFindings(limits: { minimumTarget: number; stackedShare: number }): Findings {
+export function collectFindings(limits: { minimumTarget: number; stackedShare: number }): Findings {
   const viewportWidth = document.documentElement.clientWidth;
   const viewportHeight = window.innerHeight;
   const modal = document.querySelector('dialog:modal');
@@ -192,6 +194,11 @@ function collectFindings(limits: { minimumTarget: number; stackedShare: number }
     .map((toggle) => document.getElementById(toggle.getAttribute('aria-controls') ?? ''))
     .filter((panel): panel is HTMLElement => panel !== null);
   const atTop = window.scrollY === 0;
+  const atEnd = window.scrollY + viewportHeight >= document.documentElement.scrollHeight - 1;
+  const scrolledUnder = (chrome: Element): boolean => {
+    const box = chrome.getBoundingClientRect();
+    return box.top + box.height / 2 > viewportHeight / 2 ? !atEnd : !atTop;
+  };
   const covered = onScreen
     .map((element) => ({ element, hit: coveredAtCentre(element) }))
     .filter(({ element, hit }) => {
@@ -202,7 +209,8 @@ function collectFindings(limits: { minimumTarget: number; stackedShare: number }
         return false;
       }
       const chrome = layer(hit);
-      const scrolledUnderChrome = chrome !== null && chrome !== layer(element) && !atTop;
+      const scrolledUnderChrome =
+        chrome !== null && chrome !== layer(element) && scrolledUnder(chrome);
       return !scrolledUnderChrome;
     })
     .map(({ element, hit }) => `${describe(element)} under ${describe(hit!)}`);
@@ -210,7 +218,7 @@ function collectFindings(limits: { minimumTarget: number; stackedShare: number }
   const focused = document.activeElement;
   const focusCovered =
     focused &&
-    focused !== document.body &&
+    focused.matches(controlSelector) &&
     shown(focused) &&
     inViewport(focused.getBoundingClientRect())
       ? [coveredAtCentre(focused)]
@@ -249,7 +257,12 @@ function collectFindings(limits: { minimumTarget: number; stackedShare: number }
   const tooClose = (element: Element): boolean => {
     const own = centre(element.getBoundingClientRect());
     return targets.some((other) => {
-      if (other === element || other.contains(element) || element.contains(other)) {
+      if (
+        other === element ||
+        other.contains(element) ||
+        element.contains(other) ||
+        layer(other) !== layer(element)
+      ) {
         return false;
       }
       const box = other.getBoundingClientRect();
@@ -302,10 +315,10 @@ function list(items: string[]): string {
 }
 
 export async function layoutChecks(page: Page, pageErrors: string[]): Promise<Check[]> {
-  const found = await page.evaluate(collectFindings, {
-    minimumTarget: MINIMUM_TARGET_PX,
-    stackedShare: STACKED_SHARE,
-  });
+  return checksFrom(await page.evaluate(collectFindings, LIMITS), pageErrors);
+}
+
+export function checksFrom(found: Findings, pageErrors: string[]): Check[] {
   return [
     { name: 'no script error', pass: pageErrors.length === 0, detail: list(pageErrors) },
     {

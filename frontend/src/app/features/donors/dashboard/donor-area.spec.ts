@@ -5,6 +5,7 @@ import {
   provideHttpClientTesting,
   TestRequest,
 } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideRouter, Router } from '@angular/router';
@@ -44,6 +45,8 @@ import { donorsRoutes } from '../donors.routes';
 import { LiveUpdates } from '../../../core/live/live-updates';
 import { FakeLiveUpdates } from '../../../core/live/testing/live-fixtures';
 import { BankAccountsCard } from './bank-accounts-card/bank-accounts-card';
+import { AccountBadges } from '../../../core/layout/account-badges';
+import { CompactLayout } from '../../../core/layout/compact-layout';
 import { DonorArea } from './donor-area';
 import { DonorDonations } from './donor-donations';
 
@@ -52,6 +55,7 @@ const RECEIPTS_URL = '/api/donations/me/receipts';
 const BANK_CHECK_URL = '/api/donations/me/bank-check';
 const BANK_ACCOUNTS_URL = '/api/donations/me/bank-accounts';
 const PASSKEYS_URL = '/api/donors/me/passkeys';
+const DEVICES_URL = '/api/donors/me/devices';
 const PAYMENT_DETAILS_URL = '/api/donations/payment-details';
 const EARLIER = '2026-10-18T08:05:30Z';
 const LATER = '2026-10-18T08:07:10Z';
@@ -60,6 +64,7 @@ const PAYMENT_DETAILS_URL_MATCH = (request: { url: string }): boolean =>
   request.url === PAYMENT_DETAILS_URL;
 
 describe('Given a signed-in donor in the donor area', () => {
+  const compact = signal(false);
   let harness: RouterTestingHarness;
   let http: HttpTestingController;
   let store: AuthStore;
@@ -71,6 +76,7 @@ describe('Given a signed-in donor in the donor area', () => {
   let receiptEnvironment: FakeReceiptPdfEnvironment;
 
   beforeEach(async () => {
+    compact.set(false);
     receiptEnvironment = new FakeReceiptPdfEnvironment();
     receiptEnvironment.autoDraw = true;
     localStorage.clear();
@@ -97,6 +103,7 @@ describe('Given a signed-in donor in the donor area', () => {
         provideHttpClient(withInterceptors([authInterceptor])),
         provideHttpClientTesting(),
         { provide: RECEIPT_PDF_ENVIRONMENT, useValue: receiptEnvironment },
+        { provide: CompactLayout, useValue: { isCompact: compact.asReadonly() } },
         provideRouter([
           { path: 'darce', children: donorsRoutes },
           { path: '', children: [] },
@@ -336,6 +343,20 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(texts('nav .side-nav-badge')).toHaveLength(1);
     });
 
+    it('then the account button of the header shows how many wait for an answer until the area closes', async () => {
+      areaAccounts = questions(1);
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      const account = element('header button.account-button');
+      expect(normalized(account?.querySelector('.account-badge')?.textContent ?? '')).toBe('1');
+      expect(normalized(account?.textContent ?? '')).toContain('Účet 1 otázka čeká na odpověď');
+
+      harness.fixture.destroy();
+
+      expect(TestBed.inject(AccountBadges).total()).toBeNull();
+    });
+
     it('then the description takes the Czech plural forms', async () => {
       areaAccounts = questions(2);
       await open('/darce/dary');
@@ -562,19 +583,29 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(text('h1')).toBe('Můj přehled');
     });
 
-    it('then the top bar shows the name of the donor without a greeting and a way back to the home page', async () => {
+    it('then on a phone the page stays inside the main landmark of the skip link, the same page as the window narrows', async () => {
+      await open('/darce/prehled');
+      await respond(twoYearSummary(), twoYearDonations());
+      const heading = element('h1');
+      expect(element('main#obsah h1')).toBe(heading);
+
+      compact.set(true);
+      await settle();
+
+      expect(element('#donor-nav')).toBeNull();
+      expect(element('main#obsah h1')).toBe(heading);
+    });
+
+    it('then the header offers the account under the initials of the donor and the logo leads home', async () => {
       await open('/darce/prehled');
       await respond(twoYearSummary(), twoYearDonations());
 
-      expect(text('.topbar-donor')).toBe('Jana Nováková');
-      const back = element('.topbar a.topbar-home') as HTMLAnchorElement;
-      expect(normalized(back.querySelector('.topbar-home-label')?.textContent ?? '')).toBe(
-        'Hlavní stránka',
+      const account = element('header button.account-button') as HTMLButtonElement;
+      expect(normalized(account.querySelector('.visually-hidden')?.textContent ?? '')).toBe('Účet');
+      expect(normalized(account.querySelector('[aria-hidden="true"]')?.textContent ?? '')).toBe(
+        'JN',
       );
-      expect(normalized(back.querySelector('.topbar-home-label-short')?.textContent ?? '')).toBe(
-        'Domů',
-      );
-      expect(back.getAttribute('href')).toBe('/');
+      expect(element('header a.brand')?.getAttribute('href')).toBe('/');
     });
 
     it('then the help line keeps a space before the e-mail address', async () => {
@@ -652,14 +683,16 @@ describe('Given a signed-in donor in the donor area', () => {
       await respond(twoYearSummary(), twoYearDonations());
       const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
 
-      button('.topbar-logout').click();
+      button('header button.account-button').click();
+      await settle();
+      button('.account-sign-out').click();
       http
         .expectOne('/api/donors/auth/logout')
         .flush(null, { status: 204, statusText: 'No Content' });
       await settle();
 
       expect(store.signedIn()).toBe(false);
-      expect(navigate).toHaveBeenCalledWith('/');
+      expect(navigate).toHaveBeenCalledWith('/', expect.objectContaining({ replaceUrl: true }));
     });
   });
 
@@ -673,7 +706,7 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(
         links.map((link) => [normalized(link.textContent ?? ''), link.getAttribute('href')]),
       ).toEqual([
-        ['Přehled', '/darce/prehled'],
+        ['Můj přehled', '/darce/prehled'],
         ['Moje dary', '/darce/dary'],
         ['Potvrzení o daru', '/darce/potvrzeni'],
         ['Bankovní účty', '/darce/ucty'],
@@ -711,6 +744,7 @@ describe('Given a signed-in donor in the donor area', () => {
         await go(url);
         if (url === '/darce/udaje') {
           http.expectOne(PASSKEYS_URL).flush({ items: [] });
+          http.expectOne(DEVICES_URL).flush({ items: [] });
           await settle();
         }
         expect(root().querySelectorAll('h1')).toHaveLength(1);
@@ -3012,11 +3046,14 @@ describe('Given a signed-in donor in the donor area', () => {
     it('then the details on the receipt and one card for sign-in and security show, without connected applications for a donor', async () => {
       await open('/darce/udaje');
       http.expectOne(PASSKEYS_URL).flush({ items: [] });
+      http.expectOne(DEVICES_URL).flush({ items: [] });
       await respond(twoYearSummary(), twoYearDonations());
 
       expect(texts('h2')).toEqual([
         'Údaje na potvrzení o daru',
         'Přihlášení a zabezpečení',
+        'Přihlášená zařízení',
+        'Data v tomto zařízení',
         'Smazání účtu',
       ]);
       expect(texts('app-account-card .account-row dt')).toEqual([
@@ -3032,6 +3069,7 @@ describe('Given a signed-in donor in the donor area', () => {
     it('then a last section says how to ask for deleting the account, what goes and what stays', async () => {
       await open('/darce/udaje');
       http.expectOne(PASSKEYS_URL).flush({ items: [] });
+      http.expectOne(DEVICES_URL).flush({ items: [] });
       await respond(twoYearSummary(), twoYearDonations());
 
       expect(element('.account-deletion')?.getAttribute('aria-labelledby')).toBe(

@@ -48,6 +48,9 @@ const MISSING_ASSETS = [
   '/receipt-fonts/body.ttf',
 ];
 const UNCACHED_ERROR = new Set(['no-store', 'no-cache']);
+const SERVICE_WORKER_FILES = new Set(['ngsw.json', 'ngsw-worker.js']);
+const WORKER_SCRIPTS = new Set(['ngsw-worker.js', 'safety-worker.js']);
+const JAVASCRIPT = /^(?:text|application)\/javascript(?:;|$)/;
 const APP_ROUTES = ['/', '/overit', '/darce/prehled', '/sprava', '/aktuality/nejaka-zprava'];
 
 const failures = [];
@@ -71,6 +74,9 @@ function expectedCacheControl(file) {
 }
 
 function expectedEdgeCacheControl(file) {
+  if (SERVICE_WORKER_FILES.has(file)) {
+    return 'no-store';
+  }
   const browser = expectedCacheControl(file);
   if (browser === 'no-cache') {
     return SHELL_AT_EDGE;
@@ -79,6 +85,9 @@ function expectedEdgeCacheControl(file) {
 }
 
 function expectedContentType(file) {
+  if (file.endsWith('.webmanifest')) {
+    return 'application/manifest+json';
+  }
   return file.endsWith('.ttf') ? 'font/ttf' : null;
 }
 
@@ -166,12 +175,17 @@ for (const file of built) {
   if (answer.edge !== edge) {
     fail(`/${file} has Cloudflare-CDN-Cache-Control "${answer.edge}", expected "${edge}"`);
   }
-  if (edge !== '' && answer.validator === '') {
+  if (edge !== '' && edge !== 'no-store' && answer.validator === '') {
     fail(`/${file} carries neither ETag nor Last-Modified, so Cloudflare cannot revalidate it`);
   }
   const contentType = expectedContentType(file);
   if (contentType !== null && answer.contentType !== contentType) {
     fail(`/${file} has Content-Type "${answer.contentType}", expected "${contentType}"`);
+  }
+  if (WORKER_SCRIPTS.has(file) && !JAVASCRIPT.test(answer.contentType)) {
+    fail(
+      `/${file} has Content-Type "${answer.contentType}", so a browser would refuse it as a service worker`,
+    );
   }
   if (contentType !== null && answer.contentEncoding !== 'gzip') {
     fail(`/${file} is sent without gzip ("${answer.contentEncoding}")`);

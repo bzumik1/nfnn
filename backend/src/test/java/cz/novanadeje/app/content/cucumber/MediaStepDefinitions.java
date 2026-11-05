@@ -15,6 +15,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.Map;
 import javax.imageio.ImageIO;
 
@@ -24,11 +25,13 @@ public class MediaStepDefinitions {
 
     private static final String ADMIN_MEDIA = "/api/admin/content/media";
     private static final String PUBLIC_MEDIA = "/api/content/media/";
+    private static final String ACCESS_TOKEN = "access_token";
 
     private final ApiClient api;
     private final DonorSessions sessions;
     private final UploadedImages images;
     private final UnusedMediaCleanupService cleanup;
+    private String exchangedApiToken;
 
     public MediaStepDefinitions(ApiClient api, DonorSessions sessions, UploadedImages images, UnusedMediaCleanupService cleanup) {
         this.api = api;
@@ -112,6 +115,80 @@ public class MediaStepDefinitions {
     @Then("the image response is cacheable for a year")
     public void theImageResponseIsCacheableForAYear() {
         assertThat(api.lastResponse().getHeaders().getFirst(HttpHeaders.CACHE_CONTROL)).contains("max-age=31536000", "public", "immutable");
+    }
+
+    @When("{string} places the focal point of the image uploaded as {string} at {int} % from the left and {int} % from the top")
+    public void placesTheFocalPointOfTheImageUploadedAs(String alias, String fileName, int x, int y) {
+        sessions.actAs(alias);
+        placeFocalPoint(images.idOf(fileName), x, y);
+    }
+
+    @When("{string} places the focal point of the image {string} at {int} % from the left and {int} % from the top")
+    public void placesTheFocalPointOfTheImage(String alias, String id, int x, int y) {
+        sessions.actAs(alias);
+        placeFocalPoint(id, x, y);
+    }
+
+    @When("{string} removes the focal point of the image uploaded as {string}")
+    public void removesTheFocalPointOfTheImageUploadedAs(String alias, String fileName) {
+        sessions.actAs(alias);
+        removeFocalPoint(images.idOf(fileName));
+    }
+
+    @When("{string} sends the focal point of the image uploaded as {string} as {}")
+    public void sendsTheFocalPointOfTheImageUploadedAs(String alias, String fileName, String json) {
+        sessions.actAs(alias);
+        api.send("PUT", ADMIN_MEDIA + "/" + images.idOf(fileName), "application/json", json);
+    }
+
+    @When("someone without a token places the focal point of the image uploaded as {string} at {int} % from the left and {int} % from the top")
+    public void someoneWithoutATokenPlacesTheFocalPoint(String fileName, int x, int y) {
+        api.forgetCredentials();
+        placeFocalPoint(images.idOf(fileName), x, y);
+    }
+
+    @When("the exchanged API token places the focal point of the image uploaded as {string} at {int} % from the left and {int} % from the top")
+    public void theExchangedApiTokenPlacesTheFocalPoint(String fileName, int x, int y) {
+        actAsExchangedApiToken();
+        placeFocalPoint(images.idOf(fileName), x, y);
+    }
+
+    @When("the exchanged API token removes the focal point of the image uploaded as {string}")
+    public void theExchangedApiTokenRemovesTheFocalPoint(String fileName) {
+        actAsExchangedApiToken();
+        removeFocalPoint(images.idOf(fileName));
+    }
+
+    @Then("the photo says:")
+    public void thePhotoSays(Map<String, String> expected) {
+        JsonNode response = api.lastResponseJson();
+        expected.forEach((path, value) -> {
+            JsonNode node = response;
+            for (String segment : path.split("\\.")) {
+                node = node == null || node.isNull() ? null : node.get(segment);
+            }
+            String actual = node == null || node.isNull() ? "" : node.asString();
+            assertThat(actual).as(path).isEqualTo(images.resolve(value == null ? "" : value));
+        });
+    }
+
+    private void placeFocalPoint(String id, int x, int y) {
+        api.put(ADMIN_MEDIA + "/" + id, Map.of("focalPoint", Map.of("x", x, "y", y)));
+    }
+
+    private void removeFocalPoint(String id) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("focalPoint", null);
+        api.put(ADMIN_MEDIA + "/" + id, body);
+    }
+
+    private void actAsExchangedApiToken() {
+        JsonNode last = api.lastResponseJson();
+        if (last != null && last.has(ACCESS_TOKEN)) {
+            exchangedApiToken = last.get(ACCESS_TOKEN).asString();
+        }
+        api.forgetCredentials();
+        api.authorize(exchangedApiToken);
     }
 
     private static byte[] png(int width, int height) {

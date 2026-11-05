@@ -141,6 +141,12 @@
               dáte, a kdy jste ho přidali a naposledy použili; otisk prstu ani snímek obličeje k nám
               nikdy nedorazí, ty zůstávají ve vašem zařízení,
             </li>
+            <li i18n="@@content.privacy.account.devices">
+              u každého zařízení, na kterém se přihlásíte, druh zařízení a prohlížeče (například
+              iPhone · Safari), kdy jste se na něm přihlásili a kdy jste ho naposledy použili,
+              abyste v účtu viděli, kde jste přihlášení, a mohli zařízení odhlásit; celý popis,
+              který o sobě prohlížeč posílá, neukládáme,
+            </li>
             <li i18n="@@content.privacy.account.language">
               jazyk, ve kterém vám vystavujeme potvrzení o daru,
             </li>
@@ -374,6 +380,10 @@
           <li i18n="@@content.privacy.retention.account">
             údaje dárcovského účtu po celou dobu trvání účtu,
           </li>
+          <li i18n="@@content.privacy.retention.devices">
+            přihlášená zařízení do odhlášení (zařízení, které 14 dní nepoužijete, se odhlásí samo) a
+            odhlášená zařízení ještě 400 dní,
+          </li>
           <li i18n="@@content.privacy.retention.donations">
             záznamy o přijatých platbách a darech a vystavená potvrzení o daru po dobu, kterou
             stanoví účetní a daňové předpisy, a to i po zrušení dárcovského účtu,
@@ -454,10 +464,18 @@
         <p i18n="@@content.privacy.cookies.text">
           Nepoužíváme žádné sledovací, analytické ani reklamní cookies. Do vašeho prohlížeče
           ukládáme jen to, co je technicky nezbytné: aby dárce zůstal přihlášený při procházení
-          dárcovského portálu, aby po obnovení stránky pokračovalo rozpracované stažení potvrzení, a
-          na stránce nfnn.cz/overit veřejné klíče fondu, kterými se kontroluje podpis na potvrzení;
-          ty nenesou žádné osobní údaje. Takové uložení nevyžaduje váš souhlas, proto vás o souhlas
-          s cookies nežádáme.
+          dárcovského portálu, aby po obnovení stránky pokračovalo rozpracované stažení potvrzení,
+          na stránce nfnn.cz/overit veřejné klíče fondu, kterými se kontroluje podpis na potvrzení
+          (ty nenesou žádné osobní údaje), a po přihlášení zašifrovanou kopii vašich údajů, viz
+          níže. Takové uložení nevyžaduje váš souhlas, proto vás o souhlas s cookies nežádáme.
+        </p>
+        <p class="device-copy" i18n="@@content.privacy.cookies.deviceCopy">
+          Po přihlášení si portál do vašeho prohlížeče uloží zašifrovanou kopii údajů o vašich
+          darech, potvrzeních a bankovních účtech. Klíč k ní zná jen vaše zařízení. Když jste se
+          přihlásili heslem, zůstane kopie po odhlášení zamčená tímto heslem; po přihlášení
+          přístupovým klíčem zůstane jen tehdy, když to klíč umí, jinak se odhlášením smaže. Smazat
+          ji můžete kdykoli v dárcovském portálu v části Údaje a zabezpečení tlačítkem „Smazat data
+          z tohoto zařízení“; údaje na serveru tím nezměníte.
         </p>
       </section>
 
@@ -523,7 +541,8 @@
           e&#8209;mailem na adrese <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a>.
         </p>
         <p i18n="@@content.privacy.contact.form">
-          Napsat nám můžete také přes <a routerLink="/" fragment="kontakt">kontaktní formulář</a>.
+          Napsat nám můžete také přes
+          <a routerLink="/o-nas" fragment="kontakt">kontaktní formulář</a>.
         </p>
       </section>
 
