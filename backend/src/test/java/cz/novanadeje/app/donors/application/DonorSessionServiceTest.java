@@ -252,6 +252,19 @@ class DonorSessionServiceTest {
     }
 
     @Test
+    @DisplayName("Given a token the reuse grace superseded, when the session is closed with it, then every session of the donor ends, because two holders of the session exist")
+    void should_revoke_every_session_when_closed_given_a_token_superseded_by_the_grace() {
+        RefreshTokenSecret secret = RefreshTokenSecret.generate();
+        RefreshToken superseded = RefreshToken.issue(secret, DONOR, NOW.minusSeconds(30), REFRESH_TTL, false);
+        superseded.supersede(NOW.minusSeconds(20));
+        when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(superseded));
+
+        service.close(secret.value());
+
+        verify(refreshTokens).revokeAllOf(DONOR, NOW);
+    }
+
+    @Test
     @DisplayName("Given an unknown token, when the session is closed, then nothing happens")
     void should_do_nothing_when_closed_given_unknown_token() {
         when(refreshTokens.findBySecretHashForUpdate(any())).thenReturn(Optional.empty());

@@ -100,6 +100,10 @@ public class DonorSessionService {
     public void close(String presentedSecret) {
         Instant now = clock.instant();
         refreshTokens.findBySecretHashForUpdate(RefreshTokenSecret.fromValue(presentedSecret).hash()).ifPresent(token -> {
+            if (token.isSuperseded()) {
+                refreshTokens.revokeAllOf(token.donorId(), now);
+                return;
+            }
             refreshTokens.revokeIfUnused(token.id(), now);
             token.successorId().ifPresent(successor -> refreshTokens.revokeIfUnused(successor, now));
         });

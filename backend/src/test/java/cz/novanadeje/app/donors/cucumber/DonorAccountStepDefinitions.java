@@ -158,6 +158,12 @@ public class DonorAccountStepDefinitions {
         previousRefreshCookie = currentRefreshCookie;
     }
 
+    @When("the donor signs out with the refresh cookie the grace replaced")
+    public void theDonorSignsOutWithTheReplacedCookie() {
+        api.sendCookie(previousRefreshCookie);
+        api.post(LOGOUT_PATH, Map.of());
+    }
+
     @When("the donor updates the profile")
     public void theDonorUpdatesTheProfile(Map<String, String> fields) {
         Map<String, Object> body = new HashMap<>();

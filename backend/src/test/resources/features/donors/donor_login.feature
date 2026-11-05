@@ -109,10 +109,25 @@ Feature: Donor signs in and keeps a session
     When the donor signs out
     Then the response status is 204
     When 10 seconds pass
-    And the donor refreshes the session with the previous refresh cookie
+    And the donor refreshes the session with the refresh cookie of the lost answer
     Then the response status is 401
     And the problem type ends with "auth/invalid-refresh-token"
-    When the donor refreshes the session with the refresh cookie of the lost answer
+    When the donor refreshes the session with the previous refresh cookie
+    Then the response status is 401
+    And the problem type ends with "auth/invalid-refresh-token"
+
+  Scenario: Signing out with the refresh cookie the grace replaced ends every session
+    Given the donor signed in with email "jana@example.cz" and password "correct horse battery"
+    And the donor keeps the refresh cookie aside
+    When the donor refreshes the session
+    Then the response status is 200
+    When 10 seconds pass
+    And the donor refreshes the session with the kept refresh cookie
+    Then the response status is 200
+    And the response carries an access token and a refresh cookie
+    When the donor signs out with the refresh cookie the grace replaced
+    Then the response status is 204
+    When the donor refreshes the session
     Then the response status is 401
     And the problem type ends with "auth/invalid-refresh-token"
 

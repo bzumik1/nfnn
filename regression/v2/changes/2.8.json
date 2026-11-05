@@ -3,7 +3,7 @@
     "path": "POST /api/donors/auth/*",
     "scenario": "donors/donor_login: *",
     "kind": "added",
-    "reason": "Plan v3 slice 2.8 (D28 answering S-H4): a used browser refresh token presented again within 60 s whose successor was never used revokes that successor and gets a new one; the new scenarios show the grace, its 60 s boundary, a successor already used, the cookie of the lost answer after the grace replaced it and signing out after a lost answer. The existing replay scenario now waits 2 minutes before replaying, so it still shows a replay outside the grace and its transcript is unchanged",
+    "reason": "Plan v3 slice 2.8 (D28 answering S-H4): a used browser refresh token presented again within 60 s whose successor was never used revokes that successor and gets a new one; the new scenarios show the grace, its 60 s boundary, a successor already used, the cookie of the lost answer after the grace replaced it, signing out after a lost answer and signing out with the cookie the grace replaced. The existing replay scenario now waits 2 minutes before replaying, so it still shows a replay outside the grace and its transcript is unchanged",
     "contract": "docs/api-contract.md, donors — POST /api/donors/auth/refresh; docs/security-overview.md, Tokens"
   },
   {

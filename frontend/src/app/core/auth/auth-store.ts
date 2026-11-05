@@ -148,7 +148,11 @@ export class AuthStore {
   }
 
   logout(): Observable<void> {
-    const signOut = () => this.api.logout().pipe(catchError(() => of(undefined)));
+    const signOut = () =>
+      this.api.logout().pipe(
+        timeout(REFRESH_REQUEST_TIMEOUT_MS),
+        catchError(() => of(undefined)),
+      );
     return this.underRefreshLock(signOut).pipe(
       catchError(() => signOut()),
       tap(() => {

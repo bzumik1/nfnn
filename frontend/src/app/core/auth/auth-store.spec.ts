@@ -666,6 +666,23 @@ describe('Given the auth store in one of several tabs of the browser', () => {
     expect(channel.posted).toEqual([signedOut()]);
   });
 
+  it('when the sign-out gets no answer in time, then the request is aborted, the lock released and the session forgotten in every tab', async () => {
+    signInFirst();
+    vi.useFakeTimers();
+    let done = false;
+    store.logout().subscribe(() => (done = true));
+    await vi.advanceTimersByTimeAsync(0);
+    const request = http.expectOne('/api/donors/auth/logout');
+
+    await vi.advanceTimersByTimeAsync(REFRESH_REQUEST_TIMEOUT_MS);
+
+    expect(request.cancelled).toBe(true);
+    expect(done).toBe(true);
+    expect(locks.isHeld).toBe(false);
+    expect(store.signedIn()).toBe(false);
+    expect(channel.posted).toEqual([signedOut()]);
+  });
+
   it('when another tab signs out, then this tab forgets the session and its hint', () => {
     signInFirst();
 
