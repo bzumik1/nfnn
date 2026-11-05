@@ -2,6 +2,7 @@ import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { checkerboard } from '../qr-code/testing/qr-matrices';
+import { DialogAnnouncer } from '../dialog/dialog-announcer';
 import { DialogHistory } from '../dialog/dialog-history';
 import { FakeDialogHistory } from '../dialog/testing/fake-dialog-history';
 import { ZoomContent } from './zoom-content';
@@ -47,6 +48,7 @@ describe('Given the zoom viewer', () => {
       (candidate.getAttribute('aria-label') ?? candidate.textContent ?? '').includes(name),
     ) as HTMLButtonElement;
   const level = () => button('původní velikost').textContent?.trim();
+  const unavailable = (name: string) => button(name).getAttribute('aria-disabled') === 'true';
   const announced = () => dialog()?.querySelector('[role="status"]')?.textContent?.trim();
 
   async function settle(): Promise<void> {
@@ -85,7 +87,21 @@ describe('Given the zoom viewer', () => {
     await settle();
   }
 
-  afterEach(() => fixture.nativeElement.remove());
+  function key(name: string, modifiers: KeyboardEventInit = {}): KeyboardEvent {
+    const event = new KeyboardEvent('keydown', {
+      key: name,
+      bubbles: true,
+      cancelable: true,
+      ...modifiers,
+    });
+    stage().dispatchEvent(event);
+    return event;
+  }
+
+  afterEach(() => {
+    vi.useRealTimers();
+    fixture.nativeElement.remove();
+  });
 
   describe('Given a photo opened in it', () => {
     beforeEach(() => render(PHOTO));
@@ -101,8 +117,9 @@ describe('Given the zoom viewer', () => {
 
     it('when it opens, then it shows the photo at its fitted size and offers only zooming in', () => {
       expect(level()).toBe('100\u00a0%');
-      expect(button('Oddálit').disabled).toBe(true);
-      expect(button('Přiblížit').disabled).toBe(false);
+      expect(unavailable('Oddálit')).toBe(true);
+      expect(unavailable('Přiblížit')).toBe(false);
+      expect(button('Oddálit').disabled).toBe(false);
     });
 
     it('when it opens, then the stage tells how to zoom without a pointer', () => {
@@ -120,25 +137,66 @@ describe('Given the zoom viewer', () => {
       it('then the photo grows by half and the new size is announced', () => {
         expect(level()).toBe('150\u00a0%');
         expect(announced()).toBe('Přiblíženo na 150\u00a0%');
-        expect(button('Oddálit').disabled).toBe(false);
+        expect(unavailable('Oddálit')).toBe(false);
       });
 
-      it('and the size button is pressed, then the photo returns to its fitted size', async () => {
+      it('and the size button is pressed, then the photo returns to its fitted size and says so', async () => {
         button('původní velikost').click();
         await settle();
 
         expect(level()).toBe('100\u00a0%');
+        expect(announced()).toBe('Původní velikost');
+      });
+
+      it('and the minus button is pressed, then the photo shrinks back and that is announced', async () => {
+        button('Oddálit').click();
+        await settle();
+
+        expect(level()).toBe('100\u00a0%');
+        expect(announced()).toBe('Oddáleno na 100\u00a0%');
+      });
+
+      it('and the viewer closes, then its announcement is gone from the next dialog', async () => {
+        button('Zavřít').click();
+        await settle();
+
+        expect(TestBed.inject(DialogAnnouncer).message()).toBe('');
       });
     });
 
-    it('when the plus button is pressed until the limit, then it stops at 400 % and offers only zooming out', async () => {
+    it('when the plus button is pressed until the limit, then it stops at 400 %, offers only zooming out and keeps the focus', async () => {
+      button('Přiblížit').focus();
       for (let press = 0; press < 6; press++) {
         button('Přiblížit').click();
         await settle();
       }
 
       expect(level()).toBe('400\u00a0%');
-      expect(button('Přiblížit').disabled).toBe(true);
+      expect(unavailable('Přiblížit')).toBe(true);
+      expect(document.activeElement).toBe(button('Přiblížit'));
+    });
+
+    it('when the minus button is pressed at the fitted size, then nothing changes and the focus stays on it', async () => {
+      button('Oddálit').focus();
+      button('Oddálit').click();
+      await settle();
+
+      expect(level()).toBe('100\u00a0%');
+      expect(document.activeElement).toBe(button('Oddálit'));
+    });
+
+    it('when two fingers spread apart and one of them is cancelled, then the other one goes on without counting as a tap', async () => {
+      pointer('pointerdown', 1, 100, 300);
+      pointer('pointerdown', 2, 200, 300);
+      pointer('pointermove', 2, 250, 300);
+      stage().dispatchEvent(
+        new PointerEvent('pointercancel', { bubbles: true, pointerId: 2, pointerType: 'touch' }),
+      );
+      pointer('pointerup', 1, 100, 300);
+      await tap(100, 300);
+      await settle();
+
+      expect(level()).toBe('150\u00a0%');
     });
 
     it('when two fingers spread apart on it, then the photo grows with them', async () => {
@@ -153,25 +211,45 @@ describe('Given the zoom viewer', () => {
       expect(level()).toBe('200\u00a0%');
     });
 
-    it('when it is tapped twice quickly, then it zooms in, and tapped twice again, then it returns', async () => {
-      await tap(120, 300);
-      await tap(122, 302);
+    describe('when it is tapped twice', () => {
+      beforeEach(() => vi.useFakeTimers({ toFake: ['Date'] }));
 
-      expect(level()).toBe('250\u00a0%');
+      it('within 300 ms and 30 px, then it zooms in, and twice again, then it returns', async () => {
+        await tap(120, 300);
+        vi.setSystemTime(Date.now() + 300);
+        await tap(141, 321);
 
-      await new Promise((resolve) => setTimeout(resolve, 350));
-      await tap(120, 300);
-      await tap(120, 300);
+        expect(level()).toBe('250\u00a0%');
 
-      expect(level()).toBe('100\u00a0%');
-    });
+        await tap(120, 300);
+        await tap(120, 300);
 
-    it('when it is tapped twice slowly, then nothing zooms', async () => {
-      await tap(120, 300);
-      await new Promise((resolve) => setTimeout(resolve, 350));
-      await tap(120, 300);
+        expect(level()).toBe('100\u00a0%');
+      });
 
-      expect(level()).toBe('100\u00a0%');
+      it('more than 300 ms apart, then nothing zooms', async () => {
+        await tap(120, 300);
+        vi.setSystemTime(Date.now() + 301);
+        await tap(120, 300);
+
+        expect(level()).toBe('100\u00a0%');
+      });
+
+      it('more than 30 px apart, then nothing zooms', async () => {
+        await tap(120, 300);
+        await tap(120, 331);
+
+        expect(level()).toBe('100\u00a0%');
+      });
+
+      it('after the first press slid away, then nothing zooms', async () => {
+        pointer('pointerdown', 1, 120, 300);
+        pointer('pointermove', 1, 120, 311);
+        pointer('pointerup', 1, 120, 311);
+        await tap(120, 311);
+
+        expect(level()).toBe('100\u00a0%');
+      });
     });
 
     it('when the mouse wheel turns forward over it, then it zooms in and the page does not scroll', async () => {
@@ -184,13 +262,42 @@ describe('Given the zoom viewer', () => {
     });
 
     it('when plus and then zero are typed on the stage, then it zooms in and back', async () => {
-      stage().dispatchEvent(new KeyboardEvent('keydown', { key: '+', bubbles: true }));
+      key('+');
       await settle();
       expect(level()).toBe('150\u00a0%');
 
-      stage().dispatchEvent(new KeyboardEvent('keydown', { key: '0', bubbles: true }));
+      key('0');
       await settle();
       expect(level()).toBe('100\u00a0%');
+    });
+
+    it('when equals and then minus are typed on the stage, then it zooms in and out', async () => {
+      key('=');
+      await settle();
+      expect(level()).toBe('150\u00a0%');
+
+      key('-');
+      await settle();
+      expect(level()).toBe('100\u00a0%');
+    });
+
+    it('when plus is typed with Ctrl or Cmd, then the browser zooms the page as usual and the photo stays', async () => {
+      const withCtrl = key('+', { ctrlKey: true });
+      const withCmd = key('=', { metaKey: true });
+      await settle();
+
+      expect(level()).toBe('100\u00a0%');
+      expect(withCtrl.defaultPrevented).toBe(false);
+      expect(withCmd.defaultPrevented).toBe(false);
+    });
+
+    it('when a trackpad pinches over it, then it zooms faster than a wheel turn by the same amount', async () => {
+      stage().dispatchEvent(
+        new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: -69.4, ctrlKey: true }),
+      );
+      await settle();
+
+      expect(level()).toBe('200\u00a0%');
     });
 
     it('when the close button is pressed, then the viewer closes', async () => {

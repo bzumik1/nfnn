@@ -37,6 +37,24 @@ async function width(locator: Locator): Promise<number> {
   return (await locator.boundingBox())?.width ?? 0;
 }
 
+async function left(locator: Locator): Promise<number> {
+  return (await locator.boundingBox())?.x ?? 0;
+}
+
+async function tap(cdp: CDPSession, x: number, y: number): Promise<void> {
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+}
+
+async function openArticlePhoto(page: Page): Promise<{ viewer: Locator; photo: Locator }> {
+  await page.goto(`/aktuality/${article.slug}`);
+  await page.getByRole('button', { name: 'Zvětšit fotku: Děti sázejí stromek' }).click();
+  const viewer = page.getByRole('dialog', { name: 'Zvětšená fotka' });
+  const photo = viewer.getByRole('img', { name: 'Děti sázejí stromek' });
+  await expect.poll(() => width(photo)).toBeGreaterThan(300);
+  return { viewer, photo };
+}
+
 async function pinch(
   cdp: CDPSession,
   x: number,
@@ -88,7 +106,7 @@ test.describe('Given a visitor on a phone, where the site behaves like an app', 
     expect(await pageScale(page)).toBe(1);
   });
 
-  test('when they double-tap the page, then the browser is told not to zoom on it', async ({
+  test('when the page loads, then the browser is told to answer a double tap without zooming', async ({
     page,
   }) => {
     await page.goto('/');
@@ -131,22 +149,23 @@ test.describe('Given a visitor on a phone, where the site behaves like an app', 
     await expect(trigger).toBeFocused();
   });
 
-  test('when they double-tap the photo in the viewer, then it zooms in, and twice more, then it fits again', async ({
+  test('when they double-tap the photo in the viewer with a finger, then it zooms in, and after two more taps it fits again', async ({
     page,
   }) => {
     await publishedArticle(page);
-    await page.goto(`/aktuality/${article.slug}`);
-    await page.getByRole('button', { name: 'Zvětšit fotku: Děti sázejí stromek' }).click();
-    const viewer = page.getByRole('dialog', { name: 'Zvětšená fotka' });
-    const photo = viewer.getByRole('img', { name: 'Děti sázejí stromek' });
-    await expect.poll(() => width(photo)).toBeGreaterThan(300);
+    const { viewer, photo } = await openArticlePhoto(page);
     const fitted = await width(photo);
-    const stage = viewer.getByRole('group', { name: 'Zvětšená fotka' });
+    const stage = (await viewer.getByRole('group', { name: 'Zvětšená fotka' }).boundingBox())!;
+    const cdp = await page.context().newCDPSession(page);
+    const x = stage.x + stage.width / 2;
+    const y = stage.y + stage.height / 2;
 
-    await stage.dblclick();
+    await tap(cdp, x, y);
+    await tap(cdp, x, y);
     await expect.poll(() => width(photo)).toBeCloseTo(fitted * 2.5, 0);
 
-    await stage.dblclick();
+    await tap(cdp, x, y);
+    await tap(cdp, x, y);
     await expect.poll(() => width(photo)).toBeCloseTo(fitted, 0);
   });
 
@@ -186,6 +205,143 @@ test.describe('Given a visitor on a computer', () => {
   test.beforeEach(async ({ page }) => {
     await mockDonorApi(page);
     await publishedArticle(page);
+  });
+
+  test('when the page loads, then its viewport stops pinching only by its largest scale and never forbids scaling outright', async ({
+    page,
+  }) => {
+    await page.goto('/');
+
+    const viewport = await page.locator('meta[name="viewport"]').getAttribute('content');
+    const parts = viewport!.split(',').map((part) => part.trim());
+
+    expect(parts).toContain('maximum-scale=1');
+    expect(parts.filter((part) => part.startsWith('user-scalable'))).toEqual([]);
+    expect(parts.filter((part) => part.startsWith('minimum-scale'))).toEqual([]);
+  });
+
+  test('when a news article has a square photo, then the page still shows it cropped to its wide frame, and the viewer shows it whole', async ({
+    page,
+  }) => {
+    await page.route(
+      (url) => url.pathname.startsWith('/api/content/media/'),
+      (route) =>
+        route.fulfill({
+          contentType: 'image/svg+xml',
+          body: '<svg xmlns="http://www.w3.org/2000/svg" width="900" height="900"><rect width="900" height="900" fill="#7aa"/></svg>',
+        }),
+    );
+    await page.goto(`/aktuality/${article.slug}`);
+    const onPage = page.getByRole('img', { name: 'Děti sázejí stromek' });
+    await expect.poll(async () => (await onPage.boundingBox())?.height ?? 0).toBeGreaterThan(100);
+
+    const frame = (await onPage.boundingBox())!;
+    expect(frame.width / frame.height).toBeCloseTo(1.6, 1);
+
+    await page.getByRole('button', { name: 'Zvětšit fotku: Děti sázejí stromek' }).click();
+    const whole = page
+      .getByRole('dialog', { name: 'Zvětšená fotka' })
+      .getByRole('img', { name: 'Děti sázejí stromek' });
+    await expect.poll(() => width(whole)).toBeGreaterThan(100);
+    const shown = (await whole.boundingBox())!;
+    expect(shown.width / shown.height).toBeCloseTo(1, 1);
+  });
+
+  test('when Safari starts a pinch of the page, then the site cancels the gesture', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+
+    const cancelled = await page.evaluate(() =>
+      ['gesturestart', 'gesturechange', 'gestureend'].map((type) => {
+        const gesture = new Event(type, { bubbles: true, cancelable: true });
+        document.body.dispatchEvent(gesture);
+        return gesture.defaultPrevented;
+      }),
+    );
+
+    expect(cancelled).toEqual([true, true, true]);
+  });
+
+  test('when they zoom the photo in and drag it with the mouse, then it follows the pointer and stops at its edge', async ({
+    page,
+  }) => {
+    const { viewer, photo } = await openArticlePhoto(page);
+    const stage = (await viewer.getByRole('group', { name: 'Zvětšená fotka' }).boundingBox())!;
+    const fitted = await width(photo);
+    await viewer.getByRole('button', { name: 'Přiblížit' }).click();
+    await viewer.getByRole('button', { name: 'Přiblížit' }).click();
+    await expect.poll(() => width(photo)).toBeCloseTo(fitted * 2.25, 0);
+    const centred = await left(photo);
+    const x = stage.x + stage.width / 2;
+    const y = stage.y + stage.height / 2;
+
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x + 60, y, { steps: 4 });
+    await page.mouse.up();
+
+    expect(await left(photo)).toBeCloseTo(centred + 60, -1);
+
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x + stage.width, y, { steps: 8 });
+    await page.mouse.up();
+
+    expect(await left(photo)).toBeCloseTo(stage.x, 0);
+  });
+
+  test('when they zoom the photo in with the keyboard and press the right arrow, then the photo moves to show more of its right side', async ({
+    page,
+  }) => {
+    const { viewer, photo } = await openArticlePhoto(page);
+    const stage = viewer.getByRole('group', { name: 'Zvětšená fotka' });
+    await stage.focus();
+    await page.keyboard.press('+');
+    await page.keyboard.press('+');
+    await expect(viewer.getByRole('button', { name: /vrátit původní velikost/ })).toHaveText(
+      '225 %',
+    );
+    await expect.poll(() => width(photo)).toBeGreaterThan(1000);
+    const centred = await left(photo);
+    const reach = ((await stage.boundingBox())!.width * 0.1) | 0;
+
+    await page.keyboard.press('ArrowRight');
+
+    await expect.poll(async () => centred - (await left(photo))).toBeGreaterThanOrEqual(reach);
+  });
+
+  test('when the window narrows while the zoomed photo is at its right edge, then the photo still covers the screen to its edge', async ({
+    page,
+  }) => {
+    const { viewer, photo } = await openArticlePhoto(page);
+    const stage = viewer.getByRole('group', { name: 'Zvětšená fotka' });
+    const fitted = await width(photo);
+    await viewer.getByRole('button', { name: 'Přiblížit' }).click();
+    await viewer.getByRole('button', { name: 'Přiblížit' }).click();
+    const box = (await stage.boundingBox())!;
+    await expect.poll(() => width(photo)).toBeCloseTo(fitted * 2.25, 0);
+    await expect(viewer.getByRole('button', { name: /vrátit původní velikost/ })).toHaveText(
+      '225\u00a0%',
+    );
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x - box.width, box.y + box.height / 2, { steps: 8 });
+    await page.mouse.up();
+
+    await page.setViewportSize({ width: 900, height: 720 });
+
+    await expect
+      .poll(async () => {
+        const shown = (await photo.boundingBox())!;
+        const area = (await stage.boundingBox())!;
+        return Math.round(shown.x + shown.width - (area.x + area.width));
+      })
+      .toBeGreaterThanOrEqual(0);
+    const shown = (await photo.boundingBox())!;
+    const area = (await stage.boundingBox())!;
+    expect(shown.x).toBeLessThanOrEqual(area.x + 1);
   });
 
   test('when they open the photo of a news article and turn the mouse wheel over it, then the photo grows under the pointer and the page does not scroll', async ({

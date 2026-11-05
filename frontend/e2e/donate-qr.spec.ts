@@ -93,11 +93,14 @@ test.describe('Given a visitor on the home page', () => {
     await page.getByRole('button', { name: 'Jiná částka' }).focus();
 
     const reached: string[] = [];
-    for (let step = 0; step < 7; step += 1) {
+    for (let step = 0; step < 8; step += 1) {
       await page.keyboard.press('Tab');
       reached.push(
         await page.evaluate(
-          () => document.activeElement?.textContent?.replace(/\s+/g, ' ').trim() ?? '',
+          () =>
+            document.activeElement?.textContent?.replace(/\s+/g, ' ').trim() ||
+            document.activeElement?.getAttribute('aria-label') ||
+            '',
         ),
       );
     }
@@ -109,6 +112,7 @@ test.describe('Given a visitor on the home page', () => {
       'Kopírovat částku',
       'Kopírovat IBAN',
       'založíte účet',
+      'Zvětšit: QR platba na účet Nadačního fondu Nová naděje',
       'Uložit QR kód',
     ]);
   });

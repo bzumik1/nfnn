@@ -45,7 +45,7 @@
       <button
         type="button"
         class="zoom-tool"
-        [disabled]="atRest()"
+        [attr.aria-disabled]="atRest()"
         (click)="step('out')"
         aria-label="Oddálit"
         i18n-aria-label="@@ui.zoomViewer.out"
@@ -65,7 +65,7 @@
       <button
         type="button"
         class="zoom-tool"
-        [disabled]="atLimit()"
+        [attr.aria-disabled]="atLimit()"
         (click)="step('in')"
         aria-label="Přiblížit"
         i18n-aria-label="@@ui.zoomViewer.in"

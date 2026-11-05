@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   ElementRef,
   inject,
   input,
@@ -31,6 +32,7 @@ const DOUBLE_TAP_MS = 300;
 const DOUBLE_TAP_REACH = 30;
 const TAP_SLOP = 10;
 const WHEEL_RATE = 0.002;
+const TRACKPAD_PINCH_RATE = 0.01;
 const WHEEL_LINE = 16;
 const ARROW_SHARE = 0.1;
 
@@ -90,6 +92,11 @@ export class ZoomViewer {
   private pressedAt: ZoomPoint | null = null;
   private moved = false;
   private lastTap: Tap | null = null;
+  private silence: () => void = () => undefined;
+
+  constructor() {
+    inject(DestroyRef).onDestroy(() => this.silence());
+  }
 
   protected close(): void {
     this.closed.emit();
@@ -97,9 +104,12 @@ export class ZoomViewer {
 
   protected step(direction: 'in' | 'out'): void {
     const scale = zoomStep(this.view().scale, direction, MAX_SCALE);
+    if (scale === this.view().scale) {
+      return;
+    }
     this.ease(zoomAround(this.view(), scale, { x: 0, y: 0 }, this.bounds()));
     const level = this.level();
-    this.announcer.announce(
+    this.announce(
       direction === 'in'
         ? $localize`:@@ui.zoomViewer.zoomedIn:Přiblíženo na ${level}:level:`
         : $localize`:@@ui.zoomViewer.zoomedOut:Oddáleno na ${level}:level:`,
@@ -108,7 +118,12 @@ export class ZoomViewer {
 
   protected reset(): void {
     this.ease(RESTING_VIEW);
-    this.announcer.announce($localize`:@@ui.zoomViewer.resetDone:Původní velikost`);
+    this.announce($localize`:@@ui.zoomViewer.resetDone:Původní velikost`);
+  }
+
+  private announce(text: string): void {
+    this.silence();
+    this.silence = this.announcer.announce(text);
   }
 
   protected fit(): void {
@@ -172,11 +187,15 @@ export class ZoomViewer {
     this.easing.set(false);
     const delta =
       event.deltaMode === WheelEvent.DOM_DELTA_LINE ? event.deltaY * WHEEL_LINE : event.deltaY;
-    const scale = this.view().scale * Math.exp(-delta * WHEEL_RATE);
+    const rate = event.ctrlKey ? TRACKPAD_PINCH_RATE : WHEEL_RATE;
+    const scale = this.view().scale * Math.exp(-delta * rate);
     this.view.set(zoomAround(this.view(), scale, this.pointOf(event), this.bounds()));
   }
 
   protected key(event: KeyboardEvent): void {
+    if (event.ctrlKey || event.metaKey || event.altKey) {
+      return;
+    }
     const stage = this.stage().nativeElement;
     const reachX = stage.clientWidth * ARROW_SHARE;
     const reachY = stage.clientHeight * ARROW_SHARE;

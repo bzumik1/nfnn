@@ -12,4 +12,8 @@
   color: inherit;
   font: inherit;
   cursor: zoom-in;
+
+  &:focus-visible {
+    outline-offset: calc(-1 * var(--space-1));
+  }
 }
