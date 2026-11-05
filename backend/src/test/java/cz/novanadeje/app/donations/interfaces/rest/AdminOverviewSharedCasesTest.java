@@ -8,6 +8,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ObjectNode;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -40,15 +41,24 @@ class AdminOverviewSharedCasesTest extends DonationRowsSharedCaseRunner {
         }
 
         assertGives(answerAs(CaseRows.administratorId(), "ROLE_ADMIN", call), sharedCase.expected());
-        assertGives(summaryOfTheYearIn(answerAs(CaseRows.administratorId(), "ROLE_ADMIN", get("/api/admin/donations/sync")), sharedCase.expected()),
-                withoutAvailableYears(sharedCase.expected()));
+        List<JsonNode> summary = summaryIn(answerAs(CaseRows.administratorId(), "ROLE_ADMIN", get("/api/admin/donations/sync")), sharedCase.expected());
+        Optional<JsonNode> ofTheYear = summary.stream().filter(entry -> entry.get("year").asInt() == sharedCase.expected().get("year").asInt()).findFirst();
+        if (offers(sharedCase.expected(), sharedCase.expected().get("year").asInt())) {
+            assertGives(ofTheYear.orElseThrow(), withoutAvailableYears(sharedCase.expected()));
+        } else {
+            assertThat(ofTheYear).as("the summary of a year the administration does not offer").isEmpty();
+        }
     }
 
-    private static JsonNode summaryOfTheYearIn(JsonNode manifest, JsonNode expected) {
+    private static List<JsonNode> summaryIn(JsonNode manifest, JsonNode expected) {
         List<JsonNode> years = manifest.get("summary").get("byYear").valueStream().toList();
         assertThat(years).as("the years of the manifest's summary").extracting(entry -> entry.get("year").asInt())
                 .containsExactlyElementsOf(expected.get("availableYears").valueStream().map(JsonNode::asInt).toList());
-        return years.stream().filter(entry -> entry.get("year").asInt() == expected.get("year").asInt()).findFirst().orElseThrow();
+        return years;
+    }
+
+    private static boolean offers(JsonNode expected, int year) {
+        return expected.get("availableYears").valueStream().anyMatch(offered -> offered.asInt() == year);
     }
 
     private static JsonNode withoutAvailableYears(JsonNode expected) {

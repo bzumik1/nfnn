@@ -67,7 +67,7 @@ class JpaBankPaymentRepository implements BankPaymentRepository {
 
     @Override
     public List<BankPayment> findAllNewestFirst() {
-        return List.of();
+        return toDomain(jpa.findAllByOrderByBookedOnDescTransactionIdDesc());
     }
 
     @Override

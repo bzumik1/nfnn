@@ -24,6 +24,9 @@ interface DonorJpaRepository extends JpaRepository<DonorJpaEntity, UUID> {
     @Query("select d from DonorJpaEntity d where :role member of d.roles order by d.name, d.email")
     List<DonorJpaEntity> findByRole(Role role);
 
+    @Query("select distinct d from DonorJpaEntity d left join fetch d.roles order by d.id")
+    List<DonorJpaEntity> findAllWithRoles();
+
     @Query("select d from DonorJpaEntity d where lower(function('translate', d.name, '" + AccentFolding.ACCENTED + "', '" + AccentFolding.PLAIN + "'))"
             + " like concat('%', :query, '%') escape '!'"
             + " or lower(function('translate', d.email, '" + AccentFolding.ACCENTED + "', '" + AccentFolding.PLAIN + "')) like concat('%', :query, '%') escape '!'"

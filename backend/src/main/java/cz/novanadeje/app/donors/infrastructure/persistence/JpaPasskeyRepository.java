@@ -9,6 +9,8 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Repository
 class JpaPasskeyRepository implements PasskeyRepository {
@@ -41,7 +43,8 @@ class JpaPasskeyRepository implements PasskeyRepository {
 
     @Override
     public Map<DonorId, Integer> countByDonors() {
-        return Map.of();
+        return jpa.countPerDonor().stream()
+                .collect(Collectors.toUnmodifiableMap(row -> new DonorId((UUID) row[0]), row -> ((Number) row[1]).intValue()));
     }
 
     @Override

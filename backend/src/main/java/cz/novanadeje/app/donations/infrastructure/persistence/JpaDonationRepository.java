@@ -63,7 +63,7 @@ class JpaDonationRepository implements DonationRepository {
 
     @Override
     public List<Donation> findAllNewestFirst() {
-        return List.of();
+        return jpa.findAllByOrderByReceivedOnDescRecordedAtDescIdDesc().stream().map(DonationJpaEntity::toDomain).toList();
     }
 
     @Override

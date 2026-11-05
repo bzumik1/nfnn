@@ -18,6 +18,7 @@ import org.springframework.stereotype.Repository;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -106,7 +107,10 @@ class JpaDonorRecordRepository implements DonorRecordRepository {
 
     @Override
     public List<DonorRecord> findAll() {
-        return List.of();
+        Map<UUID, List<SenderAccountLink>> links = accounts.findAllByOrderByCreatedAtAscIdAsc().stream()
+                .collect(Collectors.groupingBy(DonorSenderAccountJpaEntity::donorId,
+                        Collectors.mapping(DonorSenderAccountJpaEntity::toDomain, Collectors.toList())));
+        return jpa.findAllByOrderByDonorIdAsc().stream().map(entity -> entity.toDomain(links.getOrDefault(entity.donorId(), List.of()))).toList();
     }
 
     @Override

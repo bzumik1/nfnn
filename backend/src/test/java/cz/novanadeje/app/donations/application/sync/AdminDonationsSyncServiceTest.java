@@ -1,7 +1,6 @@
 package cz.novanadeje.app.donations.application.sync;
 
 import cz.novanadeje.app.donations.application.report.AdminOverviewService;
-import cz.novanadeje.app.donations.application.report.OverviewView;
 import cz.novanadeje.app.donations.application.report.ReportAdministrationView;
 import cz.novanadeje.app.donations.application.report.ReportSettingsService;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentRepository;
@@ -89,7 +88,7 @@ class AdminDonationsSyncServiceTest {
     }
 
     @Test
-    @DisplayName("Given an administrator, an erased donor with a receipt and a donor with one, when the snapshot is taken, then every year's overview comes newest first, the erased donor's record stays as a placeholder and only the other donor's receipt comes")
+    @DisplayName("Given an administrator, an erased donor with a receipt and a donor with one, when the snapshot is taken, then every offered year's overview comes newest first, the erased donor's record stays as a placeholder and only the other donor's receipt comes")
     void should_leave_out_erased_donors_receipts_and_compile_every_year_when_snapshot_taken_given_administrator() {
         DonorRecord jana = DonorRecord.registerPerson(new DonorReference(UuidV7.generate(NOW)), "Jana Nováková", ADDRESS,
                 new VariableSymbol("4821937560"), LocaleCode.CS, NOW);
@@ -105,8 +104,7 @@ class AdminDonationsSyncServiceTest {
                 List.of(), new ReportAdministrationView.NextReport(ReportMonth.of(2026, 11), LocalDate.of(2026, 12, 1)), ReportMonth.of(2026, 10));
         when(administrationHolders.holdsAdministration(ADMIN.value())).thenReturn(true);
         when(records.findAll()).thenReturn(List.of(jana, erased));
-        when(overview.overview(Optional.empty())).thenReturn(new OverviewView(year2026, List.of(Year.of(2026), Year.of(2025))));
-        when(overview.overview(Optional.of(Year.of(2025)))).thenReturn(new OverviewView(year2025, List.of(Year.of(2026), Year.of(2025))));
+        when(overview.everyOfferedYear(List.of(), List.of(), List.of(jana, erased))).thenReturn(List.of(year2026, year2025));
         when(payments.findAllNewestFirst()).thenReturn(List.of());
         when(donations.findAllNewestFirst()).thenReturn(List.of());
         when(claims.findAllNewestFirst()).thenReturn(List.of());

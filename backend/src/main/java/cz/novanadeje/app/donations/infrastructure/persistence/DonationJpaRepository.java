@@ -18,6 +18,8 @@ interface DonationJpaRepository extends JpaRepository<DonationJpaEntity, UUID> {
 
     List<DonationJpaEntity> findByDonorIdOrderByReceivedOnDescRecordedAtDescIdDesc(UUID donorId);
 
+    List<DonationJpaEntity> findAllByOrderByReceivedOnDescRecordedAtDescIdDesc();
+
     Optional<DonationJpaEntity> findByIdAndDonorId(UUID id, UUID donorId);
 
     List<DonationJpaEntity> findByReceivedOnBetween(LocalDate firstDay, LocalDate lastDay);

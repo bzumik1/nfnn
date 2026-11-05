@@ -54,6 +54,7 @@ Feature: An administrator's device keeps a copy of the administration's donation
     When the bank account has these movements:
       | id   | date       | amount | account    | bankCode | name          | variableSymbol |
       | 1005 | 2026-10-19 | 250.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
+    And 60 minutes pass
     And the hourly import runs
     And an administration device of "Andrea" syncs the donations
     Then the administration device downloaded the chunks "donations:2026-10, import-state, payments:2026-10"

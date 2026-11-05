@@ -10,9 +10,18 @@ import cz.novanadeje.app.donations.domain.donor.SymbolClaimRepository;
 import cz.novanadeje.app.donations.domain.importing.BankImportStateRepository;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
 import cz.novanadeje.app.shared.application.account.AdministrationHolders;
+import cz.novanadeje.app.donations.domain.donor.DonorRecord;
+import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
+import cz.novanadeje.app.donations.domain.bank.BankPayment;
+import cz.novanadeje.app.donations.domain.donation.Donation;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class AdminDonationsSyncService {
@@ -43,6 +52,15 @@ public class AdminDonationsSyncService {
 
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public AdminDonationsSyncSnapshot snapshotFor(DonorReference subject) {
-        return AdminDonationsSyncSnapshot.withoutAdministration(subject);
+        if (!administrationHolders.holdsAdministration(subject.value())) {
+            return AdminDonationsSyncSnapshot.withoutAdministration(subject);
+        }
+        List<DonorRecord> donorRecords = records.findAll();
+        Set<DonorReference> erased = donorRecords.stream().filter(DonorRecord::isErased).map(DonorRecord::id).collect(Collectors.toSet());
+        List<BankPayment> booked = payments.findAllNewestFirst();
+        List<Donation> received = donations.findAllNewestFirst();
+        List<DonationReceipt> kept = receipts.findAllNewestFirst().stream().filter(receipt -> !erased.contains(receipt.donor())).toList();
+        return new AdminDonationsSyncSnapshot(subject, true, overview.everyOfferedYear(received, booked, donorRecords), booked, received, donorRecords,
+                claims.findAllNewestFirst(), kept, Optional.of(importStates.current()), Optional.of(reportSettings.view()));
     }
 }

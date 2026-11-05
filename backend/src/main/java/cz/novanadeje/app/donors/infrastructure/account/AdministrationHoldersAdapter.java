@@ -1,5 +1,7 @@
 package cz.novanadeje.app.donors.infrastructure.account;
 
+import cz.novanadeje.app.donors.domain.Donor;
+import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.shared.application.account.AdministrationHolders;
 import org.springframework.stereotype.Component;
@@ -17,6 +19,6 @@ class AdministrationHoldersAdapter implements AdministrationHolders {
 
     @Override
     public boolean holdsAdministration(UUID accountId) {
-        return false;
+        return donors.findById(new DonorId(accountId)).filter(Donor::isAdministrator).isPresent();
     }
 }

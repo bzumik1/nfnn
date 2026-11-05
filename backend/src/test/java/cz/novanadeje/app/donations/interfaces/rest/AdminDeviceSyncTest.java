@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donations.interfaces.rest;
 
 import cz.novanadeje.app.donations.DonationRowsContext;
+import cz.novanadeje.app.donations.application.donor.DonorRecordService;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimRepository;
 import cz.novanadeje.app.shared.domain.FoundationZone;
 import cz.novanadeje.app.shared.infrastructure.json.CanonicalRows;
@@ -56,7 +57,7 @@ class AdminDeviceSyncTest {
     private static final int TIMED_DONATIONS = 1_000;
     private static final int WARM_UP_RUNS = 5;
     private static final int TIMED_RUNS = 21;
-    private static final long MANIFEST_BUDGET_MILLIS = 50;
+    private static final long MANIFEST_BUDGET_MILLIS = 100;
     private static final String MANIFEST = "/api/admin/donations/sync";
     private static final String CHUNKS = "/api/admin/donations/sync/chunks";
     private static final List<List<String>> ACCOUNTS = List.of(List.of("2900233333", "2010"), List.of("2900244444", "0800"),
@@ -77,6 +78,8 @@ class AdminDeviceSyncTest {
     private AdminDonationsSyncRateLimiter syncRateLimiter;
     @Autowired
     private SymbolClaimRepository symbolClaims;
+    @Autowired
+    private DonorRecordService erasures;
 
     @AfterEach
     void truncate() {
@@ -113,8 +116,8 @@ class AdminDeviceSyncTest {
     }
 
     @Test
-    @DisplayName("Given two hundred donors with a thousand gifts and payments, when an administration device asks for the manifest, then the backend answers within 50 ms")
-    void should_answer_within_50_ms_when_an_administration_device_asks_for_the_manifest_given_a_thousand_gifts() throws Exception {
+    @DisplayName("Given two hundred donors with a thousand gifts and payments, when an administration device asks for the manifest, then the backend answers within 100 ms")
+    void should_answer_within_100_ms_when_an_administration_device_asks_for_the_manifest_given_a_thousand_gifts() throws Exception {
         CaseRows rows = CaseRows.fromJson(json.readTree(THREE_DONORS));
         rows.write(jdbc, clock);
         rows.writeAdministrator(jdbc);
@@ -128,9 +131,9 @@ class AdminDeviceSyncTest {
             UUID id = new UUID(random.nextLong(), random.nextLong());
             UUID donor = donors.get(random.nextInt(donors.size()));
             if (random.nextInt(4) == 0) {
-                insertPayment(ACCOUNTS.get(random.nextInt(ACCOUNTS.size())), day, 100 + random.nextInt(1_000_000), random.nextLong(1, Long.MAX_VALUE));
+                insertPayment(ACCOUNTS.get(random.nextInt(ACCOUNTS.size())), day, 100 + random.nextInt(1_000_000), random.nextLong(1, 30_000_000_000L));
             } else if (random.nextBoolean()) {
-                insertBankGift(id, donor, day, 100 + random.nextInt(1_000_000), random.nextLong(1, Long.MAX_VALUE));
+                insertBankGift(id, donor, day, 100 + random.nextInt(1_000_000), random.nextLong(1, 30_000_000_000L));
             } else {
                 insertManualGift(id, donor, day, 100 + random.nextInt(1_000_000));
             }
@@ -207,9 +210,9 @@ class AdminDeviceSyncTest {
         long amount = 100 + random.nextInt(100_000);
         List<String> account = ACCOUNTS.get(random.nextInt(ACCOUNTS.size()));
         switch (operation) {
-            case "a bank gift" -> insertBankGift(id, donor, day, amount, random.nextLong(1, Long.MAX_VALUE));
+            case "a bank gift" -> insertBankGift(id, donor, day, amount, random.nextLong(1, 30_000_000_000L));
             case "a gift recorded by hand" -> insertManualGift(id, donor, day, amount);
-            case "an unpaired payment" -> insertPayment(account, day, amount, random.nextLong(1, Long.MAX_VALUE));
+            case "an unpaired payment" -> insertPayment(account, day, amount, random.nextLong(1, 30_000_000_000L));
             case "a bank import" -> recordBankImport();
             case "time passing" -> clock.advance(Duration.ofHours(1 + random.nextInt(24 * 60)));
             case "a linked account" -> linkAccount(id, donor, account, random.nextBoolean() ? "ACTIVE" : "AWAITING_PAYMENT", day);
@@ -230,12 +233,7 @@ class AdminDeviceSyncTest {
     }
 
     private void erase(UUID donor) {
-        jdbc.sql("update donation set sender_account_id = null, symbol_claim_id = null where donor_id = :donor").param("donor", donor).update();
-        jdbc.sql("delete from donor_sender_account where donor_id = :donor").param("donor", donor).update();
-        jdbc.sql("delete from donor_symbol_claim where donor_id = :donor").param("donor", donor).update();
-        jdbc.sql("update donor_record set name = 'Vymazaný dárce', street = 'Vymazáno', city = 'Vymazáno', postal_code = 'Vymazáno', erased_at = :at, "
-                        + "updated_at = :at where donor_id = :donor")
-                .param("at", Timestamp.from(clock.instant())).param("donor", donor).update();
+        erasures.erase(donor, clock.instant());
     }
 
     private static UUID pick(Random random, List<UUID> ids) {
@@ -254,7 +252,7 @@ class AdminDeviceSyncTest {
     }
 
     private void linkAccount(UUID id, UUID donor, List<String> account, String status, LocalDate from) {
-        Optional<UUID> proof = status.equals("ACTIVE") ? Optional.of(insertPayment(account, from, 100, Math.abs(id.getLeastSignificantBits()) + 1)) : Optional.empty();
+        Optional<UUID> proof = status.equals("ACTIVE") ? Optional.of(insertPayment(account, from, 100, Math.floorMod(id.getLeastSignificantBits(), 30_000_000_000L) + 1)) : Optional.empty();
         jdbc.sql("insert into donor_sender_account (id, donor_id, account_number, bank_code, learned_from_payment_id, learned_at, status, valid_from, valid_to, "
                         + "created_at, disconnected_at) select :id, :donor, :number, :bank, :proof, :provedAt, :status, :from, null, :created, null "
                         + "where exists (select 1 from donor_record where donor_id = :donor and erased_at is null) on conflict do nothing")

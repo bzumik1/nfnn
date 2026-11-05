@@ -103,7 +103,7 @@ class JpaDonationReceiptRepository implements DonationReceiptRepository {
 
     @Override
     public List<DonationReceipt> findAllNewestFirst() {
-        return List.of();
+        return jpa.findAllByOrderByIssuedAtDescNumberDesc().stream().map(IssuedReceiptJpaEntity::toDomain).toList();
     }
 
     @Override

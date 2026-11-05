@@ -17,6 +17,8 @@ interface DonorSenderAccountJpaRepository extends JpaRepository<DonorSenderAccou
 
     List<DonorSenderAccountJpaEntity> findByAccountNumberAndBankCode(String accountNumber, String bankCode);
 
+    List<DonorSenderAccountJpaEntity> findAllByOrderByCreatedAtAscIdAsc();
+
     @Transactional
     @Modifying(flushAutomatically = true)
     @Query(nativeQuery = true, value = "insert into donor_sender_account (id, donor_id, account_number, bank_code, status,"
