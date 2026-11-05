@@ -5,6 +5,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { QrCode } from '../../../shared/ui/qr-code/qr-code';
+import { encodeText } from '../../../shared/ui/qr-code/qr-encoder';
+import { QrMatrix } from '../../../shared/ui/qr-code/qr-matrix';
 import { foundationPaymentDetails, paymentQrCase } from '../testing/payment-details-fixtures';
 import { PaymentPanel } from './payment-panel';
 
@@ -13,7 +15,14 @@ const REDRAW_MS = 400;
 const QR_OF_500 = paymentQrCase('500 Kč without a variable symbol');
 const QR_OF_1000 = paymentQrCase('1 000 Kč without a variable symbol');
 const QR_OF_500_FOR_JANA = paymentQrCase('500 Kč with a ten-digit variable symbol');
-const PNG = new Blob(['png'], { type: 'image/png' });
+
+function pngOf(matrix: QrMatrix): Blob {
+  return new Blob([`png of ${matrix.modules}`], { type: 'image/png' });
+}
+
+function pngTextOf(spaydText: string): string {
+  return `png of ${encodeText(spaydText, 'H').modules}`;
+}
 
 interface Downloaded {
   readonly name: string;
@@ -21,13 +30,13 @@ interface Downloaded {
 }
 
 function readText(file: Blob): Promise<string> {
-  vi.useRealTimers();
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(reader.error);
-    reader.readAsText(file);
-  });
+  return file.text();
+}
+
+function deferred(): { readonly promise: Promise<void>; readonly resolve: () => void } {
+  let resolve: () => void = () => undefined;
+  const promise = new Promise<void>((done) => (resolve = done));
+  return { promise, resolve };
 }
 
 describe('Given the payment panel on a phone or a tablet', () => {
@@ -35,6 +44,7 @@ describe('Given the payment panel on a phone or a tablet', () => {
   let http: HttpTestingController;
   let shared: ShareData[];
   let shareRefusal: Error | null;
+  let shareAnswer: Promise<void> | null;
   let sharesFiles: (file: File) => boolean;
   let downloads: Downloaded[];
   let blobs: Map<string, Blob>;
@@ -42,6 +52,7 @@ describe('Given the payment panel on a phone or a tablet', () => {
   beforeEach(async () => {
     shared = [];
     shareRefusal = null;
+    shareAnswer = null;
     sharesFiles = () => true;
     downloads = [];
     blobs = new Map();
@@ -51,6 +62,9 @@ describe('Given the payment panel on a phone or a tablet', () => {
       canShare: (data: ShareData) => (data.files ?? []).every((file) => sharesFiles(file)),
       share: async (data: ShareData) => {
         shared.push(data);
+        if (shareAnswer) {
+          await shareAnswer;
+        }
         if (shareRefusal) {
           throw shareRefusal;
         }
@@ -70,7 +84,9 @@ describe('Given the payment panel on a phone or a tablet', () => {
     ) {
       downloads.push({ name: this.download, blob: blobs.get(this.getAttribute('href') ?? '') });
     });
-    vi.spyOn(QrCode.prototype, 'pngBlob').mockResolvedValue(PNG);
+    vi.spyOn(QrCode.prototype, 'pngBlob').mockImplementation(function (this: QrCode) {
+      return Promise.resolve(pngOf(this.matrix()));
+    });
 
     await TestBed.configureTestingModule({
       imports: [PaymentPanel],
@@ -170,6 +186,27 @@ describe('Given the payment panel on a phone or a tablet', () => {
     expect(qrRegion().classList.contains('qr')).toBe(true);
   });
 
+  it('when the QR region is read out, then its name stays Platíte z jiného zařízení? whether it is folded or not', async () => {
+    await openWithQr();
+
+    const named = () => squashed(`#${qrRegion().getAttribute('aria-labelledby')}`);
+    expect(named()).toBe('Platíte z jiného zařízení?');
+
+    otherDevice().click();
+    await settle();
+
+    expect(named()).toBe('Platíte z jiného zařízení?');
+  });
+
+  it("when it sits in another card, then its QR region and disclosure carry that card's ids", async () => {
+    panel().componentRef.setInput('idPrefix', 'gift');
+    await openWithQr();
+
+    expect(otherDevice().getAttribute('aria-controls')).toBe('gift-qr');
+    expect(qrRegion().id).toBe('gift-qr');
+    expect(element('#gift-other-device')?.textContent?.trim()).toBe('Platíte z jiného zařízení?');
+  });
+
   it('when the visitor unfolds Platíte z jiného zařízení?, then the QR of the chosen amount shows with a line naming the amount, and folding hides it again', async () => {
     await openWithQr();
 
@@ -185,6 +222,7 @@ describe('Given the payment panel on a phone or a tablet', () => {
       'Platíte z jiného zařízení? Naskenujte kód aplikací banky',
     );
     expect(squashed('.qr-caption')).toBe('QR platba na účet Nadačního fondu Nová naděje, 500 Kč.');
+    expect(element('.qr-caption').getAttribute('aria-hidden')).toBe('true');
     expect(element('.qr-save')).toBeNull();
 
     otherDevice().click();
@@ -205,6 +243,50 @@ describe('Given the payment panel on a phone or a tablet', () => {
     expect(file.type).toBe('application/x-shortpaymentdescriptor');
     expect(await readText(file)).toBe(QR_OF_500.spayd);
     expect(downloads).toEqual([]);
+    expect(handoffStatus()).toBe('');
+  });
+
+  it('when the visitor taps Otevřít v aplikaci banky, then the phone is asked to share within the tap itself, before anything is awaited', async () => {
+    await openWithQr();
+
+    button('Otevřít v aplikaci banky').click();
+
+    expect(shared).toHaveLength(1);
+    await settle();
+  });
+
+  it('when the visitor taps again while the phone still offers the file, then it is offered once and the buttons say they wait without losing the focus', async () => {
+    const answer = deferred();
+    shareAnswer = answer.promise;
+    await openWithQr();
+    const open = button('Otevřít v aplikaci banky');
+    open.focus();
+
+    await tap('Otevřít v aplikaci banky');
+    await tap('Otevřít v aplikaci banky');
+
+    expect(shared).toHaveLength(1);
+    expect(open.getAttribute('aria-disabled')).toBe('true');
+    expect(open.disabled).toBe(false);
+    expect(document.activeElement).toBe(open);
+    expect(element('.bank-app-image').getAttribute('aria-disabled')).toBe('true');
+
+    answer.resolve();
+    await settle();
+    expect(open.getAttribute('aria-disabled')).toBeNull();
+  });
+
+  it('when the visitor picks another amount while the phone still offers the file, then the answer to the old offer says nothing under the new amount', async () => {
+    const answer = deferred();
+    shareAnswer = answer.promise;
+    shareRefusal = new DOMException('Share canceled', 'AbortError');
+    await openWithQr();
+    await tap('Otevřít v aplikaci banky');
+
+    await tap('1 000 Kč');
+    answer.resolve();
+    await settle();
+
     expect(handoffStatus()).toBe('');
   });
 
@@ -268,22 +350,58 @@ describe('Given the payment panel on a phone or a tablet', () => {
     expect(downloads.map((download) => download.name)).toEqual(['platba.spayd']);
     expect(await readText(downloads[0].blob as Blob)).toBe(QR_OF_500.spayd);
     expect(handoffStatus()).toBe(
-      'Soubor platba.spayd je ve stažených souborech. Otevřete ho a vyberte svou bankovní aplikaci. Neotevřela se vám banka? Zkopírujte údaje výše do bankovní aplikace, nebo pošlete QR jako obrázek a v bance zvolte platbu z obrázku.',
+      'Soubor platba.spayd je ve stažených souborech. Některé bankovní aplikace po jeho otevření nabídnou platbu. Neotevřela se vám banka? Zkopírujte údaje výše do bankovní aplikace, nebo pošlete QR jako obrázek a v bance zvolte platbu z obrázku.',
     );
   });
 
   it('when the visitor taps Poslat QR jako obrázek, then the phone is offered the PNG of the QR drawn for the chosen amount', async () => {
     await openWithQr();
 
-    await tap('Poslat QR jako obrázek');
+    button('Poslat QR jako obrázek').click();
 
-    expect(QrCode.prototype.pngBlob).toHaveBeenCalledWith(720);
     expect(shared).toHaveLength(1);
     const [file] = shared[0].files ?? [];
     expect(file.name).toBe('qr-platba-nova-nadeje.png');
     expect(file.type).toBe('image/png');
     expect(shared[0].title).toBe('QR platba');
+    expect(await readText(file)).toBe(pngTextOf(QR_OF_500.spayd));
+    await settle();
     expect(downloads).toEqual([]);
+  });
+
+  it('when the visitor picks 1 000 Kč and taps Poslat QR jako obrázek, then the image shared is the QR drawn for 1 000 Kč', async () => {
+    await openWithQr();
+    await tap('1 000 Kč');
+
+    button('Poslat QR jako obrázek').click();
+
+    expect(await readText((shared[0].files ?? [])[0])).toBe(pngTextOf(QR_OF_1000.spayd));
+    await settle();
+  });
+
+  it('when the QR image is still being drawn, then Poslat QR jako obrázek waits for it', async () => {
+    vi.mocked(QrCode.prototype.pngBlob).mockReturnValue(new Promise<Blob>(() => undefined));
+    await openWithQr();
+
+    expect(element<HTMLButtonElement>('.bank-app-image').disabled).toBe(true);
+    expect(element<HTMLButtonElement>('.bank-app-open').disabled).toBe(false);
+  });
+
+  it('when the QR image could not be drawn ahead, then Poslat QR jako obrázek saves it instead and says where it is', async () => {
+    vi.mocked(QrCode.prototype.pngBlob)
+      .mockRejectedValueOnce(new Error('canvas lost'))
+      .mockImplementation(function (this: QrCode) {
+        return Promise.resolve(pngOf(this.matrix()));
+      });
+    await openWithQr();
+
+    await tap('Poslat QR jako obrázek');
+
+    expect(shared).toEqual([]);
+    expect(downloads.map((download) => download.name)).toEqual(['qr-platba-nova-nadeje.png']);
+    expect(handoffStatus()).toBe(
+      'QR kód qr-platba-nova-nadeje.png je uložený. Najdete ho ve stažených souborech.',
+    );
   });
 
   it('when the phone refuses to share the QR image, then the image downloads instead and a line says where it is', async () => {
@@ -343,15 +461,22 @@ describe('Given the payment panel on a phone or a tablet', () => {
     expect(qrRegion().hidden).toBe(true);
     expect(squashed('.qr-error')).toContain('QR platbu se nepodařilo připravit.');
     expect(qrRegion().querySelector('.qr-error')).toBeNull();
+    const order = Array.from(
+      panel().nativeElement.querySelectorAll('.qr-error, .bank-app-open') as NodeListOf<Element>,
+    ).map((part) => part.classList.contains('qr-error'));
+    expect(order).toEqual([true, false]);
     expect(element<HTMLButtonElement>('.bank-app-open').disabled).toBe(true);
 
     await tap('Zkusit znovu');
+    expect(document.activeElement).toBe(element('.bank-app'));
+    expect(element('.bank-app').getAttribute('aria-busy')).toBe('true');
     http
       .expectOne((request) => request.url === PAYMENT_DETAILS_URL)
       .flush(foundationPaymentDetails());
     await settle();
     expect(element('.qr-error')).toBeNull();
     expect(element<HTMLButtonElement>('.bank-app-open').disabled).toBe(false);
+    expect(document.activeElement).toBe(element('.bank-app-open'));
   });
 });
 

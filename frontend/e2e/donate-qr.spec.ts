@@ -109,8 +109,29 @@ test.describe('Given a visitor on the home page', () => {
     await expect(page.locator('#prispet .bank')).toContainText('5544332217/2010');
     await page.getByRole('button', { name: 'Jiná částka' }).focus();
 
+    const expected = phoneLayout(page)
+      ? [
+          'Založit účet',
+          'Přihlásit se',
+          'Kopírovat číslo účtu',
+          'Kopírovat částku',
+          'Kopírovat IBAN',
+          'založíte účet',
+          'Otevřít v aplikaci banky',
+          'Uložit QR kód',
+          'Platíte z jiného zařízení? Zobrazit QR kód ke skenování',
+        ]
+      : [
+          'Založit účet',
+          'Přihlásit se',
+          'Kopírovat číslo účtu',
+          'Kopírovat částku',
+          'Kopírovat IBAN',
+          'založíte účet',
+          'Uložit QR kód',
+        ];
     const reached: string[] = [];
-    for (let step = 0; step < 7; step += 1) {
+    while (reached.length < expected.length) {
       await page.keyboard.press('Tab');
       reached.push(
         await page.evaluate(
@@ -119,27 +140,7 @@ test.describe('Given a visitor on the home page', () => {
       );
     }
 
-    expect(reached).toEqual(
-      phoneLayout(page)
-        ? [
-            'Založit účet',
-            'Přihlásit se',
-            'Kopírovat číslo účtu',
-            'Kopírovat částku',
-            'Kopírovat IBAN',
-            'Otevřít v aplikaci banky',
-            'Uložit QR kód',
-          ]
-        : [
-            'Založit účet',
-            'Přihlásit se',
-            'Kopírovat číslo účtu',
-            'Kopírovat částku',
-            'Kopírovat IBAN',
-            'založíte účet',
-            'Uložit QR kód',
-          ],
-    );
+    expect(reached).toEqual(expected);
   });
 
   test('when they enter their own amount, open the privacy policy and come back to Přispět, then the same amount stays chosen in the field, the bank details and the QR', async ({
@@ -179,6 +180,7 @@ test.describe('Given a visitor on the home page', () => {
       const otherDevice = page.getByRole('button', { name: /Platíte z jiného zařízení\?/ });
       await expect(otherDevice).toHaveAttribute('aria-expanded', 'false');
       await expect(page.getByRole('img', { name: QR_NAME })).toBeHidden();
+      await expect(page.locator('#prispet .bank-app').getByRole('status')).toHaveCount(2);
 
       await otherDevice.click();
 
@@ -189,6 +191,27 @@ test.describe('Given a visitor on the home page', () => {
       const bankTop = (await bank.boundingBox())!.y;
       const qrTop = (await page.locator('#prispet .qr').boundingBox())!.y;
       expect(bankTop).toBeLessThan(qrTop);
+    });
+
+    test('when the payment details failed and the visitor retries, then the focus waits on the bank buttons and then rests on Otevřít v aplikaci banky', async ({
+      page,
+    }) => {
+      let answers = 0;
+      await page.route(
+        (url) => url.pathname === PAYMENT_DETAILS_PATH,
+        async (route) => {
+          answers += 1;
+          await (answers === 1
+            ? route.fulfill({ status: 503, json: { title: 'Nedostupné' } })
+            : route.fulfill({ json: FOUNDATION_PAYMENT_DETAILS }));
+        },
+      );
+      await page.goto('/');
+      const retry = page.locator('#prispet').getByRole('button', { name: 'Zkusit znovu' });
+
+      await retry.click();
+
+      await expect(page.getByRole('button', { name: 'Otevřít v aplikaci banky' })).toBeFocused();
     });
 
     test('when the browser cannot hand the payment file to an app, then Otevřít v aplikaci banky downloads platba.spayd with the payment of the chosen amount', async ({

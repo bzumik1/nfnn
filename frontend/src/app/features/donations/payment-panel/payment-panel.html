@@ -125,11 +125,16 @@
 <ng-content select="[afterBankDetails]" />
 
 @if (compact()) {
-  <div class="bank-app">
+  <div #bankApp class="bank-app" tabindex="-1" [attr.aria-busy]="busy()">
+    <div class="bank-app-failure">
+      <ng-container [ngTemplateOutlet]="failureNotice" />
+    </div>
     <button
+      #bankAppOpen
       type="button"
       class="bank-app-open ui-button ui-button--primary ui-button--block"
-      [disabled]="!handoffReady() || handingOff()"
+      [disabled]="!handoffReady()"
+      [attr.aria-disabled]="handingOff() || null"
       (click)="openInBankApp()"
     >
       <svg
@@ -155,8 +160,8 @@
         @case ('spaydDownloaded') {
           <p class="ui-callout bank-app-hint">
             <span i18n="@@home.donate.bankApp.downloaded"
-              >Soubor platba.spayd je ve stažených souborech. Otevřete ho a vyberte svou bankovní
-              aplikaci.</span
+              >Soubor platba.spayd je ve stažených souborech. Některé bankovní aplikace po jeho
+              otevření nabídnou platbu.</span
             >&ngsp;<ng-container [ngTemplateOutlet]="notOpened" />
           </p>
         }
@@ -168,7 +173,8 @@
     <button
       type="button"
       class="bank-app-image ui-button ui-button--block"
-      [disabled]="!handoffReady() || handingOff() || !qrMatrix()"
+      [disabled]="!imageReady()"
+      [attr.aria-disabled]="handingOff() || null"
       (click)="sendQrImage()"
     >
       <svg
@@ -190,28 +196,27 @@
         <span i18n="@@home.donate.qr.save">Uložit QR kód</span>
       }
     </button>
-    <ng-container [ngTemplateOutlet]="failureNotice" />
     <button
       type="button"
       class="other-device"
-      [id]="otherDeviceId()"
       [attr.aria-controls]="qrRegionId()"
       [attr.aria-expanded]="qrShown()"
       (click)="toggleQr()"
     >
       <span class="other-device-text">
-        <span class="other-device-title" i18n="@@home.donate.otherDevice.title"
+        <span
+          class="other-device-title"
+          [id]="otherDeviceId()"
+          i18n="@@home.donate.otherDevice.title"
           >Platíte z jiného zařízení?</span
         >&ngsp;
-        @if (qrShown()) {
-          <span class="other-device-hint" i18n="@@home.donate.otherDevice.scan"
-            >Naskenujte kód aplikací banky</span
-          >
-        } @else {
-          <span class="other-device-hint" i18n="@@home.donate.otherDevice.show"
-            >Zobrazit QR kód ke skenování</span
-          >
-        }
+        <span class="other-device-hint">
+          @if (qrShown()) {
+            <span i18n="@@home.donate.otherDevice.scan">Naskenujte kód aplikací banky</span>
+          } @else {
+            <span i18n="@@home.donate.otherDevice.show">Zobrazit QR kód ke skenování</span>
+          }
+        </span>
       </span>
       <svg
         class="other-device-chevron"
@@ -275,7 +280,7 @@
   </div>
   @if (compact()) {
     @if (qrMatrix()) {
-      <p class="qr-caption">
+      <p class="qr-caption" aria-hidden="true">
         <ng-container i18n="@@home.donate.qr.caption"
           >QR platba na účet Nadačního fondu Nová naděje, {{ drawnCrowns() }}&nbsp;Kč.</ng-container
         >

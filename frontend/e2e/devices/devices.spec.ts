@@ -46,7 +46,10 @@ test.describe('Given the site on a phone or a tablet', () => {
         page.setDefaultTimeout(KNOWN_BREAK_TIMEOUT_MS);
       }
       const skipped = await step.open(page);
-      test.skip(skipped === NOT_ON_THIS_DEVICE, 'this device shows it without a menu');
+      test.skip(
+        skipped === NOT_ON_THIS_DEVICE,
+        'this device has no such state (no menu to open, or the QR shown without folding)',
+      );
       await settled(page, inFlight, SETTLE_TIMEOUT_MS);
       await page.evaluate(() => document.fonts.ready);
 

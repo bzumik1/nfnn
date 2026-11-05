@@ -4,7 +4,7 @@ export type Handoff = 'shared' | 'dismissed' | 'refused' | 'downloaded';
 
 const SPAYD_FILE_NAME = 'platba.spayd';
 const SPAYD_MEDIA_TYPE = 'application/x-shortpaymentdescriptor';
-const IMAGE_FILE_NAME = 'qr-platba-nova-nadeje.png';
+export const IMAGE_FILE_NAME = 'qr-platba-nova-nadeje.png';
 const IMAGE_MEDIA_TYPE = 'image/png';
 
 export function spaydFile(text: string): File {

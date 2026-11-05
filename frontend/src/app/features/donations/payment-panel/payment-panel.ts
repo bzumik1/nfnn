@@ -27,7 +27,14 @@ import { PaymentAccount, PaymentDetails } from '../payment-details-api';
 import { PaymentDetailsStore } from '../payment-details-store';
 import { saveBlob } from '../file-download';
 import { spayd } from '../spayd';
-import { Handoff, handOver, imageFile, sharesImages, spaydFile } from './bank-handoff';
+import {
+  Handoff,
+  handOver,
+  IMAGE_FILE_NAME,
+  imageFile,
+  sharesImages,
+  spaydFile,
+} from './bank-handoff';
 import { ChosenAmount, ChosenAmountStore } from './chosen-amount';
 
 const DEFAULT_AMOUNT = 500;
@@ -38,7 +45,6 @@ const REDRAW_DELAY_MS = 400;
 const ANNOUNCE_DELAY_MS = 1200;
 const PAYMENT_QR_LEVEL = 'H';
 const SAVED_QR_SIDE_PX = 720;
-const SAVED_QR_FILE = 'qr-platba-nova-nadeje.png';
 
 interface AmountPreset {
   readonly amount: number;
@@ -51,6 +57,11 @@ interface Payment {
 }
 
 type HandoffNotice = 'bankNotOpened' | 'spaydDownloaded' | 'imageSaved';
+
+interface PreparedImage {
+  readonly matrix: QrMatrix;
+  readonly png: Blob | null;
+}
 
 type QrState =
   | { readonly kind: 'loading' }
@@ -78,6 +89,8 @@ export class PaymentPanel {
   protected readonly compact = inject(CompactLayout).isCompact;
   private readonly bankLabel = viewChild<ElementRef<HTMLElement>>('bankLabel');
   private readonly qrBox = viewChild<ElementRef<HTMLElement>>('qrBox');
+  private readonly bankApp = viewChild<ElementRef<HTMLElement>>('bankApp');
+  private readonly bankAppOpen = viewChild<ElementRef<HTMLButtonElement>>('bankAppOpen');
   private readonly retryButton = viewChild<ElementRef<HTMLButtonElement>>('retryButton');
 
   readonly variableSymbol = input<string | null>(null);
@@ -173,9 +186,15 @@ export class PaymentPanel {
   protected readonly handingOff = signal(false);
   protected readonly handoffNotice = signal<HandoffNotice | null>(null);
   protected readonly handoffReady = computed(() => this.payment() !== null && !this.redrawing());
-  private readonly preparedImage = signal<{ readonly matrix: QrMatrix; readonly png: Blob } | null>(
-    null,
-  );
+  private readonly preparedImage = signal<PreparedImage | null>(null);
+  protected readonly imageReady = computed(() => {
+    const matrix = this.qrMatrix();
+    return (
+      this.handoffReady() &&
+      matrix !== null &&
+      (!this.sendsImages || this.preparedImage()?.matrix === matrix)
+    );
+  });
 
   protected readonly bankAccount = computed(() => this.details()?.account ?? null);
 
@@ -259,7 +278,7 @@ export class PaymentPanel {
   retry(): void {
     this.retried = true;
     this.failureAlerts.set(true);
-    this.qrBox()?.nativeElement.focus();
+    (this.compact() ? this.bankApp() : this.qrBox())?.nativeElement.focus();
     this.store.reload();
   }
 
@@ -272,9 +291,9 @@ export class PaymentPanel {
     try {
       const link = document.createElement('a');
       link.href = await qrCode.pngDataUrl(SAVED_QR_SIDE_PX);
-      link.download = SAVED_QR_FILE;
+      link.download = IMAGE_FILE_NAME;
       link.click();
-      this.savedQrFile.set(SAVED_QR_FILE);
+      this.savedQrFile.set(IMAGE_FILE_NAME);
     } finally {
       this.saving.set(false);
     }
@@ -293,7 +312,9 @@ export class PaymentPanel {
     this.handingOff.set(true);
     try {
       const handoff = await handOver(spaydFile(payment.spayd), this.shareTitle);
-      this.handoffNotice.set(bankNotice(handoff));
+      if (this.payment() === payment) {
+        this.handoffNotice.set(bankNotice(handoff));
+      }
     } finally {
       this.handingOff.set(false);
     }
@@ -301,28 +322,38 @@ export class PaymentPanel {
 
   async sendQrImage(): Promise<void> {
     const qrCode = this.qrCode();
-    const matrix = this.qrMatrix();
-    if (!qrCode || matrix === null || !this.handoffReady() || this.handingOff()) {
+    const payment = this.payment();
+    if (!qrCode || payment === null || !this.imageReady() || this.handingOff()) {
       return;
     }
     this.clearNotices();
     this.handingOff.set(true);
     try {
-      const prepared = this.preparedImage();
-      const png =
-        prepared?.matrix === matrix ? prepared.png : await qrCode.pngBlob(SAVED_QR_SIDE_PX);
-      const file = imageFile(png);
-      const handoff = await handOver(file, this.shareTitle);
-      if (handoff === 'refused') {
-        saveBlob({ blob: file, fileName: file.name });
-      }
-      if (handoff === 'refused' || handoff === 'downloaded') {
-        this.savedQrFile.set(file.name);
+      const prepared = this.preparedImage()?.png ?? null;
+      const saved =
+        prepared === null
+          ? this.saveImage(await qrCode.pngBlob(SAVED_QR_SIDE_PX))
+          : await this.shareImage(imageFile(prepared));
+      if (saved && this.payment() === payment) {
+        this.savedQrFile.set(IMAGE_FILE_NAME);
         this.handoffNotice.set('imageSaved');
       }
     } finally {
       this.handingOff.set(false);
     }
+  }
+
+  private async shareImage(file: File): Promise<boolean> {
+    const handoff = await handOver(file, this.shareTitle);
+    if (handoff === 'refused') {
+      saveBlob({ blob: file, fileName: file.name });
+    }
+    return handoff === 'refused' || handoff === 'downloaded';
+  }
+
+  private saveImage(png: Blob): boolean {
+    saveBlob({ blob: png, fileName: IMAGE_FILE_NAME });
+    return true;
   }
 
   private clearNotices(): void {
@@ -339,14 +370,12 @@ export class PaymentPanel {
     if (this.preparedImage()?.matrix === matrix) {
       return;
     }
-    qrCode.pngBlob(SAVED_QR_SIDE_PX).then(
-      (png) => {
-        if (this.qrMatrix() === matrix) {
-          this.preparedImage.set({ matrix, png });
-        }
-      },
-      () => undefined,
-    );
+    const keep = (png: Blob | null) => {
+      if (this.qrMatrix() === matrix) {
+        this.preparedImage.set({ matrix, png });
+      }
+    };
+    qrCode.pngBlob(SAVED_QR_SIDE_PX).then(keep, () => keep(null));
   }
 
   private redrawLater(): void {
@@ -386,6 +415,9 @@ export class PaymentPanel {
       return;
     }
     this.retried = false;
+    if (kind === 'ready' && this.compact()) {
+      afterNextRender(() => this.bankAppOpen()?.nativeElement.focus(), { injector: this.injector });
+    }
     if (kind === 'unavailable' || kind === 'refused') {
       afterNextRender(() => this.retryButton()?.nativeElement.focus(), { injector: this.injector });
     }
