@@ -141,6 +141,7 @@ export class QrReader {
       answer?.(data.text);
     };
     worker.onerror = (event) => {
+      event.preventDefault();
       if (!answered) {
         this.startFailed(event.error);
       }

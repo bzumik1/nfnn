@@ -115,13 +115,15 @@ export class ReceiptPdf {
               subscriber.error(new ReceiptPdfFailure('tools-missing', errorNameOf(failure)));
               return;
             }
-            worker.onerror = (event) =>
+            worker.onerror = (event) => {
+              event.preventDefault();
               subscriber.error(
                 new ReceiptPdfFailure(
                   ready ? 'drawing' : 'tools-missing',
                   errorNameOf((event as Partial<ErrorEvent>).error),
                 ),
               );
+            };
             worker.onmessage = ({ data }) => {
               switch (data.kind) {
                 case 'ready':

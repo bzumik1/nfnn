@@ -23,6 +23,7 @@ class FakeWorker implements QrWorker {
   onerror: ((event: ErrorEvent) => void) | null = null;
   readonly questions: QrWorkerQuestion[] = [];
   terminated = false;
+  lastError: ErrorEvent | null = null;
 
   constructor(
     private readonly answer: (question: QrWorkerQuestion) => string | null | 'crash' | 'silent',
@@ -36,7 +37,7 @@ class FakeWorker implements QrWorker {
     }
     queueMicrotask(() => {
       if (text === 'crash') {
-        this.onerror?.(new ErrorEvent('error'));
+        this.onerror?.((this.lastError = new ErrorEvent('error', { cancelable: true })));
         return;
       }
       this.onmessage?.(new MessageEvent('message', { data: { id: question.id, text } }));
@@ -147,6 +148,14 @@ describe('Given the QR reader of the verification page', () => {
       expect(workers).toHaveLength(2);
       expect(workers[0].terminated).toBe(true);
       expect(reports.bodies()).toEqual([closedReport('qr-encode', 'Other')]);
+    });
+
+    it('and the worker crashes, then the error stops there, so the page does not report it a second time', async () => {
+      workerAnswer = () => 'crash';
+
+      await reader().read(IMAGE);
+
+      expect(workers[0].lastError?.defaultPrevented).toBe(true);
     });
 
     it('and every new worker fails before it answers, then after three it stops starting them and the read says the page is out of date', async () => {

@@ -180,6 +180,12 @@ describe('Given the browser receipt PDF', () => {
         expect(reports.bodies()).toEqual([closedReport('pdf-render', 'Other')]);
       });
 
+      it('while the worker draws, then the error stops there, so the page does not report it a second time', () => {
+        environment.last().say({ kind: 'ready' });
+
+        expect(environment.last().fail().defaultPrevented).toBe(true);
+      });
+
       it('because the fonts do not load, then a pdf-load report names the closed error the worker caught', () => {
         environment.last().say({ kind: 'ready' });
         environment.last().say({ kind: 'failed', reason: 'fonts', name: 'TypeError' });
