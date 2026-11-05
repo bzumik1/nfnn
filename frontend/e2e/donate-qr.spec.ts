@@ -272,7 +272,7 @@ test.describe('Given a visitor on the Přispět page', () => {
         });
       });
 
-      test('when the visitor taps Otevřít v aplikaci banky and closes the offer, then the phone was offered platba.spayd and the page says how to pay without the bank app', async ({
+      test('when the visitor taps Otevřít v aplikaci banky and closes the offer, then the phone was offered the PNG of the QR and the page says how to save it for the bank app', async ({
         page,
       }) => {
         await servePaymentDetails(page, []);
@@ -284,7 +284,28 @@ test.describe('Given a visitor on the Přispět page', () => {
         await expect(
           page.locator('#prispet .bank-app').getByRole('status').filter({ hasText: /\S/ }),
         ).toHaveText(
-          'Neotevřela se vám banka? Zkopírujte údaje výše do bankovní aplikace, nebo pošlete QR jako obrázek a v bance zvolte platbu z obrázku.',
+          'Nenašli jste v nabídce svou banku? Klepněte znovu, zvolte Uložit obrázek a v bankovní aplikaci načtěte QR platbu z Fotek. Nebo zkopírujte údaje výše do bankovní aplikace.',
+        );
+        expect(
+          await page.evaluate(() => (window as unknown as { offeredFiles: unknown }).offeredFiles),
+        ).toEqual([
+          { name: 'qr-platba-nova-nadeje.png', type: 'image/png', text: '', title: 'QR platba' },
+        ]);
+      });
+
+      test('when the visitor taps Poslat jako soubor platby and closes the offer, then the phone was offered platba.spayd and the page points to the QR image', async ({
+        page,
+      }) => {
+        await servePaymentDetails(page, []);
+        await page.goto('/prispet');
+        await expect(page.locator('#prispet .bank')).toContainText('5544332217/2010');
+
+        await page.getByRole('button', { name: 'Poslat jako soubor platby' }).click();
+
+        await expect(
+          page.locator('#prispet .bank-app').getByRole('status').filter({ hasText: /\S/ }),
+        ).toHaveText(
+          'Neotevřela se vám banka? Zkuste Otevřít v aplikaci banky, které pošle QR jako obrázek, nebo zkopírujte údaje výše do bankovní aplikace.',
         );
         expect(
           await page.evaluate(() => (window as unknown as { offeredFiles: unknown }).offeredFiles),
@@ -301,6 +322,14 @@ test.describe('Given a visitor on the Přispět page', () => {
       test('when the visitor taps Poslat QR jako obrázek, then the phone is offered the PNG of the QR', async ({
         page,
       }) => {
+        await page.addInitScript(() => {
+          Object.defineProperty(navigator, 'canShare', {
+            value: (data: ShareData) =>
+              (data.files ?? []).length > 0 &&
+              (data.files ?? []).every((file) => file.type.startsWith('image/')),
+            configurable: true,
+          });
+        });
         await servePaymentDetails(page, []);
         await page.goto('/prispet');
         await expect(page.locator('#prispet .bank')).toContainText('5544332217/2010');
