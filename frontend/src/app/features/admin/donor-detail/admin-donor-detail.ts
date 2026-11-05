@@ -143,7 +143,9 @@ export class AdminDonorDetail {
   protected readonly detail = signal<AdminDonorDetailResponse | null>(null);
   protected readonly cardNotice = signal<CardNotice | null>(null);
   protected readonly busy = signal(false);
-  protected readonly changedMeanwhile = signal<{ reload: () => void } | null>(null);
+  protected readonly changedMeanwhile = signal<{ reload: () => void; card: NoticeCard } | null>(
+    null,
+  );
   protected readonly pending = signal<PendingAction>(null);
   protected readonly erasing = signal(false);
   protected readonly issuing = signal(false);
@@ -602,7 +604,18 @@ export class AdminDonorDetail {
   protected reloadAfterChange(): void {
     const changed = this.changedMeanwhile();
     this.changedMeanwhile.set(null);
-    changed?.reload();
+    if (!changed) {
+      return;
+    }
+    this.cardNotice.set({
+      card: changed.card,
+      notice: {
+        kind: 'status',
+        text: $localize`:@@admin.donorDetail.reloaded:Načetli jsme aktuální stav účtů dárce. Zkontrolujte účet a rozhodněte znovu.`,
+      },
+    });
+    changed.reload();
+    this.focusAfterRender(() => this.noticeElement(changed.card));
   }
 
   private run(
@@ -630,7 +643,7 @@ export class AdminDonorDetail {
         this.pending.set(null);
         if (isChangedMeanwhile(failure)) {
           this.cardNotice.set(null);
-          this.changedMeanwhile.set({ reload });
+          this.changedMeanwhile.set({ reload, card });
           return;
         }
         this.cardNotice.set({ card, notice: { kind: 'alert', text: refusal(failure, failed) } });

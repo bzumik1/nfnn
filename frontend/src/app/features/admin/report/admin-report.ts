@@ -37,7 +37,12 @@ import {
 } from './email-list';
 import { followingMonth, formatReportMonth, previousMonths } from './report-month';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
-import { isChangedMeanwhile, versionInRefusal } from '../../../core/version/row-version';
+import {
+  isChangedMeanwhile,
+  savedAtInRefusal,
+  versionInRefusal,
+} from '../../../core/version/row-version';
+import { DialogAnnouncer } from '../../../shared/ui/dialog/dialog-announcer';
 import { ChangedMeanwhileDialog } from '../changed-meanwhile/changed-meanwhile-dialog';
 
 type LoadState = 'loading' | 'ready' | 'error';
@@ -80,6 +85,8 @@ export class AdminReport {
   private readonly title = viewChild.required<ElementRef<HTMLHeadingElement>>('title');
   private readonly sendButton = viewChild<ElementRef<HTMLButtonElement>>('sendButton');
   private readonly sendCancel = viewChild<ElementRef<HTMLButtonElement>>('sendCancel');
+  private readonly settingsForm = viewChild<NgForm>('settingsForm');
+  private readonly announcer = inject(DialogAnnouncer);
 
   protected readonly state = signal<LoadState>('loading');
   protected readonly report = signal<AdminReportResponse | null>(null);
@@ -90,7 +97,9 @@ export class AdminReport {
   protected readonly sending = signal(false);
   protected readonly settingsError = signal<string | null>(null);
   protected readonly confirmingSend = signal(false);
-  protected readonly changedMeanwhile = signal<string | null>(null);
+  protected readonly changedMeanwhile = signal<{ version: string; savedAt: string | null } | null>(
+    null,
+  );
   protected readonly sendDays = SEND_DAYS;
   protected readonly sendHours = SEND_HOURS;
 
@@ -167,7 +176,7 @@ export class AdminReport {
     this.fetch();
   }
 
-  private fetch(): void {
+  private fetch(loaded?: () => void): void {
     this.api
       .report()
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -180,6 +189,7 @@ export class AdminReport {
           this.sections = { ...report.settings.sections };
           this.month = report.lastEndedMonth;
           this.state.set('ready');
+          loaded?.();
         },
         error: (failure: unknown) => {
           if (problemTypeEndsWith(failure, UNAUTHENTICATED)) {
@@ -229,19 +239,31 @@ export class AdminReport {
   }
 
   protected overwriteAfterChange(): void {
-    const version = this.changedMeanwhile();
-    if (version !== null) {
-      this.submitSettings(version);
+    const changed = this.changedMeanwhile();
+    if (changed !== null) {
+      this.submitSettings(changed.version);
     }
   }
 
   protected reloadAfterChange(): void {
     this.changedMeanwhile.set(null);
-    this.fetch();
+    this.settingsError.set(null);
+    this.fetch(() => {
+      this.markSettingsSaved();
+      this.settingsStatus.set(
+        $localize`:@@admin.report.settings.reloaded:Načetli jsme nastavení, které uložil někdo jiný.`,
+      );
+    });
   }
 
   protected keepDraftAfterChange(): void {
     this.changedMeanwhile.set(null);
+  }
+
+  private markSettingsSaved(): void {
+    afterNextRender(() => this.settingsForm()?.form.markAsPristine(), {
+      injector: this.injector,
+    });
   }
 
   private submitSettings(version: string): void {
@@ -264,14 +286,19 @@ export class AdminReport {
           this.settingsStatus.set(
             $localize`:@@admin.report.settings.saved:Nastavení jsme uložili. Příští přehled odejde podle něj.`,
           );
-          this.fetch();
+          this.fetch(() => this.markSettingsSaved());
         },
         error: (failure: unknown) => {
           this.saving.set(false);
           if (isChangedMeanwhile(failure)) {
             const current = versionInRefusal(failure);
             if (current !== null) {
-              this.changedMeanwhile.set(current);
+              if (this.changedMeanwhile() !== null) {
+                this.announcer.announce(
+                  $localize`:@@admin.report.settings.changedAgain:Mezitím nastavení znovu změnil někdo jiný. Vyberte prosím znovu.`,
+                );
+              }
+              this.changedMeanwhile.set({ version: current, savedAt: savedAtInRefusal(failure) });
               return;
             }
           }

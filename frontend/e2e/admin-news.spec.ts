@@ -383,7 +383,7 @@ test.describe('Given an administrator managing the news', () => {
 
     const sheet = page.getByRole('dialog', { name: 'Mezitím se to změnilo' });
     await expect(sheet).toContainText('Vaše úpravy jsme neuložili a zůstávají ve formuláři.');
-    await sheet.getByRole('button', { name: 'Uložit moji verzi místo ní' }).click();
+    await sheet.getByRole('button', { name: 'Uložit svou verzi místo novější' }).click();
 
     await expect(sheet).toBeHidden();
     await expect(page.locator('.ui-action-bar .ui-notice--status')).toHaveText(

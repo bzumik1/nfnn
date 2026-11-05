@@ -1,34 +1,91 @@
 <app-dialog
   labelledBy="changed-meanwhile-title"
+  describedBy="changed-meanwhile-lead"
   presentation="sheet"
   (dismissed)="dismissed.emit()"
 >
   <h2 id="changed-meanwhile-title" class="ui-dialog__title" i18n="@@admin.changedMeanwhile.title">
     Mezitím se to změnilo
   </h2>
-  @if (keepsDraft()) {
-    <p class="ui-dialog__lead" i18n="@@admin.changedMeanwhile.leadDraft">
-      Zatímco jste psali, uložil změny někdo jiný: jiný správce nebo připojená aplikace. Vaše úpravy
-      jsme neuložili a zůstávají ve formuláři.
-    </p>
-  } @else {
-    <p class="ui-dialog__lead" i18n="@@admin.changedMeanwhile.lead">
-      Mezitím to změnil někdo jiný: jiný správce, připojená aplikace nebo párování plateb z banky.
-      Vaši změnu jsme proto neprovedli. Načtěte aktuální stav a rozhodněte znovu.
-    </p>
-  }
+  <div id="changed-meanwhile-lead">
+    @if (keepsDraft()) {
+      @if (canOverwrite()) {
+        <p class="ui-dialog__lead" i18n="@@admin.changedMeanwhile.leadDraft">
+          Zatímco jste měli formulář otevřený, uložil novější verzi někdo jiný: jiný správce nebo
+          připojená aplikace. Vaše úpravy jsme neuložili a zůstávají ve formuláři.
+        </p>
+      } @else {
+        <p class="ui-dialog__lead" i18n="@@admin.changedMeanwhile.leadDraftAction">
+          Zatímco jste měli formulář otevřený, uložil novější verzi někdo jiný: jiný správce nebo
+          připojená aplikace. Vaši změnu jsme proto neprovedli a vaše úpravy zůstávají ve formuláři.
+        </p>
+      }
+    } @else {
+      @switch (subject()) {
+        @case ('payment') {
+          <p class="ui-dialog__lead" i18n="@@admin.changedMeanwhile.lead">
+            Platbu mezitím změnil někdo jiný: jiný správce, připojená aplikace nebo automatické
+            párování plateb z banky. Vaši změnu jsme proto neprovedli. Načtěte aktuální stav a
+            rozhodněte znovu.
+          </p>
+        }
+        @case ('donorAccount') {
+          <p class="ui-dialog__lead" i18n="@@admin.changedMeanwhile.leadDonorAccount">
+            Účet mezitím změnil někdo jiný: jiný správce, připojená aplikace, sám dárce nebo
+            párování plateb z banky. Vaši změnu jsme proto neprovedli. Načtěte aktuální stav a
+            rozhodněte znovu.
+          </p>
+        }
+        @case ('symbolClaim') {
+          <p class="ui-dialog__lead" i18n="@@admin.changedMeanwhile.leadSymbolClaim">
+            Odpověď mezitím změnil jiný správce nebo sám dárce. Vaši změnu jsme proto neprovedli.
+            Načtěte aktuální stav a rozhodněte znovu.
+          </p>
+        }
+        @default {
+          <p class="ui-dialog__lead" i18n="@@admin.changedMeanwhile.leadContent">
+            Novější verzi uložil někdo jiný: jiný správce nebo připojená aplikace. Vaši změnu jsme
+            proto neprovedli. Načtěte aktuální stav a rozhodněte znovu.
+          </p>
+        }
+      }
+    }
+    @if (savedAtText(); as at) {
+      <p class="ui-dialog__lead" i18n="@@admin.changedMeanwhile.savedAt">
+        Novější verze je z {{ at }}.
+      </p>
+    }
+  </div>
   <div class="changed-meanwhile-actions">
     @if (keepsDraft()) {
-      <button
-        type="button"
-        class="ui-button ui-button--primary changed-meanwhile-overwrite"
-        autofocus
-        [disabled]="busy()"
-        (click)="overwriteChosen.emit()"
-        i18n="@@admin.changedMeanwhile.overwrite"
-      >
-        Uložit moji verzi místo ní
-      </button>
+      @if (canOverwrite()) {
+        <button
+          type="button"
+          class="ui-button ui-button--primary changed-meanwhile-overwrite"
+          autofocus
+          [disabled]="busy()"
+          (click)="overwriteChosen.emit()"
+        >
+          @if (busy()) {
+            <ng-container i18n="@@admin.changedMeanwhile.saving">Ukládáme…</ng-container>
+          } @else {
+            <ng-container i18n="@@admin.changedMeanwhile.overwrite"
+              >Uložit svou verzi místo novější</ng-container
+            >
+          }
+        </button>
+      } @else {
+        <button
+          type="button"
+          class="ui-button ui-button--primary changed-meanwhile-keep"
+          autofocus
+          [disabled]="busy()"
+          (click)="dismissed.emit()"
+          i18n="@@admin.changedMeanwhile.keep"
+        >
+          Nechat úpravy ve formuláři
+        </button>
+      }
       <button
         type="button"
         class="ui-button ui-button--large ui-button--danger-outline changed-meanwhile-reload"
@@ -36,7 +93,7 @@
         (click)="reloadChosen.emit()"
         i18n="@@admin.changedMeanwhile.discard"
       >
-        Zahodit moje úpravy a načíst ji
+        Zahodit své úpravy a načíst novější verzi
       </button>
     } @else {
       <button

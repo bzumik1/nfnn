@@ -472,7 +472,10 @@
 }
 @if (changedMeanwhile(); as changed) {
   <app-changed-meanwhile-dialog
-    [keepsDraft]="changed.draft && changed.version !== null"
+    subject="content"
+    [keepsDraft]="changed.draft"
+    [canOverwrite]="changed.overwrite && changed.version !== null"
+    [savedAt]="changed.savedAt"
     [busy]="busy()"
     (overwriteChosen)="overwriteAfterChange()"
     (reloadChosen)="reloadAfterChange()"

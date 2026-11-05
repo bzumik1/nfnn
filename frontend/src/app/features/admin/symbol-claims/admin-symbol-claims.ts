@@ -138,8 +138,12 @@ export class AdminSymbolClaims {
 
   protected reloadAfterChange(): void {
     this.changedMeanwhile.set(false);
-    this.notice.set(null);
+    this.notice.set({
+      kind: 'status',
+      text: $localize`:@@admin.symbolClaims.reloaded:Načetli jsme aktuální odpovědi. Zkontrolujte odpověď a rozhodněte znovu.`,
+    });
     this.load();
+    this.focusAfterRender(() => this.noticeElement());
   }
 
   private run(

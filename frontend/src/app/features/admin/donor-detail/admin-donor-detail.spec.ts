@@ -874,6 +874,41 @@ describe('Given an administrator on a donor card', () => {
     await settle();
   });
 
+  it('when the account changed meanwhile, then turning the pairing off named the version read, the sheet names the donor and reading again says so', async () => {
+    await loaded();
+
+    button(section('Bankovní účty'), 'Vypnout párování').click();
+    fixture.detectChanges();
+    button(section('Bankovní účty'), 'Ano, vypnout').click();
+    fixture.detectChanges();
+    const disconnect = http.expectOne(`${LINK_URL}/disconnect`);
+    expect(disconnect.request.headers.get('If-Match')).toBe(`"${adminBankAccount().version}"`);
+    const refusal = problem(
+      409,
+      'donations/changed-meanwhile',
+      'Mezitím se to změnilo',
+      'Účet mezitím změnil někdo jiný.',
+    );
+    disconnect.flush(
+      { ...refusal.body, version: '1b2c3d4e5f607182', current: { id: LINK_ID } },
+      refusal.options,
+    );
+    await settle();
+
+    expect(document.querySelector('app-changed-meanwhile-dialog dialog')?.textContent).toContain(
+      'sám dárce',
+    );
+    button(document.body, 'Načíst aktuální stav').click();
+    fixture.detectChanges();
+    http.expectOne(DETAIL_URL).flush(donorDetail());
+    await settle();
+
+    expect(document.querySelector('app-changed-meanwhile-dialog')).toBeNull();
+    expect(text('.ui-notice--status')).toBe(
+      'Načetli jsme aktuální stav účtů dárce. Zkontrolujte účet a rozhodněte znovu.',
+    );
+  });
+
   it('when the account is removed after the confirmation, then the request is a DELETE and the status names the deleted donations', async () => {
     await loaded();
 

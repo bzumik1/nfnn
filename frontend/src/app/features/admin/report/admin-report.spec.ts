@@ -1,6 +1,7 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { DirtyForms } from '../../../core/updates/dirty-forms';
 import { provideRouter, Router } from '@angular/router';
 import { authInterceptor } from '../../../core/auth/auth-interceptor';
 import { AuthStore } from '../../../core/auth/auth-store';
@@ -327,6 +328,74 @@ describe('Given an administrator on the monthly report page', () => {
     await settle();
 
     expect(text('.form-error')).toBe('Neplatný požadavek. Zkontrolujte prosím zadané údaje.');
+  });
+
+  describe('when someone else changed the settings while they were editing them', () => {
+    const current = '9e4b2d7c1a0f6358';
+
+    beforeEach(async () => {
+      await respond(reportView());
+      await type('#report-recipients', 'pavel@example.cz');
+      await submit();
+      const request = http.expectOne(SETTINGS_URL);
+      expect(request.request.headers.get('If-Match')).toBe(`"${reportView().settings.version}"`);
+      const refusal = problem(
+        409,
+        'donations/changed-meanwhile',
+        'Mezitím se to změnilo',
+        'Nastavení mezitím změnil někdo jiný.',
+      );
+      request.flush(
+        {
+          ...refusal.body,
+          version: current,
+          current: { recipients: ['eva@example.cz'], changedAt: '2026-11-05T15:21:00Z' },
+        },
+        refusal.options,
+      );
+      await settle();
+    });
+
+    function sheet(): HTMLDialogElement {
+      return element<HTMLDialogElement>('app-changed-meanwhile-dialog dialog');
+    }
+
+    it('then the sheet says the edits stay in the form and when the other version was saved', () => {
+      expect(sheet().textContent).toContain('zůstávají ve formuláři');
+      expect(sheet().textContent).toContain('Novější verze je z 05. 11. 2026 16:21.');
+      expect(element<HTMLTextAreaElement>('#report-recipients').value).toBe('pavel@example.cz');
+    });
+
+    it('and they keep their version, then it is sent with the version in the refusal and the button says it is saving', async () => {
+      button('Uložit svou verzi místo novější').click();
+      await settle();
+
+      const request = http.expectOne(SETTINGS_URL);
+      expect(request.request.headers.get('If-Match')).toBe(`"${current}"`);
+      expect(request.request.body.recipients).toEqual(['pavel@example.cz']);
+      expect(button('Ukládáme…').disabled).toBe(true);
+      request.flush({});
+      await settle();
+      await respond(reportView());
+
+      expect(fixture.nativeElement.querySelector('app-changed-meanwhile-dialog')).toBeNull();
+      expect(TestBed.inject(DirtyForms).any()).toBe(false);
+    });
+
+    it('and they discard theirs, then the settings are read again, the form is clean and the line says so', async () => {
+      button('Zahodit své úpravy a načíst novější verzi').click();
+      await settle();
+      await respond(
+        reportView({ settings: { ...reportView().settings, recipients: ['eva@example.cz'] } }),
+      );
+
+      expect(fixture.nativeElement.querySelector('app-changed-meanwhile-dialog')).toBeNull();
+      expect(element<HTMLTextAreaElement>('#report-recipients').value).toBe('eva@example.cz');
+      expect(text('form.settings-form button[type="submit"] + .ui-form-status')).toBe(
+        'Načetli jsme nastavení, které uložil někdo jiný.',
+      );
+      expect(TestBed.inject(DirtyForms).any()).toBe(false);
+    });
   });
 
   it('when the page is ready, then the send card names the saved recipients and why the running month is not offered', async () => {

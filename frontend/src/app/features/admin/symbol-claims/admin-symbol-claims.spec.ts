@@ -242,6 +242,41 @@ describe('Given an administrator on the older symbols page', () => {
     expect(document.activeElement).toBe(button(rows()[0], 'Vrátit přiřazení darů'));
   });
 
+  it('when the answer changed meanwhile, then the reversal named the version read, the sheet names the donor and reading again says so', async () => {
+    await listed();
+
+    button(rows()[0], 'Vrátit přiřazení darů').click();
+    fixture.detectChanges();
+    button(rows()[0], 'Vrátit přiřazení').click();
+    fixture.detectChanges();
+    const request = http.expectOne(`/api/admin/donations/symbol-claims/${YES_ID}/reverse`);
+    expect(request.request.headers.get('If-Match')).toBe(`"${yes.version}"`);
+    const refusal = problem(
+      409,
+      'donations/changed-meanwhile',
+      'Mezitím se to změnilo',
+      'Odpověď mezitím změnil někdo jiný.',
+    );
+    request.flush(
+      { ...refusal.body, version: '1b2c3d4e5f607182', current: { id: YES_ID } },
+      refusal.options,
+    );
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const sheet = document.querySelector('app-changed-meanwhile-dialog dialog');
+    expect(sheet?.textContent).toContain('Odpověď mezitím změnil jiný správce nebo sám dárce.');
+    button(document.body, 'Načíst aktuální stav').click();
+    fixture.detectChanges();
+    await listed([{ ...yes, answer: 'DECLINED', donationCount: 0 }, no]);
+
+    expect(document.querySelector('app-changed-meanwhile-dialog')).toBeNull();
+    expect(text('.ui-notice--status')).toBe(
+      'Načetli jsme aktuální odpovědi. Zkontrolujte odpověď a rozhodněte znovu.',
+    );
+    expect(document.activeElement).toBe(element('app-live-notice'));
+  });
+
   it('when the role was taken away meanwhile, then the page goes to the overview', async () => {
     const router = TestBed.inject(Router);
     const navigate = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);

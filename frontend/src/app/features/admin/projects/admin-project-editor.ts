@@ -55,8 +55,15 @@ import { FocalPointPicker, PreviewShape } from '../focal-point-picker/focal-poin
 import { ContentPreview, PreviewContent } from '../content-preview/content-preview';
 import { GuardsUnsavedChanges } from '../unsaved-changes/unsaved-changes-guard';
 import { UnsavedChangesDialog } from '../unsaved-changes/unsaved-changes-dialog';
-import { isChangedMeanwhile, versionInRefusal } from '../../../core/version/row-version';
-import { ChangedMeanwhileDialog } from '../changed-meanwhile/changed-meanwhile-dialog';
+import {
+  isChangedMeanwhile,
+  savedAtInRefusal,
+  versionInRefusal,
+} from '../../../core/version/row-version';
+import {
+  ChangedMeanwhileDialog,
+  ChangedMeanwhileState,
+} from '../changed-meanwhile/changed-meanwhile-dialog';
 
 type LoadState = 'loading' | 'ready' | 'error';
 type EditorMode = 'edit' | 'preview';
@@ -126,9 +133,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
   protected readonly categoryLabel = projectCategoryLabel;
 
   protected readonly state = signal<LoadState>('loading');
-  protected readonly changedMeanwhile = signal<{ version: string | null; draft: boolean } | null>(
-    null,
-  );
+  protected readonly changedMeanwhile = signal<ChangedMeanwhileState | null>(null);
   protected readonly project = signal<ProjectResponse | null>(null);
   protected readonly mode = signal<EditorMode>('edit');
   protected readonly preview = signal<PreviewContent | null>(null);
@@ -284,7 +289,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
     });
   }
 
-  protected load(id: string): void {
+  protected load(id: string, loaded?: () => void): void {
     this.state.set('loading');
     this.api
       .get(id)
@@ -293,6 +298,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
         next: (project) => {
           this.show(project);
           this.state.set('ready');
+          loaded?.();
         },
         error: (failure: unknown) => {
           if (problemTypeEndsWith(failure, UNAUTHENTICATED)) {
@@ -452,7 +458,13 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
       error: (failure: unknown) => {
         this.saving.set(null);
         if (existing && isChangedMeanwhile(failure)) {
-          this.changedMeanwhile.set({ version: versionInRefusal(failure), draft: true });
+          this.changedMeanwhile.set({
+            version: versionInRefusal(failure),
+            draft: true,
+            overwrite: true,
+            publish,
+            savedAt: savedAtInRefusal(failure),
+          });
           return;
         }
         this.saveFailed(failure);
@@ -544,7 +556,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
         error: (failure: unknown) => {
           this.saving.set(null);
           if (isChangedMeanwhile(failure)) {
-            this.changedMeanwhile.set({ version: null, draft: false });
+            this.changedMeanwhile.set(this.actionRefused(failure));
             return;
           }
           this.notice.set({
@@ -581,7 +593,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
         error: (failure: unknown) => {
           this.unpublishing.set(false);
           if (isChangedMeanwhile(failure)) {
-            this.changedMeanwhile.set({ version: null, draft: false });
+            this.changedMeanwhile.set(this.actionRefused(failure));
             return;
           }
           this.notice.set({
@@ -625,7 +637,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
           this.deleting.set(false);
           this.confirmingDelete.set(false);
           if (isChangedMeanwhile(failure)) {
-            this.changedMeanwhile.set({ version: null, draft: false });
+            this.changedMeanwhile.set(this.actionRefused(failure));
             return;
           }
           this.deleteNotice.set({
@@ -641,25 +653,46 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
   }
 
   protected overwriteAfterChange(): void {
-    const version = this.changedMeanwhile()?.version;
+    const changed = this.changedMeanwhile();
+    const version = changed?.version;
     const form = this.projectForm();
     this.changedMeanwhile.set(null);
-    if (!version || !form) {
+    if (!changed || !version || !form) {
       return;
     }
+    this.publishRequested = changed.publish;
     this.project.update((saved) => (saved ? { ...saved, version } : saved));
     this.submit(form);
   }
 
   protected reloadAfterChange(): void {
     const saved = this.project();
+    const discardedEdits = this.changedMeanwhile()?.draft === true;
     this.changedMeanwhile.set(null);
     if (!saved) {
       return;
     }
     this.projectForm()?.form.markAsPristine();
     this.edited.set(false);
-    this.load(saved.id);
+    this.load(saved.id, () => {
+      this.notice.set({
+        kind: 'status',
+        text: discardedEdits
+          ? $localize`:@@admin.projectEditor.reloaded.discarded:Vaše úpravy jsme zahodili a načetli novější verzi projektu.`
+          : $localize`:@@admin.projectEditor.reloaded:Načetli jsme aktuální stav projektu. Zkontrolujte ho a rozhodněte znovu.`,
+      });
+      afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
+    });
+  }
+
+  private actionRefused(failure: unknown): ChangedMeanwhileState {
+    return {
+      version: null,
+      draft: this.unsaved(),
+      overwrite: false,
+      publish: false,
+      savedAt: savedAtInRefusal(failure),
+    };
   }
 
   protected keepDraftAfterChange(): void {

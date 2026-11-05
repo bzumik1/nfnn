@@ -21,3 +21,16 @@ export function versionInRefusal(failure: unknown): string | null {
   const version = (body as Record<string, unknown>)['version'];
   return typeof version === 'string' && version !== '' ? version : null;
 }
+
+export function savedAtInRefusal(failure: unknown): string | null {
+  if (!isChangedMeanwhile(failure)) {
+    return null;
+  }
+  const current = ((failure as { error: unknown }).error as Record<string, unknown>)['current'];
+  if (current === null || typeof current !== 'object') {
+    return null;
+  }
+  const row = current as Record<string, unknown>;
+  const savedAt = row['updatedAt'] ?? row['changedAt'];
+  return typeof savedAt === 'string' && savedAt !== '' ? savedAt : null;
+}

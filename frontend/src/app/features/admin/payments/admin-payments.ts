@@ -157,6 +157,7 @@ export class AdminPayments {
 
   protected readonly unpairing = signal<string | null>(null);
   protected readonly changedMeanwhile = signal(false);
+  private afterReload: (() => void) | null = null;
 
   protected readonly hasMore = computed(() => this.items().length < this.total());
   protected readonly filteredDonorName = computed(
@@ -366,6 +367,8 @@ export class AdminPayments {
   }
 
   private showFirstPage(outcome: PageOutcome): void {
+    const afterReload = this.afterReload;
+    this.afterReload = null;
     if (outcome.kind === 'failed') {
       if (!this.leaveOnRefusal(outcome.failure)) {
         this.state.set('error');
@@ -379,6 +382,7 @@ export class AdminPayments {
       this.unpairedCount.set(outcome.list.total);
     }
     this.state.set('ready');
+    afterReload?.();
   }
 
   private leaveOnRefusal(failure: unknown): boolean {
@@ -582,6 +586,13 @@ export class AdminPayments {
   protected reloadAfterChange(): void {
     this.changedMeanwhile.set(false);
     this.notice.set(null);
+    this.afterReload = () => {
+      this.notice.set({
+        kind: 'status',
+        text: $localize`:@@admin.payments.reloaded:Načetli jsme aktuální stav plateb. Zkontrolujte platbu a rozhodněte znovu.`,
+      });
+      this.focusAfterRender(() => this.noticeElement()?.nativeElement ?? null);
+    };
     this.load();
   }
 

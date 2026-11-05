@@ -568,6 +568,38 @@ describe('Given an administrator editing a draft', () => {
     );
   });
 
+  it('when someone else saved it meanwhile and they keep their version, then it is saved and still published', async () => {
+    await type(fixture, '#news-body', 'Opravený text o koncertu.');
+    button(fixture, 'Uložit a zveřejnit').click();
+    await settle(fixture);
+    http.expectOne(`${NEWS_URL}/${draftArticle().id}`).flush(
+      {
+        type: 'https://nfnn.cz/problems/content/changed-meanwhile',
+        title: 'Mezitím se to změnilo',
+        status: 409,
+        version: '7a0f3c9e5d1b2846',
+        current: { id: draftArticle().id },
+      },
+      { status: 409, statusText: 'Conflict' },
+    );
+    await settle(fixture);
+
+    button(fixture, 'Uložit svou verzi místo novější').click();
+    await settle(fixture);
+    const update = http.expectOne(`${NEWS_URL}/${draftArticle().id}`);
+    expect(update.request.headers.get('If-Match')).toBe('"7a0f3c9e5d1b2846"');
+    update.flush(draftArticle({ body: 'Opravený text o koncertu.', version: 'c3e8a1f05b9d7264' }));
+    await settle(fixture);
+    const publish = http.expectOne(`${NEWS_URL}/${draftArticle().id}/publish`);
+    expect(publish.request.headers.get('If-Match')).toBe('"c3e8a1f05b9d7264"');
+    publish.flush(
+      draftArticle({ body: 'Opravený text o koncertu.', publishedOn: '2026-10-24', live: true }),
+    );
+    await settle(fixture);
+
+    expect(text(fixture, '.publish-state .ui-badge')).toBe('Na webu');
+  });
+
   it('when saving the edit fails while publishing, then the article is not published and the form says why', async () => {
     await type(fixture, '#news-body', 'Opravený text.');
     button(fixture, 'Uložit a zveřejnit').click();
@@ -802,7 +834,7 @@ describe('Given an administrator editing a published news article', () => {
     });
 
     it('and they keep their version, then it is saved over the other one with the version in the refusal', async () => {
-      button(fixture, 'Uložit moji verzi místo ní').click();
+      button(fixture, 'Uložit svou verzi místo novější').click();
       await settle(fixture);
 
       const request = http.expectOne(`${NEWS_URL}/${newsArticle().id}`);
@@ -821,7 +853,7 @@ describe('Given an administrator editing a published news article', () => {
     });
 
     it('and they discard theirs, then the article is read again and the form shows the other version', async () => {
-      button(fixture, 'Zahodit moje úpravy a načíst ji').click();
+      button(fixture, 'Zahodit své úpravy a načíst novější verzi').click();
       await settle(fixture);
 
       http
@@ -833,7 +865,51 @@ describe('Given an administrator editing a published news article', () => {
       expect(element<HTMLInputElement>(fixture, '#news-title').value).toBe(
         'Zahrada pro děti a rodiče',
       );
+      expect(text(fixture, '[role="status"]:not(:empty)')).toBe(
+        'Vaše úpravy jsme zahodili a načetli novější verzi aktuality.',
+      );
+      expect(document.activeElement?.tagName).toBe('H1');
     });
+
+    it('and they close the sheet, then their edits stay in the form and nothing is sent', async () => {
+      const sheet = element<HTMLDialogElement>(fixture, 'app-changed-meanwhile-dialog dialog');
+      sheet.dispatchEvent(new Event('close'));
+      await settle(fixture);
+
+      http.expectNone(`${NEWS_URL}/${newsArticle().id}`);
+      expect(fixture.nativeElement.querySelector('app-changed-meanwhile-dialog')).toBeNull();
+      expect(element<HTMLInputElement>(fixture, '#news-title').value).toBe(
+        'Zahrada pro všechny děti',
+      );
+    });
+  });
+
+  it('when someone else saved the article before they took it off the site with unsaved edits, then the edits stay and nothing can overwrite', async () => {
+    await loaded();
+    await type(fixture, '#news-body', 'Rozepsaný text.');
+    button(fixture, 'Stáhnout z webu').click();
+    await settle(fixture);
+    http.expectOne(`${NEWS_URL}/${newsArticle().id}/unpublish`).flush(
+      {
+        type: 'https://nfnn.cz/problems/content/changed-meanwhile',
+        title: 'Mezitím se to změnilo',
+        status: 409,
+        version: '7a0f3c9e5d1b2846',
+        current: { id: newsArticle().id, updatedAt: '2026-11-05T15:20:00Z' },
+      },
+      { status: 409, statusText: 'Conflict' },
+    );
+    await settle(fixture);
+
+    const sheet = element<HTMLDialogElement>(fixture, 'app-changed-meanwhile-dialog dialog');
+    expect(sheet.textContent).toContain('vaše úpravy zůstávají ve formuláři');
+    expect(sheet.textContent).toContain('Novější verze je z 05. 11. 2026 16:20.');
+    expect(sheet.textContent).not.toContain('Uložit svou verzi místo novější');
+    button(fixture, 'Nechat úpravy ve formuláři').click();
+    await settle(fixture);
+
+    http.expectNone(`${NEWS_URL}/${newsArticle().id}`);
+    expect(element<HTMLTextAreaElement>(fixture, '#news-body').value).toBe('Rozepsaný text.');
   });
 
   it('when they take the article off the site, then it becomes a draft and the page says so', async () => {

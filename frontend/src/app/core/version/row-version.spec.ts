@@ -1,11 +1,21 @@
 import { HttpErrorResponse } from '@angular/common/http';
 
-import { ifMatch, isChangedMeanwhile, versionInRefusal } from './row-version';
+import { ifMatch, isChangedMeanwhile, savedAtInRefusal, versionInRefusal } from './row-version';
 
-function refusal(status: number, type: string, version?: unknown): HttpErrorResponse {
+function refusal(
+  status: number,
+  type: string,
+  version?: unknown,
+  current?: unknown,
+): HttpErrorResponse {
   return new HttpErrorResponse({
     status,
-    error: { type: `https://nfnn.cz/problems/${type}`, title: 'Mezitím se to změnilo', version },
+    error: {
+      type: `https://nfnn.cz/problems/${type}`,
+      title: 'Mezitím se to změnilo',
+      version,
+      current,
+    },
   });
 }
 
@@ -31,5 +41,30 @@ describe('Given a refusal of the server', () => {
     expect(isChangedMeanwhile(refusal(428, 'shared/version-required'))).toBe(false);
     expect(versionInRefusal(refusal(409, 'content/changed-meanwhile', 7))).toBeNull();
     expect(isChangedMeanwhile(new Error('offline'))).toBe(false);
+  });
+});
+
+describe('Given a changed-meanwhile refusal with the current row', () => {
+  it('when the row is an article or a project, then its updatedAt is when it was saved', () => {
+    const failure = refusal(409, 'content/changed-meanwhile', 'fedcba9876543210', {
+      updatedAt: '2026-11-05T15:20:00Z',
+    });
+
+    expect(savedAtInRefusal(failure)).toBe('2026-11-05T15:20:00Z');
+  });
+
+  it('when the row is the report settings, then its changedAt is when it was saved', () => {
+    const failure = refusal(409, 'donations/changed-meanwhile', 'fedcba9876543210', {
+      changedAt: '2026-11-05T15:21:00Z',
+    });
+
+    expect(savedAtInRefusal(failure)).toBe('2026-11-05T15:21:00Z');
+  });
+
+  it('when the row names no time or it is another problem, then there is none', () => {
+    expect(
+      savedAtInRefusal(refusal(409, 'donations/changed-meanwhile', 'fedcba9876543210', {})),
+    ).toBeNull();
+    expect(savedAtInRefusal(refusal(428, 'shared/version-required'))).toBeNull();
   });
 });
