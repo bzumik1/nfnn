@@ -19,9 +19,11 @@ public final class DonationReceipt {
     private final DonationReceiptId supersedes;
     private ReceiptStatus status;
     private Instant supersededAt;
+    private ReceiptWithdrawal withdrawal;
 
     private DonationReceipt(DonationReceiptId id, DonorReference donor, Instant issuedAt, ReceiptFingerprint fingerprint, FrozenReceipt frozen,
-                            Optional<DonationReceiptId> supersedes, ReceiptStatus status, Optional<Instant> supersededAt) {
+                            Optional<DonationReceiptId> supersedes, ReceiptStatus status, Optional<Instant> supersededAt,
+                            Optional<ReceiptWithdrawal> withdrawal) {
         this.id = require(id, "Receipt id");
         this.donor = require(donor, "Donor reference");
         this.issuedAt = require(issuedAt, "Issue time");
@@ -33,26 +35,43 @@ public final class DonationReceipt {
         if ((status == ReceiptStatus.REPLACED) != (this.supersededAt != null)) {
             throw new IllegalArgumentException("A receipt has its supersede time exactly when it was replaced");
         }
+        this.withdrawal = require(withdrawal, "Withdrawal").orElse(null);
+        if (this.withdrawal != null && status != ReceiptStatus.WITHDRAWN) {
+            throw new IllegalArgumentException("Only a withdrawn receipt has a withdrawal");
+        }
     }
 
     public static DonationReceipt issue(DonationReceiptId id, DonorReference donor, Instant issuedAt, ReceiptFingerprint fingerprint,
                                         FrozenReceipt frozen, Optional<DonationReceiptId> supersedes) {
-        return new DonationReceipt(id, donor, issuedAt, fingerprint, frozen, supersedes, ReceiptStatus.ACTIVE, Optional.empty());
+        return new DonationReceipt(id, donor, issuedAt, fingerprint, frozen, supersedes, ReceiptStatus.ACTIVE, Optional.empty(),
+                Optional.empty());
     }
 
     public static DonationReceipt reconstitute(DonationReceiptId id, DonorReference donor, Instant issuedAt, ReceiptFingerprint fingerprint,
                                                FrozenReceipt frozen, Optional<DonationReceiptId> supersedes, ReceiptStatus status,
-                                               Optional<Instant> supersededAt) {
-        return new DonationReceipt(id, donor, issuedAt, fingerprint, frozen, supersedes, status, supersededAt);
+                                               Optional<Instant> supersededAt, Optional<ReceiptWithdrawal> withdrawal) {
+        return new DonationReceipt(id, donor, issuedAt, fingerprint, frozen, supersedes, status, supersededAt, withdrawal);
     }
 
     public void markSuperseded(Instant at) {
         require(at, "Supersede time");
-        if (status != ReceiptStatus.ACTIVE) {
-            throw new IllegalStateException("Receipt " + number() + " is " + status + ", so it cannot be superseded");
-        }
+        requireActiveTo("be superseded");
         status = ReceiptStatus.REPLACED;
         supersededAt = at;
+    }
+
+    public void withdrawBecauseDonationsChanged(Instant at) {
+        ReceiptWithdrawal withdrawn = new ReceiptWithdrawal(require(at, "Withdrawal time"), ReceiptWithdrawalReason.DONATIONS_CHANGED);
+        requireActiveTo("be withdrawn");
+        if (kind() != ReceiptKind.YEARLY) {
+            throw new IllegalStateException("Receipt " + number() + " is a single receipt, so it is not withdrawn because the donations changed");
+        }
+        status = ReceiptStatus.WITHDRAWN;
+        withdrawal = withdrawn;
+    }
+
+    public boolean lists(DonationId donation) {
+        return frozen.document().lines().stream().anyMatch(line -> line.donationId().equals(donation));
     }
 
     public boolean certifies(ReceiptFingerprint candidate) {
@@ -117,6 +136,20 @@ public final class DonationReceipt {
 
     public Optional<Instant> supersededAt() {
         return Optional.ofNullable(supersededAt);
+    }
+
+    public Optional<ReceiptWithdrawal> withdrawal() {
+        return Optional.ofNullable(withdrawal);
+    }
+
+    public ReceiptStanding standing() {
+        return ReceiptStanding.of(status, withdrawal().map(ReceiptWithdrawal::reason));
+    }
+
+    private void requireActiveTo(String change) {
+        if (status != ReceiptStatus.ACTIVE) {
+            throw new IllegalStateException("Receipt " + number() + " is " + status + ", so it cannot " + change);
+        }
     }
 
     private static <T> T require(T value, String label) {

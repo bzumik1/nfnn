@@ -6,6 +6,7 @@ import {
   SYNTHETIC_PORTRAIT_PNG_BASE64,
   SYNTHETIC_SIGNATURE_JSON,
 } from '../src/app/features/donations/receipt-pdf/testing/synthetic-art';
+import type { RouteTarget } from './fixtures';
 
 interface FrozenCase {
   readonly name: string;
@@ -98,7 +99,7 @@ export async function answerReceiptIssuing(route: Route, issuing: ReceiptIssuing
 }
 
 export async function mockReceiptIssuing(
-  page: Pick<Page, 'route'>,
+  page: RouteTarget,
   issuing: ReceiptIssuing,
 ): Promise<void> {
   await page.route(

@@ -45,7 +45,22 @@ public final class CaseRows {
         input.get("donations").forEach(gift -> rows.donations.add(new Gift(gift.get("donor").asString(), optional(gift.get("payment")),
                 gift.get("receivedOn").asString(), gift.get("amountMinor").asLong(), gift.get("status").asString(), gift.get("source").asString(),
                 gift.get("purpose").asString())));
+        rows.assignIds();
         return rows;
+    }
+
+    private void assignIds() {
+        ids.clear();
+        int sequence = 0;
+        for (Donor donor : donors) {
+            id("donor:" + donor.alias(), ++sequence);
+        }
+        for (Payment payment : payments) {
+            id("payment:" + payment.alias(), ++sequence);
+        }
+        for (int position = 1; position <= donations.size(); position++) {
+            id("donation:" + position, ++sequence);
+        }
     }
 
     static Optional<String> optional(JsonNode value) {
@@ -56,6 +71,33 @@ public final class CaseRows {
         return ids.get("donor:" + alias);
     }
 
+    public UUID donationId(int position) {
+        return ids.get("donation:" + position);
+    }
+
+    public JsonNode aliased(JsonNode answer) {
+        Map<String, String> aliases = new LinkedHashMap<>();
+        ids.forEach((alias, id) -> aliases.put(id.toString(), alias));
+        return aliased(answer, aliases);
+    }
+
+    private static JsonNode aliased(JsonNode node, Map<String, String> aliases) {
+        if (node.isString()) {
+            return NODES.stringNode(aliases.getOrDefault(node.asString(), node.asString()));
+        }
+        if (node.isArray()) {
+            ArrayNode array = NODES.arrayNode();
+            node.forEach(element -> array.add(aliased(element, aliases)));
+            return array;
+        }
+        if (node.isObject()) {
+            ObjectNode object = NODES.objectNode();
+            node.properties().forEach(field -> object.set(field.getKey(), aliased(field.getValue(), aliases)));
+            return object;
+        }
+        return node;
+    }
+
     public static UUID administratorId() {
         return new UUID(ID_HIGH, ID_LOW + ADMINISTRATOR);
     }
@@ -63,10 +105,10 @@ public final class CaseRows {
     public void write(JdbcClient jdbc, MutableClock clock) {
         new DatabaseCleaner(jdbc).emptyAllTables();
         clock.set(Instant.parse(now));
-        ids.clear();
         int sequence = 0;
         for (Donor donor : donors) {
-            UUID id = id("donor:" + donor.alias(), ++sequence);
+            UUID id = donorId(donor.alias());
+            ++sequence;
             jdbc.sql("insert into donor_record (donor_id, type, name, company_identifier, street, city, postal_code, variable_symbol, "
                             + "preferred_locale, registered_at, updated_at, erased_at) values (:id, 'PERSON', :name, null, 'Dlouhá 12', 'Ústí nad Labem', "
                             + "'400 01', :symbol, 'cs', :registered, :registered, :erased)")
@@ -78,7 +120,8 @@ public final class CaseRows {
                     .update();
         }
         for (Payment payment : payments) {
-            UUID id = id("payment:" + payment.alias(), ++sequence);
+            UUID id = ids.get("payment:" + payment.alias());
+            ++sequence;
             jdbc.sql("insert into bank_payment (id, bank_transaction_id, booked_on, amount_minor, currency, sender_account_number, sender_bank_code, "
                             + "counterparty_account, counterparty_bank_code, counterparty_name, variable_symbol, matching_variable_symbol, constant_symbol, "
                             + "specific_symbol, message_for_recipient, transaction_type, imported_at, unpaired_by_admin_at) values (:id, :transaction, :booked, "
@@ -91,8 +134,9 @@ public final class CaseRows {
                     .param("unpairedAt", payment.unpairedByAdminAt().map(CaseRows::timestamp).orElse(null))
                     .update();
         }
+        int position = 0;
         for (Gift gift : donations) {
-            UUID id = id("donation:" + (++sequence), sequence);
+            UUID id = ids.get("donation:" + (++position));
             jdbc.sql("insert into donation (id, donor_id, bank_payment_id, received_on, amount_minor, currency, source, status, paired_by, "
                             + "recorded_at, sender_account_id, purpose, symbol_claim_id) values (:id, :donor, :payment, :received, :amount, 'CZK', :source, "
                             + ":status, :pairedBy, :recorded, null, :purpose, null)")
@@ -146,10 +190,8 @@ public final class CaseRows {
         return Timestamp.from(Instant.parse(instant));
     }
 
-    private UUID id(String key, int sequence) {
-        UUID id = new UUID(ID_HIGH, ID_LOW + sequence);
-        ids.put(key, id);
-        return id;
+    private void id(String key, int sequence) {
+        ids.put(key, new UUID(ID_HIGH, ID_LOW + sequence));
     }
 
     private static <T> ArrayNode array(List<T> items, Function<T, ObjectNode> mapper) {

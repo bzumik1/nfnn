@@ -17,13 +17,19 @@ type CopyState = 'idle' | 'copied' | 'failed';
   selector: 'app-copy-button',
   templateUrl: './copy-button.html',
   styleUrl: './copy-button.scss',
-  host: { '[class.has-failed]': "state() === 'failed'" },
+  host: {
+    '[class.has-failed]': "state() === 'failed'",
+    '[class.is-start]': "align() === 'start'",
+  },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CopyButton {
   readonly value = input.required<string>();
   readonly what = input.required<string>();
   readonly label = input<string | null>(null);
+  readonly copiedStatus = input<string | null>(null);
+  readonly failedStatus = input<string | null>(null);
+  readonly align = input<'start' | 'end'>('end');
 
   protected readonly state = signal<CopyState>('idle');
   private reset: ReturnType<typeof setTimeout> | undefined;
@@ -35,9 +41,12 @@ export class CopyButton {
   protected status(): string {
     switch (this.state()) {
       case 'copied':
-        return $localize`:@@ui.copy.copied:Zkopírováno.`;
+        return this.copiedStatus() ?? $localize`:@@ui.copy.copied:Zkopírováno.`;
       case 'failed':
-        return $localize`:@@ui.copy.failed:Zkopírovat se nepodařilo, opište si údaj prosím ručně.`;
+        return (
+          this.failedStatus() ??
+          $localize`:@@ui.copy.failed:Zkopírovat se nepodařilo, opište si údaj prosím ručně.`
+        );
       default:
         return '';
     }

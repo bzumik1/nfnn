@@ -71,6 +71,7 @@ test.describe('Given a visitor who scans the verification QR of a receipt', () =
     ['unknown', 'Fond toto potvrzení ve své evidenci nevede'],
     ['replaced', 'Fond toto potvrzení nahradil novějším'],
     ['withdrawn', 'Fond toto potvrzení zrušil'],
+    ['outdated', 'Potvrzení platilo ke dni vystavení'],
   ]) {
     test(`when the fund answers ${status}, then the page is not green and its heading says so`, async ({
       page,

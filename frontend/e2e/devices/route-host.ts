@@ -1,9 +1,10 @@
-import type { Page, Request, Route } from '@playwright/test';
+import type { Request, Route } from '@playwright/test';
 import { readFileSync, statSync } from 'node:fs';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { extname, join, resolve, sep } from 'node:path';
 import { SESSION_FLAG } from './ui';
+import type { RouteTarget } from '../fixtures';
 
 type UrlMatcher = string | RegExp | ((url: URL) => boolean);
 type Handler = (route: Route, request: Request) => unknown;
@@ -127,11 +128,11 @@ export class RouteHost {
   private open = 0;
   private page: PageState = { textScale: 100, rememberedSession: false };
 
-  readonly routes: Pick<Page, 'route'> = {
+  readonly routes: RouteTarget = {
     route: async (matcher: UrlMatcher, handler: Handler) => {
       this.handlers.push({ matches: matcherOf(matcher), handler });
     },
-  } as unknown as Pick<Page, 'route'>;
+  } as unknown as RouteTarget;
 
   constructor(folder: string) {
     this.root = resolve(folder);

@@ -3,6 +3,7 @@ package cz.novanadeje.app.donations.interfaces.rest;
 import cz.novanadeje.app.donations.application.admin.AdminPaymentsService;
 import cz.novanadeje.app.donations.application.admin.PaymentFilter;
 import cz.novanadeje.app.donations.application.pairing.ManualPairingService;
+import cz.novanadeje.app.donations.application.receipt.AdministrationChannel;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentId;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
@@ -33,6 +34,7 @@ class AdminPaymentsController {
 
     static final String UNPAIRED = "unpaired";
     static final String PAIRED = "paired";
+    private static final String SCOPE_CLAIM = "scope";
     private static final int FIRST_FOUR_DIGIT_YEAR = 1000;
     private static final int LAST_FOUR_DIGIT_YEAR = 9999;
 
@@ -74,7 +76,11 @@ class AdminPaymentsController {
 
     @PostMapping("/payments/{id}/unpair")
     UnpairPaymentResponse unpair(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
-        return UnpairPaymentResponse.from(manualPairing.unpair(admin(jwt), new BankPaymentId(id)));
+        return UnpairPaymentResponse.from(manualPairing.unpair(admin(jwt), channelOf(jwt), new BankPaymentId(id)));
+    }
+
+    private static AdministrationChannel channelOf(Jwt jwt) {
+        return jwt.hasClaim(SCOPE_CLAIM) ? AdministrationChannel.CONNECTED_APPLICATION : AdministrationChannel.BROWSER;
     }
 
     private static UUID admin(Jwt jwt) {

@@ -26,9 +26,12 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptPage;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptParty;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptQuery;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptStanding;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptStatus;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptTextSet;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptVerification;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptWithdrawal;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptWithdrawalReason;
 import cz.novanadeje.app.donations.domain.receipt.ReplacedReceipt;
 import cz.novanadeje.app.donations.domain.receipt.Signatory;
 import cz.novanadeje.app.donations.domain.receipt.StoredReceiptImage;
@@ -235,8 +238,8 @@ class JpaDonationReceiptRepositoryTest {
     }
 
     @Test
-    @DisplayName("Given an active, a replaced and a withdrawn receipt, when a status is read by a status digest, then each digest gives its own receipt's status and any other digest finds none")
-    void should_give_each_receipts_status_when_read_by_status_digest_given_active_replaced_and_withdrawn_receipts() {
+    @DisplayName("Given an active, a replaced, a withdrawn and an outdated receipt, when a standing is read by a status digest, then each digest gives its own receipt's standing and any other digest finds none")
+    void should_give_each_receipts_standing_when_read_by_status_digest_given_active_replaced_withdrawn_and_outdated_receipts() {
         DonorReference jana = storedDonor("4821937560");
         DonationReceipt replaced = yearly(jana, YEAR_2025, "2026-000001", Optional.empty());
         receipts.save(replaced);
@@ -246,14 +249,114 @@ class JpaDonationReceiptRepositoryTest {
         receipts.save(active);
         DonationReceipt withdrawn = yearly(jana, YEAR_2026, "2026-000003", Optional.empty());
         receipts.save(withdrawn);
+        DonorReference petr = storedDonor("7310945528");
+        DonationReceipt outdated = yearly(petr, YEAR_2026, "2026-000004", Optional.empty());
+        receipts.save(outdated);
+        outdated.withdrawBecauseDonationsChanged(NOW.plusSeconds(7200));
+        receipts.save(outdated);
         flushAndClear();
         jdbc.sql("update issued_receipt set status = 'WITHDRAWN' where id = ?").param(withdrawn.id().value()).update();
 
-        assertThat(receipts.findStatusByStatusDigest(active.frozen().statusDigest())).contains(ReceiptStatus.ACTIVE);
-        assertThat(receipts.findStatusByStatusDigest(replaced.frozen().statusDigest())).contains(ReceiptStatus.REPLACED);
-        assertThat(receipts.findStatusByStatusDigest(withdrawn.frozen().statusDigest())).contains(ReceiptStatus.WITHDRAWN);
-        assertThat(receipts.findStatusByStatusDigest(new ContentDigest("f".repeat(64)))).isEmpty();
-        assertThat(receipts.findStatusByStatusDigest(ContentDigest.of(active.frozen().verification().proof().bytes()))).isEmpty();
+        assertThat(receipts.findStandingByStatusDigest(active.frozen().statusDigest())).contains(ReceiptStanding.ACTIVE);
+        assertThat(receipts.findStandingByStatusDigest(replaced.frozen().statusDigest())).contains(ReceiptStanding.REPLACED);
+        assertThat(receipts.findStandingByStatusDigest(withdrawn.frozen().statusDigest())).contains(ReceiptStanding.WITHDRAWN);
+        assertThat(receipts.findStandingByStatusDigest(outdated.frozen().statusDigest())).contains(ReceiptStanding.OUTDATED);
+        assertThat(receipts.findStandingByStatusDigest(new ContentDigest("f".repeat(64)))).isEmpty();
+        assertThat(receipts.findStandingByStatusDigest(ContentDigest.of(active.frozen().verification().proof().bytes()))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a donor's yearly receipts of a year withdrawn because the gifts changed, one withdrawn for no stated reason, a replaced one and others of another year and donor, when the latest outdated one of that year is read, then it is the one issued last of those withdrawn because the gifts changed")
+    void should_find_latest_outdated_receipt_of_year_when_read_given_receipts_in_every_standing() {
+        DonorReference jana = storedDonor("4821937560");
+        DonorReference petr = storedDonor("7310945528");
+        DonationReceipt first = issued(jana, NOW, yearlyDocument(YEAR_2026, "2027-000001", Optional.empty()), Optional.empty());
+        receipts.save(first);
+        first.withdrawBecauseDonationsChanged(NOW.plusSeconds(60));
+        receipts.save(first);
+        DonationReceipt second = issued(jana, NOW.plusSeconds(120), yearlyDocument(YEAR_2026, "2027-000002", Optional.empty()), Optional.empty());
+        receipts.save(second);
+        second.withdrawBecauseDonationsChanged(NOW.plusSeconds(180));
+        receipts.save(second);
+        DonationReceipt unexplained = issued(jana, NOW.plusSeconds(240), yearlyDocument(YEAR_2026, "2027-000003", Optional.empty()), Optional.empty());
+        receipts.save(unexplained);
+        DonationReceipt replaced = issued(jana, NOW.plusSeconds(300), yearlyDocument(YEAR_2025, "2027-000004", Optional.empty()), Optional.empty());
+        receipts.save(replaced);
+        replaced.markSuperseded(NOW.plusSeconds(360));
+        receipts.save(replaced);
+        DonationReceipt otherYear = issued(jana, NOW.plusSeconds(420), yearlyDocument(YEAR_2025, "2027-000005", Optional.empty()), Optional.empty());
+        receipts.save(otherYear);
+        otherYear.withdrawBecauseDonationsChanged(NOW.plusSeconds(480));
+        receipts.save(otherYear);
+        DonationReceipt otherDonor = issued(petr, NOW.plusSeconds(540), yearlyDocument(YEAR_2026, "2027-000006", Optional.empty()), Optional.empty());
+        receipts.save(otherDonor);
+        otherDonor.withdrawBecauseDonationsChanged(NOW.plusSeconds(600));
+        receipts.save(otherDonor);
+        flushAndClear();
+        jdbc.sql("update issued_receipt set status = 'WITHDRAWN' where id = ?").param(unexplained.id().value()).update();
+
+        assertThat(receipts.findLatestOutdatedForYear(jana, YEAR_2026)).hasValueSatisfying(found -> {
+            assertThat(found.id()).isEqualTo(second.id());
+            assertThat(found.standing()).isEqualTo(ReceiptStanding.OUTDATED);
+        });
+        assertThat(receipts.findLatestOutdatedForYear(jana, YEAR_2025)).map(DonationReceipt::id).contains(otherYear.id());
+        assertThat(receipts.findLatestOutdatedForYear(petr, YEAR_2025)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given two yearly receipts of a year issued at the same instant and both withdrawn because the gifts changed, when the latest outdated one is read, then the one with the higher number is found")
+    void should_find_higher_number_when_latest_outdated_read_given_two_outdated_receipts_issued_at_the_same_instant() {
+        DonorReference jana = storedDonor("4821937560");
+        DonationReceipt lower = issued(jana, NOW, yearlyDocument(YEAR_2026, "2027-000001", Optional.empty()), Optional.empty());
+        receipts.save(lower);
+        lower.withdrawBecauseDonationsChanged(NOW);
+        receipts.save(lower);
+        DonationReceipt higher = issued(jana, NOW, yearlyDocument(YEAR_2026, "2027-000002", Optional.empty()), Optional.empty());
+        receipts.save(higher);
+        higher.withdrawBecauseDonationsChanged(NOW);
+        receipts.save(higher);
+        flushAndClear();
+
+        assertThat(receipts.findLatestOutdatedForYear(jana, YEAR_2026)).map(DonationReceipt::id).contains(higher.id());
+    }
+
+    @Test
+    @DisplayName("Given an active receipt, when it is saved withdrawn because the donations changed, then the row keeps the status, the time and the reason, and reads back the same")
+    void should_store_withdrawal_when_saved_given_receipt_withdrawn_because_donations_changed() {
+        DonorReference jana = storedDonor("4821937560");
+        DonationReceipt receipt = yearly(jana, YEAR_2026, "2027-000001", Optional.empty());
+        receipts.save(receipt);
+        Instant withdrawnAt = NOW.plusSeconds(3600);
+        receipt.withdrawBecauseDonationsChanged(withdrawnAt);
+
+        receipts.save(receipt);
+        flushAndClear();
+
+        assertThat(jdbc.sql("select status, withdrawn_at, withdrawal_reason from issued_receipt where id = ?").param(receipt.id().value())
+                .query((row, number) -> List.of(row.getString(1), row.getTimestamp(2).toInstant(), row.getString(3)))
+                .single()).containsExactly("WITHDRAWN", withdrawnAt, "DONATIONS_CHANGED");
+        DonationReceipt read = receipts.findById(receipt.id()).orElseThrow();
+        assertThat(read.withdrawal()).contains(new ReceiptWithdrawal(withdrawnAt, ReceiptWithdrawalReason.DONATIONS_CHANGED));
+        assertThat(receipts.findActiveForYear(jana, YEAR_2026)).isEmpty();
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @CsvSource(delimiter = '|', textBlock = """
+            withdrawn_at = now(), withdrawal_reason = 'DONATIONS_CHANGED'                     | ck_issued_receipt_withdrawal
+            status = 'WITHDRAWN', withdrawn_at = now()                                      | ck_issued_receipt_withdrawal
+            status = 'WITHDRAWN', withdrawal_reason = 'DONATIONS_CHANGED'                   | ck_issued_receipt_withdrawal
+            status = 'WITHDRAWN', withdrawn_at = now(), withdrawal_reason = 'OTHER'         | ck_issued_receipt_withdrawal_reason
+            """)
+    @DisplayName("Given an active receipt, when a withdrawal time or reason is written without the other or without the withdrawn status, or with an unknown reason, then the database refuses it")
+    void should_refuse_withdrawal_columns_when_written_given_status_partner_column_or_reason_wrong(String assignments, String constraint) {
+        DonorReference jana = storedDonor("4821937560");
+        DonationReceipt receipt = yearly(jana, YEAR_2026, "2027-000001", Optional.empty());
+        receipts.save(receipt);
+        flushAndClear();
+
+        assertThatThrownBy(() -> jdbc.sql("update issued_receipt set " + assignments + " where id = ?").param(receipt.id().value()).update())
+                .isInstanceOf(DataIntegrityViolationException.class)
+                .hasMessageContaining("\"" + constraint + "\"");
     }
 
     @Test
@@ -268,7 +371,7 @@ class JpaDonationReceiptRepositoryTest {
         FrozenReceipt other = new FrozenReceipt(stored.frozen().document(), CZECH, Optional.of(OTHER_SIGNATURE.digest()), Optional.empty(),
                 stored.frozen().verification());
         DonationReceipt copy = DonationReceipt.reconstitute(stored.id(), jana, NOW, FINGERPRINT, other, Optional.empty(), ReceiptStatus.REPLACED,
-                Optional.of(replacedAt));
+                Optional.of(replacedAt), Optional.empty());
 
         receipts.save(copy);
         flushAndClear();

@@ -2,6 +2,7 @@ import { expect, Locator, Page } from '@playwright/test';
 import { FOUNDATION_PAYMENT_DETAILS } from './qr-matrices';
 import { mockReceiptIssuing, ReceiptIssuing } from './receipt-issuing';
 import { noSignature, signatory } from './signature-image';
+import type { RouteTarget } from './fixtures';
 
 export const donor = {
   id: '01a18e56-bdb0-775a-bd0a-a60756831369',
@@ -164,7 +165,7 @@ export const receiptSigningKeys = {
 };
 
 export async function mockDonorApi(
-  page: Pick<Page, 'route'>,
+  page: RouteTarget,
   donations: DonorApiMock = noDonations,
 ): Promise<void> {
   if (donations.receipts) {

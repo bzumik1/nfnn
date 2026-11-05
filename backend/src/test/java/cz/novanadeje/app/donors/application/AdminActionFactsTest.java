@@ -114,6 +114,9 @@ class AdminActionFactsTest {
                         "ISSUE_RECEIPT.yearly", Map.of("number", "2027-000002", "year", "2026", "donor", DONOR)),
                 arguments("ISSUE_RECEIPT", "Potvrzení 2027-000003 za rok 2026 vystaveno dárci " + DONOR + "; nahrazuje potvrzení 2027-000002",
                         "ISSUE_RECEIPT.yearlyReplacing", Map.of("number", "2027-000003", "year", "2026", "donor", DONOR, "replaced", "2027-000002")),
+                arguments("WITHDRAW_RECEIPT", "Potvrzení 2027-000002 za rok 2026 dárce " + DONOR + " zrušeno, protože z něj byl odebrán dar " + OTHER
+                                + " platby 26683551",
+                        "WITHDRAW_RECEIPT", Map.of("number", "2027-000002", "year", "2026", "donor", DONOR, "transaction", "26683551")),
                 arguments("REGISTER_RECEIPT_SIGNING_KEY", "Server zaregistroval svůj klíč k ověřovacím QR na potvrzeních o daru: 9c1b2f7e",
                         "REGISTER_RECEIPT_SIGNING_KEY", Map.of("key", "9c1b2f7e")),
                 arguments("ADOPT_RECEIPT_SIGNING_KEY", "Server převzal klíč k ověřovacím QR 39f713d0 z obnovené zálohy (obnova 019a1b2c-0000-7000-8000-000000000005)",

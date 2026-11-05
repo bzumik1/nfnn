@@ -131,6 +131,9 @@ public record AdminActionFacts(String summaryKey, Map<String, String> values) {
                 variant("yearly", number + "za rok (?<year>\\d{4})" + issued),
                 variant("replacing", number + "za dar " + ID + issued + replacing),
                 full(number + "za dar " + ID + issued)));
+        shapes.put("WITHDRAW_RECEIPT", List.of(
+                full("Potvrzení (?<number>\\d{4}-\\d{6}) za rok (?<year>\\d{4}) dárce " + DONOR_ID + " zrušeno, protože z něj byl odebrán dar " + ID
+                        + " platby (?<transaction>\\d+)")));
         shapes.put("REGISTER_RECEIPT_SIGNING_KEY", List.of(
                 full("Server zaregistroval svůj klíč k ověřovacím QR na potvrzeních o daru: (?<key>[0-9a-f]{8})")));
         shapes.put("ADOPT_RECEIPT_SIGNING_KEY", List.of(

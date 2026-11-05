@@ -1,0 +1,1730 @@
+[
+  {
+    "path": "POST /api/contact/*",
+    "scenario": "contact/contact_message: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/admin/*",
+    "scenario": "content/choose_project_order: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/content/*",
+    "scenario": "content/choose_project_order: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/admin/*",
+    "scenario": "content/choose_project_order: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "content/choose_project_order: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "PUT /api/admin/*",
+    "scenario": "content/choose_project_order: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "DELETE /api/admin/*",
+    "scenario": "content/clean_up_unused_photos: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/content/*",
+    "scenario": "content/clean_up_unused_photos: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/admin/*",
+    "scenario": "content/clean_up_unused_photos: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "content/clean_up_unused_photos: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "PUT /api/admin/*",
+    "scenario": "content/clean_up_unused_photos: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/content/*",
+    "scenario": "content/home_content: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/admin/*",
+    "scenario": "content/home_content: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "content/home_content: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "DELETE /api/admin/*",
+    "scenario": "content/manage_about: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/admin/*",
+    "scenario": "content/manage_about: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/content/*",
+    "scenario": "content/manage_about: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/admin/*",
+    "scenario": "content/manage_about: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "content/manage_about: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "PUT /api/admin/*",
+    "scenario": "content/manage_about: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "DELETE /api/admin/*",
+    "scenario": "content/manage_news: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/admin/*",
+    "scenario": "content/manage_news: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/content/*",
+    "scenario": "content/manage_news: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/admin/*",
+    "scenario": "content/manage_news: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "content/manage_news: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "PUT /api/admin/*",
+    "scenario": "content/manage_news: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "DELETE /api/admin/*",
+    "scenario": "content/manage_people: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/admin/*",
+    "scenario": "content/manage_people: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/content/*",
+    "scenario": "content/manage_people: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/admin/*",
+    "scenario": "content/manage_people: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "content/manage_people: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "PUT /api/admin/*",
+    "scenario": "content/manage_people: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "DELETE /api/admin/*",
+    "scenario": "content/manage_projects: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/admin/*",
+    "scenario": "content/manage_projects: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/content/*",
+    "scenario": "content/manage_projects: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/admin/*",
+    "scenario": "content/manage_projects: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "content/manage_projects: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "PUT /api/admin/*",
+    "scenario": "content/manage_projects: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/admin/*",
+    "scenario": "donations/admin_activity_since: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/admin_activity_since: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "DELETE /api/admin/*",
+    "scenario": "donations/admin_donor_accounts: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/admin/*",
+    "scenario": "donations/admin_donor_accounts: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/donations/*",
+    "scenario": "donations/admin_donor_accounts: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/admin/*",
+    "scenario": "donations/admin_donor_accounts: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donations/*",
+    "scenario": "donations/admin_donor_accounts: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/admin_donor_accounts: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "DELETE /api/admin/*",
+    "scenario": "donations/admin_donor_erasure: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/admin/*",
+    "scenario": "donations/admin_donor_erasure: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/donations/*",
+    "scenario": "donations/admin_donor_erasure: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donations/*",
+    "scenario": "donations/admin_donor_erasure: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/admin_donor_erasure: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/admin/*",
+    "scenario": "donations/admin_import_state: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/admin_import_state: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/admin/*",
+    "scenario": "donations/admin_monthly_report: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/admin/*",
+    "scenario": "donations/admin_monthly_report: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/admin_monthly_report: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "PUT /api/admin/*",
+    "scenario": "donations/admin_monthly_report: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/admin/*",
+    "scenario": "donations/admin_payments: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/admin/*",
+    "scenario": "donations/admin_payments: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donations/*",
+    "scenario": "donations/admin_payments: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/admin_payments: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "DELETE /api/admin/*",
+    "scenario": "donations/admin_receipt_signature: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/admin/*",
+    "scenario": "donations/admin_receipt_signature: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/donations/*",
+    "scenario": "donations/admin_receipt_signature: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/admin/*",
+    "scenario": "donations/admin_receipt_signature: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donations/*",
+    "scenario": "donations/admin_receipt_signature: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/admin_receipt_signature: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "PUT /api/admin/*",
+    "scenario": "donations/admin_receipt_signature: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/admin/*",
+    "scenario": "donations/admin_receipt_signing_key_withdrawal: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/donations/*",
+    "scenario": "donations/admin_receipt_signing_key_withdrawal: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/admin/*",
+    "scenario": "donations/admin_receipt_signing_key_withdrawal: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donations/*",
+    "scenario": "donations/admin_receipt_signing_key_withdrawal: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/admin_receipt_signing_key_withdrawal: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/admin/*",
+    "scenario": "donations/admin_receipt_signing_keys: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/admin/*",
+    "scenario": "donations/admin_receipt_signing_keys: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donations/*",
+    "scenario": "donations/admin_receipt_signing_keys: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/admin_receipt_signing_keys: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "DELETE /api/admin/*",
+    "scenario": "donations/admin_receipts: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/admin/*",
+    "scenario": "donations/admin_receipts: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/donations/*",
+    "scenario": "donations/admin_receipts: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "PATCH /api/donors/*",
+    "scenario": "donations/admin_receipts: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/admin/*",
+    "scenario": "donations/admin_receipts: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donations/*",
+    "scenario": "donations/admin_receipts: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/admin_receipts: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "PUT /api/admin/*",
+    "scenario": "donations/admin_receipts: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "DELETE /api/admin/*",
+    "scenario": "donations/admin_symbol_claims: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/admin/*",
+    "scenario": "donations/admin_symbol_claims: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/donations/*",
+    "scenario": "donations/admin_symbol_claims: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/admin/*",
+    "scenario": "donations/admin_symbol_claims: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donations/*",
+    "scenario": "donations/admin_symbol_claims: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/admin_symbol_claims: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/donations/*",
+    "scenario": "donations/bank_check_on_demand: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donations/*",
+    "scenario": "donations/bank_check_on_demand: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/bank_check_on_demand: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "DELETE /api/admin/*",
+    "scenario": "donations/donation_receipts_frozen: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/admin/*",
+    "scenario": "donations/donation_receipts_frozen: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/donations/*",
+    "scenario": "donations/donation_receipts_frozen: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "PATCH /api/donors/*",
+    "scenario": "donations/donation_receipts_frozen: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/admin/*",
+    "scenario": "donations/donation_receipts_frozen: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donations/*",
+    "scenario": "donations/donation_receipts_frozen: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/donation_receipts_frozen: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "PUT /api/admin/*",
+    "scenario": "donations/donation_receipts_frozen: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/donations/*",
+    "scenario": "donations/donor_bank_accounts: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donations/*",
+    "scenario": "donations/donor_bank_accounts: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/donor_bank_accounts: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/donations/*",
+    "scenario": "donations/donor_donations_overview: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/donor_donations_overview: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "PATCH /api/donors/*",
+    "scenario": "donations/donor_record_sync: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/donor_record_sync: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/monthly_report: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/donations/*",
+    "scenario": "donations/payment_details: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/payment_details: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/payment_pairing: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/donations/*",
+    "scenario": "donations/receipt_keys: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/receipt_keys: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donations/*",
+    "scenario": "donations/receipt_status: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/receipt_status: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/donations/*",
+    "scenario": "donations/symbol_claims: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donations/*",
+    "scenario": "donations/symbol_claims: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/symbol_claims: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "DELETE /api/admin/*",
+    "scenario": "donors/admin_actions: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/admin/*",
+    "scenario": "donors/admin_actions: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/admin/*",
+    "scenario": "donors/admin_actions: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donors/admin_actions: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "DELETE /api/admin/*",
+    "scenario": "donors/admin_administrators: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/admin/*",
+    "scenario": "donors/admin_administrators: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/donors/*",
+    "scenario": "donors/admin_administrators: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/admin/*",
+    "scenario": "donors/admin_administrators: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donors/admin_administrators: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "DELETE /api/admin/*",
+    "scenario": "donors/admin_donor_erasure: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/admin/*",
+    "scenario": "donors/admin_donor_erasure: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donors/admin_donor_erasure: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "DELETE /api/admin/*",
+    "scenario": "donors/admin_donors: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/admin/*",
+    "scenario": "donors/admin_donors: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/admin/*",
+    "scenario": "donors/admin_donors: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donors/admin_donors: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/admin/*",
+    "scenario": "donors/admin_previous_sign_in: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donors/admin_previous_sign_in: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/donors/*",
+    "scenario": "donors/company_lookup: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "DELETE /api/admin/*",
+    "scenario": "donors/connected_apps: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "DELETE /api/donors/*",
+    "scenario": "donors/connected_apps: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/admin/*",
+    "scenario": "donors/connected_apps: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/donors/*",
+    "scenario": "donors/connected_apps: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "PATCH /api/donors/*",
+    "scenario": "donors/connected_apps: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/admin/*",
+    "scenario": "donors/connected_apps: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donors/connected_apps: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "PUT /api/admin/*",
+    "scenario": "donors/connected_apps: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "DELETE /api/donors/*",
+    "scenario": "donors/donor_credentials: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/donors/*",
+    "scenario": "donors/donor_credentials: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donors/donor_credentials: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "PUT /api/donors/*",
+    "scenario": "donors/donor_credentials: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/donors/*",
+    "scenario": "donors/donor_email_verification: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donors/donor_email_verification: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/donors/*",
+    "scenario": "donors/donor_login: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "PATCH /api/donors/*",
+    "scenario": "donors/donor_login: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donors/donor_login: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "DELETE /api/admin/*",
+    "scenario": "donors/donor_passkeys: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "DELETE /api/donors/*",
+    "scenario": "donors/donor_passkeys: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/donors/*",
+    "scenario": "donors/donor_passkeys: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "PATCH /api/donors/*",
+    "scenario": "donors/donor_passkeys: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donors/donor_passkeys: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/donors/*",
+    "scenario": "donors/donor_password_reset: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donors/donor_password_reset: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "DELETE /api/donors/*",
+    "scenario": "donors/donor_passwordless: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/donors/*",
+    "scenario": "donors/donor_passwordless: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donors/donor_passwordless: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "PUT /api/donors/*",
+    "scenario": "donors/donor_passwordless: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/donors/*",
+    "scenario": "donors/donor_registration: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donors/donor_registration: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/donors/*",
+    "scenario": "donors/donor_second_factor: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donors/donor_second_factor: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donors/second_factor_recovery: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/admin/*",
+    "scenario": "operations/backup_key: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/admin/*",
+    "scenario": "operations/backup_key: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "operations/backup_key: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/admin/*",
+    "scenario": "operations/backups: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/admin/*",
+    "scenario": "operations/backups: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "operations/backups: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "PUT /api/admin/*",
+    "scenario": "operations/backups: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/operations/*",
+    "scenario": "operations/client_error_reports: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "DELETE /api/admin/*",
+    "scenario": "operations/diagnostics: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/admin/*",
+    "scenario": "operations/diagnostics: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "operations/diagnostics: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "PUT /api/admin/*",
+    "scenario": "operations/diagnostics: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/operations/*",
+    "scenario": "operations/first_setup: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/operations/*",
+    "scenario": "operations/first_setup: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/admin/*",
+    "scenario": "operations/plan_backups: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "operations/plan_backups: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "PUT /api/admin/*",
+    "scenario": "operations/plan_backups: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "DELETE /api/content/*",
+    "scenario": "operations/problem_answers: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/content/*",
+    "scenario": "operations/problem_answers: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/donors/*",
+    "scenario": "operations/problem_answers: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/contact/*",
+    "scenario": "operations/problem_answers: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "operations/problem_answers: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "DELETE /api/content/*",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/admin/*",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/content/*",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/donors/*",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "PATCH /api/donors/*",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/contact/*",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "PUT /api/content/*",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "QKZW1561 /api/content/*",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "QKZW1565 /api/content/*",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/admin/*",
+    "scenario": "operations/restore: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/operations/*",
+    "scenario": "operations/restore: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/admin/*",
+    "scenario": "operations/restore: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "operations/restore: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/operations/*",
+    "scenario": "operations/restore: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "PUT /api/operations/*",
+    "scenario": "operations/restore: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/admin/*",
+    "scenario": "operations/settings: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/admin/*",
+    "scenario": "operations/settings: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "operations/settings: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "POST /api/operations/*",
+    "scenario": "operations/settings: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "PUT /api/admin/*",
+    "scenario": "operations/settings: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36, slice 2.3 Version headers and compatibility rule): every /api answer names the server's build (Nfnn-Revision, dev while recording) and its API generation (Nfnn-Api, 1), set by VersionHeadersFilter before the security chain, so refusals, validation problems and 304s carry them too; the browser app reads them to hold its writes while it speaks another API generation",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  },
+  {
+    "path": "GET /api/nowhere",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "added",
+    "field": "nfnn-*",
+    "reason": "2.3 (plan v3 D36): the version headers on the 401 the security chain gives a path outside every context (request_text_in_logs asks /api/nowhere), declared by its exact template because no context anchor covers it; every /api answer names the server's build (Nfnn-Revision) and API generation (Nfnn-Api)",
+    "contract": "docs/api-contract.md, Conventions (Versions); docs/system-overview.md, shared; .claude/rules/backend.md, API versions and compatibility"
+  }
+]

@@ -2629,6 +2629,26 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(savedFiles).toEqual([]);
     });
 
+    it('then a receipt held because the site has a new version says so and what to do, not to try again', async () => {
+      await open('/darce/potvrzeni');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      await downloadYear(2025);
+      receiptRequest({ year: 2025 }).flush(
+        {
+          ...problemBody('app/update-required', 'Web mezitím dostal novou verzi', 426),
+          detail: 'Nic jsme neodeslali. Načtěte stránku znovu a zkuste to ještě jednou.',
+        },
+        { status: 426, statusText: 'Upgrade Required' },
+      );
+      await settleBlobFailure();
+
+      expect(text('.yearly-card [role="alert"]')).toBe(
+        'Web mezitím dostal novou verzi. Nic jsme neodeslali. Načtěte stránku znovu a zkuste to ještě jednou.',
+      );
+      expect(savedFiles).toEqual([]);
+    });
+
     it('then an issued receipt with a character no receipt can print asks the donor to write to the foundation, not to try another browser', async () => {
       await open('/darce/potvrzeni');
       await respond(twoYearSummary(), twoYearDonations());

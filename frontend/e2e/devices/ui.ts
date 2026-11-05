@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test';
-import { expect } from '../fixtures';
+import { expect, type RouteTarget } from '../fixtures';
 
-export type Routes = Pick<Page, 'route'>;
+export type Routes = RouteTarget;
 
 export interface Target {
   css: string;

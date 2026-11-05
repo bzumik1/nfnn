@@ -1,18 +1,10 @@
-import type { Page, Request } from '@playwright/test';
 import { test as base } from '../fixtures';
+import { requestsInFlight, settled } from '../settled';
 import { layoutChecks } from './layout-checks';
 import type { DeviceOptions } from './poses';
-import { runStep, stepTitle, waitUntilSettled } from './run-step';
+import { runStep, SETTLE_TIMEOUT_MS, stepTitle } from './run-step';
 import { STEPS } from './steps';
 import { playwrightUi } from './ui';
-
-function requestsInFlight(page: Page): () => number {
-  const open = new Set<Request>();
-  page.on('request', (request) => open.add(request));
-  page.on('requestfinished', (request) => open.delete(request));
-  page.on('requestfailed', (request) => open.delete(request));
-  return () => open.size;
-}
 
 const test = base.extend<DeviceOptions & { pageErrors: string[]; inFlight: () => number }>({
   textScale: [100, { option: true }],
@@ -43,14 +35,7 @@ test.describe('Given the site on a phone or a tablet', () => {
           ui: playwrightUi(page),
           shortenWaits: (ms) => page.setDefaultTimeout(ms),
           settle: async () => {
-            await waitUntilSettled(
-              () =>
-                page.evaluate(
-                  () =>
-                    new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
-                ),
-              inFlight,
-            );
+            await settled(page, inFlight, SETTLE_TIMEOUT_MS);
             await page.evaluate(() => document.fonts.ready);
           },
           checks: () => layoutChecks(page, pageErrors),

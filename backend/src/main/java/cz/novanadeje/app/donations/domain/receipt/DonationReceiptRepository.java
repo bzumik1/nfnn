@@ -19,6 +19,8 @@ public interface DonationReceiptRepository {
 
     Optional<DonationReceipt> findActiveForYear(DonorReference donor, Year year);
 
+    Optional<DonationReceipt> findLatestOutdatedForYear(DonorReference donor, Year year);
+
     void save(DonationReceipt receipt);
 
     boolean existsForDonation(DonationId donation);
@@ -35,7 +37,7 @@ public interface DonationReceiptRepository {
 
     boolean showsImage(DonorReference donor, ContentDigest image);
 
-    Optional<ReceiptStatus> findStatusByStatusDigest(ContentDigest statusDigest);
+    Optional<ReceiptStanding> findStandingByStatusDigest(ContentDigest statusDigest);
 
     boolean anyShowsImage(ContentDigest image);
 

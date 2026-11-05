@@ -1,5 +1,5 @@
 import type { TestInfo } from '@playwright/test';
-import { answerOfflineApi, guardServerPayments, testWithoutBrowser } from '../fixtures';
+import { expect, NO_SERVER_PAYMENT, routeApiDefaults, testWithoutBrowser } from '../fixtures';
 import { checksFrom, collectFindings, type Findings, LIMITS } from './layout-checks';
 import type { SafariPose } from './poses';
 import { BLANK_PATH, ERRORS_GLOBAL, EVENTS_GLOBAL, RouteHost } from './route-host';
@@ -44,8 +44,7 @@ const test = testWithoutBrowser.extend<
     await driver.navigate(`${baseUrl}${BLANK_PATH}`);
     await driver.execute('localStorage.clear(); sessionStorage.clear();');
     await driver.deleteCookies();
-    await answerOfflineApi(host.routes);
-    const askedNothingElse = await guardServerPayments(host.routes);
+    const askedForServerPayment = await routeApiDefaults(host.routes);
     const waits = { ms: WAIT_MS, presses: [] as string[] };
     await use({
       ui: webDriverUi(driver, host, baseUrl, waits),
@@ -74,7 +73,7 @@ const test = testWithoutBrowser.extend<
     if (testInfo.status !== testInfo.expectedStatus) {
       await keepFailedScreen(driver, testInfo);
     }
-    askedNothingElse();
+    expect(askedForServerPayment, NO_SERVER_PAYMENT).toEqual([]);
   },
 });
 

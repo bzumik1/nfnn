@@ -35,6 +35,22 @@ class TranscriptNormaliserTest {
     }
 
     @Test
+    @DisplayName("Given the digests of sync chunks over rows with random ids, when the bodies are normalised, then each digest becomes a number by first appearance and keeps it in a later body")
+    void should_number_chunk_digests_by_first_appearance_when_bodies_are_normalised_given_digests_over_random_ids() {
+        TranscriptNormaliser normaliser = new TranscriptNormaliser(Map.of());
+        String first = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        String second = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+
+        JsonNode manifest = normaliser.json(json.readTree("{\"chunks\":[{\"id\":\"donations:2025\",\"rowsSha256\":\"" + second + "\"},"
+                + "{\"id\":\"donations:2026\",\"rowsSha256\":\"" + first + "\"}]}"));
+        JsonNode chunks = normaliser.json(json.readTree("{\"chunks\":[{\"id\":\"donations:2026\",\"rowsSha256\":\"" + first + "\"}],\"sha256\":\"" + first + "\"}"));
+
+        assertThat(manifest.toString()).isEqualTo("{\"chunks\":[{\"id\":\"donations:2025\",\"rowsSha256\":\"<rows-sha256:1>\"},"
+                + "{\"id\":\"donations:2026\",\"rowsSha256\":\"<rows-sha256:2>\"}]}");
+        assertThat(chunks.toString()).isEqualTo("{\"chunks\":[{\"id\":\"donations:2026\",\"rowsSha256\":\"<rows-sha256:2>\"}],\"sha256\":\"" + first + "\"}");
+    }
+
+    @Test
     @DisplayName("Given an id seen in a path, when it appears later in a body, then it keeps its number")
     void should_keep_the_number_of_an_id_when_it_appears_later_in_a_body_given_it_was_seen_in_a_path() {
         TranscriptNormaliser normaliser = new TranscriptNormaliser(Map.of());

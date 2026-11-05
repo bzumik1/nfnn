@@ -1,6 +1,7 @@
 <app-dialog
   labelledBy="login-dialog-title"
   [wide]="step() === 'register'"
+  [pushesHistory]="false"
   (dismissed)="closeDialog()"
 >
   <div class="logo">

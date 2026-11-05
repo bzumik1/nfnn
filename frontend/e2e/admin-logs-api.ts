@@ -1,5 +1,6 @@
 import { Page } from '@playwright/test';
 import { administrator, session } from './donor-session';
+import type { RouteTarget } from './fixtures';
 
 export const LOGS = '/api/admin/operations/logs';
 export const LOGGERS = '/api/admin/operations/loggers';
@@ -86,7 +87,7 @@ export function logsApi(): Record<string, unknown> {
   };
 }
 
-export async function routeLogsApi(page: Pick<Page, 'route'>): Promise<void> {
+export async function routeLogsApi(page: RouteTarget): Promise<void> {
   const api = logsApi();
   await page.route(
     (url) => url.pathname === LOGS,

@@ -12,6 +12,7 @@ enum AdminHandlerReach {
     CONNECTOR,
     CONNECTOR_SECRETS_IN_BROWSER_ONLY,
     CONNECTOR_REPLACEMENTS_IN_BROWSER_ONLY,
+    CONNECTOR_WITHDRAWALS_IN_BROWSER_ONLY,
     CONNECTOR_SIGNATORY_PORTRAIT_IN_BROWSER_ONLY,
     BROWSER_ONLY;
 
@@ -81,7 +82,7 @@ enum AdminHandlerReach {
         table.put("GET /api/admin/donations/overview/since", CONNECTOR);
         table.put("GET /api/admin/donations/payments", CONNECTOR);
         table.put("POST /api/admin/donations/payments/{id}/pair", CONNECTOR);
-        table.put("POST /api/admin/donations/payments/{id}/unpair", CONNECTOR);
+        table.put("POST /api/admin/donations/payments/{id}/unpair", CONNECTOR_WITHDRAWALS_IN_BROWSER_ONLY);
         table.put("GET /api/admin/donations/receipt-images/{sha256}", BROWSER_ONLY);
         table.put("GET /api/admin/donations/receipt-signatory", CONNECTOR);
         table.put("PUT /api/admin/donations/receipt-signatory", BROWSER_ONLY);

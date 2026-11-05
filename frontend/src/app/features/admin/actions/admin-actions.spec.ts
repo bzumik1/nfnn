@@ -263,6 +263,20 @@ describe('Given an administrator on the history page', () => {
     expect(issued).not.toContain('ISSUE_RECEIPT');
   });
 
+  it('when a yearly receipt was withdrawn after an unpairing, then the change is named in Czech, not by its code', () => {
+    firstPage([
+      adminAction({
+        action: 'WITHDRAW_RECEIPT',
+        summary:
+          'Dárci Jana Nováková zrušeno roční potvrzení 2027-000001 za rok 2026, protože se zrušilo přiřazení daru, který na něm byl; ověření ukáže, že platilo ke dni vystavení.',
+      }),
+    ]);
+
+    const withdrawn = rowText(rows()[0]);
+    expect(withdrawn).toContain('Zrušení potvrzení o daru');
+    expect(withdrawn).not.toContain('WITHDRAW_RECEIPT');
+  });
+
   it('when a change came through a connected application, then the row names the application and a change on the web names none', () => {
     firstPage([adminAction({ action: 'CHANGE_LOG_LEVEL', client: 'claude.ai' }), granted]);
 

@@ -62,11 +62,13 @@ public final class TranscriptNormaliser {
     private static final String TIMESTAMP_FIELD = "timestamp";
     private static final Set<String> BOOT_ERROR_FIELDS = Set.of(TIMESTAMP_FIELD, "status", "error", "path");
     private static final String TIME = "<time>";
+    private static final String ROWS_DIGEST_FIELD = "rowsSha256";
 
     private final Map<String, String> knownValues;
     private final Pattern knownValuePattern;
     private final Pattern knownSecretPattern;
     private final Map<String, String> ids = new HashMap<>();
+    private final Map<String, String> rowsDigests = new HashMap<>();
     private final Map<String, String> numberedLabels = new HashMap<>();
     private final Map<String, Integer> labelCounters = new HashMap<>();
     private final Set<String> maskedValues = new TreeSet<>();
@@ -162,6 +164,10 @@ public final class TranscriptNormaliser {
             for (Map.Entry<String, JsonNode> field : raw.properties()) {
                 if (bootError && TIMESTAMP_FIELD.equals(field.getKey())) {
                     normalised.put(TIMESTAMP_FIELD, TIME);
+                    continue;
+                }
+                if (ROWS_DIGEST_FIELD.equals(field.getKey()) && field.getValue().isString()) {
+                    normalised.put(ROWS_DIGEST_FIELD, rowsDigest(field.getValue().asString()));
                     continue;
                 }
                 boolean secret = isSecretField(field.getKey(), field.getValue(), totpEnrolment)
@@ -265,6 +271,10 @@ public final class TranscriptNormaliser {
             return label;
         }
         return numberedLabels.computeIfAbsent(value, ignored -> label.replace(NUMBER, String.valueOf(labelCounters.merge(label, 1, Integer::sum))));
+    }
+
+    private String rowsDigest(String raw) {
+        return rowsDigests.computeIfAbsent(raw, ignored -> "<rows-sha256:" + (rowsDigests.size() + 1) + ">");
     }
 
     private String id(String raw) {

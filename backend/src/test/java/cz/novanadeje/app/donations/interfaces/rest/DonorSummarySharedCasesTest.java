@@ -5,6 +5,9 @@ import cz.novanadeje.app.donations.domain.receipt.FirstReceiptYear;
 import cz.novanadeje.app.sharedcases.CaseRows;
 import cz.novanadeje.app.sharedcases.SharedCase;
 import org.springframework.beans.factory.annotation.Autowired;
+import tools.jackson.databind.node.ObjectNode;
+
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -35,6 +38,11 @@ class DonorSummarySharedCasesTest extends DonationRowsSharedCaseRunner {
                 .isEqualTo(sharedCase.input().get("firstReceiptYear").asInt());
         CaseRows rows = writeRows(sharedCase.input());
 
-        assertGives(answerAs(rows.donorId(sharedCase.input().get("donor").asString()), "ROLE_DONOR", get("/api/donations/me/summary")), sharedCase.expected());
+        UUID donor = rows.donorId(sharedCase.input().get("donor").asString());
+
+        assertGives(answerAs(donor, "ROLE_DONOR", get("/api/donations/me/summary")), sharedCase.expected());
+        ObjectNode synced = (ObjectNode) answerAs(donor, "ROLE_DONOR", get("/api/donations/me/sync")).get("summary");
+        assertThat(synced.remove("bankDataAsOf").isNull()).as("the bank data time of rows without an import").isTrue();
+        assertGives(synced, sharedCase.expected());
     }
 }

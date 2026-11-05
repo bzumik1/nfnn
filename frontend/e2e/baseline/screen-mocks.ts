@@ -12,6 +12,7 @@ import {
   problem,
   session,
 } from '../donor-session';
+import type { RouteTarget } from '../fixtures';
 
 export const FIXED_TIME = new Date('2026-10-28T09:00:00Z');
 
@@ -454,7 +455,7 @@ function foundationPaymentDetails(): object {
   return details.expected;
 }
 
-export async function servePaymentDetails(page: Pick<Page, 'route'>): Promise<void> {
+export async function servePaymentDetails(page: RouteTarget): Promise<void> {
   await page.route(
     (url) => url.pathname === '/api/donations/payment-details',
     (route) => route.fulfill({ json: foundationPaymentDetails() }),
@@ -469,7 +470,7 @@ export async function failPaymentDetails(page: Page): Promise<void> {
   );
 }
 
-async function mockMedia(page: Pick<Page, 'route'>): Promise<void> {
+async function mockMedia(page: RouteTarget): Promise<void> {
   const cover = readFileSync(join(__dirname, '..', '..', 'public', 'images', 'news-1.webp'));
   await page.route(
     (url) => url.pathname.startsWith('/api/content/media/'),
@@ -477,7 +478,7 @@ async function mockMedia(page: Pick<Page, 'route'>): Promise<void> {
   );
 }
 
-export async function mockPublicContent(page: Pick<Page, 'route'>): Promise<void> {
+export async function mockPublicContent(page: RouteTarget): Promise<void> {
   await mockMedia(page);
   await page.route(
     (url) => url.pathname === '/api/content/home',
@@ -503,7 +504,7 @@ export async function mockPublicContent(page: Pick<Page, 'route'>): Promise<void
   );
 }
 
-export async function mockAdministration(page: Pick<Page, 'route'>): Promise<void> {
+export async function mockAdministration(page: RouteTarget): Promise<void> {
   await routeLogsApi(page);
   await mockMedia(page);
   await page.route(

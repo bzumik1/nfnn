@@ -1,9 +1,31 @@
 const ROOM_CLASS = 'has-floating-notice';
 const ROOM_HEIGHT = '--floating-notice-height';
+const barsShown = new WeakMap<Document, HTMLElement[]>();
+
+function shownBars(document: Document): HTMLElement[] {
+  return (barsShown.get(document) ?? []).filter((shown) => shown.isConnected);
+}
+
+function keepRoomForLatest(document: Document, bars: HTMLElement[]): void {
+  const root = document.documentElement;
+  barsShown.set(document, bars);
+  const latest = bars.at(-1);
+  if (latest) {
+    root.classList.add(ROOM_CLASS);
+    root.style.setProperty(ROOM_HEIGHT, `${latest.offsetHeight}px`);
+    return;
+  }
+  root.classList.remove(ROOM_CLASS);
+  root.style.removeProperty(ROOM_HEIGHT);
+}
 
 export function keepRoomForFloatingNotice(document: Document, bar: HTMLElement): () => void {
-  const root = document.documentElement;
-  const measure = () => root.style.setProperty(ROOM_HEIGHT, `${bar.offsetHeight}px`);
+  const measure = () => {
+    const bars = shownBars(document);
+    if (bars.at(-1) === bar) {
+      keepRoomForLatest(document, bars);
+    }
+  };
   const view = document.defaultView;
   const observer = view?.ResizeObserver ? new view.ResizeObserver(measure) : null;
   const scrollAboveBar = (focused: Element) => {
@@ -20,14 +42,15 @@ export function keepRoomForFloatingNotice(document: Document, bar: HTMLElement):
     }
     view?.requestAnimationFrame(() => scrollAboveBar(focused));
   };
-  measure();
+  keepRoomForLatest(document, [...shownBars(document).filter((shown) => shown !== bar), bar]);
   observer?.observe(bar);
-  root.classList.add(ROOM_CLASS);
   document.addEventListener('focusin', uncover);
   return () => {
     observer?.disconnect();
     document.removeEventListener('focusin', uncover);
-    root.classList.remove(ROOM_CLASS);
-    root.style.removeProperty(ROOM_HEIGHT);
+    keepRoomForLatest(
+      document,
+      shownBars(document).filter((shown) => shown !== bar),
+    );
   };
 }

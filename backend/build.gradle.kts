@@ -81,9 +81,6 @@ class JavaAgent(@get:Classpath val jar: FileCollection) : CommandLineArgumentPro
 }
 
 val runsCucumber = !project.hasProperty("noCucumber")
-val acceptanceSuite = (project.findProperty("acceptanceSuite") as String?)?.also {
-	require(file("src/test/java/cz/novanadeje/app/cucumber/${it}AcceptanceTests.java").isFile) { "No acceptance suite ${it}AcceptanceTests in src/test/java/cz/novanadeje/app/cucumber" }
-} ?: "*"
 
 tasks.withType<Test> {
 	systemProperty("cucumber.junit-platform.naming-strategy", "long")
@@ -96,6 +93,7 @@ tasks.withType<Test> {
 	environment("TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE", "/var/run/docker.sock")
 	inputs.file("../frontend/src/themes/nova-nadeje/_theme.scss").withPropertyName("siteTheme").withPathSensitivity(PathSensitivity.NONE)
 	inputs.file("../frontend/src/app/core/errors/error-vocabulary.json").withPropertyName("clientErrorVocabulary").withPathSensitivity(PathSensitivity.NONE)
+	inputs.file("../frontend/src/app/core/version/api-generation.json").withPropertyName("appApiGeneration").withPathSensitivity(PathSensitivity.NONE)
 	inputs.file("../frontend/src/app/features/donations/receipt-pdf/receipt-document.ts").withPropertyName("browserReceiptTextKeys").withPathSensitivity(PathSensitivity.NONE)
 	inputs.files(fileTree("../shared-cases")).withPropertyName("sharedCases").withPathSensitivity(PathSensitivity.RELATIVE)
 	inputs.files(fileTree("../regression")).withPropertyName("baselineArtefacts").withPathSensitivity(PathSensitivity.RELATIVE)
@@ -109,7 +107,7 @@ val acceptanceTest = tasks.register<Test>("acceptanceTest") {
 	useJUnitPlatform {
 		includeEngines("junit-platform-suite")
 	}
-	include("**/${acceptanceSuite}AcceptanceTests.class")
+	include("**/*AcceptanceTests.class")
 	enabled = runsCucumber
 	systemProperty("org.apache.juli.logging.UserDataHelper.CONFIG", "INFO_ALL")
 	val transcripts = layout.buildDirectory.dir("api-transcripts")

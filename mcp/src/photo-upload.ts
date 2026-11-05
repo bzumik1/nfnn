@@ -65,7 +65,10 @@ export async function receivePhoto(
   }
 }
 
-async function readAtMost(request: Request, limit: number): Promise<Uint8Array | undefined> {
+async function readAtMost(
+  request: Request,
+  limit: number,
+): Promise<Uint8Array<ArrayBuffer> | undefined> {
   const declared = Number(request.headers.get('content-length'));
   if (Number.isFinite(declared) && declared > limit) {
     return undefined;

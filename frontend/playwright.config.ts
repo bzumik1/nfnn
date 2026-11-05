@@ -15,6 +15,11 @@ const build = theme
   ? `npx ng build --configuration=production,${theme}-theme --output-path=dist/${theme}-theme`
   : 'npx ng build';
 const served = process.env.E2E_DIST ?? builtApp;
+const askedProjects = process.argv.filter((argument) => argument.startsWith('--project='));
+const onlyWebApp =
+  process.env.E2E_DIST !== undefined &&
+  askedProjects.length > 0 &&
+  askedProjects.every((argument) => argument === '--project=pwa');
 const safari = !!process.env.SAFARI;
 
 const SAFARI_TEST_TIMEOUT_MS = 60_000;
@@ -38,19 +43,27 @@ export default defineConfig<DeviceOptions, { safariPose?: SafariPose }>({
   use: {
     baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:4200',
     trace: 'on-first-retry',
+    serviceWorkers: 'block',
   },
   projects: safari
     ? safariProjects
     : [
         {
           name: 'chromium',
-          testIgnore: /baseline\/|devices\/(devices|safari)\.spec\.ts$/,
+          testIgnore: /baseline\/|pwa\/|devices\/(devices|safari)\.spec\.ts$/,
           use: { ...devices['Desktop Chrome'] },
         },
         {
           name: 'iphone',
-          testMatch: /(receipt-pdf|verify-receipt|donate-qr|second-factor)\.spec\.ts$/,
+          testMatch: /(receipt-pdf|verify-receipt|donate-qr|second-factor|dialog-back)\.spec\.ts$/,
+          testIgnore: /pwa\//,
           use: { ...devices['iPhone 15'] },
+        },
+        {
+          name: 'pwa',
+          default: false,
+          testMatch: /pwa\/.*\.spec\.ts$/,
+          use: { ...devices['Desktop Chrome'], channel: 'chromium', serviceWorkers: 'allow' },
         },
         ...POSES.map((pose) => ({
           name: `${DEVICE_PROJECT_PREFIX}${pose.id}`,
@@ -76,7 +89,7 @@ export default defineConfig<DeviceOptions, { safariPose?: SafariPose }>({
         },
       ],
   webServer:
-    safari || process.env.E2E_BASE_URL
+    safari || process.env.E2E_BASE_URL || onlyWebApp
       ? undefined
       : {
           command: process.env.E2E_DIST

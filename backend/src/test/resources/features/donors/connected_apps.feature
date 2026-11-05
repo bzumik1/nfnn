@@ -104,6 +104,20 @@ Feature: An administrator connects an application such as Claude to the administ
     When "Jana" lists the connected applications
     Then the connected applications are "claude.ai" with scope "admin:read admin:write"
 
+  Scenario: An exchanged API token cannot download the administrator's own data as a donor's device does
+    Given "Jana" connected the application "https://claude.ai/.well-known/oauth-client" with scope "admin:read admin:write"
+    When the connector exchanges the connector token for an API token
+    And the exchanged API token sends GET "/api/donations/me/sync"
+    Then the response status is 403
+    And the problem type ends with "auth/forbidden"
+    When the exchanged API token sends GET "/api/donations/me/sync/chunks?ids=donations:2026"
+    Then the response status is 403
+    And the problem type ends with "auth/forbidden"
+    When "Jana" asks for her sync manifest
+    Then the response status is 200
+    When "Jana" asks for the sync chunks "donations:2026"
+    Then the response status is 200
+
   Scenario Outline: A dangerous or irreversible change is refused to a connected application even with the writing permission
     Given "Jana" connected the application "https://claude.ai/.well-known/oauth-client" with scope "admin:read admin:write"
     When the connector exchanges the connector token for an API token
@@ -165,6 +179,53 @@ Feature: An administrator connects an application such as Claude to the administ
       | action        | client    |
       | ISSUE_RECEIPT |           |
       | ISSUE_RECEIPT | claude.ai |
+
+  Scenario: A connected application unpairs a gift no receipt lists, but unpairing a gift on a yearly receipt, which withdraws it, is left to the browser, after which it issues the new receipt that names the withdrawn one
+    Given today is 2026-12-20
+    And a person of the foundation signs the receipts
+    And the bank account has these movements:
+      | id   | date       | amount  | account    | bankCode | name       | variableSymbol |
+      | 3001 | 2026-11-15 | 2500.00 | 2900233333 | 2010     | Novák Petr | {Petr}         |
+      | 3002 | 2026-11-20 | 300.00  | 2900233333 | 2010     | Novák Petr | {Petr}         |
+      | 3003 | 2026-12-01 | 100.00  | 2900233333 | 2010     | Novák Petr | 1111111111     |
+    And the application starts the import
+    And today is 2027-01-15
+    And "Petr" issues his yearly receipt for 2026
+    And the issued receipt has number "2027-000001"
+    And "Jana" pairs payment 3003 with "Petr"
+    And "Jana" connected the application "https://claude.ai/.well-known/oauth-client" with scope "admin:read admin:write"
+    When the connector exchanges the connector token for an API token
+    And the exchanged API token unpairs payment 3002
+    Then the response status is 403
+    And the problem type ends with "donations/receipt-withdrawal-in-browser-only"
+    And the problem has the title "Zrušit potvrzení jde jen v prohlížeči"
+    And bank payment 3002 is paired with "Petr"
+    And 1 receipt is active
+    When the exchanged API token unpairs payment 3003
+    Then the response status is 200
+    And the unpairing changed no yearly receipt
+    And bank payment 3003 is unpaired
+    When "Jana" unpairs payment 3002
+    Then the response status is 200
+    And the unpairing changed the yearly receipt for 2026
+    And 0 receipts are active
+    When the connector exchanges the connector token for an API token
+    And the exchanged API token issues the yearly receipt of "Petr" for 2026
+    Then the response status is 200
+    And the issued receipt has number "2027-000002"
+    And the frozen receipt holds:
+      | field             | value       |
+      | replaces.number   | 2027-000001 |
+      | total.amountMinor | 250000      |
+    And 1 receipt is active
+    When "Jana" asks for the admin actions
+    Then the admin actions came through these applications:
+      | action           | client    |
+      | ISSUE_RECEIPT    | claude.ai |
+      | WITHDRAW_RECEIPT |           |
+      | UNPAIR_PAYMENT   |           |
+      | UNPAIR_PAYMENT   | claude.ai |
+      | PAIR_PAYMENT     |           |
 
   Scenario: A donor without the administrator role cannot connect an application
     When "Petr" approves the connection for "https://claude.ai/.well-known/oauth-client" with scope "admin:read" and state "xyz"

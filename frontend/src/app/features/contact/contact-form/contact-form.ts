@@ -15,8 +15,9 @@ import {
 } from '@angular/core';
 import { FormsModule, NgForm } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { problemOf } from '../../../core/auth/api-problem';
+import { problemOf, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
+import { UPDATE_REQUIRED } from '../../../core/version/version-interceptor';
 import { Donor } from '../../../core/auth/donor';
 import { FocusFirstInvalid } from '../../../shared/ui/form-field/focus-first-invalid';
 import { FormControlDirective } from '../../../shared/ui/form-field/form-control';
@@ -141,14 +142,15 @@ export class ContactForm {
   }
 }
 
-type Failure = 'tooMany' | 'generic';
+type Failure = 'tooMany' | 'updateRequired' | 'generic';
 
 function emptyMessage(): ContactMessageRequest {
   return { fullName: '', email: '', message: '', website: '' };
 }
 
 function classifyFailure(failure: unknown): Failure {
-  return failure instanceof HttpErrorResponse && failure.status === TOO_MANY_REQUESTS
-    ? 'tooMany'
-    : 'generic';
+  if (failure instanceof HttpErrorResponse && failure.status === TOO_MANY_REQUESTS) {
+    return 'tooMany';
+  }
+  return problemTypeEndsWith(failure, UPDATE_REQUIRED) ? 'updateRequired' : 'generic';
 }

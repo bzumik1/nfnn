@@ -77,7 +77,7 @@ Proxy host:
 - Block common exploits: zapnuto
 - SSL: nový Let's Encrypt certifikát, Force SSL, HTTP/2, HSTS
 
-Gzip, cache a bezpečnostní hlavičky řeší nginx ve frontend image, Advanced konfigurace v NPM není potřeba. Výjimkou bude přechod na Cloudflare: pak NPM musí brát adresu návštěvníka z `CF-Connecting-IP` (viz Obnova hesla, Adresa návštěvníka).
+Gzip, cache a bezpečnostní hlavičky řeší nginx ve frontend image, Advanced konfigurace v NPM není potřeba. Za Cloudflare musí NPM brát adresu návštěvníka z `CF-Connecting-IP` (viz Obnova hesla, Adresa návštěvníka); mezipaměť a záložní stránku na Cloudflare popisuje „Cloudflare: web při výpadku serveru“.
 
 ## Nasazení nové verze
 
@@ -140,6 +140,8 @@ Správce je čte ve webu na `/sprava/logy` a Claude přes konektor (viz [MCP kon
 
 Web i konektor čtou logy přes backend, takže když backend neběží, ukáže je jen Zima: `sudo docker logs nfnn-backend` nebo `sudo tail -n 200 /DATA/AppData/nfnn/logs/backend.log`. Co v logu není: compose uložený ZimaOS, proměnné v kontejnerech a kontejner, který ZimaOS vůbec nevytvořil; na to zůstává tvůj příkaz na Zimě.
 
+Když web u každého odeslání píše „Web mezitím dostal novou verzi“ a nepomůže ani načtení stránky, běží frontend a backend z různých commitů s jinou generací API (hlavička `Nfnn-Api`): server pak každý zápis odmítne stavem 426, který v `nginx-access.log` u `POST`/`PUT`/`DELETE` uvidíte. Pomůže uložit aplikaci v ZimaOS znovu, aby se oba obrazy stáhly ze stejného commitu (`nfnn_status` jmenuje revizi backendu).
+
 Do 23. 10. 2026 složku vystavoval ještě kontejner `nfnn-ops` přes tunel Cloudflare na `ops.nfnn.cz`. Po přeinstalaci s aktuálním `deploy/compose.yml` ho zbývá uklidit: na Zimě zmizí s celou složkou `env/` (viz [Přechod z env souborů](#přechod-z-env-souborů)), v Cloudflare Zero Trust smazat tunel `nfnn-ops` (s ním i DNS záznam `ops`), aplikaci Access `NFNN logy` a servisní token `claude-nfnn`, a z prostředí projektu na claude.ai proměnné `NFNN_OPS_CLIENT_ID` a `NFNN_OPS_CLIENT_SECRET`.
 
 ## MCP konektor
@@ -162,6 +164,50 @@ Doména fondu je `nfnn.cz` (u WEDOS, držitel fond; DNS už u Cloudflare). Od ú
 3. Až certifikát je, oba záznamy v Cloudflare přepni na **Proxied**. Přesměrování `www` udělej v Cloudflare (Rules → Redirect Rules), dvěma pravidly typu Wildcard pattern: `https://www.nfnn.cz/*` a `http://www.nfnn.cz/*`, obě na `https://nfnn.cz/${1}`, 301, Preserve query string. Pro `www` tak NPM ani certifikát nepotřebuje. V Cloudflare nech vypnuté Web Analytics s automatickou instalací (Web Analytics → Manage site → Disable), Real User Monitoring v Speed → Observatory, Rocket Loader a Email Address Obfuscation: všechny vkládají do stránky skript, který Content-Security-Policy webu zablokuje. Vypnutý nech i Bot Fight Mode, který by mohl odmítat konektor z claude.ai. Kontrola: `curl -s https://nfnn.cz/ | grep -c cloudflareinsights` vrátí 0.
 4. Ve správě na `/sprava/nastaveni` změň „Adresa webu“ na `https://nfnn.cz` a ulož (web se restartuje; přihlášení platí pro adresu webu, takže stránka po restartu přihlášení sama obnoví a otevřená správa v jiných záložkách potřebuje obnovit stránku). Zkontroluj odkaz v e-mailu (obnova hesla) a `https://nfnn.cz/.well-known/oauth-authorization-server` (`issuer` má být `https://nfnn.cz`). Přístupové klíče (passkey) patří k doméně z adresy webu: klíč vytvořený na staging adrese na `nfnn.cz` nefunguje, takže je dárci (a ty) přidávejte až po přechodu. Staré klíče ze stagingu backend po restartu s novou adresou smaže sám (v `backend.log` řádek „Passkeys of other sites removed from N donors“); kdo měl jen klíč bez hesla, přihlásí se přes „Zapomenuté heslo“. Správce, který se do správy dostává jen klíčem, si před přechodem nastaví heslo a zapne kód z aplikace: obnovu e-mailem správce nemá, a bez hesla by se po smazání klíčů nepřihlásil vůbec (s heslem a bez kódu se přihlásí, kód si zapne a správa se mu otevře).
 5. Kontrola: `https://nfnn.cz/robots.txt`, `https://nfnn.cz/sitemap.xml`, náhled odkazu (`og:image` je `https://nfnn.cz/images/og-image.jpg`, zatím zástupná fotka z hera, než Jakub dodá skutečný obsah). Starý proxy host pro duckdns nech, dokud na něj něco odkazuje; sitemap obsahuje úvodní stránku, seznamy `/aktuality` a `/projekty` a zásady ochrany osobních údajů; jednotlivé aktuality a projekty do ní přibudou s generovanou mapou webu.
+
+## Cloudflare: web při výpadku serveru
+
+Když Zima nebo aplikace neběží, Cloudflare dál vydává to, co má v mezipaměti, a na zbytek odpoví záložní stránkou „Web je dočasně nedostupný“ s číslem účtu, IBAN, QR platbou bez částky a e-mailem `info@nfnn.cz` (plán v3, krok 2.6). Server k tomu posílá dvě hlavičky, které nastavení níže jen využije:
+
+- Úvodní stránka, cesty aplikace a nehashované soubory mají pro prohlížeč dál `Cache-Control: no-cache` a pro Cloudflare `Cloudflare-CDN-Cache-Control: max-age=0, stale-if-error=604800`: Cloudflare je při každém otevření ověří u serveru (ETag, Last-Modified), takže návštěvník vždy dostane nejnovější verzi, a když server odpoví chybou 5xx nebo vůbec, vydá až 7 dní starou kopii (nejvýš: stránku, kterou nikdo dlouho neotevřel, může Cloudflare zahodit dřív). Obrázky z `/images/` a texty licencí písem drží hodinu a při výpadku stejně až 7 dní (`max-age=3600, stale-if-error=604800`), soubory aplikace s otiskem v názvu, `/media/` a písma potvrzení rok. Chyby (404 a další) Cloudflare neukládá (`no-store`).
+- `/api`, `/mcp`, `/mcp-photos` a `/.well-known/…` nesou `Cloudflare-CDN-Cache-Control: no-store`, takže je Cloudflare neuloží nikdy, ani kdyby pravidlo níže chybělo; veřejné fotky aktualit a projektů na `/api/content/media/…` také ne (rozhodnuto v kroku 2.6, prohlížeč si je drží sám rok).
+
+Při výpadku tedy návštěvník dostane uloženou aplikaci, ale co aplikace načítá z `/api` (obsah úvodu, aktuality, údaje k platbě), se nenačte a stránka to místo vynechá nebo ukáže svou chybovou hlášku (úvodní fotka a texty aplikace zůstanou); uložená data v zařízení přijdou až s fází 2 v3. Stránku, kterou Cloudflare ještě nemá (třeba aktualitu, kterou nikdo dlouho neotevřel), nahradí záložní stránka s kódem 503 a `Retry-After: 120`, kterou Cloudflare ani prohlížeč neuloží. Totéž dostane návštěvník z odkazu s dotazem za `?` (třeba `?fbclid=…` z Facebooku): dotaz je součástí klíče mezipaměti a na bezplatném plánu ho vynechat nejde. Soubory částí aplikace, které od posledního nasazení nikdo neotevřel, Cloudflare také nemá, takže taková stránka ukáže hlášku aplikace s „Načíst znovu“. Když server jen spadl a Nginx Proxy Manager běží (zastavená aplikace), odpoví Cloudflare hned; když je Zima bez proudu nebo bez internetu, čeká Cloudflare na spojení až asi 20 sekund při každém otevření stránky, než vydá uloženou kopii nebo záložní stránku.
+
+Nastavení je jednorázové, v Cloudflare u zóny `nfnn.cz`:
+
+1. **Účet**: Cloudflare vidí veškerý provoz webu nešifrovaně a kdo ovládne účet (nebo token s právem upravovat Workers či zónu), může přepsat aplikaci i číslo účtu na záložní stránce, takže účet chraň jako server: dvoufaktorové přihlášení (nejlépe bezpečnostní klíč nebo passkey), Global API Key nepoužívat, API tokeny jen s nejužším oprávněním a s datem vypršení, v účtu žádní další členové; občas projít Manage Account → Audit Log.
+2. **SSL/TLS → Edge Certificates**: Always Use HTTPS zapnout (při výpadku přesměrování na https od NPM chybí, záložní stránka by jinak mohla odejít i přes http). **Caching → Configuration**: Always Online **vypnout** (se zapnutým by Cloudflare `stale-if-error` nebral), Caching Level Standard. **Caching → Tiered Cache**: Smart Tiered Cache zapnout (kopii pak drží i nadřazené datové centrum, takže při výpadku ji najde víc návštěvníků).
+3. **Caching → Cache Rules**, dvě pravidla v tomto pořadí (u Cache Rules vyhrává poslední shodné):
+   1. `Aplikace z mezipaměti`: Custom filter expression `(http.host eq "nfnn.cz")`; Cache eligibility **Eligible for cache**; Edge TTL **Use cache-control header if present, bypass cache if not**; Browser TTL **Respect origin TTL**; Cache key nechat výchozí (dotaz za `?` je jeho součástí). Nic dalšího.
+   2. `Bez mezipaměti`: Edit expression
+      ```
+      (starts_with(http.request.uri.path, "/api")) or (starts_with(http.request.uri.path, "/mcp")) or (starts_with(http.request.uri.path, "/.well-known/")) or (starts_with(http.request.uri.path, "/actuator")) or (http.request.uri.path in {"/ngsw.json" "/ngsw-worker.js"})
+      ```
+      a Cache eligibility **Bypass cache**.
+4. **Záložní stránka (Worker)**: Workers & Pages → Create → Worker („Hello World“), název `nfnn-zalozni-stranka` → Deploy → Edit code, celý obsah nahradit souborem [`deploy/cloudflare/nfnn-fallback-worker.mjs`](cloudflare/nfnn-fallback-worker.mjs) z `main` → Deploy. Compatibility flags nech výchozí (hlavně ne `global_fetch_strictly_public`, se kterým by Worker volal sám sebe). Pak u zóny `nfnn.cz` → Workers Routes → Add route: `nfnn.cz/*`, Worker `nfnn-zalozni-stranka`, Failure mode **Fail open (proceed)**: když se vyčerpá bezplatný limit 100 000 požadavků denně, jde požadavek k serveru jako bez Workeru; když Worker spadne, pošle požadavek k serveru on sám (`passThroughOnException`). Do limitu se počítá každý soubor v kořeni webu, i soubory aplikace s otiskem (trasy je vyloučit neumí); jednou za čas mrkni do Workers & Pages → `nfnn-zalozni-stranka` → Metrics, kolik požadavků denně má. Dál stejným tlačítkem trasy s Worker **None**, aby tudy Worker vůbec nešel: `nfnn.cz/api/*`, `nfnn.cz/mcp*`, `nfnn.cz/.well-known/*`, `nfnn.cz/media/*`, `nfnn.cz/images/*`, `nfnn.cz/receipt-fonts/*` (konkrétnější trasa vyhrává). Worker sám nic neukládá, nemá žádná tajemství ani proměnné, neposílá nic jinam než na server a na tyto cesty ani na nic jiného než otevření stránky (GET a HEAD s `Sec-Fetch-Mode: navigate`, bez té hlavičky `Accept: text/html`) nesahá: všechny ostatní požadavky i odpovědi propouští beze změny. Záložní stránku vydá jen na odpověď 502, 503, 504, 520–527 a 530 nebo když se k serveru nedostane; poznáš ji podle hlavičky `nfnn-fallback: outage`.
+5. Když se změní účet fondu (`BANK_ACCOUNT_NUMBER`, `BANK_IBAN`) nebo text záložní stránky (`frontend/scripts/fallback-page/`), PR změní sdílený případ `shared-cases/payment/details.json` a znovu vygeneruje Worker (`npm run edge:fallback` ve `frontend/`; test v `npm run lint` selže, dokud soubor neodpovídá). Po merge vlož nový soubor do Workeru znovu (krok 4, Edit code → Deploy); PR to uvede mezi ručními kroky. Že na Cloudflare běží soubor z `main`, ověří Claude s konektorem Cloudflare (stáhne kód Workeru `nfnn-zalozni-stranka` a porovná ho se souborem), jinak se to pozná při zkoušce výpadku porovnáním čísla účtu na záložní stránce s `/api/donations/payment-details`.
+
+Kontrola po nastavení (z libovolného počítače):
+
+```bash
+stranka=(-H 'Sec-Fetch-Mode: navigate' -H 'Accept: text/html')   # jako prohlížeč, jinak Worker záložní stránku nikdy nevydá
+curl -sI "${stranka[@]}" https://nfnn.cz/ | grep -i -E '^(cf-cache-status|cache-control|nfnn-fallback)'   # po druhém dotazu REVALIDATED (nebo EXPIRED), no-cache, žádné nfnn-fallback; HIT znamená chybu v nastavení
+curl -sI https://nfnn.cz/api/donations/payment-details | grep -i '^cf-cache-status'                       # DYNAMIC nebo BYPASS, nikdy HIT
+curl -s "${stranka[@]}" https://nfnn.cz/ | grep -c 'Web je dočasně nedostupný'                           # 0
+```
+
+### Zkouška výpadku
+
+Jednou po nastavení Cloudflare, večer, na 5 minut (Jakub 5. 11. 2026, Q11 plánu v3):
+
+1. Claude ověří kontroly výše a otevře přes `nfnn.cz` úvod, Přispět, seznam aktualit a jednu aktualitu, aby je Cloudflare měl.
+2. Jakub v ZimaOS aplikaci „Nová naděje“ zastaví (Stop).
+3. Claude během 5 minut přes `nfnn.cz` ověří: úvod, `/aktuality` a otevřená aktualita přijdou z mezipaměti (`cf-cache-status: STALE`, kód 200; dotazy s hlavičkami `stranka` z kontroly výše) a části z `/api` chybí nebo hlásí chybu; dosud neotevřená adresa (`/aktuality/zkouska-vypadku-<čas>`) dostane záložní stránku (503, `nfnn-fallback: outage`), číslo účtu a IBAN na ní jsou tytéž jako v odpovědi `/api/donations/payment-details` před výpadkem a QR kód na ní přečtený telefonem nabídne platbu na tentýž účet bez částky; `/api/…` vrátí chybu Cloudflare, ne záložní stránku.
+4. Volitelně, s Jakubovým souhlasem: na minutu zastavit i Nginx Proxy Manager nebo odpojit Zimu od sítě, aby se ukázalo čekání Cloudflare (až asi 20 s) jako při výpadku proudu; Claude změří dobu odpovědi úvodu a záložní stránky.
+5. Jakub vše spustí (Start). Claude ověří návrat: `nfnn_status` odpovídá, úvod má `REVALIDATED` nebo `MISS` a žádné `nfnn-fallback`, `/api/donations/payment-details` 200. Výsledek zapíše do vlákna kroku.
+
+Kdyby web po výpadku ukazoval starou verzi nebo chybu, kterou server už nevrací: Caching → Configuration → Purge Everything.
 
 ## E-maily
 

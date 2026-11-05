@@ -34,7 +34,7 @@ Backend poběží na `http://localhost:8080`. JDK 25 si Gradle stáhne sám (too
 
 ### Frontend
 
-> Vyžaduje **Node 22.22.3+ nebo 24.15+ (LTS)**. Node 25 není Angularem podporován.
+> Vyžaduje **Node 22.22.3+, 24.15+ nebo 26+**; CI a obrazy běží na Node 26 (LTS). Node 25 není Angularem podporován.
 
 ```bash
 cd frontend

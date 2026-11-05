@@ -22,7 +22,7 @@ public final class FixedWindowRateLimiter {
     private final int limit;
     private final Duration window;
     private final Clock clock;
-    private final Cache<ClientAddressKey, AtomicInteger> windows;
+    private final Cache<RateLimitKey, AtomicInteger> windows;
     private final AtomicReference<Instant> nextWarning = new AtomicReference<>(Instant.MIN);
 
     public FixedWindowRateLimiter(int limit, Duration window, Clock clock) {
@@ -43,8 +43,8 @@ public final class FixedWindowRateLimiter {
                 .build();
     }
 
-    public boolean tryAcquire(ClientAddressKey key) {
-        if (!key.isAddress()) {
+    public boolean tryAcquire(RateLimitKey key) {
+        if (key instanceof ClientAddressKey address && !address.isAddress()) {
             warnOfMissingAddress();
         }
         AtomicInteger counter = windows.get(key, ignored -> new AtomicInteger());

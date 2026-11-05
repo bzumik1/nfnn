@@ -119,3 +119,77 @@ describe('Given the page of a project', () => {
     expect(text(fixture, '.crumbs a')).toBe('← Kde pomáháme');
   });
 });
+
+describe('Given a browser that can share', () => {
+  let share: ReturnType<typeof vi.fn<(data: ShareData) => Promise<void>>>;
+
+  beforeEach(() => {
+    share = vi.fn<(data: ShareData) => Promise<void>>().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'share', { value: share, configurable: true });
+    Object.defineProperty(navigator, 'canShare', { value: () => true, configurable: true });
+  });
+
+  afterEach(() => {
+    Reflect.deleteProperty(navigator, 'share');
+    Reflect.deleteProperty(navigator, 'canShare');
+  });
+
+  async function shown(
+    kind: 'news' | 'project',
+    preview = false,
+  ): Promise<ComponentFixture<ContentArticle>> {
+    const fixture = await setUp();
+    fixture.componentRef.setInput('kind', kind);
+    fixture.componentRef.setInput(
+      'page',
+      kind === 'news' ? newsPage(newsArticle()) : projectPage(project()),
+    );
+    fixture.componentRef.setInput('preview', preview);
+    await fixture.whenStable();
+    return fixture;
+  }
+
+  function shareButton(fixture: ComponentFixture<ContentArticle>): HTMLButtonElement | null {
+    return (
+      ([...fixture.nativeElement.querySelectorAll('button')] as HTMLButtonElement[]).find(
+        (button) => button.textContent?.trim() === 'Sdílet',
+      ) ?? null
+    );
+  }
+
+  it('when a visitor shares a news article, then the device gets its title and its address on nfnn.cz', async () => {
+    const fixture = await shown('news');
+
+    const button = shareButton(fixture);
+    expect(button).not.toBeNull();
+    button?.click();
+    await fixture.whenStable();
+
+    expect(share).toHaveBeenCalledExactlyOnceWith({
+      title: 'Zahrada pro děti',
+      url: `https://nfnn.cz/aktuality/${newsArticle().slug}`,
+    });
+  });
+
+  it('when a visitor shares a project, then the device gets its title and its address on nfnn.cz', async () => {
+    const fixture = await shown('project');
+
+    const button = shareButton(fixture);
+    expect(button).not.toBeNull();
+    button?.click();
+    await fixture.whenStable();
+
+    expect(share).toHaveBeenCalledExactlyOnceWith({
+      title: project().title,
+      url: `https://nfnn.cz/projekty/${project().slug}`,
+    });
+  });
+
+  it('when the page is a preview in the administration, then it offers no sharing', async () => {
+    const fixture = await shown('news', true);
+
+    expect(text(fixture, 'h3.ui-intro__title')).toBe('Zahrada pro děti');
+    expect(shareButton(fixture)).toBeNull();
+    expect(fixture.nativeElement.querySelector('app-share-button')).toBeNull();
+  });
+});
