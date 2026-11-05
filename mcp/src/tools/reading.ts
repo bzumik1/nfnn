@@ -673,15 +673,16 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Upozornění přes push',
       description:
-        'The devices on which the connected administrator gets push alerts (the push service, when each was turned on, the last delivery and the failures in a row) and which alerts each gets: bankImport (the bank import is failing), backups (a backup is missing or failed) and mail (e-mail cannot be sent). Change the switches with nfnn_set_push_alerts; a device is turned on, turned off and sent a test alert only on the web at /sprava.',
+        'The devices on which the connected administrator gets push alerts (the push service, when each was turned on, the last delivery and the failures in a row) and which alerts each gets: bankImport (the bank import is failing), backups (a backup is missing or failed) and mail (e-mail cannot be sent), and the alerts open now (`openAlerts`: the area and since when). Change the switches with nfnn_set_push_alerts; a device is turned on, turned off and sent a test alert only on the web at /sprava.',
       annotations: READ_ONLY,
     },
     async (ctx) =>
       answer(deps, ctx, 'nfnn_push_alerts', async ({ apiToken }) => {
         const push = (await backend.get('/api/admin/operations/push', apiToken)) as {
           subscriptions: unknown[];
+          openAlerts: unknown[];
         };
-        return text({ subscriptions: push.subscriptions });
+        return text({ subscriptions: push.subscriptions, openAlerts: push.openAlerts });
       }),
   );
 
