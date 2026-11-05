@@ -1,4 +1,12 @@
-import { BrowserContext, CDPSession, expect, Page, Route, test as base } from '@playwright/test';
+import {
+  Browser,
+  BrowserContext,
+  CDPSession,
+  expect,
+  Page,
+  Route,
+  test as base,
+} from '@playwright/test';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -75,6 +83,7 @@ const VIOLATION_BINDING = '__nfnnPwaSecurityPolicyViolation';
 const READY_TIMEOUT_MS = 10_000;
 const CLAIM_TIMEOUT_MS = 5_000;
 const SETTLE_TIMEOUT_MS = 10_000;
+const PREFETCH_TIMEOUT_MS = 20_000;
 const EXPECTED_PROBLEM_TIMEOUT_MS = 5_000;
 
 async function waitForController(page: Page): Promise<boolean> {
@@ -99,6 +108,145 @@ async function waitForController(page: Page): Promise<boolean> {
     },
     { readyMs: READY_TIMEOUT_MS, claimMs: CLAIM_TIMEOUT_MS },
   );
+}
+
+type RecordProblem = (kind: string, text: string, where: string | undefined) => void;
+
+interface TargetInfo {
+  readonly targetId: string;
+  readonly type: string;
+  readonly url: string;
+  readonly browserContextId?: string;
+}
+
+interface TargetMessage {
+  readonly method?: string;
+  readonly params?: {
+    readonly entry?: { readonly source: string; readonly level: string; readonly text: string };
+    readonly exceptionDetails?: {
+      readonly text: string;
+      readonly exception?: { readonly description?: string };
+    };
+  };
+}
+
+const WORKER_DOMAINS = ['Runtime.enable', 'Log.enable', 'Runtime.runIfWaitingForDebugger'];
+
+async function watchWorkers(
+  context: BrowserContext,
+  browser: Browser,
+  record: RecordProblem,
+): Promise<() => Promise<void>> {
+  const sessions: CDPSession[] = [];
+  const contexts = new Set<string>();
+  const attached = new Set<string>();
+  let nextId = 0;
+  const listen = (session: CDPSession, kinds: readonly string[], uncaught: boolean): void => {
+    const urls = new Map<string, string>();
+    session.on('Target.attachedToTarget', ({ sessionId, targetInfo }) => {
+      if (!kinds.includes(targetInfo.type)) {
+        return;
+      }
+      urls.set(sessionId, targetInfo.url);
+      for (const method of WORKER_DOMAINS) {
+        session
+          .send('Target.sendMessageToTarget', {
+            sessionId,
+            message: JSON.stringify({ id: ++nextId, method }),
+          })
+          .catch(() => undefined);
+      }
+    });
+    session.on('Target.receivedMessageFromTarget', ({ sessionId, message }) => {
+      const where = urls.get(sessionId);
+      if (where === undefined) {
+        return;
+      }
+      const received = JSON.parse(message) as TargetMessage;
+      const entry = received.params?.entry;
+      const thrown = received.params?.exceptionDetails;
+      if (received.method === 'Log.entryAdded' && entry?.source === 'security') {
+        record('Content-Security-Policy violation', entry.text, where);
+      } else if (uncaught && received.method === 'Runtime.exceptionThrown' && thrown) {
+        const text = thrown.exception?.description?.split('\n')[0] ?? thrown.text;
+        record('uncaught error', text, where);
+      }
+    });
+  };
+  const root = await browser.newBrowserCDPSession();
+  sessions.push(root);
+  listen(root, ['service_worker'], true);
+  const attachServiceWorker = (target: TargetInfo): void => {
+    if (
+      target.type === 'service_worker' &&
+      target.browserContextId !== undefined &&
+      contexts.has(target.browserContextId) &&
+      !attached.has(target.targetId)
+    ) {
+      attached.add(target.targetId);
+      root
+        .send('Target.attachToTarget', { targetId: target.targetId, flatten: false })
+        .catch(() => undefined);
+    }
+  };
+  root.on('Target.targetCreated', ({ targetInfo }) => attachServiceWorker(targetInfo));
+  const watchPage = async (page: Page): Promise<void> => {
+    const session = await context.newCDPSession(page);
+    sessions.push(session);
+    const { targetInfo } = await session.send('Target.getTargetInfo');
+    if (targetInfo.browserContextId !== undefined) {
+      contexts.add(targetInfo.browserContextId);
+    }
+    listen(session, ['worker', 'shared_worker'], false);
+    await session.send('Target.setAutoAttach', {
+      autoAttach: true,
+      waitForDebuggerOnStart: false,
+      flatten: false,
+    });
+    const { targetInfos } = await root.send('Target.getTargets');
+    targetInfos.forEach(attachServiceWorker);
+  };
+  const watching: Promise<void>[] = [];
+  context.on('page', (page) => {
+    watching.push(watchPage(page).catch(() => undefined));
+  });
+  await Promise.all(context.pages().map(watchPage));
+  await root.send('Target.setDiscoverTargets', { discover: true });
+  return async () => {
+    await Promise.all(watching);
+    await Promise.all(sessions.map((session) => session.detach().catch(() => undefined)));
+  };
+}
+
+async function prefetched(page: Page): Promise<void> {
+  const answer = await page.request.get('/ngsw.json');
+  if (!answer.ok()) {
+    return;
+  }
+  const manifest = (await answer.json()) as {
+    assetGroups: readonly { installMode: string; urls: readonly string[] }[];
+  };
+  const wanted = manifest.assetGroups
+    .filter((group) => group.installMode === 'prefetch')
+    .flatMap((group) => group.urls);
+  await expect
+    .poll(
+      () =>
+        page.evaluate(async (urls) => {
+          const cached = new Set<string>();
+          for (const name of await caches.keys()) {
+            for (const request of await (await caches.open(name)).keys()) {
+              cached.add(new URL(request.url).pathname);
+            }
+          }
+          return urls.filter((url) => !cached.has(url));
+        }, wanted),
+      {
+        message: 'the service worker keeps every prefetched file of its version in Cache Storage',
+        timeout: PREFETCH_TIMEOUT_MS,
+      },
+    )
+    .toEqual([]);
 }
 
 async function flushPendingReports(context: BrowserContext): Promise<void> {
@@ -192,10 +340,10 @@ export const pwaTest = base.extend<PwaFixtures & PwaOptions, PwaWorkerFixtures &
   },
 
   browserProblems: [
-    async ({ context, allowedConsoleErrors }, use) => {
+    async ({ context, browser, allowedConsoleErrors }, use) => {
       const problems: string[] = [];
       const expected: RegExp[] = [];
-      const record = (kind: string, text: string, where: string | undefined): void => {
+      const record: RecordProblem = (kind, text, where) => {
         const located = where === undefined || where === '' ? text : `${text} (${where})`;
         if (!allowedConsoleErrors.some((pattern) => pattern.test(located))) {
           problems.push(`${kind}: ${located}`);
@@ -224,23 +372,28 @@ export const pwaTest = base.extend<PwaFixtures & PwaOptions, PwaWorkerFixtures &
           });
         });
       }, VIOLATION_BINDING);
+      const stopWatchingWorkers = await watchWorkers(context, browser, record);
       await use({ expectOne: (pattern) => expected.push(pattern) });
-      await flushPendingReports(context);
-      for (const pattern of expected) {
-        await expect
-          .poll(() => problems.some((problem) => pattern.test(problem)), {
-            message: `the fixture records the expected problem ${pattern}`,
-            timeout: EXPECTED_PROBLEM_TIMEOUT_MS,
-          })
-          .toBe(true);
-        problems.splice(
-          problems.findIndex((problem) => pattern.test(problem)),
-          1,
-        );
+      try {
+        await flushPendingReports(context);
+        for (const pattern of expected) {
+          await expect
+            .poll(() => problems.some((problem) => pattern.test(problem)), {
+              message: `the fixture records the expected problem ${pattern}`,
+              timeout: EXPECTED_PROBLEM_TIMEOUT_MS,
+            })
+            .toBe(true);
+          problems.splice(
+            problems.findIndex((problem) => pattern.test(problem)),
+            1,
+          );
+        }
+      } finally {
+        await stopWatchingWorkers();
       }
       expect(
         problems,
-        'no page or service worker of the installed web app logs a console error, and no page throws an uncaught error or violates a Content-Security-Policy directive',
+        'no page or service worker of the installed web app logs a console error, and no page or worker throws an uncaught error or violates a Content-Security-Policy directive',
       ).toEqual([]);
     },
     { auto: true },
@@ -292,6 +445,7 @@ export const pwaTest = base.extend<PwaFixtures & PwaOptions, PwaWorkerFixtures &
           'the service worker controls the page after one reload',
         ).toBe(true);
       }
+      await prefetched(page);
       await settled(page, pageRequests, SETTLE_TIMEOUT_MS);
       return page.evaluate(() => {
         const controller = navigator.serviceWorker.controller;

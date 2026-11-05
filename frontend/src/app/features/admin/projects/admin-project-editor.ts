@@ -17,6 +17,7 @@ import { FormsModule, NgForm } from '@angular/forms';
 import { Title } from '@angular/platform-browser';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
+import { DirtyForms } from '../../../core/updates/dirty-forms';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { FocusFirstInvalid } from '../../../shared/ui/form-field/focus-first-invalid';
@@ -239,6 +240,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
   });
 
   constructor() {
+    this.destroyRef.onDestroy(inject(DirtyForms).register(() => !this.discarded && this.unsaved()));
     const id = this.route.snapshot.paramMap.get('id');
     if (id === null) {
       this.state.set('ready');

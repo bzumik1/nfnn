@@ -1,0 +1,106 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/pwa/pwa-fixtures.spec.ts > Given a page that stored data in the browser > when IndexedDB is dumped, then each store lists its records",
+    "replacement": "e2e/pwa/pwa-fixtures.spec.ts > Given a page outside the app that stored data in the browser > when IndexedDB is dumped, then each store lists its records",
+    "reason": "2.4: the app now registers its own service worker, whose IndexedDB and caches would show in the dumps, so the dumps are proved on the marker page outside the app",
+    "contract": ".claude/rules/testing.md, Frontend (Web as an app)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/pwa/pwa-fixtures.spec.ts > Given a page that stored data in the browser > when the cache is dumped, then each cached request is listed by its cache and path",
+    "replacement": "e2e/pwa/pwa-fixtures.spec.ts > Given a page outside the app that stored data in the browser > when the cache is dumped, then each cached request is listed by its cache and path",
+    "reason": "2.4: the dumps are proved on the marker page outside the app, which registers no service worker",
+    "contract": ".claude/rules/testing.md, Frontend (Web as an app)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/pwa/pwa-fixtures.spec.ts > Given a page that stored data in the browser > when the storage is dumped, then every kind of browser storage is listed by name",
+    "replacement": "e2e/pwa/pwa-fixtures.spec.ts > Given a page outside the app that stored data in the browser > when the storage is dumped, then every kind of browser storage is listed by name",
+    "reason": "2.4: the dumps are proved on the marker page outside the app, which registers no service worker",
+    "contract": ".claude/rules/testing.md, Frontend (Web as an app)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/pwa/service-worker.spec.ts > Given a page that registered the throwaway probe worker > when the browser comes back online, then the worker reaches the network again",
+    "replacement": "e2e/pwa/service-worker.spec.ts > Given the app registered its own service worker > when the browser comes back online, then the worker reaches the network again",
+    "reason": "2.4 replaces the throwaway probe worker with the app's own ngsw-worker.js, so the probe's journeys are proved again against the real worker",
+    "contract": ".claude/rules/testing.md, Frontend (Web as an app)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/pwa/service-worker.spec.ts > Given a page that registered the throwaway probe worker > when the browser goes offline > then a route never opened renders from the cached app shell, and the worker reaches neither a mocked API path nor the server",
+    "replacement": "e2e/pwa/service-worker.spec.ts > Given the app registered its own service worker > when the browser goes offline > then a route never opened renders from the cached app shell",
+    "reason": "2.4 replaces the throwaway probe worker with the app's own ngsw-worker.js, so the probe's journeys are proved again against the real worker",
+    "contract": ".claude/rules/testing.md, Frontend (Web as an app)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/pwa/service-worker.spec.ts > Given a page that registered the throwaway probe worker > when the browser goes offline > then the network cut alone keeps the worker from the server, while a route the test registered still answers it",
+    "replacement": "e2e/pwa/service-worker.spec.ts > Given the app registered its own service worker > when only the network is cut, then a route the test registered still answers the request the worker makes for a public answer",
+    "reason": "2.4 replaces the throwaway probe worker with the app's own ngsw-worker.js, so the probe's journeys are proved again against the real worker",
+    "contract": ".claude/rules/testing.md, Frontend (Web as an app)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/pwa/service-worker.spec.ts > Given a page that registered the throwaway probe worker > when the cache is dumped, then it holds the app shell and the marker and no API answer",
+    "replacement": "e2e/pwa/service-worker.spec.ts > Given the app registered its own service worker > when the page reads public news and a donor reads their own gifts, then the worker asks the network itself and Cache Storage keeps only the public answers",
+    "reason": "2.4 replaces the throwaway probe worker with the app's own ngsw-worker.js, so the probe's journeys are proved again against the real worker",
+    "contract": ".claude/rules/testing.md, Frontend (Web as an app)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/pwa/service-worker.spec.ts > Given a page that registered the throwaway probe worker > when the page fetches an API path through the worker, then the context route answers it",
+    "replacement": "e2e/pwa/service-worker.spec.ts > Given the app registered its own service worker > when the page reads public news and a donor reads their own gifts, then the worker asks the network itself and Cache Storage keeps only the public answers",
+    "reason": "2.4 replaces the throwaway probe worker with the app's own ngsw-worker.js, so the probe's journeys are proved again against the real worker",
+    "contract": ".claude/rules/testing.md, Frontend (Web as an app)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/pwa/service-worker.spec.ts > Given a page that registered the throwaway probe worker > when the page settles, then the worker controls it from its own script",
+    "replacement": "e2e/pwa/service-worker.spec.ts > Given the app registered its own service worker > when the page settles, then the worker controls it from /ngsw-worker.js",
+    "reason": "2.4 replaces the throwaway probe worker with the app's own ngsw-worker.js, so the probe's journeys are proved again against the real worker",
+    "contract": ".claude/rules/testing.md, Frontend (Web as an app)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/pwa/service-worker.spec.ts > Given a page that registered the throwaway probe worker > when the server cannot be reached, then the running variant keeps working from the cache",
+    "replacement": "e2e/pwa/service-worker.spec.ts > Given the app registered its own service worker > when the server cannot be reached > then the running version keeps working from the cache",
+    "reason": "2.4 replaces the throwaway probe worker with the app's own ngsw-worker.js, so the probe's journeys are proved again against the real worker",
+    "contract": ".claude/rules/testing.md, Frontend (Web as an app)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/pwa/service-worker.spec.ts > Given a page that registered the throwaway probe worker > when the server switches to variant B, then the worker finds the update and B waits with another version",
+    "replacement": "e2e/pwa/service-worker.spec.ts > Given a visitor who already acted on the page when a new version is deployed > when version B is ready while a half-typed message waits on the page, then the message stays, and leaving the page loads B",
+    "reason": "2.4 replaces the throwaway probe worker with the app's own ngsw-worker.js, so the probe's journeys are proved again against the real worker",
+    "contract": ".claude/rules/testing.md, Frontend (Web as an app)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/pwa/service-worker.spec.ts > Given a page that registered the throwaway probe worker > when the waiting variant B takes over, then the page reloads into B",
+    "replacement": "e2e/pwa/service-worker.spec.ts > Given a visitor who already acted on the page when a new version is deployed > when version B is ready and nothing is typed, then a section of the same page opens in place and the next page the visitor opens loads B",
+    "reason": "2.4 replaces the throwaway probe worker with the app's own ngsw-worker.js, so the probe's journeys are proved again against the real worker",
+    "contract": ".claude/rules/testing.md, Frontend (Web as an app)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/pwa/service-worker.spec.ts > Given a page that registered the throwaway probe worker > when the worker itself fetches an API path, then the context route answers it and sees the worker as its sender",
+    "replacement": "e2e/pwa/service-worker.spec.ts > Given the app registered its own service worker > when the page reads public news and a donor reads their own gifts, then the worker asks the network itself and Cache Storage keeps only the public answers",
+    "reason": "2.4 replaces the throwaway probe worker with the app's own ngsw-worker.js, so the probe's journeys are proved again against the real worker",
+    "contract": ".claude/rules/testing.md, Frontend (Web as an app)"
+  }
+]

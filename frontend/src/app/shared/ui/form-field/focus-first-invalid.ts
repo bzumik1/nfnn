@@ -1,7 +1,10 @@
 import { Directive, ElementRef, inject } from '@angular/core';
 
+import { TrackedForm } from '../../../core/updates/tracked-form';
+
 @Directive({
   selector: 'form[appFocusFirstInvalid]',
+  hostDirectives: [TrackedForm],
   host: { '(submit)': 'focusFirstInvalid()' },
 })
 export class FocusFirstInvalid {

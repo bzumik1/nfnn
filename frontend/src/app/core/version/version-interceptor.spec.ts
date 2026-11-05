@@ -9,6 +9,7 @@ import { TestBed } from '@angular/core/testing';
 
 import { describeProblem, problemTypeEndsWith } from '../auth/api-problem';
 import { APP_REVISION } from '../errors/app-revision';
+import { NO_SERVICE_WORKER, SERVICE_WORKER_UPDATES } from '../updates/service-worker-updates';
 import { API_GENERATION } from './api-generation';
 import { ServerVersion } from './server-version';
 import { UPDATE_REQUIRED, versionInterceptor } from './version-interceptor';
@@ -164,5 +165,44 @@ describe('Given the version interceptor', () => {
         http.expectOne(path).flush(null);
       });
     }
+  });
+});
+
+describe('Given the version interceptor while the service worker controls the page', () => {
+  let client: HttpClient;
+  let http: HttpTestingController;
+  let version: ServerVersion;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(withInterceptors([versionInterceptor])),
+        provideHttpClientTesting(),
+        { provide: SERVICE_WORKER_UPDATES, useValue: { ...NO_SERVICE_WORKER, isEnabled: true } },
+      ],
+    });
+    client = TestBed.inject(HttpClient);
+    http = TestBed.inject(HttpTestingController);
+    version = TestBed.inject(ServerVersion);
+  });
+
+  afterEach(() => http.verify());
+
+  it('when a public answer names another API generation, then the app keeps what it knows, because the worker may have kept that answer for weeks', () => {
+    client.get('/api/content/news', { params: { page: 0, size: 6 } }).subscribe();
+    http
+      .expectOne('/api/content/news?page=0&size=6')
+      .flush({}, { headers: { 'Cache-Control': 'no-store', 'Nfnn-Api': NEWER } });
+
+    expect(version.mustUpdate()).toBe(false);
+  });
+
+  it('when an answer the worker never keeps names another API generation, then the app learns it', () => {
+    client.get('/api/donors/me').subscribe();
+    http
+      .expectOne('/api/donors/me')
+      .flush({}, { headers: { 'Cache-Control': 'no-store', 'Nfnn-Api': NEWER } });
+
+    expect(version.mustUpdate()).toBe(true);
   });
 });

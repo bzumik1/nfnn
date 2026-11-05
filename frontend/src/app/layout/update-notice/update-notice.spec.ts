@@ -2,6 +2,7 @@ import { HttpHeaders } from '@angular/common/http';
 import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NavigationError, provideRouter, Router } from '@angular/router';
+import { Subject } from 'rxjs';
 
 import { SignedOutNotice } from '../../core/auth/signed-out-notice';
 import { Connectivity } from '../../core/navigation/connectivity';
@@ -9,6 +10,8 @@ import { ExternalNavigation } from '../../core/navigation/external-navigation';
 import { ChunkLoadRecovery } from '../../core/reload/chunk-load-recovery';
 import { ChunkProbe } from '../../core/reload/chunk-probe';
 import { ReloadGuard } from '../../core/reload/reload-guard';
+import { AppUpdates } from '../../core/updates/app-updates';
+import { SERVICE_WORKER_UPDATES } from '../../core/updates/service-worker-updates';
 import { API_GENERATION } from '../../core/version/api-generation';
 import { ServerVersion } from '../../core/version/server-version';
 import { DialogAnnouncer } from '../../shared/ui/dialog/dialog-announcer';
@@ -18,13 +21,17 @@ import { UpdateNotice } from './update-notice';
 class Page {}
 
 const MESSAGE = 'Web má novou verzi. Než budete cokoli odesílat, načtěte ji.';
+const RELOAD_MESSAGE =
+  'Web má novou verzi a tahle stránka ji potřebuje načíst. Rozepsaný text si nejdřív zkopírujte, načtením by se ztratil.';
 
 describe('Given the notice that the app must load a new version', () => {
   let fixture: ComponentFixture<UpdateNotice>;
   let loadFromServer: ReturnType<typeof vi.fn>;
+  let unrecoverable: Subject<string>;
 
   beforeEach(async () => {
     loadFromServer = vi.fn();
+    unrecoverable = new Subject<string>();
     await TestBed.configureTestingModule({
       imports: [UpdateNotice],
       providers: [
@@ -33,8 +40,19 @@ describe('Given the notice that the app must load a new version', () => {
         { provide: ReloadGuard, useValue: { claim: () => false } },
         { provide: Connectivity, useValue: { isOffline: () => false } },
         { provide: ChunkProbe, useValue: { reloadWouldLand: () => Promise.resolve(false) } },
+        {
+          provide: SERVICE_WORKER_UPDATES,
+          useValue: {
+            isEnabled: false,
+            versionEvents: new Subject(),
+            unrecoverable,
+            checkForUpdate: () => Promise.resolve(false),
+            activateUpdate: () => Promise.resolve(false),
+          },
+        },
       ],
     }).compileComponents();
+    TestBed.inject(AppUpdates).start();
     fixture = TestBed.createComponent(UpdateNotice);
     document.body.appendChild(fixture.nativeElement);
     fixture.detectChanges();
@@ -103,6 +121,30 @@ describe('Given the notice that the app must load a new version', () => {
 
       expect(text()).toBe('');
       expect(document.documentElement.classList).not.toContain('has-floating-notice');
+    });
+  });
+
+  describe('when the service worker cannot serve this version any more and the page was not reloaded for it', () => {
+    beforeEach(async () => {
+      unrecoverable.next('Hash mismatch');
+      fixture.detectChanges();
+      await fixture.whenStable();
+    });
+
+    it('then the live region asks to load the new version and to copy any half-typed text first', () => {
+      expect(text()).toBe(`${RELOAD_MESSAGE} Načíst novou verzi`);
+    });
+
+    it('and the visitor presses the button, then the page loads again from the server and the button says it is loading', async () => {
+      await TestBed.inject(Router).navigateByUrl('/darce/prehled');
+
+      button()?.click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(loadFromServer).toHaveBeenCalledWith('/darce/prehled');
+      expect(text()).toBe(`${RELOAD_MESSAGE} Načítáme novou verzi…`);
+      expect(element().querySelector('button')?.disabled).toBe(true);
     });
   });
 
