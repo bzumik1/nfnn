@@ -58,7 +58,7 @@ Feature: An administrator or a connected application issues the yearly receipts 
       | Jana  | UNCHANGED | 2027-000002 |         |
     And 2 receipts are stored
     When "Petr" asks for the admin actions
-    Then the admin actions are:
+    Then the admin actions are, in any order of those performed at the same moment:
       | action         | donor | summary                                                                                         |
       | ISSUE_RECEIPTS |       | Hromadně vystavena roční potvrzení za rok 2026: nová 1, nahrazená 0, beze změny 1, přeskočená 2. |
       | ISSUE_RECEIPT  | Jana  | Dárci Jana Nováková vystaveno roční potvrzení 2027-000002 za rok 2026.                         |

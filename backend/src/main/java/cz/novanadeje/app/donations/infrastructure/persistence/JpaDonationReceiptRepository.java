@@ -57,7 +57,7 @@ class JpaDonationReceiptRepository implements DonationReceiptRepository {
 
     @Override
     public List<DonationReceipt> findActiveForYearOfEveryDonor(Year year) {
-        throw new UnsupportedOperationException("2.29");
+        return jpa.findByReceiptYearAndStatus(year.getValue(), ReceiptStatus.ACTIVE).stream().map(IssuedReceiptJpaEntity::toDomain).toList();
     }
 
     @Override

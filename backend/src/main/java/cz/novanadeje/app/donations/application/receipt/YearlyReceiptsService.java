@@ -64,11 +64,25 @@ public class YearlyReceiptsService {
 
     @Transactional(readOnly = true)
     public YearlyReceiptCandidates candidates(Optional<Year> requested) {
-        throw new UnsupportedOperationException("2.29");
+        LocalDate today = FoundationCalendar.today(clock);
+        Year year = requested.orElseGet(() -> ReceiptCalendar.lastCompleted(today));
+        DonationReceiptService.requireCompletedYear(firstYear, year, today);
+        return candidatesOf(year, today);
     }
 
     public YearlyReceiptsRun issue(UUID adminId, AdministrationChannel channel, Year year, List<DonorReference> donors) {
-        throw new UnsupportedOperationException("2.29");
+        LocalDate today = FoundationCalendar.today(clock);
+        DonationReceiptService.requireCompletedYear(firstYear, year, today);
+        List<YearlyReceiptResult> results = new ArrayList<>();
+        for (DonorReference donor : donors) {
+            results.add(issueOne(adminId, channel, donor, year, today));
+        }
+        YearlyReceiptsRun run = new YearlyReceiptsRun(year, results);
+        if (run.tookNewNumbers()) {
+            transaction.executeWithoutResult(status -> events.publishEvent(
+                    new AdminActionPerformed(adminId, ISSUE_ACTION, Optional.empty(), auditDetails(run), clock.instant())));
+        }
+        return run;
     }
 
     private YearlyReceiptResult issueOne(UUID adminId, AdministrationChannel channel, DonorReference donor, Year year, LocalDate today) {
