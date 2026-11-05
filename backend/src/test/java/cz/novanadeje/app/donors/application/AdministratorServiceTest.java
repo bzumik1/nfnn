@@ -47,6 +47,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -179,7 +180,7 @@ class AdministratorServiceTest {
         verify(refreshTokens).revokeAllOf(PETR, NOW);
         verify(donors).forgetSignIns(PETR);
         ArgumentCaptor<Object> published = ArgumentCaptor.forClass(Object.class);
-        verify(events, org.mockito.Mockito.times(2)).publishEvent(published.capture());
+        verify(events, times(2)).publishEvent(published.capture());
         assertThat(published.getAllValues().getFirst()).isEqualTo(new AdministrationRevoked(PETR.value(), NOW));
         AdminActionPerformed action = (AdminActionPerformed) published.getAllValues().getLast();
         assertThat(action.adminId()).isEqualTo(JANA.value());
@@ -290,7 +291,7 @@ class AdministratorServiceTest {
         verify(secondFactors).delete(PETR);
         verify(refreshTokens).revokeAllOf(PETR, NOW);
         ArgumentCaptor<Object> published = ArgumentCaptor.forClass(Object.class);
-        verify(events, org.mockito.Mockito.times(2)).publishEvent(published.capture());
+        verify(events, times(2)).publishEvent(published.capture());
         AdminActionPerformed action = (AdminActionPerformed) published.getAllValues().getFirst();
         assertThat(action.adminId()).isEqualTo(JANA.value());
         assertThat(action.action()).isEqualTo("RESET_SECOND_FACTOR");
@@ -331,7 +332,7 @@ class AdministratorServiceTest {
 
         verify(refreshTokens).revokeAllOf(PETR, NOW);
         ArgumentCaptor<Object> published = ArgumentCaptor.forClass(Object.class);
-        verify(events, org.mockito.Mockito.times(2)).publishEvent(published.capture());
+        verify(events, times(2)).publishEvent(published.capture());
         AdminActionPerformed action = (AdminActionPerformed) published.getAllValues().getFirst();
         assertThat(action.adminId()).isEqualTo(JANA.value());
         assertThat(action.action()).isEqualTo("REMOVE_PASSKEYS");
