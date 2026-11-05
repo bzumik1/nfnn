@@ -20,9 +20,16 @@ import { AuthApi } from './auth-api';
 import { PasskeyAuthenticator } from './passkey-authenticator';
 import { deviceAccountOf, SESSION_DEVICE, type SignInSecret } from './session-device';
 import {
+  BROWSER_JAR,
+  BrowserSessionKind,
+  SESSION_JAR,
+  SessionJar,
+  sessionKindFor,
+  SessionKind,
+} from './session-jar';
+import {
   isSessionRefreshed,
   isSignedOut,
-  REFRESH_LOCK_NAME,
   REFRESH_LOCK_WAIT_MS,
   REFRESH_REQUEST_TIMEOUT_MS,
   SESSION_CHANNEL,
@@ -47,17 +54,21 @@ import {
 
 export type AuthStatus = 'unknown' | 'anonymous' | 'signed-in';
 
-export const SESSION_HINT_KEY = 'nfnn.donor-session';
+export const SESSION_HINT_KEY = BROWSER_JAR.hintKey;
+
+export const EMAIL_CONFIRMATION_SESSION: BrowserSessionKind = 'BROWSER';
 
 @Injectable({ providedIn: 'root' })
 export class AuthStore {
   private readonly api = inject(AuthApi);
   private readonly passkeys = inject(PasskeyAuthenticator);
+  private readonly jar = inject(SESSION_JAR);
   private readonly locks = inject(TAB_LOCKS);
   private readonly channel = inject(SESSION_CHANNEL)();
   private readonly device = inject(SESSION_DEVICE);
   private readonly currentDonor = signal<Donor | null>(null);
   private readonly currentStatus = signal<AuthStatus>('unknown');
+  private readonly currentSession = signal<SessionKind | null>(null);
   private accessToken: string | null = null;
   private refreshInFlight: Observable<string> | null = null;
   private restoring: Promise<void> | null = null;
@@ -67,6 +78,9 @@ export class AuthStore {
   readonly status = this.currentStatus.asReadonly();
   readonly signedIn = computed(() => this.currentDonor() !== null);
   readonly isAdmin = computed(() => this.currentDonor()?.roles.includes('ADMIN') ?? false);
+  readonly session = this.currentSession.asReadonly();
+  readonly storesNothing = computed(() => this.currentSession() === 'PUBLIC');
+  readonly installed = this.jar.installed;
 
   constructor() {
     this.channel?.addEventListener('message', (event) => {
@@ -90,19 +104,28 @@ export class AuthStore {
 
   confirmEmail(token: string): Observable<Donor> {
     return this.api
-      .confirmEmailVerification(token)
+      .confirmEmailVerification(token, sessionKindFor(this.jar, EMAIL_CONFIRMATION_SESSION))
       .pipe(map((response) => this.adoptSignIn(response, { kind: 'none' })));
   }
 
-  login(email: string, password: string): Observable<Donor> {
+  login(
+    email: string,
+    password: string,
+    chosen: BrowserSessionKind = 'BROWSER',
+  ): Observable<Donor> {
     return this.api
-      .login(email, password)
+      .login(email, password, sessionKindFor(this.jar, chosen))
       .pipe(map((response) => this.adoptSignIn(response, { kind: 'password', password })));
   }
 
-  completeSecondFactor(challenge: string, code: string, password?: string): Observable<Donor> {
+  completeSecondFactor(
+    challenge: string,
+    code: string,
+    password?: string,
+    chosen: BrowserSessionKind = 'BROWSER',
+  ): Observable<Donor> {
     return this.api
-      .completeSecondFactor(challenge, code)
+      .completeSecondFactor(challenge, code, sessionKindFor(this.jar, chosen))
       .pipe(
         map((response) =>
           this.adoptSignIn(
@@ -113,14 +136,15 @@ export class AuthStore {
       );
   }
 
-  signInWithPasskey(): Observable<Donor> {
+  signInWithPasskey(chosen: BrowserSessionKind = 'BROWSER'): Observable<Donor> {
+    const session = sessionKindFor(this.jar, chosen);
     return this.api.passkeySignInOptions().pipe(
       switchMap((options) =>
         from(this.device.prfInput()).pipe(
           switchMap((input) => from(this.passkeys.getWithPrf(options, input))),
           switchMap(({ credential, prf }) => {
             let handedOver = false;
-            return this.api.signInWithPasskey(options.challenge, credential).pipe(
+            return this.api.signInWithPasskey(options.challenge, credential, session).pipe(
               map((response) => {
                 handedOver = prf !== null;
                 return this.adoptSignIn(
@@ -167,7 +191,7 @@ export class AuthStore {
 
   restore(): Promise<void> {
     if (this.restoring === null) {
-      this.restoring = hasSessionHint()
+      this.restoring = hasSessionHint(this.jar)
         ? firstValueFrom(this.refresh()).then(
             () => undefined,
             (failure: unknown) => this.restoreLater(failure),
@@ -288,7 +312,7 @@ export class AuthStore {
       const giveUp = setTimeout(() => waiting.abort(), REFRESH_LOCK_WAIT_MS);
       locks
         .request(
-          REFRESH_LOCK_NAME,
+          this.jar.lockName,
           { signal: waiting.signal },
           () =>
             new Promise<void>((release) => {
@@ -353,14 +377,14 @@ export class AuthStore {
     const before = this.currentDonor();
     const donor = this.adopt(response);
     if (before === null || before.id !== donor.id) {
-      void this.device.restored(deviceAccountOf(donor));
+      void this.device.restored(deviceAccountOf(donor), this.storesNothing());
     }
     return donor;
   }
 
   private adoptSignIn(response: AuthResponse, secret: SignInSecret): Donor {
     const donor = this.adopt(response);
-    void this.device.signedIn(deviceAccountOf(donor), secret);
+    void this.device.signedIn(deviceAccountOf(donor), secret, this.storesNothing());
     return donor;
   }
 
@@ -385,7 +409,8 @@ export class AuthStore {
     this.accessToken = response.accessToken;
     this.currentDonor.set(response.user);
     this.currentStatus.set('signed-in');
-    rememberSession(true);
+    this.currentSession.set(response.session ?? null);
+    rememberSession(this.jar, response.session ?? null);
     return response.user;
   }
 
@@ -398,7 +423,8 @@ export class AuthStore {
     this.accessToken = null;
     this.currentDonor.set(null);
     this.currentStatus.set('anonymous');
-    rememberSession(false);
+    this.currentSession.set(null);
+    forgetSession(this.jar);
   }
 }
 
@@ -419,20 +445,38 @@ function isSlow(failure: unknown): boolean {
   );
 }
 
-function hasSessionHint(): boolean {
+function hasSessionHint(jar: SessionJar): boolean {
+  return hintIn(() => localStorage, jar) || hintIn(() => sessionStorage, jar);
+}
+
+function hintIn(storage: () => Storage, jar: SessionJar): boolean {
   try {
-    return localStorage.getItem(SESSION_HINT_KEY) === '1';
+    return storage().getItem(jar.hintKey) === '1';
   } catch {
     return false;
   }
 }
 
-function rememberSession(present: boolean): void {
+function rememberSession(jar: SessionJar, session: SessionKind | null): void {
+  const [kept, cleared] =
+    session === 'PUBLIC'
+      ? [() => sessionStorage, () => localStorage]
+      : [() => localStorage, () => sessionStorage];
+  writeHint(kept, jar, true);
+  writeHint(cleared, jar, false);
+}
+
+function forgetSession(jar: SessionJar): void {
+  writeHint(() => localStorage, jar, false);
+  writeHint(() => sessionStorage, jar, false);
+}
+
+function writeHint(storage: () => Storage, jar: SessionJar, present: boolean): void {
   try {
     if (present) {
-      localStorage.setItem(SESSION_HINT_KEY, '1');
+      storage().setItem(jar.hintKey, '1');
     } else {
-      localStorage.removeItem(SESSION_HINT_KEY);
+      storage().removeItem(jar.hintKey);
     }
   } catch {
     return;

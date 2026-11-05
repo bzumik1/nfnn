@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.SessionKind;
 import cz.novanadeje.app.donors.domain.DeviceDescription;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorRepository;
@@ -56,7 +57,7 @@ public class DonorAuthenticationService {
     }
 
     @Transactional(noRollbackFor = SecondFactorRequired.class)
-    public AuthenticatedDonor login(String email, String password, DeviceDescription device) {
+    public AuthenticatedDonor login(String email, String password, DeviceDescription device, SessionKind kind) {
         if (!EmailAddress.isValid(email)) {
             throw new InvalidCredentials();
         }
@@ -82,11 +83,11 @@ public class DonorAuthenticationService {
             log.info("Sign-in of donor {} waits for the second factor", donor.id());
             throw new SecondFactorRequired(secret.value(), challenge.expiresAt());
         }
-        return views.authenticated(donor, sessions.signIn(donor, false, device));
+        return views.authenticated(donor, sessions.signIn(donor, false, device, kind));
     }
 
     @Transactional(noRollbackFor = InvalidSecondFactorCode.class)
-    public AuthenticatedDonor completeSecondFactor(String challenge, String code, DeviceDescription device) {
+    public AuthenticatedDonor completeSecondFactor(String challenge, String code, DeviceDescription device, SessionKind kind) {
         Instant now = clock.instant();
         LinkSecret secret;
         try {
@@ -112,12 +113,12 @@ public class DonorAuthenticationService {
             throw new InvalidSecondFactorChallenge();
         }
         secondFactors.save(factor);
-        return views.authenticated(donor, sessions.signIn(donor, true, device));
+        return views.authenticated(donor, sessions.signIn(donor, true, device, kind));
     }
 
     @Transactional(noRollbackFor = InvalidRefreshToken.class)
-    public AuthenticatedDonor refresh(String refreshToken, DeviceDescription device) {
-        RefreshedSession session = sessions.refresh(refreshToken, device);
+    public AuthenticatedDonor refresh(String refreshToken, SessionCookie presentedIn, DeviceDescription device) {
+        RefreshedSession session = sessions.refresh(refreshToken, presentedIn, device);
         return views.authenticated(session.donor(), session.tokens());
     }
 

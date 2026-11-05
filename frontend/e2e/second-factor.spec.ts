@@ -77,7 +77,7 @@ test.describe('Given a donor who protects the account with an authenticator app'
     await page.getByRole('dialog').locator('.ui-button--block').click();
 
     await expect(page).toHaveURL(/\/darce\/prehled$/);
-    expect(completed).toEqual([{ challenge: CHALLENGE, code: '287082' }]);
+    expect(completed).toEqual([{ challenge: CHALLENGE, code: '287082', session: 'BROWSER' }]);
     await openDonorSection(page, 'Údaje a zabezpečení');
     await expect(page.locator('.account-data')).toContainText('Zapnuté, kód z ověřovací aplikace');
   });

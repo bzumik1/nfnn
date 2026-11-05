@@ -13,8 +13,8 @@ export type SignInSecret =
 
 export interface SessionDevice {
   prfInput(): Promise<Uint8Array<ArrayBuffer> | null>;
-  signedIn(account: DeviceAccount, secret: SignInSecret): Promise<void>;
-  restored(account: DeviceAccount): Promise<void>;
+  signedIn(account: DeviceAccount, secret: SignInSecret, storeNothing?: boolean): Promise<void>;
+  restored(account: DeviceAccount, storeNothing?: boolean): Promise<void>;
   signedOut(account: DeviceAccount): Promise<void>;
   signedOutElsewhere(): void;
   sessionLost(): Promise<void>;

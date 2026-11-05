@@ -7,6 +7,7 @@ import cz.novanadeje.app.donors.domain.DevicePlatform;
 import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.domain.DonorDevice;
 import cz.novanadeje.app.donors.domain.DonorId;
+import cz.novanadeje.app.donors.domain.SessionKind;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -35,6 +36,10 @@ class DonorDeviceJpaEntity {
     @Column(name = "browser", nullable = false, length = 20)
     private DeviceBrowser browser;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "session_kind", length = 20)
+    private SessionKind sessionKind;
+
     @Column(name = "signed_in_at", nullable = false)
     private Instant signedInAt;
 
@@ -57,6 +62,7 @@ class DonorDeviceJpaEntity {
         entity.donorId = device.donorId().value();
         entity.platform = device.description().platform();
         entity.browser = device.description().browser();
+        entity.sessionKind = device.kind();
         entity.signedInAt = device.signedInAt();
         entity.lastUsedAt = device.lastUsedAt();
         entity.endedAt = device.endedAt().orElse(null);
@@ -66,6 +72,6 @@ class DonorDeviceJpaEntity {
 
     DonorDevice toDomain() {
         return DonorDevice.reconstitute(new DeviceId(id), new DonorId(donorId), new DeviceDescription(platform, browser),
-                signedInAt, lastUsedAt, endedAt, endReason);
+                sessionKind == null ? SessionKind.UNNAMED : sessionKind, signedInAt, lastUsedAt, endedAt, endReason);
     }
 }

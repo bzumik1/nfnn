@@ -12,9 +12,24 @@
   (pointerdown)="onPointerDown($event)"
   (click)="onClick($event)"
 >
-  <div class="dialog-panel" [class.dialog-panel--wide]="wide()">
-    @if (look() === 'sheet') {
-      <span class="dialog-grabber" aria-hidden="true"></span>
+  <div
+    #panel
+    class="dialog-panel"
+    [class.dialog-panel--wide]="wide()"
+    [class.dialog-panel--dragging]="dragging()"
+    [style.translate]="dragTranslate()"
+    (focusin)="keepFocusAboveActions($event)"
+  >
+    @if (look() === 'sheet' && dismissible()) {
+      <span
+        class="dialog-grabber"
+        aria-hidden="true"
+        (pointerdown)="startDrag($event)"
+        (pointermove)="followDrag($event)"
+        (pointerup)="endDrag($event)"
+        (pointercancel)="cancelDrag($event)"
+        (lostpointercapture)="cancelDrag($event)"
+      ></span>
     }
     <button
       type="button"

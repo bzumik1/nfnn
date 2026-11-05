@@ -282,6 +282,50 @@
             Zapomněli jste heslo?
           </button>
         </p>
+        @if (!installed) {
+          <div class="session-choice">
+            @if (publicComputer()) {
+              <label class="session-check">
+                <input
+                  type="checkbox"
+                  name="publicComputer"
+                  checked
+                  aria-describedby="session-public-hint"
+                  (change)="leavePublicComputer()"
+                />
+                <span i18n="@@donor.login.session.public">Cizí počítač, nic neukládat</span>
+              </label>
+              <button
+                type="button"
+                class="link-btn session-switch"
+                (click)="leavePublicComputer()"
+                i18n="@@donor.login.session.publicBack"
+              >
+                Zpět
+              </button>
+              <p
+                id="session-public-hint"
+                class="session-hint"
+                i18n="@@donor.login.session.publicHint"
+              >
+                Po zavření prohlížeče tu nic nezůstane.
+              </p>
+            } @else {
+              <label class="session-check">
+                <input type="checkbox" name="remember" [(ngModel)]="remember" />
+                <span i18n="@@donor.login.session.remember">Zapamatovat si mě</span>
+              </label>
+              <button
+                type="button"
+                class="link-btn session-switch"
+                (click)="choosePublicComputer()"
+                i18n="@@donor.login.session.publicOffer"
+              >
+                Cizí počítač?
+              </button>
+            }
+          </div>
+        }
 
         @if (error()) {
           <p class="ui-field-error" role="alert">{{ error() }}</p>

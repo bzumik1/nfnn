@@ -46,7 +46,7 @@ test.describe('Given a visitor who registered and received the confirmation e-ma
     await expect(page).toHaveURL(/\/potvrzeni-emailu$/);
     expect(page.url()).not.toContain('token');
     await expect(page).toHaveTitle('Potvrzení e-mailu | Nová naděje – nadační fond');
-    expect(posted).toEqual([{ token: 'abc' }]);
+    expect(posted).toEqual([{ token: 'abc', session: 'BROWSER' }]);
 
     await page.getByRole('button', { name: 'Přejít do přehledu' }).click();
 
