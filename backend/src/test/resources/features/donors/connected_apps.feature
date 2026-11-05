@@ -104,6 +104,20 @@ Feature: An administrator connects an application such as Claude to the administ
     When "Jana" lists the connected applications
     Then the connected applications are "claude.ai" with scope "admin:read admin:write"
 
+  Scenario: An exchanged API token cannot download the administrator's own data as a donor's device does
+    Given "Jana" connected the application "https://claude.ai/.well-known/oauth-client" with scope "admin:read admin:write"
+    When the connector exchanges the connector token for an API token
+    And the exchanged API token sends GET "/api/donations/me/sync"
+    Then the response status is 403
+    And the problem type ends with "auth/forbidden"
+    When the exchanged API token sends GET "/api/donations/me/sync/chunks?ids=donations:2026"
+    Then the response status is 403
+    And the problem type ends with "auth/forbidden"
+    When "Jana" asks for her sync manifest
+    Then the response status is 200
+    When "Jana" asks for the sync chunks "donations:2026"
+    Then the response status is 200
+
   Scenario Outline: A dangerous or irreversible change is refused to a connected application even with the writing permission
     Given "Jana" connected the application "https://claude.ai/.well-known/oauth-client" with scope "admin:read admin:write"
     When the connector exchanges the connector token for an API token

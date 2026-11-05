@@ -1,0 +1,26 @@
+[
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/sync/manifest.json",
+    "reason": "2.12 adds the donor's sync manifest: database rows, the donor, the first receipt year and the last bank import give the manifest (subject, summary, chunks with id, rowsSha256 and count) joined with the rows the chunks endpoint answers for each chunk. Only the donations:<year> chunks are specified here (receipts, bank accounts and symbol claims come from donor_device_sync.feature); rowsSha256 is the SHA-256 of the rows written as RFC 8785 canonical JSON, computed over the rows as aliased, so each side computes it from the case itself. The backend (DonorSyncSharedCasesTest) writes the rows and asks GET /api/donations/me/sync and /sync/chunks with the real queries; the browser (shared-cases.spec.ts) hashes every chunk's rows as a device will, and reads the cases into its device copy from 2.13. A new file with its schema; the source is edited",
+    "contract": "docs/api-contract.md, Device sync; docs/system-overview.md, the donor's device copy; .claude/rules/testing.md, Logic on both sides"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/schemas/sync/manifest.schema.json",
+    "reason": "2.12: the schema of the new sync manifest cases (the rows of schemas/defs/rows.schema.json with the donor, the first receipt year and the last bank import as input; the manifest with its donations chunks and their rows as the expected value)",
+    "contract": "docs/api-contract.md, Device sync"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/sync/canonical.json",
+    "reason": "2.12, review round 1: the canonical form of a sync chunk's rows and its rowsSha256, written by the backend (shared/infrastructure/json/CanonicalRows, CanonicalRowsSharedCasesTest) and the browser (features/donations/sync/canonical-rows.ts) from one set of cases, so both agree beyond the ASCII donation rows of sync/manifest.json: member order by UTF-16 code units, Czech letters, U+00A0, U+2028, control characters, lone surrogates, astral characters, and the refusal of a fraction or of an integer beyond the safe range of a JavaScript number. A new file with its schema; the source is edited",
+    "contract": "docs/api-contract.md, Device sync"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/schemas/sync/canonical.schema.json",
+    "reason": "2.12, review round 1: the schema of the canonical sync rows cases (rows as input; the canonical text and its rowsSha256, or the refusal not-a-safe-integer, as the expected value)",
+    "contract": "docs/api-contract.md, Device sync"
+  }
+]

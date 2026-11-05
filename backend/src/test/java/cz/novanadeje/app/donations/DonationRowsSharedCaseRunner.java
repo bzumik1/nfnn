@@ -1,20 +1,17 @@
 package cz.novanadeje.app.donations;
 
-import cz.novanadeje.app.IntegrationTest;
 import cz.novanadeje.app.donations.application.report.MonthlyReportSender;
 import cz.novanadeje.app.sharedcases.CaseRows;
 import cz.novanadeje.app.sharedcases.SharedCaseRunner;
 import cz.novanadeje.app.support.DatabaseCleaner;
 import cz.novanadeje.app.support.MutableClock;
-import cz.novanadeje.app.support.TestSupportConfiguration;
+import cz.novanadeje.app.support.RateLimiterWindows;
 import org.junit.jupiter.api.AfterEach;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Import;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.test.context.TestPropertySource;
-import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import tools.jackson.databind.JsonNode;
@@ -26,9 +23,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 
-@IntegrationTest
-@Import(TestSupportConfiguration.class)
-@TestPropertySource(properties = "app.donations.receipt.first-year=2026")
+@DonationRowsContext
 public abstract class DonationRowsSharedCaseRunner extends SharedCaseRunner {
 
     private final JsonMapper json = JsonMapper.builder().build();
@@ -39,8 +34,10 @@ public abstract class DonationRowsSharedCaseRunner extends SharedCaseRunner {
     private JdbcClient jdbc;
     @Autowired
     private MutableClock clock;
-    @MockitoSpyBean
+    @Autowired
     private MonthlyReportSender reportSender;
+    @Autowired
+    private ConfigurableApplicationContext context;
 
     @AfterEach
     void truncate() {
@@ -50,6 +47,7 @@ public abstract class DonationRowsSharedCaseRunner extends SharedCaseRunner {
     protected CaseRows writeRows(JsonNode input) {
         CaseRows rows = CaseRows.fromJson(input);
         rows.write(jdbc, clock);
+        RateLimiterWindows.reset(context);
         return rows;
     }
 
