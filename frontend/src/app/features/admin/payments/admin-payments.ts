@@ -30,6 +30,8 @@ import {
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
+import { pluralCategory } from '../../../core/i18n/plural-category';
+import { LiveUpdates } from '../../../core/live/live-updates';
 import { Dialog } from '../../../shared/ui/dialog/dialog';
 import { formatMinorUnits } from '../../donations/donation-amount';
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
@@ -59,6 +61,11 @@ interface PaymentFilters {
 type PageOutcome =
   | { readonly kind: 'loaded'; readonly list: AdminPaymentListResponse }
   | { readonly kind: 'failed'; readonly failure: unknown };
+
+interface IncomingPayments {
+  readonly list: AdminPaymentListResponse;
+  readonly added: number;
+}
 
 interface DonorSearch {
   readonly query: string;
@@ -106,7 +113,9 @@ export class AdminPayments {
   private readonly loginDialog = inject(LoginDialogService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
+  private readonly live = inject(LiveUpdates);
   private readonly title = viewChild.required<ElementRef<HTMLHeadingElement>>('title');
+  private readonly listTitle = viewChild<ElementRef<HTMLHeadingElement>>('listTitle');
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly pairSearch = viewChild<ElementRef<HTMLInputElement>>('pairSearch');
   private readonly paymentsSearch = viewChild<ElementRef<HTMLInputElement>>('paymentsSearch');
@@ -115,6 +124,8 @@ export class AdminPayments {
   private readonly searches = new Subject<DonorSearch | null>();
   private readonly typed = new Subject<string>();
   private readonly pages = new Subject<PaymentFilters>();
+  private readonly quietPages = new Subject<PaymentFilters>();
+  private refreshWhenIdle = false;
 
   protected readonly filters = signal<PaymentFilters>(
     filtersFrom(this.route.snapshot.queryParamMap),
@@ -131,6 +142,8 @@ export class AdminPayments {
   protected readonly changedDonor = signal<ChangedDonor | null>(null);
   protected readonly unpairedCount = signal<number | null>(null);
   protected readonly busy = signal(false);
+  private readonly incoming = signal<IncomingPayments | null>(null);
+  protected readonly incomingLabel = computed(() => incomingText(this.incoming()?.added ?? 0));
 
   protected readonly pairing = signal<AdminPaymentResponse | null>(null);
   protected readonly query = signal('');
@@ -160,6 +173,18 @@ export class AdminPayments {
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe((outcome) => this.showFirstPage(outcome));
+    this.quietPages
+      .pipe(
+        switchMap((filters) =>
+          this.firstPage(filters).pipe(map((outcome) => ({ filters, outcome }))),
+        ),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(({ filters, outcome }) => this.showQuietly(filters, outcome));
+    this.live
+      .changes(['payments'])
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.refreshQuietly());
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const filters = filtersFrom(params);
       this.filters.set(filters);
@@ -231,7 +256,66 @@ export class AdminPayments {
     this.navigate({ donorId: '' });
   }
 
+  protected showIncoming(): void {
+    const incoming = this.incoming();
+    if (incoming === null) {
+      return;
+    }
+    this.showFirstPage({ kind: 'loaded', list: incoming.list });
+    this.focusAfterRender(() => this.listTitle()?.nativeElement ?? null);
+  }
+
+  private refreshQuietly(): void {
+    if (
+      this.state() !== 'ready' ||
+      this.pairing() !== null ||
+      this.unpairing() !== null ||
+      this.busy() ||
+      this.loadingMore()
+    ) {
+      this.refreshWhenIdle = this.state() === 'ready';
+      return;
+    }
+    this.refreshWhenIdle = false;
+    this.quietPages.next(this.filters());
+  }
+
+  private refreshIfMissed(): void {
+    if (this.refreshWhenIdle) {
+      this.refreshQuietly();
+    }
+  }
+
+  private showQuietly(filters: PaymentFilters, outcome: PageOutcome): void {
+    if (outcome.kind === 'failed' || filters !== this.filters() || this.state() !== 'ready') {
+      return;
+    }
+    const shown = new Set(this.items().map((item) => item.id));
+    const fresh = outcome.list.items;
+    const lastShown = fresh.reduce((last, item, index) => (shown.has(item.id) ? index : last), -1);
+    const above = shown.size === 0 ? fresh : fresh.slice(0, Math.max(lastShown, 0));
+    const added = above.filter((item) => !shown.has(item.id)).length;
+    if (added > 0) {
+      this.incoming.set({ list: outcome.list, added });
+      if (this.filter() === 'unpaired' && !this.filtered()) {
+        this.unpairedCount.set(outcome.list.total);
+      }
+      return;
+    }
+    const freshIds = new Set(fresh.map((item) => item.id));
+    this.items.update((current) =>
+      current.length <= PAGE_SIZE
+        ? fresh
+        : fresh.concat(current.slice(fresh.length).filter((item) => !freshIds.has(item.id))),
+    );
+    this.total.set(outcome.list.total);
+    if (this.filter() === 'unpaired' && !this.filtered()) {
+      this.unpairedCount.set(outcome.list.total);
+    }
+  }
+
   protected load(): void {
+    this.incoming.set(null);
     this.state.set('loading');
     this.moreFailed.set(false);
     this.pages.next(this.filters());
@@ -253,6 +337,7 @@ export class AdminPayments {
           this.items.update((current) => [...current, ...list.items]);
           this.total.set(list.total);
           this.loadingMore.set(false);
+          this.refreshIfMissed();
           this.focusAfterRender(
             () =>
               this.host.nativeElement.querySelectorAll<HTMLElement>('.payments-card tbody tr')[
@@ -264,6 +349,7 @@ export class AdminPayments {
           this.loadingMore.set(false);
           if (!this.leaveOnRefusal(failure)) {
             this.moreFailed.set(true);
+            this.refreshIfMissed();
           }
         },
       });
@@ -283,6 +369,7 @@ export class AdminPayments {
       }
       return;
     }
+    this.incoming.set(null);
     this.items.set(outcome.list.items);
     this.total.set(outcome.list.total);
     if (this.filter() === 'unpaired' && !this.filtered()) {
@@ -345,6 +432,7 @@ export class AdminPayments {
       return;
     }
     this.pairing.set(null);
+    this.refreshIfMissed();
   }
 
   protected search(value: string): void {
@@ -409,6 +497,7 @@ export class AdminPayments {
 
   protected cancelUnpair(payment: AdminPaymentResponse): void {
     this.unpairing.set(null);
+    this.refreshIfMissed();
     this.focusAfterRender(() => this.unpairOpener(payment));
   }
 
@@ -534,6 +623,20 @@ export class AdminPayments {
       this.router.navigateByUrl('/');
       this.loginDialog.open('login', { returnTo });
     });
+  }
+}
+
+function incomingText(count: number): string {
+  if (count === 0) {
+    return '';
+  }
+  switch (pluralCategory(count)) {
+    case 'one':
+      return $localize`:@@admin.payments.incoming.one:Zobrazit ${count}:count: novou platbu`;
+    case 'few':
+      return $localize`:@@admin.payments.incoming.few:Zobrazit ${count}:count: nové platby`;
+    default:
+      return $localize`:@@admin.payments.incoming.other:Zobrazit ${count}:count: nových plateb`;
   }
 }
 
