@@ -86,7 +86,7 @@ export function logsApi(): Record<string, unknown> {
   };
 }
 
-export async function routeLogsApi(page: Page): Promise<void> {
+export async function routeLogsApi(page: Pick<Page, 'route'>): Promise<void> {
   const api = logsApi();
   await page.route(
     (url) => url.pathname === LOGS,

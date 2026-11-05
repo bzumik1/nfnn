@@ -97,7 +97,10 @@ export async function answerReceiptIssuing(route: Route, issuing: ReceiptIssuing
   await route.fulfill({ status: 200, json: issuedReceipt(subject, issuing) });
 }
 
-export async function mockReceiptIssuing(page: Page, issuing: ReceiptIssuing): Promise<void> {
+export async function mockReceiptIssuing(
+  page: Pick<Page, 'route'>,
+  issuing: ReceiptIssuing,
+): Promise<void> {
   await page.route(
     (url) => url.pathname === RECEIPT_ISSUING_URL,
     (route) => answerReceiptIssuing(route, issuing),

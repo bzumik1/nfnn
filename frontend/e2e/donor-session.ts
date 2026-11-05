@@ -164,7 +164,7 @@ export const receiptSigningKeys = {
 };
 
 export async function mockDonorApi(
-  page: Page,
+  page: Pick<Page, 'route'>,
   donations: DonorApiMock = noDonations,
 ): Promise<void> {
   if (donations.receipts) {

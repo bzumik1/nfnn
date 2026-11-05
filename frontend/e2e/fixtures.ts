@@ -1,4 +1,4 @@
-import { expect, test as base } from '@playwright/test';
+import { expect, test as base, type Page } from '@playwright/test';
 import { FOUNDATION_PAYMENT_DETAILS } from './qr-matrices';
 
 export const unmockedApi = {
@@ -15,39 +15,50 @@ export const unmockedApi = {
 const SERVER_PAYMENT_PATHS = '/api/donations/payment-';
 const PAYMENT_DETAILS_PATH = '/api/donations/payment-details';
 
+export async function answerOfflineApi(page: Pick<Page, 'route'>): Promise<void> {
+  await page.route(
+    (url) => url.pathname.startsWith('/api/'),
+    (route) => route.fulfill(unmockedApi),
+  );
+  await page.route(
+    (url) => url.pathname === '/api/operations/setup',
+    (route) => route.fulfill({ json: { required: false, codeRequired: true } }),
+  );
+  await page.route(
+    (url) => url.pathname === '/api/content/home',
+    (route) => route.fulfill({ json: { news: [], projects: [] } }),
+  );
+  await page.route(
+    (url) => url.pathname === PAYMENT_DETAILS_PATH,
+    (route) => route.fulfill({ json: FOUNDATION_PAYMENT_DETAILS }),
+  );
+}
+
+export const testWithoutBrowser = base;
+
+export async function guardServerPayments(page: Pick<Page, 'route'>): Promise<() => void> {
+  const askedForServerPayment: string[] = [];
+  await page.route(
+    (url) => url.pathname.startsWith(SERVER_PAYMENT_PATHS) && url.pathname !== PAYMENT_DETAILS_PATH,
+    (route) => {
+      askedForServerPayment.push(new URL(route.request().url()).pathname);
+      return route.fulfill(unmockedApi);
+    },
+  );
+  return () =>
+    expect(
+      askedForServerPayment,
+      'the browser draws every QR payment from the payment details and asks the server for nothing else under /api/donations/payment-',
+    ).toEqual([]);
+}
+
 export const test = base.extend<{ offlineApi: void }>({
   offlineApi: [
     async ({ page }, use) => {
-      await page.route(
-        (url) => url.pathname.startsWith('/api/'),
-        (route) => route.fulfill(unmockedApi),
-      );
-      await page.route(
-        (url) => url.pathname === '/api/operations/setup',
-        (route) => route.fulfill({ json: { required: false, codeRequired: true } }),
-      );
-      await page.route(
-        (url) => url.pathname === '/api/content/home',
-        (route) => route.fulfill({ json: { news: [], projects: [] } }),
-      );
-      await page.route(
-        (url) => url.pathname === PAYMENT_DETAILS_PATH,
-        (route) => route.fulfill({ json: FOUNDATION_PAYMENT_DETAILS }),
-      );
-      const askedForServerPayment: string[] = [];
-      await page.route(
-        (url) =>
-          url.pathname.startsWith(SERVER_PAYMENT_PATHS) && url.pathname !== PAYMENT_DETAILS_PATH,
-        (route) => {
-          askedForServerPayment.push(new URL(route.request().url()).pathname);
-          return route.fulfill(unmockedApi);
-        },
-      );
+      await answerOfflineApi(page);
+      const askedNothingElse = await guardServerPayments(page);
       await use();
-      expect(
-        askedForServerPayment,
-        'the browser draws every QR payment from the payment details and asks the server for nothing else under /api/donations/payment-',
-      ).toEqual([]);
+      askedNothingElse();
     },
     { auto: true },
   ],
