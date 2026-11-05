@@ -76,6 +76,11 @@ export const test = base.extend<{ offlineApi: void; cspViolations: CspViolation[
         });
       }, CSP_VIOLATION_BINDING);
       await use(violations);
+      for (const open of context.pages()) {
+        await open
+          .evaluate(() => new Promise((settled) => setTimeout(settled)))
+          .catch(() => undefined);
+      }
       expect(
         violations,
         'no page breaks the Content-Security-Policy or Trusted Types of the frontend nginx',

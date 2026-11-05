@@ -54,7 +54,9 @@ test.describe('Given the site served with the security headers of the frontend n
 
     expect(refusal).toBe('TypeError');
     await expect(page.locator('#planted')).toHaveCount(0);
-    await expect.poll(() => cspViolations.length).toBeGreaterThan(0);
+    await expect
+      .poll(() => cspViolations.map(({ directive }) => directive))
+      .toEqual(['require-trusted-types-for']);
     cspViolations.splice(0);
   });
 
@@ -79,7 +81,9 @@ test.describe('Given the site served with the security headers of the frontend n
       }, address);
 
       expect(refusal).toBe('TypeError');
-      await expect.poll(() => cspViolations.length).toBeGreaterThan(0);
+      await expect
+        .poll(() => cspViolations.map(({ directive }) => directive))
+        .toEqual(['require-trusted-types-for']);
       cspViolations.splice(0);
     });
   }
@@ -103,7 +107,9 @@ test.describe('Given the site served with the security headers of the frontend n
     });
 
     expect(refusal).toBe('TypeError');
-    await expect.poll(() => cspViolations.length).toBeGreaterThan(0);
+    await expect
+      .poll(() => cspViolations.map(({ directive }) => directive))
+      .toEqual(['require-trusted-types-for']);
     cspViolations.splice(0);
   });
 
@@ -130,7 +136,48 @@ test.describe('Given the site served with the security headers of the frontend n
     });
 
     expect(refusals).toEqual(['TypeError', 'TypeError']);
-    await expect.poll(() => cspViolations.length).toBeGreaterThan(0);
+    await expect
+      .poll(() => cspViolations.map(({ directive }) => directive))
+      .toEqual(['trusted-types', 'trusted-types']);
+    cspViolations.splice(0);
+  });
+
+  test('when another script made a default policy before the site starts, then the site still opens', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      const factory = (
+        window as unknown as {
+          trustedTypes?: { createPolicy(name: string, rules: object): unknown };
+        }
+      ).trustedTypes;
+      factory?.createPolicy('default', {});
+    });
+
+    await page.goto('/');
+
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  });
+
+  test('when a script on the page writes a worker address of the site into a script element, then the site policy refuses it', async ({
+    page,
+    cspViolations,
+  }) => {
+    await page.goto('/');
+
+    const refusal = await page.evaluate(() => {
+      try {
+        document.createElement('script').src = '/worker-F2S2AQ7E.js';
+        return 'admitted';
+      } catch (error) {
+        return (error as Error).name;
+      }
+    });
+
+    expect(refusal).toBe('TypeError');
+    await expect
+      .poll(() => cspViolations.map(({ directive }) => directive))
+      .toEqual(['require-trusted-types-for']);
     cspViolations.splice(0);
   });
 });
