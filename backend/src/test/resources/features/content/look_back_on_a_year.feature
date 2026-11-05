@@ -101,6 +101,7 @@ Feature: An administrator links a news article to the year it looks back on
     Then the response status is 201
     And the news article says:
       | lookBackYear | 2024 |
+    And the admin action "CHANGE_NEWS_LOOK_BACK_YEAR" by "Jana" on the news article "ohlednuti-za-rokem-2024" is recorded with details containing "se ohlíží za rokem 2024"
 
   Scenario Outline: A year before 2005 or after 2100 is refused [<year>]
     When "Jana" sets the news article "ohlednuti-za-rokem-2025" to look back on the year <year>
@@ -163,6 +164,7 @@ Feature: An administrator links a news article to the year it looks back on
     When "Jana" asks for the admin actions
     Then the admin actions came through these applications:
       | action                     | client    |
+      | CHANGE_NEWS_LOOK_BACK_YEAR | claude.ai |
       | CREATE_NEWS                | claude.ai |
       | CHANGE_NEWS_LOOK_BACK_YEAR | claude.ai |
       | CREATE_NEWS                |           |

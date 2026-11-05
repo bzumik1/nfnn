@@ -469,7 +469,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
         this.saved(article, existing === null);
         if (refusal !== null) {
           this.saving.set(null);
-          this.lookBackRefused(refusal, lookBackYear);
+          this.lookBackRefused(refusal, lookBackYear, needsPublish);
           return;
         }
         if (needsPublish) {
@@ -561,17 +561,18 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     );
   }
 
-  private lookBackRefused(refusal: unknown, year: number | null): void {
+  private lookBackRefused(refusal: unknown, year: number | null, publishing: boolean): void {
     this.lookBackYear = year;
     this.articleForm()?.controls['lookBackYear']?.markAsDirty();
     this.edited.set(true);
-    this.notice.set({
-      kind: 'alert',
-      text: describeProblem(
-        refusal,
-        $localize`:@@admin.newsEditor.lookBackYear.failed:Ostatní změny jsme uložili, rok ohlédnutí ale ne. Zkuste to prosím znovu.`,
-      ),
-    });
+    const outcome = publishing
+      ? $localize`:@@admin.newsEditor.lookBackYear.notPublished:Aktualitu jsme uložili jako koncept, ale nezveřejnili, protože rok ohlédnutí se uložit nepodařilo.`
+      : $localize`:@@admin.newsEditor.lookBackYear.notSaved:Ostatní změny jsme uložili, rok ohlédnutí ale ne.`;
+    const reason = describeProblem(
+      refusal,
+      $localize`:@@admin.newsEditor.lookBackYear.retry:Zkuste to prosím znovu.`,
+    );
+    this.notice.set({ kind: 'alert', text: `${outcome} ${reason}` });
   }
 
   private keepPlacedPoint(photo: PhotoResponse): void {

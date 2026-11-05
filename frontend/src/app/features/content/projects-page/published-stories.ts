@@ -1,6 +1,6 @@
 import { inject, Injectable, signal } from '@angular/core';
-import { catchError, EMPTY, expand, forkJoin, map, Observable, of, reduce, tap } from 'rxjs';
-import { NewsApi } from '../news-api';
+import { catchError, EMPTY, expand, forkJoin, Observable, of, reduce, tap } from 'rxjs';
+import { NewsApi, NewsPageResponse } from '../news-api';
 import { ProjectPageResponse, ProjectResponse, ProjectsApi } from '../projects-api';
 
 export const STORIES_PAGE_SIZE = 50;
@@ -45,13 +45,24 @@ export class PublishedStoriesStore {
   }
 
   private lookBacks(): Observable<LookBack[]> {
-    return this.newsApi.published(0, LOOK_BACK_PAGE_SIZE).pipe(
-      map((page) =>
-        page.items.flatMap((article) =>
-          typeof article.lookBackYear === 'number'
-            ? [{ year: article.lookBackYear, slug: article.slug }]
-            : [],
-        ),
+    let index = 0;
+    return this.newsApi.published(index, LOOK_BACK_PAGE_SIZE).pipe(
+      expand((page: NewsPageResponse) => {
+        index += 1;
+        return page.hasMore && index < MAX_STORY_PAGES
+          ? this.newsApi.published(index, LOOK_BACK_PAGE_SIZE)
+          : EMPTY;
+      }),
+      reduce(
+        (all: LookBack[], page) => [
+          ...all,
+          ...page.items.flatMap((article) =>
+            typeof article.lookBackYear === 'number'
+              ? [{ year: article.lookBackYear, slug: article.slug }]
+              : [],
+          ),
+        ],
+        [],
       ),
       catchError(() => of([])),
     );

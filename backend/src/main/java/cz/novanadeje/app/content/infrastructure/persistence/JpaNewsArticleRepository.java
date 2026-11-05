@@ -1,9 +1,11 @@
 package cz.novanadeje.app.content.infrastructure.persistence;
 
+import cz.novanadeje.app.content.domain.news.LookBackYearTaken;
 import cz.novanadeje.app.content.domain.news.NewsArticle;
 import cz.novanadeje.app.content.domain.news.NewsArticleId;
 import cz.novanadeje.app.content.domain.news.NewsArticleRepository;
 import cz.novanadeje.app.content.domain.Slug;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 
@@ -14,6 +16,8 @@ import java.util.Optional;
 @Repository
 class JpaNewsArticleRepository implements NewsArticleRepository {
 
+    private static final String LOOK_BACK_YEAR_INDEX = "uq_content_news_look_back_year";
+
     private final NewsArticleJpaRepository jpa;
 
     JpaNewsArticleRepository(NewsArticleJpaRepository jpa) {
@@ -22,7 +26,24 @@ class JpaNewsArticleRepository implements NewsArticleRepository {
 
     @Override
     public void save(NewsArticle article) {
-        jpa.save(NewsArticleJpaEntity.fromDomain(article));
+        Optional<Integer> year = article.lookBackYear();
+        if (year.isEmpty()) {
+            jpa.save(NewsArticleJpaEntity.fromDomain(article));
+            return;
+        }
+        try {
+            jpa.saveAndFlush(NewsArticleJpaEntity.fromDomain(article));
+        } catch (DataIntegrityViolationException refused) {
+            if (refusedByIndex(refused, LOOK_BACK_YEAR_INDEX)) {
+                throw new LookBackYearTaken(year.get());
+            }
+            throw refused;
+        }
+    }
+
+    private static boolean refusedByIndex(DataIntegrityViolationException refused, String index) {
+        String reason = refused.getMostSpecificCause().getMessage();
+        return reason != null && reason.contains(index);
     }
 
     @Override

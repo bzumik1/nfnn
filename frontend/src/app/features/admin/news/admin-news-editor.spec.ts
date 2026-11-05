@@ -272,6 +272,40 @@ describe('Given an administrator writing a new news article', () => {
     expect(fixture.nativeElement.querySelector('.public-link')).toBeNull();
   });
 
+  it('when they save and publish a draft whose year another article already looks back on, then the alert says the draft is saved but not published, and nothing is published', async () => {
+    await type(fixture, '#news-title', 'Ohlédnutí za rokem 2025');
+    await type(fixture, '#news-perex', 'Co se nám podařilo.');
+    await type(fixture, '#news-body', 'Text.');
+    await type(fixture, '#news-publish-date', '2026-10-30');
+    const select = element<HTMLSelectElement>(fixture, '#news-look-back-year');
+    select.selectedIndex = Array.from(select.options).findIndex(
+      (option) => option.textContent?.trim() === '2025',
+    );
+    select.dispatchEvent(new Event('change'));
+    await settle(fixture);
+    button(fixture, 'Uložit a zveřejnit').click();
+    await settle(fixture);
+    http.expectOne(NEWS_URL).flush(draftArticle());
+    await settle(fixture);
+
+    const taken = problem(
+      409,
+      'content/look-back-year-taken',
+      'Rok už má ohlédnutí',
+      'Za rokem 2025 se už ohlíží jiná aktualita.',
+    );
+    http
+      .expectOne(`${NEWS_URL}/${draftArticle().id}/look-back-year`)
+      .flush(taken.body, taken.options);
+    await settle(fixture);
+
+    http.expectNone(`${NEWS_URL}/${draftArticle().id}/publish`);
+    expect(text(fixture, '[role="alert"]:not(:empty)')).toBe(
+      'Aktualitu jsme uložili jako koncept, ale nezveřejnili, protože rok ohlédnutí se uložit nepodařilo. Rok už má ohlédnutí. Za rokem 2025 se už ohlíží jiná aktualita.',
+    );
+    expect(text(fixture, '.publish-state .ui-badge')).toBe('Koncept');
+  });
+
   it('when they publish without a date, then the date field says so, takes the focus and nothing is sent', async () => {
     await type(fixture, '#news-title', 'Benefiční koncert');
     await type(fixture, '#news-perex', 'Zveme vás na koncert.');
@@ -1215,8 +1249,8 @@ describe('Given an administrator editing a published news article', () => {
       .flush(taken.body, taken.options);
     await settle(fixture);
 
-    expect(text(fixture, '[role="alert"]:not(:empty)')).toContain(
-      'Za rokem 2025 se už ohlíží jiná aktualita.',
+    expect(text(fixture, '[role="alert"]:not(:empty)')).toBe(
+      'Ostatní změny jsme uložili, rok ohlédnutí ale ne. Rok už má ohlédnutí. Za rokem 2025 se už ohlíží jiná aktualita.',
     );
     expect(
       element<HTMLSelectElement>(

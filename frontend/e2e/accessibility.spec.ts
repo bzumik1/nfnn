@@ -2194,6 +2194,62 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
+  test('when an administrator sets the photo of the Přispět band and the About page ends with it, then the band, the page and its removal confirmation break no rule', async ({
+    page,
+  }) => {
+    const photoId = '0199f3e0-0000-7000-8000-00000000b101';
+    const photo = {
+      id: photoId,
+      url: `/api/content/media/${photoId}`,
+      width: 1600,
+      height: 1067,
+      alt: 'Usměvavá dívka na zahradě',
+      focalPoint: null,
+    };
+    await page.route(
+      (url) => url.pathname === '/api/admin/content/donate-band',
+      (route) => route.fulfill({ json: { photo } }),
+    );
+    await page.route(
+      (url) => url.pathname === '/api/content/home',
+      (route) => route.fulfill({ json: { news: [], projects: [], donateBand: { photo } } }),
+    );
+    await page.route(
+      (url) => url.pathname.startsWith('/api/content/media/'),
+      (route) =>
+        route.fulfill({
+          contentType: 'image/png',
+          body: Buffer.from(samplePngBase64, 'base64'),
+        }),
+    );
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.goto('/o-nas');
+    const band = page.getByRole('region', { name: 'Pomozte nám napsat další příběh' });
+    await band.scrollIntoViewIfNeeded();
+    await expect(band.getByRole('img', { name: 'Usměvavá dívka na zahradě' })).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
+    await page.goto('/sprava/pruh-prispet');
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Fotka v pruhu Přispět' }),
+    ).toBeFocused();
+    await expect(page.locator('figure.preview figcaption')).toHaveText([
+      'Na počítači',
+      'Na telefonu',
+    ]);
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.getByRole('button', { name: 'Odebrat fotku z webu' }).click();
+    await expect(page.getByRole('group', { name: 'Odebrat fotku?' })).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
   test('when an administrator keeps the people of the foundation and the About page shows them, then the section, the page, the editor and the removal confirmation break no rule', async ({
     page,
   }) => {

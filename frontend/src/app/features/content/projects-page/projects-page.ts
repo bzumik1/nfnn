@@ -6,6 +6,7 @@ import {
   computed,
   DestroyRef,
   inject,
+  linkedSignal,
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
@@ -56,7 +57,6 @@ export class ProjectsPage {
 
   protected readonly compact = inject(CompactLayout).isCompact;
   protected readonly state = signal<LoadState>(this.store.stories() ? 'ready' : 'loading');
-  protected readonly announcement = signal('');
   protected readonly bandPhoto = signal<DonateBandPhotoResponse | null>(null);
 
   private readonly asked = toSignal(
@@ -71,6 +71,14 @@ export class ProjectsPage {
   );
 
   protected readonly choice = computed<Choice>(() => this.asked() ?? this.years()[0] ?? 'all');
+
+  protected readonly announcement = linkedSignal<{ choice: Choice; shown: boolean }, string>({
+    source: () => ({ choice: this.choice(), shown: this.years().length > 0 }),
+    computation: (now, before) =>
+      before !== undefined && before.source.shown && now.choice !== before.source.choice
+        ? this.describe(now.choice)
+        : (before?.value ?? ''),
+  });
 
   protected readonly firstYear = computed(() => this.years().at(-1) ?? null);
 
@@ -126,7 +134,6 @@ export class ProjectsPage {
       return;
     }
     void this.router.navigateByUrl(this.hrefOf(choice), { scroll: 'manual' });
-    this.announcement.set(this.describe(choice));
   }
 
   protected countOf(choice: Choice): number {

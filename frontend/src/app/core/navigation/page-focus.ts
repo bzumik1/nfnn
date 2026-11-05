@@ -27,7 +27,13 @@ export class PageFocus {
     if (main.contains(this.document.activeElement)) {
       return;
     }
-    this.focusQuietly(this.linkToPageLeft(main) ?? main.querySelector<HTMLElement>('h1') ?? main);
+    const link = this.linkToPageLeft(main);
+    if (link !== null) {
+      this.focusQuietly(link);
+      link.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+      return;
+    }
+    this.focusQuietly(main.querySelector<HTMLElement>('h1') ?? main);
   }
 
   private linkToPageLeft(main: HTMLElement): HTMLElement | null {

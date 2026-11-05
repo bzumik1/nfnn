@@ -1,5 +1,7 @@
 @use 'breakpoints' as bp;
 
+$lead-width: 34rem;
+
 :host {
   display: block;
   padding: var(--space-16) 0;
@@ -41,8 +43,9 @@
   background: linear-gradient(
     90deg,
     color-mix(in srgb, var(--color-surface-inverse) 94%, transparent) 0%,
-    color-mix(in srgb, var(--color-surface-inverse) 78%, transparent) 42%,
-    transparent 78%
+    color-mix(in srgb, var(--color-surface-inverse) 78%, transparent)
+      max(42%, calc(var(--space-16) + #{$lead-width})),
+    transparent max(78%, calc(var(--space-16) + #{$lead-width} + 25%))
   );
 }
 
@@ -57,7 +60,7 @@
 }
 
 .band-lead {
-  max-width: 34rem;
+  max-width: $lead-width;
   margin-top: var(--space-4);
   color: color-mix(in srgb, var(--color-on-inverse) 82%, transparent);
   font-size: var(--text-xl);

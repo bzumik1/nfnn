@@ -4,6 +4,7 @@ import cz.novanadeje.app.content.domain.media.MediaId;
 import cz.novanadeje.app.content.domain.media.MediaImage;
 import cz.novanadeje.app.content.domain.media.MediaImageRepository;
 import cz.novanadeje.app.content.domain.media.MediaVariant;
+import cz.novanadeje.app.content.domain.news.LookBackYearTaken;
 import cz.novanadeje.app.content.domain.news.NewsArticle;
 import cz.novanadeje.app.content.domain.news.NewsArticleId;
 import cz.novanadeje.app.content.domain.news.NewsArticleRepository;
@@ -16,7 +17,6 @@ import cz.novanadeje.app.content.domain.people.PersonRepository;
 import cz.novanadeje.app.content.domain.Slug;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
-import jakarta.persistence.PersistenceException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -82,16 +82,16 @@ class JpaNewsArticleRepositoryTest {
     }
 
     @Test
-    @DisplayName("Given an article looking back on a year, when a second one for the same year is written past the check, then the database refuses it, while articles without a year are many")
-    void should_refuse_a_second_article_when_saved_given_the_year_taken() {
+    @DisplayName("Given an article looking back on a year, when a second one for the same year is written past the check, then the database refuses it as the year taken, while articles without a year are many")
+    void should_refuse_a_second_article_as_the_year_taken_when_saved_given_the_year_taken() {
         news.save(article("prvni", NOW).lookBackOn(Optional.of(2025), NOW));
         news.save(article("bez-roku", NOW));
         news.save(article("taky-bez-roku", NOW));
         flushAndClear();
 
-        news.save(article("druha", NOW).lookBackOn(Optional.of(2025), NOW));
-
-        assertThatThrownBy(entityManager::flush).isInstanceOf(PersistenceException.class).rootCause().hasMessageContaining("uq_content_news_look_back_year");
+        assertThatThrownBy(() -> news.save(article("druha", NOW).lookBackOn(Optional.of(2025), NOW)))
+                .isInstanceOf(LookBackYearTaken.class)
+                .hasFieldOrPropertyWithValue("code", LookBackYearTaken.CODE);
     }
 
     @Test

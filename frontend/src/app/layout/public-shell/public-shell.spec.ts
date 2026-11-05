@@ -181,6 +181,34 @@ describe('Given the public shell while the visitor moves around the site', () =>
     expect(document.activeElement).toBe(host.querySelector('main a[href="/zasady"]'));
   });
 
+  it('when the link to the page they left lies in a strip scrolled sideways, then the strip brings it into view as it takes the focus', async () => {
+    router.setUpLocationChangeListener();
+    const back = TestBed.inject(BackTarget);
+    const original = HTMLElement.prototype.scrollIntoView;
+    const shown: [Element, ScrollIntoViewOptions | boolean | undefined][] = [];
+    HTMLElement.prototype.scrollIntoView = function (
+      this: Element,
+      options?: ScrollIntoViewOptions | boolean,
+    ) {
+      shown.push([this, options]);
+    };
+    try {
+      await go('/zasady');
+      const returned = firstValueFrom(
+        router.events.pipe(filter((e) => e instanceof NavigationEnd)),
+      );
+      back.back('/');
+      await returned;
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    } finally {
+      HTMLElement.prototype.scrollIntoView = original;
+    }
+
+    const link = host.querySelector('main a[href="/zasady"]');
+    expect(document.activeElement).toBe(link);
+    expect(shown).toEqual([[link, { block: 'nearest', inline: 'nearest' }]]);
+  });
+
   it('when a dialog is open during a navigation, then the focus stays in the dialog', async () => {
     const dialog = document.createElement('dialog');
     const field = document.createElement('input');

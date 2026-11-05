@@ -191,6 +191,19 @@ describe('Given the Pomáháme tab', () => {
     expect([...page.querySelectorAll('h2.year-title')].map(text)).toEqual(['2024 2 příběhy']);
   });
 
+  it('when the year changes by the strip link or by going back, then the line under the chips names the year shown, and a first opening announces nothing', async () => {
+    const page = await open('/projekty?rok=vse');
+    expect(text(page.querySelector('[role="status"]'))).toBe('');
+
+    await harness.navigateByUrl('/projekty?rok=2024');
+    await harness.fixture.whenStable();
+    expect(text(page.querySelector('[role="status"]'))).toBe('Rok 2024: 2 příběhy');
+
+    await harness.navigateByUrl('/projekty?rok=vse');
+    await harness.fixture.whenStable();
+    expect(text(page.querySelector('[role="status"]'))).toBe('Všechny roky: 6 příběhů');
+  });
+
   it('when a chip is opened in a new tab, then the page leaves the click to the browser', async () => {
     const page = await open('/projekty');
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl');

@@ -189,43 +189,101 @@
     "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
   },
   {
-    "path": "DELETE /api/admin/content/news*",
-    "scenario": "content/stale_content_writes: *",
-    "kind": "added",
-    "field": "$*.lookBackYear",
-    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
-    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when it renders, then its photo waits until it is near and comes in two widths",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the About section of the O nás tab follows the approved mockup: a square photo with the FOD badge on it, the figures inline, the founders' note as a quote signed with signature, portrait and role, and no founding paragraph or \"Kde pomáháme\" link",
+    "replacement": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when it renders, then the placeholder photo waits until it is near, comes in two widths and is cropped square around the middle"
   },
   {
-    "path": "GET /api/admin/content/news*",
-    "scenario": "content/stale_content_writes: *",
-    "kind": "added",
-    "field": "$*.lookBackYear",
-    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
-    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when it renders, then it opens with what the foundation does, then the work with FOD and then its founding",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the About section of the O nás tab follows the approved mockup: a square photo with the FOD badge on it, the figures inline, the founders' note as a quote signed with signature, portrait and role, and no founding paragraph or \"Kde pomáháme\" link",
+    "replacement": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when it renders, then it opens with what the foundation does, then the work with FOD with the figures under it"
   },
   {
-    "path": "GET /api/content/news*",
-    "scenario": "content/stale_content_writes: *",
-    "kind": "added",
-    "field": "$*.lookBackYear",
-    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
-    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when it renders, then its link to the projects says where the foundation helps",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the About section of the O nás tab follows the approved mockup: a square photo with the FOD badge on it, the figures inline, the founders' note as a quote signed with signature, portrait and role, and no founding paragraph or \"Kde pomáháme\" link",
+    "replacement": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when it renders, then it opens with what the foundation does, then the work with FOD with the figures under it"
   },
   {
-    "path": "POST /api/admin/content/news*",
-    "scenario": "content/stale_content_writes: *",
-    "kind": "added",
-    "field": "$*.lookBackYear",
-    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
-    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when it renders who runs the foundation today > then a heading under the founding story names it and the two founders follow with their roles",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the About section of the O nás tab follows the approved mockup: a square photo with the FOD badge on it, the figures inline, the founders' note as a quote signed with signature, portrait and role, and no founding paragraph or \"Kde pomáháme\" link",
+    "replacement": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when it renders who runs the foundation without the administration > then a heading names them and the two founders follow with their roles"
   },
   {
-    "path": "PUT /api/admin/content/news*",
-    "scenario": "content/stale_content_writes: *",
-    "kind": "added",
-    "field": "$*.lookBackYear",
-    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
-    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when it renders who runs the foundation today > then the whole board is listed as in the registry, without the auditor",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the About section of the O nás tab follows the approved mockup: a square photo with the FOD badge on it, the figures inline, the founders' note as a quote signed with signature, portrait and role, and no founding paragraph or \"Kde pomáháme\" link",
+    "replacement": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when it renders who runs the foundation without the administration > then the whole board is listed as in the registry, without the auditor"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when it renders who runs the foundation today > then their portraits stay out of the screen reader, since their names are beside them, and load late in two widths",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the About section of the O nás tab follows the approved mockup: a square photo with the FOD badge on it, the figures inline, the founders' note as a quote signed with signature, portrait and role, and no founding paragraph or \"Kde pomáháme\" link",
+    "replacement": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when it renders who runs the foundation without the administration > then their portraits stay out of the screen reader, since their names are beside them, and load late in two widths"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when an administrator has set a photo for it > then the badge about the work with FOD stays beside the photo, outside its caption",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the About section of the O nás tab follows the approved mockup: a square photo with the FOD badge on it, the figures inline, the founders' note as a quote signed with signature, portrait and role, and no founding paragraph or \"Kde pomáháme\" link",
+    "replacement": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when an administrator has set a photo for it > then the badge about the work with FOD stays on the photo, outside its caption and outside the button"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when an administrator keeps the people of the foundation > then the featured people replace the built-in cards in their order, with their roles",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the About section of the O nás tab follows the approved mockup: a square photo with the FOD badge on it, the figures inline, the founders' note as a quote signed with signature, portrait and role, and no founding paragraph or \"Kde pomáháme\" link",
+    "replacement": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when an administrator keeps the people of the foundation > and there is no note, then the featured people stand under the heading of who runs the fund"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when an administrator keeps the people of the foundation > then a portrait loads late from the stored copy and stays out of the screen reader, and a card without one shows the initials instead",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the About section of the O nás tab follows the approved mockup: a square photo with the FOD badge on it, the figures inline, the founders' note as a quote signed with signature, portrait and role, and no founding paragraph or \"Kde pomáháme\" link",
+    "replacement": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when an administrator keeps the people of the foundation > and the note has no signature yet, then the featured people stand under the quote instead, a card without a portrait with the initials"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when an administrator keeps the people of the foundation > then the board line names every member with no-break spaces inside the names and the notes in parentheses",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the About section of the O nás tab follows the approved mockup: a square photo with the FOD badge on it, the figures inline, the founders' note as a quote signed with signature, portrait and role, and no founding paragraph or \"Kde pomáháme\" link",
+    "replacement": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when an administrator keeps the people of the foundation > then the board line names every member with no-break spaces inside the names and the notes in parentheses, and the line under the board follows it"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when an administrator keeps the people of the foundation > then the founders note follows the cards in its paragraphs, with the signatures side by side and a name under each",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the About section of the O nás tab follows the approved mockup: a square photo with the FOD badge on it, the figures inline, the founders' note as a quote signed with signature, portrait and role, and no founding paragraph or \"Kde pomáháme\" link",
+    "replacement": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when an administrator keeps the people of the foundation > then each signature stands under the quote with the portrait, the name and the role of who signed it"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when an administrator keeps the people of the foundation > then the line under the board follows the board line as its own paragraph",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the About section of the O nás tab follows the approved mockup: a square photo with the FOD badge on it, the figures inline, the founders' note as a quote signed with signature, portrait and role, and no founding paragraph or \"Kde pomáháme\" link",
+    "replacement": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when an administrator keeps the people of the foundation > then the board line names every member with no-break spaces inside the names and the notes in parentheses, and the line under the board follows it"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when an administrator keeps the people of the foundation > and there is no note, nobody featured, nobody on the board and no line under it, then only the heading stays",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the About section of the O nás tab follows the approved mockup: a square photo with the FOD badge on it, the figures inline, the founders' note as a quote signed with signature, portrait and role, and no founding paragraph or \"Kde pomáháme\" link",
+    "replacement": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when an administrator keeps the people of the foundation > and there is no note, nobody featured, nobody on the board and no line under it, then nothing of them shows"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/admin-people.spec.ts > Given a visitor and people of the foundation kept in the administration > when they open the home page, then \"Kdo fond vede\" shows the cards, the founders note with the signature and the board line instead of the built-in block",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the About section of the O nás tab follows the approved mockup: a square photo with the FOD badge on it, the figures inline, the founders' note as a quote signed with signature, portrait and role, and no founding paragraph or \"Kde pomáháme\" link",
+    "replacement": "e2e/admin-people.spec.ts > Given a visitor and people of the foundation kept in the administration > when they open the About page, then the founders’ note shows as a quote signed with the web signature, portrait and role, with the board line, instead of the built-in block"
   }
 ]

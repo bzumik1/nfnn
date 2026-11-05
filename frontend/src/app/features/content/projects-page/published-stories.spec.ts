@@ -59,6 +59,36 @@ describe('Given the published stories of the foundation', () => {
     expect(store.stories()).toEqual(received);
   });
 
+  it('when an older look-back stands on a later page of news, then the news are read page by page and its year still leads to it', () => {
+    let received: PublishedStories | undefined;
+    store.load().subscribe((stories) => (received = stories));
+
+    http
+      .expectOne((r) => r.url === NEWS && r.params.get('page') === '0')
+      .flush({
+        items: [newsArticle({ slug: 'ohlednuti-2025', lookBackYear: 2025 })],
+        page: 0,
+        size: 50,
+        total: 51,
+        hasMore: true,
+      });
+    http
+      .expectOne((r) => r.url === NEWS && r.params.get('page') === '1')
+      .flush({
+        items: [newsArticle({ slug: 'ohlednuti-2019', lookBackYear: 2019 })],
+        page: 1,
+        size: 50,
+        total: 51,
+        hasMore: false,
+      });
+    answerProjects(0, ['prvni'], false);
+
+    expect(received?.lookBacks).toEqual([
+      { year: 2025, slug: 'ohlednuti-2025' },
+      { year: 2019, slug: 'ohlednuti-2019' },
+    ]);
+  });
+
   it('when the news cannot be read, then the projects still come, only without the look-backs', () => {
     let received: PublishedStories | undefined;
     store.load().subscribe((stories) => (received = stories));

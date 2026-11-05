@@ -602,10 +602,10 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Fotka v pruhu Přispět',
       description:
-        'Sets the photo of the closing Přispět band (shown at the end of the O nás, Pomáháme and Aktuality tabs), with its alt, or removes it with photoId null: the band then shows without a photo, the alt goes too, and the removed or replaced photo is deleted unless a news article, project or the About section still uses it. Send every field; read them with nfnn_donate_band first. A photo of people goes up through nfnn_photo_upload_link (or the web), never from a public address. Its focal point is set with nfnn_set_photo_focal_point. Audited as CHANGE_DONATE_BAND_PHOTO or REMOVE_DONATE_BAND_PHOTO.',
+        'Sets the photo of the closing Přispět band (shown at the end of the O nás, Pomáháme and Aktuality tabs), with its alt, or removes it with photoId null: the band then shows the illustrative photo of the site, the alt goes too, and the removed or replaced photo is deleted unless a news article, project, the About section or a person of the foundation still uses it. Send every field; read them with nfnn_donate_band first. A photo of people goes up through nfnn_photo_upload_link (or the web), never from a public address. Its focal point is set with nfnn_set_photo_focal_point. Audited as CHANGE_DONATE_BAND_PHOTO or REMOVE_DONATE_BAND_PHOTO.',
       inputSchema: z.object({
         photoId: UUID.nullable().describe(
-          'Id of an uploaded photo (nfnn_photo_upload_link, nfnn_upload_photo, or the one nfnn_donate_band shows); null removes the photo.',
+          'Id of a photo uploaded through nfnn_photo_upload_link (or the web), or the one nfnn_donate_band shows; null removes the photo.',
         ),
         photoAlt: z
           .string()
@@ -636,7 +636,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Bod výřezu fotky',
       description:
-        'Marks on a photo the spot that must stay visible (a face, say) as percentages from its left and top edge: the site then crops every shape it shows the photo in (the card in a list, the top of an article) around that spot, and as before with focalPoint null, as it does for a photo without one; the About photo is still shown whole, so its point takes effect once that section crops it. A portrait or web signature of a person of the foundation takes no point (400 content/focal-point-on-person-image). The point belongs to the photo, so every news article, project, the About section and the Přispět band that show it crop alike; a photo put in place of another (coverImageId of nfnn_update_news or nfnn_update_project, photoId of nfnn_update_about or nfnn_update_donate_band) starts without one. The current point is the focalPoint of the photo in nfnn_news_article, nfnn_project, nfnn_about and nfnn_donate_band. Audited as CHANGE_PHOTO_FOCAL_POINT; placing the point a photo already has changes nothing.',
+        'Marks on a photo the spot that must stay visible (a face, say) as percentages from its left and top edge: the site then crops every shape it shows the photo in (the card in a list, the top of an article) around that spot, and as before with focalPoint null, as it does for a photo without one; the About section shows its photo as a square cut around that spot, and the Přispět band as a wide band on computers and 3 : 2 on phones. A portrait or web signature of a person of the foundation takes no point (400 content/focal-point-on-person-image). The point belongs to the photo, so every news article, project, the About section and the Přispět band that show it crop alike; a photo put in place of another (coverImageId of nfnn_update_news or nfnn_update_project, photoId of nfnn_update_about or nfnn_update_donate_band) starts without one. The current point is the focalPoint of the photo in nfnn_news_article, nfnn_project, nfnn_about and nfnn_donate_band. Audited as CHANGE_PHOTO_FOCAL_POINT; placing the point a photo already has changes nothing.',
       inputSchema: z.object({
         photoId: UUID.describe(
           'Id of an uploaded photo: the coverImage of a news article or project, the About photo, the photo of the Přispět band, or one just uploaded.',

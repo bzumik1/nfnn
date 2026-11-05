@@ -87,6 +87,9 @@ public class NewsAdminService {
         news.save(article);
         formerSlugs.forget(content.slug());
         audit(adminId, CREATE_ACTION, article, "Aktualita " + id + " „" + content.slug() + "“ napsána", now);
+        if (lookBackYear.isPresent()) {
+            auditLookBack(adminId, article, lookBackYear, now);
+        }
         return versioned(article, today(now));
     }
 
@@ -129,9 +132,13 @@ public class NewsAdminService {
         requireFreeYear(year, id);
         NewsArticle changed = stored.lookBackOn(year, now);
         news.save(changed);
-        String looking = year.map(chosen -> "se ohlíží za rokem " + chosen).orElse("se už neohlíží za žádným rokem");
-        audit(adminId, LOOK_BACK_ACTION, changed, "Aktualita " + id + " „" + changed.slug() + "“ " + looking, now);
+        auditLookBack(adminId, changed, year, now);
         return versioned(changed, today(now));
+    }
+
+    private void auditLookBack(UUID adminId, NewsArticle article, Optional<Integer> year, Instant now) {
+        String looking = year.map(chosen -> "se ohlíží za rokem " + chosen).orElse("se už neohlíží za žádným rokem");
+        audit(adminId, LOOK_BACK_ACTION, article, "Aktualita " + article.id() + " „" + article.slug() + "“ " + looking, now);
     }
 
     public void delete(UUID adminId, NewsArticleId id, ExpectedVersion expected) {
