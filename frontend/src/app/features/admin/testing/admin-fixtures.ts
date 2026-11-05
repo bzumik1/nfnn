@@ -32,7 +32,13 @@ import {
   ReceiptSigningKeyResponse,
   ReceiptSigningKeysResponse,
   SymbolClaimResponse,
+  YearlyIssuedReceipt,
+  YearlyReceiptCandidate,
+  YearlyReceiptCandidatesResponse,
+  YearlyReceiptResult,
+  YearlyReceiptsIssueResponse,
 } from '../admin-api';
+import { frozenCase, YEARLY_ONE } from '../../donations/receipt-pdf/testing/receipt-fixtures';
 import { BankAccountItem } from '../../donations/bank-accounts-api';
 import { DonationItem } from '../../donations/donations-api';
 
@@ -682,4 +688,81 @@ export function receiptSignatory(
 
 export function noReceiptSignatory(): ReceiptSignatoryResponse {
   return { signatory: null, signatures: [] };
+}
+
+export function yearlyCandidate(
+  overrides: Partial<YearlyReceiptCandidate> = {},
+): YearlyReceiptCandidate {
+  return {
+    donorId: '01a18e56-bdb0-775a-bd0a-a60756831369',
+    name: 'Jana Nováková',
+    type: 'PERSON',
+    giftCount: 3,
+    totalAmountMinor: 150000,
+    receipt: null,
+    ...overrides,
+  };
+}
+
+export function yearlyReceiptCandidates(
+  overrides: Partial<YearlyReceiptCandidatesResponse> = {},
+): YearlyReceiptCandidatesResponse {
+  return {
+    year: 2026,
+    donors: [yearlyCandidate()],
+    erasedDonors: 0,
+    yearlyReceiptsAvailableThrough: 2026,
+    receiptsAvailableFrom: 2025,
+    ...overrides,
+  };
+}
+
+export function yearlyIssuedReceipt(
+  donorId: string,
+  number: string,
+  overrides: Partial<YearlyIssuedReceipt> = {},
+): YearlyIssuedReceipt {
+  const base = frozenCase(YEARLY_ONE);
+  return {
+    id: `receipt-${number}`,
+    donorId,
+    status: 'ACTIVE',
+    kind: 'YEARLY',
+    number,
+    donationId: null,
+    year: 2026,
+    issuedAt: '2027-01-15T09:30:00Z',
+    supersededAt: null,
+    withdrawnAt: null,
+    withdrawalReason: null,
+    donorErased: false,
+    receipt: { ...base, number, year: 2026 },
+    ...overrides,
+  };
+}
+
+export function yearlyResult(overrides: Partial<YearlyReceiptResult> = {}): YearlyReceiptResult {
+  const donorId = overrides.donorId ?? '01a18e56-bdb0-775a-bd0a-a60756831369';
+  return {
+    donorId,
+    outcome: 'ISSUED',
+    problem: null,
+    replacedNumber: null,
+    receipt: yearlyIssuedReceipt(donorId, '2027-000001'),
+    ...overrides,
+  };
+}
+
+export function yearlyReceiptsIssued(
+  overrides: Partial<YearlyReceiptsIssueResponse> = {},
+): YearlyReceiptsIssueResponse {
+  return {
+    year: 2026,
+    results: [yearlyResult()],
+    issued: 1,
+    replaced: 0,
+    unchanged: 0,
+    skipped: 0,
+    ...overrides,
+  };
 }

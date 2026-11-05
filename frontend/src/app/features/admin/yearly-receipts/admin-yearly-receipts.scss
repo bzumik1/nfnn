@@ -1,0 +1,126 @@
+@use 'breakpoints' as bp;
+
+:host {
+  display: block;
+}
+
+.container {
+  max-width: 1000px;
+}
+
+.issue-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+
+  app-form-field {
+    max-width: 20rem;
+  }
+}
+
+.year-choice .ui-load-state {
+  margin-top: var(--space-4);
+}
+
+.issue-button {
+  justify-self: start;
+  max-width: 100%;
+  white-space: normal;
+}
+
+.donors-card {
+  position: relative;
+}
+
+.summary,
+.outcomes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+  gap: var(--space-4);
+  margin: 0;
+}
+
+.duplex {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2-5);
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+}
+
+.failure:not(:empty),
+.pdf-actions {
+  margin-top: var(--space-4);
+}
+
+.failure {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+}
+
+.pdf-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.outcomes {
+  margin-top: var(--space-4);
+}
+
+app-download-progress,
+app-live-notice {
+  display: block;
+}
+
+app-download-progress:has(:not(:empty)),
+app-live-notice:has(p) {
+  margin-top: var(--space-4);
+}
+
+.list-title {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+  margin: var(--space-4) 0 var(--space-2);
+}
+
+.lines {
+  padding-left: var(--space-5);
+  list-style: disc;
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+}
+
+.keep-open,
+.print-hint,
+.replaced-note {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+}
+
+.print-hint {
+  margin-top: var(--space-2);
+}
+
+.replaced-note {
+  margin-bottom: var(--space-2);
+}
+
+.number {
+  text-align: right;
+  font-variant-numeric: var(--numeric-figures);
+}
+
+.muted {
+  color: var(--color-text-muted);
+}
+
+@include bp.down(cards) {
+  .number {
+    text-align: left;
+  }
+}

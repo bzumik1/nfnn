@@ -30,6 +30,12 @@ export const adminRoutes: Routes = [
           import('./donor-detail/admin-donor-detail').then((m) => m.AdminDonorDetail),
       },
       {
+        path: 'hromadna-potvrzeni',
+        title: $localize`:@@admin.yearlyReceipts.pageTitle:Hromadná potvrzení | Správa | Nová naděje – nadační fond`,
+        loadComponent: () =>
+          import('./yearly-receipts/admin-yearly-receipts').then((m) => m.AdminYearlyReceipts),
+      },
+      {
         path: 'spravci',
         title: $localize`:@@admin.administrators.pageTitle:Správci | Správa | Nová naděje – nadační fond`,
         loadComponent: () =>
