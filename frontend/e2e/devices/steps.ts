@@ -11,6 +11,7 @@ import {
 import { administrator, donor, mockDonorApi, openSignInDialog, session } from '../donor-session';
 import { expect } from '../fixtures';
 import { serveReceiptKeys, serveReceiptStatus, SINGLE_RECEIPT } from '../receipt-verification';
+import { FOUR_DONORS, mockYearlyReceipts } from '../yearly-receipts';
 
 export interface Step {
   id: string;
@@ -195,6 +196,15 @@ export const STEPS: Step[] = [
     id: 'admin-donor-detail',
     title: "a donor's card in the administration",
     open: (page) => adminPage(page, PETR_DETAIL_PATH),
+  },
+  {
+    id: 'admin-yearly-receipts',
+    title: 'the bulk receipts in the administration',
+    open: async (page) => {
+      await mockYearlyReceipts(page, { donors: FOUR_DONORS, erasedDonors: 1 });
+      await adminPage(page, '/sprava/hromadna-potvrzeni');
+      await expect(page.locator('.donors-table tbody tr')).toHaveCount(4);
+    },
   },
   {
     id: 'admin-settings',

@@ -10,15 +10,24 @@
 
 .issue-form {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
-  justify-items: start;
+}
+
+.issue-button {
+  justify-self: start;
+  max-width: 100%;
+  white-space: normal;
+}
+
+.donors-card {
+  position: relative;
 }
 
 .summary {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
   gap: var(--space-4);
-  justify-self: stretch;
   margin: 0;
 }
 
