@@ -2,6 +2,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { aboutPhoto, ABOUT_PHOTO_ID } from '../../../testing/about-fixtures';
 import { PORTRAIT_ID, publicPeople, SIGNATURE_ID } from '../../../testing/people-fixtures';
+import { DialogHistory } from '../../../../../shared/ui/dialog/dialog-history';
+import { FakeDialogHistory } from '../../../../../shared/ui/dialog/testing/fake-dialog-history';
 import { About } from './about';
 
 describe('Given the about section', () => {
@@ -10,7 +12,7 @@ describe('Given the about section', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [About],
-      providers: [provideRouter([])],
+      providers: [provideRouter([]), { provide: DialogHistory, useClass: FakeDialogHistory }],
     }).compileComponents();
     fixture = TestBed.createComponent(About);
     fixture.detectChanges();
@@ -123,6 +125,24 @@ describe('Given the about section', () => {
       expect(image.getAttribute('srcset')).toBe(
         `/api/content/media/${ABOUT_PHOTO_ID}?w=480 480w, /api/content/media/${ABOUT_PHOTO_ID}?w=960 960w, /api/content/media/${ABOUT_PHOTO_ID}?w=1440 1413w`,
       );
+    });
+
+    it('then the photo is a button that opens it enlarged at the largest width the site stores, uncropped', async () => {
+      const trigger = root().querySelector('figure app-zoomable button') as HTMLButtonElement;
+      expect(trigger.getAttribute('aria-label')).toBe(
+        'Zvětšit fotku: Malý chlapec v náručí dvou dospělých',
+      );
+
+      document.body.appendChild(root());
+      trigger.click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      const enlarged = root().querySelector('dialog .zoom-stage img')!;
+      expect(enlarged.getAttribute('src')).toBe(`/api/content/media/${ABOUT_PHOTO_ID}?w=1440`);
+      expect(enlarged.getAttribute('width')).toBe('1413');
+      expect(enlarged.getAttribute('height')).toBe('1884');
+      root().remove();
     });
 
     it('then the badge about the work with FOD stays beside the photo, outside its caption', () => {

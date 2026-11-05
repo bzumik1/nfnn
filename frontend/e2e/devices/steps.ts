@@ -88,6 +88,16 @@ export const STEPS: Step[] = [
     },
   },
   {
+    id: 'qr-viewer',
+    title: 'the Přispět QR code opened large',
+    open: async (ui) => {
+      await servePaymentDetails(ui.routes);
+      await publicPage(ui, '/#prispet');
+      await ui.click({ css: '#prispet button.zoomable' });
+      await ui.waitVisible({ css: 'dialog[open] .zoom-qr [role="img"]' });
+    },
+  },
+  {
     id: 'site-menu',
     title: 'the site menu',
     open: async (ui) => {
@@ -115,6 +125,15 @@ export const STEPS: Step[] = [
     id: 'news-article',
     title: 'a news article',
     open: (ui) => publicPage(ui, `/aktuality/${article.slug}`),
+  },
+  {
+    id: 'photo-viewer',
+    title: 'the photo of a news article opened large',
+    open: async (ui) => {
+      await publicPage(ui, `/aktuality/${article.slug}`);
+      await ui.click({ css: '.photo-zoom button.zoomable' });
+      await ui.waitVisible({ css: 'dialog[open] img.zoom-photo' });
+    },
   },
   {
     id: 'project',

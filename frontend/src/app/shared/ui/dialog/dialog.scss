@@ -135,6 +135,45 @@
   }
 }
 
+.dialog--viewer {
+  padding: 0;
+  background: var(--color-surface-inverse);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  overflow: hidden;
+
+  &[open] {
+    padding: 0;
+    align-items: stretch;
+  }
+
+  .dialog-panel {
+    display: flex;
+    flex-direction: column;
+    max-width: none;
+    min-height: 0;
+    height: 100%;
+    padding: env(safe-area-inset-top) 0 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    color: var(--color-on-inverse);
+    animation: fadeIn var(--duration-base) ease both;
+  }
+
+  .dialog-close {
+    top: calc(var(--dialog-close-inset) + env(safe-area-inset-top));
+    z-index: 1;
+    background: color-mix(in srgb, var(--color-surface-inverse) 60%, transparent);
+    color: var(--color-on-inverse);
+
+    &:hover {
+      background: color-mix(in srgb, var(--color-on-inverse) 18%, transparent);
+      color: var(--color-on-inverse);
+    }
+  }
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
