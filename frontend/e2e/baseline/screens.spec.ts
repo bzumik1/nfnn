@@ -339,6 +339,7 @@ const SCREENS: Screen[] = [
       await page.getByLabel('Současné heslo').fill('correct horse battery');
       await page.getByRole('button', { name: 'Pokračovat' }).click();
       await expect(page.getByLabel('Kód z aplikace')).toBeFocused();
+      await page.evaluate(() => window.scrollTo(0, 0));
     },
     ready: (page) => elementsShown(page, ['.account-qr']),
   },
