@@ -1,11 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 
 import { appConfig } from '../../app.config';
-import {
-  SYSTEM_TEXT_SIZE_CLASS,
-  SystemTextSize,
-  systemTextSizeAtStart,
-} from './system-text-size';
+import { SYSTEM_TEXT_SIZE_CLASS, SystemTextSize, systemTextSizeAtStart } from './system-text-size';
 
 interface Device {
   readonly standalone: boolean | undefined;
