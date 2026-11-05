@@ -400,7 +400,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Nastavení webu',
       description:
-        'The settings of the site: public address, mail server and senders, Fio history start, accounts excluded from pairing, receipt signatory and first year. Secrets (SMTP password, Fio token) only say whether they are set or unreadable, never their value.',
+        'The settings of the site: public address, mail server and senders, Fio history start, accounts excluded from pairing, receipt signatory and first year, and how many days a remembered sign-in lasts (SESSION_REMEMBER_DAYS). Secrets (SMTP password, Fio token) only say whether they are set or unreadable, never their value.',
       annotations: READ_ONLY,
     },
     async (ctx) =>

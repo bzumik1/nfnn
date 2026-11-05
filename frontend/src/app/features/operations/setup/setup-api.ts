@@ -30,7 +30,8 @@ export type SettingName =
   | 'FIO_HISTORY_FROM'
   | 'PAIRING_EXCLUDED_ACCOUNTS'
   | 'RECEIPT_FIRST_YEAR'
-  | 'ADMIN_EMAILS';
+  | 'ADMIN_EMAILS'
+  | 'SESSION_REMEMBER_DAYS';
 
 export type RestartOutcome = 'restarted' | 'slow';
 

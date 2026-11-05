@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.SessionKind;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.EmailVerificationToken;
@@ -93,7 +94,7 @@ class DonorViewsTest {
         when(secondFactors.findByDonor(DONOR)).thenReturn(Optional.of(SecondFactor.reconstitute(DONOR, SECRET, NOW, NOW, 1L)));
 
         AuthenticatedDonor result = views().authenticated(donor(Set.of(Role.DONOR, Role.ADMIN)),
-                new IssuedTokens("access", NOW, "refresh", NOW, Set.of(Role.DONOR, Role.ADMIN)));
+                new IssuedTokens("access", NOW, "refresh", NOW, Set.of(Role.DONOR, Role.ADMIN), SessionKind.REMEMBERED));
 
         assertThat(result.donor().secondFactor()).isEqualTo(new SecondFactorView(true, false));
         assertThat(result.donor().roles()).containsExactlyInAnyOrder(Role.DONOR, Role.ADMIN);

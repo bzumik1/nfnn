@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.SessionKind;
 import cz.novanadeje.app.donors.domain.DeviceDescription;
 import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.domain.DonorDevice;
@@ -45,7 +46,7 @@ class DeviceSignOutsTest {
     }
 
     private static DonorDevice device() {
-        return DonorDevice.signIn(JANA, DeviceDescription.UNKNOWN, SIGNED_IN);
+        return DonorDevice.signIn(JANA, DeviceDescription.UNKNOWN, SessionKind.REMEMBERED, SIGNED_IN);
     }
 
     @Test
@@ -168,7 +169,7 @@ class DeviceSignOutsTest {
     @Test
     @DisplayName("Given another donor's device, when it is ended for Jana, then nothing is revoked, ended or announced")
     void should_change_nothing_when_ended_given_another_donors_device() {
-        DonorDevice petrs = DonorDevice.signIn(DonorId.newId(SIGNED_IN), DeviceDescription.UNKNOWN, SIGNED_IN);
+        DonorDevice petrs = DonorDevice.signIn(DonorId.newId(SIGNED_IN), DeviceDescription.UNKNOWN, SessionKind.REMEMBERED, SIGNED_IN);
         when(devices.findById(petrs.id())).thenReturn(Optional.of(petrs));
 
         boolean result = signOuts().end(JANA, petrs.id(), DeviceSignOutReason.REMOTE_SIGN_OUT, NOW);

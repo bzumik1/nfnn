@@ -16,6 +16,7 @@ export const routes: Routes = [
   {
     path: 'sprava',
     canActivate: [adminGuard],
+    data: { head: 'light', parent: '/', backOnWide: false },
     loadComponent: () => import('./layout/donor-shell/donor-shell').then((m) => m.DonorShell),
     loadChildren: () => import('./features/admin/admin.routes').then((m) => m.adminRoutes),
   },

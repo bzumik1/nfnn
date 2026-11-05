@@ -6,9 +6,7 @@ import { DonorShell } from './donor-shell';
 
 @Component({
   imports: [SideNav],
-  template: `<app-side-nav [groups]="[]" label="Oblast" menuLabel="Menu"
-    ><h1>Přehled</h1></app-side-nav
-  >`,
+  template: `<app-side-nav [groups]="[]" label="Oblast"><h1>Přehled</h1></app-side-nav>`,
 })
 class Area {}
 

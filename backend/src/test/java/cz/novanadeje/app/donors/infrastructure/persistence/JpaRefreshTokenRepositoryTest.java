@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.infrastructure.persistence;
 
+import cz.novanadeje.app.donors.domain.SessionKind;
 import cz.novanadeje.app.donors.domain.ClientId;
 import cz.novanadeje.app.donors.domain.DeviceDescription;
 import cz.novanadeje.app.donors.domain.DeviceId;
@@ -63,7 +64,7 @@ class JpaRefreshTokenRepositoryTest {
     @BeforeEach
     void setUp() {
         jana = donor("jana@example.cz", "4821937560");
-        DonorDevice signedIn = DonorDevice.signIn(jana, DeviceDescription.UNKNOWN, NOW);
+        DonorDevice signedIn = DonorDevice.signIn(jana, DeviceDescription.UNKNOWN, SessionKind.REMEMBERED, NOW);
         devices.save(signedIn);
         device = signedIn.id();
         flushAndClear();

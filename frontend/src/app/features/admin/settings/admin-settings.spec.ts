@@ -119,6 +119,7 @@ describe('Given an administrator on the settings page', () => {
         'Klíč k ověřovacím QR kódům',
         'Kontaktní formulář',
         'Odesílatel e-mailů',
+        'Přihlášení',
         'Technické nastavení (pro správce serveru)',
       ]);
       expect(texts('h3')).toEqual(['Adresa webu', 'Server pro odesílání e-mailů', 'Banka']);

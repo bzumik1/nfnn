@@ -59,6 +59,7 @@ public class DonorCredentialsService {
         Donor donor = load(donorId);
         confirmations.confirm(donor, confirmation);
         RawPassword rawPassword = new RawPassword(newPassword);
+        sessions.requireLasting(donor, device);
         Instant now = clock.instant();
         donor.changePassword(passwordHasher.hash(rawPassword));
         donors.save(donor);
@@ -75,6 +76,7 @@ public class DonorCredentialsService {
         if (passkeys.countByDonor(donorId) == 0) {
             throw new LastSignInMethod(donorId);
         }
+        sessions.requireLasting(donor, device);
         Instant now = clock.instant();
         donor.removePassword();
         donors.save(donor);

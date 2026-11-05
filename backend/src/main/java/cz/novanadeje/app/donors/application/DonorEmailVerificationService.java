@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.SessionKind;
 import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.domain.DeviceDescription;
 import cz.novanadeje.app.donors.application.event.DonorEmailAddressInUse;
@@ -65,7 +66,7 @@ public class DonorEmailVerificationService {
     }
 
     @Transactional
-    public AuthenticatedDonor confirm(String token, DeviceDescription device) {
+    public AuthenticatedDonor confirm(String token, DeviceDescription device, SessionKind kind) {
         LinkSecret secret = new LinkSecret(token);
         Instant now = clock.instant();
         EmailVerificationToken found = tokens.findBySecretHash(secret.hash())
@@ -77,7 +78,7 @@ public class DonorEmailVerificationService {
         Donor donor = found.newEmail()
                 .map(newEmail -> changeEmail(found, newEmail, now))
                 .orElseGet(() -> verifyRegistration(found, now));
-        return views.authenticated(donor, sessions.signIn(donor, false, device));
+        return views.authenticated(donor, sessions.signIn(donor, false, device, kind));
     }
 
     private Donor verifyRegistration(EmailVerificationToken found, Instant now) {
