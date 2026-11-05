@@ -10,6 +10,7 @@ final class SettingProperties {
 
     private static final Map<Setting, String> RUNNING = new EnumMap<>(Map.ofEntries(
             Map.entry(Setting.PUBLIC_URL, "app.site.public-url"),
+            Map.entry(Setting.SESSION_REMEMBER_DAYS, "app.donors.session.remember-days"),
             Map.entry(Setting.MAIL_HOST, "spring.mail.host"),
             Map.entry(Setting.MAIL_PORT, "spring.mail.port"),
             Map.entry(Setting.MAIL_USERNAME, "spring.mail.username"),

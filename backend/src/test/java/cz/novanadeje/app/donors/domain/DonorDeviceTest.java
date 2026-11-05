@@ -18,7 +18,7 @@ class DonorDeviceTest {
     @Test
     @DisplayName("Given a sign-in, when the device is created, then it is active and last used at the sign-in")
     void should_be_active_and_last_used_at_sign_in_when_created_given_sign_in() {
-        DonorDevice device = DonorDevice.signIn(JANA, IPHONE_SAFARI, NOW);
+        DonorDevice device = DonorDevice.signIn(JANA, IPHONE_SAFARI, SessionKind.REMEMBERED, NOW);
 
         assertThat(device.isActive()).isTrue();
         assertThat(device.belongsTo(JANA)).isTrue();
@@ -32,7 +32,7 @@ class DonorDeviceTest {
     @Test
     @DisplayName("Given another donor, when the device is asked whom it belongs to, then it does not belong to them")
     void should_not_belong_when_asked_given_another_donor() {
-        DonorDevice device = DonorDevice.signIn(JANA, IPHONE_SAFARI, NOW);
+        DonorDevice device = DonorDevice.signIn(JANA, IPHONE_SAFARI, SessionKind.REMEMBERED, NOW);
 
         assertThat(device.belongsTo(DonorId.newId(NOW))).isFalse();
     }
@@ -40,7 +40,7 @@ class DonorDeviceTest {
     @Test
     @DisplayName("Given a time ending a device without its reason, when it is reconstituted, then it is refused")
     void should_refuse_when_reconstituted_given_end_without_reason() {
-        assertThatIllegalArgumentException().isThrownBy(() -> DonorDevice.reconstitute(DeviceId.newId(NOW), JANA, IPHONE_SAFARI, NOW, NOW,
+        assertThatIllegalArgumentException().isThrownBy(() -> DonorDevice.reconstitute(DeviceId.newId(NOW), JANA, IPHONE_SAFARI, SessionKind.REMEMBERED, NOW, NOW,
                 NOW, null));
     }
 
@@ -48,7 +48,7 @@ class DonorDeviceTest {
     @DisplayName("Given an active device")
     class GivenActiveDevice {
 
-        private final DonorDevice device = DonorDevice.signIn(JANA, IPHONE_SAFARI, NOW);
+        private final DonorDevice device = DonorDevice.signIn(JANA, IPHONE_SAFARI, SessionKind.REMEMBERED, NOW);
 
         @Test
         @DisplayName("when it is used later, then it remembers the later use")

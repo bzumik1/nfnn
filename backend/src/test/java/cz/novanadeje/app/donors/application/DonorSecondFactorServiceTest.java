@@ -1,5 +1,7 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.SessionKind;
+import cz.novanadeje.app.donors.domain.SessionEnded;
 import cz.novanadeje.app.donors.domain.DeviceDescription;
 import java.util.UUID;
 import cz.novanadeje.app.donors.domain.DeviceId;
@@ -53,6 +55,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -71,7 +74,7 @@ class DonorSecondFactorServiceTest {
     private static final String PASSWORD = "correct horse battery";
     private static final TotpSecret SECRET = new TotpSecret("GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ");
     private static final IssuedTokens TOKENS = new IssuedTokens("access", NOW.plus(Duration.ofMinutes(15)), "refresh", NOW.plus(Duration.ofDays(14)),
-            Set.of(Role.DONOR));
+            Set.of(Role.DONOR), SessionKind.REMEMBERED);
 
     @Mock
     private DonorRepository donors;
@@ -207,6 +210,24 @@ class DonorSecondFactorServiceTest {
     }
 
     @Test
+    @DisplayName("Given a session that has ended, when a pending factor is confirmed or an enabled one disabled with the right code, then it is refused as ended before the factor is stored or deleted, any device is signed out or the donor is told")
+    void should_refuse_as_ended_and_change_nothing_when_confirmed_or_disabled_given_ended_session() {
+        Donor donor = donor();
+        when(donors.findById(DONOR)).thenReturn(Optional.of(donor));
+        when(passwordHasher.matches(new RawPassword(PASSWORD), HASH)).thenReturn(true);
+        when(secondFactors.findByDonor(DONOR)).thenReturn(Optional.of(SecondFactor.enrol(DONOR, SECRET, NOW.minusSeconds(60))), Optional.of(enabledFactor()));
+        doThrow(new SessionEnded()).when(sessions).requireLasting(donor, DEVICE);
+
+        assertThatThrownBy(() -> service.confirm(DONOR, codeAt(NOW), DEVICE)).isInstanceOf(SessionEnded.class);
+        assertThatThrownBy(() -> service.disable(DONOR, Confirmation.withPassword(PASSWORD), codeAt(NOW), DEVICE)).isInstanceOf(SessionEnded.class);
+
+        verify(secondFactors, never()).save(any());
+        verify(secondFactors, never()).delete(any());
+        verify(sessions, never()).continueOn(any(), anyBoolean(), any());
+        verifyNoInteractions(signOuts, events);
+    }
+
+    @Test
     @DisplayName("Given a pending factor and a wrong code, when it is confirmed, then the code is rejected and the factor stays pending")
     void should_reject_code_and_keep_pending_when_confirmed_given_wrong_code() {
         SecondFactor factor = SecondFactor.enrol(DONOR, SECRET, NOW.minusSeconds(60));
@@ -276,7 +297,7 @@ class DonorSecondFactorServiceTest {
         assertThatThrownBy(() -> service.disable(DONOR, Confirmation.withPassword(PASSWORD), codeAt(NOW), DEVICE)).isInstanceOf(SecondFactorNotEnabled.class);
 
         verify(secondFactors, never()).delete(any());
-        verify(sessions, never()).signIn(any(), anyBoolean(), any());
+        verify(sessions, never()).signIn(any(), anyBoolean(), any(), any());
         verifyNoInteractions(events);
     }
 

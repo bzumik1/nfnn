@@ -432,7 +432,7 @@ describe('Given an administrator on the backups page', () => {
 
       expect(dialog()).toBeNull();
       expect(text('.restoring')).toBe(
-        'Obnovujeme databázi ze zálohy nfnn-2026-10-23_0300.dump.age. Web je teď několik minut nedostupný; stránka počká a ukáže výsledek. Možná se pak budete muset znovu přihlásit.',
+        'Obnovujeme databázi ze zálohy nfnn-2026-10-23_0300.dump.age. Web je teď několik minut nedostupný; stránka počká a ukáže výsledek. Obnova ukončí každé přihlášení, takže se pak přihlásíte znovu.',
       );
       expect(fixture.nativeElement.querySelector('.restoring')?.getAttribute('role')).toBe(
         'status',

@@ -1,61 +1,21 @@
 /// <reference types="@angular/localize" />
 
+import { NgComponentOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, DestroyRef, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { SideNav, SideNavGroup } from '../../../shared/ui/side-nav/side-nav';
-import { DashboardTopBar } from '../../donors/dashboard/top-bar/top-bar';
+import { CompactLayout } from '../../../core/layout/compact-layout';
+import { AppHeader } from '../../../layout/app-header/app-header';
+import { TabBar } from '../../../layout/tab-bar/tab-bar';
+import { DIALOG_PRESENTATION } from '../../../shared/ui/dialog/dialog-presentation';
+import { SideNav } from '../../../shared/ui/side-nav/side-nav';
+import { ADMIN_SECTIONS } from './admin-sections';
+import { ADMINISTRATION_LOCK } from './administration-lock';
 import { AlertBadgeRefresh } from './alert-badge-refresh';
-
-export const ADMIN_SECTIONS: readonly SideNavGroup[] = [
-  {
-    id: 'admin-nav-home',
-    label: null,
-    items: [{ path: '/sprava', label: $localize`:@@admin.nav.home:Přehled`, exact: true }],
-  },
-  {
-    id: 'admin-nav-daily',
-    label: $localize`:@@admin.nav.group.daily:Každý den`,
-    items: [
-      { path: '/sprava/platby', label: $localize`:@@admin.nav.payments:Platby z banky` },
-      { path: '/sprava/darci', label: $localize`:@@admin.nav.donors:Dárci` },
-      { path: '/sprava/aktuality', label: $localize`:@@admin.nav.news:Aktuality` },
-      { path: '/sprava/projekty', label: $localize`:@@admin.nav.projects:Projekty` },
-    ],
-  },
-  {
-    id: 'admin-nav-occasional',
-    label: $localize`:@@admin.nav.group.occasional:Občas`,
-    items: [
-      {
-        path: '/sprava/hromadna-potvrzeni',
-        label: $localize`:@@admin.nav.yearlyReceipts:Hromadná potvrzení`,
-      },
-      { path: '/sprava/o-nas', label: $localize`:@@admin.nav.about:Fotka v sekci O nás` },
-      { path: '/sprava/lide-fondu', label: $localize`:@@admin.nav.people:Lidé fondu` },
-      { path: '/sprava/spravci', label: $localize`:@@admin.nav.administrators:Správci` },
-      { path: '/sprava/prehledy', label: $localize`:@@admin.nav.report:Měsíční e-mail` },
-      { path: '/sprava/zalohy', label: $localize`:@@admin.nav.backups:Zálohy` },
-      { path: '/sprava/upozorneni', label: $localize`:@@admin.nav.alerts:Upozornění na telefon` },
-      { path: '/sprava/historie', label: $localize`:@@admin.nav.actions:Historie změn` },
-    ],
-  },
-  {
-    id: 'admin-nav-technical',
-    label: $localize`:@@admin.nav.group.technical:Pro technika`,
-    items: [
-      { path: '/sprava/nastaveni', label: $localize`:@@admin.nav.settings:Nastavení` },
-      { path: '/sprava/logy', label: $localize`:@@admin.nav.logs:Logy a diagnostika` },
-      {
-        path: '/sprava/starsi-symboly',
-        label: $localize`:@@admin.nav.symbolClaims:Odpovědi o starších symbolech`,
-      },
-    ],
-  },
-];
 
 @Component({
   selector: 'app-admin-shell',
-  imports: [DashboardTopBar, RouterOutlet, SideNav],
+  imports: [AppHeader, NgComponentOutlet, RouterOutlet, SideNav, TabBar],
+  providers: [{ provide: DIALOG_PRESENTATION, useValue: 'sheet' }],
   templateUrl: './admin-shell.html',
   styleUrl: './admin-shell.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -63,7 +23,8 @@ export const ADMIN_SECTIONS: readonly SideNavGroup[] = [
 export class AdminShell {
   protected readonly groups = ADMIN_SECTIONS;
   protected readonly navLabel = $localize`:@@admin.nav.label:Správa`;
-  protected readonly menuLabel = $localize`:@@admin.nav.toggle:Menu správy`;
+  protected readonly compact = inject(CompactLayout).isCompact;
+  protected readonly lock = inject(ADMINISTRATION_LOCK);
 
   constructor() {
     inject(AlertBadgeRefresh).watch(inject(DestroyRef));

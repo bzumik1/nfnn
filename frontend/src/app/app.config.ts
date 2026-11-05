@@ -21,6 +21,7 @@ import { routes } from './app.routes';
 import { authInterceptor } from './core/auth/auth-interceptor';
 import { AuthStore } from './core/auth/auth-store';
 import { SESSION_DEVICE } from './core/auth/session-device';
+import { PublicSessionIdle } from './core/auth/public-session-idle';
 import { ReportingErrorHandler } from './core/errors/reporting-error-handler';
 import { ChunkLoadRecovery } from './core/reload/chunk-load-recovery';
 import { BackTarget } from './core/navigation/back-target';
@@ -87,6 +88,7 @@ export const appConfig: ApplicationConfig = {
       inject(AlertNotificationClicks).start();
     }),
     provideAppInitializer(() => inject(AuthStore).restore()),
+    provideAppInitializer(() => inject(PublicSessionIdle).start()),
     provideAppInitializer(() => inject(CanonicalLink).start()),
     dialogHistoryAtStart,
     pagePinchLockAtStart,

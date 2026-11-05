@@ -126,6 +126,7 @@ test.describe('Given an administrator on the settings page', () => {
       'Klíč k ověřovacím QR kódům',
       'Kontaktní formulář',
       'Odesílatel e-mailů',
+      'Přihlášení',
       'Technické nastavení (pro správce serveru)',
     ]);
     await expect(page.locator('#setting-MAIL_HOST')).toBeHidden();

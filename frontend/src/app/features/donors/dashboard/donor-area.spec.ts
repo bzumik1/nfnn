@@ -331,15 +331,13 @@ describe('Given a signed-in donor in the donor area', () => {
       return element('nav a[href="/darce/ucty"]') as HTMLAnchorElement | null;
     }
 
-    it('then Bankovní účty in the side panel and the menu button show how many wait for an answer', async () => {
+    it('then Bankovní účty in the side panel shows how many wait for an answer', async () => {
       areaAccounts = [bankAccount(), ...questions(1)];
       await open('/darce/dary');
       await respond(twoYearSummary(), twoYearDonations());
 
       expect(badge(bankAccountsLink())).toBe('1');
       expect(hidden(bankAccountsLink())).toBe('1 otázka čeká na odpověď');
-      expect(badge(element('.side-nav-toggle'))).toBe('1');
-      expect(hidden(element('.side-nav-toggle'))).toBe('1 otázka čeká na odpověď');
       expect(texts('nav .side-nav-badge')).toHaveLength(1);
     });
 
@@ -379,14 +377,13 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(element('.side-nav-badge')).toBeNull();
     });
 
-    it('then the bank accounts section keeps the menu button free of it and its own list updates the badge', async () => {
+    it('then the bank accounts section updates the badge from its own list', async () => {
       areaAccounts = questions(1);
       await open('/darce/ucty');
       flushSectionAccounts(questions(1));
       await respond(twoYearSummary(), twoYearDonations());
 
       expect(badge(bankAccountsLink())).toBe('1');
-      expect(element('.side-nav-toggle .side-nav-badge')).toBeNull();
 
       (
         harness.fixture.debugElement.query(By.directive(BankAccountsCard))
@@ -732,7 +729,6 @@ describe('Given a signed-in donor in the donor area', () => {
         null,
         null,
       ]);
-      expect(text('.side-nav-toggle')).toBe('Menu účtu');
     });
 
     it('then every section has one level-one heading that takes the focus', async () => {

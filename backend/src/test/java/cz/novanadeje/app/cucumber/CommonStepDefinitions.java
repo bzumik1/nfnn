@@ -92,6 +92,11 @@ public class CommonStepDefinitions {
         clock.advance(Duration.ofSeconds(seconds));
     }
 
+    @When("{int} hour(s) pass(es)")
+    public void hoursPass(int hours) {
+        clock.advance(Duration.ofHours(hours));
+    }
+
     @When("{int} minute(s) pass(es)")
     public void minutesPass(int minutes) {
         clock.advance(Duration.ofMinutes(minutes));

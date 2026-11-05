@@ -183,6 +183,7 @@ describe('Given a dialog opened from a button', () => {
         labelledBy="title"
         [presentation]="presentation()"
         [pushesHistory]="pushesHistory()"
+        [dismissible]="!locked()"
         (dismissed)="dismissed()"
       >
         <h2 id="title">Název</h2>
@@ -195,6 +196,7 @@ class PresentedHost {
   readonly presentation = signal<DialogPresentation>('auto');
   readonly pushesHistory = signal(true);
   readonly busy = signal(false);
+  readonly locked = signal(false);
   dismissals = 0;
 
   dismissed(): void {
@@ -265,6 +267,193 @@ describe('Given a dialog and the way it is presented', () => {
 
     expect(native().dataset['presentation']).toBe('full');
     expect(grabber()).toBeNull();
+  });
+});
+
+describe('Given a dialog presented as a sheet that the visitor drags by its top edge', () => {
+  let fixture: ComponentFixture<PresentedHost>;
+
+  const grabber = () => fixture.nativeElement.querySelector('.dialog-grabber') as HTMLElement;
+  const panel = () => fixture.nativeElement.querySelector('.dialog-panel') as HTMLElement;
+  const pointer = (
+    type: string,
+    clientY: number,
+    timeStamp: number,
+    { pointerId = 1, button = 0 } = {},
+  ): Event => {
+    const event = new MouseEvent(type, { bubbles: true, clientY, button });
+    Object.defineProperties(event, {
+      pointerId: { value: pointerId },
+      isPrimary: { value: pointerId === 1 },
+      timeStamp: { value: timeStamp },
+    });
+    return event;
+  };
+  const dragTo = async (clientY: number, timeStamp: number, pointerId = 1): Promise<void> => {
+    grabber().dispatchEvent(pointer('pointermove', clientY, timeStamp, { pointerId }));
+    fixture.detectChanges();
+    await fixture.whenStable();
+  };
+  const press = (clientY = 100, button = 0): void => {
+    grabber().dispatchEvent(pointer('pointerdown', clientY, 0, { button }));
+  };
+  const release = async (): Promise<void> => {
+    grabber().dispatchEvent(pointer('pointerup', 0, 0));
+    fixture.detectChanges();
+    await fixture.whenStable();
+  };
+
+  beforeEach(async () => {
+    TestBed.configureTestingModule({
+      imports: [PresentedHost],
+      providers: [{ provide: DialogHistory, useClass: FakeDialogHistory }],
+    });
+    fixture = TestBed.createComponent(PresentedHost);
+    fixture.componentInstance.presentation.set('sheet');
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    await fixture.whenStable();
+  });
+
+  afterEach(() => fixture.nativeElement.remove());
+
+  it('when the finger moves down, then the sheet follows it without easing', async () => {
+    press();
+    await dragTo(160, 100);
+
+    expect(panel().style.translate).toBe('0 60px');
+    expect(panel().classList).toContain('dialog-panel--dragging');
+  });
+
+  it('when the finger lets go far enough down, then the sheet asks to be dismissed', async () => {
+    press();
+    await dragTo(260, 1000);
+    await release();
+
+    expect(fixture.componentInstance.dismissals).toBe(1);
+  });
+
+  it('when the finger lets go after a short way, then the sheet eases back and stays open', async () => {
+    press();
+    await dragTo(130, 1000);
+    await release();
+
+    expect(fixture.componentInstance.dismissals).toBe(0);
+    expect(panel().style.translate).toBe('');
+    expect(panel().classList).not.toContain('dialog-panel--dragging');
+  });
+
+  it('when the browser takes the gesture over, then the sheet returns and stays open', async () => {
+    press();
+    await dragTo(300, 1000);
+    grabber().dispatchEvent(pointer('pointercancel', 0, 0));
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.dismissals).toBe(0);
+    expect(panel().style.translate).toBe('');
+  });
+
+  it('when the page holds the sheet open while something runs, then no grabber offers to drag it away', async () => {
+    fixture.componentInstance.locked.set(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(grabber()).toBeNull();
+    expect(panel().style.translate).toBe('');
+  });
+
+  it('when another finger moves during the drag, then the sheet follows only the first one', async () => {
+    press();
+    await dragTo(160, 100);
+    await dragTo(400, 120, 2);
+
+    expect(panel().style.translate).toBe('0 60px');
+  });
+
+  it('when the drag is pressed with another mouse button than the main one, then the sheet stays put', async () => {
+    press(100, 2);
+    await dragTo(300, 1000);
+
+    expect(panel().style.translate).toBe('');
+  });
+
+  it('when the grabber loses the pointer, then the sheet returns and stays open', async () => {
+    press();
+    await dragTo(300, 1000);
+    grabber().dispatchEvent(pointer('lostpointercapture', 0, 0));
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.dismissals).toBe(0);
+    expect(panel().style.translate).toBe('');
+  });
+});
+
+@Component({
+  imports: [Dialog],
+  template: `
+    <app-dialog labelledBy="long-title" presentation="sheet">
+      <h2 id="long-title">Dlouhý list</h2>
+      <label for="far-field">Hledat</label>
+      <input id="far-field" />
+      <div class="ui-dialog__actions" style="position: sticky">
+        <button type="button">Uložit</button>
+      </div>
+    </app-dialog>
+  `,
+})
+class LongSheetHost {}
+
+describe('Given a long sheet whose buttons stay at its bottom edge', () => {
+  let fixture: ComponentFixture<LongSheetHost>;
+  let scrolled: number[];
+
+  const box = (element: Element, top: number, bottom: number): void => {
+    element.getBoundingClientRect = () => ({ top, bottom }) as DOMRect;
+  };
+
+  beforeEach(async () => {
+    TestBed.configureTestingModule({
+      imports: [LongSheetHost],
+      providers: [{ provide: DialogHistory, useClass: FakeDialogHistory }],
+    });
+    fixture = TestBed.createComponent(LongSheetHost);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    scrolled = [];
+    const panel = fixture.nativeElement.querySelector('.dialog-panel') as HTMLElement;
+    panel.scrollBy = ((options: ScrollToOptions) => scrolled.push(options.top ?? 0)) as never;
+    box(fixture.nativeElement.querySelector('.ui-dialog__actions'), 540, 640);
+  });
+
+  afterEach(() => fixture.nativeElement.remove());
+
+  it('when a field under the buttons takes the focus, then the sheet scrolls it above them', () => {
+    const field = fixture.nativeElement.querySelector('#far-field') as HTMLInputElement;
+    box(field, 582, 622);
+
+    field.focus();
+
+    expect(scrolled).toHaveLength(1);
+    expect(scrolled[0]).toBeGreaterThanOrEqual(622 - 540);
+  });
+
+  it('when a field above the buttons takes the focus, then the sheet stays where it is', () => {
+    const field = fixture.nativeElement.querySelector('#far-field') as HTMLInputElement;
+    box(field, 300, 340);
+
+    field.focus();
+
+    expect(scrolled).toEqual([]);
+  });
+
+  it('when one of the buttons takes the focus, then the sheet stays where it is', () => {
+    const button = fixture.nativeElement.querySelector('.ui-dialog__actions button') as HTMLElement;
+    box(button, 560, 600);
+
+    button.focus();
+
+    expect(scrolled).toEqual([]);
   });
 });
 

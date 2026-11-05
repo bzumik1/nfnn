@@ -94,7 +94,7 @@ describe('Given the page that confirms the e-mail from the registration link', (
       expect(TestBed.inject(Location).path(true)).toBe('/potvrzeni-emailu');
       const request = http.expectOne('/api/donors/auth/email-verification/confirm');
       expect(request.request.method).toBe('POST');
-      expect(request.request.body).toEqual({ token: 'abc' });
+      expect(request.request.body).toEqual({ token: 'abc', session: 'BROWSER' });
       expect(heading().textContent).toContain('Potvrzujeme váš e-mail');
       expect(element('[role="status"]').textContent).toContain('Chvilku strpení');
       request.flush(authResponse('token-1'));
@@ -223,7 +223,7 @@ describe('Given the page that confirms the e-mail from the registration link', (
     it('then only the token is sent and the address bar keeps neither', () => {
       expect(TestBed.inject(Location).path(true)).toBe('/potvrzeni-emailu');
       const request = http.expectOne('/api/donors/auth/email-verification/confirm');
-      expect(request.request.body).toEqual({ token: 'abc' });
+      expect(request.request.body).toEqual({ token: 'abc', session: 'BROWSER' });
       request.flush(authResponse('token-1'));
     });
 
@@ -285,7 +285,7 @@ describe('Given the page that confirms the e-mail from the registration link', (
     it('then only the token is sent and the address bar keeps neither', () => {
       expect(TestBed.inject(Location).path(true)).toBe('/potvrzeni-emailu');
       const request = http.expectOne('/api/donors/auth/email-verification/confirm');
-      expect(request.request.body).toEqual({ token: 'abc' });
+      expect(request.request.body).toEqual({ token: 'abc', session: 'BROWSER' });
       request.flush(authResponse('token-1'));
     });
 

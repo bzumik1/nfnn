@@ -63,6 +63,7 @@ const SIGNED_IN_PAGES = [
   '/sprava/logy',
   '/sprava/nastaveni',
   '/sprava/historie',
+  '/sprava/vice',
 ];
 
 function colours(source: string): string[] {
