@@ -32,6 +32,7 @@ function view(receipts: readonly IssuedReceipt[]): DonorCopyView {
       { sha256: 'a'.repeat(64), mediaType: 'image/png', base64: bytesToBase64Url(SIGNATURE) },
     ],
     agrees: true,
+    storedAt: '2026-10-18T08:06:00Z',
   };
 }
 
@@ -106,6 +107,38 @@ describe('Given a receipt drawn for a donor whose copy is on the device', () => 
       ),
     ).rejects.toBe(refused);
   });
+
+  for (const status of [502, 503, 504, 520, 521, 522, 523, 524]) {
+    it(`when the server stands behind a gateway that answers ${status}, then the copy’s receipt is drawn`, async () => {
+      const yearly = receipt({ id: 'yearly' });
+      const down = new HttpErrorResponse({ status, error: '<html>down</html>' });
+
+      expect(
+        await firstValueFrom(
+          copyBackedReceiptSource(online(throwError(() => down)), () => view([yearly]), {
+            year: 2025,
+          }).receipt(),
+        ),
+      ).toBe(yearly);
+    });
+  }
+
+  for (const status of [400, 401, 403, 404, 409, 426, 429, 500, 503]) {
+    it(`when the server itself refuses with a problem of status ${status}, then the failure stays and the copy is not drawn`, async () => {
+      const refused = new HttpErrorResponse({
+        status,
+        error: { type: 'https://nfnn.cz/problems/donations/receipt-signing-paused', status },
+      });
+
+      await expect(
+        firstValueFrom(
+          copyBackedReceiptSource(online(throwError(() => refused)), () => view([receipt()]), {
+            year: 2025,
+          }).receipt(),
+        ),
+      ).rejects.toBe(refused);
+    });
+  }
 
   it('when an image is kept in the copy, then it comes from the copy, and any other from the server', async () => {
     const server = online(of(receipt()));

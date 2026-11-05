@@ -184,16 +184,23 @@ describe('Given the card "Data v tomto zařízení"', () => {
       );
     });
 
-    for (const outcome of ['mismatch', 'no-copy'] as const) {
-      it(`and the download ends as ${outcome}, then the alert does not blame the connection`, async () => {
-        reload(outcome);
-        await settle();
+    it('and the copy is closed meanwhile, then the alert does not blame the connection', async () => {
+      reload('no-copy');
+      await settle();
 
-        expect(normalized(root().querySelector('[role="alert"]:not(:empty)')?.textContent)).toBe(
-          'Data se nepodařilo načíst. Zkuste to prosím za chvíli znovu, a když to nepůjde, napište nám na info@nfnn.cz.',
-        );
-      });
-    }
+      expect(normalized(root().querySelector('[role="alert"]:not(:empty)')?.textContent)).toBe(
+        'Data se nepodařilo načíst. Zkuste to prosím za chvíli znovu, a když to nepůjde, napište nám na info@nfnn.cz.',
+      );
+    });
+
+    it('and the data do not match the server’s summary, then the alert says they could not be checked, which a stored time beside it does not contradict', async () => {
+      reload('mismatch');
+      await settle();
+
+      expect(normalized(root().querySelector('[role="alert"]:not(:empty)')?.textContent)).toBe(
+        'Data ze serveru se nepodařilo ověřit. Zkuste je prosím za chvíli načíst znovu, a když to nepůjde, napište nám na info@nfnn.cz.',
+      );
+    });
   });
 
   it('when the device is offline and the donor asks to load the data again, then an alert says it needs a connection and nothing is asked', async () => {

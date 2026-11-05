@@ -34,11 +34,17 @@ describe('Given the line about the first saving of the donor’s data on this de
     fixture.detectChanges();
   });
 
-  afterEach(() => vi.useRealTimers());
+  afterEach(() => {
+    vi.useRealTimers();
+    document.documentElement.classList.remove('has-floating-notice');
+  });
+
+  function region(): HTMLElement | null {
+    return (fixture.nativeElement as HTMLElement).querySelector('[aria-live="polite"]');
+  }
 
   function status(): string {
-    const region = (fixture.nativeElement as HTMLElement).querySelector('[role="status"]');
-    return (region?.textContent ?? '').replace(/\s+/g, ' ').trim();
+    return (region()?.textContent ?? '').replace(/\s+/g, ' ').trim();
   }
 
   function after(ms: number): void {
@@ -55,27 +61,42 @@ describe('Given the line about the first saving of the donor’s data on this de
     view.set(VIEW);
     running.set(false);
     after(0);
+    expect(status()).toBe('');
     after(STORED_NOTICE_MS);
 
     expect(status()).toBe('');
   });
 
-  it('when the first saving takes longer, then the line says the gifts are being saved and then that they are, for a few seconds', () => {
-    expect((fixture.nativeElement as HTMLElement).querySelector('[role="status"]')).not.toBeNull();
+  it('when the page opens on a copy that already holds the gifts, then nothing is said, not even that they are saved', () => {
+    view.set(VIEW);
+    fixture.destroy();
+    fixture = TestBed.createComponent(FirstSyncNotice);
+    fixture.detectChanges();
+    after(0);
+
+    expect(status()).toBe('');
+    after(FIRST_SYNC_NOTICE_DELAY_MS);
+    expect(status()).toBe('');
+  });
+
+  it('when the first saving takes longer, then a bar over the page says the overview is being saved and then that it is, for a few seconds, without promising it offline', () => {
+    expect(region()).not.toBeNull();
+    expect((fixture.nativeElement as HTMLElement).querySelector('[role="status"]')).toBeNull();
     running.set(true);
     after(0);
     after(FIRST_SYNC_NOTICE_DELAY_MS);
-    expect(status()).toBe(
-      'Ukládáme vaše dary do tohoto zařízení, abyste je měli po ruce i bez připojení…',
-    );
+    expect(status()).toBe('Ukládáme přehled vašich darů do tohoto zařízení…');
+    expect(region()?.querySelector('.ui-notice--floating')).not.toBeNull();
+    expect(document.documentElement.classList).toContain('has-floating-notice');
 
     view.set(VIEW);
     running.set(false);
     after(0);
-    expect(status()).toBe('Vaše dary jsou uložené v tomto zařízení.');
+    expect(status()).toBe('Přehled vašich darů je uložený v tomto zařízení.');
 
     after(STORED_NOTICE_MS);
     expect(status()).toBe('');
+    expect(document.documentElement.classList).not.toContain('has-floating-notice');
   });
 
   it('when the first saving takes longer and fails, then the line goes without saying the gifts are saved', () => {

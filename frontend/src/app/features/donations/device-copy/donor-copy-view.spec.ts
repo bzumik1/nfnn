@@ -119,6 +119,24 @@ describe('Given the donor summary computed in the browser', () => {
   }
 });
 
+describe('Given the donor’s gift list computed in the browser', () => {
+  const manifests = new Map(sharedCases('sync/manifest.json').map((entry) => [entry.name, entry]));
+
+  for (const sharedCase of sharedCases('donor-donations/list.json')) {
+    describe(`Given the shared case ${sharedCase.name}`, () => {
+      it('when the copy holds the chunks of the manifest case of the same name, then its gifts are those the server lists', () => {
+        const manifest = manifests.get(sharedCase.name);
+
+        expect(manifest?.input).toEqual(sharedCase.input);
+        const view = donorCopyView(
+          copy(manifest?.expected.chunks ?? [], manifest?.expected.summary ?? SUMMARY),
+        );
+        expect(view?.items).toEqual(sharedCase.expected.items);
+      });
+    });
+  }
+});
+
 describe('Given a copy of the donor’s data', () => {
   it('when it holds no summary of the donor, as an erased donor’s copy, then it has no view', () => {
     expect(donorCopyView(copy([], {}))).toBeNull();

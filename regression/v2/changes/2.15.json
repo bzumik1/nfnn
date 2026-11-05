@@ -11,7 +11,7 @@
     "suite": "frontend-vitest",
     "test": "src/app/features/donations/device-copy/donor-copy-download.spec.ts > Given the download of the donor copy > when an empty copy opens that another tab has already filled, then nothing is downloaded",
     "reason": "2.15: the first-sync download of 2.14 became the sync of the donor copy (DonorCopySync), which asks only for the chunks whose digest changed, syncs a restored copy too and checks the copy's own figures against its summary",
-    "replacement": "src/app/features/donations/device-copy/donor-copy-sync.spec.ts > Given the sync of the donor copy > when nothing changed, then no chunk is asked for and the copy is stored again with the manifest’s summary"
+    "replacement": "src/app/features/donations/device-copy/donor-copy-sync.spec.ts > Given the sync of the donor copy > when another tab stored the copy after this tab read it, then the sync loads it again under the lock and asks only for what changed since"
   },
   {
     "kind": "retired",
@@ -60,7 +60,7 @@
     "suite": "frontend-vitest",
     "test": "src/app/features/donations/device-copy/donor-copy-download.spec.ts > Given the download of the donor copy > when the manifest names another donor than the copy, then nothing is stored and the mismatch is reported",
     "reason": "2.15: the first-sync download of 2.14 became the sync of the donor copy (DonorCopySync), which asks only for the chunks whose digest changed, syncs a restored copy too and checks the copy's own figures against its summary",
-    "replacement": "src/app/features/donations/device-copy/donor-copy-sync.spec.ts > Given the sync of the donor copy > when the manifest names another donor than the copy, then nothing is stored and the mismatch is reported"
+    "replacement": "src/app/features/donations/device-copy/donor-copy-sync.spec.ts > Given the sync of the donor copy > when the manifest names another donor than the copy, then nothing is stored, and since the session changed rather than the data, nothing is reported"
   },
   {
     "kind": "retired",
@@ -110,5 +110,17 @@
     "test": "e2e/device-copy.spec.ts > Given a donor who signs in with a password on a device that keeps an encrypted copy > when she loads the page again, then the same copy opens with its session key, without her password and without downloading again",
     "reason": "2.15: a restored copy is caught up by the sync, so a reload asks for the manifest (and only the manifest when nothing changed)",
     "replacement": "e2e/device-copy.spec.ts > Given a donor who signs in with a password on a device that keeps an encrypted copy > when she loads the page again, then the same copy opens with its session key, without her password, and only its manifest is asked for to catch it up"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/donor-donations/list.json",
+    "reason": "2.15: the donor's gift list as GET /api/donations/me lists it, chained by name with sync/manifest.json, so the list the browser computes from the device copy is proved to be the server's",
+    "contract": "docs/api-contract.md, Device sync; .claude/rules/testing.md, Logic on both sides"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/schemas/donor-donations/list.schema.json",
+    "reason": "2.15: the schema of the new donor-donations/list.json cases",
+    "contract": ".claude/rules/testing.md, Logic on both sides"
   }
 ]

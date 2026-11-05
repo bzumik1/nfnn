@@ -1,5 +1,5 @@
 import { computed, effect, inject, Injectable, signal, untracked } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, type Observable, timeout } from 'rxjs';
 import { userHandleOf } from '../../../core/auth/session-device';
 import { bytesToBase64Url } from '../../../core/device/crypto/device-bytes';
 import type {
@@ -21,6 +21,7 @@ export type { SyncOutcome } from './donor-copy';
 export const SYNC_ATTEMPTS = 2;
 export const REBUILD_PAUSE_MS = 60 * 60 * 1000;
 export const CATCH_UP_PAUSE_MS = 30_000;
+export const SYNC_REQUEST_TIMEOUT_MS = 30_000;
 
 type Fetched = CopyContents | 'changed' | 'another-donor';
 
@@ -160,7 +161,7 @@ export class DonorCopySync implements DonorCopy {
         return 'failed';
       }
       if (fetched === 'another-donor') {
-        break;
+        return 'mismatch';
       }
       if (fetched !== 'changed') {
         const contents = await this.withImages(fetched, before?.images ?? []);
@@ -172,7 +173,7 @@ export class DonorCopySync implements DonorCopy {
   }
 
   private async fetched(userHandle: string, stored: CopyContents | null): Promise<Fetched> {
-    const manifest = await firstValueFrom(this.api.manifest());
+    const manifest = await answered(this.api.manifest());
     if (userHandleOf(manifest.subject) !== userHandle) {
       return 'another-donor';
     }
@@ -182,7 +183,7 @@ export class DonorCopySync implements DonorCopy {
       .map((entry) => entry.id);
     const served = new Map<string, SyncChunk>();
     for (let start = 0; start < wanted.length; start += MAX_CHUNKS_PER_REQUEST) {
-      const answer = await firstValueFrom(
+      const answer = await answered(
         this.api.chunks(wanted.slice(start, start + MAX_CHUNKS_PER_REQUEST)),
       );
       if (userHandleOf(answer.subject) !== userHandle) {
@@ -234,7 +235,7 @@ export class DonorCopySync implements DonorCopy {
 
   private async downloadedImage(sha256: string): Promise<StoredImage | null> {
     try {
-      const image = await firstValueFrom(this.receipts.image(sha256));
+      const image = await answered(this.receipts.image(sha256));
       const bytes = new Uint8Array(image.bytes);
       if ((await hexDigest(bytes)) !== sha256) {
         return null;
@@ -256,6 +257,10 @@ export class DonorCopySync implements DonorCopy {
     this.lastReportAt = Date.now();
     this.reporter.report('device-copy-mismatch', 'global');
   }
+}
+
+function answered<T>(request: Observable<T>): Promise<T> {
+  return firstValueFrom(request.pipe(timeout(SYNC_REQUEST_TIMEOUT_MS)));
 }
 
 function sameSummary(first: unknown, second: unknown): boolean {

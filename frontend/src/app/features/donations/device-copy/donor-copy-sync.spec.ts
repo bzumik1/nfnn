@@ -10,9 +10,15 @@ import { deviceAccountOf } from '../../../core/auth/session-device';
 import type { AccountStore, CopyContents } from '../../../core/device/store/account-store';
 import { DeviceVault, type OpenedCopy } from '../../../core/device/store/device-vault';
 import { ErrorReporter } from '../../../core/errors/error-reporter';
+import { sharedCases } from '../../../../testing/shared-cases';
 import { rowsSha256 } from '../sync/canonical-rows';
 import { DonorCopyLink } from './donor-copy';
-import { CATCH_UP_PAUSE_MS, DonorCopySync, REBUILD_PAUSE_MS } from './donor-copy-sync';
+import {
+  CATCH_UP_PAUSE_MS,
+  DonorCopySync,
+  REBUILD_PAUSE_MS,
+  SYNC_REQUEST_TIMEOUT_MS,
+} from './donor-copy-sync';
 import { type DonationRow, summarizeDonations } from './donor-copy-view';
 import type { SyncChunk } from './donor-sync-api';
 
@@ -27,10 +33,15 @@ class FakeStore {
   readonly copyId = 'copy-1';
   readonly contents = signal<CopyContents | null>(null);
   persisted: CopyContents | null = null;
+  damaged = false;
   loads = 0;
 
-  async load(): Promise<'empty' | 'loaded'> {
+  async load(): Promise<'empty' | 'loaded' | 'damaged'> {
     this.loads++;
+    if (this.damaged) {
+      this.contents.set(null);
+      return 'damaged';
+    }
     this.contents.set(this.persisted);
     return this.persisted === null ? 'empty' : 'loaded';
   }
@@ -237,6 +248,56 @@ describe('Given the sync of the donor copy', () => {
     expect(vault.stored[0].summary).toEqual(summaryOf([gifts2025, changed]));
   });
 
+  it('when a copy that holds gifts syncs, then the first sync never shows', async () => {
+    await holding([gifts2025]);
+    open('restored');
+
+    await vi.waitFor(() => expect(sync.syncing()).toBe(true));
+    expect(sync.firstSync()).toBe(false);
+    await vi.waitFor(() => answerManifest([gifts2025, gifts2026]));
+    expect(sync.firstSync()).toBe(false);
+    await answerChunks(['donations:2026'], [gifts2026], {
+      summary: summaryOf([gifts2025, gifts2026]),
+    });
+    await settled();
+
+    expect(sync.firstSync()).toBe(false);
+  });
+
+  it('when another tab stored the copy after this tab read it, then the sync loads it again under the lock and asks only for what changed since', async () => {
+    await holding([gifts2025]);
+    store.contents.set(null);
+    open('restored');
+
+    await vi.waitFor(() => answerManifest([gifts2025, gifts2026]));
+    await answerChunks(['donations:2026'], [gifts2026], {
+      summary: summaryOf([gifts2025, gifts2026]),
+    });
+    await settled();
+
+    expect(store.loads).toBe(1);
+    expect(vault.stored[0].chunks.map((stored) => stored.id)).toEqual([
+      'donations:2025',
+      'donations:2026',
+    ]);
+  });
+
+  it('when the stored copy cannot be read, then every chunk is downloaded again', async () => {
+    await holding([gifts2025, gifts2026]);
+    store.damaged = true;
+    open('restored');
+
+    await vi.waitFor(() => answerManifest([gifts2025, gifts2026]));
+    await answerChunks(['donations:2025', 'donations:2026'], [gifts2025, gifts2026]);
+    await settled();
+
+    expect(vault.stored).toHaveLength(1);
+    expect(vault.stored[0].chunks.map((stored) => stored.id)).toEqual([
+      'donations:2025',
+      'donations:2026',
+    ]);
+  });
+
   it('when nothing changed, then no chunk is asked for and the copy is stored again with the manifest’s summary', async () => {
     await holding([gifts2025]);
     open('sign-in');
@@ -330,7 +391,7 @@ describe('Given the sync of the donor copy', () => {
     expect(reporter.report).toHaveBeenCalledWith('device-copy-mismatch', 'global');
   });
 
-  it('when the manifest names another donor than the copy, then nothing is stored and the mismatch is reported', async () => {
+  it('when the manifest names another donor than the copy, then nothing is stored, and since the session changed rather than the data, nothing is reported', async () => {
     open();
     const reloading = sync.reload();
 
@@ -338,7 +399,23 @@ describe('Given the sync of the donor copy', () => {
 
     expect(await reloading).toBe('mismatch');
     expect(vault.stored).toEqual([]);
-    expect(reporter.report).toHaveBeenCalledWith('device-copy-mismatch', 'global');
+    expect(reporter.report).not.toHaveBeenCalled();
+  });
+
+  it('when the server does not answer in time, then the sync fails, so the copy lock is not held for ever', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      open();
+      const reloading = sync.reload();
+      await vi.waitFor(() => http.expectOne('/api/donations/me/sync'));
+
+      await vi.advanceTimersByTimeAsync(SYNC_REQUEST_TIMEOUT_MS);
+
+      expect(await reloading).toBe('failed');
+      expect(vault.stored).toEqual([]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('when the chunks answer names another donor than the copy, then nothing is stored', async () => {
@@ -447,6 +524,37 @@ describe('Given the sync of the donor copy', () => {
 
     expect(await catching).toBe('stored');
   });
+
+  for (const sharedCase of sharedCases('sync/manifest.json')) {
+    describe(`Given the shared case ${sharedCase.name}`, () => {
+      it('when a new empty copy syncs against the manifest and chunks the server answers for it, then it stores exactly those chunks and summary and agrees with them', async () => {
+        const { subject, summary, chunks } = sharedCase.expected;
+        const account = deviceAccountOf({ id: subject, email: 'jana@example.cz' });
+        vault.opened.set({ store: store as unknown as AccountStore, reason: 'empty', account });
+        TestBed.tick();
+
+        await vi.waitFor(() =>
+          http.expectOne('/api/donations/me/sync').flush(manifestOf(chunks, summary, subject)),
+        );
+        if (chunks.length > 0) {
+          await answerChunks(
+            chunks.map((entry) => entry.id),
+            chunks,
+            { summary, subject },
+          );
+        }
+        await settled();
+
+        expect(vault.stored).toHaveLength(1);
+        expect(vault.stored[0].chunks).toEqual(
+          chunks.map(({ id, rowsSha256: digest, rows }) => ({ id, rowsSha256: digest, rows })),
+        );
+        expect(vault.stored[0].summary).toEqual(summary);
+        expect(sync.view()?.agrees).toBe(true);
+        expect(reporter.report).not.toHaveBeenCalled();
+      });
+    });
+  }
 
   describe('Given a copy whose gifts do not give the figures of its summary', () => {
     let wrong: unknown;

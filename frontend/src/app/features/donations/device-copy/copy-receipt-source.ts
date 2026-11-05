@@ -1,5 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { catchError, of, throwError } from 'rxjs';
+import { problemOf } from '../../../core/auth/api-problem';
 import { base64UrlToBytes } from '../../../core/device/crypto/device-bytes';
 import type { ReceiptSubject } from '../receipt-pdf/frozen-receipt';
 import type { ReceiptSource } from '../receipt-pdf/receipts-api';
@@ -28,6 +29,13 @@ export function copyBackedReceiptSource(
   };
 }
 
+const GATEWAY_FAILURES: ReadonlySet<number> = new Set([502, 503, 504, 520, 521, 522, 523, 524]);
+
 function unreachable(failure: unknown): boolean {
-  return failure instanceof HttpErrorResponse && failure.status === 0;
+  if (!(failure instanceof HttpErrorResponse)) {
+    return false;
+  }
+  return (
+    failure.status === 0 || (GATEWAY_FAILURES.has(failure.status) && problemOf(failure) === null)
+  );
 }

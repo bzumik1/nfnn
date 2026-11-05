@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nfnn.cz/shared-cases/schemas/donor-donations/list.schema.json",
+  "title": "Donor gift list cases: database rows, the donor and the first receipt year give the gifts GET /api/donations/me lists, which the browser computes from the device copy",
+  "type": "object",
+  "required": ["source", "logic", "cases"],
+  "additionalProperties": false,
+  "properties": {
+    "source": { "$ref": "../defs/source.schema.json" },
+    "logic": { "type": "string", "minLength": 1 },
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/case" }
+    }
+  },
+  "$defs": {
+    "case": {
+      "type": "object",
+      "required": ["name", "input", "expected"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "input": {
+          "$ref": "../sync/manifest.schema.json#/$defs/case/properties/input",
+          "description": "The input of the case of the same name in sync/manifest.json, whose chunks and summary the browser reads."
+        },
+        "expected": {
+          "type": "object",
+          "required": ["items"],
+          "additionalProperties": false,
+          "properties": {
+            "items": { "type": "array", "items": { "$ref": "#/$defs/item" } }
+          }
+        }
+      }
+    },
+    "item": {
+      "type": "object",
+      "required": [
+        "id",
+        "receiptNumber",
+        "receivedAt",
+        "amountMinor",
+        "currency",
+        "purpose",
+        "status",
+        "source",
+        "pairedBy",
+        "senderAccount",
+        "confirmedSymbol",
+        "accountVerification",
+        "receiptAvailable"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^donation:[1-9][0-9]*$" },
+        "receiptNumber": {
+          "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }]
+        },
+        "receivedAt": { "$ref": "../defs/rows.schema.json#/$defs/day" },
+        "amountMinor": { "type": "integer", "minimum": 0 },
+        "currency": { "const": "CZK" },
+        "purpose": { "enum": ["Obecný příspěvek", "Ověření účtu"] },
+        "status": { "enum": ["RECEIVED", "REFUNDED"] },
+        "source": { "enum": ["BANK_TRANSFER", "MANUAL"] },
+        "pairedBy": {
+          "enum": [
+            "VARIABLE_SYMBOL",
+            "SENDER_ACCOUNT",
+            "CONFIRMED_SYMBOL",
+            "MANUAL",
+            null
+          ]
+        },
+        "senderAccount": {
+          "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }]
+        },
+        "confirmedSymbol": {
+          "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }]
+        },
+        "accountVerification": { "type": "boolean" },
+        "receiptAvailable": { "type": "boolean" }
+      }
+    }
+  }
+}

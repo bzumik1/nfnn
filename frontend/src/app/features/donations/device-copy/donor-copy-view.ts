@@ -59,6 +59,7 @@ export interface DonorCopyView {
   readonly receipts: readonly IssuedReceipt[];
   readonly images: readonly StoredImage[];
   readonly agrees: boolean;
+  readonly storedAt: string;
 }
 
 const DONATIONS_CHUNK = /^donations:(\d{4})$/;
@@ -151,6 +152,7 @@ export function donorCopyView(contents: CopyContents | null): DonorCopyView | nu
     receipts,
     images: contents.images ?? [],
     agrees: figuresAgree(summarizeDonations(donations), summary),
+    storedAt: contents.storedAt,
   };
 }
 

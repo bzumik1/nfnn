@@ -115,6 +115,10 @@ function reloadNotice(outcome: SyncOutcome): Notice {
         text: $localize`:@@donor.deviceData.reloadFailed:Data se nepodařilo načíst. Zkontrolujte připojení a zkuste to prosím znovu.`,
       };
     case 'mismatch':
+      return {
+        kind: 'alert',
+        text: $localize`:@@donor.deviceData.reloadUnverified:Data ze serveru se nepodařilo ověřit. Zkuste je prosím za chvíli načíst znovu, a když to nepůjde, napište nám na info@nfnn.cz.`,
+      };
     case 'no-copy':
       return {
         kind: 'alert',

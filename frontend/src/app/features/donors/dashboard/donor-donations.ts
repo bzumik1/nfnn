@@ -14,11 +14,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
   catchError,
-  defer,
   EMPTY,
   filter,
-  forkJoin,
-  from,
   last,
   map,
   Observable,
@@ -38,8 +35,10 @@ import { LiveUpdates } from '../../../core/live/live-updates';
 import { UPDATE_REQUIRED } from '../../../core/version/version-interceptor';
 import { BankAccountItem, BankAccountsApi } from '../../donations/bank-accounts-api';
 import { copyBackedReceiptSource } from '../../donations/device-copy/copy-receipt-source';
-import { type DonorCopy, DonorCopyLink } from '../../donations/device-copy/donor-copy';
-import type { DonorCopyView } from '../../donations/device-copy/donor-copy-view';
+import {
+  type DonorDonationsRead,
+  DonorDonationsRepository,
+} from '../../donations/device-copy/donor-donations-repository';
 import {
   BankCheckResponse,
   DonationItem,
@@ -130,8 +129,7 @@ const NOT_FOUND = 404;
 const BANK_CHECK_COOLDOWN_MS = 30_000;
 
 interface IncomingDonations {
-  readonly summary: DonationSummaryResponse;
-  readonly items: readonly DonationItem[];
+  readonly read: DonorDonationsRead;
   readonly added: number;
 }
 
@@ -150,15 +148,9 @@ export class DonorDonations {
   private readonly document = inject(DOCUMENT);
   private readonly injector = inject(Injector);
   private readonly live = inject(LiveUpdates);
-  private readonly copyLink = inject(DonorCopyLink);
+  private readonly repository = inject(DonorDonationsRepository);
   private readonly pendingDownload =
     inject(ActivatedRoute).snapshot.queryParamMap.get(RECEIPT_RESTART_PARAM);
-
-  private readonly copy = computed(() => {
-    const copy = this.copyLink.copy();
-    return copy !== null && copy.open() ? copy : null;
-  });
-  private readonly copyView = computed(() => this.copy()?.view() ?? null);
 
   readonly state = signal<DonationsState>('loading');
   readonly summary = signal<DonationSummaryResponse | null>(null);
@@ -189,6 +181,7 @@ export class DonorDonations {
   private readonly focusedAtStart = new Map<string, Element | null>();
   private pendingStarted = false;
   private latestDonationsRequest = 0;
+  private shown: DonorDonationsRead | null = null;
   private bankCheckEndedAt: number | null = null;
   private readonly printedDonor = computed(() => {
     const donor = this.auth.donor();
@@ -212,15 +205,19 @@ export class DonorDonations {
       printedBefore = printed;
     });
     effect(() => {
-      const view = this.copyView();
-      if (view === null) {
+      const held = this.repository.held();
+      if (held === null) {
         return;
       }
       untracked(() => {
+        if (this.shown?.source === 'server' && held.at < this.shown.at) {
+          return;
+        }
         if (this.state() === 'ready') {
-          this.offerDonations(view.summary, view.items);
+          this.offerDonations(held);
         } else {
-          this.showCopy(view);
+          this.latestDonationsRequest++;
+          this.showRead(held);
         }
       });
     });
@@ -239,7 +236,7 @@ export class DonorDonations {
   showIncoming(): void {
     const incoming = this.incoming();
     if (incoming !== null) {
-      this.showDonations(incoming.summary, incoming.items);
+      this.showDonations(incoming.read);
     }
   }
 
@@ -277,42 +274,34 @@ export class DonorDonations {
       return this.reloadDonations();
     }
     const startedAfter = this.latestDonationsRequest;
-    const copy = this.copy();
-    const latest: Observable<{ summary: DonationSummaryResponse; items: readonly DonationItem[] }> =
-      copy === null
-        ? forkJoin({ summary: this.donations.summary(), list: this.donations.list() }).pipe(
-            map(({ summary, list }) => ({ summary, items: list.items })),
-          )
-        : defer(() => from(copy.sync())).pipe(
-            switchMap(() => {
-              const view = copy.view();
-              return view === null ? EMPTY : of({ summary: view.summary, items: view.items });
-            }),
-          );
-    return latest.pipe(
-      tap(({ summary, items }) => {
+    return this.repository.fresh('sync').pipe(
+      tap((read) => {
         if (startedAfter === this.latestDonationsRequest) {
-          this.offerDonations(summary, items);
+          this.offerDonations(read);
         }
       }),
       catchError(() => EMPTY),
     );
   }
 
-  private offerDonations(summary: DonationSummaryResponse, items: readonly DonationItem[]): void {
+  private offerDonations(read: DonorDonationsRead): void {
     const shown = new Set(this.items().map((item) => item.id));
-    const added = items.filter((item) => !shown.has(item.id)).length;
+    const added = read.items.filter((item) => !shown.has(item.id)).length;
     if (added === 0) {
-      this.showDonations(summary, items);
+      this.showDonations(read);
     } else {
-      this.incoming.set({ summary, items, added });
+      this.incoming.set({ read, added });
     }
   }
 
-  private showDonations(summary: DonationSummaryResponse, items: readonly DonationItem[]): void {
+  private showDonations(read: DonorDonationsRead): void {
     this.incoming.set(null);
-    this.summary.set(summary);
-    this.items.set(items);
+    this.shown = read;
+    this.summary.set(read.summary);
+    this.items.set(read.items);
+    if (read.bankDataAsOf !== null && this.bankDataAsOf() === null) {
+      this.bankDataAsOf.set(read.bankDataAsOf);
+    }
   }
 
   showBankAccounts(items: readonly BankAccountItem[]): void {
@@ -353,64 +342,38 @@ export class DonorDonations {
 
   private reloadDonations(): Observable<readonly DonationItem[] | null> {
     const request = ++this.latestDonationsRequest;
-    const copy = this.copy();
-    return copy === null ? this.fromServer(request) : this.fromCopy(copy, request);
-  }
-
-  private fromCopy(copy: DonorCopy, request: number): Observable<readonly DonationItem[] | null> {
-    const held = copy.view();
-    if (held === null) {
-      void copy.sync();
-      return this.fromServer(request);
+    const held = this.repository.held();
+    const atOnce = held !== null && this.state() !== 'ready';
+    if (atOnce) {
+      this.showRead(held);
     }
-    const shownAtOnce = this.state() !== 'ready';
-    if (shownAtOnce) {
-      this.showCopy(held);
-    }
-    return defer(() => from(shownAtOnce ? copy.catchUp() : copy.sync())).pipe(
-      switchMap(() => {
-        const view = copy.view();
-        if (view === null) {
-          return request === this.latestDonationsRequest ? this.fromServer(request) : of(null);
-        }
+    return this.repository.fresh(atOnce ? 'catch-up' : 'sync').pipe(
+      map((read) => {
         if (request === this.latestDonationsRequest) {
-          this.showCopy(view);
+          if (atOnce) {
+            this.offerDonations(read);
+          } else {
+            this.showRead(read);
+          }
         }
-        return of(view.items);
-      }),
-      takeUntilDestroyed(this.destroyRef),
-    );
-  }
-
-  private showCopy(view: DonorCopyView): void {
-    this.showDonations(view.summary, view.items);
-    this.state.set('ready');
-    if (this.bankDataAsOf() === null) {
-      this.bankDataAsOf.set(view.summary.bankDataAsOf);
-    }
-    this.startPendingDownload();
-  }
-
-  private fromServer(request: number): Observable<readonly DonationItem[] | null> {
-    return forkJoin({ summary: this.donations.summary(), list: this.donations.list() }).pipe(
-      map(({ summary, list }) => {
-        if (request === this.latestDonationsRequest) {
-          this.showDonations(summary, list.items);
-          this.state.set('ready');
-          this.startPendingDownload();
-        }
-        return list.items;
+        return read.items;
       }),
       catchError((failure: unknown) => {
         if (this.sessionEnded(failure)) {
           this.sendToSignIn();
-        } else if (request === this.latestDonationsRequest) {
+        } else if (request === this.latestDonationsRequest && this.shown?.source !== 'copy') {
           this.state.set('error');
         }
         return of(null);
       }),
       takeUntilDestroyed(this.destroyRef),
     );
+  }
+
+  private showRead(read: DonorDonationsRead): void {
+    this.showDonations(read);
+    this.state.set('ready');
+    this.startPendingDownload();
   }
 
   sendToSignIn(): void {
@@ -599,8 +562,13 @@ export class DonorDonations {
           }
           this.reloadDonations().subscribe((items) => {
             this.bankCheckEnded();
-            if (byDonor && items !== null) {
+            if (!byDonor) {
+              return;
+            }
+            if (items !== null) {
               this.bankCheckOutcome.set(outcomeOf(check, items, known));
+            } else if (this.state() === 'ready' && this.auth.status() !== 'anonymous') {
+              this.bankCheckOutcome.set({ kind: 'failed' });
             }
           });
         },
@@ -643,7 +611,7 @@ export class DonorDonations {
       .draw(
         copyBackedReceiptSource(
           this.receiptsApi.donorSource(subject),
-          () => this.copyView(),
+          () => this.repository.view(),
           subject,
         ),
       )
