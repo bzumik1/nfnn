@@ -338,7 +338,7 @@ describe('Given the part for older bank payments on the import card', () => {
       expect(finished.length).toBe(1);
     });
 
-    it('then a failed run is one alert with its time, reason and next step, and no link follows', async () => {
+    it('then a failed run is one alert with its time, reason and next step, which reminds that the unlock lasts 10 minutes, and no link follows', async () => {
       await poll(
         historyImport({
           status: 'FAILED',
@@ -348,12 +348,12 @@ describe('Given the part for older bank payments on the import card', () => {
       );
 
       expect(alert()).toBe(
-        'Platby se nepodařilo stáhnout (05. 11. 2026 11:00). Důvod: Fio nebylo dostupné. Co udělat: Banka teď neodpovídá. Starší platby se samy znovu nenačtou: za chvíli stiskněte „Načíst starší platby“ znovu; pokud to trvá déle, zkontrolujte připojení serveru k internetu.',
+        'Platby se nepodařilo stáhnout (05. 11. 2026 11:00). Důvod: Fio nebylo dostupné. Co udělat: Banka teď neodpovídá. Starší platby se samy znovu nenačtou: za chvíli stiskněte „Načíst starší platby“ znovu; pokud to trvá déle, zkontrolujte připojení serveru k internetu. Pokud od odemčení historie uplynulo víc než 10 minut, odemkněte ji předtím znovu.',
       );
       expect(fixture.nativeElement.querySelector('.history-next-step')).toBeNull();
     });
 
-    it('then a run the bank kept refusing as too frequent says to press the button again later', async () => {
+    it('then a run the bank kept refusing as too frequent says to press the button again later, unlocking the history again after 10 minutes', async () => {
       await poll(
         historyImport({
           status: 'FAILED',
@@ -363,10 +363,39 @@ describe('Given the part for older bank payments on the import card', () => {
       );
 
       expect(alert()).toBe(
-        'Platby se nepodařilo stáhnout (05. 11. 2026 11:00). Důvod: Fio odmítlo příliš častý dotaz. Co udělat: Banka teď odmítá příliš časté dotazy. Starší platby se samy znovu nenačtou: za pár minut stiskněte „Načíst starší platby“ znovu.',
+        'Platby se nepodařilo stáhnout (05. 11. 2026 11:00). Důvod: Fio odmítlo příliš častý dotaz. Co udělat: Banka teď odmítá příliš časté dotazy. Starší platby se samy znovu nenačtou: za pár minut stiskněte „Načíst starší platby“ znovu. Pokud od odemčení historie uplynulo víc než 10 minut, odemkněte ji předtím znovu.',
       );
       expect(fixture.nativeElement.querySelector('.history-next-step')).toBeNull();
     });
+
+    it.each([
+      [
+        'RATE_LIMITED',
+        'Fio odmítlo příliš častý dotaz',
+        'Banka teď odmítá příliš časté dotazy. Starší platby se samy znovu nenačtou: za pár minut stiskněte „Načíst starší platby“ znovu.',
+      ],
+      [
+        'TRANSPORT',
+        'Fio nebylo dostupné',
+        'Banka teď neodpovídá. Starší platby se samy znovu nenačtou: za chvíli stiskněte „Načíst starší platby“ znovu; pokud to trvá déle, zkontrolujte připojení serveru k internetu.',
+      ],
+    ] as const)(
+      'then a %s run within the last 89 days says nothing about unlocking the history',
+      async (failure, reason, step) => {
+        await poll(
+          historyImport({
+            status: 'FAILED',
+            failure,
+            needsUnlockedHistory: false,
+            finishedAt: '2026-11-05T10:00:30Z',
+          }),
+        );
+
+        expect(alert()).toBe(
+          `Platby se nepodařilo stáhnout (05. 11. 2026 11:00). Důvod: ${reason}. Co udělat: ${step}`,
+        );
+      },
+    );
 
     it.each([
       [

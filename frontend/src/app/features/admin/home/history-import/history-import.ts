@@ -29,7 +29,12 @@ import {
   formatDonationDate,
   pragueDay,
 } from '../../../donations/donation-date';
-import { AdminApi, HistoryImportResponse, ImportStateResponse } from '../../admin-api';
+import {
+  AdminApi,
+  HistoryImportResponse,
+  ImportFailureKind,
+  ImportStateResponse,
+} from '../../admin-api';
 import {
   HISTORY_NEXT_STEPS,
   IMPORT_FAILURE_LABELS,
@@ -248,8 +253,18 @@ function describeRun(run: HistoryImportResponse): Notice {
   }
 }
 
+const RETRIED_BY_PRESS: readonly ImportFailureKind[] = ['RATE_LIMITED', 'TRANSPORT'];
+
 function nextStepOf(run: HistoryImportResponse): ImportNextStep {
-  return HISTORY_NEXT_STEPS[run.failure ?? 'UNEXPECTED'];
+  const failure = run.failure ?? 'UNEXPECTED';
+  const step = HISTORY_NEXT_STEPS[failure];
+  if (!run.needsUnlockedHistory || !RETRIED_BY_PRESS.includes(failure)) {
+    return step;
+  }
+  return {
+    ...step,
+    text: `${step.text} ${$localize`:@@admin.home.history.next.unlockAgain:Pokud od odemčení historie uplynulo víc než 10 minut, odemkněte ji předtím znovu.`}`,
+  };
 }
 
 function finishedAt(run: HistoryImportResponse): string {
