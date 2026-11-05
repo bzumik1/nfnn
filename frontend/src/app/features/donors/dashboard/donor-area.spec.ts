@@ -2615,11 +2615,11 @@ describe('Given a signed-in donor in the donor area', () => {
           ...problemBody(
             'donations/receipt-too-long',
             'Potvrzení má příliš mnoho darů pro ověřovací QR kód',
-            409,
+            400,
           ),
           detail: 'O potvrzení s tolika dary nám prosím napište na info@nfnn.cz.',
         },
-        { status: 409, statusText: 'Conflict' },
+        { status: 400, statusText: 'Bad Request' },
       );
       await settleBlobFailure();
 
