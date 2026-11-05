@@ -1,4 +1,4 @@
-FROM postgres:17-alpine
+FROM postgres:18-alpine
 
 COPY nfnn-postgres.sh /usr/local/bin/nfnn-postgres
 COPY app-role.sql own-by-app-role.sql /usr/local/share/nfnn/
