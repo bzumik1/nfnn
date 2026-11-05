@@ -60,6 +60,22 @@ class ReceiptSigningKeyHistoryTest {
     }
 
     @Test
+    @DisplayName("Given a withdrawal recorded under its earlier wording, when the history reads the trail, then the key is withdrawn")
+    void should_count_key_as_withdrawn_when_read_given_a_withdrawal_in_its_earlier_wording() {
+        ReceiptSigningKeyHistory history = ReceiptSigningKeyHistory.of(List.of(registered("21fe31df"),
+                entry(ADMIN, ReceiptSigningKeyWithdrawal.ACTION, "Stažen klíč k ověřovacím QR 21fe31df (ověřeno druhým faktorem)")), Set.of());
+
+        assertThat(history.isWithdrawn(new ReceiptSigningKeyId("21fe31df"))).isTrue();
+    }
+
+    @Test
+    @DisplayName("Given a withdrawn key, when its audit details are written, then they call the withdrawal by its name")
+    void should_name_the_withdrawal_when_details_written_given_a_withdrawn_key() {
+        assertThat(ReceiptSigningKeyAuditDetails.withdrawn(new ReceiptSigningKeyId("21fe31df")))
+                .isEqualTo("Zneplatněn klíč k ověřovacím QR 21fe31df (ověřeno druhým faktorem)");
+    }
+
+    @Test
     @DisplayName("Given a key whose seed this server keeps aside as withdrawn and a trail without its withdrawal, as after a backup from before the withdrawal was restored, when the history reads them, then the key is withdrawn and its active row is reported as reverted")
     void should_count_kept_aside_key_as_withdrawn_when_read_given_a_trail_without_its_withdrawal() {
         ReceiptSigningKeyHistory history = ReceiptSigningKeyHistory.of(List.of(registered("39f713d0"), registered("21fe31df")),

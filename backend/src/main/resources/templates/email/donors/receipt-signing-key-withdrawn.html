@@ -3,7 +3,7 @@
 <body>
 <th:block th:fragment="content">
     <p style="margin: 0 0 16px;" th:text="#{donors.receiptSigningKeyWithdrawn.email.greeting}">Dobrý den,</p>
-    <p style="margin: 0 0 16px;" th:text="${intro}">správce jana@example.cz 20. 11. 2026 v 10:30 stáhl ve správě webu Nová naděje klíč 21fe31df, kterým server podepisuje ověřovací QR kódy na potvrzeních o daru.</p>
+    <p style="margin: 0 0 16px;" th:text="${intro}">správce jana@example.cz 20. 11. 2026 v 10:30 zneplatnil ve správě webu Nová naděje klíč 21fe31df, kterým server podepisuje ověřovací QR kódy na potvrzeních o daru.</p>
     <p style="margin: 0 0 16px;" th:if="${newKey}" th:text="${newKey}">Server se restartuje a vytvoří si nový klíč. Potvrzení vydaná potom podepíše novým klíčem.</p>
     <p style="margin: 0 0 28px;" th:text="#{donors.receiptSigningKeyWithdrawn.email.expected}">Pokud o tom víte, nemusíte nic dělat.</p>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 28px;">

@@ -14,7 +14,8 @@ public final class ReceiptSigningKeyAuditDetails {
     private static final String ADOPTED = "Server převzal klíč k ověřovacím QR ";
     private static final String ADOPTED_FROM = " z obnovené zálohy (obnova ";
     private static final String ADOPTED_END = ")";
-    private static final String WITHDRAWN = "Stažen klíč k ověřovacím QR ";
+    private static final String WITHDRAWN = "Zneplatněn klíč k ověřovacím QR ";
+    private static final String WITHDRAWN_BEFORE_RENAME = "Stažen klíč k ověřovacím QR ";
     private static final String WITHDRAWN_END = " (ověřeno druhým faktorem)";
 
     private static final String KEY = "(?<key>[0-9a-f]{8})";
@@ -22,7 +23,8 @@ public final class ReceiptSigningKeyAuditDetails {
             ReceiptSigningKeyRegistration.ACTION, Pattern.compile(Pattern.quote(REGISTERED) + KEY),
             ReceiptSigningKeyRegistration.ADOPT_ACTION,
             Pattern.compile(Pattern.quote(ADOPTED) + KEY + Pattern.quote(ADOPTED_FROM) + ".+" + Pattern.quote(ADOPTED_END)),
-            ReceiptSigningKeyWithdrawal.ACTION, Pattern.compile(Pattern.quote(WITHDRAWN) + KEY + Pattern.quote(WITHDRAWN_END)));
+            ReceiptSigningKeyWithdrawal.ACTION, Pattern.compile(
+                    "(?:" + Pattern.quote(WITHDRAWN) + "|" + Pattern.quote(WITHDRAWN_BEFORE_RENAME) + ")" + KEY + Pattern.quote(WITHDRAWN_END)));
 
     private ReceiptSigningKeyAuditDetails() {
     }

@@ -107,7 +107,7 @@ class ReceiptSigningKeyWithdrawalTest {
         verify(events, times(2)).publishEvent(published.capture());
         assertThat(published.getAllValues()).containsExactly(
                 new AdminActionPerformed(ADMIN, "WITHDRAW_RECEIPT_SIGNING_KEY", Optional.empty(),
-                        "Stažen klíč k ověřovacím QR 21fe31df (ověřeno druhým faktorem)", NOW),
+                        "Zneplatněn klíč k ověřovacím QR 21fe31df (ověřeno druhým faktorem)", NOW),
                 new ReceiptSigningKeyWithdrawn(ADMIN, "21fe31df", true, NOW));
         assertThat(lines.list).singleElement().satisfies(line -> {
             assertThat(line.getLevel()).isEqualTo(Level.WARN);

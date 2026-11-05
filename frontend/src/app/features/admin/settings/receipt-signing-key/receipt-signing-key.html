@@ -12,7 +12,7 @@
     <p class="ui-card__intro" i18n="@@admin.signingKey.intro">
       Server podepisuje ověřovací QR kódy na potvrzeních o daru svým klíčem. Veřejnou část klíče web
       zveřejňuje, aby se podle ní dala potvrzení ověřit. Klíč si server vytvořil sám. Kdyby se mohl
-      dostat do cizích rukou, stáhněte ho a server si vytvoří nový.
+      dostat do cizích rukou, zneplatněte ho a server si vytvoří nový.
     </p>
 
     @switch (state()) {
@@ -43,7 +43,7 @@
             <div>
               <dt i18n="@@admin.signingKey.state">Stav</dt>
               @if (key.status === 'revoked') {
-                <dd i18n="@@admin.signingKey.withdrawnState">Stažený</dd>
+                <dd i18n="@@admin.signingKey.withdrawnState">Zneplatněný</dd>
               } @else if (key.published) {
                 <dd i18n="@@admin.signingKey.published">Zveřejněný</dd>
               } @else {
@@ -89,14 +89,14 @@
           <div class="signing-key-slow" role="alert">
             @if (unfinished === 'notRestarted') {
               <p i18n="@@admin.signingKey.notRestarted">
-                Klíč {{ restartingFor() }} je stažený, ale web se zatím nerestartoval a nový klíč
-                nemá, takže se potvrzení o daru nestáhnou. Počkejte pár minut a zkuste to znovu;
-                když se nic nezmění, obraťte se prosím na technika serveru.
+                Klíč {{ restartingFor() }} je zneplatněný, ale web se zatím nerestartoval a nový
+                klíč nemá, takže se potvrzení o daru nestáhnou. Počkejte pár minut a zkuste to
+                znovu; když se nic nezmění, obraťte se prosím na technika serveru.
               </p>
             } @else {
               <p i18n="@@admin.signingKey.slow">
-                Klíč je stažený, ale web se po restartu zatím nespustil. Počkejte pár minut a zkuste
-                to znovu.
+                Klíč je zneplatněný, ale web se po restartu zatím nespustil. Počkejte pár minut a
+                zkuste to znovu.
               </p>
             }
             <button

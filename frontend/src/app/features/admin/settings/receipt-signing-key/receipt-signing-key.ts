@@ -108,7 +108,7 @@ export class ReceiptSigningKey {
     const list = keys
       .map((key) =>
         key.status === 'revoked'
-          ? $localize`:@@admin.signingKey.earlierKeyWithdrawn:${key.keyId}:key: (zaregistrovaný ${formatBankTime(key.registeredAt)}:time:, stažený)`
+          ? $localize`:@@admin.signingKey.earlierKeyWithdrawn:${key.keyId}:key: (zaregistrovaný ${formatBankTime(key.registeredAt)}:time:, zneplatněný)`
           : $localize`:@@admin.signingKey.earlierKey:${key.keyId}:key: (zaregistrovaný ${formatBankTime(key.registeredAt)}:time:)`,
       )
       .join(', ');
@@ -181,7 +181,7 @@ export class ReceiptSigningKey {
     } else {
       this.notice.set({
         kind: 'status',
-        text: $localize`:@@admin.signingKey.withdrawn:Klíč ${keyId}:key: je stažený.`,
+        text: $localize`:@@admin.signingKey.withdrawn:Klíč ${keyId}:key: je zneplatněný.`,
       });
     }
     afterNextRender(() => this.title()?.nativeElement.focus(), { injector: this.injector });
@@ -192,7 +192,7 @@ export class ReceiptSigningKey {
     this.unfinishedRenewal.set(null);
     this.notice.set({
       kind: 'status',
-      text: $localize`:@@admin.signingKey.restarting:Klíč ${keyId}:key: je stažený. Web se restartuje a vytvoří si nový klíč, obvykle do minuty.`,
+      text: $localize`:@@admin.signingKey.restarting:Klíč ${keyId}:key: je zneplatněný. Web se restartuje a vytvoří si nový klíč, obvykle do minuty.`,
     });
     watchKeyRenewal(() => this.api.receiptSigningKeys(), keyId)
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -211,19 +211,19 @@ export class ReceiptSigningKey {
     if (keys.currentKeyId === keyId) {
       return {
         kind: 'alert',
-        text: $localize`:@@admin.signingKey.notRenewed:Klíč ${keyId}:key: je stažený, ale web po restartu nový klíč nemá, takže se potvrzení o daru nestáhnou; obraťte se prosím na technika serveru.`,
+        text: $localize`:@@admin.signingKey.notRenewed:Klíč ${keyId}:key: je zneplatněný, ale web po restartu nový klíč nemá, takže se potvrzení o daru nestáhnou; obraťte se prosím na technika serveru.`,
       };
     }
     if (!keys.currentKeyPublished) {
       return {
         kind: 'alert',
-        text: $localize`:@@admin.signingKey.renewedUnpublished:Klíč ${keyId}:key: je stažený a web po restartu má nový klíč ${keys.currentKeyId}:newKey:, který ale zatím není zveřejněný.`,
+        text: $localize`:@@admin.signingKey.renewedUnpublished:Klíč ${keyId}:key: je zneplatněný a web po restartu má nový klíč ${keys.currentKeyId}:newKey:, který ale zatím není zveřejněný.`,
       };
     }
     return withdrawnCurrentKeyId(keys) === null
       ? {
           kind: 'status',
-          text: $localize`:@@admin.signingKey.renewed:Klíč ${keyId}:key: je stažený a web po restartu podepisuje novým klíčem.`,
+          text: $localize`:@@admin.signingKey.renewed:Klíč ${keyId}:key: je zneplatněný a web po restartu podepisuje novým klíčem.`,
         }
       : null;
   }
@@ -238,10 +238,10 @@ export class ReceiptSigningKey {
 
   private offerLabel(key: ReceiptSigningKeyResponse): string {
     if (key.status === 'revoked') {
-      return $localize`:@@admin.signingKey.withdrawAgain:Stáhnout klíč ${key.keyId}:key: znovu…`;
+      return $localize`:@@admin.signingKey.withdrawAgain:Zneplatnit klíč ${key.keyId}:key: znovu…`;
     }
     return key.current
-      ? $localize`:@@admin.signingKey.withdrawCurrent:Stáhnout klíč serveru…`
-      : $localize`:@@admin.signingKey.withdrawEarlier:Stáhnout klíč ${key.keyId}:key:…`;
+      ? $localize`:@@admin.signingKey.withdrawCurrent:Zneplatnit klíč serveru…`
+      : $localize`:@@admin.signingKey.withdrawEarlier:Zneplatnit klíč ${key.keyId}:key:…`;
   }
 }

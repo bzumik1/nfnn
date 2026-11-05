@@ -39,7 +39,7 @@ public class ReceiptSigningKeyWithdrawalRefusals {
     @Transactional
     public void record(UUID adminId, ReceiptSigningKeyId keyId, Instant at) {
         events.publishEvent(new AdminActionPerformed(adminId, REFUSED_ACTION, Optional.empty(),
-                "Klíč k ověřovacím QR " + keyId + " se nestáhl: druhý faktor nesouhlasil", at));
+                "Klíč k ověřovacím QR " + keyId + " se nezneplatnil: druhý faktor nesouhlasil", at));
         log.warn("Admin {} was refused the withdrawal of the receipt signing key {}: the second factor did not match", adminId, keyId);
     }
 }

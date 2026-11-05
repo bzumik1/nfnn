@@ -1,16 +1,16 @@
 <app-dialog labelledBy="stazeni-klice-titulek" [wide]="true" (dismissed)="dismiss()">
   <h2 id="stazeni-klice-titulek" class="ui-dialog__title" i18n="@@admin.signingKey.withdraw.title">
-    Stáhnout klíč <span class="ui-mono">{{ keyId() }}</span
+    Zneplatnit klíč <span class="ui-mono">{{ keyId() }}</span
     >?
   </h2>
   <p class="ui-dialog__lead" i18n="@@admin.signingKey.withdraw.lead">
-    Klíč stáhněte, jen když se mohl dostat do cizích rukou, třeba s ukradeným diskem nebo kopií
-    serveru. Stažení nejde vrátit.
+    Klíč zneplatněte, jen když se mohl dostat do cizích rukou, třeba s ukradeným diskem nebo kopií
+    serveru. Zneplatnění nejde vrátit.
   </p>
   <ul class="ui-dialog__points withdrawal-points">
     <li i18n="@@admin.signingKey.withdraw.published">
-      Web klíč dál zveřejňuje, ale jako stažený, takže QR kódům jím podepsaným už nikdo nemá věřit,
-      ani na potvrzeních vydaných dřív. Ta se znovu nepodepisují.
+      Web klíč dál zveřejňuje, ale jako zneplatněný, takže QR kódům jím podepsaným už nikdo nemá
+      věřit, ani na potvrzeních vydaných dřív. Ta se znovu nepodepisují.
     </li>
     @if (current()) {
       <li i18n="@@admin.signingKey.withdraw.current">
@@ -28,7 +28,7 @@
       jim můžete potvrdit sami podle potvrzení na kartě dárce.
     </li>
     <li i18n="@@admin.signingKey.withdraw.record">
-      Stažení se zapíše do historie správy a všem správcům přijde e-mail.
+      Zneplatnění se zapíše do historie správy a všem správcům přijde e-mail.
     </li>
   </ul>
   <form
@@ -78,7 +78,7 @@
       }
     } @else if (passkeySupported) {
       <p class="withdrawal-note" i18n="@@admin.signingKey.withdraw.confirmPasskey">
-        Stažení potvrďte svým přístupovým klíčem, i když jste se jím už přihlásili.
+        Zneplatnění potvrďte svým přístupovým klíčem, i když jste se jím už přihlásili.
       </p>
       @if (usesCode()) {
         <p class="withdrawal-alternative">
@@ -97,8 +97,8 @@
       }
     } @else {
       <p class="withdrawal-note" i18n="@@admin.signingKey.withdraw.passkeyMissing">
-        Stažení se potvrzuje přístupovým klíčem a tento prohlížeč je nepodporuje. Klíč stáhněte v
-        prohlížeči, ve kterém se klíčem přihlašujete.
+        Zneplatnění se potvrzuje přístupovým klíčem a tento prohlížeč je nepodporuje. Klíč
+        zneplatněte v prohlížeči, ve kterém se klíčem přihlašujete.
       </p>
     }
     @if (error()) {
@@ -111,9 +111,9 @@
         [disabled]="withdrawing() || (!asksCode() && !passkeySupported)"
       >
         @if (withdrawing()) {
-          <ng-container i18n="@@admin.signingKey.withdraw.busy">Stahujeme klíč…</ng-container>
+          <ng-container i18n="@@admin.signingKey.withdraw.busy">Zneplatňujeme klíč…</ng-container>
         } @else {
-          <ng-container i18n="@@admin.signingKey.withdraw.submit">Stáhnout klíč</ng-container>
+          <ng-container i18n="@@admin.signingKey.withdraw.submit">Zneplatnit klíč</ng-container>
         }
       </button>
       <button

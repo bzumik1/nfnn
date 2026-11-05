@@ -187,14 +187,14 @@ describe('Given the receipt signing key section of the receipt settings', () => 
 
     expect(text('h2')).toBe('Klíč k ověřovacím QR kódům');
     expect(text('.ui-card__intro')).toBe(
-      'Server podepisuje ověřovací QR kódy na potvrzeních o daru svým klíčem. Veřejnou část klíče web zveřejňuje, aby se podle ní dala potvrzení ověřit. Klíč si server vytvořil sám. Kdyby se mohl dostat do cizích rukou, stáhněte ho a server si vytvoří nový.',
+      'Server podepisuje ověřovací QR kódy na potvrzeních o daru svým klíčem. Veřejnou část klíče web zveřejňuje, aby se podle ní dala potvrzení ověřit. Klíč si server vytvořil sám. Kdyby se mohl dostat do cizích rukou, zneplatněte ho a server si vytvoří nový.',
     );
     expect(rows()).toEqual({
       'Klíč serveru': '21fe31df',
       Zaregistrovaný: '13. 11. 2026 12:00',
       Stav: 'Zveřejněný',
     });
-    expect(buttons()).toEqual(['Stáhnout klíč serveru…']);
+    expect(buttons()).toEqual(['Zneplatnit klíč serveru…']);
     expect(root().querySelector('input')).toBeNull();
     expect(text('[role="alert"]')).toBe('');
   });
@@ -269,7 +269,7 @@ describe('Given the receipt signing key section of the receipt settings', () => 
   it('when an earlier key is published, then its withdrawal is offered beside the one of the server', async () => {
     await load(receiptSigningKeys([earlierKey(), receiptSigningKey()]));
 
-    expect(buttons()).toEqual(['Stáhnout klíč serveru…', 'Stáhnout klíč 39f713d0…']);
+    expect(buttons()).toEqual(['Zneplatnit klíč serveru…', 'Zneplatnit klíč 39f713d0…']);
   });
 
   it('when keys were withdrawn, then they are shown as withdrawn and no withdrawal is offered', async () => {
@@ -280,13 +280,13 @@ describe('Given the receipt signing key section of the receipt settings', () => 
       ]),
     );
 
-    expect(rows()['Stav']).toBe('Stažený');
+    expect(rows()['Stav']).toBe('Zneplatněný');
     expect(text('.signing-key-earlier')).toBe(
-      'Zveřejněné jsou i dřívější klíče: 39f713d0 (zaregistrovaný 01. 11. 2026 08:00, stažený).',
+      'Zveřejněné jsou i dřívější klíče: 39f713d0 (zaregistrovaný 01. 11. 2026 08:00, zneplatněný).',
     );
     expect(buttons()).toEqual([]);
     expect(text('[role="alert"]')).toBe(
-      'Klíč serveru 21fe31df je stažený a server zatím nemá nový, takže se potvrzení o daru teď nestáhnou. Nový klíč si server vytvoří při startu; když se to nestane do pár minut, obraťte se na technika serveru.',
+      'Klíč serveru 21fe31df je zneplatněný a server zatím nemá nový, takže se potvrzení o daru teď nestáhnou. Nový klíč si server vytvoří při startu; když se to nestane do pár minut, obraťte se na technika serveru.',
     );
   });
 
@@ -301,24 +301,24 @@ describe('Given the receipt signing key section of the receipt settings', () => 
     });
 
     expect(text('[role="alert"]')).toContain(
-      'Klíč 21fe31df byl ve správě stažený, ale jeho záznam v databázi je znovu aktivní (změna mimo web nebo obnova starší zálohy). Web ho dál zveřejňuje jako stažený; stáhněte ho prosím znovu a obraťte se na technika serveru.',
+      'Klíč 21fe31df byl ve správě zneplatněný, ale jeho záznam v databázi je znovu aktivní (změna mimo web nebo obnova starší zálohy). Web ho dál zveřejňuje jako zneplatněný; zneplatněte ho prosím znovu a obraťte se na technika serveru.',
     );
     expect(text('[role="alert"]')).toContain(
       'Klíč 39f713d0 je v historii správy, ale jeho záznam v databázi chybí (změna mimo web). QR kódy jím podepsané se neověří; obraťte se na technika serveru.',
     );
-    expect(buttons()).toEqual(['Stáhnout klíč 21fe31df znovu…']);
+    expect(buttons()).toEqual(['Zneplatnit klíč 21fe31df znovu…']);
   });
 
   describe('when the administrator asks to withdraw the key of the server', () => {
     beforeEach(async () => {
       await load(receiptSigningKeys([earlierKey(), receiptSigningKey()]));
-      await openWithdrawal('Stáhnout klíč serveru…');
+      await openWithdrawal('Zneplatnit klíč serveru…');
     });
 
     it('then a dialog says what the withdrawal does and asks for a fresh code first', async () => {
       const dialog = root().querySelector('dialog') as HTMLElement;
       expect(dialog.getAttribute('aria-labelledby')).toBe('stazeni-klice-titulek');
-      expect(text('#stazeni-klice-titulek')).toBe('Stáhnout klíč 21fe31df?');
+      expect(text('#stazeni-klice-titulek')).toBe('Zneplatnit klíč 21fe31df?');
       expect(text('dialog .withdrawal-points')).toContain(
         'Je to klíč, kterým server teď podepisuje. Web se hned restartuje',
       );
@@ -366,13 +366,13 @@ describe('Given the receipt signing key section of the receipt settings', () => 
     }
 
     const restartingLine =
-      'Klíč 21fe31df je stažený. Web se restartuje a vytvoří si nový klíč, obvykle do minuty.';
+      'Klíč 21fe31df je zneplatněný. Web se restartuje a vytvoří si nový klíč, obvykle do minuty.';
 
     it('and a fresh code confirms it, then the key shows as withdrawn while the web restarts, and the new key shows once the web went down and came back', async () => {
       await confirmWithdrawal();
 
       expect(root().querySelector('dialog')).toBeNull();
-      expect(rows()['Stav']).toBe('Stažený');
+      expect(rows()['Stav']).toBe('Zneplatněný');
       expect(text('[role="status"]:not(:empty)')).toBe(restartingLine);
       expect(text('[role="alert"]')).toBe('');
 
@@ -383,7 +383,7 @@ describe('Given the receipt signing key section of the receipt settings', () => 
 
       expect(rows()['Klíč serveru']).toBe('b7e1c2d4');
       expect(text('[role="status"]:not(:empty)')).toBe(
-        'Klíč 21fe31df je stažený a web po restartu podepisuje novým klíčem.',
+        'Klíč 21fe31df je zneplatněný a web po restartu podepisuje novým klíčem.',
       );
       expect(text('[role="alert"]')).toBe('');
     });
@@ -395,7 +395,7 @@ describe('Given the receipt signing key section of the receipt settings', () => 
 
       expect(rows()['Klíč serveru']).toBe('b7e1c2d4');
       expect(text('[role="status"]:not(:empty)')).toBe(
-        'Klíč 21fe31df je stažený a web po restartu podepisuje novým klíčem.',
+        'Klíč 21fe31df je zneplatněný a web po restartu podepisuje novým klíčem.',
       );
     });
 
@@ -424,7 +424,7 @@ describe('Given the receipt signing key section of the receipt settings', () => 
 
         expect(rows()['Klíč serveru']).toBe('b7e1c2d4');
         expect(text('[role="status"]:not(:empty)')).toBe(
-          'Klíč 21fe31df je stažený a web po restartu podepisuje novým klíčem.',
+          'Klíč 21fe31df je zneplatněný a web po restartu podepisuje novým klíčem.',
         );
       });
     });
@@ -444,7 +444,7 @@ describe('Given the receipt signing key section of the receipt settings', () => 
 
       expect(rows()['Klíč serveru']).toBe('b7e1c2d4');
       expect(text('[role="status"]:not(:empty)')).toBe(
-        'Klíč 21fe31df je stažený a web po restartu podepisuje novým klíčem.',
+        'Klíč 21fe31df je zneplatněný a web po restartu podepisuje novým klíčem.',
       );
     });
 
@@ -467,7 +467,7 @@ describe('Given the receipt signing key section of the receipt settings', () => 
       await poll(stillWithdrawnKeys());
 
       expect(text('app-live-notice [role="alert"]')).toBe(
-        'Klíč 21fe31df je stažený, ale web po restartu nový klíč nemá, takže se potvrzení o daru nestáhnou; obraťte se prosím na technika serveru.',
+        'Klíč 21fe31df je zneplatněný, ale web po restartu nový klíč nemá, takže se potvrzení o daru nestáhnou; obraťte se prosím na technika serveru.',
       );
     });
 
@@ -482,7 +482,7 @@ describe('Given the receipt signing key section of the receipt settings', () => 
       fixture.detectChanges();
 
       expect(text('.signing-key-slow')).toContain(
-        'Klíč 21fe31df je stažený, ale web se zatím nerestartoval a nový klíč nemá, takže se potvrzení o daru nestáhnou. Počkejte pár minut a zkuste to znovu; když se nic nezmění, obraťte se prosím na technika serveru.',
+        'Klíč 21fe31df je zneplatněný, ale web se zatím nerestartoval a nový klíč nemá, takže se potvrzení o daru nestáhnou. Počkejte pár minut a zkuste to znovu; když se nic nezmění, obraťte se prosím na technika serveru.',
       );
       expect(text('.signing-key-slow')).not.toContain('po restartu');
       expect(text('[role="status"]:not(:empty)')).toBe('');
@@ -503,7 +503,7 @@ describe('Given the receipt signing key section of the receipt settings', () => 
       expect(rows()['Klíč serveru']).toBe('21fe31df');
       expect(text('[role="status"]:not(:empty)')).toBe('');
       expect(text('app-live-notice [role="alert"]')).toBe(
-        'Klíč 21fe31df je stažený, ale web po restartu nový klíč nemá, takže se potvrzení o daru nestáhnou; obraťte se prosím na technika serveru.',
+        'Klíč 21fe31df je zneplatněný, ale web po restartu nový klíč nemá, takže se potvrzení o daru nestáhnou; obraťte se prosím na technika serveru.',
       );
       expect(text('app-live-notice [role="alert"]')).not.toContain('podepisuje');
       expect(text('.signing-key-warning')).toBe('');
@@ -518,7 +518,7 @@ describe('Given the receipt signing key section of the receipt settings', () => 
       expect(rows()['Klíč serveru']).toBe('b7e1c2d4');
       expect(text('[role="status"]:not(:empty)')).toBe('');
       expect(text('app-live-notice [role="alert"]')).toBe(
-        'Klíč 21fe31df je stažený a web po restartu má nový klíč b7e1c2d4, který ale zatím není zveřejněný.',
+        'Klíč 21fe31df je zneplatněný a web po restartu má nový klíč b7e1c2d4, který ale zatím není zveřejněný.',
       );
     });
 
@@ -533,7 +533,7 @@ describe('Given the receipt signing key section of the receipt settings', () => 
       fixture.detectChanges();
 
       expect(text('.signing-key-slow')).toContain(
-        'Klíč je stažený, ale web se po restartu zatím nespustil. Počkejte pár minut a zkuste to znovu.',
+        'Klíč je zneplatněný, ale web se po restartu zatím nespustil. Počkejte pár minut a zkuste to znovu.',
       );
       expect(text('[role="status"]:not(:empty)')).toBe('');
       await click('Zkusit znovu');
@@ -554,7 +554,7 @@ describe('Given the receipt signing key section of the receipt settings', () => 
   describe('when the administrator withdraws an earlier key with a passkey', () => {
     beforeEach(async () => {
       await load(receiptSigningKeys([earlierKey(), receiptSigningKey()]));
-      await openWithdrawal('Stáhnout klíč 39f713d0…', [samplePasskey()]);
+      await openWithdrawal('Zneplatnit klíč 39f713d0…', [samplePasskey()]);
     });
 
     it('then the passkey is offered first, its answer goes with the request and the web keeps running', async () => {
@@ -585,8 +585,8 @@ describe('Given the receipt signing key section of the receipt settings', () => 
       await settle();
 
       expect(root().querySelector('dialog')).toBeNull();
-      expect(text('.signing-key-earlier')).toContain('stažený');
-      expect(text('[role="status"]:not(:empty)')).toBe('Klíč 39f713d0 je stažený.');
+      expect(text('.signing-key-earlier')).toContain('zneplatněný');
+      expect(text('[role="status"]:not(:empty)')).toBe('Klíč 39f713d0 je zneplatněný.');
       expect(document.activeElement).toBe(root().querySelector('h2'));
     });
 
@@ -600,7 +600,7 @@ describe('Given the receipt signing key section of the receipt settings', () => 
 
       http.expectNone(WITHDRAW_EARLIER_URL);
       expect(text('dialog [role="alert"]')).toBe(
-        'Zařízení stažení nepotvrdilo. Zkuste to prosím znovu.',
+        'Zařízení zneplatnění nepotvrdilo. Zkuste to prosím znovu.',
       );
     });
 
