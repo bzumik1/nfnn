@@ -12,5 +12,12 @@
     "test": "src/app/core/navigation/connectivity.spec.ts > Given the connectivity of the browser > when the browser says it is online, then the app is not offline",
     "reason": "Slice 2.7 (plan v3): core/navigation/connectivity.ts is replaced by Connectivity, whose browserSaysOffline() answers false while the browser says it is online",
     "replacement": "src/app/core/connectivity/connectivity.spec.ts > Given the connectivity of the app > when the browser says it is offline, then that word alone is told to whoever only needs it, as the error reports do"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/device-data-card/device-data-card.spec.ts > Given the card \"Data v tomto zařízení\" > when the device is offline and the donor asks to load the data again, then an alert says it needs a connection and nothing is asked",
+    "reason": "Slice 2.7 (plan v3): every control that needs the server carries appNeedsConnection, so offline the card's \"Načíst data znovu\" is held with the hint \"Potřebuje připojení\" instead of the card's own alert, and still sends nothing",
+    "replacement": "src/app/features/donors/dashboard/device-data-card/device-data-card.spec.ts > Given the card \"Data v tomto zařízení\" > when the device is offline and the donor asks to load the data again, then the button says it needs a connection and nothing is asked"
   }
 ]
