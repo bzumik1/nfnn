@@ -148,7 +148,7 @@ test.describe('Given the app registered its own service worker on a phone that c
     }
     expect(Buffer.concat(chunks).toString('utf8')).toBe(PAYMENT_OF_1000);
     await expect(
-      page.locator('#prispet').getByRole('status').filter({ hasText: /\S/ }),
+      page.locator('#prispet .bank-app').getByRole('status').filter({ hasText: /\S/ }),
     ).toContainText('Neotevřela se vám banka?');
     expect(reachedNetwork).toEqual([]);
   });
