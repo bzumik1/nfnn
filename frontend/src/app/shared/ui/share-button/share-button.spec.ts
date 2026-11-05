@@ -155,6 +155,22 @@ describe('Given a share button for a news article', () => {
       expect(buttonTexts()).toEqual(['Sdílet', 'Kopírovat odkaz']);
     });
 
+    it('and the device refuses twice in a row, then the second refusal is announced again', async () => {
+      share.mockRejectedValue(new DOMException('Not allowed', 'NotAllowedError'));
+      await press(buttons()[0]);
+
+      buttons()[0].click();
+      fixture.detectChanges();
+
+      expect(alert()).toBe('');
+      expect(buttonTexts()).toEqual(['Sdílet', 'Kopírovat odkaz']);
+
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(alert()).toBe('Sdílení se nepodařilo. Odkaz na stránku si můžete zkopírovat.');
+    });
+
     it('and the device refuses and later shares, then the offer to copy the link goes away', async () => {
       share.mockRejectedValueOnce(new DOMException('Not allowed', 'NotAllowedError'));
       await press(buttons()[0]);

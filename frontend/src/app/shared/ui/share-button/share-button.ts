@@ -21,6 +21,7 @@ export class ShareButton {
 
   protected readonly sharing = signal(false);
   protected readonly refused = signal(false);
+  protected readonly refusalShown = signal(false);
   private readonly shareData = computed<ShareData>(() => ({
     title: this.pageTitle(),
     url: this.url(),
@@ -32,12 +33,14 @@ export class ShareButton {
       return;
     }
     this.sharing.set(true);
+    this.refusalShown.set(false);
     try {
       await navigator.share(this.shareData());
       this.refused.set(false);
     } catch (failure) {
       if (!isAbort(failure)) {
         this.refused.set(true);
+        this.refusalShown.set(true);
       }
     } finally {
       this.sharing.set(false);
