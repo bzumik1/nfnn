@@ -47,7 +47,8 @@ public class DonorBankAccountsService {
     private static final Logger log = LoggerFactory.getLogger(DonorBankAccountsService.class);
     private static final Comparator<SenderAccountLink> LIVE_FIRST_NEWEST_FIRST = Comparator
             .comparing((SenderAccountLink link) -> !link.isLive())
-            .thenComparing(SenderAccountLink::createdAt, Comparator.reverseOrder());
+            .thenComparing(SenderAccountLink::createdAt, Comparator.reverseOrder())
+            .thenComparing(link -> link.account().display());
 
     private final DonorRecordRepository donorRecords;
     private final DonationRepository donations;
