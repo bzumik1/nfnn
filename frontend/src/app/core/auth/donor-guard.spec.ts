@@ -78,4 +78,17 @@ describe('Given the donor area guard', () => {
     expect(await result).toBeInstanceOf(UrlTree);
     expect(TestBed.inject(LoginDialogService).isOpen()).toBe(true);
   });
+
+  it('when the server cannot be reached, then the sign-in dialog opens and the session hint stays for the next try', async () => {
+    localStorage.setItem(SESSION_HINT_KEY, '1');
+
+    const result = activate();
+    http
+      .expectOne('/api/donors/auth/refresh')
+      .flush(null, { status: 503, statusText: 'Service Unavailable' });
+
+    expect(await result).toBeInstanceOf(UrlTree);
+    expect(TestBed.inject(LoginDialogService).isOpen()).toBe(true);
+    expect(localStorage.getItem(SESSION_HINT_KEY)).toBe('1');
+  });
 });

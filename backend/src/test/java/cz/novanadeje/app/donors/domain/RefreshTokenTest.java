@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Set;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -91,7 +93,7 @@ class RefreshTokenTest {
         ClientId client = new ClientId("https://claude.ai/.well-known/oauth-client");
         Instant granted = NOW.minus(Duration.ofDays(3));
 
-        RefreshToken token = RefreshToken.issueForClient(RefreshTokenSecret.generate(), DONOR, client, java.util.Set.of(OAuthScope.ADMIN_READ),
+        RefreshToken token = RefreshToken.issueForClient(RefreshTokenSecret.generate(), DONOR, client, Set.of(OAuthScope.ADMIN_READ),
                 granted, NOW, Duration.ofDays(14));
 
         assertThat(token.clientId()).contains(client);
@@ -100,5 +102,83 @@ class RefreshTokenTest {
         assertThat(token.secondFactorVerified()).isTrue();
         assertThat(token.belongsToClient(client)).isTrue();
         assertThat(token.belongsToClient(new ClientId("https://claude.ai/oauth/claude-code-client-metadata"))).isFalse();
+    }
+
+    @Test
+    @DisplayName("Given a browser token used with a successor, when it is presented again within 60 seconds of its use, then it may be reissued")
+    void should_allow_reissue_when_presented_within_the_reuse_grace_given_a_used_browser_token_with_a_successor() {
+        RefreshToken token = rotated(null, NOW.minusSeconds(59), null, UUID.randomUUID());
+
+        assertThat(token.mayBeReissuedAt(NOW)).isTrue();
+    }
+
+    @Test
+    @DisplayName("Given a browser token used with a successor, when it is presented 60 seconds or more after its use, then it may not be reissued")
+    void should_refuse_reissue_when_presented_after_the_reuse_grace_given_a_used_browser_token_with_a_successor() {
+        RefreshToken token = rotated(null, NOW.minus(RefreshToken.REUSE_GRACE), null, UUID.randomUUID());
+
+        assertThat(token.mayBeReissuedAt(NOW)).isFalse();
+    }
+
+    @Test
+    @DisplayName("Given a used token whose sessions were all revoked, when it is presented within the grace, then it may not be reissued")
+    void should_refuse_reissue_when_presented_within_the_grace_given_a_used_and_revoked_token() {
+        RefreshToken token = rotated(null, NOW.minusSeconds(10), NOW.minusSeconds(5), UUID.randomUUID());
+
+        assertThat(token.mayBeReissuedAt(NOW)).isFalse();
+    }
+
+    @Test
+    @DisplayName("Given a used token without a recorded successor, when it is presented within the grace, then it may not be reissued")
+    void should_refuse_reissue_when_presented_within_the_grace_given_no_recorded_successor() {
+        RefreshToken token = rotated(null, NOW.minusSeconds(10), null, null);
+
+        assertThat(token.mayBeReissuedAt(NOW)).isFalse();
+    }
+
+    @Test
+    @DisplayName("Given a used token of a connected application, when it is presented within the grace, then it may not be reissued")
+    void should_refuse_reissue_when_presented_within_the_grace_given_a_connected_application_token() {
+        RefreshToken token = rotated(new ClientId("https://claude.ai/.well-known/oauth-client"), NOW.minusSeconds(10), null,
+                UUID.randomUUID());
+
+        assertThat(token.mayBeReissuedAt(NOW)).isFalse();
+    }
+
+    @Test
+    @DisplayName("Given an unused token, when it is checked for the reuse grace, then it may not be reissued")
+    void should_refuse_reissue_when_checked_given_an_unused_token() {
+        RefreshToken token = RefreshToken.issue(RefreshTokenSecret.generate(), DONOR, NOW.minusSeconds(10), Duration.ofDays(14), false);
+
+        assertThat(token.mayBeReissuedAt(NOW)).isFalse();
+    }
+
+    @Test
+    @DisplayName("Given a used token whose own lifetime ended, when it is presented within the grace, then it may not be reissued")
+    void should_refuse_reissue_when_presented_within_the_grace_given_an_expired_token() {
+        Instant issued = NOW.minus(Duration.ofDays(14));
+        RefreshToken token = RefreshToken.reconstitute(UUID.randomUUID(), DONOR, RefreshTokenSecret.generate().hash(), issued, NOW, false, null,
+                Set.of(), issued, NOW.minusSeconds(10), null, UUID.randomUUID(), null);
+
+        assertThat(token.mayBeReissuedAt(NOW)).isFalse();
+    }
+
+    @Test
+    @DisplayName("Given an unused token, when the grace supersedes it, then it is revoked and remembered as superseded")
+    void should_revoke_and_mark_superseded_when_superseded_given_an_unused_token() {
+        RefreshToken token = RefreshToken.issue(RefreshTokenSecret.generate(), DONOR, NOW, Duration.ofDays(14), false);
+
+        assertThat(token.isSuperseded()).isFalse();
+        token.supersede(NOW.plusSeconds(10));
+
+        assertThat(token.isSuperseded()).isTrue();
+        assertThat(token.revokedAt()).contains(NOW.plusSeconds(10));
+        assertThat(token.isUsableAt(NOW.plusSeconds(20))).isFalse();
+    }
+
+    private static RefreshToken rotated(ClientId client, Instant usedAt, Instant revokedAt, UUID successor) {
+        Instant issued = usedAt.minus(Duration.ofDays(1));
+        return RefreshToken.reconstitute(UUID.randomUUID(), DONOR, RefreshTokenSecret.generate().hash(), issued, issued.plus(Duration.ofDays(14)),
+                false, client, Set.of(), issued, usedAt, revokedAt, successor, null);
     }
 }

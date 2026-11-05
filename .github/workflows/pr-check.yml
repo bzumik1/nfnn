@@ -23,9 +23,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
+      contents: read
       pull-requests: read
     outputs:
       code: ${{ steps.files.outputs.code }}
+      appearance: ${{ steps.appearance.outputs.lines }}
     steps:
       - name: Find whether the change touches code or only docs/, .claude/ and Markdown
         id: files
@@ -47,6 +49,28 @@ jobs:
             echo "The pull request changes only docs/, .claude/ or Markdown, so no job runs and the gate passes."
             echo "code=false" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Read the look the description declares, for the visual comparison
+        id: appearance
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          PULL_NUMBER: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.sha }}
+        run: |
+          if [ -n "$PULL_NUMBER" ]; then
+            body=$(gh api "repos/$REPOSITORY/pulls/$PULL_NUMBER" --jq '.body // ""')
+          else
+            body=$(gh api "repos/$REPOSITORY/commits/$SHA/pulls" --jq 'map(select(.merged_at != null and .base.ref == "main"))[0].body // ""')
+          fi
+          lines=$(tr -d '\r' <<<"$body" | grep -iE '^[[:space:]]*vzhled' | head -n 5 || true)
+          if [ -n "$lines" ]; then
+            echo "The description declares:"
+            echo "$lines"
+          else
+            echo "The description declares no look, so nothing may change on the screens."
+          fi
+          echo "lines=$(printf '%s' "$lines" | base64 -w 0)" >> "$GITHUB_OUTPUT"
 
   backend:
     needs: changes
@@ -438,6 +462,55 @@ jobs:
           path: ${{ runner.temp }}/inventory/
           if-no-files-found: error
           retention-days: ${{ github.event_name == 'push' && 90 || 3 }}
+
+  visual:
+    name: Vzhled
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "26"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install the frontend's dependencies and Playwright's Chromium headless shell
+        working-directory: frontend
+        run: |
+          npm ci
+          npx playwright install --with-deps --only-shell chromium
+
+      - name: The screens of main and of the change differ only where the description declares
+        env:
+          APPEARANCE: ${{ needs.changes.outputs.appearance }}
+        run: |
+          printf '%s' "$APPEARANCE" | base64 -d > "$RUNNER_TEMP/appearance.md"
+          node scripts/compare-screens.mjs --base=HEAD^1 --out="$RUNNER_TEMP/vzhled" --declared="$RUNNER_TEMP/appearance.md"
+
+      - name: Put the comparison into the job summary
+        if: ${{ !cancelled() }}
+        run: |
+          [ -f "$RUNNER_TEMP/vzhled/report.md" ] && cat "$RUNNER_TEMP/vzhled/report.md" >> "$GITHUB_STEP_SUMMARY" || echo "The comparison wrote no report" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep the shots of main and of the change with the crops of every difference
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: vzhled
+          path: |
+            ${{ runner.temp }}/vzhled/report.md
+            ${{ runner.temp }}/vzhled/crops/
+            ${{ runner.temp }}/vzhled/base-shots/
+            ${{ runner.temp }}/vzhled/head-shots/
+          if-no-files-found: warn
+          retention-days: 14
 
   main-recording:
     name: Nahrávka main
@@ -1320,186 +1393,11 @@ jobs:
     name: Zkouška vydání
     needs: changes
     if: needs.changes.outputs.code == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-
-      - uses: actions/setup-node@v7
-        with:
-          node-version: "26"
-
-      - uses: docker/setup-buildx-action@v4
-
-      - name: Build images
-        uses: docker/bake-action@v7
-        env:
-          CACHE_FROM_GHA: "true"
-          CACHE_TO_GHA: "false"
-          DOCKER_BUILD_RECORD_UPLOAD: "false"
-        with:
-          source: .
-          files: .github/docker-bake.hcl
-          load: true
-
-      - name: Pull the published images of the revision the server runs
-        run: |
-          revision=$(tr -d '[:space:]' < .github/deployed-revision)
-          echo "$revision" | grep -qxE '[0-9a-f]{7}' || { echo "::error::.github/deployed-revision must hold the short SHA (7 hex digits) that nfnn_status reports on the server (got $revision)"; exit 1; }
-          for image in backend frontend backup postgres mcp; do
-            docker pull -q "ghcr.io/bzumik1/nfnn-$image:$revision" > /dev/null || { echo "::error::ghcr.io/bzumik1/nfnn-$image:$revision is not published: .github/deployed-revision must name a commit of main that images.yml published"; exit 1; }
-            labelled=$(docker inspect -f '{{index .Config.Labels "org.opencontainers.image.revision"}}' "ghcr.io/bzumik1/nfnn-$image:$revision")
-            case "$labelled" in
-              "$revision"*) ;;
-              *) echo "::error::ghcr.io/bzumik1/nfnn-$image:$revision is labelled with revision $labelled"; exit 1 ;;
-            esac
-          done
-          echo "The server runs $revision; the rehearsal starts its five images, then the images built from this change"
-          echo "DEPLOYED_REVISION=$revision" >> "$GITHUB_ENV"
-
-      - name: Prepare the compose files of the server's images and of the candidate's
-        run: |
-          for server in first second; do
-            install -d -m 755 "$RUNNER_TEMP/$server/logs"
-            sed "s#/DATA/AppData/nfnn#$RUNNER_TEMP/$server#g" deploy/compose.yml > "$RUNNER_TEMP/$server-candidate.yml"
-            yq -i '.services.backup.environment.POLL_SECONDS = "1"' "$RUNNER_TEMP/$server-candidate.yml"
-          done
-          sed -E "s#(image: ghcr\.io/bzumik1/nfnn-[a-z]+):latest\$#\1:$DEPLOYED_REVISION#" "$RUNNER_TEMP/first-candidate.yml" > "$RUNNER_TEMP/first-deployed.yml"
-          [ "$(grep -c ":$DEPLOYED_REVISION\$" "$RUNNER_TEMP/first-deployed.yml")" = 5 ] || { echo "::error::the compose file of the server's images does not name all five images at $DEPLOYED_REVISION"; exit 1; }
-          echo "JOURNEY_STATE=$RUNNER_TEMP/journey.json" >> "$GITHUB_ENV"
-
-      - name: The server's images set up a site, issue receipts and take a backup
-        env:
-          COMPOSE_FILE: ${{ runner.temp }}/first-deployed.yml
-        run: |
-          docker compose up -d --wait --wait-timeout 300
-          docker run -d --name nfnn-probe-mail --network nfnn-edge -p 127.0.0.1:8025:8025 axllent/mailpit:v1.31.5 > /dev/null
-          for _ in $(seq 30); do
-            curl -fsS -o /dev/null --max-time 2 http://127.0.0.1:8025/api/v1/messages 2> /dev/null && break
-            sleep 1
-          done
-          node scripts/stack-journey.mjs setup --state "$JOURNEY_STATE"
-          node scripts/stack-journey.mjs receipts --state "$JOURNEY_STATE"
-          logs="$RUNNER_TEMP/first/logs"
-          grep -q "Backend revision $DEPLOYED_REVISION is ready" "$logs/backend.log" || { echo "::error::the backend of the server's images did not report revision $DEPLOYED_REVISION"; exit 1; }
-          backups="$RUNNER_TEMP/first/backups"
-          docker exec nfnn-backend sh -c 'touch /backups/requests/before-upgrade.backup'
-          for _ in $(seq 60); do
-            grep -q '^request=before-upgrade$' "$backups/status/backup" 2> /dev/null && break
-            sleep 1
-          done
-          grep -q '^request=before-upgrade$' "$backups/status/backup" && grep -q '^outcome=ok$' "$backups/status/backup" || { echo "::error::the backup before the upgrade was not written"; cat "$backups/status/backup"; exit 1; }
-          dump=$(sed -n 's/^file=//p' "$backups/status/backup")
-          echo "The backup before the upgrade is $dump"
-          echo "BACKUP_BEFORE_UPGRADE=$dump" >> "$GITHUB_ENV"
-
-      - name: The candidate's images start on that database and the journeys pass
-        env:
-          COMPOSE_FILE: ${{ runner.temp }}/first-candidate.yml
-        run: |
-          logs="$RUNNER_TEMP/first/logs"
-          before=$(wc -l < "$logs/backend.log")
-          docker compose up -d --wait --wait-timeout 300
-          tail -n "+$((before + 1))" "$logs/backend.log" > "$RUNNER_TEMP/candidate-start.log"
-          grep -q 'Backend revision dev is ready' "$RUNNER_TEMP/candidate-start.log" || { echo "::error::the candidate's backend did not start on the database of the server's images"; exit 1; }
-          for container in nfnn-postgres nfnn-backup nfnn-backend nfnn-mcp nfnn-frontend; do
-            [ "$(docker inspect -f '{{.RestartCount}}' "$container")" = 0 ] || { echo "::error::$container restarted while the candidate's images took over"; exit 1; }
-          done
-          if grep -E '^[0-9T:.+-]+ +ERROR ' "$RUNNER_TEMP/candidate-start.log"; then
-            echo "::error::the candidate's backend logged an error when it started over the data of the server's images"
-            exit 1
-          fi
-          echo "Changesets the candidate applied to the server's database:"
-          grep -oE 'ChangeSet db/changelog/[^ ]+ ran successfully' "$RUNNER_TEMP/candidate-start.log" | cut -d' ' -f2 || echo "none"
-          node scripts/stack-journey.mjs check --issue candidate --state "$JOURNEY_STATE"
-
-      - name: The server's images start again on the same database and the journeys pass
-        env:
-          COMPOSE_FILE: ${{ runner.temp }}/first-deployed.yml
-        run: |
-          logs="$RUNNER_TEMP/first/logs"
-          docker compose up -d --wait --wait-timeout 300
-          [ "$(grep -c "Backend revision $DEPLOYED_REVISION is ready" "$logs/backend.log")" -ge 3 ] || { echo "::error::the server's backend did not start again after the candidate's"; exit 1; }
-          node scripts/stack-journey.mjs check --state "$JOURNEY_STATE"
-
-      - name: The server's images restore the backup taken before the upgrade and the journeys pass
-        env:
-          COMPOSE_FILE: ${{ runner.temp }}/first-deployed.yml
-        run: |
-          backups="$RUNNER_TEMP/first/backups"
-          restore="$RUNNER_TEMP/first/restore"
-          docker compose stop backend backup
-          sudo cp "$backups/$BACKUP_BEFORE_UPGRADE" "$restore/before-upgrade.force.dump.age"
-          docker compose up -d --wait --wait-timeout 300
-          for _ in $(seq 60); do
-            [ -f "$restore/before-upgrade.force.dump.age.done" ] && break
-            sleep 1
-          done
-          [ -f "$restore/before-upgrade.force.dump.age.done" ] && grep -q '^outcome=ok$' "$backups/status/restore" || { echo "::error::the backup taken before the upgrade was not restored"; cat "$backups/status/restore"; sudo ls -la "$restore"; exit 1; }
-          docker compose up -d --wait --wait-timeout 300
-          node scripts/stack-journey.mjs forget-after-backup --state "$JOURNEY_STATE"
-          node scripts/stack-journey.mjs check --restored --state "$JOURNEY_STATE"
-
-      - name: A second server set up from the first server's backup adopts its receipt signing key and the receipts verify there
-        run: |
-          first="$RUNNER_TEMP/first"
-          second="$RUNNER_TEMP/second"
-          COMPOSE_FILE="$RUNNER_TEMP/first-candidate.yml" docker compose up -d --wait --wait-timeout 300
-          docker exec nfnn-backend sh -c 'touch /backups/requests/for-the-second-server.backup'
-          for _ in $(seq 60); do
-            grep -q '^request=for-the-second-server$' "$first/backups/status/backup" 2> /dev/null && break
-            sleep 1
-          done
-          grep -q '^outcome=ok$' "$first/backups/status/backup" || { echo "::error::the backup for the second server was not written"; exit 1; }
-          sudo cp "$first/backups/$(sed -n 's/^file=//p' "$first/backups/status/backup")" "$RUNNER_TEMP/first-server.dump.age"
-          sudo sh -c "grep -m 1 '^AGE-SECRET-KEY-' '$first/secrets/backup-key'" > "$RUNNER_TEMP/first-server.key"
-          chmod 600 "$RUNNER_TEMP/first-server.key"
-          sudo chown "$(id -u)" "$RUNNER_TEMP/first-server.dump.age"
-          echo "::add-mask::$(cat "$RUNNER_TEMP/first-server.key")"
-          first_key=$(jq -r '.receipts[0].keyId' "$JOURNEY_STATE")
-          docker rm -f nfnn-probe-mail > /dev/null
-          COMPOSE_FILE="$RUNNER_TEMP/first-candidate.yml" docker compose down
-          export COMPOSE_FILE="$RUNNER_TEMP/second-candidate.yml"
-          docker compose up -d --wait --wait-timeout 300
-          [ "$(sudo cat "$second/secrets/settings-key")" != "$(sudo cat "$first/secrets/settings-key")" ] || { echo "::error::the second server must start with secrets of its own"; exit 1; }
-          cp "$JOURNEY_STATE" "$RUNNER_TEMP/second-journey.json"
-          node scripts/stack-journey.mjs restore-setup --dump "$RUNNER_TEMP/first-server.dump.age" --key "$RUNNER_TEMP/first-server.key" --state "$RUNNER_TEMP/second-journey.json"
-          rm -f "$RUNNER_TEMP/first-server.key"
-          docker compose up -d --wait --wait-timeout 300
-          grep -q "Receipt signing key $first_key from a restored backup is sealed again and published" "$second/logs/backend.log" || { echo "::error::the second server did not adopt the first server's receipt signing key $first_key"; grep -i 'receipt signing key' "$second/logs/backend.log"; exit 1; }
-          [ "$(docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select count(*) from admin_action where action = 'ADOPT_RECEIPT_SIGNING_KEY' and details like '%$first_key%'")" = 1 ] || { echo "::error::the adoption of $first_key is not in the audit trail exactly once"; exit 1; }
-          [ "$(sudo grep -m 1 '^AGE-SECRET-KEY-' "$second/secrets/backup-key")" = "$(sudo grep -m 1 '^AGE-SECRET-KEY-' "$first/secrets/backup-key")" ] || { echo "::error::the second server did not adopt the backup key the backup came with"; exit 1; }
-          if grep -E "Receipt signing key [0-9a-f]{8} (is sealed by the settings key of another server|fails its seal)" "$second/logs/backend.log"; then
-            echo "::error::the second server refused a receipt signing key"
-            exit 1
-          fi
-          node scripts/stack-journey.mjs adopted --state "$RUNNER_TEMP/second-journey.json"
-          docker restart nfnn-backend
-          docker compose up -d --wait --wait-timeout 300
-          [ "$(grep -c "Receipt signing key $first_key from a restored backup is sealed again and published" "$second/logs/backend.log")" = 1 ] || { echo "::error::a later start adopted the key again, so a restore confirmed more than one adoption"; exit 1; }
-          node scripts/stack-journey.mjs adopted --state "$RUNNER_TEMP/second-journey.json"
-
-      - name: Logs
-        if: failure()
-        run: |
-          docker compose -f "$RUNNER_TEMP/first-candidate.yml" logs --no-color --tail 200 || true
-          docker compose -f "$RUNNER_TEMP/second-candidate.yml" logs --no-color --tail 200 || true
-          for server in first second; do
-            [ -f "$RUNNER_TEMP/$server/logs/backend.log" ] && { echo "== $server backend.log"; tail -n 80 "$RUNNER_TEMP/$server/logs/backend.log"; }
-          done
-
-      - name: Stop
-        if: always()
-        run: |
-          docker rm -f nfnn-probe-mail > /dev/null 2>&1 || true
-          docker compose -f "$RUNNER_TEMP/second-candidate.yml" down > /dev/null 2>&1 || true
-          docker compose -f "$RUNNER_TEMP/first-candidate.yml" down > /dev/null 2>&1 || true
+    uses: ./.github/workflows/release-rehearsal.yml
 
   gate:
     if: always()
-    needs: [changes, backend, acceptance, frontend, e2e, e2e-report, pwa, mcp, main-recording, compare-v2, stack, release]
+    needs: [changes, backend, acceptance, frontend, e2e, e2e-report, pwa, visual, mcp, main-recording, compare-v2, stack, release]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
