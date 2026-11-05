@@ -58,7 +58,7 @@ class AdminPushController {
 
     @PutMapping("/subscriptions/{id}/alerts")
     PushResponse.Subscription changeAlerts(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody PushAlertsRequest request) {
-        return PushResponse.Subscription.from(push.changeAlerts(admin(jwt), new PushSubscriptionId(id), request.toAlerts()));
+        return PushResponse.Subscription.from(push.changeAlerts(admin(jwt), new PushSubscriptionId(id), request.toAlerts(), sessionDevice(jwt)));
     }
 
     @PostMapping("/test")

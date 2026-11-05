@@ -258,6 +258,21 @@ public class PushStepDefinitions {
         assertThat(pushService.sent()).isEmpty();
     }
 
+    @Then("the push settings say the session names a device")
+    public void thePushSettingsSayTheSessionNamesADevice() {
+        assertThat(api.lastResponseJson().get("deviceSession").asBoolean()).isTrue();
+    }
+
+    @Then("the push settings say the session names no device")
+    public void thePushSettingsSayTheSessionNamesNoDevice() {
+        assertThat(api.lastResponseJson().get("deviceSession").asBoolean()).isFalse();
+    }
+
+    @Then("the push subscription is not the device of the asking session")
+    public void thePushSubscriptionIsNotTheDeviceOfTheAskingSession() {
+        assertThat(api.lastResponseJson().get("current").asBoolean()).isFalse();
+    }
+
     @Then("the push settings list no open alert")
     public void thePushSettingsListNoOpenAlert() {
         assertThat(api.lastResponseJson().get("openAlerts").isEmpty()).isTrue();

@@ -48,7 +48,7 @@ public class PushSubscriptionService {
 
     @Transactional
     public PushView view(UUID administratorId, Optional<UUID> deviceId) {
-        return new PushView(keys.current().publicKey(), subscriptions.findAllOf(administratorId).stream()
+        return new PushView(keys.current().publicKey(), deviceId.isPresent(), subscriptions.findAllOf(administratorId).stream()
                 .map(subscription -> PushSubscriptionView.of(subscription, deviceId.filter(subscription.deviceId()::equals).isPresent())).toList(),
                 alerts.open());
     }
@@ -81,7 +81,7 @@ public class PushSubscriptionService {
     }
 
     @Transactional
-    public PushSubscriptionView changeAlerts(UUID administratorId, PushSubscriptionId id, PushAlerts alerts) {
+    public PushSubscriptionView changeAlerts(UUID administratorId, PushSubscriptionId id, PushAlerts alerts, Optional<UUID> deviceId) {
         PushSubscription changed = ownedBy(administratorId, id).withAlerts(alerts);
         if (!subscriptions.changeAlerts(id, administratorId, alerts)) {
             throw new PushSubscriptionNotFound();
@@ -89,11 +89,11 @@ public class PushSubscriptionService {
         events.publishEvent(new AdminActionPerformed(administratorId, CHANGE_ALERTS_ACTION, Optional.of(id.value()),
                 "Upozornění přes push na zařízení (" + PushServiceNames.of(changed.endpoint().service()) + "): " + PushAlertNames.describe(alerts),
                 clock.instant()));
-        return PushSubscriptionView.of(changed);
+        return PushSubscriptionView.of(changed, deviceId.filter(changed.deviceId()::equals).isPresent());
     }
 
     public PushDeliveryReport sendTest(UUID administratorId) {
-        return sender.send(subscriptions.findAllOf(administratorId), new PushMessage(PushMessageKind.TEST, 0));
+        return sender.send(subscriptions.findAllOf(administratorId), new PushMessage(PushMessageKind.TEST, Math.min(alerts.open().size(), PushMessage.MAX_COUNT)));
     }
 
     private PushSubscription ownedBy(UUID administratorId, PushSubscriptionId id) {

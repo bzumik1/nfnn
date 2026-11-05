@@ -11,6 +11,7 @@ Feature: An administrator turns push alerts on for a device, chooses which alert
     Then the response status is 200
     And the push settings carry the server's public key
     And the push settings list no device
+    And the push settings say the session names no device
     When "Jana" turns push alerts on for the device "telefon" at "https://fcm.googleapis.com/fcm/send/jana-telefon"
     Then the response status is 201
     And the push subscription says service "google" with bank import on, backups on and mail on
@@ -112,6 +113,7 @@ Feature: An administrator turns push alerts on for a device, chooses which alert
     When the exchanged API token changes the push alerts of the first device to bank import off, backups off and mail on
     Then the response status is 200
     And the push subscription says service "google" with bank import off, backups off and mail on
+    And the push subscription is not the device of the asking session
     And the admin action "CHANGE_PUSH_ALERTS" by "Jana" on a push subscription came through "claude.ai" with details "Upozornění přes push na zařízení (Google): import z banky vypnuto, zálohy vypnuto, odesílání e-mailů zapnuto"
 
   Scenario: An administrator turns a device off, and nobody reaches the devices of another administrator

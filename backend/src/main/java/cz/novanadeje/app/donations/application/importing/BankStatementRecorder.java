@@ -67,8 +67,10 @@ public class BankStatementRecorder {
         state.failed(kind, message, at).ifPresent(outage -> {
             log.error("Fio import outage: {} failed {} times in a row, the foundation is being told", outage.kind(), outage.consecutiveFailures());
             alerts.add(outage, at);
-            events.publishEvent(OperationalAlertRaised.opened(OperationalAlertRaised.Area.BANK_IMPORT, at));
         });
+        if (state.reportedOutage().isPresent()) {
+            events.publishEvent(OperationalAlertRaised.opened(OperationalAlertRaised.Area.BANK_IMPORT, at));
+        }
         states.save(state);
     }
 
@@ -94,8 +96,8 @@ public class BankStatementRecorder {
             log.info("Fio import recovered from the {} outage after {} failures", recovery.outageKind(), recovery.failures());
             alerts.dropWaitingOutages(now);
             alerts.add(recovery, now);
-            events.publishEvent(OperationalAlertRaised.resolved(OperationalAlertRaised.Area.BANK_IMPORT, now));
         });
+        events.publishEvent(OperationalAlertRaised.resolved(OperationalAlertRaised.Area.BANK_IMPORT, now));
         states.save(state);
     }
 }

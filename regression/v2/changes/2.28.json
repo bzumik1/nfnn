@@ -16,10 +16,58 @@
     "contract": "docs/api-contract.md, Push alerts of the administration"
   },
   {
-    "scenario": "operations/admin_push: A device turns push alerts on under the server's key, and the test alert reaches it encrypted with nothing but its kind",
+    "scenario": "operations/admin_push: A device turns push alerts on under the server's key, and the test alert reaches it encrypted with nothing but its kind #1",
     "kind": "removed",
     "reason": "Plan v3 slice 2.28: the test alert now also carries the notification the browser shows (a fixed Czech title and text of its kind, its tag and the route it opens), so the scenario is renamed and checks the whole message",
     "contract": "docs/api-contract.md, Push alerts of the administration; docs/security-overview.md, Push alerts"
+  },
+  {
+    "path": "GET /api/admin/operations/push",
+    "scenario": "operations/admin_push: *",
+    "kind": "added",
+    "field": "$.deviceSession",
+    "reason": "Plan v3 slice 2.28: the push settings say whether the asking session names a device, so /sprava/upozorneni offers turning this device on only where the server would take it",
+    "contract": "docs/api-contract.md, Push alerts of the administration"
+  },
+  {
+    "path": "POST /api/admin/operations/push/subscriptions",
+    "scenario": "operations/admin_push: *",
+    "kind": "added",
+    "field": "$.current",
+    "reason": "Plan v3 slice 2.28: a device answered after turning alerts on says whether it is the device of the asking session, as the push settings do",
+    "contract": "docs/api-contract.md, Push alerts of the administration"
+  },
+  {
+    "path": "PUT /api/admin/operations/push/subscriptions/*",
+    "scenario": "operations/admin_push: *",
+    "kind": "added",
+    "field": "$.current",
+    "reason": "Plan v3 slice 2.28: a device answered after its alerts change says whether it is the device of the asking session, as the push settings do",
+    "contract": "docs/api-contract.md, Push alerts of the administration"
+  },
+  {
+    "kind": "log-field",
+    "line": "operations.application.push.PushSender: Push subscription <id> failed <n> times in a row",
+    "reason": "Plan v3 slice 2.27 brought this warning; 2.28's retry scenarios are the first to record it",
+    "security": {
+      "approvedIn": "PR #308, Jakub 2026-11-05",
+      "fields": {
+        "<id>": "the push subscription id",
+        "<n>": "the failures of the device in a row"
+      }
+    }
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/push/*",
+    "reason": "Plan v3 slice 2.28: the kind of a push alert gives the tag of its notification and the route a click opens; the backend writes both into the notification and the open app routes a click by the kind, so both run the same cases",
+    "contract": "docs/api-contract.md, Push alerts of the administration; .claude/rules/testing.md, Logic on both sides"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/schemas/push/*",
+    "reason": "Plan v3 slice 2.28: the schema of the push notification cases",
+    "contract": "docs/api-contract.md, Push alerts of the administration; .claude/rules/testing.md, Logic on both sides"
   },
   {
     "kind": "retired",
@@ -41,5 +89,19 @@
     "test": "operations.infrastructure.push.WebPushDeliveryTest > Given two alerts of different lengths, when they are delivered, then their bodies have the same length, so the push service cannot tell them apart by size",
     "reason": "Plan v3 slice 2.28: every kind with its notification is padded to one length, so the test covers all seven kinds at the largest count",
     "replacement": "operations.infrastructure.push.WebPushDeliveryTest > Given every kind of alert with the largest count, when they are delivered, then their bodies have the same length, so the push service cannot tell them apart by size"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "operations.application.backup.BackupWatchServiceTest > Given the same problem already reported, when the check runs again, then nothing is published or saved",
+    "reason": "Plan v3 slice 2.28: the backup check announces the open backup alert at every check with problems, so a change lost to a crash is put right by the next check",
+    "replacement": "operations.application.backup.BackupWatchServiceTest > Given the same problem already reported, when the check runs again, then only the open backup alert is announced and nothing is reported or saved"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "operations.application.backup.BackupWatchServiceTest > Given healthy backups and nothing reported, when the check runs, then nothing happens",
+    "reason": "Plan v3 slice 2.28: the backup check announces the resolved backup alert at every healthy check, so a change lost to a crash is put right by the next check",
+    "replacement": "operations.application.backup.BackupWatchServiceTest > Given healthy backups and nothing reported, when the check runs, then only the resolved backup alert is announced and nothing is reported or saved"
   }
 ]

@@ -21,7 +21,8 @@ Feature: The devices of the administrators are told by push when the bank import
       | kind               | count | title                    | url     |
       | bank-import-outage | 1     | Import z banky nefunguje | /sprava |
     When "Jana" asks for the push settings on the device "telefon"
-    Then the push settings list the open alerts:
+    Then the push settings say the session names a device
+    And the push settings list the open alerts:
       | area       | since                |
       | bankImport | 2026-10-24T10:00:00Z |
     And the push settings list the devices:
@@ -73,7 +74,7 @@ Feature: The devices of the administrators are told by push when the bank import
     And the backup folder does not exist
     And the backup check runs
     And the mail server refuses the next e-mail
-    When a password reset is asked for "jana@example.cz"
+    When "Jana" sends the monthly report for "2026-09" again
     Then the device "telefon" of "Jana" received the push alerts:
       | kind           | count | title               | url                |
       | backups-outage | 1     | Zálohy mají problém | /sprava/zalohy     |
@@ -81,8 +82,8 @@ Feature: The devices of the administrators are told by push when the bank import
     And the device "notebook" of "Jana" received the push alerts:
       | kind           | count | title               | url            |
       | backups-outage | 1     | Zálohy mají problém | /sprava/zalohy |
-    When a password reset is asked for "jana@example.cz"
-    And a password reset is asked for "jana@example.cz"
+    When "Jana" sends the monthly report for "2026-09" again
+    And "Jana" sends the monthly report for "2026-09" again
     Then the device "telefon" of "Jana" received the push alerts:
       | kind           | count | title                  | url               |
       | backups-outage | 1     | Zálohy mají problém    | /sprava/zalohy    |
@@ -149,3 +150,13 @@ Feature: The devices of the administrators are told by push when the bank import
       | backups-outage    | 1     | Zálohy mají problém        | /sprava/zalohy |
       | backups-recovered | 0     | Zálohy jsou zase v pořádku | /sprava/zalohy |
       | backups-outage    | 1     | Zálohy mají problém        | /sprava/zalohy |
+
+  Scenario: A test alert sent while an alert is open names the open alerts, so it keeps the app's badge
+    Given the backup folder does not exist
+    And the backup check runs
+    When "Jana" sends a test push alert
+    Then the response status is 200
+    And the device "telefon" of "Jana" received the push alerts:
+      | kind           | count | title                 | url                |
+      | backups-outage | 1     | Zálohy mají problém   | /sprava/zalohy     |
+      | test           | 1     | Zkušební upozornění   | /sprava/upozorneni |

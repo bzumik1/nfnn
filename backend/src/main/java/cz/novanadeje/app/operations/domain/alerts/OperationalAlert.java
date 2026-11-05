@@ -23,7 +23,7 @@ public record OperationalAlert(MonitoredArea area, Optional<Instant> openSince, 
         return open() ? Optional.empty() : Optional.of(new OperationalAlert(area, Optional.of(at), changes + 1));
     }
 
-    public Optional<OperationalAlert> resolved() {
-        return open() ? Optional.of(new OperationalAlert(area, Optional.empty(), changes + 1)) : Optional.empty();
+    public Optional<OperationalAlert> resolvedAt(Instant at) {
+        return openSince.filter(since -> !since.isAfter(at)).map(since -> new OperationalAlert(area, Optional.empty(), changes + 1));
     }
 }

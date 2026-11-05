@@ -36,7 +36,7 @@ public class OperationalAlertService {
     public void record(MonitoredArea area, boolean opened, Instant at) {
         alerts.lockChanges();
         OperationalAlert current = alerts.find(area).orElseGet(() -> OperationalAlert.closed(area));
-        Optional<OperationalAlert> changed = opened ? current.openedAt(at) : current.resolved();
+        Optional<OperationalAlert> changed = opened ? current.openedAt(at) : current.resolvedAt(at);
         changed.ifPresent(alert -> {
             alerts.save(alert);
             int openCount = (int) alerts.findAll().stream().filter(other -> other.area() == area ? alert.open() : other.open()).count();

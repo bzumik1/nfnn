@@ -25,6 +25,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 class BackupWatchServiceTest {
@@ -57,14 +58,15 @@ class BackupWatchServiceTest {
     }
 
     @Test
-    @DisplayName("Given the same problem already reported, when the check runs again, then nothing is published or saved")
-    void should_stay_quiet_when_checked_given_the_same_problem_reported() {
+    @DisplayName("Given the same problem already reported, when the check runs again, then only the open backup alert is announced and nothing is reported or saved")
+    void should_only_announce_open_alert_when_checked_given_the_same_problem_reported() {
         when(backups.view()).thenReturn(view(Set.of(BackupProblem.BACKUP_FAILED)));
         when(states.current()).thenReturn(BackupAlertState.reported(Set.of(BackupProblem.BACKUP_FAILED), NOW.minusSeconds(86_400)));
 
         service.check();
 
-        verify(events, never()).publishEvent(any());
+        verify(events).publishEvent(OperationalAlertRaised.opened(OperationalAlertRaised.Area.BACKUPS, NOW));
+        verifyNoMoreInteractions(events);
         verify(states, never()).save(any());
     }
 
@@ -98,14 +100,15 @@ class BackupWatchServiceTest {
     }
 
     @Test
-    @DisplayName("Given healthy backups and nothing reported, when the check runs, then nothing happens")
-    void should_do_nothing_when_checked_given_healthy_and_nothing_reported() {
+    @DisplayName("Given healthy backups and nothing reported, when the check runs, then only the resolved backup alert is announced and nothing is reported or saved")
+    void should_only_announce_resolved_alert_when_checked_given_healthy_and_nothing_reported() {
         when(backups.view()).thenReturn(view(Set.of()));
         when(states.current()).thenReturn(BackupAlertState.nothingReported());
 
         service.check();
 
-        verify(events, never()).publishEvent(any());
+        verify(events).publishEvent(OperationalAlertRaised.resolved(OperationalAlertRaised.Area.BACKUPS, NOW));
+        verifyNoMoreInteractions(events);
         verify(states, never()).save(any());
     }
 

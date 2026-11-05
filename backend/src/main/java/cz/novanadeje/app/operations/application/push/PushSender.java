@@ -50,7 +50,7 @@ public class PushSender {
         VapidKeys vapid = keys.current();
         try (ExecutorService sends = Executors.newVirtualThreadPerTaskExecutor()) {
             List<Future<PushOutcome>> outcomes = recipients.stream()
-                    .map(subscription -> sends.submit(() -> record(subscription, deliver(subscription, message, vapid)))).toList();
+                    .map(subscription -> sends.submit(() -> recorded(subscription, deliver(subscription, message, vapid)))).toList();
             PushDeliveryReport report = PushDeliveryReport.NONE;
             List<PushSubscriptionId> failed = new ArrayList<>();
             for (int index = 0; index < recipients.size(); index++) {
@@ -89,6 +89,14 @@ public class PushSender {
             case GONE -> new PushDeliveryReport(0, 0, 1);
             case FAILED -> new PushDeliveryReport(0, 1, 0);
         };
+    }
+
+    private PushOutcome recorded(PushSubscription subscription, PushOutcome outcome) {
+        try {
+            return record(subscription, outcome);
+        } catch (RuntimeException notRecorded) {
+            return outcome;
+        }
     }
 
     private PushOutcome record(PushSubscription subscription, PushOutcome outcome) {

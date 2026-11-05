@@ -11,10 +11,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
-record PushResponse(String publicKey, List<Subscription> subscriptions, List<OpenAlert> openAlerts) {
+record PushResponse(String publicKey, boolean deviceSession, List<Subscription> subscriptions, List<OpenAlert> openAlerts) {
 
     static PushResponse from(PushView view) {
-        return new PushResponse(view.publicKey(), view.subscriptions().stream().map(Subscription::from).toList(),
+        return new PushResponse(view.publicKey(), view.deviceSession(), view.subscriptions().stream().map(Subscription::from).toList(),
                 view.openAlerts().stream().map(OpenAlert::from).toList());
     }
 

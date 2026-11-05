@@ -52,7 +52,7 @@ public class PushAlertDispatcher {
     void attempt(OperationalAlertChanged changed, int attempt, Optional<Set<PushSubscriptionId>> only) {
         PushMessageKind kind = PushMessageKind.of(changed.area(), changed.opened());
         try {
-            if (attempt > 1 && !alerts.unchangedSince(changed.area(), changed.changes())) {
+            if (!alerts.unchangedSince(changed.area(), changed.changes())) {
                 return;
             }
             List<PushSubscription> recipients = subscriptions.findAllWithAlert(changed.area()).stream()

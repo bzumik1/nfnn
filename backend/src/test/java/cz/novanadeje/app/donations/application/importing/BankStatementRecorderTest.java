@@ -249,7 +249,8 @@ class BankStatementRecorderTest {
         recorder.record(new BankStatement(HOURLY_REQUEST, Optional.empty(), List.of(), 0), new ImportPlan(HOURLY_REQUEST, false), NOW);
 
         verifyNoInteractions(alerts);
-        verifyNoInteractions(events);
+        verify(events).publishEvent(OperationalAlertRaised.resolved(OperationalAlertRaised.Area.BANK_IMPORT, NOW));
+        verifyNoMoreInteractions(events);
     }
 
     @Test
@@ -263,6 +264,7 @@ class BankStatementRecorderTest {
         recorder.recordFailure(ImportFailureKind.TRANSPORT, "timed out", NOW.plusSeconds(3600));
 
         verify(events).publishEvent(OperationalAlertRaised.opened(OperationalAlertRaised.Area.BANK_IMPORT, NOW));
+        verify(events).publishEvent(OperationalAlertRaised.opened(OperationalAlertRaised.Area.BANK_IMPORT, NOW.plusSeconds(3600)));
         verifyNoMoreInteractions(events);
     }
 

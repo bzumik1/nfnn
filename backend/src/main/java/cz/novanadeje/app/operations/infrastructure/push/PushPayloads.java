@@ -49,7 +49,11 @@ class PushPayloads {
         payload.put("kind", kind.token());
         payload.put("count", message.count());
         payload.put("notification", notification);
-        return JSON.writeValueAsString(payload).getBytes(StandardCharsets.UTF_8);
+        byte[] written = JSON.writeValueAsString(payload).getBytes(StandardCharsets.UTF_8);
+        if (written.length >= WebPushDelivery.PADDED_MESSAGE_BYTES) {
+            throw new IllegalStateException("The push message of kind " + kind.token() + " does not fit the padded length");
+        }
+        return written;
     }
 
     static String routeOf(PushMessageKind kind) {

@@ -26,11 +26,20 @@ class OperationalAlertTest {
     @Test
     @DisplayName("Given an open alert, when it is resolved, then it is closed and counts another change, and resolving it again changes nothing")
     void should_resolve_once_when_resolved_given_open_alert() {
-        OperationalAlert resolved = OperationalAlert.closed(MonitoredArea.BACKUPS).openedAt(NOW).orElseThrow().resolved().orElseThrow();
+        OperationalAlert resolved = OperationalAlert.closed(MonitoredArea.BACKUPS).openedAt(NOW).orElseThrow().resolvedAt(NOW.plusSeconds(60)).orElseThrow();
 
         assertThat(resolved).isEqualTo(new OperationalAlert(MonitoredArea.BACKUPS, Optional.empty(), 2));
         assertThat(resolved.open()).isFalse();
-        assertThat(resolved.resolved()).isEmpty();
+        assertThat(resolved.resolvedAt(NOW.plusSeconds(120))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given an alert opened after a success was seen, when that older success is recorded, then the alert stays open")
+    void should_stay_open_when_resolved_given_success_older_than_the_opening() {
+        OperationalAlert opened = OperationalAlert.closed(MonitoredArea.MAIL).openedAt(NOW).orElseThrow();
+
+        assertThat(opened.resolvedAt(NOW.minusSeconds(1))).isEmpty();
+        assertThat(opened.resolvedAt(NOW)).isPresent();
     }
 
     @Test

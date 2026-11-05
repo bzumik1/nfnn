@@ -43,12 +43,13 @@ public class BackupWatchService {
             if (state.reporting()) {
                 states.save(BackupAlertState.nothingReported());
                 events.publishEvent(new BackupRecovered(state.reportedProblems(), view, now));
-                events.publishEvent(OperationalAlertRaised.resolved(OperationalAlertRaised.Area.BACKUPS, now));
                 log.info("Backups are healthy again after {}", state.reportedProblems());
             }
+            events.publishEvent(OperationalAlertRaised.resolved(OperationalAlertRaised.Area.BACKUPS, now));
             return problems;
         }
         if (problems.equals(state.reportedProblems())) {
+            events.publishEvent(OperationalAlertRaised.opened(OperationalAlertRaised.Area.BACKUPS, now));
             log.warn("Backup problems continue: {}", problems);
             return problems;
         }

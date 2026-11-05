@@ -41,7 +41,7 @@ class JpaOperationalAlertRepositoryTest {
         assertThat(alerts.find(MonitoredArea.BACKUPS)).contains(opened);
         assertThat(alerts.findAll()).contains(opened, OperationalAlert.closed(MonitoredArea.MAIL));
 
-        OperationalAlert resolved = opened.resolved().orElseThrow();
+        OperationalAlert resolved = opened.resolvedAt(NOW.plusSeconds(60)).orElseThrow();
         alerts.save(resolved);
 
         assertThat(alerts.find(MonitoredArea.BACKUPS)).contains(resolved);

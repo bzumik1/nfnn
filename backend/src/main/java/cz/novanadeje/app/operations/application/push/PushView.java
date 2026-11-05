@@ -4,5 +4,5 @@ import cz.novanadeje.app.operations.domain.alerts.OperationalAlert;
 
 import java.util.List;
 
-public record PushView(String publicKey, List<PushSubscriptionView> subscriptions, List<OperationalAlert> openAlerts) {
+public record PushView(String publicKey, boolean deviceSession, List<PushSubscriptionView> subscriptions, List<OperationalAlert> openAlerts) {
 }
