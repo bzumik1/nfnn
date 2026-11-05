@@ -16,6 +16,8 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { Connectivity } from '../../../core/connectivity/connectivity';
+import { formatDataDay } from '../../../core/connectivity/data-time';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { CopyButton } from '../../../shared/ui/copy-button/copy-button';
 import { QrCode } from '../../../shared/ui/qr-code/qr-code';
@@ -87,6 +89,7 @@ export type PaymentAccountState =
 })
 export class PaymentPanel {
   private readonly store = inject(PaymentDetailsStore);
+  private readonly connectivity = inject(Connectivity);
   private readonly injector = inject(Injector);
   private readonly chosenAmount = inject(ChosenAmountStore);
   private readonly localPaymentRoute = inject(LocalPaymentRoute);
@@ -214,6 +217,14 @@ export class PaymentPanel {
       return { kind: 'ready', account };
     }
     return this.store.state().kind === 'loading' ? { kind: 'loading' } : { kind: 'failed' };
+  });
+
+  protected readonly detailsAge = computed(() => {
+    const age = this.store.age();
+    if (age === null || (!age.kept && !this.connectivity.offline())) {
+      return null;
+    }
+    return { day: age.writtenAt === null ? null : formatDataDay(age.writtenAt) };
   });
 
   protected readonly ibanInGroups = computed(() => {

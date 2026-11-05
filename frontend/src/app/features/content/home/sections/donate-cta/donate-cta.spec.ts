@@ -7,6 +7,7 @@ import { QrCode } from '../../../../../shared/ui/qr-code/qr-code';
 import { encodeText } from '../../../../../shared/ui/qr-code/qr-encoder';
 import { QrMatrix } from '../../../../../shared/ui/qr-code/qr-matrix';
 import { PaymentDetails } from '../../../../donations/payment-details-api';
+import { KEPT_PAYMENT_DETAILS } from '../../../../donations/payment-details-store';
 import {
   foundationPaymentDetails,
   paymentQrCase,
@@ -573,6 +574,48 @@ describe('Given the donate section', () => {
     expect(frames).toEqual([true, true]);
     expect(drawnMatrixIs(qrOfTyped(250))).toBe(true);
     http.expectNone(() => true);
+  });
+
+  it('when the payment details fail to load but the browser kept them from an earlier visit, then the QR and the bank details are drawn from them with the day they were written and a note that they may be out of date', async () => {
+    localStorage.setItem(
+      KEPT_PAYMENT_DETAILS,
+      JSON.stringify({
+        details: foundationPaymentDetails(),
+        writtenAt: Date.parse('2026-11-03T09:00:00Z'),
+      }),
+    );
+    await settle();
+
+    http
+      .expectOne((request) => request.url === PAYMENT_DETAILS_URL)
+      .flush(null, { status: 0, statusText: 'Unknown Error' });
+    await settle();
+
+    expect(drawnMatrixIs(QR_OF_500)).toBe(true);
+    expect(squashed('.bank [role="note"]')).toBe('Údaje účtu z 03. 11. 2026 · nemusí být aktuální');
+    expect(element('.qr-error')).toBeNull();
+  });
+
+  it('when the kept payment details carry no day, then the note says only that they may be out of date', async () => {
+    localStorage.setItem(
+      KEPT_PAYMENT_DETAILS,
+      JSON.stringify({ details: foundationPaymentDetails(), writtenAt: null }),
+    );
+    await settle();
+
+    http
+      .expectOne((request) => request.url === PAYMENT_DETAILS_URL)
+      .flush(null, { status: 0, statusText: 'Unknown Error' });
+    await settle();
+
+    expect(drawnMatrixIs(QR_OF_500)).toBe(true);
+    expect(squashed('.bank [role="note"]')).toBe('Údaje účtu nemusí být aktuální');
+  });
+
+  it('when the payment details come from the server, then no note about their age is shown', async () => {
+    await openWithQr();
+
+    expect(element('.bank [role="note"]')).toBeNull();
   });
 
   it('when the payment details fail to load, then it says so in Czech and asking again loads them and draws the QR', async () => {
