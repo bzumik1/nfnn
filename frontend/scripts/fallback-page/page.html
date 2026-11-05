@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="cs">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Web je dočasně nedostupný · Nová naděje</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --accent: #2563eb;
+        --text: #1a1a2e;
+        --muted: #4b5563;
+        --surface: #ffffff;
+        --surface-muted: #f1f3f5;
+        --border: #e5e7eb;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        font-size: 100%;
+      }
+      body {
+        margin: 0;
+        background: var(--surface-muted);
+        color: var(--text);
+        font-family:
+          system-ui,
+          -apple-system,
+          'Segoe UI',
+          Roboto,
+          'Helvetica Neue',
+          Arial,
+          sans-serif;
+        line-height: 1.55;
+        -webkit-text-size-adjust: 100%;
+      }
+      main {
+        max-width: 46rem;
+        margin: 0 auto;
+        padding: 2rem 1rem 3rem;
+      }
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 1.25rem;
+        padding: clamp(1rem, 5vw, 1.5rem);
+      }
+      .card + .card {
+        margin-top: 1rem;
+      }
+      .logo {
+        display: block;
+        width: 12rem;
+        max-width: 100%;
+        height: auto;
+        margin: 0 0 1.5rem;
+      }
+      h1,
+      h2 {
+        overflow-wrap: break-word;
+        hyphens: auto;
+      }
+      h1 {
+        font-size: 1.75rem;
+        line-height: 1.2;
+        margin: 0 0 0.75rem;
+      }
+      h2 {
+        font-size: 1.25rem;
+        line-height: 1.3;
+        margin: 0 0 0.75rem;
+      }
+      p {
+        margin: 0 0 0.75rem;
+      }
+      .muted {
+        color: var(--muted);
+      }
+      a {
+        color: var(--accent);
+        text-underline-offset: 0.15em;
+      }
+      a:focus-visible {
+        outline: 3px solid var(--accent);
+        outline-offset: 3px;
+        border-radius: 0.25rem;
+      }
+      .button {
+        display: inline-block;
+        margin-top: 0.25rem;
+        padding: 0.75rem 1.25rem;
+        border-radius: 999px;
+        background: var(--accent);
+        color: #ffffff;
+        font-weight: 600;
+        text-decoration: none;
+      }
+      .pay {
+        display: grid;
+        gap: 1.25rem;
+        grid-template-columns: minmax(0, 1fr);
+        align-items: start;
+        margin: 1rem 0;
+      }
+      .bank {
+        margin: 0;
+      }
+      .bank div {
+        padding: 0.5rem 0;
+        border-bottom: 1px solid var(--border);
+      }
+      .bank div:last-child {
+        border-bottom: 0;
+      }
+      .bank dt {
+        font-size: 0.875rem;
+        color: var(--muted);
+      }
+      .bank dd {
+        margin: 0;
+        font-size: 1.125rem;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+        overflow-wrap: anywhere;
+      }
+      .qr-figure {
+        margin: 0;
+        text-align: center;
+      }
+      .qr {
+        display: block;
+        width: 100%;
+        max-width: 14rem;
+        height: auto;
+        margin: 0 auto;
+      }
+      .qr-figure figcaption {
+        font-size: 0.875rem;
+        color: var(--muted);
+        margin-top: 0.5rem;
+      }
+      footer {
+        margin-top: 1.5rem;
+        font-size: 0.875rem;
+        color: var(--muted);
+        text-align: center;
+      }
+      @media (min-width: 40rem) {
+        .pay {
+          grid-template-columns: minmax(0, 1fr) 14rem;
+        }
+      }
+      @media (prefers-contrast: more) {
+        :root {
+          --muted: #1f2937;
+          --border: #6b7280;
+        }
+      }
+      @media (forced-colors: active) {
+        .button {
+          border: 2px solid ButtonText;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="card" aria-labelledby="nedostupny">
+        {{ logo }}
+        <h1 id="nedostupny">Web je dočasně nedostupný</h1>
+        <p>
+          Server Nadačního fondu Nová naděje teď neodpovídá. Pracujeme na tom, zkuste to prosím za
+          chvíli znovu.
+        </p>
+        <p><a class="button" href="/">Zkusit znovu</a></p>
+      </section>
+      <section class="card" aria-labelledby="prispet">
+        <h2 id="prispet">Přispět můžete i teď</h2>
+        <p>Pošlete dar převodem na účet fondu. QR kód nemá částku, zadáte ji v aplikaci banky.</p>
+        <div class="pay">
+          <dl class="bank">
+            <div>
+              <dt>Číslo účtu</dt>
+              <dd>{{ accountNumber }}</dd>
+            </div>
+            <div>
+              <dt>IBAN</dt>
+              <dd>{{ iban }}</dd>
+            </div>
+          </dl>
+          <figure class="qr-figure">
+            {{ qr }}
+            <figcaption>QR platba na účet fondu, bez částky</figcaption>
+          </figure>
+        </div>
+        <p class="muted">
+          Máte u fondu účet dárce? Napište k platbě svůj variabilní symbol z přehledu, dar se vám
+          pak spáruje sám.
+        </p>
+      </section>
+      <section class="card" aria-labelledby="kontakt">
+        <h2 id="kontakt">Kontakt</h2>
+        <p>Napište nám na <a href="mailto:info@nfnn.cz">info@nfnn.cz</a>.</p>
+      </section>
+      <footer>
+        <p>
+          Nová naděje – nadační fond · Zapsán u KS Ústí nad Labem, oddíl N, vložka 78 · IČO 27278794
+        </p>
+      </footer>
+    </main>
+  </body>
+</html>

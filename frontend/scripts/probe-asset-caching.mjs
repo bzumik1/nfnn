@@ -9,6 +9,8 @@ if (!baseUrl || !distDir || !nginxConf) {
 }
 
 const IMMUTABLE = 'public, max-age=31536000, immutable';
+const SHELL_AT_EDGE = 'max-age=0, stale-if-error=604800';
+const HOURLY_AT_EDGE = 'max-age=3600, stale-if-error=604800';
 const HASHED_BUNDLE = /^(?:chunk|main|polyfills|styles|worker)-[A-Za-z0-9_-]{8}\.(?:js|css)$/;
 const HASHED_RECEIPT_FONT = /^receipt-fonts\/(?:body|body-bold|heading)\.[0-9a-f]{16}\.ttf$/;
 const NEVER_IMMUTABLE = [
@@ -44,7 +46,7 @@ const MISSING_ASSETS = [
   '/receipt-fonts/body.ttf',
 ];
 const UNCACHED_ERROR = new Set(['no-store', 'no-cache']);
-const APP_ROUTES = ['/', '/darce/prehled', '/sprava', '/aktuality/nejaka-zprava'];
+const APP_ROUTES = ['/', '/overit', '/darce/prehled', '/sprava', '/aktuality/nejaka-zprava'];
 
 const failures = [];
 const fail = (message) => failures.push(message);
@@ -66,6 +68,14 @@ function expectedCacheControl(file) {
   return 'no-cache';
 }
 
+function expectedEdgeCacheControl(file) {
+  const browser = expectedCacheControl(file);
+  if (browser === 'no-cache') {
+    return SHELL_AT_EDGE;
+  }
+  return browser === IMMUTABLE ? '' : HOURLY_AT_EDGE;
+}
+
 function expectedContentType(file) {
   return file.endsWith('.ttf') ? 'font/ttf' : null;
 }
@@ -76,6 +86,8 @@ async function request(path) {
   return {
     status: response.status,
     cacheControl: response.headers.get('cache-control') ?? '',
+    edge: response.headers.get('cloudflare-cdn-cache-control') ?? '',
+    validator: response.headers.get('etag') ?? response.headers.get('last-modified') ?? '',
     contentType: response.headers.get('content-type') ?? '',
     contentEncoding: response.headers.get('content-encoding') ?? '',
     csp: response.headers.get('content-security-policy') ?? '',
@@ -148,6 +160,13 @@ for (const file of built) {
   if (answer.cacheControl !== expected) {
     fail(`/${file} has Cache-Control "${answer.cacheControl}", expected "${expected}"`);
   }
+  const edge = expectedEdgeCacheControl(file);
+  if (answer.edge !== edge) {
+    fail(`/${file} has Cloudflare-CDN-Cache-Control "${answer.edge}", expected "${edge}"`);
+  }
+  if (edge !== '' && answer.validator === '') {
+    fail(`/${file} carries neither ETag nor Last-Modified, so Cloudflare cannot revalidate it`);
+  }
   const contentType = expectedContentType(file);
   if (contentType !== null && answer.contentType !== contentType) {
     fail(`/${file} has Content-Type "${answer.contentType}", expected "${contentType}"`);
@@ -177,6 +196,11 @@ for (const path of [...MISSING_HASHED, ...MISSING_ASSETS]) {
   if (!UNCACHED_ERROR.has(answer.cacheControl)) {
     fail(`missing ${path} answered with "${answer.cacheControl}", so its 404 could be kept`);
   }
+  if (answer.edge !== '' && answer.edge !== 'no-store') {
+    fail(
+      `missing ${path} answered with Cloudflare-CDN-Cache-Control "${answer.edge}", so Cloudflare could keep its 404`,
+    );
+  }
   if (!answer.csp) {
     fail(`missing ${path} carries no Content-Security-Policy`);
   }
@@ -189,6 +213,14 @@ for (const path of APP_ROUTES) {
   }
   if (answer.cacheControl !== 'no-cache') {
     fail(`the app route ${path} has Cache-Control "${answer.cacheControl}", expected "no-cache"`);
+  }
+  if (answer.edge !== SHELL_AT_EDGE) {
+    fail(
+      `the app route ${path} has Cloudflare-CDN-Cache-Control "${answer.edge}", expected "${SHELL_AT_EDGE}", so Cloudflare could not serve it during an outage`,
+    );
+  }
+  if (answer.validator === '') {
+    fail(`the app route ${path} carries neither ETag nor Last-Modified`);
   }
 }
 
@@ -205,5 +237,5 @@ if (failures.length > 0) {
   process.exit(1);
 }
 console.log(
-  `asset caching: ${hashed.length} hashed bundles and ${receiptFonts.length} receipt fonts immutable, ${built.length} built files checked, missing files answer 404`,
+  `asset caching: ${hashed.length} hashed bundles and ${receiptFonts.length} receipt fonts immutable, ${built.length} built files checked, the app shell and the hourly files served stale by Cloudflare during an outage, missing files answer 404`,
 );
