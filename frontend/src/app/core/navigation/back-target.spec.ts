@@ -109,6 +109,17 @@ describe('Given the back target of the app', () => {
     expect(back.returningByButton).toBe(false);
   });
 
+  it('when back returns to the page before, then the app names the page it left, so the list can focus the link to it', async () => {
+    await router.navigateByUrl('/aktuality/druhy?strana=2');
+
+    const returned = navigated(router);
+    back.back('/aktuality');
+    await returned;
+
+    expect(router.url).toBe('/aktuality/clanek');
+    expect(back.leftPath).toBe('/aktuality/druhy');
+  });
+
   it("when the browser returns by itself, then the return is not the app's button", async () => {
     await router.navigateByUrl('/aktuality/druhy');
 

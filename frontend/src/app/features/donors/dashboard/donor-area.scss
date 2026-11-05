@@ -1,4 +1,5 @@
 :host {
+  --side-nav-sticky-top: var(--space-4);
   display: block;
   min-height: 100vh;
   padding-top: calc(var(--header-height) + env(safe-area-inset-top));

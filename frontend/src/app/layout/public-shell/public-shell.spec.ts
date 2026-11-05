@@ -2,7 +2,14 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { NavigationEnd, provideRouter, Router, withInMemoryScrolling } from '@angular/router';
+import {
+  NavigationEnd,
+  NavigationStart,
+  provideRouter,
+  Router,
+  RouterLink,
+  withInMemoryScrolling,
+} from '@angular/router';
 import { filter, firstValueFrom } from 'rxjs';
 import { Location } from '@angular/common';
 import { CompactLayout } from '../../core/layout/compact-layout';
@@ -53,7 +60,11 @@ describe('Given the public shell', () => {
 });
 
 @Component({
-  template: `<section id="uvod"><h1>Úvod</h1></section>
+  imports: [RouterLink],
+  template: `<section id="uvod">
+      <h1>Úvod</h1>
+      <a routerLink="/zasady">Zásady</a>
+    </section>
     <section id="prispet">
       <h2>Přispět</h2>
       <button type="button">500 Kč</button>
@@ -156,6 +167,20 @@ describe('Given the public shell while the visitor moves around the site', () =>
     expect(document.activeElement).toBe(host.querySelector('main h1'));
   });
 
+  it('when they return with the back button of the app to a page that links to the one they left, then that link takes the focus, where the restored scroll shows it', async () => {
+    router.setUpLocationChangeListener();
+    const back = TestBed.inject(BackTarget);
+    await go('/zasady');
+
+    const returned = firstValueFrom(router.events.pipe(filter((e) => e instanceof NavigationEnd)));
+    back.back('/');
+    await returned;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(router.url).toBe('/');
+    expect(document.activeElement).toBe(host.querySelector('main a[href="/zasady"]'));
+  });
+
   it('when a dialog is open during a navigation, then the focus stays in the dialog', async () => {
     const dialog = document.createElement('dialog');
     const field = document.createElement('input');
@@ -168,6 +193,78 @@ describe('Given the public shell while the visitor moves around the site', () =>
 
     expect(document.activeElement).toBe(field);
     dialog.remove();
+  });
+});
+
+describe('Given the public shell created by the navigation itself', () => {
+  let router: Router;
+  let host: HTMLElement | null = null;
+
+  @Component({ template: '<h1>Jinde</h1>' })
+  class Elsewhere {}
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [PublicShell],
+      providers: [
+        provideRouter([
+          { path: 'jinde', component: Elsewhere },
+          { path: 'stary', canActivate: [() => router.parseUrl('/zasady')], children: [] },
+          { path: 'zasady', component: Page },
+        ]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+      ],
+    }).compileComponents();
+    router = TestBed.inject(Router);
+    router.setUpLocationChangeListener();
+  });
+
+  afterEach(() => {
+    const http = TestBed.inject(HttpTestingController);
+    http
+      .match('/api/operations/setup')
+      .forEach((request) => request.flush({ required: false, codeRequired: true }));
+    http.verify();
+    host?.remove();
+    host = null;
+  });
+
+  function createShellOnNextNavigation(): void {
+    const started = router.events.pipe(filter((e) => e instanceof NavigationStart));
+    const subscription = started.subscribe(() => {
+      subscription.unsubscribe();
+      const fixture = TestBed.createComponent(PublicShell);
+      host = fixture.nativeElement as HTMLElement;
+      document.body.appendChild(host);
+    });
+  }
+
+  it('when the browser returns from another area into the public pages, then the focus stays where the browser put it', async () => {
+    await router.navigateByUrl('/zasady');
+    await router.navigateByUrl('/jinde');
+    const outside = document.createElement('button');
+    document.body.appendChild(outside);
+    outside.focus();
+
+    createShellOnNextNavigation();
+    const returned = firstValueFrom(router.events.pipe(filter((e) => e instanceof NavigationEnd)));
+    TestBed.inject(Location).back();
+    await returned;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(router.url).toBe('/zasady');
+    expect(document.activeElement).toBe(outside);
+    outside.remove();
+  });
+
+  it('when the first load is redirected by a guard, then the focus stays where the browser put it', async () => {
+    createShellOnNextNavigation();
+    await router.navigateByUrl('/stary');
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(router.url).toBe('/zasady');
+    expect(host?.contains(document.activeElement)).toBe(false);
   });
 });
 
