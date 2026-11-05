@@ -12,8 +12,8 @@ import {
 const theme = process.env.E2E_THEME;
 const builtApp = theme ? `dist/${theme}-theme/browser` : 'dist/frontend/browser';
 const build = theme
-  ? `npx ng build --configuration=production,${theme}-theme --output-path=dist/${theme}-theme`
-  : 'npx ng build';
+  ? `npm run build -- --configuration=production,${theme}-theme --output-path=dist/${theme}-theme`
+  : 'npm run build';
 const served = process.env.E2E_DIST ?? builtApp;
 const askedProjects = process.argv.filter((argument) => argument.startsWith('--project='));
 const onlyWebApp =
