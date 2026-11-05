@@ -1064,7 +1064,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
-  test('when an administrator opens the administration menu on a phone, then the open side panel breaks no rule', async ({
+  test('when an administrator opens the administration on a phone, then its overview with the section rows and the page of further sections break no rule', async ({
     page,
   }) => {
     await page.route(
@@ -1125,11 +1125,14 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
       page.getByRole('region', { name: 'Co potřebuje vaši pozornost' }).getByRole('alert'),
     ).toHaveCount(2);
     expect(await violations(page)).toEqual([]);
-    await page.getByRole('button', { name: 'Menu správy' }).click();
+    await page
+      .getByRole('navigation', { name: 'Sekce správy' })
+      .getByRole('link', { name: /Lidé fondu, správci, zálohy/ })
+      .click();
     await expect(
       page
-        .getByRole('navigation', { name: 'Správa' })
-        .getByRole('link', { name: 'Přehled', exact: true }),
+        .getByRole('navigation', { name: 'Další sekce správy' })
+        .getByRole('link', { name: 'Zálohy' }),
     ).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
