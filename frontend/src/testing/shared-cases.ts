@@ -270,6 +270,12 @@ export interface SyncManifest {
   readonly chunks: readonly SyncChunk[];
 }
 
+export interface AdminSyncManifest {
+  readonly subject: string;
+  readonly administrator: boolean;
+  readonly chunks: readonly SyncChunk[];
+}
+
 export interface CanonicalRowsInput {
   readonly rows: readonly unknown[];
 }
@@ -296,6 +302,7 @@ export interface SharedCaseTopics {
   readonly 'signature/vector.json': SharedCase<SignatureVectorInput, SignatureVectorExpected>;
   readonly 'sync/canonical.json': SharedCase<CanonicalRowsInput, CanonicalRowsExpected>;
   readonly 'sync/manifest.json': SharedCase<RowsInput, SyncManifest>;
+  readonly 'sync/admin-manifest.json': SharedCase<RowsInput, AdminSyncManifest>;
   readonly 'receipts/printable.json': SharedCase<{ readonly text: string }, PrintableText>;
   readonly 'receipts/v1/frozen.json': SharedCase<FrozenReceiptInput, FrozenReceipt>;
   readonly 'receipts/v1/printed.json': SharedCase<{ readonly v2Sample: string }, PrintedReceipt>;
@@ -320,6 +327,7 @@ const REGISTERED_TOPICS: Readonly<Record<SharedCaseTopic, true>> = {
   'signature/vector.json': true,
   'sync/canonical.json': true,
   'sync/manifest.json': true,
+  'sync/admin-manifest.json': true,
   'receipts/printable.json': true,
   'receipts/v1/frozen.json': true,
   'receipts/v1/printed.json': true,

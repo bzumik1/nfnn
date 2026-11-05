@@ -412,6 +412,30 @@ class JpaDonationReceiptRepositoryTest {
     }
 
     @Test
+    @DisplayName("Given receipts of two donors, active, replaced and withdrawn, when every receipt is listed newest first, then all come, latest issue and higher number first")
+    void should_list_every_receipt_newest_first_when_all_listed_given_receipts_of_two_donors() {
+        DonorReference jana = storedDonor("4821937560");
+        DonorReference petr = storedDonor("7310945528");
+        Donation march = storedDonation(jana, LocalDate.of(2026, 3, 15));
+        DonationReceipt replaced = single(jana, march, "2026-000001");
+        receipts.save(replaced);
+        replaced.markSuperseded(NOW.plusSeconds(60));
+        receipts.save(replaced);
+        DonationReceipt sameInstantHigher = single(jana, march, "2026-000002");
+        receipts.save(sameInstantHigher);
+        DonationReceipt withdrawn = issued(petr, NOW.plusSeconds(120), yearlyDocument(YEAR_2025, "2026-000003", Optional.empty()), Optional.empty());
+        receipts.save(withdrawn);
+        withdrawn.withdrawBecauseDonationsChanged(NOW.plusSeconds(180));
+        receipts.save(withdrawn);
+        DonationReceipt earliest = issued(petr, NOW.minusSeconds(60), yearlyDocument(YEAR_2026, "2026-000004", Optional.empty()), Optional.empty());
+        receipts.save(earliest);
+        flushAndClear();
+
+        assertThat(receipts.findAllNewestFirst()).extracting(receipt -> receipt.number().value())
+                .containsExactly("2026-000003", "2026-000002", "2026-000001", "2026-000004");
+    }
+
+    @Test
     @DisplayName("Given the receipt number sequence, when two serials are taken, then the second is one more than the first")
     void should_increment_when_next_serial_taken_given_sequence() {
         long first = receipts.nextSerial();

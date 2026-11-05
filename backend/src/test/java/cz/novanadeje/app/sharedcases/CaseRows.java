@@ -1,5 +1,6 @@
 package cz.novanadeje.app.sharedcases;
 
+import cz.novanadeje.app.shared.domain.ErasedPersonalData;
 import cz.novanadeje.app.support.DatabaseCleaner;
 import cz.novanadeje.app.support.MutableClock;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -25,6 +26,7 @@ public final class CaseRows {
     private static final long ID_HIGH = 0x0190a000_0000_7000L;
     private static final long ID_LOW = 0x8000_0000_0000_0000L;
     private static final int ADMINISTRATOR = 0x999;
+    private static final String ADMINISTRATOR_ALIAS = "administrator";
 
     private final String now;
     private final List<Donor> donors = new ArrayList<>();
@@ -78,6 +80,7 @@ public final class CaseRows {
     public JsonNode aliased(JsonNode answer) {
         Map<String, String> aliases = new LinkedHashMap<>();
         ids.forEach((alias, id) -> aliases.put(id.toString(), alias));
+        aliases.put(administratorId().toString(), ADMINISTRATOR_ALIAS);
         return aliased(answer, aliases);
     }
 
@@ -102,6 +105,16 @@ public final class CaseRows {
         return new UUID(ID_HIGH, ID_LOW + ADMINISTRATOR);
     }
 
+    public void writeAdministrator(JdbcClient jdbc) {
+        jdbc.sql("insert into donor (id, type, name, company_identifier, street, city, postal_code, email, password_hash, variable_symbol, "
+                        + "preferred_locale, registered_at, email_verified_at, erased_at) values (:id, 'PERSON', 'Správce případů', null, 'Dlouhá 12', "
+                        + "'Ústí nad Labem', '400 01', 'spravce@example.cz', null, '3999999999', 'cs', :at, :at, null)")
+                .param("id", administratorId())
+                .param("at", timestamp(now))
+                .update();
+        jdbc.sql("insert into donor_role (donor_id, role) values (:id, 'ADMIN')").param("id", administratorId()).update();
+    }
+
     public void write(JdbcClient jdbc, MutableClock clock) {
         new DatabaseCleaner(jdbc).emptyAllTables();
         clock.set(Instant.parse(now));
@@ -110,10 +123,13 @@ public final class CaseRows {
             UUID id = donorId(donor.alias());
             ++sequence;
             jdbc.sql("insert into donor_record (donor_id, type, name, company_identifier, street, city, postal_code, variable_symbol, "
-                            + "preferred_locale, registered_at, updated_at, erased_at) values (:id, 'PERSON', :name, null, 'Dlouhá 12', 'Ústí nad Labem', "
-                            + "'400 01', :symbol, 'cs', :registered, :registered, :erased)")
+                            + "preferred_locale, registered_at, updated_at, erased_at) values (:id, 'PERSON', :name, null, :street, :city, :postalCode, "
+                            + ":symbol, 'cs', :registered, :registered, :erased)")
                     .param("id", id)
-                    .param("name", "Dárce " + donor.alias())
+                    .param("name", donor.erasedAt().isPresent() ? ErasedPersonalData.NAME : "Dárce " + donor.alias())
+                    .param("street", donor.erasedAt().isPresent() ? ErasedPersonalData.ADDRESS.street() : "Dlouhá 12")
+                    .param("city", donor.erasedAt().isPresent() ? ErasedPersonalData.ADDRESS.city() : "Ústí nad Labem")
+                    .param("postalCode", donor.erasedAt().isPresent() ? ErasedPersonalData.ADDRESS.postalCode() : "400 01")
                     .param("symbol", Long.toString(4000000000L + sequence))
                     .param("registered", timestamp(donor.registeredAt()))
                     .param("erased", donor.erasedAt().map(CaseRows::timestamp).orElse(null))

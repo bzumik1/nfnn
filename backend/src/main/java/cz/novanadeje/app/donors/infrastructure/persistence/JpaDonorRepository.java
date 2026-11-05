@@ -61,6 +61,11 @@ class JpaDonorRepository implements DonorRepository {
     }
 
     @Override
+    public List<Donor> findAll() {
+        return jpa.findAllWithRoles().stream().map(DonorJpaEntity::toDomain).toList();
+    }
+
+    @Override
     public List<Donor> findByIds(Collection<DonorId> ids) {
         if (ids.isEmpty()) {
             return List.of();

@@ -48,6 +48,8 @@ interface BankPaymentJpaRepository extends JpaRepository<BankPaymentJpaEntity, U
 
     List<BankPaymentJpaEntity> findByImportedAtGreaterThanEqual(Instant from);
 
+    List<BankPaymentJpaEntity> findAllByOrderByBookedOnDescTransactionIdDesc();
+
     @Query(UNPAIRED + " and p.importedAt >= :from")
     List<BankPaymentJpaEntity> findUnpairedImportedSince(@Param("from") Instant from);
 }
