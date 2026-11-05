@@ -10,7 +10,7 @@ Before building, read the sections you touch (grep them: `api-contract.md` is to
 |---|---|
 | `backend/` | Spring Boot 4.1, Java 25, Gradle Kotlin DSL. Strict DDD: `cz.novanadeje.app.{content,donors,donations,contact,operations}` + `shared`, each `domain / application / infrastructure / interfaces/rest`, enforced by ArchUnit |
 | `frontend/` | Angular 22 standalone, zoneless, signals, SCSS design tokens, Vitest, Playwright + axe |
-| `mcp/` | MCP connector of the administration (Node 24, TypeScript, MCP SDK v2, Vitest), served by the frontend nginx at `/mcp`; contract in `docs/api-contract.md` "MCP connector" |
+| `mcp/` | MCP connector of the administration (Node 26, TypeScript, MCP SDK v2, Vitest), served by the frontend nginx at `/mcp`; contract in `docs/api-contract.md` "MCP connector" |
 | `regression/`, `shared-cases/`, `scripts/` | The v2 baseline (`regression/v2/`: API, mail and log transcripts of every scenario, the test inventory, the receipt corpus, the screens manifest, `changes/` for each deliberate difference since), the cases backend and frontend both run (`shared-cases/<topic>/*.json` with their JSON Schemas in `shared-cases/schemas/`: the living specification of those computations, edited by hand first when a computation changes, `source` `edited` from then on, declared in `changes/`, `testing.md` "Logic on both sides") and the Node scripts that collect them and compare a fresh recording with them and with the recording of the latest `main` (`compare-v2.mjs`, the PR's "Srovnání s v2"); `regression/v2/` is regenerated only from the commit in `regression/v2/BASELINE_COMMIT` as `testing.md` "Regression against v2" says and never edited by hand, except `regression/v2/changes/`, where each PR adds its declarations |
 | `deploy/` | Production: `compose.yml` for ZimaOS, the `backup/` and `postgres/` images, `README.md`; `docker-compose.yml` at the root is the local stack |
 | `.github/` | `pr-check.yml` on every PR and on a push to `main`: a change to code runs every job, one to only `docs/`, `.claude/` or Markdown none, and its `release` job rehearses the deploy from the revision in `.github/deployed-revision` and the rollback to it, and its `gate` job is the check to require; `roadmap-check.yml` on every PR (Dependabot's and docs-only ones pass) fails unless `docs/roadmap.md` changes or the description says `Roadmapa: beze změny`; `images.yml` on push to `main` publishes the ghcr.io images; `dependabot.yml` |
@@ -24,7 +24,7 @@ Before building, read the sections you touch (grep them: `api-contract.md` is to
 | `./gradlew test --tests "*architecture*" -PnoCucumber` | ArchUnit only, no Docker. `--tests` filters only the `test` task, so any `--tests` run without `-PnoCucumber` also runs every scenario |
 | `./gradlew acceptanceTest` | Cucumber suites only; `CUCUMBER_FILTER_TAGS=@tag` narrows them (tags in `testing.md`) |
 | `./gradlew bootTestRun` | app with Testcontainers PostgreSQL; `bootRun` uses an external Postgres (`dev` profile) |
-| **Frontend, in `frontend/`** (Node ^22.22.3, ^24.15 or ≥ 26; CI and the images use 24) | |
+| **Frontend, in `frontend/`** (Node ^22.22.3, ^24.15 or ≥ 26; CI and the images use 26) | |
 | `npm ci`, `npm start` | dependencies; dev server :4200 with `/api` proxied to :8080 |
 | `npm run format`, `npm run format:check` | Prettier over `src/`, `e2e/` and the config files |
 | `npm run lint` | ESLint (angular-eslint): TypeScript, templates and their accessibility, and `tsc` over the Vitest setup |
@@ -37,7 +37,7 @@ Before building, read the sections you touch (grep them: `api-contract.md` is to
 | `npm ci`, `npm run check`, `npm run build` | `check` is Prettier, `tsc` and Vitest, as in CI |
 | **Stack** | `cp .env.example .env && docker compose up -d --build`, site on :8080; the `prod` profile asks for the server's settings at `/prvni-nastaveni` and generates its keys into the `backend-secrets` volume |
 
-Cloud sessions (skill `cloud-session`): Gradle needs a Maven Central mirror, `LC_ALL=C.UTF-8` and, for Testcontainers, `dockerd`; the preinstalled Node 22.22.0 is too old for `ng` (install Node 24 first); the preinstalled Chromium is older than Playwright's pin (`npx playwright install --only-shell chromium` once).
+Cloud sessions (skill `cloud-session`): Gradle needs a Maven Central mirror, `LC_ALL=C.UTF-8` and, for Testcontainers, `dockerd`; the preinstalled Node 22.22.0 is too old for `ng` (install Node 26 first); the preinstalled Chromium is older than Playwright's pin (`npx playwright install --only-shell chromium` once).
 
 ## Production logs
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SessionStart hook: a cloud session starts from a fresh clone. Puts Node 24
+# SessionStart hook: a cloud session starts from a fresh clone. Puts Node 26
 # first on PATH when the image's Node is too old for Angular 22, then installs
 # the frontend's and the connector's dependencies. Playwright's browser build
 # is not installed here: run npx playwright install --only-shell chromium once (skill
@@ -9,15 +9,15 @@
 root=$(cd "${CLAUDE_PROJECT_DIR:-$(dirname "$0")/../..}" && pwd) || exit 0
 
 if ! node -e 'const [a,b,c]=process.versions.node.split(".").map(Number);process.exit((a===22&&(b>22||b===22&&c>=3))||(a===24&&b>=15)||a>=26?0:1)' 2>/dev/null; then
-  base=https://nodejs.org/dist/latest-v24.x
-  v=$(curl -fsS "$base/SHASUMS256.txt" | grep -o 'node-v24[^ ]*-linux-x64\.tar\.xz')
+  base=https://nodejs.org/dist/latest-v26.x
+  v=$(curl -fsS "$base/SHASUMS256.txt" | grep -o 'node-v26[^ ]*-linux-x64\.tar\.xz')
   if [ -n "$v" ] && (cd /tmp && curl -fsSO "$base/$v" && curl -fsS "$base/SHASUMS256.txt" | grep " $v\$" | sha256sum -c - >/dev/null \
-    && mkdir -p /opt/node24 "$HOME/.local/bin" && tar -xJf "$v" -C /opt/node24 --strip-components=1; s=$?; rm -f "/tmp/$v"; exit $s); then
-    ln -sf /opt/node24/bin/node /opt/node24/bin/npm /opt/node24/bin/npx "$HOME/.local/bin/"
+    && mkdir -p /opt/node26 "$HOME/.local/bin" && tar -xJf "$v" -C /opt/node26 --strip-components=1; s=$?; rm -f "/tmp/$v"; exit $s); then
+    ln -sf /opt/node26/bin/node /opt/node26/bin/npm /opt/node26/bin/npx "$HOME/.local/bin/"
     [ -n "$CLAUDE_ENV_FILE" ] && echo "export PATH=\"$HOME/.local/bin:\$PATH\"" >> "$CLAUDE_ENV_FILE"
     export PATH="$HOME/.local/bin:$PATH"
   else
-    echo "Could not install Node 24; Angular 22 needs Node ^22.22.3, ^24.15 or >= 26 (skill cloud-session)"
+    echo "Could not install Node 26; Angular 22 needs Node ^22.22.3, ^24.15 or >= 26 (skill cloud-session)"
   fi
 fi
 
