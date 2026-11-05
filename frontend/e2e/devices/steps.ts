@@ -20,6 +20,8 @@ export interface Step {
 export const NOT_ON_THIS_DEVICE = 'not on this device';
 
 const DIALOG = { css: 'dialog' };
+const OTHER_DEVICE = { css: '#prispet button.other-device' };
+const DONATE_QR = { css: '#prispet .qr-code [role="img"]' };
 
 async function rememberedSession(ui: Ui, user: typeof donor): Promise<void> {
   await ui.routes.route('**/api/donors/auth/refresh', (route) => route.fulfill(session(200, user)));
@@ -83,8 +85,26 @@ export const STEPS: Step[] = [
       await servePaymentDetails(ui.routes);
       await publicPage(ui, '/#prispet');
       await ui.click({ css: '#prispet button', text: '1 000 Kč' });
-      await ui.waitVisible({ css: '#prispet .qr-code [role="img"]' });
+      if (await ui.isVisible(OTHER_DEVICE)) {
+        await ui.waitVisible({ css: '#prispet .bank-app-open:not([disabled])' });
+      } else {
+        await ui.waitVisible(DONATE_QR);
+      }
       await ui.scrollToTop({ css: '#prispet' });
+    },
+  },
+  {
+    id: 'home-donate-other-device',
+    title: 'the Přispět section with the QR code unfolded for another device',
+    open: async (ui) => {
+      await servePaymentDetails(ui.routes);
+      await publicPage(ui, '/#prispet');
+      if (!(await ui.isVisible(OTHER_DEVICE))) {
+        return NOT_ON_THIS_DEVICE;
+      }
+      await ui.click(OTHER_DEVICE);
+      await ui.waitVisible(DONATE_QR);
+      await ui.scrollToTop(OTHER_DEVICE);
     },
   },
   {
@@ -93,6 +113,9 @@ export const STEPS: Step[] = [
     open: async (ui) => {
       await servePaymentDetails(ui.routes);
       await publicPage(ui, '/#prispet');
+      if (await ui.isVisible(OTHER_DEVICE)) {
+        await ui.click(OTHER_DEVICE);
+      }
       await ui.click({ css: '#prispet button.zoomable' });
       await ui.waitVisible({ css: 'dialog[open] .zoom-qr [role="img"]' });
     },

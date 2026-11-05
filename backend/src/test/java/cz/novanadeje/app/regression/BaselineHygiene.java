@@ -72,6 +72,9 @@ final class BaselineHygiene {
             "4ccd089b28ff96da9db6c346ec114e0f5b8a319f35aba624da8cf6ed4fb8a6fb", "c5aa8df43f9f837bedb7442f31dcb7b166d38535076f094b85ce3a2e0b4458f7",
             "f5e5767cf153319517630f226876b86c8160cc583bc013744c6bf255f5cc0ee5", "833fe62409237b9d62ec77587520911e9a759cec1d19755b7da901b96dca3d42",
             "6e666e6e2d70726f642d746573742d736565642d6e6f742d7266632d38303332");
+    static final Set<String> TEST_PUSH_PRIVATE_KEYS = Set.of("q1dXpw3UpT5VOmu_cf_v6ih07Aems3njxI-JWgLcM94",
+            "yfWPiYE-n46HLnH0KqZOF1fJJU3MYrct3AELtAQ-oRw", "0123456789abcdefghijABCDEFGHIJklmnopqrstuvw");
+    private static final Set<String> PUSH_SUBSCRIPTION_KEY_FIELDS = Set.of("p256dh", "auth");
     private static final Pattern SIGNING_SEED_FIELD = Pattern.compile("(?i)[a-z]*(?:seed|signingkey|privatekey)(?:hex|base64|base64url)?");
     static final Path BASELINE_COMMIT = Path.of("v2", "BASELINE_COMMIT");
     private static final Path REGRESSION_FOLDER = Path.of("regression");
@@ -159,6 +162,7 @@ final class BaselineHygiene {
                 JsonNode json = JSON.readTree(text);
                 unmaskedSecretSettings(json, findings, file);
                 unmaskedSigningKeyFields(json, findings, file);
+                unmaskedPushSubscriptionKeyFields(json, findings, file);
                 unmaskedBackupKeyWords(json, allowedBackupKeyWords(fixtures), fixtures, findings, file);
             } catch (RuntimeException unparsable) {
                 findings.add(file + ": not valid JSON, so the secret-setting rule cannot run");
@@ -186,6 +190,11 @@ final class BaselineHygiene {
         signingSeedSpellings().stream().map(seed -> seed.toLowerCase(Locale.ROOT)).forEach(seed -> {
             for (int at = lowercase.indexOf(seed); at >= 0; at = lowercase.indexOf(seed, at + seed.length())) {
                 findings.add(file + ": a receipt signing seed of the tests starting " + text.substring(at, at + 8));
+            }
+        });
+        pushPrivateKeySpellings().forEach(key -> {
+            for (int at = text.indexOf(key); at >= 0; at = text.indexOf(key, at + key.length())) {
+                findings.add(file + ": a push private key of the tests starting " + text.substring(at, at + 8));
             }
         });
         if (!baselineCommit) {
@@ -277,6 +286,29 @@ final class BaselineHygiene {
                 .flatMap(seed -> Stream.of(HexFormat.of().formatHex(seed), Base64.getEncoder().withoutPadding().encodeToString(seed),
                         Base64.getUrlEncoder().withoutPadding().encodeToString(seed)))
                 .collect(Collectors.toUnmodifiableSet());
+    }
+
+    private static Set<String> pushPrivateKeySpellings() {
+        return TEST_PUSH_PRIVATE_KEYS.stream()
+                .flatMap(key -> {
+                    byte[] scalar = Base64.getUrlDecoder().decode(key);
+                    return Stream.of(key, HexFormat.of().formatHex(scalar), Base64.getEncoder().withoutPadding().encodeToString(scalar));
+                })
+                .collect(Collectors.toUnmodifiableSet());
+    }
+
+    private static void unmaskedPushSubscriptionKeyFields(JsonNode node, List<String> findings, String file) {
+        if (node.isObject()) {
+            for (var field : node.properties()) {
+                JsonNode value = field.getValue();
+                if (PUSH_SUBSCRIPTION_KEY_FIELDS.contains(field.getKey()) && value.isString() && !MASKED.equals(value.asString())) {
+                    findings.add(file + ": an unmasked push subscription key field " + field.getKey());
+                }
+                unmaskedPushSubscriptionKeyFields(value, findings, file);
+            }
+        } else if (node.isArray()) {
+            node.values().forEach(child -> unmaskedPushSubscriptionKeyFields(child, findings, file));
+        }
     }
 
     private static void unmaskedSigningKeyFields(JsonNode node, List<String> findings, String file) {

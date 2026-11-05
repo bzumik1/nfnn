@@ -6,9 +6,12 @@ export const ERROR_KINDS = [
   'qr-encode',
   'verify-parse',
   'verify-signature',
+  'boot',
+  'sw-install',
+  'sw-unrecoverable',
 ] as const;
 
-export const ERROR_PLACES = ['global', 'navigation'] as const;
+export const ERROR_PLACES = ['global', 'navigation', 'start-up', 'service-worker'] as const;
 
 export const ERROR_NAMES = [
   'Error',

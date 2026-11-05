@@ -234,6 +234,11 @@ td.receipt-pdf-cell {
   margin: var(--space-1-5) 0 0;
 }
 
+.receipt-key-note {
+  margin: var(--space-1-5) 0 0;
+  text-align: left;
+}
+
 th.amount,
 td.amount {
   text-align: right;

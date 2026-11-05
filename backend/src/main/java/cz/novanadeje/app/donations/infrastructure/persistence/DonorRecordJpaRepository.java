@@ -23,4 +23,6 @@ interface DonorRecordJpaRepository extends JpaRepository<DonorRecordJpaEntity, U
             + " and (lower(function('translate', r.name, '" + AccentFolding.ACCENTED + "', '" + AccentFolding.PLAIN + "')) like concat('%', :query, '%') escape '!'"
             + " or r.variableSymbol like concat(:query, '%') escape '!') order by r.name, r.donorId")
     List<DonorRecordJpaEntity> searchByNameOrSymbol(@Param("query") String query, Pageable page);
+
+    List<DonorRecordJpaEntity> findAllByOrderByDonorIdAsc();
 }

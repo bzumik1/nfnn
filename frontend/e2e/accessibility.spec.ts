@@ -133,6 +133,39 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
+  test('when they pay from a phone and unfold the QR code for another device, then nothing in Přispět breaks the rules', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/');
+    await expect(page.getByRole('button', { name: 'Otevřít v aplikaci banky' })).toBeEnabled();
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.getByRole('button', { name: /Platíte z jiného zařízení\?/ }).click();
+    await expect(page.locator('#prispet .qr-code svg')).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when they pay from a phone and close the bank offer without a bank, then the line on how to pay without it breaks no rule', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'canShare', { value: () => true, configurable: true });
+      Object.defineProperty(navigator, 'share', {
+        value: () => Promise.reject(new DOMException('Share canceled', 'AbortError')),
+        configurable: true,
+      });
+    });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Otevřít v aplikaci banky' }).click();
+    await expect(page.locator('#prispet .bank-app-hint')).toContainText('Neotevřela se vám banka?');
+
+    expect(await violations(page)).toEqual([]);
+  });
+
   test('when the home page shows published news and projects and they open both pages, then nothing breaks the rules', async ({
     page,
   }) => {
@@ -676,6 +709,31 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
     await page.getByRole('button', { name: 'Jak přiřazujeme platby' }).click();
     await expect(page.getByRole('region', { name: 'Jak přiřazujeme platby' })).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when the browser of a signed-in donor offers the app and they decline it, then the offer and the closing line break no rule', async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.evaluate(() => {
+      const offer = new Event('beforeinstallprompt', { cancelable: true });
+      Object.assign(offer, {
+        prompt: () => Promise.resolve(),
+        userChoice: Promise.resolve({ outcome: 'dismissed', platform: 'web' }),
+      });
+      window.dispatchEvent(offer);
+    });
+    const offer = page.getByRole('region', { name: 'Nová naděje jako aplikace' });
+    await expect(offer).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+
+    await offer.getByRole('button', { name: 'Teď ne' }).click();
+    await expect(
+      page.locator('p', { hasText: 'Dobře, nabídku na tři měsíce skryjeme.' }),
+    ).toBeFocused();
 
     expect(await violations(page)).toEqual([]);
   });

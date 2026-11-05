@@ -798,7 +798,7 @@
         @if (erasedAt() === null) {
           <div class="ui-card__body receipt-issue">
             @if (issueChoices().length > 0) {
-              <form class="receipt-issue__form" (ngSubmit)="issue()">
+              <form class="receipt-issue__form" appTrackedForm (ngSubmit)="issue()">
                 <app-form-field
                   label="Potvrzení k vystavení"
                   i18n-label="@@admin.donorDetail.issue.label"
@@ -909,6 +909,9 @@
                         [id]="receiptPdfId(receipt)"
                         [attr.aria-disabled]="pdfs.drawing(receipt.id) ? 'true' : null"
                         [attr.aria-busy]="pdfs.drawing(receipt.id)"
+                        [attr.aria-describedby]="
+                          signedWithWithdrawnKey(receipt) ? withdrawnKeyNoteId(receipt) : null
+                        "
                         (click)="pdfs.press(receipt.id)"
                       >
                         @if (pdfs.drawing(receipt.id)) {
@@ -932,6 +935,16 @@
                       />
                       @if (pdfs.failure(receipt.id); as failure) {
                         <p class="ui-field-error receipt-pdf-error" role="alert">{{ failure }}</p>
+                      }
+                      @if (signedWithWithdrawnKey(receipt)) {
+                        <p
+                          class="ui-callout ui-callout--warning receipt-key-note"
+                          [id]="withdrawnKeyNoteId(receipt)"
+                          i18n="@@admin.donorDetail.receiptPdf.withdrawnKey"
+                        >
+                          QR na tomto potvrzení podepsal zneplatněný klíč. Stránka /overit ho ukáže
+                          jako zneplatněné.
+                        </p>
                       }
                     }
                   </td>

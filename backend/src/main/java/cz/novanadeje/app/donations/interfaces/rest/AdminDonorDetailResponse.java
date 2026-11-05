@@ -46,13 +46,14 @@ record AdminDonorDetailResponse(AdminDonorRecordResponse donor, List<BankAccount
 
     record ReceiptItemResponse(UUID id, String number, ReceiptKind kind, UUID donationId, LocalDate donationReceivedOn, Integer year,
                                LocalDate issuedOn, Instant issuedAt, String locale, boolean active, Instant withdrawnAt,
-                               ReceiptWithdrawalReason withdrawalReason) {
+                               ReceiptWithdrawalReason withdrawalReason, String keyId) {
 
         static ReceiptItemResponse from(DonationReceipt receipt, LocalDate donationReceivedOn) {
             return new ReceiptItemResponse(receipt.id().value(), receipt.number().value(), receipt.kind(),
                     receipt.donation().map(DonationId::value).orElse(null), donationReceivedOn, receipt.year().map(Year::getValue).orElse(null),
                     receipt.issuedOn(), receipt.issuedAt(), receipt.locale().tag(), receipt.isActive(),
-                    receipt.withdrawal().map(ReceiptWithdrawal::at).orElse(null), receipt.withdrawal().map(ReceiptWithdrawal::reason).orElse(null));
+                    receipt.withdrawal().map(ReceiptWithdrawal::at).orElse(null), receipt.withdrawal().map(ReceiptWithdrawal::reason).orElse(null),
+                    receipt.frozen().verification().keyId().value());
         }
     }
 }

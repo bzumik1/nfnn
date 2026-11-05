@@ -21,6 +21,7 @@ import cz.novanadeje.app.donors.domain.SecondFactorNotEnabled;
 import cz.novanadeje.app.donors.domain.SecondFactorRepository;
 import cz.novanadeje.app.donors.domain.TotpSecret;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.shared.application.event.AdministrationRevoked;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -46,6 +47,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -166,7 +168,7 @@ class AdministratorServiceTest {
     }
 
     @Test
-    @DisplayName("Given another administrator, when the role is revoked, then the donor keeps only DONOR, every session ends and the action is recorded")
+    @DisplayName("Given another administrator, when the role is revoked, then the donor keeps only DONOR, every session ends, the revocation is announced and the action is recorded")
     void should_revoke_role_end_sessions_and_record_action_when_revoked_given_other_administrator() {
         when(donors.findById(PETR)).thenReturn(Optional.of(administrator(PETR, "Petr Svoboda", PETR_EMAIL.value())));
 
@@ -178,8 +180,9 @@ class AdministratorServiceTest {
         verify(refreshTokens).revokeAllOf(PETR, NOW);
         verify(donors).forgetSignIns(PETR);
         ArgumentCaptor<Object> published = ArgumentCaptor.forClass(Object.class);
-        verify(events).publishEvent(published.capture());
-        AdminActionPerformed action = (AdminActionPerformed) published.getValue();
+        verify(events, times(2)).publishEvent(published.capture());
+        assertThat(published.getAllValues().getFirst()).isEqualTo(new AdministrationRevoked(PETR.value(), NOW));
+        AdminActionPerformed action = (AdminActionPerformed) published.getAllValues().getLast();
         assertThat(action.adminId()).isEqualTo(JANA.value());
         assertThat(action.action()).isEqualTo("REVOKE_ADMINISTRATION");
         assertThat(action.subjectId()).contains(PETR.value());
@@ -288,7 +291,7 @@ class AdministratorServiceTest {
         verify(secondFactors).delete(PETR);
         verify(refreshTokens).revokeAllOf(PETR, NOW);
         ArgumentCaptor<Object> published = ArgumentCaptor.forClass(Object.class);
-        verify(events, org.mockito.Mockito.times(2)).publishEvent(published.capture());
+        verify(events, times(2)).publishEvent(published.capture());
         AdminActionPerformed action = (AdminActionPerformed) published.getAllValues().getFirst();
         assertThat(action.adminId()).isEqualTo(JANA.value());
         assertThat(action.action()).isEqualTo("RESET_SECOND_FACTOR");
@@ -329,7 +332,7 @@ class AdministratorServiceTest {
 
         verify(refreshTokens).revokeAllOf(PETR, NOW);
         ArgumentCaptor<Object> published = ArgumentCaptor.forClass(Object.class);
-        verify(events, org.mockito.Mockito.times(2)).publishEvent(published.capture());
+        verify(events, times(2)).publishEvent(published.capture());
         AdminActionPerformed action = (AdminActionPerformed) published.getAllValues().getFirst();
         assertThat(action.adminId()).isEqualTo(JANA.value());
         assertThat(action.action()).isEqualTo("REMOVE_PASSKEYS");

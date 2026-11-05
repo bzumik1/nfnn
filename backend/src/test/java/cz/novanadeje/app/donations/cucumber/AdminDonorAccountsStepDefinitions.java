@@ -26,7 +26,7 @@ public class AdminDonorAccountsStepDefinitions {
     private static final UUID UNKNOWN = UUID.fromString("019a1c00-0000-7000-8000-00000000dead");
     private static final List<String> ACCOUNT_FIELDS = List.of("accountNumber", "status", "connectedFrom", "disconnectedOn", "donationCount",
             "totalAmountMinor", "lastDonationOn", "shared");
-    private static final List<String> RECEIPT_FIELDS = List.of("number", "kind", "donationReceivedOn", "year", "issuedOn", "active");
+    private static final List<String> RECEIPT_FIELDS = List.of("number", "kind", "donationReceivedOn", "year", "issuedOn", "active", "keyId");
 
     private final ApiClient api;
     private final DonorSessions sessions;

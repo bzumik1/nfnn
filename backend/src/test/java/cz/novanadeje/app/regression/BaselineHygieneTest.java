@@ -231,6 +231,32 @@ class BaselineHygieneTest {
     }
 
     @Test
+    @DisplayName("Given the push private keys of RFC 8291 and of the push tests in base64url or hex, when text is checked, then each is reported as a push private key even though the tests spell them out")
+    void should_report_push_private_keys_when_text_is_checked_given_test_keys_spelled_out_by_tests() {
+        String text = String.join("\n", "q1dXpw3UpT5VOmu_cf_v6ih07Aems3njxI-JWgLcM94", "yfWPiYE-n46HLnH0KqZOF1fJJU3MYrct3AELtAQ-oRw",
+                "0123456789abcdefghijABCDEFGHIJklmnopqrstuvw", "ab5757a70dd4a53e553a6bbf71ffefea2874ec07a6b379e3c48f895a02dc33de");
+        BaselineHygiene.Fixtures spelled = new BaselineHygiene.Fixtures(Set.of(), Set.of("q1dXpw3UpT5VOmu_cf_v6ih07Aems3njxI-JWgLcM94", "yfWPiYE-n46HLnH0KqZOF1fJJU3MYrct3AELtAQ-oRw",
+                "0123456789abcdefghijABCDEFGHIJklmnopqrstuvw"));
+
+        List<String> findings = BaselineHygiene.findings("push.txt", text, spelled);
+
+        assertThat(findings).filteredOn(finding -> finding.contains("a push private key of the tests")).hasSize(4);
+    }
+
+    @Test
+    @DisplayName("Given JSON fields p256dh and auth of a push subscription, when a JSON file is checked, then a value other than <secret> is reported and a boolean auth is not")
+    void should_report_unmasked_push_subscription_keys_when_a_json_file_is_checked() {
+        String text = """
+                {"endpoint":"https://fcm.googleapis.com/fcm/send/jana", "keys":{"p256dh":"planted", "auth":"planted"}, "masked":{"p256dh":"<secret>", "auth":"<secret>"}, "route":{"auth":true}}
+                """;
+
+        List<String> findings = BaselineHygiene.findings("push.json", text, NO_FIXTURES);
+
+        assertThat(findings).containsExactlyInAnyOrder("push.json: an unmasked push subscription key field p256dh",
+                "push.json: an unmasked push subscription key field auth");
+    }
+
+    @Test
     @DisplayName("Given proof hex labelled payloadHex, signatureHex or publicKeyHex and a proof text with a stray letter, when a verification case file is checked, then they are not reported, and the same hex unlabelled or in another folder is")
     void should_allow_labelled_proof_hex_only_in_verification_cases_when_text_is_checked() {
         String hex = "3f2a9c41d07be65f8a1c29e0b4d7f3a6";

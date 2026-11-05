@@ -48,7 +48,10 @@ export async function runStep(step: Step, browser: Browser, testInfo: TestInfo):
     browser.shortenWaits(KNOWN_BREAK_TIMEOUT_MS);
   }
   const skipped = await step.open(browser.ui);
-  test.skip(skipped === NOT_ON_THIS_DEVICE, 'this device shows it without a menu');
+  test.skip(
+    skipped === NOT_ON_THIS_DEVICE,
+    'this device has no such state (no menu to open, or the QR shown without folding)',
+  );
   await browser.settle();
 
   const known = knownFindings(pose, step.id);

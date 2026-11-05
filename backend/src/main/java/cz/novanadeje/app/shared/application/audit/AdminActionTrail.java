@@ -9,6 +9,8 @@ public interface AdminActionTrail {
 
     List<AdminActionEntry> findPerformedBefore(Instant before, int limit);
 
+    List<AdminActionEntry> findAllNewestFirst();
+
     long countPerformedSince(UUID adminId, String action, Instant since);
 
     List<AdminActionEntry> findByActions(Set<String> actions);

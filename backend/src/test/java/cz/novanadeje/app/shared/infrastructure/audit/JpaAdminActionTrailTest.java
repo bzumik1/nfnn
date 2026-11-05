@@ -90,4 +90,13 @@ class JpaAdminActionTrailTest {
         assertThat(entries).extracting(AdminActionEntry::details).containsExactly("first", "third", "fourth");
         assertThat(trail.findByActions(Set.of("NO_SUCH_ACTION"))).isEmpty();
     }
+
+    @Test
+    @DisplayName("Given three stored actions, when the whole trail is read newest first, then all of them come, the latest first, with their subjects")
+    void should_list_whole_trail_newest_first_when_read_given_stored_actions() {
+        var entries = trail.findAllNewestFirst().stream().filter(entry -> entry.adminId().equals(admin)).toList();
+
+        assertThat(entries).extracting(AdminActionEntry::action).containsExactly("GRANT_ADMINISTRATION", "UNPAIR_PAYMENT", "PAIR_PAYMENT");
+        assertThat(entries).extracting(AdminActionEntry::subjectId).containsExactly(Optional.of(subject), Optional.empty(), Optional.of(subject));
+    }
 }

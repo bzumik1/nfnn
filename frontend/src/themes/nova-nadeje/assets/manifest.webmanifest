@@ -1,0 +1,33 @@
+{
+  "id": "/aplikace",
+  "name": "Nová naděje – nadační fond",
+  "short_name": "NFNN",
+  "description": "Dary, potvrzení o daru a aktuality Nadačního fondu Nová naděje.",
+  "lang": "cs",
+  "dir": "ltr",
+  "start_url": "/aplikace",
+  "scope": "/",
+  "display": "standalone",
+  "theme_color": "#2563eb",
+  "background_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

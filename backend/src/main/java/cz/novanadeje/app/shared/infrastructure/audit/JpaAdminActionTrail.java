@@ -27,6 +27,11 @@ class JpaAdminActionTrail implements AdminActionTrail {
     }
 
     @Override
+    public List<AdminActionEntry> findAllNewestFirst() {
+        return actions.findAllByOrderByPerformedAtDescIdDesc().stream().map(AdminActionJpaEntity::toEntry).toList();
+    }
+
+    @Override
     public List<AdminActionEntry> findByActions(Set<String> names) {
         if (names.isEmpty()) {
             return List.of();
