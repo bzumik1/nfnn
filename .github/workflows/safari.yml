@@ -1,0 +1,56 @@
+name: Safari
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/safari.yml"
+  schedule:
+    - cron: "41 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: safari-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  safari:
+    runs-on: macos-15
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "26"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+
+      - name: Safari takes WebDriver sessions
+        run: sudo safaridriver --enable
+
+      - name: The iOS simulators of this runner
+        run: xcrun simctl list devices available
+
+      - name: Every step in Safari on the iPhone and iPad simulators and on macOS
+        run: npm run e2e:safari
+
+      - name: Keep the Safari screens with their layout checks
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: safari
+          path: frontend/test-results/device-report/
+          if-no-files-found: ignore
+          retention-days: 7

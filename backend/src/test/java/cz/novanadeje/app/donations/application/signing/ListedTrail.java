@@ -20,6 +20,11 @@ final class ListedTrail implements AdminActionTrail {
     }
 
     @Override
+    public List<AdminActionEntry> findAllNewestFirst() {
+        throw new UnsupportedOperationException("the key history asks by action");
+    }
+
+    @Override
     public long countPerformedSince(UUID adminId, String action, Instant since) {
         throw new UnsupportedOperationException("the key history asks by action");
     }

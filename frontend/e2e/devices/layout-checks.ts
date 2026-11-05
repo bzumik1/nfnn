@@ -9,9 +9,11 @@ export interface Check {
 
 export const MINIMUM_TARGET_PX = 24;
 const STACKED_SHARE = 0.25;
+
+export const LIMITS = { minimumTarget: MINIMUM_TARGET_PX, stackedShare: STACKED_SHARE };
 const LISTED = 6;
 
-interface Findings {
+export interface Findings {
   pageWidth: number;
   viewportWidth: number;
   wideElements: string[];
@@ -23,7 +25,7 @@ interface Findings {
   clippedText: string[];
 }
 
-function collectFindings(limits: { minimumTarget: number; stackedShare: number }): Findings {
+export function collectFindings(limits: { minimumTarget: number; stackedShare: number }): Findings {
   const viewportWidth = document.documentElement.clientWidth;
   const viewportHeight = window.innerHeight;
   const modal = document.querySelector('dialog:modal');
@@ -302,10 +304,10 @@ function list(items: string[]): string {
 }
 
 export async function layoutChecks(page: Page, pageErrors: string[]): Promise<Check[]> {
-  const found = await page.evaluate(collectFindings, {
-    minimumTarget: MINIMUM_TARGET_PX,
-    stackedShare: STACKED_SHARE,
-  });
+  return checksFrom(await page.evaluate(collectFindings, LIMITS), pageErrors);
+}
+
+export function checksFrom(found: Findings, pageErrors: string[]): Check[] {
   return [
     { name: 'no script error', pass: pageErrors.length === 0, detail: list(pageErrors) },
     {

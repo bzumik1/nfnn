@@ -1,0 +1,439 @@
+{
+  "source": "edited",
+  "logic": "The administration's donations sync manifest and chunks that GET /api/admin/donations/sync and GET /api/admin/donations/sync/chunks?ids= answer an administrator, joined: whether the subject holds the administration, and each chunk of the manifest with its id, rowsSha256 and count and the rows the chunks endpoint answers for it. Only the chunks of the case rows are specified here: payments:<yyyy-mm> (every bank payment, paired or not, by the month it was booked, newest booking first, then the higher bank transaction id; a payment of a gift of an erased donor without the payer's account, name and message), donations:<yyyy-mm> (every donation by the month it was received, newest first: receivedAt, then the later record, then the higher id) and donor-records:<yyyy-mm> (every donor record, an erased one as erasure leaves it: the placeholder name and address, by the month of its registration in Prague, the earlier registration first, then the lower id); links:<yyyy-mm>, symbol-claims, receipts:<year>, import-state, report-settings and the per-year summary come from features and the admin-overview cases. A month without rows has no chunk; chunks are listed by id. rowsSha256 is the SHA-256 (lowercase hex) of the UTF-8 bytes of the rows array written as RFC 8785 canonical JSON, so each side computes it from the rows of the case itself. Ids are the aliases of the case's rows (donor:<alias>, payment:<alias>, donation:<n> for the n-th donation of input.donations, administrator for the account that asks); a runner replaces the real ids of its answer by them and computes rowsSha256 over the rows as aliased, after checking that the answer's own rowsSha256 is that SHA-256 of the rows it answered. The rows hold only the columns the computation reads: a runner fills every other column with the values of CaseRows (each donor's name Dárce <alias>, address Dlouhá 12, Ústí nad Labem, 400 01, an erased donor's the placeholders Vymazaný dárce and Vymazáno, Vymazáno, 00000, variable symbol 4000000000 plus its position among the rows, each payment's bank transaction 26000000000 plus its position, sender account 2900233333/2010, imported and recorded at noon UTC of its day); a donation with a payment is paired by its variable symbol, one without is recorded by hand.",
+  "cases": [
+    {
+      "name": "an administration without any rows",
+      "input": {
+        "now": "2026-10-20T10:00:00Z",
+        "donors": [],
+        "payments": [],
+        "donations": []
+      },
+      "expected": {
+        "subject": "administrator",
+        "administrator": true,
+        "chunks": []
+      }
+    },
+    {
+      "name": "payments and gifts by month, donor records by the Prague month of their registration, unpaired payments with the paired ones",
+      "input": {
+        "now": "2026-10-20T10:00:00Z",
+        "donors": [
+          {
+            "alias": "jana",
+            "registeredAt": "2026-01-15T10:00:00Z",
+            "erasedAt": null
+          },
+          {
+            "alias": "petr",
+            "registeredAt": "2026-02-28T23:30:00Z",
+            "erasedAt": null
+          }
+        ],
+        "payments": [
+          {
+            "alias": "p1",
+            "bookedOn": "2026-03-10",
+            "amountMinor": 50000,
+            "unpairedByAdminAt": null
+          },
+          {
+            "alias": "p2",
+            "bookedOn": "2026-03-20",
+            "amountMinor": 25000,
+            "unpairedByAdminAt": null
+          },
+          {
+            "alias": "p3",
+            "bookedOn": "2026-03-31",
+            "amountMinor": 40000,
+            "unpairedByAdminAt": "2026-04-02T08:00:00Z"
+          },
+          {
+            "alias": "p4",
+            "bookedOn": "2026-04-05",
+            "amountMinor": 90000,
+            "unpairedByAdminAt": null
+          }
+        ],
+        "donations": [
+          {
+            "donor": "jana",
+            "payment": "p1",
+            "receivedOn": "2026-03-10",
+            "amountMinor": 50000,
+            "status": "RECEIVED",
+            "source": "BANK_TRANSFER",
+            "purpose": "GENERAL"
+          },
+          {
+            "donor": "jana",
+            "payment": null,
+            "receivedOn": "2026-04-01",
+            "amountMinor": 7000,
+            "status": "RECEIVED",
+            "source": "MANUAL",
+            "purpose": "GENERAL"
+          },
+          {
+            "donor": "petr",
+            "payment": "p4",
+            "receivedOn": "2026-04-05",
+            "amountMinor": 90000,
+            "status": "RECEIVED",
+            "source": "BANK_TRANSFER",
+            "purpose": "GENERAL"
+          }
+        ]
+      },
+      "expected": {
+        "subject": "administrator",
+        "administrator": true,
+        "chunks": [
+          {
+            "id": "donations:2026-03",
+            "rowsSha256": "6512697a20de45ff5dccfc78b2da8a2cbda6c99bf5f46559a06ab23e49d9506b",
+            "count": 1,
+            "rows": [
+              {
+                "id": "donation:1",
+                "donorId": "donor:jana",
+                "paymentId": "payment:p1",
+                "receivedAt": "2026-03-10",
+                "amountMinor": 50000,
+                "currency": "CZK",
+                "status": "RECEIVED",
+                "source": "BANK_TRANSFER",
+                "purpose": "GENERAL",
+                "pairedBy": "VARIABLE_SYMBOL",
+                "bankAccountId": null,
+                "symbolClaimId": null,
+                "recordedAt": "2026-03-10T12:00:00Z"
+              }
+            ]
+          },
+          {
+            "id": "donations:2026-04",
+            "rowsSha256": "bc68149ed3110182adc45f417b2311a928324208130ef1784dd9eefab49918ed",
+            "count": 2,
+            "rows": [
+              {
+                "id": "donation:3",
+                "donorId": "donor:petr",
+                "paymentId": "payment:p4",
+                "receivedAt": "2026-04-05",
+                "amountMinor": 90000,
+                "currency": "CZK",
+                "status": "RECEIVED",
+                "source": "BANK_TRANSFER",
+                "purpose": "GENERAL",
+                "pairedBy": "VARIABLE_SYMBOL",
+                "bankAccountId": null,
+                "symbolClaimId": null,
+                "recordedAt": "2026-04-05T12:00:00Z"
+              },
+              {
+                "id": "donation:2",
+                "donorId": "donor:jana",
+                "paymentId": null,
+                "receivedAt": "2026-04-01",
+                "amountMinor": 7000,
+                "currency": "CZK",
+                "status": "RECEIVED",
+                "source": "MANUAL",
+                "purpose": "GENERAL",
+                "pairedBy": null,
+                "bankAccountId": null,
+                "symbolClaimId": null,
+                "recordedAt": "2026-04-01T12:00:00Z"
+              }
+            ]
+          },
+          {
+            "id": "donor-records:2026-01",
+            "rowsSha256": "24abea6340ba768b2cbe62781e4dae5965881b8f8db163f4f6e1f3f9536e5f74",
+            "count": 1,
+            "rows": [
+              {
+                "donorId": "donor:jana",
+                "name": "Dárce jana",
+                "type": "PERSON",
+                "variableSymbol": "4000000001",
+                "companyIdentifier": null,
+                "address": {
+                  "street": "Dlouhá 12",
+                  "city": "Ústí nad Labem",
+                  "postalCode": "400 01"
+                },
+                "preferredLocale": "cs",
+                "registeredAt": "2026-01-15T10:00:00Z",
+                "erasedAt": null
+              }
+            ]
+          },
+          {
+            "id": "donor-records:2026-03",
+            "rowsSha256": "77d6ea43e7df5efda2941e75471c226fb91d1cf62b0281fc9b91e7a6c3b70981",
+            "count": 1,
+            "rows": [
+              {
+                "donorId": "donor:petr",
+                "name": "Dárce petr",
+                "type": "PERSON",
+                "variableSymbol": "4000000002",
+                "companyIdentifier": null,
+                "address": {
+                  "street": "Dlouhá 12",
+                  "city": "Ústí nad Labem",
+                  "postalCode": "400 01"
+                },
+                "preferredLocale": "cs",
+                "registeredAt": "2026-02-28T23:30:00Z",
+                "erasedAt": null
+              }
+            ]
+          },
+          {
+            "id": "payments:2026-03",
+            "rowsSha256": "4ae3c5048f68b819c8071ca65853a4f28ecea34d1fa61bdebacb113679a201c0",
+            "count": 3,
+            "rows": [
+              {
+                "id": "payment:p3",
+                "bankTransactionId": 26000000005,
+                "bookedOn": "2026-03-31",
+                "amountMinor": 40000,
+                "currency": "CZK",
+                "variableSymbol": null,
+                "counterpartyAccount": "2900233333/2010",
+                "counterpartyName": null,
+                "messageForRecipient": null,
+                "importedAt": "2026-03-31T12:00:00Z",
+                "unpairedByAdminAt": "2026-04-02T08:00:00Z",
+                "accountVerification": false
+              },
+              {
+                "id": "payment:p2",
+                "bankTransactionId": 26000000004,
+                "bookedOn": "2026-03-20",
+                "amountMinor": 25000,
+                "currency": "CZK",
+                "variableSymbol": null,
+                "counterpartyAccount": "2900233333/2010",
+                "counterpartyName": null,
+                "messageForRecipient": null,
+                "importedAt": "2026-03-20T12:00:00Z",
+                "unpairedByAdminAt": null,
+                "accountVerification": false
+              },
+              {
+                "id": "payment:p1",
+                "bankTransactionId": 26000000003,
+                "bookedOn": "2026-03-10",
+                "amountMinor": 50000,
+                "currency": "CZK",
+                "variableSymbol": null,
+                "counterpartyAccount": "2900233333/2010",
+                "counterpartyName": null,
+                "messageForRecipient": null,
+                "importedAt": "2026-03-10T12:00:00Z",
+                "unpairedByAdminAt": null,
+                "accountVerification": false
+              }
+            ]
+          },
+          {
+            "id": "payments:2026-04",
+            "rowsSha256": "ec56753dd84356396ffcf591f11864ccaf0b9b52c6feb891de4a3a4a2473e397",
+            "count": 1,
+            "rows": [
+              {
+                "id": "payment:p4",
+                "bankTransactionId": 26000000006,
+                "bookedOn": "2026-04-05",
+                "amountMinor": 90000,
+                "currency": "CZK",
+                "variableSymbol": null,
+                "counterpartyAccount": "2900233333/2010",
+                "counterpartyName": null,
+                "messageForRecipient": null,
+                "importedAt": "2026-04-05T12:00:00Z",
+                "unpairedByAdminAt": null,
+                "accountVerification": false
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "ties of one day come by the higher transaction or id first, donors registered at one instant by the lower id first, an erased donor as erasure leaves the record and its payment without the payer",
+      "input": {
+        "now": "2026-10-20T10:00:00Z",
+        "donors": [
+          {
+            "alias": "jana",
+            "registeredAt": "2026-05-01T08:00:00Z",
+            "erasedAt": null
+          },
+          {
+            "alias": "eva",
+            "registeredAt": "2026-05-01T08:00:00Z",
+            "erasedAt": "2026-09-01T09:00:00Z"
+          }
+        ],
+        "payments": [
+          {
+            "alias": "p1",
+            "bookedOn": "2026-06-01",
+            "amountMinor": 30000,
+            "unpairedByAdminAt": null
+          },
+          {
+            "alias": "p2",
+            "bookedOn": "2026-06-01",
+            "amountMinor": 20000,
+            "unpairedByAdminAt": null
+          }
+        ],
+        "donations": [
+          {
+            "donor": "jana",
+            "payment": "p1",
+            "receivedOn": "2026-06-01",
+            "amountMinor": 30000,
+            "status": "RECEIVED",
+            "source": "BANK_TRANSFER",
+            "purpose": "GENERAL"
+          },
+          {
+            "donor": "eva",
+            "payment": "p2",
+            "receivedOn": "2026-06-01",
+            "amountMinor": 20000,
+            "status": "REFUNDED",
+            "source": "BANK_TRANSFER",
+            "purpose": "GENERAL"
+          }
+        ]
+      },
+      "expected": {
+        "subject": "administrator",
+        "administrator": true,
+        "chunks": [
+          {
+            "id": "donations:2026-06",
+            "rowsSha256": "7884a7cb1306745e0bf56c7acc576aaf803e498ad4d33d85218fe7e3a05384f6",
+            "count": 2,
+            "rows": [
+              {
+                "id": "donation:2",
+                "donorId": "donor:eva",
+                "paymentId": "payment:p2",
+                "receivedAt": "2026-06-01",
+                "amountMinor": 20000,
+                "currency": "CZK",
+                "status": "REFUNDED",
+                "source": "BANK_TRANSFER",
+                "purpose": "GENERAL",
+                "pairedBy": "VARIABLE_SYMBOL",
+                "bankAccountId": null,
+                "symbolClaimId": null,
+                "recordedAt": "2026-06-01T12:00:00Z"
+              },
+              {
+                "id": "donation:1",
+                "donorId": "donor:jana",
+                "paymentId": "payment:p1",
+                "receivedAt": "2026-06-01",
+                "amountMinor": 30000,
+                "currency": "CZK",
+                "status": "RECEIVED",
+                "source": "BANK_TRANSFER",
+                "purpose": "GENERAL",
+                "pairedBy": "VARIABLE_SYMBOL",
+                "bankAccountId": null,
+                "symbolClaimId": null,
+                "recordedAt": "2026-06-01T12:00:00Z"
+              }
+            ]
+          },
+          {
+            "id": "donor-records:2026-05",
+            "rowsSha256": "05af534c3ecb44266f7bd5acc14c4ff2f85dcc8baed12503b41eabe859cc6022",
+            "count": 2,
+            "rows": [
+              {
+                "donorId": "donor:jana",
+                "name": "Dárce jana",
+                "type": "PERSON",
+                "variableSymbol": "4000000001",
+                "companyIdentifier": null,
+                "address": {
+                  "street": "Dlouhá 12",
+                  "city": "Ústí nad Labem",
+                  "postalCode": "400 01"
+                },
+                "preferredLocale": "cs",
+                "registeredAt": "2026-05-01T08:00:00Z",
+                "erasedAt": null
+              },
+              {
+                "donorId": "donor:eva",
+                "name": "Vymazaný dárce",
+                "type": "PERSON",
+                "variableSymbol": "4000000002",
+                "companyIdentifier": null,
+                "address": {
+                  "street": "Vymazáno",
+                  "city": "Vymazáno",
+                  "postalCode": "00000"
+                },
+                "preferredLocale": "cs",
+                "registeredAt": "2026-05-01T08:00:00Z",
+                "erasedAt": "2026-09-01T09:00:00Z"
+              }
+            ]
+          },
+          {
+            "id": "payments:2026-06",
+            "rowsSha256": "afb166140ea8b7e8bcc84dfdea6544c38636f597f548f0576f4a447ad440d79d",
+            "count": 2,
+            "rows": [
+              {
+                "id": "payment:p2",
+                "bankTransactionId": 26000000004,
+                "bookedOn": "2026-06-01",
+                "amountMinor": 20000,
+                "currency": "CZK",
+                "variableSymbol": null,
+                "counterpartyAccount": null,
+                "counterpartyName": null,
+                "messageForRecipient": null,
+                "importedAt": "2026-06-01T12:00:00Z",
+                "unpairedByAdminAt": null,
+                "accountVerification": false
+              },
+              {
+                "id": "payment:p1",
+                "bankTransactionId": 26000000003,
+                "bookedOn": "2026-06-01",
+                "amountMinor": 30000,
+                "currency": "CZK",
+                "variableSymbol": null,
+                "counterpartyAccount": "2900233333/2010",
+                "counterpartyName": null,
+                "messageForRecipient": null,
+                "importedAt": "2026-06-01T12:00:00Z",
+                "unpairedByAdminAt": null,
+                "accountVerification": false
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

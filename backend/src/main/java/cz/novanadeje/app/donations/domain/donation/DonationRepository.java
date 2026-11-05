@@ -24,6 +24,8 @@ public interface DonationRepository {
 
     List<Donation> findByDonorNewestFirst(DonorReference donor);
 
+    List<Donation> findAllNewestFirst();
+
     Optional<Donation> findByIdForDonor(DonationId id, DonorReference donor);
 
     List<Donation> findReceivedOnBetween(LocalDate firstDay, LocalDate lastDay);

@@ -391,6 +391,32 @@ class JpaDonationRepositoryTest {
         assertThat(donations.findBySenderAccountLink(SenderAccountLinkId.newId(NOW))).isEmpty();
     }
 
+    @Test
+    @DisplayName("Given donations of two donors, when every donation is listed newest first, then both donors' donations come, latest receipt, latest recording and newer id first")
+    void should_list_every_donation_newest_first_when_all_listed_given_two_donors() {
+        DonorReference jana = storedDonor("4821937560");
+        DonorReference petr = storedDonor("7310945528");
+        LocalDate sameDay = LocalDate.of(2026, 10, 15);
+        Donation janaEarlier = Donation.fromBankPayment(DonationId.newId(NOW), jana, storedPayment(1001, sameDay), PairingMethod.VARIABLE_SYMBOL, NOW);
+        Donation petrLater = Donation.fromBankPayment(DonationId.newId(NOW), petr, storedPayment(1002, sameDay), PairingMethod.VARIABLE_SYMBOL,
+                NOW.plusSeconds(60));
+        Donation petrNewerId = Donation.fromBankPayment(DonationId.newId(NOW.plusMillis(1)), petr, storedPayment(1003, sameDay),
+                PairingMethod.VARIABLE_SYMBOL, NOW);
+        Donation janaNewestDay = Donation.fromBankPayment(DonationId.newId(NOW), jana, storedPayment(1004, sameDay.plusDays(1)),
+                PairingMethod.MANUAL, NOW);
+        Donation petrLastYear = Donation.fromBankPayment(DonationId.newId(NOW), petr, storedPayment(1005, LocalDate.of(2025, 12, 31)),
+                PairingMethod.VARIABLE_SYMBOL, NOW.plusSeconds(600));
+        donations.save(janaEarlier);
+        donations.save(petrLastYear);
+        donations.save(petrNewerId);
+        donations.save(janaNewestDay);
+        donations.save(petrLater);
+        flushAndClear();
+
+        assertThat(donations.findAllNewestFirst()).extracting(Donation::id)
+                .containsExactly(janaNewestDay.id(), petrLater.id(), petrNewerId.id(), janaEarlier.id(), petrLastYear.id());
+    }
+
     private DonorReference storedDonor(String symbol) {
         DonorRecord record = DonorRecord.registerPerson(new DonorReference(UuidV7.generate(NOW)), "Jana Nováková",
                 new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new VariableSymbol(symbol), LocaleCode.CS, NOW);

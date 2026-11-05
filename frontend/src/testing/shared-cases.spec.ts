@@ -30,6 +30,7 @@ const RECEIPT_CASES = 'receipts/formatting.json';
 const VECTOR_CASES = 'signature/vector.json';
 const VERIFICATION_CASES = 'verification/payload.json';
 const SYNC_CASES = 'sync/manifest.json';
+const ADMIN_SYNC_CASES = 'sync/admin-manifest.json';
 const FINDER_SPAN = 17;
 const MODULES_PER_VERSION = 4;
 
@@ -428,6 +429,35 @@ describe('Given the sync manifest cases', () => {
 
     expect(schemaViolations(SYNC_CASES, file).join('\n')).toMatch(
       /\/expected\/chunks\/0\/rowsSha256 must match pattern/,
+    );
+  });
+});
+
+describe('Given the administration sync manifest cases', () => {
+  it("when the rows of each chunk are written as canonical JSON and hashed as an administrator's device will, then they give the chunk's rowsSha256 and count", async () => {
+    const chunks = sharedCases(ADMIN_SYNC_CASES).flatMap(
+      (sharedCase) => sharedCase.expected.chunks,
+    );
+    const digests = await Promise.all(chunks.map((chunk) => rowsSha256(chunk.rows)));
+
+    expect(chunks.length).toBeGreaterThan(0);
+    expect(digests).toEqual(chunks.map((chunk) => chunk.rowsSha256));
+    expect(chunks.map((chunk) => chunk.rows.length)).toEqual(chunks.map((chunk) => chunk.count));
+  });
+
+  it('when a chunk of donor records is named by an id digit instead of a month, then it is refused', () => {
+    const file = editable(ADMIN_SYNC_CASES);
+    const withRecords = file.cases.findIndex((sharedCase) =>
+      (sharedCase.expected['chunks'] as Record<string, unknown>[]).some((chunk) =>
+        String(chunk['id']).startsWith('donor-records:'),
+      ),
+    );
+    const chunks = file.cases[withRecords].expected['chunks'] as Record<string, unknown>[];
+    const records = chunks.findIndex((chunk) => String(chunk['id']).startsWith('donor-records:'));
+    chunks[records]['id'] = 'donor-records:a';
+
+    expect(schemaViolations(ADMIN_SYNC_CASES, file).join('\n')).toMatch(
+      new RegExp(`/expected/chunks/${records}`),
     );
   });
 });
