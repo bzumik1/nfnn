@@ -29,6 +29,7 @@ import { provideAppServiceWorker } from './core/updates/angular-service-worker';
 import { serviceWorkerBypassInterceptor } from './core/updates/service-worker-bypass';
 import { versionInterceptor } from './core/version/version-interceptor';
 import { pagePinchLockAtStart } from './core/zoom/page-pinch-lock';
+import { systemTextSizeAtStart } from './core/zoom/system-text-size';
 import { DialogHistory } from './shared/ui/dialog/dialog-history';
 
 const scrollOptions: InMemoryScrollingOptions = {
@@ -71,5 +72,6 @@ export const appConfig: ApplicationConfig = {
     provideAppInitializer(() => inject(CanonicalLink).start()),
     dialogHistoryAtStart,
     pagePinchLockAtStart,
+    systemTextSizeAtStart,
   ],
 };
