@@ -1109,7 +1109,9 @@ describe('Given an administrator on the bank payments page where lists show as r
       await settle();
 
       expect(document.querySelector('dialog[open]')).toBe(sheet());
-      expect(text(sheet().querySelector('.sheet-actions [role="alert"]'))).not.toBe('');
+      expect(text(sheet().querySelector('.sheet-actions [role="alert"]'))).toBe(
+        'Přiřazení se nepodařilo zrušit. Zkuste to prosím znovu.',
+      );
       expect(sheet().querySelector('.confirm')).toBeNull();
     });
 

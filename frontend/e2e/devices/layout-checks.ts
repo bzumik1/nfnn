@@ -165,13 +165,7 @@ export function collectFindings(limits: { minimumTarget: number; stackedShare: n
     return false;
   };
 
-  const clippedControls = controls
-    .filter((element) => {
-      const box = element.getBoundingClientRect();
-      return box.right > 0 && box.left < viewportWidth;
-    })
-    .filter(clippedBy)
-    .map(describe);
+  const clippedControls = controls.filter(clippedBy).map(describe);
 
   const textField = (element: Element): boolean =>
     element.tagName === 'TEXTAREA' ||

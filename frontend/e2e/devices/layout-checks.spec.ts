@@ -257,6 +257,17 @@ test.describe('Given a page checked as on a phone', () => {
     ).toEqual(['no control cut off by a box that hides its overflow']);
   });
 
+  test('when a button lies beyond both its card that hides its overflow and the screen edge, then it is cut off', async ({
+    page,
+  }) => {
+    expect(
+      await failingChecks(
+        page,
+        '<section style="width: 300px; overflow: hidden"><table style="width: 900px"><tr><td style="width: 800px">Row</td><td><button>Pair</button></td></tr></table></section>',
+      ),
+    ).toEqual(['no control cut off by a box that hides its overflow']);
+  });
+
   test('when a control sits in a visually hidden box of one pixel on the screen, then it is not counted as cut off', async ({
     page,
   }) => {
