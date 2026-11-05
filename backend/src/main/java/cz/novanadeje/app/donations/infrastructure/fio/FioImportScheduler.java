@@ -11,6 +11,9 @@ import cz.novanadeje.app.donations.domain.importing.ImportFailureKind;
 import cz.novanadeje.app.donations.domain.importing.ImportTrigger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import cz.novanadeje.app.shared.application.event.LiveFeed;
+import cz.novanadeje.app.shared.application.event.StoredDataChanged;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -42,6 +45,7 @@ class FioImportScheduler implements BankImportRequests {
     private final BankImportProperties importProperties;
     private final TaskScheduler taskScheduler;
     private final Clock clock;
+    private final ApplicationEventPublisher events;
     private final AtomicBoolean running = new AtomicBoolean();
     private final AtomicBoolean onDemandPending = new AtomicBoolean();
     private final AtomicBoolean started = new AtomicBoolean();
@@ -54,12 +58,13 @@ class FioImportScheduler implements BankImportRequests {
     private final HistoryImportTracker historyImports;
 
     FioImportScheduler(ImportBankPaymentsService service, BankImportProperties importProperties, TaskScheduler taskScheduler,
-                       HistoryImportTracker historyImports, Clock clock) {
+                       HistoryImportTracker historyImports, Clock clock, ApplicationEventPublisher events) {
         this.service = service;
         this.importProperties = importProperties;
         this.taskScheduler = taskScheduler;
         this.historyImports = historyImports;
         this.clock = clock;
+        this.events = events;
     }
 
     @Scheduled(initialDelayString = "${app.donations.fio.initial-delay}", fixedDelayString = "${app.donations.fio.interval}")
@@ -112,7 +117,11 @@ class FioImportScheduler implements BankImportRequests {
     }
 
     void run(ImportTrigger trigger) {
-        execute(trigger, () -> Optional.of(service.importIncomingPayments(trigger, importProperties.toSettings())));
+        try {
+            execute(trigger, () -> Optional.of(service.importIncomingPayments(trigger, importProperties.toSettings())));
+        } finally {
+            importEnded();
+        }
     }
 
     private void runQueuedHistory() {
@@ -127,8 +136,13 @@ class FioImportScheduler implements BankImportRequests {
         if (!historyImports.current(run.id())) {
             return;
         }
-        boolean ran = execute(ImportTrigger.HISTORY, () -> Optional.of(service.importHistory(run, importProperties.toSettings())),
-                report -> scheduleHistoryFollowUp(run, report));
+        boolean ran;
+        try {
+            ran = execute(ImportTrigger.HISTORY, () -> Optional.of(service.importHistory(run, importProperties.toSettings())),
+                    report -> scheduleHistoryFollowUp(run, report));
+        } finally {
+            importEnded();
+        }
         if (!ran) {
             scheduleHistoryRun(run, clock.instant().plus(importProperties.onDemandCooldown()));
         }
@@ -139,7 +153,12 @@ class FioImportScheduler implements BankImportRequests {
             execute(ImportTrigger.ON_DEMAND, () -> service.importOnDemand(importProperties.toSettings(), importProperties.onDemandCooldown()));
         } finally {
             onDemandPending.set(false);
+            importEnded();
         }
+    }
+
+    private void importEnded() {
+        events.publishEvent(StoredDataChanged.of(LiveFeed.BANK_IMPORT));
     }
 
     private boolean execute(ImportTrigger trigger, Supplier<Optional<ImportReport>> importer) {

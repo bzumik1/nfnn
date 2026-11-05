@@ -10,6 +10,8 @@ import { bankAccount, symbolOffer } from '../../../donations/testing/bank-accoun
 import { foundationPaymentDetails } from '../../../donations/testing/payment-details-fixtures';
 import { drawsText } from '../../../../shared/ui/qr-code/testing/branded-qr';
 import { BankAccountsCard } from './bank-accounts-card';
+import { LiveUpdates } from '../../../../core/live/live-updates';
+import { FakeLiveUpdates } from '../../../../core/live/testing/live-fixtures';
 
 const LIST_URL = '/api/donations/me/bank-accounts';
 const BANK_CHECK_URL = '/api/donations/me/bank-check';
@@ -1521,6 +1523,30 @@ describe('Given the bank accounts card in the overview', () => {
       await answerCheck({ bankDataAsOf: LATER, checking: false }, [newAccount, bankAccount()]);
 
       expect(text('.add-account-watch .watch-title')).toBe('Účet 1234567890/0800 je ověřený');
+    });
+
+    it('and the live stream says the accounts changed, then the list is read at once and the tick shows without waiting for the next check', async () => {
+      const live = TestBed.inject(LiveUpdates) as unknown as FakeLiveUpdates;
+
+      live.hint('bank-accounts');
+      await respond([newAccount, bankAccount()]);
+
+      expect(text('.add-account-watch .watch-title')).toBe('Účet 1234567890/0800 je ověřený');
+      await wait(60_000);
+      http.expectNone(BANK_CHECK_URL);
+    });
+
+    it('and the dialog is closed, then the live hints no longer read the accounts', async () => {
+      const live = TestBed.inject(LiveUpdates) as unknown as FakeLiveUpdates;
+      expect(live.listeners()).toBe(1);
+      await click('.add-account-close');
+      const listening = live.listeners();
+
+      live.hint('bank-accounts');
+      await settle();
+
+      expect(listening).toBe(0);
+      http.expectNone(LIST_URL);
     });
 
     it('and the dialog is closed, then the bank is not asked any more', async () => {

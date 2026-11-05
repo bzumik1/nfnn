@@ -128,10 +128,19 @@
         other {Nalezeno {{ total() }} plateb.}
       }</span>
     }
+    @if (incomingLabel(); as label) {
+      &ngsp;<button
+        type="button"
+        class="ui-button ui-button--small ui-button--primary payments-incoming"
+        (click)="showIncoming()"
+      >
+        {{ label }}
+      </button>
+    }
   </p>
 
   <section class="ui-card payments-card" aria-labelledby="payments-title">
-    <h2 id="payments-title" class="ui-card__title">
+    <h2 #listTitle id="payments-title" class="ui-card__title" tabindex="-1">
       @if (filter() === 'unpaired') {
         <ng-container i18n="@@admin.payments.list.unpairedTitle"
           >Platby čekající na přiřazení</ng-container

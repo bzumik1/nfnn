@@ -173,6 +173,61 @@ test.describe('Given an administrator with an unpaired bank payment', () => {
     await expect(page.locator('tbody tr')).toContainText('ručně správcem');
   });
 
+  test('when a payment arrives while the page is open, then a button in the status line offers it and the list grows only when it is pressed', async ({
+    page,
+  }) => {
+    let arrived = false;
+    const newcomer = {
+      ...unpaired,
+      id: '019a1c00-0000-7000-8000-000000002001',
+      bankTransactionId: 2001,
+      bookedOn: '2026-10-20',
+      counterpartyName: 'Svobodová Petra',
+    };
+    await page.route(
+      (url) => url.pathname === PAYMENTS,
+      (route) => {
+        const items = arrived ? [newcomer, unpaired] : [unpaired];
+        return route.fulfill({
+          json: { year: null, availableYears: [], items, total: items.length },
+        });
+      },
+    );
+    let announce: () => void = () => undefined;
+    const announced = new Promise<void>((resolve) => (announce = resolve));
+    await page.route(
+      (url) => url.pathname === '/api/live',
+      async (route) => {
+        await announced;
+        await route.fulfill({
+          contentType: 'text/event-stream',
+          headers: { 'Cache-Control': 'no-store' },
+          body: 'event:revision\ndata:{"revision":"e2e"}\n\nevent:changed\ndata:{"feed":"payments"}\n\n',
+        });
+      },
+    );
+    await signIn(page, administrator);
+    await page.getByRole('link', { name: 'Správa' }).click();
+    await page.getByRole('link', { name: 'Platby z banky' }).click();
+    const rows = page.locator('tbody tr');
+    await expect(rows).toHaveCount(1);
+
+    arrived = true;
+    announce();
+
+    const offer = page.getByRole('status').getByRole('button', { name: 'Zobrazit 1 novou platbu' });
+    await expect(offer).toBeVisible();
+    await expect(rows).toHaveCount(1);
+    await offer.click();
+
+    await expect(rows).toHaveCount(2);
+    await expect(rows.first()).toContainText('Svobodová Petra');
+    await expect(offer).toHaveCount(0);
+    await expect(
+      page.getByRole('heading', { level: 2, name: 'Platby čekající na přiřazení' }),
+    ).toBeFocused();
+  });
+
   test('when they unpair a paired payment, then a confirmation precedes the request and the payment is marked as held', async ({
     page,
   }) => {
