@@ -11,7 +11,7 @@ export const FALLBACK_WORKER_FILE = new URL(
 
 const PAGE_TEMPLATE = new URL('./fallback-page/page.html', import.meta.url);
 const WORKER_TEMPLATE = new URL('./fallback-page/worker.mjs', import.meta.url);
-const LOGO = new URL('../public/images/logo.svg', import.meta.url);
+const LOGO = new URL('../src/themes/nova-nadeje/assets/images/logo.svg', import.meta.url);
 const QR_ENCODER = new URL('../src/app/shared/ui/qr-code/qr-encoder.ts', import.meta.url);
 const SHARED_CASES = new URL('../../shared-cases/', import.meta.url);
 const QUIET_ZONE = 4;
