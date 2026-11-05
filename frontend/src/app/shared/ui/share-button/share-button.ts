@@ -3,8 +3,6 @@
 import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
 import { CopyButton } from '../copy-button/copy-button';
 
-type ShareState = 'idle' | 'sharing' | 'failed';
-
 @Component({
   selector: 'app-share-button',
   imports: [CopyButton],
@@ -19,8 +17,10 @@ export class ShareButton {
   protected readonly copyWhat = $localize`:@@ui.share.copyWhat:odkaz na stránku`;
   protected readonly copyLabel = $localize`:@@ui.share.copyLink:Kopírovat odkaz`;
   protected readonly copiedStatus = $localize`:@@ui.share.copied:Odkaz je zkopírovaný, můžete ho vložit do zprávy.`;
+  protected readonly copyFailedStatus = $localize`:@@ui.share.copyFailed:Zkopírovat se nepodařilo. Odkaz najdete v adresním řádku prohlížeče.`;
 
-  protected readonly state = signal<ShareState>('idle');
+  protected readonly sharing = signal(false);
+  protected readonly refused = signal(false);
   private readonly shareData = computed<ShareData>(() => ({
     title: this.pageTitle(),
     url: this.url(),
@@ -28,15 +28,19 @@ export class ShareButton {
   protected readonly canShare = computed(() => deviceCanShare(this.shareData()));
 
   protected async share(): Promise<void> {
-    if (this.state() === 'sharing') {
+    if (this.sharing()) {
       return;
     }
-    this.state.set('sharing');
+    this.sharing.set(true);
     try {
       await navigator.share(this.shareData());
-      this.state.set('idle');
+      this.refused.set(false);
     } catch (failure) {
-      this.state.set(isAbort(failure) ? 'idle' : 'failed');
+      if (!isAbort(failure)) {
+        this.refused.set(true);
+      }
+    } finally {
+      this.sharing.set(false);
     }
   }
 }

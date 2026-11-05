@@ -2,7 +2,7 @@
   <button
     type="button"
     class="ui-pill-button share-button"
-    [attr.aria-disabled]="state() === 'sharing' ? 'true' : null"
+    [attr.aria-disabled]="sharing() ? 'true' : null"
     (click)="share()"
   >
     <svg
@@ -21,7 +21,7 @@
     </svg>
     <span i18n="@@ui.share.action">Sdílet</span>
   </button>
-  @if (state() === 'failed') {
+  @if (refused()) {
     <p class="share-failed" role="alert" i18n="@@ui.share.failed">
       Sdílení se nepodařilo. Odkaz na stránku si můžete zkopírovat.
     </p>
@@ -30,6 +30,8 @@
       [what]="copyWhat"
       [label]="copyLabel"
       [copiedStatus]="copiedStatus"
+      [failedStatus]="copyFailedStatus"
+      align="start"
     />
   }
 } @else {
@@ -38,5 +40,7 @@
     [what]="copyWhat"
     [label]="copyLabel"
     [copiedStatus]="copiedStatus"
+    [failedStatus]="copyFailedStatus"
+    align="start"
   />
 }

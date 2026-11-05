@@ -115,9 +115,9 @@
   &[aria-disabled='true'] {
     cursor: progress;
   }
-}
 
-.ui-pill-button--done {
-  color: var(--color-success);
-  border-color: var(--color-success);
+  &.ui-pill-button--done {
+    color: var(--color-success);
+    border-color: var(--color-success);
+  }
 }

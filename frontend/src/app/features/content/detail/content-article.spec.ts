@@ -130,8 +130,8 @@ describe('Given a browser that can share', () => {
   });
 
   afterEach(() => {
-    Object.defineProperty(navigator, 'share', { value: undefined, configurable: true });
-    Object.defineProperty(navigator, 'canShare', { value: undefined, configurable: true });
+    Reflect.deleteProperty(navigator, 'share');
+    Reflect.deleteProperty(navigator, 'canShare');
   });
 
   async function shown(
@@ -160,7 +160,9 @@ describe('Given a browser that can share', () => {
   it('when a visitor shares a news article, then the device gets its title and its address on nfnn.cz', async () => {
     const fixture = await shown('news');
 
-    shareButton(fixture)?.click();
+    const button = shareButton(fixture);
+    expect(button).not.toBeNull();
+    button?.click();
     await fixture.whenStable();
 
     expect(share).toHaveBeenCalledExactlyOnceWith({
@@ -172,7 +174,9 @@ describe('Given a browser that can share', () => {
   it('when a visitor shares a project, then the device gets its title and its address on nfnn.cz', async () => {
     const fixture = await shown('project');
 
-    shareButton(fixture)?.click();
+    const button = shareButton(fixture);
+    expect(button).not.toBeNull();
+    button?.click();
     await fixture.whenStable();
 
     expect(share).toHaveBeenCalledExactlyOnceWith({
@@ -184,6 +188,7 @@ describe('Given a browser that can share', () => {
   it('when the page is a preview in the administration, then it offers no sharing', async () => {
     const fixture = await shown('news', true);
 
+    expect(text(fixture, 'h3.ui-intro__title')).toBe('Zahrada pro děti');
     expect(shareButton(fixture)).toBeNull();
     expect(fixture.nativeElement.querySelector('app-share-button')).toBeNull();
   });

@@ -12,6 +12,11 @@ function giveNavigator(share: ShareFn | undefined, canShare?: CanShareFn): void 
   Object.defineProperty(navigator, 'canShare', { value: canShare, configurable: true });
 }
 
+function forgetNavigatorStubs(): void {
+  Reflect.deleteProperty(navigator, 'share');
+  Reflect.deleteProperty(navigator, 'canShare');
+}
+
 function abort(): DOMException {
   return new DOMException('Share canceled', 'AbortError');
 }
@@ -34,7 +39,7 @@ describe('Given a share button for a news article', () => {
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
   });
 
-  afterEach(() => giveNavigator(undefined, undefined));
+  afterEach(() => forgetNavigatorStubs());
 
   const buttons = () =>
     [...fixture.nativeElement.querySelectorAll('button')] as HTMLButtonElement[];
@@ -76,14 +81,29 @@ describe('Given a share button for a news article', () => {
       expect(writeText).not.toHaveBeenCalled();
     });
 
-    it('and the visitor closes the share sheet, then nothing is said', async () => {
-      share.mockRejectedValue(abort());
+    it('and the page has been shared, then the button shares again on the next press', async () => {
+      await press(buttons()[0]);
+
+      expect(buttons()[0].getAttribute('aria-disabled')).toBeNull();
+
+      await press(buttons()[0]);
+
+      expect(share).toHaveBeenCalledTimes(2);
+    });
+
+    it('and the visitor closes the share sheet, then nothing is said and the button shares again', async () => {
+      share.mockRejectedValueOnce(abort());
 
       await press(buttons()[0]);
 
       expect(buttonTexts()).toEqual(['Sdílet']);
       expect(alert()).toBe('');
       expect(statuses()).toEqual([]);
+      expect(buttons()[0].getAttribute('aria-disabled')).toBeNull();
+
+      await press(buttons()[0]);
+
+      expect(share).toHaveBeenCalledTimes(2);
     });
 
     it('and it is pressed again while the share sheet is open, then the device is asked once', async () => {
@@ -91,11 +111,17 @@ describe('Given a share button for a news article', () => {
       share.mockReturnValue(new Promise<void>((resolve) => (finish = resolve)));
 
       buttons()[0].click();
+      fixture.detectChanges();
+
+      expect(buttons()[0].getAttribute('aria-disabled')).toBe('true');
+
       buttons()[0].click();
       finish();
       await fixture.whenStable();
+      fixture.detectChanges();
 
       expect(share).toHaveBeenCalledOnce();
+      expect(buttons()[0].getAttribute('aria-disabled')).toBeNull();
     });
 
     it('and the device refuses to share, then it says so and offers to copy the link', async () => {
@@ -109,6 +135,34 @@ describe('Given a share button for a news article', () => {
       await press(buttons()[1]);
 
       expect(writeText).toHaveBeenCalledWith(URL);
+    });
+
+    it('and the device refuses, then the visitor tries again and closes the sheet, then the offer to copy the link stays', async () => {
+      share.mockRejectedValueOnce(new DOMException('Not allowed', 'NotAllowedError'));
+      await press(buttons()[0]);
+
+      let close: (failure: unknown) => void = () => undefined;
+      share.mockReturnValueOnce(new Promise<void>((_, reject) => (close = reject)));
+      buttons()[0].click();
+      fixture.detectChanges();
+
+      expect(buttonTexts()).toEqual(['Sdílet', 'Kopírovat odkaz']);
+
+      close(abort());
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(buttonTexts()).toEqual(['Sdílet', 'Kopírovat odkaz']);
+    });
+
+    it('and the device refuses and later shares, then the offer to copy the link goes away', async () => {
+      share.mockRejectedValueOnce(new DOMException('Not allowed', 'NotAllowedError'));
+      await press(buttons()[0]);
+
+      await press(buttons()[0]);
+
+      expect(buttonTexts()).toEqual(['Sdílet']);
+      expect(alert()).toBe('');
     });
   });
 
@@ -128,6 +182,16 @@ describe('Given a share button for a news article', () => {
       expect(writeText).toHaveBeenCalledWith(URL);
       expect(buttonTexts()).toEqual(['Zkopírováno']);
       expect(statuses()).toEqual(['Odkaz je zkopírovaný, můžete ho vložit do zprávy.']);
+    });
+
+    it('and the browser refuses to copy, then it points to the address bar', async () => {
+      writeText.mockRejectedValue(new Error('denied'));
+
+      await press(buttons()[0]);
+
+      expect(statuses()).toEqual([
+        'Zkopírovat se nepodařilo. Odkaz najdete v adresním řádku prohlížeče.',
+      ]);
     });
   });
 

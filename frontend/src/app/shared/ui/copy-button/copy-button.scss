@@ -13,3 +13,11 @@
   color: var(--color-danger);
   text-align: right;
 }
+
+:host(.has-failed.is-start) {
+  align-items: flex-start;
+
+  .copy-status {
+    text-align: left;
+  }
+}

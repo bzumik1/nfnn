@@ -84,3 +84,43 @@ describe('Given a copy button with a label of its own', () => {
     expect(button.textContent?.replace(/\s+/g, ' ').trim()).toBe('Zkopírovat zprávu pro technika');
   });
 });
+
+describe('Given a copy button with sentences of its own for its status', () => {
+  let fixture: ComponentFixture<CopyButton>;
+  let writeText: ReturnType<typeof vi.fn>;
+
+  beforeEach(async () => {
+    writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    await TestBed.configureTestingModule({ imports: [CopyButton] }).compileComponents();
+    fixture = TestBed.createComponent(CopyButton);
+    fixture.componentRef.setInput('value', 'https://nfnn.cz/aktuality/zahrada-pro-deti');
+    fixture.componentRef.setInput('what', 'odkaz na stránku');
+    fixture.componentRef.setInput('copiedStatus', 'Odkaz je zkopírovaný.');
+    fixture.componentRef.setInput('failedStatus', 'Odkaz najdete v adresním řádku.');
+    fixture.detectChanges();
+  });
+
+  const status = () =>
+    (fixture.nativeElement.querySelector('[role="status"]') as HTMLElement).textContent?.trim();
+
+  async function press(): Promise<void> {
+    (fixture.nativeElement.querySelector('button') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+  }
+
+  it('when it copies, then its status says its own sentence', async () => {
+    await press();
+
+    expect(status()).toBe('Odkaz je zkopírovaný.');
+  });
+
+  it('when the browser refuses to copy, then its status says its own sentence', async () => {
+    writeText.mockRejectedValue(new Error('denied'));
+
+    await press();
+
+    expect(status()).toBe('Odkaz najdete v adresním řádku.');
+  });
+});

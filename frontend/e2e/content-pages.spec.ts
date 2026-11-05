@@ -319,11 +319,11 @@ test.describe('Given a visitor in a browser that cannot share', () => {
     page,
   }) => {
     await page.goto(`/aktuality/${article.slug}`);
-    await expect(page.getByRole('button', { name: 'Sdílet' })).toHaveCount(0);
 
     await page.getByRole('button', { name: 'Kopírovat odkaz' }).click();
 
     await expect(page.getByRole('button', { name: 'Zkopírováno' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Sdílet' })).toHaveCount(0);
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
       `https://nfnn.cz/aktuality/${article.slug}`,
     );
