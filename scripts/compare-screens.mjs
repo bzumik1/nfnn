@@ -26,6 +26,22 @@ export const ELEMENT_TOLERANCE_PIXELS = 0;
 const CROP_MARGIN = 24;
 const ELEMENT_MARK = '--';
 
+export function shotState() {
+  throw new Error('not named yet');
+}
+
+export function publicRoute() {
+  throw new Error('not decided yet');
+}
+
+export function declaredAppearance() {
+  throw new Error('not read yet');
+}
+
+export function undeclaredShots() {
+  throw new Error('not judged yet');
+}
+
 export function shotKind(file) {
   return file.replace(/-\d+\.png$/, '').includes(ELEMENT_MARK) ? 'element' : 'page';
 }

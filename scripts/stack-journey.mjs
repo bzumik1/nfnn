@@ -175,6 +175,20 @@ export function mcpMessages(contentType, text) {
     .map((data) => JSON.parse(data));
 }
 
+export const BANK_PHASES = [];
+
+export function phaseMovements() {
+  throw new Error('not planned yet');
+}
+
+export function pragueDay() {
+  throw new Error('not named yet');
+}
+
+export function bankProblems() {
+  throw new Error('not checked yet');
+}
+
 class JourneyFailure extends Error {}
 
 function fail(message) {

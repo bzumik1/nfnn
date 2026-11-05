@@ -3,9 +3,13 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { inflateSync } from 'node:zlib';
 import {
+  BANK_PHASES,
   backupKeyWords,
+  bankProblems,
   base32Decode,
   mcpMessages,
+  phaseMovements,
+  pragueDay,
   proofBytes,
   receiptSerial,
   statusDigest,
@@ -76,4 +80,59 @@ test('Given connector answers as JSON or as an event stream, when the journey re
     [{ id: 1 }, { id: 2 }],
   );
   assert.deepEqual(mcpMessages('application/json', ''), []);
+});
+
+test('Given each bank phase, when the journey plans its movements, then the first phase pays with the symbol only and every later one also from the learned account, with an unknown payer each time', () => {
+  const planned = BANK_PHASES.map((phase) => phaseMovements(phase, '4821937560', '2026-11-04'));
+  assert.deepEqual(
+    planned.map(({ gifts }) => gifts.map((gift) => gift.pairedBy)),
+    [['VARIABLE_SYMBOL'], ['VARIABLE_SYMBOL', 'SENDER_ACCOUNT'], ['VARIABLE_SYMBOL', 'SENDER_ACCOUNT'], ['VARIABLE_SYMBOL', 'SENDER_ACCOUNT']],
+  );
+  const all = planned.flatMap(({ gifts, stranger }) => [...gifts, stranger]);
+  assert.equal(new Set(all.map((movement) => movement.id)).size, all.length);
+  assert.equal(new Set(all.map((movement) => movement.amountMinor)).size, all.length);
+  for (const amount of [50_000, 70_000, 90_000]) {
+    assert.ok(!all.some((movement) => movement.amountMinor === amount), 'the amounts of the gifts paired by hand stay apart');
+  }
+  for (const { gifts, stranger } of planned) {
+    assert.equal(gifts[0].variableSymbol, '4821937560');
+    assert.ok(gifts.slice(1).every((gift) => gift.variableSymbol === null && gift.account === gifts[0].account));
+    assert.equal(stranger.variableSymbol, null);
+    assert.notEqual(stranger.account, gifts[0].account);
+    assert.ok(all.every((movement) => movement.date === '2026-11-04'));
+  }
+  assert.throws(() => phaseMovements('later', '1', '2026-11-04'), /unknown bank phase later/);
+});
+
+test('Given instants around midnight in Prague, when the journey names the booking day, then it is the Prague day the given days back', () => {
+  assert.equal(pragueDay(new Date('2026-11-04T23:30:00Z'), 0), '2026-11-05');
+  assert.equal(pragueDay(new Date('2026-11-04T22:30:00Z'), 1), '2026-11-04');
+  assert.equal(pragueDay(new Date('2026-07-01T21:59:00Z'), 1), '2026-06-30');
+});
+
+test('Given the planned movements and what the site shows, when the journey checks the bank, then it names every gift missing, doubled or paired otherwise and every unknown payment paired to the donor or not listed as unpaired', () => {
+  const { gifts, stranger } = phaseMovements('candidate', '4821937560', '2026-11-04');
+  const planned = [...gifts.map((gift) => ({ ...gift, role: 'gift' })), { ...stranger, role: 'stranger' }];
+  const donations = gifts.map((gift) => ({ amountMinor: gift.amountMinor, pairedBy: gift.pairedBy }));
+  const unpaired = [{ bankTransactionId: stranger.id }];
+  assert.deepEqual(bankProblems(planned, donations, unpaired), []);
+  assert.deepEqual(
+    bankProblems(
+      planned,
+      [
+        { amountMinor: gifts[0].amountMinor, pairedBy: 'VARIABLE_SYMBOL' },
+        { amountMinor: gifts[0].amountMinor, pairedBy: 'VARIABLE_SYMBOL' },
+        { amountMinor: gifts[1].amountMinor, pairedBy: 'VARIABLE_SYMBOL' },
+        { amountMinor: stranger.amountMinor, pairedBy: null },
+      ],
+      [],
+    ),
+    [
+      `the donor holds the gift of ${gifts[0].amountMinor / 100} Kč 2 times`,
+      `the gift of ${gifts[1].amountMinor / 100} Kč is paired by VARIABLE_SYMBOL instead of SENDER_ACCOUNT`,
+      `the unknown payer's ${stranger.amountMinor / 100} Kč is paired to the donor`,
+      `the unknown payer's ${stranger.amountMinor / 100} Kč (movement ${stranger.id}) is not among the unpaired payments`,
+    ],
+  );
+  assert.deepEqual(bankProblems(planned, [], unpaired), gifts.map((gift) => `the donor does not hold the gift of ${gift.amountMinor / 100} Kč`));
 });
