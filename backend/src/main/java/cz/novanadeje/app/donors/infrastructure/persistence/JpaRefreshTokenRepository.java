@@ -35,6 +35,26 @@ class JpaRefreshTokenRepository implements RefreshTokenRepository {
     }
 
     @Override
+    public Optional<RefreshToken> findBySecretHashForUpdate(String secretHash) {
+        return jpa.findForUpdateBySecretHash(secretHash).map(RefreshTokenJpaEntity::toDomain);
+    }
+
+    @Override
+    public void recordSuccessor(UUID tokenId, UUID successorId) {
+        jpa.recordSuccessor(tokenId, successorId);
+    }
+
+    @Override
+    public boolean revokeIfUnused(UUID tokenId, Instant at) {
+        return jpa.revokeIfUnused(tokenId, at) == 1;
+    }
+
+    @Override
+    public boolean supersedeIfUnused(UUID tokenId, Instant at) {
+        return jpa.supersedeIfUnused(tokenId, at) == 1;
+    }
+
+    @Override
     public boolean markUsed(UUID tokenId, Instant at) {
         return jpa.markUsed(tokenId, at) == 1;
     }
@@ -46,6 +66,7 @@ class JpaRefreshTokenRepository implements RefreshTokenRepository {
 
     @Override
     public void revokeAllOf(DonorId donorId, Instant at) {
+        jpa.lockAllOfInIdOrder(donorId.value());
         jpa.revokeAllOf(donorId.value(), at);
     }
 }

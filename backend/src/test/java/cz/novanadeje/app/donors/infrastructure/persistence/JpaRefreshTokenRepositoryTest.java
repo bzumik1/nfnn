@@ -129,6 +129,83 @@ class JpaRefreshTokenRepositoryTest {
         assertThat(refreshTokens.findBySecretHash(secret.hash()).orElseThrow().usedAt()).contains(NOW.plusSeconds(60));
     }
 
+    @Test
+    @DisplayName("Given a token, when it is found by hash for an update, then it is the stored token")
+    void should_find_the_stored_token_when_found_for_update_given_a_token() {
+        RefreshTokenSecret secret = RefreshTokenSecret.generate();
+        RefreshToken token = RefreshToken.issue(secret, jana, NOW, TTL, true);
+        refreshTokens.save(token);
+        flushAndClear();
+
+        assertThat(refreshTokens.findBySecretHashForUpdate(secret.hash())).get().extracting(RefreshToken::id).isEqualTo(token.id());
+        assertThat(refreshTokens.findBySecretHashForUpdate(RefreshTokenSecret.generate().hash())).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a used token and the token issued after it, when the successor is recorded, then the used token names it")
+    void should_name_the_successor_when_recorded_given_a_used_token_and_the_next_one() {
+        RefreshTokenSecret secret = RefreshTokenSecret.generate();
+        RefreshToken used = RefreshToken.issue(secret, jana, NOW, TTL, false);
+        used.markUsed(NOW.plusSeconds(60));
+        RefreshToken successor = RefreshToken.issue(RefreshTokenSecret.generate(), jana, NOW.plusSeconds(60), TTL, false);
+        refreshTokens.save(used);
+        refreshTokens.save(successor);
+
+        refreshTokens.recordSuccessor(used.id(), successor.id());
+        flushAndClear();
+
+        assertThat(refreshTokens.findBySecretHash(secret.hash()).orElseThrow().successorId()).contains(successor.id());
+        assertThat(refreshTokens.findById(successor.id()).orElseThrow().successorId()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given an unused, a used and a revoked token, when each is revoked if unused, then only the unused one is revoked and the others keep their state")
+    void should_revoke_only_the_unused_token_when_revoked_if_unused_given_unused_used_and_revoked_tokens() {
+        RefreshToken unused = RefreshToken.issue(RefreshTokenSecret.generate(), jana, NOW, TTL, false);
+        RefreshToken used = RefreshToken.issue(RefreshTokenSecret.generate(), jana, NOW, TTL, false);
+        used.markUsed(NOW.plusSeconds(10));
+        RefreshToken revoked = RefreshToken.issue(RefreshTokenSecret.generate(), jana, NOW, TTL, false);
+        revoked.revoke(NOW.plusSeconds(10));
+        for (RefreshToken token : new RefreshToken[]{unused, used, revoked}) {
+            refreshTokens.save(token);
+        }
+        flushAndClear();
+
+        assertThat(refreshTokens.revokeIfUnused(unused.id(), NOW.plusSeconds(30))).isTrue();
+        assertThat(refreshTokens.revokeIfUnused(used.id(), NOW.plusSeconds(30))).isFalse();
+        assertThat(refreshTokens.revokeIfUnused(revoked.id(), NOW.plusSeconds(30))).isFalse();
+        flushAndClear();
+
+        assertThat(refreshTokens.findById(unused.id()).orElseThrow().revokedAt()).contains(NOW.plusSeconds(30));
+        assertThat(refreshTokens.findById(used.id()).orElseThrow().revokedAt()).isEmpty();
+        assertThat(refreshTokens.findById(revoked.id()).orElseThrow().revokedAt()).contains(NOW.plusSeconds(10));
+    }
+
+    @Test
+    @DisplayName("Given an unused, a used and a revoked token, when each is superseded if unused, then only the unused one is revoked and remembered as superseded")
+    void should_supersede_only_the_unused_token_when_superseded_if_unused_given_unused_used_and_revoked_tokens() {
+        RefreshToken unused = RefreshToken.issue(RefreshTokenSecret.generate(), jana, NOW, TTL, false);
+        RefreshToken used = RefreshToken.issue(RefreshTokenSecret.generate(), jana, NOW, TTL, false);
+        used.markUsed(NOW.plusSeconds(10));
+        RefreshToken revoked = RefreshToken.issue(RefreshTokenSecret.generate(), jana, NOW, TTL, false);
+        revoked.revoke(NOW.plusSeconds(10));
+        for (RefreshToken token : new RefreshToken[]{unused, used, revoked}) {
+            refreshTokens.save(token);
+        }
+        flushAndClear();
+
+        assertThat(refreshTokens.supersedeIfUnused(unused.id(), NOW.plusSeconds(30))).isTrue();
+        assertThat(refreshTokens.supersedeIfUnused(used.id(), NOW.plusSeconds(30))).isFalse();
+        assertThat(refreshTokens.supersedeIfUnused(revoked.id(), NOW.plusSeconds(30))).isFalse();
+        flushAndClear();
+
+        RefreshToken superseded = refreshTokens.findById(unused.id()).orElseThrow();
+        assertThat(superseded.isSuperseded()).isTrue();
+        assertThat(superseded.revokedAt()).contains(NOW.plusSeconds(30));
+        assertThat(refreshTokens.findById(used.id()).orElseThrow().isSuperseded()).isFalse();
+        assertThat(refreshTokens.findById(revoked.id()).orElseThrow().isSuperseded()).isFalse();
+    }
+
     private DonorId donor(String email, String variableSymbol) {
         Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null,
                 new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new EmailAddress(email), new PasswordHash("$hash"),
