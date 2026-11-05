@@ -345,7 +345,7 @@ export class DonorDonations {
     this.reloadDonations().subscribe();
   }
 
-  private reloadDonations(): Observable<readonly DonationItem[] | null> {
+  private reloadDonations(offered = false): Observable<readonly DonationItem[] | null> {
     const request = ++this.latestDonationsRequest;
     const held = this.repository.held();
     const atOnce = held !== null && this.state() !== 'ready';
@@ -355,7 +355,7 @@ export class DonorDonations {
     return this.repository.fresh(atOnce ? 'catch-up' : 'sync').pipe(
       map((read) => {
         if (request === this.latestDonationsRequest) {
-          if (atOnce) {
+          if (atOnce || offered) {
             this.offerDonations(read);
           } else {
             this.showRead(read);
@@ -565,7 +565,7 @@ export class DonorDonations {
           if (byDonor || check.bankDataAsOf !== asOfBefore) {
             this.bankDataArrived.update((count) => count + 1);
           }
-          this.reloadDonations().subscribe((items) => {
+          this.reloadDonations(!byDonor && this.shown?.source === 'copy').subscribe((items) => {
             this.bankCheckEnded();
             if (!byDonor) {
               return;

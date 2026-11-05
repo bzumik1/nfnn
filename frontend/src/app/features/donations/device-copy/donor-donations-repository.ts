@@ -1,5 +1,7 @@
 import { computed, inject, Injectable, untracked } from '@angular/core';
 import { defer, forkJoin, from, map, Observable, of, switchMap } from 'rxjs';
+import { AuthStore } from '../../../core/auth/auth-store';
+import { userHandleOf } from '../../../core/auth/session-device';
 import { DonationItem, DonationsApi, DonationSummaryResponse } from '../donations-api';
 import { DonorCopyLink } from './donor-copy';
 import type { DonorCopyView } from './donor-copy-view';
@@ -19,6 +21,7 @@ export interface DonorDonationsRead {
 export class DonorDonationsRepository {
   private readonly link = inject(DonorCopyLink);
   private readonly api = inject(DonationsApi);
+  private readonly auth = inject(AuthStore);
 
   private readonly copy = computed(() => {
     const copy = this.link.copy();
@@ -62,15 +65,19 @@ export class DonorDonationsRepository {
   }
 
   private fromServer(): Observable<DonorDonationsRead> {
-    return forkJoin({ summary: this.api.summary(), list: this.api.list() }).pipe(
-      map(({ summary, list }) => ({
-        source: 'server' as const,
-        owner: null,
-        summary,
-        items: list.items,
-        at: new Date().toISOString(),
-        bankDataAsOf: null,
-      })),
-    );
+    return defer(() => {
+      const donor = untracked(this.auth.donor);
+      const owner = donor === null ? null : userHandleOf(donor.id);
+      return forkJoin({ summary: this.api.summary(), list: this.api.list() }).pipe(
+        map(({ summary, list }) => ({
+          source: 'server' as const,
+          owner,
+          summary,
+          items: list.items,
+          at: new Date().toISOString(),
+          bankDataAsOf: null,
+        })),
+      );
+    });
   }
 }

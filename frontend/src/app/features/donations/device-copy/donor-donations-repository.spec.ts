@@ -2,6 +2,9 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
+import { AuthStore } from '../../../core/auth/auth-store';
+import { userHandleOf } from '../../../core/auth/session-device';
+import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
 import type { DonationListResponse } from '../donations-api';
 import { donationItem, twoYearDonations, twoYearSummary } from '../testing/donation-fixtures';
 import { DonorCopyLink } from './donor-copy';
@@ -46,6 +49,17 @@ describe('Given the repository the donor pages read their gifts from', () => {
       owner: null,
       items: twoYearDonations().items,
     });
+  });
+
+  it('when the donor is signed in, then a read from the server names the donor it was asked for', async () => {
+    const store = TestBed.inject(AuthStore);
+    store.login('jana@example.cz', 'correct horse battery').subscribe();
+    http.expectOne('/api/donors/auth/login').flush(authResponse('token-1', sampleDonor()));
+
+    const read = firstValueFrom(repository.fresh('sync'));
+    await answerServer();
+
+    expect((await read).owner).toBe(userHandleOf(sampleDonor().id));
   });
 
   describe('when a copy is open', () => {

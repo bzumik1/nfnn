@@ -15,6 +15,7 @@ import { AdminAccessRefusal } from '../../../core/auth/admin-access-refusal';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
+import { userHandleOf } from '../../../core/auth/session-device';
 import { DonationListResponse, DonationSummaryResponse } from '../../donations/donations-api';
 import { foundationPaymentDetails } from '../../donations/testing/payment-details-fixtures';
 import { spayd } from '../../donations/spayd';
@@ -3104,6 +3105,7 @@ describe('Given a signed-in donor in the donor area', () => {
 
     beforeEach(() => {
       copy = new FakeDonorCopy();
+      copy.owned.set(userHandleOf(sampleDonor().id));
       TestBed.inject(DonorCopyLink).copy.set(copy);
     });
 
@@ -3137,7 +3139,25 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(text('.bank-check-incoming')).toBe('');
     });
 
-    it('then a gift the catch-up brings after the copy was shown does not move the list until the bank check ends', async () => {
+    it('then a copy that opens for another donor after the server answered replaces the list at once instead of offering its gifts as new ones', async () => {
+      copy.opened.set(false);
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+      expect(rows()).toBe(twoYearDonations().items.length);
+
+      const other = donationItem({ id: 'petr-1', receivedAt: '2026-05-05', amountMinor: 70000 });
+      copy.owned.set('petr');
+      copy.shown.set(
+        copyViewOf(twoYearSummary(), { ...twoYearDonations(), items: [other], count: 1 }),
+      );
+      copy.opened.set(true);
+      await settle();
+
+      expect(rows()).toBe(1);
+      expect(text('.bank-check-incoming')).toBe('');
+    });
+
+    it('then a gift the catch-up brings after the copy was shown waits behind the button that names it, also once the bank check has ended', async () => {
       copy.shown.set(copyViewOf(twoYearSummary(), twoYearDonations()));
       await open('/darce/dary');
 
@@ -3152,7 +3172,29 @@ describe('Given a signed-in donor in the donor area', () => {
       await settle();
       copy.finish('stored');
       await settle();
+
+      expect(rows()).toBe(twoYearDonations().items.length);
+      expect(text('.bank-check-incoming')).toBe('Zobrazit 1 nový dar');
+      await click('.bank-check-incoming');
+      await settle();
       expect(rows()).toBe(twoYearDonations().items.length + 1);
+    });
+
+    it('then a bank check that ends before the catch-up keeps the gift it brings behind the button that names it', async () => {
+      copy.shown.set(copyViewOf(twoYearSummary(), twoYearDonations()));
+      await open('/darce/dary');
+
+      bankCheck.flush(
+        { bankDataAsOf: LATER, checking: false },
+        { status: 202, statusText: 'Accepted' },
+      );
+      await settle();
+      copy.finish('stored', copyViewOf(twoYearSummary(), withNewGift()));
+      await settle();
+
+      http.expectNone('/api/donations/me');
+      expect(rows()).toBe(twoYearDonations().items.length);
+      expect(text('.bank-check-incoming')).toBe('Zobrazit 1 nový dar');
     });
 
     it('then a copy whose gifts disagree with its summary is not shown and the gifts come from the server', async () => {
@@ -3221,7 +3263,7 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(text('.bank-check-incoming')).toBe('Zobrazit 1 nový dar');
     });
 
-    it('then a gift that the copy brings after the bank check is shown at once', async () => {
+    it('then a gift that the copy brings after the bank check waits behind the button that names it', async () => {
       copy.shown.set(copyViewOf(twoYearSummary(), twoYearDonations()));
       await open('/darce/dary');
       copy.finish('stored');
@@ -3237,8 +3279,8 @@ describe('Given a signed-in donor in the donor area', () => {
       await settle();
 
       http.expectNone('/api/donations/me');
-      expect(rows()).toBe(twoYearDonations().items.length + 1);
-      expect(text('.bank-check-incoming')).toBe('');
+      expect(rows()).toBe(twoYearDonations().items.length);
+      expect(text('.bank-check-incoming')).toBe('Zobrazit 1 nový dar');
     });
 
     describe('and the donor presses Zkontrolovat nové platby while the copy is shown', () => {
