@@ -16,7 +16,7 @@ A project thread wakes only on events: Jakub's message, a PR event it subscribed
 3. Never end a turn that waits on CI unless a run of the head SHA was seen and a `send_later` check is scheduled about 20 minutes after the push, naming the PR and the SHA. Each check acts or schedules the next one (10 minutes later while the run is in progress, up to 35 minutes after the push; after that, treat it as no run). A check that fires after the merge only confirms it and stops.
 4. When the run ends:
    - Green, with the reviews the task requires done: merge as `CLAUDE.md` allows.
-   - Red in code or tests the PR touches, or reproducible locally: fix it. Read the failed job's log as soon as that job fails; the run itself lasts until the backend job ends.
+   - Red in code or tests the PR touches, or reproducible locally: fix it. Read the failed job's log as soon as that job fails; the run itself lasts until its slowest job ends.
    - Red in a step on the known-flaky list below, or in a job the diff cannot affect whose step was green on `main` the same day: re-run the failed jobs once through the GitHub tools (`actions_run_trigger` with `rerun_failed_jobs`) and comment the run link on the PR. Never an empty commit, never close and reopen. The same step failing again is not flaky: investigate, and if the cause is outside the PR, ask the coordinator to give one thread the fix.
 5. Tell Jakub, in one message with the PR link and the one thing he must do, only when: the fix needs him (a setting, a secret, GitHub settings, the server); no run started 10 minutes after a clean push; the same flaky step failed twice in a day; or a PR has waited more than 2 hours on something no thread can unblock.
 
