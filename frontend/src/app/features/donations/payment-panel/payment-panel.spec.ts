@@ -22,6 +22,13 @@ function pngOf(matrix: QrMatrix): Blob {
   return new Blob([`png of ${matrix.modules}`], { type: 'image/png' });
 }
 
+function sharesOnlyImages(file: File): boolean {
+  return file.type !== 'application/x-shortpaymentdescriptor';
+}
+
+const IMAGE_NOT_SHARED =
+  'Nenašli jste v nabídce svou banku? Klepněte znovu, zvolte Uložit obrázek a v bankovní aplikaci načtěte QR platbu z Fotek. Nebo zkopírujte údaje výše do bankovní aplikace.';
+
 function pngTextOf(spaydText: string): string {
   return `png of ${encodeText(spaydText, 'H').modules}`;
 }
@@ -172,22 +179,30 @@ describe('Given the payment panel on a phone or a tablet', () => {
   }
 
   it('when it opens, then the bank details come first, then Otevřít v aplikaci banky, Poslat QR jako obrázek and the QR folded under Platíte z jiného zařízení?', async () => {
+    sharesFiles = sharesOnlyImages;
     await openWithQr();
 
     const order = Array.from(
       panel().nativeElement.querySelectorAll(
-        '.bank, .bank-app-open, .bank-app-image, .other-device, .qr',
+        '.bank, .bank-app-open, .bank-app-second, .other-device, .qr',
       ) as NodeListOf<Element>,
     ).map((part) => part.classList[0]);
-    expect(order).toEqual(['bank', 'bank-app-open', 'bank-app-image', 'other-device', 'qr']);
+    expect(order).toEqual(['bank', 'bank-app-open', 'bank-app-second', 'other-device', 'qr']);
     expect(squashed('.bank-app-open')).toBe('Otevřít v aplikaci banky');
-    expect(squashed('.bank-app-image')).toBe('Poslat QR jako obrázek');
+    expect(squashed('.bank-app-second')).toBe('Poslat QR jako obrázek');
     expect(squashed('.other-device')).toBe(
       'Platíte z jiného zařízení? Zobrazit QR kód ke skenování',
     );
     expect(otherDevice().getAttribute('aria-expanded')).toBe('false');
     expect(qrRegion().hidden).toBe(true);
     expect(qrRegion().classList.contains('qr')).toBe(true);
+  });
+
+  it('when the phone shares payment files too, then the second button offers the payment as a file', async () => {
+    await openWithQr();
+
+    expect(squashed('.bank-app-open')).toBe('Otevřít v aplikaci banky');
+    expect(squashed('.bank-app-second')).toBe('Poslat jako soubor platby');
   });
 
   it('when the QR region is read out, then its name stays Platíte z jiného zařízení? whether it is folded or not', async () => {
@@ -235,10 +250,43 @@ describe('Given the payment panel on a phone or a tablet', () => {
     expect(qrRegion().hidden).toBe(true);
   });
 
-  it('when the visitor taps Otevřít v aplikaci banky, then the phone is offered platba.spayd holding the payment of the chosen amount and nothing more is said', async () => {
+  it('when the visitor taps Otevřít v aplikaci banky, then the phone is offered the PNG of the QR drawn for the chosen amount and nothing more is said', async () => {
     await openWithQr();
 
     await tap('Otevřít v aplikaci banky');
+
+    expect(shared).toHaveLength(1);
+    const [file] = shared[0].files ?? [];
+    expect(shared[0].title).toBe('QR platba');
+    expect(file.name).toBe('qr-platba-nova-nadeje.png');
+    expect(file.type).toBe('image/png');
+    expect(await readText(file)).toBe(pngTextOf(QR_OF_500.spayd));
+    expect(downloads).toEqual([]);
+    expect(handoffStatus()).toBe('');
+  });
+
+  it('when the QR image is still being drawn, then Otevřít v aplikaci banky waits for it', async () => {
+    vi.mocked(QrCode.prototype.pngBlob).mockReturnValue(new Promise<Blob>(() => undefined));
+    await openWithQr();
+
+    expect(element<HTMLButtonElement>('.bank-app-open').disabled).toBe(true);
+  });
+
+  it('when the QR image could not be drawn ahead, then Otevřít v aplikaci banky offers platba.spayd instead', async () => {
+    vi.mocked(QrCode.prototype.pngBlob).mockRejectedValue(new Error('canvas lost'));
+    await openWithQr();
+
+    await tap('Otevřít v aplikaci banky');
+
+    const [file] = shared[0].files ?? [];
+    expect(file.name).toBe('platba.spayd');
+    expect(await readText(file)).toBe(QR_OF_500.spayd);
+  });
+
+  it('when the visitor taps Poslat jako soubor platby, then the phone is offered platba.spayd holding the payment of the chosen amount and nothing more is said', async () => {
+    await openWithQr();
+
+    await tap('Poslat jako soubor platby');
 
     expect(shared).toHaveLength(1);
     const [file] = shared[0].files ?? [];
@@ -259,6 +307,17 @@ describe('Given the payment panel on a phone or a tablet', () => {
     await settle();
   });
 
+  it('when the visitor closes the offer of the payment file without a bank, then a line points to the QR image', async () => {
+    shareRefusal = new DOMException('Share canceled', 'AbortError');
+    await openWithQr();
+
+    await tap('Poslat jako soubor platby');
+
+    expect(handoffStatus()).toBe(
+      'Neotevřela se vám banka? Zkuste Otevřít v aplikaci banky, které pošle QR jako obrázek, nebo zkopírujte údaje výše do bankovní aplikace.',
+    );
+  });
+
   it('when the visitor taps again while the phone still offers the file, then it is offered once and the buttons say they wait without losing the focus', async () => {
     const answer = deferred();
     shareAnswer = answer.promise;
@@ -273,7 +332,7 @@ describe('Given the payment panel on a phone or a tablet', () => {
     expect(open.getAttribute('aria-disabled')).toBe('true');
     expect(open.disabled).toBe(false);
     expect(document.activeElement).toBe(open);
-    expect(element('.bank-app-image').getAttribute('aria-disabled')).toBe('true');
+    expect(element('.bank-app-second').getAttribute('aria-disabled')).toBe('true');
 
     answer.resolve();
     await settle();
@@ -311,7 +370,7 @@ describe('Given the payment panel on a phone or a tablet', () => {
 
     expect(qrRegion().hidden).toBe(true);
     expect(element<HTMLButtonElement>('.bank-app-open').getAttribute('aria-disabled')).toBeNull();
-    expect(handoffStatus()).toContain('Neotevřela se vám banka?');
+    expect(handoffStatus()).toBe(IMAGE_NOT_SHARED);
   });
 
   it('when the visitor picks 1 000 Kč and taps Otevřít v aplikaci banky, then the file holds the payment of 1 000 Kč', async () => {
@@ -320,7 +379,7 @@ describe('Given the payment panel on a phone or a tablet', () => {
 
     await tap('Otevřít v aplikaci banky');
 
-    expect(await readText((shared[0].files ?? [])[0])).toBe(QR_OF_1000.spayd);
+    expect(await readText((shared[0].files ?? [])[0])).toBe(pngTextOf(QR_OF_1000.spayd));
   });
 
   it('when a signed-in donor taps Otevřít v aplikaci banky, then the file carries their variable symbol', async () => {
@@ -329,7 +388,7 @@ describe('Given the payment panel on a phone or a tablet', () => {
 
     await tap('Otevřít v aplikaci banky');
 
-    expect(await readText((shared[0].files ?? [])[0])).toBe(QR_OF_500_FOR_JANA.spayd);
+    expect(await readText((shared[0].files ?? [])[0])).toBe(pngTextOf(QR_OF_500_FOR_JANA.spayd));
   });
 
   it('when the visitor closes the offer without a bank, then a polite line says how to pay without it', async () => {
@@ -339,9 +398,7 @@ describe('Given the payment panel on a phone or a tablet', () => {
 
     await tap('Otevřít v aplikaci banky');
 
-    expect(handoffStatus()).toBe(
-      'Neotevřela se vám banka? Zkopírujte údaje výše do bankovní aplikace, nebo pošlete QR jako obrázek a v bance zvolte platbu z obrázku.',
-    );
+    expect(handoffStatus()).toBe(IMAGE_NOT_SHARED);
   });
 
   it('when the phone refuses to offer the file, then the same line says how to pay without it', async () => {
@@ -350,7 +407,7 @@ describe('Given the payment panel on a phone or a tablet', () => {
 
     await tap('Otevřít v aplikaci banky');
 
-    expect(handoffStatus()).toContain('Neotevřela se vám banka?');
+    expect(handoffStatus()).toBe(IMAGE_NOT_SHARED);
     expect(downloads).toEqual([]);
   });
 
@@ -447,6 +504,7 @@ describe('Given the payment panel on a phone or a tablet', () => {
   });
 
   it('when the visitor taps Poslat QR jako obrázek, then the phone is offered the PNG of the QR drawn for the chosen amount', async () => {
+    sharesFiles = sharesOnlyImages;
     await openWithQr();
 
     button('Poslat QR jako obrázek').click();
@@ -462,6 +520,7 @@ describe('Given the payment panel on a phone or a tablet', () => {
   });
 
   it('when the visitor picks 1 000 Kč and taps Poslat QR jako obrázek, then the image shared is the QR drawn for 1 000 Kč', async () => {
+    sharesFiles = sharesOnlyImages;
     await openWithQr();
     await tap('1 000 Kč');
 
@@ -472,14 +531,16 @@ describe('Given the payment panel on a phone or a tablet', () => {
   });
 
   it('when the QR image is still being drawn, then Poslat QR jako obrázek waits for it', async () => {
+    sharesFiles = sharesOnlyImages;
     vi.mocked(QrCode.prototype.pngBlob).mockReturnValue(new Promise<Blob>(() => undefined));
     await openWithQr();
 
-    expect(element<HTMLButtonElement>('.bank-app-image').disabled).toBe(true);
+    expect(element<HTMLButtonElement>('.bank-app-second').disabled).toBe(true);
     expect(element<HTMLButtonElement>('.bank-app-open').disabled).toBe(false);
   });
 
   it('when the QR image could not be drawn ahead, then Poslat QR jako obrázek saves it instead and says where it is', async () => {
+    sharesFiles = sharesOnlyImages;
     vi.mocked(QrCode.prototype.pngBlob)
       .mockRejectedValueOnce(new Error('canvas lost'))
       .mockImplementation(function (this: QrCode) {
@@ -497,6 +558,7 @@ describe('Given the payment panel on a phone or a tablet', () => {
   });
 
   it('when the phone refuses to share the QR image, then the image downloads instead and a line says where it is', async () => {
+    sharesFiles = sharesOnlyImages;
     shareRefusal = new DOMException('Not allowed', 'NotAllowedError');
     await openWithQr();
 
@@ -512,7 +574,7 @@ describe('Given the payment panel on a phone or a tablet', () => {
     sharesFiles = () => false;
     await openWithQr();
 
-    expect(squashed('.bank-app-image')).toBe('Uložit QR kód');
+    expect(squashed('.bank-app-second')).toBe('Uložit QR kód');
     await tap('Uložit QR kód');
 
     expect(shared).toEqual([]);
@@ -540,7 +602,7 @@ describe('Given the payment panel on a phone or a tablet', () => {
     await settle(REDRAW_MS);
 
     expect(element<HTMLButtonElement>('.bank-app-open').disabled).toBe(true);
-    expect(element<HTMLButtonElement>('.bank-app-image').disabled).toBe(true);
+    expect(element<HTMLButtonElement>('.bank-app-second').disabled).toBe(true);
   });
 
   it('when the payment details fail to load, then the failure and its retry show without unfolding the QR', async () => {
@@ -606,7 +668,7 @@ describe('Given the payment panel on a computer', () => {
     expect(panel.querySelector('.qr-title')?.textContent?.trim()).toBe('Naskenujte a přispějte');
     expect(panel.querySelector('.qr-save')?.textContent?.trim()).toBe('Uložit QR kód');
     expect(panel.querySelector('.bank-app-open')).toBeNull();
-    expect(panel.querySelector('.bank-app-image')).toBeNull();
+    expect(panel.querySelector('.bank-app-second')).toBeNull();
     expect(panel.querySelector('.other-device')).toBeNull();
   });
 });

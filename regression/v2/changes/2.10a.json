@@ -1,0 +1,18 @@
+[
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "content/stale_content_writes: *",
+    "kind": "added",
+    "field": "$.session",
+    "reason": "Plan v3 slice 2.10 after 2.18: the features 2.18 added (merged after 2.10 branched) sign in through the answers that now name the session kind (session: REMEMBERED for a sign-in that names none), as declared for every other feature in 2.10.json",
+    "contract": "docs/api-contract.md, Authentication, Session kinds"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/admin_stale_writes: *",
+    "kind": "added",
+    "field": "$.session",
+    "reason": "Plan v3 slice 2.10 after 2.18: the features 2.18 added (merged after 2.10 branched) sign in through the answers that now name the session kind (session: REMEMBERED for a sign-in that names none), as declared for every other feature in 2.10.json",
+    "contract": "docs/api-contract.md, Authentication, Session kinds"
+  }
+]
