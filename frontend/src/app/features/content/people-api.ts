@@ -69,6 +69,8 @@ export interface PublicSignature {
   width: number;
   height: number;
   name: string;
+  role?: string | null;
+  portrait?: PersonImageResponse | null;
 }
 
 export interface PublicFoundersNote {

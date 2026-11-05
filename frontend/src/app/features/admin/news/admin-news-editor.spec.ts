@@ -1135,6 +1135,107 @@ describe('Given an administrator editing a published news article', () => {
 
     expect(navigated).toHaveBeenCalledWith('/sprava/aktuality');
   });
+
+  async function chooseLookBackYear(label: string): Promise<void> {
+    const select = element<HTMLSelectElement>(fixture, '#news-look-back-year');
+    const index = Array.from(select.options).findIndex(
+      (option) => option.textContent?.trim() === label,
+    );
+    expect(index).toBeGreaterThanOrEqual(0);
+    select.selectedIndex = index;
+    select.dispatchEvent(new Event('change'));
+    await settle(fixture);
+  }
+
+  it('when they choose the year it looks back on and save, then the year goes to its own address with the version of the saved article', async () => {
+    await loaded();
+    expect(
+      element<HTMLSelectElement>(
+        fixture,
+        '#news-look-back-year',
+      ).selectedOptions[0].textContent?.trim(),
+    ).toBe('Není ohlédnutím');
+
+    await chooseLookBackYear('2025');
+    await submit(fixture);
+    const saving = http.expectOne(`${NEWS_URL}/${newsArticle().id}`);
+    expect(saving.request.method).toBe('PUT');
+    expect(saving.request.body.lookBackYear).toBeUndefined();
+    saving.flush(newsArticle({ version: '5d0f2b8c31e4a967' }));
+    await settle(fixture);
+
+    const placing = http.expectOne(`${NEWS_URL}/${newsArticle().id}/look-back-year`);
+    expect(placing.request.method).toBe('PUT');
+    expect(placing.request.body).toEqual({ year: 2025 });
+    expect(placing.request.headers.get('If-Match')).toBe('"5d0f2b8c31e4a967"');
+    placing.flush(newsArticle({ version: '6e1a3c9d42f5b078', lookBackYear: 2025 }));
+    await settle(fixture);
+
+    expect(text(fixture, '[role="status"]:not(:empty)')).toBe(
+      'Změny jsme uložili a na webu už jsou.',
+    );
+    expect(
+      element<HTMLSelectElement>(
+        fixture,
+        '#news-look-back-year',
+      ).selectedOptions[0].textContent?.trim(),
+    ).toBe('2025');
+  });
+
+  it('when they save other changes and the year stays, then nothing is sent to the address of the year', async () => {
+    http.expectOne(`${NEWS_URL}/${newsArticle().id}`).flush(newsArticle({ lookBackYear: 2024 }));
+    await settle(fixture);
+
+    await type(fixture, '#news-perex', 'Nový souhrn.');
+    await submit(fixture);
+    http.expectOne(`${NEWS_URL}/${newsArticle().id}`).flush(newsArticle({ lookBackYear: 2024 }));
+    await settle(fixture);
+
+    http.expectNone(`${NEWS_URL}/${newsArticle().id}/look-back-year`);
+    expect(text(fixture, '[role="status"]:not(:empty)')).toBe(
+      'Změny jsme uložili a na webu už jsou.',
+    );
+  });
+
+  it('when another article already looks back on the chosen year, then the rest is saved, the alert says why and the choice stays to try again', async () => {
+    await loaded();
+    await chooseLookBackYear('2025');
+    await submit(fixture);
+    http.expectOne(`${NEWS_URL}/${newsArticle().id}`).flush(newsArticle());
+    await settle(fixture);
+
+    const taken = problem(
+      409,
+      'content/look-back-year-taken',
+      'Rok už má ohlédnutí',
+      'Za rokem 2025 se už ohlíží jiná aktualita.',
+    );
+    http
+      .expectOne(`${NEWS_URL}/${newsArticle().id}/look-back-year`)
+      .flush(taken.body, taken.options);
+    await settle(fixture);
+
+    expect(text(fixture, '[role="alert"]:not(:empty)')).toContain(
+      'Za rokem 2025 se už ohlíží jiná aktualita.',
+    );
+    expect(
+      element<HTMLSelectElement>(
+        fixture,
+        '#news-look-back-year',
+      ).selectedOptions[0].textContent?.trim(),
+    ).toBe('2025');
+
+    await submit(fixture);
+    http.expectOne(`${NEWS_URL}/${newsArticle().id}`).flush(newsArticle());
+    await settle(fixture);
+    http
+      .expectOne(`${NEWS_URL}/${newsArticle().id}/look-back-year`)
+      .flush(newsArticle({ lookBackYear: 2025 }));
+    await settle(fixture);
+    expect(text(fixture, '[role="status"]:not(:empty)')).toBe(
+      'Změny jsme uložili a na webu už jsou.',
+    );
+  });
 });
 
 describe('Given an administrator linked to a person of the foundation writing a new news article', () => {

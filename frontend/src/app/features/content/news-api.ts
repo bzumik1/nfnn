@@ -32,6 +32,7 @@ export interface NewsArticleResponse {
   updatedAt: string;
   version?: string;
   signer: NewsSignerResponse | null;
+  lookBackYear?: number | null;
 }
 
 export interface NewsListResponse {
@@ -76,6 +77,8 @@ const ADMIN_NEWS = '/api/admin/content/news';
 const ADMIN_MEDIA = '/api/admin/content/media';
 const PUBLIC_NEWS = '/api/content/news';
 const PUBLIC_MEDIA = '/api/content/media/';
+
+export const MIN_LOOK_BACK_YEAR = 2005;
 
 export function mediaUrl(imageId: string, width: number): string {
   return `${PUBLIC_MEDIA}${imageId}?w=${width}`;
@@ -128,6 +131,18 @@ export class NewsApi {
     return this.http.post<NewsArticleResponse>(
       `${ADMIN_NEWS}/${id}/unpublish`,
       {},
+      ifMatch(version),
+    );
+  }
+
+  setLookBackYear(
+    id: string,
+    year: number | null,
+    version: string,
+  ): Observable<NewsArticleResponse> {
+    return this.http.put<NewsArticleResponse>(
+      `${ADMIN_NEWS}/${id}/look-back-year`,
+      { year },
       ifMatch(version),
     );
   }

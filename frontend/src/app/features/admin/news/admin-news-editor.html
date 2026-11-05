@@ -184,6 +184,27 @@
                 </select>
               </app-form-field>
 
+              <app-form-field
+                label="Ohlédnutí za rokem (nepovinné)"
+                i18n-label="@@admin.newsEditor.lookBackYear"
+                hint="Je-li aktualita ohlédnutím za rokem, stránka Pomáháme na ni odkáže u příběhů toho roku. Každý rok může mít jen jedno ohlédnutí."
+                i18n-hint="@@admin.newsEditor.lookBackYear.hint"
+              >
+                <select
+                  appFormControl
+                  id="news-look-back-year"
+                  name="lookBackYear"
+                  [(ngModel)]="lookBackYear"
+                >
+                  <option [ngValue]="null" i18n="@@admin.newsEditor.lookBackYear.none">
+                    Není ohlédnutím
+                  </option>
+                  @for (year of lookBackYears; track year) {
+                    <option [ngValue]="year">{{ year }}</option>
+                  }
+                </select>
+              </app-form-field>
+
               <div class="image-field">
                 <p class="field-label" i18n="@@admin.newsEditor.image">Fotka (nepovinné)</p>
                 @if (coverImage(); as cover) {

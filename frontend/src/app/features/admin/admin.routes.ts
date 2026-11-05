@@ -94,6 +94,12 @@ export const adminRoutes: Routes = [
         loadComponent: () => import('./about/admin-about').then((m) => m.AdminAbout),
       },
       {
+        path: 'pruh-prispet',
+        title: $localize`:@@admin.donateBand.pageTitle:Fotka v pruhu Přispět | Správa | Nová naděje – nadační fond`,
+        loadComponent: () =>
+          import('./donate-band/admin-donate-band').then((m) => m.AdminDonateBand),
+      },
+      {
         path: 'lide-fondu',
         title: $localize`:@@admin.people.pageTitle:Lidé fondu | Správa | Nová naděje – nadační fond`,
         loadComponent: () => import('./people/admin-people').then((m) => m.AdminPeople),

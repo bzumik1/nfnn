@@ -30,6 +30,10 @@ export const ADMIN_SECTIONS: readonly SideNavGroup[] = [
         label: $localize`:@@admin.nav.yearlyReceipts:Hromadná potvrzení`,
       },
       { path: '/sprava/o-nas', label: $localize`:@@admin.nav.about:Fotka v sekci O nás` },
+      {
+        path: '/sprava/pruh-prispet',
+        label: $localize`:@@admin.nav.donateBand:Fotka v pruhu Přispět`,
+      },
       { path: '/sprava/lide-fondu', label: $localize`:@@admin.nav.people:Lidé fondu` },
       { path: '/sprava/spravci', label: $localize`:@@admin.nav.administrators:Správci` },
       { path: '/sprava/prehledy', label: $localize`:@@admin.nav.report:Měsíční e-mail` },

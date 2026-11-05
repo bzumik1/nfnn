@@ -1,0 +1,195 @@
+<div class="ui-page container">
+  <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.donateBand.heading">
+    Fotka v pruhu Přispět
+  </h1>
+  <p class="ui-page-intro" i18n="@@admin.donateBand.intro">
+    Pruh Přispět končí stránky O nás, Pomáháme a Aktuality. Na počítači je fotka pod textem přes
+    celou šířku pruhu, na telefonu nad ním. Dokud žádnou neuložíte, je tam ilustrační fotka. Fotka
+    je jen v databázi webu, ne ve veřejném kódu, a odebrat ji můžete kdykoli.
+  </p>
+
+  @switch (state()) {
+    @case ('loading') {
+      <p class="ui-load-state" role="status" i18n="@@admin.donateBand.loading">Načítáme fotku…</p>
+    }
+    @case ('error') {
+      <div class="ui-load-state ui-load-state--error" role="alert">
+        <p i18n="@@admin.donateBand.error.text">Fotku se nepodařilo načíst.</p>
+        <button
+          type="button"
+          class="ui-button"
+          (click)="load()"
+          i18n="@@admin.donateBand.error.retry"
+        >
+          Zkusit znovu
+        </button>
+      </div>
+    }
+    @case ('ready') {
+      <section class="ui-card" aria-labelledby="donate-band-photo-title">
+        <h2
+          id="donate-band-photo-title"
+          class="ui-card__title"
+          i18n="@@admin.donateBand.card.title"
+        >
+          Fotka
+        </h2>
+        <form
+          #bandForm="ngForm"
+          class="ui-card__body"
+          appFocusFirstInvalid
+          (ngSubmit)="submit(bandForm)"
+          novalidate
+        >
+          @if (chosen(); as photo) {
+            <app-focal-point-picker
+              inputId="donate-band-focal-point"
+              [imageId]="photo.id"
+              [shapes]="previewShapes"
+              [point]="photo.focalPoint"
+              (pointChange)="focalPointChanged($event)"
+            />
+          } @else {
+            <p class="photo-state" i18n="@@admin.donateBand.none">
+              Fotka zatím není nahraná, web ukazuje ilustrační fotku.
+            </p>
+          }
+          <div class="photo-actions">
+            <app-file-button
+              inputId="donate-band-photo"
+              accept="image/jpeg,image/png,image/webp"
+              describedBy="donate-band-photo-hint"
+              [disabled]="busy()"
+              (chosen)="upload($event)"
+            >
+              @if (chosen()) {
+                <ng-container i18n="@@admin.donateBand.photo.replace">Vyměnit fotku</ng-container>
+              } @else {
+                <ng-container i18n="@@admin.donateBand.photo.choose">Nahrát fotku</ng-container>
+              }
+            </app-file-button>
+          </div>
+          <p id="donate-band-photo-hint" class="field-hint" i18n="@@admin.donateBand.photo.hint">
+            JPEG, PNG nebo WebP do 10 MB, nejlépe na šířku. Web fotku ořízne podle bodu výřezu a
+            vyrobí si z ní zmenšené kopie.
+          </p>
+          <div role="status">
+            @if (uploading()) {
+              <p class="field-status" i18n="@@admin.donateBand.photo.uploading">Nahráváme fotku…</p>
+            } @else if (photoUnsaved() && chosen()) {
+              <p class="field-status" i18n="@@admin.donateBand.photo.uploaded">
+                Fotka je nahraná. Na web se dostane, až ji uložíte.
+              </p>
+            }
+          </div>
+          @if (uploadError(); as error) {
+            <p class="field-error" role="alert">{{ error }}</p>
+          }
+
+          @if (chosen()) {
+            <div class="fields">
+              <app-form-field
+                label="Popis pro čtečky (nepovinné)"
+                i18n-label="@@admin.donateBand.alt"
+                hint="Jednou větou, co je na fotce. Přečte ho nevidomým čtečka obrazovky a ukáže se, když se fotka nenačte. Bez popisu ji čtečka přeskočí jako ozdobu."
+                i18n-hint="@@admin.donateBand.alt.hint"
+                [messages]="altMessages"
+              >
+                <input
+                  appFormControl
+                  id="donate-band-photo-alt"
+                  name="photoAlt"
+                  type="text"
+                  autocomplete="off"
+                  [(ngModel)]="photoAlt"
+                  [maxlength]="maxAltLength"
+                />
+              </app-form-field>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="ui-button ui-button--primary" [disabled]="busy()">
+                @if (saving()) {
+                  <ng-container i18n="@@admin.donateBand.saving">Ukládáme…</ng-container>
+                } @else {
+                  <ng-container i18n="@@admin.donateBand.save"
+                    >Uložit a ukázat na webu</ng-container
+                  >
+                }
+              </button>
+            </div>
+          }
+          <app-live-notice class="card-notice" [notice]="notice()" />
+        </form>
+      </section>
+
+      @if (saved()) {
+        <section
+          class="ui-card ui-card--danger remove-card"
+          aria-labelledby="donate-band-remove-title"
+        >
+          <h2
+            id="donate-band-remove-title"
+            class="ui-card__title"
+            i18n="@@admin.donateBand.remove.title"
+          >
+            Odebrání fotky
+          </h2>
+          <div class="ui-card__body">
+            <p class="ui-card__intro" i18n="@@admin.donateBand.remove.intro">
+              Fotka hned zmizí z webu a smaže se z databáze; ze záloh zmizí do 30 dnů. Obnova ze
+              starší zálohy by ji vrátila. Pruh Přispět pak ukáže zase ilustrační fotku.
+            </p>
+            @if (confirmingRemoval()) {
+              <span
+                class="confirm"
+                role="group"
+                aria-label="Odebrat fotku?"
+                i18n-aria-label="@@admin.donateBand.remove.confirm.label"
+              >
+                <span i18n="@@admin.donateBand.remove.confirm.question"
+                  >Opravdu fotku odebrat z webu a smazat?</span
+                >
+                <button
+                  type="button"
+                  class="ui-button ui-button--danger"
+                  [disabled]="removing()"
+                  (click)="remove()"
+                >
+                  @if (removing()) {
+                    <ng-container i18n="@@admin.donateBand.removing">Odebíráme…</ng-container>
+                  } @else {
+                    <ng-container i18n="@@admin.donateBand.remove.yes"
+                      >Odebrat a smazat</ng-container
+                    >
+                  }
+                </button>
+                <button
+                  #removeCancel
+                  type="button"
+                  class="ui-link-button"
+                  [disabled]="removing()"
+                  (click)="cancelRemoval()"
+                  i18n="@@admin.donateBand.remove.no"
+                >
+                  Zrušit
+                </button>
+              </span>
+            } @else {
+              <button
+                #removeButton
+                type="button"
+                class="ui-button ui-button--danger-outline"
+                [disabled]="busy()"
+                (click)="askRemoval()"
+                i18n="@@admin.donateBand.remove.open"
+              >
+                Odebrat fotku z webu
+              </button>
+            }
+            <app-live-notice class="card-notice" [notice]="removeNotice()" />
+          </div>
+        </section>
+      }
+    }
+  }
+</div>

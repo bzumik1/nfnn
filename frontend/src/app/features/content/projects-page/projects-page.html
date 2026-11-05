@@ -1,0 +1,173 @@
+<section class="stories">
+  <header class="stories-head ui-container">
+    <div class="stories-intro">
+      @if (!compact()) {
+        <p class="ui-eyebrow" i18n="@@content.projects.eyebrow">Pomáháme</p>
+      }
+      <h1 class="stories-title" tabindex="-1" i18n="@@content.projects.title">Komu jsme pomohli</h1>
+      <p class="stories-lead" i18n="@@content.projects.lead">
+        Každý dar jde na konkrétní pomoc: pomůcku, léčbu, rehabilitaci nebo střechu nad hlavou.
+      </p>
+    </div>
+    @if (state() === 'ready' && projects().length > 0) {
+      <div class="summary">
+        <div class="summary-grid">
+          <p class="summary-tile summary-tile--total">
+            <strong class="summary-number">{{ projects().length }}</strong
+            >&ngsp;<span class="summary-label" i18n="@@content.projects.summary.total"
+              >{projects().length, plural,
+                one {příběh zveřejněný}
+                few {příběhy zveřejněné}
+                other {příběhů zveřejněných}
+              }
+              od roku {{ firstYear() }}</span
+            >
+          </p>
+          <div class="summary-categories">
+            @for (entry of categories(); track entry.category) {
+              <p class="summary-tile">
+                <strong class="summary-number">{{ entry.count }}</strong
+                >&ngsp;<span class="summary-label">
+                  @switch (entry.category) {
+                    @case ('CHILDREN') {
+                      <ng-container i18n="@@content.projects.summary.children">{entry.count, plural,
+                        one {dítě}
+                        few {děti}
+                        other {dětí}
+                      }</ng-container>
+                    }
+                    @case ('ADULTS') {
+                      <ng-container i18n="@@content.projects.summary.adults">{entry.count, plural,
+                        one {dospělý}
+                        few {dospělí}
+                        other {dospělých}
+                      }</ng-container>
+                    }
+                    @case ('ANIMALS') {
+                      <ng-container i18n="@@content.projects.summary.animals">{entry.count, plural,
+                        one {zvíře}
+                        few {zvířata}
+                        other {zvířat}
+                      }</ng-container>
+                    }
+                    @default {
+                      <ng-container i18n="@@content.projects.summary.other">{entry.count, plural,
+                        one {ostatní}
+                        few {ostatní}
+                        other {ostatních}
+                      }</ng-container>
+                    }
+                  }
+                </span>
+              </p>
+            }
+          </div>
+        </div>
+      </div>
+    }
+  </header>
+
+  <div class="stories-body ui-container">
+    <p class="stories-state" role="status">
+      @if (state() === 'loading') {
+        <span i18n="@@content.projects.loading">Načítáme příběhy…</span>
+      } @else if (announcement(); as text) {
+        <span>{{ text }}</span>
+      }
+    </p>
+
+    @if (state() === 'error') {
+      <p class="stories-error" role="alert" i18n="@@content.projects.error">
+        Příběhy se nepodařilo načíst. Zkontrolujte připojení a zkuste to znovu.
+      </p>
+      <button
+        type="button"
+        class="ui-cta ui-cta--ghost"
+        (click)="retry()"
+        i18n="@@content.projects.retry"
+      >
+        Zkusit znovu
+      </button>
+    }
+
+    @if (state() === 'ready') {
+      @if (projects().length === 0) {
+        <p class="stories-empty" i18n="@@content.projects.empty">Zatím tu žádný příběh není.</p>
+      } @else {
+        <nav class="chips" i18n-aria-label="@@content.projects.chips.label" aria-label="Roky">
+          @for (chip of chips(); track chip.label) {
+            <a
+              class="chip"
+              [href]="chip.href"
+              [attr.aria-current]="chip.choice === choice() ? 'true' : null"
+              (click)="choose($event, chip.choice)"
+              >{{ chip.label }}</a
+            >
+          }
+        </nav>
+
+        @for (group of groups(); track group.year) {
+          <section class="year" [attr.aria-labelledby]="'rok-' + group.year">
+            <div class="year-head">
+              <h2 class="year-title" [id]="'rok-' + group.year">
+                {{ group.year }}&ngsp;<span class="year-count" i18n="@@content.projects.year.count"
+                  >{{ group.items.length }}
+                  {group.items.length, plural, one {příběh} few {příběhy} other {příběhů}}</span
+                >
+              </h2>
+              @if (group.lookBack; as slug) {
+                <a
+                  class="year-look-back"
+                  [routerLink]="['/aktuality', slug]"
+                  i18n="@@content.projects.year.lookBack"
+                  >Ohlédnutí za rokem {{ group.year }}<span aria-hidden="true"> →</span></a
+                >
+              }
+            </div>
+
+            @if (group.items.length === 0) {
+              <p class="stories-empty" i18n="@@content.projects.year.empty">
+                Z tohoto roku tu zatím žádný příběh není.
+              </p>
+            } @else if (choice() === 'all') {
+              <ul class="strip">
+                @for (item of group.items; track item.id) {
+                  <li class="strip-item"><app-story-tile [item]="item" /></li>
+                }
+                <li class="strip-item">
+                  <a class="strip-all" routerLink="/projekty" [queryParams]="{ rok: group.year }"
+                    ><span i18n="@@content.projects.strip.all"
+                      >{group.items.length, plural,
+                        one {Celý rok}
+                        few {Všechny {{ group.items.length }} z roku}
+                        other {Všech {{ group.items.length }} z roku}
+                      }
+                      {{ group.year }}</span
+                    ><span aria-hidden="true"> →</span></a
+                  >
+                </li>
+              </ul>
+            } @else {
+              <ul class="grid">
+                @for (item of group.items; track item.id; let first = $first) {
+                  <li class="grid-item" [class.grid-item--large]="first">
+                    <app-story-tile [item]="item" [size]="first ? 'large' : 'small'" />
+                  </li>
+                }
+              </ul>
+            }
+          </section>
+        }
+      }
+    }
+  </div>
+
+  <app-donate-band
+    i18n-heading="@@content.projects.band.heading"
+    heading="Pomozte s dalším příběhem"
+    i18n-lead="@@content.projects.band.lead"
+    lead="Každý příspěvek jde do poslední koruny těm, kdo ho potřebují."
+    [photo]="bandPhoto()"
+    [showsProjects]="false"
+  />
+</section>

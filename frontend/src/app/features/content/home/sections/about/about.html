@@ -1,168 +1,192 @@
 <section id="o-nas" class="about">
-  <div class="two-col ui-container">
-    <div class="about-text">
-      <p class="ui-eyebrow" i18n="@@home.about.eyebrow">O nás</p>
+  <div class="intro ui-container">
+    <div class="intro-head">
+      @if (!compact()) {
+        <p class="ui-eyebrow" i18n="@@home.about.eyebrow">O nás</p>
+      }
       <h1 class="title" i18n="@@home.about.title">Vznik a poslání</h1>
-      <p class="paragraph" i18n="@@home.about.p3">
+      <p class="lead" i18n="@@home.about.p3">
         Nejsme velká organizace, ale snažíme se řešit přímou a účinnou pomoc konkrétním dětem –
         zdravotní a kompenzační pomůcky, přístroje, které jim umožňují další rozvoj v běžném životě
         a posun ve vzdělávání.
       </p>
-      <p class="paragraph" i18n="@@home.about.p2">
-        Od svého počátku úzce spolupracujeme s Fondem ohrožených dětí (FOD) a snažíme se pomáhat
-        zdravotně postiženým dětem, které jsou pro své zdravotní postižení opouštěny rodiči.
-      </p>
-      <p class="paragraph paragraph--last" i18n="@@home.about.p1">
-        Nová naděje – nadační fond byl zřízen Pavlem a Andreou Znamenáčkovými, zakládací listinou z
-        5. září 2005. Dne 28. října 2005 byl zapsán do nadačního rejstříku vedeného Krajským soudem
-        v Ústí nad Labem.
-      </p>
-      <a class="link-arrow" routerLink="/projekty" i18n="@@home.about.link">Kde pomáháme →</a>
     </div>
-    @if (photo(); as photo) {
-      <figure class="about-figure" [style.--about-photo-ratio]="photo.width / photo.height">
-        <div class="about-frame">
-          <app-zoomable class="about-zoom" [content]="enlarged()!">
+    <figure class="intro-figure">
+      <div class="intro-frame">
+        @if (photo(); as photo) {
+          <app-zoomable class="intro-zoom" [content]="enlarged()!">
             <img
               loading="lazy"
               [attr.srcset]="photoSet()"
-              sizes="(max-width: 768px) calc(100vw - 32px), 560px"
+              sizes="(max-width: 768px) calc(100vw - 40px), 560px"
               [src]="photoSource()"
               [attr.width]="photo.width"
               [attr.height]="photo.height"
               [alt]="photo.alt ?? ''"
-              class="about-photo"
+              [appFocalPoint]="photo.focalPoint"
+              focalShape="square"
+              class="intro-photo"
             />
           </app-zoomable>
-          <ng-container [ngTemplateOutlet]="badge" />
-        </div>
-        @if (photo.caption) {
-          <figcaption class="about-caption">{{ photo.caption }}</figcaption>
-        }
-      </figure>
-    } @else {
-      <div class="about-img-wrap">
-        <div class="about-img">
+        } @else {
           <img
             loading="lazy"
             srcset="/images/about-720.webp 720w, /images/about-1440.webp 1440w"
-            sizes="720px"
+            sizes="(max-width: 768px) calc(100vw - 40px), 560px"
             src="/images/about-720.webp"
             width="720"
             height="480"
             alt=""
-            class="real-img"
+            focalShape="square"
+            [appFocalPoint]="null"
+            class="intro-photo"
           />
-        </div>
-        <ng-container [ngTemplateOutlet]="badge" />
-      </div>
-    }
-  </div>
-  <div class="ui-container">
-    <div class="board">
-      <h3 class="ui-eyebrow board-title" i18n="@@home.about.board.title">Kdo fond vede</h3>
-      @if (people(); as people) {
-        @if (people.featured.length > 0) {
-          <ul class="board-people">
-            @for (card of people.featured; track $index) {
-              <li class="board-person">
-                <app-avatar
-                  class="board-photo"
-                  [name]="card.name"
-                  [src]="card.portrait ? portraitSource(card.portrait.id) : null"
-                  [size]="160"
-                  loading="lazy"
-                />
-                <div>
-                  <p class="board-name">{{ card.name }}</p>
-                  @if (card.role) {
-                    <p class="board-role">{{ card.role }}</p>
-                  }
-                </div>
-              </li>
-            }
-          </ul>
         }
-        @if (people.note; as note) {
-          <div class="founders-note">
-            @for (paragraph of paragraphs(note.text); track $index) {
-              <p class="founders-note-text">{{ paragraph }}</p>
-            }
-            @if (note.signatures.length > 0) {
-              <ul class="signatures">
-                @for (signature of note.signatures; track $index) {
-                  <li class="signature">
-                    <img
-                      loading="lazy"
-                      [src]="signatureSource(signature.url)"
-                      [attr.width]="signature.width"
-                      [attr.height]="signature.height"
-                      alt=""
-                      class="signature-ink"
-                    />
-                    <span class="signature-name">{{ signature.name }}</span>
-                  </li>
-                }
-              </ul>
-            }
+        <div class="about-badge">
+          <div class="about-badge-title">FOD</div>
+          <div class="about-badge-text" i18n="@@home.about.badge">
+            Úzká spolupráce s Fondem ohrožených dětí
           </div>
-        }
-        @if (boardLine(); as line) {
-          <p class="board-members">{{ line }}</p>
-        }
-        @if (people.footnote; as footnote) {
-          <p class="board-footnote">{{ footnote }}</p>
-        }
-      } @else {
-        <ul class="board-people">
-          <li class="board-person">
+        </div>
+      </div>
+      @if (photo()?.caption; as caption) {
+        <figcaption class="intro-caption">{{ caption }}</figcaption>
+      }
+    </figure>
+    <div class="intro-rest">
+      <p class="paragraph" i18n="@@home.about.p2">
+        Od svého počátku úzce spolupracujeme s Fondem ohrožených dětí (FOD) a snažíme se pomáhat
+        zdravotně postiženým dětem, které jsou pro své zdravotní postižení opouštěny rodiči.
+      </p>
+      <app-stats-bar class="figures" />
+    </div>
+  </div>
+
+  <div class="founders ui-container">
+    @if (people(); as people) {
+      @if (people.note; as note) {
+        <section class="quote" aria-labelledby="founders-title">
+          <h2 id="founders-title" class="visually-hidden" i18n="@@home.about.note.title">
+            Slovo zakladatelů
+          </h2>
+          <svg class="quote-mark" viewBox="0 0 48 36" aria-hidden="true">
+            <path
+              d="M0 36V20C0 8 7 1 19 0l2 5C13 7 10 12 10 18h9v18zm27 0V20C27 8 34 1 46 0l2 5c-8 2-11 7-11 13h9v18z"
+            />
+          </svg>
+          <blockquote class="quote-text">
+            @for (paragraph of paragraphs(note.text); track $index) {
+              <p>{{ paragraph }}</p>
+            }
+          </blockquote>
+          @if (note.signatures.length > 0) {
+            <ul class="signers">
+              @for (signature of note.signatures; track $index) {
+                <li class="signer">
+                  <img
+                    loading="lazy"
+                    [src]="signatureSource(signature.url)"
+                    [attr.width]="signature.width"
+                    [attr.height]="signature.height"
+                    alt=""
+                    class="signer-ink"
+                  />
+                  <app-avatar
+                    class="signer-photo"
+                    [name]="signature.name"
+                    [src]="signature.portrait ? portraitSource(signature.portrait.id) : null"
+                    [size]="48"
+                    loading="lazy"
+                  />
+                  <p class="signer-name">{{ signature.name }}</p>
+                  @if (signature.role) {
+                    <p class="signer-role">{{ signature.role }}</p>
+                  }
+                </li>
+              }
+            </ul>
+          } @else {
+            <ng-container [ngTemplateOutlet]="featured" [ngTemplateOutletContext]="{ people }" />
+          }
+        </section>
+      } @else if (people.featured.length > 0) {
+        <section class="quote" aria-labelledby="founders-title">
+          <h2 id="founders-title" class="board-title" i18n="@@home.about.board.title">
+            Kdo fond vede
+          </h2>
+          <ng-container [ngTemplateOutlet]="featured" [ngTemplateOutletContext]="{ people }" />
+        </section>
+      }
+      @if (boardLine(); as line) {
+        <p class="board-members">{{ line }}</p>
+      }
+      @if (people.footnote; as footnote) {
+        <p class="board-footnote">{{ footnote }}</p>
+      }
+    } @else {
+      <section class="quote" aria-labelledby="founders-title">
+        <h2 id="founders-title" class="board-title" i18n="@@home.about.board.title">
+          Kdo fond vede
+        </h2>
+        <ul class="signers">
+          <li class="signer">
             <app-avatar
-              class="board-photo"
+              class="signer-photo"
               name="Pavel Znamenáček"
               src="/images/pavel-znamenacek-160.webp"
               srcset="/images/pavel-znamenacek-160.webp 160w, /images/pavel-znamenacek-320.webp 320w"
-              sizes="(max-width: 480px) 96px, 160px"
-              [size]="160"
+              sizes="48px"
+              [size]="48"
               loading="lazy"
             />
-            <div>
-              <p class="board-name" i18n="@@home.about.board.pavel.name">Pavel Znamenáček</p>
-              <p class="board-role" i18n="@@home.about.board.pavel.role">
-                Zakladatel a předseda správní rady
-              </p>
-            </div>
+            <p class="signer-name" i18n="@@home.about.board.pavel.name">Pavel Znamenáček</p>
+            <p class="signer-role" i18n="@@home.about.board.pavel.role">
+              Zakladatel a předseda správní rady
+            </p>
           </li>
-          <li class="board-person">
+          <li class="signer">
             <app-avatar
-              class="board-photo"
+              class="signer-photo"
               name="Andrea Znamenáčková"
               src="/images/andrea-znamenackova-160.webp"
               srcset="/images/andrea-znamenackova-160.webp 160w, /images/andrea-znamenackova-320.webp 320w"
-              sizes="(max-width: 480px) 96px, 160px"
-              [size]="160"
+              sizes="48px"
+              [size]="48"
               loading="lazy"
             />
-            <div>
-              <p class="board-name" i18n="@@home.about.board.andrea.name">Andrea Znamenáčková</p>
-              <p class="board-role" i18n="@@home.about.board.andrea.role">
-                Zakladatelka a členka správní rady
-              </p>
-            </div>
+            <p class="signer-name" i18n="@@home.about.board.andrea.name">Andrea Znamenáčková</p>
+            <p class="signer-role" i18n="@@home.about.board.andrea.role">
+              Zakladatelka a členka správní rady
+            </p>
           </li>
         </ul>
-        <p class="board-members" i18n="@@home.about.board.members">
-          Správní rada: Pavel&nbsp;Znamenáček (předseda), Andrea&nbsp;Znamenáčková,
-          Zdeňka&nbsp;Znamenáčková.
-        </p>
-      }
-    </div>
+      </section>
+      <p class="board-members" i18n="@@home.about.board.members">
+        Správní rada: Pavel&nbsp;Znamenáček (předseda), Andrea&nbsp;Znamenáčková,
+        Zdeňka&nbsp;Znamenáčková.
+      </p>
+    }
   </div>
-  <ng-template #badge>
-    <div class="about-badge">
-      <div class="about-badge-title">FOD</div>
-      <div class="about-badge-text" i18n="@@home.about.badge">
-        Úzká spolupráce s Fondem ohrožených dětí
-      </div>
-    </div>
+
+  <ng-template #featured let-people="people">
+    @if (people.featured.length > 0) {
+      <ul class="signers">
+        @for (card of people.featured; track $index) {
+          <li class="signer">
+            <app-avatar
+              class="signer-photo"
+              [name]="card.name"
+              [src]="card.portrait ? portraitSource(card.portrait.id) : null"
+              [size]="48"
+              loading="lazy"
+            />
+            <p class="signer-name">{{ card.name }}</p>
+            @if (card.role) {
+              <p class="signer-role">{{ card.role }}</p>
+            }
+          </li>
+        }
+      </ul>
+    }
   </ng-template>
 </section>

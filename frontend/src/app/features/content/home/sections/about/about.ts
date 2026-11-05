@@ -1,14 +1,16 @@
 /// <reference types="@angular/localize" />
 
 import { NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { CompactLayout } from '../../../../../core/layout/compact-layout';
 import { AboutPhotoResponse } from '../../../about-api';
 import { mediaUrl } from '../../../news-api';
 import { PublicPeopleResponse } from '../../../people-api';
 import { Avatar } from '../../../../../shared/ui/avatar/avatar';
+import { FocalPointCrop } from '../../../../../shared/ui/focal-point/focal-point';
 import { ZoomPhoto } from '../../../../../shared/ui/zoom-viewer/zoom-content';
 import { Zoomable } from '../../../../../shared/ui/zoom-viewer/zoomable';
+import { StatsBar } from '../stats-bar/stats-bar';
 
 const PHOTO_WIDTHS = [480, 960, 1440];
 const LARGEST_WIDTH = PHOTO_WIDTHS[PHOTO_WIDTHS.length - 1];
@@ -18,7 +20,7 @@ const NO_BREAK_SPACE = '\u00a0';
 
 @Component({
   selector: 'app-about',
-  imports: [RouterLink, NgTemplateOutlet, Avatar, Zoomable],
+  imports: [NgTemplateOutlet, Avatar, Zoomable, FocalPointCrop, StatsBar],
   templateUrl: './about.html',
   styleUrl: './about.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -26,6 +28,8 @@ const NO_BREAK_SPACE = '\u00a0';
 export class About {
   readonly photo = input<AboutPhotoResponse | null>(null);
   readonly people = input<PublicPeopleResponse | null>(null);
+
+  protected readonly compact = inject(CompactLayout).isCompact;
 
   protected readonly boardLine = computed(() => {
     const board = this.people()?.board ?? [];

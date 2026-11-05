@@ -34,7 +34,7 @@
             <app-focal-point-picker
               inputId="about-focal-point"
               [imageId]="photo.id"
-              [hint]="focalPointHint"
+              [shapes]="previewShapes"
               [point]="photo.focalPoint"
               (pointChange)="focalPointChanged($event)"
             />
@@ -58,9 +58,9 @@
               }
             </app-file-button>
           </div>
-          <p id="about-photo-hint" class="field-hint" i18n="@@admin.about.photo.hint">
-            JPEG, PNG nebo WebP do 10 MB. Web ukáže celou fotku, na výšku i na šířku, a vyrobí si z
-            ní zmenšené kopie.
+          <p id="about-photo-hint" class="field-hint" i18n="@@admin.about.photo.squareHint">
+            JPEG, PNG nebo WebP do 10 MB. Web fotku ukáže jako čtverec oříznutý kolem bodu výřezu a
+            vyrobí si z ní zmenšené kopie.
           </p>
           <div role="status">
             @if (uploading()) {
