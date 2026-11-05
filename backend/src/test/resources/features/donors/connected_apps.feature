@@ -118,6 +118,13 @@ Feature: An administrator connects an application such as Claude to the administ
     When "Jana" asks for the sync chunks "donations:2026"
     Then the response status is 200
 
+  Scenario: A connected application gets no live stream, which is for browser sessions only
+    Given "Jana" connected the application "https://claude.ai/.well-known/oauth-client" with scope "admin:read admin:write"
+    When the connector exchanges the connector token for an API token
+    And the exchanged API token sends GET "/api/live"
+    Then the response status is 403
+    And the problem type ends with "auth/forbidden"
+
   Scenario Outline: A dangerous or irreversible change is refused to a connected application even with the writing permission
     Given "Jana" connected the application "https://claude.ai/.well-known/oauth-client" with scope "admin:read admin:write"
     When the connector exchanges the connector token for an API token
