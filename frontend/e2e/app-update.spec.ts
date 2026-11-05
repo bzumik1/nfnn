@@ -37,7 +37,7 @@ test.describe('Given a visitor whose page was opened before the server changed i
 
     await page.goto('/');
     const notice = page.getByRole('status').filter({ hasText: NOTICE });
-    await expect(notice).toBeVisible();
+    await expect(notice.getByText(NOTICE)).toBeVisible();
 
     await page.locator('#contact-name').fill('Jana Nováková');
     await page.locator('#contact-email').fill('jana@example.cz');

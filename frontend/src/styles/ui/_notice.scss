@@ -16,6 +16,11 @@
   color: var(--color-danger);
 }
 
+.ui-notice--warning {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+
 .ui-load-state {
   display: flex;
   flex-wrap: wrap;
@@ -106,6 +111,10 @@
 
 .ui-notice--floating.ui-notice--alert {
   border-color: var(--color-danger-border);
+}
+
+.ui-notice--floating.ui-notice--warning {
+  border-color: var(--color-warning-border);
 }
 
 .ui-notice__text {

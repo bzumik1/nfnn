@@ -35,6 +35,8 @@ class VersionHeadersFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
+        response.setHeader(REVISION_HEADER, build.revision());
+        response.setHeader(API_HEADER, String.valueOf(API_GENERATION));
         chain.doFilter(request, response);
     }
 }

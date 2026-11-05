@@ -23,6 +23,7 @@ import { AuthStore } from './core/auth/auth-store';
 import { ReportingErrorHandler } from './core/errors/reporting-error-handler';
 import { ChunkLoadRecovery } from './core/reload/chunk-load-recovery';
 import { CanonicalLink } from './core/seo/canonical-link';
+import { versionInterceptor } from './core/version/version-interceptor';
 
 const scrollOptions: InMemoryScrollingOptions = {
   scrollPositionRestoration: 'enabled',
@@ -37,7 +38,7 @@ export const chunkLoadRecoveryFeature: NavigationErrorHandlerFeature = withNavig
 
 export const appHttpClient: EnvironmentProviders = provideHttpClient(
   withXhr(),
-  withInterceptors([authInterceptor]),
+  withInterceptors([authInterceptor, versionInterceptor]),
 );
 
 export const appErrorHandler: Provider = {
