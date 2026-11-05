@@ -13,6 +13,9 @@ import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
+import cz.novanadeje.app.shared.domain.LocaleCode;
+import cz.novanadeje.app.shared.domain.PostalAddress;
+import cz.novanadeje.app.shared.domain.VariableSymbol;
 import cz.novanadeje.app.shared.domain.UuidV7;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -45,8 +48,9 @@ class AdminPaymentsServiceTest {
     private final BankPayment december = payment(1002, LocalDate.of(2026, 12, 5), czk(20000), ACCOUNT, null);
     private final BankPayment lastYear = payment(1003, LocalDate.of(2025, 3, 5), czk(10000), ACCOUNT, null);
     private final Donation octoberGift = Donation.fromBankPayment(DonationId.newId(NOW), janaRecord.id(), october, PairingMethod.MANUAL, NOW);
-    private final Donation decemberGift = Donation.fromBankPayment(DonationId.newId(NOW), new DonorReference(UuidV7.generate(NOW.plusSeconds(1))),
-            december, PairingMethod.VARIABLE_SYMBOL, NOW);
+    private final DonorRecord petrRecord = DonorRecord.registerPerson(new DonorReference(UuidV7.generate(NOW.plusSeconds(1))), "Petr Svoboda",
+            new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new VariableSymbol("7310945528"), LocaleCode.CS, NOW);
+    private final Donation decemberGift = Donation.fromBankPayment(DonationId.newId(NOW), petrRecord.id(), december, PairingMethod.VARIABLE_SYMBOL, NOW);
 
     private final BankPaymentRepository payments = mock(BankPaymentRepository.class);
     private final DonationRepository donations = mock(DonationRepository.class);
@@ -76,7 +80,7 @@ class AdminPaymentsServiceTest {
         when(donations.findReceivedOnBetween(LocalDate.of(2025, 1, 1), LocalDate.of(2026, 12, 31)))
                 .thenReturn(List.of(lastYearGift, octoberGift, decemberGift));
         when(payments.findByIds(anyCollection())).thenReturn(List.of(lastYear, october, december));
-        when(donorRecords.findByIds(anyCollection())).thenReturn(List.of(janaRecord));
+        when(donorRecords.findByIds(anyCollection())).thenReturn(List.of(janaRecord, petrRecord));
         when(receipts.findDonationsWithReceipt(anyCollection())).thenReturn(Set.of(octoberGift.id()));
 
         AdminPaymentList list = service.listPaired(Optional.empty(), PaymentFilter.none());
@@ -87,7 +91,7 @@ class AdminPaymentsServiceTest {
         assertThat(list.items()).extracting(AdminPaymentView::payment).containsExactly(december, october, lastYear);
         PairedDonationView decemberView = list.items().getFirst().donation().orElseThrow();
         assertThat(decemberView.donation()).isEqualTo(decemberGift);
-        assertThat(decemberView.donor()).isEmpty();
+        assertThat(decemberView.donor()).contains(petrRecord);
         assertThat(decemberView.receiptIssued()).isFalse();
         PairedDonationView octoberView = list.items().get(1).donation().orElseThrow();
         assertThat(octoberView.donor()).contains(janaRecord);
@@ -212,7 +216,7 @@ class AdminPaymentsServiceTest {
         when(donations.findReceivedYearsNewestFirst()).thenReturn(List.of(Year.of(2026)));
         when(donations.findReceivedOnBetween(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31))).thenReturn(List.of(octoberGift, decemberGift));
         when(payments.findByIds(anyCollection())).thenReturn(List.of(october, december));
-        when(donorRecords.findByIds(anyCollection())).thenReturn(List.of(janaRecord));
+        when(donorRecords.findByIds(anyCollection())).thenReturn(List.of(janaRecord, petrRecord));
         when(receipts.findDonationsWithReceipt(anyCollection())).thenReturn(Set.of());
 
         assertThat(service.listPaired(Optional.empty(), new PaymentFilter(null, null, null, janaRecord.id(), 0, null)).items())

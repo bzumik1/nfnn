@@ -84,8 +84,8 @@ public class NewsAdminService {
     }
 
     public Versioned<NewsArticleView> update(UUID adminId, NewsArticleId id, ExpectedVersion expected, NewsArticleCommand command) {
-        Instant now = clock.instant();
         NewsArticle article = requireUnchanged(id, expected);
+        Instant now = clock.instant();
         NewsContent content = checked(command.toContent(), id);
         NewsArticle edited = article.edit(content, now);
         news.save(edited);
@@ -96,24 +96,26 @@ public class NewsAdminService {
     }
 
     public Versioned<NewsArticleView> publish(UUID adminId, NewsArticleId id, LocalDate on, ExpectedVersion expected) {
+        NewsArticle stored = requireUnchanged(id, expected);
         Instant now = clock.instant();
-        NewsArticle published = requireUnchanged(id, expected).publish(on, now);
+        NewsArticle published = stored.publish(on, now);
         news.save(published);
         audit(adminId, PUBLISH_ACTION, published, "Aktualita " + id + " „" + published.slug() + "“ zveřejněna od " + on, now);
         return versioned(published, today(now));
     }
 
     public Versioned<NewsArticleView> unpublish(UUID adminId, NewsArticleId id, ExpectedVersion expected) {
+        NewsArticle stored = requireUnchanged(id, expected);
         Instant now = clock.instant();
-        NewsArticle draft = requireUnchanged(id, expected).unpublish(now);
+        NewsArticle draft = stored.unpublish(now);
         news.save(draft);
         audit(adminId, UNPUBLISH_ACTION, draft, "Aktualita " + id + " „" + draft.slug() + "“ stažena z webu", now);
         return versioned(draft, today(now));
     }
 
     public void delete(UUID adminId, NewsArticleId id, ExpectedVersion expected) {
-        Instant now = clock.instant();
         NewsArticle article = requireUnchanged(id, expected);
+        Instant now = clock.instant();
         news.delete(id);
         dropUnusedImage(article.content().coverImage(), Optional.empty());
         audit(adminId, DELETE_ACTION, article, "Aktualita " + id + " „" + article.slug() + "“ smazána", now);

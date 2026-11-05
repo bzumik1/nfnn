@@ -55,6 +55,10 @@ Feature: The administration refuses a change to a news article or a project made
     Then the response status is 200
 
   Scenario: A change from a browser that names no version is refused before anything changes
+    Given "Jana" publishes the news article "zahrada-pro-deti" on 2026-10-20
     When "Jana" withdraws the news article "zahrada-pro-deti" naming no version
     Then the response status is 428
     And the problem type ends with "shared/version-required"
+    When someone without a token asks for the news articles
+    Then the news list titles are:
+      | Zahrada pro děti |

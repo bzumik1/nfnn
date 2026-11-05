@@ -9,6 +9,7 @@ import cz.novanadeje.app.donations.domain.report.ReportSections;
 import cz.novanadeje.app.donations.domain.report.ReportSettings;
 import cz.novanadeje.app.donations.domain.report.ReportSettingsRepository;
 import cz.novanadeje.app.donations.domain.report.SentReport;
+import cz.novanadeje.app.donations.domain.report.StoredReportSettings;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
 import org.slf4j.Logger;
@@ -55,17 +56,16 @@ public class ReportSettingsService {
         LocalDate today = FoundationCalendar.today(clock);
         Optional<Instant> changedAt = settings.lastChangedAt();
         return new ReportAdministrationView(current, changedAt, sent, nextReport(current, sent, today), ReportMonth.previousTo(today),
-                rows.reportSettingsVersion(current, changedAt));
+                rows.reportSettingsVersion(new StoredReportSettings(current, changedAt)));
     }
 
     @Transactional
-    public ReportSettings change(UUID adminId, ReportSettings changed, ExpectedVersion expected) {
+    public SavedReportSettings change(UUID adminId, ReportSettings changed, ExpectedVersion expected) {
         settings.lockForChange();
-        ReportSettings current = settings.current();
-        Optional<Instant> changedAt = settings.lastChangedAt();
-        String version = rows.reportSettingsVersion(current, changedAt);
+        StoredReportSettings current = new StoredReportSettings(settings.current(), settings.lastChangedAt());
+        String version = rows.reportSettingsVersion(current);
         if (!expected.admits(version)) {
-            throw new ChangedMeanwhile(version, rows.reportSettings(current, changedAt, reportLog.sentReportsNewestFirst()));
+            throw new ChangedMeanwhile(version, rows.reportSettings(current, reportLog.sentReportsNewestFirst()));
         }
         Instant now = clock.instant();
         settings.save(changed, now);
@@ -74,7 +74,7 @@ public class ReportSettingsService {
                         + "; odesílá se " + changed.sendDay() + ". den v měsíci v " + changed.sendHour() + ":00; části " + czechSections(changed.sections()), now));
         log.info("Admin {} changed the monthly report settings: {} recipient(s), day {} at {}:00, sections {}", adminId, changed.recipients().count(),
                 changed.sendDay(), changed.sendHour(), changed.sections().names());
-        return changed;
+        return new SavedReportSettings(changed, now, rows.reportSettingsVersion(new StoredReportSettings(changed, Optional.of(now))));
     }
 
     private static String czechSections(ReportSections sections) {

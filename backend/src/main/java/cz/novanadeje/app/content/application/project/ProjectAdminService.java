@@ -87,8 +87,8 @@ public class ProjectAdminService {
     }
 
     public Versioned<ProjectView> update(UUID adminId, ProjectId id, ExpectedVersion expected, ProjectCommand command) {
-        Instant now = clock.instant();
         Project article = requireUnchanged(id, expected);
+        Instant now = clock.instant();
         ProjectContent content = checked(command.toContent(), id);
         Project edited = article.edit(content, now);
         projects.save(edited);
@@ -99,24 +99,26 @@ public class ProjectAdminService {
     }
 
     public Versioned<ProjectView> publish(UUID adminId, ProjectId id, LocalDate on, ExpectedVersion expected) {
+        Project stored = requireUnchanged(id, expected);
         Instant now = clock.instant();
-        Project published = requireUnchanged(id, expected).publish(on, now);
+        Project published = stored.publish(on, now);
         projects.save(published);
         audit(adminId, PUBLISH_ACTION, published, "Projekt " + id + " „" + published.slug() + "“ zveřejněn od " + on, now);
         return versioned(published, today(now));
     }
 
     public Versioned<ProjectView> unpublish(UUID adminId, ProjectId id, ExpectedVersion expected) {
+        Project stored = requireUnchanged(id, expected);
         Instant now = clock.instant();
-        Project draft = requireUnchanged(id, expected).unpublish(now);
+        Project draft = stored.unpublish(now);
         projects.save(draft);
         audit(adminId, UNPUBLISH_ACTION, draft, "Projekt " + id + " „" + draft.slug() + "“ stažen z webu", now);
         return versioned(draft, today(now));
     }
 
     public void delete(UUID adminId, ProjectId id, ExpectedVersion expected) {
-        Instant now = clock.instant();
         Project article = requireUnchanged(id, expected);
+        Instant now = clock.instant();
         projects.delete(id);
         dropUnusedImage(article.content().coverImage(), Optional.empty());
         audit(adminId, DELETE_ACTION, article, "Projekt " + id + " „" + article.slug() + "“ smazán", now);

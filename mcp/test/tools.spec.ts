@@ -860,6 +860,121 @@ describe('Given an administrator connected with the writing permission', () => {
     expect(calls.map((call) => call.ifMatch)).toEqual([`"${CURRENT_VERSION}"`, undefined]);
   });
 
+  it('when every tool that takes the version read is called with one, then the administration receives it as If-Match and never in the body', async () => {
+    const article = { title: 'Letní tábor', perex: 'Krátce o táboře.', body: 'Text.' };
+    const project = { ...article, year: 2026, category: 'CHILDREN' };
+    const settings = {
+      recipients: ['info@nfnn.cz'],
+      sendDay: 1,
+      sendHour: 7,
+      sections: { donors: true, donations: true, unpairedPayments: true, bankImport: true },
+    };
+    const link = { donorId: DONOR_ID, linkId: LINK_ID };
+    const tools: [string, Record<string, unknown>, string, string, unknown][] = [
+      [
+        'nfnn_pair_payment',
+        { paymentId: PAYMENT_ID, donorId: DONOR_ID },
+        'POST',
+        `/api/admin/donations/payments/${PAYMENT_ID}/pair`,
+        { donorId: DONOR_ID },
+      ],
+      [
+        'nfnn_unpair_payment',
+        { paymentId: PAYMENT_ID },
+        'POST',
+        `/api/admin/donations/payments/${PAYMENT_ID}/unpair`,
+        undefined,
+      ],
+      [
+        'nfnn_publish_news',
+        { id: UNKNOWN_ID, publishedOn: '2026-10-20' },
+        'POST',
+        `/api/admin/content/news/${UNKNOWN_ID}/publish`,
+        { publishedOn: '2026-10-20' },
+      ],
+      [
+        'nfnn_unpublish_news',
+        { id: UNKNOWN_ID },
+        'POST',
+        `/api/admin/content/news/${UNKNOWN_ID}/unpublish`,
+        undefined,
+      ],
+      [
+        'nfnn_publish_project',
+        { id: UNKNOWN_ID, publishedOn: '2026-10-20' },
+        'POST',
+        `/api/admin/content/projects/${UNKNOWN_ID}/publish`,
+        { publishedOn: '2026-10-20' },
+      ],
+      [
+        'nfnn_unpublish_project',
+        { id: UNKNOWN_ID },
+        'POST',
+        `/api/admin/content/projects/${UNKNOWN_ID}/unpublish`,
+        undefined,
+      ],
+      [
+        'nfnn_update_report_settings',
+        settings,
+        'PUT',
+        '/api/admin/donations/report/settings',
+        settings,
+      ],
+      [
+        'nfnn_update_news',
+        { id: UNKNOWN_ID, ...article, signerId: PERSON_ID },
+        'PUT',
+        `/api/admin/content/news/${UNKNOWN_ID}`,
+        { ...article, signerId: PERSON_ID },
+      ],
+      [
+        'nfnn_update_project',
+        { id: UNKNOWN_ID, ...project },
+        'PUT',
+        `/api/admin/content/projects/${UNKNOWN_ID}`,
+        project,
+      ],
+      [
+        'nfnn_disconnect_bank_account',
+        link,
+        'POST',
+        `/api/admin/donations/donors/${DONOR_ID}/bank-accounts/${LINK_ID}/disconnect`,
+        undefined,
+      ],
+      [
+        'nfnn_reconnect_bank_account',
+        link,
+        'POST',
+        `/api/admin/donations/donors/${DONOR_ID}/bank-accounts/${LINK_ID}/reconnect`,
+        undefined,
+      ],
+    ];
+
+    const sent = [];
+    for (const [name, args] of tools) {
+      const before = stack.backend.requests.length;
+      await client.callTool({ name, arguments: { ...args, expectedVersion: CURRENT_VERSION } });
+      const requests = stack.backend.requests
+        .slice(before)
+        .filter((request) => request.path.startsWith('/api/admin/'));
+      sent.push(
+        requests.map((request) => [
+          name,
+          request.method,
+          request.path,
+          request.ifMatch,
+          request.body === '' ? undefined : JSON.parse(request.body),
+        ]),
+      );
+    }
+
+    expect(sent).toEqual(
+      tools.map(([name, , method, path, body]) => [
+        [name, method, path, `"${CURRENT_VERSION}"`, body],
+      ]),
+    );
+  });
+
   it('when someone changed the record since the version read, then the tool answers the refusal with the version stored now and the current record', async () => {
     const stale = await client.callTool({
       name: 'nfnn_update_report_settings',
@@ -874,7 +989,8 @@ describe('Given an administrator connected with the writing permission', () => {
     expect(stale.isError).toBe(true);
     expect(textOf(stale)).toContain('409 donations/changed-meanwhile');
     expect(textOf(stale)).toContain(`The version stored now is ${CURRENT_VERSION}`);
-    expect(textOf(stale)).toContain(`"id":"${PAYMENT_ID}"`);
+    expect(textOf(stale)).toContain('"sendDay":5');
+    expect(textOf(stale)).toContain('"sentReports":[]');
     const call = stack.backend.requests.find((request) => request.ifMatch !== undefined);
     expect(call?.method).toBe('PUT');
     expect(JSON.parse(call?.body ?? '{}')).not.toHaveProperty('expectedVersion');

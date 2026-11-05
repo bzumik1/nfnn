@@ -51,7 +51,7 @@ public class AdminPaymentsService {
 
     public AdminPaymentList listUnpaired(PaymentFilter filter) {
         List<AdminPaymentView> matching = payments.findUnpairedNewestFirst().stream()
-                .map(payment -> new AdminPaymentView(payment, Optional.empty(), rows.payment(payment, Optional.empty(), false).version()))
+                .map(payment -> new AdminPaymentView(payment, Optional.empty(), rows.unpaidPayment(payment).version()))
                 .filter(filter::matches)
                 .toList();
         return new AdminPaymentList(Optional.empty(), List.of(), filter.page(matching), matching.size());
@@ -80,16 +80,16 @@ public class AdminPaymentsService {
         Set<DonationId> withReceipt = receipts.findDonationsWithReceipt(paired.stream().map(Donation::id).toList());
         List<AdminPaymentView> matching = paired.stream()
                 .map(donation -> pairedView(paymentsById.get(donation.bankPayment().orElseThrow()), donation,
-                        Optional.ofNullable(donorsById.get(donation.donor())), withReceipt.contains(donation.id())))
+                        donorsById.get(donation.donor()), withReceipt.contains(donation.id())))
                 .filter(filter::matches)
                 .sorted(NEWEST_FIRST)
                 .toList();
         return new AdminPaymentList(requested, availableYears, filter.page(matching), matching.size());
     }
 
-    private AdminPaymentView pairedView(BankPayment payment, Donation donation, Optional<DonorRecord> donor, boolean receiptIssued) {
-        String version = rows.payment(payment, Optional.of(donation), donor.filter(DonorRecord::isErased).isPresent()).version();
-        return new AdminPaymentView(payment, Optional.of(new PairedDonationView(donation, donor, receiptIssued)), version);
+    private AdminPaymentView pairedView(BankPayment payment, Donation donation, DonorRecord giver, boolean receiptIssued) {
+        String version = rows.paidPayment(payment, donation, giver).version();
+        return new AdminPaymentView(payment, Optional.of(new PairedDonationView(donation, Optional.of(giver), receiptIssued)), version);
     }
 
     public List<DonorRecord> searchDonors(String query) {

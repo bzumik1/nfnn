@@ -8,6 +8,7 @@ import cz.novanadeje.app.donations.domain.donation.Donation;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLink;
+import cz.novanadeje.app.donations.domain.report.StoredReportSettings;
 import cz.novanadeje.app.donations.interfaces.rest.AdminDonorDetailResponse.AdminDonorRecordResponse;
 import cz.novanadeje.app.donations.interfaces.rest.AdminReceiptListResponse.AdminReceiptItemResponse;
 import cz.novanadeje.app.shared.interfaces.rest.SyncChunk;
@@ -20,7 +21,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.function.Function;
@@ -54,11 +54,12 @@ class AdminDonationsSyncProjection {
 
     List<SyncChunk> chunksOf(AdminDonationsSyncSnapshot snapshot) {
         SortedMap<String, List<Object>> chunks = new TreeMap<>();
-        Set<BankPaymentId> ofErasedDonors = paymentsOfErasedDonors(snapshot);
+        Map<DonorReference, DonorRecord> giversById = snapshot.donorRecords().stream().collect(Collectors.toMap(DonorRecord::id, Function.identity()));
         Map<BankPaymentId, Donation> gifts = snapshot.donations().stream().filter(donation -> donation.bankPayment().isPresent())
                 .collect(Collectors.toMap(donation -> donation.bankPayment().orElseThrow(), Function.identity()));
         snapshot.payments().forEach(payment -> rowsOf(chunks, PAYMENTS + YearMonth.from(payment.bookedOn()))
-                .add(rows.payment(payment, Optional.ofNullable(gifts.get(payment.id())), ofErasedDonors.contains(payment.id()))));
+                .add(Optional.ofNullable(gifts.get(payment.id())).map(gift -> rows.paidPayment(payment, gift, giversById.get(gift.donor())))
+                        .orElseGet(() -> rows.unpaidPayment(payment))));
         snapshot.donations().forEach(donation -> rowsOf(chunks, DONATIONS + YearMonth.from(donation.receivedOn())).add(DonationRow.from(donation)));
         snapshot.donorRecords().stream().sorted(OLDER_REGISTRATION_FIRST).forEach(record -> {
             YearMonth registered = SyncChunk.monthOf(record.registeredAt());
@@ -69,15 +70,10 @@ class AdminDonationsSyncProjection {
         snapshot.receipts().forEach(receipt -> rowsOf(chunks, RECEIPTS + DonorSyncProjection.yearOf(receipt).getValue())
                 .add(AdminReceiptItemResponse.from(receipt)));
         snapshot.importState().ifPresent(state -> rowsOf(chunks, IMPORT_STATE).add(ImportStateResponse.from(state)));
-        snapshot.report().ifPresent(report -> rowsOf(chunks, REPORT_SETTINGS).add(rows.reportSettings(report.settings(), report.changedAt(), report.sentReports())));
+        snapshot.report().ifPresent(report -> rowsOf(chunks, REPORT_SETTINGS).add(rows.reportSettings(new StoredReportSettings(report.settings(), report.changedAt()), report.sentReports())));
         return SyncChunk.allOf(chunks, json);
     }
 
-    private static Set<BankPaymentId> paymentsOfErasedDonors(AdminDonationsSyncSnapshot snapshot) {
-        Set<DonorReference> erased = snapshot.donorRecords().stream().filter(DonorRecord::isErased).map(DonorRecord::id).collect(Collectors.toSet());
-        return snapshot.donations().stream().filter(donation -> erased.contains(donation.donor())).flatMap(donation -> donation.bankPayment().stream())
-                .collect(Collectors.toSet());
-    }
 
     private static List<SenderAccountLink> linksOf(DonorRecord record) {
         return record.senderAccountLinks().stream().sorted(OLDER_LINK_FIRST).toList();

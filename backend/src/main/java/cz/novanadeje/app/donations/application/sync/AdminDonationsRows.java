@@ -19,13 +19,12 @@ import cz.novanadeje.app.donations.domain.donor.SenderAccountLink;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaim;
 import cz.novanadeje.app.donations.domain.report.ReportSettings;
 import cz.novanadeje.app.donations.domain.report.SentReport;
+import cz.novanadeje.app.donations.domain.report.StoredReportSettings;
 import cz.novanadeje.app.shared.application.version.RowVersions;
 import org.springframework.stereotype.Component;
 
-import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 
 @Component
 public class AdminDonationsRows {
@@ -40,16 +39,23 @@ public class AdminDonationsRows {
         this.donorRecords = donorRecords;
     }
 
-    public PaymentRow payment(BankPayment payment, Optional<Donation> gift, boolean ofErasedDonor) {
-        PaymentRow row = ofErasedDonor ? withoutPayer(unversioned(payment)) : unversioned(payment);
-        String version = versionOf(row, gift.map(DonationRow::from).orElse(null));
-        return withVersion(row, version);
+    public PaymentRow unpaidPayment(BankPayment payment) {
+        PaymentRow row = unversioned(payment);
+        return withVersion(row, versionOf(row, null));
+    }
+
+    public PaymentRow paidPayment(BankPayment payment, Donation gift, DonorRecord giver) {
+        if (!giver.id().equals(gift.donor())) {
+            throw new IllegalArgumentException("The giver " + giver.id().value() + " is not the donor of the gift " + gift.id().value());
+        }
+        PaymentRow row = giver.isErased() ? withoutPayer(unversioned(payment)) : unversioned(payment);
+        return withVersion(row, versionOf(row, DonationRow.from(gift)));
     }
 
     public PaymentRow currentPayment(BankPayment payment) {
-        Optional<Donation> gift = donations.findByBankPayment(payment.id());
-        boolean erased = gift.flatMap(donation -> donorRecords.findById(donation.donor())).filter(DonorRecord::isErased).isPresent();
-        return payment(payment, gift, erased);
+        return donations.findByBankPayment(payment.id())
+                .map(gift -> paidPayment(payment, gift, donorRecords.findById(gift.donor()).orElseThrow()))
+                .orElseGet(() -> unpaidPayment(payment));
     }
 
     public LinkRow link(DonorRecord record, SenderAccountLink link) {
@@ -66,15 +72,17 @@ public class AdminDonationsRows {
         return new SymbolClaimRow(row.id(), row.donorId(), row.accountNumber(), row.variableSymbol(), row.answer(), row.answeredAt(), versionOf(row));
     }
 
-    public ReportSettingsRow reportSettings(ReportSettings settings, Optional<Instant> changedAt, List<SentReport> sent) {
+    public ReportSettingsRow reportSettings(StoredReportSettings stored, List<SentReport> sent) {
+        ReportSettings settings = stored.settings();
         return new ReportSettingsRow(settings.recipients().values(), settings.sendDay(), settings.sendHour(), sectionsOf(settings),
-                changedAt.orElse(null), sent.stream().map(report -> new SentReportRow(report.month().toString(), report.sentAt())).toList(),
-                reportSettingsVersion(settings, changedAt));
+                stored.changedAt().orElse(null), sent.stream().map(report -> new SentReportRow(report.month().toString(), report.sentAt())).toList(),
+                reportSettingsVersion(stored));
     }
 
-    public String reportSettingsVersion(ReportSettings settings, Optional<Instant> changedAt) {
+    public String reportSettingsVersion(StoredReportSettings stored) {
+        ReportSettings settings = stored.settings();
         return versionOf(new ReportSettingsRow(settings.recipients().values(), settings.sendDay(), settings.sendHour(), sectionsOf(settings),
-                changedAt.orElse(null), List.of(), null));
+                stored.changedAt().orElse(null), List.of(), null));
     }
 
     private static ReportSectionsRow sectionsOf(ReportSettings settings) {

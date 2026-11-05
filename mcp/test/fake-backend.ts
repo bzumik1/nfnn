@@ -24,6 +24,17 @@ export const CURRENT_VERSION = '5e1c0a9f3b7d2486';
 export const PERSON_ID = '019a0000-0000-7000-8000-000000000007';
 export const SIGNED_PERSON_ID = '019a0000-0000-7000-8000-000000000008';
 export const PUSH_SUBSCRIPTION_ID = '019a0000-0000-7000-8000-000000000027';
+const STORED_NOW: Record<string, unknown> = {
+  'PUT /api/admin/donations/report/settings': {
+    recipients: ['info@nfnn.cz'],
+    sendDay: 5,
+    sendHour: 7,
+    sections: { donors: true, donations: false, unpairedPayments: false, bankImport: false },
+    changedAt: '2026-10-17T10:00:00Z',
+    sentReports: [],
+    version: CURRENT_VERSION,
+  },
+};
 const LOG_MATCHES: Record<string, number[]> = {
   'backend.log': [36],
   'backend.log.2026-10-22.0.gz': [70, 50, 10],
@@ -122,7 +133,11 @@ export class FakeBackend {
     if (request.method !== 'GET' && token !== 'api-token-write') {
       return [403, problem(403, 'auth/forbidden', 'Přístup odepřen', 'Chybí oprávnění.')];
     }
-    if (request.ifMatch === `"${STALE_VERSION}"`) {
+    const stale =
+      request.ifMatch === `"${STALE_VERSION}"`
+        ? STORED_NOW[`${request.method} ${url.pathname}`]
+        : undefined;
+    if (stale !== undefined) {
       return [
         409,
         {
@@ -130,10 +145,10 @@ export class FakeBackend {
             409,
             'donations/changed-meanwhile',
             'Mezitím se to změnilo',
-            'Někdo jiný to mezitím změnil.',
+            'Někdo jiný nebo automatické párování to mezitím změnil.',
           ),
           version: CURRENT_VERSION,
-          current: { id: PAYMENT_ID, version: CURRENT_VERSION },
+          current: stale,
         },
       ];
     }

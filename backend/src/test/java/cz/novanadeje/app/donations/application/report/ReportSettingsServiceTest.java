@@ -1,6 +1,8 @@
 package cz.novanadeje.app.donations.application.report;
 
 import cz.novanadeje.app.donations.application.sync.AdminDonationsRows;
+import cz.novanadeje.app.donations.application.sync.AdminSyncRows.ReportSettingsRow;
+import cz.novanadeje.app.donations.domain.ChangedMeanwhile;
 import cz.novanadeje.app.donations.domain.donation.DonationRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
@@ -29,8 +31,12 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class ReportSettingsServiceTest {
@@ -86,9 +92,10 @@ class ReportSettingsServiceTest {
     @Test
     @DisplayName("Given an administrator, when the settings are changed, then they are saved with the time and the change is audited with its content")
     void should_save_and_audit_when_changed_given_administrator() {
-        ReportSettings saved = service.change(ADMIN, CHANGED, ExpectedVersion.none());
+        SavedReportSettings saved = service.change(ADMIN, CHANGED, ExpectedVersion.none());
 
-        assertThat(saved).isEqualTo(CHANGED);
+        assertThat(saved.settings()).isEqualTo(CHANGED);
+        assertThat(saved.changedAt()).isEqualTo(NOW);
         verify(settings).save(CHANGED, NOW);
         ArgumentCaptor<AdminActionPerformed> audited = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events).publishEvent(audited.capture());
@@ -98,5 +105,33 @@ class ReportSettingsServiceTest {
         assertThat(audited.getValue().details()).isEqualTo("Nastavení měsíčního přehledu změněno: příjemci pavel@example.cz, jakub@example.cz;"
                 + " odesílá se 5. den v měsíci v 9:00; části dárci, dary, stahování z banky");
         assertThat(audited.getValue().performedAt()).isEqualTo(NOW);
+    }
+
+    @Test
+    @DisplayName("Given settings changed, when the change answers, then its version is the one a later view of the saved settings gives")
+    void should_answer_the_saved_version_when_changed_given_settings_changed() {
+        SavedReportSettings saved = service.change(ADMIN, CHANGED, ExpectedVersion.of(service.view().settingsVersion()));
+        when(settings.current()).thenReturn(CHANGED);
+        when(settings.lastChangedAt()).thenReturn(Optional.of(NOW));
+
+        assertThat(saved.version()).isEqualTo(service.view().settingsVersion());
+    }
+
+    @Test
+    @DisplayName("Given another version than the stored settings', when the settings are changed, then it is refused with the stored version and row, and nothing is saved or audited")
+    void should_refuse_and_keep_settings_when_changed_given_another_version() {
+        String stored = service.view().settingsVersion();
+
+        assertThatThrownBy(() -> service.change(ADMIN, CHANGED, ExpectedVersion.of("0000000000000000")))
+                .isInstanceOfSatisfying(ChangedMeanwhile.class, refusal -> {
+                    assertThat(refusal.extensions()).containsEntry("version", stored);
+                    assertThat(refusal.extensions().get("current")).isInstanceOfSatisfying(ReportSettingsRow.class, row -> {
+                        assertThat(row.recipients()).containsExactly("info@nfnn.cz");
+                        assertThat(row.version()).isEqualTo(stored);
+                    });
+                });
+        verify(settings).lockForChange();
+        verify(settings, never()).save(any(), any());
+        verifyNoInteractions(events);
     }
 }

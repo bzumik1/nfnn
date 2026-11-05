@@ -58,6 +58,7 @@ import static cz.novanadeje.app.shared.domain.Money.czk;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -345,7 +346,9 @@ class ManualPairingServiceTest {
                     });
                 });
 
-        verify(lock).acquire();
+        InOrder order = inOrder(lock, donations);
+        order.verify(lock).acquire();
+        order.verify(donations, atLeastOnce()).findByBankPayment(unknownSymbol.id());
         verify(donations, never()).save(any());
         verify(events, never()).publishEvent(any());
     }

@@ -3,6 +3,8 @@ package cz.novanadeje.app.donations.application.admin;
 import cz.novanadeje.app.shared.infrastructure.json.RowVersionsFixture;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
 import cz.novanadeje.app.donations.application.sync.AdminDonationsRows;
+import cz.novanadeje.app.donations.application.sync.AdminSyncRows.LinkRow;
+import cz.novanadeje.app.donations.domain.ChangedMeanwhile;
 import cz.novanadeje.app.donations.application.bankaccount.DonorBankAccountsService;
 import cz.novanadeje.app.donations.application.overview.DonorDonationsService;
 import cz.novanadeje.app.donations.application.pairing.PairingLock;
@@ -167,6 +169,50 @@ class AdminDonorAccountsServiceTest {
         assertThatThrownBy(() -> service.view(PETR)).isInstanceOf(DonorRecordNotFound.class);
         assertThatThrownBy(() -> service.disconnect(ADMIN, PETR, SenderAccountLinkId.newId(NOW), ExpectedVersion.none())).isInstanceOf(DonorRecordNotFound.class);
         verify(events, never()).publishEvent(any());
+    }
+
+    @Test
+    @DisplayName("Given a link changed since an administrator read it, when they disconnect it with the version they read, then the lock comes first and it is refused with the current version and link row, saving and recording nothing")
+    void should_refuse_with_the_current_link_when_disconnected_given_a_stale_version() {
+        DonorRecord record = record();
+        SenderAccountLink link = learn(record);
+        when(donorRecords.findById(PETR)).thenReturn(Optional.of(record));
+        String current = new AdminDonationsRows(RowVersionsFixture.canonical(), donations, donorRecords).link(record, link).version();
+
+        assertThatThrownBy(() -> service.disconnect(ADMIN, PETR, link.id(), ExpectedVersion.of("0000000000000000")))
+                .isInstanceOfSatisfying(ChangedMeanwhile.class, refusal -> assertRefusedWith(refusal, link, current));
+
+        InOrder order = inOrder(lock, donorRecords);
+        order.verify(lock).acquire();
+        order.verify(donorRecords).findById(PETR);
+        verify(donorRecords, never()).saveSenderAccountLink(any(), any());
+        verify(events, never()).publishEvent(any());
+    }
+
+    @Test
+    @DisplayName("Given a disconnected link changed since an administrator read it, when they reconnect it with the version they read, then it is refused with the current version and link row, saving and recording nothing")
+    void should_refuse_with_the_current_link_when_reconnected_given_a_stale_version() {
+        DonorRecord record = record();
+        SenderAccountLink disconnected = record.disconnectSenderAccount(learn(record).id(), NOW.atZone(ZoneOffset.UTC).toLocalDate(), NOW.minusSeconds(100));
+        when(donorRecords.findById(PETR)).thenReturn(Optional.of(record));
+        String current = new AdminDonationsRows(RowVersionsFixture.canonical(), donations, donorRecords).link(record, disconnected).version();
+
+        assertThatThrownBy(() -> service.reconnect(ADMIN, PETR, disconnected.id(), ExpectedVersion.of("0000000000000000")))
+                .isInstanceOfSatisfying(ChangedMeanwhile.class, refusal -> assertRefusedWith(refusal, disconnected, current));
+
+        verify(lock).acquire();
+        verify(donorRecords, never()).saveSenderAccountLink(any(), any());
+        verify(events, never()).publishEvent(any());
+    }
+
+    private static void assertRefusedWith(ChangedMeanwhile refusal, SenderAccountLink link, String current) {
+        assertThat(refusal.extensions()).containsEntry("version", current);
+        assertThat(refusal.extensions().get("current")).isInstanceOfSatisfying(LinkRow.class, row -> {
+            assertThat(row.id()).isEqualTo(link.id().value());
+            assertThat(row.donorId()).isEqualTo(PETR.value());
+            assertThat(row.status()).isEqualTo(link.status());
+            assertThat(row.version()).isEqualTo(current);
+        });
     }
 
     private static DonorRecord record() {

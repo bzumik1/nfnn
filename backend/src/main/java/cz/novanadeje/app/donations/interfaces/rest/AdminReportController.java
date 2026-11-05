@@ -4,6 +4,7 @@ import cz.novanadeje.app.donations.application.report.ManualReportDelivery;
 import cz.novanadeje.app.donations.application.report.MonthlyReportService;
 import cz.novanadeje.app.donations.application.report.ReportAdministrationView;
 import cz.novanadeje.app.donations.application.report.ReportSettingsService;
+import cz.novanadeje.app.donations.application.report.SavedReportSettings;
 import cz.novanadeje.app.donations.domain.report.ReportMonth;
 import cz.novanadeje.app.donations.domain.report.ReportRecipients;
 import cz.novanadeje.app.donations.domain.report.ReportSections;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.YearMonth;
+import java.util.Optional;
 import java.util.UUID;
 
 @RestController
@@ -43,11 +45,10 @@ class AdminReportController {
     @PutMapping("/settings")
     AdminReportResponse.Settings changeSettings(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody ReportSettingsRequest request,
                                                 ExpectedVersion expected) {
-        settings.change(admin(jwt), new ReportSettings(ReportRecipients.parse(request.recipients()), request.sendDay(), request.sendHour(),
+        SavedReportSettings saved = settings.change(admin(jwt), new ReportSettings(ReportRecipients.parse(request.recipients()), request.sendDay(), request.sendHour(),
                 new ReportSections(request.sections().donors(), request.sections().donations(), request.sections().unpairedPayments(),
                         request.sections().bankImport())), expected);
-        ReportAdministrationView changed = settings.view();
-        return AdminReportResponse.Settings.from(changed.settings(), changed.changedAt(), changed.settingsVersion());
+        return AdminReportResponse.Settings.from(saved.settings(), Optional.of(saved.changedAt()), saved.version());
     }
 
     @PostMapping("/send")
