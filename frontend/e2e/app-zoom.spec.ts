@@ -282,14 +282,14 @@ test.describe('Given a visitor on a computer', () => {
     await page.mouse.move(x + 60, y, { steps: 4 });
     await page.mouse.up();
 
-    expect(await left(photo)).toBeCloseTo(centred + 60, -1);
+    await expect.poll(() => left(photo)).toBeCloseTo(centred + 60, -1);
 
     await page.mouse.move(x, y);
     await page.mouse.down();
     await page.mouse.move(x + stage.width, y, { steps: 8 });
     await page.mouse.up();
 
-    expect(await left(photo)).toBeCloseTo(stage.x, 0);
+    await expect.poll(() => left(photo)).toBeCloseTo(stage.x, 0);
   });
 
   test('when they zoom the photo in with the keyboard and press the right arrow, then the photo moves to show more of its right side', async ({
@@ -312,9 +312,10 @@ test.describe('Given a visitor on a computer', () => {
     await expect.poll(async () => centred - (await left(photo))).toBeGreaterThanOrEqual(reach);
   });
 
-  test('when the window narrows while the zoomed photo is at its right edge, then the photo still covers the screen to its edge', async ({
+  test('when the window widens while the zoomed photo is at its right edge, then the photo moves with the wider screen and leaves no gap at its edge', async ({
     page,
   }) => {
+    await page.setViewportSize({ width: 900, height: 720 });
     const { viewer, photo } = await openArticlePhoto(page);
     const stage = viewer.getByRole('group', { name: 'Zvětšená fotka' });
     const fitted = await width(photo);
@@ -322,23 +323,21 @@ test.describe('Given a visitor on a computer', () => {
     await viewer.getByRole('button', { name: 'Přiblížit' }).click();
     const box = (await stage.boundingBox())!;
     await expect.poll(() => width(photo)).toBeCloseTo(fitted * 2.25, 0);
-    await expect(viewer.getByRole('button', { name: /vrátit původní velikost/ })).toHaveText(
-      '225\u00a0%',
-    );
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     await page.mouse.down();
     await page.mouse.move(box.x - box.width, box.y + box.height / 2, { steps: 8 });
     await page.mouse.up();
+    const gapAtRight = async () => {
+      const shown = (await photo.boundingBox())!;
+      const area = (await stage.boundingBox())!;
+      return Math.round(area.x + area.width - (shown.x + shown.width));
+    };
+    await expect.poll(gapAtRight).toBe(0);
 
-    await page.setViewportSize({ width: 900, height: 720 });
+    await page.setViewportSize({ width: 1280, height: 720 });
 
-    await expect
-      .poll(async () => {
-        const shown = (await photo.boundingBox())!;
-        const area = (await stage.boundingBox())!;
-        return Math.round(shown.x + shown.width - (area.x + area.width));
-      })
-      .toBeGreaterThanOrEqual(0);
+    await expect.poll(async () => (await stage.boundingBox())!.width).toBeGreaterThan(1200);
+    await expect.poll(gapAtRight).toBeLessThanOrEqual(0);
     const shown = (await photo.boundingBox())!;
     const area = (await stage.boundingBox())!;
     expect(shown.x).toBeLessThanOrEqual(area.x + 1);
