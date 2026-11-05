@@ -5,7 +5,7 @@ import { NavigationError, provideRouter, Router } from '@angular/router';
 import { Subject } from 'rxjs';
 
 import { SignedOutNotice } from '../../core/auth/signed-out-notice';
-import { Connectivity } from '../../core/navigation/connectivity';
+import { Connectivity } from '../../core/connectivity/connectivity';
 import { ExternalNavigation } from '../../core/navigation/external-navigation';
 import { ChunkLoadRecovery } from '../../core/reload/chunk-load-recovery';
 import { ChunkProbe } from '../../core/reload/chunk-probe';
@@ -38,7 +38,7 @@ describe('Given the notice that the app must load a new version', () => {
         provideRouter([{ path: 'darce/prehled', component: Page }]),
         { provide: ExternalNavigation, useValue: { loadFromServer } },
         { provide: ReloadGuard, useValue: { claim: () => false } },
-        { provide: Connectivity, useValue: { isOffline: () => false } },
+        { provide: Connectivity, useValue: { browserSaysOffline: () => false } },
         { provide: ChunkProbe, useValue: { reloadWouldLand: () => Promise.resolve(false) } },
         {
           provide: SERVICE_WORKER_UPDATES,

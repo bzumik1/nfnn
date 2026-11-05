@@ -1,0 +1,98 @@
+<div class="visually-hidden" aria-live="polite">
+  @if (announcement(); as message) {
+    <span>{{ message }}</span>
+  }
+</div>
+
+@if (connectivity.offline()) {
+  <button type="button" class="offline-pill" aria-haspopup="dialog" (click)="openSheet()">
+    <svg
+      aria-hidden="true"
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M2 2l20 20" />
+      <path d="M8.5 16.5a5 5 0 0 1 7 0" />
+      <path d="M5 12.86a10 10 0 0 1 5.17-2.69" />
+      <path d="M19 12.86a10 10 0 0 0-2.07-1.37" />
+      <path d="M2 8.82a15 15 0 0 1 4.18-2.65" />
+      <path d="M22 8.82a15 15 0 0 0-11.29-3.76" />
+      <path d="M12 20h.01" />
+    </svg>
+    <span>{{ label() }}</span>
+  </button>
+}
+
+@if (sheetOpen()) {
+  <app-dialog labelledBy="offline-sheet-title" presentation="sheet" (dismissed)="closeSheet()">
+    @if (connectivity.cause() === 'server') {
+      <h2
+        id="offline-sheet-title"
+        class="ui-dialog__title"
+        i18n="@@layout.offline.sheet.serverTitle"
+      >
+        Server neodpovídá
+      </h2>
+      <p class="ui-dialog__lead" i18n="@@layout.offline.sheet.serverLead">
+        Server fondu teď neodpovídá; zkuste to za chvíli.
+      </p>
+    } @else if (connectivity.offline()) {
+      <h2 id="offline-sheet-title" class="ui-dialog__title" i18n="@@layout.offline.sheet.title">
+        Jste offline
+      </h2>
+      <p class="ui-dialog__lead" i18n="@@layout.offline.sheet.lead">
+        Bez připojení můžete jen prohlížet.
+      </p>
+    } @else {
+      <h2
+        id="offline-sheet-title"
+        class="ui-dialog__title"
+        i18n="@@layout.offline.sheet.onlineTitle"
+      >
+        Jste připojeni
+      </h2>
+    }
+    @if (connectivity.offline()) {
+      <p class="offline-sheet-text">
+        @if (dataTime(); as time) {
+          <ng-container i18n="@@layout.offline.sheet.dataTime"
+            >Zobrazujeme údaje z {{ time }}, nemusí být aktuální.</ng-container
+          >&ngsp;
+        }
+        <ng-container i18n="@@layout.offline.sheet.changesLater"
+          >Odeslat zprávu, přihlásit se nebo cokoli změnit půjde, až se připojíte.</ng-container
+        >
+      </p>
+      <button
+        type="button"
+        class="ui-button ui-button--primary ui-button--block offline-try-again"
+        [disabled]="tryOutcome() === 'trying'"
+        (click)="tryAgain()"
+      >
+        @if (tryOutcome() === 'trying') {
+          <span i18n="@@layout.offline.sheet.trying">Zkoušíme se připojit…</span>
+        } @else {
+          <span i18n="@@layout.offline.sheet.tryAgain">Zkusit znovu</span>
+        }
+      </button>
+    }
+    <p class="ui-form-status offline-sheet-status" role="status">
+      @switch (tryOutcome()) {
+        @case ('reached') {
+          <span i18n="@@layout.offline.sheet.reached">Připojení je zpět.</span>
+        }
+        @case ('still-offline') {
+          <span i18n="@@layout.offline.sheet.stillOffline"
+            >Pořád se nedaří připojit. Zkusíme to znovu samo za chvíli.</span
+          >
+        }
+      }
+    </p>
+  </app-dialog>
+}

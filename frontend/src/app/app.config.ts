@@ -24,6 +24,9 @@ import { SESSION_DEVICE } from './core/auth/session-device';
 import { ReportingErrorHandler } from './core/errors/reporting-error-handler';
 import { ChunkLoadRecovery } from './core/reload/chunk-load-recovery';
 import { CanonicalLink } from './core/seo/canonical-link';
+import { Connectivity } from './core/connectivity/connectivity';
+import { UnseenPhotos } from './core/connectivity/unseen-photos';
+import { connectivityInterceptor } from './core/connectivity/connectivity-interceptor';
 import { AppInstall } from './core/install/app-install';
 import { AppUpdates } from './core/updates/app-updates';
 import { provideAppServiceWorker } from './core/updates/angular-service-worker';
@@ -47,7 +50,12 @@ export const chunkLoadRecoveryFeature: NavigationErrorHandlerFeature = withNavig
 
 export const appHttpClient: EnvironmentProviders = provideHttpClient(
   withXhr(),
-  withInterceptors([authInterceptor, versionInterceptor, serviceWorkerBypassInterceptor]),
+  withInterceptors([
+    authInterceptor,
+    versionInterceptor,
+    serviceWorkerBypassInterceptor,
+    connectivityInterceptor,
+  ]),
 );
 
 export const appErrorHandler: Provider = {
@@ -60,6 +68,11 @@ export const dialogHistoryAtStart: EnvironmentProviders = provideAppInitializer(
 );
 
 export const deviceCopies: Provider = { provide: SESSION_DEVICE, useExisting: DeviceCopies };
+
+export const connectivityAtStart: EnvironmentProviders = provideAppInitializer(() => {
+  inject(Connectivity);
+  inject(UnseenPhotos);
+});
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -76,6 +89,7 @@ export const appConfig: ApplicationConfig = {
     provideAppInitializer(() => inject(AuthStore).restore()),
     provideAppInitializer(() => inject(CanonicalLink).start()),
     dialogHistoryAtStart,
+    connectivityAtStart,
     pagePinchLockAtStart,
     systemTextSizeAtStart,
   ],

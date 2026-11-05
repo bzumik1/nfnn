@@ -8,8 +8,11 @@ import {
   appErrorHandler,
   appHttpClient,
   chunkLoadRecoveryFeature,
+  connectivityAtStart,
   dialogHistoryAtStart,
 } from './app.config';
+import { Connectivity } from './core/connectivity/connectivity';
+import { UnseenPhotos } from './core/connectivity/unseen-photos';
 import { ReportingErrorHandler } from './core/errors/reporting-error-handler';
 import { ExternalNavigation } from './core/navigation/external-navigation';
 import { ChunkProbe } from './core/reload/chunk-probe';
@@ -51,6 +54,27 @@ describe('Given the history entries of dialogs', () => {
 
     expect(started).toHaveBeenCalledTimes(1);
     expect(appConfig.providers).toContain(dialogHistoryAtStart);
+  });
+});
+
+describe('Given the connectivity of the app', () => {
+  it('when the app starts, then it listens to the browser from the first moment, so a start without a network is noticed before any page asks the server, and a photo it cannot load is marked from the first page', () => {
+    const started = vi.fn();
+    const watchingPhotos = vi.fn();
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        connectivityAtStart,
+        { provide: Connectivity, useFactory: () => started() ?? {} },
+        { provide: UnseenPhotos, useFactory: () => watchingPhotos() ?? {} },
+      ],
+    });
+
+    TestBed.inject(Router);
+
+    expect(started).toHaveBeenCalledTimes(1);
+    expect(watchingPhotos).toHaveBeenCalledTimes(1);
+    expect(appConfig.providers).toContain(connectivityAtStart);
   });
 });
 

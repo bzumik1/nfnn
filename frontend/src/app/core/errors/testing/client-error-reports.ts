@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 
-import { Connectivity } from '../../navigation/connectivity';
+import { Connectivity } from '../../connectivity/connectivity';
 import { ErrorKind, ErrorName } from '../error-vocabulary';
 
 const IPHONE_SAFARI =
@@ -15,7 +15,7 @@ export function recordClientErrors(): SentClientErrors {
   vi.stubGlobal('fetch', fetchSpy);
   vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(IPHONE_SAFARI);
   TestBed.configureTestingModule({
-    providers: [{ provide: Connectivity, useValue: { isOffline: () => false } }],
+    providers: [{ provide: Connectivity, useValue: { browserSaysOffline: () => false } }],
   });
   return {
     bodies: () =>
