@@ -47,26 +47,5 @@
     "test": "src/app/features/content/list/content-list.spec.ts > Given a visitor opening the list of news > when the list fails, then an alert offers to try again and the retry loads it",
     "reason": "Slice 2.26 (plan v3 2.26, Jakub's mockups of 2026-10-31): Aktuality is its own page, the newest news large with its signer, the stories of the year and the older news as cards, so the list of news leaves the shared content list and its tests move to the new page",
     "replacement": "src/app/features/content/news-page/news-page.spec.ts > Given a visitor opening Aktuality > when the news fail, then an alert offers to try again and the retry loads them"
-  },
-  {
-    "kind": "retired",
-    "suite": "frontend-vitest",
-    "test": "src/app/features/content/home/sections/news/news.spec.ts > Given the news section > when only the placeholder cards show, then no link offers a list of articles that does not exist yet",
-    "reason": "Slice 2.23 retired these tests of the former home news section to the content-list news tests, which 2.26 retires in turn (Aktuality is its own page), so they move on to the tests of the news page and the news card that now prove the same",
-    "replacement": "src/app/features/content/news-page/news-page.spec.ts > Given a visitor opening Aktuality > when nothing is published yet, then the page says so and leads home"
-  },
-  {
-    "kind": "retired",
-    "suite": "frontend-vitest",
-    "test": "src/app/features/content/home/sections/news/news.spec.ts > Given the news section > when only the placeholder cards show, then their dates are written like the real ones and nothing invites to read on",
-    "reason": "Slice 2.23 retired these tests of the former home news section to the content-list news tests, which 2.26 retires in turn (Aktuality is its own page), so they move on to the tests of the news page and the news card that now prove the same",
-    "replacement": "src/app/features/content/news-page/news-page.spec.ts > Given a visitor opening Aktuality > when nothing is published yet, then the page says so and leads home"
-  },
-  {
-    "kind": "retired",
-    "suite": "frontend-vitest",
-    "test": "src/app/features/content/home/sections/news/news.spec.ts > Given the news section with published articles > when the articles arrive, then each card shows the tag, the date, the perex and a link to the article",
-    "reason": "Slice 2.23 retired these tests of the former home news section to the content-list news tests, which 2.26 retires in turn (Aktuality is its own page), so they move on to the tests of the news page and the news card that now prove the same",
-    "replacement": "src/app/features/content/news-card/news-card.spec.ts > Given the card of a news article > when it is shown, then the tag, the date and the perex stand beside a decorative photo that waits until it is near"
   }
 ]
