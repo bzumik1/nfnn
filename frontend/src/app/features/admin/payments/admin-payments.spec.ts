@@ -14,6 +14,8 @@ import {
   unpairedPayment,
 } from '../testing/admin-fixtures';
 import { AdminPayments } from './admin-payments';
+import { LiveUpdates } from '../../../core/live/live-updates';
+import { FakeLiveUpdates } from '../../../core/live/testing/live-fixtures';
 
 const PAYMENTS_URL = '/api/admin/donations/payments';
 const DONORS_URL = '/api/admin/donations/donors';
@@ -328,6 +330,93 @@ describe('Given an administrator on the bank payments page', () => {
         'K daru už bylo vystaveno potvrzení. Dar s vystaveným potvrzením odpárovat nelze.',
       );
       expect(document.activeElement).toBe(button('Zrušit přiřazení'));
+    });
+  });
+
+  describe('when the live stream says the payments changed', () => {
+    let live: FakeLiveUpdates;
+    const shown = unpairedPayment();
+    const arrived = (index: number) =>
+      unpairedPayment({
+        id: `019a1c00-0000-7000-8000-00000000200${index}`,
+        bankTransactionId: 2000 + index,
+        bookedOn: '2026-10-20',
+        counterpartyName: `Odesílatel ${index}`,
+      });
+
+    beforeEach(async () => {
+      live = TestBed.inject(LiveUpdates) as unknown as FakeLiveUpdates;
+      await open();
+      await listResponds(paymentList([shown]));
+    });
+
+    function incoming(): string {
+      return text('.payments-incoming');
+    }
+
+    it('then a new payment waits behind a button in the status line, the tab counts it, and the list stays put until the administrator asks', async () => {
+      live.hint('payments');
+      await listResponds(paymentList([arrived(1), shown]));
+
+      expect(rows()).toHaveLength(1);
+      expect(incoming()).toBe('Zobrazit 1 novou platbu');
+      expect(element('.payments-incoming').closest('[role="status"]')).not.toBeNull();
+      expect(text('.admin-tab')).toBe('Čekají na přiřazení (2)');
+
+      element<HTMLButtonElement>('.payments-incoming').click();
+      await settle();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(rows()).toHaveLength(2);
+      expect(rows()[0]).toContain('Odesílatel 1');
+      expect(incoming()).toBe('');
+      expect(text('.admin-tab')).toBe('Čekají na přiřazení (2)');
+      expect(document.activeElement).toBe(element('#payments-title'));
+    });
+
+    it('then the button takes the Czech plural forms', async () => {
+      live.hint('payments');
+      await listResponds(paymentList([arrived(1), arrived(2), shown]));
+      expect(incoming()).toBe('Zobrazit 2 nové platby');
+
+      live.hint('payments');
+      await listResponds(paymentList([1, 2, 3, 4, 5].map(arrived).concat(shown)));
+      expect(incoming()).toBe('Zobrazit 5 nových plateb');
+    });
+
+    it('then a payment that someone else paired leaves the list at once and no button shows', async () => {
+      live.hint('payments');
+      await listResponds(paymentList([]));
+
+      expect(rows()).toHaveLength(0);
+      expect(incoming()).toBe('');
+    });
+
+    it('then the list is not read while the pairing dialog is open, and is read once it closes', async () => {
+      button('Přiřadit dárci').click();
+      await settle();
+      http.expectOne((request) => request.url === DONORS_URL).flush({ items: [] });
+      http
+        .expectOne((request) => request.url === ACCOUNTS_URL)
+        .flush({ items: [], hasMore: false });
+      await settle();
+
+      live.hint('payments');
+      http.expectNone(`${PAYMENTS_URL}?${FIRST_PAGE}`);
+
+      button('Zavřít').click();
+      await settle();
+      await listResponds(paymentList([arrived(1), shown]));
+
+      expect(incoming()).toBe('Zobrazit 1 novou platbu');
+    });
+
+    it('then a stream that comes back after a gap reads the list again', async () => {
+      live.resync();
+      await listResponds(paymentList([shown]));
+
+      expect(rows()).toHaveLength(1);
+      expect(incoming()).toBe('');
     });
   });
 

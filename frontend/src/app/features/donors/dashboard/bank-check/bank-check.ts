@@ -1,6 +1,16 @@
 /// <reference types="@angular/localize" />
 
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject } from '@angular/core';
+import {
+  afterNextRender,
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  DestroyRef,
+  ElementRef,
+  inject,
+  Injector,
+  viewChild,
+} from '@angular/core';
 import { pluralCategory } from '../../../../core/i18n/plural-category';
 import { formatBankTime } from '../../../donations/donation-date';
 import { BankCheckOutcome, DonorDonations } from '../donor-donations';
@@ -13,9 +23,12 @@ import { BankCheckOutcome, DonorDonations } from '../donor-donations';
 })
 export class BankCheck {
   protected readonly donations = inject(DonorDonations);
+  private readonly injector = inject(Injector);
+  private readonly checkButton = viewChild.required<ElementRef<HTMLButtonElement>>('checkButton');
 
   protected readonly outcome = computed(() => outcomeText(this.donations.bankCheckOutcome()));
   protected readonly failed = computed(() => this.donations.bankCheckOutcome()?.kind === 'failed');
+  protected readonly incoming = computed(() => incomingText(this.donations.incomingCount()));
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.donations.clearBankCheckOutcome());
@@ -23,6 +36,25 @@ export class BankCheck {
 
   protected formatBankTime(isoInstant: string): string {
     return formatBankTime(isoInstant);
+  }
+
+  protected showIncoming(): void {
+    this.donations.showIncoming();
+    afterNextRender(() => this.checkButton().nativeElement.focus(), { injector: this.injector });
+  }
+}
+
+function incomingText(count: number): string {
+  if (count === 0) {
+    return '';
+  }
+  switch (pluralCategory(count)) {
+    case 'one':
+      return $localize`:@@donor.dashboard.bank.incoming.one:Zobrazit ${count}:count: nový dar`;
+    case 'few':
+      return $localize`:@@donor.dashboard.bank.incoming.few:Zobrazit ${count}:count: nové dary`;
+    default:
+      return $localize`:@@donor.dashboard.bank.incoming.other:Zobrazit ${count}:count: nových darů`;
   }
 }
 

@@ -41,6 +41,8 @@ import {
   YEARLY_ONE,
 } from '../../donations/receipt-pdf/testing/receipt-fixtures';
 import { donorsRoutes } from '../donors.routes';
+import { LiveUpdates } from '../../../core/live/live-updates';
+import { FakeLiveUpdates } from '../../../core/live/testing/live-fixtures';
 import { BankAccountsCard } from './bank-accounts-card/bank-accounts-card';
 import { DonorArea } from './donor-area';
 import { DonorDonations } from './donor-donations';
@@ -373,6 +375,138 @@ describe('Given a signed-in donor in the donor area', () => {
       await settle();
 
       expect(element('.side-nav-badge')).toBeNull();
+    });
+  });
+
+  describe('when the live stream says that something changed while the donor reads Moje dary', () => {
+    let live: FakeLiveUpdates;
+    const newGift = donationItem({ id: 'd-5', receivedAt: '2026-04-02', amountMinor: 30000 });
+
+    function withNewGifts(...gifts: ReturnType<typeof donationItem>[]): DonationListResponse {
+      const list = twoYearDonations();
+      return { ...list, items: [...gifts, ...list.items], count: list.count + gifts.length };
+    }
+
+    async function openGifts(): Promise<void> {
+      live = TestBed.inject(LiveUpdates) as unknown as FakeLiveUpdates;
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+      bankCheck.flush(
+        { bankDataAsOf: EARLIER, checking: false },
+        { status: 202, statusText: 'Accepted' },
+      );
+      await settle();
+      await respond(twoYearSummary(), twoYearDonations());
+    }
+
+    function rows(): number {
+      return texts('.payments-card tbody tr').length;
+    }
+
+    it('then a new gift waits behind a button that names it, and the list stays put until the donor asks', async () => {
+      await openGifts();
+
+      live.hint('donations');
+      await respond(twoYearSummary(), withNewGifts(newGift));
+
+      expect(rows()).toBe(twoYearDonations().items.length);
+      expect(text('.bank-check-incoming')).toBe('Zobrazit 1 nový dar');
+      expect(element('.bank-check-incoming')?.closest('[role="status"]')).not.toBeNull();
+
+      element('.bank-check-incoming')?.click();
+      await settle();
+
+      expect(rows()).toBe(twoYearDonations().items.length + 1);
+      expect(text('.bank-check-incoming')).toBe('');
+      expect(document.activeElement).toBe(element('.bank-check-btn'));
+    });
+
+    it('then the button takes the Czech plural forms', async () => {
+      await openGifts();
+
+      live.hint('donations');
+      await respond(
+        twoYearSummary(),
+        withNewGifts(newGift, donationItem({ id: 'd-6' }), donationItem({ id: 'd-7' })),
+      );
+      expect(text('.bank-check-incoming')).toBe('Zobrazit 3 nové dary');
+
+      live.hint('donations');
+      await respond(
+        twoYearSummary(),
+        withNewGifts(...['d-5', 'd-6', 'd-7', 'd-8', 'd-9'].map((id) => donationItem({ id }))),
+      );
+      expect(text('.bank-check-incoming')).toBe('Zobrazit 5 nových darů');
+    });
+
+    it('then a change to a gift already shown, such as a refund, shows at once in its place', async () => {
+      await openGifts();
+      const list = twoYearDonations();
+      const refunded = {
+        ...list,
+        items: list.items.map((item) =>
+          item.id === 'd-2'
+            ? { ...item, status: 'REFUNDED' as const, receiptAvailable: false }
+            : item,
+        ),
+      };
+
+      live.hint('donations');
+      await respond(twoYearSummary(), refunded);
+
+      expect(rows()).toBe(list.items.length);
+      expect(text('.bank-check-incoming')).toBe('');
+      expect(
+        texts('.payments-card tbody tr').filter((row) => row.includes('Vráceno')),
+      ).toHaveLength(2);
+    });
+
+    it('then the donor checking the bank shows the new gifts at once and the button goes away', async () => {
+      await openGifts();
+      live.hint('donations');
+      await respond(twoYearSummary(), withNewGifts(newGift));
+
+      element('.bank-check-btn')?.click();
+      await settle();
+      http
+        .expectOne({ method: 'POST', url: BANK_CHECK_URL })
+        .flush({ bankDataAsOf: LATER, checking: false });
+      await settle();
+      await respond(twoYearSummary(), withNewGifts(newGift));
+
+      expect(rows()).toBe(twoYearDonations().items.length + 1);
+      expect(text('.bank-check-incoming')).toBe('');
+    });
+
+    it('then the bank accounts and the time of the bank data are read again when their feeds change', async () => {
+      await openGifts();
+
+      live.hint('bank-accounts');
+      http
+        .expectOne({ method: 'GET', url: BANK_ACCOUNTS_URL })
+        .flush({ items: [bankAccount({ id: 'question-0', symbolOffer: symbolOffer() })] });
+      live.hint('bank-import');
+      http
+        .expectOne({ method: 'GET', url: BANK_CHECK_URL })
+        .flush({ bankDataAsOf: LATER, checking: false });
+      await settle();
+
+      expect(text('nav a[href="/darce/ucty"] .side-nav-badge')).toBe('1');
+      expect(text('.bank-check-status')).toBe('Údaje z banky k 18. 10. 2026 10:07');
+    });
+
+    it('then a stream that comes back after a gap reads everything again', async () => {
+      await openGifts();
+
+      live.resync();
+      await respond(twoYearSummary(), twoYearDonations());
+      http.expectOne({ method: 'GET', url: BANK_ACCOUNTS_URL }).flush({ items: [] });
+      http
+        .expectOne({ method: 'GET', url: BANK_CHECK_URL })
+        .flush({ bankDataAsOf: EARLIER, checking: false });
+      await settle();
+
+      expect(text('.bank-check-incoming')).toBe('');
     });
   });
 

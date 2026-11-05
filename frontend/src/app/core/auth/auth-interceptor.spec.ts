@@ -189,6 +189,41 @@ describe('Given the auth interceptor', () => {
     expect(await received?.text()).toBe('%PDF-1.4');
   });
 
+  it('when a text call such as the live stream fails with an expired token, then the session is refreshed and the call is retried with the new token', () => {
+    signIn('token-1');
+    let received: string | undefined;
+    client.get('/api/live', { responseType: 'text' }).subscribe((text) => (received = text));
+
+    http.expectOne('/api/live').flush(JSON.stringify(problem('auth/expired-token')), {
+      status: 401,
+      statusText: 'Unauthorized',
+      headers: { 'Content-Type': 'application/problem+json' },
+    });
+
+    http.expectOne('/api/donors/auth/refresh').flush(authResponse('token-2'));
+    const retried = http.expectOne('/api/live');
+    expect(retried.request.headers.get('Authorization')).toBe('Bearer token-2');
+    retried.flush('event:revision\ndata:{}\n\n');
+    expect(received).toBe('event:revision\ndata:{}\n\n');
+  });
+
+  it('when a text call fails with a text that is not a problem, then the failure passes through unchanged', () => {
+    signIn('token-1');
+    let failure: unknown;
+    client
+      .get('/api/live', { responseType: 'text' })
+      .subscribe({ error: (error) => (failure = error) });
+
+    http.expectOne('/api/live').flush('Bad Gateway', {
+      status: 502,
+      statusText: 'Bad Gateway',
+      headers: { 'Content-Type': 'text/html' },
+    });
+
+    expect(failure).toBeInstanceOf(HttpErrorResponse);
+    expect((failure as HttpErrorResponse).error).toBe('Bad Gateway');
+  });
+
   it('when a file download is refused as unauthenticated, then the caller gets the problem as a parsed body and no refresh happens', async () => {
     signIn('token-1');
     let failure: unknown;
