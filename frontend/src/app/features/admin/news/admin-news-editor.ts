@@ -226,6 +226,22 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
   );
   protected readonly focalShapes: readonly PreviewShape[] = [
     {
+      shape: 'newsFeatured',
+      label: $localize`:@@admin.newsEditor.focalPoint.featured:Velká zpráva, široká`,
+    },
+    {
+      shape: 'newsFeaturedMedium',
+      label: $localize`:@@admin.newsEditor.focalPoint.featuredMedium:Velká zpráva, středně široká`,
+    },
+    {
+      shape: 'newsFeaturedTall',
+      label: $localize`:@@admin.newsEditor.focalPoint.featuredTall:Velká zpráva, na výšku`,
+    },
+    {
+      shape: 'newsCardSide',
+      label: $localize`:@@admin.newsEditor.focalPoint.cardSide:Starší zpráva, fotka vedle textu`,
+    },
+    {
       shape: 'newsCard',
       label: $localize`:@@admin.newsEditor.focalPoint.card:Karta v Aktualitách`,
     },

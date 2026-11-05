@@ -1,0 +1,51 @@
+<section class="stories" [attr.aria-labelledby]="titleId">
+  <div class="section-head">
+    <h2 class="section-title" [id]="titleId" i18n="@@content.news.stories.title">
+      Příběhy z roku {{ stories().year }}
+    </h2>
+    <a
+      class="stories-all"
+      routerLink="/projekty"
+      [queryParams]="{ rok: stories().year }"
+      i18n="@@content.news.stories.all"
+      >{stories().projects.length, plural,
+        one {Zobrazit v Pomáháme}
+        few {Všechny {{ stories().projects.length }} v Pomáháme}
+        other {Všech {{ stories().projects.length }} v Pomáháme}
+      }</a
+    >
+  </div>
+  <ul class="stories-strip">
+    @for (tile of tiles(); track tile.project.id) {
+      <li class="story">
+        <div class="story-photo">
+          @if (tile.image; as src) {
+            <img
+              loading="lazy"
+              [src]="src"
+              width="72"
+              height="72"
+              alt=""
+              [appFocalPoint]="tile.project.coverImage?.focalPoint"
+              focalShape="storyTile"
+            />
+          } @else {
+            <svg class="story-heart" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 20s-7-4.35-7-10a4 4 0 0 1 7-2.65A4 4 0 0 1 19 10c0 5.65-7 10-7 10z" />
+            </svg>
+          }
+        </div>
+        <div class="story-text">
+          @if (tile.project.tag) {
+            <span class="story-tag">{{ tile.project.tag }}</span>
+          }
+          <h3 class="story-title">
+            <a class="story-link" [routerLink]="['/projekty', tile.project.slug]">{{
+              tile.project.title
+            }}</a>
+          </h3>
+        </div>
+      </li>
+    }
+  </ul>
+</section>

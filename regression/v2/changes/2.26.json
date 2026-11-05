@@ -1,0 +1,51 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/list/content-list.spec.ts > Given a visitor opening the list of news > when the first page arrives > then the page is named, each article links to itself and the count of pages shows",
+    "reason": "Slice 2.26 (plan v3 2.26, Jakub's mockups of 2026-10-31): Aktuality is its own page, the newest news large with its signer, the stories of the year and the older news as cards, so the list of news leaves the shared content list and its tests move to the new page",
+    "replacement": "src/app/features/content/news-page/news-page.spec.ts > Given a visitor opening Aktuality > when the first page of news and the projects arrive > then the page is named and the newest news leads it, large, with its signer"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/list/content-list.spec.ts > Given a visitor opening the list of news > when the first page arrives > then only older articles are offered, in a named navigation",
+    "reason": "Slice 2.26 (plan v3 2.26, Jakub's mockups of 2026-10-31): Aktuality is its own page, the newest news large with its signer, the stories of the year and the older news as cards, so the list of news leaves the shared content list and its tests move to the new page",
+    "replacement": "src/app/features/content/news-page/news-page.spec.ts > Given a visitor opening Aktuality > when there are more news than one page holds > then older pages are offered in a named navigation"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/list/content-list.spec.ts > Given a visitor opening the list of news > when a middle page is asked for, then it loads that page and offers both directions",
+    "reason": "Slice 2.26 (plan v3 2.26, Jakub's mockups of 2026-10-31): Aktuality is its own page, the newest news large with its signer, the stories of the year and the older news as cards, so the list of news leaves the shared content list and its tests move to the new page",
+    "replacement": "src/app/features/content/news-page/news-page.spec.ts > Given a visitor opening Aktuality > when a later page is asked for > then both directions are offered"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/list/content-list.spec.ts > Given a visitor opening the list of news > when the page number is not a page, then the first page loads",
+    "reason": "Slice 2.26 (plan v3 2.26, Jakub's mockups of 2026-10-31): Aktuality is its own page, the newest news large with its signer, the stories of the year and the older news as cards, so the list of news leaves the shared content list and its tests move to the new page",
+    "replacement": "src/app/features/content/news-page/news-page.spec.ts > Given a visitor opening Aktuality > when the page number is not a page, then the first page loads"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/list/content-list.spec.ts > Given a visitor opening the list of news > when nothing is published yet, then the page says so",
+    "reason": "Slice 2.26 (plan v3 2.26, Jakub's mockups of 2026-10-31): Aktuality is its own page, the newest news large with its signer, the stories of the year and the older news as cards, so the list of news leaves the shared content list and its tests move to the new page",
+    "replacement": "src/app/features/content/news-page/news-page.spec.ts > Given a visitor opening Aktuality > when nothing is published yet, then the page says so and leads home"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/list/content-list.spec.ts > Given a visitor opening the list of news > when a page past the last one is asked for, then the page says it does not exist and leads to the first one",
+    "reason": "Slice 2.26 (plan v3 2.26, Jakub's mockups of 2026-10-31): Aktuality is its own page, the newest news large with its signer, the stories of the year and the older news as cards, so the list of news leaves the shared content list and its tests move to the new page",
+    "replacement": "src/app/features/content/news-page/news-page.spec.ts > Given a visitor opening Aktuality > when a page past the last one is asked for, then the page says it does not exist and leads to the first one"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/list/content-list.spec.ts > Given a visitor opening the list of news > when the list fails, then an alert offers to try again and the retry loads it",
+    "reason": "Slice 2.26 (plan v3 2.26, Jakub's mockups of 2026-10-31): Aktuality is its own page, the newest news large with its signer, the stories of the year and the older news as cards, so the list of news leaves the shared content list and its tests move to the new page",
+    "replacement": "src/app/features/content/news-page/news-page.spec.ts > Given a visitor opening Aktuality > when the news fail, then an alert offers to try again and the retry loads them"
+  }
+]

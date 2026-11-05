@@ -17,6 +17,11 @@ export const PHOTO_SHAPES = {
   band: { ratio: 3, fallback: { x: 50, y: 30 } },
   bandPhone: { ratio: 3 / 2, fallback: { x: 50, y: 30 } },
   square: { ratio: 1, fallback: { x: 50, y: 40 } },
+  newsFeatured: { ratio: 12 / 5, fallback: { x: 50, y: 40 } },
+  newsFeaturedMedium: { ratio: 3 / 2, fallback: { x: 50, y: 40 } },
+  newsFeaturedTall: { ratio: 4 / 5, fallback: { x: 50, y: 40 } },
+  newsCardSide: { ratio: 1, fallback: { x: 50, y: 30 } },
+  storyTile: { ratio: 1, fallback: { x: 50, y: 30 } },
 } as const satisfies Record<string, PhotoShape>;
 
 export type PhotoShapeName = keyof typeof PHOTO_SHAPES;

@@ -79,6 +79,8 @@ const PUBLIC_NEWS = '/api/content/news';
 const PUBLIC_MEDIA = '/api/content/media/';
 
 export const MIN_LOOK_BACK_YEAR = 2005;
+export const MEDIA_WIDTHS = [480, 960, 1440] as const;
+export const SMALL_MEDIA_WIDTH = MEDIA_WIDTHS[0];
 
 export function mediaUrl(imageId: string, width: number): string {
   return `${PUBLIC_MEDIA}${imageId}?w=${width}`;

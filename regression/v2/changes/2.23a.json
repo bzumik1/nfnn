@@ -332,5 +332,19 @@
     "test": "src/app/features/content/about-page/about-page.spec.ts > Given the About page > when it opens, then it names the founding story as its one level-one heading and ends with the contact form",
     "reason": "2.23a (plan v3, Jakub 2026-10-31): the O nás tab closes with the Přispět band before the contact form, like the other tab pages",
     "replacement": "src/app/features/content/about-page/about-page.spec.ts > Given the About page > when it opens, then it names the founding story as its one level-one heading, then asks for a gift and ends with the contact form"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/list/content-list.spec.ts > Given a visitor opening the list of projects > when the projects arrive, then each project card links to its page",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the Pomáháme tab follows the approved mockup (summary tiles, year chips, story tiles, Přispět band), so the projects list it replaced is gone with its spec; 2.26 moved the news to the Aktuality tab, so nothing else used it",
+    "replacement": "src/app/features/content/projects-page/projects-page.spec.ts > Given the Pomáháme tab > when it opens without a year asked, then the newest year with a story is chosen and shown with its first story large"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/list/content-list.spec.ts > Given a visitor opening the list of projects > when nothing is published yet, then the page says so",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the Pomáháme tab follows the approved mockup (summary tiles, year chips, story tiles, Přispět band), so the projects list it replaced is gone with its spec; 2.26 moved the news to the Aktuality tab, so nothing else used it",
+    "replacement": "src/app/features/content/projects-page/projects-page.spec.ts > Given the Pomáháme tab > when there is no story yet, then it says so, leads home and offers no years"
   }
 ]

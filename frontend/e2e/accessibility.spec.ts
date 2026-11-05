@@ -123,6 +123,13 @@ async function violations(page: Page): Promise<string[]> {
   );
 }
 
+const FEED_SIGNER = {
+  id: 'signer',
+  name: 'Petr Vzorový',
+  role: 'Předseda správní rady',
+  portrait: null,
+};
+
 test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
   test.beforeEach(async ({ page }) => {
     await mockDonorApi(page);
@@ -256,18 +263,57 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.route(
       (url) => url.pathname === '/api/content/news',
       (route) =>
-        route.fulfill({ json: { items: [article], page: 1, size: 10, total: 1, hasMore: false } }),
+        route.fulfill({
+          json: {
+            items: [
+              { ...article, signer: FEED_SIGNER },
+              {
+                ...article,
+                id: 'older',
+                slug: 'starsi',
+                title: 'Starší zpráva',
+                signer: FEED_SIGNER,
+              },
+            ],
+            page: 0,
+            size: 10,
+            total: 2,
+            hasMore: false,
+          },
+        }),
       { times: 1 },
     );
     await page.route(
       (url) => url.pathname === '/api/content/projects',
       (route) =>
-        route.fulfill({ json: { items: [project], page: 1, size: 10, total: 1, hasMore: false } }),
-      { times: 1 },
+        route.fulfill({ json: { items: [project], page: 0, size: 10, total: 1, hasMore: false } }),
+      { times: 2 },
     );
 
     await page.goto('/aktuality');
+    await expect(page.locator('.featured')).toHaveCount(1);
     await expect(page.locator('.news-card')).toHaveCount(1);
+    await expect(page.locator('.story')).toHaveCount(1);
+
+    expect(await violations(page)).toEqual([]);
+    await expect(page.locator('.featured .signer-name')).toHaveText('Petr Vzorový');
+
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+    const featured = page.locator('.featured');
+    await featured.getByRole('button', { name: /^Kopírovat odkaz/ }).click();
+    await expect(featured.getByRole('button', { name: 'Zkopírováno' })).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.route(
+      (url) => url.pathname === '/api/content/news',
+      (route) => route.fulfill({ status: 503, body: '' }),
+      { times: 1 },
+    );
+    await page.goto('/aktuality?strana=2');
+    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toHaveText(
+      'Aktuality se nepodařilo načíst.',
+    );
 
     expect(await violations(page)).toEqual([]);
 
@@ -314,7 +360,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
         route.fulfill({ json: { items: [], page: 0, size: 10, total: 0, hasMore: false } }),
     );
     await page.goto('/aktuality?strana=2');
-    await expect(page.getByRole('heading', { level: 1, name: 'Aktuality' })).toBeFocused();
+    await expect(page.getByRole('heading', { level: 1, name: 'Co je u nás nového' })).toBeFocused();
     await expect(page.getByText('Strana 2 z 3')).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
