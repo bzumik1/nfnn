@@ -47,6 +47,13 @@
   --color-qr-ground: #ffffff;
   --color-logo: #0f766e;
   --color-logo-fill: #fdfcf7;
+  --color-tab-bar: color-mix(in srgb, #1c2b25 72%, transparent);
+  --color-tab-bar-rim: color-mix(in srgb, #fdfcf7 30%, transparent);
+  --color-tab-pill: color-mix(in srgb, #111a16 92%, transparent);
+  --color-tab-active: #5eead4;
+  --color-on-tab-bar: #fdfcf7;
+  --color-tab-focus-ring: #fdba74;
+  --color-sheet-grabber: #8a877c;
 
   --font-serif: Georgia, 'Times New Roman', serif;
   --font-sans: system-ui, 'Segoe UI', Roboto, Arial, sans-serif;
@@ -124,6 +131,7 @@
   --duration-base: 0.15s;
   --duration-slow: 0.25s;
   --duration-entrance: 0.6s;
+  --duration-sheet: 0.2s;
 
   --radius-xs: 0;
   --radius-scrollbar: 0;
@@ -135,6 +143,7 @@
   --radius-card: 4px;
   --radius-media: 4px;
   --radius-dialog: 6px;
+  --radius-sheet: var(--radius-dialog);
   --radius-pill: 4px;
   --radius-round: 50%;
 
@@ -144,6 +153,8 @@
   --shadow-panel: 0 1px 0 var(--color-border);
   --shadow-media: 0 4px 0 var(--color-border-field);
   --shadow-dialog: 0 6px 0 var(--color-border-field);
+  --shadow-sheet: 0 -3px 0 var(--color-border-field);
+  --shadow-tab-bar: 0 3px 0 var(--color-surface-inverse);
   --shadow-header: 0 1px 0 var(--color-border);
   --shadow-menu: 0 3px 0 var(--color-border-field);
   --shadow-action-bar: 0 3px 0 var(--color-border-field);
@@ -165,6 +176,21 @@
   --side-nav-width: 230px;
   --top-bar-height: 62px;
   --floating-notice-height: 0rem;
+  --dialog-max-width: 420px;
+  --dialog-max-width-wide: 520px;
+  --dialog-close-inset: 14px;
+  --dialog-close-size: 32px;
+  --blur-backdrop: 6px;
+  --blur-bar: 12px;
+  --sheet-max-width: 640px;
+  --sheet-grabber-width: 40px;
+  --sheet-grabber-height: 4px;
+  --tab-bar-height: 60px;
+  --tab-bar-gap: 15px;
+  --tab-bar-gap-browser: 15px;
+  --tab-pill-inset: 5px;
+  --list-row-min-height: 55px;
+  --list-group-title-top: 0rem;
 
   --receipt-color-text: #202020;
   --receipt-color-muted: #484848;
@@ -192,4 +218,12 @@
   --receipt-font-body: 'body.3a702fdc360fa254.ttf';
   --receipt-font-bold: 'body-bold.d061552b593f1876.ttf';
   --receipt-font-heading: 'heading.d061552b593f1876.ttf';
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --color-tab-bar: #5c6662;
+    --color-tab-pill: #0b110e;
+    --blur-bar: 0px;
+  }
 }

@@ -89,6 +89,36 @@ describe('Given the history entries of an open dialog', () => {
     expect(routerEvents).toEqual([]);
   });
 
+  it('when a dialog that another one has since replaced closes, then the entry of the open one stays', async () => {
+    const replaced = { stepBack: vi.fn(), close: vi.fn() };
+    history.open(replaced);
+    await open();
+
+    history.close(replaced);
+    await settled();
+
+    expect(depth()).toBe(1);
+    await back();
+    expect(listener.close).toHaveBeenCalledTimes(1);
+    expect(replaced.close).not.toHaveBeenCalled();
+  });
+
+  it('when the visitor goes forward onto the entry of a closed dialog and opens another, then Back closes the new one', async () => {
+    await open();
+    history.close();
+    await settled();
+    window.history.go(1);
+    await settled();
+
+    await open();
+    await back();
+
+    expect(listener.close).toHaveBeenCalledTimes(1);
+    expect(location.path()).toBe('/stranka');
+    await back();
+    expect(location.path()).toBe('');
+  });
+
   it('when the dialog closes before it ever added an entry, then history is left alone', async () => {
     const before = window.history.length;
 
@@ -199,5 +229,96 @@ describe('Given the history entries of an open dialog', () => {
     await back();
     expect(listener.close).toHaveBeenCalledTimes(1);
     expect(location.path()).toBe('/jinam');
+  });
+});
+
+describe('Given a page reloaded while a dialog had its entry open', () => {
+  let router: Router;
+  let location: Location;
+  let routerEvents: RouterEvent[];
+
+  const settled = async (): Promise<void> => {
+    for (let round = 0; round < 3; round++) {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      TestBed.tick();
+    }
+  };
+
+  beforeEach(async () => {
+    window.history.pushState(null, '', '/');
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([
+          { path: '', component: Page },
+          { path: 'stranka', component: Page },
+        ]),
+        { provide: PlatformLocation, useClass: BrowserPlatformLocation },
+      ],
+    });
+    router = TestBed.inject(Router);
+    location = TestBed.inject(Location);
+    router.initialNavigation();
+    await router.navigateByUrl('/stranka');
+    await settled();
+    window.history.pushState({ ...window.history.state, nfnnDialogDepth: 1 }, '');
+    routerEvents = [];
+    router.events.subscribe((event) => routerEvents.push(event));
+  });
+
+  it('when the history of dialogs starts, then it takes the stale entry back without the router noticing, so the next Back leaves the page', async () => {
+    TestBed.inject(DialogHistory);
+    await settled();
+
+    expect(
+      (window.history.state as Record<string, unknown> | null)?.['nfnnDialogDepth'],
+    ).toBeUndefined();
+    expect(location.path()).toBe('/stranka');
+    expect(routerEvents).toEqual([]);
+    window.history.go(-1);
+    await settled();
+    expect(location.path()).toBe('');
+  });
+});
+
+describe('Given a page reloaded while a dialog had its entry open, whose route loads only after a while', () => {
+  const settled = async (): Promise<void> => {
+    for (let round = 0; round < 3; round++) {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      TestBed.tick();
+    }
+  };
+
+  it('when the app starts, then the router never copies the stale mark, so a dialog opened later still closes on Back without leaving the page', async () => {
+    window.history.pushState(null, '', '/');
+    window.history.pushState(null, '', '/stranka');
+    window.history.pushState({ nfnnDialogDepth: 1 }, '', '/stranka');
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([
+          { path: '', component: Page },
+          {
+            path: 'stranka',
+            loadComponent: () =>
+              new Promise<typeof Page>((resolve) => setTimeout(() => resolve(Page), 40)),
+          },
+        ]),
+        { provide: PlatformLocation, useClass: BrowserPlatformLocation },
+      ],
+    });
+    const history = TestBed.inject(DialogHistory);
+    const router = TestBed.inject(Router);
+    const location = TestBed.inject(Location);
+    router.initialNavigation();
+    await vi.waitFor(() => expect(router.navigated).toBe(true));
+    await settled();
+    const listener = { stepBack: vi.fn(), close: vi.fn() };
+
+    history.open(listener);
+    await settled();
+    window.history.go(-1);
+    await settled();
+
+    expect(listener.close).toHaveBeenCalledTimes(1);
+    expect(location.path()).toBe('/stranka');
   });
 });
