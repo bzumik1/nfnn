@@ -84,6 +84,32 @@
   }
 }
 
+@media (hover: hover) and (pointer: fine) {
+  .tab-bar {
+    max-width: var(--tab-bar-max-width-pointer);
+  }
+
+  @include bp.container-up(tab-bar, phone) {
+    .tab-bar-list {
+      min-height: var(--tab-bar-height-pointer);
+    }
+
+    .tab {
+      flex-direction: row;
+      gap: var(--space-1-5);
+      padding: 0 var(--space-3);
+      font-size: var(--text-sm);
+      white-space: nowrap;
+    }
+
+    .tab-icon {
+      flex: none;
+      width: var(--tab-icon-size-pointer);
+      height: var(--tab-icon-size-pointer);
+    }
+  }
+}
+
 .tab--current {
   background: var(--color-tab-pill);
   border-color: var(--color-tab-bar-rim);

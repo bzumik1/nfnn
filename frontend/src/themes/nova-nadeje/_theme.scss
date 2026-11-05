@@ -260,6 +260,9 @@
   --tab-bar-max-width: 420px;
   --tab-bar-home-indicator-overlap: 13px;
   --tab-icon-size: 22px;
+  --tab-bar-height-pointer: 44px;
+  --tab-bar-max-width-pointer: 500px;
+  --tab-icon-size-pointer: 18px;
   --tab-bar-rendered-height: var(--tab-bar-height);
   --tab-bar-clearance: calc(
     var(--tab-bar-rendered-height) + 2 * var(--tab-bar-gap-browser) + env(safe-area-inset-bottom)
