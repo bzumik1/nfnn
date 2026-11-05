@@ -227,6 +227,19 @@ describe('Given the sync of the donor copy', () => {
     expect(sync.view()?.items.map((item) => item.id)).toEqual(['gift-2', 'gift-1']);
   });
 
+  it('when a copy opens, then the sync names the donor whose copy it is, and none once it closes', async () => {
+    expect(sync.owner()).toBeNull();
+    await holding([gifts2025]);
+    open('restored');
+
+    expect(sync.owner()).toBe(JANA.userHandle);
+    await vi.waitFor(() => answerManifest([gifts2025]));
+    await settled();
+    vault.opened.set(null);
+    TestBed.tick();
+    expect(sync.owner()).toBeNull();
+  });
+
   it('when a restored copy opens, then only the chunks whose digest changed are asked for, the others are kept and the one no longer listed goes', async () => {
     const gifts2024 = await chunk('donations:2024', [gift('gift-0', '2024-12-31', 10_000)]);
     await holding([gifts2024, gifts2025, gifts2026]);

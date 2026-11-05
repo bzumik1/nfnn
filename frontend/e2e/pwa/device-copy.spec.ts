@@ -25,7 +25,7 @@ test.describe('Given a donor who signs in with a password to the site behind its
     ],
   });
 
-  test('when she signs in, then the Argon2id worker wraps her copy under the real policy, and after a reload her gifts show from the copy before the sync answers, which then brings her new gift, at once or behind Zobrazit 1 nový dar', async ({
+  test('when she signs in, then the Argon2id worker wraps her copy under the real policy, and after a reload her gifts show from the copy before the sync answers, which then brings her new gift, behind Zobrazit 1 nový dar', async ({
     page,
     context,
     idbDump,
@@ -90,10 +90,9 @@ test.describe('Given a donor who signs in with a password to the site behind its
     await expect(gifts).toHaveCount(2);
     release();
     const pill = page.locator('.bank-check-incoming').filter({ hasText: 'Zobrazit 1 nový dar' });
-    await expect(pill.or(gifts.nth(2))).toBeVisible();
-    if (await pill.isVisible()) {
-      await pill.click();
-    }
+    await expect(pill).toBeVisible();
+    await expect(gifts).toHaveCount(2);
+    await pill.click();
     await expect(gifts).toHaveCount(3);
     await expect(gifts.first()).toContainText('300 Kč');
   });

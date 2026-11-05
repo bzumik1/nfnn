@@ -3122,6 +3122,17 @@ describe('Given a signed-in donor in the donor area', () => {
       copy.finish('stored');
     });
 
+    it('then Přehled shows the totals of the copy at once and asks the server for none of them', async () => {
+      copy.shown.set(copyViewOf(twoYearSummary(), twoYearDonations()));
+
+      await open('/darce/prehled');
+
+      http.expectNone('/api/donations/me/summary');
+      http.expectNone('/api/donations/me');
+      expect(texts('.stat-value')).toEqual(['1 750 Kč', '3', '1 500 Kč']);
+      copy.finish('stored');
+    });
+
     it('then a copy that opens for another donor in its place replaces the list at once instead of offering its gifts as new ones', async () => {
       copy.shown.set(copyViewOf(twoYearSummary(), twoYearDonations()));
       await open('/darce/dary');
