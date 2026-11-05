@@ -98,8 +98,11 @@ public class BackupRestoreService {
         String file = run.fileName().orElse("an unnamed backup");
         if (run.succeeded()) {
             String tables = run.tables().map(count -> ", tabulek: " + count).orElse("");
+            String revoked = run.tables().flatMap(count -> run.revocations())
+                    .map(revocations -> "; ukončená přihlášení: " + revocations.sessions() + ", zneplatněné jednorázové odkazy a kódy: " + revocations.oneTimeSecrets())
+                    .orElse("");
             events.publishEvent(new AdminActionPerformed(run.requestedBy().orElseThrow(), BACKUP_RESTORED_ACTION, Optional.empty(),
-                    "Databáze obnovena ze zálohy " + file + " (požadavek " + requestId + ")" + tables, now));
+                    "Databáze obnovena ze zálohy " + file + " (požadavek " + requestId + ")" + tables + revoked, now));
             log.info("The restore of {} (request {}) finished and is recorded in the administration history", file, requestId);
         } else {
             events.publishEvent(new AdminActionPerformed(run.requestedBy().orElseThrow(), BACKUP_RESTORE_FAILED_ACTION, Optional.empty(),
