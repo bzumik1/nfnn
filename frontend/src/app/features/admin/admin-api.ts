@@ -5,6 +5,7 @@ import { map, Observable } from 'rxjs';
 import { BankAccountItem } from '../donations/bank-accounts-api';
 import { DonationListResponse, DownloadedFile, downloadedFile } from '../donations/donations-api';
 import { PasskeyConfirmation } from '../../core/auth/donor';
+import { IssuedReceipt } from '../donations/receipt-pdf/frozen-receipt';
 import {
   MailServerRequest,
   TestEmailResponse,
@@ -244,6 +245,55 @@ export interface AdminIssuedReceiptResponse {
   withdrawalReason: ReceiptWithdrawalReason | null;
   donorErased: boolean;
   receipt: AdminFrozenReceiptResponse;
+}
+
+export interface YearlyReceiptCandidateReceipt {
+  id: string;
+  number: string;
+  issuedAt: string;
+}
+
+export interface YearlyReceiptCandidate {
+  donorId: string;
+  name: string;
+  type: 'PERSON' | 'COMPANY';
+  giftCount: number;
+  totalAmountMinor: number;
+  receipt: YearlyReceiptCandidateReceipt | null;
+}
+
+export interface YearlyReceiptCandidatesResponse {
+  year: number;
+  donors: YearlyReceiptCandidate[];
+  erasedDonors: number;
+  yearlyReceiptsAvailableThrough: number;
+  receiptsAvailableFrom: number;
+}
+
+export type YearlyReceiptOutcome = 'ISSUED' | 'UNCHANGED' | 'REPLACED' | 'SKIPPED';
+
+export interface YearlyIssuedReceipt extends IssuedReceipt {
+  donorId: string;
+  withdrawnAt: string | null;
+  withdrawalReason: ReceiptWithdrawalReason | null;
+  donorErased: boolean;
+}
+
+export interface YearlyReceiptResult {
+  donorId: string;
+  outcome: YearlyReceiptOutcome;
+  problem: string | null;
+  replacedNumber: string | null;
+  receipt: YearlyIssuedReceipt | null;
+}
+
+export interface YearlyReceiptsIssueResponse {
+  year: number;
+  results: YearlyReceiptResult[];
+  issued: number;
+  replaced: number;
+  unchanged: number;
+  skipped: number;
 }
 
 export interface ReportSectionsResponse {
@@ -625,6 +675,8 @@ export interface DiagnosticsResponse {
   logLevelOverrides: LogOverrideResponse[];
 }
 
+const YEARLY_RECEIPTS = '/api/admin/donations/receipts/yearly';
+
 @Injectable({ providedIn: 'root' })
 export class AdminApi {
   private readonly http = inject(HttpClient);
@@ -779,6 +831,18 @@ export class AdminApi {
       `/api/admin/donations/donors/${encodeURIComponent(donorId)}/receipts`,
       request,
     );
+  }
+
+  yearlyReceiptCandidates(year: number | null): Observable<YearlyReceiptCandidatesResponse> {
+    const params: Record<string, string> = year === null ? {} : { year: String(year) };
+    return this.http.get<YearlyReceiptCandidatesResponse>(YEARLY_RECEIPTS, { params });
+  }
+
+  issueYearlyReceipts(
+    year: number,
+    donorIds: readonly string[],
+  ): Observable<YearlyReceiptsIssueResponse> {
+    return this.http.post<YearlyReceiptsIssueResponse>(YEARLY_RECEIPTS, { year, donorIds });
   }
 
   disconnectDonorAccount(donorId: string, linkId: string): Observable<void> {
