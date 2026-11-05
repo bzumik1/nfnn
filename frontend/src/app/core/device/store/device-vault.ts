@@ -168,13 +168,10 @@ export class DeviceVault implements SessionDevice {
   forget(account: DeviceAccount): Promise<void> {
     return this.run(async () => {
       const storage = await this.storageOf(account);
-      this.closeOpen();
       this.pendingSalt = null;
-      if (storage === null) {
-        return;
-      }
-      const salt = await storage.deviceSalt();
-      if (salt === null) {
+      const salt = storage === null ? null : await storage.deviceSalt();
+      if (storage === null || salt === null) {
+        this.closeOpen();
         return;
       }
       const tags = await accountTags(salt, account);
@@ -187,6 +184,7 @@ export class DeviceVault implements SessionDevice {
         deleteCopies: forgotten.map((entry) => entry.copyId),
         ...(remaining === 0 ? { deviceSalt: null } : {}),
       });
+      this.closeOpen();
       for (const entry of forgotten) {
         this.announce(entry.copyId, 'deleted');
       }

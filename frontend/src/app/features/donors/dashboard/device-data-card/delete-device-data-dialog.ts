@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import {
+  afterRenderEffect,
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  input,
+  output,
+  viewChild,
+} from '@angular/core';
 import { Dialog } from '../../../../shared/ui/dialog/dialog';
 
 @Component({
@@ -13,4 +21,13 @@ export class DeleteDeviceDataDialog {
   readonly failed = input(false);
   readonly confirmed = output<void>();
   readonly cancelled = output<void>();
+  private readonly confirm = viewChild.required<ElementRef<HTMLButtonElement>>('confirm');
+
+  constructor() {
+    afterRenderEffect(() => {
+      if (this.failed() && !this.deleting()) {
+        this.confirm().nativeElement.focus();
+      }
+    });
+  }
 }

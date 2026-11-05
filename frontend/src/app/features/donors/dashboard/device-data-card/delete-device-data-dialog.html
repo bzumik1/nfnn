@@ -11,8 +11,8 @@
     Smazat data z tohoto zařízení?
   </h2>
   <p class="ui-dialog__lead" i18n="@@donor.deviceData.deleteDialog.lead">
-    Kopie vašich darů, potvrzení a bankovních účtů se z tohoto zařízení smaže a v tomto zařízení vás
-    odhlásíme. Na serveru zůstane vše, jak je; po dalším přihlášení se kopie stáhne znovu.
+    Kopie vašich darů, potvrzení a bankovních účtů se z tohoto zařízení smaže a odhlásíme vás. Na
+    serveru zůstane vše, jak je; po dalším přihlášení se kopie stáhne znovu.
   </p>
   @if (failed()) {
     <p class="ui-notice ui-notice--alert device-data-delete-failed" role="alert">
@@ -25,6 +25,7 @@
   <div class="device-data-dialog-actions">
     <button
       type="button"
+      #confirm
       class="ui-button ui-button--danger device-data-confirm"
       [disabled]="deleting()"
       (click)="confirmed.emit()"

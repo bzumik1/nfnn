@@ -125,7 +125,7 @@ describe('Given the card "Data v tomto zařízení"', () => {
     await settle();
 
     expect(state()).toBe(
-      'Kopie v tomto zařízení je zamčená. Otevře se, až se přihlásíte heslem nebo přístupovým klíčem, který to umí.',
+      'Kopie v tomto zařízení je zamčená, protože toto přihlášení ji odemknout nemůže. Otevře se, až se odhlásíte a znovu přihlásíte heslem nebo přístupovým klíčem, kterým se tu obvykle přihlašujete.',
     );
     expect(root().querySelector('.device-data-reload')).toBeNull();
     expect(button('Smazat data z tohoto zařízení').disabled).toBe(false);
@@ -224,7 +224,7 @@ describe('Given the card "Data v tomto zařízení"', () => {
         'Smazat data z tohoto zařízení?',
       );
       expect(normalized(dialog.querySelector('.ui-dialog__lead')?.textContent)).toBe(
-        'Kopie vašich darů, potvrzení a bankovních účtů se z tohoto zařízení smaže a v tomto zařízení vás odhlásíme. Na serveru zůstane vše, jak je; po dalším přihlášení se kopie stáhne znovu.',
+        'Kopie vašich darů, potvrzení a bankovních účtů se z tohoto zařízení smaže a odhlásíme vás. Na serveru zůstane vše, jak je; po dalším přihlášení se kopie stáhne znovu.',
       );
       expect(vault.forget).not.toHaveBeenCalled();
     });
@@ -284,6 +284,7 @@ describe('Given the card "Data v tomto zařízení"', () => {
       expect(TestBed.inject(SignedOutNotice).shown()).toBe(false);
       expect(button('Smazat data a odhlásit').disabled).toBe(false);
       expect(button('Zrušit').disabled).toBe(false);
+      await vi.waitFor(() => expect(document.activeElement).toBe(button('Smazat data a odhlásit')));
     });
   });
 });

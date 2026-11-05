@@ -9,7 +9,7 @@ import type { PrfReading } from '../crypto/prf';
 import type { PasswordKeyQuestion } from '../crypto/password-key';
 import { SmallArgon2Derivation } from '../crypto/testing/password-key-derivations';
 import type { CopyContents } from './account-store';
-import { DEVICE_DATABASE, type DeviceStorage } from './device-storage';
+import { DEVICE_DATABASE, type DeviceStorage, type StorageChange } from './device-storage';
 import {
   COPY_CHANNELS,
   DEVICE_COPY_MARKER_KEY,
@@ -82,6 +82,7 @@ class GatedDerivation extends SmallArgon2Derivation {
 class FailingWrites implements DeviceStorage {
   readonly kind = 'indexed-db' as const;
   private readonly inner = new MemoryDeviceStorage();
+  failing = true;
 
   deviceSalt() {
     return this.inner.deviceSalt();
@@ -95,8 +96,11 @@ class FailingWrites implements DeviceStorage {
   records(copyId: string) {
     return this.inner.records(copyId);
   }
-  async write(): Promise<void> {
-    throw new DOMException('The quota is full', 'QuotaExceededError');
+  async write(change: StorageChange): Promise<void> {
+    if (this.failing) {
+      throw new DOMException('The quota is full', 'QuotaExceededError');
+    }
+    return this.inner.write(change);
   }
   destroy() {
     return this.inner.destroy();
@@ -534,6 +538,22 @@ describe('Given the device vault over IndexedDB with real WebCrypto', () => {
         'global',
         expect.objectContaining({ name: 'QuotaExceededError' }),
       );
+    });
+  });
+
+  describe('when the deletion of the data on this device fails', () => {
+    it('then the copy stays open and stored, so the card and a reload keep working', async () => {
+      const storage = new FailingWrites();
+      storage.failing = false;
+      opener.mockImplementation(async () => storage);
+      await vault.signedIn(JANA, { kind: 'password', password: PASSWORD });
+      const copyId = vault.opened()?.store.copyId;
+      storage.failing = true;
+
+      await expect(vault.forget(JANA)).rejects.toMatchObject({ name: 'QuotaExceededError' });
+
+      expect(vault.opened()?.store.copyId).toBe(copyId);
+      expect((await storage.entries()).map((entry) => entry.copyId)).toEqual([copyId]);
     });
   });
 
