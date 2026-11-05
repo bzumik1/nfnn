@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/donate-qr.spec.ts > Given a visitor on the home page > on a phone > when they copy the amount, then the clipboard holds it and the bank details come before the QR code",
+    "reason": "1.12 adds the iphone project (WebKit), which grants no clipboard permissions: the copy test moves under 'with the clipboard allowed' and stays Chromium-only, while the order of the bank details and the QR code gets its own test without permissions, so both projects check it on a phone",
+    "replacement": "e2e/donate-qr.spec.ts > Given a visitor on the home page > on a phone > with the clipboard allowed > when they copy the amount, then the clipboard holds it and the bank details come before the QR code",
+    "contract": ".claude/rules/testing.md, Frontend (Playwright projects)"
+  }
+]
