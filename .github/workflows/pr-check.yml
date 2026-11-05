@@ -52,7 +52,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ github.event_name == 'push' && 35 || 25 }}
+    timeout-minutes: 25
     defaults:
       run:
         working-directory: backend
@@ -68,8 +68,8 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v6
 
-      - name: Build and test, recording the API transcripts
-        run: ./gradlew build
+      - name: Build and test, the acceptance suites apart in their own jobs
+        run: ./gradlew build -PnoCucumber
         env:
           API_TRANSCRIPTS: record
 
@@ -85,27 +85,144 @@ jobs:
         with:
           node-version: "24"
 
-      - name: List the backend's tests for the test inventory
-        run: node ../scripts/test-inventory.mjs --part=backend --out="$GITHUB_WORKSPACE/backend/build/backend-inventory.json"
+      - name: List the unit and integration tests for the test inventory
+        run: node ../scripts/test-inventory.mjs --part=backend-shard --junit=backend/build/test-results/test --out="$GITHUB_WORKSPACE/backend/build/backend-inventory.json"
 
-      - name: Keep the transcripts and the test list for the v2 comparison
+      - name: Keep the test list for the backend recording
         uses: actions/upload-artifact@v7
         with:
-          name: backend-recording
+          name: backend-part-tests
+          path: backend/build/backend-inventory.json
+          if-no-files-found: error
+          retention-days: 1
+
+  acceptance:
+    name: Cucumber (${{ matrix.suite }})
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ github.event_name == 'push' && 35 || 25 }}
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [Donors, OtherContexts]
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      SUITE: ${{ matrix.suite }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Run the suite's scenarios, recording the API transcripts
+        run: ./gradlew acceptanceTest -PacceptanceSuite="$SUITE"
+        env:
+          API_TRANSCRIPTS: record
+
+      - name: The suite ran its scenarios
+        run: |
+          if ! ls build/test-results/acceptanceTest/*.xml > /dev/null 2>&1; then
+            echo "::error::${SUITE}AcceptanceTests wrote no test result"
+            exit 1
+          fi
+
+      - name: Keep test reports
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-test-reports-${{ matrix.suite }}
+          path: backend/build/reports/
+          retention-days: 14
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - name: List the suite's scenarios for the test inventory
+        run: node ../scripts/test-inventory.mjs --part=backend-shard --junit=backend/build/test-results/acceptanceTest --out="$GITHUB_WORKSPACE/backend/build/backend-inventory.json"
+
+      - name: Keep the transcripts and the scenario list for the backend recording
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-part-${{ matrix.suite }}
           path: |
             backend/build/api-transcripts/
             backend/build/backend-inventory.json
           if-no-files-found: error
-          retention-days: ${{ github.event_name == 'push' && 90 || 3 }}
+          retention-days: 1
 
       - name: Record main a second time and compare the two recordings
         if: github.event_name == 'push'
         run: |
           cp -R build/api-transcripts "$RUNNER_TEMP/first-recording"
-          ./gradlew acceptanceTest --rerun
+          ./gradlew acceptanceTest -PacceptanceSuite="$SUITE" --rerun
           node ../scripts/compare-recordings.mjs "$RUNNER_TEMP/first-recording" build/api-transcripts
         env:
           API_TRANSCRIPTS: record
+
+  backend-recording:
+    name: Nahrávka backendu
+    needs: [backend, acceptance]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: backend-part-*
+          path: ${{ runner.temp }}/parts
+
+      - name: Every acceptance suite ran in a job of its own
+        run: |
+          suites=$(find backend/src/test/java -name '*AcceptanceTests.java' -printf '%f\n' | sed 's/AcceptanceTests\.java$//' | sort | tr '\n' ' ')
+          parts=$(find "$RUNNER_TEMP/parts" -mindepth 1 -maxdepth 1 -type d -name 'backend-part-*' -printf '%f\n' | sed 's/^backend-part-//' | grep -vx tests | sort | tr '\n' ' ')
+          if [ "$suites" != "$parts" ]; then
+            echo "::error::the job acceptance must run exactly the suites in the test sources ($suites), but ran $parts"
+            exit 1
+          fi
+          [ -f "$RUNNER_TEMP/parts/backend-part-tests/backend-inventory.json" ] || { echo "::error::the unit and integration tests left no test list"; exit 1; }
+
+      - name: Join the transcripts and the test lists into one recording
+        run: |
+          recording="$RUNNER_TEMP/recording"
+          mkdir -p "$recording/api-transcripts"
+          for part in "$RUNNER_TEMP"/parts/backend-part-*/; do
+            [ -d "$part/api-transcripts" ] || continue
+            (cd "$part/api-transcripts" && find . -type f) | while read -r file; do
+              if [ -e "$recording/api-transcripts/$file" ]; then
+                echo "::error::two suites recorded api-transcripts/${file#./}"
+                exit 1
+              fi
+              mkdir -p "$(dirname "$recording/api-transcripts/$file")"
+              cp "$part/api-transcripts/$file" "$recording/api-transcripts/$file"
+            done
+          done
+          lists=$(find "$RUNNER_TEMP/parts" -name backend-inventory.json | sort | paste -sd, -)
+          node scripts/test-inventory.mjs --part=backend --backend="$lists" --out="$recording/backend-inventory.json"
+
+      - name: Keep the transcripts and the test list for the v2 comparison
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-recording
+          path: ${{ runner.temp }}/recording/
+          if-no-files-found: error
+          retention-days: ${{ github.event_name == 'push' && 90 || 3 }}
 
   frontend:
     needs: changes
@@ -128,9 +245,9 @@ jobs:
 
       - run: npm ci
 
-      - name: Start installing Playwright's Chromium headless shell and WebKit while the checks run
+      - name: Start installing Playwright's Chromium headless shell for the control theme while the checks run
         run: |
-          (npx playwright install --with-deps --only-shell chromium webkit > "$RUNNER_TEMP/playwright-install.log" 2>&1; echo $? > "$RUNNER_TEMP/playwright-install.status") &
+          (npx playwright install --with-deps --only-shell chromium > "$RUNNER_TEMP/playwright-install.log" 2>&1; echo $? > "$RUNNER_TEMP/playwright-install.status") &
 
       - name: Formatting follows Prettier
         run: npm run format:check
@@ -152,29 +269,6 @@ jobs:
       - name: Only the receipt worker carries the PDF library
         run: node scripts/check-receipt-chunks.mjs dist/frontend/browser
 
-      - name: Playwright's Chromium headless shell and WebKit are installed
-        run: |
-          for _ in $(seq 300); do
-            [ -s "$RUNNER_TEMP/playwright-install.status" ] && break
-            sleep 1
-          done
-          cat "$RUNNER_TEMP/playwright-install.log"
-          [ "$(cat "$RUNNER_TEMP/playwright-install.status" 2>/dev/null)" = 0 ] || { echo "::error::Playwright's Chromium headless shell or WebKit was not installed (log above)"; exit 1; }
-
-      - name: End-to-end and accessibility tests
-        run: npm run e2e
-        env:
-          E2E_DIST: dist/frontend/browser
-
-      - name: Keep the screens of the phones and tablets with their layout checks
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v7
-        with:
-          name: zarizeni
-          path: frontend/test-results/device-report/
-          if-no-files-found: ignore
-          retention-days: 3
-
       - name: List the end-to-end tests for the test inventory
         run: npx playwright test --list --reporter=json > "$RUNNER_TEMP/inventory/frontend-playwright.json"
 
@@ -189,11 +283,123 @@ jobs:
       - name: Build with the control theme
         run: npx ng build --configuration=production,control-theme --output-path=dist/control-theme
 
+      - name: Playwright's Chromium headless shell is installed
+        run: |
+          for _ in $(seq 300); do
+            [ -s "$RUNNER_TEMP/playwright-install.status" ] && break
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/playwright-install.log"
+          [ "$(cat "$RUNNER_TEMP/playwright-install.status" 2>/dev/null)" = 0 ] || { echo "::error::Playwright's Chromium headless shell was not installed (log above)"; exit 1; }
+
       - name: The control theme restyles every page
         run: npx playwright test e2e/theme.spec.ts
         env:
           E2E_THEME: control
           E2E_DIST: dist/control-theme/browser
+
+  e2e:
+    name: e2e (${{ matrix.shard }}/6)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6]
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+
+      - name: Start installing Playwright's Chromium headless shell and WebKit while the app builds
+        run: |
+          (npx playwright install --with-deps --only-shell chromium webkit > "$RUNNER_TEMP/playwright-install.log" 2>&1; echo $? > "$RUNNER_TEMP/playwright-install.status") &
+
+      - name: Build
+        run: npm run build
+
+      - name: Playwright's Chromium headless shell and WebKit are installed
+        run: |
+          for _ in $(seq 300); do
+            [ -s "$RUNNER_TEMP/playwright-install.status" ] && break
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/playwright-install.log"
+          [ "$(cat "$RUNNER_TEMP/playwright-install.status" 2>/dev/null)" = 0 ] || { echo "::error::Playwright's Chromium headless shell or WebKit was not installed (log above)"; exit 1; }
+
+      - name: End-to-end and accessibility tests of this shard
+        run: npx playwright test --shard="$SHARD/6" --reporter=github,blob
+        env:
+          SHARD: ${{ matrix.shard }}
+          E2E_DIST: dist/frontend/browser
+
+      - name: Keep the shard's results for the device report and the shard check
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-blob-${{ matrix.shard }}
+          path: frontend/blob-report/
+          if-no-files-found: error
+          retention-days: 1
+
+  e2e-report:
+    name: Zařízení
+    needs: [changes, e2e]
+    if: ${{ !cancelled() && needs.changes.outputs.code == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: e2e-blob-*
+          merge-multiple: true
+          path: frontend/blob-reports
+
+      - name: Merge the shards into the device report
+        run: npx playwright merge-reports --reporter=./e2e/devices/device-report.ts,json blob-reports
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_NAME: ${{ runner.temp }}/e2e-merged.json
+
+      - name: Keep the screens of the phones and tablets with their layout checks
+        uses: actions/upload-artifact@v7
+        with:
+          name: zarizeni
+          path: frontend/test-results/device-report/
+          if-no-files-found: ignore
+          retention-days: 3
+
+      - name: Every listed end-to-end test ran in exactly one shard
+        run: |
+          npx playwright test --list --reporter=json > "$RUNNER_TEMP/e2e-listed.json"
+          node scripts/check-e2e-shards.mjs "$RUNNER_TEMP/e2e-listed.json" "$RUNNER_TEMP/e2e-merged.json"
 
   mcp:
     needs: changes
@@ -310,7 +516,7 @@ jobs:
 
   compare-v2:
     name: Srovnání s v2
-    needs: [backend, frontend, mcp, main-recording]
+    needs: [backend-recording, frontend, mcp, main-recording]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -1207,7 +1413,7 @@ jobs:
 
   gate:
     if: always()
-    needs: [changes, backend, frontend, mcp, main-recording, compare-v2, stack, release]
+    needs: [changes, backend, acceptance, backend-recording, frontend, e2e, e2e-report, mcp, main-recording, compare-v2, stack, release]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

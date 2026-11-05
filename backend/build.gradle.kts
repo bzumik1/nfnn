@@ -81,6 +81,9 @@ class JavaAgent(@get:Classpath val jar: FileCollection) : CommandLineArgumentPro
 }
 
 val runsCucumber = !project.hasProperty("noCucumber")
+val acceptanceSuite = (project.findProperty("acceptanceSuite") as String?)?.also {
+	require(file("src/test/java/cz/novanadeje/app/cucumber/${it}AcceptanceTests.java").isFile) { "No acceptance suite ${it}AcceptanceTests in src/test/java/cz/novanadeje/app/cucumber" }
+} ?: "*"
 
 tasks.withType<Test> {
 	systemProperty("cucumber.junit-platform.naming-strategy", "long")
@@ -106,7 +109,7 @@ val acceptanceTest = tasks.register<Test>("acceptanceTest") {
 	useJUnitPlatform {
 		includeEngines("junit-platform-suite")
 	}
-	include("**/*AcceptanceTests.class")
+	include("**/${acceptanceSuite}AcceptanceTests.class")
 	enabled = runsCucumber
 	systemProperty("org.apache.juli.logging.UserDataHelper.CONFIG", "INFO_ALL")
 	val transcripts = layout.buildDirectory.dir("api-transcripts")

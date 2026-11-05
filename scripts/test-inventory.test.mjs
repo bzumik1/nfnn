@@ -43,7 +43,7 @@ function reports() {
   return root;
 }
 
-function inventory(root, args) {
+function inventory(root, args, expectedStatus = 0) {
   const run = spawnSync(
     process.execPath,
     [
@@ -55,7 +55,21 @@ function inventory(root, args) {
     ],
     { encoding: 'utf8' },
   );
-  assert.equal(run.status, 0, `${run.stdout}${run.stderr}`);
+  assert.equal(run.status, expectedStatus, `${run.stdout}${run.stderr}`);
+  return run;
+}
+
+function splitReports(root) {
+  mkdirSync(join(root, 'unit'));
+  mkdirSync(join(root, 'acceptance'));
+  const [unit, scenario] = readFileSync(join(root, 'junit', 'TEST-a.xml'), 'utf8')
+    .split('\n')
+    .filter((line) => line.startsWith('<testcase'));
+  writeFileSync(join(root, 'unit', 'TEST-a.xml'), `<testsuite name="a">\n${unit}\n</testsuite>`);
+  writeFileSync(
+    join(root, 'acceptance', 'TEST-b.xml'),
+    `<testsuite name="b">\n${scenario}\n</testsuite>`,
+  );
 }
 
 afterEach(() => {
@@ -82,16 +96,7 @@ describe('Given the backend JUnit reports', () => {
 
   it('when the unit tests and the scenarios sit in report folders of their own, then the backend part lists both', () => {
     const root = reports();
-    mkdirSync(join(root, 'unit'));
-    mkdirSync(join(root, 'acceptance'));
-    const [unit, scenario] = readFileSync(join(root, 'junit', 'TEST-a.xml'), 'utf8')
-      .split('\n')
-      .filter((line) => line.startsWith('<testcase'));
-    writeFileSync(join(root, 'unit', 'TEST-a.xml'), `<testsuite name="a">\n${unit}\n</testsuite>`);
-    writeFileSync(
-      join(root, 'acceptance', 'TEST-b.xml'),
-      `<testsuite name="b">\n${scenario}\n</testsuite>`,
-    );
+    splitReports(root);
     inventory(root, [
       `--junit=${join(root, 'junit')}`,
       '--part=backend',
@@ -125,5 +130,73 @@ describe('Given the backend JUnit reports', () => {
       readFileSync(join(root, 'merged.json'), 'utf8'),
       readFileSync(join(root, 'direct.json'), 'utf8'),
     );
+  });
+
+  it('when each CI job collects its own folder as a shard, then the shards merged equal the backend part of the whole', () => {
+    const root = reports();
+    splitReports(root);
+    inventory(root, [
+      `--junit=${join(root, 'junit')}`,
+      '--part=backend',
+      `--out=${join(root, 'together.json')}`,
+    ]);
+    inventory(root, [
+      `--junit=${join(root, 'unit')}`,
+      '--part=backend-shard',
+      `--out=${join(root, 'unit.json')}`,
+    ]);
+    inventory(root, [
+      `--junit=${join(root, 'acceptance')}`,
+      '--part=backend-shard',
+      `--out=${join(root, 'acceptance.json')}`,
+    ]);
+    inventory(root, [
+      `--backend=${join(root, 'acceptance.json')},${join(root, 'unit.json')}`,
+      '--part=backend',
+      `--out=${join(root, 'merged.json')}`,
+    ]);
+    assert.equal(
+      readFileSync(join(root, 'merged.json'), 'utf8'),
+      readFileSync(join(root, 'together.json'), 'utf8'),
+    );
+  });
+
+  it('when a test is in two shards, then merging them fails and names the test', () => {
+    const root = reports();
+    inventory(root, [
+      `--junit=${join(root, 'junit')}`,
+      '--part=backend-shard',
+      `--out=${join(root, 'shard.json')}`,
+    ]);
+    const run = inventory(
+      root,
+      [
+        `--backend=${join(root, 'shard.json')},${join(root, 'shard.json')}`,
+        '--part=backend',
+        `--out=${join(root, 'merged.json')}`,
+      ],
+      1,
+    );
+    assert.match(run.stderr, /donors\.DonorTest > Given a, when b, then c/);
+  });
+
+  it('when the merged shards leave a suite empty, then the backend part fails as a whole report would', () => {
+    const root = reports();
+    splitReports(root);
+    inventory(root, [
+      `--junit=${join(root, 'unit')}`,
+      '--part=backend-shard',
+      `--out=${join(root, 'unit.json')}`,
+    ]);
+    const run = inventory(
+      root,
+      [
+        `--backend=${join(root, 'unit.json')}`,
+        '--part=backend',
+        `--out=${join(root, 'merged.json')}`,
+      ],
+      1,
+    );
+    assert.match(run.stderr, /No tests found for backend-cucumber/);
   });
 });

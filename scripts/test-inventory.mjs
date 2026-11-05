@@ -112,19 +112,20 @@ function inventory(names) {
     });
 }
 
-if (options.part !== '' && options.part !== 'backend') {
-  console.error(`Unknown part ${options.part}; known: backend`);
+const PARTS = ['backend', 'backend-shard'];
+if (options.part !== '' && !PARTS.includes(options.part)) {
+  console.error(`Unknown part ${options.part}; known: ${PARTS.join(', ')}`);
   process.exit(2);
 }
+const partOnly = options.part !== '';
 const needed = Object.entries(options).filter(
-  ([name]) =>
-    !SETTINGS.has(name) &&
-    (options.part === 'backend' ? name === 'junit' : name !== 'junit' || options.backend === ''),
+  ([name]) => !SETTINGS.has(name) && (name === 'junit' ? options.backend === '' : !partOnly),
 );
 if (options.backend !== '') {
   needed.push(['backend', options.backend]);
 }
-const paths = (name, value) => (name === 'junit' ? value.split(',') : [value]);
+const paths = (name, value) =>
+  name === 'junit' || name === 'backend' ? value.split(',') : [value];
 for (const [name, path] of needed.flatMap(([name, value]) =>
   paths(name, value).map((path) => [name, path]),
 )) {
@@ -138,26 +139,42 @@ for (const [name, path] of needed.flatMap(([name, value]) =>
 
 function backendSuites() {
   if (options.backend !== '') {
-    const part = JSON.parse(readFileSync(at(options.backend), 'utf8')).suites;
-    return Object.fromEntries(BACKEND_SUITES.map((name) => [name, part[name] ?? []]));
+    const parts = paths('backend', options.backend).map(
+      (path) => JSON.parse(readFileSync(at(path), 'utf8')).suites,
+    );
+    return Object.fromEntries(
+      BACKEND_SUITES.map((name) => {
+        const seen = new Set();
+        const twice = [];
+        for (const test of parts.flatMap((part) => part[name] ?? [])) {
+          (seen.has(test) ? twice : []).push(test);
+          seen.add(test);
+        }
+        if (twice.length > 0) {
+          console.error(`Tests in more than one backend part of ${name}: ${twice.join('; ')}`);
+          process.exit(1);
+        }
+        return [name, [...seen].sort()];
+      }),
+    );
   }
   const { backend, cucumber } = junit(paths('junit', options.junit).map(at));
   return { 'backend-junit': inventory(backend), 'backend-cucumber': inventory(cucumber) };
 }
 
-const suites =
-  options.part === 'backend'
-    ? backendSuites()
-    : {
-        ...backendSuites(),
-        'frontend-vitest': inventory(vitest(at(options.frontendVitest), at('frontend'))),
-        'frontend-playwright': inventory(playwright(at(options.playwright))),
-        'mcp-vitest': inventory(vitest(at(options.mcpVitest), at('mcp'))),
-      };
+const suites = partOnly
+  ? backendSuites()
+  : {
+      ...backendSuites(),
+      'frontend-vitest': inventory(vitest(at(options.frontendVitest), at('frontend'))),
+      'frontend-playwright': inventory(playwright(at(options.playwright))),
+      'mcp-vitest': inventory(vitest(at(options.mcpVitest), at('mcp'))),
+    };
 const counts = Object.fromEntries(
   Object.entries(suites).map(([name, tests]) => [name, tests.length]),
 );
-const empty = Object.entries(counts).filter(([, count]) => count === 0);
+const empty =
+  options.part === 'backend-shard' ? [] : Object.entries(counts).filter(([, count]) => count === 0);
 if (empty.length > 0) {
   console.error(`No tests found for ${empty.map(([name]) => name).join(', ')}`);
   process.exit(1);
