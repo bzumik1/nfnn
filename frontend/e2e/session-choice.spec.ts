@@ -29,6 +29,12 @@ async function deviceDatabases(page: Page): Promise<string[]> {
   );
 }
 
+function copyOpened(page: Page): Promise<unknown> {
+  return page.waitForRequest(
+    (request) => new URL(request.url()).pathname === '/api/donations/me/sync',
+  );
+}
+
 async function submitPassword(page: Page): Promise<void> {
   await page.locator('#login-email').fill('jana@example.cz');
   await page.locator('#login-password').fill('correct horse battery');
@@ -79,7 +85,9 @@ test.describe('Given a visitor with the sign-in dialog open in a browser tab', (
     await expect(publicChoice).toHaveAccessibleDescription(
       'Po zavření prohlížeče tu nic nezůstane.',
     );
+    const openedAtSignIn = copyOpened(page);
     await submitPassword(page);
+    await openedAtSignIn;
 
     expect(kinds).toEqual(['PUBLIC']);
     expect(await sessionFlags(page)).toEqual({ local: null, tab: '1' });
@@ -91,8 +99,9 @@ test.describe('Given a visitor with the sign-in dialog open in a browser tab', (
         body: JSON.stringify({ ...JSON.parse(answer.body), session: 'PUBLIC' }),
       });
     });
+    const openedAfterReload = copyOpened(page);
     await page.reload();
-    await expect(page.getByRole('link', { name: 'Můj přehled' }).first()).toBeVisible();
+    await openedAfterReload;
     expect(await deviceDatabases(page)).toEqual([]);
   });
 

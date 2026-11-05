@@ -17,6 +17,7 @@ import cz.novanadeje.app.donors.domain.RefreshToken;
 import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
 import cz.novanadeje.app.donors.domain.RefreshTokenSecret;
 import cz.novanadeje.app.donors.domain.Role;
+import cz.novanadeje.app.donors.domain.SessionEnded;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 import cz.novanadeje.app.shared.domain.EmailAddress;
@@ -692,24 +693,6 @@ class DonorSessionServiceTest {
     }
 
     @Test
-    @DisplayName("Given a session whose device already ended, when it continues, then a new device signs in")
-    void should_sign_in_new_device_when_continued_given_ended_device() {
-        DonorDevice ended = signedInDevice();
-        ended.end(DeviceSignOutReason.REMOTE_SIGN_OUT, NOW.minusSeconds(5));
-        when(devices.findById(DEVICE)).thenReturn(Optional.of(ended));
-        DeviceDescription iphone = new DeviceDescription(DevicePlatform.IPHONE, DeviceBrowser.SAFARI);
-        when(accessTokens.issue(eq(DONOR), eq(Set.of(Role.DONOR)), any(DeviceId.class), eq(NOW)))
-                .thenReturn(new IssuedAccessToken("access", NOW.plus(Duration.ofMinutes(15))));
-
-        service.continueOn(donor(), false, new RequestingDevice(Optional.of(DEVICE), iphone));
-
-        ArgumentCaptor<DonorDevice> device = ArgumentCaptor.forClass(DonorDevice.class);
-        verify(devices).save(device.capture());
-        assertThat(device.getValue().id()).isNotEqualTo(DEVICE);
-        assertThat(device.getValue().description()).isEqualTo(iphone);
-    }
-
-    @Test
     @DisplayName("Given each kind of session, when the donor signs in, then the device keeps the kind and the token lasts as long as that kind")
     void should_keep_kind_and_its_length_when_signed_in_given_each_kind() {
         when(accessTokens.issue(eq(DONOR), eq(Set.of(Role.DONOR)), any(DeviceId.class), eq(NOW))).thenReturn(new IssuedAccessToken("access", NOW.plus(Duration.ofMinutes(15))));
@@ -819,17 +802,16 @@ class DonorSessionServiceTest {
     }
 
     @Test
-    @DisplayName("Given a public-computer session whose device was signed out a moment ago, when it continues after a credential change, then the new device is a public computer too")
-    void should_keep_the_public_kind_when_continued_given_its_device_just_ended() {
+    @DisplayName("Given a session whose device was signed out a moment ago, when it continues after a credential change, then it is refused as ended and no device signs in")
+    void should_refuse_as_ended_when_continued_given_its_device_just_ended() {
         DonorDevice ended = deviceOf(SessionKind.PUBLIC, NOW.minus(Duration.ofMinutes(20)));
         ended.end(DeviceSignOutReason.REMOTE_SIGN_OUT, NOW.minusSeconds(5));
         when(devices.findById(DEVICE)).thenReturn(Optional.of(ended));
-        when(accessTokens.issue(eq(DONOR), eq(Set.of(Role.DONOR)), any(DeviceId.class), eq(NOW))).thenReturn(new IssuedAccessToken("access", NOW.plus(Duration.ofMinutes(15))));
 
-        IssuedTokens tokens = service.continueOn(donor(), false, new RequestingDevice(Optional.of(DEVICE), DeviceDescription.UNKNOWN));
-
-        assertThat(tokens.session()).isEqualTo(SessionKind.PUBLIC);
-        assertThat(tokens.refreshTokenExpiresAt()).isEqualTo(NOW.plus(Duration.ofHours(1)));
+        assertThatThrownBy(() -> service.continueOn(donor(), true, new RequestingDevice(Optional.of(DEVICE), DeviceDescription.UNKNOWN)))
+                .isInstanceOf(SessionEnded.class);
+        verify(devices, never()).save(any());
+        verify(refreshTokens, never()).save(any());
     }
 
     @Test
@@ -844,18 +826,14 @@ class DonorSessionServiceTest {
     }
 
     @Test
-    @DisplayName("Given a public-computer session past its 12 hours, when it continues after a credential change, then a new public-computer device signs in instead of storing a token that has already expired")
-    void should_sign_in_a_new_public_device_when_continued_given_the_public_session_past_its_twelve_hours() {
+    @DisplayName("Given a public-computer session past its 12 hours, when it continues after a credential change, then it is refused as ended instead of starting its 12 hours again")
+    void should_refuse_as_ended_when_continued_given_the_public_session_past_its_twelve_hours() {
         when(devices.findById(DEVICE)).thenReturn(Optional.of(deviceOf(SessionKind.PUBLIC, NOW.minus(Duration.ofHours(12)).minus(Duration.ofMinutes(5)))));
-        when(accessTokens.issue(eq(DONOR), eq(Set.of(Role.DONOR)), any(DeviceId.class), eq(NOW))).thenReturn(new IssuedAccessToken("access", NOW.plus(Duration.ofMinutes(15))));
 
-        IssuedTokens tokens = service.continueOn(donor(), false, new RequestingDevice(Optional.of(DEVICE), DeviceDescription.UNKNOWN));
-
-        ArgumentCaptor<DonorDevice> device = ArgumentCaptor.forClass(DonorDevice.class);
-        verify(devices).save(device.capture());
-        assertThat(device.getValue().id()).isNotEqualTo(DEVICE);
-        assertThat(tokens.session()).isEqualTo(SessionKind.PUBLIC);
-        assertThat(tokens.refreshTokenExpiresAt()).isEqualTo(NOW.plus(Duration.ofHours(1)));
+        assertThatThrownBy(() -> service.continueOn(donor(), true, new RequestingDevice(Optional.of(DEVICE), DeviceDescription.UNKNOWN)))
+                .isInstanceOf(SessionEnded.class);
+        verify(devices, never()).save(any());
+        verify(refreshTokens, never()).save(any());
     }
 
     @Test

@@ -10,6 +10,7 @@ import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.InvalidRefreshToken;
 import cz.novanadeje.app.donors.domain.RefreshToken;
 import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
+import cz.novanadeje.app.donors.domain.SessionEnded;
 import cz.novanadeje.app.donors.domain.RefreshTokenSecret;
 import cz.novanadeje.app.donors.domain.Role;
 import cz.novanadeje.app.donors.domain.SessionKind;
@@ -59,14 +60,16 @@ public class DonorSessionService {
     public IssuedTokens continueOn(Donor donor, boolean secondFactorVerified, RequestingDevice requesting) {
         Instant now = clock.instant();
         Optional<DonorDevice> own = requesting.session().flatMap(devices::findById).filter(found -> found.belongsTo(donor.id()));
+        if (own.isPresent() && !lasts(own.get(), now)) {
+            throw new SessionEnded();
+        }
         DonorDevice device = own
-                .filter(found -> found.isActive() && properties.lengths().expiresAt(found.kind(), found.signedInAt(), now).isAfter(now))
                 .map(found -> {
                     found.recordUse(now);
                     devices.save(found);
                     return found;
                 })
-                .orElseGet(() -> newDevice(donor, requesting.description(), own.map(DonorDevice::kind).orElse(SessionKind.BROWSER), now));
+                .orElseGet(() -> newDevice(donor, requesting.description(), SessionKind.BROWSER, now));
         return issue(device, secondFactorVerified, donor.sessionRoles(secondFactorVerified), now).tokens();
     }
 
@@ -163,6 +166,10 @@ public class DonorSessionService {
             token.successorId().ifPresent(successor -> refreshTokens.revokeIfUnused(successor, now));
             token.deviceId().ifPresent(device -> signOuts.end(token.donorId(), device, DeviceSignOutReason.SIGNED_OUT, now));
         });
+    }
+
+    private boolean lasts(DonorDevice device, Instant now) {
+        return device.isActive() && properties.lengths().expiresAt(device.kind(), device.signedInAt(), now).isAfter(now);
     }
 
     private DonorDevice newDevice(Donor donor, DeviceDescription description, SessionKind kind, Instant now) {

@@ -135,3 +135,23 @@ Feature: A sign-in lasts as long as its kind of session
     And the app refreshes its session
     Then the response status is 200
     And the session opens the administration
+
+  Scenario: A passkey sign-in on a public computer opens a public-computer session
+    Given "Jana" added a passkey named "Telefon"
+    When "Jana" signs in with the passkey "Telefon" on a public computer
+    Then the response status is 200
+    And the answer names the session "PUBLIC"
+    And the refresh cookie "refresh_token" ends with the browser
+
+  Scenario: The sign-in by the link from the confirmation e-mail opens a session for this browser
+    When a person registers
+      | name       | Petra Malá            |
+      | street     | Krátká 3              |
+      | city       | Most                  |
+      | postalCode | 434 01                |
+      | email      | petra@example.cz      |
+      | password   | correct horse battery |
+    And the donor confirms the e-mail with the link from the e-mail for this browser session
+    Then the response status is 200
+    And the answer names the session "BROWSER"
+    And the refresh cookie "refresh_token" ends with the browser

@@ -275,6 +275,9 @@ export class DeviceVault implements SessionDevice {
     storeNothing: boolean,
   ): Promise<void> {
     this.closeOpen();
+    if (storeNothing) {
+      await this.endSessions(await this.presentStorage().catch(() => null));
+    }
     const storage = await this.storageFor(storeNothing);
     const salt = await this.saltOf(storage);
     const tags = await accountTags(salt, account);

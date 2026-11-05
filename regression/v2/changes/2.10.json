@@ -480,11 +480,34 @@
     "contract": "docs/api-contract.md, Authentication, Session kinds"
   },
   {
+    "path": "POST /api/donors/*",
+    "scenario": "content/place_photo_focal_point: *",
+    "kind": "added",
+    "field": "$.session",
+    "reason": "Plan v3 slice 2.10: every answer that opens or continues a session names its kind (session: APP, REMEMBERED, BROWSER or PUBLIC); a sign-in that names none, as every scenario before 2.10 does, is REMEMBERED with the 14-day cookie it had before, so nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Session kinds"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/admin_yearly_receipts: *",
+    "kind": "added",
+    "field": "$.session",
+    "reason": "Plan v3 slice 2.10: every answer that opens or continues a session names its kind (session: APP, REMEMBERED, BROWSER or PUBLIC); a sign-in that names none, as every scenario before 2.10 does, is REMEMBERED with the 14-day cookie it had before, so nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Session kinds"
+  },
+  {
     "path": "GET /api/admin/operations/settings",
     "scenario": "operations/settings: *",
     "kind": "body",
     "field": "$.settings*",
     "reason": "Plan v3 slice 2.10: the setting SESSION_REMEMBER_DAYS (how many days \"Zapamatovat si mě\" keeps a browser signed in, 1 to 30, default 14; Správa, Nastavení, Přihlášení) joins the list as its last entry, so the list has one setting more",
     "contract": "docs/api-contract.md, Settings and the first setup"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.DonorSessionServiceTest > Given a session whose device already ended, when it continues, then a new device signs in",
+    "reason": "Plan v3 slice 2.10, security review S1: a credential change from a session whose device has ended, or whose public-computer limit has passed, is refused as auth/session-ended instead of continuing on a new device, so signing out and changing the password within the 30 s an old access token is still accepted can no longer restart a public computer's 12 hours",
+    "replacement": "donors.application.DonorSessionServiceTest > Given a session whose device was signed out a moment ago, when it continues after a credential change, then it is refused as ended and no device signs in"
   }
 ]

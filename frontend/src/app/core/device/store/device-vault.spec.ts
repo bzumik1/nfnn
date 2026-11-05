@@ -384,6 +384,21 @@ describe('Given the device vault over IndexedDB with real WebCrypto', () => {
       storage.close();
     });
 
+    it('and the page is left without a sign-out and Petr signs in on a public computer, then her copy keeps only its password wrap and Petr leaves nothing stored', async () => {
+      const copyId = vault.opened()!.store.copyId;
+      const later = anotherTab();
+
+      await later.signedIn(PETR, { kind: 'password', password: 'Petrovo heslo' }, true);
+
+      const entries = await storedEntries();
+      expect(entries.map((entry) => entry.copyId)).toEqual([copyId]);
+      expect(entries[0].wraps.map((wrap) => wrap.kind)).toEqual(['password']);
+      const storage = await rawStorage();
+      expect(await storage.sessionKey(copyId)).toBeNull();
+      storage.close();
+      expect(later.mode()).toBe('memory');
+    });
+
     it('and another tab signs out while her new password is being wrapped, then the copy still opens with the new password and shows her gifts', async () => {
       await vault.replaceContents(vault.opened()!.store, contentsOf(CANARY));
       derivation.hold();

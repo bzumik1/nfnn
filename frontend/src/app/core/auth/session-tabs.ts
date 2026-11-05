@@ -24,6 +24,12 @@ export interface SignedOut {
   readonly version: typeof SESSION_MESSAGE_VERSION;
 }
 
+export interface PublicActivity {
+  readonly kind: 'public-activity';
+  readonly version: typeof SESSION_MESSAGE_VERSION;
+  readonly at: number;
+}
+
 export const TAB_LOCKS = new InjectionToken<TabLocks | null>('TAB_LOCKS', {
   providedIn: 'root',
   factory: () => (typeof navigator !== 'undefined' && navigator.locks ? navigator.locks : null),
@@ -43,6 +49,16 @@ export function sessionRefreshed(response: AuthResponse): SessionRefreshed {
 
 export function signedOut(): SignedOut {
   return { kind: 'signed-out', version: SESSION_MESSAGE_VERSION };
+}
+
+export function publicActivity(at: number): PublicActivity {
+  return { kind: 'public-activity', version: SESSION_MESSAGE_VERSION, at };
+}
+
+export function isPublicActivity(message: unknown): message is PublicActivity {
+  return (
+    isMessageOfKind(message, 'public-activity') && Number.isFinite((message as { at?: unknown }).at)
+  );
 }
 
 export function isSessionRefreshed(message: unknown): message is SessionRefreshed {
