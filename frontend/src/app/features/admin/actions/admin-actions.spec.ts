@@ -225,6 +225,30 @@ describe('Given an administrator on the history page', () => {
     expect(rowText(reset)).toContain('Vrácení úrovně logování');
   });
 
+  it('when push alerts were turned on, switched or turned off for a device, then those changes are named in Czech too', () => {
+    firstPage([
+      adminAction({
+        action: 'SUBSCRIBE_PUSH',
+        details: 'Upozornění přes push zapnuta na zařízení (Google)',
+      }),
+      adminAction({
+        id: '019a1c00-0000-7000-8000-00000000e027',
+        action: 'CHANGE_PUSH_ALERTS',
+        details: 'Upozornění přes push na zařízení (Google): zálohy vypnuto',
+      }),
+      adminAction({
+        id: '019a1c00-0000-7000-8000-00000000e028',
+        action: 'REMOVE_PUSH_SUBSCRIPTION',
+        details: 'Upozornění přes push vypnuta na zařízení (Google)',
+      }),
+    ]);
+
+    const [subscribed, switched, removed] = rows();
+    expect(rowText(subscribed)).toContain('Zapnutí upozornění přes push na zařízení');
+    expect(rowText(switched)).toContain('Změna upozornění přes push na zařízení');
+    expect(rowText(removed)).toContain('Vypnutí upozornění přes push na zařízení');
+  });
+
   it('when the receipt signature was uploaded or removed, then those changes are named in Czech too', () => {
     firstPage([
       adminAction({

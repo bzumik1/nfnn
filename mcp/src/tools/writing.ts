@@ -808,6 +808,32 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
   );
 
   server.registerTool(
+    'nfnn_set_push_alerts',
+    {
+      title: 'Nastavit upozornění přes push',
+      description:
+        'Chooses which push alerts one device of the connected administrator gets (its id from nfnn_push_alerts): bankImport, backups and mail, each true or false, all three given. Audited as CHANGE_PUSH_ALERTS. A device is turned on or off only on the web at /sprava.',
+      inputSchema: z.object({
+        id: z.string().uuid(),
+        bankImport: z.boolean(),
+        backups: z.boolean(),
+        mail: z.boolean(),
+      }),
+      annotations: WRITING,
+    },
+    async ({ id, bankImport, backups, mail }, ctx) =>
+      answerChange(deps, ctx, 'nfnn_set_push_alerts', async ({ apiToken }) =>
+        text(
+          await backend.put(`/api/admin/operations/push/subscriptions/${id}/alerts`, apiToken, {
+            bankImport,
+            backups,
+            mail,
+          }),
+        ),
+      ),
+  );
+
+  server.registerTool(
     'nfnn_set_log_level',
     {
       title: 'Dočasně změnit úroveň logování',

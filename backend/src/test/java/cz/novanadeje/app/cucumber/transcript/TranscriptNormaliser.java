@@ -49,7 +49,7 @@ public final class TranscriptNormaliser {
     private static final String ID_FIELD = "id";
     private static final Set<String> SECRET_FIELDS = Set.of("password", "currentpassword", "newpassword", "secret", "otpauthuri",
             "accesstoken", "access_token", "refreshtoken", "refresh_token", "id_token", "token", "recoverycodes", "recoverycode",
-            "setupcode", "client_secret", "clientsecret", "code_verifier", "codeverifier", "word");
+            "setupcode", "client_secret", "clientsecret", "code_verifier", "codeverifier", "word", "p256dh", "auth");
     private static final Pattern SIGNING_SEED_FIELD = Pattern.compile("[a-z]*(?:seed|signingkey|privatekey)(?:hex|base64|base64url)?");
     private static final String WORDS_FIELD = "words";
     private static final String CODE_FIELD = "code";

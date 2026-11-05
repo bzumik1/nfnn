@@ -9,6 +9,7 @@ import {
   MEDIA_ID,
   PAYMENT_ID,
   PERSON_ID,
+  PUSH_SUBSCRIPTION_ID,
   READ_TOKEN,
   RECEIPT_ID,
   REPLACING_DONOR_ID,
@@ -74,6 +75,7 @@ describe('Given an administrator connected with the reading permission only', ()
       'nfnn_project_order',
       'nfnn_publish_news',
       'nfnn_publish_project',
+      'nfnn_push_alerts',
       'nfnn_receipt',
       'nfnn_receipt_signature',
       'nfnn_receipts',
@@ -87,6 +89,7 @@ describe('Given an administrator connected with the reading permission only', ()
       'nfnn_send_test_email',
       'nfnn_set_log_level',
       'nfnn_set_project_order',
+      'nfnn_set_push_alerts',
       'nfnn_set_web_signature',
       'nfnn_settings',
       'nfnn_since_last_sign_in',
@@ -125,6 +128,18 @@ describe('Given an administrator connected with the reading permission only', ()
     expect(setting).toContain('nfnn_photo_upload_link');
     expect(setting).toContain('never from a public address');
     expect(setting).toContain('CHANGE_WEB_SIGNATURE');
+  });
+
+  it('when the push alerts are asked, then the devices of the connected administrator come with their switches and the description says turning a device on or off stays on the web', async () => {
+    const result = await client.callTool({ name: 'nfnn_push_alerts', arguments: {} });
+    expect(result.isError).toBeFalsy();
+    expect(textOf(result)).toContain(`"id":"${PUSH_SUBSCRIPTION_ID}"`);
+    expect(textOf(result)).toContain('"bankImport":true');
+    expect(textOf(result)).not.toContain('publicKey');
+    const { tools } = await client.listTools();
+    const description = tools.find((tool) => tool.name === 'nfnn_push_alerts')?.description;
+    expect(description).toContain('nfnn_set_push_alerts');
+    expect(description).toContain('only on the web');
   });
 
   it('when the order of the projects is asked, then the chosen order comes with a description of every way of ordering', async () => {
@@ -1436,6 +1451,28 @@ describe('Given an administrator connected with the writing permission', () => {
       ).toHaveLength(0);
     },
   );
+
+  it('when the push alerts of a device are switched, then the administration gets the PUT of all three switches and an unknown device is explained', async () => {
+    const switched = await client.callTool({
+      name: 'nfnn_set_push_alerts',
+      arguments: { id: PUSH_SUBSCRIPTION_ID, bankImport: false, backups: true, mail: false },
+    });
+    expect(switched.isError).toBeFalsy();
+    expect(textOf(switched)).toContain('"bankImport":false');
+    const put = stack.backend.requests.find((request) => request.method === 'PUT');
+    expect(put?.path).toBe(
+      `/api/admin/operations/push/subscriptions/${PUSH_SUBSCRIPTION_ID}/alerts`,
+    );
+    expect(put?.body).toBe('{"bankImport":false,"backups":true,"mail":false}');
+    expect(put?.authorization).toBe('Bearer api-token-write');
+
+    const unknown = await client.callTool({
+      name: 'nfnn_set_push_alerts',
+      arguments: { id: UNKNOWN_ID, bankImport: true, backups: true, mail: true },
+    });
+    expect(unknown.isError).toBe(true);
+    expect(textOf(unknown)).toContain('404 operations/push-subscription-not-found');
+  });
 
   it('when a log level is raised and reset, then the administration gets the PUT and DELETE and a missing override is explained', async () => {
     const raised = await client.callTool({

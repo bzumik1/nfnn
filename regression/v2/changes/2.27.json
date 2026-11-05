@@ -1,0 +1,16 @@
+[
+  {
+    "path": "GET /api/admin/operations/push",
+    "scenario": "operations/admin_push: *",
+    "kind": "added",
+    "reason": "Plan v3 slice 2.27: the administrator's push settings (the server's VAPID public key and the administrator's own devices with their alert switches), read by the browser and by the connector's nfnn_push_alerts; v2 had no push alerts",
+    "contract": "docs/api-contract.md, Push alerts of the administration; MCP connector"
+  },
+  {
+    "path": "PUT /api/admin/operations/push/subscriptions/{id}/alerts",
+    "scenario": "operations/admin_push: *",
+    "kind": "added",
+    "reason": "Plan v3 slice 2.27: the alert switches of one device (bank import, backups, mail), changed in the browser and by the connector's nfnn_set_push_alerts, audited as CHANGE_PUSH_ALERTS; v2 had no push alerts",
+    "contract": "docs/api-contract.md, Push alerts of the administration; MCP connector"
+  }
+]
