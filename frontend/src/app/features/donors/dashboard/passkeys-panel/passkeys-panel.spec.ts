@@ -230,6 +230,34 @@ describe('Given the passkeys panel of the sign-in card', () => {
       expect(passkeys.created).toHaveLength(0);
     });
 
+    it('and the server refuses the new key after the device gave a PRF output, then that output is zeroed', async () => {
+      passkeys.prfOutput = new Uint8Array(32).fill(9);
+      const outputs: Uint8Array[] = [];
+      const createWithPrf = passkeys.createWithPrf.bind(passkeys);
+      passkeys.createWithPrf = async (options, input) => {
+        const answer = await createWithPrf(options, input);
+        if (answer.prf !== null) {
+          outputs.push(answer.prf.output);
+        }
+        return answer;
+      };
+      await fillIn('#passkey-name', 'MacBook');
+      await fillIn('#passkey-password', 'correct horse battery');
+      await submit();
+      http.expectOne(OPTIONS_URL).flush(passkeyCreationOptions());
+      await vi.waitFor(() => expect(passkeys.created).toHaveLength(1));
+      await settle();
+
+      http.expectOne(PASSKEYS_URL).flush(problem('donors/passkey-exists', 'Klíč už máte'), {
+        status: 409,
+        statusText: 'Conflict',
+      });
+      await settle();
+
+      expect(outputs).toHaveLength(1);
+      expect(outputs[0].every((byte) => byte === 0)).toBe(true);
+    });
+
     it('and dismisses the prompt of the device, then the card says nothing was created', async () => {
       passkeys.failure = 'cancelled';
       await fillIn('#passkey-name', 'MacBook');

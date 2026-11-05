@@ -35,9 +35,6 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
       if (!ended && !problemTypeEndsWith(failure, EXPIRED_TOKEN)) {
         return throwError(() => failure);
       }
-      if (ended) {
-        store.sessionEnded();
-      }
       return store.refresh().pipe(switchMap((fresh) => send(withBearer(request, fresh), next)));
     }),
   );

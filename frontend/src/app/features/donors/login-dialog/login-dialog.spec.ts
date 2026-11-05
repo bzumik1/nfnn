@@ -11,6 +11,12 @@ import {
 } from '../../../core/auth/login-dialog.service';
 import { PasskeyAuthenticator } from '../../../core/auth/passkey-authenticator';
 import {
+  NO_SESSION_DEVICE,
+  SESSION_DEVICE,
+  type SessionDevice,
+  type SignInSecret,
+} from '../../../core/auth/session-device';
+import {
   authResponse,
   FakePasskeyAuthenticator,
   passkeySignInOptions,
@@ -30,8 +36,14 @@ describe('Given the sign-in dialog', () => {
   let navigate: ReturnType<typeof vi.spyOn>;
   let passkeys: FakePasskeyAuthenticator;
   let history: FakeDialogHistory;
+  let secrets: SignInSecret[];
 
   beforeEach(async () => {
+    secrets = [];
+    const device: SessionDevice = {
+      ...NO_SESSION_DEVICE,
+      signedIn: async (_account, secret) => void secrets.push(secret),
+    };
     localStorage.clear();
     passkeys = new FakePasskeyAuthenticator();
     history = new FakeDialogHistory();
@@ -43,6 +55,7 @@ describe('Given the sign-in dialog', () => {
         provideRouter([]),
         { provide: PasskeyAuthenticator, useValue: passkeys },
         { provide: DialogHistory, useValue: history },
+        { provide: SESSION_DEVICE, useValue: device },
       ],
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);
@@ -293,6 +306,17 @@ describe('Given the sign-in dialog', () => {
         expect(TestBed.inject(AuthStore).donor()?.name).toBe('Jana Nováková');
         expect(dialog.isOpen()).toBe(false);
         expect(navigate).not.toHaveBeenCalled();
+      });
+
+      it('and the right code is sent, then the password typed before the code goes to this device to lock its copy', async () => {
+        await fillIn('#login-code', '287082');
+
+        await submit('.code-form');
+        http.expectOne('/api/donors/auth/login/second-factor').flush(authResponse('token-1'));
+        await settle();
+        await vi.waitFor(() => expect(secrets.length).toBe(1));
+
+        expect(secrets).toEqual([{ kind: 'password', password: 'correct horse battery' }]);
       });
 
       it('and a five-digit code is sent, then nothing goes out and the field says the code has six digits', async () => {

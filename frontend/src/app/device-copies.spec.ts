@@ -12,6 +12,7 @@ describe('Given the device copies of the app, loaded only when a session first n
   let copies: DeviceCopies;
 
   beforeEach(() => {
+    localStorage.clear();
     downloads = 0;
     vault = {
       prfInput: vi.fn(async () => new Uint8Array(32)),
@@ -19,7 +20,7 @@ describe('Given the device copies of the app, loaded only when a session first n
       restored: vi.fn(async () => undefined),
       signedOut: vi.fn(async () => undefined),
       signedOutElsewhere: vi.fn(),
-      endedRemotely: vi.fn(async () => undefined),
+      sessionLost: vi.fn(async () => undefined),
       passwordChanged: vi.fn(async () => undefined),
       passwordRemoved: vi.fn(async () => undefined),
       passkeyAdded: vi.fn(async () => undefined),
@@ -62,5 +63,34 @@ describe('Given the device copies of the app, loaded only when a session first n
     vault['prfInput'].mockRejectedValue(new Error('no storage'));
 
     expect(await copies.prfInput()).toBeNull();
+  });
+
+  it('when the PRF input takes longer than the passkey prompt can wait, then the sign-in goes on without one', async () => {
+    vi.useFakeTimers();
+    try {
+      vault['prfInput'].mockReturnValue(new Promise(() => undefined));
+
+      const input = copies.prfInput();
+      await vi.advanceTimersByTimeAsync(1500);
+
+      expect(await input).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('when a session is lost and this device holds no copy, then nothing is loaded', async () => {
+    await copies.sessionLost();
+
+    expect(vault['sessionLost']).not.toHaveBeenCalled();
+    expect(downloads).toBe(0);
+  });
+
+  it('when a session is lost and this device holds a copy, then the vault ends its sessions', async () => {
+    localStorage.setItem('nfnn.device-copy', '1');
+
+    await copies.sessionLost();
+
+    expect(vault['sessionLost']).toHaveBeenCalledTimes(1);
   });
 });

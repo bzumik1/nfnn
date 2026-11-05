@@ -62,7 +62,6 @@ export class AuthStore {
   private refreshInFlight: Observable<string> | null = null;
   private restoring: Promise<void> | null = null;
   private adoptions = 0;
-  private sessionEndedSeen = false;
 
   readonly donor = this.currentDonor.asReadonly();
   readonly status = this.currentStatus.asReadonly();
@@ -119,27 +118,26 @@ export class AuthStore {
       switchMap((options) =>
         from(this.device.prfInput()).pipe(
           switchMap((input) => from(this.passkeys.getWithPrf(options, input))),
-          switchMap(({ credential, prf }) =>
-            this.api.signInWithPasskey(options.challenge, credential).pipe(
-              map((response) =>
-                this.adoptSignIn(
+          switchMap(({ credential, prf }) => {
+            let handedOver = false;
+            return this.api.signInWithPasskey(options.challenge, credential).pipe(
+              map((response) => {
+                handedOver = prf !== null;
+                return this.adoptSignIn(
                   response,
                   prf === null ? { kind: 'none' } : { kind: 'prf', reading: prf },
-                ),
-              ),
-              catchError((failure: unknown) => {
-                prf?.output.fill(0);
-                return throwError(() => failure);
+                );
               }),
-            ),
-          ),
+              finalize(() => {
+                if (!handedOver) {
+                  prf?.output.fill(0);
+                }
+              }),
+            );
+          }),
         ),
       ),
     );
-  }
-
-  sessionEnded(): void {
-    this.sessionEndedSeen = true;
   }
 
   refresh(): Observable<string> {
@@ -174,7 +172,7 @@ export class AuthStore {
             () => undefined,
             (failure: unknown) => this.restoreLater(failure),
           )
-        : Promise.resolve(this.forget());
+        : Promise.resolve(this.forgetWithoutSession());
     }
     return this.restoring;
   }
@@ -354,8 +352,10 @@ export class AuthStore {
   private adoptRestored(response: AuthResponse): Donor {
     const before = this.currentDonor();
     const donor = this.adopt(response);
-    this.sessionEndedSeen = false;
-    if (before === null) {
+    if (before !== null && before.id !== donor.id) {
+      const switched = this.device.signedOut(deviceAccountOf(before));
+      void switched.then(() => this.device.restored(deviceAccountOf(donor)));
+    } else if (before === null) {
       void this.device.restored(deviceAccountOf(donor));
     }
     return donor;
@@ -363,21 +363,16 @@ export class AuthStore {
 
   private adoptSignIn(response: AuthResponse, secret: SignInSecret): Donor {
     const donor = this.adopt(response);
-    this.sessionEndedSeen = false;
     void this.device.signedIn(deviceAccountOf(donor), secret);
     return donor;
   }
 
   private endRefused(): void {
     const donor = this.currentDonor();
-    const endedRemotely = this.sessionEndedSeen;
-    this.sessionEndedSeen = false;
     this.forget();
-    if (donor === null) {
-      return;
-    }
-    const account = deviceAccountOf(donor);
-    void (endedRemotely ? this.device.endedRemotely(account) : this.device.signedOut(account));
+    void (donor === null
+      ? this.device.sessionLost()
+      : this.device.signedOut(deviceAccountOf(donor)));
   }
 
   private reloadProfile(): Observable<void> {
@@ -395,6 +390,11 @@ export class AuthStore {
     this.currentStatus.set('signed-in');
     rememberSession(true);
     return response.user;
+  }
+
+  private forgetWithoutSession(): void {
+    this.forget();
+    void this.device.sessionLost();
   }
 
   private forget(): void {

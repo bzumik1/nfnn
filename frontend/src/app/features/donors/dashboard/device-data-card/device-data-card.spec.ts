@@ -29,6 +29,7 @@ function openedWith(contents: CopyContents | null): OpenedCopy {
   return {
     store: { copyId: 'copy-1', contents: signal(contents) } as unknown as AccountStore,
     reason: 'sign-in',
+    account: deviceAccountOf(DONOR),
   };
 }
 
@@ -37,6 +38,7 @@ describe('Given the card "Data v tomto zařízení"', () => {
   let vault: {
     mode: ReturnType<typeof signal<VaultMode | null>>;
     opened: ReturnType<typeof signal<OpenedCopy | null>>;
+    locked: ReturnType<typeof signal<boolean>>;
     forget: ReturnType<typeof vi.fn>;
   };
   let download: {
@@ -76,6 +78,7 @@ describe('Given the card "Data v tomto zařízení"', () => {
     vault = {
       mode: signal<VaultMode | null>('stored'),
       opened: signal<OpenedCopy | null>(null),
+      locked: signal(false),
       forget: vi.fn(async () => undefined),
     };
     download = {
@@ -97,14 +100,35 @@ describe('Given the card "Data v tomto zařízení"', () => {
     await settle();
   });
 
-  it('when the copy is stored, then the card says when it was last updated and that sign-out locks it', async () => {
+  it('when the copy is stored, then the card says when it was last updated, what it holds, that the server is unaffected and when sign-out keeps it', async () => {
     vault.opened.set(openedWith({ chunks: [], summary: {}, storedAt: '2026-11-05T09:30:00Z' }));
     await settle();
 
     expect(state()).toBe('Uloženo v zařízení · aktualizováno 05. 11. 2026 10:30');
-    expect(normalized(root().querySelector('.device-data-about')?.textContent)).toContain(
-      'Po odhlášení zůstane zamčená vaším heslem nebo přístupovým klíčem',
+    expect(normalized(root().querySelector('.device-data-about')?.textContent)).toBe(
+      'Kopie vašich darů, potvrzení a bankovních účtů se v tomto prohlížeči ukládá zašifrovaně a klíč k ní zná jen toto zařízení. Na serveru se tím nic nemění. Když jste se přihlásili heslem, zůstane kopie po odhlášení zamčená tímto heslem. Po přihlášení přístupovým klíčem zůstane jen tehdy, když to váš klíč umí; jinak se odhlášením smaže.',
     );
+  });
+
+  it('when the stored time is shown, then the date and the time each stay whole but may wrap apart', async () => {
+    vault.opened.set(openedWith({ chunks: [], summary: {}, storedAt: '2026-11-05T09:30:00Z' }));
+    await settle();
+
+    const parts = Array.from(root().querySelectorAll('.device-data-time')).map((part) =>
+      normalized(part.textContent),
+    );
+    expect(parts).toEqual(['05. 11. 2026', '10:30']);
+  });
+
+  it('when a copy on this device stays locked, then the card says how it opens and offers no reload', async () => {
+    vault.locked.set(true);
+    await settle();
+
+    expect(state()).toBe(
+      'Kopie v tomto zařízení je zamčená. Otevře se, až se přihlásíte heslem nebo přístupovým klíčem, který to umí.',
+    );
+    expect(root().querySelector('.device-data-reload')).toBeNull();
+    expect(button('Smazat data z tohoto zařízení').disabled).toBe(false);
   });
 
   it('when the first download is still running, then the card says the data are being saved', async () => {
@@ -119,13 +143,16 @@ describe('Given the card "Data v tomto zařízení"', () => {
     expect(state()).toBe('V tomto zařízení zatím nic uloženo není.');
   });
 
-  it('when the copy lives only in memory, then the card says nothing is stored and does not claim an encrypted copy', async () => {
+  it('when the copy lives only in memory, then the card says nothing is stored, the server keeps everything, and offers no deletion', async () => {
     vault.mode.set('memory');
     vault.opened.set(openedWith(null));
     await settle();
 
-    expect(state()).toContain('V tomto prohlížeči se nic neukládá.');
+    expect(state()).toBe(
+      'V tomto prohlížeči se nic neukládá. Kopie vašich darů je jen v paměti této stránky a po jejím zavření zmizí; na serveru zůstává vše.',
+    );
     expect(root().querySelector('.device-data-about')).toBeNull();
+    expect(root().querySelector('.device-data-delete')).toBeNull();
   });
 
   describe('when the donor asks to load the data again', () => {
@@ -159,19 +186,28 @@ describe('Given the card "Data v tomto zařízení"', () => {
         'Data se nepodařilo načíst. Zkontrolujte připojení a zkuste to prosím znovu.',
       );
     });
+
+    for (const outcome of ['mismatch', 'no-copy'] as const) {
+      it(`and the download ends as ${outcome}, then the alert does not blame the connection`, async () => {
+        reload(outcome);
+        await settle();
+
+        expect(normalized(root().querySelector('[role="alert"]:not(:empty)')?.textContent)).toBe(
+          'Data se nepodařilo načíst. Zkuste to prosím za chvíli znovu, a když to nepůjde, napište nám na info@nfnn.cz.',
+        );
+      });
+    }
   });
 
-  it('when the device is offline and the donor asks to load the data again, then the card says it needs a connection and asks nothing', async () => {
+  it('when the device is offline and the donor asks to load the data again, then an alert says it needs a connection and nothing is asked', async () => {
     offline = true;
 
     button('Načíst data znovu').click();
     await settle();
 
     expect(download.reload).not.toHaveBeenCalled();
-    const offlineLine = root().querySelector('#device-data-offline');
-    expect(normalized(offlineLine?.textContent)).toBe('Potřebuje připojení.');
-    expect(button('Načíst data znovu').getAttribute('aria-describedby')).toBe(
-      'device-data-offline',
+    expect(normalized(root().querySelector('[role="alert"]:not(:empty)')?.textContent)).toBe(
+      'Bez připojení k internetu data načíst nejde. Připojte se a zkuste to znovu.',
     );
   });
 
@@ -181,14 +217,14 @@ describe('Given the card "Data v tomto zařízení"', () => {
       await settle();
     });
 
-    it('then a dialog says the data go from this device, the donor is signed out here and the server keeps everything', () => {
+    it('then a dialog says the copy goes from this device, the donor is signed out here, the server keeps everything and the copy comes back at the next sign-in', () => {
       const dialog = document.querySelector('dialog')!;
 
       expect(normalized(dialog.querySelector('h2')?.textContent)).toBe(
         'Smazat data z tohoto zařízení?',
       );
       expect(normalized(dialog.querySelector('.ui-dialog__lead')?.textContent)).toBe(
-        'Vaše dary a údaje se z tohoto zařízení smažou a odhlásíme vás tady. Na serveru zůstává vše, jak je.',
+        'Kopie vašich darů, potvrzení a bankovních účtů se z tohoto zařízení smaže a v tomto zařízení vás odhlásíme. Na serveru zůstane vše, jak je; po dalším přihlášení se kopie stáhne znovu.',
       );
       expect(vault.forget).not.toHaveBeenCalled();
     });
@@ -210,10 +246,11 @@ describe('Given the card "Data v tomto zařízení"', () => {
         return of(undefined);
       });
 
-      button('Smazat a odhlásit').click();
+      button('Smazat data a odhlásit').click();
       await settle();
 
       await vi.waitFor(() => expect(TestBed.inject(SignedOutNotice).shown()).toBe(true));
+      expect(TestBed.inject(SignedOutNotice).reason()).toBe('device-data-deleted');
       expect(order).toEqual(['forget', 'logout']);
       expect(vault.forget).toHaveBeenCalledWith(deviceAccountOf(DONOR));
       expect(navigate).toHaveBeenCalledWith('/');
@@ -222,11 +259,31 @@ describe('Given the card "Data v tomto zařízení"', () => {
     it('and confirms while the deletion runs, then both dialog buttons are disabled and the confirmation names the deletion', async () => {
       vault.forget.mockImplementation(() => new Promise(() => undefined));
 
-      button('Smazat a odhlásit').click();
+      button('Smazat data a odhlásit').click();
       await settle();
 
       expect(button('Mažeme data…').disabled).toBe(true);
       expect(button('Zrušit').disabled).toBe(true);
+      expect(document.querySelector<HTMLButtonElement>('.dialog-close')?.disabled).toBe(true);
+    });
+
+    it('and the deletion fails, then the dialog stays open with an alert, the donor stays signed in and may try again', async () => {
+      vault.forget.mockRejectedValueOnce(new Error('QuotaExceededError'));
+
+      button('Smazat data a odhlásit').click();
+      await settle();
+
+      await vi.waitFor(() =>
+        expect(
+          normalized(document.querySelector('dialog [role="alert"]:not(:empty)')?.textContent),
+        ).toBe(
+          'Data z tohoto zařízení se nepodařilo smazat. Zkuste to prosím znovu. Když to nepůjde, smažte data webu nfnn.cz v nastavení prohlížeče.',
+        ),
+      );
+      expect(logout).not.toHaveBeenCalled();
+      expect(TestBed.inject(SignedOutNotice).shown()).toBe(false);
+      expect(button('Smazat data a odhlásit').disabled).toBe(false);
+      expect(button('Zrušit').disabled).toBe(false);
     });
   });
 });

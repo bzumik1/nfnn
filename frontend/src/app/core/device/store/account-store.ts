@@ -5,6 +5,7 @@ import type { DeviceStorage, StoredRecord } from './device-storage';
 
 export const RECORD_SCHEMA_VERSION = 1;
 const RECORD_ID_LENGTH = 16;
+const SMALLEST_RECORD_BYTES = 1024;
 
 export interface StoredChunk {
   readonly id: string;
@@ -33,6 +34,7 @@ interface MetaPlaintext {
 export class AccountStore {
   private readonly current = signal<CopyContents | null>(null);
   readonly contents = this.current.asReadonly();
+  private closed = false;
 
   constructor(
     private readonly copy: OpenCopy,
@@ -52,7 +54,7 @@ export class AccountStore {
     }
     try {
       const contents = await this.contentsOf(records);
-      this.current.set(contents);
+      this.show(contents);
       return contents === null ? 'damaged' : 'loaded';
     } catch (failure: unknown) {
       if (failure instanceof CopyRefused || failure instanceof SyntaxError) {
@@ -76,7 +78,7 @@ export class AccountStore {
     const records: StoredRecord[] = [];
     for (const plaintext of plaintexts) {
       const recordId = bytesToBase64Url(randomBytes(RECORD_ID_LENGTH));
-      const bytes = utf8(JSON.stringify(plaintext));
+      const bytes = padded(utf8(JSON.stringify(plaintext)));
       try {
         const sealed = await this.copy.sealRecord(this.addressOf(recordId), bytes);
         records.push({ copyId: this.copy.copyId, recordId, ...sealed });
@@ -85,16 +87,19 @@ export class AccountStore {
       }
     }
     await this.storage.write({ replaceRecords: { copyId: this.copy.copyId, records } });
-    this.current.set(structuredClone(contents));
-  }
-
-  forget(): void {
-    this.current.set(null);
+    this.show(structuredClone(contents));
   }
 
   close(): void {
+    this.closed = true;
     this.current.set(null);
     this.copy.close();
+  }
+
+  private show(contents: CopyContents | null): void {
+    if (!this.closed) {
+      this.current.set(contents);
+    }
   }
 
   private async contentsOf(records: readonly StoredRecord[]): Promise<CopyContents | null> {
@@ -124,4 +129,15 @@ export class AccountStore {
   private addressOf(recordId: string): RecordAddress {
     return { collection: this.feed, recordId, schemaVersion: RECORD_SCHEMA_VERSION };
   }
+}
+
+function padded(json: Uint8Array<ArrayBuffer>): Uint8Array<ArrayBuffer> {
+  let size = SMALLEST_RECORD_BYTES;
+  while (size < json.length) {
+    size *= 2;
+  }
+  const bytes = new Uint8Array(size).fill(0x20);
+  bytes.set(json);
+  json.fill(0);
+  return bytes;
 }

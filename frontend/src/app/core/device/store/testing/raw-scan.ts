@@ -18,10 +18,20 @@ export async function rawIndexedDbDump(): Promise<RawDump> {
     database.close();
   }
   values.push(storageText(localStorage), storageText(sessionStorage), document.cookie);
-  const text = JSON.stringify(values, (_key, value: unknown) =>
-    value instanceof CryptoKey ? '<CryptoKey>' : value,
-  );
-  return { text, decodedTokens: decodedTokensOf(text) };
+  const binaries: Uint8Array[] = [];
+  const raw = JSON.stringify(values, (_key, value: unknown) => {
+    if (value instanceof CryptoKey) {
+      return '<CryptoKey>';
+    }
+    const bytes = bytesOf(value);
+    if (bytes !== null) {
+      binaries.push(bytes);
+      return '<bytes>';
+    }
+    return value;
+  });
+  const text = `${raw}\n${urlDecoded(raw)}`;
+  return { text, decodedTokens: [...binaries, ...decodedTokensOf(text), ...hexTokensOf(text)] };
 }
 
 export function leaks(dump: RawDump, canary: string): boolean {
@@ -38,6 +48,36 @@ function storageText(storage: Storage): string {
     Array.from({ length: storage.length }, (_, index) => {
       const key = storage.key(index) ?? '';
       return [key, storage.getItem(key)];
+    }),
+  );
+}
+
+function bytesOf(value: unknown): Uint8Array | null {
+  if (Object.prototype.toString.call(value) === '[object ArrayBuffer]') {
+    return new Uint8Array(value as ArrayBuffer);
+  }
+  if (ArrayBuffer.isView(value)) {
+    return new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
+  }
+  return null;
+}
+
+function urlDecoded(text: string): string {
+  return text.replace(/(?:%[0-9A-Fa-f]{2})+/g, (encoded) => {
+    try {
+      return decodeURIComponent(encoded);
+    } catch {
+      return encoded;
+    }
+  });
+}
+
+function hexTokensOf(text: string): Uint8Array[] {
+  const tokens = text.match(/[0-9A-Fa-f]{8,}/g) ?? [];
+  return tokens.flatMap((token) =>
+    [0, 1].map((skip) => {
+      const even = token.slice(skip, skip + Math.floor((token.length - skip) / 2) * 2);
+      return Uint8Array.from(even.match(/../g) ?? [], (pair) => parseInt(pair, 16));
     }),
   );
 }

@@ -16,7 +16,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { FormsModule, NgForm } from '@angular/forms';
-import { from, map, Observable, of, switchMap } from 'rxjs';
+import { Observable, finalize, from, map, of, switchMap } from 'rxjs';
 import { describeProblem, problemTypeEndsWith } from '../../../../core/auth/api-problem';
 import { AuthApi } from '../../../../core/auth/auth-api';
 import { AuthStore } from '../../../../core/auth/auth-store';
@@ -182,19 +182,24 @@ export class PasskeysPanel {
         switchMap((confirmation) => this.authApi.passkeyCreationOptions(confirmation)),
         switchMap((options) =>
           from(this.authenticator.createWithPrf(options, this.prfInput)).pipe(
-            switchMap(({ credential, prf }) =>
-              this.authApi.addPasskey(options.challenge, name, credential).pipe(
+            switchMap(({ credential, prf }) => {
+              let handedOver = false;
+              return this.authApi.addPasskey(options.challenge, name, credential).pipe(
                 map((passkey) => {
                   const donor = this.auth.donor();
                   if (prf !== null && donor !== null) {
+                    handedOver = true;
                     void this.device.passkeyAdded(deviceAccountOf(donor), prf);
-                  } else {
-                    prf?.output.fill(0);
                   }
                   return passkey;
                 }),
-              ),
-            ),
+                finalize(() => {
+                  if (!handedOver) {
+                    prf?.output.fill(0);
+                  }
+                }),
+              );
+            }),
           ),
         ),
       )

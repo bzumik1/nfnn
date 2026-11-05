@@ -642,6 +642,7 @@ export class LoginDialog {
 
   private enterPortal(): void {
     this.loading.set(false);
+    this.password = '';
     this.registration = emptyRegistration();
     this.dialog.signedIn();
   }

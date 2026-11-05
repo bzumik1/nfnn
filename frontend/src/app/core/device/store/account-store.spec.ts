@@ -1,5 +1,6 @@
 import 'fake-indexeddb/auto';
 import { IDBFactory } from 'fake-indexeddb';
+import { openDB } from 'idb';
 import { generateSessionKey, OpenCopy, openWithSessionKey } from '../crypto/copy-keys';
 import { base64UrlToBytes, bytesToBase64Url } from '../crypto/device-bytes';
 import { AccountStore, type CopyContents } from './account-store';
@@ -10,6 +11,7 @@ import { leaks, rawIndexedDbDump } from './testing/raw-scan';
 const CANARY_NAME = 'Kanárek Zlatohlávek';
 const CANARY_IBAN = 'CZ4955000000001041000071';
 const CHUNK_ID = 'donations:2026';
+const AES_GCM_TAG_BYTES = 16;
 
 function contents(): CopyContents {
   return {
@@ -93,6 +95,54 @@ describe('Given an account store over IndexedDB', () => {
     expect(leaks(await rawIndexedDbDump(), CANARY_NAME)).toBe(true);
   });
 
+  describe('when the raw scan is planted with the name in another shape', () => {
+    async function planted(value: unknown): Promise<void> {
+      const database = await openDB('nfnn.raw-scan-planted', 1, {
+        upgrade: (created) => void created.createObjectStore('values'),
+      });
+      await database.put('values', value, 'planted');
+      database.close();
+    }
+
+    afterEach(() => {
+      document.cookie = 'planted=; max-age=0';
+      localStorage.clear();
+    });
+
+    it('as bytes in a Uint8Array, then it finds it', async () => {
+      await planted(new TextEncoder().encode(`x${CANARY_NAME}y`));
+
+      expect(leaks(await rawIndexedDbDump(), CANARY_NAME)).toBe(true);
+    });
+
+    it('as an ArrayBuffer, then it finds it', async () => {
+      await planted(new TextEncoder().encode(`x${CANARY_NAME}y`).buffer);
+
+      expect(leaks(await rawIndexedDbDump(), CANARY_NAME)).toBe(true);
+    });
+
+    it('as hex, then it finds it', async () => {
+      const hex = Array.from(new TextEncoder().encode(CANARY_NAME), (byte) =>
+        byte.toString(16).padStart(2, '0'),
+      ).join('');
+      await planted({ field: hex.toUpperCase() });
+
+      expect(leaks(await rawIndexedDbDump(), CANARY_NAME)).toBe(true);
+    });
+
+    it('URL-encoded in a cookie, then it finds it', async () => {
+      document.cookie = `planted=${encodeURIComponent(CANARY_NAME)}`;
+
+      expect(leaks(await rawIndexedDbDump(), CANARY_NAME)).toBe(true);
+    });
+
+    it('URL-encoded in local storage, then it finds it', async () => {
+      localStorage.setItem('nfnn.planted', encodeURIComponent(CANARY_NAME));
+
+      expect(leaks(await rawIndexedDbDump(), CANARY_NAME)).toBe(true);
+    });
+  });
+
   it('when contents are stored again, then only the new records remain', async () => {
     await store.replace(contents());
     const first = (await storage.records(copy.copyId)).map((record) => record.recordId);
@@ -136,6 +186,64 @@ describe('Given an account store over IndexedDB', () => {
     const otherFeed = new AccountStore(await sameCopy(copy), storage, 'administration');
 
     expect(await otherFeed.load()).toBe('damaged');
+  });
+
+  it('when it is closed while its records are being written, then it shows no contents afterwards', async () => {
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => (release = resolve));
+    const slow: DeviceStorage = {
+      ...storage,
+      write: async (change) => {
+        await held;
+        await storage.write(change);
+      },
+    };
+    const racing = new AccountStore(copy, slow, 'donor');
+
+    const replaced = racing.replace(contents());
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    racing.close();
+    release();
+    await replaced;
+
+    expect(racing.contents()).toBeNull();
+  });
+
+  it('when it is closed while its records are being read, then it shows no contents afterwards', async () => {
+    await store.replace(contents());
+    const reader = new AccountStore(await sameCopy(copy), storage, 'donor');
+
+    const loaded = reader.load();
+    reader.close();
+
+    await expect(loaded).resolves.toBe('damaged');
+    expect(reader.contents()).toBeNull();
+  });
+
+  it('when contents of different sizes are stored, then every sealed record has the length of a size bucket of at least 1 KiB, so its size tells little about the gifts', async () => {
+    const many: CopyContents = {
+      ...contents(),
+      chunks: [
+        ...contents().chunks,
+        {
+          id: 'donations:2025',
+          rowsSha256: 'c'.repeat(64),
+          rows: Array.from({ length: 100 }, (_, index) => ({ amountMinor: index * 1000 })),
+        },
+      ],
+    };
+    await store.replace(many);
+
+    const lengths = (await storage.records(copy.copyId)).map(
+      (record) => base64UrlToBytes(record.sealed).length - AES_GCM_TAG_BYTES,
+    );
+
+    expect(lengths.length).toBe(4);
+    for (const length of lengths) {
+      expect(length).toBeGreaterThanOrEqual(1024);
+      expect(Math.log2(length) % 1).toBe(0);
+    }
+    expect(new Set(lengths).size).toBeGreaterThan(1);
   });
 
   it('when it is closed, then its contents are gone and its copy refuses to seal', async () => {

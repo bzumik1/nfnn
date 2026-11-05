@@ -8,7 +8,10 @@ import { SignedOutNotice } from '../../../../core/auth/signed-out-notice';
 import { DeviceVault } from '../../../../core/device/store/device-vault';
 import { Connectivity } from '../../../../core/navigation/connectivity';
 import { LiveNotice, type Notice } from '../../../../shared/ui/live-notice/live-notice';
-import { DonorCopyDownload } from '../../../donations/device-copy/donor-copy-download';
+import {
+  DonorCopyDownload,
+  type DownloadOutcome,
+} from '../../../donations/device-copy/donor-copy-download';
 import { formatBankTime } from '../../../donations/donation-date';
 import { DeleteDeviceDataDialog } from './delete-device-data-dialog';
 
@@ -30,13 +33,19 @@ export class DeviceDataCard {
   protected readonly reloading = signal(false);
   protected readonly confirming = signal(false);
   protected readonly deleting = signal(false);
+  protected readonly deleteFailed = signal(false);
   protected readonly notice = signal<Notice | null>(null);
-  protected readonly offline = signal(false);
 
   protected readonly memoryOnly = computed(() => this.vault.mode() === 'memory');
+  protected readonly locked = computed(() => this.vault.locked());
   protected readonly storedAt = computed(() => {
     const contents = this.vault.opened()?.store.contents();
-    return contents === null || contents === undefined ? null : formatBankTime(contents.storedAt);
+    if (contents === null || contents === undefined) {
+      return null;
+    }
+    const shown = formatBankTime(contents.storedAt);
+    const split = shown.lastIndexOf(' ');
+    return { date: shown.slice(0, split), time: shown.slice(split + 1) };
   });
   protected readonly saving = computed(
     () => this.vault.opened() !== null && this.storedAt() === null && this.download.downloading(),
@@ -47,30 +56,23 @@ export class DeviceDataCard {
       return;
     }
     if (this.connectivity.isOffline()) {
-      this.offline.set(true);
+      this.notice.set({
+        kind: 'alert',
+        text: $localize`:@@donor.deviceData.needsConnection:Bez připojení k internetu data načíst nejde. Připojte se a zkuste to znovu.`,
+      });
       return;
     }
-    this.offline.set(false);
     this.reloading.set(true);
     this.notice.set(null);
     void this.download.reload().then((outcome) => {
       this.reloading.set(false);
-      this.notice.set(
-        outcome === 'stored'
-          ? {
-              kind: 'status',
-              text: $localize`:@@donor.deviceData.reloaded:Data jsou načtená znovu.`,
-            }
-          : {
-              kind: 'alert',
-              text: $localize`:@@donor.deviceData.reloadFailed:Data se nepodařilo načíst. Zkontrolujte připojení a zkuste to prosím znovu.`,
-            },
-      );
+      this.notice.set(reloadNotice(outcome));
     });
   }
 
   askToDelete(): void {
     this.notice.set(null);
+    this.deleteFailed.set(false);
     this.confirming.set(true);
   }
 
@@ -86,14 +88,41 @@ export class DeviceDataCard {
       return;
     }
     this.deleting.set(true);
-    void this.vault
-      .forget(deviceAccountOf(donor))
-      .catch(() => undefined)
-      .then(() => {
+    this.deleteFailed.set(false);
+    this.vault.forget(deviceAccountOf(donor)).then(
+      () =>
         this.auth.logout().subscribe(() => {
           this.confirming.set(false);
-          void this.router.navigateByUrl('/').then(() => this.signedOut.show());
-        });
-      });
+          void this.router
+            .navigateByUrl('/')
+            .then(() => this.signedOut.show('device-data-deleted'));
+        }),
+      () => {
+        this.deleting.set(false);
+        this.deleteFailed.set(true);
+      },
+    );
+  }
+}
+
+function reloadNotice(outcome: DownloadOutcome): Notice {
+  switch (outcome) {
+    case 'stored':
+    case 'skipped':
+      return {
+        kind: 'status',
+        text: $localize`:@@donor.deviceData.reloaded:Data jsou načtená znovu.`,
+      };
+    case 'failed':
+      return {
+        kind: 'alert',
+        text: $localize`:@@donor.deviceData.reloadFailed:Data se nepodařilo načíst. Zkontrolujte připojení a zkuste to prosím znovu.`,
+      };
+    case 'mismatch':
+    case 'no-copy':
+      return {
+        kind: 'alert',
+        text: $localize`:@@donor.deviceData.reloadFailedOther:Data se nepodařilo načíst. Zkuste to prosím za chvíli znovu, a když to nepůjde, napište nám na info@nfnn.cz.`,
+      };
   }
 }

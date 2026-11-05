@@ -141,6 +141,31 @@ describe('Given a new device copy', () => {
     expect((await refusal(copy.wrapWithPrf(CREDENTIAL, PRF_OUTPUT))).reason).toBe('closed');
   });
 
+  it('when it is closed while its password wrap is being made, then the wrap is refused and no wrap of a zeroed key comes out', async () => {
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    const small = new SmallArgon2Derivation();
+    const slow = {
+      derive: async (...question: Parameters<SmallArgon2Derivation['derive']>) => {
+        await gate;
+        return small.derive(...question);
+      },
+    };
+
+    const wrapping = copy.wrapWithPassword(PASSWORD, slow);
+    copy.close();
+    release();
+
+    expect((await refusal(wrapping)).reason).toBe('closed');
+  });
+
+  it('when it is closed while its passkey wrap is being made, then the wrap is refused', async () => {
+    const wrapping = copy.wrapWithPrf(CREDENTIAL, PRF_OUTPUT);
+    copy.close();
+
+    expect((await refusal(wrapping)).reason).toBe('closed');
+  });
+
   it('when it is re-keyed, then a wrap made before opens a copy that cannot read the records sealed after', async () => {
     const oldWrap = await copy.wrapWithPrf(CREDENTIAL, PRF_OUTPUT);
     const rekeyed = await copy.rekeyed();

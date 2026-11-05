@@ -205,6 +205,17 @@ export const STEPS: Step[] = [
     open: (page) => donorPage(page, '/darce/udaje'),
   },
   {
+    id: 'donor-device-data-delete',
+    title: 'the dialog that deletes the data on this device',
+    open: async (page) => {
+      await donorPage(page, '/darce/udaje');
+      await page.getByRole('button', { name: 'Smazat data z tohoto zařízení' }).click();
+      await expect(
+        page.getByRole('dialog').getByRole('heading', { name: 'Smazat data z tohoto zařízení?' }),
+      ).toBeVisible();
+    },
+  },
+  {
     id: 'donor-menu',
     title: "the donor's account menu",
     open: async (page) => {

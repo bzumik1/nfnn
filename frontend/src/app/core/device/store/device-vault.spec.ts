@@ -6,6 +6,7 @@ import { type DeviceAccount, userHandleOf } from '../../auth/session-device';
 import { TAB_LOCKS } from '../../auth/session-tabs';
 import { ErrorReporter } from '../../errors/error-reporter';
 import type { PrfReading } from '../crypto/prf';
+import type { PasswordKeyQuestion } from '../crypto/password-key';
 import { SmallArgon2Derivation } from '../crypto/testing/password-key-derivations';
 import type { CopyContents } from './account-store';
 import { DEVICE_DATABASE, type DeviceStorage } from './device-storage';
@@ -19,6 +20,7 @@ import {
   VAULT_LOCK_NAME,
 } from './device-vault';
 import { openIdbDeviceStorage } from './idb-device-storage';
+import { MemoryDeviceStorage } from './memory-device-storage';
 import { ChannelBus, NamedLocks } from './testing/fake-device';
 import { leaks, rawIndexedDbDump } from './testing/raw-scan';
 
@@ -29,6 +31,10 @@ const JANA: DeviceAccount = {
 const PETR: DeviceAccount = {
   email: 'petr@example.cz',
   userHandle: userHandleOf('0190c3a2-7b1e-7cc1-8a52-000000000002'),
+};
+const NEWCOMER: DeviceAccount = {
+  email: JANA.email,
+  userHandle: userHandleOf('0190c3a2-7b1e-7cc1-8a52-000000000003'),
 };
 const PASSWORD = 'Kanárek 2026';
 const CREDENTIAL = 'Y3JlZGVudGlhbC0x';
@@ -50,6 +56,60 @@ function prfReading(fill = 7): PrfReading {
   };
 }
 
+class GatedDerivation extends SmallArgon2Derivation {
+  private gate: Promise<void> | null = null;
+  private release: () => void = () => undefined;
+
+  hold(): void {
+    this.gate = new Promise((resolve) => (this.release = resolve));
+  }
+
+  open(): void {
+    this.gate = null;
+    this.release();
+  }
+
+  override async derive(question: PasswordKeyQuestion) {
+    const gate = this.gate;
+    const derived = super.derive(question);
+    if (gate !== null) {
+      await gate;
+    }
+    return derived;
+  }
+}
+
+class FailingWrites implements DeviceStorage {
+  readonly kind = 'indexed-db' as const;
+  private readonly inner = new MemoryDeviceStorage();
+
+  deviceSalt() {
+    return this.inner.deviceSalt();
+  }
+  entries() {
+    return this.inner.entries();
+  }
+  sessionKey(copyId: string) {
+    return this.inner.sessionKey(copyId);
+  }
+  records(copyId: string) {
+    return this.inner.records(copyId);
+  }
+  async write(): Promise<void> {
+    throw new DOMException('The quota is full', 'QuotaExceededError');
+  }
+  destroy() {
+    return this.inner.destroy();
+  }
+  close(): void {
+    this.inner.close();
+  }
+}
+
+async function databaseNames(): Promise<string[]> {
+  return (await indexedDB.databases()).map((database) => database.name ?? '');
+}
+
 async function rawStorage(): Promise<DeviceStorage> {
   return openIdbDeviceStorage();
 }
@@ -69,7 +129,7 @@ describe('Given the device vault over IndexedDB with real WebCrypto', () => {
   let reporter: { report: ReturnType<typeof vi.fn> };
   let persist: ReturnType<typeof vi.fn>;
   let opener: ReturnType<typeof vi.fn>;
-  let derivation: SmallArgon2Derivation;
+  let derivation: GatedDerivation;
   let vault: DeviceVault;
 
   function anotherTab(): DeviceVault {
@@ -92,7 +152,7 @@ describe('Given the device vault over IndexedDB with real WebCrypto', () => {
     locks = new NamedLocks();
     reporter = { report: vi.fn() };
     persist = vi.fn();
-    derivation = new SmallArgon2Derivation();
+    derivation = new GatedDerivation();
     opener = vi.fn(() => openIdbDeviceStorage());
     TestBed.configureTestingModule({
       providers: [
@@ -267,10 +327,53 @@ describe('Given the device vault over IndexedDB with real WebCrypto', () => {
       );
     });
 
-    it('and her session ends remotely, then the copy is deleted as by "Smazat data"', async () => {
-      await vault.endedRemotely(JANA);
+    it('then the opened copy names her account', () => {
+      expect(vault.opened()?.account).toEqual(JANA);
+    });
 
-      expect(await storedEntries()).toEqual([]);
+    it('and the page is left without a sign-out and a later refresh is refused before anyone is known, then only the password wrap stays and no session key is left', async () => {
+      const copyId = vault.opened()!.store.copyId;
+      const later = anotherTab();
+
+      await later.sessionLost();
+
+      const entries = await storedEntries();
+      expect(entries.map((entry) => entry.wraps.map((wrap) => wrap.kind))).toEqual([['password']]);
+      const storage = await rawStorage();
+      expect(await storage.sessionKey(copyId)).toBeNull();
+      storage.close();
+    });
+
+    it('and the page is left without a sign-out and Petr signs in, then her copy keeps only its password wrap', async () => {
+      const copyId = vault.opened()!.store.copyId;
+      const later = anotherTab();
+
+      await later.signedIn(PETR, { kind: 'password', password: 'Petrovo heslo' });
+
+      const jana = (await storedEntries()).find((entry) => entry.copyId === copyId);
+      expect(jana?.wraps.map((wrap) => wrap.kind)).toEqual(['password']);
+      const storage = await rawStorage();
+      expect(await storage.sessionKey(copyId)).toBeNull();
+      storage.close();
+    });
+
+    it('and another tab signs out while her new password is being wrapped, then the copy still opens with the new password and shows her gifts', async () => {
+      await vault.replaceContents(vault.opened()!.store, contentsOf(CANARY));
+      derivation.hold();
+      const changing = vault.passwordChanged(JANA, 'Nové heslo 2026');
+      await vi.waitFor(() => expect(derivation.requested).toHaveLength(2));
+
+      const other = anotherTab();
+      const signingOut = other.signedOut(JANA);
+      vault.signedOutElsewhere();
+      derivation.open();
+      await changing;
+      await signingOut;
+      await vi.waitFor(() => expect(vault.opened()).toBeNull());
+      const later = anotherTab();
+      await later.signedIn(JANA, { kind: 'password', password: 'Nové heslo 2026' });
+
+      expect(later.opened()?.store.contents()).toEqual(contentsOf(CANARY));
     });
 
     it('and another tab has her copy open and she deletes the data here, then the other tab closes its copy', async () => {
@@ -333,6 +436,104 @@ describe('Given the device vault over IndexedDB with real WebCrypto', () => {
       after.close();
       await vault.signedIn(PETR, { kind: 'password', password: 'Petrovo heslo' });
       expect(vault.opened()?.store.contents()).toEqual(contentsOf('Petr'));
+    });
+  });
+
+  describe('when another account with the e-mail Jana once had signs in on this device', () => {
+    beforeEach(async () => {
+      await vault.signedIn(JANA, { kind: 'password', password: PASSWORD });
+      await vault.replaceContents(vault.opened()!.store, contentsOf(CANARY));
+    });
+
+    it("then Jana's copy does not open for it, even with its session wrap still there", async () => {
+      await anotherTab().signedIn(NEWCOMER, { kind: 'password', password: 'Cizí heslo 2026' });
+
+      const later = anotherTab();
+      await later.signedIn(NEWCOMER, { kind: 'password', password: 'Cizí heslo 2026' });
+      expect(later.opened()?.store.contents()).not.toEqual(contentsOf(CANARY));
+    });
+
+    it("then Jana's copy stays and opens again with her password", async () => {
+      await vault.signedOut(JANA);
+      await vault.signedIn(NEWCOMER, { kind: 'password', password: 'Cizí heslo 2026' });
+      await vault.signedOut(NEWCOMER);
+
+      await vault.signedIn(JANA, { kind: 'password', password: PASSWORD });
+
+      expect(vault.opened()?.store.contents()).toEqual(contentsOf(CANARY));
+    });
+
+    it("and it deletes its data here, then Jana's copy stays", async () => {
+      await vault.signedOut(JANA);
+      await vault.signedIn(NEWCOMER, { kind: 'password', password: 'Cizí heslo 2026' });
+
+      await vault.forget(NEWCOMER);
+      await vault.signedIn(JANA, { kind: 'password', password: PASSWORD });
+
+      expect(vault.opened()?.store.contents()).toEqual(contentsOf(CANARY));
+    });
+  });
+
+  describe('when Jana keeps a copy locked by her password and signs in with no secret to open it', () => {
+    beforeEach(async () => {
+      await vault.signedIn(JANA, { kind: 'password', password: PASSWORD });
+      await vault.replaceContents(vault.opened()!.store, contentsOf(CANARY));
+      await vault.signedOut(JANA);
+    });
+
+    it('then nothing opens, the vault says the copy is locked, and it opens again with her password', async () => {
+      await vault.signedIn(JANA, { kind: 'none' });
+
+      expect(vault.opened()).toBeNull();
+      expect(vault.locked()).toBe(true);
+      await vault.signedOut(JANA);
+      await vault.signedIn(JANA, { kind: 'password', password: PASSWORD });
+
+      expect(vault.locked()).toBe(false);
+      expect(vault.opened()?.store.contents()).toEqual(contentsOf(CANARY));
+    });
+
+    it('and the page is loaded again, then the locked copy is kept and no new one is made', async () => {
+      await anotherTab().restored(JANA);
+
+      const entries = await storedEntries();
+      expect(entries).toHaveLength(1);
+      await vault.signedIn(JANA, { kind: 'password', password: PASSWORD });
+      expect(vault.opened()?.store.contents()).toEqual(contentsOf(CANARY));
+    });
+  });
+
+  describe('when the device holds no copy and a passkey sign-in asks for the PRF input', () => {
+    it('and the sign-in is cancelled, then no database is made', async () => {
+      expect(await vault.prfInput()).not.toBeNull();
+
+      expect(await databaseNames()).not.toContain(DEVICE_DATABASE);
+    });
+
+    it('and the sign-in completes, then the copy is wrapped under the input that was asked', async () => {
+      const input = await vault.prfInput();
+
+      await vault.signedIn(JANA, { kind: 'prf', reading: prfReading() });
+
+      expect(await vault.prfInput()).toEqual(input);
+    });
+  });
+
+  describe('when the device storage opens but refuses every write', () => {
+    beforeEach(() => {
+      opener.mockImplementation(async () => new FailingWrites());
+    });
+
+    it('then the copy lives in memory and the failure is reported', async () => {
+      await vault.signedIn(JANA, { kind: 'password', password: PASSWORD });
+
+      expect(vault.mode()).toBe('memory');
+      expect(vault.opened()).not.toBeNull();
+      expect(reporter.report).toHaveBeenCalledWith(
+        'device-store-open',
+        'global',
+        expect.objectContaining({ name: 'QuotaExceededError' }),
+      );
     });
   });
 
@@ -424,6 +625,44 @@ describe('Given the device vault over IndexedDB with real WebCrypto', () => {
         expect.objectContaining({ name: 'TimeoutError' }),
       );
       expect(localStorage.getItem(DEVICE_COPY_MARKER_KEY)).toBeNull();
+    });
+  });
+
+  describe('when two tabs start a session of Jana at the same moment', () => {
+    it('then the vault lock lets one create the copy and the other open it, so the device holds one copy under one salt', async () => {
+      const other = anotherTab();
+
+      await Promise.all([
+        vault.signedIn(JANA, { kind: 'password', password: PASSWORD }),
+        other.restored(JANA),
+      ]);
+
+      const entries = await storedEntries();
+      expect(entries).toHaveLength(1);
+      expect(vault.opened()?.store.copyId).toBe(entries[0].copyId);
+      expect(other.opened()?.store.copyId).toBe(entries[0].copyId);
+    });
+  });
+
+  describe('when two downloads of one copy run at once', () => {
+    it('then the copy lock runs them one after the other', async () => {
+      await vault.signedIn(JANA, { kind: 'password', password: PASSWORD });
+      const store = vault.opened()!.store;
+      const order: string[] = [];
+      let releaseFirst: () => void = () => undefined;
+      const firstHeld = new Promise<void>((resolve) => (releaseFirst = resolve));
+
+      const first = vault.withCopyLock(store, async () => {
+        order.push('first started');
+        await firstHeld;
+        order.push('first done');
+      });
+      const second = vault.withCopyLock(store, async () => void order.push('second started'));
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      releaseFirst();
+      await Promise.all([first, second]);
+
+      expect(order).toEqual(['first started', 'first done', 'second started']);
     });
   });
 

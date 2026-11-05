@@ -10,6 +10,7 @@ import { Dialog } from '../../../../shared/ui/dialog/dialog';
 })
 export class DeleteDeviceDataDialog {
   readonly deleting = input(false);
+  readonly failed = input(false);
   readonly confirmed = output<void>();
   readonly cancelled = output<void>();
 }

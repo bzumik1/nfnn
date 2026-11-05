@@ -5,12 +5,18 @@
 
   @if (memoryOnly()) {
     <p class="device-data-state" i18n="@@donor.deviceData.memoryOnly">
-      V tomto prohlížeči se nic neukládá. Vaše data jsou jen v paměti této stránky a po jejím
-      zavření zmizí.
+      V tomto prohlížeči se nic neukládá. Kopie vašich darů je jen v paměti této stránky a po jejím
+      zavření zmizí; na serveru zůstává vše.
     </p>
   } @else if (storedAt(); as storedAt) {
     <p class="device-data-state" i18n="@@donor.deviceData.stored">
-      Uloženo v zařízení · aktualizováno <span class="device-data-time">{{ storedAt }}</span>
+      Uloženo v zařízení · aktualizováno <span class="device-data-time">{{ storedAt.date }}</span
+      >&ngsp;<span class="device-data-time">{{ storedAt.time }}</span>
+    </p>
+  } @else if (locked()) {
+    <p class="device-data-state" i18n="@@donor.deviceData.locked">
+      Kopie v tomto zařízení je zamčená. Otevře se, až se přihlásíte heslem nebo přístupovým klíčem,
+      který to umí.
     </p>
   } @else if (saving()) {
     <p class="device-data-state" i18n="@@donor.deviceData.saving">Data se ukládají do zařízení…</p>
@@ -22,51 +28,47 @@
 
   @if (!memoryOnly()) {
     <p class="device-data-about" i18n="@@donor.deviceData.about">
-      Kopie vašich darů a potvrzení se v tomto prohlížeči ukládá zašifrovaně a klíč k ní zná jen
-      toto zařízení. Po odhlášení zůstane zamčená vaším heslem nebo přístupovým klíčem; když jste se
-      přihlásili jinak, odhlášením se smaže.
+      Kopie vašich darů, potvrzení a bankovních účtů se v tomto prohlížeči ukládá zašifrovaně a klíč
+      k ní zná jen toto zařízení. Na serveru se tím nic nemění. Když jste se přihlásili heslem,
+      zůstane kopie po odhlášení zamčená tímto heslem. Po přihlášení přístupovým klíčem zůstane jen
+      tehdy, když to váš klíč umí; jinak se odhlášením smaže.
     </p>
   }
 
   <div class="device-data-actions">
-    <button
-      type="button"
-      class="ui-button device-data-reload"
-      [disabled]="reloading() || deleting()"
-      [attr.aria-describedby]="offline() ? 'device-data-offline' : null"
-      (click)="reload()"
-    >
-      @if (reloading()) {
-        <span i18n="@@donor.deviceData.reloading">Načítáme data…</span>
-      } @else {
-        <span i18n="@@donor.deviceData.reload">Načíst data znovu</span>
-      }
-    </button>
-    <button
-      type="button"
-      class="ui-button ui-button--danger-outline device-data-delete"
-      [disabled]="deleting()"
-      (click)="askToDelete()"
-      i18n="@@donor.deviceData.delete"
-    >
-      Smazat data z tohoto zařízení
-    </button>
+    @if (!locked()) {
+      <button
+        type="button"
+        class="ui-button device-data-reload"
+        [disabled]="reloading() || deleting()"
+        (click)="reload()"
+      >
+        @if (reloading()) {
+          <span i18n="@@donor.deviceData.reloading">Načítáme data…</span>
+        } @else {
+          <span i18n="@@donor.deviceData.reload">Načíst data znovu</span>
+        }
+      </button>
+    }
+    @if (!memoryOnly()) {
+      <button
+        type="button"
+        class="ui-button ui-button--danger-outline device-data-delete"
+        [disabled]="deleting()"
+        (click)="askToDelete()"
+        i18n="@@donor.deviceData.delete"
+      >
+        Smazat data z tohoto zařízení
+      </button>
+    }
   </div>
-  @if (offline()) {
-    <p
-      id="device-data-offline"
-      class="device-data-offline"
-      i18n="@@donor.deviceData.needsConnection"
-    >
-      Potřebuje připojení.
-    </p>
-  }
   <app-live-notice [notice]="notice()" />
 </section>
 
 @if (confirming()) {
   <app-delete-device-data-dialog
     [deleting]="deleting()"
+    [failed]="deleteFailed()"
     (confirmed)="confirmDelete()"
     (cancelled)="cancelDelete()"
   />

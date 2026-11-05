@@ -28,6 +28,7 @@ interface RawDevice {
   readonly databases: readonly string[];
   readonly text: string;
   readonly wraps: readonly string[];
+  readonly copyIds: readonly string[];
   readonly marker: string | null;
 }
 
@@ -39,6 +40,7 @@ function rawDevice(page: Page): Promise<RawDevice> {
         databases: listed,
         text: '',
         wraps: [],
+        copyIds: [],
         marker: localStorage.getItem('nfnn.device-copy'),
       };
     }
@@ -49,37 +51,60 @@ function rawDevice(page: Page): Promise<RawDevice> {
     });
     const values: unknown[] = [];
     for (const store of Array.from(database.objectStoreNames)) {
-      values.push(
-        store,
-        await new Promise((resolve, reject) => {
-          const request = database.transaction(store).objectStore(store).getAll();
+      const read = (method: 'getAll' | 'getAllKeys') =>
+        new Promise((resolve, reject) => {
+          const request = database.transaction(store).objectStore(store)[method]();
           request.onsuccess = () => resolve(request.result);
           request.onerror = () => reject(request.error);
-        }),
-      );
+        });
+      values.push(store, await read('getAll'), await read('getAllKeys'));
     }
     database.close();
     const copies = (values[values.indexOf('copies') + 1] ?? []) as {
+      copyId: string;
       wraps: { kind: string }[];
     }[];
+    const webStorage = [localStorage, sessionStorage].map((storage) =>
+      Array.from({ length: storage.length }, (_, index) => {
+        const key = storage.key(index) ?? '';
+        return [key, storage.getItem(key)];
+      }),
+    );
+    values.push(webStorage, document.cookie);
+    const base64 = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes));
     return {
       databases: listed,
-      text: JSON.stringify(values, (_key, value: unknown) =>
-        value instanceof CryptoKey ? '<CryptoKey>' : value,
-      ),
+      text: JSON.stringify(values, (_key, value: unknown) => {
+        if (value instanceof CryptoKey) {
+          return '<CryptoKey>';
+        }
+        if (value instanceof ArrayBuffer) {
+          return base64(new Uint8Array(value));
+        }
+        if (ArrayBuffer.isView(value)) {
+          return base64(new Uint8Array(value.buffer, value.byteOffset, value.byteLength));
+        }
+        return value;
+      }),
       wraps: copies.flatMap((copy) => copy.wraps.map((wrap) => wrap.kind)).sort(),
+      copyIds: copies.map((copy) => copy.copyId),
       marker: localStorage.getItem('nfnn.device-copy'),
     };
   }, DEVICE_DATABASE);
 }
 
-function leaked(raw: RawDevice, canary: string): boolean {
+function leaked(text: string, canary: string): boolean {
   const forms = [0, 1, 2].flatMap((pad) => {
     const base64 = Buffer.concat([Buffer.alloc(pad), Buffer.from(canary)]).toString('base64');
     const stable = base64.slice([0, 2, 3][pad], -3);
     return [stable, stable.replace(/\+/g, '-').replace(/\//g, '_')];
   });
-  return [canary, ...forms].some((form) => raw.text.includes(form));
+  const hex = Buffer.from(canary).toString('hex');
+  const lower = text.toLowerCase();
+  return (
+    [canary, encodeURIComponent(canary), ...forms].some((form) => text.includes(form)) ||
+    lower.includes(hex)
+  );
 }
 
 async function openDeviceData(page: Page): Promise<void> {
@@ -104,21 +129,32 @@ test.describe('Given a donor who signs in with a password on a device that keeps
     await expect.poll(async () => (await rawDevice(page)).wraps).toEqual(['password', 'session']);
     const raw = await rawDevice(page);
     expect(raw.databases).toContain(DEVICE_DATABASE);
+    const cookies = JSON.stringify(await page.context().cookies());
     for (const canary of [CANARY_PAYER, CANARY_IBAN, donor.email, PASSWORD, 'donations:2026']) {
-      expect(leaked(raw, canary), canary).toBe(false);
+      expect(leaked(`${raw.text}\n${cookies}`, canary), canary).toBe(false);
     }
   });
 
-  test('when she loads the page again, then the copy opens without her password and is still stored', async ({
+  test('when she loads the page again, then the same copy opens with its session key, without her password and without downloading again', async ({
     page,
   }) => {
     await signIn(page);
     await openDeviceData(page);
     await expect(page.getByText(/Uloženo v zařízení · aktualizováno /)).toBeVisible();
+    const before = await rawDevice(page);
+    const syncs: string[] = [];
+    page.on('request', (request) => {
+      if (new URL(request.url()).pathname.startsWith('/api/donations/me/sync')) {
+        syncs.push(request.url());
+      }
+    });
 
     await page.reload();
 
     await expect(page.getByText(/Uloženo v zařízení · aktualizováno /)).toBeVisible();
+    expect((await rawDevice(page)).copyIds).toEqual(before.copyIds);
+    expect(before.copyIds).toHaveLength(1);
+    expect(syncs).toEqual([]);
   });
 
   test('when she asks to load the data again, then a status line says they are loaded', async ({
@@ -161,10 +197,14 @@ test.describe('Given a donor who signs in with a password on a device that keeps
       dialog.getByRole('heading', { name: 'Smazat data z tohoto zařízení?' }),
     ).toBeVisible();
     await expect(dialog.getByRole('button', { name: 'Zrušit' })).toBeFocused();
-    await dialog.getByRole('button', { name: 'Smazat a odhlásit' }).click();
+    await dialog.getByRole('button', { name: 'Smazat data a odhlásit' }).click();
 
     await expect(page).toHaveURL(/\/$/);
-    await expect(page.getByRole('status').getByText('Odhlásili jste se.')).toBeVisible();
+    await expect(
+      page
+        .getByRole('status')
+        .getByText('Data z tohoto zařízení jsme smazali a odhlásili jsme vás.'),
+    ).toBeVisible();
     await expect.poll(async () => (await rawDevice(page)).databases).not.toContain(DEVICE_DATABASE);
     expect((await rawDevice(page)).marker).toBeNull();
   });

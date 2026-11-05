@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { deviceAccountOf } from '../../../core/auth/session-device';
 import type { AccountStore, CopyContents } from '../../../core/device/store/account-store';
 import { DeviceVault, type OpenedCopy } from '../../../core/device/store/device-vault';
 import { ErrorReporter } from '../../../core/errors/error-reporter';
@@ -10,6 +11,9 @@ import { DonorCopyDownload } from './donor-copy-download';
 import type { SyncChunk } from './donor-sync-api';
 
 const SUMMARY = { totalMinor: 150_000, firstReceiptYear: 2026 };
+const DONOR_ID = '01a18e56-bdb0-775a-bd0a-a60756831369';
+const JANA = deviceAccountOf({ id: DONOR_ID, email: 'jana@example.cz' });
+const PETR_ID = '01a18e56-bdb0-775a-bd0a-000000000002';
 
 class FakeVault {
   readonly opened = signal<OpenedCopy | null>(null);
@@ -65,9 +69,13 @@ describe('Given the download of the donor copy', () => {
 
   afterEach(() => http.verify());
 
-  function answerManifest(chunks: readonly SyncChunk[], summary: unknown = SUMMARY): void {
+  function answerManifest(
+    chunks: readonly SyncChunk[],
+    summary: unknown = SUMMARY,
+    subject = DONOR_ID,
+  ): void {
     http.expectOne('/api/donations/me/sync').flush({
-      subject: 'donor',
+      subject,
       summary,
       chunks: chunks.map(({ id, rowsSha256: digest, count }) => ({
         id,
@@ -79,7 +87,7 @@ describe('Given the download of the donor copy', () => {
 
   async function answerChunks(
     chunks: readonly SyncChunk[],
-    options: { summary?: unknown; missing?: string[] } = {},
+    options: { summary?: unknown; missing?: string[]; subject?: string } = {},
   ): Promise<void> {
     const request = await vi.waitFor(() =>
       http.expectOne((candidate) => candidate.url === '/api/donations/me/sync/chunks'),
@@ -88,7 +96,7 @@ describe('Given the download of the donor copy', () => {
       [...chunks.map((entry) => entry.id), ...(options.missing ?? [])].join(','),
     );
     request.flush({
-      subject: 'donor',
+      subject: options.subject ?? DONOR_ID,
       summary: options.summary ?? SUMMARY,
       chunks,
       missing: options.missing ?? [],
@@ -96,7 +104,7 @@ describe('Given the download of the donor copy', () => {
   }
 
   function reloadOpenCopy(): Promise<string> {
-    vault.opened.set({ store: fakeStore('loaded'), reason: 'restored' });
+    vault.opened.set({ store: fakeStore('loaded'), reason: 'restored', account: JANA });
     TestBed.tick();
     return download.reload();
   }
@@ -106,7 +114,7 @@ describe('Given the download of the donor copy', () => {
   }
 
   it('when a new empty copy opens, then the manifest and its chunks are downloaded and stored under the copy lock', async () => {
-    vault.opened.set({ store: fakeStore(), reason: 'empty' });
+    vault.opened.set({ store: fakeStore(), reason: 'empty', account: JANA });
     TestBed.tick();
 
     await vi.waitFor(() => answerManifest([gifts2025, gifts2026]));
@@ -123,7 +131,7 @@ describe('Given the download of the donor copy', () => {
   });
 
   it('when an empty copy opens that another tab has already filled, then nothing is downloaded', async () => {
-    vault.opened.set({ store: fakeStore('loaded'), reason: 'empty' });
+    vault.opened.set({ store: fakeStore('loaded'), reason: 'empty', account: JANA });
     TestBed.tick();
 
     await settled();
@@ -133,7 +141,7 @@ describe('Given the download of the donor copy', () => {
   });
 
   it('when a copy is restored on a reload, then nothing is downloaded', async () => {
-    vault.opened.set({ store: fakeStore('loaded'), reason: 'restored' });
+    vault.opened.set({ store: fakeStore('loaded'), reason: 'restored', account: JANA });
     TestBed.tick();
 
     http.expectNone('/api/donations/me/sync');
@@ -204,6 +212,26 @@ describe('Given the download of the donor copy', () => {
     expect(reporter.report).toHaveBeenCalledWith('device-copy-mismatch', 'global');
   });
 
+  it('when the manifest names another donor than the copy, then nothing is stored and the mismatch is reported', async () => {
+    const reloading = reloadOpenCopy();
+
+    await vi.waitFor(() => answerManifest([gifts2026], SUMMARY, PETR_ID));
+
+    expect(await reloading).toBe('mismatch');
+    expect(vault.stored).toEqual([]);
+    expect(reporter.report).toHaveBeenCalledWith('device-copy-mismatch', 'global');
+  });
+
+  it('when the chunks answer names another donor than the copy, then nothing is stored', async () => {
+    const reloading = reloadOpenCopy();
+
+    await vi.waitFor(() => answerManifest([gifts2026]));
+    await answerChunks([gifts2026], { subject: PETR_ID });
+
+    expect(await reloading).toBe('mismatch');
+    expect(vault.stored).toEqual([]);
+  });
+
   it('when the manifest is empty, then an empty copy with its summary is stored and no chunk is asked for', async () => {
     const reloading = reloadOpenCopy();
 
@@ -239,7 +267,7 @@ describe('Given the download of the donor copy', () => {
   });
 
   it('when a copy is open and the donor asks to load the data again, then it is downloaded even though it holds data', async () => {
-    vault.opened.set({ store: fakeStore('loaded'), reason: 'restored' });
+    vault.opened.set({ store: fakeStore('loaded'), reason: 'restored', account: JANA });
     TestBed.tick();
     const reloading = download.reload();
 

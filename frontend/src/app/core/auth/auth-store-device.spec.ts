@@ -22,6 +22,11 @@ import {
 } from './testing/donor-fixtures';
 
 const JANA = deviceAccountOf(sampleDonor());
+const PETR_DONOR = sampleDonor({
+  id: '01a18e56-bdb0-775a-bd0a-000000000002',
+  email: 'petr@example.cz',
+});
+const PETR = deviceAccountOf(PETR_DONOR);
 const PRF_INPUT = new Uint8Array(32).fill(3);
 
 class RecordingDevice implements SessionDevice {
@@ -46,8 +51,8 @@ class RecordingDevice implements SessionDevice {
   signedOutElsewhere() {
     this.calls.push(['signedOutElsewhere']);
   }
-  async endedRemotely(account: DeviceAccount) {
-    this.calls.push(['endedRemotely', account]);
+  async sessionLost() {
+    this.calls.push(['sessionLost']);
   }
   async passwordChanged(account: DeviceAccount, password: string) {
     this.calls.push(['passwordChanged', account, password]);
@@ -241,36 +246,75 @@ describe('Given the auth store on a device that keeps a copy of the donor data',
     await vi.waitFor(() => expect(device.calls).toEqual([['signedOut', JANA]]));
   });
 
-  it('when the server said the session ended and then refuses the refresh, then the copy on this device is deleted', async () => {
+  it('when the server said the session ended and then refuses the refresh, then the copy is closed and kept as after a sign-out, never deleted', async () => {
     signIn();
 
-    store.sessionEnded();
     store.refresh().subscribe({ error: () => undefined });
     await vi.waitFor(() =>
       http
         .expectOne('/api/donors/auth/refresh')
-        .flush(problem('auth/invalid-refresh-token'), { status: 401, statusText: 'Refused' }),
-    );
-
-    await vi.waitFor(() => expect(device.calls).toEqual([['endedRemotely', JANA]]));
-  });
-
-  it('when the server said the session ended but the refresh succeeds, then nothing is deleted', async () => {
-    signIn();
-
-    store.sessionEnded();
-    store.refresh().subscribe();
-    await vi.waitFor(() =>
-      http.expectOne('/api/donors/auth/refresh').flush(authResponse('token-7')),
-    );
-    store.refresh().subscribe({ error: () => undefined });
-    await vi.waitFor(() =>
-      http
-        .expectOne('/api/donors/auth/refresh')
-        .flush(problem('auth/invalid-refresh-token'), { status: 401, statusText: 'Refused' }),
+        .flush(problem('auth/session-ended'), { status: 401, statusText: 'Refused' }),
     );
 
     await vi.waitFor(() => expect(device.calls).toEqual([['signedOut', JANA]]));
+  });
+
+  it('when a reload finds the session refused before any donor is known, then the device drops every session key it holds', async () => {
+    localStorage.setItem(SESSION_HINT_KEY, '1');
+
+    const restoring = store.restore();
+    await vi.waitFor(() =>
+      http
+        .expectOne('/api/donors/auth/refresh')
+        .flush(problem('auth/invalid-refresh-token'), { status: 401, statusText: 'Refused' }),
+    );
+    await restoring;
+
+    expect(device.calls).toEqual([['sessionLost']]);
+  });
+
+  it('when a page opens with no session in this browser, then the device drops every session key it holds', async () => {
+    await store.restore();
+
+    expect(device.calls).toEqual([['sessionLost']]);
+  });
+
+  it('when a refresh answers for another donor, then the copy of the first is closed as after a sign-out and the copy of the other opens', async () => {
+    signIn();
+
+    store.refresh().subscribe();
+    await vi.waitFor(() =>
+      http.expectOne('/api/donors/auth/refresh').flush(authResponse('token-10', PETR_DONOR)),
+    );
+
+    await vi.waitFor(() =>
+      expect(device.calls).toEqual([
+        ['signedOut', JANA],
+        ['restored', PETR],
+      ]),
+    );
+  });
+
+  it('when a passkey sign-in is abandoned after the authenticator answered, then the PRF output is zeroed', async () => {
+    passkeys.prfOutput = new Uint8Array(32).fill(9);
+    const outputs: Uint8Array[] = [];
+    const getWithPrf = passkeys.getWithPrf.bind(passkeys);
+    passkeys.getWithPrf = async (options, input) => {
+      const answer = await getWithPrf(options, input);
+      if (answer.prf !== null) {
+        outputs.push(answer.prf.output);
+      }
+      return answer;
+    };
+    const signingIn = store.signInWithPasskey().subscribe();
+
+    http.expectOne('/api/donors/auth/passkey/options').flush(passkeySignInOptions());
+    await vi.waitFor(() => http.expectOne('/api/donors/auth/passkey'));
+    signingIn.unsubscribe();
+
+    expect(outputs).toHaveLength(1);
+    expect(outputs[0].every((byte) => byte === 0)).toBe(true);
+    expect(device.secrets).toEqual([]);
   });
 
   it('when the donor changes her password, then the copy is wrapped with the new one', () => {

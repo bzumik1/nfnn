@@ -8,9 +8,14 @@ export class DeviceCopies implements SessionDevice {
   private loading: Promise<SessionDevice> | null = null;
 
   prfInput(): Promise<Uint8Array<ArrayBuffer> | null> {
-    return this.vault()
+    const input = this.vault()
       .then((vault) => vault.prfInput())
       .catch(() => null);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const late = new Promise<null>(
+      (resolve) => (timer = setTimeout(() => resolve(null), PRF_INPUT_WAIT_MS)),
+    );
+    return Promise.race([input, late]).finally(() => clearTimeout(timer));
   }
 
   signedIn(account: DeviceAccount, secret: SignInSecret): Promise<void> {
@@ -29,8 +34,11 @@ export class DeviceCopies implements SessionDevice {
     void this.loading?.then((vault) => vault.signedOutElsewhere());
   }
 
-  endedRemotely(account: DeviceAccount): Promise<void> {
-    return this.vault().then((vault) => vault.endedRemotely(account));
+  sessionLost(): Promise<void> {
+    if (!holdsDeviceCopy()) {
+      return Promise.resolve();
+    }
+    return this.vault().then((vault) => vault.sessionLost());
   }
 
   passwordChanged(account: DeviceAccount, password: string): Promise<void> {
@@ -62,5 +70,16 @@ export class DeviceCopies implements SessionDevice {
       });
     }
     return this.loading;
+  }
+}
+
+const DEVICE_COPY_MARKER_KEY = 'nfnn.device-copy';
+const PRF_INPUT_WAIT_MS = 1500;
+
+function holdsDeviceCopy(): boolean {
+  try {
+    return localStorage.getItem(DEVICE_COPY_MARKER_KEY) === '1';
+  } catch {
+    return true;
   }
 }

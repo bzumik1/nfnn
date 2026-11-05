@@ -130,9 +130,8 @@ describe('Given the auth interceptor', () => {
     expect(store.signedIn()).toBe(false);
   });
 
-  it('when the server says the session ended and the refresh is refused, then the store hears that the session ended remotely', () => {
+  it('when the server says the session ended and the refresh is refused, then the donor is signed out here', () => {
     signIn('token-1');
-    const ended = vi.spyOn(store, 'sessionEnded');
     client.get('/api/donors/me').subscribe({ error: () => undefined });
 
     http
@@ -142,7 +141,6 @@ describe('Given the auth interceptor', () => {
       .expectOne('/api/donors/auth/refresh')
       .flush(problem('auth/invalid-refresh-token'), { status: 401, statusText: 'Unauthorized' });
 
-    expect(ended).toHaveBeenCalledTimes(1);
     expect(store.signedIn()).toBe(false);
   });
 

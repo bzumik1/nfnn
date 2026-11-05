@@ -17,7 +17,7 @@ export interface SessionDevice {
   restored(account: DeviceAccount): Promise<void>;
   signedOut(account: DeviceAccount): Promise<void>;
   signedOutElsewhere(): void;
-  endedRemotely(account: DeviceAccount): Promise<void>;
+  sessionLost(): Promise<void>;
   passwordChanged(account: DeviceAccount, password: string): Promise<void>;
   passwordRemoved(account: DeviceAccount): Promise<void>;
   passkeyAdded(account: DeviceAccount, reading: PrfReading): Promise<void>;
@@ -29,7 +29,7 @@ export const NO_SESSION_DEVICE: SessionDevice = {
   restored: async () => undefined,
   signedOut: async () => undefined,
   signedOutElsewhere: () => undefined,
-  endedRemotely: async () => undefined,
+  sessionLost: async () => undefined,
   passwordChanged: async () => undefined,
   passwordRemoved: async () => undefined,
   passkeyAdded: async () => undefined,
