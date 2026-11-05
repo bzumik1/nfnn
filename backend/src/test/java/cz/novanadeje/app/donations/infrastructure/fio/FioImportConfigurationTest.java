@@ -3,6 +3,7 @@ package cz.novanadeje.app.donations.infrastructure.fio;
 import com.sun.net.httpserver.HttpServer;
 import cz.novanadeje.app.donations.application.importing.BankImportProperties;
 import cz.novanadeje.app.donations.application.importing.BankImportRequests;
+import cz.novanadeje.app.donations.application.importing.HistoryImportTracker;
 import cz.novanadeje.app.donations.application.importing.ImportBankPaymentsService;
 import io.github.bzumik1.fio.AccountStatement;
 import io.github.bzumik1.fio.FioClient;
@@ -259,6 +260,11 @@ class FioImportConfigurationTest {
         @Bean
         TaskScheduler taskScheduler() {
             return mock(TaskScheduler.class);
+        }
+
+        @Bean
+        HistoryImportTracker historyImportTracker() {
+            return new HistoryImportTracker();
         }
     }
 }
