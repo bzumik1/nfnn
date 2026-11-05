@@ -28,7 +28,7 @@ const ELEMENT_MARK = '--';
 
 const PRIVATE_AREAS = ['/darce', '/sprava'];
 const ROUTE_ITEM = /^\/[A-Za-z0-9/_.-]*\*?$/;
-const STATE_ITEM = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const STATE_ITEM = /^[a-z0-9]+(?:-[a-z0-9]+)*(?:--[a-z0-9]+(?:-[a-z0-9]+)*)?$/;
 const UNCHANGED_LINE = /^\s*vzhled\s*:\s*beze\s+zm(?:ě|e)ny\s*$/i;
 const CHANGES_LINE = /^\s*vzhled\s+se\s+m(?:ě|e)n(?:í|i)\s*:(.*)$/i;
 

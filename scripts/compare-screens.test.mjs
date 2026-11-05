@@ -282,6 +282,15 @@ describe('Given the description of a pull request', () => {
     assert.deepEqual(declaredAppearance('vzhled se meni: /'), { kind: 'changes', items: ['/'] });
   });
 
+  it('when it names one element shot of a state, then it declares that shot', () => {
+    assert.deepEqual(declaredAppearance('Vzhled se mění: sign-in-recovery-payment--details, home--donate-qr'), {
+      kind: 'changes',
+      items: ['sign-in-recovery-payment--details', 'home--donate-qr'],
+    });
+    assert.throws(() => declaredAppearance('Vzhled se mění: home---donate'), /"home---donate" is neither a route/);
+    assert.throws(() => declaredAppearance('Vzhled se mění: home--'), /"home--" is neither a route/);
+  });
+
   it('when it says nothing about the look, then the declaration is missing and nothing may change', () => {
     assert.deepEqual(declaredAppearance('Roadmapa: beze změny'), { kind: 'missing', items: [] });
     assert.deepEqual(declaredAppearance(''), { kind: 'missing', items: [] });
@@ -336,6 +345,13 @@ describe('Given shots with the routes they were taken at', () => {
       ],
     );
     assert.deepEqual(undeclaredShots({ results, removed: [] }, routes, ['/', '/sprava/*', 'donor-overview']), []);
+  });
+
+  it('when the declaration names an element shot, then only that shot is declared, at every width', () => {
+    const results = ['home-390.png', 'home--donate-qr-390.png', 'home--donate-qr-1280.png'].map(differing);
+    assert.deepEqual(undeclaredShots({ results, removed: [] }, routes, ['home--donate-qr']), [
+      { file: 'home-390.png', route: '/' },
+    ]);
   });
 
   it('when a shot was removed, then only its state declares it, since the head took no route for it', () => {
