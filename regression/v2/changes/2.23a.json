@@ -1,0 +1,231 @@
+[
+  {
+    "path": "PUT /api/admin/content/news/{id}/look-back-year",
+    "scenario": "content/look_back_on_a_year: *",
+    "kind": "added",
+    "reason": "2.23a: an administrator or a connected application with admin:write links a news article to the year it looks back on, a call v2 did not have; the connector's nfnn_set_news_look_back_year sends it",
+    "contract": "docs/api-contract.md, content — public CMS (look-back-year); MCP connector"
+  },
+  {
+    "path": "GET /api/admin/content/donate-band",
+    "scenario": "content/manage_donate_band: *",
+    "kind": "added",
+    "reason": "2.23a: the administration reads the photo of the closing Přispět band, a call v2 did not have; the connector's nfnn_donate_band sends it",
+    "contract": "docs/api-contract.md, content — public CMS (donate-band); MCP connector"
+  },
+  {
+    "path": "PUT /api/admin/content/donate-band",
+    "scenario": "content/manage_donate_band: *",
+    "kind": "added",
+    "reason": "2.23a: an administrator or a connected application with admin:write sets or removes the photo of the closing Přispět band, a call v2 did not have; the connector's nfnn_update_donate_band sends it",
+    "contract": "docs/api-contract.md, content — public CMS (donate-band); MCP connector"
+  },
+  {
+    "path": "GET /api/content/home*",
+    "scenario": "content/choose_project_order: *",
+    "kind": "added",
+    "field": "$.donateBand",
+    "reason": "2.23a: the home answer carries donateBand, the photo of the closing Přispět band (null while none is set)",
+    "contract": "docs/api-contract.md, content — public CMS (GET /api/content/home, Band photo)"
+  },
+  {
+    "path": "POST /api/admin/content/news*",
+    "scenario": "content/clean_up_unused_photos: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
+    "path": "PUT /api/admin/content/news*",
+    "scenario": "content/clean_up_unused_photos: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
+    "path": "GET /api/content/home*",
+    "scenario": "content/home_content: *",
+    "kind": "added",
+    "field": "$.donateBand",
+    "reason": "2.23a: the home answer carries donateBand, the photo of the closing Přispět band (null while none is set)",
+    "contract": "docs/api-contract.md, content — public CMS (GET /api/content/home, Band photo)"
+  },
+  {
+    "path": "GET /api/content/home*",
+    "scenario": "content/home_content: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
+    "path": "POST /api/admin/content/news*",
+    "scenario": "content/home_content: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
+    "path": "GET /api/content/home*",
+    "scenario": "content/manage_about: *",
+    "kind": "added",
+    "field": "$.donateBand",
+    "reason": "2.23a: the home answer carries donateBand, the photo of the closing Přispět band (null while none is set)",
+    "contract": "docs/api-contract.md, content — public CMS (GET /api/content/home, Band photo)"
+  },
+  {
+    "path": "POST /api/admin/content/news*",
+    "scenario": "content/manage_about: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
+    "path": "GET /api/admin/content/news*",
+    "scenario": "content/manage_news: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
+    "path": "GET /api/content/news*",
+    "scenario": "content/manage_news: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
+    "path": "POST /api/admin/content/news*",
+    "scenario": "content/manage_news: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
+    "path": "PUT /api/admin/content/news*",
+    "scenario": "content/manage_news: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
+    "path": "GET /api/content/home*",
+    "scenario": "content/manage_people: *",
+    "kind": "added",
+    "field": "$.donateBand",
+    "reason": "2.23a: the home answer carries donateBand, the photo of the closing Přispět band (null while none is set)",
+    "contract": "docs/api-contract.md, content — public CMS (GET /api/content/home, Band photo)"
+  },
+  {
+    "path": "GET /api/content/home*",
+    "scenario": "content/manage_people: *",
+    "kind": "added",
+    "field": "$*.signatures[*].portrait",
+    "reason": "2.23a: each signature under the founders' note carries its person's role and portrait (null when the person has none), so the site shows who signs it",
+    "contract": "docs/api-contract.md, content — public CMS (People of the foundation, public)"
+  },
+  {
+    "path": "GET /api/content/home*",
+    "scenario": "content/manage_people: *",
+    "kind": "added",
+    "field": "$*.signatures[*].role",
+    "reason": "2.23a: each signature under the founders' note carries its person's role and portrait (null when the person has none), so the site shows who signs it",
+    "contract": "docs/api-contract.md, content — public CMS (People of the foundation, public)"
+  },
+  {
+    "path": "GET /api/admin/content/news*",
+    "scenario": "content/place_photo_focal_point: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
+    "path": "GET /api/content/home*",
+    "scenario": "content/place_photo_focal_point: *",
+    "kind": "added",
+    "field": "$.donateBand",
+    "reason": "2.23a: the home answer carries donateBand, the photo of the closing Přispět band (null while none is set)",
+    "contract": "docs/api-contract.md, content — public CMS (GET /api/content/home, Band photo)"
+  },
+  {
+    "path": "GET /api/content/home*",
+    "scenario": "content/place_photo_focal_point: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
+    "path": "GET /api/content/news*",
+    "scenario": "content/place_photo_focal_point: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
+    "path": "POST /api/admin/content/news*",
+    "scenario": "content/place_photo_focal_point: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
+    "path": "PUT /api/admin/content/news*",
+    "scenario": "content/place_photo_focal_point: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
+    "path": "DELETE /api/admin/content/news*",
+    "scenario": "content/stale_content_writes: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
+    "path": "GET /api/admin/content/news*",
+    "scenario": "content/stale_content_writes: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
+    "path": "GET /api/content/news*",
+    "scenario": "content/stale_content_writes: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
+    "path": "POST /api/admin/content/news*",
+    "scenario": "content/stale_content_writes: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
+    "path": "PUT /api/admin/content/news*",
+    "scenario": "content/stale_content_writes: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  }
+]
