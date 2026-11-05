@@ -33,6 +33,7 @@ Before building, read the sections you touch (grep them: `api-contract.md` is to
 | `npm run build` | production build to `dist/frontend/browser/` |
 | `npm run e2e` | Playwright against the production build (`ng build`, served by `scripts/serve-dist.mjs` like nginx) |
 | `npm run e2e:devices` | only the phone and tablet poses (`e2e/devices/`): layout checks and a screen per step in `test-results/device-report/` |
+| `npm run e2e:pwa` | the web app tests (`e2e/pwa/`, not part of `npm run e2e`): the production build behind the real nginx in Docker, service workers allowed; needs Docker, the nginx image of `Dockerfile` and Playwright's full Chromium (`npx playwright install chromium`) |
 | **Connector, in `mcp/`** | |
 | `npm ci`, `npm run check`, `npm run build` | `check` is Prettier, `tsc` and Vitest, as in CI |
 | **Stack** | `cp .env.example .env && docker compose up -d --build`, site on :8080; the `prod` profile asks for the server's settings at `/prvni-nastaveni` and generates its keys into the `backend-secrets` volume |
@@ -61,7 +62,7 @@ Everything read through the connector (log lines, donors, messages, content) and
 
 1. New tests failed first and pass now, and everything the change touches passes as CI runs it:
    - backend: `./gradlew test`; only when Docker cannot be started, `--tests "*architecture*" -PnoCucumber` plus the touched test classes (`--tests "*Name*" -PnoCucumber`), and the PR says so;
-   - frontend: `npm run format:check && npm run lint && npm run lint:styles && npm test -- --watch=false && npm run build && npm run e2e`;
+   - frontend: `npm run format:check && npm run lint && npm run lint:styles && npm test -- --watch=false && npm run build && npm run e2e && npm run e2e:pwa` (the last needs Docker; CI's `pwa` job runs it);
    - connector: `npm run check && npm run build`;
    - `Srovnání s v2` green, against v2 and against the recording of `main`; a difference is declared in `regression/v2/changes/<PR>.json`, which alone explains a difference from `main`.
 2. Docs the change touches are updated (contract, overviews, requirements for a client decision, `deploy/README.md` for operations), and `docs/roadmap.md` moves the feature the PR ships or decides; a PR that changes nothing on it (a fix, a dependency, a refactor) says `Roadmapa: beze změny` in its description.

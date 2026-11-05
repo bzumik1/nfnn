@@ -1,4 +1,5 @@
 import { Page } from '@playwright/test';
+import type { RouteTarget } from './fixtures';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -64,14 +65,14 @@ export const REVOKED_KEY_LIST = keyList([{ ...TEST_KEY, status: 'revoked' }]);
 export const TAMPERED_KEY_LIST = keyList([{ ...TEST_KEY, publicKey: OTHER_KEY.publicKey }]);
 export const LIST_WITHOUT_THE_KEY = keyList([OTHER_KEY]);
 
-export async function serveReceiptKeys(page: Page, list: object = KEY_LIST): Promise<void> {
+export async function serveReceiptKeys(page: RouteTarget, list: object = KEY_LIST): Promise<void> {
   await page.route(
     (url) => url.pathname === '/api/donations/receipt-keys',
     (route) => route.fulfill({ json: list }),
   );
 }
 
-export async function serveReceiptStatus(page: Page, status: string): Promise<void> {
+export async function serveReceiptStatus(page: RouteTarget, status: string): Promise<void> {
   await page.route(
     (url) => url.pathname === '/api/donations/receipts/status',
     (route) => route.fulfill({ json: { status }, headers: { 'Cache-Control': 'no-store' } }),
