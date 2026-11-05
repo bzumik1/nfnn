@@ -2,6 +2,7 @@ package cz.novanadeje.app.donations.infrastructure.persistence;
 
 import cz.novanadeje.app.donations.domain.receipt.ReceiptKind;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptStatus;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptWithdrawalReason;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -33,6 +34,9 @@ interface IssuedReceiptJpaRepository extends JpaRepository<IssuedReceiptJpaEntit
 
     Optional<IssuedReceiptJpaEntity> findByDonorIdAndReceiptYearAndStatus(UUID donorId, Integer receiptYear, ReceiptStatus status);
 
+    Optional<IssuedReceiptJpaEntity> findFirstByDonorIdAndReceiptYearAndStatusAndWithdrawalReasonOrderByIssuedAtDescNumberDesc(UUID donorId,
+            Integer receiptYear, ReceiptStatus status, ReceiptWithdrawalReason withdrawalReason);
+
     List<SingleReceiptNumber> findByDonorIdAndKindAndStatus(UUID donorId, ReceiptKind kind, ReceiptStatus status);
 
     List<IssuedReceiptJpaEntity> findByDonorIdOrderByIssuedAtDescNumberDesc(UUID donorId);
@@ -40,8 +44,8 @@ interface IssuedReceiptJpaRepository extends JpaRepository<IssuedReceiptJpaEntit
     @Query("select count(r) > 0 from IssuedReceiptJpaEntity r where r.donorId = :donorId and (r.signatureImageSha256 = :image or r.portraitImageSha256 = :image)")
     boolean showsImage(@Param("donorId") UUID donorId, @Param("image") String image);
 
-    @Query("select r.status from IssuedReceiptJpaEntity r where r.statusSha256 = :statusSha256")
-    Optional<ReceiptStatus> findStatusByStatusSha256(@Param("statusSha256") String statusSha256);
+    @Query("select r.status as status, r.withdrawalReason as withdrawalReason from IssuedReceiptJpaEntity r where r.statusSha256 = :statusSha256")
+    Optional<KeptStatus> findStatusByStatusSha256(@Param("statusSha256") String statusSha256);
 
     boolean existsBySignatureImageSha256OrPortraitImageSha256(String signatureImageSha256, String portraitImageSha256);
 
@@ -60,6 +64,13 @@ interface IssuedReceiptJpaRepository extends JpaRepository<IssuedReceiptJpaEntit
     @Transactional(propagation = Propagation.MANDATORY)
     @Query(nativeQuery = true, value = "select donor_id from donor_record where donor_id = :donorId for update")
     Optional<UUID> lockDonorRecord(@Param("donorId") UUID donorId);
+
+    interface KeptStatus {
+
+        ReceiptStatus getStatus();
+
+        ReceiptWithdrawalReason getWithdrawalReason();
+    }
 
     interface SingleReceiptNumber {
 

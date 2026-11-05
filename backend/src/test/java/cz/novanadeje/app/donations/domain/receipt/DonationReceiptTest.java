@@ -31,6 +31,8 @@ class DonationReceiptTest {
     private static final Donation MARCH = receivedFromJana(LocalDate.of(2026, 3, 15), 50000);
     private static final ReceiptFingerprint FINGERPRINT = new ReceiptFingerprint("a".repeat(64));
     private static final ReceiptFingerprint OTHER_FINGERPRINT = new ReceiptFingerprint("b".repeat(64));
+    private static final Donation APRIL = receivedFromJana(LocalDate.of(2026, 4, 2), 20000);
+    private static final ReceiptWithdrawal CHANGED_DONATIONS = new ReceiptWithdrawal(NOW.plusSeconds(60), ReceiptWithdrawalReason.DONATIONS_CHANGED);
 
     @Test
     @DisplayName("Given the frozen receipt of a donation, when it is issued, then it is an active single receipt of that donation, with the number, issue day and locale frozen")
@@ -54,6 +56,8 @@ class DonationReceiptTest {
         assertThat(receipt.status()).isEqualTo(ReceiptStatus.ACTIVE);
         assertThat(receipt.supersededAt()).isEmpty();
         assertThat(receipt.isActive()).isTrue();
+        assertThat(receipt.withdrawal()).isEmpty();
+        assertThat(receipt.standing()).isEqualTo(ReceiptStanding.ACTIVE);
     }
 
     @Test
@@ -72,19 +76,21 @@ class DonationReceiptTest {
     }
 
     @Test
-    @DisplayName("Given a missing part or a supersede time that does not match the status, when a receipt is issued or reconstituted, then it is refused")
-    void should_refuse_when_reconstituted_given_missing_part_or_supersede_time_not_matching_status() {
+    @DisplayName("Given a missing part, or a supersede time or a withdrawal that does not match the status, when a receipt is issued or reconstituted, then it is refused")
+    void should_refuse_when_reconstituted_given_missing_part_or_supersede_time_or_withdrawal_not_matching_status() {
         FrozenReceipt frozen = frozen(singleDocument(jana(), MARCH));
 
         assertThatIllegalArgumentException().isThrownBy(() -> DonationReceipt.issue(ID, JANA, NOW, FINGERPRINT, null, Optional.empty()));
         assertThatIllegalArgumentException().isThrownBy(() -> DonationReceipt.reconstitute(ID, JANA, NOW, FINGERPRINT, frozen, Optional.empty(),
-                ReceiptStatus.REPLACED, Optional.empty()));
+                ReceiptStatus.REPLACED, Optional.empty(), Optional.empty()));
         assertThatIllegalArgumentException().isThrownBy(() -> DonationReceipt.reconstitute(ID, JANA, NOW, FINGERPRINT, frozen, Optional.empty(),
-                ReceiptStatus.ACTIVE, Optional.of(NOW)));
+                ReceiptStatus.ACTIVE, Optional.of(NOW), Optional.empty()));
         assertThatIllegalArgumentException().isThrownBy(() -> DonationReceipt.reconstitute(ID, JANA, NOW, FINGERPRINT, frozen, Optional.empty(),
-                null, Optional.empty()));
-        assertThat(DonationReceipt.reconstitute(ID, JANA, NOW, FINGERPRINT, frozen, Optional.empty(), ReceiptStatus.WITHDRAWN, Optional.empty())
-                .isActive()).isFalse();
+                null, Optional.empty(), Optional.empty()));
+        assertThatIllegalArgumentException().isThrownBy(() -> DonationReceipt.reconstitute(ID, JANA, NOW, FINGERPRINT, frozen, Optional.empty(),
+                ReceiptStatus.ACTIVE, Optional.empty(), Optional.of(CHANGED_DONATIONS)));
+        assertThat(DonationReceipt.reconstitute(ID, JANA, NOW, FINGERPRINT, frozen, Optional.empty(), ReceiptStatus.WITHDRAWN, Optional.empty(),
+                Optional.empty()).isActive()).isFalse();
     }
 
     @Test
@@ -106,7 +112,7 @@ class DonationReceiptTest {
         DonationReceipt replaced = single();
         replaced.markSuperseded(NOW.plusSeconds(60));
         DonationReceipt withdrawn = DonationReceipt.reconstitute(ID, JANA, NOW, FINGERPRINT, frozen(singleDocument(jana(), MARCH)),
-                Optional.empty(), ReceiptStatus.WITHDRAWN, Optional.empty());
+                Optional.empty(), ReceiptStatus.WITHDRAWN, Optional.empty(), Optional.empty());
 
         assertThatIllegalStateException().isThrownBy(() -> replaced.markSuperseded(NOW.plusSeconds(120)));
         assertThatIllegalStateException().isThrownBy(() -> withdrawn.markSuperseded(NOW.plusSeconds(120)));
@@ -119,6 +125,68 @@ class DonationReceiptTest {
 
         assertThat(receipt.certifies(new ReceiptFingerprint("a".repeat(64)))).isTrue();
         assertThat(receipt.certifies(OTHER_FINGERPRINT)).isFalse();
+    }
+
+    @Test
+    @DisplayName("Given an active yearly receipt, when it is withdrawn because the donor's donations changed, then it is withdrawn, no longer active, remembers when and why, and stands as outdated")
+    void should_be_outdated_when_withdrawn_because_donations_changed_given_active_yearly_receipt() {
+        DonationReceipt receipt = yearly();
+        Instant later = NOW.plusSeconds(3600);
+
+        receipt.withdrawBecauseDonationsChanged(later);
+
+        assertThat(receipt.status()).isEqualTo(ReceiptStatus.WITHDRAWN);
+        assertThat(receipt.isActive()).isFalse();
+        assertThat(receipt.supersededAt()).isEmpty();
+        assertThat(receipt.withdrawal()).contains(new ReceiptWithdrawal(later, ReceiptWithdrawalReason.DONATIONS_CHANGED));
+        assertThat(receipt.standing()).isEqualTo(ReceiptStanding.OUTDATED);
+    }
+
+    @Test
+    @DisplayName("Given a replaced or an already withdrawn receipt, when it is withdrawn, then it is refused")
+    void should_refuse_when_withdrawn_given_receipt_that_is_not_active() {
+        DonationReceipt replaced = yearly();
+        replaced.markSuperseded(NOW.plusSeconds(60));
+        DonationReceipt withdrawn = yearly();
+        withdrawn.withdrawBecauseDonationsChanged(NOW.plusSeconds(60));
+
+        assertThatIllegalStateException().isThrownBy(() -> replaced.withdrawBecauseDonationsChanged(NOW.plusSeconds(120)));
+        assertThatIllegalStateException().isThrownBy(() -> withdrawn.withdrawBecauseDonationsChanged(NOW.plusSeconds(120)));
+        assertThatIllegalStateException().isThrownBy(() -> withdrawn.markSuperseded(NOW.plusSeconds(120)));
+    }
+
+    @Test
+    @DisplayName("Given an active single receipt, when it is withdrawn because the donations changed, then it is refused and stays active")
+    void should_refuse_when_withdrawn_because_donations_changed_given_single_receipt() {
+        DonationReceipt receipt = single();
+
+        assertThatIllegalStateException().isThrownBy(() -> receipt.withdrawBecauseDonationsChanged(NOW.plusSeconds(60)));
+
+        assertThat(receipt.isActive()).isTrue();
+        assertThat(receipt.withdrawal()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a yearly receipt, when asked whether it lists a donation, then it lists exactly the donations it certifies")
+    void should_list_only_certified_donations_when_asked_given_yearly_receipt() {
+        DonationReceipt receipt = yearly();
+
+        assertThat(receipt.lists(MARCH.id())).isTrue();
+        assertThat(receipt.lists(APRIL.id())).isFalse();
+    }
+
+    @Test
+    @DisplayName("Given each kept status and withdrawal, when the standing is read, then a withdrawal because the donations changed is outdated and any other withdrawal is withdrawn")
+    void should_tell_outdated_from_withdrawn_when_standing_read_given_status_and_withdrawal() {
+        assertThat(ReceiptStanding.of(ReceiptStatus.ACTIVE, Optional.empty())).isEqualTo(ReceiptStanding.ACTIVE);
+        assertThat(ReceiptStanding.of(ReceiptStatus.REPLACED, Optional.empty())).isEqualTo(ReceiptStanding.REPLACED);
+        assertThat(ReceiptStanding.of(ReceiptStatus.WITHDRAWN, Optional.empty())).isEqualTo(ReceiptStanding.WITHDRAWN);
+        assertThat(ReceiptStanding.of(ReceiptStatus.WITHDRAWN, Optional.of(ReceiptWithdrawalReason.DONATIONS_CHANGED)))
+                .isEqualTo(ReceiptStanding.OUTDATED);
+    }
+
+    private static DonationReceipt yearly() {
+        return DonationReceipt.issue(ID, JANA, NOW, FINGERPRINT, frozen(yearlyDocument(jana(), List.of(MARCH))), Optional.empty());
     }
 
     private static DonationReceipt single() {

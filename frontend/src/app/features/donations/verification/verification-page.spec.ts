@@ -350,9 +350,20 @@ describe('Given the verification page', () => {
     expect(page).not.toContain('Ověření proběhlo jen ve vašem zařízení');
   });
 
+  it('when the fund answers outdated, then the page says the receipt held on the day it was issued and only a newer one holds since the gifts changed', async () => {
+    await open(`/overit#${FRAGMENT}`, { state: 'signed', receipt: SINGLE, status: 'outdated' });
+
+    const page = root().textContent?.replace(/\s+/g, ' ');
+    expect(page).toContain(
+      'Fond ho vystavil podle darů, které v tu chvíli evidoval. Od té doby se dary dárce změnily, proto platí jen novější potvrzení. Pokud ho nemáte, napište na info@nfnn.cz s číslem tohoto potvrzení.',
+    );
+    expect(page).not.toContain('Fond toto potvrzení vede jako platné.');
+  });
+
   for (const [status, title, glyph] of [
     ['replaced', 'Fond toto potvrzení nahradil novějším', AMBER],
     ['withdrawn', 'Fond toto potvrzení zrušil', RED],
+    ['outdated', 'Potvrzení platilo ke dni vystavení', AMBER],
     ['unknown', 'Fond toto potvrzení ve své evidenci nevede', AMBER],
   ] as const) {
     it(`when the fund answers ${status}, then the result is not green and the heading says so`, async () => {

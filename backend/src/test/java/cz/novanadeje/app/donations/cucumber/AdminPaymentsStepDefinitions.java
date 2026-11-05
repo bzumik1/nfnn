@@ -26,6 +26,7 @@ public class AdminPaymentsStepDefinitions {
     private final DonorSessions sessions;
     private final ScenarioDonors scenarioDonors;
     private final JdbcClient jdbc;
+    private String exchangedApiToken;
 
     public AdminPaymentsStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors scenarioDonors, JdbcClient jdbc) {
         this.api = api;
@@ -105,6 +106,17 @@ public class AdminPaymentsStepDefinitions {
         api.post(PAYMENTS_PATH + "/" + paymentId(transactionId) + "/unpair", null);
     }
 
+    @When("the exchanged API token unpairs payment {long}")
+    public void theExchangedApiTokenUnpairsPayment(long transactionId) {
+        JsonNode last = api.lastResponseJson();
+        if (last != null && last.has("access_token")) {
+            exchangedApiToken = last.get("access_token").asString();
+        }
+        api.forgetCredentials();
+        api.authorize(exchangedApiToken);
+        api.post(PAYMENTS_PATH + "/" + paymentId(transactionId) + "/unpair", null);
+    }
+
     @When("{string} searches donors for {string}")
     public void searchesDonorsFor(String alias, String query) {
         sessions.actAs(alias);
@@ -168,6 +180,18 @@ public class AdminPaymentsStepDefinitions {
     @Then("the unpairing changed the yearly receipt for {int}")
     public void theUnpairingChangedTheYearlyReceiptFor(int year) {
         assertThat(changedYearlyReceipts()).containsExactly(year);
+    }
+
+    @Then("the admin action {string} by {string} on receipt {string} is recorded with details containing {string}")
+    public void theAdminActionByOnReceiptIsRecordedWithDetailsContaining(String action, String alias, String number, String details) {
+        UUID receipt = jdbc.sql("select id from issued_receipt where number = ?").param(number).query(UUID.class).single();
+        List<String> recorded = jdbc.sql("select details from admin_action where action = ? and admin_id = ? and subject_id = ?")
+                .param(action)
+                .param(scenarioDonors.idOf(alias))
+                .param(receipt)
+                .query(String.class)
+                .list();
+        assertThat(recorded).singleElement().asString().contains(number).contains(details);
     }
 
     @Then("the admin action {string} by {string} on payment {long} is recorded")

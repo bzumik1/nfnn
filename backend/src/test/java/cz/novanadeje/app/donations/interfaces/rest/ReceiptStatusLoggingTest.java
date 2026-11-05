@@ -114,7 +114,7 @@ class ReceiptStatusLoggingTest {
     }
 
     @Test
-    @DisplayName("Given the production log levels, when the statuses active, replaced, withdrawn and unknown are asked, refused as invalid and refused for the rate limit, then not one line is written")
+    @DisplayName("Given the production log levels, when the statuses active, replaced, withdrawn, outdated and unknown are asked, refused as invalid and refused for the rate limit, then not one line is written")
     void should_write_no_line_when_statuses_asked_refused_and_limited_given_production_levels(CapturedOutput output) throws Exception {
         List<String> digests = issuedReceiptDigests();
         PRODUCTION_LEVELS.forEach(this::setLevel);
@@ -123,7 +123,7 @@ class ReceiptStatusLoggingTest {
         List<Integer> answers = askEveryKindOfQuestion(digests);
 
         assertThat(answers).contains(200, 400, 429);
-        assertThat(answered).containsExactlyInAnyOrder("active", "replaced", "withdrawn", "unknown");
+        assertThat(answered).containsExactlyInAnyOrder("active", "replaced", "withdrawn", "outdated", "unknown");
         assertThat(output.getAll().substring(start)).isEmpty();
     }
 
@@ -190,7 +190,7 @@ class ReceiptStatusLoggingTest {
                 new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new VariableSymbol("4821937560"), LocaleCode.CS, now);
         donorRecords.save(jana);
         List<String> digests = new ArrayList<>();
-        for (int gift = 0; gift < 3; gift++) {
+        for (int gift = 0; gift < 4; gift++) {
             BankPayment paid = payment(7101 + gift, LocalDate.of(2026, 3, 15 + gift), Money.czk(50000), Optional.of(new SenderAccount("2900233333", "2010")), null);
             payments.saveAll(List.of(paid));
             Donation donation = Donation.fromBankPayment(DonationId.newId(now), jana.id(), paid, PairingMethod.VARIABLE_SYMBOL, now);
@@ -199,6 +199,8 @@ class ReceiptStatusLoggingTest {
         }
         jdbc.sql("update issued_receipt set status = 'REPLACED', superseded_at = issued_at where status_sha256 = ?").param(digests.get(1)).update();
         jdbc.sql("update issued_receipt set status = 'WITHDRAWN' where status_sha256 = ?").param(digests.get(2)).update();
+        jdbc.sql("update issued_receipt set status = 'WITHDRAWN', withdrawn_at = issued_at, withdrawal_reason = 'DONATIONS_CHANGED' where status_sha256 = ?")
+                .param(digests.get(3)).update();
         return digests;
     }
 }

@@ -24,6 +24,7 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptKind;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptReplacementInBrowserOnly;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatoryMissing;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptStanding;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptStatus;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptUnprintable;
 import cz.novanadeje.app.donations.domain.receipt.Signatory;
@@ -322,6 +323,58 @@ class DonationReceiptIssuerTest {
     }
 
     @Test
+    @DisplayName("Given no active receipt for the year and an English one withdrawn because the gifts changed, when the yearly receipt is issued, then the new one names the withdrawn one as replaced, keeps its language and counts against the cap, and the withdrawn one stays outdated and is not saved again")
+    void should_name_outdated_receipt_as_replaced_when_issued_given_receipt_withdrawn_because_donations_changed() {
+        DonationReceipt outdated = yearlyReceipt(ReceiptDocumentFactory.fingerprintForYear(jana(), YEAR_2026, List.of(MARCH)), LocaleCode.EN);
+        outdated.withdrawBecauseDonationsChanged(EARLIER_AT.plus(Duration.ofDays(1)));
+        givenDonationsOfJana(jana(), JUNE);
+        when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.empty());
+        when(receipts.findLatestOutdatedForYear(JANA, YEAR_2026)).thenReturn(Optional.of(outdated));
+        when(receipts.nextSerial()).thenReturn(2L);
+        givenFreezer();
+
+        DonationReceipt issued = issuer.issueForYear(JANA, YEAR_2026, TODAY);
+
+        assertThat(savedReceipt()).isSameAs(issued);
+        assertThat(issued.supersedes()).contains(outdated.id());
+        assertThat(issued.isActive()).isTrue();
+        assertThat(issued.locale()).isEqualTo(LocaleCode.EN);
+        assertThat(frozenDocument().replaces()).contains(new ReplacedReceipt(outdated.number(), EARLIER));
+        assertThat(outdated.standing()).isEqualTo(ReceiptStanding.OUTDATED);
+        verify(receipts).countReplacementsIssuedAfter(eq(JANA), any());
+    }
+
+    @Test
+    @DisplayName("Given no active receipt for the year and 20 replacements in the last 24 hours, when the yearly receipt that would name an outdated one is issued, then it is refused by the cap before a number is taken")
+    void should_refuse_before_numbering_when_issued_given_outdated_receipt_and_twenty_replacements_in_a_day() {
+        DonationReceipt outdated = yearlyReceipt(ReceiptDocumentFactory.fingerprintForYear(jana(), YEAR_2026, List.of(MARCH)), LocaleCode.CS);
+        outdated.withdrawBecauseDonationsChanged(EARLIER_AT.plus(Duration.ofDays(1)));
+        givenDonationsOfJana(jana(), JUNE);
+        when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.empty());
+        when(receipts.findLatestOutdatedForYear(JANA, YEAR_2026)).thenReturn(Optional.of(outdated));
+        when(receipts.countReplacementsIssuedAfter(eq(JANA), any())).thenReturn(20L);
+
+        assertThatThrownBy(() -> issuer.issueForYear(JANA, YEAR_2026, TODAY)).isInstanceOf(ReceiptIssueLimitReached.class);
+
+        verify(receipts, never()).nextSerial();
+        verify(receipts, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Given a single receipt to issue, when issued, then no outdated yearly receipt is looked for")
+    void should_not_look_for_outdated_receipt_when_issued_given_single_receipt() {
+        givenDonationsOfJana(jana(), MARCH);
+        when(receipts.findActiveForDonation(MARCH.id())).thenReturn(Optional.empty());
+        when(receipts.nextSerial()).thenReturn(1L);
+        givenFreezer();
+
+        issuer.issueForDonation(JANA, MARCH.id(), TODAY);
+
+        verify(receipts, never()).findLatestOutdatedForYear(any(), any());
+        assertThat(frozenDocument().replaces()).isEmpty();
+    }
+
+    @Test
     @DisplayName("Given a donor who prefers English and no receipt yet, when issued, then the receipt is English")
     void should_use_preferred_locale_when_issued_given_first_receipt() {
         DonorRecord english = jana();
@@ -569,6 +622,24 @@ class DonationReceiptIssuerTest {
             DonationReceipt issued = issuer.issueForYearByAdministrator(petr, BROWSER, JANA, YEAR_2026, TODAY);
 
             assertThat(issued.supersedes()).contains(active.id());
+            verify(events).publishEvent(new AdminActionPerformed(petr, "ISSUE_RECEIPT", Optional.of(issued.id().value()),
+                    "Potvrzení 2027-000002 za rok 2026 vystaveno dárci " + JANA.value() + "; nahrazuje potvrzení 2027-000001", NOW));
+        }
+
+        @Test
+        @DisplayName("when a connected application issues the yearly receipt after one was withdrawn because the gifts changed, then it is issued, names the withdrawn one and the audit says it replaces it")
+        void should_issue_naming_outdated_receipt_when_issued_by_connected_application_given_receipt_withdrawn_because_donations_changed() {
+            DonationReceipt outdated = yearlyReceipt(ReceiptDocumentFactory.fingerprintForYear(jana(), YEAR_2026, List.of(MARCH)), LocaleCode.CS);
+            outdated.withdrawBecauseDonationsChanged(EARLIER_AT.plus(Duration.ofDays(1)));
+            givenDonationsOfJana(jana(), JUNE);
+            when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.empty());
+            when(receipts.findLatestOutdatedForYear(JANA, YEAR_2026)).thenReturn(Optional.of(outdated));
+            when(receipts.nextSerial()).thenReturn(2L);
+            givenFreezer();
+
+            DonationReceipt issued = issuer.issueForYearByAdministrator(petr, CONNECTED_APPLICATION, JANA, YEAR_2026, TODAY);
+
+            assertThat(issued.supersedes()).contains(outdated.id());
             verify(events).publishEvent(new AdminActionPerformed(petr, "ISSUE_RECEIPT", Optional.of(issued.id().value()),
                     "Potvrzení 2027-000002 za rok 2026 vystaveno dárci " + JANA.value() + "; nahrazuje potvrzení 2027-000001", NOW));
         }

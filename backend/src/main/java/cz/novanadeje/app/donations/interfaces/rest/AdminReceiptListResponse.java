@@ -5,6 +5,8 @@ import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptKind;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptPage;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptStatus;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptWithdrawal;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptWithdrawalReason;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -19,12 +21,15 @@ record AdminReceiptListResponse(List<AdminReceiptItemResponse> items, long total
     }
 
     record AdminReceiptItemResponse(UUID id, UUID donorId, ReceiptStatus status, ReceiptKind kind, String number, UUID donationId, Integer year,
-                                    LocalDate issuedOn, Instant issuedAt, Instant supersededAt, String locale, int giftCount, long totalAmountMinor) {
+                                    LocalDate issuedOn, Instant issuedAt, Instant supersededAt, Instant withdrawnAt,
+                                    ReceiptWithdrawalReason withdrawalReason, String locale, int giftCount, long totalAmountMinor) {
 
         static AdminReceiptItemResponse from(DonationReceipt receipt) {
             return new AdminReceiptItemResponse(receipt.id().value(), receipt.donor().value(), receipt.status(), receipt.kind(),
                     receipt.number().value(), receipt.donation().map(DonationId::value).orElse(null), receipt.year().map(Year::getValue).orElse(null),
-                    receipt.issuedOn(), receipt.issuedAt(), receipt.supersededAt().orElse(null), receipt.locale().tag(),
+                    receipt.issuedOn(), receipt.issuedAt(), receipt.supersededAt().orElse(null),
+                    receipt.withdrawal().map(ReceiptWithdrawal::at).orElse(null), receipt.withdrawal().map(ReceiptWithdrawal::reason).orElse(null),
+                    receipt.locale().tag(),
                     receipt.frozen().document().lines().size(), receipt.frozen().document().total().amountMinor());
         }
     }

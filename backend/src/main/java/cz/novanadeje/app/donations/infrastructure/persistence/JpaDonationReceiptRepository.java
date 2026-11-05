@@ -10,7 +10,9 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptKind;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptPage;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptQuery;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptStanding;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptStatus;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptWithdrawalReason;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -50,6 +52,13 @@ class JpaDonationReceiptRepository implements DonationReceiptRepository {
     @Override
     public Optional<DonationReceipt> findActiveForYear(DonorReference donor, Year year) {
         return jpa.findByDonorIdAndReceiptYearAndStatus(donor.value(), year.getValue(), ReceiptStatus.ACTIVE)
+                .map(IssuedReceiptJpaEntity::toDomain);
+    }
+
+    @Override
+    public Optional<DonationReceipt> findLatestOutdatedForYear(DonorReference donor, Year year) {
+        return jpa.findFirstByDonorIdAndReceiptYearAndStatusAndWithdrawalReasonOrderByIssuedAtDescNumberDesc(donor.value(), year.getValue(),
+                        ReceiptStatus.WITHDRAWN, ReceiptWithdrawalReason.DONATIONS_CHANGED)
                 .map(IssuedReceiptJpaEntity::toDomain);
     }
 
@@ -103,8 +112,9 @@ class JpaDonationReceiptRepository implements DonationReceiptRepository {
     }
 
     @Override
-    public Optional<ReceiptStatus> findStatusByStatusDigest(ContentDigest statusDigest) {
-        return jpa.findStatusByStatusSha256(statusDigest.value());
+    public Optional<ReceiptStanding> findStandingByStatusDigest(ContentDigest statusDigest) {
+        return jpa.findStatusByStatusSha256(statusDigest.value())
+                .map(kept -> ReceiptStanding.of(kept.getStatus(), Optional.ofNullable(kept.getWithdrawalReason())));
     }
 
     @Override

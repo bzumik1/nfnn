@@ -451,7 +451,7 @@ export class AdminPayments {
             kind: 'status',
             text:
               $localize`:@@admin.payments.unpair.done:Platba ${this.describe(payment)}:payment: už není přiřazena. Web ji sám znovu nepřiřadí; najdete ji mezi platbami čekajícími na přiřazení.` +
-              this.receiptNote(result.changedYearlyReceipts),
+              this.withdrawalNote(result.changedYearlyReceipts),
           });
           const donation = payment.donation;
           if (donation?.donorName) {
@@ -506,6 +506,17 @@ export class AdminPayments {
     return (
       ' ' +
       $localize`:@@admin.payments.receiptChanged:Dárce si už stáhl roční potvrzení za ${list}:years:; při dalším stažení dostane nové. Dejte mu prosím vědět.`
+    );
+  }
+
+  private withdrawalNote(years: number[]): string {
+    if (years.length === 0) {
+      return '';
+    }
+    const list = years.join(', ');
+    return (
+      ' ' +
+      $localize`:@@admin.payments.receiptWithdrawn:Roční potvrzení za ${list}:years:, na kterém dar byl, je teď zrušené; ověření ukáže, že platilo ke dni vystavení. Zbyly-li dárci za ten rok další dary, může si stáhnout nové. Dejte mu prosím vědět.`
     );
   }
 

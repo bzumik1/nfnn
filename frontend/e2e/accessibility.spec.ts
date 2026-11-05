@@ -328,6 +328,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
         ['replaced', SINGLE_RECEIPT.fragment, 'Fond toto potvrzení nahradil novějším'],
         ['withdrawn', YEARLY_RECEIPT.fragment, 'Fond toto potvrzení zrušil'],
         ['unknown', SINGLE_RECEIPT.fragment, 'Fond toto potvrzení ve své evidenci nevede'],
+        ['outdated', YEARLY_RECEIPT.fragment, 'Potvrzení platilo ke dni vystavení'],
       ];
       for (const [status, fragment, title] of answers) {
         api.status = status;

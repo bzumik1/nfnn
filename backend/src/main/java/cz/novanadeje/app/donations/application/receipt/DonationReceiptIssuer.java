@@ -121,17 +121,17 @@ public class DonationReceiptIssuer {
         }
         DonationReceipt receipt = issue(request, active);
         if (active.filter(previous -> previous.id().equals(receipt.id())).isEmpty()) {
-            events.publishEvent(new AdminActionPerformed(adminId, ISSUE_ACTION, Optional.of(receipt.id().value()), auditDetails(receipt, active),
+            events.publishEvent(new AdminActionPerformed(adminId, ISSUE_ACTION, Optional.of(receipt.id().value()), auditDetails(receipt),
                     receipt.issuedAt()));
         }
         return receipt;
     }
 
-    private static String auditDetails(DonationReceipt receipt, Optional<DonationReceipt> replaced) {
+    private static String auditDetails(DonationReceipt receipt) {
         String subject = receipt.year().map(year -> "za rok " + year)
                 .orElseGet(() -> "za dar " + receipt.donation().map(donation -> donation.value().toString()).orElseThrow());
         return "Potvrzení " + receipt.number() + " " + subject + " vystaveno dárci " + receipt.donor()
-                + replaced.map(old -> "; nahrazuje potvrzení " + old.number()).orElse("");
+                + receipt.frozen().document().replaces().map(old -> "; nahrazuje potvrzení " + old.number()).orElse("");
     }
 
     private DonationReceipt issue(ReceiptRequest request) {
@@ -144,10 +144,11 @@ public class DonationReceiptIssuer {
             LOG.debug("Returning issued receipt {} again for donor {}", active.get().number(), request.donor());
             return active.get();
         }
-        return issueNew(request, fingerprint, active);
+        return issueNew(request, fingerprint, active, active.or(() -> outdatedReceipt(request)));
     }
 
-    private DonationReceipt issueNew(ReceiptRequest request, ReceiptFingerprint fingerprint, Optional<DonationReceipt> replaced) {
+    private DonationReceipt issueNew(ReceiptRequest request, ReceiptFingerprint fingerprint, Optional<DonationReceipt> active,
+                                     Optional<DonationReceipt> replaced) {
         Instant issuedAt = clock.instant();
         SignatoryAtIssue signatory = signatories.resolve(issuedAt);
         ReceiptUnprintable.refuseUnlessPrintable(request.record(), foundation, signatory.signatory());
@@ -165,7 +166,7 @@ public class DonationReceiptIssuer {
         FrozenReceipt frozen = freezer.freeze(document, signatory.signatureImage(), signatory.portraitImage());
         DonationReceipt issued = DonationReceipt.issue(DonationReceiptId.newId(issuedAt), request.donor(), issuedAt, fingerprint, frozen,
                 replaced.map(DonationReceipt::id));
-        replaced.ifPresent(old -> {
+        active.ifPresent(old -> {
             old.markSuperseded(issuedAt);
             receipts.save(old);
         });
@@ -173,6 +174,13 @@ public class DonationReceiptIssuer {
         String replacing = replaced.map(old -> " replacing " + old.number()).orElse("");
         AfterCommit.run(() -> LOG.info("Issued receipt {} ({}) for donor {}{}", number, issued.kind(), request.donor(), replacing));
         return issued;
+    }
+
+    private Optional<DonationReceipt> outdatedReceipt(ReceiptRequest request) {
+        return switch (request) {
+            case ReceiptRequest.ForDonation single -> Optional.empty();
+            case ReceiptRequest.ForYear yearly -> receipts.findLatestOutdatedForYear(yearly.donor(), yearly.year());
+        };
     }
 
     private Optional<DonationReceipt> activeReceipt(ReceiptRequest request) {

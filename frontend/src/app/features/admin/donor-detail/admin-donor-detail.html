@@ -891,6 +891,10 @@
                       <span class="tag tag--on" i18n="@@admin.donorDetail.receipts.active"
                         >platné</span
                       >
+                    } @else if (receipt.withdrawalReason === 'DONATIONS_CHANGED') {
+                      <span class="tag tag--off" i18n="@@admin.donorDetail.receipts.outdated"
+                        >zrušeno, dary se změnily</span
+                      >
                     } @else {
                       <span class="tag tag--off" i18n="@@admin.donorDetail.receipts.superseded"
                         >nahrazeno novějším</span

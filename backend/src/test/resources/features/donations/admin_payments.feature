@@ -196,7 +196,7 @@ Feature: An administrator pairs bank payments by hand
     Then paired payment 1001 says:
       | donation.receiptIssued | true |
 
-  Scenario: Pairing and unpairing in a year with an issued yearly receipt name that year so the administrator can tell the donor
+  Scenario: Pairing in a year with an issued yearly receipt names that year so the administrator can tell the donor, and unpairing a gift the receipt does not list leaves it valid
     Given the bank account has these movements:
       | id   | date       | amount | account    | bankCode | name          | variableSymbol |
       | 1001 | 2026-10-10 | 500.00 | 2900233333 | 2010     | Svoboda Petr  | {Petr}         |
@@ -211,7 +211,64 @@ Feature: An administrator pairs bank payments by hand
     And the pairing changed the yearly receipt for 2026
     When "Jana" unpairs payment 1002
     Then the response status is 200
+    And the unpairing changed no yearly receipt
+    And no admin action "WITHDRAW_RECEIPT" is recorded
+    When a visitor asks the status of receipt "2027-000001"
+    Then the receipt status is "active"
+
+  Scenario: Unpairing a gift on the donor's yearly receipt withdraws that receipt as outdated in the same step, audits it, and the donor's new one names it as replaced
+    Given the bank account has these movements:
+      | id   | date       | amount | account    | bankCode | name          | variableSymbol |
+      | 1001 | 2026-10-10 | 500.00 | 2900233333 | 2010     | Svoboda Petr  | {Petr}         |
+      | 1002 | 2026-10-12 | 200.00 | 2900233333 | 2010     | Svoboda Petr  | {Petr}         |
+    And the application starts the import
+    And today is 2027-01-15
+    And "Petr" issues his yearly receipt for 2026
+    And the issued receipt has number "2027-000001"
+    When "Jana" unpairs payment 1002
+    Then the response status is 200
     And the unpairing changed the yearly receipt for 2026
+    And bank payment 1002 is unpaired
+    And the admin action "UNPAIR_PAYMENT" by "Jana" on payment 1002 is recorded
+    And the admin action "WITHDRAW_RECEIPT" by "Jana" on receipt "2027-000001" is recorded with details containing "za rok 2026"
+    And 0 receipts are active
+    When a visitor asks the status of receipt "2027-000001"
+    Then the receipt status is "outdated"
+    When "Jana" opens the donations of "Petr"
+    Then the donor's receipt "2027-000001" is withdrawn because the donations changed
+    When "Jana" lists the issued receipts of "Petr" in the administration
+    Then the administration's receipt list counts 1 of 1 receipts:
+      | number      | status    | kind   | donor |
+      | 2027-000001 | WITHDRAWN | YEARLY | Petr  |
+    When "Jana" reads in the administration the receipt "2027-000001"
+    Then the response status is 200
+    When "Petr" issues his yearly receipt for 2026
+    Then the issued receipt has number "2027-000002"
+    And the frozen receipt holds:
+      | field             | value       |
+      | replaces.number   | 2027-000001 |
+      | replaces.issuedOn | 2027-01-15  |
+      | total.amountMinor | 50000       |
+    And 1 receipt is active
+    When a visitor asks the status of receipt "2027-000002"
+    Then the receipt status is "active"
+    When a visitor asks the status of receipt "2027-000001"
+    Then the receipt status is "outdated"
+
+  Scenario: Unpairing a gift that also has its own single receipt is refused and leaves the yearly receipt valid
+    Given the bank account has these movements:
+      | id   | date       | amount | account    | bankCode | name          | variableSymbol |
+      | 1001 | 2026-10-10 | 500.00 | 2900233333 | 2010     | Svoboda Petr  | {Petr}         |
+    And the application starts the import
+    And "Petr" issues the receipt of his donation received on 2026-10-10
+    And today is 2027-01-15
+    And "Petr" issues his yearly receipt for 2026
+    And the issued receipt has number "2027-000002"
+    When "Jana" unpairs payment 1001
+    Then the response status is 409
+    And the problem type ends with "donations/donation-has-receipt"
+    And 2 receipts are active
+    And no admin action "WITHDRAW_RECEIPT" is recorded
 
   Scenario: Donors are found by part of the name or the start of the variable symbol
     Given a company "Acme" is registered with identification number "25596641"

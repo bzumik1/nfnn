@@ -148,6 +148,17 @@ public class AdminDonorAccountsStepDefinitions {
         assertThat(receipts).allSatisfy(receipt -> assertThat(UUID.fromString(receipt.get("id").asString())).isNotNull());
     }
 
+    @Then("the donor's receipt {string} is withdrawn because the donations changed")
+    public void theDonorsReceiptIsWithdrawnBecauseTheDonationsChanged(String number) {
+        JsonNode receipt = api.lastResponseJson().get("receipts").valueStream()
+                .filter(item -> item.get("number").asString().equals(number))
+                .findFirst()
+                .orElseThrow();
+        assertThat(receipt.get("active").asBoolean()).isFalse();
+        assertThat(receipt.get("withdrawalReason").asString()).isEqualTo("DONATIONS_CHANGED");
+        assertThat(receipt.get("withdrawnAt").isNull()).isFalse();
+    }
+
     @Then("{string} has no stored answer about symbol {string}")
     public void hasNoStoredAnswerAboutSymbol(String alias, String symbol) {
         assertThat(claims.findByDonor(new DonorReference(scenarioDonors.idOf(alias))))

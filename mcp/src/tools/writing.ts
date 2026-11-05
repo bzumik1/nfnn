@@ -151,7 +151,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Zrušit spárování platby',
       description:
-        'Removes the donation of a paired payment, so the payment is unpaired again (refused while a receipt certifies the donation); audited as UNPAIR_PAYMENT.',
+        "Removes the donation of a paired payment, so the payment is unpaired again; audited as UNPAIR_PAYMENT. Refused while a single receipt certifies the donation (409 donations/donation-has-receipt), and refused to a connection while the donor's active yearly receipt lists the donation (403 donations/receipt-withdrawal-in-browser-only), because unpairing it withdraws that receipt, which an administrator does only on the web at /sprava/platby.",
       inputSchema: z.object({ paymentId: UUID }),
       annotations: { ...WRITING, destructiveHint: true },
     },
@@ -505,7 +505,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Vystavit potvrzení',
       description:
-        "Issues a donor's donation receipt, as \"Vystavit potvrzení\" on the donor card at /sprava does: the yearly receipt of a completed year (`year`, from the first receipt year) or the receipt of one donation (`donationId`, one of the donor's donations in nfnn_donor with receiptAvailable), never both. A connection issues only the first receipt of a donation or year: the same data give back the receipt already issued with its number, so calling it again changes nothing, but when the donor's name, address or gifts changed since, the replacement with a new number, which would make the receipt the donor holds REPLACED for good, is issued only by an administrator on the web at /sprava (403 donations/receipt-replacement-in-browser-only, and the receipt already issued stays valid). So this tool never changes or withdraws anything that exists. The answer is that of nfnn_receipt. An erased donor gets none (409 donations/donor-erased). A new number is audited as ISSUE_RECEIPT, naming this application.",
+        "Issues a donor's donation receipt, as \"Vystavit potvrzení\" on the donor card at /sprava does: the yearly receipt of a completed year (`year`, from the first receipt year) or the receipt of one donation (`donationId`, one of the donor's donations in nfnn_donor with receiptAvailable), never both. A connection issues only the first receipt of a donation or year: the same data give back the receipt already issued with its number, so calling it again changes nothing, but when the donor's name, address or gifts changed since, the replacement with a new number, which would make the receipt the donor holds REPLACED for good, is issued only by an administrator on the web at /sprava (403 donations/receipt-replacement-in-browser-only, and the receipt already issued stays valid). After an administrator's unpairing on the web withdrew the yearly receipt of a year (WITHDRAWN with withdrawalReason DONATIONS_CHANGED), this tool issues the new one, which names the withdrawn one as the receipt it replaces. So this tool never changes or withdraws anything that exists. The answer is that of nfnn_receipt. An erased donor gets none (409 donations/donor-erased). A new number is audited as ISSUE_RECEIPT, naming this application.",
       inputSchema: z.object({
         donorId: UUID,
         year: z
