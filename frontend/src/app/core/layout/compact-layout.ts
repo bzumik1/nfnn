@@ -3,6 +3,8 @@ import { DestroyRef, inject, Injectable, Signal, signal } from '@angular/core';
 
 import { downQuery } from './breakpoints';
 
+const NO_WIDTH = 1;
+
 @Injectable({ providedIn: 'root' })
 export class CompactLayout {
   private readonly compact = signal(false);
@@ -14,7 +16,11 @@ export class CompactLayout {
       return;
     }
     const query = view.matchMedia(downQuery('nav'));
-    const follow = (): void => this.compact.set(query.matches);
+    const follow = (): void => {
+      if (view.innerWidth > NO_WIDTH) {
+        this.compact.set(query.matches);
+      }
+    };
     follow();
     query.addEventListener('change', follow);
     inject(DestroyRef).onDestroy(() => query.removeEventListener('change', follow));
