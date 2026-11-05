@@ -26,13 +26,16 @@ public class AdminPaymentsStepDefinitions {
     private final DonorSessions sessions;
     private final ScenarioDonors scenarioDonors;
     private final JdbcClient jdbc;
+    private final DonationRowVersions versions;
     private String exchangedApiToken;
 
-    public AdminPaymentsStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors scenarioDonors, JdbcClient jdbc) {
+    public AdminPaymentsStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors scenarioDonors, JdbcClient jdbc,
+                                        DonationRowVersions versions) {
         this.api = api;
         this.sessions = sessions;
         this.scenarioDonors = scenarioDonors;
         this.jdbc = jdbc;
+        this.versions = versions;
     }
 
     @When("{string} asks for the unpaired payments")
@@ -79,31 +82,37 @@ public class AdminPaymentsStepDefinitions {
     @When("{string} pairs payment {long} with {string}")
     public void pairsPaymentWith(String alias, long transactionId, String donorAlias) {
         sessions.actAs(alias);
-        api.post(PAYMENTS_PATH + "/" + paymentId(transactionId) + "/pair", Map.of("donorId", scenarioDonors.idOf(donorAlias).toString()));
+        UUID payment = paymentId(transactionId);
+        api.post(PAYMENTS_PATH + "/" + payment + "/pair", Map.of("donorId", scenarioDonors.idOf(donorAlias).toString()),
+                ApiClient.ifMatch(versions.ofPayment(payment)));
     }
 
     @When("{string} pairs an unknown payment with {string}")
     public void pairsAnUnknownPaymentWith(String alias, String donorAlias) {
         sessions.actAs(alias);
-        api.post(PAYMENTS_PATH + "/" + UUID.randomUUID() + "/pair", Map.of("donorId", scenarioDonors.idOf(donorAlias).toString()));
+        api.post(PAYMENTS_PATH + "/" + UUID.randomUUID() + "/pair", Map.of("donorId", scenarioDonors.idOf(donorAlias).toString()),
+                ApiClient.ifMatch(DonationRowVersions.MATCHING_NOTHING));
     }
 
     @When("{string} pairs payment {long} with an unknown donor")
     public void pairsPaymentWithAnUnknownDonor(String alias, long transactionId) {
         sessions.actAs(alias);
-        api.post(PAYMENTS_PATH + "/" + paymentId(transactionId) + "/pair", Map.of("donorId", UUID.randomUUID().toString()));
+        UUID payment = paymentId(transactionId);
+        api.post(PAYMENTS_PATH + "/" + payment + "/pair", Map.of("donorId", UUID.randomUUID().toString()), ApiClient.ifMatch(versions.ofPayment(payment)));
     }
 
     @When("{string} pairs payment {long} without naming a donor")
     public void pairsPaymentWithoutNamingADonor(String alias, long transactionId) {
         sessions.actAs(alias);
-        api.post(PAYMENTS_PATH + "/" + paymentId(transactionId) + "/pair", Map.of());
+        UUID payment = paymentId(transactionId);
+        api.post(PAYMENTS_PATH + "/" + payment + "/pair", Map.of(), ApiClient.ifMatch(versions.ofPayment(payment)));
     }
 
     @When("{string} unpairs payment {long}")
     public void unpairsPayment(String alias, long transactionId) {
         sessions.actAs(alias);
-        api.post(PAYMENTS_PATH + "/" + paymentId(transactionId) + "/unpair", null);
+        UUID payment = paymentId(transactionId);
+        api.post(PAYMENTS_PATH + "/" + payment + "/unpair", null, ApiClient.ifMatch(versions.ofPayment(payment)));
     }
 
     @When("the exchanged API token unpairs payment {long}")

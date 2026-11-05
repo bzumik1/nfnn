@@ -1,4 +1,5 @@
 export const BREAKPOINTS = {
+  tabs: 208,
   tiny: 360,
   narrow: 420,
   phone: 480,

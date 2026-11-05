@@ -1,0 +1,150 @@
+@use 'breakpoints' as bp;
+
+:host {
+  display: contents;
+}
+
+.app-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  padding-top: env(safe-area-inset-top);
+
+  &:focus {
+    outline: none;
+  }
+}
+
+.app-header-inner {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: 0 max(var(--space-8), env(safe-area-inset-right)) 0
+    max(var(--space-8), env(safe-area-inset-left));
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--header-height);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  flex: 0 1 auto;
+  min-width: 0;
+  margin-inline-end: auto;
+  border-radius: var(--radius-sm);
+
+  img {
+    display: block;
+    width: 115px;
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+.brand--after-back {
+  margin-inline-start: calc(var(--back-button-size) + var(--space-1));
+}
+
+.back-button {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + (var(--header-height) - var(--back-button-size)) / 2);
+  left: max(
+    max(var(--space-8), env(safe-area-inset-left)),
+    calc((100% - var(--content-max)) / 2 + var(--space-8))
+  );
+  z-index: 110;
+  display: grid;
+  place-items: center;
+  width: var(--back-button-size);
+  height: var(--back-button-size);
+  padding: 0;
+  border: 1px solid var(--color-tab-bar-rim);
+  border-radius: var(--radius-pill);
+  background: var(--color-tab-bar);
+  backdrop-filter: blur(var(--blur-bar));
+  box-shadow: var(--shadow-tab-bar);
+  color: var(--color-on-tab-bar);
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 3px solid var(--color-tab-focus-ring);
+    outline-offset: -3px;
+  }
+}
+
+.sign-in {
+  flex: none;
+  max-width: 60%;
+  text-align: center;
+  border: 1.5px solid var(--color-accent);
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  padding: var(--space-2-25) var(--space-4-5);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  box-shadow: var(--shadow-button-sm);
+  cursor: pointer;
+}
+
+.account-button {
+  display: grid;
+  place-items: center;
+  width: var(--back-button-size);
+  height: var(--back-button-size);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-wide);
+  cursor: pointer;
+  position: relative;
+}
+
+.account-portrait {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  object-fit: cover;
+}
+
+.account-badge {
+  position: absolute;
+  inset-block-start: calc(var(--space-1) * -1);
+  inset-inline-end: calc(var(--space-1) * -1);
+  min-width: var(--space-5);
+  padding: var(--space-0-5) var(--space-1);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-accent);
+  font-size: var(--text-2xs);
+  line-height: var(--leading-snug);
+  letter-spacing: normal;
+  text-align: center;
+  font-variant-numeric: var(--numeric-figures);
+}
+
+.app-header--on-dark .account-button {
+  border: 1px solid var(--color-tab-bar-rim);
+}
+
+@include bp.down(tablet) {
+  .app-header-inner {
+    padding: 0 max(var(--space-5), env(safe-area-inset-right)) 0
+      max(var(--space-5), env(safe-area-inset-left));
+  }
+
+  .back-button {
+    left: max(var(--space-5), env(safe-area-inset-left));
+  }
+}

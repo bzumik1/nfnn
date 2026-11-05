@@ -9,5 +9,7 @@ public interface ReportSettingsRepository {
 
     Optional<Instant> lastChangedAt();
 
+    void lockForChange();
+
     void save(ReportSettings settings, Instant at);
 }

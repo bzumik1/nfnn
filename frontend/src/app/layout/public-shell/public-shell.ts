@@ -2,6 +2,7 @@ import {
   afterNextRender,
   ChangeDetectionStrategy,
   Component,
+  computed,
   DOCUMENT,
   ElementRef,
   inject,
@@ -17,14 +18,18 @@ import {
   Router,
   RouterOutlet,
 } from '@angular/router';
-import { SiteHeader } from '../site-header/site-header';
+import { CompactLayout } from '../../core/layout/compact-layout';
+import { BackTarget } from '../../core/navigation/back-target';
+import { RouteChrome } from '../../core/navigation/route-chrome';
+import { AppHeader } from '../app-header/app-header';
+import { TabBar } from '../tab-bar/tab-bar';
 import { SiteFooter } from '../site-footer/site-footer';
 import { SignedOutNotice } from '../signed-out-notice/signed-out-notice';
 import { SetupRedirect } from '../../features/operations/setup/setup-redirect';
 
 @Component({
   selector: 'app-public-shell',
-  imports: [RouterOutlet, SiteHeader, SiteFooter, SignedOutNotice],
+  imports: [RouterOutlet, AppHeader, SiteFooter, TabBar, SignedOutNotice],
   templateUrl: './public-shell.html',
   styleUrl: './public-shell.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -34,14 +39,28 @@ export class PublicShell {
   private readonly document = inject(DOCUMENT);
   private readonly injector = inject(Injector);
   private readonly router = inject(Router);
+  private readonly back = inject(BackTarget);
   private returningInHistory = false;
+  private readonly chrome = inject(RouteChrome).current;
+  private readonly compact = inject(CompactLayout).isCompact;
+  protected readonly tabBar = computed(() => this.chrome().tabBar);
+  protected readonly footer = computed(() =>
+    this.compact() ? this.chrome().phoneFooter : !this.chrome().landing,
+  );
+  protected readonly roomForTabBar = computed(
+    () => this.tabBar() && !this.footer() && !this.chrome().landing,
+  );
 
   constructor() {
     inject(SetupRedirect).checkOnce();
     this.router.events.pipe(takeUntilDestroyed()).subscribe((event) => {
       if (event instanceof NavigationStart) {
         this.returningInHistory = event.navigationTrigger === 'popstate';
-      } else if (event instanceof NavigationEnd && event.id > 1 && !this.returningInHistory) {
+      } else if (
+        event instanceof NavigationEnd &&
+        event.id > 1 &&
+        (!this.returningInHistory || this.back.returningByButton)
+      ) {
         const fragment = this.router.parseUrl(event.urlAfterRedirects).fragment;
         afterNextRender(() => this.followNavigation(fragment), { injector: this.injector });
       } else if (

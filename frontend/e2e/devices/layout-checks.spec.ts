@@ -103,6 +103,63 @@ test.describe('Given a page checked as on a phone', () => {
     ]);
   });
 
+  test('when the focus rests on the main region behind a fixed bar, as Safari on a Mac leaves it after a pressed button, then the focus check passes', async ({
+    page,
+  }) => {
+    await page.setViewportSize(VIEWPORT);
+    await page.setContent(
+      '<!doctype html><html><body style="margin: 0"><main id="content" tabindex="-1" style="display: block; height: 1200px; outline: none"><h1>Title</h1></main><div style="position: fixed; bottom: 0; left: 0; right: 0; height: 400px; background: white"><a href="#content">Tab</a></div></body></html>',
+    );
+    await page.locator('#content').focus();
+
+    const failing = (await layoutChecks(page, [])).filter((check) => !check.pass);
+
+    expect(failing.map((check) => check.name)).toEqual([]);
+  });
+
+  test('when the page has scrolled a button under a fixed bar at the top, then the button does not count as covered', async ({
+    page,
+  }) => {
+    await page.setViewportSize(VIEWPORT);
+    await page.setContent(
+      '<!doctype html><html><body style="margin: 0"><div style="position: fixed; top: 0; left: 0; right: 0; height: 80px; background: white"></div><div style="height: 300px"></div><button style="width: 120px; height: 40px">Under</button><div style="height: 1200px"></div></body></html>',
+    );
+    await page.evaluate(() => window.scrollTo({ top: 280, behavior: 'instant' }));
+
+    const failing = (await layoutChecks(page, [])).filter((check) => !check.pass);
+
+    expect(failing.map((check) => check.name)).toEqual([]);
+  });
+
+  test('when a button further down lies under a fixed bar at the bottom while the page still scrolls, then the button does not count as covered', async ({
+    page,
+  }) => {
+    await page.setViewportSize(VIEWPORT);
+    await page.setContent(
+      '<!doctype html><html><body style="margin: 0"><div style="height: 540px"></div><button style="width: 120px; height: 40px">Below</button><div style="height: 600px"></div><nav style="position: fixed; bottom: 0; left: 20px; right: 20px; height: 80px; background: white"></nav></body></html>',
+    );
+
+    const failing = (await layoutChecks(page, [])).filter((check) => !check.pass);
+
+    expect(failing.map((check) => check.name)).toEqual([]);
+  });
+
+  test('when the page has reached its end and a button still lies under the fixed bar at the bottom, then the button is covered', async ({
+    page,
+  }) => {
+    await page.setViewportSize(VIEWPORT);
+    await page.setContent(
+      '<!doctype html><html><body style="margin: 0"><div style="height: 1100px"></div><button style="width: 120px; height: 40px">Last</button><nav style="position: fixed; bottom: 0; left: 20px; right: 20px; height: 80px; background: white"></nav></body></html>',
+    );
+    await page.evaluate(() =>
+      window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' }),
+    );
+
+    const failing = (await layoutChecks(page, [])).filter((check) => !check.pass);
+
+    expect(failing.map((check) => check.name)).toEqual(['no control covered by another element']);
+  });
+
   test('when small targets stand close together, then they are too small', async ({ page }) => {
     expect(
       await failingChecks(
@@ -121,6 +178,19 @@ test.describe('Given a page checked as on a phone', () => {
         '<div style="display: flex; gap: 40px"><button style="width: 16px; height: 16px">a</button><button style="width: 16px; height: 16px">b</button></div>',
       ),
     ).toEqual([]);
+  });
+
+  test('when a small target scrolls past a control of a fixed bar, then the spacing exception still lets it pass', async ({
+    page,
+  }) => {
+    await page.setViewportSize(VIEWPORT);
+    await page.setContent(
+      '<!doctype html><html><body style="margin: 0"><div style="height: 540px"></div><button style="display: block; margin-left: 20px; width: 80px; height: 16px">Small</button><div style="height: 600px"></div><nav style="position: fixed; bottom: 0; left: 0; right: 0; height: 52px; background: white"><a href="#" style="display: block; width: 120px; height: 44px">Tab</a></nav></body></html>',
+    );
+
+    const failing = (await layoutChecks(page, [])).filter((check) => !check.pass);
+
+    expect(failing.map((check) => check.name)).toEqual([]);
   });
 
   test('when a link stands inside a sentence, then its size does not count', async ({ page }) => {

@@ -397,8 +397,10 @@ describe('Given the privacy policy page', () => {
     expect(link.textContent!.trim()).toBe('info@nfnn.cz');
   });
 
-  it('when it renders, then the contact section links to the contact form on the home page', () => {
-    const link = fixture.nativeElement.querySelector('a[href="/#kontakt"]') as HTMLAnchorElement;
+  it('when it renders, then the contact section links to the contact form on the About page', () => {
+    const link = fixture.nativeElement.querySelector(
+      'a[href="/o-nas#kontakt"]',
+    ) as HTMLAnchorElement;
 
     expect(link.textContent!.trim()).toBe('kontaktní formulář');
   });

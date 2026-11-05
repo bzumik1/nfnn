@@ -1,14 +1,17 @@
 package cz.novanadeje.app.donations.interfaces.rest;
 
 import cz.novanadeje.app.donations.application.admin.AdminDonorView;
+import cz.novanadeje.app.donations.application.bankaccount.BankAccountView;
 import cz.novanadeje.app.donations.application.receipt.ReceiptYears;
 import cz.novanadeje.app.donations.domain.donation.DonationId;
 import cz.novanadeje.app.donations.domain.donation.DonationPurpose;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
+import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkStatus;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptKind;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptWithdrawal;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptWithdrawalReason;
+import cz.novanadeje.app.shared.domain.Currency;
 import cz.novanadeje.app.shared.domain.DonorType;
 
 import java.time.Instant;
@@ -18,13 +21,13 @@ import java.util.List;
 import java.util.UUID;
 import java.util.function.Function;
 
-record AdminDonorDetailResponse(AdminDonorRecordResponse donor, List<BankAccountListResponse.BankAccountItemResponse> bankAccounts,
+record AdminDonorDetailResponse(AdminDonorRecordResponse donor, List<AdminBankAccountResponse> bankAccounts,
                                 DonationListResponse donations, List<ReceiptItemResponse> receipts, int yearlyReceiptsAvailableThrough,
                                 int receiptsAvailableFrom) {
 
     static AdminDonorDetailResponse from(AdminDonorView view, ReceiptYears receiptYears, Function<DonationPurpose, String> purposeText) {
         return new AdminDonorDetailResponse(AdminDonorRecordResponse.from(view.record()),
-                view.bankAccounts().stream().map(BankAccountListResponse.BankAccountItemResponse::from).toList(),
+                view.bankAccounts().stream().map(account -> AdminBankAccountResponse.from(account, view.versionOf(account.link().id()))).toList(),
                 DonationListResponse.from(view.donations(), purposeText),
                 view.receipts().stream().map(receipt -> ReceiptItemResponse.from(receipt, view.receivedOn(receipt).orElse(null))).toList(),
                 receiptYears.lastCompleted().getValue(), receiptYears.first().getValue());
@@ -38,6 +41,19 @@ record AdminDonorDetailResponse(AdminDonorRecordResponse donor, List<BankAccount
                     record.companyIdentifier().orElse(null),
                     new AddressResponse(record.address().street(), record.address().city(), record.address().postalCode()),
                     record.preferredLocale().tag(), record.registeredAt(), record.erasedAt().orElse(null));
+        }
+    }
+
+    record AdminBankAccountResponse(UUID id, String accountNumber, SenderAccountLinkStatus status, LocalDate verifiedOn, LocalDate connectedFrom,
+                                    LocalDate disconnectedOn, int donationCount, long totalAmountMinor, Currency currency, LocalDate lastDonationOn,
+                                    boolean shared, boolean pairingExcluded, LocalDate verificationPaymentOn,
+                                    BankAccountListResponse.SymbolOfferResponse symbolOffer, List<String> confirmedSymbols, String version) {
+
+        static AdminBankAccountResponse from(BankAccountView view, String version) {
+            BankAccountListResponse.BankAccountItemResponse item = BankAccountListResponse.BankAccountItemResponse.from(view);
+            return new AdminBankAccountResponse(item.id(), item.accountNumber(), item.status(), item.verifiedOn(), item.connectedFrom(),
+                    item.disconnectedOn(), item.donationCount(), item.totalAmountMinor(), item.currency(), item.lastDonationOn(), item.shared(),
+                    item.pairingExcluded(), item.verificationPaymentOn(), item.symbolOffer(), item.confirmedSymbols(), version);
         }
     }
 

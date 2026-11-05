@@ -2,6 +2,7 @@ package cz.novanadeje.app.donations.interfaces.rest;
 
 import cz.novanadeje.app.donations.application.admin.AdminSymbolClaimsService;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimId;
+import cz.novanadeje.app.shared.application.version.ExpectedVersion;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -32,13 +33,13 @@ class AdminSymbolClaimsController {
 
     @PostMapping("/{id}/reverse")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    void reverse(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
-        symbolClaims.reverse(UUID.fromString(jwt.getSubject()), new SymbolClaimId(id));
+    void reverse(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, ExpectedVersion expected) {
+        symbolClaims.reverse(UUID.fromString(jwt.getSubject()), new SymbolClaimId(id), expected);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    void reset(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
-        symbolClaims.reset(UUID.fromString(jwt.getSubject()), new SymbolClaimId(id));
+    void reset(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, ExpectedVersion expected) {
+        symbolClaims.reset(UUID.fromString(jwt.getSubject()), new SymbolClaimId(id), expected);
     }
 }

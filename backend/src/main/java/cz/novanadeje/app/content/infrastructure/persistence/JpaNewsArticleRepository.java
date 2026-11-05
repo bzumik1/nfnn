@@ -31,6 +31,11 @@ class JpaNewsArticleRepository implements NewsArticleRepository {
     }
 
     @Override
+    public Optional<NewsArticle> findByIdForUpdate(NewsArticleId id) {
+        return jpa.findByIdForUpdate(id.value()).map(NewsArticleJpaEntity::toDomain);
+    }
+
+    @Override
     public Optional<NewsArticle> findBySlug(Slug slug) {
         return jpa.findBySlug(slug.value()).map(NewsArticleJpaEntity::toDomain);
     }

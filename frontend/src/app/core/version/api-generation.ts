@@ -1,4 +1,4 @@
-export const API_GENERATION = 1;
+export const API_GENERATION = 2;
 
 export const POSTS_ACROSS_GENERATIONS: ReadonlySet<string> = new Set([
   '/api/donors/auth/refresh',
