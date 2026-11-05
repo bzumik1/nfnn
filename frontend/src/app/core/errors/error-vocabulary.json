@@ -6,12 +6,12 @@
     "pdf-load",
     "qr-encode",
     "verify-parse",
-    "verify-signature"
+    "verify-signature",
+    "boot",
+    "sw-install",
+    "sw-unrecoverable"
   ],
-  "places": [
-    "global",
-    "navigation"
-  ],
+  "places": ["global", "navigation", "start-up", "service-worker"],
   "names": [
     "Error",
     "AggregateError",
@@ -41,26 +41,7 @@
     "HttpErrorResponse",
     "Other"
   ],
-  "browsers": [
-    "chrome",
-    "edge",
-    "firefox",
-    "safari",
-    "samsung",
-    "opera",
-    "other"
-  ],
-  "operatingSystems": [
-    "android",
-    "ios",
-    "ipados",
-    "macos",
-    "windows",
-    "linux",
-    "other"
-  ],
-  "displayModes": [
-    "browser",
-    "standalone"
-  ]
+  "browsers": ["chrome", "edge", "firefox", "safari", "samsung", "opera", "other"],
+  "operatingSystems": ["android", "ios", "ipados", "macos", "windows", "linux", "other"],
+  "displayModes": ["browser", "standalone"]
 }

@@ -273,6 +273,87 @@ export function themeAssetProblems({ reference, assets, publicFiles, angular }) 
   return problems;
 }
 
+const MANIFEST_FIELDS = [
+  ['id', '/aplikace'],
+  ['start_url', '/aplikace'],
+  ['scope', '/'],
+  ['display', 'standalone'],
+  ['lang', 'cs'],
+];
+
+const MANIFEST_COLOURS = [
+  ['theme_color', '--color-accent'],
+  ['background_color', '--color-surface'],
+];
+
+const REQUIRED_ICONS = [
+  ['any', '192x192'],
+  ['any', '512x512'],
+  ['maskable', '512x512'],
+];
+
+export function manifestProblems({ theme, manifest, source, iconSizes }) {
+  if (manifest === null) {
+    return [`theme ${theme} has no assets/manifest.webmanifest`];
+  }
+  const problems = [];
+  for (const [field, wanted] of MANIFEST_FIELDS) {
+    if (manifest[field] !== wanted) {
+      problems.push(`theme ${theme}: manifest ${field} is ${manifest[field]}, not ${wanted}`);
+    }
+  }
+  const atRoot = new Map(
+    declarationsByBlock(source)
+      .filter(({ chain }) => chain.length === 1 && chain[0] === ':root')
+      .map(({ name, value }) => [name, value.toLowerCase()]),
+  );
+  for (const [field, token] of MANIFEST_COLOURS) {
+    const value = String(manifest[field] ?? '').toLowerCase();
+    if (value !== atRoot.get(token)) {
+      problems.push(
+        `theme ${theme}: manifest ${field} ${manifest[field]} is not ${token} ${atRoot.get(token)}`,
+      );
+    }
+  }
+  const icons = Array.isArray(manifest.icons) ? manifest.icons : [];
+  for (const icon of icons) {
+    const size = iconSizes.get(String(icon.src).replace(/^\//, ''));
+    if (size === undefined || icon.type !== 'image/png') {
+      problems.push(`theme ${theme}: manifest icon ${icon.src} is not a PNG in assets/`);
+    } else if (`${size[0]}x${size[1]}` !== icon.sizes) {
+      problems.push(
+        `theme ${theme}: manifest icon ${icon.src} is ${size[0]}x${size[1]}, not ${icon.sizes}`,
+      );
+    }
+  }
+  for (const [purpose, sizes] of REQUIRED_ICONS) {
+    if (!icons.some((icon) => (icon.purpose ?? 'any') === purpose && icon.sizes === sizes)) {
+      problems.push(`theme ${theme}: manifest has no ${purpose} icon of ${sizes}`);
+    }
+  }
+  return problems;
+}
+
+function pngSize(path) {
+  const bytes = readFileSync(path);
+  const signature = bytes.subarray(0, 8).toString('hex');
+  return signature === '89504e470d0a1a0a' ? [bytes.readUInt32BE(16), bytes.readUInt32BE(20)] : null;
+}
+
+function iconSizesUnder(dir) {
+  return new Map(
+    filesUnder(dir)
+      .filter((file) => file.endsWith('.png'))
+      .map((file) => [file, pngSize(join(dir, file))])
+      .filter(([, size]) => size !== null),
+  );
+}
+
+function manifestIn(dir) {
+  const path = join(dir, 'manifest.webmanifest');
+  return existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')) : null;
+}
+
 function filesUnder(dir, prefix = '') {
   if (!existsSync(dir)) {
     return [];
@@ -391,6 +472,15 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   }
   for (const [theme, source] of sources) {
     problems.push(...barContrastProblems(theme, source));
+    const assetsDir = join(themesDir, theme, 'assets');
+    problems.push(
+      ...manifestProblems({
+        theme,
+        manifest: manifestIn(assetsDir),
+        source,
+        iconSizes: iconSizesUnder(assetsDir),
+      }),
+    );
   }
   problems.push(
     ...themeAssetProblems({
@@ -429,6 +519,6 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     process.exit(1);
   }
   console.log(
-    `${themes.size} themes set all ${needed.size} tokens the styles and the receipt use, and carry content-named receipt fonts, literal receipt colours and readable receipt text, set only in their top-level :root, keep the tab bar readable over a white and a black page, its solid pill apart from the bar, and serve the same theme files.`,
+    `${themes.size} themes set all ${needed.size} tokens the styles and the receipt use, and carry content-named receipt fonts, literal receipt colours and readable receipt text, set only in their top-level :root, keep the tab bar readable over a white and a black page, its solid pill apart from the bar, serve the same theme files and a web app manifest in their colours with the icons it names.`,
   );
 }

@@ -1,87 +1,89 @@
 import { Page, Request } from '@playwright/test';
 import { expect, pwaTest as test } from './pwa-fixtures';
-import { MARKER, PROBE_MANIFEST, PROBE_WORKER } from './pwa-site';
+import { MARKER, SERVICE_WORKER, SERVICE_WORKER_MANIFEST } from './pwa-site';
 
 const POLICY = '/zasady-ochrany-osobnich-udaju';
-const APP_API_OFFLINE = /^Failed to load resource: net::ERR_FAILED \(http:\/\/localhost:\d+\/api\//;
+const APP_API_UNREACHABLE =
+  /^Failed to load resource: the server responded with a status of 504 \(Gateway Timeout\) \(http:\/\/localhost:\d+\/api\//;
+const APP_API_OFFLINE =
+  /^Failed to load resource: (?:the server responded with a status of 504 \(Gateway Timeout\)|net::ERR_INTERNET_DISCONNECTED) \(http:\/\/localhost:\d+\/api\//;
+const ANSWER_TIMEOUT_MS = 10_000;
+const SETTLE_MS = 1_000;
+const CANARY = 'Zxqv Kanárek 7781,77 Kč';
+const PUBLIC_ANSWERS = [
+  /^\/api\/content\/home$/,
+  /^\/api\/content\/news(?:\?[^/]*|\/[^/]*)?$/,
+  /^\/api\/content\/projects(?:\?[^/]*|\/[^/]*)?$/,
+  /^\/api\/content\/media\/[^/]*$/,
+  /^\/api\/donations\/payment-details$/,
+];
 
-async function registerProbeWorker(page: Page): Promise<void> {
-  await page.evaluate(async (script) => {
-    await navigator.serviceWorker.register(script, { scope: '/' });
-  }, PROBE_WORKER);
+interface UpdateCheck {
+  readonly result?: boolean;
+  readonly error?: string;
 }
 
-const ANSWER_TIMEOUT_MS = 5_000;
-const UPDATE_TIMEOUT_MS = 10_000;
-
-async function askWorker(page: Page, message: unknown): Promise<unknown> {
+async function checkForUpdate(page: Page): Promise<UpdateCheck> {
   return page.evaluate(
-    ({ sent, timeoutMs }) =>
-      new Promise((resolve, reject) => {
+    (timeoutMs) =>
+      new Promise<UpdateCheck>((resolve, reject) => {
         const controller = navigator.serviceWorker.controller;
         if (controller === null) {
           reject(new Error('no service worker controls the page'));
           return;
         }
-        const channel = new MessageChannel();
+        const nonce = Math.floor(Math.random() * 1_000_000_000);
         const timer = setTimeout(
-          () => reject(new Error(`the worker did not answer ${JSON.stringify(sent)} in time`)),
+          () => reject(new Error('the service worker did not finish its update check in time')),
           timeoutMs,
         );
-        channel.port1.onmessage = (event) => {
-          clearTimeout(timer);
-          resolve(event.data);
-        };
-        controller.postMessage(sent, [channel.port2]);
-      }),
-    { sent: message, timeoutMs: ANSWER_TIMEOUT_MS },
-  );
-}
-
-async function waitingVersion(page: Page): Promise<string> {
-  return page.evaluate(
-    async ({ answerMs, updateMs }) => {
-      const registration = await navigator.serviceWorker.getRegistration();
-      if (registration === undefined) {
-        throw new Error('no registration');
-      }
-      await registration.update();
-      const waiting = await new Promise<ServiceWorker>((resolve, reject) => {
-        const timer = setTimeout(
-          () => reject(new Error('no update of the worker was waiting in time')),
-          updateMs,
-        );
-        const settled = (): void => {
-          if (registration.waiting !== null) {
+        const answered = (event: MessageEvent): void => {
+          const data = event.data as { type?: string; nonce?: number } & UpdateCheck;
+          if (data.type === 'OPERATION_COMPLETED' && data.nonce === nonce) {
             clearTimeout(timer);
-            resolve(registration.waiting);
+            navigator.serviceWorker.removeEventListener('message', answered);
+            resolve(data.error === undefined ? { result: data.result } : { error: data.error });
           }
         };
-        settled();
-        registration.addEventListener('updatefound', () => {
-          registration.installing?.addEventListener('statechange', settled);
-        });
-        registration.installing?.addEventListener('statechange', settled);
-      });
-      return new Promise<string>((resolve, reject) => {
-        const channel = new MessageChannel();
-        const timer = setTimeout(
-          () => reject(new Error('the waiting worker did not tell its version in time')),
-          answerMs,
-        );
-        channel.port1.onmessage = (event) => {
-          clearTimeout(timer);
-          resolve((event.data as { version: string }).version);
-        };
-        waiting.postMessage('version', [channel.port2]);
-      });
-    },
-    { answerMs: ANSWER_TIMEOUT_MS, updateMs: UPDATE_TIMEOUT_MS },
+        navigator.serviceWorker.addEventListener('message', answered);
+        controller.postMessage({ action: 'CHECK_FOR_UPDATES', nonce });
+      }),
+    ANSWER_TIMEOUT_MS,
   );
 }
 
 async function marker(page: Page): Promise<string> {
   return page.evaluate(async (path) => (await (await fetch(path)).text()).trim(), MARKER);
+}
+
+async function markThisDocument(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    document.documentElement.dataset['pwaSameDocument'] = 'yes';
+  });
+}
+
+async function sameDocument(page: Page): Promise<boolean> {
+  return page.evaluate(() => document.documentElement.dataset['pwaSameDocument'] === 'yes');
+}
+
+async function settle(page: Page): Promise<void> {
+  await page.evaluate((ms) => new Promise((done) => setTimeout(done, ms)), SETTLE_MS);
+}
+
+async function cachedBodiesHolding(page: Page, text: string): Promise<readonly string[]> {
+  return page.evaluate(async (wanted) => {
+    const found: string[] = [];
+    for (const name of await caches.keys()) {
+      const cache = await caches.open(name);
+      for (const request of await cache.keys()) {
+        const response = await cache.match(request);
+        if (response !== undefined && (await response.text()).includes(wanted)) {
+          found.push(new URL(request.url).pathname);
+        }
+      }
+    }
+    return found;
+  }, text);
 }
 
 test.describe('Given the production build served by the real nginx', () => {
@@ -93,6 +95,29 @@ test.describe('Given the production build served by the real nginx', () => {
     expect(response?.headers()['content-security-policy']).toContain("script-src 'self'");
     expect(response?.headers()['cache-control']).toBe('no-cache');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  });
+
+  test('when the service worker files and the web app manifest are asked for, then each must be revalidated, Cloudflare keeps no copy of the worker files and the manifest opens /aplikace standalone', async ({
+    request,
+  }) => {
+    for (const path of [SERVICE_WORKER, SERVICE_WORKER_MANIFEST, '/manifest.webmanifest']) {
+      const answer = await request.get(path);
+      expect(answer.status(), path).toBe(200);
+      expect(answer.headers()['cache-control'], path).toBe('no-cache');
+    }
+    for (const path of [SERVICE_WORKER, SERVICE_WORKER_MANIFEST]) {
+      const answer = await request.get(path);
+      expect(answer.headers()['cloudflare-cdn-cache-control'], path).toBe('no-store');
+    }
+    const manifest = await request.get('/manifest.webmanifest');
+
+    expect(manifest.headers()['content-type']).toContain('application/manifest+json');
+    expect(await manifest.json()).toMatchObject({
+      id: '/aplikace',
+      start_url: '/aplikace',
+      scope: '/',
+      display: 'standalone',
+    });
   });
 
   test('when a removed hashed chunk is asked for, then nginx answers 404 instead of the app page', async ({
@@ -115,14 +140,13 @@ test.describe('Given the production build served by the real nginx', () => {
   });
 });
 
-test.describe('Given a page that registered the throwaway probe worker', () => {
+test.describe('Given the app registered its own service worker', () => {
   test.beforeEach(async ({ page, swReady }) => {
     await page.goto('/');
-    await registerProbeWorker(page);
     await swReady();
   });
 
-  test('when the page settles, then the worker controls it from its own script', async ({
+  test('when the page settles, then the worker controls it from /ngsw-worker.js', async ({
     swReady,
   }) => {
     expect(await swReady()).toEqual({
@@ -131,41 +155,91 @@ test.describe('Given a page that registered the throwaway probe worker', () => {
     });
   });
 
-  test('when the worker itself fetches an API path, then the context route answers it and sees the worker as its sender', async ({
+  test('when the page reads public news and a donor reads their own gifts, then the worker asks the network itself and Cache Storage keeps only the public answers', async ({
     page,
     context,
+    cacheDump,
   }) => {
-    const fromWorker: Request[] = [];
-    await context.route('**/api/content/news', (route) => {
+    const askedByWorker: Request[] = [];
+    await context.route('**/api/content/news?*', (route) => {
       if (route.request().serviceWorker() !== null) {
-        fromWorker.push(route.request());
+        askedByWorker.push(route.request());
       }
-      return route.fulfill({ json: { items: ['mocked for the worker'] } });
+      return route.fulfill({ json: { items: [], page: 0, size: 6, total: 0 } });
     });
-
-    const answer = await askWorker(page, { fetch: '/api/content/news' });
-
-    expect(answer).toEqual({ status: 200, body: '{"items":["mocked for the worker"]}' });
-    expect(fromWorker).toHaveLength(1);
-  });
-
-  test('when the page fetches an API path through the worker, then the context route answers it', async ({
-    page,
-    context,
-  }) => {
-    await context.route('**/api/content/news', (route) =>
-      route.fulfill({ json: { items: ['mocked through the worker'] } }),
+    await context.route('**/api/donations/me/summary', (route) =>
+      route.fulfill({ json: { donor: CANARY } }),
     );
 
-    const body = await page.evaluate(async () => (await fetch('/api/content/news')).json());
+    const donorAnswer = await page.evaluate(async () => {
+      await fetch('/api/content/news?page=0&size=6');
+      const answer = await fetch('/api/donations/me/summary', {
+        headers: { Authorization: 'Bearer not-a-real-token' },
+      });
+      return answer.json();
+    });
 
-    expect(body).toEqual({ items: ['mocked through the worker'] });
+    expect(askedByWorker).toHaveLength(1);
+    expect(donorAnswer).toEqual({ donor: CANARY });
+    const urls = (await cacheDump()).map((entry) => entry.url);
+    expect(urls).toContain('/index.html');
+    expect(urls).toContain('/boot-guard.js');
+    expect(urls.some((url) => /^\/main-[A-Za-z0-9_-]{8}\.js$/.test(url))).toBe(true);
+    expect(urls).toContain('/api/content/news?page=0&size=6');
+    expect(
+      urls
+        .filter((url) => url.startsWith('/api/'))
+        .filter((url) => !PUBLIC_ANSWERS.some((pattern) => pattern.test(url))),
+    ).toEqual([]);
+    expect(await cachedBodiesHolding(page, CANARY)).toEqual([]);
+  });
+
+  test('when only the network is cut, then a route the test registered still answers the request the worker makes for a public answer', async ({
+    page,
+    context,
+  }) => {
+    const askedByWorker: Request[] = [];
+    await context.route('**/api/content/news?*', (route) => {
+      if (route.request().serviceWorker() !== null) {
+        askedByWorker.push(route.request());
+      }
+      return route.fulfill({ json: { routed: 'offline' } });
+    });
+
+    await context.setOffline(true);
+
+    expect(
+      await page.evaluate(async () => (await fetch('/api/content/news?page=0&size=6')).json()),
+    ).toEqual({ routed: 'offline' });
+    expect(askedByWorker).toHaveLength(1);
+  });
+
+  test('when the browser comes back online, then the worker reaches the network again', async ({
+    page,
+    context,
+    goOffline,
+    goOnline,
+  }) => {
+    await goOffline();
+    await goOnline();
+    const askedByWorker: Request[] = [];
+    await context.route('**/api/content/news?*', (route) => {
+      if (route.request().serviceWorker() !== null) {
+        askedByWorker.push(route.request());
+      }
+      return route.fulfill({ json: { back: true } });
+    });
+
+    expect(
+      await page.evaluate(async () => (await fetch('/api/content/news?page=0&size=6')).json()),
+    ).toEqual({ back: true });
+    expect(askedByWorker).toHaveLength(1);
   });
 
   test.describe('when the browser goes offline', () => {
     test.use({ allowedConsoleErrors: [APP_API_OFFLINE] });
 
-    test('then a route never opened renders from the cached app shell, and the worker reaches neither a mocked API path nor the server', async ({
+    test('then a route never opened renders from the cached app shell', async ({
       page,
       goOffline,
     }) => {
@@ -174,125 +248,212 @@ test.describe('Given a page that registered the throwaway probe worker', () => {
       await page.goto(POLICY);
 
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-      expect(await askWorker(page, { fetch: '/api/content/news' })).toEqual({
-        failed: expect.stringContaining('TypeError'),
-      });
-      expect(await askWorker(page, { fetch: PROBE_MANIFEST })).toEqual({
-        failed: expect.stringContaining('TypeError'),
-      });
     });
 
-    test('then the network cut alone keeps the worker from the server, while a route the test registered still answers it', async ({
+    test('then an API answer the worker never keeps fails, and once back online it comes from the server again', async ({
       page,
       context,
+      goOffline,
+      goOnline,
     }) => {
-      await context.route('**/api/content/news', (route) =>
-        route.fulfill({ json: { routed: 'offline' } }),
-      );
-
-      await context.setOffline(true);
-
-      expect(await askWorker(page, { fetch: PROBE_MANIFEST })).toEqual({
-        failed: expect.stringContaining('TypeError'),
+      let answered = 0;
+      await context.route('**/api/donations/me/summary', (route) => {
+        answered += 1;
+        return route.fulfill({ json: { donor: 'online' } });
       });
-      expect(await askWorker(page, { fetch: '/api/content/news' })).toEqual({
-        status: 200,
-        body: '{"routed":"offline"}',
-      });
+      const ask = (): Promise<string> =>
+        page.evaluate(async () => {
+          try {
+            const answer = await fetch('/api/donations/me/summary');
+            return answer.ok
+              ? ((await answer.json()) as { donor: string }).donor
+              : `${answer.status}`;
+          } catch {
+            return 'unreachable';
+          }
+        });
+
+      await goOffline();
+      expect(await ask()).not.toBe('online');
+      expect(answered).toBe(0);
+
+      await goOnline();
+      expect(await ask()).toBe('online');
+      expect(answered).toBe(1);
     });
   });
 
-  test('when the browser comes back online, then the worker reaches the network again', async ({
-    page,
-    goOffline,
-    goOnline,
-    context,
-  }) => {
-    await context.route('**/api/content/news', (route) => route.fulfill({ json: { back: true } }));
-    await goOffline();
-    await goOnline();
+  test.describe('when the server cannot be reached', () => {
+    test.use({ allowedConsoleErrors: [APP_API_UNREACHABLE] });
 
-    expect(await askWorker(page, { fetch: '/api/content/news' })).toEqual({
-      status: 200,
-      body: '{"back":true}',
+    test('then the running version keeps working from the cache', async ({ page, site }) => {
+      await site.takeDown();
+
+      await page.goto(POLICY);
+
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     });
   });
 
-  test('when the cache is dumped, then it holds the app shell and the marker and no API answer', async ({
+  test('when the server removed every chunk of the running version, then the tab still opens a page it never opened', async ({
     page,
-    cacheDump,
+    site,
+    request,
   }) => {
-    await page.evaluate(async () => fetch('/api/content/home'));
+    const manifest = (await (await request.get(SERVICE_WORKER_MANIFEST)).json()) as {
+      hashTable: Record<string, string>;
+    };
+    const chunks = Object.keys(manifest.hashTable).filter((path) => path.startsWith('/chunk-'));
+    expect(chunks.length).toBeGreaterThan(0);
+    for (const chunk of chunks) {
+      site.remove(chunk);
+    }
 
-    const urls = (await cacheDump()).map((entry) => entry.url);
+    await page.getByRole('link', { name: 'Zásady ochrany osobních údajů', exact: true }).click();
 
-    expect(urls).toContain('/index.html');
-    expect(urls).toContain(MARKER);
-    expect(urls.some((url) => /^\/main-[A-Za-z0-9_-]{8}\.js$/.test(url))).toBe(true);
-    expect(urls.filter((url) => url.startsWith('/api/'))).toEqual([]);
+    await expect(page).toHaveURL(new RegExp(`${POLICY}$`));
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   });
 
-  test('when the server switches to variant B, then the worker finds the update and B waits with another version', async ({
+  test('when the operator turns the service worker off, then at its next check the worker removes itself and its caches and the site still opens', async ({
+    page,
+    site,
+    request,
+  }) => {
+    await site.turnServiceWorkerOff();
+
+    expect((await request.get(SERVICE_WORKER_MANIFEST)).status()).toBe(404);
+    expect(await (await request.get(SERVICE_WORKER)).text()).toContain('NGSW Safety Worker');
+    await checkForUpdate(page);
+
+    await expect
+      .poll(() =>
+        page.evaluate(async () => (await navigator.serviceWorker.getRegistrations()).length),
+      )
+      .toBe(0);
+    await expect
+      .poll(() =>
+        page.evaluate(async () => (await caches.keys()).filter((name) => name.startsWith('ngsw:'))),
+      )
+      .toEqual([]);
+    await page.goto(POLICY);
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  });
+});
+
+test.describe('Given a visitor who already acted on the page when a new version is deployed', () => {
+  test.beforeEach(async ({ page, swReady }) => {
+    await page.goto('/');
+    await swReady();
+    await page.getByRole('heading', { level: 1 }).click();
+  });
+
+  test('when version B is ready while a half-typed message waits on the page, then the message stays, and leaving the page loads B', async ({
     page,
     site,
   }) => {
-    const current = (await askWorker(page, 'version')) as { version: string };
     expect(await marker(page)).toBe('a');
+    await markThisDocument(page);
+    const message = page.getByLabel('Vaše zpráva');
+    await message.click();
+    await message.pressSequentially('Dobrý den, chtěla bych se zeptat');
 
     site.switchTo('b');
+    expect(await checkForUpdate(page)).toEqual({ result: true });
+    await settle(page);
 
-    const waiting = await waitingVersion(page);
-    expect(waiting).not.toBe(current.version);
-    expect(site.filesOnlyIn('b')).toEqual([
-      '/ngsw-worker.js',
-      '/pwa-marker.txt',
-      '/pwa-probe.json',
-    ]);
+    await expect(message).toHaveValue('Dobrý den, chtěla bych se zeptat');
+    expect(await sameDocument(page)).toBe(true);
     expect(await marker(page)).toBe('a');
+
+    await page.getByRole('link', { name: 'Zásady ochrany osobních údajů', exact: true }).click();
+
+    await expect(page).toHaveURL(new RegExp(`${POLICY}$`));
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await expect.poll(() => sameDocument(page)).toBe(false);
+    expect(await marker(page)).toBe('b');
   });
 
-  test('when the waiting variant B takes over, then the page reloads into B', async ({
+  test('when version B is ready and nothing is typed, then a section of the same page opens in place and the next page the visitor opens loads B', async ({
+    page,
+    site,
+  }) => {
+    expect(await marker(page)).toBe('a');
+    await markThisDocument(page);
+
+    site.switchTo('b');
+    expect(await checkForUpdate(page)).toEqual({ result: true });
+    await settle(page);
+    expect(await sameDocument(page)).toBe(true);
+
+    await page.getByRole('link', { name: 'O nás', exact: true }).first().click();
+    await expect(page).toHaveURL(/\/#o-nas$/);
+    await settle(page);
+    expect(await sameDocument(page)).toBe(true);
+    expect(await marker(page)).toBe('a');
+
+    await page.getByRole('link', { name: 'Zásady ochrany osobních údajů', exact: true }).click();
+
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await expect.poll(() => sameDocument(page)).toBe(false);
+    await expect(page).toHaveURL(new RegExp(`${POLICY}$`));
+    expect(await marker(page)).toBe('b');
+  });
+
+  test.describe('when the server no longer has a file of the running version that the tab never kept', () => {
+    test.use({
+      allowedConsoleErrors: [
+        /^Failed to load resource: the server responded with a status of 404 \(Not Found\) \(http:\/\/localhost:\d+\/pwa-marker\.txt\)$/,
+      ],
+    });
+
+    test('then the app reports it and loads the site again from the server', async ({
+      page,
+      site,
+      context,
+    }) => {
+      const reports: unknown[] = [];
+      await context.route('**/api/operations/client-errors', (route) => {
+        reports.push(route.request().postDataJSON());
+        return route.fulfill({ status: 204 });
+      });
+      await page.evaluate(() => fetch('/favicon.svg').then(() => undefined));
+      await markThisDocument(page);
+      site.remove(MARKER);
+
+      await page.evaluate((path) => {
+        void fetch(path).catch(() => undefined);
+      }, MARKER);
+
+      await expect.poll(() => sameDocument(page).catch(() => true)).toBe(false);
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+      await expect
+        .poll(() => reports)
+        .toContainEqual(
+          expect.objectContaining({ kind: 'sw-unrecoverable', place: 'service-worker' }),
+        );
+    });
+  });
+});
+
+test.describe('Given a visitor who has not touched the page yet', () => {
+  test('when a new version is ready right after the page opened, then the page loads it at once', async ({
     page,
     site,
     swReady,
   }) => {
-    site.switchTo('b');
-    const version = await waitingVersion(page);
-
-    await page.evaluate(async () => {
-      const registration = await navigator.serviceWorker.getRegistration();
-      const changed = new Promise((resolve) =>
-        navigator.serviceWorker.addEventListener('controllerchange', resolve, { once: true }),
-      );
-      registration?.waiting?.postMessage('skip-waiting');
-      await changed;
-      const controller = navigator.serviceWorker.controller;
-      if (controller !== null && controller.state !== 'activated') {
-        await new Promise<void>((activated) =>
-          controller.addEventListener('statechange', () => {
-            if (controller.state === 'activated') {
-              activated();
-            }
-          }),
-        );
-      }
-    });
-    await page.reload();
+    await page.goto('/');
     await swReady();
-
-    expect(await askWorker(page, 'version')).toEqual({ version });
-    expect(await marker(page)).toBe('b');
-  });
-
-  test('when the server cannot be reached, then the running variant keeps working from the cache', async ({
-    page,
-    site,
-  }) => {
-    await site.takeDown();
-
-    await page.goto(POLICY);
-
+    await page.reload();
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     expect(await marker(page)).toBe('a');
+    await markThisDocument(page);
+
+    site.switchTo('b');
+    await checkForUpdate(page);
+
+    await expect.poll(() => sameDocument(page).catch(() => false)).toBe(false);
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    expect(await marker(page)).toBe('b');
   });
 });

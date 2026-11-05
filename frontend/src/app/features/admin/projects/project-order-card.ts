@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { describeProblem } from '../../../core/auth/api-problem';
+import { DirtyForms } from '../../../core/updates/dirty-forms';
 import { PROJECT_ORDERS, ProjectOrder, ProjectsApi } from '../../content/projects-api';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 import { projectOrderDescription, projectOrderLabel } from './project-order';
@@ -32,11 +33,14 @@ export class ProjectOrderCard {
   protected readonly description = projectOrderDescription;
   protected readonly state = signal<LoadState>('loading');
   protected readonly chosen = signal<ProjectOrder | null>(null);
+  private readonly saved = signal<ProjectOrder | null>(null);
   protected readonly saving = signal(false);
   protected readonly notice = signal<Notice | null>(null);
 
   constructor() {
     this.load();
+    const unregister = inject(DirtyForms).register(() => this.chosen() !== this.saved());
+    this.destroyRef.onDestroy(unregister);
   }
 
   protected load(): void {
@@ -47,6 +51,7 @@ export class ProjectOrderCard {
       .subscribe({
         next: (response) => {
           this.chosen.set(response.order);
+          this.saved.set(response.order);
           this.state.set('ready');
         },
         error: () => this.state.set('error'),
@@ -73,6 +78,7 @@ export class ProjectOrderCard {
         next: (response) => {
           this.saving.set(false);
           this.chosen.set(response.order);
+          this.saved.set(response.order);
           this.notice.set({
             kind: 'status',
             text: $localize`:@@admin.projects.order.saved:Řazení jsme uložili. Web už projekty ukazuje v tomto pořadí.`,

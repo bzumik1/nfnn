@@ -680,6 +680,31 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
+  test('when the browser of a signed-in donor offers the app and they decline it, then the offer and the closing line break no rule', async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.evaluate(() => {
+      const offer = new Event('beforeinstallprompt', { cancelable: true });
+      Object.assign(offer, {
+        prompt: () => Promise.resolve(),
+        userChoice: Promise.resolve({ outcome: 'dismissed', platform: 'web' }),
+      });
+      window.dispatchEvent(offer);
+    });
+    const offer = page.getByRole('region', { name: 'Nová naděje jako aplikace' });
+    await expect(offer).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+
+    await offer.getByRole('button', { name: 'Teď ne' }).click();
+    await expect(
+      page.locator('p', { hasText: 'Dobře, nabídku na tři měsíce skryjeme.' }),
+    ).toBeFocused();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
   test('when a signed-in donor adds a bank account, then the dialog breaks no rule while it waits for the payment or once the account is verified', async ({
     page,
   }) => {

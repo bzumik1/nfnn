@@ -12,6 +12,7 @@ import { DonationsPending } from '../donations-pending/donations-pending';
 import { donationStatusLabel, DonationsTable } from '../donations-table/donations-table';
 import { DonorDonations } from '../donor-donations';
 import { DownloadProgress } from '../../../../shared/ui/download-progress/download-progress';
+import { InstallCard } from '../install-card/install-card';
 import { receivedVerifications } from '../gift-count/gift-count';
 import { PageTitle } from '../page-title/page-title';
 import { SendGift } from '../send-gift/send-gift';
@@ -30,6 +31,7 @@ const RECENT_DONATIONS_SHOWN = 5;
     SendGift,
     DonationsPending,
     DonationsTable,
+    InstallCard,
   ],
   templateUrl: './donor-overview.html',
   styleUrl: './donor-overview.scss',

@@ -1,6 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { DirtyForms } from '../../../core/updates/dirty-forms';
 import { ProjectOrder } from '../../content/projects-api';
 import { ProjectOrderCard } from './project-order-card';
 
@@ -108,6 +109,21 @@ describe('Given an administrator choosing the order of the projects', () => {
     );
     expect(radio('CATEGORY_THEN_YEAR').checked).toBe(true);
     expect(changes).toEqual(['CATEGORY_THEN_YEAR']);
+  });
+
+  it('when another order is chosen and not saved yet, then the page counts as half-filled until it is saved, so a new version of the site waits', async () => {
+    const dirtyForms = TestBed.inject(DirtyForms);
+    await loaded();
+    expect(dirtyForms.any()).toBe(false);
+
+    radio('CATEGORY_THEN_YEAR').click();
+    await settle();
+    expect(dirtyForms.any()).toBe(true);
+
+    await submit();
+    http.expectOne({ method: 'PUT', url: ORDER_URL }).flush({ order: 'CATEGORY_THEN_YEAR' });
+    await settle();
+    expect(dirtyForms.any()).toBe(false);
   });
 
   it('when saving fails, then an alert says so, the choice stays and the page is not told', async () => {

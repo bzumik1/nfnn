@@ -1,0 +1,96 @@
+{
+  "$schema": "./node_modules/@angular/service-worker/config/schema.json",
+  "index": "/index.html",
+  "navigationRequestStrategy": "performance",
+  "navigationUrls": [
+    "/**",
+    "!/**/*.*",
+    "!/**/*__*",
+    "!/**/*__*/**",
+    "!/api/**",
+    "!/mcp",
+    "!/mcp/**",
+    "!/mcp-photos",
+    "!/.well-known/**",
+    "!/actuator/**",
+    "!/media/**"
+  ],
+  "assetGroups": [
+    {
+      "name": "app",
+      "installMode": "prefetch",
+      "updateMode": "prefetch",
+      "resources": {
+        "files": [
+          "/index.html",
+          "/boot-guard.js",
+          "/manifest.webmanifest",
+          "/favicon.svg",
+          "/images/logo.svg",
+          "/images/logo-on-dark.svg",
+          "/main-*.js",
+          "/polyfills-*.js",
+          "/chunk-*.js",
+          "/styles-*.css",
+          "/media/**"
+        ]
+      }
+    },
+    {
+      "name": "on-demand",
+      "installMode": "lazy",
+      "updateMode": "lazy",
+      "resources": {
+        "files": [
+          "/worker-*.js",
+          "/receipt-fonts/**",
+          "/images/**",
+          "/*.png",
+          "/*.ico",
+          "/*.svg",
+          "/*.txt",
+          "/*.xml"
+        ]
+      }
+    }
+  ],
+  "dataGroups": [
+    {
+      "name": "public-content",
+      "urls": [
+        "/api/content/home",
+        "/api/content/news",
+        "/api/content/news?*",
+        "/api/content/news/*",
+        "/api/content/projects",
+        "/api/content/projects?*",
+        "/api/content/projects/*"
+      ],
+      "cacheConfig": {
+        "strategy": "freshness",
+        "maxSize": 100,
+        "maxAge": "30d",
+        "timeout": "5s"
+      }
+    },
+    {
+      "name": "payment-details",
+      "urls": ["/api/donations/payment-details"],
+      "cacheConfig": {
+        "strategy": "freshness",
+        "maxSize": 1,
+        "maxAge": "1d",
+        "timeout": "5s"
+      }
+    },
+    {
+      "name": "public-photos",
+      "urls": ["/api/content/media/*"],
+      "cacheConfig": {
+        "strategy": "performance",
+        "maxSize": 300,
+        "maxAge": "365d"
+      }
+    }
+  ]
+}

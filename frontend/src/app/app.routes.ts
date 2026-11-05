@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { adminGuard } from './core/auth/admin-guard';
+import { APP_ENTRY_PATH, appEntryGuard } from './core/auth/app-entry-guard';
 import { donorGuard } from './core/auth/donor-guard';
 
 export const routes: Routes = [
@@ -10,6 +11,7 @@ export const routes: Routes = [
     loadChildren: () => import('./features/donors/donors.routes').then((m) => m.donorsRoutes),
   },
   { path: 'donor', redirectTo: 'darce' },
+  { path: APP_ENTRY_PATH, canActivate: [appEntryGuard], children: [] },
   {
     path: 'sprava',
     canActivate: [adminGuard],

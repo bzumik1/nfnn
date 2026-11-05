@@ -183,6 +183,11 @@ jobs:
           docker compose up -d --wait --wait-timeout 300
           [ "$(grep -c "Backend revision $DEPLOYED_REVISION is ready" "$logs/backend.log")" -ge 3 ] || { echo "::error::the older images' backend did not start again after the candidate's"; exit 1; }
           node scripts/stack-journey.mjs check --state "$JOURNEY_STATE"
+          answer=$(curl -sS --max-time 10 -o /dev/null -w '%{http_code} %{content_type}' http://localhost:8089/ngsw.json)
+          case "$answer" in
+            "404 "* | "200 application/json"*) ;;
+            *) echo "::error::after the rollback /ngsw.json must answer 404 (an image before slice 2.4, so every installed service worker removes itself) or 200 JSON (2.4 or later), got $answer"; exit 1 ;;
+          esac
           node scripts/stack-journey.mjs bank --phase rollback --state "$JOURNEY_STATE"
           backup_and_test_restore rollback
 
