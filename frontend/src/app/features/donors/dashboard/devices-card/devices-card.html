@@ -14,6 +14,7 @@
   @if (loadError()) {
     <p class="ui-field-error" role="alert">{{ loadError() }}</p>
     <button
+      appNeedsConnection
       type="button"
       class="ui-button devices-retry"
       (click)="loadDevices()"
@@ -48,6 +49,7 @@
             </span>
           } @else {
             <button
+              appNeedsConnection
               type="button"
               class="ui-button ui-button--danger-soft device-sign-out"
               [disabled]="signingOut() !== null"
@@ -67,6 +69,7 @@
     </ul>
     @if (hasOthers()) {
       <button
+        appNeedsConnection
         #othersButton
         type="button"
         class="ui-button ui-button--danger-outline devices-sign-out-others"
