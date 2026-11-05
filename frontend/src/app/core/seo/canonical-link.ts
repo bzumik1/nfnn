@@ -6,6 +6,11 @@ import { filter } from 'rxjs';
 
 export const SITE_ORIGIN = 'https://nfnn.cz';
 
+export function canonicalAddress(url: string): string {
+  const path = url.split(/[?#]/)[0] || '/';
+  return `${SITE_ORIGIN}${path.startsWith('/') ? path : `/${path}`}`;
+}
+
 @Injectable({ providedIn: 'root' })
 export class CanonicalLink {
   private readonly document = inject(DOCUMENT);
@@ -20,8 +25,7 @@ export class CanonicalLink {
   }
 
   private name(url: string): void {
-    const path = url.split(/[?#]/)[0] || '/';
-    const address = `${SITE_ORIGIN}${path.startsWith('/') ? path : `/${path}`}`;
+    const address = canonicalAddress(url);
     this.link().href = address;
     this.meta.updateTag({ property: 'og:url', content: address });
   }

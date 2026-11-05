@@ -9,6 +9,11 @@ const build = theme
   ? `npx ng build --configuration=production,${theme}-theme --output-path=dist/${theme}-theme`
   : 'npx ng build';
 const served = process.env.E2E_DIST ?? builtApp;
+const askedProjects = process.argv.filter((argument) => argument.startsWith('--project='));
+const onlyWebApp =
+  process.env.E2E_DIST !== undefined &&
+  askedProjects.length > 0 &&
+  askedProjects.every((argument) => argument === '--project=pwa');
 
 export default defineConfig<DeviceOptions>({
   testDir: './e2e',
@@ -21,17 +26,25 @@ export default defineConfig<DeviceOptions>({
   use: {
     baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:4200',
     trace: 'on-first-retry',
+    serviceWorkers: 'block',
   },
   projects: [
     {
       name: 'chromium',
-      testIgnore: /baseline\/|devices\/devices\.spec\.ts$/,
+      testIgnore: /baseline\/|pwa\/|devices\/devices\.spec\.ts$/,
       use: { ...devices['Desktop Chrome'] },
     },
     {
       name: 'iphone',
-      testMatch: /(receipt-pdf|verify-receipt|donate-qr|second-factor)\.spec\.ts$/,
+      testMatch: /(receipt-pdf|verify-receipt|donate-qr|second-factor|dialog-back)\.spec\.ts$/,
+      testIgnore: /pwa\//,
       use: { ...devices['iPhone 15'] },
+    },
+    {
+      name: 'pwa',
+      default: false,
+      testMatch: /pwa\/.*\.spec\.ts$/,
+      use: { ...devices['Desktop Chrome'], channel: 'chromium', serviceWorkers: 'allow' },
     },
     ...POSES.map((pose) => ({
       name: `${DEVICE_PROJECT_PREFIX}${pose.id}`,
@@ -56,14 +69,15 @@ export default defineConfig<DeviceOptions>({
       },
     },
   ],
-  webServer: process.env.E2E_BASE_URL
-    ? undefined
-    : {
-        command: process.env.E2E_DIST
-          ? `node scripts/serve-dist.mjs ${served}`
-          : `${build} && node scripts/serve-dist.mjs ${served}`,
-        url: 'http://localhost:4200',
-        reuseExistingServer: !process.env.CI,
-        timeout: 120_000,
-      },
+  webServer:
+    process.env.E2E_BASE_URL || onlyWebApp
+      ? undefined
+      : {
+          command: process.env.E2E_DIST
+            ? `node scripts/serve-dist.mjs ${served}`
+            : `${build} && node scripts/serve-dist.mjs ${served}`,
+          url: 'http://localhost:4200',
+          reuseExistingServer: !process.env.CI,
+          timeout: 120_000,
+        },
 });

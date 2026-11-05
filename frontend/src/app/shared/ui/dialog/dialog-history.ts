@@ -46,6 +46,7 @@ export class DialogHistory {
       popStateListeners.delete(onPopState);
       navigations.unsubscribe();
     });
+    this.foldStaleEntries();
   }
 
   open(listener: DialogHistoryListener): void {
@@ -62,7 +63,10 @@ export class DialogHistory {
     this.settle();
   }
 
-  close(): void {
+  close(listener?: DialogHistoryListener): void {
+    if (listener !== undefined && listener !== this.listener) {
+      return;
+    }
     this.listener = null;
     this.wanted = 0;
     this.settle();
@@ -122,6 +126,10 @@ export class DialogHistory {
     if (untracked(this.router.currentNavigation) !== null) {
       return;
     }
+    if (this.owned === 0 && this.wanted > 0) {
+      this.entryPath = this.location.path(true);
+      this.owned = depthOf(history.state);
+    }
     if (this.owned < this.wanted) {
       this.push(history, this.wanted - this.owned);
     } else if (this.owned > this.wanted) {
@@ -132,10 +140,18 @@ export class DialogHistory {
     }
   }
 
-  private push(history: History, entries: number): void {
-    if (this.owned === 0) {
-      this.entryPath = this.location.path(true);
+  private foldStaleEntries(): void {
+    const history = this.window?.history;
+    const stale = depthOf(history?.state);
+    if (history === undefined || stale === 0) {
+      return;
     }
+    history.replaceState(withoutDepth(history.state), '');
+    this.ownPops++;
+    history.go(-stale);
+  }
+
+  private push(history: History, entries: number): void {
     for (let entry = 0; entry < entries; entry++) {
       this.owned++;
       history.pushState({ ...stateOf(history.state), [DEPTH_KEY]: this.owned }, '');
@@ -150,4 +166,10 @@ function stateOf(state: unknown): Record<string, unknown> {
 function depthOf(state: unknown): number {
   const depth = stateOf(state)[DEPTH_KEY];
   return typeof depth === 'number' ? depth : 0;
+}
+
+function withoutDepth(state: unknown): Record<string, unknown> {
+  const rest = { ...stateOf(state) };
+  delete rest[DEPTH_KEY];
+  return rest;
 }

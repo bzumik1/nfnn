@@ -6,8 +6,10 @@ export class FakeDialogHistory {
   handedOver: string[] = [];
   closed = 0;
   released = 0;
+  opened = 0;
 
   open(listener: DialogHistoryListener): void {
+    this.opened++;
     this.listener = listener;
   }
 
@@ -17,7 +19,10 @@ export class FakeDialogHistory {
     }
   }
 
-  close(): void {
+  close(listener?: DialogHistoryListener): void {
+    if (listener !== undefined && listener !== this.listener) {
+      return;
+    }
     this.listener = null;
     this.closed++;
   }

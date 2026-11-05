@@ -1,0 +1,9 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/receipt-pdf/receipt-logo.spec.ts > Given the logo of the site and the logo the receipt draws > when the receipt logo is compared with public/images/logo.svg, then it has its view box and every path with its colour",
+    "reason": "Slice 2.22: the logo moved from public/images/ into the theme folder src/themes/nova-nadeje/assets/images/ (served at the same address), so the test names the file it now reads",
+    "replacement": "src/app/features/donations/receipt-pdf/receipt-logo.spec.ts > Given the logo of the site and the logo the receipt draws > when the receipt logo is compared with the logo of the nova-nadeje theme, then it has its view box and every path with its colour"
+  }
+]

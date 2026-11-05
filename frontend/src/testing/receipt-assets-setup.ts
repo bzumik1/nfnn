@@ -6,7 +6,9 @@ import type { ReceiptAssetLibrary } from './receipt-assets';
 
 const THEMES = fileURLToPath(new URL('../themes/', import.meta.url));
 const V2_RECEIPTS = fileURLToPath(new URL('../../../regression/v2/receipts/', import.meta.url));
-const LOGO = fileURLToPath(new URL('../../public/images/logo.svg', import.meta.url));
+const LOGO = fileURLToPath(
+  new URL('../themes/nova-nadeje/assets/images/logo.svg', import.meta.url),
+);
 const SAMPLE = /^(?:single|yearly)-.+\.json$/;
 const FONT_TOKENS = { body: 'body', 'body-bold': 'bold', heading: 'heading' } as const;
 

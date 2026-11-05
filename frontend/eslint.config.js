@@ -137,6 +137,39 @@ module.exports = defineConfig([
     },
   },
   {
+    files: ['e2e/pwa/**/*.spec.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@playwright/test',
+              importNames: ['test', 'expect'],
+              message:
+                "Import pwaTest and expect from './pwa-fixtures', which routes /api for the whole context, so the service worker's requests are answered too.",
+            },
+            {
+              name: '../fixtures',
+              importNames: ['test', 'expect'],
+              message:
+                "Import pwaTest and expect from './pwa-fixtures': the fixtures of the other projects route only the page, which misses the service worker's requests.",
+            },
+          ],
+        },
+      ],
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            "CallExpression[callee.object.name='page'][callee.property.name=/^(route|unroute|routeFromHAR)$/]",
+          message:
+            'Route on the context (context.route): a page route never sees the requests of a service worker, so once a worker controls the page the mock stops answering.',
+        },
+      ],
+    },
+  },
+  {
     files: ['**/*dialog*.html'],
     rules: {
       '@angular-eslint/template/no-autofocus': 'off',

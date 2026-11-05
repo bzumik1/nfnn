@@ -3,11 +3,18 @@ import { ErrorHandler } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 
-import { appConfig, appErrorHandler, appHttpClient, chunkLoadRecoveryFeature } from './app.config';
+import {
+  appConfig,
+  appErrorHandler,
+  appHttpClient,
+  chunkLoadRecoveryFeature,
+  dialogHistoryAtStart,
+} from './app.config';
 import { ReportingErrorHandler } from './core/errors/reporting-error-handler';
 import { ExternalNavigation } from './core/navigation/external-navigation';
 import { ChunkProbe } from './core/reload/chunk-probe';
 import { ReloadGuard } from './core/reload/reload-guard';
+import { DialogHistory } from './shared/ui/dialog/dialog-history';
 
 describe('Given the HTTP client of the app', () => {
   it('when a request is sent, then it goes through XMLHttpRequest, which reports upload progress', () => {
@@ -26,6 +33,24 @@ describe('Given the error handler of the app', () => {
 
   it('when the app starts, then its providers install that handler', () => {
     expect(appConfig.providers).toContain(appErrorHandler);
+  });
+});
+
+describe('Given the history entries of dialogs', () => {
+  it('when the app starts, then they are looked after before the first page opens, so a dialog left open by a reload costs no Back press', () => {
+    const started = vi.fn();
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        dialogHistoryAtStart,
+        { provide: DialogHistory, useFactory: () => started() ?? {} },
+      ],
+    });
+
+    TestBed.inject(Router);
+
+    expect(started).toHaveBeenCalledTimes(1);
+    expect(appConfig.providers).toContain(dialogHistoryAtStart);
   });
 });
 
