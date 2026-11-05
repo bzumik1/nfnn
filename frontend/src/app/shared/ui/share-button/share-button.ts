@@ -13,6 +13,7 @@ import { CopyButton } from '../copy-button/copy-button';
 export class ShareButton {
   readonly pageTitle = input.required<string>();
   readonly url = input.required<string>();
+  readonly subject = input<string | null>(null);
 
   protected readonly copyWhat = $localize`:@@ui.share.copyWhat:odkaz na stránku`;
   protected readonly copyLabel = $localize`:@@ui.share.copyLink:Kopírovat odkaz`;
