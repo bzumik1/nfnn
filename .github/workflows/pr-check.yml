@@ -192,7 +192,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: frontend
@@ -211,7 +211,7 @@ jobs:
 
       - name: Start installing Playwright's Chromium headless shell for the control theme while the checks run
         run: |
-          (npx playwright install --with-deps --only-shell chromium > "$RUNNER_TEMP/playwright-install.log" 2>&1; echo $? > "$RUNNER_TEMP/playwright-install.status") &
+          (scripts/install-playwright-browsers.sh --only-shell chromium > "$RUNNER_TEMP/playwright-install.log" 2>&1; echo $? > "$RUNNER_TEMP/playwright-install.status") &
 
       - name: Formatting follows Prettier
         run: npm run format:check
@@ -249,7 +249,7 @@ jobs:
 
       - name: Playwright's Chromium headless shell is installed
         run: |
-          for _ in $(seq 300); do
+          for _ in $(seq 1200); do
             [ -s "$RUNNER_TEMP/playwright-install.status" ] && break
             sleep 1
           done
@@ -267,7 +267,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -294,7 +294,7 @@ jobs:
 
       - name: Start installing the shard's browsers while the app builds
         run: |
-          (npx playwright install --with-deps --only-shell $BROWSERS > "$RUNNER_TEMP/playwright-install.log" 2>&1; echo $? > "$RUNNER_TEMP/playwright-install.status") &
+          (scripts/install-playwright-browsers.sh --only-shell $BROWSERS > "$RUNNER_TEMP/playwright-install.log" 2>&1; echo $? > "$RUNNER_TEMP/playwright-install.status") &
         env:
           BROWSERS: ${{ matrix.install }}
 
@@ -303,7 +303,7 @@ jobs:
 
       - name: The shard's browsers are installed
         run: |
-          for _ in $(seq 400); do
+          for _ in $(seq 1200); do
             [ -s "$RUNNER_TEMP/playwright-install.status" ] && break
             sleep 1
           done
@@ -378,7 +378,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: frontend
@@ -397,7 +397,7 @@ jobs:
 
       - name: Pull the nginx image, with Playwright's full Chromium installing in the background
         run: |
-          (npx playwright install --with-deps --no-shell chromium > "$RUNNER_TEMP/playwright-install.log" 2>&1; echo $? > "$RUNNER_TEMP/playwright-install.status") &
+          (scripts/install-playwright-browsers.sh --no-shell chromium > "$RUNNER_TEMP/playwright-install.log" 2>&1; echo $? > "$RUNNER_TEMP/playwright-install.status") &
           image=$(sed -n 's/^FROM \(nginx:[^ ]*\)$/\1/p' Dockerfile)
           [ -n "$image" ] || { echo "::error::frontend/Dockerfile names no nginx base image"; exit 1; }
           docker pull --quiet "$image"
@@ -407,7 +407,7 @@ jobs:
 
       - name: Playwright's Chromium is installed
         run: |
-          for _ in $(seq 300); do
+          for _ in $(seq 1200); do
             [ -s "$RUNNER_TEMP/playwright-install.status" ] && break
             sleep 1
           done
@@ -485,7 +485,7 @@ jobs:
         working-directory: frontend
         run: |
           npm ci
-          npx playwright install --with-deps --only-shell chromium
+          scripts/install-playwright-browsers.sh --only-shell chromium
 
       - name: The screens of main and of the change differ only where the description declares
         env:
