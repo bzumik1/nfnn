@@ -9,7 +9,8 @@ import { ErrorReporter } from '../../errors/error-reporter';
 import { base64UrlToBytes } from '../crypto/device-bytes';
 import type { PrfReading } from '../crypto/prf';
 import { SmallArgon2Derivation } from '../crypto/testing/password-key-derivations';
-import type { CopyContents } from './account-store';
+import { AccountStore, type CopyContents } from './account-store';
+import { OpenCopy } from '../crypto/copy-keys';
 import {
   COPY_CHANNELS,
   DEVICE_STORAGE_OPENER,
@@ -178,6 +179,20 @@ describe('Given the device vault keeping a copy of the administration for an adm
       expect(restarted.administration()?.reason).toBe('unlocked');
     });
 
+    it('and the administration locks while another tab holds the vault, then its copy closes at once, without waiting for the vault', async () => {
+      const store = vault.administration()!.store;
+      await vault.replaceContents(store, administrationContents(CANARY));
+      let release: () => void = () => undefined;
+      void locks.request('nfnn.device-vault', () => new Promise<void>((done) => (release = done)));
+
+      access.lock();
+      TestBed.tick();
+
+      expect(vault.administration()).toBeNull();
+      expect(store.contents()).toBeNull();
+      release();
+    });
+
     it('and the administration locks, then its copy closes and her own copy stays open', async () => {
       const store = vault.administration()!.store;
       await vault.replaceContents(store, administrationContents(CANARY));
@@ -274,14 +289,16 @@ describe('Given the device vault keeping a copy of the administration for an adm
       expect(await administrationWraps()).toEqual(['password']);
     });
 
-    it('and she signs out while her password unlock waits for the vault, then the administration does not open again', async () => {
+    it('and reading the copy fails as she unlocks it, then its key is closed and nothing stays open', async () => {
       await vault.lockAdministration();
-      const unlocking = vault.unlockAdministrationWithPassword(JANA, PASSWORD, false);
-      const signingOut = vault.signedOut(JANA);
+      vi.spyOn(AccountStore.prototype, 'load').mockRejectedValueOnce(new Error('read failed'));
+      const closed = vi.spyOn(OpenCopy.prototype, 'close');
 
-      await Promise.all([unlocking, signingOut]);
+      await expect(vault.unlockAdministrationWithPassword(JANA, PASSWORD, false)).rejects.toThrow();
 
+      expect(closed).toHaveBeenCalled();
       expect(vault.administration()).toBeNull();
+      vi.restoreAllMocks();
     });
 
     it('and she signs out, then the administration closes and stays on the device under her password', async () => {

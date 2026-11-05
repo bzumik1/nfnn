@@ -1,4 +1,4 @@
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { afterNextRender, computed, inject, Injectable, Injector, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { firstValueFrom, Observable, tap } from 'rxjs';
 import { AdministrationAccess } from '../../../core/auth/administration-access';
@@ -15,6 +15,7 @@ export class AdministrationLockService {
   private readonly vault = inject(DeviceVault);
   private readonly api = inject(AdministrationSyncApi);
   private readonly router = inject(Router);
+  private readonly injector = inject(Injector);
   private readonly leaving = signal(false);
 
   readonly locked = computed(
@@ -66,12 +67,18 @@ export class AdministrationLockService {
 
   async signOut(): Promise<void> {
     this.leaving.set(true);
+    this.access.ended();
     try {
+      await this.rendered();
       await firstValueFrom(this.auth.logout()).catch(() => undefined);
       await this.router.navigateByUrl('/');
     } finally {
       this.leaving.set(false);
     }
+  }
+
+  private rendered(): Promise<void> {
+    return new Promise((resolve) => afterNextRender(() => resolve(), { injector: this.injector }));
   }
 
   private stillSignedInAs(account: DeviceAccount): boolean {

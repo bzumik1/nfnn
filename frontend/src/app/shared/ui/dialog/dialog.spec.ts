@@ -640,7 +640,10 @@ describe('Given a dialog inside a part of the page that something may cover for 
   const native = () => fixture.nativeElement.querySelector('dialog') as HTMLDialogElement;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({ imports: [KeptPageHost] }).compileComponents();
+    await TestBed.configureTestingModule({
+      imports: [KeptPageHost],
+      providers: [{ provide: DialogHistory, useClass: FakeDialogHistory }],
+    }).compileComponents();
     fixture = TestBed.createComponent(KeptPageHost);
     host = fixture.componentInstance;
     document.body.appendChild(fixture.nativeElement);
@@ -661,6 +664,22 @@ describe('Given a dialog inside a part of the page that something may cover for 
     it('then the dialog steps aside without asking to be dismissed, so it blocks nothing in front', () => {
       expect(native().open).toBe(false);
       expect(host.dismissals).toBe(0);
+    });
+
+    it('and Back is pressed meanwhile, then the dialog stays, keeps its history entry and comes back when uncovered', async () => {
+      const history = TestBed.inject(DialogHistory) as unknown as FakeDialogHistory;
+      const entry = history.listener!;
+
+      entry.close();
+      TestBed.tick();
+      await fixture.whenStable();
+      expect(host.dismissals).toBe(0);
+      expect(history.listener).toBe(entry);
+
+      host.suspended.set(false);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(native().open).toBe(true);
     });
 
     it('and that part is uncovered again, then the same dialog opens as a modal dialog again', async () => {

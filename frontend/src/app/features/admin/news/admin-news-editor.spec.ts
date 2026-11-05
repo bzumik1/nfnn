@@ -385,6 +385,15 @@ describe('Given an administrator writing a new news article', () => {
       expect(document.activeElement?.textContent?.trim()).toBe('Zůstat a uložit');
     });
 
+    it('and the page goes away while it asks, then the question is answered with staying, so no navigation waits for ever', async () => {
+      const answer = fixture.componentInstance.canLeave();
+      await settle(fixture);
+
+      fixture.destroy();
+
+      await expect(answer).resolves.toBe(false);
+    });
+
     it('and choose to leave without saving, then the navigation goes on', async () => {
       const answer = fixture.componentInstance.canLeave();
       await settle(fixture);

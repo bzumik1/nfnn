@@ -105,7 +105,9 @@ export class AdministrationLockPanel {
     this.busy.set(false);
     if (!unlocked) {
       this.error.set(
-        $localize`:@@admin.lock.passkey.failed:Přístupový klíč správu neodemkl. Zkuste to znovu, nebo použijte heslo.`,
+        this.passwordUnlocks()
+          ? $localize`:@@admin.lock.passkey.failed:Přístupový klíč správu neodemkl. Zkuste to znovu, nebo použijte heslo.`
+          : $localize`:@@admin.lock.passkey.failedOnly:Přístupový klíč správu neodemkl. Zkuste to znovu, nebo se odhlaste a přihlaste znovu.`,
       );
     }
   }

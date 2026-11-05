@@ -158,7 +158,10 @@ export class DeviceVault implements SessionDevice {
     inject(DestroyRef).onDestroy(() => this.closeOpen());
     effect(() => {
       if (!this.access.unlocked()) {
-        untracked(() => void this.lockAdministration());
+        untracked(() => {
+          this.closeAdministration();
+          void this.lockAdministration();
+        });
       }
     });
   }
@@ -624,7 +627,16 @@ export class DeviceVault implements SessionDevice {
     if (storage.kind === 'indexed-db') {
       markStoredCopy(true);
     }
-    const load = await store.load();
+    let load: Awaited<ReturnType<AccountStore['load']>>;
+    try {
+      load = await store.load();
+    } catch (failure: unknown) {
+      store.close();
+      this.administrationChannel?.close();
+      this.administrationChannel = null;
+      this.administrationStorage = null;
+      throw failure;
+    }
     this.openedAdministration.set({ store, reason: load === 'loaded' ? reason : 'empty', account });
   }
 

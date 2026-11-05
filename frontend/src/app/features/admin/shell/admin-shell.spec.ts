@@ -236,6 +236,7 @@ describe('Given an administrator anywhere in the administration', () => {
       keepsPage.set(true);
       locked.set(true);
       await settle();
+      element('.lock-panel')!.focus();
     });
 
     afterEach(() => fixture.nativeElement.remove());

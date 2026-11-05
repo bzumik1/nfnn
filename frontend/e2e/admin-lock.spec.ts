@@ -224,6 +224,49 @@ test.describe('Given an administrator whose administration locks on this device'
     });
   });
 
+  test.describe('when the administration locked with a half-written article kept under the panel', () => {
+    test.beforeEach(async ({ page }) => {
+      await page.route(
+        (url) => url.pathname === ADMINISTRATION_UNLOCK_PATH,
+        (route) => route.fulfill({ status: 204 }),
+      );
+      await page.route('**/api/donors/auth/logout', (route) => route.fulfill({ status: 204 }));
+      await rememberedSession(page);
+      await page.goto('/sprava/aktuality/nova');
+      await unlockAdministration(page);
+      await page.getByLabel('Titulek').fill('Benefiční koncert');
+      await leaveTheApp(page);
+      await page.clock.runFor(FIVE_MINUTES_MS);
+      await comeBack(page);
+      await expect(
+        page.getByRole('heading', { level: 1, name: ADMINISTRATION_LOCKED }),
+      ).toBeVisible();
+    });
+
+    test('and the administrator signs out from the panel, then the site opens and the article stays out of sight', async ({
+      page,
+    }) => {
+      await page.getByRole('button', { name: 'Odhlásit se z tohoto zařízení' }).click();
+
+      await expect(page).toHaveURL('/');
+      await expect(page.getByLabel('Titulek')).toHaveCount(0);
+    });
+
+    test('and a tab was pressed before signing out, then signing out still opens the site', async ({
+      page,
+    }) => {
+      await page
+        .getByRole('navigation', { name: 'Hlavní sekce' })
+        .getByRole('link', { name: 'O nás' })
+        .click();
+
+      await page.getByRole('button', { name: 'Odhlásit se z tohoto zařízení' }).click();
+
+      await expect(page).toHaveURL('/');
+      await expect(page.getByLabel('Titulek')).toHaveCount(0);
+    });
+  });
+
   test('when the device is offline, then the panel says that the password waits for a connection', async ({
     page,
     context,

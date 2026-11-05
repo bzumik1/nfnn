@@ -64,10 +64,10 @@ export const ADMINISTRATION_COPY_RECORD_PATH =
 export const ADMINISTRATION_LOCKED = 'Správa je zamčená';
 
 export async function unlockAdministration(page: Page): Promise<void> {
-  await page.getByRole('button', { name: 'Použít heslo' }).click();
+  await page.getByRole('button', { name: 'Použít heslo' }).press('Enter');
   await page.locator('#zamek-heslo').fill('correct horse battery');
   await page.locator('#zamek-kod').fill('123456');
-  await page.getByRole('button', { name: 'Odemknout', exact: true }).click();
+  await page.locator('#zamek-kod').press('Enter');
 }
 
 export const test = base.extend<{

@@ -26,10 +26,14 @@
         Údaje správy jsou v tomto zařízení zašifrované. Zamykají se po 5 minutách mimo aplikaci a
         při každém spuštění.
       </p>
-    } @else {
+    } @else if (passkeyUnlocks()) {
       <p class="lock-lead" i18n="@@admin.lock.offline">
         Jste offline. Heslem a kódem odemknete správu, až budete připojeni. Přístupový klíč funguje
         i bez připojení.
+      </p>
+    } @else {
+      <p class="lock-lead" i18n="@@admin.lock.offlineWithoutPasskey">
+        Jste offline. Heslem a kódem odemknete správu, až budete připojeni.
       </p>
     }
     <div class="lock-actions">

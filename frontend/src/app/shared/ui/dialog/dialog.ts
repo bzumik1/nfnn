@@ -215,7 +215,9 @@ export class Dialog implements AfterViewInit, OnDestroy {
   }
 
   private closedByBack(): void {
-    this.dismiss();
+    if (!this.steppedAside) {
+      this.dismiss();
+    }
     afterNextRender(
       () => {
         if (!this.destroyed) {

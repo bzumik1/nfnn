@@ -133,8 +133,31 @@ describe('Given the panel of the locked administration', () => {
       await settle();
 
       expect(element('.lock-lead')?.textContent).toContain('Jste offline');
+      expect(element('.lock-lead')?.textContent).toContain(
+        'Přístupový klíč funguje i bez připojení.',
+      );
       expect((element('button.lock-use-password') as HTMLButtonElement).disabled).toBe(true);
       expect((element('button.lock-passkey') as HTMLButtonElement).disabled).toBe(false);
+    });
+  });
+
+  describe('when the device keeps the administration under a passkey and the account has no password with a code', () => {
+    beforeEach(() =>
+      render({
+        passkey: true,
+        donor: { secondFactor: { enabled: false, neededForAdministration: false } },
+      }),
+    );
+
+    it('and the passkey does not open it, then it says so without offering a password that cannot unlock', async () => {
+      lock.unlockWithPasskey.mockResolvedValue(false);
+
+      element('button.lock-passkey')!.click();
+      await settle();
+
+      const alert = element('[role="alert"]')?.textContent ?? '';
+      expect(alert).toContain('Přístupový klíč správu neodemkl');
+      expect(alert).not.toContain('heslo');
     });
   });
 
@@ -144,6 +167,15 @@ describe('Given the panel of the locked administration', () => {
     it('then the password is the main way to unlock', () => {
       expect(buttons()).toEqual(['Použít heslo', 'Odhlásit se z tohoto zařízení']);
       expect(element('button.lock-use-password')?.classList).toContain('ui-button--primary');
+    });
+
+    it('and the device is offline, then it says the password waits for a connection and promises no passkey', async () => {
+      online = false;
+      window.dispatchEvent(new Event('offline'));
+      await settle();
+
+      expect(element('.lock-lead')?.textContent).toContain('Jste offline');
+      expect(element('.lock-lead')?.textContent).not.toContain('Přístupový klíč');
     });
 
     describe('and the password is chosen', () => {
