@@ -11,6 +11,9 @@ import cz.novanadeje.app.donations.domain.receipt.DonationReceiptId;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
 import cz.novanadeje.app.donations.domain.receipt.FirstReceiptYear;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptCalendar;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatoryMissing;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatoryNeedsRenaming;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatoryUnprintable;
 import cz.novanadeje.app.donations.domain.receipt.ReplacedReceipt;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyUnpublished;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningPaused;
@@ -90,7 +93,8 @@ public class YearlyReceiptsService {
         DonationReceipt receipt;
         try {
             receipt = issuer.issueForYearByAdministrator(adminId, channel, donor, year, today);
-        } catch (ReceiptSigningPaused | ReceiptSigningKeyUnpublished signingStopped) {
+        } catch (ReceiptSigningPaused | ReceiptSigningKeyUnpublished | ReceiptSignatoryMissing | ReceiptSignatoryNeedsRenaming
+                 | ReceiptSignatoryUnprintable signingStopped) {
             throw signingStopped;
         } catch (DomainException refused) {
             return YearlyReceiptResult.skipped(donor, refused.code());

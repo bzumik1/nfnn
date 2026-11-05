@@ -7,6 +7,7 @@ import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
 import cz.novanadeje.app.donations.domain.receipt.FirstReceiptYear;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatoryMissing;
 import cz.novanadeje.app.donations.domain.receipt.YearNotYetCompleted;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyId;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningPaused;
@@ -99,6 +100,16 @@ class YearlyReceiptsServiceTest {
                 .thenThrow(new ReceiptSigningPaused(new ReceiptSigningKeyId("21fe31df")));
 
         assertThatThrownBy(() -> service.issue(PETR, BROWSER, YEAR_2026, List.of(JANA, ACME))).isInstanceOf(ReceiptSigningPaused.class);
+        verifyNoInteractions(events);
+    }
+
+    @Test
+    @DisplayName("Given nobody chosen to sign the receipts, when the yearly receipts are issued, then the whole run is refused as a single issue would be and nothing is audited")
+    void should_refuse_whole_run_when_issued_given_signatory_missing() {
+        when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.empty());
+        when(issuer.issueForYearByAdministrator(PETR, BROWSER, JANA, YEAR_2026, TODAY)).thenThrow(new ReceiptSignatoryMissing());
+
+        assertThatThrownBy(() -> service.issue(PETR, BROWSER, YEAR_2026, List.of(JANA, ACME))).isInstanceOf(ReceiptSignatoryMissing.class);
         verifyNoInteractions(events);
     }
 
