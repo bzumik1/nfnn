@@ -98,10 +98,10 @@
       >
         Neověřeno: fond tento klíč zneplatnil
       </h1>
-      <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.revoked.text">
+      <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.revoked.write">
         Kód je podepsaný klíčem, který fond přestal používat, protože se mohl dostat do cizích
-        rukou. Potvrzení nepovažujte za ověřené a požádejte fond o nové na
-        <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a>.
+        rukou. Potvrzení nepovažujte za ověřené a napište fondu na
+        <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a> s číslem potvrzení.
       </p>
     }
     @case ('unknown-key-online') {
@@ -198,10 +198,17 @@
       >
         Odkaz je neúplný
       </h1>
-      <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.broken.text">
-        Kód se nepřečetl celý, nebo je adresa opsaná s chybou. Naskenujte ho znovu, blíž a se
-        světlem.
-      </p>
+      @if (scanned()) {
+        <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.broken.text">
+          Kód se nepřečetl celý, nebo je adresa opsaná s chybou. Naskenujte ho znovu, blíž a se
+          světlem.
+        </p>
+      } @else {
+        <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.broken.link">
+          Kód v odkazu není celý, nebo je adresa opsaná s chybou. Otevřete odkaz z PDF potvrzení
+          znovu, nebo načtěte jeho QR kód.
+        </p>
+      }
     }
     @case ('newer') {
       <h1 id="verify-title" class="ui-panel__title" tabindex="-1" i18n="@@donor.verify.newer.title">

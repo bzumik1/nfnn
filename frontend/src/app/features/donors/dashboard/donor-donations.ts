@@ -92,6 +92,9 @@ const PROBLEMS_SHOWN_WITH_DETAIL: Readonly<Record<string, string>> = {
   [RECEIPT_UNPRINTABLE_PROBLEM]: RECEIPT_UNPRINTABLE,
   [RECEIPT_SIGNING_PAUSED_PROBLEM]: RECEIPT_FAILED,
   [RECEIPT_SIGNING_KEY_UNPUBLISHED_PROBLEM]: RECEIPT_FAILED,
+  'donations/receipt-signatory-missing': RECEIPT_FAILED,
+  'donations/receipt-issue-limit': RECEIPT_FAILED,
+  'donations/receipt-too-long': RECEIPT_FAILED,
 };
 const YEARLY_PROBLEMS_SHOWN_AS_TITLE = [
   'donations/year-not-yet-completed',

@@ -79,6 +79,7 @@ const ANSWERED: readonly string[] = [
 })
 export class VerificationResult {
   readonly outcome = input.required<FinalOutcome>();
+  readonly scanned = input(false);
   readonly retry = output<void>();
 
   protected readonly kind = computed(() => kindOf(this.outcome()));
