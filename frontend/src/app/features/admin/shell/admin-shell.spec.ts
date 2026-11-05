@@ -19,12 +19,16 @@ class LockPanel {}
 describe('Given an administrator anywhere in the administration', () => {
   const compact = signal(false);
   const locked = signal(false);
+  const keepsPage = signal(false);
+  const firstDownload = signal<{ done: number; total: number } | null>(null);
   let fixture: ComponentFixture<AdminShell>;
   let router: Router;
 
   beforeEach(async () => {
     compact.set(false);
     locked.set(false);
+    keepsPage.set(false);
+    firstDownload.set(null);
     await TestBed.configureTestingModule({
       imports: [AdminShell],
       providers: [
@@ -33,7 +37,12 @@ describe('Given an administrator anywhere in the administration', () => {
         { provide: CompactLayout, useValue: { isCompact: compact.asReadonly() } },
         {
           provide: ADMINISTRATION_LOCK,
-          useValue: { locked: locked.asReadonly(), panel: signal(LockPanel).asReadonly() },
+          useValue: {
+            locked: locked.asReadonly(),
+            panel: signal(LockPanel).asReadonly(),
+            keepsPage: keepsPage.asReadonly(),
+            firstDownload: firstDownload.asReadonly(),
+          },
         },
         provideRouter([
           { path: 'sprava', component: Page },
@@ -190,6 +199,66 @@ describe('Given an administrator anywhere in the administration', () => {
 
       expect(element('main#obsah h1')?.textContent).toBe('Stránka');
       expect(element('.lock-panel')).toBeNull();
+    });
+
+    it('then no download bar stands above the panel, even while the copy downloads', async () => {
+      firstDownload.set({ done: 3, total: 40 });
+      await settle();
+
+      expect(clean(element('.admin-first-download')?.textContent)).toBe('');
+    });
+  });
+
+  describe('when the administration locks while a form of the page is half-typed', () => {
+    let page: HTMLElement;
+
+    beforeEach(async () => {
+      page = element('main#obsah h1')!;
+      keepsPage.set(true);
+      locked.set(true);
+      await settle();
+    });
+
+    it('then the page stays alive under the panel, hidden and out of reach', () => {
+      const kept = element('main#obsah .admin-page')!;
+
+      expect(clean(element('main#obsah .lock-panel')?.textContent)).toBe('Správa je zamčená');
+      expect(kept.hidden).toBe(true);
+      expect(kept.hasAttribute('inert')).toBe(true);
+      expect(kept.contains(page)).toBe(true);
+    });
+
+    it('and it is unlocked again, then the same page comes back as it was', async () => {
+      keepsPage.set(false);
+      locked.set(false);
+      await settle();
+
+      const shown = element('main#obsah .admin-page')!;
+      expect(shown.hidden).toBe(false);
+      expect(shown.hasAttribute('inert')).toBe(false);
+      expect(element('main#obsah h1')).toBe(page);
+      expect(element('.lock-panel')).toBeNull();
+    });
+  });
+
+  describe('when the administration is first stored on this device after unlocking', () => {
+    it('then a bar above the page says how much of it is stored', async () => {
+      firstDownload.set({ done: 18, total: 40 });
+      await settle();
+
+      expect(clean(element('main#obsah .admin-first-download')?.textContent)).toBe(
+        'Ukládáme správu do zařízení 18 z 40',
+      );
+      expect(element('main#obsah .admin-first-download')?.getAttribute('aria-live')).toBe('polite');
+    });
+
+    it('and it is stored, then the bar goes', async () => {
+      firstDownload.set({ done: 40, total: 40 });
+      await settle();
+      firstDownload.set(null);
+      await settle();
+
+      expect(clean(element('.admin-first-download')?.textContent)).toBe('');
     });
   });
 });

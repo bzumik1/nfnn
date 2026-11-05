@@ -8,3 +8,18 @@
 .admin-content {
   padding-bottom: var(--tab-bar-clearance);
 }
+
+.first-download {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-4) var(--space-4) 0;
+}
+
+.first-download p {
+  margin: 0;
+}
+
+.first-download__bar {
+  width: 100%;
+  accent-color: var(--color-accent);
+}

@@ -1,4 +1,13 @@
-import { DestroyRef, inject, Injectable, InjectionToken, signal } from '@angular/core';
+import {
+  DestroyRef,
+  effect,
+  inject,
+  Injectable,
+  InjectionToken,
+  signal,
+  untracked,
+} from '@angular/core';
+import { AdministrationAccess } from '../../auth/administration-access';
 import type { DeviceAccount, SessionDevice, SignInSecret } from '../../auth/session-device';
 import { TAB_LOCKS } from '../../auth/session-tabs';
 import { ErrorReporter } from '../../errors/error-reporter';
@@ -12,7 +21,9 @@ import {
   openWithSessionKey,
 } from '../crypto/copy-keys';
 import {
+  type CopyKind,
   lookupTag,
+  mayWrapWithPassword,
   newDeviceSalt,
   type RegistryEntry,
   userHandleTag,
@@ -22,13 +33,14 @@ import {
   PasswordKeyFailure,
   WorkerPasswordKeyDerivation,
 } from '../crypto/password-key';
-import { prfInput, type PrfReading } from '../crypto/prf';
+import { prfInput, type PrfReading, readPrf } from '../crypto/prf';
 import { AccountStore, type CopyContents } from './account-store';
 import type { DeviceStorage, StorageChange } from './device-storage';
 import { idbDeviceStoragePresent, openIdbDeviceStorage } from './idb-device-storage';
 import { MemoryDeviceStorage } from './memory-device-storage';
 
 export const DONOR_FEED = 'donor';
+export const ADMINISTRATION_FEED = 'administration';
 export const VAULT_LOCK_NAME = 'nfnn.device-vault';
 export const COPY_CHANNEL_PREFIX = 'nfnn.device-copy.';
 export const COPY_LOCK_PREFIX = 'nfnn.device-copy-write.';
@@ -54,6 +66,19 @@ export const PASSWORD_KEY_DERIVATION = new InjectionToken<PasswordKeyDerivation>
   { providedIn: 'root', factory: () => new WorkerPasswordKeyDerivation() },
 );
 
+export interface PasskeyReader {
+  readonly rpId: string;
+  readonly credentials: CredentialsContainer | null;
+}
+
+export const PASSKEY_READER = new InjectionToken<PasskeyReader>('PASSKEY_READER', {
+  providedIn: 'root',
+  factory: () => ({
+    rpId: typeof location === 'undefined' ? '' : location.hostname,
+    credentials: typeof navigator === 'undefined' ? null : (navigator.credentials ?? null),
+  }),
+});
+
 export const COPY_CHANNELS = new InjectionToken<CopyChannelFactory>('COPY_CHANNELS', {
   providedIn: 'root',
   factory: () => (name) =>
@@ -70,7 +95,7 @@ export const STORAGE_PERSISTENCE = new InjectionToken<() => void>('STORAGE_PERSI
   },
 });
 
-export type OpenReason = 'sign-in' | 'restored' | 'empty';
+export type OpenReason = 'sign-in' | 'restored' | 'unlocked' | 'empty';
 
 export interface OpenedCopy {
   readonly store: AccountStore;
@@ -83,6 +108,11 @@ export type VaultMode = 'stored' | 'memory';
 interface CopyMessage {
   readonly kind: 'replaced' | 'deleted';
   readonly version: typeof COPY_MESSAGE_VERSION;
+}
+
+interface AdministrationOpening {
+  readonly replacesRefused: boolean;
+  readonly reason: OpenReason;
 }
 
 interface Opening {
@@ -99,9 +129,14 @@ export class DeviceVault implements SessionDevice {
   private readonly persist = inject(STORAGE_PERSISTENCE);
   private readonly locks = inject(TAB_LOCKS);
   private readonly reporter = inject(ErrorReporter);
+  private readonly passkeys = inject(PASSKEY_READER);
+  private readonly access = inject(AdministrationAccess);
   private readonly openedCopy = signal<OpenedCopy | null>(null);
   private readonly currentMode = signal<VaultMode | null>(null);
   private readonly lockedCopy = signal(false);
+  private readonly openedAdministration = signal<OpenedCopy | null>(null);
+  private administrationStorage: DeviceStorage | null = null;
+  private administrationChannel: CopyChannel | null = null;
   private sharedStorage: Promise<DeviceStorage> | null = null;
   private memoryOnly: MemoryDeviceStorage | null = null;
   private activeStorage: DeviceStorage | null = null;
@@ -116,9 +151,15 @@ export class DeviceVault implements SessionDevice {
   readonly opened = this.openedCopy.asReadonly();
   readonly mode = this.currentMode.asReadonly();
   readonly locked = this.lockedCopy.asReadonly();
+  readonly administration = this.openedAdministration.asReadonly();
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.closeOpen());
+    effect(() => {
+      if (!this.access.unlocked()) {
+        untracked(() => void this.lockAdministration());
+      }
+    });
   }
 
   prfInput(): Promise<Uint8Array<ArrayBuffer> | null> {
@@ -137,6 +178,9 @@ export class DeviceVault implements SessionDevice {
     return this.run(async () => {
       try {
         await this.withMemoryFallback(() => this.openAtSignIn(account, secret, storeNothing));
+        if (account.administrator === true) {
+          await this.openAdministrationAtSignIn(account, secret, storeNothing);
+        }
       } finally {
         zeroed(secret);
       }
@@ -181,9 +225,7 @@ export class DeviceVault implements SessionDevice {
       }
       const tags = await accountTags(salt, account);
       const entries = await storage.entries();
-      const forgotten = entries.filter(
-        (entry) => isDonor(entry) && entry.userHandleTag === tags.userHandleTag,
-      );
+      const forgotten = entries.filter((entry) => entry.userHandleTag === tags.userHandleTag);
       const remaining = entries.length - forgotten.length;
       await storage.write({
         deleteCopies: forgotten.map((entry) => entry.copyId),
@@ -200,22 +242,44 @@ export class DeviceVault implements SessionDevice {
   passwordChanged(account: DeviceAccount, password: string): Promise<void> {
     return this.run(async () => {
       const opened = this.openedFor(account);
-      if (opened === null || this.activeStorage === null) {
-        return;
+      if (opened !== null && this.activeStorage !== null) {
+        await this.rewrapWithPassword(this.activeStorage, opened.store, password);
       }
-      await this.rewrapWithPassword(this.activeStorage, opened.store, password);
+      const administration = this.administrationFor(account);
+      if (administration !== null && this.administrationStorage !== null) {
+        await this.rewrapWithPassword(this.administrationStorage, administration.store, password);
+      }
     });
   }
 
   passwordRemoved(account: DeviceAccount): Promise<void> {
     return this.run(async () => {
-      const storage = this.openedFor(account) === null ? null : this.activeStorage;
-      const entry = storage === null ? null : await this.entryOf(storage, account);
-      if (storage === null || entry === null) {
+      const storage =
+        this.openedFor(account) === null
+          ? this.administrationFor(account) === null
+            ? null
+            : this.administrationStorage
+          : this.activeStorage;
+      if (storage === null) {
+        return;
+      }
+      const tags = await this.tagsIn(storage, account);
+      const entries =
+        tags === null
+          ? []
+          : (await storage.entries()).filter(
+              (entry) =>
+                entry.userHandleTag === tags.userHandleTag &&
+                entry.wraps.some((wrap) => wrap.kind === 'password'),
+            );
+      if (entries.length === 0) {
         return;
       }
       await storage.write({
-        putEntries: [{ ...entry, wraps: entry.wraps.filter((wrap) => wrap.kind !== 'password') }],
+        putEntries: entries.map((entry) => ({
+          ...entry,
+          wraps: entry.wraps.filter((wrap) => wrap.kind !== 'password'),
+        })),
       });
     });
   }
@@ -225,20 +289,13 @@ export class DeviceVault implements SessionDevice {
       try {
         const opened = this.openedFor(account);
         const storage = this.activeStorage;
-        if (opened === null || storage === null) {
-          return;
+        if (opened !== null && storage !== null) {
+          await this.addPrfWrap(storage, opened.store, reading);
         }
-        const entry = await this.entryOf(storage, account);
-        if (entry === null || entry.copyId !== opened.store.copyId) {
-          return;
+        const administration = this.administrationFor(account);
+        if (administration !== null && this.administrationStorage !== null) {
+          await this.addPrfWrap(this.administrationStorage, administration.store, reading);
         }
-        const copy = this.copyOf(opened.store);
-        const wrap = await copy.wrapWithPrf(reading.credentialId, reading.output);
-        await storage.write({
-          putEntries: [
-            { ...entry, wraps: [...withoutPrfOf(entry.wraps, reading.credentialId), wrap] },
-          ],
-        });
       } finally {
         reading.output.fill(0);
       }
@@ -247,8 +304,13 @@ export class DeviceVault implements SessionDevice {
 
   replaceContents(store: AccountStore, contents: CopyContents): Promise<boolean> {
     return this.run(async () => {
-      const storage = this.activeStorage;
-      if (this.openedCopy()?.store !== store || storage === null) {
+      const administration = this.openedAdministration()?.store === store;
+      const storage = administration
+        ? this.administrationStorage
+        : this.openedCopy()?.store === store
+          ? this.activeStorage
+          : null;
+      if (storage === null) {
         return false;
       }
       const entries = await storage.entries();
@@ -256,8 +318,121 @@ export class DeviceVault implements SessionDevice {
         return false;
       }
       await store.replace(contents);
-      this.channel?.postMessage(copyMessage('replaced'));
+      (administration ? this.administrationChannel : this.channel)?.postMessage(
+        copyMessage('replaced'),
+      );
       return true;
+    });
+  }
+
+  stores(store: AccountStore): boolean {
+    const storage =
+      this.openedAdministration()?.store === store
+        ? this.administrationStorage
+        : this.openedCopy()?.store === store
+          ? this.activeStorage
+          : null;
+    return storage?.kind === 'indexed-db';
+  }
+
+  administrationPasskeys(account: DeviceAccount, storeNothing: boolean): Promise<string[]> {
+    return this.run(async () => {
+      const entry = await this.administrationEntryOf(account, storeNothing);
+      return entry === null ? [] : prfCredentialsOf(entry.wraps);
+    });
+  }
+
+  async unlockAdministrationWithPasskey(
+    account: DeviceAccount,
+    storeNothing: boolean,
+  ): Promise<boolean> {
+    const asked = await this.run(async () => {
+      const storage = await this.administrationStorageFor(storeNothing);
+      const salt = storage === null ? null : await storage.deviceSalt();
+      const entry =
+        storage === null || salt === null
+          ? null
+          : administrationEntryFor(await storage.entries(), await accountTags(salt, account));
+      return entry === null || salt === null
+        ? null
+        : { salt, credentialIds: prfCredentialsOf(entry.wraps) };
+    });
+    const credentials = this.passkeys.credentials;
+    if (asked === null || asked.credentialIds.length === 0 || credentials === null) {
+      return false;
+    }
+    const reading = await readPrf(credentials, {
+      rpId: this.passkeys.rpId,
+      deviceSalt: asked.salt,
+      credentialIds: asked.credentialIds,
+    }).catch(() => null);
+    if (reading === null) {
+      return false;
+    }
+    return this.run(async () => {
+      try {
+        const storage = await this.administrationStorageFor(storeNothing);
+        if (storage === null) {
+          return false;
+        }
+        this.closeAdministration();
+        return (
+          (await this.openAdministration(
+            storage,
+            account,
+            { kind: 'prf', reading },
+            { replacesRefused: false, reason: 'unlocked' },
+          )) === 'opened'
+        );
+      } finally {
+        reading.output.fill(0);
+      }
+    });
+  }
+
+  unlockAdministrationWithPassword(
+    account: DeviceAccount,
+    password: string,
+    storeNothing: boolean,
+  ): Promise<void> {
+    return this.run(async () => {
+      const storage = await this.administrationStorageFor(storeNothing, true);
+      if (storage === null) {
+        return;
+      }
+      this.closeAdministration();
+      await this.openAdministration(
+        storage,
+        account,
+        { kind: 'password', password },
+        { replacesRefused: true, reason: 'unlocked' },
+      );
+    });
+  }
+
+  lockAdministration(): Promise<void> {
+    return this.run(async () => this.closeAdministration());
+  }
+
+  administrationRevoked(account: DeviceAccount): Promise<void> {
+    return this.run(async () => {
+      const storage =
+        this.administrationFor(account) === null
+          ? await this.storageOf(account)
+          : this.administrationStorage;
+      this.closeAdministration();
+      const tags = storage === null ? null : await this.tagsIn(storage, account);
+      if (storage === null || tags === null) {
+        return;
+      }
+      const revoked = (await storage.entries()).filter(
+        (entry) => entry.kind === 'administration' && entry.userHandleTag === tags.userHandleTag,
+      );
+      if (revoked.length === 0) {
+        return;
+      }
+      await this.committed(storage, { deleteCopies: revoked.map((entry) => entry.copyId) });
+      await this.afterRemoval(storage);
     });
   }
 
@@ -314,6 +489,207 @@ export class DeviceVault implements SessionDevice {
     this.openedCopy.set({ store, reason: load === 'loaded' ? 'sign-in' : 'empty', account });
     if (secret.kind === 'password' && opening?.by !== 'password') {
       await this.rewrapWithPassword(storage, store, secret.password);
+    }
+  }
+
+  private async openAdministrationAtSignIn(
+    account: DeviceAccount,
+    secret: SignInSecret,
+    storeNothing: boolean,
+  ): Promise<void> {
+    this.closeAdministration();
+    if (secret.kind === 'none') {
+      return;
+    }
+    const storage = storeNothing
+      ? this.memoryOnly
+      : (this.activeStorage ?? (await this.storageFor(false)));
+    if (storage === null) {
+      return;
+    }
+    try {
+      await this.openAdministration(storage, account, secret, {
+        replacesRefused: true,
+        reason: 'sign-in',
+      });
+    } catch (failure: unknown) {
+      this.closeAdministration();
+      this.reporter.report('device-store-open', 'global', failure);
+    }
+  }
+
+  private async openAdministration(
+    storage: DeviceStorage,
+    account: DeviceAccount,
+    secret: SignInSecret,
+    how: AdministrationOpening,
+  ): Promise<'opened' | 'locked'> {
+    const salt = await this.saltOf(storage);
+    const tags = await accountTags(salt, account);
+    const entry = administrationEntryFor(await storage.entries(), tags);
+    const opening = entry === null ? null : await this.openExisting(storage, entry, secret);
+    if (
+      opening === 'undecided' ||
+      (entry !== null &&
+        opening === null &&
+        !(how.replacesRefused && refusedBy(entry.wraps, secret)))
+    ) {
+      return 'locked';
+    }
+    const copy = opening?.copy ?? (await OpenCopy.create());
+    try {
+      let wraps: KeyWrap[] =
+        opening === null ? [] : entry!.wraps.filter((wrap) => wrap.kind !== 'session');
+      if (secret.kind === 'prf') {
+        wraps = [
+          ...withoutPrfOf(wraps, secret.reading.credentialId).filter(
+            (wrap) => wrap.kind !== 'password',
+          ),
+          await copy.wrapWithPrf(secret.reading.credentialId, secret.reading.output),
+        ];
+      } else if (
+        secret.kind === 'password' &&
+        opening?.by !== 'password' &&
+        mayWrapWithPassword(ADMINISTRATION_KIND, wraps)
+      ) {
+        const wrap = await this.passwordWrapOf(copy, secret.password);
+        wraps = wrap === null ? wraps : [...wraps.filter((kept) => kept.kind !== 'password'), wrap];
+      }
+      if (wraps.length === 0) {
+        copy.close();
+        return 'locked';
+      }
+      await this.committed(storage, {
+        deleteCopies: entry !== null && opening === null ? [entry.copyId] : [],
+        putEntries: [{ copyId: copy.copyId, kind: ADMINISTRATION_KIND, ...tags, wraps }],
+      });
+    } catch (failure: unknown) {
+      copy.close();
+      throw failure;
+    }
+    await this.adoptAdministration(storage, account, copy, how.reason);
+    return 'opened';
+  }
+
+  private async adoptAdministration(
+    storage: DeviceStorage,
+    account: DeviceAccount,
+    copy: OpenCopy,
+    reason: OpenReason,
+  ): Promise<void> {
+    const store = new AccountStore(copy, storage, ADMINISTRATION_FEED);
+    this.copies.set(store, copy);
+    this.administrationStorage = storage;
+    this.listenAdministration(store);
+    if (storage.kind === 'indexed-db') {
+      markStoredCopy(true);
+    }
+    const load = await store.load();
+    this.openedAdministration.set({ store, reason: load === 'loaded' ? reason : 'empty', account });
+  }
+
+  private listenAdministration(store: AccountStore): void {
+    const channel = this.channels(`${COPY_CHANNEL_PREFIX}${store.copyId}`);
+    this.administrationChannel = channel;
+    channel?.addEventListener('message', (event: Event) => {
+      const message = (event as MessageEvent<unknown>).data as Partial<CopyMessage> | null;
+      if (
+        this.openedAdministration()?.store !== store ||
+        message?.version !== COPY_MESSAGE_VERSION
+      ) {
+        return;
+      }
+      if (message.kind === 'replaced') {
+        void store.load().catch(() => undefined);
+      } else if (message.kind === 'deleted') {
+        void this.run(async () => {
+          if (this.openedAdministration()?.store === store) {
+            this.closeAdministration();
+          }
+        });
+      }
+    });
+  }
+
+  private closeAdministration(): void {
+    const opened = this.openedAdministration();
+    this.openedAdministration.set(null);
+    opened?.store.close();
+    this.administrationChannel?.close();
+    this.administrationChannel = null;
+    this.administrationStorage = null;
+  }
+
+  private administrationFor(account: DeviceAccount): OpenedCopy | null {
+    const opened = this.openedAdministration();
+    return opened !== null && opened.account.userHandle === account.userHandle ? opened : null;
+  }
+
+  private async administrationStorageFor(
+    storeNothing: boolean,
+    create = false,
+  ): Promise<DeviceStorage | null> {
+    if (this.administrationStorage !== null) {
+      return this.administrationStorage;
+    }
+    if (storeNothing) {
+      if (create && this.memoryOnly === null) {
+        this.memoryOnly = new MemoryDeviceStorage();
+      }
+      return this.memoryOnly;
+    }
+    if (this.activeStorage !== null && this.activeStorage !== this.memoryOnly) {
+      return this.activeStorage;
+    }
+    if (create) {
+      return this.storageFor(false);
+    }
+    return this.presentStorage().catch(() => null);
+  }
+
+  private async administrationEntryOf(
+    account: DeviceAccount,
+    storeNothing: boolean,
+  ): Promise<RegistryEntry | null> {
+    const storage = await this.administrationStorageFor(storeNothing);
+    const tags = storage === null ? null : await this.tagsIn(storage, account);
+    return storage === null || tags === null
+      ? null
+      : administrationEntryFor(await storage.entries(), tags);
+  }
+
+  private async tagsIn(
+    storage: DeviceStorage,
+    account: DeviceAccount,
+  ): Promise<AccountTags | null> {
+    const salt = await storage.deviceSalt();
+    return salt === null ? null : accountTags(salt, account);
+  }
+
+  private async addPrfWrap(
+    storage: DeviceStorage,
+    store: AccountStore,
+    reading: PrfReading,
+  ): Promise<void> {
+    const entry = (await storage.entries()).find((candidate) => candidate.copyId === store.copyId);
+    if (entry === undefined) {
+      return;
+    }
+    const wrap = await this.copyOf(store).wrapWithPrf(reading.credentialId, reading.output);
+    const kept = withoutPrfOf(entry.wraps, reading.credentialId).filter(
+      (candidate) => entry.kind === 'donor' || candidate.kind !== 'password',
+    );
+    await storage.write({ putEntries: [{ ...entry, wraps: [...kept, wrap] }] });
+  }
+
+  private async passwordWrapOf(copy: OpenCopy, password: string): Promise<KeyWrap | null> {
+    try {
+      return await copy.wrapWithPassword(password, this.derivation);
+    } catch (failure: unknown) {
+      if (failure instanceof PasswordKeyFailure || failure instanceof CopyRefused) {
+        return null;
+      }
+      throw failure;
     }
   }
 
@@ -427,14 +803,13 @@ export class DeviceVault implements SessionDevice {
     password: string,
   ): Promise<void> {
     const copy = this.copyOf(store);
-    let wrap: KeyWrap;
-    try {
-      wrap = await copy.wrapWithPassword(password, this.derivation);
-    } catch (failure: unknown) {
-      if (failure instanceof PasswordKeyFailure || failure instanceof CopyRefused) {
-        return;
-      }
-      throw failure;
+    const current = (await storage.entries()).find((candidate) => candidate.copyId === copy.copyId);
+    if (current !== undefined && !mayWrapWithPassword(current.kind, current.wraps)) {
+      return;
+    }
+    const wrap = await this.passwordWrapOf(copy, password);
+    if (wrap === null) {
+      return;
     }
     const entry = (await storage.entries()).find((candidate) => candidate.copyId === copy.copyId);
     if (entry === undefined) {
@@ -512,6 +887,7 @@ export class DeviceVault implements SessionDevice {
   }
 
   private closeOpen(): void {
+    this.closeAdministration();
     const opened = this.openedCopy();
     this.openedCopy.set(null);
     this.lockedCopy.set(false);
@@ -695,8 +1071,25 @@ function joined(first: StorageChange, second: StorageChange): StorageChange {
   };
 }
 
+const ADMINISTRATION_KIND: CopyKind = 'administration';
+
 function isDonor(entry: RegistryEntry): boolean {
   return entry.kind === 'donor';
+}
+
+function administrationEntryFor(
+  entries: readonly RegistryEntry[],
+  tags: AccountTags,
+): RegistryEntry | null {
+  return (
+    entries.find(
+      (entry) => entry.kind === ADMINISTRATION_KIND && entry.userHandleTag === tags.userHandleTag,
+    ) ?? null
+  );
+}
+
+function prfCredentialsOf(wraps: readonly KeyWrap[]): string[] {
+  return wraps.flatMap((wrap) => (wrap.kind === 'prf' ? [wrap.credentialId] : []));
 }
 
 function refusedBy(wraps: readonly KeyWrap[], secret: SignInSecret): boolean {

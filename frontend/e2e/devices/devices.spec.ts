@@ -27,6 +27,8 @@ const test = base.extend<DeviceOptions & { pageErrors: string[]; inFlight: () =>
 });
 
 test.describe('Given the site on a phone or a tablet', () => {
+  test.use({ unlocksAdministration: false });
+
   for (const step of STEPS) {
     test(stepTitle(step), async ({ page, pageErrors, inFlight }, testInfo) => {
       await runStep(

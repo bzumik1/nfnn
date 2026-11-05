@@ -19,6 +19,9 @@ export class DeviceCopies implements SessionDevice {
   }
 
   signedIn(account: DeviceAccount, secret: SignInSecret, storeNothing = false): Promise<void> {
+    if (account.administrator === true) {
+      this.watchAdministration();
+    }
     return this.vault().then(
       (vault) => vault.signedIn(account, secret, storeNothing),
       (failure: unknown) => {
@@ -65,6 +68,12 @@ export class DeviceCopies implements SessionDevice {
         throw failure;
       },
     );
+  }
+
+  private watchAdministration(): void {
+    void import('./features/admin/device-copy/administration-copy-download')
+      .then((download) => this.injector.get(download.AdministrationCopyDownload))
+      .catch(() => undefined);
   }
 
   private vault(): Promise<SessionDevice> {

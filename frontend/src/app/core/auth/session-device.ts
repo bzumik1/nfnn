@@ -4,6 +4,7 @@ import type { PrfReading } from '../device/crypto/prf';
 export interface DeviceAccount {
   readonly email: string;
   readonly userHandle: string;
+  readonly administrator?: boolean;
 }
 
 export type SignInSecret =
@@ -43,9 +44,16 @@ export const SESSION_DEVICE = new InjectionToken<SessionDevice>('SESSION_DEVICE'
 export function deviceAccountOf(donor: {
   readonly id: string;
   readonly email: string;
+  readonly roles?: readonly string[];
 }): DeviceAccount {
-  return { email: donor.email, userHandle: userHandleOf(donor.id) };
+  return {
+    email: donor.email,
+    userHandle: userHandleOf(donor.id),
+    administrator: donor.roles?.includes(ADMINISTRATOR_ROLE) ?? false,
+  };
 }
+
+const ADMINISTRATOR_ROLE = 'ADMIN';
 
 export function userHandleOf(donorId: string): string {
   const hex = donorId.replace(/-/g, '');
