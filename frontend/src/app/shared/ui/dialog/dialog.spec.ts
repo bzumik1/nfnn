@@ -183,6 +183,7 @@ describe('Given a dialog opened from a button', () => {
         labelledBy="title"
         [presentation]="presentation()"
         [pushesHistory]="pushesHistory()"
+        [dismissible]="!locked()"
         (dismissed)="dismissed()"
       >
         <h2 id="title">Název</h2>
@@ -195,6 +196,7 @@ class PresentedHost {
   readonly presentation = signal<DialogPresentation>('auto');
   readonly pushesHistory = signal(true);
   readonly busy = signal(false);
+  readonly locked = signal(false);
   dismissals = 0;
 
   dismissed(): void {
@@ -265,6 +267,97 @@ describe('Given a dialog and the way it is presented', () => {
 
     expect(native().dataset['presentation']).toBe('full');
     expect(grabber()).toBeNull();
+  });
+});
+
+describe('Given a dialog presented as a sheet that the visitor drags by its top edge', () => {
+  let fixture: ComponentFixture<PresentedHost>;
+
+  const grabber = () => fixture.nativeElement.querySelector('.dialog-grabber') as HTMLElement;
+  const panel = () => fixture.nativeElement.querySelector('.dialog-panel') as HTMLElement;
+  const pointer = (type: string, clientY: number, timeStamp: number): Event => {
+    const event = new MouseEvent(type, { bubbles: true, clientY });
+    Object.defineProperties(event, {
+      pointerId: { value: 1 },
+      isPrimary: { value: true },
+      timeStamp: { value: timeStamp },
+    });
+    return event;
+  };
+  const dragTo = async (clientY: number, timeStamp: number): Promise<void> => {
+    grabber().dispatchEvent(pointer('pointermove', clientY, timeStamp));
+    fixture.detectChanges();
+    await fixture.whenStable();
+  };
+  const press = (clientY = 100): void => {
+    grabber().dispatchEvent(pointer('pointerdown', clientY, 0));
+  };
+  const release = async (): Promise<void> => {
+    grabber().dispatchEvent(pointer('pointerup', 0, 0));
+    fixture.detectChanges();
+    await fixture.whenStable();
+  };
+
+  beforeEach(async () => {
+    TestBed.configureTestingModule({
+      imports: [PresentedHost],
+      providers: [{ provide: DialogHistory, useClass: FakeDialogHistory }],
+    });
+    fixture = TestBed.createComponent(PresentedHost);
+    fixture.componentInstance.presentation.set('sheet');
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    await fixture.whenStable();
+  });
+
+  afterEach(() => fixture.nativeElement.remove());
+
+  it('when the finger moves down, then the sheet follows it without easing', async () => {
+    press();
+    await dragTo(160, 100);
+
+    expect(panel().style.translate).toBe('0 60px');
+    expect(panel().classList).toContain('dialog-panel--dragging');
+  });
+
+  it('when the finger lets go far enough down, then the sheet asks to be dismissed', async () => {
+    press();
+    await dragTo(260, 1000);
+    await release();
+
+    expect(fixture.componentInstance.dismissals).toBe(1);
+  });
+
+  it('when the finger lets go after a short way, then the sheet eases back and stays open', async () => {
+    press();
+    await dragTo(130, 1000);
+    await release();
+
+    expect(fixture.componentInstance.dismissals).toBe(0);
+    expect(panel().style.translate).toBe('');
+    expect(panel().classList).not.toContain('dialog-panel--dragging');
+  });
+
+  it('when the browser takes the gesture over, then the sheet returns and stays open', async () => {
+    press();
+    await dragTo(300, 1000);
+    grabber().dispatchEvent(pointer('pointercancel', 0, 0));
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.dismissals).toBe(0);
+    expect(panel().style.translate).toBe('');
+  });
+
+  it('when the page holds the sheet open while something runs, then dragging does not move it', async () => {
+    fixture.componentInstance.locked.set(true);
+    fixture.detectChanges();
+
+    press();
+    await dragTo(300, 1000);
+    await release();
+
+    expect(panel().style.translate).toBe('');
+    expect(fixture.componentInstance.dismissals).toBe(0);
   });
 });
 

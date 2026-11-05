@@ -11,12 +11,14 @@ import {
   inject,
   input,
   output,
+  signal,
   viewChild,
 } from '@angular/core';
 
 import { DialogAnnouncer } from './dialog-announcer';
 import { DialogHistory, DialogHistoryListener } from './dialog-history';
 import { DIALOG_PRESENTATION, DialogPresentation } from './dialog-presentation';
+import { SheetDrag } from './sheet-drag';
 
 @Component({
   selector: 'app-dialog',
@@ -41,6 +43,14 @@ export class Dialog implements AfterViewInit, OnDestroy {
   });
 
   private readonly element = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
+  private readonly panel = viewChild.required<ElementRef<HTMLElement>>('panel');
+  private readonly drag = new SheetDrag();
+  private readonly dragOffset = signal(0);
+  protected readonly dragging = signal(false);
+  protected readonly dragTranslate = computed(() => {
+    const offset = this.dragOffset();
+    return offset > 0 ? `0 ${offset}px` : null;
+  });
   private readonly opener = inject(DOCUMENT).activeElement;
   private readonly history = inject(DialogHistory);
   private readonly injector = inject(Injector);
@@ -101,6 +111,39 @@ export class Dialog implements AfterViewInit, OnDestroy {
       this.dismiss();
     }
     this.pressStartedOnBackdrop = false;
+  }
+
+  protected startDrag(event: PointerEvent): void {
+    if (!this.dismissible() || !event.isPrimary) {
+      return;
+    }
+    (event.target as Element).setPointerCapture?.(event.pointerId);
+    this.drag.start(event.clientY, event.timeStamp);
+    this.dragging.set(true);
+  }
+
+  protected followDrag(event: PointerEvent): void {
+    if (this.dragging()) {
+      this.dragOffset.set(this.drag.move(event.clientY, event.timeStamp));
+    }
+  }
+
+  protected endDrag(): void {
+    if (!this.dragging()) {
+      return;
+    }
+    const release = this.drag.end(this.panel().nativeElement.getBoundingClientRect().height);
+    this.dragging.set(false);
+    this.dragOffset.set(0);
+    if (release === 'dismiss') {
+      this.dismiss();
+    }
+  }
+
+  protected cancelDrag(): void {
+    this.drag.end(Number.POSITIVE_INFINITY);
+    this.dragging.set(false);
+    this.dragOffset.set(0);
   }
 
   private closedByBack(): void {
