@@ -24,6 +24,7 @@ import { ReportingErrorHandler } from './core/errors/reporting-error-handler';
 import { ChunkLoadRecovery } from './core/reload/chunk-load-recovery';
 import { CanonicalLink } from './core/seo/canonical-link';
 import { versionInterceptor } from './core/version/version-interceptor';
+import { DialogHistory } from './shared/ui/dialog/dialog-history';
 
 const scrollOptions: InMemoryScrollingOptions = {
   scrollPositionRestoration: 'enabled',
@@ -46,6 +47,10 @@ export const appErrorHandler: Provider = {
   useClass: ReportingErrorHandler,
 };
 
+export const dialogHistoryAtStart: EnvironmentProviders = provideAppInitializer(
+  () => void inject(DialogHistory),
+);
+
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
@@ -54,5 +59,6 @@ export const appConfig: ApplicationConfig = {
     appHttpClient,
     provideAppInitializer(() => inject(AuthStore).restore()),
     provideAppInitializer(() => inject(CanonicalLink).start()),
+    dialogHistoryAtStart,
   ],
 };

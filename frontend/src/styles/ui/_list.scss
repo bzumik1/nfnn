@@ -24,17 +24,16 @@
   text-decoration: none;
   cursor: pointer;
   transition: background var(--duration-base);
-
-  &:hover {
-    background: var(--color-surface-alt);
-  }
 }
 
 div.ui-list__row {
   cursor: default;
+}
 
-  &:hover {
-    background: transparent;
+@media (hover: hover) {
+  a.ui-list__row:hover,
+  button.ui-list__row:hover {
+    background: var(--color-surface-alt);
   }
 }
 
@@ -88,11 +87,16 @@ div.ui-list__row {
   background: var(--color-surface);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
-  overflow: hidden;
+  overflow: clip;
+}
+
+.ui-list--inset .ui-list__row:focus-visible {
+  outline-offset: -3px;
 }
 
 @media (forced-colors: active) {
-  .ui-list__row:hover {
+  a.ui-list__row:hover,
+  button.ui-list__row:hover {
     outline: 1px solid CanvasText;
   }
 }

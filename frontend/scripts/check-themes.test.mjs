@@ -131,6 +131,67 @@ describe('Given the colours of the tab bar over the page', () => {
       'theme missing does not set --color-tab-focus-ring in its top-level :root',
     ]);
   });
+
+  it('when the white glass carries black labels, then the contrast over a black page is reported too, because dark content scrolls under the bar', () => {
+    const white = BARS.replace(
+      'color-mix(in srgb, #0f172a 66%, transparent)',
+      'color-mix(in srgb, #ffffff 40%, transparent)',
+    ).replace('--color-on-tab-bar: #ffffff;', '--color-on-tab-bar: #000000;');
+
+    assert.match(
+      barContrastProblems('white', white).join('\n'),
+      /theme white: --color-on-tab-bar on --color-tab-bar over a black page is 3\.66:1, below 4\.5:1/,
+    );
+  });
+
+  it('when the focus ring is as dark as the pill it surrounds, then the contrast against the pill is reported', () => {
+    const ring = BARS.replace(
+      '--color-tab-focus-ring: #ffffff;',
+      '--color-tab-focus-ring: #1e293b;',
+    );
+
+    assert.match(
+      barContrastProblems('ring', ring).join('\n'),
+      /--color-tab-focus-ring on --color-tab-pill over --color-tab-bar over a white page/,
+    );
+  });
+
+  it('when a colour is written in upper case, then it is read like the lower-case one', () => {
+    assert.deepEqual(barContrastProblems('upper', BARS.replace('#93c5fd', '#93C5FD')), []);
+  });
+
+  it('when an address in the theme holds a double slash, then the tokens after it are still read', () => {
+    const font = `@font-face { src: url('https://example.org/x.woff2'); }\n${BARS}`;
+
+    assert.deepEqual(barContrastProblems('font', font), []);
+  });
+
+  it('when a bar colour is set under a rule the check does not follow, then it is reported, because its contrast would go unchecked', () => {
+    const hidden = `${BARS}
+      @supports (backdrop-filter: blur(1px)) {
+        :root { --color-tab-bar: #9ca3af; }
+      }
+      :root:not([data-x]) { --color-tab-pill: #9ca3af; }
+    `;
+
+    assert.deepEqual(barContrastProblems('hidden', hidden), [
+      'theme hidden sets --color-tab-bar under @supports (backdrop-filter: blur(1px)) > :root, where its contrast is not checked; set it in the top-level :root or a @media block of :root',
+      'theme hidden sets --color-tab-pill under :root:not([data-x]), where its contrast is not checked; set it in the top-level :root or a @media block of :root',
+    ]);
+  });
+
+  it('when the bar is solid and its pill hardly differs from it, then the pill is reported, because the active tab would show by its label colour alone', () => {
+    const solid = `${BARS}
+      @media (prefers-reduced-transparency: reduce) {
+        :root { --color-tab-bar: #0f172a; --color-tab-pill: #060d1f; }
+      }
+    `;
+
+    assert.deepEqual(barContrastProblems('solid', solid), [
+      'theme solid under @media (prefers-reduced-transparency: reduce): --color-tab-pill on --color-tab-bar over a white page is 1.08:1, below 3:1',
+      'theme solid under @media (prefers-reduced-transparency: reduce): --color-tab-pill on --color-tab-bar over a black page is 1.08:1, below 3:1',
+    ]);
+  });
 });
 
 const ANGULAR = {

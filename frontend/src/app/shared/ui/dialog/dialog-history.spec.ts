@@ -103,6 +103,22 @@ describe('Given the history entries of an open dialog', () => {
     expect(replaced.close).not.toHaveBeenCalled();
   });
 
+  it('when the visitor goes forward onto the entry of a closed dialog and opens another, then Back closes the new one', async () => {
+    await open();
+    history.close();
+    await settled();
+    window.history.go(1);
+    await settled();
+
+    await open();
+    await back();
+
+    expect(listener.close).toHaveBeenCalledTimes(1);
+    expect(location.path()).toBe('/stranka');
+    await back();
+    expect(location.path()).toBe('');
+  });
+
   it('when the dialog closes before it ever added an entry, then history is left alone', async () => {
     const before = window.history.length;
 
@@ -213,5 +229,53 @@ describe('Given the history entries of an open dialog', () => {
     await back();
     expect(listener.close).toHaveBeenCalledTimes(1);
     expect(location.path()).toBe('/jinam');
+  });
+});
+
+describe('Given a page reloaded while a dialog had its entry open', () => {
+  let router: Router;
+  let location: Location;
+  let routerEvents: RouterEvent[];
+
+  const settled = async (): Promise<void> => {
+    for (let round = 0; round < 3; round++) {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      TestBed.tick();
+    }
+  };
+
+  beforeEach(async () => {
+    window.history.pushState(null, '', '/');
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([
+          { path: '', component: Page },
+          { path: 'stranka', component: Page },
+        ]),
+        { provide: PlatformLocation, useClass: BrowserPlatformLocation },
+      ],
+    });
+    router = TestBed.inject(Router);
+    location = TestBed.inject(Location);
+    router.initialNavigation();
+    await router.navigateByUrl('/stranka');
+    await settled();
+    window.history.pushState({ ...window.history.state, nfnnDialogDepth: 1 }, '');
+    routerEvents = [];
+    router.events.subscribe((event) => routerEvents.push(event));
+  });
+
+  it('when the history of dialogs starts, then it takes the stale entry back without the router noticing, so the next Back leaves the page', async () => {
+    TestBed.inject(DialogHistory);
+    await settled();
+
+    expect(
+      (window.history.state as Record<string, unknown> | null)?.['nfnnDialogDepth'],
+    ).toBeUndefined();
+    expect(location.path()).toBe('/stranka');
+    expect(routerEvents).toEqual([]);
+    window.history.go(-1);
+    await settled();
+    expect(location.path()).toBe('');
   });
 });

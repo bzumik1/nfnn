@@ -35,7 +35,7 @@ function values(source) {
 }
 
 export function receiptTokensOutsideRoot(source) {
-  const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+  const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
   const blocks = [];
   const outside = new Set();
   let boundary = 0;
@@ -68,11 +68,16 @@ const TAB_BAR_PAIRS = [
   { text: '--color-on-tab-bar', under: [TAB_BAR], minimum: 4.5 },
   { text: '--color-tab-active', under: [TAB_PILL, TAB_BAR], minimum: 4.5 },
   { text: '--color-tab-focus-ring', under: [TAB_BAR], minimum: 3 },
+  { text: '--color-tab-focus-ring', under: [TAB_PILL, TAB_BAR], minimum: 3 },
 ];
-const WHITE = [255, 255, 255];
+const SOLID_BAR_PAIRS = [{ top: TAB_PILL, under: [TAB_BAR], minimum: 3 }];
+const PAGES = [
+  { name: 'white', rgb: [255, 255, 255] },
+  { name: 'black', rgb: [0, 0, 0] },
+];
 
 function declarationsByBlock(source) {
-  const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+  const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
   const blocks = [];
   const found = [];
   let boundary = 0;
@@ -93,7 +98,8 @@ function rgbOf(hex) {
   return [1, 3, 5].map((offset) => parseInt(hex.slice(offset, offset + 2), 16));
 }
 
-function colourOf(value) {
+function colourOf(written) {
+  const value = written.toLowerCase();
   if (/^#[0-9a-f]{6}$/.test(value)) {
     return { rgb: rgbOf(value), alpha: 1 };
   }
@@ -128,6 +134,16 @@ export function barContrastProblems(theme, source) {
       .map(({ name, value }) => [name, value]),
   );
   const problems = [];
+  for (const { chain, name } of declarations) {
+    const checked =
+      (chain.length === 1 && chain[0] === ':root') ||
+      (chain.length === 2 && chain[0].startsWith('@media') && chain[1] === ':root');
+    if (!checked) {
+      problems.push(
+        `theme ${theme} sets ${name} under ${chain.join(' > ')}, where its contrast is not checked; set it in the top-level :root or a @media block of :root`,
+      );
+    }
+  }
   for (const token of TAB_BAR_TOKENS) {
     if (!atRoot.has(token)) {
       problems.push(`theme ${theme} does not set ${token} in its top-level :root`);
@@ -148,7 +164,9 @@ export function barContrastProblems(theme, source) {
   const contexts = [{ label: '', values: atRoot }];
   for (const chain of new Set(
     declarations
-      .filter(({ chain }) => chain.length === 2 && chain[1] === ':root')
+      .filter(
+        ({ chain }) => chain.length === 2 && chain[1] === ':root' && chain[0].startsWith('@media'),
+      )
       .map(({ chain }) => chain[0]),
   )) {
     const values = new Map(atRoot);
@@ -160,15 +178,29 @@ export function barContrastProblems(theme, source) {
     contexts.push({ label: ` under ${chain}`, values });
   }
   for (const { label, values } of contexts) {
-    for (const pair of TAB_BAR_PAIRS) {
-      const ground = [...pair.under]
-        .reverse()
-        .reduce((below, token) => over(colourOf(values.get(token)), below), WHITE);
-      const ratio = contrast(colourOf(values.get(pair.text)).rgb, ground);
-      if (ratio < pair.minimum) {
-        problems.push(
-          `theme ${theme}${label}: ${pair.text} on ${pair.under.join(' over ')} over a white page is ${ratio.toFixed(2)}:1, below ${pair.minimum}:1`,
-        );
+    for (const page of PAGES) {
+      for (const pair of TAB_BAR_PAIRS) {
+        const ground = [...pair.under]
+          .reverse()
+          .reduce((below, token) => over(colourOf(values.get(token)), below), page.rgb);
+        const ratio = contrast(colourOf(values.get(pair.text)).rgb, ground);
+        if (ratio < pair.minimum) {
+          problems.push(
+            `theme ${theme}${label}: ${pair.text} on ${pair.under.join(' over ')} over a ${page.name} page is ${ratio.toFixed(2)}:1, below ${pair.minimum}:1`,
+          );
+        }
+      }
+      for (const pair of SOLID_BAR_PAIRS) {
+        const layers = [pair.top, ...pair.under].map((token) => colourOf(values.get(token)));
+        if (layers.some((layer) => layer.alpha !== 1)) {
+          continue;
+        }
+        const ratio = contrast(layers[0].rgb, layers[1].rgb);
+        if (ratio < pair.minimum) {
+          problems.push(
+            `theme ${theme}${label}: ${pair.top} on ${pair.under.join(' over ')} over a ${page.name} page is ${ratio.toFixed(2)}:1, below ${pair.minimum}:1`,
+          );
+        }
       }
     }
   }
@@ -397,6 +429,6 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     process.exit(1);
   }
   console.log(
-    `${themes.size} themes set all ${needed.size} tokens the styles and the receipt use, and carry content-named receipt fonts, literal receipt colours and readable receipt text, set only in their top-level :root, keep the tab bar readable over a white page, and serve the same theme files.`,
+    `${themes.size} themes set all ${needed.size} tokens the styles and the receipt use, and carry content-named receipt fonts, literal receipt colours and readable receipt text, set only in their top-level :root, keep the tab bar readable over a white and a black page, its solid pill apart from the bar, and serve the same theme files.`,
   );
 }

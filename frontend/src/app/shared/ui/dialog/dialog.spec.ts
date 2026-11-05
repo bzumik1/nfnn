@@ -337,7 +337,12 @@ describe('Given a page with an open dialog in the browser history', () => {
     await settled();
   });
 
-  afterEach(() => fixture.nativeElement.remove());
+  afterEach(async () => {
+    fixture.componentInstance.open.set(false);
+    fixture.detectChanges();
+    await settled();
+    fixture.nativeElement.remove();
+  });
 
   it('when the visitor goes back, then the dialog closes and the page stays', async () => {
     window.history.go(-1);
@@ -358,6 +363,25 @@ describe('Given a page with an open dialog in the browser history', () => {
     expect(
       (window.history.state as Record<string, unknown> | null)?.['nfnnDialogDepth'],
     ).toBeUndefined();
+    expect(location.path()).toBe('/sprava/platby');
+    window.history.go(-1);
+    await settled();
+    expect(location.path()).toBe('');
+  });
+
+  it('when the visitor goes back while the page keeps the dialog open, then it stays open and the next Back still closes it', async () => {
+    fixture.componentInstance.busy.set(true);
+
+    window.history.go(-1);
+    await settled();
+
+    expect(fixture.nativeElement.querySelector('dialog')).not.toBeNull();
+    expect((window.history.state as Record<string, unknown>)['nfnnDialogDepth']).toBe(1);
+    expect(location.path()).toBe('/sprava/platby');
+    fixture.componentInstance.busy.set(false);
+    window.history.go(-1);
+    await settled();
+    expect(fixture.nativeElement.querySelector('dialog')).toBeNull();
     expect(location.path()).toBe('/sprava/platby');
   });
 });

@@ -143,7 +143,7 @@
   --radius-card: 4px;
   --radius-media: 4px;
   --radius-dialog: 6px;
-  --radius-sheet: 6px;
+  --radius-sheet: var(--radius-dialog);
   --radius-pill: 4px;
   --radius-round: 50%;
 
@@ -222,8 +222,8 @@
 
 @media (prefers-reduced-transparency: reduce) {
   :root {
-    --color-tab-bar: #1c2b25;
-    --color-tab-pill: #111a16;
+    --color-tab-bar: #5c6662;
+    --color-tab-pill: #0b110e;
     --blur-bar: 0px;
   }
 }

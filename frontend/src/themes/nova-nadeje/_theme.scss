@@ -122,7 +122,7 @@
   --color-tab-active: #93c5fd;
   --color-on-tab-bar: #ffffff;
   --color-tab-focus-ring: #ffffff;
-  --color-sheet-grabber: #d1d5db;
+  --color-sheet-grabber: var(--color-border-rule);
 
   --font-serif: 'Playfair Display', serif;
   --font-sans: 'Inter', sans-serif;
@@ -200,7 +200,7 @@
   --duration-base: 0.2s;
   --duration-slow: 0.3s;
   --duration-entrance: 0.9s;
-  --duration-sheet: 0.3s;
+  --duration-sheet: var(--duration-slow);
 
   --radius-xs: 2px;
   --radius-scrollbar: 3px;
@@ -212,7 +212,7 @@
   --radius-card: 16px;
   --radius-media: 20px;
   --radius-dialog: 24px;
-  --radius-sheet: 24px;
+  --radius-sheet: var(--radius-dialog);
   --radius-pill: 50px;
   --radius-round: 50%;
 
@@ -223,7 +223,7 @@
   --shadow-media: 0 12px 36px rgb(0 0 0 / 0.25);
   --shadow-dialog: 0 24px 80px rgb(0 0 0 / 0.2);
   --shadow-sheet: 0 -8px 40px rgb(0 0 0 / 0.16);
-  --shadow-tab-bar: 0 8px 32px rgb(15 23 42 / 0.28);
+  --shadow-tab-bar: 0 8px 24px rgb(15 23 42 / 0.25);
   --shadow-header: 0 2px 20px rgb(0 0 0 / 0.08);
   --shadow-menu: 0 8px 24px rgb(0 0 0 / 0.1);
   --shadow-action-bar: 0 6px 28px rgb(0 0 0 / 0.14);
@@ -250,7 +250,7 @@
   --dialog-close-inset: 14px;
   --dialog-close-size: 32px;
   --blur-backdrop: 6px;
-  --blur-bar: 20px;
+  --blur-bar: 22px;
   --sheet-max-width: 600px;
   --sheet-grabber-width: 36px;
   --sheet-grabber-height: 5px;
@@ -305,8 +305,8 @@
 
 @media (prefers-reduced-transparency: reduce) {
   :root {
-    --color-tab-bar: #0f172a;
-    --color-tab-pill: #060d1f;
+    --color-tab-bar: #616672;
+    --color-tab-pill: #0f172a;
     --blur-bar: 0px;
   }
 }
