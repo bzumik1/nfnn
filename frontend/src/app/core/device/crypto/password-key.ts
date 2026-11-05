@@ -134,7 +134,11 @@ export class WorkerPasswordKeyDerivation implements PasswordKeyDerivation {
       worker.onmessage = ({ data }: MessageEvent<unknown>) => finish(answerOf(data));
       worker.onerror = () => finish(new PasswordKeyFailure('failed'));
       worker.onmessageerror = () => finish(new PasswordKeyFailure('failed'));
-      worker.postMessage(question);
+      try {
+        worker.postMessage(question);
+      } catch {
+        finish(new PasswordKeyFailure('failed'));
+      }
     });
   }
 }
@@ -154,14 +158,20 @@ function answerOf(data: unknown): DerivedPasswordKey | PasswordKeyFailure {
   );
 }
 
-export function acceptedParameters(parameters: Argon2Parameters): boolean {
+export function acceptedParameters(stored: unknown): stored is Argon2Parameters {
+  if (typeof stored !== 'object' || stored === null) {
+    return false;
+  }
+  const parameters = stored as Partial<Record<keyof Argon2Parameters, unknown>>;
   return (
     parameters.algorithm === 'argon2id' &&
     parameters.version === 19 &&
     parameters.parallelism === 1 &&
+    typeof parameters.iterations === 'number' &&
     Number.isInteger(parameters.iterations) &&
     parameters.iterations >= STANDARD_PASSWORD_PARAMETERS.iterations &&
     parameters.iterations <= MAXIMUM_ITERATIONS &&
+    typeof parameters.memoryKiB === 'number' &&
     Number.isInteger(parameters.memoryKiB) &&
     parameters.memoryKiB >= STANDARD_PASSWORD_PARAMETERS.memoryKiB &&
     parameters.memoryKiB <= MAXIMUM_MEMORY_KIB

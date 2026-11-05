@@ -12,6 +12,7 @@ import {
 const ROOT_KEY_LENGTH = 32;
 const COPY_ID_LENGTH = 16;
 const IV_LENGTH = 12;
+const GCM_TAG_LENGTH = 16;
 const NO_SALT = new Uint8Array(0);
 const AES_GCM = 'AES-GCM';
 
@@ -185,7 +186,12 @@ export async function openWithPassword(
     throw new CopyRefused('wrong-wrap');
   }
   const salt = decoded(wrap.salt);
-  if (salt.length !== PASSWORD_SALT_LENGTH || !acceptedParameters(wrap.parameters)) {
+  if (
+    salt.length !== PASSWORD_SALT_LENGTH ||
+    !acceptedParameters(wrap.parameters) ||
+    decoded(wrap.iv).length !== IV_LENGTH ||
+    decoded(wrap.sealed).length !== ROOT_KEY_LENGTH + GCM_TAG_LENGTH
+  ) {
     throw new CopyRefused('damaged');
   }
   const { key: passwordKey } = await deriveWithParameters(

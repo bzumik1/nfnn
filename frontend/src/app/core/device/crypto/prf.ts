@@ -2,6 +2,8 @@ import { base64UrlToBytes, bytesToBase64Url, framed, randomBytes } from './devic
 
 export const PRF_OUTPUT_LENGTH = 32;
 export const PRF_TIMEOUT_MS = 120_000;
+const FLAGS_OFFSET = 32;
+const USER_VERIFIED = 0x04;
 
 export interface PrfRequest {
   readonly rpId: string;
@@ -53,16 +55,25 @@ export async function readPrf(
   if (output === null) {
     return null;
   }
-  if (request.credentialIds.length > 0 && !request.credentialIds.includes(credentialId)) {
+  const response = publicKey.response as AuthenticatorAssertionResponse;
+  if (
+    (request.credentialIds.length > 0 && !request.credentialIds.includes(credentialId)) ||
+    !userVerified(response.authenticatorData)
+  ) {
     output.fill(0);
     return null;
   }
-  const userHandle = (publicKey.response as AuthenticatorAssertionResponse).userHandle;
+  const userHandle = response.userHandle;
   return {
     credentialId,
     userHandle: userHandle === null ? null : bytesToBase64Url(new Uint8Array(userHandle)),
     output,
   };
+}
+
+function userVerified(authenticatorData: ArrayBuffer): boolean {
+  const data = new Uint8Array(authenticatorData);
+  return data.length > FLAGS_OFFSET && (data[FLAGS_OFFSET] & USER_VERIFIED) !== 0;
 }
 
 function takenOutput(first: BufferSource | undefined): Uint8Array<ArrayBuffer> | null {

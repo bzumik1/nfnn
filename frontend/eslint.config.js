@@ -90,7 +90,7 @@ module.exports = defineConfig([
     rules: {
       'no-restricted-globals': [
         'error',
-        ...['indexedDB', 'localStorage', 'sessionStorage', 'caches'].map((name) => ({
+        ...['indexedDB', 'localStorage', 'sessionStorage', 'caches', 'cookieStore'].map((name) => ({
           name,
           message: DEVICE_CRYPTO_STORES_NOTHING,
         })),
@@ -98,7 +98,15 @@ module.exports = defineConfig([
       'no-restricted-properties': [
         'error',
         ...['window', 'self', 'globalThis'].flatMap((object) =>
-          ['indexedDB', 'localStorage', 'sessionStorage', 'caches'].map((property) => ({
+          [
+            'indexedDB',
+            'localStorage',
+            'sessionStorage',
+            'caches',
+            'cookieStore',
+            'document',
+            'navigator',
+          ].map((property) => ({
             object,
             property,
             message: DEVICE_CRYPTO_STORES_NOTHING,
