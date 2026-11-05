@@ -133,6 +133,12 @@ public class PushStepDefinitions {
         api.post(SUBSCRIPTIONS, body("https://fcm.googleapis.com/fcm/send/" + alias.toLowerCase() + "-bez-zarizeni", receiver.p256dh(), receiver.auth()));
     }
 
+    @When("{string} asks for the push settings in a browser session that names no device")
+    public void asksForThePushSettingsInASessionThatNamesNoDevice(String alias) {
+        actWithoutDevice(alias);
+        api.get(PUSH);
+    }
+
     @When("{string} sends a test push alert")
     public void sendsATestPushAlert(String alias) {
         sessions.actAs(alias);

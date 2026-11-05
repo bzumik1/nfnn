@@ -11,7 +11,7 @@ Feature: An administrator turns push alerts on for a device, chooses which alert
     Then the response status is 200
     And the push settings carry the server's public key
     And the push settings list no device
-    And the push settings say the session names no device
+    And the push settings say the session names a device
     When "Jana" turns push alerts on for the device "telefon" at "https://fcm.googleapis.com/fcm/send/jana-telefon"
     Then the response status is 201
     And the push subscription says service "google" with bank import on, backups on and mail on
@@ -78,6 +78,9 @@ Feature: An administrator turns push alerts on for a device, chooses which alert
     When "Jana" turns push alerts on in a browser session that names no device
     Then the response status is 403
     And the problem type ends with "operations/push-device-required"
+    When "Jana" asks for the push settings in a browser session that names no device
+    Then the response status is 200
+    And the push settings say the session names no device
     Given "Jana" turned push alerts on for 10 devices
     When "Jana" turns push alerts on for the device "jedenácté" at "https://fcm.googleapis.com/fcm/send/jana-11"
     Then the response status is 409
