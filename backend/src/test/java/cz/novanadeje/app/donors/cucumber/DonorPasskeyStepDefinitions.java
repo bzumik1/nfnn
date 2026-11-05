@@ -427,6 +427,17 @@ public class DonorPasskeyStepDefinitions {
         answer(passkey(alias, name).key().assertion(signInChallenge), alias);
     }
 
+    @When("{string} signs in with the passkey {string} on a public computer")
+    public void signsInWithThePasskeyOnAPublicComputer(String alias, String name) {
+        theBrowserAskedForAPasskeySignIn();
+        api.forgetCredentials();
+        ResponseEntity<String> response = api.post(SIGN_IN_PATH,
+                Map.of("challenge", signInChallenge, "credential", passkey(alias, name).key().assertion(signInChallenge), "session", "PUBLIC"));
+        if (response.getStatusCode().is2xxSuccessful()) {
+            scenarioDonors.rememberAccessToken(alias, api.lastResponseJson().get("accessToken").asString());
+        }
+    }
+
     @When("{string} answers the sign-in with the passkey {string}")
     public void answersTheSignInWithThePasskey(String alias, String name) {
         answer(passkey(alias, name).key().assertion(signInChallenge), alias);

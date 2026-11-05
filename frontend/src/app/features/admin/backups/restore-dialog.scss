@@ -14,12 +14,6 @@
   line-height: var(--leading-normal);
 }
 
-.restore-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2-5);
-}
-
 .restore-confirm,
 .restore-cancel {
   padding: var(--space-2-5) var(--space-5);

@@ -180,7 +180,9 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/prispet');
     await page.getByRole('button', { name: 'Otevřít v aplikaci banky' }).click();
-    await expect(page.locator('#prispet .bank-app-hint')).toContainText('Neotevřela se vám banka?');
+    await expect(page.locator('#prispet .bank-app-hint')).toContainText(
+      'Nenašli jste v nabídce svou banku?',
+    );
 
     expect(await violations(page)).toEqual([]);
   });
@@ -660,6 +662,13 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
 
     const dialog = page.getByRole('dialog');
+    await dialog.getByRole('button', { name: 'Cizí počítač?' }).click();
+    await expect(
+      dialog.getByRole('checkbox', { name: 'Cizí počítač, nic neukládat' }),
+    ).toBeFocused();
+    expect(await violations(page)).toEqual([]);
+    await dialog.getByRole('button', { name: 'Zpět', exact: true }).click();
+
     await dialog.getByRole('button', { name: 'Registrace' }).click();
     await dialog.getByRole('radio', { name: 'Firma' }).click();
 
@@ -1116,7 +1125,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     });
   }
 
-  test('when an administrator opens the administration menu on a phone, then the open side panel breaks no rule', async ({
+  test('when an administrator opens the administration on a phone, then its overview with the section rows and the page of further sections break no rule', async ({
     page,
   }) => {
     await page.route(
@@ -1179,11 +1188,14 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
       page.getByRole('region', { name: 'Co potřebuje vaši pozornost' }).getByRole('alert'),
     ).toHaveCount(2);
     expect(await violations(page)).toEqual([]);
-    await page.getByRole('button', { name: 'Menu správy' }).click();
+    await page
+      .getByRole('navigation', { name: 'Sekce správy' })
+      .getByRole('link', { name: /Lidé fondu, správci, zálohy/ })
+      .click();
     await expect(
       page
-        .getByRole('navigation', { name: 'Správa' })
-        .getByRole('link', { name: 'Přehled', exact: true }),
+        .getByRole('navigation', { name: 'Další sekce správy' })
+        .getByRole('link', { name: 'Zálohy' }),
     ).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
@@ -2883,9 +2895,9 @@ test.describe('Given a visitor on a phone who relies on WCAG 2.2 AA', () => {
     const question = page.getByRole('group', { name: /Z tohoto účtu k nám chodí/ });
     await expect(question).toBeVisible();
 
-    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
-      360,
-    );
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.scrollWidth))
+      .toBeLessThanOrEqual(360);
     for (const name of ['Ano, jsou moje', 'Ne, nejsou moje']) {
       const size = await question.getByRole('button', { name }).boundingBox();
       expect(size?.width).toBeGreaterThanOrEqual(24);

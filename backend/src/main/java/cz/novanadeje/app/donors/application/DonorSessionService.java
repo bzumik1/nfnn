@@ -10,12 +10,15 @@ import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.InvalidRefreshToken;
 import cz.novanadeje.app.donors.domain.RefreshToken;
 import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
+import cz.novanadeje.app.donors.domain.SessionEnded;
 import cz.novanadeje.app.donors.domain.RefreshTokenSecret;
 import cz.novanadeje.app.donors.domain.Role;
+import cz.novanadeje.app.donors.domain.SessionKind;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.Set;
@@ -44,31 +47,35 @@ public class DonorSessionService {
     }
 
     @Transactional
-    public IssuedTokens signIn(Donor donor, boolean secondFactorVerified, DeviceDescription description) {
+    public IssuedTokens signIn(Donor donor, boolean secondFactorVerified, DeviceDescription description, SessionKind kind) {
         Instant now = clock.instant();
         Set<Role> roles = donor.sessionRoles(secondFactorVerified);
         if (roles.contains(Role.ADMIN)) {
             donors.recordSignIn(donor.id(), now);
         }
-        return issue(newDevice(donor, description, now), secondFactorVerified, roles, now).tokens();
+        return issue(newDevice(donor, description, kind, now), secondFactorVerified, roles, now).tokens();
+    }
+
+    @Transactional(readOnly = true)
+    public void requireLasting(Donor donor, RequestingDevice requesting) {
+        lastingDevice(donor, requesting, clock.instant());
     }
 
     @Transactional
     public IssuedTokens continueOn(Donor donor, boolean secondFactorVerified, RequestingDevice requesting) {
         Instant now = clock.instant();
-        DonorDevice device = requesting.session().flatMap(devices::findById)
-                .filter(found -> found.isActive() && found.belongsTo(donor.id()))
+        DonorDevice device = lastingDevice(donor, requesting, now)
                 .map(found -> {
                     found.recordUse(now);
                     devices.save(found);
                     return found;
                 })
-                .orElseGet(() -> newDevice(donor, requesting.description(), now));
+                .orElseGet(() -> newDevice(donor, requesting.description(), SessionKind.BROWSER, now));
         return issue(device, secondFactorVerified, donor.sessionRoles(secondFactorVerified), now).tokens();
     }
 
     @Transactional(noRollbackFor = InvalidRefreshToken.class)
-    public RefreshedSession refresh(String presentedSecret, DeviceDescription description) {
+    public RefreshedSession refresh(String presentedSecret, SessionCookie presentedIn, DeviceDescription description) {
         Instant now = clock.instant();
         RefreshToken token = refreshTokens.findBySecretHashForUpdate(RefreshTokenSecret.fromValue(presentedSecret).hash())
                 .orElseThrow(InvalidRefreshToken::new);
@@ -76,9 +83,9 @@ public class DonorSessionService {
             throw replay(token, now);
         }
         if (token.isUsed()) {
-            return reissueWithinReuseGrace(token, description, now);
+            return reissueWithinReuseGrace(token, presentedIn, description, now);
         }
-        if (!token.isUsableAt(now) || token.clientId().isPresent() || deviceEnded(token)) {
+        if (!token.isUsableAt(now) || token.clientId().isPresent() || deviceEnded(token) || !presentedInItsCookie(token, presentedIn)) {
             throw new InvalidRefreshToken();
         }
         Donor donor = donors.findById(token.donorId()).orElseThrow(InvalidRefreshToken::new);
@@ -88,12 +95,15 @@ public class DonorSessionService {
         return succeed(token, donor, description, now);
     }
 
-    private RefreshedSession reissueWithinReuseGrace(RefreshToken token, DeviceDescription description, Instant now) {
+    private RefreshedSession reissueWithinReuseGrace(RefreshToken token, SessionCookie presentedIn, DeviceDescription description, Instant now) {
         if (usedWithinReuseGrace(token, now) && deviceEnded(token)) {
             throw new InvalidRefreshToken();
         }
         if (!token.mayBeReissuedAt(now)) {
             throw replay(token, now);
+        }
+        if (!presentedInItsCookie(token, presentedIn)) {
+            throw new InvalidRefreshToken();
         }
         Optional<Donor> donor = donors.findById(token.donorId());
         boolean supersededUnused = donor.isPresent() && token.successorId()
@@ -127,6 +137,11 @@ public class DonorSessionService {
         return deviceIdOf(token).flatMap(devices::findById).filter(device -> !device.isActive()).isPresent();
     }
 
+    private boolean presentedInItsCookie(RefreshToken token, SessionCookie presentedIn) {
+        SessionKind kind = deviceIdOf(token).flatMap(devices::findById).map(DonorDevice::kind).orElse(SessionKind.UNNAMED);
+        return SessionCookie.of(kind) == presentedIn;
+    }
+
     private Optional<DeviceId> deviceIdOf(RefreshToken token) {
         return token.deviceId().or(() -> token.successorId().flatMap(refreshTokens::findById).flatMap(RefreshToken::deviceId));
     }
@@ -134,7 +149,7 @@ public class DonorSessionService {
     private DonorDevice deviceOf(RefreshToken token, Donor donor, DeviceDescription description, Instant now) {
         Optional<DeviceId> deviceId = deviceIdOf(token);
         if (deviceId.isEmpty()) {
-            return DonorDevice.signIn(donor.id(), description, token.issuedAt());
+            return DonorDevice.signIn(donor.id(), description, SessionKind.UNNAMED, token.issuedAt());
         }
         return deviceId.flatMap(devices::findById).filter(device -> device.isActive() && device.belongsTo(donor.id()))
                 .orElseThrow(InvalidRefreshToken::new);
@@ -154,8 +169,20 @@ public class DonorSessionService {
         });
     }
 
-    private DonorDevice newDevice(Donor donor, DeviceDescription description, Instant now) {
-        DonorDevice device = DonorDevice.signIn(donor.id(), description, now);
+    private Optional<DonorDevice> lastingDevice(Donor donor, RequestingDevice requesting, Instant now) {
+        Optional<DonorDevice> own = requesting.session().flatMap(devices::findById).filter(found -> found.belongsTo(donor.id()));
+        if (own.isPresent() && !lasts(own.get(), now)) {
+            throw new SessionEnded();
+        }
+        return own;
+    }
+
+    private boolean lasts(DonorDevice device, Instant now) {
+        return device.isActive() && properties.lengths().expiresAt(device.kind(), device.signedInAt(), now).isAfter(now);
+    }
+
+    private DonorDevice newDevice(Donor donor, DeviceDescription description, SessionKind kind, Instant now) {
+        DonorDevice device = DonorDevice.signIn(donor.id(), description, kind, now);
         devices.save(device);
         return device;
     }
@@ -163,10 +190,12 @@ public class DonorSessionService {
     private Issued issue(DonorDevice device, boolean secondFactorVerified, Set<Role> roles, Instant now) {
         IssuedAccessToken access = accessTokens.issue(device.donorId(), roles, device.id(), now);
         RefreshTokenSecret secret = RefreshTokenSecret.generate();
-        RefreshToken refresh = RefreshToken.issue(secret, device.donorId(), device.id(), now, properties.refreshTokenTtl(),
+        Instant expiresAt = properties.lengths().expiresAt(device.kind(), device.signedInAt(), now);
+        RefreshToken refresh = RefreshToken.issue(secret, device.donorId(), device.id(), now, Duration.between(now, expiresAt),
                 secondFactorVerified);
         refreshTokens.save(refresh);
-        return new Issued(refresh.id(), new IssuedTokens(access.token(), access.expiresAt(), secret.value(), refresh.expiresAt(), roles));
+        return new Issued(refresh.id(), new IssuedTokens(access.token(), access.expiresAt(), secret.value(), refresh.expiresAt(), roles,
+                device.kind()));
     }
 
     private record Issued(UUID refreshTokenId, IssuedTokens tokens) {

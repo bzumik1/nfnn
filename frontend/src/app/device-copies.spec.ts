@@ -38,9 +38,21 @@ describe('Given the device copies of the app, loaded only when a session first n
     await copies.signedIn(JANA, { kind: 'password', password: 'heslo' });
     await copies.signedOut(JANA);
 
-    expect(vault['signedIn']).toHaveBeenCalledWith(JANA, { kind: 'password', password: 'heslo' });
+    expect(vault['signedIn']).toHaveBeenCalledWith(
+      JANA,
+      { kind: 'password', password: 'heslo' },
+      false,
+    );
     expect(vault['signedOut']).toHaveBeenCalledWith(JANA);
     expect(downloads).toBe(1);
+  });
+
+  it('when a donor signs in or comes back on a public computer, then the vault is told to store nothing', async () => {
+    await copies.signedIn(JANA, { kind: 'none' }, true);
+    await copies.restored(JANA, true);
+
+    expect(vault['signedIn']).toHaveBeenCalledWith(JANA, { kind: 'none' }, true);
+    expect(vault['restored']).toHaveBeenCalledWith(JANA, true);
   });
 
   describe('when the code of the vault cannot be loaded', () => {

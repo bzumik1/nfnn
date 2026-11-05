@@ -8,15 +8,16 @@ public final class DonorDevice {
     private final DeviceId id;
     private final DonorId donorId;
     private final DeviceDescription description;
+    private final SessionKind kind;
     private final Instant signedInAt;
     private Instant lastUsedAt;
     private Instant endedAt;
     private DeviceSignOutReason endReason;
 
-    private DonorDevice(DeviceId id, DonorId donorId, DeviceDescription description, Instant signedInAt, Instant lastUsedAt,
+    private DonorDevice(DeviceId id, DonorId donorId, DeviceDescription description, SessionKind kind, Instant signedInAt, Instant lastUsedAt,
                         Instant endedAt, DeviceSignOutReason endReason) {
-        if (id == null || donorId == null || description == null || signedInAt == null || lastUsedAt == null) {
-            throw new IllegalArgumentException("A device needs its id, donor, description and times");
+        if (id == null || donorId == null || description == null || kind == null || signedInAt == null || lastUsedAt == null) {
+            throw new IllegalArgumentException("A device needs its id, donor, description, session kind and times");
         }
         if ((endedAt == null) != (endReason == null)) {
             throw new IllegalArgumentException("A device ends with both a time and a reason");
@@ -24,19 +25,20 @@ public final class DonorDevice {
         this.id = id;
         this.donorId = donorId;
         this.description = description;
+        this.kind = kind;
         this.signedInAt = signedInAt;
         this.lastUsedAt = lastUsedAt;
         this.endedAt = endedAt;
         this.endReason = endReason;
     }
 
-    public static DonorDevice signIn(DonorId donorId, DeviceDescription description, Instant at) {
-        return new DonorDevice(DeviceId.newId(at), donorId, description, at, at, null, null);
+    public static DonorDevice signIn(DonorId donorId, DeviceDescription description, SessionKind kind, Instant at) {
+        return new DonorDevice(DeviceId.newId(at), donorId, description, kind, at, at, null, null);
     }
 
-    public static DonorDevice reconstitute(DeviceId id, DonorId donorId, DeviceDescription description, Instant signedInAt,
+    public static DonorDevice reconstitute(DeviceId id, DonorId donorId, DeviceDescription description, SessionKind kind, Instant signedInAt,
                                            Instant lastUsedAt, Instant endedAt, DeviceSignOutReason endReason) {
-        return new DonorDevice(id, donorId, description, signedInAt, lastUsedAt, endedAt, endReason);
+        return new DonorDevice(id, donorId, description, kind, signedInAt, lastUsedAt, endedAt, endReason);
     }
 
     public boolean isActive() {
@@ -75,6 +77,10 @@ public final class DonorDevice {
 
     public DeviceDescription description() {
         return description;
+    }
+
+    public SessionKind kind() {
+        return kind;
     }
 
     public Instant signedInAt() {

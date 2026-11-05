@@ -1,6 +1,6 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { DialogHistory } from '../../shared/ui/dialog/dialog-history';
+import { DialogHistory, DialogHistoryListener } from '../../shared/ui/dialog/dialog-history';
 import { ConfirmationReturn } from './confirmation-return';
 import { DonorType } from './donor';
 
@@ -37,6 +37,10 @@ export class LoginDialogService {
   private readonly administration = signal(false);
   private options: LoginDialogOptions = {};
   private stepBack: (() => void) | null = null;
+  private readonly historyEntry: DialogHistoryListener = {
+    stepBack: () => this.stepBack?.(),
+    close: () => this.close(),
+  };
   readonly isOpen = this.opened.asReadonly();
   readonly initialMode = this.mode.asReadonly();
   readonly initialEmail = this.email.asReadonly();
@@ -51,14 +55,11 @@ export class LoginDialogService {
     this.administration.set(options.forAdministration ?? false);
     this.options = options;
     this.opened.set(true);
-    this.history.open({
-      stepBack: () => this.stepBack?.(),
-      close: () => this.close(),
-    });
+    this.history.open(this.historyEntry);
   }
 
   showStep(depth: number): void {
-    this.history.showStep(depth);
+    this.history.showStep(depth, this.historyEntry);
   }
 
   onStepBack(handler: (() => void) | null): void {
@@ -75,7 +76,7 @@ export class LoginDialogService {
 
   close(): void {
     this.dismiss();
-    this.history.close();
+    this.history.close(this.historyEntry);
   }
 
   closeForNavigation(): void {
@@ -92,7 +93,7 @@ export class LoginDialogService {
       void this.router.navigateByUrl(returnTo);
       return;
     }
-    this.history.close();
+    this.history.close(this.historyEntry);
     afterSignIn?.();
   }
 

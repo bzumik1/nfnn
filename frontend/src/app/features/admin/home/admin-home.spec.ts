@@ -1,5 +1,6 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { authInterceptor } from '../../../core/auth/auth-interceptor';
@@ -23,6 +24,7 @@ import {
   noReceiptSignatory,
   receiptSignatory,
 } from '../testing/admin-fixtures';
+import { CompactLayout } from '../../../core/layout/compact-layout';
 import { AdminHome } from './admin-home';
 
 const IMPORT_STATE_URL = '/api/admin/donations/import-state';
@@ -36,17 +38,20 @@ const SIGNING_KEYS_URL = '/api/admin/donations/receipt-signing-keys';
 const SIGNATORY_URL = '/api/admin/donations/receipt-signatory';
 
 describe('Given an administrator on the administration home', () => {
+  const compact = signal(false);
   let fixture: ComponentFixture<AdminHome>;
   let http: HttpTestingController;
   let store: AuthStore;
 
   beforeEach(async () => {
     localStorage.clear();
+    compact.set(false);
     await TestBed.configureTestingModule({
       imports: [AdminHome],
       providers: [
         provideHttpClient(withInterceptors([authInterceptor])),
         provideHttpClientTesting(),
+        { provide: CompactLayout, useValue: { isCompact: compact.asReadonly() } },
         provideRouter([]),
       ],
     }).compileComponents();
@@ -968,6 +973,78 @@ describe('Given an administrator on the administration home', () => {
       fixture.detectChanges();
 
       expect(text('.attention .healthy')).toContain('Vše je v pořádku.');
+    });
+  });
+
+  describe('when the window is as narrow as a phone or a tablet', () => {
+    function sections(): HTMLElement | null {
+      return fixture.nativeElement.querySelector('nav[aria-label="Sekce správy"]');
+    }
+
+    function rows(): string[][] {
+      return Array.from(sections()?.querySelectorAll('section') ?? []).map((section) => [
+        clean(section.querySelector('h2')?.textContent),
+        ...Array.from(section.querySelectorAll('a')).map(
+          (link) => `${clean(link.textContent)} → ${link.getAttribute('href')}`,
+        ),
+      ]);
+    }
+
+    function clean(value: string | null | undefined): string {
+      return (value ?? '').replace(/\s+/g, ' ').trim();
+    }
+
+    beforeEach(async () => {
+      compact.set(true);
+      await fixture.whenStable();
+      fixture.detectChanges();
+    });
+
+    it('then the sections of every day and the way to the rest follow what is new since the last sign-in, each one tap away', () => {
+      expect(fixture.nativeElement.querySelector('.since')?.nextElementSibling).toBe(
+        sections()?.closest('app-admin-section-rows'),
+      );
+      expect(rows()).toEqual([
+        [
+          'Každý den',
+          'Platby z banky → /sprava/platby',
+          'Dárci → /sprava/darci',
+          'Aktuality → /sprava/aktuality',
+          'Projekty → /sprava/projekty',
+        ],
+        ['Občas a pro technika', 'Lidé fondu, správci, zálohy, nastavení… → /sprava/vice'],
+      ]);
+    });
+
+    it('then the payments row shows how many payments wait to be paired and says it to screen readers', async () => {
+      http
+        .expectOne(UNPAIRED_URL)
+        .flush(paymentList([unpairedPayment(), unpairedPayment({ id: 'p2', amountMinor: 15000 })]));
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const payments = sections()?.querySelector('a[href="/sprava/platby"]');
+      expect(clean(payments?.querySelector('.ui-list__count')?.textContent)).toBe('2');
+      expect(payments?.querySelector('.ui-list__count')?.getAttribute('aria-hidden')).toBe('true');
+      expect(clean(payments?.querySelector('.visually-hidden')?.textContent)).toBe(
+        '2 platby čekají na přiřazení',
+      );
+    });
+
+    it('then no count shows while no payment waits', async () => {
+      http.expectOne(UNPAIRED_URL).flush(paymentList([]));
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(sections()?.querySelector('.ui-list__count')).toBeNull();
+    });
+
+    it('and the window widens again, then the side panel lists the sections and the overview leaves them out', async () => {
+      compact.set(false);
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(sections()).toBeNull();
     });
   });
 });

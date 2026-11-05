@@ -15,7 +15,8 @@ final class SessionResponses {
     static ResponseEntity<AuthResponse> opened(HttpStatus status, AuthenticatedDonor authenticated, Instant now) {
         return ResponseEntity.status(status)
                 .header(HttpHeaders.SET_COOKIE, RefreshTokenCookie.carrying(
-                        authenticated.tokens().refreshToken(), authenticated.tokens().refreshTokenExpiresAt(), now).toString())
+                        authenticated.tokens().refreshToken(), authenticated.tokens().refreshTokenExpiresAt(), now,
+                        authenticated.tokens().session()).toString())
                 .body(AuthResponse.of(authenticated));
     }
 }

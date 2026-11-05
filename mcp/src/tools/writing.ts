@@ -69,6 +69,7 @@ const PLAIN_SETTING = z.enum([
   'FIO_HISTORY_FROM',
   'PAIRING_EXCLUDED_ACCOUNTS',
   'RECEIPT_FIRST_YEAR',
+  'SESSION_REMEMBER_DAYS',
 ]);
 const SLUG = z
   .string()
@@ -359,7 +360,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Změnit nastavení webu',
       description:
-        'Changes plain settings of the site (see nfnn_settings for the current values); an empty value returns a setting to its default. Every value is checked as at startup before anything is stored, a refused one comes back with its reason. A real change restarts the backend, so the site does not answer for about a minute; audited as CHANGE_SETTINGS. Secrets (SMTP password, Fio token) and the address of the site are changed only in the web administration; moving the mail server, port, user or STARTTLS needs the SMTP password again, so it is done there too.',
+        'Changes plain settings of the site (see nfnn_settings for the current values); an empty value returns a setting to its default. SESSION_REMEMBER_DAYS is how many days (1 to 30, default 14) a browser sign-in with "Zapamatovat si mě" lasts from its last use. Every value is checked as at startup before anything is stored, a refused one comes back with its reason. A real change restarts the backend, so the site does not answer for about a minute; audited as CHANGE_SETTINGS. Secrets (SMTP password, Fio token) and the address of the site are changed only in the web administration; moving the mail server, port, user or STARTTLS needs the SMTP password again, so it is done there too.',
       inputSchema: z.object({
         changes: z
           .array(z.object({ name: PLAIN_SETTING, value: z.string().max(1000) }))

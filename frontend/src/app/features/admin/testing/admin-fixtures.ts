@@ -599,6 +599,7 @@ export function settingsView(
         stored: false,
       }),
       setting({ name: 'RECEIPT_FIRST_YEAR', group: 'RECEIPTS', value: '2026', stored: false }),
+      setting({ name: 'SESSION_REMEMBER_DAYS', group: 'SITE', value: '14', stored: false }),
     ],
     secretsCanBeStored: true,
     ...overrides,
