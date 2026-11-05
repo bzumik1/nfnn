@@ -1,6 +1,6 @@
 {
   "source": "edited",
-  "logic": "The administration's donations sync manifest and chunks that GET /api/admin/donations/sync and GET /api/admin/donations/sync/chunks?ids= answer an administrator, joined: whether the subject holds the administration, and each chunk of the manifest with its id, rowsSha256 and count and the rows the chunks endpoint answers for it. Only the chunks of the case rows are specified here: payments:<yyyy-mm> (every bank payment, paired or not, by the month it was booked, newest booking first, then the higher bank transaction id), donations:<yyyy-mm> (every donation by the month it was received, newest first: receivedAt, then the later record, then the higher id) and donor-records:<yyyy-mm> (every donor record, erased ones as stored, by the month of its registration in Prague, the earlier registration first, then the lower id); links:<yyyy-mm>, symbol-claims, receipts:<year>, import-state, report-settings and the per-year summary come from features and the admin-overview cases. A month without rows has no chunk; chunks are listed by id. rowsSha256 is the SHA-256 (lowercase hex) of the UTF-8 bytes of the rows array written as RFC 8785 canonical JSON, so each side computes it from the rows of the case itself. Ids are the aliases of the case's rows (donor:<alias>, payment:<alias>, donation:<n> for the n-th donation of input.donations, administrator for the account that asks); a runner replaces the real ids of its answer by them and computes rowsSha256 over the rows as aliased, after checking that the answer's own rowsSha256 is that SHA-256 of the rows it answered. The rows hold only the columns the computation reads: a runner fills every other column with the values of CaseRows (each donor's name Dárce <alias>, address Dlouhá 12, Ústí nad Labem, 400 01, variable symbol 4000000000 plus its position among the rows, each payment's bank transaction 26000000000 plus its position, sender account 2900233333/2010, imported and recorded at noon UTC of its day); a donation with a payment is paired by its variable symbol, one without is recorded by hand.",
+  "logic": "The administration's donations sync manifest and chunks that GET /api/admin/donations/sync and GET /api/admin/donations/sync/chunks?ids= answer an administrator, joined: whether the subject holds the administration, and each chunk of the manifest with its id, rowsSha256 and count and the rows the chunks endpoint answers for it. Only the chunks of the case rows are specified here: payments:<yyyy-mm> (every bank payment, paired or not, by the month it was booked, newest booking first, then the higher bank transaction id; a payment of a gift of an erased donor without the payer's account, name and message), donations:<yyyy-mm> (every donation by the month it was received, newest first: receivedAt, then the later record, then the higher id) and donor-records:<yyyy-mm> (every donor record, an erased one as erasure leaves it: the placeholder name and address, by the month of its registration in Prague, the earlier registration first, then the lower id); links:<yyyy-mm>, symbol-claims, receipts:<year>, import-state, report-settings and the per-year summary come from features and the admin-overview cases. A month without rows has no chunk; chunks are listed by id. rowsSha256 is the SHA-256 (lowercase hex) of the UTF-8 bytes of the rows array written as RFC 8785 canonical JSON, so each side computes it from the rows of the case itself. Ids are the aliases of the case's rows (donor:<alias>, payment:<alias>, donation:<n> for the n-th donation of input.donations, administrator for the account that asks); a runner replaces the real ids of its answer by them and computes rowsSha256 over the rows as aliased, after checking that the answer's own rowsSha256 is that SHA-256 of the rows it answered. The rows hold only the columns the computation reads: a runner fills every other column with the values of CaseRows (each donor's name Dárce <alias>, address Dlouhá 12, Ústí nad Labem, 400 01, an erased donor's the placeholders Vymazaný dárce and Vymazáno, Vymazáno, 00000, variable symbol 4000000000 plus its position among the rows, each payment's bank transaction 26000000000 plus its position, sender account 2900233333/2010, imported and recorded at noon UTC of its day); a donation with a payment is paired by its variable symbol, one without is recorded by hand.",
   "cases": [
     {
       "name": "an administration without any rows",
@@ -269,7 +269,7 @@
       }
     },
     {
-      "name": "ties of one day come by the higher transaction or id first, donors registered at one instant by the lower id first, an erased donor as stored",
+      "name": "ties of one day come by the higher transaction or id first, donors registered at one instant by the lower id first, an erased donor as erasure leaves the record and its payment without the payer",
       "input": {
         "now": "2026-10-20T10:00:00Z",
         "donors": [
@@ -362,7 +362,7 @@
           },
           {
             "id": "donor-records:2026-05",
-            "rowsSha256": "f877193f51f42d1327e61c100ccef6308ad9aaa7447de31605ac5f9dd4db013d",
+            "rowsSha256": "05af534c3ecb44266f7bd5acc14c4ff2f85dcc8baed12503b41eabe859cc6022",
             "count": 2,
             "rows": [
               {
@@ -382,14 +382,14 @@
               },
               {
                 "donorId": "donor:eva",
-                "name": "Dárce eva",
+                "name": "Vymazaný dárce",
                 "type": "PERSON",
                 "variableSymbol": "4000000002",
                 "companyIdentifier": null,
                 "address": {
-                  "street": "Dlouhá 12",
-                  "city": "Ústí nad Labem",
-                  "postalCode": "400 01"
+                  "street": "Vymazáno",
+                  "city": "Vymazáno",
+                  "postalCode": "00000"
                 },
                 "preferredLocale": "cs",
                 "registeredAt": "2026-05-01T08:00:00Z",
@@ -399,7 +399,7 @@
           },
           {
             "id": "payments:2026-06",
-            "rowsSha256": "0a64ce0993f3a07f0d95dc034220deded5256aa14c3258be63d51b19107a5633",
+            "rowsSha256": "afb166140ea8b7e8bcc84dfdea6544c38636f597f548f0576f4a447ad440d79d",
             "count": 2,
             "rows": [
               {
@@ -409,7 +409,7 @@
                 "amountMinor": 20000,
                 "currency": "CZK",
                 "variableSymbol": null,
-                "counterpartyAccount": "2900233333/2010",
+                "counterpartyAccount": null,
                 "counterpartyName": null,
                 "messageForRecipient": null,
                 "importedAt": "2026-06-01T12:00:00Z",

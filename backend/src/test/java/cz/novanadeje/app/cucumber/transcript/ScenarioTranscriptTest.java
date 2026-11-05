@@ -174,7 +174,7 @@ class ScenarioTranscriptTest {
         String older = "{\"id\":\"" + DONOR_ID + "\",\"action\":\"RESET_LOG_LEVEL\",\"performedAt\":\"2026-10-23T10:00:00Z\"}";
         String newer = "{\"id\":\"" + PAYMENT_ID + "\",\"action\":\"CHANGE_LOG_LEVEL\",\"performedAt\":\"2026-10-23T10:00:00Z\"}";
         String first = "{\"id\":\"019a2b3c-4d5e-7f60-8a9b-0c1d2e3f4a5d\",\"action\":\"SIGN_IN\",\"performedAt\":\"2026-10-23T09:00:00Z\"}";
-        List<UnorderedTie> ties = List.of(new UnorderedTie("GET /api/admin/donors/actions", "$.items", "ordered by performedAt, then by random id bits"));
+        List<UnorderedTie> ties = List.of(new UnorderedTie("GET /api/admin/donors/actions", "$.items", List.of("performedAt"), "ordered by performedAt, then by random id bits"));
         ScenarioTranscript oneRun = new ScenarioTranscript(ties);
         oneRun.exchange(exchange("GET", "/api/admin/donors/actions", 200, "{\"items\":[" + older + "," + newer + "," + first + "]}"));
         ScenarioTranscript otherRun = new ScenarioTranscript(ties);
@@ -187,9 +187,30 @@ class ScenarioTranscriptTest {
     }
 
     @Test
+    @DisplayName("Given items tied only in the field their list is ordered by, while another instant differs, when two runs list them in other orders, then both transcripts are identical and items of other kinds keep their order")
+    void should_sort_items_tied_in_their_ordering_field_when_written_given_another_instant_differs() {
+        String erased = "{\"donorId\":\"" + DONOR_ID + "\",\"registeredAt\":\"2026-10-17T10:00:00Z\",\"erasedAt\":\"2026-10-18T10:00:00Z\"}";
+        String kept = "{\"donorId\":\"" + PAYMENT_ID + "\",\"registeredAt\":\"2026-10-17T10:00:00Z\",\"erasedAt\":null}";
+        String laterPayment = "{\"id\":\"b\",\"importedAt\":\"2026-10-17T10:00:00Z\"}";
+        String earlierPayment = "{\"id\":\"a\",\"importedAt\":\"2026-10-17T10:00:00Z\"}";
+        List<UnorderedTie> ties = List.of(new UnorderedTie("GET /api/admin/donations/sync/chunks", "$.chunks[].rows", List.of("registeredAt"), "random id bits"));
+        ScenarioTranscript oneRun = new ScenarioTranscript(ties);
+        oneRun.exchange(exchange("GET", "/api/admin/donations/sync/chunks", 200, "{\"chunks\":[{\"rows\":[" + erased + "," + kept + "]},{\"rows\":["
+                + laterPayment + "," + earlierPayment + "]}]}"));
+        ScenarioTranscript otherRun = new ScenarioTranscript(ties);
+        otherRun.exchange(exchange("GET", "/api/admin/donations/sync/chunks", 200, "{\"chunks\":[{\"rows\":[" + kept + "," + erased + "]},{\"rows\":["
+                + laterPayment + "," + earlierPayment + "]}]}"));
+
+        JsonNode chunks = oneRun.toJson(Map.of()).get("requests").get("GET /api/admin/donations/sync/chunks #1").get("response").get("body").get("chunks");
+
+        assertThat(json.writeValueAsString(oneRun.toJson(Map.of()))).isEqualTo(json.writeValueAsString(otherRun.toJson(Map.of())));
+        assertThat(chunks.get(1).get("rows").valueStream().map(row -> row.get("id").asString()).toList()).containsExactly("b", "a");
+    }
+
+    @Test
     @DisplayName("Given list items stamped with the same instant on a list whose order v2 defines, when the transcript is written, then v2's order is kept")
     void should_keep_the_order_of_v2_when_written_given_items_with_equal_instants_on_a_list_v2_orders() {
-        ScenarioTranscript transcript = new ScenarioTranscript(List.of(new UnorderedTie("GET /api/admin/donors/actions", "$.items", "random id bits")));
+        ScenarioTranscript transcript = new ScenarioTranscript(List.of(new UnorderedTie("GET /api/admin/donors/actions", "$.items", List.of("performedAt"), "random id bits")));
         transcript.exchange(exchange("GET", "/api/content/news", 200, "{\"items\":["
                 + "{\"title\":\"B\",\"publishedOn\":\"2026-10-22\",\"updatedAt\":\"2026-11-04T09:00:00Z\"},"
                 + "{\"title\":\"A\",\"publishedOn\":\"2026-10-20\",\"updatedAt\":\"2026-11-04T09:00:00Z\"}]}"));

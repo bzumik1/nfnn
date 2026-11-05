@@ -1,6 +1,5 @@
 package cz.novanadeje.app.donations.application.sync;
 
-import cz.novanadeje.app.donations.application.report.AdminOverviewService;
 import cz.novanadeje.app.donations.application.report.ReportAdministrationView;
 import cz.novanadeje.app.donations.application.report.ReportSettingsService;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentRepository;
@@ -30,10 +29,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Year;
-import java.util.Collections;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 
@@ -51,8 +51,6 @@ class AdminDonationsSyncServiceTest {
 
     @Mock
     private AdministrationHolders administrationHolders;
-    @Mock
-    private AdminOverviewService overview;
     @Mock
     private BankPaymentRepository payments;
     @Mock
@@ -72,8 +70,8 @@ class AdminDonationsSyncServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new AdminDonationsSyncService(administrationHolders, overview, payments, donations, records, claims, receipts, importStates,
-                reportSettings);
+        service = new AdminDonationsSyncService(administrationHolders, payments, donations, records, claims, receipts, importStates, reportSettings,
+                Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
     @Test
@@ -83,12 +81,12 @@ class AdminDonationsSyncServiceTest {
 
         AdminDonationsSyncSnapshot snapshot = service.snapshotFor(ADMIN);
 
-        assertThat(snapshot).isEqualTo(AdminDonationsSyncSnapshot.withoutAdministration(ADMIN));
-        verifyNoInteractions(overview, payments, donations, records, claims, receipts, importStates, reportSettings);
+        assertThat(snapshot).isEqualTo(AdminDonationsSyncSnapshot.withoutAdministration(ADMIN, TODAY));
+        verifyNoInteractions(payments, donations, records, claims, receipts, importStates, reportSettings);
     }
 
     @Test
-    @DisplayName("Given an administrator, an erased donor with a receipt and a donor with one, when the snapshot is taken, then every offered year's overview comes newest first, the erased donor's record stays as a placeholder and only the other donor's receipt comes")
+    @DisplayName("Given an administrator, an erased donor with a receipt and a donor with one, when the snapshot is taken, then the foundation's day and every offered year's overview come, the erased donor's record stays as a placeholder and only the other donor's receipt comes")
     void should_leave_out_erased_donors_receipts_and_compile_every_year_when_snapshot_taken_given_administrator() {
         DonorRecord jana = DonorRecord.registerPerson(new DonorReference(UuidV7.generate(NOW)), "Jana Nováková", ADDRESS,
                 new VariableSymbol("4821937560"), LocaleCode.CS, NOW);
@@ -97,14 +95,11 @@ class AdminDonationsSyncServiceTest {
         erased.erase(NOW);
         DonationReceipt janas = Receipts.yearlyReceiptOf(jana.id(), Year.of(2026));
         DonationReceipt erasedOnes = Receipts.yearlyReceiptOf(erased.id(), Year.of(2026));
-        YearOverview year2026 = overviewOf(Year.of(2026));
-        YearOverview year2025 = overviewOf(Year.of(2025));
         BankImportState importState = BankImportState.initial(NOW);
         ReportAdministrationView report = new ReportAdministrationView(ReportSettings.defaults(new EmailAddress("info@nfnn.cz")), Optional.empty(),
                 List.of(), new ReportAdministrationView.NextReport(ReportMonth.of(2026, 11), LocalDate.of(2026, 12, 1)), ReportMonth.of(2026, 10));
         when(administrationHolders.holdsAdministration(ADMIN.value())).thenReturn(true);
         when(records.findAll()).thenReturn(List.of(jana, erased));
-        when(overview.everyOfferedYear(List.of(), List.of(), List.of(jana, erased))).thenReturn(List.of(year2026, year2025));
         when(payments.findAllNewestFirst()).thenReturn(List.of());
         when(donations.findAllNewestFirst()).thenReturn(List.of());
         when(claims.findAllNewestFirst()).thenReturn(List.of());
@@ -115,14 +110,12 @@ class AdminDonationsSyncServiceTest {
         AdminDonationsSyncSnapshot snapshot = service.snapshotFor(ADMIN);
 
         assertThat(snapshot.administrator()).isTrue();
-        assertThat(snapshot.years()).containsExactly(year2026, year2025);
+        assertThat(snapshot.today()).isEqualTo(TODAY);
+        assertThat(snapshot.years()).containsExactly(YearOverview.compile(Year.of(2026), TODAY, List.of(), List.of(),
+                List.of(0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 2L, 2L)));
         assertThat(snapshot.donorRecords()).containsExactly(jana, erased);
         assertThat(snapshot.receipts()).containsExactly(janas);
         assertThat(snapshot.importState()).contains(importState);
         assertThat(snapshot.report()).contains(report);
-    }
-
-    private static YearOverview overviewOf(Year year) {
-        return YearOverview.compile(year, TODAY, List.of(), List.of(), Collections.nCopies(YearOverview.MONTH_BOUNDARIES, 0L));
     }
 }

@@ -2,13 +2,21 @@
 Feature: An administrator's device keeps a copy of the accounts and the administrators' trail by downloading only the chunks that changed
 
   Scenario: A device gets every account by registration month and the trail by month without its details, and no stored secret
-    Given today is 2026-10-17
+    Given today is 2026-10-01
     And a person "Jana" is registered
+    And the bank account has these movements:
+      | id   | date       | amount | account    | bankCode | name          | variableSymbol |
+      | 1001 | 2026-09-30 | 500.00 | 2000145399 | 0800     | Nováková Jana | {Jana}         |
+    And the application starts the import
+    And today is 2026-10-17
     And a person "Petr" is registered
     And a person "Andrea" is registered
     And "Andrea" is an administrator
     And "Jana" enables the second factor
     And "Jana" keeps a passkey stored as "jana-phone-credential-0001"
+    And "Jana" asks to recover the second factor by payment
+    And a password reset is asked for "petr@example.cz"
+    And "Andrea" approved the connection for "https://claude.ai/.well-known/oauth-client"
     And "Andrea" made "Petr" an administrator
     And 1 minute passes
     And "Andrea" removes "Petr" from the administrators
@@ -21,7 +29,8 @@ Feature: An administrator's device keeps a copy of the accounts and the administ
     And the administration device's account of "Jana" says it has the second factor and 1 passkey
     And the administration device holds the chunk "audit:2026-10" with 2 rows
     And the administration device's chunks of the audit hold every action the administration lists, without details
-    And no chunk on the administration device holds a stored secret or an audit detail
+    When an administration device of "Andrea" syncs the donations
+    Then no chunk on the administration device holds a stored secret or an audit detail
 
   Scenario: A changed profile changes only the chunk of the donor's registration month, a new action only its month of the trail
     Given today is 2026-09-20

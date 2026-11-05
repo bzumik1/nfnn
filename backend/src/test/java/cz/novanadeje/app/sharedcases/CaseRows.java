@@ -1,5 +1,6 @@
 package cz.novanadeje.app.sharedcases;
 
+import cz.novanadeje.app.shared.domain.ErasedPersonalData;
 import cz.novanadeje.app.support.DatabaseCleaner;
 import cz.novanadeje.app.support.MutableClock;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -122,10 +123,13 @@ public final class CaseRows {
             UUID id = donorId(donor.alias());
             ++sequence;
             jdbc.sql("insert into donor_record (donor_id, type, name, company_identifier, street, city, postal_code, variable_symbol, "
-                            + "preferred_locale, registered_at, updated_at, erased_at) values (:id, 'PERSON', :name, null, 'Dlouhá 12', 'Ústí nad Labem', "
-                            + "'400 01', :symbol, 'cs', :registered, :registered, :erased)")
+                            + "preferred_locale, registered_at, updated_at, erased_at) values (:id, 'PERSON', :name, null, :street, :city, :postalCode, "
+                            + ":symbol, 'cs', :registered, :registered, :erased)")
                     .param("id", id)
-                    .param("name", "Dárce " + donor.alias())
+                    .param("name", donor.erasedAt().isPresent() ? ErasedPersonalData.NAME : "Dárce " + donor.alias())
+                    .param("street", donor.erasedAt().isPresent() ? ErasedPersonalData.ADDRESS.street() : "Dlouhá 12")
+                    .param("city", donor.erasedAt().isPresent() ? ErasedPersonalData.ADDRESS.city() : "Ústí nad Labem")
+                    .param("postalCode", donor.erasedAt().isPresent() ? ErasedPersonalData.ADDRESS.postalCode() : "400 01")
                     .param("symbol", Long.toString(4000000000L + sequence))
                     .param("registered", timestamp(donor.registeredAt()))
                     .param("erased", donor.erasedAt().map(CaseRows::timestamp).orElse(null))

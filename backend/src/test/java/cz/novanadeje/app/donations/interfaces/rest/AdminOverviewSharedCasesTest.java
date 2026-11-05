@@ -22,12 +22,12 @@ class AdminOverviewSharedCasesTest extends DonationRowsSharedCaseRunner {
 
     @Override
     protected String when() {
-        return "when the backend selects its rows with the real queries and compiles the year overview, alone and in the administration's sync manifest";
+        return "when the backend selects its rows with the real queries and compiles the year overview, alone and in the administration's sync manifest for every offered year";
     }
 
     @Override
     protected String then() {
-        return "then the administration gets the expected overview, and the manifest's summary of that year is the same";
+        return "then the administration gets the expected overview, and the manifest's summary of that year and of every other offered year is the overview of that year";
     }
 
     @Override
@@ -47,6 +47,10 @@ class AdminOverviewSharedCasesTest extends DonationRowsSharedCaseRunner {
             assertGives(ofTheYear.orElseThrow(), withoutAvailableYears(sharedCase.expected()));
         } else {
             assertThat(ofTheYear).as("the summary of a year the administration does not offer").isEmpty();
+        }
+        for (JsonNode entry : summary) {
+            JsonNode overview = answerAs(CaseRows.administratorId(), "ROLE_ADMIN", get("/api/admin/donations/overview").param("year", entry.get("year").asString()));
+            assertGives(entry, withoutAvailableYears(overview));
         }
     }
 

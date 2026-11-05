@@ -116,7 +116,7 @@ class AdminDeviceSyncTest {
     }
 
     @Test
-    @DisplayName("Given two hundred donors with a thousand gifts and payments, when an administration device asks for the manifest, then the backend answers within 100 ms")
+    @DisplayName("Given two hundred donors, each with a linked bank account and half of them with an older-symbol answer, and a thousand gifts and payments, when an administration device asks for the manifest, then the backend answers within 100 ms")
     void should_answer_within_100_ms_when_an_administration_device_asks_for_the_manifest_given_a_thousand_gifts() throws Exception {
         CaseRows rows = CaseRows.fromJson(json.readTree(THREE_DONORS));
         rows.write(jdbc, clock);
@@ -124,7 +124,13 @@ class AdminDeviceSyncTest {
         Random random = new Random(20261105L);
         List<UUID> donors = new ArrayList<>();
         for (int donor = 0; donor < TIMED_DONORS; donor++) {
-            donors.add(insertDonorRecord(new UUID(random.nextLong(), random.nextLong()), 5_000_000_000L + donor));
+            UUID id = insertDonorRecord(new UUID(random.nextLong(), random.nextLong()), 5_000_000_000L + donor);
+            donors.add(id);
+            List<String> account = List.of(Long.toString(100_000_000L + donor), "0800");
+            linkAccount(new UUID(random.nextLong(), random.nextLong()), id, account, "ACTIVE", LocalDate.of(2026, 1, 1).plusDays(donor));
+            if (donor % 2 == 0) {
+                answerSymbol(new UUID(random.nextLong(), random.nextLong()), id, account, SYMBOLS.get(donor % SYMBOLS.size()), "CONFIRMED");
+            }
         }
         for (int gift = 0; gift < TIMED_DONATIONS; gift++) {
             LocalDate day = LocalDate.of(2016 + random.nextInt(11), 1 + random.nextInt(12), 1 + random.nextInt(28));

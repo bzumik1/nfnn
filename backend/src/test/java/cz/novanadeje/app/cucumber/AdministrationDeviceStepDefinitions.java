@@ -14,6 +14,7 @@ import tools.jackson.databind.node.ObjectNode;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -214,17 +215,13 @@ public class AdministrationDeviceStepDefinitions {
         }
     }
 
-    @Then("the administration device's chunks of payments hold every payment the administration lists")
+    @Then("the administration device's chunks of payments hold every payment the administration lists, those of erased donors without the payer")
     public void theAdministrationDevicesChunksOfPaymentsHoldEveryListedPayment() {
+        Set<String> erased = Set.copyOf(jdbc.sql("select donor_id from donor_record where erased_at is not null").query(UUID.class).list().stream()
+                .map(UUID::toString).toList());
         Map<String, List<JsonNode>> listed = new TreeMap<>();
-        api.get("/api/admin/donations/payments?pairing=unpaired&limit=500");
-        api.lastResponseJson().get("items").forEach(item -> listed.put(item.get("id").asString(), fields(item, PAYMENT_FIELDS)));
-        api.get("/api/admin/donations/payments?pairing=paired&limit=500");
-        List<Integer> years = api.lastResponseJson().get("availableYears").valueStream().map(JsonNode::asInt).toList();
-        for (int year : years) {
-            api.get("/api/admin/donations/payments?pairing=paired&limit=500&year=" + year);
-            api.lastResponseJson().get("items").forEach(item -> listed.put(item.get("id").asString(), fields(item, PAYMENT_FIELDS)));
-        }
+        listedPayments().forEach(item -> listed.put(item.get("id").asString(), fields(paidBy(item, erased) ? withoutPayer(item) : item,
+                PAYMENT_FIELDS)));
         Map<String, List<JsonNode>> held = new TreeMap<>();
         rowsOfChunks("payments:").forEach((id, rows) -> rows.forEach(row -> {
             assertThat(fieldNames(row)).containsExactlyInAnyOrderElementsOf(PAYMENT_FIELDS);
@@ -233,6 +230,38 @@ public class AdministrationDeviceStepDefinitions {
         }));
         assertThat(listed).isNotEmpty();
         assertThat(held).isEqualTo(listed);
+    }
+
+    @Then("the administration device holds {int} payment(s) of {string}, each without the payer's name, account and message")
+    public void theAdministrationDeviceHoldsPaymentsWithoutThePayer(int count, String alias) {
+        Set<String> ofDonor = listedPayments().stream().filter(item -> paidBy(item, Set.of(donors.idOf(alias).toString())))
+                .map(item -> item.get("id").asString()).collect(Collectors.toSet());
+        List<JsonNode> held = rowsOfChunks("payments:").values().stream().flatMap(List::stream).filter(row -> ofDonor.contains(row.get("id").asString()))
+                .toList();
+        assertThat(held).hasSize(count);
+        held.forEach(row -> assertThat(List.of(row.get("counterpartyName"), row.get("counterpartyAccount"), row.get("messageForRecipient")))
+                .as("the payer of payment %s", row.get("bankTransactionId")).allMatch(JsonNode::isNull));
+    }
+
+    @Then("every gift on the administration device names a donor record, a payment, a bank account and an older-symbol answer it holds, {int} of them a bank account and {int} an older-symbol answer")
+    public void everyGiftOnTheAdministrationDeviceNamesRowsItHolds(int throughAccounts, int bySymbols) {
+        Set<String> records = idsOf("donor-records:", "donorId");
+        Set<String> payments = idsOf("payments:", "id");
+        Set<String> links = idsOf("links:", "id");
+        Set<String> claims = idsOf("symbol-claims", "id");
+        List<JsonNode> gifts = rowsOfChunks("donations:").values().stream().flatMap(List::stream).toList();
+        assertThat(gifts).isNotEmpty();
+        gifts.forEach(gift -> {
+            assertThat(records).as("the donor of gift %s", gift.get("id")).contains(gift.get("donorId").asString());
+            assertThat(gift.get("paymentId").isNull() || payments.contains(gift.get("paymentId").asString())).as("the payment of gift %s", gift.get("id"))
+                    .isTrue();
+            assertThat(gift.get("bankAccountId").isNull() || links.contains(gift.get("bankAccountId").asString()))
+                    .as("the bank account of gift %s", gift.get("id")).isTrue();
+            assertThat(gift.get("symbolClaimId").isNull() || claims.contains(gift.get("symbolClaimId").asString()))
+                    .as("the older-symbol answer of gift %s", gift.get("id")).isTrue();
+        });
+        assertThat(gifts.stream().filter(gift -> !gift.get("bankAccountId").isNull()).count()).as("gifts through a bank account").isEqualTo(throughAccounts);
+        assertThat(gifts.stream().filter(gift -> !gift.get("symbolClaimId").isNull()).count()).as("gifts by an older symbol").isEqualTo(bySymbols);
     }
 
     @Then("the administration device's chunks of donations hold every gift of {string} the administration lists")
@@ -328,11 +357,13 @@ public class AdministrationDeviceStepDefinitions {
     public void theAdministrationDevicesChunksOfAccountsHoldEveryAccount() {
         Map<String, List<JsonNode>> held = rowsOfChunks("accounts:");
         assertThat(held).isNotEmpty();
-        held.forEach((id, rows) -> rows.forEach(row -> {
+        held.forEach((id, rows) -> rows.forEach(row -> assertThat(id).isEqualTo("accounts:" + monthOf(row.get("registeredAt").asString()))));
+        Comparator<JsonNode> byNameAndEmail = Comparator.comparing((JsonNode row) -> row.get("name").asString())
+                .thenComparing(row -> String.valueOf(row.get("email")));
+        held.values().stream().flatMap(List::stream).sorted(byNameAndEmail).forEach(row -> {
             api.get("/api/admin/donors/" + row.get("donorId").asString());
             assertThat(row).isEqualTo(api.lastResponseJson());
-            assertThat(id).isEqualTo("accounts:" + monthOf(row.get("registeredAt").asString()));
-        }));
+        });
     }
 
     @Then("the administration device's chunks of accounts hold {int} account(s)")
@@ -376,10 +407,17 @@ public class AdministrationDeviceStepDefinitions {
                 .forEach(table -> secrets.addAll(jdbc.sql("select secret_hash from " + table).query(String.class).list()));
         secrets.addAll(jdbc.sql("select challenge_hash from donor_passkey_challenge").query(String.class).list());
         secrets.addAll(jdbc.sql("select code_hash from donor_second_factor_recovery").query(String.class).list());
+        secrets.addAll(jdbc.sql("select code from donor_second_factor_recovery").query(String.class).list());
+        secrets.addAll(jdbc.sql("select code_challenge from oauth_authorization_code").query(String.class).list());
         secrets.addAll(jdbc.sql("select details from admin_action").query(String.class).list());
         List<String> worthChecking = secrets.stream().filter(secret -> secret != null && secret.strip().length() >= MINIMUM_SECRET_LENGTH)
                 .map(String::strip).toList();
         assertThat(worthChecking).isNotEmpty();
+        Stream.of("donor_password_reset_token", "donor_second_factor_recovery", "oauth_authorization_code", "donor_refresh_token", "donor_passkey",
+                        "donor_second_factor")
+                .forEach(table -> assertThat(jdbc.sql("select count(*) from " + table).query(Integer.class).single())
+                        .as("the rows of %s the scenario holds to look for", table).isPositive());
+        assertThat(devices.keySet()).as("the copies scanned").anyMatch(key -> key.endsWith("donations")).anyMatch(key -> key.endsWith("donors"));
         String held = devices.values().stream().flatMap(copy -> copy.chunks.values().stream()).map(JsonNode::toString).collect(Collectors.joining("\n"));
         assertThat(held).isNotEmpty();
         worthChecking.forEach(secret -> assertThat(held).as("the chunks on the administration devices").doesNotContain(secret));
@@ -392,6 +430,36 @@ public class AdministrationDeviceStepDefinitions {
         JsonNode answer = api.lastResponseJson();
         assertThat(answer.get("chunks").valueStream().map(chunk -> chunk.get("id").asString()).toList()).containsExactlyElementsOf(list(held));
         assertThat(answer.get("missing").valueStream().map(JsonNode::asString).toList()).containsExactlyElementsOf(list(missing));
+    }
+
+    private List<JsonNode> listedPayments() {
+        List<JsonNode> listed = new ArrayList<>();
+        api.get("/api/admin/donations/payments?pairing=unpaired&limit=500");
+        api.lastResponseJson().get("items").forEach(listed::add);
+        api.get("/api/admin/donations/payments?pairing=paired&limit=500");
+        List<Integer> years = api.lastResponseJson().get("availableYears").valueStream().map(JsonNode::asInt).toList();
+        for (int year : years) {
+            api.get("/api/admin/donations/payments?pairing=paired&limit=500&year=" + year);
+            api.lastResponseJson().get("items").forEach(listed::add);
+        }
+        return listed;
+    }
+
+    private static boolean paidBy(JsonNode payment, Set<String> donorIds) {
+        JsonNode donation = payment.get("donation");
+        return donation != null && !donation.isNull() && donorIds.contains(donation.get("donorId").asString());
+    }
+
+    private static JsonNode withoutPayer(JsonNode payment) {
+        ObjectNode copy = (ObjectNode) payment.deepCopy();
+        copy.putNull("counterpartyName");
+        copy.putNull("counterpartyAccount");
+        copy.putNull("messageForRecipient");
+        return copy;
+    }
+
+    private Set<String> idsOf(String prefix, String field) {
+        return rowsOfChunks(prefix).values().stream().flatMap(List::stream).map(row -> row.get(field).asString()).collect(Collectors.toSet());
     }
 
     private Map<String, List<JsonNode>> rowsOfChunks(String prefix) {

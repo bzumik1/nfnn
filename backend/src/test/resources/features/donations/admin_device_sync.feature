@@ -18,6 +18,7 @@ Feature: An administrator's device keeps a copy of the administration's donation
       | 1003 | 2026-09-05 | 400.00 | 7654321    | 0800     | Nováková Jana | {Jana}         |                                       |
       | 1004 | 2026-10-14 | 1.00   | 1234567    | 0800     | Nováková Jana | {Jana}         | OVERENI UCTU NADACNI FOND NOVA NADEJE |
       | 1005 | 2026-09-20 | 250.00 | 2900299999 | 0300     | Dvořák Karel  |                |                                       |
+      | 1007 | 2026-10-15 | 200.00 | 1234567    | 0800     | Nováková Jana |                |                                       |
     And the application starts the import
     When "Jana" confirms symbol "6123456789" at bank account "1234567/0800"
     And "Jana" issues the receipt of her donation received on 2026-09-05
@@ -28,8 +29,9 @@ Feature: An administrator's device keeps a copy of the administration's donation
     And the administration device holds the chunk "donor-records:2026-10" with 2 rows
     And the administration device holds the chunk "payments:2026-09" with 2 rows
     And the administration device holds the chunk "donations:2026-09" with 1 row
-    And the administration device's chunks of payments hold every payment the administration lists
+    And the administration device's chunks of payments hold every payment the administration lists, those of erased donors without the payer
     And the administration device's chunks of donations hold every gift of "Jana" the administration lists
+    And every gift on the administration device names a donor record, a payment, a bank account and an older-symbol answer it holds, 2 of them a bank account and 1 an older-symbol answer
     And the administration device holds the donor record of "Jana" as the administration reads it, with its bank accounts
     And the administration device's chunk "receipts:2026" holds every receipt the administration lists
     And the administration device's chunk "symbol-claims" holds every older-symbol answer the administration lists
@@ -37,6 +39,20 @@ Feature: An administrator's device keeps a copy of the administration's donation
     And the administration device's chunk "report-settings" holds the monthly report settings and the sent reports the administration reads
     And the administration device's summary lists the years "2026, 2025"
     And the administration device's summary of every year is the administration's overview of that year
+
+  Scenario: A bank account learned in a later month stays in the chunk of its owner's registration month
+    Given today is 2026-09-28
+    And a person "Jana" is registered
+    And a person "Andrea" is registered
+    And "Andrea" is an administrator
+    And today is 2026-10-02
+    And the bank account has these movements:
+      | id   | date       | amount | account | bankCode | name          | variableSymbol | message                               |
+      | 1004 | 2026-10-01 | 1.00   | 1234567 | 0800     | Nováková Jana | {Jana}         | OVERENI UCTU NADACNI FOND NOVA NADEJE |
+    And the application starts the import
+    When an administration device of "Andrea" syncs the donations
+    Then the administration device holds the chunk "links:2026-09" with 1 row
+    And the administration device holds the donor record of "Jana" as the administration reads it, with its bank accounts
 
   Scenario: A new payment changes only the chunks of its month and the import state, and an unchanged manifest downloads nothing
     Given today is 2026-10-20
@@ -59,7 +75,7 @@ Feature: An administrator's device keeps a copy of the administration's donation
     And an administration device of "Andrea" syncs the donations
     Then the administration device downloaded the chunks "donations:2026-10, import-state, payments:2026-10"
     And the administration device removed no chunk
-    And the administration device's chunks of payments hold every payment the administration lists
+    And the administration device's chunks of payments hold every payment the administration lists, those of erased donors without the payer
     And the administration device's summary of every year is the administration's overview of that year
     And every chunk on the administration device hashes to its rowsSha256
 
@@ -80,11 +96,11 @@ Feature: An administrator's device keeps a copy of the administration's donation
     And an administration device of "Andrea" syncs the donations
     Then the administration device downloaded the chunks "payments:2026-04"
     And the administration device removed the chunks "donations:2026-04"
-    And the administration device's chunks of payments hold every payment the administration lists
+    And the administration device's chunks of payments hold every payment the administration lists, those of erased donors without the payer
     And the administration device's chunks of donations hold every gift of "Jana" the administration lists
     And the administration device's summary of every year is the administration's overview of that year
 
-  Scenario: An erased donor stays as a placeholder while the donor's bank accounts, older-symbol answers and receipts leave the device
+  Scenario: An erased donor stays as a placeholder while the donor's bank accounts, older-symbol answers, receipts and the payer of the donor's payments leave the device
     Given today is 2026-10-17
     And a person "Jana" is registered
     And a person "Petr" is registered
@@ -107,7 +123,9 @@ Feature: An administrator's device keeps a copy of the administration's donation
     And the administration device holds the donor record of "Jana" only as an erased placeholder, without bank accounts, older-symbol answers or receipts
     And the administration device holds the donor record of "Petr" as the administration reads it, with its bank accounts
     And the administration device's chunk "receipts:2026" holds every receipt the administration lists for 2026, except those of "Jana"
-    And the administration device's chunks of payments hold every payment the administration lists
+    And the administration device holds 3 payments of "Jana", each without the payer's name, account and message
+    And every gift on the administration device names a donor record, a payment, a bank account and an older-symbol answer it holds, 0 of them a bank account and 0 an older-symbol answer
+    And the administration device's chunks of payments hold every payment the administration lists, those of erased donors without the payer
     And every chunk on the administration device hashes to its rowsSha256
 
   Scenario: An administrator whose role was removed learns it at the next sync while the token is still valid, and the device keeps nothing
@@ -156,6 +174,21 @@ Feature: An administrator's device keeps a copy of the administration's donation
     Then the response status is 400
     And the problem type ends with "validation"
     When "Andrea" asks for the administration's donations sync chunks "accounts:2026-10"
+    Then the response status is 400
+    And the problem type ends with "validation"
+    When "Andrea" asks for the administration's donations sync chunks "payments:2026-00"
+    Then the response status is 400
+    And the problem type ends with "validation"
+    When "Andrea" asks for the administration's donations sync chunks "payments:2026-13"
+    Then the response status is 400
+    And the problem type ends with "validation"
+    When "Andrea" asks for the administration's donations sync chunks "receipts:2026-10"
+    Then the response status is 400
+    And the problem type ends with "validation"
+    When "Andrea" asks for the administration's donations sync chunks "donor-records:a"
+    Then the response status is 400
+    And the problem type ends with "validation"
+    When "Andrea" asks for the administration's donations sync chunks "import-state,,payments:2026-09"
     Then the response status is 400
     And the problem type ends with "validation"
     When "Andrea" asks for 65 of the administration's donations sync chunks
