@@ -3,6 +3,7 @@ package cz.novanadeje.app.donations.infrastructure.fio;
 import cz.novanadeje.app.donations.application.importing.BankImportProperties;
 import cz.novanadeje.app.donations.application.importing.BankImportRequests;
 import cz.novanadeje.app.donations.application.importing.FollowUp;
+import cz.novanadeje.app.donations.application.importing.HistoryImportTracker;
 import cz.novanadeje.app.donations.application.importing.ImportBankPaymentsService;
 import cz.novanadeje.app.donations.application.importing.ImportReport;
 import cz.novanadeje.app.donations.domain.importing.ImportFailureKind;
@@ -15,6 +16,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Optional;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -30,7 +33,7 @@ class FioImportScheduler implements BankImportRequests {
 
     private static final Logger log = LoggerFactory.getLogger(FioImportScheduler.class);
     private static final String UNLOCK_HISTORY = "unlock the history in Fio internet banking (Nastavení > API, the lock icon) "
-            + "and restart the backend within 10 minutes, or shorten FIO_HISTORY_FROM";
+            + "and press Načíst starší platby on /sprava within 10 minutes";
     private static final String RENEW_TOKEN = "the Fio token is missing, not yet active or expired (180 days): "
             + "create a new one in Fio internet banking and set FIO_TOKEN";
 
@@ -43,11 +46,18 @@ class FioImportScheduler implements BankImportRequests {
     private final AtomicBoolean started = new AtomicBoolean();
     private final AtomicReference<ScheduledFuture<?>> pendingFollowUp = new AtomicReference<>();
     private final AtomicInteger followUpsSinceTick = new AtomicInteger();
+    private final AtomicReference<LocalDate> pendingHistoryFrom = new AtomicReference<>();
+    private final AtomicBoolean historyRunQueued = new AtomicBoolean();
+    private final AtomicReference<ScheduledFuture<?>> pendingHistoryFollowUp = new AtomicReference<>();
+    private final AtomicInteger historyFollowUps = new AtomicInteger();
+    private final HistoryImportTracker historyImports;
 
-    FioImportScheduler(ImportBankPaymentsService service, BankImportProperties importProperties, TaskScheduler taskScheduler, Clock clock) {
+    FioImportScheduler(ImportBankPaymentsService service, BankImportProperties importProperties, TaskScheduler taskScheduler,
+                       HistoryImportTracker historyImports, Clock clock) {
         this.service = service;
         this.importProperties = importProperties;
         this.taskScheduler = taskScheduler;
+        this.historyImports = historyImports;
         this.clock = clock;
     }
 
@@ -73,12 +83,48 @@ class FioImportScheduler implements BankImportRequests {
 
     @Override
     public boolean inProgress() {
-        ScheduledFuture<?> followUp = pendingFollowUp.get();
-        return onDemandPending.get() || running.get() || (followUp != null && !followUp.isDone());
+        return onDemandPending.get() || historyRunQueued.get() || running.get() || pending(pendingFollowUp) || pending(pendingHistoryFollowUp);
+    }
+
+    @Override
+    public boolean enabled() {
+        return true;
+    }
+
+    @Override
+    public void requestHistoryImport(LocalDate from, Instant at) {
+        pendingHistoryFrom.set(from);
+        historyFollowUps.set(0);
+        cancel(pendingHistoryFollowUp.getAndSet(null));
+        if (!historyRunQueued.compareAndSet(false, true)) {
+            return;
+        }
+        try {
+            taskScheduler.schedule(this::runQueuedHistory, at);
+        } catch (RuntimeException rejected) {
+            historyRunQueued.set(false);
+            pendingHistoryFrom.set(null);
+            throw rejected;
+        }
     }
 
     void run(ImportTrigger trigger) {
         execute(trigger, () -> Optional.of(service.importIncomingPayments(trigger, importProperties.toSettings())));
+    }
+
+    private void runQueuedHistory() {
+        historyRunQueued.set(false);
+        LocalDate from = pendingHistoryFrom.getAndSet(null);
+        if (from != null) {
+            runHistory(from);
+        }
+    }
+
+    private void runHistory(LocalDate from) {
+        boolean ran = execute(ImportTrigger.HISTORY, () -> Optional.of(service.importHistory(from, importProperties.toSettings())));
+        if (!ran) {
+            scheduleHistoryFollowUp(from, new FollowUp(clock.instant().plus(importProperties.onDemandCooldown()), ImportTrigger.HISTORY));
+        }
     }
 
     private void runOnDemand() {
@@ -89,24 +135,29 @@ class FioImportScheduler implements BankImportRequests {
         }
     }
 
-    private void execute(ImportTrigger trigger, Supplier<Optional<ImportReport>> importer) {
+    private boolean execute(ImportTrigger trigger, Supplier<Optional<ImportReport>> importer) {
         if (!running.compareAndSet(false, true)) {
             log.warn("Fio import {} skipped, previous import still running", trigger);
-            return;
+            return false;
         }
         try {
             importer.get().ifPresent(report -> {
                 report.failure().ifPresent(kind -> logFailure(report, kind));
-                report.followUp().ifPresent(this::scheduleFollowUp);
+                report.followUp().ifPresent(followUp -> scheduleFollowUp(report, followUp));
             });
         } catch (RuntimeException unexpected) {
             log.error("Fio import {} failed unexpectedly", trigger, unexpected);
         } finally {
             running.set(false);
         }
+        return true;
     }
 
-    private void scheduleFollowUp(FollowUp followUp) {
+    private void scheduleFollowUp(ImportReport report, FollowUp followUp) {
+        if (followUp.trigger() == ImportTrigger.HISTORY) {
+            scheduleHistoryFollowUp(report.requested().from(), followUp);
+            return;
+        }
         int followUps = followUpsSinceTick.incrementAndGet();
         if (followUps > MAX_FOLLOW_UPS_PER_TICK) {
             log.warn("Fio refused {} follow-ups in a row; waiting for the next hourly run", followUps);
@@ -114,6 +165,21 @@ class FioImportScheduler implements BankImportRequests {
         }
         ScheduledFuture<?> next = taskScheduler.schedule(() -> run(followUp.trigger()), followUp.at());
         cancel(pendingFollowUp.getAndSet(next));
+    }
+
+    private void scheduleHistoryFollowUp(LocalDate from, FollowUp followUp) {
+        int followUps = historyFollowUps.incrementAndGet();
+        if (followUps > MAX_FOLLOW_UPS_PER_TICK) {
+            log.warn("Fio import HISTORY put off {} times in a row; it waits to be requested again", followUps);
+            historyImports.abandoned(ImportFailureKind.RATE_LIMITED, clock.instant());
+            return;
+        }
+        cancel(pendingHistoryFollowUp.getAndSet(taskScheduler.schedule(() -> runHistory(from), followUp.at())));
+    }
+
+    private static boolean pending(AtomicReference<ScheduledFuture<?>> followUp) {
+        ScheduledFuture<?> future = followUp.get();
+        return future != null && !future.isDone();
     }
 
     private void logFailure(ImportReport report, ImportFailureKind kind) {

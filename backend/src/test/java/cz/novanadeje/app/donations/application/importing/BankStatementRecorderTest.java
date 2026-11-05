@@ -174,7 +174,7 @@ class BankStatementRecorderTest {
 
         assertThat(state.coverage()).isEqualTo(coverage("2026-07-21", "2026-10-18"));
         assertThat(warnings()).containsExactly("Fio movements between 2026-04-01 and 2026-07-20 were not downloaded; "
-                + "unlock the history in Fio internet banking, set FIO_HISTORY_FROM=2026-04-01 and restart the backend");
+                + "unlock the history in Fio internet banking and press Načíst starší platby on /sprava from 2026-04-01");
     }
 
     @Test

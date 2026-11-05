@@ -95,6 +95,7 @@ enum AdminHandlerReach {
         table.put("GET /api/admin/donations/receipts/{id}", CONNECTOR);
         table.put("GET /api/admin/donations/report", CONNECTOR);
         table.put("POST /api/admin/donations/report/send", CONNECTOR);
+        table.put("POST /api/admin/donations/import/history", CONNECTOR);
         table.put("PUT /api/admin/donations/report/settings", CONNECTOR);
         table.put("GET /api/admin/donations/symbol-claims", CONNECTOR);
         table.put("DELETE /api/admin/donations/symbol-claims/{id}", BROWSER_ONLY);

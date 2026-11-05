@@ -1,6 +1,7 @@
 package cz.novanadeje.app.cucumber;
 
 import cz.novanadeje.app.cucumber.transcript.ApiTranscripts;
+import cz.novanadeje.app.donations.application.importing.HistoryImportTracker;
 import cz.novanadeje.app.donors.application.CompanyLookupService;
 import cz.novanadeje.app.operations.application.backup.BackupKeyWordChallenges;
 import cz.novanadeje.app.operations.application.clienterrors.ClientErrorCap;
@@ -11,6 +12,7 @@ import cz.novanadeje.app.support.CompanyLookupPause;
 import cz.novanadeje.app.support.DatabaseCleaner;
 import cz.novanadeje.app.support.FakeCompanyRegistry;
 import cz.novanadeje.app.support.FakeFioClient;
+import cz.novanadeje.app.support.HistoryImportRuns;
 import cz.novanadeje.app.support.KeptAsideWithdrawnSeeds;
 import cz.novanadeje.app.support.MutableClock;
 import cz.novanadeje.app.support.RateLimiterWindows;
@@ -18,6 +20,7 @@ import cz.novanadeje.app.support.RecordingMailSender;
 import cz.novanadeje.app.support.ServerReceiptSigningKey;
 import cz.novanadeje.app.support.SwitchablePublicBackupKeyPolicy;
 import cz.novanadeje.app.support.SwitchablePublicTestKeyPolicy;
+import cz.novanadeje.app.support.SynchronousBankImportRequests;
 import io.cucumber.java.Before;
 import io.cucumber.java.BeforeAll;
 import io.cucumber.java.en.Then;
@@ -81,6 +84,7 @@ public class CommonStepDefinitions {
         context.getBean(SwitchablePublicBackupKeyPolicy.class).reset();
         context.getBean(SwitchablePublicTestKeyPolicy.class).reset();
         context.getBean(KeptAsideWithdrawnSeeds.class).reset();
+        HistoryImportRuns.forget(context.getBean(HistoryImportTracker.class), context.getBean(SynchronousBankImportRequests.class));
     }
 
     @When("{int} second(s) pass(es)")

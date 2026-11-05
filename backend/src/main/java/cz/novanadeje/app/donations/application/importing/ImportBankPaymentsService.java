@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Optional;
 
 @Service
@@ -28,14 +29,16 @@ public class ImportBankPaymentsService {
     private final BankStatementRecorder recorder;
     private final BankImportStateRepository states;
     private final ImportAlertDelivery alertDelivery;
+    private final HistoryImportTracker historyImports;
     private final Clock clock;
 
     public ImportBankPaymentsService(BankStatementSource source, BankStatementRecorder recorder, BankImportStateRepository states,
-                                     ImportAlertDelivery alertDelivery, Clock clock) {
+                                     ImportAlertDelivery alertDelivery, HistoryImportTracker historyImports, Clock clock) {
         this.source = source;
         this.recorder = recorder;
         this.states = states;
         this.alertDelivery = alertDelivery;
+        this.historyImports = historyImports;
         this.clock = clock;
     }
 
@@ -64,6 +67,18 @@ public class ImportBankPaymentsService {
         return Optional.of(importIncomingPayments(ImportTrigger.ON_DEMAND, settings));
     }
 
+    public ImportReport importHistory(LocalDate from, ImportSettings settings) {
+        historyImports.started(from);
+        try {
+            ImportReport report = importIncomingPayments(ImportTrigger.HISTORY, settings.withHistoryFrom(from));
+            historyImports.finished(from, report, clock.instant());
+            return report;
+        } catch (RuntimeException unexpected) {
+            historyImports.abandoned(ImportFailureKind.UNEXPECTED, clock.instant());
+            throw unexpected;
+        }
+    }
+
     private ImportReport completed(ImportTrigger trigger, ImportPlan plan, BankStatement statement, ImportCounts counts) {
         ImportCoverage coverage = states.current().coverage();
         log.info("Fio import {} {} completed: bank reported {}, {} movements, {} new incoming, {} known, {} paired by symbol, "
@@ -83,15 +98,18 @@ public class ImportBankPaymentsService {
     private Optional<FollowUp> followUp(ImportTrigger trigger, ImportPlan plan, BankStatementUnavailable unavailable) {
         return switch (unavailable.kind()) {
             case RATE_LIMITED -> unavailable.retryAfter().map(at -> new FollowUp(at.plus(FOLLOW_UP_MARGIN), trigger));
-            case HISTORY_LOCKED -> historyLockedFollowUp(plan, unavailable);
+            case HISTORY_LOCKED -> historyLockedFollowUp(trigger, plan, unavailable);
             default -> Optional.empty();
         };
     }
 
-    private Optional<FollowUp> historyLockedFollowUp(ImportPlan plan, BankStatementUnavailable unavailable) {
+    private Optional<FollowUp> historyLockedFollowUp(ImportTrigger trigger, ImportPlan plan, BankStatementUnavailable unavailable) {
         if (!plan.needsUnlockedHistory()) {
             log.error("Fio refused {} as locked history although it lies inside the history window; "
                     + "the history-window is too long for this account", plan.period());
+            return Optional.empty();
+        }
+        if (trigger == ImportTrigger.HISTORY) {
             return Optional.empty();
         }
         return unavailable.retryAfter().map(at -> new FollowUp(at.plus(FOLLOW_UP_MARGIN), ImportTrigger.HOURLY));
