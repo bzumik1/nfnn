@@ -37,6 +37,7 @@ export class DonorCopySync implements DonorCopy {
   private readonly reporter = inject(ErrorReporter);
   private readonly running = signal(0);
   private queued: QueuedSync | null = null;
+  private active: Promise<SyncOutcome> | null = null;
   private tail: Promise<unknown> = Promise.resolve();
   private lastRebuildAt: number | null = null;
   private lastReportAt: number | null = null;
@@ -68,13 +69,13 @@ export class DonorCopySync implements DonorCopy {
   }
 
   catchUp(): Promise<SyncOutcome> {
+    const pending = this.queued?.promise ?? this.active;
+    if (pending !== null) {
+      return pending;
+    }
     const store = this.vault.opened()?.store;
     const syncedAt = store === undefined ? undefined : this.lastSyncedAt.get(store);
-    if (
-      this.queued === null &&
-      syncedAt !== undefined &&
-      Date.now() - syncedAt < CATCH_UP_PAUSE_MS
-    ) {
+    if (syncedAt !== undefined && Date.now() - syncedAt < CATCH_UP_PAUSE_MS) {
       return Promise.resolve('stored');
     }
     return this.sync();
@@ -95,7 +96,12 @@ export class DonorCopySync implements DonorCopy {
         if (this.queued === entry) {
           this.queued = null;
         }
-        return this.runOnOpenCopy(entry.full);
+        this.active = entry.promise;
+        return this.runOnOpenCopy(entry.full).finally(() => {
+          if (this.active === entry.promise) {
+            this.active = null;
+          }
+        });
       }),
     };
     this.queued = entry;

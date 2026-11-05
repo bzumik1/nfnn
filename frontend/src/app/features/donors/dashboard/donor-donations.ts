@@ -213,9 +213,16 @@ export class DonorDonations {
     });
     effect(() => {
       const view = this.copyView();
-      if (view !== null && untracked(this.state) === 'ready') {
-        untracked(() => this.offerDonations(view.summary, view.items));
+      if (view === null) {
+        return;
       }
+      untracked(() => {
+        if (this.state() === 'ready') {
+          this.offerDonations(view.summary, view.items);
+        } else {
+          this.showCopy(view);
+        }
+      });
     });
     this.load();
     this.checkBank(false);

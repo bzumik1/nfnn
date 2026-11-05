@@ -412,6 +412,18 @@ describe('Given the sync of the donor copy', () => {
     http.expectNone('/api/donations/me/sync');
   });
 
+  it('when the donor area catches up while a sync runs, then it waits for that sync instead of asking again', async () => {
+    await holding([gifts2025]);
+    open();
+    const running = await vi.waitFor(() => http.expectOne('/api/donations/me/sync'));
+
+    const caughtUp = sync.catchUp();
+    running.flush(manifestOf([gifts2025]));
+
+    expect(await caughtUp).toBe('stored');
+    http.expectNone('/api/donations/me/sync');
+  });
+
   it('when the donor area catches up right after a sync, then nothing is asked for', async () => {
     await holding([gifts2025]);
     open();

@@ -3154,6 +3154,22 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(rows()).toBe(twoYearDonations().items.length);
     });
 
+    it('then a copy that opens only after the server failed to answer is shown', async () => {
+      copy.opened.set(false);
+      await open('/darce/dary');
+      http.expectOne('/api/donations/me');
+      http
+        .expectOne('/api/donations/me/summary')
+        .flush(null, { status: 503, statusText: 'Service Unavailable' });
+      await settle();
+
+      copy.shown.set(copyViewOf(twoYearSummary(), twoYearDonations()));
+      copy.opened.set(true);
+      await settle();
+
+      expect(rows()).toBe(twoYearDonations().items.length);
+    });
+
     it('then a live hint syncs the copy and a new gift waits behind the button that names it', async () => {
       const live = TestBed.inject(LiveUpdates) as unknown as FakeLiveUpdates;
       copy.shown.set(copyViewOf(twoYearSummary(), twoYearDonations()));
