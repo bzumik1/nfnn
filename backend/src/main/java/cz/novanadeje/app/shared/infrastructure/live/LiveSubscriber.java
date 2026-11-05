@@ -13,8 +13,4 @@ public record LiveSubscriber(UUID donor, boolean administrator, Optional<UUID> s
         Objects.requireNonNull(issuedAt, "issuedAt");
         Objects.requireNonNull(expiresAt, "expiresAt");
     }
-
-    public LiveSubscriber(UUID donor, boolean administrator, Instant issuedAt, Instant expiresAt) {
-        this(donor, administrator, Optional.empty(), issuedAt, expiresAt);
-    }
 }

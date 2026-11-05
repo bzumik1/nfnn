@@ -5,6 +5,7 @@ import cz.novanadeje.app.cucumber.DonorSessions;
 import cz.novanadeje.app.cucumber.ScenarioDonors;
 import cz.novanadeje.app.operations.infrastructure.push.PushReceiver;
 import cz.novanadeje.app.shared.infrastructure.config.PublicUrlProperties;
+import cz.novanadeje.app.shared.infrastructure.security.JwtProperties;
 import cz.novanadeje.app.support.RecordingPushTransport;
 import io.cucumber.datatable.DataTable;
 import io.cucumber.java.en.Given;
@@ -42,7 +43,6 @@ public class PushStepDefinitions {
 
     private static final String PUSH = "/api/admin/operations/push";
     private static final String SUBSCRIPTIONS = PUSH + "/subscriptions";
-    private static final String SESSION_CLAIM = "sid";
     private static final String PUBLIC_KEY_SHAPE = "B[A-Za-z0-9_-]{86}";
     private static final long VAPID_LIFETIME_SECONDS = 3600;
     private static final int CREATED = 201;
@@ -274,7 +274,7 @@ public class PushStepDefinitions {
 
     private void subscribe(String alias, String device, String endpoint, PushReceiver receiver, String p256dh) {
         String key = alias + "/" + device;
-        UUID deviceId = devices.containsKey(key) ? devices.get(key).deviceId() : UUID.nameUUIDFromBytes(key.getBytes(StandardCharsets.UTF_8));
+        UUID deviceId = devices.containsKey(key) ? devices.get(key).deviceId() : UUID.randomUUID();
         actOnDevice(alias, deviceId);
         api.post(SUBSCRIPTIONS, body(endpoint, p256dh, receiver.auth()));
         String subscriptionId = api.lastResponse().getStatusCode().value() == CREATED ? api.lastResponseJson().get("id").asString() : null;
@@ -284,12 +284,12 @@ public class PushStepDefinitions {
     private void actOnDevice(String alias, UUID deviceId) {
         sessions.actAs(alias);
         signedIn(alias, deviceId);
-        actWith(alias, claims -> claims.claim(SESSION_CLAIM, deviceId.toString()));
+        actWith(alias, claims -> claims.claim(JwtProperties.SESSION_CLAIM, deviceId.toString()));
     }
 
     private void actWithoutDevice(String alias) {
         sessions.actAs(alias);
-        actWith(alias, claims -> claims.claims(all -> all.remove(SESSION_CLAIM)));
+        actWith(alias, claims -> claims.claims(all -> all.remove(JwtProperties.SESSION_CLAIM)));
     }
 
     private void actWith(String alias, Consumer<JwtClaimsSet.Builder> session) {
