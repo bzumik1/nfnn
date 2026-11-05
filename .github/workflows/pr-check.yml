@@ -128,9 +128,9 @@ jobs:
 
       - run: npm ci
 
-      - name: Start installing Playwright's Chromium headless shell while the checks run
+      - name: Start installing Playwright's Chromium headless shell and WebKit while the checks run
         run: |
-          (npx playwright install --with-deps --only-shell chromium > "$RUNNER_TEMP/playwright-install.log" 2>&1; echo $? > "$RUNNER_TEMP/playwright-install.status") &
+          (npx playwright install --with-deps --only-shell chromium webkit > "$RUNNER_TEMP/playwright-install.log" 2>&1; echo $? > "$RUNNER_TEMP/playwright-install.status") &
 
       - name: Formatting follows Prettier
         run: npm run format:check
@@ -152,14 +152,14 @@ jobs:
       - name: Only the receipt worker carries the PDF library
         run: node scripts/check-receipt-chunks.mjs dist/frontend/browser
 
-      - name: Playwright's Chromium headless shell is installed
+      - name: Playwright's Chromium headless shell and WebKit are installed
         run: |
           for _ in $(seq 300); do
             [ -s "$RUNNER_TEMP/playwright-install.status" ] && break
             sleep 1
           done
           cat "$RUNNER_TEMP/playwright-install.log"
-          [ "$(cat "$RUNNER_TEMP/playwright-install.status" 2>/dev/null)" = 0 ] || { echo "::error::Playwright's Chromium headless shell was not installed (log above)"; exit 1; }
+          [ "$(cat "$RUNNER_TEMP/playwright-install.status" 2>/dev/null)" = 0 ] || { echo "::error::Playwright's Chromium headless shell or WebKit was not installed (log above)"; exit 1; }
 
       - name: End-to-end and accessibility tests
         run: npm run e2e
