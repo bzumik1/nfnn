@@ -144,6 +144,33 @@ class FixedWindowRateLimiterTest {
         assertThat(log.list).isEmpty();
     }
 
+    @Test
+    @DisplayName("Given a signed-in subject used up the limit, when the same subject asks from another address, then it is refused and another subject is not")
+    void should_refuse_the_subject_when_acquired_given_the_subject_used_up_the_limit() {
+        limiter.tryAcquire(new SubjectKey("0190a000-0000-7000-8000-000000000001"));
+        limiter.tryAcquire(new SubjectKey("0190a000-0000-7000-8000-000000000001"));
+
+        assertThat(limiter.tryAcquire(new SubjectKey("0190a000-0000-7000-8000-000000000001"))).isFalse();
+        assertThat(limiter.tryAcquire(new SubjectKey("0190a000-0000-7000-8000-000000000002"))).isTrue();
+    }
+
+    @Test
+    @DisplayName("Given a subject that reads like an address used up the limit, when that address asks, then the address has a window of its own")
+    void should_count_an_address_apart_when_acquired_given_a_subject_of_the_same_text_used_up_the_limit() {
+        limiter.tryAcquire(new SubjectKey("203.0.113.7"));
+        limiter.tryAcquire(new SubjectKey("203.0.113.7"));
+
+        assertThat(limiter.tryAcquire(key("203.0.113.7"))).isTrue();
+    }
+
+    @Test
+    @DisplayName("Given a signed-in subject, when it is counted, then nothing is logged")
+    void should_log_nothing_when_acquired_given_a_subject() {
+        limiter.tryAcquire(new SubjectKey("0190a000-0000-7000-8000-000000000001"));
+
+        assertThat(log.list).isEmpty();
+    }
+
     private static Logger logger() {
         return (Logger) LoggerFactory.getLogger(FixedWindowRateLimiter.class);
     }

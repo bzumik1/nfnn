@@ -257,6 +257,19 @@ export interface PrintableText {
 export type RowsInput = Readonly<Record<string, unknown>>;
 export type Answer = Readonly<Record<string, unknown>>;
 
+export interface SyncChunk {
+  readonly id: string;
+  readonly rowsSha256: string;
+  readonly count: number;
+  readonly rows: readonly Answer[];
+}
+
+export interface SyncManifest {
+  readonly subject: string;
+  readonly summary: Answer;
+  readonly chunks: readonly SyncChunk[];
+}
+
 export interface SharedCaseTopics {
   readonly 'admin-overview/year-overview.json': SharedCase<RowsInput, Answer>;
   readonly 'donor-summary/summary.json': SharedCase<RowsInput, Answer>;
@@ -273,6 +286,7 @@ export interface SharedCaseTopics {
     ReceiptFormattingExpected
   >;
   readonly 'signature/vector.json': SharedCase<SignatureVectorInput, SignatureVectorExpected>;
+  readonly 'sync/manifest.json': SharedCase<RowsInput, SyncManifest>;
   readonly 'receipts/printable.json': SharedCase<{ readonly text: string }, PrintableText>;
   readonly 'receipts/v1/frozen.json': SharedCase<FrozenReceiptInput, FrozenReceipt>;
   readonly 'receipts/v1/printed.json': SharedCase<{ readonly v2Sample: string }, PrintedReceipt>;
@@ -295,6 +309,7 @@ const REGISTERED_TOPICS: Readonly<Record<SharedCaseTopic, true>> = {
   'qr/totp.json': true,
   'receipts/formatting.json': true,
   'signature/vector.json': true,
+  'sync/manifest.json': true,
   'receipts/printable.json': true,
   'receipts/v1/frozen.json': true,
   'receipts/v1/printed.json': true,
