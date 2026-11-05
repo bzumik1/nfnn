@@ -1,10 +1,15 @@
 <section class="ui-card ui-card--padded devices" aria-labelledby="devices-title">
-  <h2 id="devices-title" class="ui-card__title" i18n="@@donor.account.devices.title">
+  <h2
+    #heading
+    id="devices-title"
+    class="ui-card__title"
+    tabindex="-1"
+    i18n="@@donor.account.devices.title"
+  >
     Přihlášená zařízení
   </h2>
   <p class="devices-intro" i18n="@@donor.account.devices.intro">
-    Prohlížeče a aplikace, ve kterých jste přihlášeni. Zařízení, které neznáte, odhlaste a změňte si
-    heslo.
+    Prohlížeče, ve kterých jste přihlášeni. Zařízení, které neznáte, odhlaste a změňte si heslo.
   </p>
   @if (loadError()) {
     <p class="ui-field-error" role="alert">{{ loadError() }}</p>
@@ -26,10 +31,8 @@
               <span class="device-date"
                 ><span i18n="@@donor.account.devices.since">přihlášeno</span>
                 {{ signedInOn(device) }}</span
-              >
-              ·
-              <span class="device-date"
-                ><span i18n="@@donor.account.devices.lastUsed">naposledy</span>
+              >&ngsp;<span class="device-date"
+                >· <span i18n="@@donor.account.devices.lastUsed">naposledy použito</span>
                 {{ lastUsed(device) }}</span
               >
             </span>
@@ -44,8 +47,9 @@
           } @else {
             <button
               type="button"
-              class="ui-button ui-button--danger-soft ui-button--small device-sign-out"
+              class="ui-button ui-button--danger-soft device-sign-out"
               [disabled]="signingOut() !== null"
+              [id]="signOutButtonId(device)"
               [attr.aria-label]="signOutLabel(device)"
               (click)="signOut(device)"
             >
@@ -61,6 +65,7 @@
     </ul>
     @if (hasOthers()) {
       <button
+        #othersButton
         type="button"
         class="ui-button ui-button--danger-outline devices-sign-out-others"
         [disabled]="signingOut() !== null"

@@ -104,7 +104,7 @@ class DonorAuthenticationServiceTest {
         assertThatThrownBy(() -> service.login("jana@example.cz", "correct horse battery", DeviceDescription.UNKNOWN))
                 .isInstanceOfSatisfying(EmailNotVerified.class, refused -> assertThat(refused.code()).isEqualTo("auth/email-not-verified"));
 
-        verify(sessions, never()).open(any(), anyBoolean(), any());
+        verify(sessions, never()).signIn(any(), anyBoolean(), any());
     }
 
     @Test
@@ -130,7 +130,7 @@ class DonorAuthenticationServiceTest {
         assertThatThrownBy(() -> service.login(erased.email().value(), "correct horse battery", DeviceDescription.UNKNOWN)).isInstanceOf(InvalidCredentials.class);
 
         verify(passwordHasher, never()).matches(any(), eq(HASH));
-        verify(sessions, never()).open(any(), anyBoolean(), any());
+        verify(sessions, never()).signIn(any(), anyBoolean(), any());
     }
 
     @Test
@@ -155,7 +155,7 @@ class DonorAuthenticationServiceTest {
         assertThatThrownBy(() -> service.login("jana@example.cz", "wrong horse battery", DeviceDescription.UNKNOWN))
                 .isInstanceOf(InvalidCredentials.class);
 
-        verify(sessions, never()).open(any(), anyBoolean(), any());
+        verify(sessions, never()).signIn(any(), anyBoolean(), any());
     }
 
     @Test
@@ -182,7 +182,7 @@ class DonorAuthenticationServiceTest {
         BCryptPasswordEncoder bcrypt = new BCryptPasswordEncoder(12);
         assertThat(bcrypt.matches("correct horse battery", unknownDonorHash)).isFalse();
         assertThat(bcrypt.matches(UUID.randomUUID().toString(), unknownDonorHash)).isFalse();
-        verify(sessions, never()).open(any(), anyBoolean(), any());
+        verify(sessions, never()).signIn(any(), anyBoolean(), any());
     }
 
     @Test
@@ -210,7 +210,7 @@ class DonorAuthenticationServiceTest {
                     assertThat(required.extensions()).containsEntry("challenge", required.challenge());
                 });
 
-        verify(sessions, never()).open(any(), anyBoolean(), any());
+        verify(sessions, never()).signIn(any(), anyBoolean(), any());
     }
 
     @Test
@@ -263,7 +263,7 @@ class DonorAuthenticationServiceTest {
 
         assertThat(factor.lastUsedStep()).isNotEqualTo(OptionalLong.of(Totp.stepAt(NOW)));
         verify(secondFactors, never()).save(any());
-        verify(sessions, never()).open(any(), anyBoolean(), any());
+        verify(sessions, never()).signIn(any(), anyBoolean(), any());
     }
 
     @Test
@@ -279,7 +279,7 @@ class DonorAuthenticationServiceTest {
 
         assertThatThrownBy(() -> service.completeSecondFactor(secret.value(), codeAt(NOW), DeviceDescription.UNKNOWN)).isInstanceOf(InvalidSecondFactorChallenge.class);
 
-        verify(sessions, never()).open(any(), anyBoolean(), any());
+        verify(sessions, never()).signIn(any(), anyBoolean(), any());
     }
 
     @Test
@@ -297,7 +297,7 @@ class DonorAuthenticationServiceTest {
         verify(challenges).reserveAttempt(challenge.id(), NOW, CHALLENGE_ATTEMPTS);
         verify(challenges, never()).markUsed(any(), any());
         verify(secondFactors, never()).save(any());
-        verify(sessions, never()).open(any(), anyBoolean(), any());
+        verify(sessions, never()).signIn(any(), anyBoolean(), any());
     }
 
     @Test

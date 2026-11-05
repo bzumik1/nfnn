@@ -3,14 +3,12 @@ package cz.novanadeje.app.donors.application;
 import cz.novanadeje.app.donors.domain.DeviceId;
 import cz.novanadeje.app.donors.domain.DeviceNotFound;
 import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
-import cz.novanadeje.app.donors.domain.DonorDevice;
 import cz.novanadeje.app.donors.domain.DonorDeviceRepository;
 import cz.novanadeje.app.donors.domain.DonorId;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
-import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -41,11 +39,9 @@ public class DonorDevicesService {
 
     @Transactional
     public void signOut(DonorId donorId, DeviceId deviceId) {
-        Instant now = clock.instant();
-        DonorDevice device = devices.findById(deviceId)
-                .filter(found -> found.belongsTo(donorId) && found.isActive())
-                .orElseThrow(() -> new DeviceNotFound(deviceId));
-        signOuts.end(device, DeviceSignOutReason.REMOTE_SIGN_OUT, now);
+        if (!signOuts.end(donorId, deviceId, DeviceSignOutReason.REMOTE_SIGN_OUT, clock.instant())) {
+            throw new DeviceNotFound(deviceId);
+        }
     }
 
     @Transactional

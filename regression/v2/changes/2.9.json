@@ -25,5 +25,11 @@
     "kind": "headers",
     "reason": "Plan v3 slice 2.9: the security chain's 401 carries the headers of every other 401 (cache-control, expires, pragma) instead of the issuer's 409",
     "contract": "docs/api-contract.md, Authentication, Devices"
+  },
+  {
+    "scenario": "donations/donor_device_sync: The device of an erased donor finds no chunk left while the token it holds is still valid*",
+    "kind": "removed",
+    "reason": "Plan v3 slice 2.9: the erasure signs out every device, so the browser token is refused with 401 auth/session-ended and the device gets no manifest at all; the scenario is renamed to 'The device of an erased donor is signed out, so its token gets neither the manifest nor a chunk'",
+    "contract": "docs/api-contract.md, Device sync; docs/security-overview.md, Donor authentication, Devices"
   }
 ]

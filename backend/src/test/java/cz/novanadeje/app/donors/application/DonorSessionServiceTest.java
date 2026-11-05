@@ -81,11 +81,11 @@ class DonorSessionServiceTest {
     }
 
     @Test
-    @DisplayName("Given a donor, when a session opens, then an access token is issued and only the hash of the refresh token is stored")
-    void should_issue_tokens_and_store_hash_when_session_opened() {
+    @DisplayName("Given a donor, when they sign in, then an access token is issued and only the hash of the refresh token is stored")
+    void should_issue_tokens_and_store_hash_when_signed_in() {
         when(accessTokens.issue(eq(DONOR), eq(Set.of(Role.DONOR)), any(DeviceId.class), eq(NOW))).thenReturn(new IssuedAccessToken("access", NOW.plus(Duration.ofMinutes(15))));
 
-        IssuedTokens tokens = service.open(donor(), false, DeviceDescription.UNKNOWN);
+        IssuedTokens tokens = service.signIn(donor(), false, DeviceDescription.UNKNOWN);
 
         ArgumentCaptor<RefreshToken> stored = ArgumentCaptor.forClass(RefreshToken.class);
         verify(refreshTokens).save(stored.capture());
@@ -141,16 +141,6 @@ class DonorSessionServiceTest {
         when(accessTokens.issue(eq(DONOR), eq(Set.of(Role.DONOR)), any(DeviceId.class), eq(NOW))).thenReturn(new IssuedAccessToken("access", NOW.plus(Duration.ofMinutes(15))));
 
         service.signIn(donor(), true, DeviceDescription.UNKNOWN);
-
-        verify(donors, never()).recordSignIn(any(), any());
-    }
-
-    @Test
-    @DisplayName("Given an administrator, when a session opens again after a credential change, then it is not counted as a sign-in")
-    void should_not_record_sign_in_when_session_opened_given_administrator() {
-        when(accessTokens.issue(eq(DONOR), eq(Set.of(Role.DONOR, Role.ADMIN)), any(DeviceId.class), eq(NOW))).thenReturn(new IssuedAccessToken("access", NOW.plus(Duration.ofMinutes(15))));
-
-        service.open(administrator(), true, DeviceDescription.UNKNOWN);
 
         verify(donors, never()).recordSignIn(any(), any());
     }
@@ -291,11 +281,11 @@ class DonorSessionServiceTest {
     }
 
     @Test
-    @DisplayName("Given an administrator, when a session opens with the second factor verified, then ADMIN is granted and the refresh token remembers the verification")
-    void should_grant_admin_and_flag_refresh_token_when_session_opened_given_administrator_with_second_factor() {
+    @DisplayName("Given an administrator, when they sign in with the second factor verified, then ADMIN is granted and the refresh token remembers the verification")
+    void should_grant_admin_and_flag_refresh_token_when_signed_in_given_administrator_with_second_factor() {
         when(accessTokens.issue(eq(DONOR), eq(Set.of(Role.DONOR, Role.ADMIN)), any(DeviceId.class), eq(NOW))).thenReturn(new IssuedAccessToken("access", NOW.plus(Duration.ofMinutes(15))));
 
-        IssuedTokens tokens = service.open(administrator(), true, DeviceDescription.UNKNOWN);
+        IssuedTokens tokens = service.signIn(administrator(), true, DeviceDescription.UNKNOWN);
 
         ArgumentCaptor<RefreshToken> stored = ArgumentCaptor.forClass(RefreshToken.class);
         verify(refreshTokens).save(stored.capture());
@@ -304,11 +294,11 @@ class DonorSessionServiceTest {
     }
 
     @Test
-    @DisplayName("Given an administrator, when a session opens without the second factor, then only DONOR is granted")
-    void should_grant_donor_only_when_session_opened_given_administrator_without_second_factor() {
+    @DisplayName("Given an administrator, when they sign in without the second factor, then only DONOR is granted")
+    void should_grant_donor_only_when_signed_in_given_administrator_without_second_factor() {
         when(accessTokens.issue(eq(DONOR), eq(Set.of(Role.DONOR)), any(DeviceId.class), eq(NOW))).thenReturn(new IssuedAccessToken("access", NOW.plus(Duration.ofMinutes(15))));
 
-        IssuedTokens tokens = service.open(administrator(), false, DeviceDescription.UNKNOWN);
+        IssuedTokens tokens = service.signIn(administrator(), false, DeviceDescription.UNKNOWN);
 
         ArgumentCaptor<RefreshToken> stored = ArgumentCaptor.forClass(RefreshToken.class);
         verify(refreshTokens).save(stored.capture());
@@ -502,13 +492,59 @@ class DonorSessionServiceTest {
         ended.end(DeviceSignOutReason.REMOTE_SIGN_OUT, NOW.minusSeconds(5));
         when(devices.findById(DEVICE)).thenReturn(Optional.of(ended));
         when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(existing));
-        when(donors.findById(DONOR)).thenReturn(Optional.of(donor()));
-        when(refreshTokens.markUsed(existing.id(), NOW)).thenReturn(true);
 
         assertThatThrownBy(() -> service.refresh(secret.value(), DeviceDescription.UNKNOWN)).isInstanceOf(InvalidRefreshToken.class);
 
+        verify(refreshTokens, never()).markUsed(any(), any());
+        verify(signOuts, never()).endAllOf(any(), any(), any());
         verify(accessTokens, never()).issue(any(), any(), any(), any());
         verify(refreshTokens, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Given a token used within the reuse grace whose device was signed out elsewhere meanwhile, when it is presented again, then it is refused without ending the donor's other sessions")
+    void should_refuse_without_ending_other_sessions_when_presented_again_given_device_signed_out_within_the_reuse_grace() {
+        RefreshTokenSecret secret = RefreshTokenSecret.generate();
+        RefreshToken used = rotated(secret, NOW.minusSeconds(30), UUID.randomUUID(), false);
+        used.revoke(NOW.minusSeconds(10));
+        DonorDevice ended = signedInDevice();
+        ended.end(DeviceSignOutReason.REMOTE_SIGN_OUT, NOW.minusSeconds(10));
+        when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(used));
+        when(devices.findById(DEVICE)).thenReturn(Optional.of(ended));
+
+        assertThatThrownBy(() -> service.refresh(secret.value(), DeviceDescription.UNKNOWN)).isInstanceOf(InvalidRefreshToken.class);
+
+        verify(signOuts, never()).endAllOf(any(), any(), any());
+        verify(refreshTokens, never()).supersedeIfUnused(any(), any());
+        verify(refreshTokens, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Given a token from before devices existed, used within the reuse grace, when it is presented again, then the new token stays on the device its first refresh opened")
+    void should_keep_the_device_of_the_first_refresh_when_presented_again_given_token_without_device_within_the_reuse_grace() {
+        RefreshTokenSecret secret = RefreshTokenSecret.generate();
+        Instant issued = NOW.minus(Duration.ofDays(3));
+        UUID successorId = UUID.randomUUID();
+        RefreshToken legacy = RefreshToken.reconstitute(UUID.randomUUID(), DONOR, secret.hash(), issued, issued.plus(REFRESH_TTL), false, null,
+                Set.of(), issued, NOW.minusSeconds(20), null, successorId, null, null);
+        RefreshToken successor = RefreshToken.reconstitute(successorId, DONOR, "successor-hash", NOW.minusSeconds(20),
+                NOW.minusSeconds(20).plus(REFRESH_TTL), false, null, Set.of(), NOW.minusSeconds(20), null, null, null, null, DEVICE);
+        DonorDevice opened = signedInDevice();
+        when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(legacy));
+        when(donors.findById(DONOR)).thenReturn(Optional.of(donor()));
+        when(refreshTokens.supersedeIfUnused(successorId, NOW)).thenReturn(true);
+        when(refreshTokens.findById(successorId)).thenReturn(Optional.of(successor));
+        when(devices.findById(DEVICE)).thenReturn(Optional.of(opened));
+        when(accessTokens.issue(DONOR, Set.of(Role.DONOR), DEVICE, NOW)).thenReturn(new IssuedAccessToken("access2", NOW.plus(Duration.ofMinutes(15))));
+
+        service.refresh(secret.value(), DeviceDescription.UNKNOWN);
+
+        ArgumentCaptor<DonorDevice> saved = ArgumentCaptor.forClass(DonorDevice.class);
+        verify(devices).save(saved.capture());
+        assertThat(saved.getAllValues()).extracting(DonorDevice::id).containsExactly(DEVICE);
+        ArgumentCaptor<RefreshToken> stored = ArgumentCaptor.forClass(RefreshToken.class);
+        verify(refreshTokens).save(stored.capture());
+        assertThat(stored.getValue().deviceId()).contains(DEVICE);
     }
 
     @Test
@@ -520,7 +556,7 @@ class DonorSessionServiceTest {
 
         service.close(secret.value());
 
-        verify(signOuts).end(any(DonorDevice.class), eq(DeviceSignOutReason.SIGNED_OUT), eq(NOW));
+        verify(signOuts).end(DONOR, DEVICE, DeviceSignOutReason.SIGNED_OUT, NOW);
     }
 
     @Test

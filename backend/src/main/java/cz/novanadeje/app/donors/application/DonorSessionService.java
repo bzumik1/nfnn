@@ -53,13 +53,6 @@ public class DonorSessionService {
     }
 
     @Transactional
-    public IssuedTokens open(Donor donor, boolean secondFactorVerified, DeviceDescription description) {
-        Instant now = clock.instant();
-        return issue(newDevice(donor, description, now), secondFactorVerified, donor.sessionRoles(secondFactorVerified), now)
-                .tokens();
-    }
-
-    @Transactional
     public IssuedTokens continueOn(Donor donor, boolean secondFactorVerified, RequestingDevice requesting) {
         Instant now = clock.instant();
         DonorDevice device = requesting.session().flatMap(devices::findById)
@@ -78,6 +71,9 @@ public class DonorSessionService {
         Instant now = clock.instant();
         RefreshToken token = refreshTokens.findBySecretHashForUpdate(RefreshTokenSecret.fromValue(presentedSecret).hash())
                 .orElseThrow(InvalidRefreshToken::new);
+        if (deviceEnded(token)) {
+            throw new InvalidRefreshToken();
+        }
         if (token.isSuperseded()) {
             throw replay(token, now);
         }
@@ -122,9 +118,15 @@ public class DonorSessionService {
         return new RefreshedSession(donor, successor.tokens());
     }
 
+    private boolean deviceEnded(RefreshToken token) {
+        return token.deviceId().flatMap(devices::findById).filter(device -> !device.isActive()).isPresent();
+    }
+
     private DonorDevice deviceOf(RefreshToken token, Donor donor, DeviceDescription description, Instant now) {
         if (token.deviceId().isEmpty()) {
-            return DonorDevice.signIn(donor.id(), description, token.issuedAt());
+            return token.successorId().flatMap(refreshTokens::findById).flatMap(RefreshToken::deviceId).flatMap(devices::findById)
+                    .filter(DonorDevice::isActive)
+                    .orElseGet(() -> DonorDevice.signIn(donor.id(), description, token.issuedAt()));
         }
         return token.deviceId().flatMap(devices::findById).filter(DonorDevice::isActive).orElseThrow(InvalidRefreshToken::new);
     }
@@ -139,8 +141,7 @@ public class DonorSessionService {
             }
             refreshTokens.revokeIfUnused(token.id(), now);
             token.successorId().ifPresent(successor -> refreshTokens.revokeIfUnused(successor, now));
-            token.deviceId().flatMap(devices::findById).filter(device -> device.belongsTo(token.donorId()))
-                    .ifPresent(device -> signOuts.end(device, DeviceSignOutReason.SIGNED_OUT, now));
+            token.deviceId().ifPresent(device -> signOuts.end(token.donorId(), device, DeviceSignOutReason.SIGNED_OUT, now));
         });
     }
 

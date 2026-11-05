@@ -43,6 +43,7 @@ public class DeviceSignOuts {
 
     @Transactional(propagation = Propagation.MANDATORY)
     public void endOthersOf(DonorId donorId, Optional<DeviceId> kept, Instant at) {
+        refreshTokens.lockAllOf(donorId);
         refreshTokens.revokeDevicelessBrowserTokensOf(donorId, at);
         devices.findActiveOf(donorId).stream()
                 .filter(device -> kept.filter(device.id()::equals).isEmpty())
@@ -50,7 +51,18 @@ public class DeviceSignOuts {
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
-    public void end(DonorDevice device, DeviceSignOutReason reason, Instant at) {
+    public boolean end(DonorId donorId, DeviceId deviceId, DeviceSignOutReason reason, Instant at) {
+        refreshTokens.lockAllOf(donorId);
+        return devices.findById(deviceId)
+                .filter(device -> device.belongsTo(donorId) && device.isActive())
+                .map(device -> {
+                    end(device, reason, at);
+                    return true;
+                })
+                .orElse(false);
+    }
+
+    private void end(DonorDevice device, DeviceSignOutReason reason, Instant at) {
         refreshTokens.revokeAllOfDevice(device.id(), at);
         if (device.end(reason, at)) {
             devices.save(device);

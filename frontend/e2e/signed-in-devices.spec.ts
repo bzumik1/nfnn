@@ -32,7 +32,7 @@ test.describe('Given a donor signed in on a Mac and an iPhone', () => {
 
     await expect(devices.locator('.device-name')).toHaveText(['Mac · Safari']);
     await expect(devices.getByRole('status').filter({ hasText: /\S/ })).toHaveText(
-      'iPhone · Safari je odhlášené. Pokud jste to nebyli vy, změňte si heslo.',
+      'Zařízení jsme odhlásili: iPhone · Safari. Pokud jste se na něm nepřihlásili vy, změňte si heslo.',
     );
     expect(deleted).toEqual([`DELETE /api/donors/me/devices/${signedInDevices[1].id}`]);
   });

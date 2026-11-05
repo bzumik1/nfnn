@@ -180,11 +180,12 @@ class JpaDonorDeviceRepositoryTest {
     }
 
     @Test
-    @DisplayName("Given tokens revoked or expired before the cutoff, one used but still valid and one live, when the spent ones are deleted, then only those revoked or expired before the cutoff go")
+    @DisplayName("Given a token revoked before the cutoff but expiring after it, one expired before it, one revoked after it, one used but still valid and one live, when the spent ones are deleted, then only those revoked or expired before the cutoff go, even one revoked before it that expires after it")
     void should_delete_only_revoked_or_expired_tokens_when_deleted_given_mixed_tokens() {
         DonorDevice phone = DonorDevice.signIn(jana, IPHONE_SAFARI, NOW.minus(Duration.ofDays(60)));
         devices.save(phone);
-        RefreshTokenSecret revokedSecret = token(phone, NOW.minus(Duration.ofDays(60)), null, NOW.minus(Duration.ofDays(59)));
+        RefreshTokenSecret revokedSecret = token(phone, NOW.minus(Duration.ofDays(35)), null, NOW.minus(Duration.ofDays(34)));
+        RefreshTokenSecret recentlyRevokedSecret = token(phone, NOW.minus(Duration.ofDays(20)), null, NOW.minus(Duration.ofDays(10)));
         RefreshTokenSecret expiredSecret = token(phone, NOW.minus(Duration.ofDays(50)), null, null);
         RefreshTokenSecret usedSecret = token(phone, NOW.minus(Duration.ofDays(1)), NOW.minus(Duration.ofHours(1)), null);
         RefreshTokenSecret liveSecret = token(phone, NOW, null, null);
@@ -195,6 +196,7 @@ class JpaDonorDeviceRepositoryTest {
         assertThat(deleted).isEqualTo(2);
         assertThat(refreshTokens.findBySecretHash(revokedSecret.hash())).isEmpty();
         assertThat(refreshTokens.findBySecretHash(expiredSecret.hash())).isEmpty();
+        assertThat(refreshTokens.findBySecretHash(recentlyRevokedSecret.hash())).isPresent();
         assertThat(refreshTokens.findBySecretHash(usedSecret.hash())).isPresent();
         assertThat(refreshTokens.findBySecretHash(liveSecret.hash())).isPresent();
     }

@@ -37,16 +37,18 @@ class DonorSessionCleanupServiceTest {
     private DeviceSignOuts signOuts;
 
     @Test
-    @DisplayName("Given a device whose tokens all expired, spent tokens and old ended devices, when the cleanup runs, then the device ends as expired and the old rows go")
+    @DisplayName("Given a device whose tokens all expired, one another sign-out ended meanwhile, spent tokens and old ended devices, when the cleanup runs, then the device ends as expired, only it is counted and the old rows go")
     void should_end_expired_device_and_delete_old_rows_when_run_given_spent_sessions() {
         DonorDevice idle = DonorDevice.signIn(JANA, DeviceDescription.UNKNOWN, NOW.minus(Duration.ofDays(20)));
-        when(devices.findActiveWithoutUsableTokenAt(NOW)).thenReturn(List.of(idle));
+        DonorDevice endedMeanwhile = DonorDevice.signIn(JANA, DeviceDescription.UNKNOWN, NOW.minus(Duration.ofDays(20)));
+        when(devices.findActiveWithoutUsableTokenAt(NOW)).thenReturn(List.of(idle, endedMeanwhile));
+        when(signOuts.end(JANA, idle.id(), DeviceSignOutReason.EXPIRED, NOW)).thenReturn(true);
+        when(signOuts.end(JANA, endedMeanwhile.id(), DeviceSignOutReason.EXPIRED, NOW)).thenReturn(false);
         when(refreshTokens.deleteSpentBefore(NOW.minus(Duration.ofDays(30)))).thenReturn(7);
         when(devices.deleteEndedBefore(NOW.minus(Duration.ofDays(400)))).thenReturn(2);
 
         SessionCleanup cleanup = new DonorSessionCleanupService(devices, refreshTokens, signOuts, Clock.fixed(NOW, ZoneOffset.UTC)).cleanUp();
 
-        verify(signOuts).end(idle, DeviceSignOutReason.EXPIRED, NOW);
         assertThat(cleanup).isEqualTo(new SessionCleanup(1, 7, 2));
     }
 }

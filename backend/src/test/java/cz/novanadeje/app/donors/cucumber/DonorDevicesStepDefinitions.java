@@ -28,6 +28,7 @@ public class DonorDevicesStepDefinitions {
     private static final String PASSWORD_PATH = "/api/donors/me/password";
     private static final String PROFILE_PATH = "/api/donors/me";
     private static final String DEVICES_PATH = "/api/donors/me/devices";
+    private static final UUID UNKNOWN_DEVICE = UUID.fromString("019a5a00-0000-7000-8000-000000000001");
     private static final Map<String, String> USER_AGENTS = Map.of(
             "iPhone", "Mozilla/5.0 (iPhone; CPU iPhone OS 26_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.1 Mobile/15E148 Safari/604.1",
             "Mac", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:145.0) Gecko/20100101 Firefox/145.0",
@@ -55,6 +56,16 @@ public class DonorDevicesStepDefinitions {
         }
         assertThat(response.getStatusCode().value()).withFailMessage("Signing in on the %s answered %s", device, response.getBody()).isEqualTo(200);
         remember(device, response);
+    }
+
+    @When("{string} signs in again on the {string} while it sends its old access token")
+    public void signsInAgainWhileItSendsItsOldAccessToken(String alias, String device) {
+        ScenarioDonors.Credentials credentials = donors.credentialsOf(alias);
+        onDevice(device, sessionOf(device).accessToken());
+        ResponseEntity<String> response = api.post(LOGIN_PATH, Map.of("email", credentials.email(), "password", credentials.password()));
+        if (response.getStatusCode().value() == 200) {
+            remember(device, response);
+        }
     }
 
     @When("{string} lists the devices on the {string}")
@@ -126,6 +137,12 @@ public class DonorDevicesStepDefinitions {
     public void someoneWithoutATokenSignsOutEveryOtherDevice() {
         api.forgetCredentials();
         api.delete(DEVICES_PATH);
+    }
+
+    @When("someone without a token signs out a device")
+    public void someoneWithoutATokenSignsOutADevice() {
+        api.forgetCredentials();
+        api.delete(DEVICES_PATH + "/" + UNKNOWN_DEVICE);
     }
 
     @Then("the devices are:")

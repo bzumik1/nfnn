@@ -53,11 +53,26 @@ Feature: A donor sees the devices signed in to the account and signs them out
     And "Jana" signs in on the "iPhone"
     When "Jana" signs out of the "iPhone"
     Then the response status is 204
+    When "Jana" reads the profile on the "iPhone"
+    Then the response status is 401
+    And the problem type ends with "auth/session-ended"
     When "Jana" lists the devices on the "Mac"
     Then the devices are:
       | platform | browser | current |
       | MAC      | FIREFOX | true    |
       | OTHER    | OTHER   | false   |
+
+  Scenario: A device signed out elsewhere still signs out and in again while it sends its old access token
+    Given "Jana" signs in on the "Mac"
+    And "Jana" signs in on the "iPhone"
+    When "Jana" signs out the "iPhone" on the "Mac"
+    Then the response status is 204
+    When "Jana" signs out of the "iPhone"
+    Then the response status is 204
+    When "Jana" signs in again on the "iPhone" while it sends its old access token
+    Then the response status is 200
+    When "Jana" reads the profile on the "iPhone"
+    Then the response status is 200
 
   Scenario: Signing out every other device keeps this one and the connected applications
     Given "Jana" is an administrator
@@ -76,6 +91,18 @@ Feature: A donor sees the devices signed in to the account and signs them out
     When the connector exchanges the connector token for an API token
     Then the response status is 200
     And the exchanged API token opens the administration
+    When the application refreshes its tokens
+    Then the response status is 200
+
+  Scenario: A password change also ends the connected applications
+    Given "Jana" is an administrator
+    And "Jana" connected the application "https://claude.ai/.well-known/oauth-client" with scope "admin:read"
+    And "Jana" signs in on the "Mac"
+    When "Jana" changes the password to "a much longer horse battery" on the "Mac"
+    Then the response status is 200
+    When the application refreshes its tokens
+    Then the response status is 400
+    And the token error is "invalid_grant"
 
   Scenario: A password change signs out every other device, and the one that changed it stays signed in
     Given "Jana" signs in on the "Mac"
@@ -104,6 +131,8 @@ Feature: A donor sees the devices signed in to the account and signs them out
     When someone without a token lists the devices
     Then the response status is 401
     When someone without a token signs out every other device
+    Then the response status is 401
+    When someone without a token signs out a device
     Then the response status is 401
 
   Scenario: A connected application cannot read or sign out the devices

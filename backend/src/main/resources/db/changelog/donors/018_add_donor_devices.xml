@@ -44,5 +44,14 @@
         <createIndex tableName="donor_refresh_token" indexName="ix_donor_refresh_token_device">
             <column name="device_id"/>
         </createIndex>
+        <createIndex tableName="donor_device" indexName="ix_donor_device_ended_at">
+            <column name="ended_at"/>
+        </createIndex>
+        <createIndex tableName="donor_refresh_token" indexName="ix_donor_refresh_token_revoked_at">
+            <column name="revoked_at"/>
+        </createIndex>
+        <createIndex tableName="donor_refresh_token" indexName="ix_donor_refresh_token_expires_at">
+            <column name="expires_at"/>
+        </createIndex>
     </changeSet>
 </databaseChangeLog>

@@ -63,7 +63,7 @@ class DonorSessionRefreshConcurrencyTest {
     @Test
     @DisplayName("Given two tabs that present the same refresh cookie at the same moment, when both refresh, then both get a session, only one of the two stays usable and no session of the donor is ended")
     void should_give_both_a_session_and_keep_one_usable_when_refreshed_at_once_given_the_same_cookie() throws Exception {
-        String cookie = new TransactionTemplate(transactionManager).execute(status -> sessions.open(jana, false, DeviceDescription.UNKNOWN).refreshToken());
+        String cookie = new TransactionTemplate(transactionManager).execute(status -> sessions.signIn(jana, false, DeviceDescription.UNKNOWN).refreshToken());
         CountDownLatch rowHeld = new CountDownLatch(1);
         CountDownLatch release = new CountDownLatch(1);
         ExecutorService callers = Executors.newFixedThreadPool(3);

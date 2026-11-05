@@ -23,8 +23,6 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -77,35 +75,21 @@ class DonorDevicesServiceTest {
     @Test
     @DisplayName("Given the donor's active device, when it is signed out, then it ends remotely")
     void should_end_remotely_when_signed_out_given_own_active_device() {
-        DonorDevice phone = usedAt(SIGNED_IN);
-        when(devices.findById(phone.id())).thenReturn(Optional.of(phone));
+        DeviceId phone = DeviceId.newId(SIGNED_IN);
+        when(signOuts.end(JANA, phone, DeviceSignOutReason.REMOTE_SIGN_OUT, NOW)).thenReturn(true);
 
-        service().signOut(JANA, phone.id());
+        service().signOut(JANA, phone);
 
-        verify(signOuts).end(phone, DeviceSignOutReason.REMOTE_SIGN_OUT, NOW);
+        verify(signOuts).end(JANA, phone, DeviceSignOutReason.REMOTE_SIGN_OUT, NOW);
     }
 
     @Test
-    @DisplayName("Given another donor's device, when it is signed out, then it is not found and nothing ends")
-    void should_not_find_when_signed_out_given_another_donors_device() {
-        DonorDevice petrs = DonorDevice.signIn(DonorId.newId(SIGNED_IN), IPHONE_SAFARI, SIGNED_IN);
-        when(devices.findById(petrs.id())).thenReturn(Optional.of(petrs));
+    @DisplayName("Given a device that is not the donor's active one (another donor's, ended or missing), when it is signed out, then it is not found")
+    void should_not_find_when_signed_out_given_device_not_ended_by_the_sign_out() {
+        DeviceId other = DeviceId.newId(SIGNED_IN);
+        when(signOuts.end(JANA, other, DeviceSignOutReason.REMOTE_SIGN_OUT, NOW)).thenReturn(false);
 
-        assertThatThrownBy(() -> service().signOut(JANA, petrs.id())).isInstanceOf(DeviceNotFound.class);
-        verify(signOuts, never()).end(any(), any(), any());
-    }
-
-    @Test
-    @DisplayName("Given a device that already ended or does not exist, when it is signed out, then it is not found")
-    void should_not_find_when_signed_out_given_ended_or_missing_device() {
-        DonorDevice ended = usedAt(SIGNED_IN);
-        ended.end(DeviceSignOutReason.SIGNED_OUT, SIGNED_IN.plusSeconds(60));
-        when(devices.findById(ended.id())).thenReturn(Optional.of(ended));
-        DeviceId missing = DeviceId.newId(NOW);
-        when(devices.findById(missing)).thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> service().signOut(JANA, ended.id())).isInstanceOf(DeviceNotFound.class);
-        assertThatThrownBy(() -> service().signOut(JANA, missing)).isInstanceOf(DeviceNotFound.class);
+        assertThatThrownBy(() -> service().signOut(JANA, other)).isInstanceOf(DeviceNotFound.class);
     }
 
     @Test

@@ -86,7 +86,7 @@ class DeviceSignOutsTest {
     }
 
     @Test
-    @DisplayName("Given the current device and another, when the others are signed out, then only the other ends, remotely, and the connected applications keep their tokens")
+    @DisplayName("Given the current device and another, when the others are signed out, then the donor's tokens are locked first, only the other ends, remotely, and the connected applications keep their tokens")
     void should_end_only_other_device_and_keep_connected_apps_when_others_signed_out_given_current_device() {
         DonorDevice current = device();
         DonorDevice other = device();
@@ -94,7 +94,10 @@ class DeviceSignOutsTest {
 
         signOuts().endOthersOf(JANA, Optional.of(current.id()), NOW);
 
-        verify(refreshTokens).revokeDevicelessBrowserTokensOf(JANA, NOW);
+        InOrder order = inOrder(refreshTokens, devices);
+        order.verify(refreshTokens).lockAllOf(JANA);
+        order.verify(refreshTokens).revokeDevicelessBrowserTokensOf(JANA, NOW);
+        order.verify(devices).findActiveOf(JANA);
         verify(refreshTokens, never()).revokeAllOf(any(), any());
         verify(refreshTokens, never()).revokeAllOfDevice(current.id(), NOW);
         verify(refreshTokens).revokeAllOfDevice(other.id(), NOW);
@@ -115,16 +118,51 @@ class DeviceSignOutsTest {
     }
 
     @Test
-    @DisplayName("Given a device that already ended, when it is ended again, then its tokens are revoked but nothing is saved or announced")
-    void should_announce_nothing_when_ended_given_device_already_ended() {
+    @DisplayName("Given a signed-in device, when it is ended, then the donor's tokens are locked before the device is read, its tokens are revoked and it ends and is announced")
+    void should_lock_then_end_and_announce_when_ended_given_active_device() {
+        DonorDevice phone = device();
+        when(devices.findById(phone.id())).thenReturn(Optional.of(phone));
+
+        boolean ended = signOuts().end(JANA, phone.id(), DeviceSignOutReason.REMOTE_SIGN_OUT, NOW);
+
+        assertThat(ended).isTrue();
+        InOrder order = inOrder(refreshTokens, devices, events);
+        order.verify(refreshTokens).lockAllOf(JANA);
+        order.verify(devices).findById(phone.id());
+        order.verify(refreshTokens).revokeAllOfDevice(phone.id(), NOW);
+        order.verify(devices).save(phone);
+        order.verify(events).publishEvent(new DeviceSignedOut(JANA.value(), phone.id().value(), NOW));
+        assertThat(phone.endReason()).contains(DeviceSignOutReason.REMOTE_SIGN_OUT);
+    }
+
+    @Test
+    @DisplayName("Given a device that already ended, when it is ended again, then nothing is revoked, saved or announced and its first reason stays")
+    void should_change_nothing_when_ended_given_device_already_ended() {
         DonorDevice ended = device();
         ended.end(DeviceSignOutReason.SIGNED_OUT, SIGNED_IN.plusSeconds(60));
+        when(devices.findById(ended.id())).thenReturn(Optional.of(ended));
 
-        signOuts().end(ended, DeviceSignOutReason.REMOTE_SIGN_OUT, NOW);
+        boolean result = signOuts().end(JANA, ended.id(), DeviceSignOutReason.REMOTE_SIGN_OUT, NOW);
 
-        verify(refreshTokens).revokeAllOfDevice(ended.id(), NOW);
+        assertThat(result).isFalse();
+        verify(refreshTokens, never()).revokeAllOfDevice(any(), any());
         verify(devices, never()).save(any());
         verify(events, never()).publishEvent(any(Object.class));
         assertThat(ended.endReason()).contains(DeviceSignOutReason.SIGNED_OUT);
+    }
+
+    @Test
+    @DisplayName("Given another donor's device, when it is ended for Jana, then nothing is revoked, saved or announced")
+    void should_change_nothing_when_ended_given_another_donors_device() {
+        DonorDevice petrs = DonorDevice.signIn(DonorId.newId(SIGNED_IN), DeviceDescription.UNKNOWN, SIGNED_IN);
+        when(devices.findById(petrs.id())).thenReturn(Optional.of(petrs));
+
+        boolean result = signOuts().end(JANA, petrs.id(), DeviceSignOutReason.REMOTE_SIGN_OUT, NOW);
+
+        assertThat(result).isFalse();
+        verify(refreshTokens, never()).revokeAllOfDevice(any(), any());
+        verify(devices, never()).save(any());
+        verify(events, never()).publishEvent(any(Object.class));
+        assertThat(petrs.isActive()).isTrue();
     }
 }

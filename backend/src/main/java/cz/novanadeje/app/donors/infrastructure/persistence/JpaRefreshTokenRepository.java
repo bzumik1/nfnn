@@ -66,6 +66,11 @@ class JpaRefreshTokenRepository implements RefreshTokenRepository {
     }
 
     @Override
+    public void lockAllOf(DonorId donorId) {
+        jpa.lockAllOfInIdOrder(donorId.value());
+    }
+
+    @Override
     public void revokeAllOf(DonorId donorId, Instant at) {
         jpa.lockAllOfInIdOrder(donorId.value());
         jpa.revokeAllOf(donorId.value(), at);

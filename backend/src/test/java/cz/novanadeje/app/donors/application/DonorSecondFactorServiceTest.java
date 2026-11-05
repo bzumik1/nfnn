@@ -276,7 +276,7 @@ class DonorSecondFactorServiceTest {
         assertThatThrownBy(() -> service.disable(DONOR, Confirmation.withPassword(PASSWORD), codeAt(NOW), DEVICE)).isInstanceOf(SecondFactorNotEnabled.class);
 
         verify(secondFactors, never()).delete(any());
-        verify(sessions, never()).open(any(), anyBoolean(), any());
+        verify(sessions, never()).signIn(any(), anyBoolean(), any());
         verifyNoInteractions(events);
     }
 

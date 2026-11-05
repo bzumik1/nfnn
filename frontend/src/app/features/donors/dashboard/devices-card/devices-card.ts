@@ -1,12 +1,17 @@
 /// <reference types="@angular/localize" />
 
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
+  DOCUMENT,
+  ElementRef,
   inject,
+  Injector,
   output,
   signal,
+  viewChild,
 } from '@angular/core';
 import { describeProblem, problemTypeEndsWith } from '../../../../core/auth/api-problem';
 import { AuthApi } from '../../../../core/auth/auth-api';
@@ -16,6 +21,7 @@ import { formatBankTime, formatDonationDate, pragueDay } from '../../../donation
 import { deviceName } from './device-labels';
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
+const DEVICE_NOT_FOUND = 'donors/device-not-found';
 const ALL_OTHERS = 'others';
 
 @Component({
@@ -27,6 +33,10 @@ const ALL_OTHERS = 'others';
 export class DevicesCard {
   private readonly auth = inject(AuthStore);
   private readonly authApi = inject(AuthApi);
+  private readonly injector = inject(Injector);
+  private readonly document = inject(DOCUMENT);
+  private readonly heading = viewChild.required<ElementRef<HTMLElement>>('heading');
+  private readonly othersButton = viewChild<ElementRef<HTMLButtonElement>>('othersButton');
 
   readonly sessionEnded = output<void>();
 
@@ -68,14 +78,14 @@ export class DevicesCard {
     }
     this.begin(device.id);
     this.authApi.signOutDevice(device.id).subscribe({
-      next: () => {
-        this.signingOut.set(null);
-        this.devices.update((list) => (list ?? []).filter((other) => other.id !== device.id));
-        this.signedOut.set(
-          $localize`:@@donor.account.devices.signedOut:${this.name(device)}:device: je odhlášené. Pokud jste to nebyli vy, změňte si heslo.`,
-        );
+      next: () => this.removed(device),
+      error: (failure: unknown) => {
+        if (problemTypeEndsWith(failure, DEVICE_NOT_FOUND)) {
+          this.removed(device);
+          return;
+        }
+        this.failed(failure);
       },
-      error: (failure: unknown) => this.failed(failure),
     });
   }
 
@@ -89,8 +99,11 @@ export class DevicesCard {
         this.signingOut.set(null);
         this.devices.update((list) => (list ?? []).filter((device) => device.current));
         this.signedOut.set(
-          $localize`:@@donor.account.devices.othersSignedOut:Ostatní zařízení jsou odhlášená.`,
+          this.auth.isAdmin()
+            ? $localize`:@@donor.account.devices.othersSignedOutAdmin:Ostatní zařízení jsou odhlášená. Připojené aplikace zůstávají připojené; odpojíte je na kartě Připojené aplikace.`
+            : $localize`:@@donor.account.devices.othersSignedOut:Ostatní zařízení jsou odhlášená.`,
         );
+        this.focusAfterRender(() => this.heading().nativeElement);
       },
       error: (failure: unknown) => this.failed(failure),
     });
@@ -107,12 +120,37 @@ export class DevicesCard {
     return $localize`:@@donor.account.devices.signOutLabel:Odhlásit ${this.name(device)}:device:`;
   }
 
+  protected signOutButtonId(device: SignedInDevice): string {
+    return `device-sign-out-${device.id}`;
+  }
+
   protected signedInOn(device: SignedInDevice): string {
     return formatDonationDate(pragueDay(device.signedInAt));
   }
 
   protected lastUsed(device: SignedInDevice): string {
     return formatBankTime(device.lastUsedAt);
+  }
+
+  private removed(device: SignedInDevice): void {
+    this.signingOut.set(null);
+    const list = this.devices() ?? [];
+    const position = list.findIndex((other) => other.id === device.id);
+    const remaining = list.filter((other) => other.id !== device.id);
+    const next = remaining.slice(position).find((other) => !other.current);
+    this.devices.set(remaining);
+    this.signedOut.set(
+      $localize`:@@donor.account.devices.signedOut:Zařízení jsme odhlásili: ${this.name(device)}:device:. Pokud jste se na něm nepřihlásili vy, změňte si heslo.`,
+    );
+    this.focusAfterRender(() =>
+      next
+        ? this.document.getElementById(this.signOutButtonId(next))
+        : (this.othersButton()?.nativeElement ?? this.heading().nativeElement),
+    );
+  }
+
+  private focusAfterRender(target: () => HTMLElement | null | undefined): void {
+    afterNextRender(() => target()?.focus(), { injector: this.injector });
   }
 
   private begin(target: string): void {
