@@ -159,6 +159,7 @@ app:
   donors:
     session:
       refresh-token-ttl: P14D
+      remember-days: ${SESSION_REMEMBER_DAYS:14}
     session-cleanup:
       cron: "0 10 4 * * *"
     password-reset:

@@ -1,8 +1,9 @@
-import { InjectionToken } from '@angular/core';
+import { inject, InjectionToken } from '@angular/core';
 import { AuthResponse } from './donor';
+import { BROWSER_JAR, SESSION_JAR } from './session-jar';
 
-export const REFRESH_LOCK_NAME = 'nfnn-refresh';
-export const SESSION_CHANNEL_NAME = 'nfnn-session';
+export const REFRESH_LOCK_NAME = BROWSER_JAR.lockName;
+export const SESSION_CHANNEL_NAME = BROWSER_JAR.channelName;
 export const SESSION_MESSAGE_VERSION = 1;
 export const REFRESH_REQUEST_TIMEOUT_MS = 15_000;
 export const REFRESH_LOCK_WAIT_MS = 20_000;
@@ -23,6 +24,12 @@ export interface SignedOut {
   readonly version: typeof SESSION_MESSAGE_VERSION;
 }
 
+export interface PublicActivity {
+  readonly kind: 'public-activity';
+  readonly version: typeof SESSION_MESSAGE_VERSION;
+  readonly at: number;
+}
+
 export const TAB_LOCKS = new InjectionToken<TabLocks | null>('TAB_LOCKS', {
   providedIn: 'root',
   factory: () => (typeof navigator !== 'undefined' && navigator.locks ? navigator.locks : null),
@@ -30,8 +37,10 @@ export const TAB_LOCKS = new InjectionToken<TabLocks | null>('TAB_LOCKS', {
 
 export const SESSION_CHANNEL = new InjectionToken<() => SessionChannel | null>('SESSION_CHANNEL', {
   providedIn: 'root',
-  factory: () => () =>
-    typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel(SESSION_CHANNEL_NAME),
+  factory: () => {
+    const name = inject(SESSION_JAR).channelName;
+    return () => (typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel(name));
+  },
 });
 
 export function sessionRefreshed(response: AuthResponse): SessionRefreshed {
@@ -40,6 +49,16 @@ export function sessionRefreshed(response: AuthResponse): SessionRefreshed {
 
 export function signedOut(): SignedOut {
   return { kind: 'signed-out', version: SESSION_MESSAGE_VERSION };
+}
+
+export function publicActivity(at: number): PublicActivity {
+  return { kind: 'public-activity', version: SESSION_MESSAGE_VERSION, at };
+}
+
+export function isPublicActivity(message: unknown): message is PublicActivity {
+  return (
+    isMessageOfKind(message, 'public-activity') && Number.isFinite((message as { at?: unknown }).at)
+  );
 }
 
 export function isSessionRefreshed(message: unknown): message is SessionRefreshed {

@@ -384,6 +384,21 @@ describe('Given the device vault over IndexedDB with real WebCrypto', () => {
       storage.close();
     });
 
+    it('and the page is left without a sign-out and Petr signs in on a public computer, then her copy keeps only its password wrap and Petr leaves nothing stored', async () => {
+      const copyId = vault.opened()!.store.copyId;
+      const later = anotherTab();
+
+      await later.signedIn(PETR, { kind: 'password', password: 'Petrovo heslo' }, true);
+
+      const entries = await storedEntries();
+      expect(entries.map((entry) => entry.copyId)).toEqual([copyId]);
+      expect(entries[0].wraps.map((wrap) => wrap.kind)).toEqual(['password']);
+      const storage = await rawStorage();
+      expect(await storage.sessionKey(copyId)).toBeNull();
+      storage.close();
+      expect(later.mode()).toBe('memory');
+    });
+
     it('and another tab signs out while her new password is being wrapped, then the copy still opens with the new password and shows her gifts', async () => {
       await vault.replaceContents(vault.opened()!.store, contentsOf(CANARY));
       derivation.hold();
@@ -648,6 +663,19 @@ describe('Given the device vault over IndexedDB with real WebCrypto', () => {
       expect(await indexedDB.databases()).toEqual([]);
       expect(setItem).not.toHaveBeenCalled();
       expect(persist).not.toHaveBeenCalled();
+      setItem.mockRestore();
+    });
+
+    it('and a reload restores her session, then the copy again lives in memory only and nothing reaches IndexedDB or Web Storage', async () => {
+      const setItem = vi.spyOn(Storage.prototype, 'setItem');
+
+      await vault.restored(JANA, true);
+
+      expect(vault.mode()).toBe('memory');
+      expect(vault.opened()).not.toBeNull();
+      expect(opener).not.toHaveBeenCalled();
+      expect(await indexedDB.databases()).toEqual([]);
+      expect(setItem).not.toHaveBeenCalled();
       setItem.mockRestore();
     });
 

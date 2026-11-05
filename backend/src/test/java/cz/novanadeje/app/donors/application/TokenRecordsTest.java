@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.SessionKind;
 import cz.novanadeje.app.donors.domain.OAuthScope;
 import cz.novanadeje.app.donors.domain.Role;
 import org.junit.jupiter.api.DisplayName;
@@ -17,7 +18,7 @@ class TokenRecordsTest {
     @Test
     @DisplayName("Given issued, exchanged and OAuth tokens, when they are printed, then no token appears, only that it is there")
     void should_mask_tokens_when_printed_given_token_records() {
-        assertThat(new IssuedTokens("access-secret", NOW, "refresh-secret", NOW, Set.of(Role.ADMIN)).toString())
+        assertThat(new IssuedTokens("access-secret", NOW, "refresh-secret", NOW, Set.of(Role.ADMIN), SessionKind.REMEMBERED).toString())
                 .doesNotContain("access-secret", "refresh-secret").contains("ADMIN");
         assertThat(new OAuthTokens("access-secret", NOW, "refresh-secret", Set.of(OAuthScope.ADMIN_READ)).toString())
                 .doesNotContain("access-secret", "refresh-secret");

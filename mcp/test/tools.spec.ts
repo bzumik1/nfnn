@@ -1698,6 +1698,17 @@ describe('Given an administrator connected with the writing permission', () => {
     expect(textOf(refused)).toContain('RECEIPT_FIRST_YEAR: Rok musí být mezi 2000 a 2100.');
   });
 
+  it('when the remembered sign-in length is changed, then the administration gets it', async () => {
+    const changed = await client.callTool({
+      name: 'nfnn_change_settings',
+      arguments: { changes: [{ name: 'SESSION_REMEMBER_DAYS', value: '30' }] },
+    });
+
+    expect(changed.isError).toBeFalsy();
+    const put = stack.backend.requests.find((request) => request.method === 'PUT');
+    expect(put?.body).toBe('{"changes":[{"name":"SESSION_REMEMBER_DAYS","value":"30"}]}');
+  });
+
   it('when a test e-mail is asked for, then it goes through the running mail settings without a password to the administrator', async () => {
     const result = await client.callTool({ name: 'nfnn_send_test_email', arguments: {} });
 

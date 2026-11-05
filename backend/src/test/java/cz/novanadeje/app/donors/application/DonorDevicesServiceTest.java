@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.SessionKind;
 import cz.novanadeje.app.donors.domain.DeviceBrowser;
 import cz.novanadeje.app.donors.domain.DeviceDescription;
 import cz.novanadeje.app.donors.domain.DeviceId;
@@ -45,7 +46,7 @@ class DonorDevicesServiceTest {
     }
 
     private static DonorDevice usedAt(Instant lastUse) {
-        DonorDevice device = DonorDevice.signIn(JANA, IPHONE_SAFARI, SIGNED_IN);
+        DonorDevice device = DonorDevice.signIn(JANA, IPHONE_SAFARI, SessionKind.REMEMBERED, SIGNED_IN);
         device.recordUse(lastUse);
         return device;
     }
@@ -71,10 +72,10 @@ class DonorDevicesServiceTest {
         DeviceId lowerId = new DeviceId(UUID.fromString("019a5a00-0000-7000-8000-000000000001"));
         DeviceId higherId = new DeviceId(UUID.fromString("019a5a00-0000-7000-8000-000000000002"));
         DeviceId highestId = new DeviceId(UUID.fromString("019a5a00-0000-7000-8000-000000000003"));
-        DonorDevice unknown = DonorDevice.reconstitute(lowerId, JANA, DeviceDescription.UNKNOWN, SIGNED_IN, SIGNED_IN, null, null);
+        DonorDevice unknown = DonorDevice.reconstitute(lowerId, JANA, DeviceDescription.UNKNOWN, SessionKind.REMEMBERED, SIGNED_IN, SIGNED_IN, null, null);
         DonorDevice iphoneChrome = DonorDevice.reconstitute(higherId, JANA,
-                new DeviceDescription(DevicePlatform.IPHONE, DeviceBrowser.CHROME), SIGNED_IN, SIGNED_IN, null, null);
-        DonorDevice iphoneSafari = DonorDevice.reconstitute(highestId, JANA, IPHONE_SAFARI, SIGNED_IN, SIGNED_IN, null, null);
+                new DeviceDescription(DevicePlatform.IPHONE, DeviceBrowser.CHROME), SessionKind.REMEMBERED, SIGNED_IN, SIGNED_IN, null, null);
+        DonorDevice iphoneSafari = DonorDevice.reconstitute(highestId, JANA, IPHONE_SAFARI, SessionKind.REMEMBERED, SIGNED_IN, SIGNED_IN, null, null);
         when(devices.findSignedInOf(JANA, NOW)).thenReturn(List.of(unknown, iphoneChrome, iphoneSafari));
 
         List<DeviceView> listed = service().list(JANA, Optional.empty());
