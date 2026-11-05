@@ -1,10 +1,10 @@
 import { utf8 } from './device-bytes';
-import type {
-  Argon2Parameters,
-  DerivedPasswordKey,
-  PasswordKeyAnswer,
-  PasswordKeyFailureReason,
-  PasswordKeyQuestion,
+import {
+  type Argon2Parameters,
+  type DerivedPasswordKey,
+  PASSWORD_KEY_LENGTH,
+  type PasswordKeyFailureReason,
+  type PasswordKeyQuestion,
 } from './password-key-protocol';
 
 export * from './password-key-protocol';
@@ -56,16 +56,15 @@ export async function deriveWithMeasuredParameters(
   password: string,
   salt: Uint8Array<ArrayBuffer>,
 ): Promise<MeasuredPasswordKey> {
-  const started = performance.now();
   try {
-    const { key } = await deriveWithParameters(
+    const { key, elapsedMs } = await deriveWithParameters(
       derivation,
       password,
       salt,
       STRONG_PASSWORD_PARAMETERS,
       STRONG_ATTEMPT_TIMEOUT_MS,
     );
-    if (performance.now() - started <= STRONG_PARAMETERS_BUDGET_MS) {
+    if (elapsedMs <= STRONG_PARAMETERS_BUDGET_MS) {
       return { key, parameters: STRONG_PASSWORD_PARAMETERS };
     }
     key.fill(0);
@@ -108,8 +107,14 @@ export class WorkerPasswordKeyDerivation implements PasswordKeyDerivation {
   ) {}
 
   derive(question: PasswordKeyQuestion, timeoutMs?: number): Promise<DerivedPasswordKey> {
-    const worker = this.startWorker();
     return new Promise<DerivedPasswordKey>((resolve, reject) => {
+      let worker: Worker;
+      try {
+        worker = this.startWorker();
+      } catch {
+        reject(new PasswordKeyFailure('failed'));
+        return;
+      }
       const timer = setTimeout(
         () => finish(new PasswordKeyFailure('timeout')),
         timeoutMs ?? this.timeoutMs,
@@ -126,12 +131,7 @@ export class WorkerPasswordKeyDerivation implements PasswordKeyDerivation {
           resolve(outcome);
         }
       };
-      worker.onmessage = ({ data }: MessageEvent<PasswordKeyAnswer>) =>
-        finish(
-          'key' in data
-            ? { key: copiedAndZeroed(data.key), elapsedMs: data.elapsedMs }
-            : new PasswordKeyFailure(data.failure),
-        );
+      worker.onmessage = ({ data }: MessageEvent<unknown>) => finish(answerOf(data));
       worker.onerror = () => finish(new PasswordKeyFailure('failed'));
       worker.onmessageerror = () => finish(new PasswordKeyFailure('failed'));
       worker.postMessage(question);
@@ -139,10 +139,19 @@ export class WorkerPasswordKeyDerivation implements PasswordKeyDerivation {
   }
 }
 
-function copiedAndZeroed(sent: Uint8Array<ArrayBuffer>): Uint8Array<ArrayBuffer> {
-  const key = new Uint8Array(sent);
-  sent.fill(0);
-  return key;
+function answerOf(data: unknown): DerivedPasswordKey | PasswordKeyFailure {
+  const answer = data as Partial<Record<keyof DerivedPasswordKey | 'failure', unknown>> | null;
+  if (
+    answer?.key instanceof Uint8Array &&
+    answer.key.length === PASSWORD_KEY_LENGTH &&
+    typeof answer.elapsedMs === 'number' &&
+    Number.isFinite(answer.elapsedMs)
+  ) {
+    return { key: answer.key as Uint8Array<ArrayBuffer>, elapsedMs: answer.elapsedMs };
+  }
+  return new PasswordKeyFailure(
+    answer?.failure === 'memory' || answer?.failure === 'timeout' ? answer.failure : 'failed',
+  );
 }
 
 export function acceptedParameters(parameters: Argon2Parameters): boolean {

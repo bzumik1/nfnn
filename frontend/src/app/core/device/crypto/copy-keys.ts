@@ -76,6 +76,9 @@ export class OpenCopy implements CopyIdentity {
   }
 
   static async withRoot(identity: CopyIdentity, root: Uint8Array<ArrayBuffer>): Promise<OpenCopy> {
+    if (root.length !== ROOT_KEY_LENGTH) {
+      throw new RangeError('A root key is 32 bytes');
+    }
     const dataKeyBytes = await hkdfSha256(
       root,
       NO_SALT,

@@ -33,17 +33,16 @@ export async function argon2WorkerAnswer(
   now: () => number = () => performance.now(),
 ): Promise<PasswordKeyAnswer> {
   try {
-    return {
-      elapsedMs: now() * 0,
-      key: await argon2id({
-        password: question.password,
-        salt: question.salt,
-        memoryKiB: question.parameters.memoryKiB,
-        iterations: question.parameters.iterations,
-        parallelism: question.parameters.parallelism,
-        hashLength: PASSWORD_KEY_LENGTH,
-      }),
-    };
+    const started = now();
+    const key = await argon2id({
+      password: question.password,
+      salt: question.salt,
+      memoryKiB: question.parameters.memoryKiB,
+      iterations: question.parameters.iterations,
+      parallelism: question.parameters.parallelism,
+      hashLength: PASSWORD_KEY_LENGTH,
+    });
+    return { key, elapsedMs: now() - started };
   } catch (failure: unknown) {
     return { failure: argon2FailureOf(failure) };
   } finally {
@@ -52,8 +51,5 @@ export async function argon2WorkerAnswer(
 }
 
 export function argon2FailureOf(failure: unknown): PasswordKeyFailureReason {
-  if (failure instanceof RangeError) {
-    return 'memory';
-  }
-  return failure instanceof Error && /memory/i.test(failure.message) ? 'memory' : 'failed';
+  return failure instanceof RangeError ? 'memory' : 'failed';
 }

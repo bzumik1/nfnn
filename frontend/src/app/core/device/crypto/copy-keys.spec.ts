@@ -195,7 +195,9 @@ describe('Given a new device copy', () => {
     });
 
     it('then the password typed in its decomposed form opens it too', async () => {
-      const opened = await openWithPassword(copy, wrap, 'Knížka 2026', derivation);
+      expect(DECOMPOSED_PASSWORD).not.toBe(PASSWORD);
+
+      const opened = await openWithPassword(copy, wrap, DECOMPOSED_PASSWORD, derivation);
 
       expect(opened.copyId).toBe(copy.copyId);
     });
