@@ -111,5 +111,17 @@
     "test": "operations.application.backup.BackupWatchServiceTest > Given healthy backups and nothing reported, when the check runs, then nothing happens",
     "reason": "Plan v3 slice 2.28: the backup check announces the resolved backup alert at every healthy check, so a change lost to a crash is put right by the next check",
     "replacement": "operations.application.backup.BackupWatchServiceTest > Given healthy backups and nothing reported, when the check runs, then only the resolved backup alert is announced and nothing is reported or saved"
+  },
+  {
+    "kind": "log-field",
+    "line": "operations.application.push.PushAlertDispatcher: Push alert <enum> attempt <n>: <n> delivered, <n> failed, <n> removed",
+    "reason": "Plan v3 slice 2.28 logs the outcome of every push alert attempt (the first send and the retries after 1, 5 and 15 minutes)",
+    "security": {
+      "approvedIn": "PR #327, Jakub 2026-11-05",
+      "fields": {
+        "<enum>": "the kind of the alert",
+        "<n>": "the attempt number, then the devices delivered, failed and removed"
+      }
+    }
   }
 ]
