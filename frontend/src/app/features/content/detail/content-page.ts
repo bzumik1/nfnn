@@ -1,3 +1,4 @@
+import { FocalPoint } from '../../../shared/ui/focal-point/focal-point';
 import { formatDonationDate } from '../../donations/donation-date';
 import { NewsArticleResponse } from '../news-api';
 import { ProjectResponse } from '../projects-api';
@@ -17,6 +18,7 @@ export interface ContentPage {
   body: string;
   imageId: string | null;
   imageAlt: string;
+  imageFocalPoint: FocalPoint | null;
   slug: string;
   backPath: string;
   signer: ContentSigner | null;
@@ -31,6 +33,7 @@ export function newsPage(article: NewsArticleResponse): ContentPage {
     body: article.body,
     imageId: article.coverImage?.id ?? null,
     imageAlt: article.coverImage?.alt ?? '',
+    imageFocalPoint: article.coverImage?.focalPoint ?? null,
     slug: article.slug,
     backPath: '/aktuality',
     signer: article.signer
@@ -51,6 +54,7 @@ export function projectPage(project: ProjectResponse): ContentPage {
     body: project.body,
     imageId: project.coverImage?.id ?? null,
     imageAlt: project.coverImage?.alt ?? '',
+    imageFocalPoint: project.coverImage?.focalPoint ?? null,
     slug: project.slug,
     backPath: '/projekty',
     signer: null,

@@ -42,7 +42,7 @@ class DonorCredentialsController {
         passwordLimiter.check(http.getRemoteAddr());
         return SessionResponses.opened(HttpStatus.OK,
                 credentials.changePassword(DonorId.of(jwt.getSubject()), SessionRoles.secondFactorVerified(jwt), request.confirmation(),
-                        request.newPassword()), clock.instant());
+                        request.newPassword(), SessionDevices.requesting(jwt, http)), clock.instant());
     }
 
     @PostMapping("/password/remove")
@@ -50,8 +50,8 @@ class DonorCredentialsController {
                                                 HttpServletRequest http) {
         passwordLimiter.check(http.getRemoteAddr());
         return SessionResponses.opened(HttpStatus.OK,
-                credentials.removePassword(DonorId.of(jwt.getSubject()), SessionRoles.secondFactorVerified(jwt), request.confirmation()),
-                clock.instant());
+                credentials.removePassword(DonorId.of(jwt.getSubject()), SessionRoles.secondFactorVerified(jwt), request.confirmation(),
+                        SessionDevices.requesting(jwt, http)), clock.instant());
     }
 
     @PostMapping("/email-change")

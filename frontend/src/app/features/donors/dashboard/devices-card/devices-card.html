@@ -1,0 +1,101 @@
+<section class="ui-card ui-card--padded devices" aria-labelledby="devices-title">
+  <h2
+    #heading
+    id="devices-title"
+    class="ui-card__title"
+    tabindex="-1"
+    i18n="@@donor.account.devices.title"
+  >
+    Přihlášená zařízení
+  </h2>
+  <p class="devices-intro" i18n="@@donor.account.devices.intro">
+    Prohlížeče, ve kterých jste přihlášeni. Zařízení, které neznáte, odhlaste a změňte si heslo.
+  </p>
+  @if (loadError()) {
+    <p class="ui-field-error" role="alert">{{ loadError() }}</p>
+    <button
+      type="button"
+      class="ui-button devices-retry"
+      (click)="loadDevices()"
+      i18n="@@donor.account.devices.retry"
+    >
+      Načíst znovu
+    </button>
+  } @else if (devices(); as list) {
+    <ul class="device-list">
+      @for (device of list; track device.id) {
+        <li class="device">
+          <div class="device-body">
+            <span class="device-name">{{ name(device) }}</span>
+            <span class="device-dates">
+              <span class="device-date"
+                ><span i18n="@@donor.account.devices.since">přihlášeno</span>&ngsp;<span
+                  class="device-date-value"
+                  >{{ signedInOn(device) }}</span
+                ></span
+              >&ngsp;<span class="device-date"
+                >·&nbsp;<span i18n="@@donor.account.devices.lastUsed">naposledy použito</span
+                >&ngsp;<span class="device-date-value">{{ lastUsed(device) }}</span></span
+              >
+            </span>
+          </div>
+          @if (device.current) {
+            <span
+              class="ui-badge ui-badge--accent device-current"
+              i18n="@@donor.account.devices.current"
+            >
+              Toto zařízení
+            </span>
+          } @else {
+            <button
+              type="button"
+              class="ui-button ui-button--danger-soft device-sign-out"
+              [disabled]="signingOut() !== null"
+              [id]="signOutButtonId(device)"
+              [attr.aria-label]="signOutLabel(device)"
+              (click)="signOut(device)"
+            >
+              @if (signingOut() === device.id) {
+                <span i18n="@@donor.account.devices.signingOut">Odhlašujeme…</span>
+              } @else {
+                <span i18n="@@donor.account.devices.signOut">Odhlásit</span>
+              }
+            </button>
+          }
+        </li>
+      }
+    </ul>
+    @if (hasOthers()) {
+      <button
+        #othersButton
+        type="button"
+        class="ui-button ui-button--danger-outline devices-sign-out-others"
+        [disabled]="signingOut() !== null"
+        (click)="signOutOthers()"
+      >
+        @if (signingOutOthers()) {
+          <span i18n="@@donor.account.devices.signingOut">Odhlašujeme…</span>
+        } @else {
+          <span i18n="@@donor.account.devices.signOutOthers"
+            >Odhlásit všechna ostatní zařízení</span
+          >
+        }
+      </button>
+    } @else {
+      <p class="devices-empty" i18n="@@donor.account.devices.empty">Jinde přihlášení nejste.</p>
+    }
+  } @else {
+    <p class="devices-empty" role="status" i18n="@@donor.account.devices.loading">
+      Načítáme přihlášená zařízení…
+    </p>
+  }
+
+  @if (actionError()) {
+    <p class="ui-field-error" role="alert">{{ actionError() }}</p>
+  }
+  <p class="ui-form-status devices-status" role="status">
+    @if (signedOut(); as message) {
+      <span>{{ message }}</span>
+    }
+  </p>
+</section>

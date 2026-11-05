@@ -2,6 +2,7 @@ import { expect, Locator, Page } from '@playwright/test';
 import { FOUNDATION_PAYMENT_DETAILS } from './qr-matrices';
 import { mockReceiptIssuing, ReceiptIssuing } from './receipt-issuing';
 import { noSignature, signatory } from './signature-image';
+import type { RouteTarget } from './fixtures';
 
 export const donor = {
   id: '01a18e56-bdb0-775a-bd0a-a60756831369',
@@ -182,7 +183,7 @@ export const receiptSigningKeys = {
 };
 
 export async function mockDonorApi(
-  page: Page,
+  page: RouteTarget,
   donations: DonorApiMock = noDonations,
 ): Promise<void> {
   if (donations.receipts) {
@@ -240,10 +241,14 @@ export async function mockDonorApi(
     (url) => url.pathname === '/api/donors/me/passkeys',
     (route) => route.fulfill({ json: { items: [] } }),
   );
+  await page.route(
+    (url) => url.pathname === '/api/donors/me/devices',
+    (route) => route.fulfill({ json: { items: signedInDevices } }),
+  );
   await mockDonorSync(page, donations.sync ?? emptyDonorSync);
 }
 
-export async function mockDonorSync(page: Page, sync: DonorSyncMock): Promise<void> {
+export async function mockDonorSync(page: RouteTarget, sync: DonorSyncMock): Promise<void> {
   await page.route(
     (url) => url.pathname === '/api/donations/me/sync',
     (route) =>
@@ -270,6 +275,25 @@ export async function mockDonorSync(page: Page, sync: DonorSyncMock): Promise<vo
     },
   );
 }
+
+export const signedInDevices = [
+  {
+    id: '019a5a3c-0000-7000-8000-000000000001',
+    platform: 'MAC',
+    browser: 'SAFARI',
+    signedInAt: '2026-10-18T07:00:00Z',
+    lastUsedAt: '2026-10-18T08:05:00Z',
+    current: true,
+  },
+  {
+    id: '019a5a3c-0000-7000-8000-000000000002',
+    platform: 'IPHONE',
+    browser: 'SAFARI',
+    signedInAt: '2026-10-12T18:00:00Z',
+    lastUsedAt: '2026-10-17T19:05:00Z',
+    current: false,
+  },
+];
 
 export const connectionRequest =
   '/pripojeni?client_id=https%3A%2F%2Fclaude.ai%2F.well-known%2Foauth-client&redirect_uri=https%3A%2F%2Fclaude.ai%2Fapi%2Fmcp%2Fauth_callback&response_type=code&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256&scope=admin%3Aread%20admin%3Awrite&resource=http%3A%2F%2Flocalhost%3A4200%2Fmcp&state=xyz';

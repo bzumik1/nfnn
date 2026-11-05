@@ -214,8 +214,14 @@
 
               <div class="image-field">
                 <p class="field-label" i18n="@@admin.projectEditor.image">Fotka (nepovinné)</p>
-                @if (previewUrl(); as url) {
-                  <img class="image-preview" [src]="url" alt="" width="480" height="300" />
+                @if (coverImage(); as cover) {
+                  <app-focal-point-picker
+                    inputId="project-focal-point"
+                    [imageId]="cover.id"
+                    [shapes]="focalShapes"
+                    [point]="cover.focalPoint"
+                    (pointChange)="focalPointChanged($event)"
+                  />
                 }
                 <div class="image-actions">
                   <app-file-button

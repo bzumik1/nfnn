@@ -52,6 +52,7 @@ const RECEIPTS_URL = '/api/donations/me/receipts';
 const BANK_CHECK_URL = '/api/donations/me/bank-check';
 const BANK_ACCOUNTS_URL = '/api/donations/me/bank-accounts';
 const PASSKEYS_URL = '/api/donors/me/passkeys';
+const DEVICES_URL = '/api/donors/me/devices';
 const PAYMENT_DETAILS_URL = '/api/donations/payment-details';
 const EARLIER = '2026-10-18T08:05:30Z';
 const LATER = '2026-10-18T08:07:10Z';
@@ -711,6 +712,7 @@ describe('Given a signed-in donor in the donor area', () => {
         await go(url);
         if (url === '/darce/udaje') {
           http.expectOne(PASSKEYS_URL).flush({ items: [] });
+          http.expectOne(DEVICES_URL).flush({ items: [] });
           await settle();
         }
         expect(root().querySelectorAll('h1')).toHaveLength(1);
@@ -3012,11 +3014,13 @@ describe('Given a signed-in donor in the donor area', () => {
     it('then the details on the receipt and one card for sign-in and security show, without connected applications for a donor', async () => {
       await open('/darce/udaje');
       http.expectOne(PASSKEYS_URL).flush({ items: [] });
+      http.expectOne(DEVICES_URL).flush({ items: [] });
       await respond(twoYearSummary(), twoYearDonations());
 
       expect(texts('h2')).toEqual([
         'Údaje na potvrzení o daru',
         'Přihlášení a zabezpečení',
+        'Přihlášená zařízení',
         'Data v tomto zařízení',
         'Smazání účtu',
       ]);
@@ -3033,6 +3037,7 @@ describe('Given a signed-in donor in the donor area', () => {
     it('then a last section says how to ask for deleting the account, what goes and what stays', async () => {
       await open('/darce/udaje');
       http.expectOne(PASSKEYS_URL).flush({ items: [] });
+      http.expectOne(DEVICES_URL).flush({ items: [] });
       await respond(twoYearSummary(), twoYearDonations());
 
       expect(element('.account-deletion')?.getAttribute('aria-labelledby')).toBe(

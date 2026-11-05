@@ -71,10 +71,23 @@ Feature: An administrator's device keeps a copy of the accounts and the administ
     And a person "Andrea" is registered
     And "Jana" is an administrator
     And "Andrea" is an administrator
+    And "Andrea" holds a browser token from before the signed-in devices
     And an administration device of "Andrea" syncs the donors
     When "Jana" removes "Andrea" from the administrators
     And an administration device of "Andrea" syncs the donors
     Then the administration device was told that "Andrea" no longer holds the administration
+
+  Scenario: An administrator whose role was removed is signed out on every device, so the device's next sync is refused at once
+    Given today is 2026-10-17
+    And a person "Jana" is registered
+    And a person "Andrea" is registered
+    And "Jana" is an administrator
+    And "Andrea" is an administrator
+    And an administration device of "Andrea" syncs the donors
+    When "Jana" removes "Andrea" from the administrators
+    And "Andrea" asks for the administration's donors sync manifest
+    Then the response status is 401
+    And the problem type ends with "auth/session-ended"
 
   Scenario: The chunks come in the asked order, a repeated chunk once, up to 64 in one request, and no cache keeps an answer
     Given today is 2026-10-17

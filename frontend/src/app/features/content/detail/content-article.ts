@@ -9,6 +9,7 @@ import {
 import { RouterLink } from '@angular/router';
 import { canonicalAddress } from '../../../core/seo/canonical-link';
 import { Avatar } from '../../../shared/ui/avatar/avatar';
+import { FocalPointCrop } from '../../../shared/ui/focal-point/focal-point';
 import { Markdown } from '../../../shared/ui/markdown/markdown';
 import { ShareButton } from '../../../shared/ui/share-button/share-button';
 import { ZoomPhoto } from '../../../shared/ui/zoom-viewer/zoom-content';
@@ -23,7 +24,7 @@ const PORTRAIT_WIDTH = 480;
 
 @Component({
   selector: 'app-content-article',
-  imports: [RouterLink, Markdown, Avatar, ShareButton, Zoomable],
+  imports: [RouterLink, Markdown, Avatar, ShareButton, Zoomable, FocalPointCrop],
   templateUrl: './content-article.html',
   styleUrl: './content-article.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

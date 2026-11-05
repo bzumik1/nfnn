@@ -463,7 +463,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Aktualita',
       description:
-        'One news article whole, draft or published: every field nfnn_update_news takes, with its text and photo, and live (whether the site shows it today; false for a draft and before its published date).',
+        'One news article whole, draft or published: every field nfnn_update_news takes, with its text and photo (coverImage.focalPoint is the spot the site crops around, set with nfnn_set_photo_focal_point), and live (whether the site shows it today; false for a draft and before its published date).',
       inputSchema: z.object({ id: UUID }),
       annotations: READ_ONLY,
     },
@@ -482,7 +482,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Projekt',
       description:
-        'One project whole, draft or published: every field nfnn_update_project takes, with its text, year, category and photo, and live (whether the site shows it today; false for a draft and before its published date).',
+        'One project whole, draft or published: every field nfnn_update_project takes, with its text, year, category and photo (coverImage.focalPoint as for news), and live (whether the site shows it today; false for a draft and before its published date).',
       inputSchema: z.object({ id: UUID }),
       annotations: READ_ONLY,
     },
@@ -502,7 +502,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Fotka v sekci O nás',
       description:
-        'The photo the home page shows in its About section: its id, size in pixels, alt (read by screen readers) and caption (shown under it to every visitor), or photo null while the site shows its placeholder photo. Change it with nfnn_update_about.',
+        'The photo the home page shows in its About section: its id, size in pixels, alt (read by screen readers) and caption (shown under it to every visitor) and focalPoint (set with nfnn_set_photo_focal_point), or photo null while the site shows its placeholder photo. Change it with nfnn_update_about.',
       annotations: READ_ONLY,
     },
     async (ctx) =>

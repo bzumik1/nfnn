@@ -98,7 +98,9 @@ test.describe('Given an administrator managing the news', () => {
     await expect(page).toHaveURL(`/sprava/aktuality/${ARTICLE_ID}`);
     await expect(page.getByRole('heading', { level: 1, name: 'Úprava aktuality' })).toBeFocused();
     await expect(page.getByLabel('Titulek')).toHaveValue('Zahrada pro děti');
-    await expect(page.locator('.image-preview')).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Fotka, klepnutím nastavíte bod výřezu' }),
+    ).toBeVisible();
     await expect(page.locator('.publish-state .ui-badge')).toHaveText('Na webu');
     await expect(
       page.getByRole('link', { name: 'Otevřít na webu (v novém okně)' }),
@@ -118,9 +120,26 @@ test.describe('Given an administrator managing the news', () => {
           json: { id: IMAGE_ID, url: `/api/content/media/${IMAGE_ID}`, width: 1600, height: 1000 },
         }),
     );
+    const placed: unknown[] = [];
+    await page.route(
+      (url) => url.pathname === `${MEDIA}/${IMAGE_ID}`,
+      (route) => {
+        placed.push(route.request().postDataJSON());
+        return route.fulfill({
+          json: {
+            id: IMAGE_ID,
+            url: `/api/content/media/${IMAGE_ID}`,
+            width: 1600,
+            height: 1000,
+            focalPoint: { x: 50, y: 50 },
+          },
+        });
+      },
+    );
     await page.route(
       (url) => url.pathname === NEWS,
       (route) => {
+        expect(placed).toHaveLength(1);
         created.push(route.request().postDataJSON());
         return route.fulfill({ status: 201, json: draft({ coverImage: article().coverImage }) });
       },
@@ -165,9 +184,15 @@ test.describe('Given an administrator managing the news', () => {
       mimeType: 'image/png',
       buffer: TINY_PNG,
     });
-    await expect(page.locator('.image-preview')).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Fotka, klepnutím nastavíte bod výřezu' }),
+    ).toBeVisible();
     await expect(page.getByRole('button', { name: 'Odebrat fotku' })).toBeVisible();
     await page.getByLabel('Popis fotky').fill('Lidé na koncertě');
+    await expect(page.getByText('Bez bodu výřezu: web fotku ořízne jako dosud.')).toBeVisible();
+    await page.getByRole('button', { name: 'Fotka, klepnutím nastavíte bod výřezu' }).click();
+    await expect(page.getByText('Bod výřezu: 50 % zleva, 50 % shora.')).toBeVisible();
+    await expect(page.getByRole('figure')).toHaveText(['Karta v Aktualitách', 'Nahoře v článku']);
 
     await page.getByRole('button', { name: 'Náhled', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Náhled', exact: true })).toHaveAttribute(
@@ -189,6 +214,7 @@ test.describe('Given an administrator managing the news', () => {
       'Aktualitu jsme uložili jako koncept. Na web ji dostanete tlačítkem Uložit a zveřejnit.',
     );
     await expect(page).toHaveURL(`/sprava/aktuality/${DRAFT_ID}`);
+    expect(placed).toEqual([{ focalPoint: { x: 50, y: 50 } }]);
     expect(created).toEqual([
       {
         title: 'Benefiční koncert',

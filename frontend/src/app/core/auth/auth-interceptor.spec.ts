@@ -130,9 +130,10 @@ describe('Given the auth interceptor', () => {
     expect(store.signedIn()).toBe(false);
   });
 
-  it('when the server says the session ended and the refresh is refused, then the donor is signed out here', () => {
+  it('when the device was signed out elsewhere, then the refresh is refused, the failure reaches the caller and the session is forgotten', () => {
     signIn('token-1');
-    client.get('/api/donors/me').subscribe({ error: () => undefined });
+    let failure: unknown;
+    client.get('/api/donors/me').subscribe({ error: (reason: unknown) => (failure = reason) });
 
     http
       .expectOne('/api/donors/me')
@@ -141,6 +142,7 @@ describe('Given the auth interceptor', () => {
       .expectOne('/api/donors/auth/refresh')
       .flush(problem('auth/invalid-refresh-token'), { status: 401, statusText: 'Unauthorized' });
 
+    expect((failure as HttpErrorResponse).status).toBe(401);
     expect(store.signedIn()).toBe(false);
   });
 

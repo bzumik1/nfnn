@@ -30,13 +30,13 @@
           (ngSubmit)="submit(aboutForm)"
           novalidate
         >
-          @if (previewUrl(); as url) {
-            <img
-              class="photo-preview"
-              [src]="url"
-              alt=""
-              [attr.width]="chosen()?.width"
-              [attr.height]="chosen()?.height"
+          @if (chosen(); as photo) {
+            <app-focal-point-picker
+              inputId="about-focal-point"
+              [imageId]="photo.id"
+              [hint]="focalPointHint"
+              [point]="photo.focalPoint"
+              (pointChange)="focalPointChanged($event)"
             />
           } @else {
             <p class="photo-state" i18n="@@admin.about.none">

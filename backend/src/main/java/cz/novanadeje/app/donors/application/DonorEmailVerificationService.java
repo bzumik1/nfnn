@@ -1,5 +1,7 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
+import cz.novanadeje.app.donors.domain.DeviceDescription;
 import cz.novanadeje.app.donors.application.event.DonorEmailAddressInUse;
 import cz.novanadeje.app.donors.application.event.DonorEmailChangeRequested;
 import cz.novanadeje.app.donors.application.event.DonorEmailChanged;
@@ -13,7 +15,6 @@ import cz.novanadeje.app.donors.domain.EmailVerificationTokenRepository;
 import cz.novanadeje.app.donors.domain.InvalidEmailVerificationToken;
 import cz.novanadeje.app.donors.domain.LinkSecret;
 import cz.novanadeje.app.donors.domain.NoPendingEmailChange;
-import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
 import cz.novanadeje.app.donors.domain.RegistrationReturn;
 import cz.novanadeje.app.shared.application.event.DonorRegistered;
 import cz.novanadeje.app.shared.domain.EmailAddress;
@@ -34,19 +35,18 @@ public class DonorEmailVerificationService {
 
     private final DonorRepository donors;
     private final EmailVerificationTokenRepository tokens;
-    private final RefreshTokenRepository refreshTokens;
     private final DonorSessionService sessions;
     private final DonorViews views;
     private final DonorEmailVerificationProperties properties;
     private final Clock clock;
     private final ApplicationEventPublisher events;
+    private final DeviceSignOuts signOuts;
 
-    public DonorEmailVerificationService(DonorRepository donors, EmailVerificationTokenRepository tokens, RefreshTokenRepository refreshTokens,
-                                         DonorSessionService sessions, DonorViews views, DonorEmailVerificationProperties properties,
-                                         Clock clock, ApplicationEventPublisher events) {
+    public DonorEmailVerificationService(DonorRepository donors, EmailVerificationTokenRepository tokens, DonorSessionService sessions, DonorViews views, DonorEmailVerificationProperties properties,
+                                         Clock clock, ApplicationEventPublisher events, DeviceSignOuts signOuts) {
+        this.signOuts = signOuts;
         this.donors = donors;
         this.tokens = tokens;
-        this.refreshTokens = refreshTokens;
         this.sessions = sessions;
         this.views = views;
         this.properties = properties;
@@ -65,7 +65,7 @@ public class DonorEmailVerificationService {
     }
 
     @Transactional
-    public AuthenticatedDonor confirm(String token) {
+    public AuthenticatedDonor confirm(String token, DeviceDescription device) {
         LinkSecret secret = new LinkSecret(token);
         Instant now = clock.instant();
         EmailVerificationToken found = tokens.findBySecretHash(secret.hash())
@@ -77,7 +77,7 @@ public class DonorEmailVerificationService {
         Donor donor = found.newEmail()
                 .map(newEmail -> changeEmail(found, newEmail, now))
                 .orElseGet(() -> verifyRegistration(found, now));
-        return views.authenticated(donor, sessions.signIn(donor, false));
+        return views.authenticated(donor, sessions.signIn(donor, false, device));
     }
 
     private Donor verifyRegistration(EmailVerificationToken found, Instant now) {
@@ -104,7 +104,7 @@ public class DonorEmailVerificationService {
         donor.changeEmail(newEmail);
         donors.save(donor);
         tokens.deleteAllOf(donor.id());
-        refreshTokens.revokeAllOf(donor.id(), now);
+        signOuts.endAllOf(donor.id(), DeviceSignOutReason.CREDENTIALS_CHANGED, now);
         events.publishEvent(new DonorEmailChanged(donor.id().value(), previousEmail, newEmail, donor.preferredLocale()));
         log.info("E-mail of donor {} changed", donor.id());
         return donor;

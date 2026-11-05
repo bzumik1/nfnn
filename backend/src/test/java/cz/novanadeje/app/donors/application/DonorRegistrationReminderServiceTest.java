@@ -6,7 +6,6 @@ import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.EmailVerificationTokenRepository;
 import cz.novanadeje.app.donors.domain.PasswordHash;
-import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
 import cz.novanadeje.app.donors.domain.RegistrationReminders;
 import cz.novanadeje.app.donors.domain.SecondFactorRepository;
 import cz.novanadeje.app.shared.domain.DonorType;
@@ -51,7 +50,7 @@ class DonorRegistrationReminderServiceTest {
     @Mock
     private EmailVerificationTokenRepository tokens;
     @Mock
-    private RefreshTokenRepository refreshTokens;
+    private DeviceSignOuts signOuts;
     @Mock
     private DonorSessionService sessions;
     @Mock
@@ -64,8 +63,8 @@ class DonorRegistrationReminderServiceTest {
     @BeforeEach
     void setUp() {
         Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
-        DonorEmailVerificationService emailVerification = new DonorEmailVerificationService(donors, tokens, refreshTokens, sessions,
-                new DonorViews(secondFactors, tokens, clock), new DonorEmailVerificationProperties(Duration.ofHours(24), 3), clock, events);
+        DonorEmailVerificationService emailVerification = new DonorEmailVerificationService(donors, tokens, sessions,
+                new DonorViews(secondFactors, tokens, clock), new DonorEmailVerificationProperties(Duration.ofHours(24), 3), clock, events, signOuts);
         service = new DonorRegistrationReminderService(reminders, donors, emailVerification,
                 new RegistrationReminderProperties("0 20 * * * *", Duration.ofDays(1), Duration.ofDays(7)), clock);
     }

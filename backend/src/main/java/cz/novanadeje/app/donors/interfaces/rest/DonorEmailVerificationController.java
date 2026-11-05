@@ -40,7 +40,7 @@ class DonorEmailVerificationController {
     }
 
     @PostMapping("/confirm")
-    ResponseEntity<AuthResponse> confirm(@Valid @RequestBody EmailVerificationConfirmation request) {
-        return SessionResponses.opened(HttpStatus.OK, emailVerification.confirm(request.token()), clock.instant());
+    ResponseEntity<AuthResponse> confirm(@Valid @RequestBody EmailVerificationConfirmation request, HttpServletRequest http) {
+        return SessionResponses.opened(HttpStatus.OK, emailVerification.confirm(request.token(), UserAgentDevice.of(http)), clock.instant());
     }
 }

@@ -1,0 +1,98 @@
+[
+  {
+    "scenario": "donors/donor_password_reset: A reset ends every session but not the access token already issued*",
+    "kind": "removed",
+    "reason": "Plan v3 slice 2.9: a browser access token names its device (claim sid) and a token of a device the reset signed out is refused at once (401 auth/session-ended), so the scenario that showed the old token still reading the profile is renamed to 'A reset ends every session, the access token already issued included', where the profile answers 401 auth/session-ended",
+    "contract": "docs/api-contract.md, Authentication, Devices; docs/security-overview.md, Donor authentication, Devices"
+  },
+  {
+    "path": "POST /api/donations/me/receipts*",
+    "scenario": "donations/donation_receipts_frozen: A donor erased after signing in gets no new receipt with the earlier token*",
+    "kind": "status",
+    "reason": "Plan v3 slice 2.9: the erasure ends every device, so the earlier access token is refused by the security chain with 401 auth/session-ended before the issuer's 409 donations/donor-erased could answer; the issuer's own check stays for a token without a device",
+    "contract": "docs/api-contract.md, Authentication, Devices; docs/security-overview.md, Donor authentication, Devices"
+  },
+  {
+    "path": "POST /api/donations/me/receipts*",
+    "scenario": "donations/donation_receipts_frozen: A donor erased after signing in gets no new receipt with the earlier token*",
+    "kind": "body",
+    "reason": "Plan v3 slice 2.9: the problem of the refused token (auth/session-ended) instead of donations/donor-erased",
+    "contract": "docs/api-contract.md, Authentication, Devices"
+  },
+  {
+    "scenario": "donations/donor_device_sync: The device of an erased donor finds no chunk left while the token it holds is still valid*",
+    "kind": "removed",
+    "reason": "Plan v3 slice 2.9: the erasure signs out every device, so the browser token is refused with 401 auth/session-ended and the device gets no manifest at all; the scenario is renamed to 'The device of an erased donor is signed out, so its token gets neither the manifest nor a chunk'",
+    "contract": "docs/api-contract.md, Device sync; docs/security-overview.md, Donor authentication, Devices"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.DonorCredentialsServiceTest > Given the right current password, when the password is changed, then the new hash is stored, every session is revoked, the donor is told and a new session opens",
+    "reason": "Plan v3 slice 2.9: a change made from a signed-in session signs out every other device and continues the session on the requesting device (DonorSessionService.continueOn), so the test names what is signed out and what continues",
+    "replacement": "donors.application.DonorCredentialsServiceTest > Given the right current password, when the password is changed, then the new hash is stored, every other device is signed out, the donor is told and the session continues on this one"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.DonorCredentialsServiceTest > Given a passkey and the right password, when the password is removed, then it is gone, every session is revoked and a new one opens",
+    "reason": "Plan v3 slice 2.9: a change made from a signed-in session signs out every other device and continues the session on the requesting device (DonorSessionService.continueOn), so the test names what is signed out and what continues",
+    "replacement": "donors.application.DonorCredentialsServiceTest > Given a passkey and the right password, when the password is removed, then it is gone, every other device is signed out and the session continues on this one"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.DonorSecondFactorServiceTest > Given a pending factor and the current code, when it is confirmed, then the factor is enabled, every session is revoked, a verified session opens and the donor is to be told",
+    "reason": "Plan v3 slice 2.9: a change made from a signed-in session signs out every other device and continues the session on the requesting device (DonorSessionService.continueOn), so the test names what is signed out and what continues",
+    "replacement": "donors.application.DonorSecondFactorServiceTest > Given a pending factor and the current code, when it is confirmed, then the factor is enabled, every other device is signed out, a verified session continues on this one and the donor is to be told"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.DonorSecondFactorServiceTest > Given an enabled factor, the right password and a fresh code, when it is disabled, then the factor is deleted, every session is revoked, a plain session opens and the donor is to be told",
+    "reason": "Plan v3 slice 2.9: a change made from a signed-in session signs out every other device and continues the session on the requesting device (DonorSessionService.continueOn), so the test names what is signed out and what continues",
+    "replacement": "donors.application.DonorSecondFactorServiceTest > Given an enabled factor, the right password and a fresh code, when it is disabled, then the factor is deleted, every other device is signed out, a plain session continues on this one and the donor is to be told"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.DonorSessionServiceTest > Given a donor, when a session opens, then an access token is issued and only the hash of the refresh token is stored",
+    "reason": "Plan v3 slice 2.9: DonorSessionService.open became signIn, which opens a device for every browser sign-in, so the test names the sign-in",
+    "replacement": "donors.application.DonorSessionServiceTest > Given a donor, when they sign in, then an access token is issued and only the hash of the refresh token is stored"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.DonorSessionServiceTest > Given an administrator, when a session opens with the second factor verified, then ADMIN is granted and the refresh token remembers the verification",
+    "reason": "Plan v3 slice 2.9: DonorSessionService.open became signIn, which opens a device for every browser sign-in, so the test names the sign-in",
+    "replacement": "donors.application.DonorSessionServiceTest > Given an administrator, when they sign in with the second factor verified, then ADMIN is granted and the refresh token remembers the verification"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.DonorSessionServiceTest > Given an administrator, when a session opens without the second factor, then only DONOR is granted",
+    "reason": "Plan v3 slice 2.9: DonorSessionService.open became signIn, which opens a device for every browser sign-in, so the test names the sign-in",
+    "replacement": "donors.application.DonorSessionServiceTest > Given an administrator, when they sign in without the second factor, then only DONOR is granted"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.DonorSessionServiceTest > Given an administrator, when a session opens again after a credential change, then it is not counted as a sign-in",
+    "reason": "Plan v3 slice 2.9: a change made from a signed-in session signs out every other device and continues the session on the requesting device (DonorSessionService.continueOn), so the test names what is signed out and what continues",
+    "replacement": "donors.application.DonorSessionServiceTest > Given an administrator's signed-in device that changed a credential, when its session continues with the second factor, then the administration is kept and it is not counted as a sign-in"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donors/donor_password_reset.feature > Donor resets a forgotten password by e-mail - A reset ends every session but not the access token already issued",
+    "reason": "Plan v3 slice 2.9: a token of a device the reset signed out is refused at once (401 auth/session-ended), so the scenario is renamed",
+    "replacement": "feature_classpath_features/donors/donor_password_reset.feature > Donor resets a forgotten password by e-mail - A reset ends every session, the access token already issued included"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/donor_device_sync.feature > A donor's device keeps a copy of the donor's data by downloading only the chunks that changed - The device of an erased donor finds no chunk left while the token it holds is still valid",
+    "reason": "Plan v3 slice 2.9: the erasure signs out every device, so the browser token gets no manifest at all and the scenario is renamed",
+    "replacement": "feature_classpath_features/donations/donor_device_sync.feature > A donor's device keeps a copy of the donor's data by downloading only the chunks that changed - The device of an erased donor is signed out, so its token gets neither the manifest nor a chunk"
+  }
+]

@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.application.event.AdministratorSecondFactorRecovered;
 import cz.novanadeje.app.donors.application.event.DonorSecondFactorRecovered;
 import cz.novanadeje.app.donors.domain.Donor;
@@ -7,7 +8,6 @@ import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.InvalidSecondFactorChallenge;
 import cz.novanadeje.app.donors.domain.LinkSecret;
-import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
 import cz.novanadeje.app.donors.domain.SecondFactor;
 import cz.novanadeje.app.donors.domain.SecondFactorChallenge;
 import cz.novanadeje.app.donors.domain.SecondFactorChallengeRepository;
@@ -46,21 +46,20 @@ public class SecondFactorRecoveryService {
     private final SecondFactorRepository secondFactors;
     private final SecondFactorChallengeRepository challenges;
     private final SecondFactorRecoveryRepository recoveries;
-    private final RefreshTokenRepository refreshTokens;
     private final SecondFactorRecoveryTargets targets;
     private final DonorSecondFactorProperties properties;
     private final ApplicationEventPublisher events;
     private final Clock clock;
+    private final DeviceSignOuts signOuts;
 
     public SecondFactorRecoveryService(DonorRepository donors, SecondFactorRepository secondFactors, SecondFactorChallengeRepository challenges,
-                                       SecondFactorRecoveryRepository recoveries, RefreshTokenRepository refreshTokens,
-                                       SecondFactorRecoveryTargets targets, DonorSecondFactorProperties properties,
-                                       ApplicationEventPublisher events, Clock clock) {
+                                       SecondFactorRecoveryRepository recoveries, SecondFactorRecoveryTargets targets, DonorSecondFactorProperties properties,
+                                       ApplicationEventPublisher events, Clock clock, DeviceSignOuts signOuts) {
+        this.signOuts = signOuts;
         this.donors = donors;
         this.secondFactors = secondFactors;
         this.challenges = challenges;
         this.recoveries = recoveries;
-        this.refreshTokens = refreshTokens;
         this.targets = targets;
         this.properties = properties;
         this.events = events;
@@ -110,7 +109,7 @@ public class SecondFactorRecoveryService {
             return;
         }
         secondFactors.delete(donorId);
-        refreshTokens.revokeAllOf(donorId, now);
+        signOuts.endAllOf(donorId, DeviceSignOutReason.CREDENTIALS_CHANGED, now);
         events.publishEvent(new DonorSecondFactorRecovered(donorId.value(), donor.get().email(), donor.get().preferredLocale(),
                 payment.senderAccount()));
         if (donor.get().isAdministrator()) {

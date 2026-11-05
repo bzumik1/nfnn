@@ -136,6 +136,24 @@ export interface ConnectedAppList {
   items: ConnectedApp[];
 }
 
+export type DevicePlatform =
+  'IPHONE' | 'IPAD' | 'ANDROID' | 'MAC' | 'WINDOWS' | 'CHROMEBOOK' | 'LINUX' | 'OTHER';
+
+export type DeviceBrowser = 'SAFARI' | 'CHROME' | 'FIREFOX' | 'EDGE' | 'OTHER';
+
+export interface SignedInDevice {
+  id: string;
+  platform: DevicePlatform;
+  browser: DeviceBrowser;
+  signedInAt: string;
+  lastUsedAt: string;
+  current: boolean;
+}
+
+export interface SignedInDeviceList {
+  items: SignedInDevice[];
+}
+
 export interface AuthResponse {
   user: Donor;
   accessToken: string;

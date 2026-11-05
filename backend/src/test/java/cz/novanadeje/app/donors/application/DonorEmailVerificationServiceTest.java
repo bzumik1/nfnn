@@ -1,5 +1,7 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.DeviceDescription;
+import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.application.event.DonorEmailAddressInUse;
 import cz.novanadeje.app.donors.application.event.DonorEmailChangeRequested;
 import cz.novanadeje.app.donors.application.event.DonorEmailChanged;
@@ -14,7 +16,6 @@ import cz.novanadeje.app.donors.domain.InvalidEmailVerificationToken;
 import cz.novanadeje.app.donors.domain.LinkSecret;
 import cz.novanadeje.app.donors.domain.NoPendingEmailChange;
 import cz.novanadeje.app.donors.domain.PasswordHash;
-import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
 import cz.novanadeje.app.donors.domain.RegistrationReturn;
 import cz.novanadeje.app.donors.domain.Role;
 import cz.novanadeje.app.donors.domain.SecondFactorRepository;
@@ -70,7 +71,7 @@ class DonorEmailVerificationServiceTest {
     @Mock
     private EmailVerificationTokenRepository tokens;
     @Mock
-    private RefreshTokenRepository refreshTokens;
+    private DeviceSignOuts signOuts;
     @Mock
     private DonorSessionService sessions;
     @Mock
@@ -82,9 +83,9 @@ class DonorEmailVerificationServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new DonorEmailVerificationService(donors, tokens, refreshTokens, sessions, new DonorViews(secondFactors, tokens, Clock.fixed(NOW, ZoneOffset.UTC)),
+        service = new DonorEmailVerificationService(donors, tokens, sessions, new DonorViews(secondFactors, tokens, Clock.fixed(NOW, ZoneOffset.UTC)),
                 new DonorEmailVerificationProperties(TTL, 3),
-                Clock.fixed(NOW, ZoneOffset.UTC), events);
+                Clock.fixed(NOW, ZoneOffset.UTC), events, signOuts);
     }
 
     @Test
@@ -217,7 +218,7 @@ class DonorEmailVerificationServiceTest {
     @Test
     @DisplayName("Given a malformed token, when the e-mail is confirmed, then it is refused before any lookup")
     void should_refuse_before_lookup_when_confirmed_given_malformed_token() {
-        assertThatIllegalArgumentException().isThrownBy(() -> service.confirm("not.a.token"));
+        assertThatIllegalArgumentException().isThrownBy(() -> service.confirm("not.a.token", DeviceDescription.UNKNOWN));
 
         verifyNoInteractions(tokens, donors, sessions, events);
     }
@@ -228,7 +229,7 @@ class DonorEmailVerificationServiceTest {
         LinkSecret secret = LinkSecret.generate();
         when(tokens.findBySecretHash(secret.hash())).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.confirm(secret.value())).isInstanceOf(InvalidEmailVerificationToken.class);
+        assertThatThrownBy(() -> service.confirm(secret.value(), DeviceDescription.UNKNOWN)).isInstanceOf(InvalidEmailVerificationToken.class);
 
         verify(tokens, never()).markUsed(any(), any());
         verifyNoInteractions(donors, sessions, events);
@@ -240,7 +241,7 @@ class DonorEmailVerificationServiceTest {
         LinkSecret secret = LinkSecret.generate();
         when(tokens.findBySecretHash(secret.hash())).thenReturn(Optional.of(EmailVerificationToken.issue(secret, DONOR, NOW.minus(TTL), TTL)));
 
-        assertThatThrownBy(() -> service.confirm(secret.value())).isInstanceOf(InvalidEmailVerificationToken.class);
+        assertThatThrownBy(() -> service.confirm(secret.value(), DeviceDescription.UNKNOWN)).isInstanceOf(InvalidEmailVerificationToken.class);
 
         verify(tokens, never()).markUsed(any(), any());
         verifyNoInteractions(donors, sessions, events);
@@ -254,7 +255,7 @@ class DonorEmailVerificationServiceTest {
         used.markUsed(NOW.minusSeconds(30));
         when(tokens.findBySecretHash(secret.hash())).thenReturn(Optional.of(used));
 
-        assertThatThrownBy(() -> service.confirm(secret.value())).isInstanceOf(InvalidEmailVerificationToken.class);
+        assertThatThrownBy(() -> service.confirm(secret.value(), DeviceDescription.UNKNOWN)).isInstanceOf(InvalidEmailVerificationToken.class);
 
         verify(tokens, never()).markUsed(any(), any());
         verifyNoInteractions(donors, sessions, events);
@@ -268,7 +269,7 @@ class DonorEmailVerificationServiceTest {
         when(tokens.findBySecretHash(secret.hash())).thenReturn(Optional.of(token));
         when(tokens.markUsed(token.id(), NOW)).thenReturn(false);
 
-        assertThatThrownBy(() -> service.confirm(secret.value())).isInstanceOf(InvalidEmailVerificationToken.class);
+        assertThatThrownBy(() -> service.confirm(secret.value(), DeviceDescription.UNKNOWN)).isInstanceOf(InvalidEmailVerificationToken.class);
 
         verify(tokens, never()).deleteAllOf(any());
         verifyNoInteractions(donors, sessions, events);
@@ -283,8 +284,8 @@ class DonorEmailVerificationServiceTest {
         when(tokens.markUsed(token.id(), NOW)).thenReturn(true);
         when(donors.findById(DONOR)).thenReturn(Optional.empty(), Optional.of(verifiedDonor()));
 
-        assertThatThrownBy(() -> service.confirm(secret.value())).isInstanceOf(InvalidEmailVerificationToken.class);
-        assertThatThrownBy(() -> service.confirm(secret.value())).isInstanceOf(InvalidEmailVerificationToken.class);
+        assertThatThrownBy(() -> service.confirm(secret.value(), DeviceDescription.UNKNOWN)).isInstanceOf(InvalidEmailVerificationToken.class);
+        assertThatThrownBy(() -> service.confirm(secret.value(), DeviceDescription.UNKNOWN)).isInstanceOf(InvalidEmailVerificationToken.class);
 
         verify(donors, never()).save(any());
         verifyNoInteractions(sessions, events);
@@ -299,9 +300,9 @@ class DonorEmailVerificationServiceTest {
         when(tokens.findBySecretHash(secret.hash())).thenReturn(Optional.of(token));
         when(tokens.markUsed(token.id(), NOW)).thenReturn(true);
         when(donors.findById(DONOR)).thenReturn(Optional.of(donor));
-        when(sessions.signIn(donor, false)).thenReturn(TOKENS);
+        when(sessions.signIn(donor, false, DeviceDescription.UNKNOWN)).thenReturn(TOKENS);
 
-        AuthenticatedDonor result = service.confirm(secret.value());
+        AuthenticatedDonor result = service.confirm(secret.value(), DeviceDescription.UNKNOWN);
 
         InOrder order = inOrder(donors, tokens, events, sessions);
         ArgumentCaptor<Donor> saved = ArgumentCaptor.forClass(Donor.class);
@@ -309,7 +310,7 @@ class DonorEmailVerificationServiceTest {
         order.verify(tokens).deleteAllOf(DONOR);
         order.verify(events).publishEvent(new DonorRegistered(DONOR.value(), DonorType.PERSON, "Jana Nováková", Optional.empty(), ADDRESS, EMAIL,
                 SYMBOL, LocaleCode.CS, donor.registeredAt()));
-        order.verify(sessions).signIn(donor, false);
+        order.verify(sessions).signIn(donor, false, DeviceDescription.UNKNOWN);
         assertThat(saved.getValue().emailVerifiedAt()).contains(NOW);
         assertThat(result.donor().email()).isEqualTo("jana@example.cz");
         assertThat(result.tokens()).isEqualTo(TOKENS);
@@ -335,7 +336,7 @@ class DonorEmailVerificationServiceTest {
         assertThat(published.getValue().donorId()).isEqualTo(DONOR.value());
         assertThat(published.getValue().preferredLocale()).isEqualTo(LocaleCode.CS);
         assertThat(published.getValue().expiresAt()).isEqualTo(NOW.plus(TTL));
-        verifyNoInteractions(sessions, refreshTokens);
+        verifyNoInteractions(sessions, signOuts);
     }
 
     @Test
@@ -407,16 +408,16 @@ class DonorEmailVerificationServiceTest {
         when(tokens.markUsed(token.id(), NOW)).thenReturn(true);
         when(donors.findById(DONOR)).thenReturn(Optional.of(donor));
         when(donors.existsByEmail(NEW_EMAIL)).thenReturn(false);
-        when(sessions.signIn(donor, false)).thenReturn(TOKENS);
+        when(sessions.signIn(donor, false, DeviceDescription.UNKNOWN)).thenReturn(TOKENS);
 
-        AuthenticatedDonor result = service.confirm(secret.value());
+        AuthenticatedDonor result = service.confirm(secret.value(), DeviceDescription.UNKNOWN);
 
-        InOrder order = inOrder(donors, tokens, refreshTokens, events, sessions);
+        InOrder order = inOrder(donors, tokens, signOuts, events, sessions);
         order.verify(donors).save(donor);
         order.verify(tokens).deleteAllOf(DONOR);
-        order.verify(refreshTokens).revokeAllOf(DONOR, NOW);
+        order.verify(signOuts).endAllOf(DONOR, DeviceSignOutReason.CREDENTIALS_CHANGED, NOW);
         order.verify(events).publishEvent(new DonorEmailChanged(DONOR.value(), EMAIL, NEW_EMAIL, LocaleCode.CS));
-        order.verify(sessions).signIn(donor, false);
+        order.verify(sessions).signIn(donor, false, DeviceDescription.UNKNOWN);
         assertThat(donor.email()).isEqualTo(NEW_EMAIL);
         assertThat(result.donor().email()).isEqualTo("jana.nova@example.cz");
         assertThat(result.tokens()).isEqualTo(TOKENS);
@@ -433,11 +434,11 @@ class DonorEmailVerificationServiceTest {
         when(donors.findById(DONOR)).thenReturn(Optional.of(verifiedDonor()), Optional.of(unverifiedDonor(LocaleCode.CS)));
         when(donors.existsByEmail(NEW_EMAIL)).thenReturn(true);
 
-        assertThatThrownBy(() -> service.confirm(secret.value())).isInstanceOf(InvalidEmailVerificationToken.class);
-        assertThatThrownBy(() -> service.confirm(secret.value())).isInstanceOf(InvalidEmailVerificationToken.class);
+        assertThatThrownBy(() -> service.confirm(secret.value(), DeviceDescription.UNKNOWN)).isInstanceOf(InvalidEmailVerificationToken.class);
+        assertThatThrownBy(() -> service.confirm(secret.value(), DeviceDescription.UNKNOWN)).isInstanceOf(InvalidEmailVerificationToken.class);
 
         verify(donors, never()).save(any());
-        verifyNoInteractions(sessions, refreshTokens, events);
+        verifyNoInteractions(sessions, signOuts, events);
     }
 
     private static Donor unverifiedDonor(LocaleCode locale) {

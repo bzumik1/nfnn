@@ -2,7 +2,7 @@ import type { FullConfig, Reporter, Suite, TestCase, TestResult } from '@playwri
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Check } from './layout-checks';
-import { DEVICE_PROJECT_PREFIX, POSES } from './poses';
+import { DEVICE_PROJECT_PREFIX, POSES, SAFARI_POSES } from './poses';
 
 interface Shot {
   pose: string;
@@ -13,6 +13,7 @@ interface Shot {
   checks: Check[];
   image?: string;
   knownBreak?: string;
+  device?: string;
 }
 
 export const DEVICE_REPORT_DIR = join('test-results', 'device-report');
@@ -44,14 +45,16 @@ function figure(shot: Shot): string {
 }
 
 export function renderReport(shots: Shot[]): string {
-  const sections = POSES.map((pose) => {
-    const own = shots.filter((shot) => shot.pose === pose.id).sort((a, b) => a.order - b.order);
-    if (!own.length) {
-      return '';
-    }
-    const failing = own.filter((shot) => shot.checks.some((check) => !check.pass)).length;
-    return `<section><h2>${escape(pose.id)} <small>${escape(String(pose.device))}${pose.textScale ? `, text ${pose.textScale} %` : ''} · ${failing} of ${own.length} screens with findings</small></h2><div class="grid">${own.map(figure).join('')}</div></section>`;
-  }).join('');
+  const sections = [...POSES, ...SAFARI_POSES]
+    .map((pose) => {
+      const own = shots.filter((shot) => shot.pose === pose.id).sort((a, b) => a.order - b.order);
+      if (!own.length) {
+        return '';
+      }
+      const failing = own.filter((shot) => shot.checks.some((check) => !check.pass)).length;
+      return `<section><h2>${escape(pose.id)} <small>${escape(own.find((shot) => shot.device)?.device ?? String(pose.device))}${pose.textScale ? `, text ${pose.textScale} %` : ''} · ${failing} of ${own.length} screens with findings</small></h2><div class="grid">${own.map(figure).join('')}</div></section>`;
+    })
+    .join('');
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Devices</title><style>
 body{font:14px system-ui,sans-serif;margin:16px;color:#1f2937}h2 small{font-weight:400;color:#4b5563}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
@@ -73,7 +76,7 @@ export default class DeviceReport implements Reporter {
       result.attachments.find((attachment) => attachment.name === name)?.body;
     const described = body('step');
     const stepInfo = described
-      ? (JSON.parse(described.toString()) as { id: string; order: number })
+      ? (JSON.parse(described.toString()) as { id: string; order: number; device?: string })
       : { id: test.title, order: Number.MAX_SAFE_INTEGER };
     const layout = body('layout');
     const screen = { body: body('screen') };
@@ -91,6 +94,7 @@ export default class DeviceReport implements Reporter {
       status: result.status,
       checks: layout ? (JSON.parse(layout.toString()) as Check[]) : [],
       image,
+      device: stepInfo.device,
       knownBreak:
         test.expectedStatus === 'failed'
           ? [...test.annotations, ...result.annotations].find((note) => note.type === 'fail')

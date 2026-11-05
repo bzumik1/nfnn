@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.domain.AdministratorRequired;
 import cz.novanadeje.app.donors.domain.AuthorizationCode;
 import cz.novanadeje.app.donors.domain.AuthorizationCodeRepository;
@@ -52,11 +53,13 @@ public class AuthorizationServerService {
     private final OAuthProperties properties;
     private final DonorSessionProperties sessionProperties;
     private final Clock clock;
+    private final DeviceSignOuts signOuts;
 
     public AuthorizationServerService(ClientMetadataSource clients, AuthorizationCodeRepository codes, RefreshTokenRepository refreshTokens,
                                       DonorRepository donors, AccessTokenIssuer accessTokens, AccessTokenVerifier accessTokenVerifier,
                                       FreshSecondFactorCheck freshSecondFactor,
-                                      OAuthProperties properties, DonorSessionProperties sessionProperties, Clock clock) {
+                                      OAuthProperties properties, DonorSessionProperties sessionProperties, Clock clock, DeviceSignOuts signOuts) {
+        this.signOuts = signOuts;
         this.clients = clients;
         this.codes = codes;
         this.refreshTokens = refreshTokens;
@@ -150,7 +153,7 @@ public class AuthorizationServerService {
             throw new InvalidGrant("the refresh token or the client is malformed");
         }
         if (token.isUsed()) {
-            refreshTokens.revokeAllOf(token.donorId(), now);
+            signOuts.endAllOf(token.donorId(), DeviceSignOutReason.REPLAY, now);
             log.warn("A used refresh token of donor {} was presented by a client; every session of the donor is ended", token.donorId());
             throw new InvalidGrant("the refresh token was used before");
         }
@@ -165,7 +168,7 @@ public class AuthorizationServerService {
             throw new InvalidGrant("the donor is no administrator any more");
         }
         if (!refreshTokens.markUsed(token.id(), now)) {
-            refreshTokens.revokeAllOf(token.donorId(), now);
+            signOuts.endAllOf(token.donorId(), DeviceSignOutReason.REPLAY, now);
             log.warn("A refresh token of donor {} was presented twice at once by a client; every session of the donor is ended", token.donorId());
             throw new InvalidGrant("the refresh token was used before");
         }
