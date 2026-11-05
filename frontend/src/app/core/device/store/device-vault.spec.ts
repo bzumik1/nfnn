@@ -651,6 +651,19 @@ describe('Given the device vault over IndexedDB with real WebCrypto', () => {
       setItem.mockRestore();
     });
 
+    it('and a reload restores her session, then the copy again lives in memory only and nothing reaches IndexedDB or Web Storage', async () => {
+      const setItem = vi.spyOn(Storage.prototype, 'setItem');
+
+      await vault.restored(JANA, true);
+
+      expect(vault.mode()).toBe('memory');
+      expect(vault.opened()).not.toBeNull();
+      expect(opener).not.toHaveBeenCalled();
+      expect(await indexedDB.databases()).toEqual([]);
+      expect(setItem).not.toHaveBeenCalled();
+      setItem.mockRestore();
+    });
+
     it('and she signs out, then the copy is gone with the memory', async () => {
       await vault.signedIn(JANA, { kind: 'password', password: PASSWORD }, true);
 

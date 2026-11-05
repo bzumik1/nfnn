@@ -18,9 +18,9 @@ export class DeviceCopies implements SessionDevice {
     return Promise.race([input, late]).finally(() => clearTimeout(timer));
   }
 
-  signedIn(account: DeviceAccount, secret: SignInSecret): Promise<void> {
+  signedIn(account: DeviceAccount, secret: SignInSecret, storeNothing = false): Promise<void> {
     return this.vault().then(
-      (vault) => vault.signedIn(account, secret),
+      (vault) => vault.signedIn(account, secret, storeNothing),
       (failure: unknown) => {
         if (secret.kind === 'prf') {
           secret.reading.output.fill(0);
@@ -30,8 +30,8 @@ export class DeviceCopies implements SessionDevice {
     );
   }
 
-  restored(account: DeviceAccount): Promise<void> {
-    return this.vault().then((vault) => vault.restored(account));
+  restored(account: DeviceAccount, storeNothing = false): Promise<void> {
+    return this.vault().then((vault) => vault.restored(account, storeNothing));
   }
 
   signedOut(account: DeviceAccount): Promise<void> {

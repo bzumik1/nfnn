@@ -143,8 +143,12 @@ export class DeviceVault implements SessionDevice {
     });
   }
 
-  restored(account: DeviceAccount): Promise<void> {
-    return this.run(() => this.withMemoryFallback(() => this.openAtRestore(account)));
+  restored(account: DeviceAccount, storeNothing = false): Promise<void> {
+    return this.run(() =>
+      this.withMemoryFallback(() =>
+        storeNothing ? this.openInMemoryAtRestore(account) : this.openAtRestore(account),
+      ),
+    );
   }
 
   signedOut(account: DeviceAccount): Promise<void> {
@@ -307,6 +311,12 @@ export class DeviceVault implements SessionDevice {
     this.openedCopy.set({ store, reason: load === 'loaded' ? 'sign-in' : 'empty', account });
     if (secret.kind === 'password' && opening?.by !== 'password') {
       await this.rewrapWithPassword(storage, store, secret.password);
+    }
+  }
+
+  private async openInMemoryAtRestore(account: DeviceAccount): Promise<void> {
+    if (this.openedFor(account) === null) {
+      await this.openAtSignIn(account, { kind: 'none' }, true);
     }
   }
 

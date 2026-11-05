@@ -33,17 +33,20 @@ class RecordingDevice implements SessionDevice {
   readonly calls: [string, ...unknown[]][] = [];
   input: Uint8Array<ArrayBuffer> | null = PRF_INPUT;
   secrets: SignInSecret[] = [];
+  storesNothing: boolean[] = [];
 
   async prfInput() {
     this.calls.push(['prfInput']);
     return this.input;
   }
-  async signedIn(account: DeviceAccount, secret: SignInSecret) {
+  async signedIn(account: DeviceAccount, secret: SignInSecret, storeNothing = false) {
     this.calls.push(['signedIn', account, secret.kind]);
     this.secrets.push(secret);
+    this.storesNothing.push(storeNothing);
   }
-  async restored(account: DeviceAccount) {
+  async restored(account: DeviceAccount, storeNothing = false) {
     this.calls.push(['restored', account]);
+    this.storesNothing.push(storeNothing);
   }
   async signedOut(account: DeviceAccount) {
     this.calls.push(['signedOut', account]);
@@ -203,6 +206,41 @@ describe('Given the auth store on a device that keeps a copy of the donor data',
     await restoring;
 
     expect(device.calls).toEqual([['restored', JANA]]);
+  });
+
+  it('when the donor signs in on a public computer, then the device is told to store nothing', () => {
+    store.login('jana@example.cz', 'correct horse battery', 'PUBLIC').subscribe();
+    http
+      .expectOne('/api/donors/auth/login')
+      .flush({ ...authResponse('token-1'), session: 'PUBLIC' });
+
+    expect(device.calls).toEqual([['signedIn', JANA, 'password']]);
+    expect(device.storesNothing).toEqual([true]);
+  });
+
+  it('when the donor signs in for this browser session, then the device keeps the copy as usual', () => {
+    store.login('jana@example.cz', 'correct horse battery', 'BROWSER').subscribe();
+    http
+      .expectOne('/api/donors/auth/login')
+      .flush({ ...authResponse('token-1'), session: 'BROWSER' });
+
+    expect(device.storesNothing).toEqual([false]);
+  });
+
+  it('when a reload restores a public-computer session, then the device is told to store nothing', async () => {
+    sessionStorage.setItem(SESSION_HINT_KEY, '1');
+
+    const restoring = store.restore();
+    await vi.waitFor(() =>
+      http
+        .expectOne('/api/donors/auth/refresh')
+        .flush({ ...authResponse('token-5'), session: 'PUBLIC' }),
+    );
+    await restoring;
+    sessionStorage.clear();
+
+    expect(device.calls).toEqual([['restored', JANA]]);
+    expect(device.storesNothing).toEqual([true]);
   });
 
   it('when the session of a signed-in donor is refreshed, then the device is not asked again', async () => {

@@ -23,6 +23,12 @@ async function sessionFlags(page: Page): Promise<{ local: string | null; tab: st
   }));
 }
 
+async function deviceDatabases(page: Page): Promise<string[]> {
+  return page.evaluate(async () =>
+    (await indexedDB.databases()).flatMap((database) => (database.name ? [database.name] : [])),
+  );
+}
+
 async function submitPassword(page: Page): Promise<void> {
   await page.locator('#login-email').fill('jana@example.cz');
   await page.locator('#login-password').fill('correct horse battery');
@@ -46,6 +52,7 @@ test.describe('Given a visitor with the sign-in dialog open in a browser tab', (
 
     expect(kinds).toEqual(['BROWSER']);
     expect(await sessionFlags(page)).toEqual({ local: '1', tab: null });
+    await expect.poll(() => deviceDatabases(page)).toContain('nfnn.device');
   });
 
   test('when they tick "Zapamatovat si mě", then the sign-in asks to be remembered', async ({
@@ -59,7 +66,7 @@ test.describe('Given a visitor with the sign-in dialog open in a browser tab', (
     expect(kinds).toEqual(['REMEMBERED']);
   });
 
-  test('when they choose a public computer, then the hint says nothing stays, the sign-in asks for a public session and the session flag stays only in the session storage of the tab', async ({
+  test('when they choose a public computer, then the hint says nothing stays, the sign-in asks for a public session and nothing but the session flag of the tab is stored, even after a reload', async ({
     page,
   }) => {
     const kinds = await signInCapturingTheKind(page);
@@ -76,6 +83,17 @@ test.describe('Given a visitor with the sign-in dialog open in a browser tab', (
 
     expect(kinds).toEqual(['PUBLIC']);
     expect(await sessionFlags(page)).toEqual({ local: null, tab: '1' });
+    await expect(page.getByRole('link', { name: 'Můj přehled' }).first()).toBeVisible();
+    await page.route('**/api/donors/auth/refresh', async (route) => {
+      const answer = session(200);
+      await route.fulfill({
+        ...answer,
+        body: JSON.stringify({ ...JSON.parse(answer.body), session: 'PUBLIC' }),
+      });
+    });
+    await page.reload();
+    await expect(page.getByRole('link', { name: 'Můj přehled' }).first()).toBeVisible();
+    expect(await deviceDatabases(page)).toEqual([]);
   });
 
   test('when they choose a public computer and then "Zpět", then the first row returns unticked', async ({

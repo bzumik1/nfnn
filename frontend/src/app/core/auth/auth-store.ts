@@ -377,14 +377,14 @@ export class AuthStore {
     const before = this.currentDonor();
     const donor = this.adopt(response);
     if (before === null || before.id !== donor.id) {
-      void this.device.restored(deviceAccountOf(donor));
+      void this.device.restored(deviceAccountOf(donor), this.storesNothing());
     }
     return donor;
   }
 
   private adoptSignIn(response: AuthResponse, secret: SignInSecret): Donor {
     const donor = this.adopt(response);
-    void this.device.signedIn(deviceAccountOf(donor), secret);
+    void this.device.signedIn(deviceAccountOf(donor), secret, this.storesNothing());
     return donor;
   }
 
