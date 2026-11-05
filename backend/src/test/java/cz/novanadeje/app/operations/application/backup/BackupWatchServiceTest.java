@@ -6,6 +6,7 @@ import cz.novanadeje.app.operations.domain.backup.BackupAlertState;
 import cz.novanadeje.app.operations.domain.backup.BackupAlertStateRepository;
 import cz.novanadeje.app.operations.domain.backup.BackupHealth;
 import cz.novanadeje.app.operations.domain.backup.BackupProblem;
+import cz.novanadeje.app.shared.application.event.OperationalAlertRaised;
 import cz.novanadeje.app.support.MutableClock;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -22,7 +23,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 class BackupWatchServiceTest {
@@ -46,22 +49,24 @@ class BackupWatchServiceTest {
         assertThat(problems).containsExactly(BackupProblem.BACKUP_FAILED);
         verify(states).save(BackupAlertState.reported(Set.of(BackupProblem.BACKUP_FAILED), NOW));
         ArgumentCaptor<Object> published = ArgumentCaptor.forClass(Object.class);
-        verify(events).publishEvent(published.capture());
-        assertThat(published.getValue()).isInstanceOfSatisfying(BackupProblemsDetected.class, event -> {
+        verify(events, times(2)).publishEvent(published.capture());
+        assertThat(published.getAllValues().getFirst()).isInstanceOfSatisfying(BackupProblemsDetected.class, event -> {
             assertThat(event.problems()).containsExactly(BackupProblem.BACKUP_FAILED);
             assertThat(event.detectedAt()).isEqualTo(NOW);
         });
+        assertThat(published.getAllValues().getLast()).isEqualTo(OperationalAlertRaised.opened(OperationalAlertRaised.Area.BACKUPS, NOW));
     }
 
     @Test
-    @DisplayName("Given the same problem already reported, when the check runs again, then nothing is published or saved")
-    void should_stay_quiet_when_checked_given_the_same_problem_reported() {
+    @DisplayName("Given the same problem already reported, when the check runs again, then only the open backup alert is announced and nothing is reported or saved")
+    void should_only_announce_open_alert_when_checked_given_the_same_problem_reported() {
         when(backups.view()).thenReturn(view(Set.of(BackupProblem.BACKUP_FAILED)));
         when(states.current()).thenReturn(BackupAlertState.reported(Set.of(BackupProblem.BACKUP_FAILED), NOW.minusSeconds(86_400)));
 
         service.check();
 
-        verify(events, never()).publishEvent(any());
+        verify(events).publishEvent(OperationalAlertRaised.opened(OperationalAlertRaised.Area.BACKUPS, NOW));
+        verifyNoMoreInteractions(events);
         verify(states, never()).save(any());
     }
 
@@ -88,20 +93,22 @@ class BackupWatchServiceTest {
         assertThat(problems).isEmpty();
         verify(states).save(BackupAlertState.nothingReported());
         ArgumentCaptor<Object> published = ArgumentCaptor.forClass(Object.class);
-        verify(events).publishEvent(published.capture());
-        assertThat(published.getValue()).isInstanceOfSatisfying(BackupRecovered.class,
+        verify(events, times(2)).publishEvent(published.capture());
+        assertThat(published.getAllValues().getFirst()).isInstanceOfSatisfying(BackupRecovered.class,
                 event -> assertThat(event.resolvedProblems()).containsExactly(BackupProblem.BACKUP_STALE));
+        assertThat(published.getAllValues().getLast()).isEqualTo(OperationalAlertRaised.resolved(OperationalAlertRaised.Area.BACKUPS, NOW));
     }
 
     @Test
-    @DisplayName("Given healthy backups and nothing reported, when the check runs, then nothing happens")
-    void should_do_nothing_when_checked_given_healthy_and_nothing_reported() {
+    @DisplayName("Given healthy backups and nothing reported, when the check runs, then only the resolved backup alert is announced and nothing is reported or saved")
+    void should_only_announce_resolved_alert_when_checked_given_healthy_and_nothing_reported() {
         when(backups.view()).thenReturn(view(Set.of()));
         when(states.current()).thenReturn(BackupAlertState.nothingReported());
 
         service.check();
 
-        verify(events, never()).publishEvent(any());
+        verify(events).publishEvent(OperationalAlertRaised.resolved(OperationalAlertRaised.Area.BACKUPS, NOW));
+        verifyNoMoreInteractions(events);
         verify(states, never()).save(any());
     }
 

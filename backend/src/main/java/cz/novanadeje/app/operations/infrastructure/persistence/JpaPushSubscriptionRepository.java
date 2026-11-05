@@ -1,5 +1,6 @@
 package cz.novanadeje.app.operations.infrastructure.persistence;
 
+import cz.novanadeje.app.operations.domain.alerts.MonitoredArea;
 import cz.novanadeje.app.operations.domain.push.PushAlerts;
 import cz.novanadeje.app.operations.domain.push.PushEndpoint;
 import cz.novanadeje.app.operations.domain.push.PushSubscription;
@@ -36,6 +37,16 @@ class JpaPushSubscriptionRepository implements PushSubscriptionRepository {
     @Override
     public List<PushSubscription> findAllOf(UUID administratorId) {
         return jpa.findByAdministratorIdOrderByCreatedAtAscIdAsc(administratorId).stream().map(PushSubscriptionJpaEntity::toDomain).toList();
+    }
+
+    @Override
+    public List<PushSubscription> findAllWithAlert(MonitoredArea area) {
+        List<PushSubscriptionJpaEntity> found = switch (area) {
+            case BANK_IMPORT -> jpa.findByBankImportAlertsTrueOrderByCreatedAtAscIdAsc();
+            case BACKUPS -> jpa.findByBackupAlertsTrueOrderByCreatedAtAscIdAsc();
+            case MAIL -> jpa.findByMailAlertsTrueOrderByCreatedAtAscIdAsc();
+        };
+        return found.stream().map(PushSubscriptionJpaEntity::toDomain).toList();
     }
 
     @Override

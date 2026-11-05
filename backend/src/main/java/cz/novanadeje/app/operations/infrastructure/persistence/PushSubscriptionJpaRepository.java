@@ -14,6 +14,12 @@ interface PushSubscriptionJpaRepository extends JpaRepository<PushSubscriptionJp
 
     List<PushSubscriptionJpaEntity> findByAdministratorIdOrderByCreatedAtAscIdAsc(UUID administratorId);
 
+    List<PushSubscriptionJpaEntity> findByBankImportAlertsTrueOrderByCreatedAtAscIdAsc();
+
+    List<PushSubscriptionJpaEntity> findByBackupAlertsTrueOrderByCreatedAtAscIdAsc();
+
+    List<PushSubscriptionJpaEntity> findByMailAlertsTrueOrderByCreatedAtAscIdAsc();
+
     List<PushSubscriptionJpaEntity> findByEndpointOrDeviceId(String endpoint, UUID deviceId);
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
