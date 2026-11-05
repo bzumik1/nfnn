@@ -1191,7 +1191,7 @@ describe('Given an administrator on a donor card', () => {
       http.expectOne(READ_URL).flush(readAnswer());
       await settle();
       receiptEnvironment.last().say({ kind: 'ready' });
-      receiptEnvironment.last().say({ kind: 'failed', reason: 'fonts' });
+      receiptEnvironment.last().say({ kind: 'failed', reason: 'fonts', name: 'Error' });
       await settle();
 
       expect(rowAlert('2027-000001')).toBe(
