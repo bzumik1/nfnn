@@ -1,0 +1,62 @@
+@if (closing(); as closed) {
+  <p #closingLine class="ui-card ui-card--padded install-card__closed" tabindex="-1">
+    @if (closed === 'hidden') {
+      <span i18n="@@donor.overview.install.hidden"
+        >Dobře, nabídku na tři měsíce skryjeme. Web si jako aplikaci můžete přidat kdykoli z nabídky
+        prohlížeče.</span
+      >
+    } @else if (closed === 'declined') {
+      <span i18n="@@donor.overview.install.declined"
+        >Aplikaci teď instalovat nebudeme. Přidat si ji můžete kdykoli z nabídky prohlížeče.</span
+      >
+    } @else {
+      <span i18n="@@donor.overview.install.installing"
+        >Aplikace se instaluje. Najdete ji mezi ostatními aplikacemi v zařízení.</span
+      >
+    }
+  </p>
+} @else if (install.offered()) {
+  <section class="ui-card ui-card--padded install-card" aria-labelledby="install-card-title">
+    <h2 id="install-card-title" class="ui-card__title" i18n="@@donor.overview.install.title">
+      Nová naděje jako aplikace
+    </h2>
+    <p class="install-card__lead" i18n="@@donor.overview.install.lead">
+      Přidejte si web mezi aplikace v zařízení. Otevře se bez adresního řádku rovnou na vašem
+      přehledu.
+    </p>
+    @switch (install.way()) {
+      @case ('ios-share') {
+        <p class="install-card__how" i18n="@@donor.overview.install.ios">
+          Klepněte na <strong>Sdílet</strong> (v Safari ho najdete i pod tlačítkem ⋯) a pak na
+          <strong>Přidat na plochu</strong>. V aplikaci se přihlásíte ještě jednou.
+        </p>
+      }
+      @case ('mac-dock') {
+        <p class="install-card__how" i18n="@@donor.overview.install.mac">
+          V Safari zvolte v nabídce <strong>Soubor</strong> položku
+          <strong>Přidat do Docku</strong>. V aplikaci se přihlásíte ještě jednou.
+        </p>
+      }
+    }
+    <div class="install-card__actions">
+      @if (install.way() === 'prompt') {
+        <button
+          type="button"
+          class="ui-button ui-button--primary"
+          (click)="installNow()"
+          i18n="@@donor.overview.install.install"
+        >
+          Nainstalovat aplikaci
+        </button>
+      }
+      <button
+        type="button"
+        class="ui-button ui-button--quiet"
+        (click)="notNow()"
+        i18n="@@donor.overview.install.notNow"
+      >
+        Teď ne
+      </button>
+    </div>
+  </section>
+}

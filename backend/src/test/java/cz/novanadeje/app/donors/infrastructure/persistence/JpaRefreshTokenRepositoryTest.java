@@ -13,6 +13,7 @@ import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.RefreshToken;
 import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
 import cz.novanadeje.app.donors.domain.RefreshTokenSecret;
+import cz.novanadeje.app.shared.application.event.DonorSessionsEnded;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -26,6 +27,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.event.ApplicationEvents;
+import org.springframework.test.context.event.RecordApplicationEvents;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -36,6 +39,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import(DonorsPersistenceTestConfiguration.class)
+@RecordApplicationEvents
 class JpaRefreshTokenRepositoryTest {
 
     private static final Instant NOW = Instant.parse("2026-10-23T10:00:00Z");
@@ -50,6 +54,8 @@ class JpaRefreshTokenRepositoryTest {
     private DonorDeviceRepository devices;
     @Autowired
     private EntityManager entityManager;
+    @Autowired
+    private ApplicationEvents events;
 
     private DonorId jana;
     private DeviceId device;
@@ -61,6 +67,14 @@ class JpaRefreshTokenRepositoryTest {
         devices.save(signedIn);
         device = signedIn.id();
         flushAndClear();
+    }
+
+    @Test
+    @DisplayName("Given a donor, when every refresh token of the donor is revoked, then the end of the donor's sessions is published with its instant")
+    void should_publish_sessions_ended_when_all_revoked_given_donor() {
+        refreshTokens.revokeAllOf(jana, NOW);
+
+        assertThat(events.stream(DonorSessionsEnded.class)).containsExactly(new DonorSessionsEnded(jana.value(), NOW));
     }
 
     @Test

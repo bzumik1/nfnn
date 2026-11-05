@@ -65,6 +65,7 @@ import {
 } from './signature-image';
 
 const WCAG_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
+const PAGE_PINCH_STOPPED_JAKUB_2026_10_31 = 'meta-viewport';
 
 async function askAboutAnOlderSymbol(page: Page): Promise<void> {
   let confirmed = false;
@@ -112,7 +113,10 @@ async function violations(page: Page): Promise<string[]> {
           animation.effect?.getTiming().iterations === Infinity,
       ),
   );
-  const results = await new AxeBuilder({ page }).withTags(WCAG_AA).analyze();
+  const results = await new AxeBuilder({ page })
+    .withTags(WCAG_AA)
+    .disableRules([PAGE_PINCH_STOPPED_JAKUB_2026_10_31])
+    .analyze();
   return results.violations.flatMap((violation) =>
     violation.nodes.map((node) => `${violation.id}: ${node.target.join(' ')}`),
   );
@@ -126,6 +130,39 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
   test('when they open the home page, then nothing on it breaks the rules', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('.qr-code svg')).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when they pay from a phone and unfold the QR code for another device, then nothing in Přispět breaks the rules', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/');
+    await expect(page.getByRole('button', { name: 'Otevřít v aplikaci banky' })).toBeEnabled();
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.getByRole('button', { name: /Platíte z jiného zařízení\?/ }).click();
+    await expect(page.locator('#prispet .qr-code svg')).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when they pay from a phone and close the bank offer without a bank, then the line on how to pay without it breaks no rule', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'canShare', { value: () => true, configurable: true });
+      Object.defineProperty(navigator, 'share', {
+        value: () => Promise.reject(new DOMException('Share canceled', 'AbortError')),
+        configurable: true,
+      });
+    });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Otevřít v aplikaci banky' }).click();
+    await expect(page.locator('#prispet .bank-app-hint')).toContainText('Neotevřela se vám banka?');
 
     expect(await violations(page)).toEqual([]);
   });
@@ -183,8 +220,18 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
     expect(await violations(page)).toEqual([]);
 
+    await page.getByRole('button', { name: /^Zvětšit: QR platba/ }).click();
+    await expect(page.getByRole('dialog', { name: 'Zvětšený QR kód' })).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+
     await page.goto('/aktuality/zahrada-pro-deti');
     await expect(page.getByRole('heading', { level: 1, name: 'Zahrada pro děti' })).toBeFocused();
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.getByRole('button', { name: 'Zvětšit fotku' }).click();
+    await expect(page.getByRole('dialog', { name: 'Zvětšená fotka' })).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
 
@@ -705,6 +752,31 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
     await devices.getByRole('button', { name: 'Odhlásit iPhone · Safari' }).click();
     await expect(devices.getByRole('status').filter({ hasText: /\S/ })).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when the browser of a signed-in donor offers the app and they decline it, then the offer and the closing line break no rule', async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.evaluate(() => {
+      const offer = new Event('beforeinstallprompt', { cancelable: true });
+      Object.assign(offer, {
+        prompt: () => Promise.resolve(),
+        userChoice: Promise.resolve({ outcome: 'dismissed', platform: 'web' }),
+      });
+      window.dispatchEvent(offer);
+    });
+    const offer = page.getByRole('region', { name: 'Nová naděje jako aplikace' });
+    await expect(offer).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+
+    await offer.getByRole('button', { name: 'Teď ne' }).click();
+    await expect(
+      page.locator('p', { hasText: 'Dobře, nabídku na tři měsíce skryjeme.' }),
+    ).toBeFocused();
 
     expect(await violations(page)).toEqual([]);
   });

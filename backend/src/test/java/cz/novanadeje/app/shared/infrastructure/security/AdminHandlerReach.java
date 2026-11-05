@@ -124,6 +124,11 @@ enum AdminHandlerReach {
         table.put("GET /api/admin/operations/logs", CONNECTOR);
         table.put("GET /api/admin/operations/logs/{name}", CONNECTOR);
         table.put("GET /api/admin/operations/logs/{name}/search", CONNECTOR);
+        table.put("GET /api/admin/operations/push", CONNECTOR);
+        table.put("POST /api/admin/operations/push/subscriptions", BROWSER_ONLY);
+        table.put("DELETE /api/admin/operations/push/subscriptions/{id}", BROWSER_ONLY);
+        table.put("PUT /api/admin/operations/push/subscriptions/{id}/alerts", CONNECTOR);
+        table.put("POST /api/admin/operations/push/test", BROWSER_ONLY);
         table.put("GET /api/admin/operations/settings", CONNECTOR);
         table.put("PUT /api/admin/operations/settings", CONNECTOR_SECRETS_IN_BROWSER_ONLY);
         table.put("POST /api/admin/operations/settings/test-email", CONNECTOR_SECRETS_IN_BROWSER_ONLY);

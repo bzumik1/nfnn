@@ -51,28 +51,47 @@ function rethrowReadable(failure: unknown): Observable<never> {
 }
 
 function readable(failure: unknown): Observable<unknown> {
-  if (!(failure instanceof HttpErrorResponse) || !isProblemBlob(failure.error)) {
+  if (!(failure instanceof HttpErrorResponse)) {
+    return of(failure);
+  }
+  if (isProblemText(failure)) {
+    return of(parsedOrAsIs(failure, failure.error));
+  }
+  if (!isProblemBlob(failure.error)) {
     return of(failure);
   }
   return from(failure.error.text()).pipe(
-    map(
-      (text) =>
-        new HttpErrorResponse({
-          error: JSON.parse(text) as unknown,
-          headers: failure.headers,
-          status: failure.status,
-          statusText: failure.statusText,
-          url: failure.url ?? undefined,
-        }),
-    ),
+    map((text) => parsedOrAsIs(failure, text)),
     catchError(() => of(failure)),
   );
 }
 
+function parsedOrAsIs(failure: HttpErrorResponse, text: string): HttpErrorResponse {
+  try {
+    return new HttpErrorResponse({
+      error: JSON.parse(text) as unknown,
+      headers: failure.headers,
+      status: failure.status,
+      statusText: failure.statusText,
+      url: failure.url ?? undefined,
+    });
+  } catch {
+    return failure;
+  }
+}
+
+function isProblemText(
+  failure: HttpErrorResponse,
+): failure is HttpErrorResponse & { error: string } {
+  return typeof failure.error === 'string' && isProblemType(failure.headers.get('Content-Type'));
+}
+
 function isProblemBlob(body: unknown): body is Blob {
-  return (
-    body instanceof Blob && body.type.split(';')[0].trim().toLowerCase() === PROBLEM_MEDIA_TYPE
-  );
+  return body instanceof Blob && isProblemType(body.type);
+}
+
+function isProblemType(contentType: string | null): boolean {
+  return (contentType ?? '').split(';')[0].trim().toLowerCase() === PROBLEM_MEDIA_TYPE;
 }
 
 function needsAccessToken(url: string): boolean {

@@ -1,9 +1,47 @@
 import { Page } from '@playwright/test';
 import { expect, pwaTest as test } from './pwa-fixtures';
 import { serveReceiptKeys } from '../receipt-verification';
-import { MARKER, PROBE_WORKER } from './pwa-site';
+import { MARKER, PLANTED_DEDICATED_WORKER, PLANTED_SCOPE, PLANTED_WORKER } from './pwa-site';
 
 const POLICY = '/zasady-ochrany-osobnich-udaju';
+
+interface ScriptUrlPolicies {
+  readonly defaultPolicy: unknown;
+  createPolicy(name: string, rules: { createScriptURL(input: string): string }): unknown;
+}
+
+async function openMarkerAdmittingPlantedScripts(page: Page): Promise<void> {
+  await page.goto(MARKER);
+  await page.evaluate(() => {
+    const policies = (window as unknown as { trustedTypes?: ScriptUrlPolicies }).trustedTypes;
+    if (policies !== undefined && !policies.defaultPolicy) {
+      policies.createPolicy('default', { createScriptURL: (input) => input });
+    }
+  });
+}
+
+async function tellPlantedServiceWorker(page: Page, message: string): Promise<void> {
+  await openMarkerAdmittingPlantedScripts(page);
+  await page.evaluate(
+    async ({ script, scope, sent }) => {
+      const registration = await navigator.serviceWorker.register(script, {
+        scope,
+      });
+      const worker =
+        registration.active ??
+        (await new Promise<ServiceWorker>((activated) => {
+          const installing = registration.installing ?? registration.waiting;
+          installing?.addEventListener('statechange', () => {
+            if (installing.state === 'activated') {
+              activated(installing);
+            }
+          });
+        }));
+      worker.postMessage(sent);
+    },
+    { script: PLANTED_WORKER, scope: PLANTED_SCOPE, sent: message },
+  );
+}
 
 async function openPolicy(page: Page): Promise<void> {
   await page.goto(POLICY);
@@ -41,29 +79,63 @@ test.describe('Given the pwaTest fixture watching a page of the production build
     browserProblems,
   }) => {
     browserProblems.expectOne(
-      /^Content-Security-Policy violation: script-src-elem blocked inline \(http:\/\/localhost:\d+\/zasady-ochrany-osobnich-udaju\)$/,
+      /^Content-Security-Policy violation: require-trusted-types-for blocked trusted-types-sink \(http:\/\/localhost:\d+\/zasady-ochrany-osobnich-udaju\)$/,
     );
-    browserProblems.expectOne(/^console error: Executing inline script violates/);
+    browserProblems.expectOne(/^console error: This document requires 'TrustedScript' assignment/);
     await openPolicy(page);
 
     await page.evaluate(() => {
       const script = document.createElement('script');
-      script.textContent = 'window.planted = true;';
+      try {
+        script.textContent = 'window.planted = true;';
+      } catch {
+        return;
+      }
       document.body.append(script);
     });
   });
 
   test('when a service worker logs a console error, then the fixture records it', async ({
     page,
-    swReady,
     browserProblems,
   }) => {
-    browserProblems.expectOne(/^console error: pwa probe worker error [0-9a-f]{16}/);
-    await openPolicy(page);
-    await page.evaluate((script) => navigator.serviceWorker.register(script), PROBE_WORKER);
-    await swReady();
+    browserProblems.expectOne(/^console error: pwa planted worker error/);
+    await tellPlantedServiceWorker(page, 'log-error');
+  });
 
-    await page.evaluate(() => navigator.serviceWorker.controller?.postMessage('log-error'));
+  test('when a service worker throws, then the fixture records the uncaught error with the worker address', async ({
+    page,
+    browserProblems,
+  }) => {
+    browserProblems.expectOne(
+      /^uncaught error: Error: pwa planted worker failure \(http:\/\/localhost:\d+\/pwa-plant-sw\.js\)$/,
+    );
+    await tellPlantedServiceWorker(page, 'throw');
+  });
+
+  test('when a service worker reaches another site, then the fixture records the Content-Security-Policy violation with the worker address', async ({
+    page,
+    browserProblems,
+  }) => {
+    browserProblems.expectOne(
+      /^Content-Security-Policy violation: Connecting to 'https:\/\/example\.com\/pwa-plant' violates .*connect-src 'self'.* \(http:\/\/localhost:\d+\/pwa-plant-sw\.js\)$/,
+    );
+    await tellPlantedServiceWorker(page, 'violate');
+  });
+
+  test('when a dedicated worker reaches another site, then the fixture records the Content-Security-Policy violation with the worker address', async ({
+    page,
+    browserProblems,
+  }) => {
+    browserProblems.expectOne(
+      /^Content-Security-Policy violation: Connecting to 'https:\/\/example\.com\/pwa-plant' violates .*connect-src 'self'.* \(http:\/\/localhost:\d+\/pwa-plant-worker\.js\)$/,
+    );
+    await openMarkerAdmittingPlantedScripts(page);
+
+    await page.evaluate((script) => {
+      const worker = new Worker(script);
+      worker.postMessage('violate');
+    }, PLANTED_DEDICATED_WORKER);
   });
 
   test('when an expected problem never happens, then the test fails', async ({
@@ -97,9 +169,9 @@ test.describe('Given the pwaTest fixture watching a page of the production build
   });
 });
 
-test.describe('Given a page that stored data in the browser', () => {
+test.describe('Given a page outside the app that stored data in the browser', () => {
   test.beforeEach(async ({ page }) => {
-    await openPolicy(page);
+    await page.goto(MARKER);
     await page.evaluate(async () => {
       window.localStorage.setItem('nfnn.local', 'kept');
       window.sessionStorage.setItem('nfnn.session', 'tab');

@@ -23,9 +23,14 @@ import { promisify } from 'node:util';
 const run = promisify(execFile);
 
 const FRONTEND = join(__dirname, '..', '..');
-export const PROBE_WORKER = '/pwa-probe-sw.js';
-export const PROBE_MANIFEST = '/pwa-probe.json';
+export const PLANTED_WORKER = '/pwa-plant-sw.js';
+export const PLANTED_SCOPE = '/pwa-plant/';
+export const PLANTED_DEDICATED_WORKER = '/pwa-plant-worker.js';
+export const OUTSIDE_ADDRESS = 'https://example.com/pwa-plant';
 export const MARKER = '/pwa-marker.txt';
+export const SERVICE_WORKER = '/ngsw-worker.js';
+export const SERVICE_WORKER_MANIFEST = '/ngsw.json';
+const SERVICE_WORKER_OFF = '/logs/service-worker.off';
 export const VARIANTS = ['a', 'b'] as const;
 export type Variant = (typeof VARIANTS)[number];
 
@@ -41,6 +46,7 @@ export interface PwaSite {
   switchTo(variant: Variant): void;
   remove(path: string): void;
   filesOnlyIn(variant: Variant): readonly string[];
+  turnServiceWorkerOff(): Promise<void>;
   takeDown(): Promise<void>;
   bringUp(): Promise<void>;
   reset(): Promise<void>;
@@ -60,50 +66,26 @@ export function nginxImage(): string {
   return image;
 }
 
-function probeWorker(version: string, precache: readonly string[]): string {
-  return `const VERSION = ${JSON.stringify(version)};
-const CACHE = 'pwa-probe-' + VERSION;
-const PRECACHE = ${JSON.stringify(precache)};
-const NETWORK_ONLY = (url) => url.origin !== self.location.origin || url.pathname.startsWith('/api/') || url.pathname === '/mcp';
-self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(PRECACHE)));
-});
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys()
-      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key))))
-      .then(() => self.clients.claim()),
-  );
-});
-self.addEventListener('message', (event) => {
-  const reply = (answer) => event.ports[0] && event.ports[0].postMessage(answer);
-  if (event.data === 'version') {
-    reply({ version: VERSION });
-  } else if (event.data === 'skip-waiting') {
-    event.waitUntil(self.skipWaiting());
-  } else if (event.data === 'log-error') {
-    console.error('pwa probe worker error ' + VERSION);
-  } else if (event.data && event.data.fetch) {
-    event.waitUntil(
-      fetch(event.data.fetch).then(
-        (response) => response.text().then((body) => reply({ status: response.status, body })),
-        (error) => reply({ failed: String(error) }),
-      ),
-    );
+const PLANTED_ANSWERS = `const planted = (event) => {
+  if (event.data === 'log-error') {
+    console.error('pwa planted worker error');
+  } else if (event.data === 'violate') {
+    fetch(${JSON.stringify(OUTSIDE_ADDRESS)}).catch(() => undefined);
+  } else if (event.data === 'throw') {
+    setTimeout(() => {
+      throw new Error('pwa planted worker failure');
+    });
   }
-});
-self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
-  if (NETWORK_ONLY(url)) {
-    event.respondWith(fetch(event.request));
-  } else if (event.request.mode === 'navigate') {
-    event.respondWith(fetch(event.request).catch(() => caches.match('/index.html')));
-  } else {
-    event.respondWith(caches.match(event.request).then((hit) => hit || fetch(event.request)));
-  }
-});
+};
 `;
-}
+
+const PLANTED_WORKER_SCRIPT = `${PLANTED_ANSWERS}self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
+self.addEventListener('message', planted);
+`;
+
+const PLANTED_DEDICATED_WORKER_SCRIPT = `${PLANTED_ANSWERS}self.addEventListener('message', planted);
+`;
 
 function sha256(bytes: Buffer | string): string {
   return createHash('sha256').update(bytes).digest('hex');
@@ -125,22 +107,31 @@ export function filesOf(folder: string): readonly string[] {
     .sort();
 }
 
-export function writeProbeVariant(folder: string, variant: Variant): void {
+const NGSW_CONFIG_CLI = join(
+  FRONTEND,
+  'node_modules',
+  '@angular',
+  'service-worker',
+  'ngsw-config.js',
+);
+
+export async function writeVariant(folder: string, variant: Variant): Promise<void> {
   writeVariantFile(folder, MARKER, `${variant}\n`, variant);
-  const precache = filesOf(folder).filter(
-    (path) => path !== PROBE_WORKER && path !== PROBE_MANIFEST,
+  writeVariantFile(folder, PLANTED_WORKER, PLANTED_WORKER_SCRIPT, 'a');
+  writeVariantFile(folder, PLANTED_DEDICATED_WORKER, PLANTED_DEDICATED_WORKER_SCRIPT, 'a');
+  await run(
+    process.execPath,
+    [NGSW_CONFIG_CLI, relative(FRONTEND, folder), 'ngsw-config.json', '/'],
+    {
+      cwd: FRONTEND,
+    },
   );
-  const hashes = Object.fromEntries(
-    precache.map((path) => [path, sha256(readFileSync(join(folder, path.slice(1))))]),
-  );
-  const manifest = JSON.stringify({ files: hashes }, null, 2);
-  const version = sha256(manifest).slice(0, 16);
-  writeVariantFile(folder, PROBE_MANIFEST, manifest, variant);
-  writeVariantFile(folder, PROBE_WORKER, probeWorker(version, precache), variant);
+  const written = Math.floor(Date.now() / 1000) + VARIANTS.indexOf(variant) * LATER_VARIANT_SECONDS;
+  utimesSync(join(folder, SERVICE_WORKER_MANIFEST.slice(1)), written, written);
 }
 
-export function probeVersion(folder: string): string {
-  return sha256(readFileSync(join(folder, PROBE_MANIFEST.slice(1)), 'utf8')).slice(0, 16);
+export function serviceWorkerVersion(folder: string): string {
+  return sha256(readFileSync(join(folder, SERVICE_WORKER_MANIFEST.slice(1)), 'utf8')).slice(0, 16);
 }
 
 function freePort(): Promise<number> {
@@ -242,7 +233,7 @@ export async function startPwaSite(dist: string): Promise<PwaSite> {
   mkdirSync(stash);
   for (const variant of VARIANTS) {
     cpSync(dist, join(root, variant), { recursive: true });
-    writeProbeVariant(join(root, variant), variant);
+    await writeVariant(join(root, variant), variant);
   }
   servedLink(root, 'a');
   const { port, container } = await startContainer(root);
@@ -272,6 +263,9 @@ export async function startPwaSite(dist: string): Promise<PwaSite> {
         return !existsSync(theirs) || !readFileSync(theirs).equals(readFileSync(mine));
       });
     },
+    async turnServiceWorkerOff() {
+      await run('docker', ['exec', container, 'touch', SERVICE_WORKER_OFF]);
+    },
     async takeDown() {
       await run('docker', ['stop', '--time', '0', container]);
     },
@@ -288,6 +282,7 @@ export async function startPwaSite(dist: string): Promise<PwaSite> {
       if (!(await answers(`${url}/`))) {
         await site.bringUp();
       }
+      await run('docker', ['exec', container, 'rm', '-f', SERVICE_WORKER_OFF]);
     },
     async dispose() {
       await run('docker', ['rm', '-f', container]).catch(() => undefined);

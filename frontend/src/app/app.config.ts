@@ -23,7 +23,12 @@ import { AuthStore } from './core/auth/auth-store';
 import { ReportingErrorHandler } from './core/errors/reporting-error-handler';
 import { ChunkLoadRecovery } from './core/reload/chunk-load-recovery';
 import { CanonicalLink } from './core/seo/canonical-link';
+import { AppInstall } from './core/install/app-install';
+import { AppUpdates } from './core/updates/app-updates';
+import { provideAppServiceWorker } from './core/updates/angular-service-worker';
+import { serviceWorkerBypassInterceptor } from './core/updates/service-worker-bypass';
 import { versionInterceptor } from './core/version/version-interceptor';
+import { pagePinchLockAtStart } from './core/zoom/page-pinch-lock';
 import { DialogHistory } from './shared/ui/dialog/dialog-history';
 
 const scrollOptions: InMemoryScrollingOptions = {
@@ -39,7 +44,7 @@ export const chunkLoadRecoveryFeature: NavigationErrorHandlerFeature = withNavig
 
 export const appHttpClient: EnvironmentProviders = provideHttpClient(
   withXhr(),
-  withInterceptors([authInterceptor, versionInterceptor]),
+  withInterceptors([authInterceptor, versionInterceptor, serviceWorkerBypassInterceptor]),
 );
 
 export const appErrorHandler: Provider = {
@@ -57,8 +62,14 @@ export const appConfig: ApplicationConfig = {
     appErrorHandler,
     provideRouter(routes, inMemoryScrolling, chunkLoadRecoveryFeature),
     appHttpClient,
+    provideAppServiceWorker(),
+    provideAppInitializer(() => {
+      inject(AppUpdates).start();
+      inject(AppInstall).start();
+    }),
     provideAppInitializer(() => inject(AuthStore).restore()),
     provideAppInitializer(() => inject(CanonicalLink).start()),
     dialogHistoryAtStart,
+    pagePinchLockAtStart,
   ],
 };

@@ -1,7 +1,7 @@
 import { DOCUMENT } from '@angular/common';
 import { inject, Injectable, InjectionToken } from '@angular/core';
 
-export type ReloadReason = 'chunk-load';
+export type ReloadReason = 'chunk-load' | 'update' | 'unrecoverable';
 
 export const RELOAD_WINDOW_MS = 60_000;
 

@@ -3,7 +3,7 @@ import { NavigationEnd, NavigationError, NavigationStart, Router } from '@angula
 
 import { ErrorReporter } from '../errors/error-reporter';
 import { Connectivity } from '../navigation/connectivity';
-import { ExternalNavigation } from '../navigation/external-navigation';
+import { AppUpdates } from '../updates/app-updates';
 import { ChunkProbe } from './chunk-probe';
 import { ReloadGuard } from './reload-guard';
 
@@ -29,7 +29,7 @@ export interface ChunkLoadFailure {
 export class ChunkLoadRecovery {
   private readonly router = inject(Router);
   private readonly guard = inject(ReloadGuard);
-  private readonly navigation = inject(ExternalNavigation);
+  private readonly updates = inject(AppUpdates);
   private readonly connectivity = inject(Connectivity);
   private readonly probe = inject(ChunkProbe);
   private readonly reporter = inject(ErrorReporter);
@@ -62,14 +62,14 @@ export class ChunkLoadRecovery {
     const navigation = this.navigationsStarted;
     const lands = await this.probe.reloadWouldLand(error.error);
     if (lands && navigation === this.navigationsStarted && this.guard.claim('chunk-load')) {
-      this.navigation.loadFromServer(error.url);
+      this.updates.loadNewVersion(error.url);
     }
   }
 
   reload(): void {
     const failure = this.failed();
     if (failure !== null) {
-      this.navigation.loadFromServer(failure.url);
+      this.updates.loadNewVersion(failure.url);
     }
   }
 }

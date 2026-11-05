@@ -13,6 +13,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
+import { TrackedForm } from '../../../core/updates/tracked-form';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -178,6 +179,7 @@ const INPUTS: Partial<Readonly<Record<SettingName, Input>>> = {
     PasswordReveal,
     ReceiptSignatory,
     ReceiptSigningKey,
+    TrackedForm,
   ],
   templateUrl: './admin-settings.html',
   styleUrl: './admin-settings.scss',

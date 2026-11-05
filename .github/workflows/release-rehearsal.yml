@@ -158,7 +158,7 @@ jobs:
           logs="$RUNNER_TEMP/first/logs"
           before=$(wc -l < "$logs/backend.log")
           docker compose up -d --wait --wait-timeout 300
-          tail -n "+$((before + 1))" "$logs/backend.log" > "$RUNNER_TEMP/candidate-start.log"
+          tail -n "+$((before + 1))" "$logs/backend.log" | sed -n '/ Starting AppApplication /,$p' > "$RUNNER_TEMP/candidate-start.log"
           grep -q 'Backend revision dev is ready' "$RUNNER_TEMP/candidate-start.log" || { echo "::error::the candidate's backend did not start on the database of the older images"; exit 1; }
           for container in nfnn-postgres nfnn-backup nfnn-backend nfnn-mcp nfnn-frontend; do
             [ "$(docker inspect -f '{{.RestartCount}}' "$container")" = 0 ] || { echo "::error::$container restarted while the candidate's images took over"; exit 1; }
@@ -183,6 +183,11 @@ jobs:
           docker compose up -d --wait --wait-timeout 300
           [ "$(grep -c "Backend revision $DEPLOYED_REVISION is ready" "$logs/backend.log")" -ge 3 ] || { echo "::error::the older images' backend did not start again after the candidate's"; exit 1; }
           node scripts/stack-journey.mjs check --state "$JOURNEY_STATE"
+          answer=$(curl -sS --max-time 10 -o /dev/null -w '%{http_code} %{content_type}' http://localhost:8089/ngsw.json)
+          case "$answer" in
+            "404 "* | "200 application/json"*) ;;
+            *) echo "::error::after the rollback /ngsw.json must answer 404 (an image before slice 2.4, so every installed service worker removes itself) or 200 JSON (2.4 or later), got $answer"; exit 1 ;;
+          esac
           node scripts/stack-journey.mjs bank --phase rollback --state "$JOURNEY_STATE"
           backup_and_test_restore rollback
 

@@ -1,5 +1,7 @@
 package cz.novanadeje.app.operations.application.settings;
 
+import cz.novanadeje.app.operations.domain.push.PushKey;
+import cz.novanadeje.app.operations.domain.push.PushKeyRepository;
 import cz.novanadeje.app.operations.domain.settings.CarriedSettingsKey;
 import cz.novanadeje.app.operations.domain.settings.Setting;
 import cz.novanadeje.app.operations.domain.settings.StoredSetting;
@@ -26,8 +28,71 @@ class CarriedSettingsKeyServiceTest {
     private final ReversibleSealer sealer = new ReversibleSealer("current:");
     private final ReversibleSealer oldSealer = new ReversibleSealer("old:");
     private final FakeCarrier carrier = new FakeCarrier();
-    private final CarriedSettingsKeyService service = new CarriedSettingsKeyService(settings, carried, sealer, carrier,
+    private final InMemoryPushKeys pushKeys = new InMemoryPushKeys();
+    private final CarriedSettingsKeyService service = new CarriedSettingsKeyService(settings, carried, pushKeys, sealer, carrier,
             Clock.fixed(NOW, ZoneOffset.UTC));
+
+    @Test
+    @DisplayName("Given push keys restored from another server with its key carried, when the backend starts, then the private key is sealed again with this key and the public key kept")
+    void should_seal_push_key_again_when_started_given_push_key_of_carried_key() {
+        carried.save(OLD);
+        pushKeys.replace(new PushKey("public", oldSealer.seal(PushKey.SEAL_PURPOSE, "private"), STORED));
+
+        assertThat(service.carryIntoBackups()).isEqualTo(1);
+
+        assertThat(pushKeys.find()).contains(new PushKey("public", sealer.seal(PushKey.SEAL_PURPOSE, "private"), STORED));
+    }
+
+    @Test
+    @DisplayName("Given push keys restored with the carried key and the startup not yet run, when a request seals the push key again, then only the push key is sealed with this key and the carried key stays")
+    void should_seal_only_push_key_when_request_seals_it_again_given_carried_key_of_restore() {
+        carried.save(OLD);
+        pushKeys.replace(new PushKey("public", oldSealer.seal(PushKey.SEAL_PURPOSE, "private"), STORED));
+
+        service.sealPushKeyAgain();
+
+        assertThat(pushKeys.find()).contains(new PushKey("public", sealer.seal(PushKey.SEAL_PURPOSE, "private"), STORED));
+        assertThat(carried.find()).contains(OLD);
+    }
+
+    @Test
+    @DisplayName("Given push keys this server can already read, when the backend starts after a restore, then they are kept as they are")
+    void should_keep_push_key_when_started_given_push_key_readable() {
+        carried.save(OLD);
+        PushKey readable = new PushKey("public", sealer.seal(PushKey.SEAL_PURPOSE, "private"), STORED);
+        pushKeys.replace(readable);
+
+        assertThat(service.carryIntoBackups()).isZero();
+
+        assertThat(pushKeys.find()).contains(readable);
+    }
+
+    private static final class InMemoryPushKeys implements PushKeyRepository {
+
+        private Optional<PushKey> key = Optional.empty();
+
+        @Override
+        public Optional<PushKey> find() {
+            return key;
+        }
+
+        @Override
+        public Optional<PushKey> findLocked() {
+            return key;
+        }
+
+        @Override
+        public void insertIfAbsent(PushKey stored) {
+            if (key.isEmpty()) {
+                key = Optional.of(stored);
+            }
+        }
+
+        @Override
+        public void replace(PushKey stored) {
+            key = Optional.of(stored);
+        }
+    }
 
     @Test
     @DisplayName("Given no settings key carried yet, when the backend starts, then the current key is carried for the backups and nothing is sealed again")

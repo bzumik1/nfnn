@@ -244,6 +244,23 @@ class TranscriptNormaliserTest {
     }
 
     @Test
+    @DisplayName("Given a push subscription with its browser keys, a VAPID public key and a VAPID private key in a field and a sentence, when they are normalised, then the browser keys and the private key are masked and remembered, the boolean auth flag stays and the endpoint stays")
+    void should_mask_push_keys_when_normalised_given_a_subscription_and_vapid_keys() {
+        TranscriptNormaliser normaliser = new TranscriptNormaliser(Map.of());
+        String publicKey = "BCVxsr7N_eNgVRqvHtD0zTZsEc6-VV-JvLexhqUzORcxaOzi6-AYWXvTBHm4bjyPjs7Vd8pZGH6SRpkNtoIAiw4";
+        String privateKey = "q1dXpw3UpT5VOmu_cf_v6ih07Aems3njxI-JWgLcM94";
+
+        JsonNode body = normaliser.json(json.readTree("{\"endpoint\":\"https://fcm.googleapis.com/fcm/send/jana-telefon\",\"keys\":{\"p256dh\":\"" + publicKey
+                + "\",\"auth\":\"BTBZMqHH6r4Tts7J_aSIgg\"},\"vapidPrivateKey\":\"planted-push-key\",\"publicKey\":\"" + publicKey + "\",\"route\":{\"auth\":true}}"));
+        String sentence = normaliser.text("key " + privateKey + ".");
+
+        assertThat(body.toString()).isEqualTo("{\"endpoint\":\"https://fcm.googleapis.com/fcm/send/jana-telefon\",\"keys\":{\"p256dh\":\"<secret>\",\"auth\":\"<secret>\"},"
+                + "\"vapidPrivateKey\":\"<secret>\",\"publicKey\":\"<token>\",\"route\":{\"auth\":true}}");
+        assertThat(sentence).isEqualTo("key <token>.");
+        assertThat(normaliser.maskedValues()).contains(publicKey, "BTBZMqHH6r4Tts7J_aSIgg", "planted-push-key", privateKey);
+    }
+
+    @Test
     @DisplayName("Given a backup key in capitals and in lowercase inside a field and a sentence, when it is normalised, then each is masked and remembered for the leak check, and the bare prefix of a hint stays")
     void should_mask_and_remember_backup_keys_when_normalised_given_a_key_in_any_case() {
         TranscriptNormaliser normaliser = new TranscriptNormaliser(Map.of());

@@ -83,6 +83,16 @@ function donorPage(name: string, path: string, donations = donorWithDonations): 
   };
 }
 
+async function unfoldPaymentQr(page: Page, scope = '#prispet'): Promise<void> {
+  const otherDevice = page
+    .locator(scope)
+    .getByRole('button', { name: /Platíte z jiného zařízení\?/ });
+  await expect(page.locator(`${scope} .bank`)).toBeVisible();
+  if (await otherDevice.isVisible()) {
+    await otherDevice.click();
+  }
+}
+
 async function openDonateSection(page: Page, signedIn = false): Promise<void> {
   await mockDonorApi(page);
   await mockPublicContent(page);
@@ -91,6 +101,7 @@ async function openDonateSection(page: Page, signedIn = false): Promise<void> {
     await rememberedSession(page, donor);
   }
   await page.goto('/');
+  await unfoldPaymentQr(page);
   await expect(page.locator(DONATE_QR).getByRole('img')).toBeVisible();
 }
 
@@ -122,6 +133,12 @@ async function openDialogAt(page: Page, width: number): Promise<void> {
 const SCREENS: Screen[] = [
   publicPage('home', '/', {
     elements: [element('home--donate-qr', DONATE_QR), element('home--donate-bank', DONATE_BANK)],
+    open: async (page) => {
+      await mockDonorApi(page);
+      await mockPublicContent(page);
+      await page.goto('/');
+      await unfoldPaymentQr(page);
+    },
   }),
   publicPage('news', '/aktuality'),
   publicPage('news-article', `/aktuality/${article.slug}`),
@@ -322,6 +339,12 @@ const SCREENS: Screen[] = [
       await failPaymentDetails(page);
       await page.goto('/');
       await expect(page.locator('#prispet .qr-error')).toBeVisible();
+      const otherDevice = page
+        .locator('#prispet')
+        .getByRole('button', { name: /Platíte z jiného zařízení\?/ });
+      if (await otherDevice.isVisible()) {
+        await otherDevice.click();
+      }
     },
     ready: (page) => elementsShown(page, ['#prispet .qr']),
   },
@@ -405,6 +428,7 @@ const SCREENS_SINCE_V2: Screen[] = [
       await rememberedSession(page, donor);
       await page.goto('/darce/prehled');
       await expect(page.locator(SEND_GIFT_BANK)).toContainText(donor.variableSymbol);
+      await unfoldPaymentQr(page, '.send-gift');
     },
     ready: (page) => elementsShown(page, [SEND_GIFT_QR, SEND_GIFT_BANK]),
   },
@@ -485,6 +509,7 @@ function shootEach(screens: Screen[]): void {
         }
         if (screen.region || screen.elements) {
           await page.addStyleTag({ content: FIXED_BARS_HIDDEN });
+          await page.mouse.move(0, 0);
         }
         if (screen.region) {
           await page

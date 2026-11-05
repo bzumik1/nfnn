@@ -24,7 +24,10 @@ const API_ANSWERS = [
   { status: 401, method: 'GET', path: '/api/donors/me' },
   { status: 404, method: 'GET', path: '/api/content/news/probe-neexistuje' },
   ...RECEIPT_IMAGES.map(({ path }) => ({ status: 401, method: 'GET', path })),
+  { status: 401, method: 'GET', path: '/api/live' },
 ];
+const LIVE_PATH = '/api/live';
+const LIVE_HEARTBEAT_WITHIN_MS = 35_000;
 const EDGE_ONLY = [
   { method: 'POST', path: '/mcp' },
   { method: 'POST', path: '/mcp-photos' },
@@ -50,6 +53,82 @@ const CLIENT_ERROR_REPORT = {
 
 const failures = [];
 const fail = (message) => failures.push(message);
+
+async function probeLiveStream() {
+  const label = `GET ${LIVE_PATH} with a donor's token`;
+  if (ACCESS_TOKEN === '') {
+    fail(`${label} is not probed: set PROBE_ACCESS_TOKEN to a donor's access token`);
+    return;
+  }
+  const abort = new AbortController();
+  const deadline = setTimeout(() => abort.abort(), LIVE_HEARTBEAT_WITHIN_MS);
+  const seenParts = [];
+  try {
+    const response = await fetch(new URL(LIVE_PATH, baseUrl), {
+      headers: {
+        'X-Forwarded-For': PROBE_ADDRESS,
+        Accept: 'text/event-stream',
+        Authorization: `Bearer ${ACCESS_TOKEN}`,
+      },
+      signal: abort.signal,
+    });
+    const answer = {
+      status: response.status,
+      cacheControl: response.headers.get('cache-control') ?? '',
+      edge: response.headers.get(EDGE_HEADER) ?? '',
+    };
+    expectApiNoStore(label, answer);
+    if (response.status !== 200) {
+      fail(`${label} answered ${response.status}, expected 200`);
+      return;
+    }
+    const contentType = response.headers.get('content-type') ?? '';
+    if (!contentType.startsWith('text/event-stream')) {
+      fail(`${label} answered Content-Type "${contentType}", expected text/event-stream`);
+    }
+    const buffering = response.headers.get('x-accel-buffering') ?? '';
+    if (buffering !== 'no') {
+      fail(
+        `${label} answered X-Accel-Buffering "${buffering}", expected "no", so a proxy in front passes the stream on unbuffered`,
+      );
+    }
+    if (response.headers.get('content-encoding')) {
+      fail(`${label} is compressed, so a proxy could hold its events back`);
+    }
+    const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+    let text = '';
+    while (!(seenParts.includes('revision') && seenParts.includes('heartbeat'))) {
+      const { value, done } = await reader.read();
+      if (done) {
+        break;
+      }
+      text += value;
+      if (!seenParts.includes('revision') && /^event:revision$/m.test(text)) {
+        seenParts.push('revision');
+      }
+      if (!seenParts.includes('heartbeat') && /^:/m.test(text)) {
+        seenParts.push('heartbeat');
+      }
+    }
+  } catch (error) {
+    if (error.name !== 'AbortError') {
+      fail(`${label} failed: ${error.message}`);
+      return;
+    }
+  } finally {
+    clearTimeout(deadline);
+    abort.abort();
+  }
+  for (const part of ['revision', 'heartbeat']) {
+    if (!seenParts.includes(part)) {
+      fail(
+        `${label} brought no ${part} through nginx within ${LIVE_HEARTBEAT_WITHIN_MS / 1000} s, so the stream is buffered or broken`,
+      );
+    }
+  }
+}
+
+const liveStream = probeLiveStream();
 
 async function request({ method, path, headers = {}, body }) {
   const response = await fetch(new URL(path, baseUrl), {
@@ -257,6 +336,8 @@ for (const path of [...APP_SHELL, '/overit/']) {
   }
 }
 
+await liveStream;
+
 if (failures.length > 0) {
   for (const message of failures) {
     console.error(`::error::${message}`);
@@ -265,5 +346,5 @@ if (failures.length > 0) {
   process.exit(1);
 }
 console.log(
-  `edge caching: /api answers ${[...seen].sort().join(', ')} carry no-store for the browser and Cloudflare, /mcp and /.well-known no-store for Cloudflare, browser error reports over 4 kB refused by nginx, the app shell no-cache`,
+  `edge caching: /api answers ${[...seen].sort().join(', ')} carry no-store for the browser and Cloudflare, /mcp and /.well-known no-store for Cloudflare, the live stream unbuffered with its revision and a heartbeat, browser error reports over 4 kB refused by nginx, the app shell no-cache`,
 );

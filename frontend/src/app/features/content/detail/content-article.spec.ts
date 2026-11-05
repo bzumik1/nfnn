@@ -2,13 +2,15 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { IMAGE_ID, newsArticle } from '../testing/news-fixtures';
 import { project } from '../testing/project-fixtures';
+import { DialogHistory } from '../../../shared/ui/dialog/dialog-history';
+import { FakeDialogHistory } from '../../../shared/ui/dialog/testing/fake-dialog-history';
 import { ContentArticle } from './content-article';
 import { newsPage, projectPage } from './content-page';
 
 async function setUp(): Promise<ComponentFixture<ContentArticle>> {
   await TestBed.configureTestingModule({
     imports: [ContentArticle],
-    providers: [provideRouter([])],
+    providers: [provideRouter([]), { provide: DialogHistory, useClass: FakeDialogHistory }],
   }).compileComponents();
   return TestBed.createComponent(ContentArticle);
 }
@@ -37,6 +39,37 @@ describe('Given the page of a news article', () => {
     expect(
       (fixture.nativeElement.querySelector('.photo img') as HTMLImageElement).getAttribute('src'),
     ).toBe(`/api/content/media/${IMAGE_ID}?w=960`);
+  });
+
+  it('when its photo is pressed, then the whole photo opens enlarged at the largest width the site stores', async () => {
+    fixture.componentRef.setInput(
+      'page',
+      newsPage(
+        newsArticle({
+          coverImage: {
+            id: IMAGE_ID,
+            url: `/api/content/media/${IMAGE_ID}`,
+            alt: 'Děti sázejí stromek',
+          },
+        }),
+      ),
+    );
+    await fixture.whenStable();
+    const trigger = fixture.nativeElement.querySelector(
+      '.photo app-zoomable button',
+    ) as HTMLButtonElement;
+    expect(trigger.getAttribute('aria-label')).toBe('Zvětšit fotku: Děti sázejí stromek');
+
+    document.body.appendChild(fixture.nativeElement);
+    trigger.click();
+    await fixture.whenStable();
+
+    const enlarged = fixture.nativeElement.querySelector(
+      'dialog .zoom-stage img',
+    ) as HTMLImageElement;
+    expect(enlarged.getAttribute('src')).toBe(`/api/content/media/${IMAGE_ID}?w=1440`);
+    expect(enlarged.getAttribute('alt')).toBe('Děti sázejí stromek');
+    fixture.nativeElement.remove();
   });
 
   it('when it is shown as a preview inside another page, then the title is a third-level heading and the page keeps its one h1', async () => {

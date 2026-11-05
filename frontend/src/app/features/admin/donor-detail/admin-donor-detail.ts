@@ -19,6 +19,7 @@ import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-pro
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { pluralCategory } from '../../../core/i18n/plural-category';
+import { TrackedForm } from '../../../core/updates/tracked-form';
 import { BankAccountItem } from '../../donations/bank-accounts-api';
 import { formatMinorUnits } from '../../donations/donation-amount';
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
@@ -97,6 +98,7 @@ const PAIRING_LABELS: Record<NonNullable<DonationItem['pairedBy']>, string> = {
     FormsModule,
     LiveNotice,
     RouterLink,
+    TrackedForm,
   ],
   providers: [AdminReceiptDownloads],
   templateUrl: './admin-donor-detail.html',

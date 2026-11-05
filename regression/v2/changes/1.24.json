@@ -1,0 +1,18 @@
+[
+  {
+    "path": "POST /api/donations/me/receipts",
+    "scenario": "donations/donation_receipts_frozen: A donor erased after signing in gets no new receipt with the earlier token, and the receipt issued before stays active*",
+    "kind": "body",
+    "field": "$.detail",
+    "reason": "1.24 (1.22 review n5): the detail of donations/donor-erased no longer speaks of the donor in the third person, because the donor reads it too; it reads right for the donor and for an administrator",
+    "contract": "docs/api-contract.md, donations — donations and PDF receipts (POST /api/donations/me/receipts)"
+  },
+  {
+    "path": "POST /api/admin/donations/donors/{id}/receipts",
+    "scenario": "donations/admin_receipts: The administration answers the issuer's refusals and refuses an unknown or erased donor*",
+    "kind": "body",
+    "field": "$.detail",
+    "reason": "1.24 (1.22 review n5): the same neutral detail of donations/donor-erased answers the administration's issue of an erased donor's receipt",
+    "contract": "docs/api-contract.md, Issued receipts in the administration"
+  }
+]
