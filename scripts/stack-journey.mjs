@@ -826,7 +826,7 @@ class Journey {
     }
     this.say(`The donor's ${this.state.receipts.filter((entry) => !entry.gone).length} receipts read as issued, with their statuses, and an unchanged one is issued again under its number`);
     if (restored) {
-      const lost = this.state.receipts.filter((entry) => entry.gone && entry.donationId === this.state.gifts[2]);
+      const lost = this.state.receipts.filter((entry) => entry.gone);
       const again = await this.expect(200, 'POST', '/api/donations/me/receipts', { token: donor, json: { donationId: this.state.gifts[2] } },
         'issuing the receipt lost with the restore again');
       for (const entry of lost) {
