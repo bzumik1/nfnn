@@ -2,12 +2,13 @@ import type { Page } from '@playwright/test';
 import { rowsSha256 } from '../src/app/features/donations/sync/canonical-rows';
 import {
   donor,
-  type DonorSyncMock,
   mockDonorApi,
   noDonations,
   openDonorSection,
   session,
   signIn,
+  signOutFromAccount,
+  type DonorSyncMock,
 } from './donor-session';
 import { expect, test } from './fixtures';
 
@@ -178,8 +179,7 @@ test.describe('Given a donor who signs in with a password on a device that keeps
     await openDeviceData(page);
     await expect(page.getByText(/Uloženo v zařízení · aktualizováno /)).toBeVisible();
 
-    await page.getByRole('banner').getByRole('button', { name: 'Účet' }).click();
-    await page.getByRole('dialog').getByRole('button', { name: 'Odhlásit se' }).click();
+    await signOutFromAccount(page);
     await expect(page).toHaveURL(/\/$/);
 
     await expect.poll(async () => (await rawDevice(page)).wraps).toEqual(['password']);

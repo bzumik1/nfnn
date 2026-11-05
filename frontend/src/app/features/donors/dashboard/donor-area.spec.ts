@@ -767,6 +767,18 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(element('app-section-rows')).toBeNull();
     });
 
+    it('then Zpět on a section opened by its address leads to the overview that lists the sections', async () => {
+      await open('/darce/potvrzeni');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      button('header button.back-button').click();
+      await settle();
+      await answerPaymentDetails();
+
+      expect(TestBed.inject(Router).url).toBe('/darce/prehled');
+      expect(element('app-section-rows')).not.toBeNull();
+    });
+
     it('then the overview ends with Odhlásit se and under it how to reach the foundation, its register entry and the privacy policy', async () => {
       await open('/darce/prehled');
       await respond(twoYearSummary(), twoYearDonations());

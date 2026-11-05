@@ -16,6 +16,16 @@ import { InstallCard } from '../install-card/install-card';
 import { receivedVerifications } from '../gift-count/gift-count';
 import { PageTitle } from '../page-title/page-title';
 import { SendGift } from '../send-gift/send-gift';
+import { CompactLayout } from '../../../../core/layout/compact-layout';
+import { SectionRows } from '../../../../shared/ui/section-rows/section-rows';
+import {
+  DONOR_NAV_LABEL,
+  donorSectionGroups,
+  donorSectionRows,
+  questionsBadge,
+} from '../donor-sections';
+import { DonorSignOut } from '../sign-out/donor-sign-out';
+import { InstallRow } from '../install-row/install-row';
 
 const RECENT_DONATIONS_SHOWN = 5;
 
@@ -32,6 +42,9 @@ const RECENT_DONATIONS_SHOWN = 5;
     DonationsPending,
     DonationsTable,
     InstallCard,
+    SectionRows,
+    DonorSignOut,
+    InstallRow,
   ],
   templateUrl: './donor-overview.html',
   styleUrl: './donor-overview.scss',
@@ -39,7 +52,18 @@ const RECENT_DONATIONS_SHOWN = 5;
 })
 export class DonorOverview {
   protected readonly donations = inject(DonorDonations);
-  protected readonly donor = inject(AuthStore).donor;
+  private readonly auth = inject(AuthStore);
+  protected readonly donor = this.auth.donor;
+  protected readonly compact = inject(CompactLayout).isCompact;
+  protected readonly navLabel = DONOR_NAV_LABEL;
+  protected readonly sectionRows = computed(() =>
+    donorSectionRows(
+      donorSectionGroups(
+        this.auth.isAdmin(),
+        questionsBadge(this.donations.accountsWithQuestion().length),
+      ),
+    ),
+  );
   private readonly refusal = inject(AdminAccessRefusal);
   protected readonly adminRefusal = this.refusal.reason;
 

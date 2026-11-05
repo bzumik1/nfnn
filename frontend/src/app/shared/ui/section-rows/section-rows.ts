@@ -1,8 +1,18 @@
 import { Component, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { SideNavBadge } from '../../../../shared/ui/side-nav/side-nav';
+import { SideNavBadge } from '../side-nav/side-nav';
 
-export type SectionIcon = 'payments' | 'donors' | 'news' | 'projects' | 'more';
+export type SectionIcon =
+  | 'payments'
+  | 'donors'
+  | 'news'
+  | 'projects'
+  | 'more'
+  | 'gifts'
+  | 'receipts'
+  | 'accounts'
+  | 'details'
+  | 'admin';
 
 export interface SectionRow {
   readonly path: string;
@@ -18,12 +28,12 @@ export interface SectionRowGroup {
 }
 
 @Component({
-  selector: 'app-admin-section-rows',
+  selector: 'app-section-rows',
   imports: [RouterLink],
-  templateUrl: './admin-section-rows.html',
-  styleUrl: './admin-section-rows.scss',
+  templateUrl: './section-rows.html',
+  styleUrl: './section-rows.scss',
 })
-export class AdminSectionRows {
+export class SectionRows {
   readonly label = input.required<string>();
   readonly groups = input.required<readonly SectionRowGroup[]>();
 }

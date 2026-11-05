@@ -43,10 +43,10 @@ import { signingKeyWarnings } from '../settings/receipt-signing-key/key-warnings
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { ADMIN_DAILY, ADMIN_MORE_PATH, ADMIN_PAYMENTS_PATH } from '../shell/admin-sections';
 import {
-  AdminSectionRows,
+  SectionRows,
   SectionIcon,
   SectionRowGroup,
-} from '../shell/section-rows/admin-section-rows';
+} from '../../../shared/ui/section-rows/section-rows';
 
 type SignatoryState = 'loading' | 'ok' | 'missing' | 'unsigned' | 'error';
 type LoadState = 'loading' | 'ready' | 'error';
@@ -116,7 +116,7 @@ const FAILURE_LABELS: Record<ImportFailureKind, string> = {
 
 @Component({
   selector: 'app-admin-home',
-  imports: [RouterLink, CopyButton, AdminSectionRows],
+  imports: [RouterLink, CopyButton, SectionRows],
   templateUrl: './admin-home.html',
   styleUrl: './admin-home.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

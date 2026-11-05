@@ -51,9 +51,7 @@ test.describe('Given a visitor who registered and received the confirmation e-ma
     await page.getByRole('button', { name: 'Přejít do přehledu' }).click();
 
     await expect(page).toHaveURL(/\/darce\/prehled$/);
-    await expect(page.getByRole('banner').getByRole('button', { name: 'Účet' })).toContainText(
-      'JN',
-    );
+    await expect(page.getByRole('banner').getByRole('link', { name: 'Účet' })).toContainText('JN');
     await expect(page.locator('.send-gift .bank-value').nth(2)).toHaveText('1234567890');
   });
 

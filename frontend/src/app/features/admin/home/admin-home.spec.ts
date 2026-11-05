@@ -903,7 +903,7 @@ describe('Given an administrator on the administration home', () => {
 
     it('then the sections of every day and the way to the rest follow what is new since the last sign-in, each one tap away', () => {
       expect(fixture.nativeElement.querySelector('.since')?.nextElementSibling).toBe(
-        sections()?.closest('app-admin-section-rows'),
+        sections()?.closest('app-section-rows'),
       );
       expect(rows()).toEqual([
         [

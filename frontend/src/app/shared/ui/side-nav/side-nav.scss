@@ -23,6 +23,10 @@
   padding: var(--space-8) 0 var(--space-8) var(--space-6);
 }
 
+.side-nav-end:not(:empty) {
+  margin-top: var(--space-6);
+}
+
 .side-nav-group + .side-nav-group {
   margin-top: var(--space-5);
 }

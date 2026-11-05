@@ -187,23 +187,15 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
-  test('when a signed-in donor opens the account sheet on a phone, then the sheet breaks no rule and Esc returns the focus to the account button', async ({
+  test('when a signed-in donor opens the overview on a phone, then its rows of sections and its sign-out break no rule', async ({
     page,
   }) => {
     await signIn(page);
     await page.setViewportSize({ width: 390, height: 844 });
-    const account = page.getByRole('banner').getByRole('button', { name: 'Účet' });
 
-    await account.click();
-
-    const sheet = page.getByRole('dialog', { name: 'Jana Nováková' });
-    await expect(sheet).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Můj účet' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Odhlásit se' })).toBeVisible();
     expect(await violations(page)).toEqual([]);
-
-    await page.keyboard.press('Escape');
-
-    await expect(sheet).toHaveCount(0);
-    await expect(account).toBeFocused();
   });
 
   test('when published news and projects are listed and they open both pages, then nothing breaks the rules', async ({

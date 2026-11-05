@@ -1,0 +1,17 @@
+:host {
+  display: block;
+}
+
+.install-row {
+  gap: var(--space-2);
+}
+
+.install-row-how {
+  padding: var(--space-2) var(--space-1) 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+
+  p {
+    margin: 0;
+  }
+}

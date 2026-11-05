@@ -214,17 +214,17 @@ test.describe('Given the site built with another theme', () => {
     expect(await lookOfTheReferenceTheme(page)).toEqual([]);
   });
 
-  test('when an administrator opens the account sheet, then it shows no colour or font of the default theme', async ({
+  test('when an administrator opens the overview on a phone, then its rows of sections and its sign-out show no colour or font of the default theme', async ({
     page,
   }) => {
     await page.route('**/api/donors/auth/refresh', (route) =>
       route.fulfill(session(200, administrator)),
     );
+    await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/');
     await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
-    await page.goto('/o-nas');
-    await page.getByRole('banner').getByRole('button', { name: 'Účet' }).click();
-    await expect(page.getByRole('dialog')).toBeVisible();
+    await page.goto('/darce/prehled');
+    await expect(page.getByRole('navigation', { name: 'Můj účet' })).toBeVisible();
 
     expect(await lookOfTheReferenceTheme(page)).toEqual([]);
   });
