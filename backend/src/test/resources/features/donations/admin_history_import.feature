@@ -100,6 +100,21 @@ Feature: An administrator loads older bank payments without restarting the serve
       | added  | 0         |
     And 3 bank payments are stored
 
+  Scenario: A later day than the covered period's end reaches back to it, so no days stay between them
+    Given the bank account has these movements:
+      | id   | date       | amount | account    | bankCode | name         |
+      | 2001 | 2026-11-10 | 300.00 | 2900233333 | 2010     | Svoboda Petr |
+    And the application starts the import
+    And 20 days pass
+    When "Jana" asks for older bank payments from 2026-11-20
+    Then the history import says:
+      | from   | 2026-11-02 |
+      | status | COMPLETED  |
+      | added  | 1          |
+    When "Jana" asks for the import state
+    Then the import state says:
+      | coveredTo | 2026-11-25 |
+
   Scenario: A request right after another bank request waits for the bank's 30 seconds
     Given the application starts the import
     And 10 seconds pass

@@ -410,6 +410,21 @@ class FioImportSchedulerTest {
     }
 
     @Test
+    @DisplayName("Given a newer run already handed over, when an older run's handover arrives late, then the queued task still imports the newer run")
+    void should_import_newer_run_when_older_handover_arrives_late_given_newer_run_handed_over() {
+        doReturn(mock(ScheduledFuture.class)).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
+        when(service.importHistory(any(), any())).thenReturn(history(null, null));
+        currentRuns(2);
+
+        scheduler.requestHistoryImport(run(2, HISTORY_FROM, NOW));
+        scheduler.requestHistoryImport(run(1, LocalDate.parse("2025-01-01"), NOW));
+        scheduledFollowUp().run();
+
+        verify(service).importHistory(run(2, HISTORY_FROM, NOW), SETTINGS);
+        verify(service, times(1)).importHistory(any(), any());
+    }
+
+    @Test
     @DisplayName("Given a history run refused by the bank's 30-second limit, when the scheduler ticks before the follow-up, then the history follow-up stays and imports the same run")
     void should_keep_history_follow_up_across_tick_when_refused_given_rate_limit() {
         ScheduledFuture<?> queued = mock(ScheduledFuture.class);
@@ -447,6 +462,25 @@ class FioImportSchedulerTest {
         verify(taskScheduler, times(4)).schedule(any(Runnable.class), any(Instant.class));
         verify(historyImports).abandoned(7, ImportFailureKind.RATE_LIMITED, NOW);
         assertThat(messages(Level.WARN)).contains("Fio import HISTORY put off 4 times in a row; it waits to be requested again");
+    }
+
+    @Test
+    @DisplayName("Given a history run held back twice, when the hourly import ticks between its follow-ups, then the tick leaves its budget alone and the fourth refusal still abandons it")
+    void should_keep_history_budget_across_tick_when_refused_given_hourly_tick_between() {
+        doReturn(mock(ScheduledFuture.class)).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
+        when(service.importHistory(any(), any())).thenReturn(history(ImportFailureKind.RATE_LIMITED, new FollowUp(RETRY_AT, HISTORY)));
+        when(service.importIncomingPayments(any(), any())).thenReturn(completed(STARTUP));
+        currentRuns(7);
+        scheduler.requestHistoryImport(run(7, HISTORY_FROM, NOW));
+        Runnable historyRun = scheduledFollowUp();
+        historyRun.run();
+        scheduledFollowUp().run();
+
+        scheduler.tick();
+        scheduledFollowUp().run();
+        scheduledFollowUp().run();
+
+        verify(historyImports).abandoned(7, ImportFailureKind.RATE_LIMITED, NOW);
     }
 
     @Test
@@ -551,6 +585,7 @@ class FioImportSchedulerTest {
         scheduledFollowUp().run();
 
         verify(historyImports).abandoned(1, ImportFailureKind.UNEXPECTED, NOW);
+        assertThat(messages(Level.WARN)).contains("Fio import HISTORY run 1 could not be scheduled again (TaskRejectedException); it ends as failed");
     }
 
     @Test

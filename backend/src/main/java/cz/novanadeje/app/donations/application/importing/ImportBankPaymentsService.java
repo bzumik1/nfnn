@@ -72,7 +72,7 @@ public class ImportBankPaymentsService {
             ImportReport report = importIncomingPayments(ImportTrigger.HISTORY, settings.withHistoryFrom(run.requested().from()));
             historyImports.finished(run.id(), report, clock.instant());
             return report;
-        } catch (RuntimeException unexpected) {
+        } catch (RuntimeException | Error unexpected) {
             historyImports.abandoned(run.id(), ImportFailureKind.UNEXPECTED, clock.instant());
             throw unexpected;
         }

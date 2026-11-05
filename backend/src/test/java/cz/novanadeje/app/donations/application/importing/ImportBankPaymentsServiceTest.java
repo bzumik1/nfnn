@@ -136,6 +136,20 @@ class ImportBankPaymentsServiceTest {
     }
 
     @Test
+    @DisplayName("Given a history run that ends in an error of the virtual machine, when it runs, then the error escapes and the run still ends as failed unexpectedly")
+    void should_end_failed_and_rethrow_when_history_run_errors_given_virtual_machine_error() {
+        HistoryImportRun run = historyImports.queue(DEEP, true, NOW, NOW);
+        when(states.current()).thenReturn(BankImportState.initial(NOW));
+        when(source.fetch(DEEP)).thenThrow(new StackOverflowError());
+
+        assertThatThrownBy(() -> service.importHistory(run, ImportSettings.defaults()))
+                .isInstanceOf(StackOverflowError.class);
+
+        assertThat(historyImports.last()).map(HistoryImportRun::status).contains(HistoryImportStatus.FAILED);
+        assertThat(historyImports.last()).flatMap(HistoryImportRun::failure).contains(ImportFailureKind.UNEXPECTED);
+    }
+
+    @Test
     @DisplayName("Given a newer request for another day, when an older history run completes, then the newer request stays queued")
     void should_keep_newer_request_queued_when_older_history_run_completes_given_newer_request() {
         HistoryImportRun run = historyImports.queue(DEEP, true, NOW, NOW);

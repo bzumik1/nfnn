@@ -32,6 +32,7 @@ public class HistoryImportService {
     private final ApplicationEventPublisher events;
     private final TransactionTemplate transaction;
     private final Clock clock;
+    private final Object requests = new Object();
 
     public HistoryImportService(BankImportRequests imports, BankImportStateRepository states, BankImportProperties properties,
                                 HistoryImportTracker tracker, ApplicationEventPublisher events, TransactionTemplate transaction, Clock clock) {
@@ -50,27 +51,29 @@ public class HistoryImportService {
         }
         LocalDate today = BankCalendar.today(clock);
         HistoryImportStart start = HistoryImportStart.of(from, today);
-        LocalDate runFrom = tracker.last()
-                .filter(run -> run.status() == HistoryImportStatus.QUEUED)
-                .map(run -> run.requested().from())
-                .filter(queued -> queued.isBefore(start.from()))
-                .orElse(start.from());
-        BankImportState state = states.current();
-        ImportPlan plan = ImportPlanner.plan(state.coverage(), today, properties.toSettings().withHistoryFrom(runFrom), ImportTrigger.HISTORY);
-        Instant now = clock.instant();
-        Instant startsAt = state.lastAttemptedAt()
-                .map(attempted -> attempted.plus(properties.onDemandCooldown()))
-                .filter(now::isBefore)
-                .orElse(now);
-        transaction.executeWithoutResult(status -> events.publishEvent(new AdminActionPerformed(adminId, ACTION, Optional.empty(),
-                "Vyžádáno načtení starších plateb z banky od " + start.from(), now)));
-        HistoryImportRun run = tracker.queue(plan.period(), plan.needsUnlockedHistory(), now, startsAt);
-        try {
-            imports.requestHistoryImport(run);
-        } catch (RuntimeException refused) {
-            tracker.abandoned(run.id(), ImportFailureKind.UNEXPECTED, now);
-            throw refused;
+        synchronized (requests) {
+            LocalDate runFrom = tracker.last()
+                    .filter(run -> run.status() == HistoryImportStatus.QUEUED)
+                    .map(run -> run.requested().from())
+                    .filter(queued -> queued.isBefore(start.from()))
+                    .orElse(start.from());
+            BankImportState state = states.current();
+            ImportPlan plan = ImportPlanner.plan(state.coverage(), today, properties.toSettings().withHistoryFrom(runFrom), ImportTrigger.HISTORY);
+            Instant now = clock.instant();
+            Instant startsAt = state.lastAttemptedAt()
+                    .map(attempted -> attempted.plus(properties.onDemandCooldown()))
+                    .filter(now::isBefore)
+                    .orElse(now);
+            transaction.executeWithoutResult(status -> events.publishEvent(new AdminActionPerformed(adminId, ACTION, Optional.empty(),
+                    "Vyžádáno načtení starších plateb z banky od " + start.from(), now)));
+            HistoryImportRun run = tracker.queue(plan.period(), plan.needsUnlockedHistory(), now, startsAt);
+            try {
+                imports.requestHistoryImport(run);
+            } catch (RuntimeException refused) {
+                tracker.abandoned(run.id(), ImportFailureKind.UNEXPECTED, now);
+                throw refused;
+            }
+            return tracker.last().orElse(run);
         }
-        return tracker.last().orElse(run);
     }
 }

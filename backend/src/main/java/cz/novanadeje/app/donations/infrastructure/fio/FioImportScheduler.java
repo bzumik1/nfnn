@@ -94,7 +94,9 @@ class FioImportScheduler implements BankImportRequests {
 
     @Override
     public void requestHistoryImport(HistoryImportRun run) {
-        pendingHistoryRun.set(run);
+        if (pendingHistoryRun.accumulateAndGet(run, FioImportScheduler::newer) != run) {
+            return;
+        }
         historyFollowUps.set(0);
         cancel(pendingHistoryFollowUp.getAndSet(null));
         if (!historyRunQueued.compareAndSet(false, true)) {
@@ -192,8 +194,13 @@ class FioImportScheduler implements BankImportRequests {
         try {
             cancel(pendingHistoryFollowUp.getAndSet(taskScheduler.schedule(() -> runHistory(run), at)));
         } catch (RuntimeException rejected) {
+            log.warn("Fio import HISTORY run {} could not be scheduled again ({}); it ends as failed", run.id(), rejected.getClass().getSimpleName());
             historyImports.abandoned(run.id(), ImportFailureKind.UNEXPECTED, clock.instant());
         }
+    }
+
+    private static HistoryImportRun newer(HistoryImportRun pending, HistoryImportRun offered) {
+        return pending != null && pending.id() > offered.id() ? pending : offered;
     }
 
     private static boolean pending(AtomicReference<ScheduledFuture<?>> followUp) {

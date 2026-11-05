@@ -27,6 +27,12 @@ import java.time.Period;
 import java.time.ZoneId;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -172,6 +178,19 @@ class HistoryImportServiceTest {
     }
 
     @Test
+    @DisplayName("Given a shallower run still queued, when an earlier day is asked for, then the new run starts from the earlier day and needs the unlocked history")
+    void should_start_from_earlier_day_when_requested_given_shallower_run_queued() {
+        when(imports.enabled()).thenReturn(true);
+        when(states.current()).thenReturn(BankImportState.initial(NOW));
+        service.request(ADMIN, LocalDate.of(2026, 10, 1));
+
+        HistoryImportRun run = service.request(ADMIN, LocalDate.of(2025, 1, 1));
+
+        assertThat(run.requested().from()).isEqualTo(LocalDate.of(2025, 1, 1));
+        assertThat(run.needsUnlockedHistory()).isTrue();
+    }
+
+    @Test
     @DisplayName("Given a deeper run that already ended, when a later day is asked for, then the new run starts from the later day")
     void should_start_from_later_day_when_requested_given_deeper_run_ended() {
         when(imports.enabled()).thenReturn(true);
@@ -211,5 +230,41 @@ class HistoryImportServiceTest {
         assertThatThrownBy(() -> service.request(ADMIN, LocalDate.of(2026, 1, 1))).isInstanceOf(BankImportOff.class);
 
         verify(events, never()).publishEvent(any());
+    }
+
+    @Test
+    @DisplayName("Given a deeper request still reading the import state, when a later day is asked for at the same moment, then the later request waits for it and keeps the deeper day")
+    void should_keep_deeper_day_when_requested_at_same_moment_given_deeper_request_in_progress() throws Exception {
+        when(imports.enabled()).thenReturn(true);
+        CountDownLatch deeperReading = new CountDownLatch(1);
+        CountDownLatch laterArrived = new CountDownLatch(1);
+        CountDownLatch deeperQueued = new CountDownLatch(1);
+        AtomicInteger reads = new AtomicInteger();
+        when(states.current()).thenAnswer(invocation -> {
+            if (reads.incrementAndGet() == 1) {
+                deeperReading.countDown();
+                laterArrived.await(300, TimeUnit.MILLISECONDS);
+            } else {
+                laterArrived.countDown();
+                deeperQueued.await(2, TimeUnit.SECONDS);
+            }
+            return BankImportState.initial(NOW.minusSeconds(3600));
+        });
+        doAnswer(invocation -> {
+            deeperQueued.countDown();
+            return null;
+        }).when(imports).requestHistoryImport(any());
+        ExecutorService threads = Executors.newFixedThreadPool(2);
+        try {
+            Future<HistoryImportRun> deeper = threads.submit(() -> service.request(ADMIN, LocalDate.of(2026, 1, 1)));
+            assertThat(deeperReading.await(2, TimeUnit.SECONDS)).isTrue();
+            Future<HistoryImportRun> later = threads.submit(() -> service.request(ADMIN, LocalDate.of(2026, 10, 1)));
+            deeper.get(5, TimeUnit.SECONDS);
+            later.get(5, TimeUnit.SECONDS);
+        } finally {
+            threads.shutdownNow();
+        }
+
+        assertThat(tracker.last()).map(run -> run.requested().from()).contains(LocalDate.of(2026, 1, 1));
     }
 }
