@@ -22,3 +22,7 @@
   color: var(--color-danger);
   font-size: var(--text-sm);
 }
+
+:host(.is-on-dark) .share-failed {
+  color: var(--color-on-image);
+}

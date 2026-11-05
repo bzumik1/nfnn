@@ -38,8 +38,8 @@ export const contentRoutes: Routes = [
   {
     path: 'aktuality',
     title: $localize`:@@content.newsList.pageTitle:Aktuality | Nová naděje – nadační fond`,
-    data: { kind: 'news', ...LOADED_AHEAD },
-    loadComponent: () => import('./list/content-list').then((m) => m.ContentList),
+    data: { ...LIGHT_HEAD, ...LOADED_AHEAD },
+    loadComponent: () => import('./news-page/news-page').then((m) => m.NewsPage),
   },
   {
     path: 'projekty',

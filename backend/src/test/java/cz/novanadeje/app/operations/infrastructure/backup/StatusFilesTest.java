@@ -1,6 +1,7 @@
 package cz.novanadeje.app.operations.infrastructure.backup;
 
 import cz.novanadeje.app.operations.domain.backup.BackupRun;
+import cz.novanadeje.app.operations.domain.backup.RestoreRevocations;
 import cz.novanadeje.app.operations.domain.backup.RunOutcome;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -26,7 +27,7 @@ class StatusFilesTest {
                 """);
 
         assertThat(run).contains(new BackupRun(RunOutcome.OK, Instant.parse("2026-10-23T04:36:41Z"), Instant.parse("2026-10-23T04:36:43Z"),
-                Optional.of("nfnn-2026-10-23_0636-rucni.dump.age"), Optional.of(1590L), Optional.empty(), Optional.of("req-1"), Optional.empty(), Optional.empty()));
+                Optional.of("nfnn-2026-10-23_0636-rucni.dump.age"), Optional.of(1590L), Optional.empty(), Optional.of("req-1"), Optional.empty(), Optional.empty(), Optional.empty()));
     }
 
     @Test
@@ -66,6 +67,36 @@ class StatusFilesTest {
             assertThat(parsed.requestId()).contains("019a1b2c-0000-7000-8000-000000000001");
             assertThat(parsed.requestedBy()).contains(UUID.fromString("019a1b2c-0000-7000-8000-00000000000a"));
         });
+    }
+
+    @Test
+    @DisplayName("Given the status file of a restore that ended the sessions and spent the one-time secrets of the backup, when parsed, then both counts are read")
+    void should_read_the_revocations_when_parsed_given_a_restore_that_revoked() {
+        Optional<BackupRun> run = StatusFiles.parse("""
+                outcome=ok
+                started_at=2026-11-05T17:20:12Z
+                finished_at=2026-11-05T17:20:13Z
+                file=nfnn-2026-11-05_0300.dump.age
+                tables=58
+                sessions_ended=2
+                one_time_secrets_spent=3
+                request=019a1b2c-0000-7000-8000-000000000001
+                admin=019a1b2c-0000-7000-8000-00000000000a
+                """);
+
+        assertThat(run).hasValueSatisfying(parsed -> assertThat(parsed.revocations()).contains(new RestoreRevocations(2, 3)));
+    }
+
+    @Test
+    @DisplayName("Given a restore status file with only one of the counts or a count that is no number, when parsed, then the restore is read without revocations")
+    void should_read_no_revocations_when_parsed_given_a_missing_or_unreadable_count() {
+        String restored = "outcome=ok\nstarted_at=2026-11-05T17:20:12Z\nfinished_at=2026-11-05T17:20:13Z\ntables=58\n";
+
+        assertThat(StatusFiles.parse(restored + "sessions_ended=2\n")).hasValueSatisfying(parsed -> assertThat(parsed.revocations()).isEmpty());
+        assertThat(StatusFiles.parse(restored + "sessions_ended=2\none_time_secrets_spent=99999999999\n"))
+                .hasValueSatisfying(parsed -> assertThat(parsed.revocations()).isEmpty());
+        assertThat(StatusFiles.parse(restored + "sessions_ended=-1\none_time_secrets_spent=3\n"))
+                .hasValueSatisfying(parsed -> assertThat(parsed.revocations()).isEmpty());
     }
 
     @Test

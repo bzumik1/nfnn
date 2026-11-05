@@ -159,18 +159,9 @@ async function answers(url: string): Promise<boolean> {
 }
 
 async function waitUntilAnswering(url: string, container: string): Promise<void> {
-  for (let attempt = 0; attempt < STARTUP_ATTEMPTS; attempt++) {
-    if (await answers(url)) {
-      return;
-    }
-    await new Promise((resolve) => setTimeout(resolve, STARTUP_PAUSE_MS));
+  if ((await waitUntilServing(url, container)) === 'exited') {
+    throw new Error(`nginx in ${container} stopped:\n${await containerLogs(container)}`);
   }
-  const logs = await run('docker', ['logs', container]).catch((error: Error) => ({
-    stdout: '',
-    stderr: error.message,
-  }));
-  const tail = `${logs.stdout}${logs.stderr}`.split('\n').slice(-20).join('\n');
-  throw new Error(`nginx in ${container} did not answer ${url}:\n${tail}`);
 }
 
 function servedLink(root: string, variant: Variant): void {
@@ -180,43 +171,81 @@ function servedLink(root: string, variant: Variant): void {
   renameSync(next, join(root, SERVED));
 }
 
+const NGINX_LISTEN = /^(\s*)listen 80;$/m;
+
+function nginxConfigListeningOn(config: string, port: number): string {
+  const listens = config.match(new RegExp(NGINX_LISTEN.source, 'gm')) ?? [];
+  if (listens.length !== 1) {
+    throw new Error(`nginx.conf must listen on port 80 exactly once, found ${listens.length}`);
+  }
+  return config.replace(NGINX_LISTEN, `$1listen 127.0.0.1:${port};`);
+}
+
+async function running(container: string): Promise<boolean> {
+  const { stdout } = await run('docker', ['inspect', '--format', '{{.State.Running}}', container]);
+  return stdout.trim() === 'true';
+}
+
+async function containerLogs(container: string): Promise<string> {
+  const logs = await run('docker', ['logs', container]).catch((error: Error) => ({
+    stdout: '',
+    stderr: error.message,
+  }));
+  return `${logs.stdout}${logs.stderr}`.split('\n').slice(-20).join('\n');
+}
+
+async function waitUntilServing(url: string, container: string): Promise<'serving' | 'exited'> {
+  for (let attempt = 0; attempt < STARTUP_ATTEMPTS; attempt++) {
+    if (await answers(url)) {
+      return 'serving';
+    }
+    if (!(await running(container))) {
+      return 'exited';
+    }
+    await new Promise((resolve) => setTimeout(resolve, STARTUP_PAUSE_MS));
+  }
+  throw new Error(
+    `nginx in ${container} did not answer ${url}:\n${await containerLogs(container)}`,
+  );
+}
+
 async function startContainer(root: string): Promise<{ port: number; container: string }> {
+  const config = readFileSync(join(FRONTEND, 'nginx.conf'), 'utf8');
+  const servedConfig = join(root, 'nginx.conf');
   for (let attempt = 1; ; attempt++) {
     const port = await freePort();
     const container = `nfnn-pwa-${port}-${randomUUID().slice(0, 8)}`;
-    try {
-      await run('docker', [
-        'run',
-        '-d',
-        '--name',
-        container,
-        '--label',
-        CONTAINER_LABEL,
-        '-p',
-        `127.0.0.1:${port}:80`,
-        '--add-host',
-        'backend:127.0.0.1',
-        '--add-host',
-        'mcp:127.0.0.1',
-        '-v',
-        `${root}:/usr/share/nginx:ro`,
-        '-v',
-        `${join(FRONTEND, 'nginx.conf')}:/etc/nginx/conf.d/default.conf:ro`,
-        '-v',
-        `${join(FRONTEND, 'nginx-security-headers.conf')}:/etc/nginx/snippets/security-headers.conf:ro`,
-        '--tmpfs',
-        '/logs',
-        nginxImage(),
-      ]);
+    writeFileSync(servedConfig, nginxConfigListeningOn(config, port));
+    await run('docker', [
+      'run',
+      '-d',
+      '--name',
+      container,
+      '--label',
+      CONTAINER_LABEL,
+      '--network',
+      'host',
+      '--add-host',
+      'backend:127.0.0.1',
+      '--add-host',
+      'mcp:127.0.0.1',
+      '-v',
+      `${root}:/usr/share/nginx:ro`,
+      '-v',
+      `${servedConfig}:/etc/nginx/conf.d/default.conf:ro`,
+      '-v',
+      `${join(FRONTEND, 'nginx-security-headers.conf')}:/etc/nginx/snippets/security-headers.conf:ro`,
+      '--tmpfs',
+      '/logs',
+      nginxImage(),
+    ]);
+    if ((await waitUntilServing(`http://localhost:${port}/`, container)) === 'serving') {
       return { port, container };
-    } catch (error) {
-      await run('docker', ['rm', '-f', container]).catch(() => undefined);
-      if (
-        attempt >= PORT_ATTEMPTS ||
-        !/port is already allocated|address already in use/i.test(String(error))
-      ) {
-        throw error;
-      }
+    }
+    const logs = await containerLogs(container);
+    await run('docker', ['rm', '-f', container]).catch(() => undefined);
+    if (attempt >= PORT_ATTEMPTS || !/address already in use/i.test(logs)) {
+      throw new Error(`nginx in ${container} stopped on port ${port}:\n${logs}`);
     }
   }
 }
@@ -293,11 +322,5 @@ export async function startPwaSite(dist: string): Promise<PwaSite> {
       }
     },
   };
-  try {
-    await waitUntilAnswering(`${url}/`, container);
-  } catch (error) {
-    await site.dispose();
-    throw error;
-  }
   return site;
 }
