@@ -11,7 +11,9 @@ const build = theme
 const served = process.env.E2E_DIST ?? builtApp;
 const askedProjects = process.argv.filter((argument) => argument.startsWith('--project='));
 const onlyWebApp =
-  askedProjects.length > 0 && askedProjects.every((argument) => argument === '--project=pwa');
+  process.env.E2E_DIST !== undefined &&
+  askedProjects.length > 0 &&
+  askedProjects.every((argument) => argument === '--project=pwa');
 
 export default defineConfig<DeviceOptions>({
   testDir: './e2e',
@@ -35,6 +37,7 @@ export default defineConfig<DeviceOptions>({
     {
       name: 'iphone',
       testMatch: /(receipt-pdf|verify-receipt|donate-qr|second-factor)\.spec\.ts$/,
+      testIgnore: /pwa\//,
       use: { ...devices['iPhone 15'] },
     },
     {

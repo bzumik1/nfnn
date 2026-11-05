@@ -1,5 +1,6 @@
 import { Page } from '@playwright/test';
 import { expect, pwaTest as test } from './pwa-fixtures';
+import { serveReceiptKeys } from '../receipt-verification';
 import { MARKER, PROBE_WORKER } from './pwa-site';
 
 const POLICY = '/zasady-ochrany-osobnich-udaju';
@@ -72,6 +73,17 @@ test.describe('Given the pwaTest fixture watching a page of the production build
     test.fail(true, 'planted: an expected problem that never comes must fail the test');
     browserProblems.expectOne(/^console error: never logged$/);
     await openPolicy(page);
+  });
+
+  test('when a spec routes on the page, directly or through a shared helper, then the fixture refuses it', async ({
+    page,
+  }) => {
+    const routeOnThePage = page.route.bind(page);
+
+    await expect(routeOnThePage('**/api/x', (route) => route.abort())).rejects.toThrow(
+      /route on the context/,
+    );
+    await expect(serveReceiptKeys(page)).rejects.toThrow(/route on the context/);
   });
 
   test.describe('when the test allows a console error by its text', () => {

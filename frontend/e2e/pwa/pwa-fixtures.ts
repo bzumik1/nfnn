@@ -69,6 +69,8 @@ interface PwaWorkerFixtures {
 
 const OFFLINE = (route: Route): Promise<void> => route.abort('internetdisconnected');
 
+const PAGE_ROUTING = ['route', 'unroute', 'routeFromHAR'] as const;
+
 const VIOLATION_BINDING = '__nfnnPwaSecurityPolicyViolation';
 const READY_TIMEOUT_MS = 10_000;
 const CLAIM_TIMEOUT_MS = 5_000;
@@ -170,6 +172,21 @@ export const pwaTest = base.extend<PwaFixtures & PwaOptions, PwaWorkerFixtures &
     { auto: true },
   ],
 
+  page: async ({ page }, use) => {
+    for (const name of PAGE_ROUTING) {
+      Object.defineProperty(page, name, {
+        configurable: true,
+        value: () =>
+          Promise.reject(
+            new Error(
+              `page.${name} is refused in the pwa project: route on the context (context.route), which also answers the service worker's requests`,
+            ),
+          ),
+      });
+    }
+    await use(page);
+  },
+
   pageRequests: async ({ page }, use) => {
     await use(requestsInFlight(page));
   },
@@ -223,7 +240,7 @@ export const pwaTest = base.extend<PwaFixtures & PwaOptions, PwaWorkerFixtures &
       }
       expect(
         problems,
-        'a page or service worker of the installed web app logs no console error, throws nothing uncaught and violates no Content-Security-Policy directive',
+        'no page or service worker of the installed web app logs a console error, and no page throws an uncaught error or violates a Content-Security-Policy directive',
       ).toEqual([]);
     },
     { auto: true },
@@ -382,8 +399,10 @@ export const pwaTest = base.extend<PwaFixtures & PwaOptions, PwaWorkerFixtures &
       credentialCount: async () =>
         (await cdp.send('WebAuthn.getCredentials', { authenticatorId })).credentials.length,
     });
-    await cdp.send('WebAuthn.removeVirtualAuthenticator', { authenticatorId });
-    await cdp.detach();
+    await cdp
+      .send('WebAuthn.removeVirtualAuthenticator', { authenticatorId })
+      .then(() => cdp.detach())
+      .catch(() => undefined);
   },
 });
 

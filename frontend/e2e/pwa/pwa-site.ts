@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import {
   chmodSync,
   Dirent,
@@ -192,7 +192,7 @@ function servedLink(root: string, variant: Variant): void {
 async function startContainer(root: string): Promise<{ port: number; container: string }> {
   for (let attempt = 1; ; attempt++) {
     const port = await freePort();
-    const container = `nfnn-pwa-${port}`;
+    const container = `nfnn-pwa-${port}-${randomUUID().slice(0, 8)}`;
     try {
       await run('docker', [
         'run',
