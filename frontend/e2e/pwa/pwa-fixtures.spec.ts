@@ -41,14 +41,18 @@ test.describe('Given the pwaTest fixture watching a page of the production build
     browserProblems,
   }) => {
     browserProblems.expectOne(
-      /^Content-Security-Policy violation: script-src-elem blocked inline \(http:\/\/localhost:\d+\/zasady-ochrany-osobnich-udaju\)$/,
+      /^Content-Security-Policy violation: require-trusted-types-for blocked trusted-types-sink \(http:\/\/localhost:\d+\/zasady-ochrany-osobnich-udaju\)$/,
     );
-    browserProblems.expectOne(/^console error: Executing inline script violates/);
+    browserProblems.expectOne(/^console error: This document requires 'TrustedScript' assignment/);
     await openPolicy(page);
 
     await page.evaluate(() => {
       const script = document.createElement('script');
-      script.textContent = 'window.planted = true;';
+      try {
+        script.textContent = 'window.planted = true;';
+      } catch {
+        return;
+      }
       document.body.append(script);
     });
   });
