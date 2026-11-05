@@ -6,7 +6,7 @@ const SAMPLE_INSET = 4;
 const THIN_BORDER = 10;
 const NEARLY_TRANSPARENT = 0.1;
 
-async function topEdgeContainer(page: Page) {
+async function safariLeavesTheStatusBarUntinted(page: Page): Promise<boolean> {
   return page.evaluate(
     ({ inset, thin, transparent }) => {
       const ignorePointerEvents = document.createElement('style');
@@ -14,47 +14,54 @@ async function topEdgeContainer(page: Page) {
       document.head.append(ignorePointerEvents);
       const hit = document.elementFromPoint(window.innerWidth / 2, inset);
       ignorePointerEvents.remove();
+      let backdropFilter = false;
       let element: Element | null = hit ?? null;
-      while (element && getComputedStyle(element).position !== 'fixed') {
+      while (element) {
+        const style = getComputedStyle(element);
+        const box = element.getBoundingClientRect();
+        const shown = style.visibility !== 'hidden' && Number(style.opacity) >= transparent;
+        const wide = box.width >= window.innerWidth * 0.9 && box.width > thin && box.height > thin;
+        if (shown) {
+          backdropFilter ||= style.backdropFilter !== 'none' && style.backdropFilter !== '';
+        }
+        if ((style.position === 'fixed' || style.position === 'sticky') && shown && wide) {
+          return backdropFilter;
+        }
         element = element.parentElement;
       }
-      if (!element) {
-        return null;
-      }
-      const style = getComputedStyle(element);
-      const box = element.getBoundingClientRect();
-      return {
-        wide: box.width >= window.innerWidth * 0.9,
-        thick: box.width > thin && box.height > thin,
-        opaqueEnough: Number(style.opacity) >= transparent,
-        background: style.backgroundColor,
-      };
+      return true;
     },
     { inset: SAMPLE_INSET, thin: THIN_BORDER, transparent: NEARLY_TRANSPARENT },
   );
 }
 
-async function expectSafariTintsTheStatusBarBlue(page: Page): Promise<void> {
-  await expect
-    .poll(() => topEdgeContainer(page))
-    .toEqual({ wide: true, thick: true, opaqueEnough: true, background: 'rgb(37, 99, 235)' });
-}
-
-test.describe('Given a visitor on an iPhone, whose Safari tints its status bar from the fixed box at the top edge', () => {
+test.describe('Given a visitor on an iPhone, whose Safari tints its status bar from a fixed box at the top edge without a backdrop filter and otherwise lets the page show under it', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
   for (const path of ['/', '/projekty', '/zasady-ochrany-osobnich-udaju']) {
-    test(`when ${path} opens, then the box Safari finds there carries the site's blue`, async ({
+    test(`when ${path} opens, then Safari finds no box to tint the status bar from`, async ({
       page,
     }) => {
       await mockDonorApi(page);
       await page.goto(path);
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 
-      await expectSafariTintsTheStatusBarBlue(page);
+      await expect.poll(() => safariLeavesTheStatusBarUntinted(page)).toBe(true);
+    });
+
+    test(`when ${path} is scrolled, then Safari still finds no box to tint the status bar from`, async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await page.goto(path);
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+      await page.evaluate(() => window.scrollTo({ top: 600, behavior: 'instant' }));
+
+      await expect.poll(() => safariLeavesTheStatusBarUntinted(page)).toBe(true);
     });
   }
 
-  test('when a donor opens the overview, then the status bar is blue there too', async ({
+  test('when a donor opens the overview, then Safari finds no box to tint the status bar from', async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
@@ -66,38 +73,17 @@ test.describe('Given a visitor on an iPhone, whose Safari tints its status bar f
     await expect(page.getByRole('heading', { level: 1, name: 'Můj přehled' })).toBeVisible();
     await expect(page.getByRole('dialog')).toHaveCount(0);
 
-    await expectSafariTintsTheStatusBarBlue(page);
+    await expect.poll(() => safariLeavesTheStatusBarUntinted(page)).toBe(true);
   });
 
-  test('when the home page opens, then the box shows at most a faint line over the photo and takes no tap', async ({
-    page,
-  }) => {
-    await page.goto('/');
-    await expect(page.locator('.status-bar-tint')).toHaveCount(1);
-
-    const visible = await page.evaluate(() => {
-      const tint = document.querySelector('.status-bar-tint') as HTMLElement;
-      const box = tint.getBoundingClientRect();
-      return {
-        height: Math.max(0, box.bottom),
-        opacity: Number(getComputedStyle(tint).opacity),
-        taps: getComputedStyle(tint).pointerEvents,
-      };
-    });
-    expect(visible.height).toBeLessThanOrEqual(5);
-    expect(visible.opacity).toBeLessThanOrEqual(0.12);
-    expect(visible.taps).toBe('none');
-  });
-
-  test('when a page opens in Chrome on Android or an older Safari, then the theme-color it reads is the same blue', async ({
+  test('when a page opens, then it paints no tint strip and names no theme colour', async ({
     page,
   }) => {
     await mockDonorApi(page);
     await page.goto('/projekty');
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 
-    await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute(
-      'content',
-      'rgb(37, 99, 235)',
-    );
+    await expect(page.locator('.status-bar-tint')).toHaveCount(0);
+    await expect(page.locator('meta[name="theme-color"]')).toHaveCount(0);
   });
 });
