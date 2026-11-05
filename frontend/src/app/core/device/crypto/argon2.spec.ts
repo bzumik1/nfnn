@@ -103,7 +103,7 @@ describe('Given the Argon2id worker', () => {
 
     expect(answer).toEqual({
       key: await argon2id({
-        password: question.password,
+        password: utf8('heslo'),
         salt: question.salt,
         memoryKiB: 64,
         iterations: 1,

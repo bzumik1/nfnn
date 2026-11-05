@@ -14,7 +14,7 @@ function policyOf(snippet) {
   );
 }
 
-describe('Given the security headers of the frontend nginx', () => {
+describe('Given the script sources the frontend nginx allows', () => {
   const policy = policyOf(
     readFileSync(new URL('../nginx-security-headers.conf', import.meta.url), 'utf8'),
   );

@@ -44,6 +44,8 @@ export async function argon2WorkerAnswer(
     };
   } catch (failure: unknown) {
     return { failure: argon2FailureOf(failure) };
+  } finally {
+    question.password.fill(0);
   }
 }
 

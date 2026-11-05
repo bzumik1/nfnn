@@ -25,6 +25,8 @@ export const STANDARD_PASSWORD_PARAMETERS: Argon2Parameters = {
 };
 
 export const STRONG_PARAMETERS_BUDGET_MS = 1000;
+export const MAXIMUM_MEMORY_KIB = 1024 * 1024;
+export const MAXIMUM_ITERATIONS = 10;
 export const PASSWORD_KEY_LENGTH = 32;
 export const PASSWORD_SALT_LENGTH = 16;
 export const DERIVATION_TIMEOUT_MS = 30_000;
@@ -68,7 +70,13 @@ export async function deriveWithMeasuredParameters(
 ): Promise<MeasuredPasswordKey> {
   const started = now();
   try {
-    const key = await deriveWithParameters(derivation, password, salt, STRONG_PASSWORD_PARAMETERS);
+    const key = await deriveWithParameters(
+      derivation,
+      password,
+      salt,
+      STRONG_PASSWORD_PARAMETERS,
+      STRONG_ATTEMPT_TIMEOUT_MS,
+    );
     if (now() - started <= STRONG_PARAMETERS_BUDGET_MS) {
       return { key, parameters: STRONG_PASSWORD_PARAMETERS };
     }
@@ -89,10 +97,11 @@ export async function deriveWithParameters(
   password: string,
   salt: Uint8Array<ArrayBuffer>,
   parameters: Argon2Parameters,
+  timeoutMs?: number,
 ): Promise<Uint8Array<ArrayBuffer>> {
   const bytes = passwordBytes(password);
   try {
-    return await derivation.derive({ password: bytes, salt, parameters });
+    return await derivation.derive({ password: bytes, salt, parameters }, timeoutMs);
   } finally {
     bytes.fill(0);
   }
@@ -108,14 +117,17 @@ export class WorkerPasswordKeyDerivation implements PasswordKeyDerivation {
   ) {}
 
   derive(question: PasswordKeyQuestion, timeoutMs?: number): Promise<Uint8Array<ArrayBuffer>> {
-    void timeoutMs;
     const worker = this.startWorker();
     return new Promise<Uint8Array<ArrayBuffer>>((resolve, reject) => {
-      const timer = setTimeout(() => finish(new PasswordKeyFailure('timeout')), this.timeoutMs);
+      const timer = setTimeout(
+        () => finish(new PasswordKeyFailure('timeout')),
+        timeoutMs ?? this.timeoutMs,
+      );
       const finish = (outcome: Uint8Array<ArrayBuffer> | PasswordKeyFailure): void => {
         clearTimeout(timer);
         worker.onmessage = null;
         worker.onerror = null;
+        worker.onmessageerror = null;
         worker.terminate();
         if (outcome instanceof PasswordKeyFailure) {
           reject(outcome);
@@ -124,9 +136,30 @@ export class WorkerPasswordKeyDerivation implements PasswordKeyDerivation {
         }
       };
       worker.onmessage = ({ data }: MessageEvent<PasswordKeyAnswer>) =>
-        finish('key' in data ? new Uint8Array(data.key) : new PasswordKeyFailure(data.failure));
+        finish('key' in data ? copiedAndZeroed(data.key) : new PasswordKeyFailure(data.failure));
       worker.onerror = () => finish(new PasswordKeyFailure('failed'));
+      worker.onmessageerror = () => finish(new PasswordKeyFailure('failed'));
       worker.postMessage(question);
     });
   }
+}
+
+function copiedAndZeroed(sent: Uint8Array<ArrayBuffer>): Uint8Array<ArrayBuffer> {
+  const key = new Uint8Array(sent);
+  sent.fill(0);
+  return key;
+}
+
+export function acceptedParameters(parameters: Argon2Parameters): boolean {
+  return (
+    parameters.algorithm === 'argon2id' &&
+    parameters.version === 19 &&
+    parameters.parallelism === 1 &&
+    Number.isInteger(parameters.iterations) &&
+    parameters.iterations >= STANDARD_PASSWORD_PARAMETERS.iterations &&
+    parameters.iterations <= MAXIMUM_ITERATIONS &&
+    Number.isInteger(parameters.memoryKiB) &&
+    parameters.memoryKiB >= STANDARD_PASSWORD_PARAMETERS.memoryKiB &&
+    parameters.memoryKiB <= MAXIMUM_MEMORY_KIB
+  );
 }

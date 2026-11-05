@@ -56,7 +56,5 @@ async function tagOf(
 }
 
 export function mayWrapWithPassword(kind: CopyKind, wraps: readonly KeyWrap[]): boolean {
-  void kind;
-  void wraps;
-  return true;
+  return kind === 'donor' || !wraps.some((wrap) => wrap.kind === 'prf');
 }

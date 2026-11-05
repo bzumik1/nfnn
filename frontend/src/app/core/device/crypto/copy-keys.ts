@@ -3,6 +3,7 @@ import { hkdfSha256 } from './hkdf';
 import {
   type Argon2Parameters,
   deriveWithMeasuredParameters,
+  acceptedParameters,
   deriveWithParameters,
   PASSWORD_SALT_LENGTH,
   type PasswordKeyDerivation,
@@ -124,7 +125,11 @@ export class OpenCopy implements CopyIdentity {
       kind: 'password',
       salt: bytesToBase64Url(salt),
       parameters: measured.parameters,
-      ...(await seal(keyEncryptionKey, wrapAad(this.copyId, 'password', ''), root)),
+      ...(await seal(
+        keyEncryptionKey,
+        passwordWrapAad(this.copyId, salt, measured.parameters),
+        root,
+      )),
     };
   }
 
@@ -183,14 +188,18 @@ export async function openWithPassword(
   if (wrap.kind !== 'password') {
     throw new CopyRefused('wrong-wrap');
   }
-  const passwordKey = await deriveWithParameters(
-    derivation,
-    password,
-    base64UrlToBytes(wrap.salt),
-    wrap.parameters,
-  );
+  const salt = decoded(wrap.salt);
+  if (salt.length !== PASSWORD_SALT_LENGTH || !acceptedParameters(wrap.parameters)) {
+    throw new CopyRefused('damaged');
+  }
+  const passwordKey = await deriveWithParameters(derivation, password, salt, wrap.parameters);
   const keyEncryptionKey = await passwordKeyEncryptionKey(identity.copyId, passwordKey);
-  return unwrapRoot(identity, keyEncryptionKey, wrapAad(identity.copyId, 'password', ''), wrap);
+  return unwrapRoot(
+    identity,
+    keyEncryptionKey,
+    passwordWrapAad(identity.copyId, salt, wrap.parameters),
+    wrap,
+  );
 }
 
 export async function openWithPrf(
@@ -231,9 +240,16 @@ async function unwrapRoot(
   additionalData: Uint8Array<ArrayBuffer>,
   wrap: SealedRecord,
 ): Promise<OpenCopy> {
+  const iv = decoded(wrap.iv);
+  const sealed = decoded(wrap.sealed);
+  if (iv.length !== IV_LENGTH) {
+    throw new CopyRefused('damaged');
+  }
   let root: Uint8Array<ArrayBuffer>;
   try {
-    root = await unseal(keyEncryptionKey, additionalData, wrap);
+    root = new Uint8Array(
+      await crypto.subtle.decrypt({ name: AES_GCM, iv, additionalData }, keyEncryptionKey, sealed),
+    );
   } catch {
     throw new CopyRefused('wrong-secret');
   }
@@ -287,6 +303,33 @@ function recordAad(copyId: string, address: RecordAddress): Uint8Array<ArrayBuff
     address.recordId,
     String(address.schemaVersion),
   );
+}
+
+function passwordWrapAad(
+  copyId: string,
+  salt: Uint8Array<ArrayBuffer>,
+  parameters: Argon2Parameters,
+): Uint8Array<ArrayBuffer> {
+  return framed(
+    'nfnn-wrap-v1',
+    copyId,
+    'password',
+    '',
+    salt,
+    parameters.algorithm,
+    String(parameters.version),
+    String(parameters.memoryKiB),
+    String(parameters.iterations),
+    String(parameters.parallelism),
+  );
+}
+
+function decoded(value: string): Uint8Array<ArrayBuffer> {
+  try {
+    return base64UrlToBytes(value);
+  } catch {
+    throw new CopyRefused('damaged');
+  }
 }
 
 function wrapAad(
