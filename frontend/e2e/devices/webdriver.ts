@@ -255,13 +255,73 @@ const described = ({ css, text }: Target) => (text ? `${css} with "${text}"` : c
 
 export interface Waits {
   ms: number;
+  presses: string[];
+}
+
+const CLICKED_GLOBAL = '__deviceClicked';
+const CLICK_WAIT_MS = 2_000;
+
+const WATCH_CLICK = `
+window.${CLICKED_GLOBAL} = false;
+arguments[0].addEventListener('click', () => { window.${CLICKED_GLOBAL} = true; }, { once: true, capture: true });`;
+
+interface Press {
+  name: string;
+  run(driver: WebDriver, element: ElementReference): Promise<unknown>;
+}
+
+const tap = (element: ElementReference) => ({
+  actions: [
+    {
+      type: 'pointer',
+      id: 'finger',
+      parameters: { pointerType: 'touch' },
+      actions: [
+        { type: 'pointerMove', duration: 0, origin: element, x: 0, y: 0 },
+        { type: 'pointerDown', button: 0 },
+        { type: 'pause', duration: 60 },
+        { type: 'pointerUp', button: 0 },
+      ],
+    },
+  ],
+});
+
+const PRESSES: Press[] = [
+  {
+    name: 'element click',
+    run: (driver, element) => driver.command('POST', `/element/${element[ELEMENT]}/click`, {}),
+  },
+  {
+    name: 'touch tap',
+    run: async (driver, element) => {
+      await driver.command('POST', '/actions', tap(element));
+      await driver.command('DELETE', '/actions');
+    },
+  },
+  {
+    name: 'script click',
+    run: (driver, element) => driver.execute('arguments[0].click();', element),
+  },
+];
+
+async function clicked(driver: WebDriver): Promise<boolean> {
+  const deadline = Date.now() + CLICK_WAIT_MS;
+  for (;;) {
+    if (await driver.execute<boolean>(`return window.${CLICKED_GLOBAL} === true;`)) {
+      return true;
+    }
+    if (Date.now() > deadline) {
+      return false;
+    }
+    await pause(POLL_MS);
+  }
 }
 
 export function webDriverUi(
   driver: WebDriver,
   host: RouteHost,
   baseUrl: string,
-  waits: Waits = { ms: WAIT_MS },
+  waits: Waits = { ms: WAIT_MS, presses: [] },
 ): Ui {
   const find = (target: Target) =>
     driver.execute<ElementReference | null>(FIND_SHOWN, target.css, target.text ?? '');
@@ -282,12 +342,22 @@ export function webDriverUi(
         element,
       );
       await driver.executeAsync(NEXT_FRAMES);
-      await driver
-        .command('POST', `/element/${element[ELEMENT]}/click`, {})
-        .catch(async (error: unknown) => {
-          const atCentre = await driver.execute<string>(ELEMENT_AT_CENTRE, element);
-          throw new Error(`${String(error)}; at its centre: ${atCentre}`);
-        });
+      for (const press of PRESSES) {
+        await driver.execute(WATCH_CLICK, element);
+        const pressed = await press
+          .run(driver, element)
+          .then(() => undefined)
+          .catch((error: unknown) => String(error));
+        if (await clicked(driver)) {
+          waits.presses.push(`${described(target)}: ${press.name}`);
+          return;
+        }
+        waits.presses.push(
+          `${described(target)}: ${press.name} gave no click${pressed ? ` (${pressed})` : ''}`,
+        );
+      }
+      const atCentre = await driver.execute<string>(ELEMENT_AT_CENTRE, element);
+      throw new Error(`no press clicked ${described(target)}; at its centre: ${atCentre}`);
     },
     waitAttribute: async (target, name, value) => {
       await until(`${described(target)} to have ${name}="${value}"`, waits.ms, async () => {

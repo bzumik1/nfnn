@@ -24,7 +24,19 @@ interface PageState {
 export const BLANK_PATH = '/__blank';
 export const ERRORS_GLOBAL = '__deviceErrors';
 export const EVENTS_GLOBAL = '__deviceEvents';
-const LOGGED_EVENTS = ['pointerdown', 'touchstart', 'click', 'focusin', 'focusout'];
+const LOGGED_EVENTS = [
+  'pointerdown',
+  'pointerup',
+  'pointercancel',
+  'touchstart',
+  'touchend',
+  'touchcancel',
+  'mousedown',
+  'mouseup',
+  'click',
+  'focusin',
+  'focusout',
+];
 
 const FILE_ONLY =
   /\.(?:js|mjs|css|map|json|webmanifest|txt|xml|ico|png|jpe?g|gif|svg|webp|avif|woff2?|ttf|otf|pdf)$/i;

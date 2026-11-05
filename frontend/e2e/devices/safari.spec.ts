@@ -46,7 +46,7 @@ const test = testWithoutBrowser.extend<
     await driver.deleteCookies();
     await answerOfflineApi(host.routes);
     const askedNothingElse = await guardServerPayments(host.routes);
-    const waits = { ms: WAIT_MS };
+    const waits = { ms: WAIT_MS, presses: [] as string[] };
     await use({
       ui: webDriverUi(driver, host, baseUrl, waits),
       device: driver.device,
@@ -65,6 +65,12 @@ const test = testWithoutBrowser.extend<
         ),
       screenshot: () => driver.screenshot(),
     });
+    for (const press of waits.presses) {
+      testInfo.annotations.push({ type: 'press', description: press });
+    }
+    if (waits.presses.length) {
+      console.log(`${testInfo.title}: ${waits.presses.join('; ')}`);
+    }
     if (testInfo.status !== testInfo.expectedStatus) {
       await keepFailedScreen(driver, testInfo);
     }

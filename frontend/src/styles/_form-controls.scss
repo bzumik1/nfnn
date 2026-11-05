@@ -18,6 +18,11 @@
   }
 }
 
+input.form-control[type='date'] {
+  min-width: 0;
+  max-width: 100%;
+}
+
 textarea.form-control {
   resize: vertical;
 }
