@@ -244,7 +244,7 @@ test.describe('Given a donor whose copy on this device holds her gifts and her y
     await expect(page.getByText(/Uloženo v zařízení · aktualizováno /)).toBeVisible();
   });
 
-  test('when she opens Moje dary again while the server answers nothing about her gifts, then they show from the copy, and a new gift comes in when the copy catches up', async ({
+  test('when she opens Moje dary again while the server answers nothing about her gifts, then they show from the copy, and a new gift comes in when the copy catches up, at once or behind Zobrazit 1 nový dar', async ({
     page,
   }) => {
     let release: () => void = () => undefined;
@@ -278,6 +278,11 @@ test.describe('Given a donor whose copy on this device holds her gifts and her y
 
     await expect(gifts(page)).toHaveCount(2);
     release();
+    const pill = page.locator('.bank-check-incoming').filter({ hasText: 'Zobrazit 1 nový dar' });
+    await expect(pill.or(gifts(page).nth(2))).toBeVisible();
+    if (await pill.isVisible()) {
+      await pill.click();
+    }
     await expect(gifts(page)).toHaveCount(3);
     await expect(gifts(page).first()).toContainText('300 Kč');
   });
