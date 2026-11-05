@@ -8,11 +8,14 @@ import { CopyButton } from '../copy-button/copy-button';
   imports: [CopyButton],
   templateUrl: './share-button.html',
   styleUrl: './share-button.scss',
+  host: { '[class.is-on-dark]': "tone() === 'dark'" },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ShareButton {
   readonly pageTitle = input.required<string>();
   readonly url = input.required<string>();
+  readonly subject = input<string | null>(null);
+  readonly tone = input<'light' | 'dark'>('light');
 
   protected readonly copyWhat = $localize`:@@ui.share.copyWhat:odkaz na stránku`;
   protected readonly copyLabel = $localize`:@@ui.share.copyLink:Kopírovat odkaz`;

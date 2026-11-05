@@ -296,6 +296,10 @@ export interface SharedCaseTopics {
   readonly 'payment/account.json': SharedCase<PaymentAccountInput, PaymentAccountExpected>;
   readonly 'payment/details.json': SharedCase<PaymentDetailsInput, PaymentDetailsExpected>;
   readonly 'payment/spayd.json': SharedCase<SpaydInput, SpaydExpected>;
+  readonly 'push/notification.json': SharedCase<
+    { readonly kind: string },
+    { readonly tag: string; readonly url: string }
+  >;
   readonly 'qr/encoder.json': SharedCase<EncoderQrInput, QrSymbol>;
   readonly 'qr/payment.json': SharedCase<PaymentQrInput, QrSymbol>;
   readonly 'qr/totp.json': SharedCase<TotpQrInput, QrSymbol>;
@@ -325,6 +329,7 @@ const REGISTERED_TOPICS: Readonly<Record<SharedCaseTopic, true>> = {
   'payment/account.json': true,
   'payment/details.json': true,
   'payment/spayd.json': true,
+  'push/notification.json': true,
   'qr/encoder.json': true,
   'qr/payment.json': true,
   'qr/totp.json': true,

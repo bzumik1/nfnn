@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nfnn.cz/shared-cases/schemas/push/notification.schema.json",
+  "title": "Push notification cases: the kind of an alert gives its tag and the route a click opens",
+  "description": "The backend writes the tag and the route into the notification; the browser routes a click by the kind.",
+  "type": "object",
+  "required": [
+    "source",
+    "logic",
+    "cases"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "source": {
+      "$ref": "../defs/source.schema.json"
+    },
+    "logic": {
+      "type": "string",
+      "minLength": 1
+    },
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/case"
+      }
+    }
+  },
+  "$defs": {
+    "case": {
+      "type": "object",
+      "required": [
+        "name",
+        "input",
+        "expected"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "input": {
+          "type": "object",
+          "required": [
+            "kind"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "type": "string",
+              "pattern": "^[a-z]+(-[a-z]+)*$"
+            }
+          }
+        },
+        "expected": {
+          "type": "object",
+          "required": [
+            "tag",
+            "url"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "tag": {
+              "type": "string",
+              "pattern": "^nfnn-[a-z]+(-[a-z]+)*$"
+            },
+            "url": {
+              "type": "string",
+              "pattern": "^/sprava(/[a-z]+)*$"
+            }
+          }
+        }
+      }
+    }
+  }
+}
