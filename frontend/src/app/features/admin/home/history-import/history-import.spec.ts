@@ -174,7 +174,7 @@ describe('Given the part for older bank payments on the import card', () => {
       await settle();
 
       expect(status()).toBe(
-        'Fio přijímá jeden dotaz za 30 sekund. Stahování začne samo nejpozději v 11:00:20, stránku nechte otevřenou.',
+        'Fio přijímá jeden dotaz za 30 sekund. Stahování začne samo nejpozději v 11:00:20. Stránku můžete zavřít, výsledek tu uvidíte i později.',
       );
       expect(busy()).toBe(true);
       expect(button().textContent?.trim()).toBe('Žádáme banku…');

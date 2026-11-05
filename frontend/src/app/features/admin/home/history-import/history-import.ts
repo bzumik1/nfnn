@@ -202,7 +202,7 @@ function describeRun(run: HistoryImportResponse): Notice {
         kind: 'status',
         text:
           Date.parse(run.startsAt) > Date.now()
-            ? $localize`:@@admin.home.history.queued:Fio přijímá jeden dotaz za 30 sekund. Stahování začne samo nejpozději v ${formatBankClock(run.startsAt)}:time:, stránku nechte otevřenou.`
+            ? $localize`:@@admin.home.history.queued:Fio přijímá jeden dotaz za 30 sekund. Stahování začne samo nejpozději v ${formatBankClock(run.startsAt)}:time:. Stránku můžete zavřít, výsledek tu uvidíte i později.`
             : $localize`:@@admin.home.history.waiting:Stahování začne za chvíli…`,
       };
     case 'RUNNING':

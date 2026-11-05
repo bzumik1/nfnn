@@ -458,7 +458,7 @@ test.describe('Given an administrator', () => {
     await part.getByRole('button', { name: 'Načíst starší platby' }).click();
 
     await expect(part.getByRole('status')).toHaveText(
-      'Fio přijímá jeden dotaz za 30 sekund. Stahování začne samo nejpozději v 11:00:25, stránku nechte otevřenou.',
+      'Fio přijímá jeden dotaz za 30 sekund. Stahování začne samo nejpozději v 11:00:25. Stránku můžete zavřít, výsledek tu uvidíte i později.',
     );
     const waiting = part.getByRole('button', { name: 'Žádáme banku…' });
     await expect(waiting).toHaveAttribute('aria-disabled', 'true');
