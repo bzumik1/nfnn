@@ -112,13 +112,13 @@ describe('Given the payment route of the service worker', () => {
     });
   });
 
-  describe('when the page opens an id after thirty seconds', () => {
+  describe('when the page opens an id after ten seconds', () => {
     it('then the reservation is gone and the worker refuses it', async () => {
       const clock = { now: 1_000 };
       const route = installedRoute(clock);
       const id = reservationOf(route);
 
-      clock.now += 30_000;
+      clock.now += 10_000;
 
       await assertRefused(await fetched(route, new Request(fileAddress(id))).answer, 404);
     });
@@ -128,9 +128,43 @@ describe('Given the payment route of the service worker', () => {
       const route = installedRoute(clock);
       const id = reservationOf(route);
 
-      clock.now += 29_999;
+      clock.now += 9_999;
 
       assert.equal((await fetched(route, new Request(fileAddress(id))).answer).status, 200);
+    });
+  });
+
+  describe('when the page has reserved more payments than the worker keeps', () => {
+    it('then the oldest reservations give way and the newest sixteen stay', async () => {
+      const route = installedRoute();
+      const ids = Array.from({ length: 20 }, () => reservationOf(route));
+
+      for (const id of ids.slice(0, 4)) {
+        await assertRefused(await fetched(route, new Request(fileAddress(id))).answer, 404);
+      }
+      for (const id of ids.slice(4)) {
+        assert.equal((await fetched(route, new Request(fileAddress(id))).answer).status, 200);
+      }
+    });
+  });
+
+  describe('when the tab navigates to an id the worker no longer holds, as after a restart of the worker', () => {
+    it('then the worker answers 204, so the tab stays on the payment panel', async () => {
+      const route = installedRoute();
+      const navigation = {
+        url: fileAddress('6f1c1e9a-3c1b-4f53-9d55-0d0a9b1f2c11'),
+        method: 'GET',
+        mode: 'navigate',
+      };
+
+      const { answer, stopped } = fetched(route, navigation);
+
+      assert.equal(stopped, true);
+      const response = await answer;
+      assert.equal(response.status, 204);
+      assert.equal(response.headers.get('cache-control'), 'no-store');
+      assert.equal(response.headers.get('content-disposition'), null);
+      assert.equal(await response.text(), '');
     });
   });
 

@@ -95,6 +95,27 @@ test.describe('Given the app registered its own service worker on a phone that c
     expect(refused).toEqual({ status: 404, type: 'text/plain; charset=utf-8', disposition: null });
   });
 
+  test('when the tab navigates to a payment file the worker no longer holds, then the tab stays on the page', async ({
+    page,
+  }) => {
+    const id = await reserved(page, PAYMENT);
+    await page.evaluate(async (address) => {
+      await fetch(address);
+    }, `/platba.spayd?id=${id}`);
+    await page.evaluate(() => document.documentElement.setAttribute('data-stayed', 'yes'));
+
+    const answer = page.waitForResponse((response) => response.url().includes('/platba.spayd?id='));
+    await page.evaluate((address) => location.assign(address), `/platba.spayd?id=${id}`);
+
+    expect((await answer).status()).toBe(204);
+    expect(
+      await page.evaluate(() => ({
+        path: location.pathname,
+        stayed: document.documentElement.getAttribute('data-stayed'),
+      })),
+    ).toEqual({ path: '/', stayed: 'yes' });
+  });
+
   test('when the page asks to reserve a text that is no payment, then the worker gives no id', async ({
     page,
   }) => {

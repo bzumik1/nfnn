@@ -1,7 +1,8 @@
 (() => {
   const ROUTE = '/platba.spayd';
   const RESERVATION = 'nfnn-payment-file';
-  const LIFETIME_MS = 30_000;
+  const LIFETIME_MS = 10_000;
+  const KEPT = 16;
   const PAYMENT = /^SPD\*1\.0\*[0-9A-Z $%*+\-./:]{1,992}$/;
   const PAYMENT_HEADERS = {
     'Content-Type': 'application/x-shortpaymentdescriptor; charset=utf-8',
@@ -30,6 +31,9 @@
   const reserve = (payment) => {
     const now = Date.now();
     forgetExpired(now);
+    while (reserved.size >= KEPT) {
+      reserved.delete(reserved.keys().next().value);
+    }
     const id = self.crypto.randomUUID();
     reserved.set(id, { payment, until: now + LIFETIME_MS });
     return id;
@@ -54,9 +58,12 @@
       return refusal(405, 'Method Not Allowed', { Allow: 'GET' });
     }
     const payment = take(url);
-    return payment === null
-      ? refusal(404, 'Not Found')
-      : new Response(payment, { status: 200, headers: PAYMENT_HEADERS });
+    if (payment !== null) {
+      return new Response(payment, { status: 200, headers: PAYMENT_HEADERS });
+    }
+    return request.mode === 'navigate'
+      ? new Response(null, { status: 204, headers: REFUSAL_HEADERS })
+      : refusal(404, 'Not Found');
   };
 
   self.addEventListener('message', (event) => {
