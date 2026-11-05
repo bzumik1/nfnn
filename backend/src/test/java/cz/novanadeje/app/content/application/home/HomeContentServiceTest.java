@@ -3,6 +3,9 @@ package cz.novanadeje.app.content.application.home;
 import cz.novanadeje.app.content.application.about.AboutPhotoView;
 import cz.novanadeje.app.content.application.about.AboutService;
 import cz.novanadeje.app.content.application.about.AboutView;
+import cz.novanadeje.app.content.application.donateband.DonateBandPhotoView;
+import cz.novanadeje.app.content.application.donateband.DonateBandService;
+import cz.novanadeje.app.content.application.donateband.DonateBandView;
 import cz.novanadeje.app.content.application.people.BoardMemberView;
 import cz.novanadeje.app.content.application.people.PublicPeopleService;
 import cz.novanadeje.app.content.application.people.PublicPeopleView;
@@ -18,6 +21,7 @@ import cz.novanadeje.app.content.domain.project.ProjectOrder;
 import cz.novanadeje.app.content.domain.project.ProjectOrderRepository;
 import cz.novanadeje.app.content.domain.project.ProjectRepository;
 import cz.novanadeje.app.content.domain.Slug;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -50,9 +54,27 @@ class HomeContentServiceTest {
     private final ProjectOrderRepository projectOrders = mock(ProjectOrderRepository.class);
     private final AboutService about = mock(AboutService.class);
     private final PublicPeopleService people = mock(PublicPeopleService.class);
+    private final DonateBandService donateBand = mock(DonateBandService.class);
     private final NewsSigners signers = new NewsSigners(mock(PersonRepository.class), mock(MediaImageRepository.class));
-    private final HomeContentService service = new HomeContentService(news, signers, projects, projectOrders, about, people,
+    private final HomeContentService service = new HomeContentService(news, signers, projects, projectOrders, about, donateBand, people,
             mock(MediaImageRepository.class), Clock.fixed(LATE_EVENING_UTC, ZoneOffset.UTC));
+
+    @BeforeEach
+    void showNoBandPhoto() {
+        when(donateBand.read()).thenReturn(new DonateBandView(Optional.empty()));
+    }
+
+    @Test
+    @DisplayName("Given a photo in the donate band, when the home content is read, then it carries the photo with its size and description")
+    void should_carry_the_donate_band_photo_when_read_given_a_photo_in_the_band() {
+        DonateBandPhotoView photo = new DonateBandPhotoView(MediaId.newId(LATE_EVENING_UTC), 1600, 900, Optional.of("Děti u stolu"), Optional.empty());
+        when(news.findVisibleNewestFirst(eq(PRAGUE_DAY), eq(0), anyInt())).thenReturn(List.of());
+        when(projects.findVisible(eq(PRAGUE_DAY), any(), eq(0), anyInt())).thenReturn(List.of());
+        when(about.read()).thenReturn(new AboutView(Optional.empty()));
+        when(donateBand.read()).thenReturn(new DonateBandView(Optional.of(photo)));
+
+        assertThat(service.read().donateBand().photo()).contains(photo);
+    }
 
     @Test
     @DisplayName("Given published news and projects, when the home content is read, then it asks for the three newest news articles and the first three projects in the chosen order visible on the Prague day")

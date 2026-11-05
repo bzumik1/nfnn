@@ -77,7 +77,8 @@ class PublicPeopleServiceTest {
                 new BoardMemberView("Adam Vzor", Optional.empty()),
                 new BoardMemberView("Hana Vzorová", Optional.empty()));
         assertThat(view.note()).contains(new FoundersNoteView("Děkujeme.",
-                List.of(new SignatureView(new PersonImageView(SIGNATURE, 600, 180), "Eva Vzorová"))));
+                List.of(new SignatureView(new PersonImageView(SIGNATURE, 600, 180), "Eva Vzorová", Optional.of("Role"),
+                        Optional.of(new PersonImageView(PORTRAIT, 640, 640))))));
         assertThat(view.footnote()).contains("Web zajišťuje Petr Vzor.");
     }
 
