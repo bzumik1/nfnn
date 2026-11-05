@@ -21,6 +21,7 @@ export class ScreenWakeLock {
   private readonly locks = inject(SCREEN_WAKE_LOCKS);
   private readonly document = inject(DOCUMENT);
   private holding = false;
+  private requests = 0;
   private sentinel: WakeLockSentinelLike | null = null;
   private readonly visibilityChanged = () => {
     if (this.document.visibilityState !== 'visible') {
@@ -50,6 +51,7 @@ export class ScreenWakeLock {
 
   release(): void {
     this.holding = false;
+    this.requests++;
     const sentinel = this.sentinel;
     this.sentinel = null;
     void sentinel?.release().catch(() => undefined);
@@ -59,6 +61,7 @@ export class ScreenWakeLock {
     if (this.locks === null) {
       return;
     }
+    const current = ++this.requests;
     let request: Promise<WakeLockSentinelLike>;
     try {
       request = this.locks.request('screen');
@@ -67,7 +70,7 @@ export class ScreenWakeLock {
     }
     request.then(
       (sentinel) => {
-        if (this.holding) {
+        if (this.holding && current === this.requests) {
           this.sentinel = sentinel;
         } else {
           void sentinel.release().catch(() => undefined);

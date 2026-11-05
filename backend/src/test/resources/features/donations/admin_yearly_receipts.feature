@@ -120,6 +120,16 @@ Feature: An administrator or a connected application issues the yearly receipts 
     And no receipt issue is audited
     And no bulk receipt issue is audited
 
+  Scenario: While the server's own signing key is not published, the whole run is refused before any number is taken
+    Given the server has started and registered its receipt signing key
+    And the row of the receipt signing key "21fe31df" was deleted in the database
+    When "Petr" issues in the administration the yearly receipts for 2026 of "Jana, Karel"
+    Then the response status is 409
+    And the problem type ends with "donations/receipt-signing-key-unpublished"
+    And 0 receipts are stored
+    And no receipt issue is audited
+    And no bulk receipt issue is audited
+
   Scenario: The yearly receipts are refused for a year that is not completed or before the first receipt year, and for a list that is empty, too long or repeats a donor
     When "Petr" lists in the administration the donors to receive yearly receipts for 2027
     Then the response status is 400

@@ -100,6 +100,20 @@ describe('Given a page that keeps the screen on while it works', () => {
     await vi.waitFor(() => expect(sentinels[0]?.released).toBe(true));
   });
 
+  it('when it lets go and holds again before the browser answered, then only the latest lock is kept and letting go releases every one', async () => {
+    const lock = setUp(true);
+
+    lock.hold();
+    lock.release();
+    lock.hold();
+    await vi.waitFor(() => expect(sentinels).toHaveLength(2));
+    await vi.waitFor(() => expect(sentinels[0].released).toBe(true));
+    expect(sentinels[1].released).toBe(false);
+
+    lock.release();
+    await vi.waitFor(() => expect(sentinels[1].released).toBe(true));
+  });
+
   it('when the browser refuses the lock, then the work goes on without it', async () => {
     refuse = true;
     const lock = setUp(true);

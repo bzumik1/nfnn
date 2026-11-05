@@ -1321,6 +1321,7 @@ describe('Given an administrator connected with the writing permission', () => {
     ]);
     expect(textOf(issued)).not.toContain('"receipt"');
     expect(run['issued']).toBe(1);
+    expect(stack.logLines).toContain('INFO Tool nfnn_issue_receipts answered donor donor-jana');
   });
 
   it('when the yearly receipts name a donor twice, then nothing reaches the administration', async () => {
@@ -1333,6 +1334,9 @@ describe('Given an administrator connected with the writing permission', () => {
     expect(
       stack.backend.requests.filter((request) => request.path.endsWith('/receipts/yearly')),
     ).toHaveLength(0);
+    expect(stack.logLines).toContain(
+      'INFO Tool nfnn_issue_receipts refused for donor donor-jana: repeated-donor',
+    );
   });
 
   it('when a yearly receipt and the receipt of one donation are issued, then each asks for its own subject and the issued receipt comes back with its verification link', async () => {

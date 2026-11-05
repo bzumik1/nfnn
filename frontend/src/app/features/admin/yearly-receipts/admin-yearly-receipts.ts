@@ -12,7 +12,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { concatMap, from, Subscription } from 'rxjs';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
@@ -71,6 +71,7 @@ interface ReplacedLine {
 }
 
 interface SkippedLine {
+  readonly donorId: string;
   readonly name: string;
   readonly reason: string;
 }
@@ -84,6 +85,7 @@ interface SkippedLine {
     FormField,
     FormsModule,
     LiveNotice,
+    RouterLink,
   ],
   templateUrl: './admin-yearly-receipts.html',
   styleUrl: './admin-yearly-receipts.scss',
@@ -107,7 +109,9 @@ export class AdminYearlyReceipts {
 
   protected readonly state = signal<LoadState>('loading');
   protected readonly candidates = signal<YearlyReceiptCandidatesResponse | null>(null);
-  protected readonly duplex = signal(false);
+  protected readonly switching = signal(false);
+  private readonly requestedYear = signal<number | null>(null);
+  protected readonly duplex = signal(true);
   protected readonly run = signal<RunState>('idle');
   protected readonly progress = signal<DownloadProgressState | null>(null);
   protected readonly failure = signal<string | null>(null);
@@ -136,7 +140,9 @@ export class AdminYearlyReceipts {
     return years;
   });
 
-  protected readonly chosenYear = computed(() => this.candidates()?.year ?? null);
+  protected readonly chosenYear = computed(
+    () => this.requestedYear() ?? this.candidates()?.year ?? null,
+  );
 
   protected readonly donors = computed(() =>
     [...(this.candidates()?.donors ?? [])].sort((a, b) => NAMES.compare(a.name, b.name)),
@@ -154,6 +160,12 @@ export class AdminYearlyReceipts {
   });
 
   protected readonly busy = computed(() => this.run() === 'issuing' || this.run() === 'drawing');
+
+  protected readonly busyLabel = computed(() =>
+    this.run() === 'issuing'
+      ? $localize`:@@admin.yearlyReceipts.issue.issuing:Vystavujeme potvrzení…`
+      : $localize`:@@admin.yearlyReceipts.issue.running:Připravujeme PDF…`,
+  );
 
   protected readonly outcomes = computed(() => {
     const counts = { ISSUED: 0, UNCHANGED: 0, REPLACED: 0, SKIPPED: 0 };
@@ -180,7 +192,11 @@ export class AdminYearlyReceipts {
   protected readonly skipped = computed<SkippedLine[]>(() =>
     this.orderedResults()
       .filter((result) => result.outcome === 'SKIPPED')
-      .map((result) => ({ name: this.nameOf(result.donorId), reason: skipReason(result.problem) })),
+      .map((result) => ({
+        donorId: result.donorId,
+        name: this.nameOf(result.donorId),
+        reason: skipReason(result.problem),
+      })),
   );
 
   constructor() {
@@ -200,9 +216,26 @@ export class AdminYearlyReceipts {
     this.load(year);
   }
 
+  protected chooseDuplex(duplex: boolean): void {
+    this.duplex.set(duplex);
+    if (this.run() !== 'done' || this.file() === null) {
+      return;
+    }
+    this.file.set(null);
+    this.downloaded.set(false);
+    this.notice.set(null);
+    this.wakeLock.hold();
+    this.draw();
+  }
+
   protected load(year: number | null): void {
     this.loading?.unsubscribe();
-    this.state.set('loading');
+    this.requestedYear.set(year);
+    if (this.state() === 'ready') {
+      this.switching.set(true);
+    } else {
+      this.state.set('loading');
+    }
     this.resetRun();
     this.loading = this.api
       .yearlyReceiptCandidates(year)
@@ -210,9 +243,12 @@ export class AdminYearlyReceipts {
       .subscribe({
         next: (candidates) => {
           this.candidates.set(candidates);
+          this.requestedYear.set(candidates.year);
+          this.switching.set(false);
           this.state.set('ready');
         },
         error: (failure: unknown) => {
+          this.switching.set(false);
           if (this.leftForSession(failure)) {
             return;
           }
@@ -226,11 +262,15 @@ export class AdminYearlyReceipts {
   }
 
   protected reload(): void {
-    this.load(this.chosenYear());
+    this.load(this.requestedYear());
   }
 
   protected start(): void {
-    if (this.busy() || this.donors().length === 0) {
+    if (this.busy() || this.switching() || this.donors().length === 0) {
+      return;
+    }
+    if (this.run() === 'failed' && this.results().size > 0) {
+      this.proceed();
       return;
     }
     this.resetRun();
@@ -252,10 +292,7 @@ export class AdminYearlyReceipts {
     }
     this.running?.unsubscribe();
     this.running = null;
-    this.wakeLock.release();
-    this.run.set('failed');
-    this.progress.set(null);
-    this.failure.set(
+    this.fail(
       $localize`:@@admin.yearlyReceipts.cancelled:Přípravu jste zrušili. Potvrzení, která už jsme vystavili, platí; tlačítkem Zkusit znovu budeme pokračovat.`,
     );
   }
@@ -383,7 +420,8 @@ export class AdminYearlyReceipts {
           kind: 'running',
           step: 1 + event.receipt,
           steps,
-          text: $localize`:@@admin.yearlyReceipts.progress.drawing:Kreslíme potvrzení ${event.receipt}:receipt: z ${event.receipts}:receipts:…`,
+          text: $localize`:@@admin.yearlyReceipts.progress.drawing:Kreslíme potvrzení…`,
+          detail: $localize`:@@admin.yearlyReceipts.progress.drawingCount:${event.receipt}:receipt: z ${event.receipts}:receipts:`,
         });
         break;
       case 'done':

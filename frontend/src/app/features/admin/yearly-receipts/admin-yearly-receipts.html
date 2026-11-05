@@ -63,58 +63,76 @@
             </select>
           </app-form-field>
 
-          <dl class="ui-data-list summary">
-            <div>
-              <dt i18n="@@admin.yearlyReceipts.summary.donors">
-                Dárci s dary za rok {{ chosenYear() }}
-              </dt>
-              <dd>{{ summary().donors }}</dd>
-            </div>
-            <div>
-              <dt i18n="@@admin.yearlyReceipts.summary.issued">Potvrzení už vystavená</dt>
-              <dd>{{ summary().issued }}</dd>
-            </div>
-            <div>
-              <dt i18n="@@admin.yearlyReceipts.summary.fresh">Vystaví se nově</dt>
-              <dd>{{ summary().fresh }}</dd>
-            </div>
-            <div>
-              <dt i18n="@@admin.yearlyReceipts.summary.erased">Vymazaní dárci, přeskočí se</dt>
-              <dd>{{ summary().erased }}</dd>
-            </div>
-          </dl>
+          <div role="status">
+            @if (switching()) {
+              <p class="ui-load-state" i18n="@@admin.yearlyReceipts.switching">
+                Načítáme dárce za rok {{ chosenYear() }}…
+              </p>
+            }
+          </div>
 
-          @if (donors().length === 0) {
-            <p class="ui-card__empty empty" i18n="@@admin.yearlyReceipts.empty">
-              Za rok {{ chosenYear() }} nemá dary žádný dárce.
-            </p>
-          } @else {
-            <label class="duplex">
-              <input
-                type="checkbox"
-                name="duplex"
-                [ngModel]="duplex()"
-                (ngModelChange)="duplex.set($event)"
-                [disabled]="busy()"
-              />
-              <span i18n="@@admin.yearlyReceipts.duplex"
-                >Tisknu oboustranně (každé potvrzení začne na novém listu)</span
-              >
-            </label>
-            <button
-              type="submit"
-              class="ui-button ui-button--primary issue-button"
-              [attr.aria-disabled]="busy() ? 'true' : null"
-              [attr.aria-busy]="busy()"
-            >
-              @if (busy()) {
-                <span i18n="@@admin.yearlyReceipts.issue.running">Připravujeme PDF…</span>
-              } @else {
-                <span i18n="@@admin.yearlyReceipts.issue.start"
-                  >Vystavit a připravit PDF k tisku</span
+          @if (!switching()) {
+            @if (!finished()) {
+              <dl class="ui-data-list summary">
+                <div>
+                  <dt i18n="@@admin.yearlyReceipts.summary.donors">
+                    Dárci s dary za rok {{ chosenYear() }}
+                  </dt>
+                  <dd>{{ summary().donors }}</dd>
+                </div>
+                <div>
+                  <dt i18n="@@admin.yearlyReceipts.summary.issued">Potvrzení už vystavená</dt>
+                  <dd>{{ summary().issued }}</dd>
+                </div>
+                <div>
+                  <dt i18n="@@admin.yearlyReceipts.summary.fresh">Vystaví se nově</dt>
+                  <dd>{{ summary().fresh }}</dd>
+                </div>
+                <div>
+                  <dt i18n="@@admin.yearlyReceipts.summary.erased">Vymazaní dárci, přeskočí se</dt>
+                  <dd>{{ summary().erased }}</dd>
+                </div>
+              </dl>
+            }
+
+            @if (donors().length === 0) {
+              <p class="ui-card__empty empty" i18n="@@admin.yearlyReceipts.empty">
+                Za rok {{ chosenYear() }} nemá dary žádný dárce.
+              </p>
+            } @else {
+              <label class="duplex">
+                <input
+                  type="checkbox"
+                  name="duplex"
+                  [ngModel]="duplex()"
+                  (ngModelChange)="chooseDuplex($event)"
+                  [disabled]="busy()"
+                />
+                <span i18n="@@admin.yearlyReceipts.duplex"
+                  >Tisknu oboustranně (vložíme prázdné strany, aby každé potvrzení začalo na novém
+                  listu; při jednostranném tisku volbu vypněte)</span
                 >
-              }
-            </button>
+              </label>
+              <button
+                type="submit"
+                class="ui-button issue-button"
+                [class.ui-button--primary]="file() === null"
+                [attr.aria-disabled]="busy() ? 'true' : null"
+                [attr.aria-busy]="busy()"
+              >
+                @if (busy()) {
+                  <span>{{ busyLabel() }}</span>
+                } @else {
+                  <span i18n="@@admin.yearlyReceipts.issue.start"
+                    >Vystavit a připravit PDF k tisku</span
+                  >
+                }
+              </button>
+              <p class="keep-open" i18n="@@admin.yearlyReceipts.keepOpen">
+                Nechte prosím stránku otevřenou, dokud nebude PDF hotové. Odchodem se příprava
+                zastaví; vystavená potvrzení zůstanou.
+              </p>
+            }
           }
         </form>
 
@@ -154,6 +172,9 @@
               Otevřít PDF
             </button>
           </div>
+          <p class="print-hint" i18n="@@admin.yearlyReceipts.printHint">
+            Tiskněte ve skutečné velikosti (100 %), ať ověřovací QR kód zůstane čitelný.
+          </p>
         }
       </section>
 
@@ -191,6 +212,10 @@
               <h3 class="list-title" i18n="@@admin.yearlyReceipts.replaced.title">
                 Nahrazená potvrzení
               </h3>
+              <p class="replaced-note" i18n="@@admin.yearlyReceipts.replaced.note">
+                V PDF jsou už nová, se všemi dary. Stará potvrzení přestanou platit (jako když je
+                nahradíte na kartě dárce), a tak dárcům pošlete nová.
+              </p>
               <ul class="lines">
                 @for (line of replaced(); track line.number) {
                   <li i18n="@@admin.yearlyReceipts.replaced.line">
@@ -207,7 +232,11 @@
               </h3>
               <ul class="lines">
                 @for (line of skipped(); track $index) {
-                  <li>{{ line.name }}: {{ line.reason }}</li>
+                  <li i18n="@@admin.yearlyReceipts.skipped.line">
+                    <a [routerLink]="['/sprava/darci', line.donorId]">{{ line.name }}</a
+                    >:
+                    {{ line.reason }}
+                  </li>
                 }
               </ul>
             </div>
@@ -215,7 +244,7 @@
         </section>
       }
 
-      @if (donors().length > 0) {
+      @if (donors().length > 0 && !switching()) {
         <section class="ui-card donors-card" aria-labelledby="yearly-receipts-donors">
           <h2
             id="yearly-receipts-donors"

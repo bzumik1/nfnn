@@ -38,6 +38,7 @@ test.describe('Given a year of 300 donors on a slow device', () => {
     const cdp = await page.context().newCDPSession(page);
     await cdp.send('Emulation.setCPUThrottlingRate', { rate: CPU_SLOWDOWN });
 
+    await page.getByLabel(/^Tisknu oboustranně/).uncheck();
     const started = Date.now();
     await page.getByRole('button', { name: 'Vystavit a připravit PDF k tisku' }).click();
     await expect(page.locator('app-live-notice').getByRole('status')).toHaveText(

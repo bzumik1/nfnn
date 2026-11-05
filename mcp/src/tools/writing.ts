@@ -564,29 +564,23 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
       annotations: { ...WRITING, idempotentHint: true },
     },
     async ({ year, donorIds }, ctx) =>
-      answerChange(
-        deps,
-        ctx,
-        'nfnn_issue_receipts',
-        async ({ apiToken }) => {
-          const ids = donorIds.map((id) => id.toLowerCase());
-          if (new Set(ids).size !== ids.length) {
-            throw new ToolRefusal(
-              'repeated-donor',
-              'Name each donor in `donorIds` once; nothing was issued.',
-            );
-          }
-          return text(
-            yearlyReceiptsView(
-              await backend.post('/api/admin/donations/receipts/yearly', apiToken, {
-                year,
-                donorIds: ids,
-              }),
-            ),
+      answerChange(deps, ctx, 'nfnn_issue_receipts', async ({ apiToken }) => {
+        const ids = donorIds.map((id) => id.toLowerCase());
+        if (new Set(ids).size !== ids.length) {
+          throw new ToolRefusal(
+            'repeated-donor',
+            'Name each donor in `donorIds` once; nothing was issued.',
           );
-        },
-        `${donorIds.length} donors`,
-      ),
+        }
+        return text(
+          yearlyReceiptsView(
+            await backend.post('/api/admin/donations/receipts/yearly', apiToken, {
+              year,
+              donorIds: ids,
+            }),
+          ),
+        );
+      }),
   );
 
   server.registerTool(

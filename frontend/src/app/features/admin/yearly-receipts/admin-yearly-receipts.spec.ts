@@ -6,10 +6,12 @@ import {
 } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { By } from '@angular/platform-browser';
 import { authInterceptor } from '../../../core/auth/auth-interceptor';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
 import { recordClientErrors } from '../../../core/errors/testing/client-error-reports';
+import { DownloadProgress } from '../../../shared/ui/download-progress/download-progress';
 import { DownloadedFile } from '../../donations/donations-api';
 import { PdfDelivery } from '../../donations/receipt-pdf/pdf-delivery';
 import { RECEIPT_PDF_ENVIRONMENT } from '../../donations/receipt-pdf/receipt-pdf';
@@ -250,11 +252,17 @@ describe('Given an administrator on the bulk receipts page', () => {
       ]);
     });
 
-    it('then two-sided printing is off until the administrator turns it on', () => {
+    it('then two-sided printing is on until the administrator turns it off, and the label says what it adds', () => {
       const duplex = query<HTMLInputElement>('input[type="checkbox"]');
-      expect(duplex?.checked).toBe(false);
+      expect(duplex?.checked).toBe(true);
       expect(text(duplex?.closest('label') ?? null)).toBe(
-        'Tisknu oboustranně (každé potvrzení začne na novém listu)',
+        'Tisknu oboustranně (vložíme prázdné strany, aby každé potvrzení začalo na novém listu; při jednostranném tisku volbu vypněte)',
+      );
+    });
+
+    it('then the page asks to stay open until the PDF is ready', () => {
+      expect(text(query('.keep-open'))).toBe(
+        'Nechte prosím stránku otevřenou, dokud nebude PDF hotové. Odchodem se příprava zastaví; vystavená potvrzení zůstanou.',
       );
     });
 
@@ -269,6 +277,53 @@ describe('Given an administrator on the bulk receipts page', () => {
 
       const request = http.expectOne(`${URL}?year=2025`);
       request.flush(yearlyReceiptCandidates({ year: 2025, donors: [candidate(9, 'Nová Ida')] }));
+      fixture.detectChanges();
+
+      expect(rows()).toEqual([['Nová Ida', '3', '1 500 Kč', 'zatím ne']]);
+    });
+
+    it('and another year is chosen with the keyboard, then the year choice keeps the focus while its donors load', () => {
+      const select = query<HTMLSelectElement>('select');
+      if (select === null) {
+        throw new Error('no year choice');
+      }
+      select.focus();
+      select.value = select.options[1].value;
+      select.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+
+      expect(query('select')).toBe(select);
+      expect(document.activeElement).toBe(select);
+      expect(status()).toContain('Načítáme dárce za rok 2025…');
+      expect(query('button[type="submit"]')).toBeNull();
+      expect(rows()).toEqual([]);
+
+      http
+        .expectOne(`${URL}?year=2025`)
+        .flush(yearlyReceiptCandidates({ year: 2025, donors: [candidate(9, 'Nová Ida')] }));
+      fixture.detectChanges();
+
+      expect(document.activeElement).toBe(select);
+      expect(status()).not.toContain('Načítáme');
+      expect(rows()).toEqual([['Nová Ida', '3', '1 500 Kč', 'zatím ne']]);
+    });
+
+    it('and another year fails to load, then trying again asks for that year', () => {
+      const select = query<HTMLSelectElement>('select');
+      if (select === null) {
+        throw new Error('no year choice');
+      }
+      select.value = select.options[1].value;
+      select.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+      http.expectOne(`${URL}?year=2025`).flush(null, { status: 500, statusText: 'Server Error' });
+      fixture.detectChanges();
+
+      expect(alert()).toContain('Dárce za rok se nepodařilo načíst.');
+      button('Zkusit znovu').click();
+      http
+        .expectOne(`${URL}?year=2025`)
+        .flush(yearlyReceiptCandidates({ year: 2025, donors: [candidate(9, 'Nová Ida')] }));
       fixture.detectChanges();
 
       expect(rows()).toEqual([['Nová Ida', '3', '1 500 Kč', 'zatím ne']]);
@@ -320,8 +375,8 @@ describe('Given an administrator on the bulk receipts page', () => {
       fixture.detectChanges();
     });
 
-    it('then the button stays focusable but says it is busy, so the focus does not fall to the page', () => {
-      const running = button('Připravujeme PDF…');
+    it('then the button stays focusable but says it is busy issuing, so the focus does not fall to the page', () => {
+      const running = button('Vystavujeme potvrzení…');
 
       expect(running.disabled).toBe(false);
       expect(running.getAttribute('aria-disabled')).toBe('true');
@@ -412,6 +467,48 @@ describe('Given an administrator on the bulk receipts page', () => {
         donors.slice(50, 100).map((donor) => donor.donorId),
       );
     });
+
+    it('and the run is cancelled while a batch is issuing, then the focus goes to the line that says so and trying again goes on', async () => {
+      expectIssue().flush({
+        year: 2026,
+        results: donors.slice(0, 50).map((donor) => issuedFor(donor.donorId, '2027-000001')),
+        issued: 50,
+        replaced: 0,
+        unchanged: 0,
+        skipped: 0,
+      });
+      const pending = expectIssue();
+      fixture.debugElement.query(By.directive(DownloadProgress)).componentInstance.cancelled.emit();
+      await settle();
+
+      expect(pending.cancelled).toBe(true);
+      expect(alert()).toContain('Přípravu jste zrušili.');
+      expect(document.activeElement).toBe(query('.failure'));
+      button('Zkusit znovu').click();
+      fixture.detectChanges();
+      expect(expectIssue().request.body.donorIds).toEqual(
+        donors.slice(50, 100).map((donor) => donor.donorId),
+      );
+    });
+
+    it('and the main button is pressed after a batch failed, then the run goes on with the donors not issued yet', async () => {
+      expectIssue().flush({
+        year: 2026,
+        results: donors.slice(0, 50).map((donor) => issuedFor(donor.donorId, '2027-000001')),
+        issued: 50,
+        replaced: 0,
+        unchanged: 0,
+        skipped: 0,
+      });
+      expectIssue().flush(null, { status: 503, statusText: 'Unavailable' });
+      await settle();
+
+      button('Vystavit a připravit PDF k tisku').click();
+      fixture.detectChanges();
+      expect(expectIssue().request.body.donorIds).toEqual(
+        donors.slice(50, 100).map((donor) => donor.donorId),
+      );
+    });
   });
 
   describe('when a year of four donors is issued, printed on both sides', () => {
@@ -430,7 +527,6 @@ describe('Given an administrator on the bulk receipts page', () => {
         candidate(4, 'Dvořák Petr'),
       ]);
       await settle();
-      query<HTMLInputElement>('input[type="checkbox"]')?.click();
       button('Vystavit a připravit PDF k tisku').click();
       fixture.detectChanges();
       await vi.waitFor(() => expect(sentinels).toHaveLength(1));
@@ -502,11 +598,18 @@ describe('Given an administrator on the bulk receipts page', () => {
       expect(bundle.options.info.title).toBe('Roční potvrzení o darech za rok 2026');
     });
 
-    it('then the drawing tells which receipt it is on', () => {
+    it('then the drawing tells which receipt it is on without announcing every receipt', () => {
+      environment.last().say({ kind: 'receipt', index: 0 });
+      fixture.detectChanges();
+      const announced = status();
       environment.last().say({ kind: 'receipt', index: 1 });
       fixture.detectChanges();
 
-      expect(status()).toContain('Kreslíme potvrzení 2 z 3…');
+      expect(status()).toBe(announced);
+      expect(status()).toContain('Kreslíme potvrzení…');
+      expect(text(query('.download-progress-detail'))).toBe('2 z 3');
+      expect(query('progress')?.getAttribute('aria-valuetext')).toBe('2 z 3');
+      expect(button('Připravujeme PDF…').getAttribute('aria-disabled')).toBe('true');
     });
 
     describe('and the PDF is ready', () => {
@@ -523,12 +626,26 @@ describe('Given an administrator on the bulk receipts page', () => {
         );
       });
 
-      it('then the replaced receipts and the skipped donors are listed with the reason', () => {
+      it('then the replaced receipts and the skipped donors are listed with the reason and a link to their card', () => {
         expect(text(query('.replaced'))).toBe(
-          'Nahrazená potvrzení Bílá Eva: 2027-000011 nahrazuje 2027-000003',
+          'Nahrazená potvrzení V PDF jsou už nová, se všemi dary. Stará potvrzení přestanou platit (jako když je nahradíte na kartě dárce), a tak dárcům pošlete nová. Bílá Eva: 2027-000011 nahrazuje 2027-000003',
         );
         expect(text(query('.skipped'))).toBe(
           'Přeskočení dárci Cibulka Ota: osobní údaje dárce jsou vymazané, nové potvrzení nevystavujeme.',
+        );
+        expect(query<HTMLAnchorElement>('.skipped a')?.getAttribute('href')).toBe(
+          '/sprava/darci/donor-3',
+        );
+      });
+
+      it('then the summary of the list before the run gives way to the result, and the next step is the PDF', () => {
+        expect(query('.summary')).toBeNull();
+        expect(button('Vystavit a připravit PDF k tisku').classList).not.toContain(
+          'ui-button--primary',
+        );
+        expect(button('Stáhnout PDF').classList).toContain('ui-button--primary');
+        expect(text(query('.print-hint'))).toBe(
+          'Tiskněte ve skutečné velikosti (100 %), ať ověřovací QR kód zůstane čitelný.',
         );
       });
 
@@ -557,6 +674,31 @@ describe('Given an administrator on the bulk receipts page', () => {
         button('Otevřít PDF').click();
 
         expect(shared).toHaveLength(1);
+      });
+
+      it('and two-sided printing is turned off, then the PDF is drawn again one-sided without issuing anew', async () => {
+        query<HTMLInputElement>('input[type="checkbox"]')?.click();
+        fixture.detectChanges();
+
+        expect(hasButton('Stáhnout PDF')).toBe(false);
+        await vi.waitFor(() => {
+          for (const request of http.match(`/api/admin/donations/receipt-images/${digest}`)) {
+            request.flush(arrayBuffer(SIGNATURE_BYTES), {
+              headers: { 'Content-Type': 'application/json' },
+            });
+          }
+          expect(environment.workers).toHaveLength(2);
+        });
+        environment.last().say({ kind: 'ready' });
+        fixture.detectChanges();
+        expect(environment.last().bundles[0].options.duplex).toBe(false);
+        environment.last().say({ kind: 'done', bytes: new TextEncoder().encode('%PDF-1.7') });
+        await settle();
+
+        expect(hasButton('Stáhnout PDF')).toBe(true);
+        expect(pairs('.outcomes')).toBe(
+          'Nově vystaveno 1 Beze změny 1 Nahrazeno, dary se od vystavení změnily 1 Přeskočeno 1',
+        );
       });
     });
 

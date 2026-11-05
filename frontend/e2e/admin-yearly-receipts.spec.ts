@@ -36,7 +36,7 @@ test.describe('Given an administrator who prints the yearly receipts of 2026', (
       'Dvořák Ota',
     ]);
 
-    await page.getByLabel('Tisknu oboustranně (každé potvrzení začne na novém listu)').check();
+    await expect(page.getByLabel(/^Tisknu oboustranně/)).toBeChecked();
     await page.getByRole('button', { name: 'Vystavit a připravit PDF k tisku' }).click();
 
     await expect(page.locator('app-live-notice').getByRole('status')).toHaveText(
@@ -50,7 +50,7 @@ test.describe('Given an administrator who prints the yearly receipts of 2026', (
       `Bílá Eva: ${receiptNumberOf(1)} nahrazuje 2027-000090`,
     ]);
     await expect(page.locator('.skipped li')).toHaveText([
-      'Čermák Petr: dárci jsme za posledních 24 hodin vydali nejvíc nových potvrzení, kolik za den vydáváme; zkuste to zítra.',
+      'Čermák Petr: dárce dnes dosáhl denního limitu nových potvrzení; zkuste to zítra.',
     ]);
 
     const [saved] = await Promise.all([
@@ -67,13 +67,18 @@ test.describe('Given an administrator who prints the yearly receipts of 2026', (
     expect(pdf.pages[1].text).toBe('');
     expect(pdf.raw.match(/\/Subtype \/Image/g) ?? []).toHaveLength(1);
 
-    await page.context().setOffline(true);
+    const requested: string[] = [];
+    page.on('request', (request) => {
+      if (/^https?:/.test(request.url())) {
+        requested.push(request.url());
+      }
+    });
     const [again] = await Promise.all([
       page.waitForEvent('download'),
       page.getByRole('button', { name: 'Stáhnout znovu' }).click(),
     ]);
     expect(again.suggestedFilename()).toBe('potvrzeni-o-darech-2026-hromadne.pdf');
-    await page.context().setOffline(false);
+    expect(requested).toEqual([]);
   });
 
   test('when the server stops in the middle, then the alert offers to try again and the next try sends only the donors left', async ({

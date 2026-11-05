@@ -10,7 +10,7 @@ const DRAWING_FAILURES: Readonly<Record<ReceiptPdfFailureReason, string>> = {
   drawing: DRAWING_FAILED,
   image: $localize`:@@admin.yearlyReceipts.imageFailed:Podpis nebo portrét na potvrzeních se nepodařilo ověřit, a tak jsme PDF nevytvořili. Zkuste to prosím znovu.`,
   unprintable: $localize`:@@admin.yearlyReceipts.unprintable:Údaje některého potvrzení obsahují znak, který v PDF neumíme vytisknout, a tak jsme PDF nevytvořili. Napište prosím správci webu.`,
-  style: $localize`:@@admin.yearlyReceipts.styleFailed:PDF teď kvůli chybě na webu nejde vytvořit. Motiv webu dává potvrzení vzhled, který neprojde kontrolou.`,
+  style: $localize`:@@admin.yearlyReceipts.styleFailed:PDF teď kvůli chybě na webu nejde vytvořit. Motiv webu dává potvrzení vzhled, který neprojde kontrolou. Napište prosím správci webu.`,
 };
 
 const SKIP_REASONS: Readonly<Record<string, string>> = {
@@ -18,8 +18,9 @@ const SKIP_REASONS: Readonly<Record<string, string>> = {
   'donations/donor-not-found': $localize`:@@admin.yearlyReceipts.skip.notFound:dárce jsme nenašli.`,
   'donations/yearly-receipt-not-available': $localize`:@@admin.yearlyReceipts.skip.noGift:za tento rok nemá žádný dar.`,
   'donations/receipt-replacement-in-browser-only': $localize`:@@admin.yearlyReceipts.skip.browserOnly:platné potvrzení jde nahradit jen ve správě webu v prohlížeči.`,
-  'donations/receipt-issue-limit': $localize`:@@admin.yearlyReceipts.skip.limit:dárci jsme za posledních 24 hodin vydali nejvíc nových potvrzení, kolik za den vydáváme; zkuste to zítra.`,
-  'donations/receipt-too-long': $localize`:@@admin.yearlyReceipts.skip.tooLong:potvrzení má příliš mnoho darů pro ověřovací QR kód.`,
+  'donations/receipt-issue-limit': $localize`:@@admin.yearlyReceipts.skip.limit:dárce dnes dosáhl denního limitu nových potvrzení; zkuste to zítra.`,
+  'donations/receipt-too-long': $localize`:@@admin.yearlyReceipts.skip.tooLong:potvrzení má příliš mnoho darů pro ověřovací QR kód; vystavte mu na kartě dárce potvrzení k jednotlivým darům.`,
+  'donations/receipt-unprintable': $localize`:@@admin.yearlyReceipts.skip.unprintable:údaje na potvrzení obsahují znak, který neumíme vytisknout; napište prosím správci webu.`,
 };
 
 const OTHER_SKIP = $localize`:@@admin.yearlyReceipts.skip.other:potvrzení se nepodařilo vystavit; zkuste to na kartě dárce.`;
