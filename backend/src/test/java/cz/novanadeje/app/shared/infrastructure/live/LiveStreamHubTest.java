@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -59,17 +60,51 @@ class LiveStreamHubTest {
     }
 
     @Test
-    @DisplayName("Given a donor's and an administrator's stream, when payments and another donor's bank accounts change, then only the administrator hears them")
-    void should_hint_administrator_of_every_feed_when_feeds_change_given_donor_and_administrator() {
+    @DisplayName("Given a donor's and an administrator's stream, when payments, another donor's bank accounts and the administrator's own donations change, then only the administrator hears the payments and own donations, and nobody the other donor's accounts")
+    void should_hint_administrator_of_payments_and_own_feeds_when_feeds_change_given_donor_and_administrator() {
         RecordingConnection jana = open(donor(JANA));
         RecordingConnection admin = open(administrator(ADMIN));
 
         hub.publish(StoredDataChanged.of(LiveFeed.PAYMENTS));
         hub.publish(StoredDataChanged.ofDonor(LiveFeed.BANK_ACCOUNTS, PETR));
+        hub.publish(StoredDataChanged.ofDonor(LiveFeed.DONATIONS, ADMIN));
         hub.publish(StoredDataChanged.of(LiveFeed.BANK_IMPORT));
 
-        await().untilAsserted(() -> assertThat(admin.changedFeeds()).containsExactlyInAnyOrder("payments", "bank-accounts", "bank-import"));
+        await().untilAsserted(() -> assertThat(admin.changedFeeds()).containsExactlyInAnyOrder("payments", "donations", "bank-import"));
         await().untilAsserted(() -> assertThat(jana.changedFeeds()).containsExactly("bank-import"));
+    }
+
+    @Test
+    @DisplayName("Given a change committed while a stream opens, when the revision is still being written, then the hint follows the revision and never comes before it")
+    void should_send_hint_after_revision_when_change_races_opening_given_new_stream() {
+        LiveOpening<RecordingConnection> opening = hub.open(donor(JANA), timeout -> {
+            RecordingConnection connection = new RecordingConnection(timeout);
+            connection.beforeEachSend(() -> {
+                connection.beforeEachSend(() -> {
+                });
+                new Thread(() -> hub.publish(StoredDataChanged.ofDonor(LiveFeed.DONATIONS, JANA))).start();
+                await().pollDelay(Duration.ofMillis(100)).until(() -> true);
+            });
+            return connection;
+        });
+        RecordingConnection jana = ((LiveOpening.Opened<RecordingConnection>) opening).connection();
+
+        await().untilAsserted(() -> assertThat(jana.sent()).extracting(RecordingConnection.Sent::event)
+                .containsExactly(LiveStreamHub.REVISION_EVENT, LiveStreamHub.CHANGED_EVENT));
+    }
+
+    @Test
+    @DisplayName("Given the hub's own scheduler, when streams close before their timers ran, then no cancelled timer stays queued holding the stream")
+    void should_leave_no_timer_queued_when_streams_close_given_hub_scheduler() {
+        hub.stop();
+        ScheduledThreadPoolExecutor scheduler = LiveStreamHub.scheduler();
+        hub = new LiveStreamHub(new LiveProperties(Duration.ofMinutes(1), 5, 50, 10), TOKEN_LIFETIME.plusMinutes(1), "f00ba12", clock, () -> scheduler);
+        hub.start();
+
+        IntStream.range(0, 20).forEach(index -> open(donor(UUID.randomUUID())).close());
+
+        assertThat(hub.openStreams()).isZero();
+        assertThat(scheduler.getQueue()).isEmpty();
     }
 
     @Test
@@ -180,11 +215,23 @@ class LiveStreamHubTest {
         assertThat(jana.closed()).isTrue();
         assertThat(admin.closed()).isTrue();
         assertThat(hub.isRunning()).isFalse();
-        assertThat(hub.open(donor(PETR), RecordingConnection::new)).isInstanceOf(LiveOpening.SessionEnded.class);
+        assertThat(hub.open(donor(PETR), RecordingConnection::new)).isInstanceOf(LiveOpening.Unavailable.class);
+    }
+
+    @Test
+    @DisplayName("Given a hub that was stopped, as the test framework pauses a cached context, when it starts again, then streams open and hear hints as before")
+    void should_open_streams_and_hint_when_started_again_given_stopped_hub() {
+        hub.stop();
+        hub.start();
+
+        RecordingConnection jana = open(donor(JANA));
+        hub.publish(StoredDataChanged.ofDonor(LiveFeed.DONATIONS, JANA));
+
+        await().untilAsserted(() -> assertThat(jana.changedFeeds()).containsExactly("donations"));
     }
 
     private LiveStreamHub hub(LiveProperties properties) {
-        LiveStreamHub created = new LiveStreamHub(properties, TOKEN_LIFETIME.plusMinutes(1), "f00ba12", clock, Executors.newScheduledThreadPool(2));
+        LiveStreamHub created = new LiveStreamHub(properties, TOKEN_LIFETIME.plusMinutes(1), "f00ba12", clock, () -> Executors.newScheduledThreadPool(2));
         created.start();
         return created;
     }

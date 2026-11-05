@@ -22,13 +22,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 @Component
 public class LiveStreamHub implements SmartLifecycle {
@@ -43,7 +45,8 @@ public class LiveStreamHub implements SmartLifecycle {
     private final Duration sessionEndMemory;
     private final String revision;
     private final Clock clock;
-    private final ScheduledExecutorService executor;
+    private final Supplier<ScheduledExecutorService> schedulers;
+    private ScheduledExecutorService executor;
     private final List<LiveStream> streams = new ArrayList<>();
     private final Map<UUID, Instant> sessionsEnded = new HashMap<>();
     private long opened;
@@ -51,15 +54,15 @@ public class LiveStreamHub implements SmartLifecycle {
 
     @Autowired
     LiveStreamHub(LiveProperties properties, JwtProperties jwt, BuildProperties build, Clock clock) {
-        this(properties, jwt.accessTokenTtl().plus(TOKEN_SKEW), build.revision(), clock, Executors.newScheduledThreadPool(THREADS, hubThreads()));
+        this(properties, jwt.accessTokenTtl().plus(TOKEN_SKEW), build.revision(), clock, LiveStreamHub::scheduler);
     }
 
-    LiveStreamHub(LiveProperties properties, Duration sessionEndMemory, String revision, Clock clock, ScheduledExecutorService executor) {
+    LiveStreamHub(LiveProperties properties, Duration sessionEndMemory, String revision, Clock clock, Supplier<ScheduledExecutorService> schedulers) {
         this.properties = properties;
         this.sessionEndMemory = sessionEndMemory;
         this.revision = revision;
         this.clock = clock;
-        this.executor = executor;
+        this.schedulers = schedulers;
     }
 
     public <C extends LiveConnection> LiveOpening<C> open(LiveSubscriber subscriber, Function<Duration, C> connections) {
@@ -68,8 +71,13 @@ public class LiveStreamHub implements SmartLifecycle {
         List<LiveStream> evicted = new ArrayList<>();
         LiveStream stream;
         C connection;
+        ScheduledExecutorService scheduler;
         synchronized (this) {
-            if (!running || lifetime.isNegative() || lifetime.isZero() || endedBefore(subscriber, now)) {
+            if (!running) {
+                return new LiveOpening.Unavailable<>();
+            }
+            scheduler = executor;
+            if (lifetime.isNegative() || lifetime.isZero() || endedBefore(subscriber, now)) {
                 return new LiveOpening.SessionEnded<>();
             }
             List<LiveStream> ofDonor = streams.stream().filter(each -> each.subscriber.donor().equals(subscriber.donor()))
@@ -91,10 +99,16 @@ public class LiveStreamHub implements SmartLifecycle {
         evicted.forEach(LiveStream::close);
         LiveStream opening = stream;
         connection.onEnd(() -> forget(opening));
-        stream.expiry = executor.schedule(stream::close, lifetime.toMillis(), TimeUnit.MILLISECONDS);
-        long heartbeat = properties.heartbeat().toMillis();
-        stream.heartbeat = executor.scheduleAtFixedRate(stream::heartbeat, heartbeat, heartbeat, TimeUnit.MILLISECONDS);
+        try {
+            stream.expiry = scheduler.schedule(stream::close, lifetime.toMillis(), TimeUnit.MILLISECONDS);
+            long heartbeat = properties.heartbeat().toMillis();
+            stream.heartbeat = scheduler.scheduleAtFixedRate(stream::heartbeat, heartbeat, heartbeat, TimeUnit.MILLISECONDS);
+        } catch (RejectedExecutionException stopping) {
+            stream.close();
+            return new LiveOpening.Unavailable<>();
+        }
         stream.send(REVISION_EVENT, Map.of("revision", revision));
+        stream.revisionSent();
         return new LiveOpening.Opened<>(connection);
     }
 
@@ -108,7 +122,19 @@ public class LiveStreamHub implements SmartLifecycle {
                 }
             }
         }
-        due.forEach(stream -> executor.execute(stream::flush));
+        due.forEach(this::flushLater);
+    }
+
+    private void flushLater(LiveStream stream) {
+        ScheduledExecutorService scheduler;
+        synchronized (this) {
+            scheduler = executor;
+        }
+        try {
+            scheduler.execute(stream::flush);
+        } catch (RejectedExecutionException stopping) {
+            stream.close();
+        }
     }
 
     public void endSessions(DonorSessionsEnded ended) {
@@ -131,20 +157,25 @@ public class LiveStreamHub implements SmartLifecycle {
     }
 
     @Override
-    public void start() {
+    public synchronized void start() {
+        executor = schedulers.get();
         running = true;
     }
 
     @Override
     public void stop() {
         List<LiveStream> closing;
+        ScheduledExecutorService stopping;
         synchronized (this) {
             running = false;
             closing = List.copyOf(streams);
             streams.clear();
+            stopping = executor;
         }
         closing.forEach(LiveStream::close);
-        executor.shutdownNow();
+        if (stopping != null) {
+            stopping.shutdownNow();
+        }
     }
 
     @Override
@@ -162,6 +193,12 @@ public class LiveStreamHub implements SmartLifecycle {
         stream.cancelTimers();
     }
 
+    static ScheduledThreadPoolExecutor scheduler() {
+        ScheduledThreadPoolExecutor scheduler = new ScheduledThreadPoolExecutor(THREADS, hubThreads());
+        scheduler.setRemoveOnCancelPolicy(true);
+        return scheduler;
+    }
+
     private static ThreadFactory hubThreads() {
         AtomicInteger number = new AtomicInteger();
         return work -> {
@@ -177,7 +214,7 @@ public class LiveStreamHub implements SmartLifecycle {
         private final LiveSubscriber subscriber;
         private final LiveConnection connection;
         private final Set<LiveFeed> pending = EnumSet.noneOf(LiveFeed.class);
-        private boolean flushQueued;
+        private boolean flushQueued = true;
         private volatile ScheduledFuture<?> expiry;
         private volatile ScheduledFuture<?> heartbeat;
 
@@ -189,10 +226,21 @@ public class LiveStreamHub implements SmartLifecycle {
 
         private boolean wants(StoredDataChanged change) {
             return switch (change.feed().audience()) {
-                case DONOR -> subscriber.administrator() || change.donor().filter(subscriber.donor()::equals).isPresent();
+                case DONOR -> change.donor().filter(subscriber.donor()::equals).isPresent();
                 case EVERYONE -> true;
                 case ADMINISTRATION -> subscriber.administrator();
             };
+        }
+
+        private void revisionSent() {
+            boolean due;
+            synchronized (LiveStreamHub.this) {
+                due = !pending.isEmpty();
+                flushQueued = due;
+            }
+            if (due) {
+                flushLater(this);
+            }
         }
 
         private void flush() {

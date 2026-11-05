@@ -10,4 +10,7 @@ public sealed interface LiveOpening<C extends LiveConnection> {
 
     record Full<C extends LiveConnection>() implements LiveOpening<C> {
     }
+
+    record Unavailable<C extends LiveConnection>() implements LiveOpening<C> {
+    }
 }

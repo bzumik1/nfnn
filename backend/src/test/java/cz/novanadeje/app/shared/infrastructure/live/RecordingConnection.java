@@ -20,6 +20,8 @@ final class RecordingConnection implements LiveConnection {
     private final AtomicBoolean failing = new AtomicBoolean();
     private volatile Runnable onEnd = () -> {
     };
+    private volatile Runnable beforeEachSend = () -> {
+    };
 
     RecordingConnection(Duration timeout) {
         this.timeout = timeout;
@@ -30,6 +32,7 @@ final class RecordingConnection implements LiveConnection {
         if (failing.get()) {
             throw new IOException("client gone");
         }
+        beforeEachSend.run();
         sent.add(new Sent(event, data));
     }
 
@@ -51,6 +54,10 @@ final class RecordingConnection implements LiveConnection {
     @Override
     public void onEnd(Runnable callback) {
         onEnd = callback;
+    }
+
+    void beforeEachSend(Runnable action) {
+        beforeEachSend = action;
     }
 
     void failFromNowOn() {

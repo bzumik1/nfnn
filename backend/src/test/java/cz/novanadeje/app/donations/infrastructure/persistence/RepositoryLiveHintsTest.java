@@ -60,8 +60,8 @@ class RepositoryLiveHintsTest {
     private ApplicationEvents events;
 
     @Test
-    @DisplayName("Given a stored payment, when a donation of it is saved and deleted, then each change hints the donor's donations")
-    void should_hint_donor_donations_when_donation_saved_and_deleted_given_stored_payment() {
+    @DisplayName("Given a stored payment, when a donation of it is saved and deleted, then each change hints the donor's donations and the payments, whose pairing it is")
+    void should_hint_donor_donations_and_payments_when_donation_saved_and_deleted_given_stored_payment() {
         DonorReference jana = storedDonor("4821937560");
         BankPayment stored = storedPayment(1001);
         Donation donation = Donation.fromBankPayment(DonationId.newId(NOW), jana, stored, PairingMethod.VARIABLE_SYMBOL, NOW);
@@ -70,8 +70,9 @@ class RepositoryLiveHintsTest {
         donations.save(donation);
         donations.delete(donation.id());
 
-        assertThat(hints()).containsExactly(StoredDataChanged.ofDonor(LiveFeed.DONATIONS, jana.value()),
-                StoredDataChanged.ofDonor(LiveFeed.DONATIONS, jana.value()));
+        StoredDataChanged gifts = StoredDataChanged.ofDonor(LiveFeed.DONATIONS, jana.value());
+        StoredDataChanged pairings = StoredDataChanged.of(LiveFeed.PAYMENTS);
+        assertThat(hints()).containsExactly(gifts, pairings, gifts, pairings);
     }
 
     @Test
@@ -99,6 +100,32 @@ class RepositoryLiveHintsTest {
 
         StoredDataChanged accounts = StoredDataChanged.ofDonor(LiveFeed.BANK_ACCOUNTS, jana.value());
         assertThat(hints()).containsExactly(accounts, accounts, accounts);
+    }
+
+    @Test
+    @DisplayName("Given a donor, when a link is saved again, a duplicate link and an answered claim come again, claims change and every link goes, then each stored change hints the donor's bank accounts and the ignored ones send nothing")
+    void should_hint_only_stored_changes_when_links_and_claims_repeat_given_donor() {
+        DonorReference jana = storedDonor("4821937560");
+        SenderAccountLink link = SenderAccountLink.awaitingPayment(SenderAccountLinkId.newId(NOW), ACCOUNT.orElseThrow(), LocalDate.of(2026, 10, 1), NOW);
+        SymbolClaim claim = SymbolClaim.answer(SymbolClaimId.newId(NOW), jana, ACCOUNT.orElseThrow(), new VariableSymbol("6123456789"),
+                SymbolClaimAnswer.CONFIRMED, NOW);
+        donorRecords.saveSenderAccountLink(jana, link);
+        claims.saveIfAbsent(claim);
+        events.clear();
+
+        donorRecords.saveSenderAccountLink(jana, link);
+        boolean duplicateSaved = donorRecords.saveSenderAccountLink(jana,
+                SenderAccountLink.awaitingPayment(SenderAccountLinkId.newId(NOW), ACCOUNT.orElseThrow(), LocalDate.of(2026, 10, 1), NOW));
+        boolean answeredAgain = claims.saveIfAbsent(SymbolClaim.answer(SymbolClaimId.newId(NOW), jana, ACCOUNT.orElseThrow(),
+                new VariableSymbol("6123456789"), SymbolClaimAnswer.CONFIRMED, NOW));
+        claims.save(claim);
+        claims.delete(claim.id());
+        donorRecords.deleteSenderAccountLinksOf(jana);
+
+        assertThat(duplicateSaved).isFalse();
+        assertThat(answeredAgain).isFalse();
+        StoredDataChanged accounts = StoredDataChanged.ofDonor(LiveFeed.BANK_ACCOUNTS, jana.value());
+        assertThat(hints()).containsExactly(accounts, accounts, accounts, accounts);
     }
 
     private List<StoredDataChanged> hints() {

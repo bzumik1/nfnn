@@ -58,6 +58,7 @@ class JpaDonationRepository implements DonationRepository {
 
     private void changed(DonorReference donor) {
         events.publishEvent(StoredDataChanged.ofDonor(LiveFeed.DONATIONS, donor.value()));
+        events.publishEvent(StoredDataChanged.of(LiveFeed.PAYMENTS));
     }
 
     @Override
