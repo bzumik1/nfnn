@@ -1,13 +1,13 @@
 ---
 name: cloud-session
-description: Prepare a claude.ai cloud container to build and test nfnn - Node 24 for Angular, Playwright's Chromium, a Maven Central mirror and UTF-8 locale for Gradle, dockerd for Testcontainers, the production nginx for header checks
+description: Prepare a claude.ai cloud container to build and test nfnn - Node 26 for Angular, Playwright's Chromium, a Maven Central mirror and UTF-8 locale for Gradle, dockerd for Testcontainers, the production nginx for header checks
 ---
 # Building and testing in a cloud session
 
-Verified 2026-10-23. Cloud containers start from a fresh clone; the session-start hook (single-repository cloud sessions) installs Node 24 when needed and runs `npm ci` in `frontend/` and `mcp/`; a claude.ai project thread runs no hooks at all.
+Verified 2026-10-23. Cloud containers start from a fresh clone; the session-start hook (single-repository cloud sessions) installs Node 26 when needed and runs `npm ci` in `frontend/` and `mcp/`; a claude.ai project thread runs no hooks at all.
 
-## Node 24 (frontend and connector)
-The image ships Node 22.22.0, below Angular 22's minimum (`^22.22.3 || ^24.15 || >=26`): every `ng` command refuses to start. Where the hook did not run, run it by hand from the repository root; it installs the current Node 24 into `/opt/node24`, links it into `~/.local/bin` (before `/opt/node22/bin` on `PATH`) and runs `npm ci` in `frontend/` and `mcp/`:
+## Node 26 (frontend and connector)
+The image ships Node 22.22.0, below Angular 22's minimum (`^22.22.3 || ^24.15 || >=26`): every `ng` command refuses to start. Where the hook did not run, run it by hand from the repository root; it installs the current Node 26 into `/opt/node26`, links it into `~/.local/bin` (before `/opt/node22/bin` on `PATH`) and runs `npm ci` in `frontend/` and `mcp/`:
 ```bash
 CLAUDE_CODE_REMOTE=true CLAUDE_PROJECT_DIR=$PWD bash .claude/hooks/session-start.sh && hash -r && node -v
 ```

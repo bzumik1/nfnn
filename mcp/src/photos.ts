@@ -10,7 +10,7 @@ const REDIRECTS = new Set([301, 302, 303, 307, 308]);
 const PHOTO_TYPE = /^(?:image\/[a-z0-9.+-]+|application\/octet-stream)$/;
 
 export interface Photo {
-  readonly bytes: Uint8Array;
+  readonly bytes: Uint8Array<ArrayBuffer>;
   readonly contentType: string;
 }
 
@@ -189,7 +189,10 @@ type LookupCallback = (
   family?: number,
 ) => void;
 
-async function readAtMost(response: IncomingMessage, limit: number): Promise<Uint8Array> {
+async function readAtMost(
+  response: IncomingMessage,
+  limit: number,
+): Promise<Uint8Array<ArrayBuffer>> {
   const declared = Number(response.headers['content-length']);
   if (Number.isFinite(declared) && declared > limit) {
     response.destroy();

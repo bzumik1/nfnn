@@ -12,7 +12,7 @@ updates:
       - dependency-name: typescript
         versions: [">=6.1"]
       - dependency-name: "@types/node"
-        versions: [">=25"]
+        versions: [">=27"]
     groups:
       angular:
         patterns:
@@ -38,7 +38,7 @@ updates:
       - dependency-name: typescript
         versions: [">=6.1"]
       - dependency-name: "@types/node"
-        versions: [">=25"]
+        versions: [">=27"]
     groups:
       mcp-sdk:
         patterns:
@@ -49,6 +49,9 @@ updates:
     directories: [/backend, /frontend, /mcp, /deploy/backup, /deploy/postgres]
     schedule:
       interval: monthly
+    ignore:
+      - dependency-name: nginx
+        versions: [">=1.31, <1.32", ">=1.33, <1.34", ">=1.35, <1.36"]
     groups:
       base-images:
         patterns: ["*"]
