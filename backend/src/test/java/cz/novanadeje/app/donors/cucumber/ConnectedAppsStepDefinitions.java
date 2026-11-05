@@ -368,6 +368,21 @@ public class ConnectedAppsStepDefinitions {
         api.put("/api/admin/operations/loggers/" + logger, Map.of("level", level, "minutes", minutes));
     }
 
+    @When("the exchanged API token reads the push settings")
+    public void theExchangedApiTokenReadsThePushSettings() {
+        actAsExchangedApiToken();
+        api.get("/api/admin/operations/push");
+    }
+
+    @When("the exchanged API token changes the push alerts of the first device to bank import {word}, backups {word} and mail {word}")
+    public void theExchangedApiTokenChangesThePushAlertsOfTheFirstDevice(String bankImport, String backups, String mail) {
+        actAsExchangedApiToken();
+        String id = api.get("/api/admin/operations/push").getStatusCode().value() == 200
+                ? api.lastResponseJson().get("subscriptions").get(0).get("id").asString() : UUID.randomUUID().toString();
+        api.put("/api/admin/operations/push/subscriptions/" + id + "/alerts",
+                Map.of("bankImport", "on".equals(bankImport), "backups", "on".equals(backups), "mail", "on".equals(mail)));
+    }
+
     @When("the exchanged API token lists the backups")
     public void theExchangedApiTokenListsTheBackups() {
         actAsExchangedApiToken();

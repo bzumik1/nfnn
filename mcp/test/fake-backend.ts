@@ -21,6 +21,7 @@ export const ERASED_RECEIPT_ID = '019a0000-0000-7000-8000-000000000019';
 export const VERIFICATION_LINK = 'https://nfnn.cz/overit#1003188506188208640000126520415073310';
 export const PERSON_ID = '019a0000-0000-7000-8000-000000000007';
 export const SIGNED_PERSON_ID = '019a0000-0000-7000-8000-000000000008';
+export const PUSH_SUBSCRIPTION_ID = '019a0000-0000-7000-8000-000000000027';
 const LOG_MATCHES: Record<string, number[]> = {
   'backend.log': [36],
   'backend.log.2026-10-22.0.gz': [70, 50, 10],
@@ -548,6 +549,37 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
           text: '2026-10-23T10:00:02 INFO third line\n',
         },
       ];
+    case 'GET /api/admin/operations/push':
+      return [
+        200,
+        {
+          publicKey: 'BPushPublicKeyOfTheFakeBackend',
+          subscriptions: [
+            {
+              id: PUSH_SUBSCRIPTION_ID,
+              service: 'google',
+              alerts: { bankImport: true, backups: true, mail: true },
+              createdAt: '2026-11-05T06:00:00Z',
+              lastDeliveredAt: '2026-11-05T06:05:00Z',
+              failuresInARow: 0,
+            },
+          ],
+        },
+      ];
+    case `PUT /api/admin/operations/push/subscriptions/${PUSH_SUBSCRIPTION_ID}/alerts`:
+      return [
+        200,
+        {
+          id: PUSH_SUBSCRIPTION_ID,
+          service: 'google',
+          alerts: JSON.parse(body) as { bankImport: boolean; backups: boolean; mail: boolean },
+          createdAt: '2026-11-05T06:00:00Z',
+          lastDeliveredAt: null,
+          failuresInARow: 0,
+        },
+      ];
+    case `PUT /api/admin/operations/push/subscriptions/${UNKNOWN_ID}/alerts`:
+      return [404, problem(404, 'operations/push-subscription-not-found', 'Zařízení nenalezeno')];
     case 'GET /api/admin/operations/loggers':
       return [
         200,

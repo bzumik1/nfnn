@@ -15,6 +15,7 @@ import cz.novanadeje.app.donors.domain.SecondFactor;
 import cz.novanadeje.app.donors.domain.SecondFactorNotEnabled;
 import cz.novanadeje.app.donors.domain.SecondFactorRepository;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.shared.application.event.AdministrationRevoked;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -93,6 +94,7 @@ public class AdministratorService {
         Instant now = clock.instant();
         refreshTokens.revokeAllOf(donorId, now);
         donors.forgetSignIns(donorId);
+        events.publishEvent(new AdministrationRevoked(donorId.value(), now));
         events.publishEvent(new AdminActionPerformed(adminId.value(), REVOKE_ACTION, Optional.of(donorId.value()),
                 "Role správce odebrána dárci " + donorId + "; všechna přihlášení dárce ukončena", now));
         log.info("Administrator {} took the administrator role from donor {}", adminId, donorId);

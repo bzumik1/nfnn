@@ -29,7 +29,8 @@ class ApiSecurityConfiguration {
             "/api/admin/content/projects/*",
             "/api/admin/donations/donors/*/bank-accounts/*",
             "/api/admin/donations/symbol-claims/*",
-            "/api/admin/donations/receipt-signatures/*"};
+            "/api/admin/donations/receipt-signatures/*",
+            "/api/admin/operations/push/subscriptions/*"};
     private static final String[] BROWSER_ONLY_POSTS = {
             "/api/admin/donors/administrators",
             "/api/admin/donors/*/second-factor/reset",
@@ -37,7 +38,9 @@ class ApiSecurityConfiguration {
             "/api/admin/donations/receipt-signatures/*",
             "/api/admin/donations/receipt-signing-keys/*/withdrawal",
             "/api/admin/operations/backups/key/reveal",
-            "/api/admin/operations/backups/key/confirmation"};
+            "/api/admin/operations/backups/key/confirmation",
+            "/api/admin/operations/push/subscriptions",
+            "/api/admin/operations/push/test"};
     private static final String[] BROWSER_ONLY_PUTS = {
             "/api/admin/donations/receipt-signatory"};
 

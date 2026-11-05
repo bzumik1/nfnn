@@ -1,7 +1,6 @@
 package cz.novanadeje.app.operations.infrastructure.settings;
 
 import cz.novanadeje.app.operations.application.settings.SecretSealer;
-import cz.novanadeje.app.operations.domain.settings.Setting;
 
 import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;
@@ -54,14 +53,14 @@ final class AesGcmSecretSealer implements SecretSealer {
     }
 
     @Override
-    public String seal(Setting setting, String value) {
+    public String seal(String purpose, String value) {
         SecretKeySpec secretKey = key.orElseThrow(() -> new IllegalStateException("No settings key to seal with"));
         try {
             byte[] iv = new byte[IV_BYTES];
             random.nextBytes(iv);
             Cipher cipher = Cipher.getInstance(TRANSFORMATION);
             cipher.init(Cipher.ENCRYPT_MODE, secretKey, new GCMParameterSpec(TAG_BITS, iv));
-            cipher.updateAAD(setting.name().getBytes(StandardCharsets.US_ASCII));
+            cipher.updateAAD(purpose.getBytes(StandardCharsets.US_ASCII));
             byte[] sealed = cipher.doFinal(value.getBytes(StandardCharsets.UTF_8));
             return VERSION + Base64.getEncoder().encodeToString(ByteBuffer.allocate(IV_BYTES + sealed.length).put(iv).put(sealed).array());
         } catch (GeneralSecurityException failure) {
@@ -70,7 +69,7 @@ final class AesGcmSecretSealer implements SecretSealer {
     }
 
     @Override
-    public Optional<String> unseal(Setting setting, String sealed) {
+    public Optional<String> unseal(String purpose, String sealed) {
         if (key.isEmpty() || sealed == null || !sealed.startsWith(VERSION)) {
             return Optional.empty();
         }
@@ -81,7 +80,7 @@ final class AesGcmSecretSealer implements SecretSealer {
             }
             Cipher cipher = Cipher.getInstance(TRANSFORMATION);
             cipher.init(Cipher.DECRYPT_MODE, key.get(), new GCMParameterSpec(TAG_BITS, bytes, 0, IV_BYTES));
-            cipher.updateAAD(setting.name().getBytes(StandardCharsets.US_ASCII));
+            cipher.updateAAD(purpose.getBytes(StandardCharsets.US_ASCII));
             return Optional.of(new String(cipher.doFinal(bytes, IV_BYTES, bytes.length - IV_BYTES), StandardCharsets.UTF_8));
         } catch (GeneralSecurityException | IllegalArgumentException unreadable) {
             return Optional.empty();

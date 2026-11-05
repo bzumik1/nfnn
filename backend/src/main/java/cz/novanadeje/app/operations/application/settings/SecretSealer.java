@@ -8,7 +8,15 @@ public interface SecretSealer {
 
     boolean available();
 
-    String seal(Setting setting, String value);
+    String seal(String purpose, String value);
 
-    Optional<String> unseal(Setting setting, String sealed);
+    Optional<String> unseal(String purpose, String sealed);
+
+    default String seal(Setting setting, String value) {
+        return seal(setting.name(), value);
+    }
+
+    default Optional<String> unseal(Setting setting, String sealed) {
+        return unseal(setting.name(), sealed);
+    }
 }
