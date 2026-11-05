@@ -127,9 +127,7 @@ export class AccountStore {
       const bytes = await this.copy.openRecord(this.addressOf(record.recordId), record);
       try {
         const plaintext = JSON.parse(new TextDecoder().decode(bytes)) as
-          | ChunkPlaintext
-          | MetaPlaintext
-          | ImagePlaintext;
+          ChunkPlaintext | MetaPlaintext | ImagePlaintext;
         if (plaintext.type === 'meta') {
           meta = plaintext;
         } else if (plaintext.type === 'image') {

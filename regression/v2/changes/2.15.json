@@ -1,0 +1,114 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/device-copy/donor-copy-download.spec.ts > Given the download of the donor copy > when a new empty copy opens, then the manifest and its chunks are downloaded and stored under the copy lock",
+    "reason": "2.15: the first-sync download of 2.14 became the sync of the donor copy (DonorCopySync), which asks only for the chunks whose digest changed, syncs a restored copy too and checks the copy's own figures against its summary",
+    "replacement": "src/app/features/donations/device-copy/donor-copy-sync.spec.ts > Given the sync of the donor copy > when a new empty copy opens, then every chunk of the manifest is downloaded and stored under the copy lock while the first sync shows"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/device-copy/donor-copy-download.spec.ts > Given the download of the donor copy > when an empty copy opens that another tab has already filled, then nothing is downloaded",
+    "reason": "2.15: the first-sync download of 2.14 became the sync of the donor copy (DonorCopySync), which asks only for the chunks whose digest changed, syncs a restored copy too and checks the copy's own figures against its summary",
+    "replacement": "src/app/features/donations/device-copy/donor-copy-sync.spec.ts > Given the sync of the donor copy > when nothing changed, then no chunk is asked for and the copy is stored again with the manifest’s summary"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/device-copy/donor-copy-download.spec.ts > Given the download of the donor copy > when a copy is restored on a reload, then nothing is downloaded",
+    "reason": "2.15: the first-sync download of 2.14 became the sync of the donor copy (DonorCopySync), which asks only for the chunks whose digest changed, syncs a restored copy too and checks the copy's own figures against its summary",
+    "replacement": "src/app/features/donations/device-copy/donor-copy-sync.spec.ts > Given the sync of the donor copy > when a restored copy opens, then only the chunks whose digest changed are asked for, the others are kept and the one no longer listed goes"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/device-copy/donor-copy-download.spec.ts > Given the download of the donor copy > when the manifest lists more than 64 chunks, then they are asked for in batches of 64",
+    "reason": "2.15: the first-sync download of 2.14 became the sync of the donor copy (DonorCopySync), which asks only for the chunks whose digest changed, syncs a restored copy too and checks the copy's own figures against its summary",
+    "replacement": "src/app/features/donations/device-copy/donor-copy-sync.spec.ts > Given the sync of the donor copy > when the manifest lists more than 64 changed chunks, then they are asked for in batches of 64"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/device-copy/donor-copy-download.spec.ts > Given the download of the donor copy > when a chunk changed between the manifest and the chunks, then the download starts again and stores the second answer",
+    "reason": "2.15: the first-sync download of 2.14 became the sync of the donor copy (DonorCopySync), which asks only for the chunks whose digest changed, syncs a restored copy too and checks the copy's own figures against its summary",
+    "replacement": "src/app/features/donations/device-copy/donor-copy-sync.spec.ts > Given the sync of the donor copy > when a chunk changed between the manifest and the chunks, then the sync starts again and stores the second answer"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/device-copy/donor-copy-download.spec.ts > Given the download of the donor copy > when the rows of a chunk do not give its digest, then the download starts again",
+    "reason": "2.15: the first-sync download of 2.14 became the sync of the donor copy (DonorCopySync), which asks only for the chunks whose digest changed, syncs a restored copy too and checks the copy's own figures against its summary",
+    "replacement": "src/app/features/donations/device-copy/donor-copy-sync.spec.ts > Given the sync of the donor copy > when the rows of a chunk do not give its digest, then the sync starts again"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/device-copy/donor-copy-download.spec.ts > Given the download of the donor copy > when the summary of the chunks differs from the manifest, or a chunk is missing, then the download starts again",
+    "reason": "2.15: the first-sync download of 2.14 became the sync of the donor copy (DonorCopySync), which asks only for the chunks whose digest changed, syncs a restored copy too and checks the copy's own figures against its summary",
+    "replacement": "src/app/features/donations/device-copy/donor-copy-sync.spec.ts > Given the sync of the donor copy > when a changed chunk comes back missing or with another summary twice, then nothing is stored and the mismatch is reported"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/device-copy/donor-copy-download.spec.ts > Given the download of the donor copy > when two attempts in a row do not agree, then nothing is stored and the mismatch is reported",
+    "reason": "2.15: the first-sync download of 2.14 became the sync of the donor copy (DonorCopySync), which asks only for the chunks whose digest changed, syncs a restored copy too and checks the copy's own figures against its summary",
+    "replacement": "src/app/features/donations/device-copy/donor-copy-sync.spec.ts > Given the sync of the donor copy > when a changed chunk comes back missing or with another summary twice, then nothing is stored and the mismatch is reported"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/device-copy/donor-copy-download.spec.ts > Given the download of the donor copy > when the manifest names another donor than the copy, then nothing is stored and the mismatch is reported",
+    "reason": "2.15: the first-sync download of 2.14 became the sync of the donor copy (DonorCopySync), which asks only for the chunks whose digest changed, syncs a restored copy too and checks the copy's own figures against its summary",
+    "replacement": "src/app/features/donations/device-copy/donor-copy-sync.spec.ts > Given the sync of the donor copy > when the manifest names another donor than the copy, then nothing is stored and the mismatch is reported"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/device-copy/donor-copy-download.spec.ts > Given the download of the donor copy > when the chunks answer names another donor than the copy, then nothing is stored",
+    "reason": "2.15: the first-sync download of 2.14 became the sync of the donor copy (DonorCopySync), which asks only for the chunks whose digest changed, syncs a restored copy too and checks the copy's own figures against its summary",
+    "replacement": "src/app/features/donations/device-copy/donor-copy-sync.spec.ts > Given the sync of the donor copy > when the chunks answer names another donor than the copy, then nothing is stored"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/device-copy/donor-copy-download.spec.ts > Given the download of the donor copy > when the manifest is empty, then an empty copy with its summary is stored and no chunk is asked for",
+    "reason": "2.15: the first-sync download of 2.14 became the sync of the donor copy (DonorCopySync), which asks only for the chunks whose digest changed, syncs a restored copy too and checks the copy's own figures against its summary",
+    "replacement": "src/app/features/donations/device-copy/donor-copy-sync.spec.ts > Given the sync of the donor copy > when the manifest is empty, then an empty copy with its summary is stored and no chunk is asked for"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/device-copy/donor-copy-download.spec.ts > Given the download of the donor copy > when the server cannot be reached, then the download fails without storing or reporting",
+    "reason": "2.15: the first-sync download of 2.14 became the sync of the donor copy (DonorCopySync), which asks only for the chunks whose digest changed, syncs a restored copy too and checks the copy's own figures against its summary",
+    "replacement": "src/app/features/donations/device-copy/donor-copy-sync.spec.ts > Given the sync of the donor copy > when the server cannot be reached, then the sync fails and the copy stays as it was, unreported"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/device-copy/donor-copy-download.spec.ts > Given the download of the donor copy > when the copy was closed or deleted before the answer came, then the outcome says there is no copy",
+    "reason": "2.15: the first-sync download of 2.14 became the sync of the donor copy (DonorCopySync), which asks only for the chunks whose digest changed, syncs a restored copy too and checks the copy's own figures against its summary",
+    "replacement": "src/app/features/donations/device-copy/donor-copy-sync.spec.ts > Given the sync of the donor copy > when the copy was closed or deleted before the answer came, then the outcome says there is no copy"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/device-copy/donor-copy-download.spec.ts > Given the download of the donor copy > when no copy is open and the donor asks to load the data again, then nothing is asked for",
+    "reason": "2.15: the first-sync download of 2.14 became the sync of the donor copy (DonorCopySync), which asks only for the chunks whose digest changed, syncs a restored copy too and checks the copy's own figures against its summary",
+    "replacement": "src/app/features/donations/device-copy/donor-copy-sync.spec.ts > Given the sync of the donor copy > when no copy is open, then nothing is asked for"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/device-copy/donor-copy-download.spec.ts > Given the download of the donor copy > when a copy is open and the donor asks to load the data again, then it is downloaded even though it holds data",
+    "reason": "2.15: the first-sync download of 2.14 became the sync of the donor copy (DonorCopySync), which asks only for the chunks whose digest changed, syncs a restored copy too and checks the copy's own figures against its summary",
+    "replacement": "src/app/features/donations/device-copy/donor-copy-sync.spec.ts > Given the sync of the donor copy > when the donor asks to load the data again, then every chunk is asked for even though the copy holds them"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/device-copy.spec.ts > Given a donor who signs in with a password on a device that keeps an encrypted copy > when she loads the page again, then the same copy opens with its session key, without her password and without downloading again",
+    "reason": "2.15: a restored copy is caught up by the sync, so a reload asks for the manifest (and only the manifest when nothing changed)",
+    "replacement": "e2e/device-copy.spec.ts > Given a donor who signs in with a password on a device that keeps an encrypted copy > when she loads the page again, then the same copy opens with its session key, without her password, and only its manifest is asked for to catch it up"
+  }
+]

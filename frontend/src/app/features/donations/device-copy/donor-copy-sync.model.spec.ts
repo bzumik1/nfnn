@@ -181,7 +181,7 @@ type Command =
   | { readonly kind: 'wrong-summary' }
   | { readonly kind: 'another-donor' };
 
-const commands = fc.oneof(
+const commands: fc.Arbitrary<Command> = fc.oneof(
   {
     weight: 4,
     arbitrary: fc.record({
