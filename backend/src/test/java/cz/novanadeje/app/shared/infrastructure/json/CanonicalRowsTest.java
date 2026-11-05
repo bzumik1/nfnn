@@ -1,4 +1,4 @@
-package cz.novanadeje.app.donations.interfaces.rest;
+package cz.novanadeje.app.shared.infrastructure.json;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

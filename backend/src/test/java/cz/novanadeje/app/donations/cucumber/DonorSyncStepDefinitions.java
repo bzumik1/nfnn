@@ -3,7 +3,7 @@ package cz.novanadeje.app.donations.cucumber;
 import cz.novanadeje.app.cucumber.ApiClient;
 import cz.novanadeje.app.cucumber.DonorSessions;
 import cz.novanadeje.app.cucumber.ScenarioDonors;
-import cz.novanadeje.app.support.CanonicalRowsDigest;
+import cz.novanadeje.app.shared.infrastructure.json.CanonicalRows;
 import io.cucumber.datatable.DataTable;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
@@ -170,7 +170,7 @@ public class DonorSyncStepDefinitions {
     @Then("every chunk on the device hashes to its rowsSha256")
     public void everyChunkOnTheDeviceHashesToItsRowsSha256() {
         assertThat(device.chunks).isNotEmpty();
-        device.chunks.forEach((id, chunk) -> assertThat(CanonicalRowsDigest.sha256(chunk.get("rows")))
+        device.chunks.forEach((id, chunk) -> assertThat(CanonicalRows.sha256(chunk.get("rows")))
                 .as("the SHA-256 of the canonical rows of %s", id).isEqualTo(chunk.get("rowsSha256").asString()));
     }
 

@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donations.interfaces.rest;
 
+import cz.novanadeje.app.shared.infrastructure.json.CanonicalRows;
 import tools.jackson.databind.JsonNode;
 
 record SyncChunk(String id, String rowsSha256, int count, JsonNode rows) {

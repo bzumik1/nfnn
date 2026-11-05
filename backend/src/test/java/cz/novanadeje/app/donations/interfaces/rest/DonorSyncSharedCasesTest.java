@@ -4,7 +4,7 @@ import cz.novanadeje.app.donations.DonationRowsSharedCaseRunner;
 import cz.novanadeje.app.donations.domain.receipt.FirstReceiptYear;
 import cz.novanadeje.app.sharedcases.CaseRows;
 import cz.novanadeje.app.sharedcases.SharedCase;
-import cz.novanadeje.app.support.CanonicalRowsDigest;
+import cz.novanadeje.app.shared.infrastructure.json.CanonicalRows;
 import org.springframework.beans.factory.annotation.Autowired;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ArrayNode;
@@ -66,7 +66,7 @@ class DonorSyncSharedCasesTest extends DonationRowsSharedCaseRunner {
                 assertThat(body.get("id")).isEqualTo(listed.get("id"));
                 assertThat(body.get("rowsSha256")).as("the body of %s and its manifest entry", listed.get("id")).isEqualTo(listed.get("rowsSha256"));
                 assertThat(body.get("count")).isEqualTo(listed.get("count"));
-                assertThat(CanonicalRowsDigest.sha256(body.get("rows"))).as("the SHA-256 of the canonical rows of %s as answered", listed.get("id"))
+                assertThat(CanonicalRows.sha256(body.get("rows"))).as("the SHA-256 of the canonical rows of %s as answered", listed.get("id"))
                         .isEqualTo(body.get("rowsSha256").asString());
                 chunks.add(body);
             }
@@ -80,7 +80,7 @@ class DonorSyncSharedCasesTest extends DonationRowsSharedCaseRunner {
     }
 
     private static JsonNode withCaseDigests(JsonNode aliased) {
-        aliased.get("chunks").forEach(chunk -> ((ObjectNode) chunk).put("rowsSha256", CanonicalRowsDigest.sha256(chunk.get("rows"))));
+        aliased.get("chunks").forEach(chunk -> ((ObjectNode) chunk).put("rowsSha256", CanonicalRows.sha256(chunk.get("rows"))));
         return aliased;
     }
 }

@@ -2,7 +2,7 @@ package cz.novanadeje.app.donations.interfaces.rest;
 
 import cz.novanadeje.app.donations.DonationRowsContext;
 import cz.novanadeje.app.sharedcases.CaseRows;
-import cz.novanadeje.app.support.CanonicalRowsDigest;
+import cz.novanadeje.app.shared.infrastructure.json.CanonicalRows;
 import cz.novanadeje.app.support.DatabaseCleaner;
 import cz.novanadeje.app.support.MutableClock;
 import cz.novanadeje.app.support.RateLimiterWindows;
@@ -277,7 +277,7 @@ class DonorDeviceSyncTest {
                 bodies.get("chunks").forEach(body -> {
                     String id = body.get("id").asString();
                     assertThat(body.get("rowsSha256").asString()).as("the chunk %s and its manifest entry", id).isEqualTo(listed.get(id));
-                    assertThat(CanonicalRowsDigest.sha256(body.get("rows"))).as("the digest of the rows of %s", id).isEqualTo(listed.get(id));
+                    assertThat(CanonicalRows.sha256(body.get("rows"))).as("the digest of the rows of %s", id).isEqualTo(listed.get(id));
                     assertThat(body.get("count").asInt()).isEqualTo(body.get("rows").size());
                     chunks.put(id, body);
                 });
