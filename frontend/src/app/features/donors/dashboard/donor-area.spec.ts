@@ -71,6 +71,7 @@ class FakeDonorCopy implements DonorCopy {
   readonly open = this.opened.asReadonly();
   readonly view = this.shown.asReadonly();
   readonly firstSync = this.first.asReadonly();
+  readonly keepsOnDevice = signal(true).asReadonly();
   readonly pending: ((outcome: SyncOutcome) => void)[] = [];
   readonly sync = vi.fn(() => this.next());
   readonly catchUp = vi.fn(() => this.next());

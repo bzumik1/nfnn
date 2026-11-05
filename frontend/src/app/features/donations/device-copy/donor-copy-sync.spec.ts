@@ -11,6 +11,7 @@ import type { AccountStore, CopyContents } from '../../../core/device/store/acco
 import { DeviceVault, type OpenedCopy } from '../../../core/device/store/device-vault';
 import { ErrorReporter } from '../../../core/errors/error-reporter';
 import { rowsSha256 } from '../sync/canonical-rows';
+import { DonorCopyLink } from './donor-copy';
 import { CATCH_UP_PAUSE_MS, DonorCopySync, REBUILD_PAUSE_MS } from './donor-copy-sync';
 import { type DonationRow, summarizeDonations } from './donor-copy-view';
 import type { SyncChunk } from './donor-sync-api';
@@ -37,6 +38,7 @@ class FakeStore {
 
 class FakeVault {
   readonly opened = signal<OpenedCopy | null>(null);
+  readonly mode = signal<'stored' | 'memory' | null>('stored');
   readonly stored: CopyContents[] = [];
   readonly locked: string[] = [];
   accepts = true;
@@ -245,6 +247,15 @@ describe('Given the sync of the donor copy', () => {
     http.expectNone('/api/donations/me/sync/chunks');
     expect(vault.stored[0].chunks).toEqual(store.persisted?.chunks);
     expect(vault.stored[0].summary).toEqual(summaryOf([gifts2025]));
+  });
+
+  it('when it starts, then the donor pages reach it through the link, and it says whether the device keeps the copy', () => {
+    expect(TestBed.inject(DonorCopyLink).copy()).toBe(sync);
+    expect(sync.keepsOnDevice()).toBe(true);
+
+    vault.mode.set('memory');
+
+    expect(sync.keepsOnDevice()).toBe(false);
   });
 
   it('when the manifest is empty, then an empty copy with its summary is stored and no chunk is asked for', async () => {

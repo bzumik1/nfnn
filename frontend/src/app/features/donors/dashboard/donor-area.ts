@@ -5,6 +5,7 @@ import { RouterOutlet } from '@angular/router';
 import { pluralCategory } from '../../../core/i18n/plural-category';
 import { SideNav, SideNavBadge, SideNavGroup } from '../../../shared/ui/side-nav/side-nav';
 import { DonorDonations } from './donor-donations';
+import { FirstSyncNotice } from './first-sync-notice/first-sync-notice';
 import { DashboardTopBar } from './top-bar/top-bar';
 
 const BANK_ACCOUNTS_PATH = '/darce/ucty';
@@ -25,7 +26,7 @@ export const DONOR_SECTIONS: readonly SideNavGroup[] = [
 
 @Component({
   selector: 'app-donor-area',
-  imports: [RouterOutlet, DashboardTopBar, SideNav],
+  imports: [RouterOutlet, DashboardTopBar, SideNav, FirstSyncNotice],
   providers: [DonorDonations],
   templateUrl: './donor-area.html',
   styleUrl: './donor-area.scss',

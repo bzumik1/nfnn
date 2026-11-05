@@ -2,6 +2,7 @@
 
 <app-side-nav navId="donor-nav" [groups]="groups()" [label]="navLabel" [menuLabel]="menuLabel">
   <div class="container">
+    <app-first-sync-notice />
     <router-outlet />
 
     <p class="contact-line">

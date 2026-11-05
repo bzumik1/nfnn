@@ -1,0 +1,14 @@
+<div role="status">
+  @switch (shown()) {
+    @case ('saving') {
+      <p class="ui-notice ui-notice--status first-sync" i18n="@@donor.dashboard.firstSync.saving">
+        Ukládáme vaše dary do tohoto zařízení, abyste je měli po ruce i bez připojení…
+      </p>
+    }
+    @case ('stored') {
+      <p class="ui-notice ui-notice--status first-sync" i18n="@@donor.dashboard.firstSync.stored">
+        Vaše dary jsou uložené v tomto zařízení.
+      </p>
+    }
+  }
+</div>
