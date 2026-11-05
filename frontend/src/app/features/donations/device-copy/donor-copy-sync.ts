@@ -12,10 +12,11 @@ import { DeviceVault, type OpenedCopy } from '../../../core/device/store/device-
 import { ErrorReporter } from '../../../core/errors/error-reporter';
 import { ReceiptsApi } from '../receipt-pdf/receipts-api';
 import { canonicalRows, rowsSha256 } from '../sync/canonical-rows';
+import { type DonorCopy, DonorCopyLink, type SyncOutcome } from './donor-copy';
 import { donorCopyView, imageDigestsOf, issuedReceiptsOf } from './donor-copy-view';
 import { DonorSyncApi, MAX_CHUNKS_PER_REQUEST, type SyncChunk } from './donor-sync-api';
 
-export type SyncOutcome = 'stored' | 'failed' | 'mismatch' | 'no-copy';
+export type { SyncOutcome } from './donor-copy';
 
 export const SYNC_ATTEMPTS = 2;
 export const REBUILD_PAUSE_MS = 60 * 60 * 1000;
@@ -29,7 +30,7 @@ interface QueuedSync {
 }
 
 @Injectable({ providedIn: 'root' })
-export class DonorCopySync {
+export class DonorCopySync implements DonorCopy {
   private readonly vault = inject(DeviceVault);
   private readonly api = inject(DonorSyncApi);
   private readonly receipts = inject(ReceiptsApi);
@@ -49,6 +50,7 @@ export class DonorCopySync {
   );
 
   constructor() {
+    inject(DonorCopyLink).copy.set(this);
     effect(() => {
       if (this.vault.opened() !== null) {
         untracked(() => void this.sync());

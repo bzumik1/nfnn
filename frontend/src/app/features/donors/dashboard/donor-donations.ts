@@ -8,14 +8,17 @@ import {
   Injectable,
   Injector,
   signal,
+  untracked,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
   catchError,
+  defer,
   EMPTY,
   filter,
   forkJoin,
+  from,
   last,
   map,
   Observable,
@@ -34,6 +37,9 @@ import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { LiveUpdates } from '../../../core/live/live-updates';
 import { UPDATE_REQUIRED } from '../../../core/version/version-interceptor';
 import { BankAccountItem, BankAccountsApi } from '../../donations/bank-accounts-api';
+import { copyBackedReceiptSource } from '../../donations/device-copy/copy-receipt-source';
+import { type DonorCopy, DonorCopyLink } from '../../donations/device-copy/donor-copy';
+import type { DonorCopyView } from '../../donations/device-copy/donor-copy-view';
 import {
   BankCheckResponse,
   DonationItem,
@@ -144,8 +150,15 @@ export class DonorDonations {
   private readonly document = inject(DOCUMENT);
   private readonly injector = inject(Injector);
   private readonly live = inject(LiveUpdates);
+  private readonly copyLink = inject(DonorCopyLink);
   private readonly pendingDownload =
     inject(ActivatedRoute).snapshot.queryParamMap.get(RECEIPT_RESTART_PARAM);
+
+  private readonly copy = computed(() => {
+    const copy = this.copyLink.copy();
+    return copy !== null && copy.open() ? copy : null;
+  });
+  private readonly copyView = computed(() => this.copy()?.view() ?? null);
 
   readonly state = signal<DonationsState>('loading');
   readonly summary = signal<DonationSummaryResponse | null>(null);
@@ -197,6 +210,12 @@ export class DonorDonations {
         this.dropReadyFiles();
       }
       printedBefore = printed;
+    });
+    effect(() => {
+      const view = this.copyView();
+      if (view !== null && untracked(this.state) === 'ready') {
+        untracked(() => this.offerDonations(view.summary, view.items));
+      }
     });
     this.load();
     this.checkBank(false);
@@ -251,21 +270,36 @@ export class DonorDonations {
       return this.reloadDonations();
     }
     const startedAfter = this.latestDonationsRequest;
-    return forkJoin({ summary: this.donations.summary(), list: this.donations.list() }).pipe(
-      tap(({ summary, list }) => {
-        if (startedAfter !== this.latestDonationsRequest) {
-          return;
-        }
-        const shown = new Set(this.items().map((item) => item.id));
-        const added = list.items.filter((item) => !shown.has(item.id)).length;
-        if (added === 0) {
-          this.showDonations(summary, list.items);
-        } else {
-          this.incoming.set({ summary, items: list.items, added });
+    const copy = this.copy();
+    const latest: Observable<{ summary: DonationSummaryResponse; items: readonly DonationItem[] }> =
+      copy === null
+        ? forkJoin({ summary: this.donations.summary(), list: this.donations.list() }).pipe(
+            map(({ summary, list }) => ({ summary, items: list.items })),
+          )
+        : defer(() => from(copy.sync())).pipe(
+            switchMap(() => {
+              const view = copy.view();
+              return view === null ? EMPTY : of({ summary: view.summary, items: view.items });
+            }),
+          );
+    return latest.pipe(
+      tap(({ summary, items }) => {
+        if (startedAfter === this.latestDonationsRequest) {
+          this.offerDonations(summary, items);
         }
       }),
       catchError(() => EMPTY),
     );
+  }
+
+  private offerDonations(summary: DonationSummaryResponse, items: readonly DonationItem[]): void {
+    const shown = new Set(this.items().map((item) => item.id));
+    const added = items.filter((item) => !shown.has(item.id)).length;
+    if (added === 0) {
+      this.showDonations(summary, items);
+    } else {
+      this.incoming.set({ summary, items, added });
+    }
   }
 
   private showDonations(summary: DonationSummaryResponse, items: readonly DonationItem[]): void {
@@ -312,6 +346,41 @@ export class DonorDonations {
 
   private reloadDonations(): Observable<readonly DonationItem[] | null> {
     const request = ++this.latestDonationsRequest;
+    const copy = this.copy();
+    return copy === null ? this.fromServer(request) : this.fromCopy(copy, request);
+  }
+
+  private fromCopy(copy: DonorCopy, request: number): Observable<readonly DonationItem[] | null> {
+    const held = copy.view();
+    const shownAtOnce = held !== null && this.state() !== 'ready';
+    if (shownAtOnce) {
+      this.showCopy(held);
+    }
+    return defer(() => from(shownAtOnce ? copy.catchUp() : copy.sync())).pipe(
+      switchMap(() => {
+        const view = copy.view();
+        if (view === null) {
+          return request === this.latestDonationsRequest ? this.fromServer(request) : of(null);
+        }
+        if (request === this.latestDonationsRequest) {
+          this.showCopy(view);
+        }
+        return of(view.items);
+      }),
+      takeUntilDestroyed(this.destroyRef),
+    );
+  }
+
+  private showCopy(view: DonorCopyView): void {
+    this.showDonations(view.summary, view.items);
+    this.state.set('ready');
+    if (this.bankDataAsOf() === null) {
+      this.bankDataAsOf.set(view.summary.bankDataAsOf);
+    }
+    this.startPendingDownload();
+  }
+
+  private fromServer(request: number): Observable<readonly DonationItem[] | null> {
     return forkJoin({ summary: this.donations.summary(), list: this.donations.list() }).pipe(
       map(({ summary, list }) => {
         if (request === this.latestDonationsRequest) {
@@ -560,7 +629,13 @@ export class DonorDonations {
     this.downloads.update((running) => new Set(running).add(key));
     this.focusedAtStart.set(key, this.document.activeElement);
     const subscription = this.receiptPdf
-      .draw(this.receiptsApi.donorSource(subject))
+      .draw(
+        copyBackedReceiptSource(
+          this.receiptsApi.donorSource(subject),
+          () => this.copyView(),
+          subject,
+        ),
+      )
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (event) => this.receiptProgressed(key, scope, event),
