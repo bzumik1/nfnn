@@ -87,6 +87,10 @@ export class QrCode {
     });
   }
 
+  async pngBlob(_sidePx: number): Promise<Blob> {
+    throw new Error('not yet');
+  }
+
   async pngDataUrl(sidePx: number): Promise<string> {
     const source = this.svg().nativeElement;
     const copy = source.cloneNode(true) as SVGSVGElement;
