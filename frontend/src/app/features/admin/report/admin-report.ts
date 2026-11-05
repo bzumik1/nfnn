@@ -295,7 +295,7 @@ export class AdminReport {
             if (current !== null) {
               if (this.changedMeanwhile() !== null) {
                 this.announcer.announce(
-                  $localize`:@@admin.report.settings.changedAgain:Mezitím nastavení znovu změnil někdo jiný. Vyberte prosím znovu.`,
+                  $localize`:@@admin.report.settings.changedAgain:Nastavení mezitím změnil ještě někdo další. Vyberte prosím znovu, co s vašimi úpravami.`,
                 );
               }
               this.changedMeanwhile.set({ version: current, savedAt: savedAtInRefusal(failure) });

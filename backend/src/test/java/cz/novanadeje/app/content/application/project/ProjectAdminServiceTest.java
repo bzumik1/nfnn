@@ -23,6 +23,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
@@ -38,6 +39,8 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -176,6 +179,21 @@ class ProjectAdminServiceTest {
     }
 
     @Test
+    @DisplayName("Given a draft, when it is published, then the clock is read only after the project is locked, so a write that waited for the lock stamps the time it applied")
+    void should_read_the_clock_after_the_lock_when_published_given_a_draft() {
+        Project project = Project.create(ProjectId.newId(NOW), content("dominik", Optional.empty()), NOW);
+        when(projects.findByIdForUpdate(project.id())).thenReturn(Optional.of(project));
+        Clock clock = mock(Clock.class);
+        when(clock.instant()).thenReturn(NOW);
+
+        new ProjectAdminService(projects, orders, media, formerSlugs, new ContentVersions(RowVersionsFixture.canonical()), events, clock).publish(ADMIN, project.id(), LocalDate.parse("2026-10-23"), ExpectedVersion.none());
+
+        InOrder order = inOrder(projects, clock);
+        order.verify(projects).findByIdForUpdate(project.id());
+        order.verify(clock).instant();
+    }
+
+    @Test
     @DisplayName("Given a draft, when it is published on a day, then the day is stored and audited")
     void should_publish_on_the_day_when_published_given_a_draft() {
         Project project = Project.create(ProjectId.newId(NOW), content("dominik", Optional.empty()), NOW);
@@ -264,7 +282,7 @@ class ProjectAdminServiceTest {
         return new ProjectContent(new Slug(slug), "Dominik", 2024, Optional.of("Projekt"), "Perex", "Text", image);
     }
     @Test
-    @DisplayName("Given an project edited since the version an administrator read, when they save their edit with that version, then it is refused with the current version and project, and nothing is saved or audited")
+    @DisplayName("Given a project edited since the version an administrator read, when they save their edit with that version, then it is refused with the current version and project, and nothing is saved or audited")
     void should_refuse_with_the_current_project_when_updated_given_a_stale_version() {
         Project read = Project.create(ProjectId.newId(NOW), content("dominik", Optional.empty()), NOW);
         String readVersion = versions().of(read);
@@ -283,7 +301,7 @@ class ProjectAdminServiceTest {
     }
 
     @Test
-    @DisplayName("Given an project unchanged since the version an administrator read, when they delete it with that version, then it is deleted")
+    @DisplayName("Given a project unchanged since the version an administrator read, when they delete it with that version, then it is deleted")
     void should_delete_when_deleted_given_the_current_version() {
         Project article = Project.create(ProjectId.newId(NOW), content("dominik", Optional.empty()), NOW);
         when(projects.findByIdForUpdate(article.id())).thenReturn(Optional.of(article));
@@ -294,7 +312,7 @@ class ProjectAdminServiceTest {
     }
 
     @Test
-    @DisplayName("Given an project that is gone, when it is unpublished with a version, then it is not found rather than changed meanwhile")
+    @DisplayName("Given a project that is gone, when it is unpublished with a version, then it is not found rather than changed meanwhile")
     void should_answer_not_found_when_unpublished_with_a_version_given_no_project() {
         ProjectId id = ProjectId.newId(NOW);
         when(projects.findByIdForUpdate(id)).thenReturn(Optional.empty());

@@ -57,7 +57,7 @@ export class AdminSymbolClaims {
     afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
   }
 
-  protected load(): void {
+  protected load(onLoaded?: () => void): void {
     this.state.set('loading');
     this.api
       .symbolClaims()
@@ -66,6 +66,7 @@ export class AdminSymbolClaims {
         next: (list) => {
           this.items.set(list.items);
           this.state.set('ready');
+          onLoaded?.();
         },
         error: (failure: unknown) => {
           if (problemTypeEndsWith(failure, UNAUTHENTICATED)) {
@@ -138,12 +139,13 @@ export class AdminSymbolClaims {
 
   protected reloadAfterChange(): void {
     this.changedMeanwhile.set(false);
-    this.notice.set({
-      kind: 'status',
-      text: $localize`:@@admin.symbolClaims.reloaded:Načetli jsme aktuální odpovědi. Zkontrolujte odpověď a rozhodněte znovu.`,
+    this.load(() => {
+      this.notice.set({
+        kind: 'status',
+        text: $localize`:@@admin.symbolClaims.reloaded:Načetli jsme aktuální odpovědi. Zkontrolujte odpověď a rozhodněte znovu.`,
+      });
+      this.focusAfterRender(() => this.noticeElement());
     });
-    this.load();
-    this.focusAfterRender(() => this.noticeElement());
   }
 
   private run(

@@ -27,6 +27,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
@@ -42,6 +43,8 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -166,6 +169,21 @@ class NewsAdminServiceTest {
         service().create(ADMIN, command("Dominik", Optional.of("dominik"), Optional.empty()));
 
         verify(formerSlugs).forget(new Slug("dominik"));
+    }
+
+    @Test
+    @DisplayName("Given a draft, when it is published, then the clock is read only after the article is locked, so a write that waited for the lock stamps the time it applied")
+    void should_read_the_clock_after_the_lock_when_published_given_a_draft() {
+        NewsArticle article = NewsArticle.create(NewsArticleId.newId(NOW), content("dominik", Optional.empty()), NOW);
+        when(news.findByIdForUpdate(article.id())).thenReturn(Optional.of(article));
+        Clock clock = mock(Clock.class);
+        when(clock.instant()).thenReturn(NOW);
+
+        new NewsAdminService(news, media, formerSlugs, new NewsSigners(people, media), new ContentVersions(RowVersionsFixture.canonical()), events, clock).publish(ADMIN, article.id(), LocalDate.parse("2026-10-23"), ExpectedVersion.none());
+
+        InOrder order = inOrder(news, clock);
+        order.verify(news).findByIdForUpdate(article.id());
+        order.verify(clock).instant();
     }
 
     @Test

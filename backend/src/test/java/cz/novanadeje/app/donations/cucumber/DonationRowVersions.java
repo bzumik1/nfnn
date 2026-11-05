@@ -42,7 +42,7 @@ public class DonationRowVersions {
                 .filter(view -> view.payment().id().equals(id))
                 .map(AdminPaymentView::version)
                 .findFirst()
-                .orElse(MATCHING_NOTHING);
+                .orElseThrow(() -> new IllegalStateException("No payment row " + paymentId + " in the administration's lists"));
     }
 
     public String ofSymbolClaim(UUID claimId) {
@@ -51,7 +51,7 @@ public class DonationRowVersions {
                 .filter(view -> view.claim().id().equals(id))
                 .map(SymbolClaimView::version)
                 .findFirst()
-                .orElse(MATCHING_NOTHING);
+                .orElseThrow(() -> new IllegalStateException("No symbol answer " + claimId + " in the administration's list"));
     }
 
     public VersionedLink ofLink(UUID donorId, String account) {

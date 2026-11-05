@@ -74,7 +74,6 @@ class AdminDonationsSyncProjection {
         return SyncChunk.allOf(chunks, json);
     }
 
-
     private static List<SenderAccountLink> linksOf(DonorRecord record) {
         return record.senderAccountLinks().stream().sorted(OLDER_LINK_FIRST).toList();
     }

@@ -128,6 +128,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
 
   protected readonly state = signal<LoadState>('loading');
   protected readonly changedMeanwhile = signal<ChangedMeanwhileState | null>(null);
+  private refusedDelete = false;
   protected readonly article = signal<NewsArticleResponse | null>(null);
   protected readonly mode = signal<EditorMode>('edit');
   protected readonly preview = signal<PreviewContent | null>(null);
@@ -651,6 +652,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
           this.deleting.set(false);
           this.confirmingDelete.set(false);
           if (isChangedMeanwhile(failure)) {
+            this.refusedDelete = true;
             this.changedMeanwhile.set(this.actionRefused(failure));
             return;
           }
@@ -667,6 +669,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
   }
 
   protected overwriteAfterChange(): void {
+    this.refusedDelete = false;
     const changed = this.changedMeanwhile();
     const version = changed?.version;
     const form = this.articleForm();
@@ -680,6 +683,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
   }
 
   protected reloadAfterChange(): void {
+    this.refusedDelete = false;
     const saved = this.article();
     const discardedEdits = this.changedMeanwhile()?.draft === true;
     this.changedMeanwhile.set(null);
@@ -711,6 +715,10 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
 
   protected keepDraftAfterChange(): void {
     this.changedMeanwhile.set(null);
+    if (this.refusedDelete) {
+      this.refusedDelete = false;
+      this.focusDeleteButton();
+    }
   }
 
   private focusDeleteButton(): void {

@@ -18,6 +18,8 @@
         <p class="ui-dialog__lead" i18n="@@admin.changedMeanwhile.leadDraftAction">
           Zatímco jste měli formulář otevřený, uložil novější verzi někdo jiný: jiný správce nebo
           připojená aplikace. Vaši změnu jsme proto neprovedli a vaše úpravy zůstávají ve formuláři.
+          Chcete-li pokračovat, úpravy nejdřív uložte (nabídneme vám uložit je místo novější verze),
+          nebo je zahoďte a načtěte novější verzi.
         </p>
       }
     } @else {
@@ -62,7 +64,6 @@
         <button
           type="button"
           class="ui-button ui-button--primary changed-meanwhile-overwrite"
-          autofocus
           [disabled]="busy()"
           (click)="overwriteChosen.emit()"
         >

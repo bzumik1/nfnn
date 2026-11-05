@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, input, output } from '@an
 import { Dialog } from '../../../shared/ui/dialog/dialog';
 import { formatBankTime } from '../../donations/donation-date';
 
-export type ChangedSubject = 'payment' | 'donorAccount' | 'symbolClaim' | 'content' | 'report';
+export type ChangedSubject = 'payment' | 'donorAccount' | 'symbolClaim' | 'content';
 
 @Component({
   selector: 'app-changed-meanwhile-dialog',

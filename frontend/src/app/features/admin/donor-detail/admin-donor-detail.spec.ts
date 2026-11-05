@@ -852,7 +852,13 @@ describe('Given an administrator on a donor card', () => {
     );
     http.expectOne(DETAIL_URL).flush(
       donorDetail({
-        bankAccounts: [adminBankAccount({ status: 'DISCONNECTED', disconnectedOn: '2026-10-22' })],
+        bankAccounts: [
+          adminBankAccount({
+            status: 'DISCONNECTED',
+            disconnectedOn: '2026-10-22',
+            version: '5e8d2a1c7b3f9046',
+          }),
+        ],
       }),
     );
     await settle();
@@ -865,6 +871,7 @@ describe('Given an administrator on a donor card', () => {
     fixture.detectChanges();
     const reconnect = http.expectOne(`${LINK_URL}/reconnect`);
     expect(reconnect.request.method).toBe('POST');
+    expect(reconnect.request.headers.get('If-Match')).toBe('"5e8d2a1c7b3f9046"');
     reconnect.flush(null, { status: 204, statusText: 'No Content' });
     fixture.detectChanges();
     expect(text('.ui-notice--status')).toBe(
@@ -922,6 +929,7 @@ describe('Given an administrator on a donor card', () => {
 
     const request = http.expectOne(LINK_URL);
     expect(request.request.method).toBe('DELETE');
+    expect(request.request.headers.get('If-Match')).toBe(`"${adminBankAccount().version}"`);
     request.flush(null, { status: 204, statusText: 'No Content' });
     fixture.detectChanges();
 

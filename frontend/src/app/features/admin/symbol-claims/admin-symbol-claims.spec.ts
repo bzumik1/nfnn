@@ -37,6 +37,7 @@ describe('Given an administrator on the older symbols page', () => {
     answer: 'DECLINED',
     answeredAt: '2026-10-19T08:30:00Z',
     donationCount: 0,
+    version: '9c4f1e7a2d6b0853',
   });
 
   beforeEach(async () => {
@@ -190,6 +191,7 @@ describe('Given an administrator on the older symbols page', () => {
 
     const request = http.expectOne(`/api/admin/donations/symbol-claims/${NO_ID}`);
     expect(request.request.method).toBe('DELETE');
+    expect(request.request.headers.get('If-Match')).toBe('"9c4f1e7a2d6b0853"');
     request.flush(null, { status: 204, statusText: 'No Content' });
     fixture.detectChanges();
 

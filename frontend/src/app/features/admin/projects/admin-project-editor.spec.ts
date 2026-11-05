@@ -1072,6 +1072,32 @@ describe('Given an administrator editing a published project', () => {
     });
   });
 
+  it('when someone else saved the project before they deleted it with unsaved edits and they keep the edits, then the focus returns to the delete button', async () => {
+    await loaded();
+    await type(fixture, '#projects-title', 'Jiný titulek');
+    button(fixture, 'Smazat projekt').click();
+    await settle(fixture);
+    element<HTMLButtonElement>(fixture, '.confirm .ui-button--danger').click();
+    await settle(fixture);
+    http.expectOne(`${PROJECTS_URL}/${project().id}`).flush(
+      {
+        type: 'https://nfnn.cz/problems/content/changed-meanwhile',
+        title: 'Mezitím se to změnilo',
+        status: 409,
+        version: '7a0f3c9e5d1b2846',
+        current: { id: project().id },
+      },
+      { status: 409, statusText: 'Conflict' },
+    );
+    await settle(fixture);
+
+    button(fixture, 'Nechat úpravy ve formuláři').click();
+    await settle(fixture);
+
+    expect(element<HTMLInputElement>(fixture, '#projects-title').value).toBe('Jiný titulek');
+    expect(document.activeElement).toBe(button(fixture, 'Smazat projekt'));
+  });
+
   it('when the project no longer exists, then the page returns to the list', async () => {
     const navigated = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
     const refusal = problem(404, 'content/project-not-found', 'Projekt nenalezen', '');
