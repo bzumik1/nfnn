@@ -79,6 +79,14 @@ Proxy host:
 
 Gzip, cache a bezpečnostní hlavičky řeší nginx ve frontend image, Advanced konfigurace v NPM není potřeba. Za Cloudflare musí NPM brát adresu návštěvníka z `CF-Connecting-IP` (viz Obnova hesla, Adresa návštěvníka); mezipaměť a záložní stránku na Cloudflare popisuje „Cloudflare: web při výpadku serveru“.
 
+Živé změny (`/api/live`, krok 2.16): otevřená stránka drží s webem jedno spojení, kterým jí server hned řekne, že přibyla platba nebo dar. Nginx ve frontend image ho posílá bez vyrovnávací paměti a s hlavičkou `X-Accel-Buffering: no`, kterou NPM (také nginx) respektuje, takže se v NPM nic nenastavuje. Po nasazení jednou ověř, že to tak opravdu je, protože kdyby NPM spojení zadržoval, web by fungoval jako dřív (kontrola banky by se ptala každé 2 s a nové dary by se ukázaly až po obnovení stránky), jen bez živých změn:
+
+1. Přihlas se na webu přes doménu (ne přes port 8089), otevři vývojářské nástroje (Safari: Vývojář → Zobrazit webový inspektor → Síť; Chrome: F12 → Network) a otevři „Platby z banky“ ve správě.
+2. V seznamu požadavků najdi `live`: musí mít stav 200, typ `text/event-stream` a zůstat otevřený (Chrome v záložce EventStream nebo Response ukáže hned řádek `revision` a pak každých 25 s prázdný řádek `:`).
+3. Kdyby `live` zůstal bez odpovědi, nebo odpověď přišla až po minutách najednou, NPM spojení zadržuje: v proxy hostu → ozubené kolečko → Custom Nginx Configuration doplň `proxy_buffering off;` a ulož.
+
+Totéž platí za Cloudflare: proxované spojení s `text/event-stream` Cloudflare nezadržuje, a protože server pošle něco každých 25 s, nezavře ho ani po 100 s nečinnosti.
+
 ## Nasazení nové verze
 
 Po merge do `main` počkej, až v Actions doběhne zeleně **Publish Docker images**. Pak v ZimaOS otevři nastavení aplikace „Nová naděje“ a klikni na **Uložit** bez jakékoli změny: ZimaOS stáhne nové image `latest` a kontejnery vytvoří znovu; data, `secrets/` i nastavení v databázi zůstanou. Tlačítko Update to neudělá (u tagu `latest` aplikaci považuje za aktuální) a samotné `docker restart` taky ne, kontejner by běžel dál ze staré image. Merge, který nemění nic v `backend/`, `frontend/`, `mcp/`, `deploy/backup/` ani `deploy/postgres/` (třeba jen dokumentaci), nové image nevydá a nasazovat není co.

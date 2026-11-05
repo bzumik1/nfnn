@@ -3,6 +3,8 @@ package cz.novanadeje.app.donors.infrastructure.persistence;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.RefreshToken;
 import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
+import cz.novanadeje.app.shared.application.event.DonorSessionsEnded;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
@@ -14,9 +16,11 @@ import java.util.UUID;
 class JpaRefreshTokenRepository implements RefreshTokenRepository {
 
     private final RefreshTokenJpaRepository jpa;
+    private final ApplicationEventPublisher events;
 
-    JpaRefreshTokenRepository(RefreshTokenJpaRepository jpa) {
+    JpaRefreshTokenRepository(RefreshTokenJpaRepository jpa, ApplicationEventPublisher events) {
         this.jpa = jpa;
+        this.events = events;
     }
 
     @Override
@@ -68,5 +72,6 @@ class JpaRefreshTokenRepository implements RefreshTokenRepository {
     public void revokeAllOf(DonorId donorId, Instant at) {
         jpa.lockAllOfInIdOrder(donorId.value());
         jpa.revokeAllOf(donorId.value(), at);
+        events.publishEvent(new DonorSessionsEnded(donorId.value(), at));
     }
 }

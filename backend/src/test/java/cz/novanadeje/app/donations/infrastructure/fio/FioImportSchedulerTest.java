@@ -14,6 +14,8 @@ import cz.novanadeje.app.donations.domain.importing.ImportFailureKind;
 import cz.novanadeje.app.donations.domain.importing.ImportPeriod;
 import cz.novanadeje.app.donations.domain.importing.ImportSettings;
 import cz.novanadeje.app.donations.domain.importing.ImportTrigger;
+import cz.novanadeje.app.shared.application.event.LiveFeed;
+import cz.novanadeje.app.shared.application.event.StoredDataChanged;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -21,6 +23,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.slf4j.LoggerFactory;
 import cz.novanadeje.app.support.MutableClock;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.task.TaskRejectedException;
 import org.springframework.scheduling.TaskScheduler;
 
@@ -29,6 +32,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Period;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ScheduledFuture;
@@ -42,6 +46,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -62,8 +67,9 @@ class FioImportSchedulerTest {
 
     private final ImportBankPaymentsService service = mock(ImportBankPaymentsService.class);
     private final TaskScheduler taskScheduler = mock(TaskScheduler.class);
+    private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
     private final MutableClock clock = new MutableClock(NOW, ZoneId.of("Europe/Prague"));
-    private final FioImportScheduler scheduler = new FioImportScheduler(service, IMPORT_PROPERTIES, taskScheduler, clock);
+    private final FioImportScheduler scheduler = new FioImportScheduler(service, IMPORT_PROPERTIES, taskScheduler, clock, events);
     private ListAppender<ILoggingEvent> log;
 
     @BeforeEach
@@ -88,6 +94,30 @@ class FioImportSchedulerTest {
 
         verify(service).importIncomingPayments(STARTUP, SETTINGS);
         verify(service).importIncomingPayments(HOURLY, SETTINGS);
+    }
+
+    @Test
+    @DisplayName("Given an on-demand import, when it ends, then the bank import hint goes out once the scheduler no longer reports an import in progress")
+    void should_publish_bank_import_hint_after_progress_cleared_when_on_demand_import_ends_given_requested_import() {
+        when(service.importOnDemand(any(), any())).thenReturn(Optional.of(completed(ON_DEMAND)));
+        List<Boolean> inProgressAtHint = new ArrayList<>();
+        doAnswer(invocation -> inProgressAtHint.add(scheduler.inProgress())).when(events).publishEvent(any(Object.class));
+        scheduler.requestImport();
+
+        scheduledFollowUp().run();
+
+        verify(events).publishEvent(StoredDataChanged.of(LiveFeed.BANK_IMPORT));
+        assertThat(inProgressAtHint).containsExactly(false);
+    }
+
+    @Test
+    @DisplayName("Given an hourly import that fails unexpectedly, when the scheduler ticks, then the bank import hint still goes out")
+    void should_publish_bank_import_hint_when_ticked_given_unexpected_failure() {
+        when(service.importIncomingPayments(any(), any())).thenThrow(new IllegalStateException("boom"));
+
+        scheduler.tick();
+
+        verify(events).publishEvent(StoredDataChanged.of(LiveFeed.BANK_IMPORT));
     }
 
     @Test

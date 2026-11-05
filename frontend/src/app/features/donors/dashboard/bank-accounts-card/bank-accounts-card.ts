@@ -35,6 +35,7 @@ import {
   tap,
   timer,
 } from 'rxjs';
+import { LiveUpdates } from '../../../../core/live/live-updates';
 import { describeProblem, problemOf, problemTypeEndsWith } from '../../../../core/auth/api-problem';
 import { AuthStore } from '../../../../core/auth/auth-store';
 import { pluralCategory } from '../../../../core/i18n/plural-category';
@@ -127,6 +128,7 @@ export class BankAccountsCard {
   private readonly api = inject(BankAccountsApi);
   private readonly paymentDetails = inject(PaymentDetailsStore);
   private readonly donations = inject(DonationsApi);
+  private readonly live = inject(LiveUpdates);
   private readonly document = inject(DOCUMENT);
   private readonly auth = inject(AuthStore);
   private readonly destroyRef = inject(DestroyRef);
@@ -207,6 +209,7 @@ export class BankAccountsCard {
     ),
   );
   private watchRequest: Subscription | undefined;
+  private liveWatch: Subscription | undefined;
 
   constructor() {
     this.fetch();
@@ -219,6 +222,7 @@ export class BankAccountsCard {
     });
     this.destroyRef.onDestroy(() => {
       this.watchRequest?.unsubscribe();
+      this.liveWatch?.unsubscribe();
     });
   }
 
@@ -474,6 +478,7 @@ export class BankAccountsCard {
 
   protected closeAdd(): void {
     this.watchRequest?.unsubscribe();
+    this.liveWatch?.unsubscribe();
     this.adding.set(false);
     this.accountsWhenOpened.set(null);
   }
@@ -484,6 +489,14 @@ export class BankAccountsCard {
 
   private watchForPayment(): void {
     this.watchRequest?.unsubscribe();
+    this.liveWatch?.unsubscribe();
+    this.liveWatch = this.live
+      .changes(['bank-accounts'])
+      .pipe(
+        switchMap(() => this.listAccounts()),
+        takeWhile(() => this.newlyVerified() === null, true),
+      )
+      .subscribe({ complete: () => this.watchRequest?.unsubscribe() });
     this.paymentWatch.set('waiting');
     this.watchRequest = this.pageVisible()
       .pipe(
@@ -513,7 +526,12 @@ export class BankAccountsCard {
       last(),
       tap((check) => this.bankChecked.emit(check)),
       catchError(() => of(null)),
-      switchMap(() => this.api.list()),
+      switchMap(() => this.listAccounts()),
+    );
+  }
+
+  private listAccounts(): Observable<void> {
+    return this.api.list().pipe(
       map(({ items }: BankAccountListResponse) => this.showAccounts(items)),
       catchError((failure: unknown) => {
         if (this.sessionHasEnded(failure)) {
