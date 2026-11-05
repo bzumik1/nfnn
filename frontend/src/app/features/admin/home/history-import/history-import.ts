@@ -34,6 +34,7 @@ import {
   HISTORY_NEXT_STEPS,
   IMPORT_FAILURE_LABELS,
   ImportNextStep,
+  ImportNextStepLink,
 } from '../import-failure-labels';
 
 const HISTORY_POLL_MS = 3000;
@@ -89,11 +90,9 @@ export class HistoryImport {
   protected readonly running = computed(
     () => !this.requesting() && this.run()?.status === 'RUNNING',
   );
-  protected readonly nextStep = computed<ImportNextStep | null>(() => {
+  protected readonly nextLink = computed<ImportNextStepLink>(() => {
     const run = this.run();
-    return run?.status === 'FAILED' && this.refusal() === null
-      ? HISTORY_NEXT_STEPS[run.failure ?? 'UNEXPECTED']
-      : null;
+    return run?.status === 'FAILED' && this.refusal() === null ? nextStepOf(run).link : null;
   });
 
   protected readonly notice = computed<Notice | null>(() => {
@@ -240,12 +239,17 @@ function describeRun(run: HistoryImportResponse): Notice {
     case 'FAILED': {
       const at = finishedAt(run);
       const reason = IMPORT_FAILURE_LABELS[run.failure ?? 'UNEXPECTED'];
+      const step = nextStepOf(run).text;
       return {
         kind: 'alert',
-        text: $localize`:@@admin.home.history.failed:Platby se nepodařilo stáhnout (${at}:time:). Důvod: ${reason}:reason:.`,
+        text: $localize`:@@admin.home.history.failed:Platby se nepodařilo stáhnout (${at}:time:). Důvod: ${reason}:reason:. Co udělat: ${step}:step:`,
       };
     }
   }
+}
+
+function nextStepOf(run: HistoryImportResponse): ImportNextStep {
+  return HISTORY_NEXT_STEPS[run.failure ?? 'UNEXPECTED'];
 }
 
 function finishedAt(run: HistoryImportResponse): string {

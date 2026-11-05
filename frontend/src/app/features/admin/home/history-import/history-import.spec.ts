@@ -338,7 +338,7 @@ describe('Given the part for older bank payments on the import card', () => {
       expect(finished.length).toBe(1);
     });
 
-    it('then a failed run is an alert with its time and reason, followed by the next step', async () => {
+    it('then a failed run is one alert with its time, reason and next step, and no link follows', async () => {
       await poll(
         historyImport({
           status: 'FAILED',
@@ -348,12 +348,9 @@ describe('Given the part for older bank payments on the import card', () => {
       );
 
       expect(alert()).toBe(
-        'Platby se nepodařilo stáhnout (05. 11. 2026 11:00). Důvod: Fio nebylo dostupné.',
+        'Platby se nepodařilo stáhnout (05. 11. 2026 11:00). Důvod: Fio nebylo dostupné. Co udělat: Banka teď neodpovídá. Starší platby se samy znovu nenačtou: za chvíli stiskněte „Načíst starší platby“ znovu; pokud to trvá déle, zkontrolujte připojení serveru k internetu.',
       );
-      expect(text('.history-next-step')).toBe(
-        'Co udělat: Banka teď neodpovídá. Starší platby se samy znovu nenačtou: za chvíli stiskněte „Načíst starší platby“ znovu; pokud to trvá déle, zkontrolujte připojení serveru k internetu.',
-      );
-      expect(fixture.nativeElement.querySelector('.history-next-step a')).toBeNull();
+      expect(fixture.nativeElement.querySelector('.history-next-step')).toBeNull();
     });
 
     it('then a run the bank kept refusing as too frequent says to press the button again later', async () => {
@@ -365,10 +362,10 @@ describe('Given the part for older bank payments on the import card', () => {
         }),
       );
 
-      expect(text('.history-next-step')).toBe(
-        'Co udělat: Banka teď odmítá příliš časté dotazy. Starší platby se samy znovu nenačtou: za pár minut stiskněte „Načíst starší platby“ znovu.',
+      expect(alert()).toBe(
+        'Platby se nepodařilo stáhnout (05. 11. 2026 11:00). Důvod: Fio odmítlo příliš častý dotaz. Co udělat: Banka teď odmítá příliš časté dotazy. Starší platby se samy znovu nenačtou: za pár minut stiskněte „Načíst starší platby“ znovu.',
       );
-      expect(fixture.nativeElement.querySelector('.history-next-step a')).toBeNull();
+      expect(fixture.nativeElement.querySelector('.history-next-step')).toBeNull();
     });
 
     it('then a run the bank refused the token for leads to the settings', async () => {
@@ -380,12 +377,14 @@ describe('Given the part for older bank payments on the import card', () => {
         }),
       );
 
-      expect(text('.history-next-step')).toBe(
-        'Co udělat: V internetovém bankovnictví Fio (Nastavení → API) vytvořte nový token typu „Sledování účtu“ (platí 180 dní) a vložte ho v Nastavení jako Token Fio API. Otevřít Nastavení',
+      expect(alert()).toBe(
+        'Platby se nepodařilo stáhnout (05. 11. 2026 11:00). Důvod: Fio odmítlo token (chybí, ještě neplatí nebo vypršel). Co udělat: V internetovém bankovnictví Fio (Nastavení → API) vytvořte nový token typu „Sledování účtu“ (platí 180 dní) a vložte ho v Nastavení jako Token Fio API.',
       );
+      expect(text('.history-next-step')).toBe('Otevřít Nastavení');
       expect(
         fixture.nativeElement.querySelector('.history-next-step a')?.getAttribute('href'),
       ).toBe('/sprava/nastaveni');
+      expect(fixture.nativeElement.querySelector('[role="alert"] a')).toBeNull();
     });
 
     it('then a failed check is asked again at the next step', async () => {

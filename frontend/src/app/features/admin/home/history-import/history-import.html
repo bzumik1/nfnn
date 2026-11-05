@@ -71,20 +71,18 @@
       Zjistit výsledek
     </button>
   }
-  @if (nextStep(); as step) {
-    <p class="history-next-step">
-      <span class="history-next-step-label" i18n="@@admin.home.history.next.label">Co udělat:</span>
-      {{ step.text }}
-      @switch (step.link) {
-        @case ('settings') {
-          <a routerLink="/sprava/nastaveni" i18n="@@admin.home.history.next.settings"
-            >Otevřít Nastavení</a
-          >
-        }
-        @case ('logs') {
-          <a routerLink="/sprava/logy" i18n="@@admin.home.history.next.logs">Otevřít logy</a>
-        }
-      }
-    </p>
+  @switch (nextLink()) {
+    @case ('settings') {
+      <p class="history-next-step">
+        <a routerLink="/sprava/nastaveni" i18n="@@admin.home.history.next.settings"
+          >Otevřít Nastavení</a
+        >
+      </p>
+    }
+    @case ('logs') {
+      <p class="history-next-step">
+        <a routerLink="/sprava/logy" i18n="@@admin.home.history.next.logs">Otevřít logy</a>
+      </p>
+    }
   }
 </section>
