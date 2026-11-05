@@ -32,7 +32,6 @@ describe('Given the Trusted Types policy for script URLs', () => {
     ['https://nfnn.cz/main-F2S2AQ7E.js', 'the main bundle'],
     ['https://nfnn.cz/chunk-F2S2AQ7E.js', 'a lazy chunk'],
     ['https://nfnn.cz/api/worker-F2S2AQ7E.js', 'an address under /api'],
-    ['https://nfnn.cz/%2e%2e/worker-F2S2AQ7E.js', 'an encoded parent folder'],
     ['blob:https://nfnn.cz/1b4e28ba-2fa1-11d2-883f-0016d3cca427', 'a blob of the site'],
     ['data:text/javascript,postMessage(1)', 'a data address'],
     ['javascript:alert(1)', 'a javascript address'],

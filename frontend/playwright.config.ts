@@ -36,7 +36,7 @@ export default defineConfig<DeviceOptions>({
     },
     {
       name: 'iphone',
-      testMatch: /(receipt-pdf|verify-receipt|donate-qr|second-factor|dialog-back)\.spec\.ts$/,
+      testMatch: /(receipt-pdf|verify-receipt|donate-qr|second-factor|dialog-back|security-headers)\.spec\.ts$/,
       testIgnore: /pwa\//,
       use: { ...devices['iPhone 15'] },
     },
