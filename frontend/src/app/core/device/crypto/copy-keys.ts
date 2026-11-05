@@ -11,14 +11,12 @@ import {
 
 const ROOT_KEY_LENGTH = 32;
 const COPY_ID_LENGTH = 16;
-const COPY_SALT_LENGTH = 32;
 const IV_LENGTH = 12;
 const NO_SALT = new Uint8Array(0);
 const AES_GCM = 'AES-GCM';
 
 export interface CopyIdentity {
   readonly copyId: string;
-  readonly copySalt: string;
 }
 
 export interface RecordAddress {
@@ -63,7 +61,6 @@ export class OpenCopy implements CopyIdentity {
 
   private constructor(
     readonly copyId: string,
-    readonly copySalt: string,
     root: Uint8Array<ArrayBuffer>,
     dataKey: CryptoKey,
   ) {
@@ -73,10 +70,7 @@ export class OpenCopy implements CopyIdentity {
 
   static async create(): Promise<OpenCopy> {
     return OpenCopy.withRoot(
-      {
-        copyId: bytesToBase64Url(randomBytes(COPY_ID_LENGTH)),
-        copySalt: bytesToBase64Url(randomBytes(COPY_SALT_LENGTH)),
-      },
+      { copyId: bytesToBase64Url(randomBytes(COPY_ID_LENGTH)) },
       randomBytes(ROOT_KEY_LENGTH),
     );
   }
@@ -90,7 +84,7 @@ export class OpenCopy implements CopyIdentity {
     );
     try {
       const dataKey = await importAesKey(dataKeyBytes);
-      return new OpenCopy(identity.copyId, identity.copySalt, root, dataKey);
+      return new OpenCopy(identity.copyId, root, dataKey);
     } finally {
       dataKeyBytes.fill(0);
     }
@@ -115,11 +109,10 @@ export class OpenCopy implements CopyIdentity {
   async wrapWithPassword(
     password: string,
     derivation: PasswordKeyDerivation,
-    now?: () => number,
   ): Promise<PasswordWrap> {
     const root = this.openRoot();
     const salt = randomBytes(PASSWORD_SALT_LENGTH);
-    const measured = await deriveWithMeasuredParameters(derivation, password, salt, now);
+    const measured = await deriveWithMeasuredParameters(derivation, password, salt);
     const keyEncryptionKey = await passwordKeyEncryptionKey(this.copyId, measured.key);
     return {
       kind: 'password',
@@ -192,7 +185,12 @@ export async function openWithPassword(
   if (salt.length !== PASSWORD_SALT_LENGTH || !acceptedParameters(wrap.parameters)) {
     throw new CopyRefused('damaged');
   }
-  const passwordKey = await deriveWithParameters(derivation, password, salt, wrap.parameters);
+  const { key: passwordKey } = await deriveWithParameters(
+    derivation,
+    password,
+    salt,
+    wrap.parameters,
+  );
   const keyEncryptionKey = await passwordKeyEncryptionKey(identity.copyId, passwordKey);
   return unwrapRoot(
     identity,

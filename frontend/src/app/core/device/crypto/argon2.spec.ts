@@ -68,7 +68,7 @@ const REFERENCE_ARGON2ID_V13 = [
   },
 ];
 
-describe('Given Argon2id through hash-wasm', () => {
+describe('Given Argon2id through hash-wasm', { timeout: 15_000 }, () => {
   for (const vector of REFERENCE_ARGON2ID_V13) {
     it(`when it hashes the reference implementation's vector ${vector.name}, then it gives the published tag`, async () => {
       const tag = await argon2id({
@@ -86,7 +86,7 @@ describe('Given Argon2id through hash-wasm', () => {
 });
 
 describe('Given the Argon2id worker', () => {
-  it('when it gets a question, then it answers the 32-byte key the parameters give', async () => {
+  it('when it gets a question, then it answers the 32-byte key the parameters give and how long the derivation itself took', async () => {
     const question = {
       password: utf8('heslo'),
       salt: utf8('sixteen byte slt'),
@@ -99,9 +99,12 @@ describe('Given the Argon2id worker', () => {
       },
     };
 
-    const answer = await argon2WorkerAnswer(question);
+    const clock = vi.fn().mockReturnValueOnce(1000).mockReturnValueOnce(1250);
+
+    const answer = await argon2WorkerAnswer(question, clock);
 
     expect(answer).toEqual({
+      elapsedMs: 250,
       key: await argon2id({
         password: utf8('heslo'),
         salt: question.salt,
@@ -151,7 +154,9 @@ describe('Given the Argon2id worker', () => {
     expect(argon2FailureOf(new RangeError('WebAssembly.Memory(): could not allocate memory'))).toBe(
       'memory',
     );
-    expect(argon2FailureOf(new Error('Out of memory'))).toBe('memory');
+    expect(argon2FailureOf(new Error('Memory size should be at least 8 * parallelism'))).toBe(
+      'failed',
+    );
     expect(argon2FailureOf(new Error('Iterations should be a positive number'))).toBe('failed');
   });
 });

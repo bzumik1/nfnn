@@ -17,6 +17,15 @@ import { ScriptedDerivation, SmallArgon2Derivation } from './testing/password-ke
 const GIFTS_2026: RecordAddress = { collection: 'donations', recordId: '2026', schemaVersion: 1 };
 const PRF_OUTPUT = new Uint8Array(32).fill(0x5a);
 const CREDENTIAL = 'Y3JlZGVudGlhbC0x';
+const PASSWORD = 'Kn\u00ed\u017eka 2026';
+const DECOMPOSED_PASSWORD = 'Kni\u0301z\u030cka 2026';
+const KNOWN_ROOT = new Uint8Array(32).map((_, index) => 200 - index);
+
+function contains(haystack: Uint8Array, needle: Uint8Array): boolean {
+  return Array.from({ length: haystack.length - needle.length + 1 }, (_, start) => start).some(
+    (start) => needle.every((byte, offset) => haystack[start + offset] === byte),
+  );
+}
 
 function flipped(record: SealedRecord): SealedRecord {
   const bytes = base64UrlToBytes(record.sealed);
@@ -43,13 +52,20 @@ describe('Given a new device copy', () => {
     copy = await OpenCopy.create();
   });
 
-  it('when it is created, then it has a random copy id and salt of its own', async () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('when it is created, then it has a random copy id of its own and nothing else in the clear', async () => {
     const other = await OpenCopy.create();
 
     expect(base64UrlToBytes(copy.copyId)).toHaveLength(16);
-    expect(base64UrlToBytes(copy.copySalt)).toHaveLength(32);
     expect(other.copyId).not.toBe(copy.copyId);
-    expect(other.copySalt).not.toBe(copy.copySalt);
+    expect(Object.keys(copy)).not.toContain('copySalt');
+  });
+
+  it('when it is made from a root key that is not 32 bytes, then it is refused', async () => {
+    await expect(OpenCopy.withRoot({ copyId: copy.copyId }, new Uint8Array(16))).rejects.toThrow(
+      RangeError,
+    );
   });
 
   it('when a record is sealed and opened at the same address, then the plaintext comes back', async () => {
@@ -76,7 +92,7 @@ describe('Given a new device copy', () => {
       ['another record id', { ...GIFTS_2026, recordId: '2025' }],
       ['another schema version', { ...GIFTS_2026, schemaVersion: 2 }],
     ] as const) {
-      it(`(${name}), then it is refused as damaged`, async () => {
+      it(`and it is ${name}, then it is refused as damaged`, async () => {
         const sealed = await copy.sealRecord(GIFTS_2026, utf8('{}'));
 
         expect((await refusal(copy.openRecord(address, sealed))).reason).toBe('damaged');
@@ -113,7 +129,6 @@ describe('Given a new device copy', () => {
     ];
     expect(extractableFlags.length).toBeGreaterThan(0);
     expect(extractableFlags.every((extractable) => extractable === false)).toBe(true);
-    vi.restoreAllMocks();
   });
 
   it('when it is closed, then it seals, opens and wraps nothing more', async () => {
@@ -126,13 +141,22 @@ describe('Given a new device copy', () => {
     expect((await refusal(copy.wrapWithPrf(CREDENTIAL, PRF_OUTPUT))).reason).toBe('closed');
   });
 
+  it('when it is re-keyed, then a wrap made before opens a copy that cannot read the records sealed after', async () => {
+    const oldWrap = await copy.wrapWithPrf(CREDENTIAL, PRF_OUTPUT);
+    const rekeyed = await copy.rekeyed();
+    const fresh = await rekeyed.sealRecord(GIFTS_2026, utf8('{"new":true}'));
+
+    const openedWithOldWrap = await openWithPrf(rekeyed, oldWrap, PRF_OUTPUT);
+
+    expect((await refusal(openedWithOldWrap.openRecord(GIFTS_2026, fresh))).reason).toBe('damaged');
+  });
+
   it('when it is re-keyed, then it keeps its id, the old records no longer open and the old copy is closed', async () => {
     const old = await copy.sealRecord(GIFTS_2026, utf8('{}'));
 
     const rekeyed = await copy.rekeyed();
 
     expect(rekeyed.copyId).toBe(copy.copyId);
-    expect(rekeyed.copySalt).toBe(copy.copySalt);
     expect((await refusal(rekeyed.openRecord(GIFTS_2026, old))).reason).toBe('damaged');
     expect((await refusal(copy.sealRecord(GIFTS_2026, utf8('{}')))).reason).toBe('closed');
     const fresh = await rekeyed.sealRecord(GIFTS_2026, utf8('{"new":true}'));
@@ -149,7 +173,7 @@ describe('Given a new device copy', () => {
     beforeEach(async () => {
       derivation = new SmallArgon2Derivation();
       sealed = await copy.sealRecord(GIFTS_2026, utf8('{"gifts":[100]}'));
-      wrap = await copy.wrapWithPassword('Knížka 2026', derivation, () => 0);
+      wrap = await copy.wrapWithPassword(PASSWORD, derivation);
     });
 
     it('then the wrap names its salt and Argon2id parameters and holds no root key in the clear', () => {
@@ -163,7 +187,7 @@ describe('Given a new device copy', () => {
     });
 
     it('then the same password opens a copy that reads the old records', async () => {
-      const opened = await openWithPassword(copy, wrap, 'Knížka 2026', derivation);
+      const opened = await openWithPassword(copy, wrap, PASSWORD, derivation);
 
       expect(new TextDecoder().decode(await opened.openRecord(GIFTS_2026, sealed))).toBe(
         '{"gifts":[100]}',
@@ -183,7 +207,7 @@ describe('Given a new device copy', () => {
     });
 
     it('then the stored parameters are used again when it is opened', async () => {
-      await openWithPassword(copy, wrap, 'Knížka 2026', derivation);
+      await openWithPassword(copy, wrap, PASSWORD, derivation);
 
       expect(derivation.requested.at(-1)).toEqual(STRONG_PASSWORD_PARAMETERS);
     });
@@ -191,7 +215,7 @@ describe('Given a new device copy', () => {
     it('then the wrap moved to another copy is refused', async () => {
       const other = await OpenCopy.create();
 
-      expect((await refusal(openWithPassword(other, wrap, 'Knížka 2026', derivation))).reason).toBe(
+      expect((await refusal(openWithPassword(other, wrap, PASSWORD, derivation))).reason).toBe(
         'wrong-secret',
       );
     });
@@ -210,7 +234,7 @@ describe('Given a new device copy', () => {
 
     beforeEach(async () => {
       derivation = new SmallArgon2Derivation();
-      wrap = await copy.wrapWithPassword('heslo', derivation, () => 0);
+      wrap = await copy.wrapWithPassword('heslo', derivation);
       derivation.requested.length = 0;
     });
 
@@ -224,7 +248,7 @@ describe('Given a new device copy', () => {
       ['another algorithm', { ...STRONG_PASSWORD_PARAMETERS, algorithm: 'argon2i' }],
       ['another version', { ...STRONG_PASSWORD_PARAMETERS, version: 16 }],
     ] as const) {
-      it(`(${name}), then it is refused as damaged before any key is derived`, async () => {
+      it(`and it names ${name}, then it is refused as damaged before any key is derived`, async () => {
         const tampered = { ...wrap, parameters } as unknown as KeyWrap;
 
         expect((await refusal(openWithPassword(copy, tampered, 'heslo', derivation))).reason).toBe(
@@ -234,7 +258,7 @@ describe('Given a new device copy', () => {
       });
     }
 
-    it('(a salt of 8 bytes), then it is refused as damaged before any key is derived', async () => {
+    it('and it has a salt of 8 bytes, then it is refused as damaged before any key is derived', async () => {
       const tampered = { ...wrap, salt: bytesToBase64Url(new Uint8Array(8)) };
 
       expect((await refusal(openWithPassword(copy, tampered, 'heslo', derivation))).reason).toBe(
@@ -243,7 +267,7 @@ describe('Given a new device copy', () => {
       expect(derivation.requested).toEqual([]);
     });
 
-    it('(other accepted parameters), then the wrap does not open, because its parameters are bound to it', async () => {
+    it('and it names other accepted parameters, then the wrap does not open, because its parameters are bound to it', async () => {
       const tampered = {
         ...wrap,
         parameters: { ...wrap.parameters, iterations: 4 },
@@ -254,7 +278,7 @@ describe('Given a new device copy', () => {
       );
     });
 
-    it('(another salt), then the wrap does not open', async () => {
+    it('and it has another salt, then the wrap does not open', async () => {
       const tampered = { ...wrap, salt: bytesToBase64Url(new Uint8Array(16).fill(1)) };
 
       expect((await refusal(openWithPassword(copy, tampered, 'heslo', derivation))).reason).toBe(
@@ -278,11 +302,7 @@ describe('Given a new device copy', () => {
 
     it('then a passkey or password wrap is refused as damaged', async () => {
       const prfWrap = await copy.wrapWithPrf(CREDENTIAL, PRF_OUTPUT);
-      const passwordWrap = await copy.wrapWithPassword(
-        'heslo',
-        new SmallArgon2Derivation(),
-        () => 0,
-      );
+      const passwordWrap = await copy.wrapWithPassword('heslo', new SmallArgon2Derivation());
 
       expect((await refusal(openWithPrf(copy, { ...prfWrap, iv: '%%' }, PRF_OUTPUT))).reason).toBe(
         'damaged',
@@ -305,7 +325,7 @@ describe('Given a new device copy', () => {
   it('when the device is slow, then the password wrap keeps the 64 MiB parameters it measured', async () => {
     const derivation = new ScriptedDerivation([{ takesMs: 2500 }, { takesMs: 1200 }]);
 
-    const wrap = await copy.wrapWithPassword('heslo', derivation, derivation.now);
+    const wrap = await copy.wrapWithPassword('heslo', derivation);
 
     expect(wrap.parameters).toEqual(STANDARD_PASSWORD_PARAMETERS);
     const opened = await openWithPassword(copy, wrap, 'heslo', derivation);
@@ -369,6 +389,34 @@ describe('Given a new device copy', () => {
       expect(sessionKey.extractable).toBe(false);
       await expect(crypto.subtle.exportKey('raw', sessionKey)).rejects.toThrow();
     });
+  });
+
+  it('when a copy of a known root key is wrapped every way, then no wrap holds those bytes', async () => {
+    const known = await OpenCopy.withRoot({ copyId: copy.copyId }, new Uint8Array(KNOWN_ROOT));
+    const wraps = [
+      await known.wrapWithPassword('heslo', new SmallArgon2Derivation()),
+      await known.wrapWithPrf(CREDENTIAL, PRF_OUTPUT),
+      await known.wrapWithSessionKey(await generateSessionKey()),
+    ];
+
+    for (const wrap of wraps) {
+      expect(contains(base64UrlToBytes(wrap.sealed), KNOWN_ROOT)).toBe(false);
+      expect(JSON.stringify(wrap)).not.toContain(bytesToBase64Url(KNOWN_ROOT));
+    }
+  });
+
+  it('when one passkey output wraps two copies, then it opens each of them and neither wrap opens the other copy', async () => {
+    const administration = await OpenCopy.create();
+    const donorWrap = await copy.wrapWithPrf(CREDENTIAL, PRF_OUTPUT);
+    const administrationWrap = await administration.wrapWithPrf(CREDENTIAL, PRF_OUTPUT);
+
+    expect((await openWithPrf(copy, donorWrap, PRF_OUTPUT)).copyId).toBe(copy.copyId);
+    expect((await openWithPrf(administration, administrationWrap, PRF_OUTPUT)).copyId).toBe(
+      administration.copyId,
+    );
+    expect((await refusal(openWithPrf(administration, donorWrap, PRF_OUTPUT))).reason).toBe(
+      'wrong-secret',
+    );
   });
 
   it('when a wrap is relabelled as another kind, then it does not open', async () => {

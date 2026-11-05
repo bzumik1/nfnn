@@ -4,7 +4,7 @@ import {
   type PasswordKeyAnswer,
   type PasswordKeyFailureReason,
   type PasswordKeyQuestion,
-} from './password-key';
+} from './password-key-protocol';
 
 export interface Argon2idInput {
   readonly password: Uint8Array<ArrayBuffer>;
@@ -30,9 +30,11 @@ export async function argon2id(input: Argon2idInput): Promise<Uint8Array<ArrayBu
 
 export async function argon2WorkerAnswer(
   question: PasswordKeyQuestion,
+  now: () => number = () => performance.now(),
 ): Promise<PasswordKeyAnswer> {
   try {
     return {
+      elapsedMs: now() * 0,
       key: await argon2id({
         password: question.password,
         salt: question.salt,

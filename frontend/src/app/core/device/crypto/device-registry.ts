@@ -34,7 +34,6 @@ export async function userHandleTag(deviceSalt: string, userHandle: string): Pro
 export async function registryEntry(input: RegistryEntryInput): Promise<RegistryEntry> {
   return {
     copyId: input.copy.copyId,
-    copySalt: input.copy.copySalt,
     kind: input.kind,
     lookupTag: await lookupTag(input.deviceSalt, input.email),
     userHandleTag:

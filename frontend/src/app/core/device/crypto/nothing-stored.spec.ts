@@ -4,9 +4,12 @@ import { lookupTag, newDeviceSalt, registryEntry } from './device-registry';
 import { SmallArgon2Derivation } from './testing/password-key-derivations';
 
 describe('Given a sign-in with "Cizí počítač, nic neukládat"', () => {
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
 
-  it('when the crypto core makes, seals, wraps and opens a copy in memory, then nothing is written to any browser storage', async () => {
+  it('when the crypto core makes, seals, wraps and opens a copy in memory, then nothing is written to IndexedDB, Web Storage or a cookie (the store of 2.14 proves it for the whole sign-in)', async () => {
     const open = vi.fn();
     const deleteDatabase = vi.fn();
     vi.stubGlobal('indexedDB', { open, deleteDatabase });
@@ -19,7 +22,7 @@ describe('Given a sign-in with "Cizí počítač, nic neukládat"', () => {
       { collection: 'donations', recordId: '2026', schemaVersion: 1 },
       utf8('{"gifts":[100]}'),
     );
-    const passwordWrap = await copy.wrapWithPassword('heslo', derivation, () => 0);
+    const passwordWrap = await copy.wrapWithPassword('heslo', derivation);
     const prfWrap = await copy.wrapWithPrf('Y3JlZA', new Uint8Array(32).fill(2));
     await copy.wrapWithSessionKey(await generateSessionKey());
     await openWithPassword(copy, passwordWrap, 'heslo', derivation);
@@ -45,6 +48,5 @@ describe('Given a sign-in with "Cizí počítač, nic neukládat"', () => {
     expect(deleteDatabase).not.toHaveBeenCalled();
     expect(setItem).not.toHaveBeenCalled();
     expect(cookie).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
   });
 });

@@ -1,12 +1,13 @@
 import { utf8 } from './device-bytes';
+import type {
+  Argon2Parameters,
+  DerivedPasswordKey,
+  PasswordKeyAnswer,
+  PasswordKeyFailureReason,
+  PasswordKeyQuestion,
+} from './password-key-protocol';
 
-export interface Argon2Parameters {
-  readonly algorithm: 'argon2id';
-  readonly version: 19;
-  readonly memoryKiB: number;
-  readonly iterations: number;
-  readonly parallelism: number;
-}
+export * from './password-key-protocol';
 
 export const STRONG_PASSWORD_PARAMETERS: Argon2Parameters = {
   algorithm: 'argon2id',
@@ -27,12 +28,9 @@ export const STANDARD_PASSWORD_PARAMETERS: Argon2Parameters = {
 export const STRONG_PARAMETERS_BUDGET_MS = 1000;
 export const MAXIMUM_MEMORY_KIB = 1024 * 1024;
 export const MAXIMUM_ITERATIONS = 10;
-export const PASSWORD_KEY_LENGTH = 32;
 export const PASSWORD_SALT_LENGTH = 16;
 export const DERIVATION_TIMEOUT_MS = 30_000;
 export const STRONG_ATTEMPT_TIMEOUT_MS = 5_000;
-
-export type PasswordKeyFailureReason = 'memory' | 'timeout' | 'failed';
 
 export class PasswordKeyFailure extends Error {
   constructor(readonly reason: PasswordKeyFailureReason) {
@@ -40,17 +38,8 @@ export class PasswordKeyFailure extends Error {
   }
 }
 
-export interface PasswordKeyQuestion {
-  readonly password: Uint8Array<ArrayBuffer>;
-  readonly salt: Uint8Array<ArrayBuffer>;
-  readonly parameters: Argon2Parameters;
-}
-
-export type PasswordKeyAnswer =
-  { readonly key: Uint8Array<ArrayBuffer> } | { readonly failure: PasswordKeyFailureReason };
-
 export interface PasswordKeyDerivation {
-  derive(question: PasswordKeyQuestion, timeoutMs?: number): Promise<Uint8Array<ArrayBuffer>>;
+  derive(question: PasswordKeyQuestion, timeoutMs?: number): Promise<DerivedPasswordKey>;
 }
 
 export interface MeasuredPasswordKey {
@@ -66,18 +55,17 @@ export async function deriveWithMeasuredParameters(
   derivation: PasswordKeyDerivation,
   password: string,
   salt: Uint8Array<ArrayBuffer>,
-  now: () => number = () => performance.now(),
 ): Promise<MeasuredPasswordKey> {
-  const started = now();
+  const started = performance.now();
   try {
-    const key = await deriveWithParameters(
+    const { key } = await deriveWithParameters(
       derivation,
       password,
       salt,
       STRONG_PASSWORD_PARAMETERS,
       STRONG_ATTEMPT_TIMEOUT_MS,
     );
-    if (now() - started <= STRONG_PARAMETERS_BUDGET_MS) {
+    if (performance.now() - started <= STRONG_PARAMETERS_BUDGET_MS) {
       return { key, parameters: STRONG_PASSWORD_PARAMETERS };
     }
     key.fill(0);
@@ -86,10 +74,13 @@ export async function deriveWithMeasuredParameters(
       throw failure;
     }
   }
-  return {
-    key: await deriveWithParameters(derivation, password, salt, STANDARD_PASSWORD_PARAMETERS),
-    parameters: STANDARD_PASSWORD_PARAMETERS,
-  };
+  const { key } = await deriveWithParameters(
+    derivation,
+    password,
+    salt,
+    STANDARD_PASSWORD_PARAMETERS,
+  );
+  return { key, parameters: STANDARD_PASSWORD_PARAMETERS };
 }
 
 export async function deriveWithParameters(
@@ -98,7 +89,7 @@ export async function deriveWithParameters(
   salt: Uint8Array<ArrayBuffer>,
   parameters: Argon2Parameters,
   timeoutMs?: number,
-): Promise<Uint8Array<ArrayBuffer>> {
+): Promise<DerivedPasswordKey> {
   const bytes = passwordBytes(password);
   try {
     return await derivation.derive({ password: bytes, salt, parameters }, timeoutMs);
@@ -116,14 +107,14 @@ export class WorkerPasswordKeyDerivation implements PasswordKeyDerivation {
     private readonly timeoutMs = DERIVATION_TIMEOUT_MS,
   ) {}
 
-  derive(question: PasswordKeyQuestion, timeoutMs?: number): Promise<Uint8Array<ArrayBuffer>> {
+  derive(question: PasswordKeyQuestion, timeoutMs?: number): Promise<DerivedPasswordKey> {
     const worker = this.startWorker();
-    return new Promise<Uint8Array<ArrayBuffer>>((resolve, reject) => {
+    return new Promise<DerivedPasswordKey>((resolve, reject) => {
       const timer = setTimeout(
         () => finish(new PasswordKeyFailure('timeout')),
         timeoutMs ?? this.timeoutMs,
       );
-      const finish = (outcome: Uint8Array<ArrayBuffer> | PasswordKeyFailure): void => {
+      const finish = (outcome: DerivedPasswordKey | PasswordKeyFailure): void => {
         clearTimeout(timer);
         worker.onmessage = null;
         worker.onerror = null;
@@ -136,7 +127,11 @@ export class WorkerPasswordKeyDerivation implements PasswordKeyDerivation {
         }
       };
       worker.onmessage = ({ data }: MessageEvent<PasswordKeyAnswer>) =>
-        finish('key' in data ? copiedAndZeroed(data.key) : new PasswordKeyFailure(data.failure));
+        finish(
+          'key' in data
+            ? { key: copiedAndZeroed(data.key), elapsedMs: data.elapsedMs }
+            : new PasswordKeyFailure(data.failure),
+        );
       worker.onerror = () => finish(new PasswordKeyFailure('failed'));
       worker.onmessageerror = () => finish(new PasswordKeyFailure('failed'));
       worker.postMessage(question);

@@ -44,14 +44,18 @@ class FakeWorker {
 
 describe('Given the password key of a device copy', () => {
   it('when a password is written in two Unicode forms, then both give the same bytes (NFC)', () => {
-    expect(passwordBytes('Knížka')).toEqual(passwordBytes('Knížka'));
+    const composed = 'Kn\u00ed\u017eka';
+    const decomposed = 'Kni\u0301z\u030cka';
+
+    expect(decomposed).not.toBe(composed);
+    expect(passwordBytes(decomposed)).toEqual(passwordBytes(composed));
     expect(passwordBytes('heslo')).toEqual(utf8('heslo'));
   });
 
   it('when the strong parameters run within a second, then the key uses 128 MiB and three passes', async () => {
     const derivation = new ScriptedDerivation([{ takesMs: 900 }]);
 
-    const measured = await deriveWithMeasuredParameters(derivation, 'heslo', SALT, derivation.now);
+    const measured = await deriveWithMeasuredParameters(derivation, 'heslo', SALT);
 
     expect(measured.parameters).toEqual(STRONG_PASSWORD_PARAMETERS);
     expect(derivation.requested).toEqual([STRONG_PASSWORD_PARAMETERS]);
@@ -61,7 +65,7 @@ describe('Given the password key of a device copy', () => {
   it('when the strong parameters take longer than a second, then the key is derived again with 64 MiB', async () => {
     const derivation = new ScriptedDerivation([{ takesMs: 1400 }, { takesMs: 700 }]);
 
-    const measured = await deriveWithMeasuredParameters(derivation, 'heslo', SALT, derivation.now);
+    const measured = await deriveWithMeasuredParameters(derivation, 'heslo', SALT);
 
     expect(measured.parameters).toEqual(STANDARD_PASSWORD_PARAMETERS);
     expect(derivation.requested).toEqual([
@@ -73,7 +77,7 @@ describe('Given the password key of a device copy', () => {
   it('when the device cannot give the strong parameters their memory, then the key uses 64 MiB', async () => {
     const derivation = new ScriptedDerivation([{ fails: new PasswordKeyFailure('memory') }, {}]);
 
-    const measured = await deriveWithMeasuredParameters(derivation, 'heslo', SALT, derivation.now);
+    const measured = await deriveWithMeasuredParameters(derivation, 'heslo', SALT);
 
     expect(measured.parameters).toEqual(STANDARD_PASSWORD_PARAMETERS);
   });
@@ -81,11 +85,36 @@ describe('Given the password key of a device copy', () => {
   it('when the strong attempt runs out of its own short time, then the key is derived again with 64 MiB', async () => {
     const derivation = new ScriptedDerivation([{ fails: new PasswordKeyFailure('timeout') }, {}]);
 
-    const measured = await deriveWithMeasuredParameters(derivation, 'heslo', SALT, derivation.now);
+    const measured = await deriveWithMeasuredParameters(derivation, 'heslo', SALT);
 
     expect(measured.parameters).toEqual(STANDARD_PASSWORD_PARAMETERS);
     expect(derivation.timeouts).toEqual([STRONG_ATTEMPT_TIMEOUT_MS, undefined]);
     expect(STRONG_ATTEMPT_TIMEOUT_MS).toBeLessThan(DERIVATION_TIMEOUT_MS);
+  });
+
+  it('when the strong attempt fails for another reason, then the key is derived again with 64 MiB', async () => {
+    const derivation = new ScriptedDerivation([{ fails: new PasswordKeyFailure('failed') }, {}]);
+
+    const measured = await deriveWithMeasuredParameters(derivation, 'heslo', SALT);
+
+    expect(measured.parameters).toEqual(STANDARD_PASSWORD_PARAMETERS);
+  });
+
+  it('when the strong key came too late, then its bytes are zeroed before the 64 MiB key is derived', async () => {
+    const derivation = new ScriptedDerivation([{ takesMs: 1400 }, {}]);
+
+    await deriveWithMeasuredParameters(derivation, 'heslo', SALT);
+
+    expect(Array.from(derivation.keys[0])).toEqual(new Array(32).fill(0));
+    expect(Array.from(derivation.keys[1])).not.toEqual(new Array(32).fill(0));
+  });
+
+  it('when the strong attempt throws something other than a derivation failure, then it reaches the caller and nothing is derived again', async () => {
+    const unexpected = new TypeError('unexpected');
+    const derivation = new ScriptedDerivation([{ throws: unexpected }, {}]);
+
+    await expect(deriveWithMeasuredParameters(derivation, 'heslo', SALT)).rejects.toBe(unexpected);
+    expect(derivation.requested).toEqual([STRONG_PASSWORD_PARAMETERS]);
   });
 
   it('when the standard parameters fail too, then the failure reaches the caller', async () => {
@@ -94,9 +123,9 @@ describe('Given the password key of a device copy', () => {
       { fails: new PasswordKeyFailure('memory') },
     ]);
 
-    await expect(
-      deriveWithMeasuredParameters(derivation, 'heslo', SALT, derivation.now),
-    ).rejects.toEqual(new PasswordKeyFailure('memory'));
+    await expect(deriveWithMeasuredParameters(derivation, 'heslo', SALT)).rejects.toEqual(
+      new PasswordKeyFailure('memory'),
+    );
   });
 
   it('when a stored wrap names its parameters, then the key is derived with exactly those', async () => {
@@ -126,8 +155,8 @@ describe('Given the password key of a device copy', () => {
       STANDARD_PASSWORD_PARAMETERS,
       STANDARD_PASSWORD_PARAMETERS,
     ]);
-    expect(again).toEqual(first);
-    expect(other).not.toEqual(first);
+    expect(again.key).toEqual(first.key);
+    expect(other.key).not.toEqual(first.key);
   });
 
   describe('when the key is derived in a worker', () => {
@@ -146,9 +175,9 @@ describe('Given the password key of a device copy', () => {
       };
 
       const derived = derivationWith(worker).derive(question);
-      worker.answer({ key: new Uint8Array(32).fill(9) });
+      worker.answer({ key: new Uint8Array(32).fill(9), elapsedMs: 420 });
 
-      await expect(derived).resolves.toEqual(new Uint8Array(32).fill(9));
+      await expect(derived).resolves.toEqual({ key: new Uint8Array(32).fill(9), elapsedMs: 420 });
       expect(worker.posted).toEqual([question]);
       expect(worker.terminated).toBe(true);
     });
@@ -195,7 +224,7 @@ describe('Given the password key of a device copy', () => {
       expect(worker.terminated).toBe(true);
     });
 
-    it('and the key arrives, then the bytes the worker sent are zeroed once copied', async () => {
+    it('and the key arrives, then the transferred bytes themselves are the key, so zeroing it zeroes the only copy', async () => {
       const worker = new FakeWorker();
       const sent = new Uint8Array(32).fill(9);
 
@@ -204,10 +233,44 @@ describe('Given the password key of a device copy', () => {
         salt: SALT,
         parameters: STRONG_PASSWORD_PARAMETERS,
       });
-      worker.answer({ key: sent });
+      worker.answer({ key: sent, elapsedMs: 1 });
 
-      expect(Array.from(await derived)).toEqual(new Array(32).fill(9));
-      expect(Array.from(sent)).toEqual(new Array(32).fill(0));
+      expect((await derived).key).toBe(sent);
+    });
+
+    for (const [name, data] of [
+      ['a key of 16 bytes', { key: new Uint8Array(16), elapsedMs: 1 }],
+      ['a key that is no byte array', { key: 'AAAA', elapsedMs: 1 }],
+      ['no time', { key: new Uint8Array(32) }],
+      ['nothing it knows', { hello: true }],
+    ] as const) {
+      it(`and it answers ${name}, then the derivation fails and the worker ends`, async () => {
+        const worker = new FakeWorker();
+
+        const derived = derivationWith(worker).derive({
+          password: utf8('heslo'),
+          salt: SALT,
+          parameters: STRONG_PASSWORD_PARAMETERS,
+        });
+        worker.answer(data);
+
+        await expect(derived).rejects.toEqual(new PasswordKeyFailure('failed'));
+        expect(worker.terminated).toBe(true);
+      });
+    }
+
+    it('and the browser refuses to start the worker, then the derivation fails', async () => {
+      const derivation = new WorkerPasswordKeyDerivation(() => {
+        throw new DOMException('Refused', 'SecurityError');
+      });
+
+      await expect(
+        derivation.derive({
+          password: utf8('heslo'),
+          salt: SALT,
+          parameters: STRONG_PASSWORD_PARAMETERS,
+        }),
+      ).rejects.toEqual(new PasswordKeyFailure('failed'));
     });
 
     it('and a call names a shorter time, then that time ends the derivation', async () => {
@@ -239,6 +302,23 @@ describe('Given the password key of a device copy', () => {
 
       await refusal;
       expect(worker.terminated).toBe(true);
+    });
+
+    it('and its key arrives after the time ran out, then the derivation stays timed out', async () => {
+      vi.useFakeTimers();
+      const worker = new FakeWorker();
+
+      const derived = derivationWith(worker, 1_000).derive({
+        password: utf8('heslo'),
+        salt: SALT,
+        parameters: STRONG_PASSWORD_PARAMETERS,
+      });
+      const refusal = expect(derived).rejects.toEqual(new PasswordKeyFailure('timeout'));
+      await vi.advanceTimersByTimeAsync(1_000);
+      worker.answer({ key: new Uint8Array(32), elapsedMs: 1 });
+
+      await refusal;
+      expect(worker.onmessage).toBeNull();
     });
   });
 });

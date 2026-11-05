@@ -9,8 +9,13 @@ import {
 } from './device-registry';
 
 const EMAIL = 'Jana.Novakova@Example.cz';
+const COPY_ID = bytesToBase64Url(new Uint8Array(16).fill(0x11));
+const DEVICE_SALT = bytesToBase64Url(new Uint8Array(32).fill(0x22));
+const ROOT = new Uint8Array(32).fill(0x33);
 
 describe('Given the plaintext registry of device copies', () => {
+  afterEach(() => vi.restoreAllMocks());
+
   it('when a device salt is made, then it is 32 random bytes', () => {
     expect(base64UrlToBytes(newDeviceSalt())).toHaveLength(32);
     expect(newDeviceSalt()).not.toBe(newDeviceSalt());
@@ -39,14 +44,21 @@ describe('Given the plaintext registry of device copies', () => {
   });
 
   it('when an entry is written, then it holds no e-mail, part of it or user handle in any readable form', async () => {
-    const copy = await OpenCopy.create();
+    vi.spyOn(crypto, 'getRandomValues').mockImplementation(
+      <T extends ArrayBufferView | null>(array: T): T => {
+        if (array !== null) {
+          new Uint8Array(array.buffer, array.byteOffset, array.byteLength).fill(0x44);
+        }
+        return array;
+      },
+    );
+    const copy = await OpenCopy.withRoot({ copyId: COPY_ID }, new Uint8Array(ROOT));
     const handle = bytesToBase64Url(new Uint8Array(16).fill(6));
-    const deviceSalt = newDeviceSalt();
 
     const entry = await registryEntry({
       copy,
       kind: 'donor',
-      deviceSalt,
+      deviceSalt: DEVICE_SALT,
       email: EMAIL,
       userHandle: handle,
       wraps: [await copy.wrapWithPrf('Y3JlZA', new Uint8Array(32).fill(1))],
@@ -59,12 +71,14 @@ describe('Given the plaintext registry of device copies', () => {
       expect(stored).not.toContain(btoa(readable).toLowerCase());
     }
     expect(stored).not.toContain(handle.toLowerCase());
+    expect(Object.keys(entry).sort()).toEqual(
+      ['copyId', 'kind', 'lookupTag', 'userHandleTag', 'wraps'].sort(),
+    );
     expect(entry).toMatchObject({
-      copyId: copy.copyId,
-      copySalt: copy.copySalt,
+      copyId: COPY_ID,
       kind: 'donor',
-      lookupTag: await lookupTag(deviceSalt, EMAIL),
-      userHandleTag: await userHandleTag(deviceSalt, handle),
+      lookupTag: await lookupTag(DEVICE_SALT, EMAIL),
+      userHandleTag: await userHandleTag(DEVICE_SALT, handle),
     });
     expect(entry.wraps).toHaveLength(1);
   });
