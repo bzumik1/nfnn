@@ -277,3 +277,12 @@
     }
   }
 </div>
+@if (changedMeanwhile() !== null) {
+  <app-changed-meanwhile-dialog
+    [keepsDraft]="true"
+    [busy]="saving()"
+    (overwriteChosen)="overwriteAfterChange()"
+    (reloadChosen)="reloadAfterChange()"
+    (dismissed)="keepDraftAfterChange()"
+  />
+}

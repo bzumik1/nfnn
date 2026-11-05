@@ -37,6 +37,8 @@ import {
 } from './email-list';
 import { followingMonth, formatReportMonth, previousMonths } from './report-month';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
+import { isChangedMeanwhile, versionInRefusal } from '../../../core/version/row-version';
+import { ChangedMeanwhileDialog } from '../changed-meanwhile/changed-meanwhile-dialog';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -62,6 +64,7 @@ const SEND_HOURS = Array.from({ length: 24 }, (_, index) => index);
     FormControlDirective,
     FocusFirstInvalid,
     EmailListValidator,
+    ChangedMeanwhileDialog,
   ],
   templateUrl: './admin-report.html',
   styleUrl: './admin-report.scss',
@@ -87,6 +90,7 @@ export class AdminReport {
   protected readonly sending = signal(false);
   protected readonly settingsError = signal<string | null>(null);
   protected readonly confirmingSend = signal(false);
+  protected readonly changedMeanwhile = signal<string | null>(null);
   protected readonly sendDays = SEND_DAYS;
   protected readonly sendHours = SEND_HOURS;
 
@@ -218,18 +222,45 @@ export class AdminReport {
       );
       return;
     }
+    const report = this.report();
+    if (report !== null) {
+      this.submitSettings(report.settings.version);
+    }
+  }
+
+  protected overwriteAfterChange(): void {
+    const version = this.changedMeanwhile();
+    if (version !== null) {
+      this.submitSettings(version);
+    }
+  }
+
+  protected reloadAfterChange(): void {
+    this.changedMeanwhile.set(null);
+    this.fetch();
+  }
+
+  protected keepDraftAfterChange(): void {
+    this.changedMeanwhile.set(null);
+  }
+
+  private submitSettings(version: string): void {
     this.saving.set(true);
     this.api
-      .changeReportSettings({
-        recipients: parseEmailList(this.recipients()),
-        sendDay: Number(this.sendDay),
-        sendHour: Number(this.sendHour),
-        sections: { ...this.sections },
-      })
+      .changeReportSettings(
+        {
+          recipients: parseEmailList(this.recipients()),
+          sendDay: Number(this.sendDay),
+          sendHour: Number(this.sendHour),
+          sections: { ...this.sections },
+        },
+        version,
+      )
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
           this.saving.set(false);
+          this.changedMeanwhile.set(null);
           this.settingsStatus.set(
             $localize`:@@admin.report.settings.saved:Nastavení jsme uložili. Příští přehled odejde podle něj.`,
           );
@@ -237,6 +268,14 @@ export class AdminReport {
         },
         error: (failure: unknown) => {
           this.saving.set(false);
+          if (isChangedMeanwhile(failure)) {
+            const current = versionInRefusal(failure);
+            if (current !== null) {
+              this.changedMeanwhile.set(current);
+              return;
+            }
+          }
+          this.changedMeanwhile.set(null);
           this.settingsError.set(
             describeProblem(
               failure,

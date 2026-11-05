@@ -1,4 +1,5 @@
 import { BackupKeyWordCheck } from '../operations/backup-key/backup-key-word-check';
+import { ifMatch } from '../../core/version/row-version';
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
@@ -53,6 +54,7 @@ export interface PairedDonationResponse {
 
 export interface AdminPaymentResponse {
   id: string;
+  version: string;
   bankTransactionId: number;
   bookedOn: string;
   amountMinor: number;
@@ -119,6 +121,7 @@ export type SymbolClaimAnswer = 'CONFIRMED' | 'DECLINED';
 
 export interface SymbolClaimResponse {
   id: string;
+  version: string;
   donorId: string;
   donorName: string | null;
   account: string;
@@ -211,9 +214,13 @@ export interface AdminReceiptResponse {
   keyId: string;
 }
 
+export interface AdminBankAccountItem extends BankAccountItem {
+  version: string;
+}
+
 export interface AdminDonorDetailResponse {
   donor: AdminDonorRecordResponse;
-  bankAccounts: BankAccountItem[];
+  bankAccounts: AdminBankAccountItem[];
   donations: DonationListResponse;
   receipts: AdminReceiptResponse[];
   yearlyReceiptsAvailableThrough: number;
@@ -260,6 +267,7 @@ export interface ReportSettingsResponse {
   sendHour: number;
   sections: ReportSectionsResponse;
   changedAt: string | null;
+  version: string;
 }
 
 export interface ReportSettingsRequest {
@@ -658,17 +666,23 @@ export class AdminApi {
     });
   }
 
-  pairPayment(paymentId: string, donorId: string): Observable<PairPaymentResponse> {
+  pairPayment(
+    paymentId: string,
+    donorId: string,
+    version: string,
+  ): Observable<PairPaymentResponse> {
     return this.http.post<PairPaymentResponse>(
       `/api/admin/donations/payments/${encodeURIComponent(paymentId)}/pair`,
       { donorId },
+      ifMatch(version),
     );
   }
 
-  unpairPayment(paymentId: string): Observable<UnpairPaymentResponse> {
+  unpairPayment(paymentId: string, version: string): Observable<UnpairPaymentResponse> {
     return this.http.post<UnpairPaymentResponse>(
       `/api/admin/donations/payments/${encodeURIComponent(paymentId)}/unpair`,
       null,
+      ifMatch(version),
     );
   }
 
@@ -701,16 +715,18 @@ export class AdminApi {
     return this.http.get<SymbolClaimListResponse>('/api/admin/donations/symbol-claims');
   }
 
-  reverseSymbolClaim(claimId: string): Observable<void> {
+  reverseSymbolClaim(claimId: string, version: string): Observable<void> {
     return this.http.post<void>(
       `/api/admin/donations/symbol-claims/${encodeURIComponent(claimId)}/reverse`,
       null,
+      ifMatch(version),
     );
   }
 
-  deleteSymbolClaim(claimId: string): Observable<void> {
+  deleteSymbolClaim(claimId: string, version: string): Observable<void> {
     return this.http.delete<void>(
       `/api/admin/donations/symbol-claims/${encodeURIComponent(claimId)}`,
+      ifMatch(version),
     );
   }
 
@@ -740,8 +756,15 @@ export class AdminApi {
     return this.http.get<AdminReportResponse>('/api/admin/donations/report');
   }
 
-  changeReportSettings(request: ReportSettingsRequest): Observable<ReportSettingsResponse> {
-    return this.http.put<ReportSettingsResponse>('/api/admin/donations/report/settings', request);
+  changeReportSettings(
+    request: ReportSettingsRequest,
+    version: string,
+  ): Observable<ReportSettingsResponse> {
+    return this.http.put<ReportSettingsResponse>(
+      '/api/admin/donations/report/settings',
+      request,
+      ifMatch(version),
+    );
   }
 
   sendReport(month: string): Observable<SendReportResponse> {
@@ -782,16 +805,24 @@ export class AdminApi {
     );
   }
 
-  disconnectDonorAccount(donorId: string, linkId: string): Observable<void> {
-    return this.http.post<void>(`${donorAccountUrl(donorId, linkId)}/disconnect`, null);
+  disconnectDonorAccount(donorId: string, linkId: string, version: string): Observable<void> {
+    return this.http.post<void>(
+      `${donorAccountUrl(donorId, linkId)}/disconnect`,
+      null,
+      ifMatch(version),
+    );
   }
 
-  reconnectDonorAccount(donorId: string, linkId: string): Observable<void> {
-    return this.http.post<void>(`${donorAccountUrl(donorId, linkId)}/reconnect`, null);
+  reconnectDonorAccount(donorId: string, linkId: string, version: string): Observable<void> {
+    return this.http.post<void>(
+      `${donorAccountUrl(donorId, linkId)}/reconnect`,
+      null,
+      ifMatch(version),
+    );
   }
 
-  removeDonorAccount(donorId: string, linkId: string): Observable<void> {
-    return this.http.delete<void>(donorAccountUrl(donorId, linkId));
+  removeDonorAccount(donorId: string, linkId: string, version: string): Observable<void> {
+    return this.http.delete<void>(donorAccountUrl(donorId, linkId), ifMatch(version));
   }
 
   backups(): Observable<AdminBackupsResponse> {

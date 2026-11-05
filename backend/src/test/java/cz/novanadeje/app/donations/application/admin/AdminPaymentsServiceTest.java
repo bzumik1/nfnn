@@ -1,5 +1,7 @@
 package cz.novanadeje.app.donations.application.admin;
 
+import cz.novanadeje.app.shared.infrastructure.json.RowVersionsFixture;
+import cz.novanadeje.app.donations.application.sync.AdminDonationsRows;
 import cz.novanadeje.app.donations.domain.bank.BankPayment;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentRepository;
 import cz.novanadeje.app.donations.domain.bank.SenderAccount;
@@ -50,7 +52,8 @@ class AdminPaymentsServiceTest {
     private final DonationRepository donations = mock(DonationRepository.class);
     private final DonorRecordRepository donorRecords = mock(DonorRecordRepository.class);
     private final DonationReceiptRepository receipts = mock(DonationReceiptRepository.class);
-    private final AdminPaymentsService service = new AdminPaymentsService(payments, donations, donorRecords, receipts);
+    private final AdminPaymentsService service = new AdminPaymentsService(payments, donations, donorRecords, receipts,
+            new AdminDonationsRows(RowVersionsFixture.canonical(), donations, donorRecords));
 
     @Test
     @DisplayName("Given unpaired payments, when listed, then they come in the repository's order without donations and without years")

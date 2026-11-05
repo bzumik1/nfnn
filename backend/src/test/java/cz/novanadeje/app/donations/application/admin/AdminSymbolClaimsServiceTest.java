@@ -1,5 +1,8 @@
 package cz.novanadeje.app.donations.application.admin;
 
+import cz.novanadeje.app.shared.infrastructure.json.RowVersionsFixture;
+import cz.novanadeje.app.shared.application.version.ExpectedVersion;
+import cz.novanadeje.app.donations.application.sync.AdminDonationsRows;
 import cz.novanadeje.app.donations.application.pairing.PairingLock;
 import cz.novanadeje.app.donations.domain.bank.BankPayment;
 import cz.novanadeje.app.donations.domain.bank.SenderAccount;
@@ -80,7 +83,7 @@ class AdminSymbolClaimsServiceTest {
     private final PairingLock lock = mock(PairingLock.class);
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
     private final AdminSymbolClaimsService service = new AdminSymbolClaimsService(claims, donations, donorRecords, receipts, lock, events,
-            Clock.fixed(NOW, ZoneOffset.UTC));
+            new AdminDonationsRows(RowVersionsFixture.canonical(), donations, donorRecords), Clock.fixed(NOW, ZoneOffset.UTC));
 
     @BeforeEach
     void twoClaimsAreStored() {
@@ -115,7 +118,7 @@ class AdminSymbolClaimsServiceTest {
     void should_delete_donations_and_decline_when_reversed_given_uncovered_confirmed_claim() {
         when(receipts.existsYearlyIssuedSince(any(), any(), any())).thenReturn(false);
 
-        service.reverse(ADMIN, confirmed.id());
+        service.reverse(ADMIN, confirmed.id(), ExpectedVersion.none());
 
         InOrder order = inOrder(lock, receipts, donations, claims, events);
         order.verify(lock).acquire();
@@ -144,7 +147,7 @@ class AdminSymbolClaimsServiceTest {
     void should_refuse_when_reversed_given_single_receipt_of_claimed_donation() {
         when(receipts.findDonationsWithReceipt(List.of(marchDonation.id(), septemberDonation.id()))).thenReturn(Set.of(septemberDonation.id()));
 
-        assertThatThrownBy(() -> service.reverse(ADMIN, confirmed.id())).isInstanceOf(SymbolClaimHasReceipt.class);
+        assertThatThrownBy(() -> service.reverse(ADMIN, confirmed.id(), ExpectedVersion.none())).isInstanceOf(SymbolClaimHasReceipt.class);
 
         verify(donations, never()).delete(any());
         verify(claims, never()).save(any());
@@ -157,7 +160,7 @@ class AdminSymbolClaimsServiceTest {
         when(receipts.existsYearlyIssuedSince(janaId, Year.of(2025), ANSWERED)).thenReturn(false);
         when(receipts.existsYearlyIssuedSince(janaId, Year.of(2026), ANSWERED)).thenReturn(true);
 
-        assertThatThrownBy(() -> service.reverse(ADMIN, confirmed.id())).isInstanceOf(SymbolClaimHasReceipt.class);
+        assertThatThrownBy(() -> service.reverse(ADMIN, confirmed.id(), ExpectedVersion.none())).isInstanceOf(SymbolClaimHasReceipt.class);
 
         verify(donations, never()).delete(any());
         verify(claims, never()).save(any());
@@ -166,7 +169,7 @@ class AdminSymbolClaimsServiceTest {
     @Test
     @DisplayName("Given a declined claim, when reversed, then it is refused because only a confirmed answer can be reversed")
     void should_refuse_when_reversed_given_declined_claim() {
-        assertThatThrownBy(() -> service.reverse(ADMIN, declined.id())).isInstanceOf(SymbolClaimNotConfirmed.class);
+        assertThatThrownBy(() -> service.reverse(ADMIN, declined.id(), ExpectedVersion.none())).isInstanceOf(SymbolClaimNotConfirmed.class);
 
         verify(claims, never()).save(any());
         verify(events, never()).publishEvent(any());
@@ -178,14 +181,14 @@ class AdminSymbolClaimsServiceTest {
         SymbolClaimId unknown = SymbolClaimId.newId(NOW);
         when(claims.findById(unknown)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.reverse(ADMIN, unknown)).isInstanceOf(SymbolClaimNotFound.class);
-        assertThatThrownBy(() -> service.reset(ADMIN, unknown)).isInstanceOf(SymbolClaimNotFound.class);
+        assertThatThrownBy(() -> service.reverse(ADMIN, unknown, ExpectedVersion.none())).isInstanceOf(SymbolClaimNotFound.class);
+        assertThatThrownBy(() -> service.reset(ADMIN, unknown, ExpectedVersion.none())).isInstanceOf(SymbolClaimNotFound.class);
     }
 
     @Test
     @DisplayName("Given a declined claim, when reset, then the lock is taken, the claim is deleted and the action is audited")
     void should_delete_claim_and_audit_when_reset_given_declined_claim() {
-        service.reset(ADMIN, declined.id());
+        service.reset(ADMIN, declined.id(), ExpectedVersion.none());
 
         InOrder order = inOrder(lock, claims, events);
         order.verify(lock).acquire();
@@ -201,7 +204,7 @@ class AdminSymbolClaimsServiceTest {
     @Test
     @DisplayName("Given a confirmed claim, when reset, then it is refused because the confirmed answer has to be reversed first")
     void should_refuse_when_reset_given_confirmed_claim() {
-        assertThatThrownBy(() -> service.reset(ADMIN, confirmed.id())).isInstanceOf(SymbolClaimStillConfirmed.class);
+        assertThatThrownBy(() -> service.reset(ADMIN, confirmed.id(), ExpectedVersion.none())).isInstanceOf(SymbolClaimStillConfirmed.class);
 
         verify(claims, never()).delete(any());
         verify(events, never()).publishEvent(any());

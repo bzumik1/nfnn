@@ -8,6 +8,8 @@ import {
   LINK_ID,
   MEDIA_ID,
   PAYMENT_ID,
+  CURRENT_VERSION,
+  STALE_VERSION,
   PERSON_ID,
   PUSH_SUBSCRIPTION_ID,
   READ_TOKEN,
@@ -843,6 +845,39 @@ describe('Given an administrator connected with the writing permission', () => {
     expect(stack.logLines).toContain(
       `INFO Tool nfnn_pair_payment answered donor donor-jana about payment ${PAYMENT_ID}, donor ${DONOR_ID}`,
     );
+  });
+
+  it('when a payment is paired from the version read, then the administration receives it as If-Match, and without one no If-Match is sent', async () => {
+    await client.callTool({
+      name: 'nfnn_pair_payment',
+      arguments: { paymentId: PAYMENT_ID, donorId: DONOR_ID, expectedVersion: CURRENT_VERSION },
+    });
+    await client.callTool({
+      name: 'nfnn_pair_payment',
+      arguments: { paymentId: PAYMENT_ID, donorId: DONOR_ID },
+    });
+    const calls = stack.backend.requests.filter((request) => request.path.endsWith('/pair'));
+    expect(calls.map((call) => call.ifMatch)).toEqual([`"${CURRENT_VERSION}"`, undefined]);
+  });
+
+  it('when someone changed the record since the version read, then the tool answers the refusal with the version stored now and the current record', async () => {
+    const stale = await client.callTool({
+      name: 'nfnn_update_report_settings',
+      arguments: {
+        recipients: ['info@nfnn.cz'],
+        sendDay: 1,
+        sendHour: 7,
+        sections: { donors: true, donations: true, unpairedPayments: true, bankImport: true },
+        expectedVersion: STALE_VERSION,
+      },
+    });
+    expect(stale.isError).toBe(true);
+    expect(textOf(stale)).toContain('409 donations/changed-meanwhile');
+    expect(textOf(stale)).toContain(`The version stored now is ${CURRENT_VERSION}`);
+    expect(textOf(stale)).toContain(`"id":"${PAYMENT_ID}"`);
+    const call = stack.backend.requests.find((request) => request.ifMatch !== undefined);
+    expect(call?.method).toBe('PUT');
+    expect(JSON.parse(call?.body ?? '{}')).not.toHaveProperty('expectedVersion');
   });
 
   it('when the administration refuses, then the tool answers an error with the Czech title and detail', async () => {

@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donations.application.admin;
 
+import cz.novanadeje.app.donations.application.sync.AdminDonationsRows;
 import cz.novanadeje.app.donations.domain.bank.BankPayment;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentId;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentRepository;
@@ -37,18 +38,20 @@ public class AdminPaymentsService {
     private final DonationRepository donations;
     private final DonorRecordRepository donorRecords;
     private final DonationReceiptRepository receipts;
+    private final AdminDonationsRows rows;
 
     public AdminPaymentsService(BankPaymentRepository payments, DonationRepository donations, DonorRecordRepository donorRecords,
-                                DonationReceiptRepository receipts) {
+                                DonationReceiptRepository receipts, AdminDonationsRows rows) {
         this.payments = payments;
         this.donations = donations;
         this.donorRecords = donorRecords;
         this.receipts = receipts;
+        this.rows = rows;
     }
 
     public AdminPaymentList listUnpaired(PaymentFilter filter) {
         List<AdminPaymentView> matching = payments.findUnpairedNewestFirst().stream()
-                .map(payment -> new AdminPaymentView(payment, Optional.empty()))
+                .map(payment -> new AdminPaymentView(payment, Optional.empty(), rows.payment(payment, Optional.empty(), false).version()))
                 .filter(filter::matches)
                 .toList();
         return new AdminPaymentList(Optional.empty(), List.of(), filter.page(matching), matching.size());
@@ -76,13 +79,17 @@ public class AdminPaymentsService {
                 .collect(Collectors.toMap(DonorRecord::id, Function.identity()));
         Set<DonationId> withReceipt = receipts.findDonationsWithReceipt(paired.stream().map(Donation::id).toList());
         List<AdminPaymentView> matching = paired.stream()
-                .map(donation -> new AdminPaymentView(paymentsById.get(donation.bankPayment().orElseThrow()),
-                        Optional.of(new PairedDonationView(donation, Optional.ofNullable(donorsById.get(donation.donor())),
-                                withReceipt.contains(donation.id())))))
+                .map(donation -> pairedView(paymentsById.get(donation.bankPayment().orElseThrow()), donation,
+                        Optional.ofNullable(donorsById.get(donation.donor())), withReceipt.contains(donation.id())))
                 .filter(filter::matches)
                 .sorted(NEWEST_FIRST)
                 .toList();
         return new AdminPaymentList(requested, availableYears, filter.page(matching), matching.size());
+    }
+
+    private AdminPaymentView pairedView(BankPayment payment, Donation donation, Optional<DonorRecord> donor, boolean receiptIssued) {
+        String version = rows.payment(payment, Optional.of(donation), donor.filter(DonorRecord::isErased).isPresent()).version();
+        return new AdminPaymentView(payment, Optional.of(new PairedDonationView(donation, donor, receiptIssued)), version);
     }
 
     public List<DonorRecord> searchDonors(String query) {

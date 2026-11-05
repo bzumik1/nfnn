@@ -1,5 +1,10 @@
 package cz.novanadeje.app.donations.application.report;
 
+import cz.novanadeje.app.donations.application.sync.AdminDonationsRows;
+import cz.novanadeje.app.donations.domain.donation.DonationRepository;
+import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
+import cz.novanadeje.app.shared.application.version.ExpectedVersion;
+import cz.novanadeje.app.shared.infrastructure.json.RowVersionsFixture;
 import cz.novanadeje.app.donations.domain.report.MonthlyReportLog;
 import cz.novanadeje.app.donations.domain.report.ReportMonth;
 import cz.novanadeje.app.donations.domain.report.ReportRecipients;
@@ -40,7 +45,8 @@ class ReportSettingsServiceTest {
     private final MonthlyReportLog reportLog = mock(MonthlyReportLog.class);
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
     private final MutableClock clock = new MutableClock(NOW, ZoneId.of("Europe/Prague"));
-    private final ReportSettingsService service = new ReportSettingsService(settings, reportLog, events, clock);
+    private final ReportSettingsService service = new ReportSettingsService(settings, reportLog, events,
+            new AdminDonationsRows(RowVersionsFixture.canonical(), mock(DonationRepository.class), mock(DonorRecordRepository.class)), clock);
 
     @BeforeEach
     void stubDefaults() {
@@ -80,7 +86,7 @@ class ReportSettingsServiceTest {
     @Test
     @DisplayName("Given an administrator, when the settings are changed, then they are saved with the time and the change is audited with its content")
     void should_save_and_audit_when_changed_given_administrator() {
-        ReportSettings saved = service.change(ADMIN, CHANGED);
+        ReportSettings saved = service.change(ADMIN, CHANGED, ExpectedVersion.none());
 
         assertThat(saved).isEqualTo(CHANGED);
         verify(settings).save(CHANGED, NOW);

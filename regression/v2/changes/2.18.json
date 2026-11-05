@@ -1,0 +1,453 @@
+[
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/sync/admin-manifest.json",
+    "reason": "2.18: every payment row of the administration's donations chunks carries its row version, the first 16 lowercase hex characters of the SHA-256 of the canonical JSON of [the payment row without the version, its gift's row or null], so the payments chunks' rowsSha256 change; the logic text says so and that the version is opaque to the browser (compared, never recomputed)",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions); Device sync of the administration"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/schemas/sync/admin-manifest.schema.json",
+    "reason": "2.18: a payment row requires its version (16 lowercase hex characters)",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "DELETE /api/admin/content/news/{id}",
+    "scenario": "content/clean_up_unused_photos: *",
+    "kind": "request",
+    "reason": "2.18 (plan v3 D4): the administration sends the version of the record it read as If-Match on every versioned write, so the scenarios that act as the administration send it too; a write whose record changed since is refused with 409 <context>/changed-meanwhile, a browser write without one with 428 shared/version-required",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "DELETE /api/admin/content/news/{id}",
+    "scenario": "content/manage_news: *",
+    "kind": "request",
+    "reason": "2.18 (plan v3 D4): the administration sends the version of the record it read as If-Match on every versioned write, so the scenarios that act as the administration send it too; a write whose record changed since is refused with 409 <context>/changed-meanwhile, a browser write without one with 428 shared/version-required",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "DELETE /api/admin/content/projects/{id}",
+    "scenario": "content/manage_projects: *",
+    "kind": "request",
+    "reason": "2.18 (plan v3 D4): the administration sends the version of the record it read as If-Match on every versioned write, so the scenarios that act as the administration send it too; a write whose record changed since is refused with 409 <context>/changed-meanwhile, a browser write without one with 428 shared/version-required",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "DELETE /api/admin/donations/symbol-claims/{id}",
+    "scenario": "donations/admin_symbol_claims: *",
+    "kind": "request",
+    "reason": "2.18 (plan v3 D4): the administration sends the version of the record it read as If-Match on every versioned write, so the scenarios that act as the administration send it too; a write whose record changed since is refused with 409 <context>/changed-meanwhile, a browser write without one with 428 shared/version-required",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "POST /api/admin/content/news/{id}/publish",
+    "scenario": "content/home_content: *",
+    "kind": "request",
+    "reason": "2.18 (plan v3 D4): the administration sends the version of the record it read as If-Match on every versioned write, so the scenarios that act as the administration send it too; a write whose record changed since is refused with 409 <context>/changed-meanwhile, a browser write without one with 428 shared/version-required",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "POST /api/admin/content/news/{id}/publish",
+    "scenario": "content/manage_news: *",
+    "kind": "request",
+    "reason": "2.18 (plan v3 D4): the administration sends the version of the record it read as If-Match on every versioned write, so the scenarios that act as the administration send it too; a write whose record changed since is refused with 409 <context>/changed-meanwhile, a browser write without one with 428 shared/version-required",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "POST /api/admin/content/news/{id}/unpublish",
+    "scenario": "content/manage_news: *",
+    "kind": "request",
+    "reason": "2.18 (plan v3 D4): the administration sends the version of the record it read as If-Match on every versioned write, so the scenarios that act as the administration send it too; a write whose record changed since is refused with 409 <context>/changed-meanwhile, a browser write without one with 428 shared/version-required",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "POST /api/admin/content/projects/{id}/publish",
+    "scenario": "content/home_content: *",
+    "kind": "request",
+    "reason": "2.18 (plan v3 D4): the administration sends the version of the record it read as If-Match on every versioned write, so the scenarios that act as the administration send it too; a write whose record changed since is refused with 409 <context>/changed-meanwhile, a browser write without one with 428 shared/version-required",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "POST /api/admin/content/projects/{id}/publish",
+    "scenario": "content/manage_projects: *",
+    "kind": "request",
+    "reason": "2.18 (plan v3 D4): the administration sends the version of the record it read as If-Match on every versioned write, so the scenarios that act as the administration send it too; a write whose record changed since is refused with 409 <context>/changed-meanwhile, a browser write without one with 428 shared/version-required",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "POST /api/admin/content/projects/{id}/unpublish",
+    "scenario": "content/manage_projects: *",
+    "kind": "request",
+    "reason": "2.18 (plan v3 D4): the administration sends the version of the record it read as If-Match on every versioned write, so the scenarios that act as the administration send it too; a write whose record changed since is refused with 409 <context>/changed-meanwhile, a browser write without one with 428 shared/version-required",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "POST /api/admin/donations/donors/{id}/bank-accounts/{id}/disconnect",
+    "scenario": "donations/admin_donor_accounts: *",
+    "kind": "request",
+    "reason": "2.18 (plan v3 D4): the administration sends the version of the record it read as If-Match on every versioned write, so the scenarios that act as the administration send it too; a write whose record changed since is refused with 409 <context>/changed-meanwhile, a browser write without one with 428 shared/version-required",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "POST /api/admin/donations/donors/{id}/bank-accounts/{id}/reconnect",
+    "scenario": "donations/admin_donor_accounts: *",
+    "kind": "request",
+    "reason": "2.18 (plan v3 D4): the administration sends the version of the record it read as If-Match on every versioned write, so the scenarios that act as the administration send it too; a write whose record changed since is refused with 409 <context>/changed-meanwhile, a browser write without one with 428 shared/version-required",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "PUT /api/admin/content/news/{id}",
+    "scenario": "content/clean_up_unused_photos: *",
+    "kind": "request",
+    "reason": "2.18 (plan v3 D4): the administration sends the version of the record it read as If-Match on every versioned write, so the scenarios that act as the administration send it too; a write whose record changed since is refused with 409 <context>/changed-meanwhile, a browser write without one with 428 shared/version-required",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "PUT /api/admin/content/news/{id}",
+    "scenario": "content/manage_news: *",
+    "kind": "request",
+    "reason": "2.18 (plan v3 D4): the administration sends the version of the record it read as If-Match on every versioned write, so the scenarios that act as the administration send it too; a write whose record changed since is refused with 409 <context>/changed-meanwhile, a browser write without one with 428 shared/version-required",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "PUT /api/admin/content/projects/{id}",
+    "scenario": "content/manage_projects: *",
+    "kind": "request",
+    "reason": "2.18 (plan v3 D4): the administration sends the version of the record it read as If-Match on every versioned write, so the scenarios that act as the administration send it too; a write whose record changed since is refused with 409 <context>/changed-meanwhile, a browser write without one with 428 shared/version-required",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "PUT /api/admin/donations/report/settings",
+    "scenario": "donations/admin_monthly_report: *",
+    "kind": "request",
+    "reason": "2.18 (plan v3 D4): the administration sends the version of the record it read as If-Match on every versioned write, so the scenarios that act as the administration send it too; a write whose record changed since is refused with 409 <context>/changed-meanwhile, a browser write without one with 428 shared/version-required",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "PUT /api/admin/donations/report/settings",
+    "scenario": "operations/backups: *",
+    "kind": "request",
+    "reason": "2.18 (plan v3 D4): the administration sends the version of the record it read as If-Match on every versioned write, so the scenarios that act as the administration send it too; a write whose record changed since is refused with 409 <context>/changed-meanwhile, a browser write without one with 428 shared/version-required",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "GET /api/admin/content/news",
+    "scenario": "content/manage_news: *",
+    "kind": "added",
+    "field": "$.items[*].version",
+    "reason": "2.18 (plan v3 D4): every answer that returns a versioned record names its row version (the first 16 hex characters of the SHA-256 of its stored fields, a payment's with its gift), which the administration sends back as If-Match",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "GET /api/admin/content/news/{id}",
+    "scenario": "content/manage_news: *",
+    "kind": "added",
+    "field": "$.version",
+    "reason": "2.18 (plan v3 D4): every answer that returns a versioned record names its row version (the first 16 hex characters of the SHA-256 of its stored fields, a payment's with its gift), which the administration sends back as If-Match",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "GET /api/admin/content/projects",
+    "scenario": "content/choose_project_order: *",
+    "kind": "added",
+    "field": "$.items[*].version",
+    "reason": "2.18 (plan v3 D4): every answer that returns a versioned record names its row version (the first 16 hex characters of the SHA-256 of its stored fields, a payment's with its gift), which the administration sends back as If-Match",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "GET /api/admin/content/projects",
+    "scenario": "content/manage_projects: *",
+    "kind": "added",
+    "field": "$.items[*].version",
+    "reason": "2.18 (plan v3 D4): every answer that returns a versioned record names its row version (the first 16 hex characters of the SHA-256 of its stored fields, a payment's with its gift), which the administration sends back as If-Match",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "GET /api/admin/content/projects/{id}",
+    "scenario": "content/manage_projects: *",
+    "kind": "added",
+    "field": "$.version",
+    "reason": "2.18 (plan v3 D4): every answer that returns a versioned record names its row version (the first 16 hex characters of the SHA-256 of its stored fields, a payment's with its gift), which the administration sends back as If-Match",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "GET /api/admin/donations/donors/{id}",
+    "scenario": "donations/admin_device_sync: *",
+    "kind": "added",
+    "field": "$.bankAccounts[*].version",
+    "reason": "2.18 (plan v3 D4): every answer that returns a versioned record names its row version (the first 16 hex characters of the SHA-256 of its stored fields, a payment's with its gift), which the administration sends back as If-Match",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "GET /api/admin/donations/donors/{id}",
+    "scenario": "donations/admin_donor_accounts: *",
+    "kind": "added",
+    "field": "$.bankAccounts[*].version",
+    "reason": "2.18 (plan v3 D4): every answer that returns a versioned record names its row version (the first 16 hex characters of the SHA-256 of its stored fields, a payment's with its gift), which the administration sends back as If-Match",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "GET /api/admin/donations/donors/{id}",
+    "scenario": "donations/admin_payments: *",
+    "kind": "added",
+    "field": "$.bankAccounts[*].version",
+    "reason": "2.18 (plan v3 D4): every answer that returns a versioned record names its row version (the first 16 hex characters of the SHA-256 of its stored fields, a payment's with its gift), which the administration sends back as If-Match",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "GET /api/admin/donations/payments",
+    "scenario": "donations/admin_device_sync: *",
+    "kind": "added",
+    "field": "$.items[*].version",
+    "reason": "2.18 (plan v3 D4): every answer that returns a versioned record names its row version (the first 16 hex characters of the SHA-256 of its stored fields, a payment's with its gift), which the administration sends back as If-Match",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "GET /api/admin/donations/payments",
+    "scenario": "donations/admin_payments: *",
+    "kind": "added",
+    "field": "$.items[*].version",
+    "reason": "2.18 (plan v3 D4): every answer that returns a versioned record names its row version (the first 16 hex characters of the SHA-256 of its stored fields, a payment's with its gift), which the administration sends back as If-Match",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "GET /api/admin/donations/report",
+    "scenario": "donations/admin_device_sync: *",
+    "kind": "added",
+    "field": "$.settings.version",
+    "reason": "2.18 (plan v3 D4): every answer that returns a versioned record names its row version (the first 16 hex characters of the SHA-256 of its stored fields, a payment's with its gift), which the administration sends back as If-Match",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "GET /api/admin/donations/report",
+    "scenario": "donations/admin_monthly_report: *",
+    "kind": "added",
+    "field": "$.settings.version",
+    "reason": "2.18 (plan v3 D4): every answer that returns a versioned record names its row version (the first 16 hex characters of the SHA-256 of its stored fields, a payment's with its gift), which the administration sends back as If-Match",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "GET /api/admin/donations/symbol-claims",
+    "scenario": "donations/admin_device_sync: *",
+    "kind": "added",
+    "field": "$.items[*].version",
+    "reason": "2.18 (plan v3 D4): every answer that returns a versioned record names its row version (the first 16 hex characters of the SHA-256 of its stored fields, a payment's with its gift), which the administration sends back as If-Match",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "GET /api/admin/donations/symbol-claims",
+    "scenario": "donations/admin_symbol_claims: *",
+    "kind": "added",
+    "field": "$.items[*].version",
+    "reason": "2.18 (plan v3 D4): every answer that returns a versioned record names its row version (the first 16 hex characters of the SHA-256 of its stored fields, a payment's with its gift), which the administration sends back as If-Match",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "GET /api/admin/donations/sync/chunks",
+    "scenario": "donations/admin_device_sync: *",
+    "kind": "added",
+    "field": "$.chunks[*].rows[*].version",
+    "reason": "2.18 (plan v3 D4): every answer that returns a versioned record names its row version (the first 16 hex characters of the SHA-256 of its stored fields, a payment's with its gift), which the administration sends back as If-Match",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "GET /api/admin/donations/sync/chunks",
+    "scenario": "donors/admin_device_sync: *",
+    "kind": "added",
+    "field": "$.chunks[*].rows[*].version",
+    "reason": "2.18 (plan v3 D4): every answer that returns a versioned record names its row version (the first 16 hex characters of the SHA-256 of its stored fields, a payment's with its gift), which the administration sends back as If-Match",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "POST /api/admin/content/news",
+    "scenario": "content/clean_up_unused_photos: *",
+    "kind": "added",
+    "field": "$.version",
+    "reason": "2.18 (plan v3 D4): every answer that returns a versioned record names its row version (the first 16 hex characters of the SHA-256 of its stored fields, a payment's with its gift), which the administration sends back as If-Match",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "POST /api/admin/content/news",
+    "scenario": "content/home_content: *",
+    "kind": "added",
+    "field": "$.version",
+    "reason": "2.18 (plan v3 D4): every answer that returns a versioned record names its row version (the first 16 hex characters of the SHA-256 of its stored fields, a payment's with its gift), which the administration sends back as If-Match",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "POST /api/admin/content/news",
+    "scenario": "content/manage_about: *",
+    "kind": "added",
+    "field": "$.version",
+    "reason": "2.18 (plan v3 D4): every answer that returns a versioned record names its row version (the first 16 hex characters of the SHA-256 of its stored fields, a payment's with its gift), which the administration sends back as If-Match",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "POST /api/admin/content/news",
+    "scenario": "content/manage_news: *",
+    "kind": "added",
+    "field": "$.version",
+    "reason": "2.18 (plan v3 D4): every answer that returns a versioned record names its row version (the first 16 hex characters of the SHA-256 of its stored fields, a payment's with its gift), which the administration sends back as If-Match",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "POST /api/admin/content/news/{id}/publish",
+    "scenario": "content/home_content: *",
+    "kind": "added",
+    "field": "$.version",
+    "reason": "2.18 (plan v3 D4): every answer that returns a versioned record names its row version (the first 16 hex characters of the SHA-256 of its stored fields, a payment's with its gift), which the administration sends back as If-Match",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "POST /api/admin/content/news/{id}/publish",
+    "scenario": "content/manage_news: *",
+    "kind": "added",
+    "field": "$.version",
+    "reason": "2.18 (plan v3 D4): every answer that returns a versioned record names its row version (the first 16 hex characters of the SHA-256 of its stored fields, a payment's with its gift), which the administration sends back as If-Match",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "POST /api/admin/content/news/{id}/unpublish",
+    "scenario": "content/manage_news: *",
+    "kind": "added",
+    "field": "$.version",
+    "reason": "2.18 (plan v3 D4): every answer that returns a versioned record names its row version (the first 16 hex characters of the SHA-256 of its stored fields, a payment's with its gift), which the administration sends back as If-Match",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "POST /api/admin/content/projects",
+    "scenario": "content/choose_project_order: *",
+    "kind": "added",
+    "field": "$.version",
+    "reason": "2.18 (plan v3 D4): every answer that returns a versioned record names its row version (the first 16 hex characters of the SHA-256 of its stored fields, a payment's with its gift), which the administration sends back as If-Match",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "POST /api/admin/content/projects",
+    "scenario": "content/clean_up_unused_photos: *",
+    "kind": "added",
+    "field": "$.version",
+    "reason": "2.18 (plan v3 D4): every answer that returns a versioned record names its row version (the first 16 hex characters of the SHA-256 of its stored fields, a payment's with its gift), which the administration sends back as If-Match",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "POST /api/admin/content/projects",
+    "scenario": "content/home_content: *",
+    "kind": "added",
+    "field": "$.version",
+    "reason": "2.18 (plan v3 D4): every answer that returns a versioned record names its row version (the first 16 hex characters of the SHA-256 of its stored fields, a payment's with its gift), which the administration sends back as If-Match",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "POST /api/admin/content/projects",
+    "scenario": "content/manage_projects: *",
+    "kind": "added",
+    "field": "$.version",
+    "reason": "2.18 (plan v3 D4): every answer that returns a versioned record names its row version (the first 16 hex characters of the SHA-256 of its stored fields, a payment's with its gift), which the administration sends back as If-Match",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "POST /api/admin/content/projects/{id}/publish",
+    "scenario": "content/choose_project_order: *",
+    "kind": "added",
+    "field": "$.version",
+    "reason": "2.18 (plan v3 D4): every answer that returns a versioned record names its row version (the first 16 hex characters of the SHA-256 of its stored fields, a payment's with its gift), which the administration sends back as If-Match",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "POST /api/admin/content/projects/{id}/publish",
+    "scenario": "content/home_content: *",
+    "kind": "added",
+    "field": "$.version",
+    "reason": "2.18 (plan v3 D4): every answer that returns a versioned record names its row version (the first 16 hex characters of the SHA-256 of its stored fields, a payment's with its gift), which the administration sends back as If-Match",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "POST /api/admin/content/projects/{id}/publish",
+    "scenario": "content/manage_projects: *",
+    "kind": "added",
+    "field": "$.version",
+    "reason": "2.18 (plan v3 D4): every answer that returns a versioned record names its row version (the first 16 hex characters of the SHA-256 of its stored fields, a payment's with its gift), which the administration sends back as If-Match",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "POST /api/admin/content/projects/{id}/unpublish",
+    "scenario": "content/manage_projects: *",
+    "kind": "added",
+    "field": "$.version",
+    "reason": "2.18 (plan v3 D4): every answer that returns a versioned record names its row version (the first 16 hex characters of the SHA-256 of its stored fields, a payment's with its gift), which the administration sends back as If-Match",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "PUT /api/admin/content/news/{id}",
+    "scenario": "content/clean_up_unused_photos: *",
+    "kind": "added",
+    "field": "$.version",
+    "reason": "2.18 (plan v3 D4): every answer that returns a versioned record names its row version (the first 16 hex characters of the SHA-256 of its stored fields, a payment's with its gift), which the administration sends back as If-Match",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "PUT /api/admin/content/news/{id}",
+    "scenario": "content/manage_news: *",
+    "kind": "added",
+    "field": "$.version",
+    "reason": "2.18 (plan v3 D4): every answer that returns a versioned record names its row version (the first 16 hex characters of the SHA-256 of its stored fields, a payment's with its gift), which the administration sends back as If-Match",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "PUT /api/admin/content/projects/{id}",
+    "scenario": "content/manage_projects: *",
+    "kind": "added",
+    "field": "$.version",
+    "reason": "2.18 (plan v3 D4): every answer that returns a versioned record names its row version (the first 16 hex characters of the SHA-256 of its stored fields, a payment's with its gift), which the administration sends back as If-Match",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "PUT /api/admin/donations/report/settings",
+    "scenario": "donations/admin_monthly_report: *",
+    "kind": "added",
+    "field": "$.version",
+    "reason": "2.18 (plan v3 D4): every answer that returns a versioned record names its row version (the first 16 hex characters of the SHA-256 of its stored fields, a payment's with its gift), which the administration sends back as If-Match",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "PUT /api/admin/donations/report/settings",
+    "scenario": "operations/backups: *",
+    "kind": "added",
+    "field": "$.version",
+    "reason": "2.18 (plan v3 D4): every answer that returns a versioned record names its row version (the first 16 hex characters of the SHA-256 of its stored fields, a payment's with its gift), which the administration sends back as If-Match",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "GET /api/admin/donations/sync",
+    "scenario": "donations/admin_device_sync: *",
+    "kind": "body",
+    "field": "$.chunks[*].rowsSha256",
+    "reason": "2.18 (plan v3 D4): the rows of payments:, links:, symbol-claims and report-settings carry their row version, so the digest of each such chunk changes once (the device copy sends the version back as If-Match from 2.20a)",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions); Device sync of the administration"
+  },
+  {
+    "path": "GET /api/admin/donations/sync/chunks",
+    "scenario": "donations/admin_device_sync: *",
+    "kind": "body",
+    "field": "$.chunks[*].rowsSha256",
+    "reason": "2.18 (plan v3 D4): the rows of payments:, links:, symbol-claims and report-settings carry their row version, so the digest of each such chunk changes once (the device copy sends the version back as If-Match from 2.20a)",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions); Device sync of the administration"
+  },
+  {
+    "path": "GET /api/admin/donations/sync",
+    "scenario": "donors/admin_device_sync: *",
+    "kind": "body",
+    "field": "$.chunks[*].rowsSha256",
+    "reason": "2.18 (plan v3 D4): the rows of payments:, links:, symbol-claims and report-settings carry their row version, so the digest of each such chunk changes once (the device copy sends the version back as If-Match from 2.20a)",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions); Device sync of the administration"
+  },
+  {
+    "path": "GET /api/admin/donations/sync/chunks",
+    "scenario": "donors/admin_device_sync: *",
+    "kind": "body",
+    "field": "$.chunks[*].rowsSha256",
+    "reason": "2.18 (plan v3 D4): the rows of payments:, links:, symbol-claims and report-settings carry their row version, so the digest of each such chunk changes once (the device copy sends the version back as If-Match from 2.20a)",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions); Device sync of the administration"
+  }
+]

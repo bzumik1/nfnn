@@ -52,6 +52,8 @@ import { FocalPointPicker, PreviewShape } from '../focal-point-picker/focal-poin
 import { ContentPreview, PreviewContent } from '../content-preview/content-preview';
 import { GuardsUnsavedChanges } from '../unsaved-changes/unsaved-changes-guard';
 import { UnsavedChangesDialog } from '../unsaved-changes/unsaved-changes-dialog';
+import { isChangedMeanwhile, versionInRefusal } from '../../../core/version/row-version';
+import { ChangedMeanwhileDialog } from '../changed-meanwhile/changed-meanwhile-dialog';
 
 type LoadState = 'loading' | 'ready' | 'error';
 type EditorMode = 'edit' | 'preview';
@@ -77,6 +79,7 @@ const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
     MarkdownToolbar,
     FileButton,
     UnsavedChangesDialog,
+    ChangedMeanwhileDialog,
     ContentPreview,
     ActionBar,
     FocalPointPicker,
@@ -117,6 +120,9 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
   protected readonly slugPattern = SLUG_PATTERN;
 
   protected readonly state = signal<LoadState>('loading');
+  protected readonly changedMeanwhile = signal<{ version: string | null; draft: boolean } | null>(
+    null,
+  );
   protected readonly article = signal<NewsArticleResponse | null>(null);
   protected readonly mode = signal<EditorMode>('edit');
   protected readonly preview = signal<PreviewContent | null>(null);
@@ -416,7 +422,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     const needsPublish = publish && existing?.publishedOn !== date;
     this.saving.set(publish ? 'publish' : 'save');
     if (existing && needsPublish && !this.unsaved()) {
-      this.sendPublish(existing.id, date);
+      this.sendPublish(existing.id, date, existing.version ?? '');
       return;
     }
     if (existing && !this.edited() && !this.coverUnsaved() && this.focalPointUnsaved()) {
@@ -425,7 +431,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
         .subscribe({
           next: () => {
             if (needsPublish) {
-              this.sendPublish(existing.id, date);
+              this.sendPublish(existing.id, date, existing.version ?? '');
               return;
             }
             this.saving.set(null);
@@ -441,7 +447,9 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     const request = this.request();
     const call = this.placeFocalPoint().pipe(
       switchMap(() =>
-        existing ? this.api.update(existing.id, request) : this.api.create(request),
+        existing
+          ? this.api.update(existing.id, request, existing.version ?? '')
+          : this.api.create(request),
       ),
     );
     call.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
@@ -449,7 +457,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
         this.saved(article, existing === null);
         if (needsPublish) {
           this.publishDate = date;
-          this.sendPublish(article.id, date);
+          this.sendPublish(article.id, date, article.version ?? '');
           return;
         }
         this.saving.set(null);
@@ -457,6 +465,10 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
       },
       error: (failure: unknown) => {
         this.saving.set(null);
+        if (existing && isChangedMeanwhile(failure)) {
+          this.changedMeanwhile.set({ version: versionInRefusal(failure), draft: true });
+          return;
+        }
         this.saveFailed(failure);
       },
     });
@@ -527,9 +539,9 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     this.uploadError.set(null);
   }
 
-  private sendPublish(id: string, date: string): void {
+  private sendPublish(id: string, date: string, version: string): void {
     this.api
-      .publish(id, date)
+      .publish(id, date, version)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (article) => {
@@ -545,6 +557,10 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
         },
         error: (failure: unknown) => {
           this.saving.set(null);
+          if (isChangedMeanwhile(failure)) {
+            this.changedMeanwhile.set({ version: null, draft: false });
+            return;
+          }
           this.notice.set({
             kind: 'alert',
             text: describeProblem(
@@ -564,7 +580,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     this.notice.set(null);
     this.unpublishing.set(true);
     this.api
-      .unpublish(existing.id)
+      .unpublish(existing.id, existing.version ?? '')
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (article) => {
@@ -578,6 +594,10 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
         },
         error: (failure: unknown) => {
           this.unpublishing.set(false);
+          if (isChangedMeanwhile(failure)) {
+            this.changedMeanwhile.set({ version: null, draft: false });
+            return;
+          }
           this.notice.set({
             kind: 'alert',
             text: describeProblem(
@@ -607,7 +627,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     }
     this.deleting.set(true);
     this.api
-      .delete(existing.id)
+      .delete(existing.id, existing.version ?? '')
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
@@ -618,6 +638,10 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
         error: (failure: unknown) => {
           this.deleting.set(false);
           this.confirmingDelete.set(false);
+          if (isChangedMeanwhile(failure)) {
+            this.changedMeanwhile.set({ version: null, draft: false });
+            return;
+          }
           this.deleteNotice.set({
             kind: 'alert',
             text: describeProblem(
@@ -628,6 +652,32 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
           this.focusDeleteButton();
         },
       });
+  }
+
+  protected overwriteAfterChange(): void {
+    const version = this.changedMeanwhile()?.version;
+    const form = this.articleForm();
+    this.changedMeanwhile.set(null);
+    if (!version || !form) {
+      return;
+    }
+    this.article.update((saved) => (saved ? { ...saved, version } : saved));
+    this.submit(form);
+  }
+
+  protected reloadAfterChange(): void {
+    const saved = this.article();
+    this.changedMeanwhile.set(null);
+    if (!saved) {
+      return;
+    }
+    this.articleForm()?.form.markAsPristine();
+    this.edited.set(false);
+    this.load(saved.id);
+  }
+
+  protected keepDraftAfterChange(): void {
+    this.changedMeanwhile.set(null);
   }
 
   private focusDeleteButton(): void {

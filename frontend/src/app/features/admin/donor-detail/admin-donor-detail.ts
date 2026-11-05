@@ -30,6 +30,7 @@ import { trustedKeys } from '../../donations/verification/receipt-keys';
 import { ReceiptKeysApi } from '../../donations/verification/receipt-keys-api';
 import {
   AdminApi,
+  AdminBankAccountItem,
   AdminDonorDetailResponse,
   AdminIssuedReceiptResponse,
   AdminReceiptResponse,
@@ -42,6 +43,8 @@ import { FormControlDirective } from '../../../shared/ui/form-field/form-control
 import { FormField } from '../../../shared/ui/form-field/form-field';
 import { DownloadProgress } from '../../../shared/ui/download-progress/download-progress';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
+import { isChangedMeanwhile } from '../../../core/version/row-version';
+import { ChangedMeanwhileDialog } from '../changed-meanwhile/changed-meanwhile-dialog';
 import { AdminReceiptDownloads } from './admin-receipt-downloads';
 
 type LoadState = 'loading' | 'ready' | 'missing' | 'error';
@@ -100,6 +103,7 @@ const PAIRING_LABELS: Record<NonNullable<DonationItem['pairedBy']>, string> = {
     FormControlDirective,
     FormField,
     FormsModule,
+    ChangedMeanwhileDialog,
     LiveNotice,
     RouterLink,
     TrackedForm,
@@ -139,6 +143,7 @@ export class AdminDonorDetail {
   protected readonly detail = signal<AdminDonorDetailResponse | null>(null);
   protected readonly cardNotice = signal<CardNotice | null>(null);
   protected readonly busy = signal(false);
+  protected readonly changedMeanwhile = signal<{ reload: () => void } | null>(null);
   protected readonly pending = signal<PendingAction>(null);
   protected readonly erasing = signal(false);
   protected readonly issuing = signal(false);
@@ -564,9 +569,9 @@ export class AdminDonorDetail {
       });
   }
 
-  protected disconnect(item: BankAccountItem): void {
+  protected disconnect(item: AdminBankAccountItem): void {
     this.run(
-      this.api.disconnectDonorAccount(this.donorId, item.id),
+      this.api.disconnectDonorAccount(this.donorId, item.id, item.version),
       $localize`:@@admin.donorDetail.disconnect.done:Párování z účtu ${item.accountNumber}:account: je vypnuté: platby bez symbolu z něj už dárci nepřiřadíme, dosavadní dary zůstávají.`,
       $localize`:@@admin.donorDetail.disconnect.failed:Párování se nepodařilo vypnout. Zkuste to prosím znovu.`,
       () => this.loadDonations(),
@@ -574,9 +579,9 @@ export class AdminDonorDetail {
     );
   }
 
-  protected reconnect(item: BankAccountItem): void {
+  protected reconnect(item: AdminBankAccountItem): void {
     this.run(
-      this.api.reconnectDonorAccount(this.donorId, item.id),
+      this.api.reconnectDonorAccount(this.donorId, item.id, item.version),
       $localize`:@@admin.donorDetail.reconnect.done:Párování z účtu ${item.accountNumber}:account: zase zapneme, jakmile z něj přijde platba s variabilním symbolem dárce.`,
       $localize`:@@admin.donorDetail.reconnect.failed:Párování se nepodařilo zapnout. Zkuste to prosím znovu.`,
       () => this.loadDonations(),
@@ -584,14 +589,20 @@ export class AdminDonorDetail {
     );
   }
 
-  protected remove(item: BankAccountItem): void {
+  protected remove(item: AdminBankAccountItem): void {
     this.run(
-      this.api.removeDonorAccount(this.donorId, item.id),
+      this.api.removeDonorAccount(this.donorId, item.id, item.version),
       $localize`:@@admin.donorDetail.remove.done:Účet ${item.accountNumber}:account: jsme dárci odebrali: ${this.donationsCount(item.donationCount)}:donations: přiřazené přes něj jsme smazali a platby jsou zase nespárované.`,
       $localize`:@@admin.donorDetail.remove.failed:Účet se nepodařilo odebrat. Zkuste to prosím znovu.`,
       () => this.loadDonations(),
       'accounts',
     );
+  }
+
+  protected reloadAfterChange(): void {
+    const changed = this.changedMeanwhile();
+    this.changedMeanwhile.set(null);
+    changed?.reload();
   }
 
   private run(
@@ -617,6 +628,11 @@ export class AdminDonorDetail {
       error: (failure: unknown) => {
         this.busy.set(false);
         this.pending.set(null);
+        if (isChangedMeanwhile(failure)) {
+          this.cardNotice.set(null);
+          this.changedMeanwhile.set({ reload });
+          return;
+        }
         this.cardNotice.set({ card, notice: { kind: 'alert', text: refusal(failure, failed) } });
         this.focusAfterRender(() => this.byId(opener) ?? this.noticeElement(card));
       },

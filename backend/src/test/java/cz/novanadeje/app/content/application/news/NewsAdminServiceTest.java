@@ -18,7 +18,11 @@ import cz.novanadeje.app.content.domain.people.PersonRepository;
 import cz.novanadeje.app.content.domain.FormerSlugs;
 import cz.novanadeje.app.content.domain.Slug;
 import cz.novanadeje.app.content.domain.SlugTaken;
+import cz.novanadeje.app.content.application.ContentVersions;
+import cz.novanadeje.app.content.domain.ChangedMeanwhile;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.shared.application.version.ExpectedVersion;
+import cz.novanadeje.app.shared.infrastructure.json.RowVersionsFixture;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -65,7 +69,7 @@ class NewsAdminServiceTest {
     }
 
     private NewsAdminService service(Instant now) {
-        return new NewsAdminService(news, media, formerSlugs, new NewsSigners(people, media), events, Clock.fixed(now, ZoneOffset.UTC));
+        return new NewsAdminService(news, media, formerSlugs, new NewsSigners(people, media), new ContentVersions(RowVersionsFixture.canonical()), events, Clock.fixed(now, ZoneOffset.UTC));
     }
 
     @Test
@@ -73,7 +77,7 @@ class NewsAdminServiceTest {
     void should_create_a_draft_with_a_slug_from_the_title_when_created_given_no_slug() {
         when(news.isSlugTakenByAnother(any(), any())).thenReturn(false);
 
-        NewsArticleView view = service().create(ADMIN, command("Pomohli jsme Dominikovi", Optional.empty(), Optional.empty()));
+        NewsArticleView view = service().create(ADMIN, command("Pomohli jsme Dominikovi", Optional.empty(), Optional.empty())).view();
 
         assertThat(view.slug()).isEqualTo("pomohli-jsme-dominikovi");
         assertThat(view.publishedOn()).isEmpty();
@@ -114,11 +118,11 @@ class NewsAdminServiceTest {
     void should_drop_the_old_image_when_updated_given_a_new_cover() {
         MediaId newImage = MediaId.newId(NOW.plusSeconds(1));
         NewsArticle article = NewsArticle.create(NewsArticleId.newId(NOW), content("dominik", Optional.of(IMAGE)), NOW).publish(LocalDate.parse("2026-10-20"), NOW);
-        when(news.findById(article.id())).thenReturn(Optional.of(article));
+        when(news.findByIdForUpdate(article.id())).thenReturn(Optional.of(article));
         when(news.isSlugTakenByAnother(any(), any())).thenReturn(false);
         when(media.exists(newImage)).thenReturn(true);
 
-        NewsArticleView view = service().update(ADMIN, article.id(), command("Dominik znovu", Optional.of("dominik"), Optional.of(newImage)));
+        NewsArticleView view = service().update(ADMIN, article.id(), ExpectedVersion.none(), command("Dominik znovu", Optional.of("dominik"), Optional.of(newImage))).view();
 
         assertThat(view.title()).isEqualTo("Dominik znovu");
         assertThat(view.publishedOn()).contains(LocalDate.parse("2026-10-20"));
@@ -132,10 +136,10 @@ class NewsAdminServiceTest {
     @DisplayName("Given an article at one address, when its address changes, then the old address is remembered for it and the new one is released from any other")
     void should_remember_the_old_slug_when_updated_given_a_new_slug() {
         NewsArticle article = NewsArticle.create(NewsArticleId.newId(NOW), content("dominik", Optional.empty()), NOW);
-        when(news.findById(article.id())).thenReturn(Optional.of(article));
+        when(news.findByIdForUpdate(article.id())).thenReturn(Optional.of(article));
         when(news.isSlugTakenByAnother(any(), any())).thenReturn(false);
 
-        NewsArticleView view = service().update(ADMIN, article.id(), command("Dominik", Optional.of("dominik-7-let"), Optional.empty()));
+        NewsArticleView view = service().update(ADMIN, article.id(), ExpectedVersion.none(), command("Dominik", Optional.of("dominik-7-let"), Optional.empty())).view();
 
         assertThat(view.slug()).isEqualTo("dominik-7-let");
         verify(formerSlugs).forget(new Slug("dominik-7-let"));
@@ -146,10 +150,10 @@ class NewsAdminServiceTest {
     @DisplayName("Given an article, when it is updated at the same address, then no former address is remembered")
     void should_remember_nothing_when_updated_given_the_same_slug() {
         NewsArticle article = NewsArticle.create(NewsArticleId.newId(NOW), content("dominik", Optional.empty()), NOW);
-        when(news.findById(article.id())).thenReturn(Optional.of(article));
+        when(news.findByIdForUpdate(article.id())).thenReturn(Optional.of(article));
         when(news.isSlugTakenByAnother(any(), any())).thenReturn(false);
 
-        service().update(ADMIN, article.id(), command("Dominik znovu", Optional.of("dominik"), Optional.empty()));
+        service().update(ADMIN, article.id(), ExpectedVersion.none(), command("Dominik znovu", Optional.of("dominik"), Optional.empty()));
 
         verify(formerSlugs, never()).rememberNews(any(), any(), any());
     }
@@ -168,9 +172,9 @@ class NewsAdminServiceTest {
     @DisplayName("Given a draft, when it is published on a day, then the day is stored and audited")
     void should_publish_on_the_day_when_published_given_a_draft() {
         NewsArticle article = NewsArticle.create(NewsArticleId.newId(NOW), content("dominik", Optional.empty()), NOW);
-        when(news.findById(article.id())).thenReturn(Optional.of(article));
+        when(news.findByIdForUpdate(article.id())).thenReturn(Optional.of(article));
 
-        NewsArticleView view = service().publish(ADMIN, article.id(), LocalDate.parse("2026-10-23"));
+        NewsArticleView view = service().publish(ADMIN, article.id(), LocalDate.parse("2026-10-23"), ExpectedVersion.none()).view();
 
         assertThat(view.publishedOn()).contains(LocalDate.parse("2026-10-23"));
         ArgumentCaptor<AdminActionPerformed> audit = ArgumentCaptor.forClass(AdminActionPerformed.class);
@@ -183,9 +187,9 @@ class NewsAdminServiceTest {
     @DisplayName("Given an article with an image nothing else uses, when it is deleted, then the article and the image go and the deletion is audited")
     void should_delete_with_its_image_when_deleted() {
         NewsArticle article = NewsArticle.create(NewsArticleId.newId(NOW), content("dominik", Optional.of(IMAGE)), NOW);
-        when(news.findById(article.id())).thenReturn(Optional.of(article));
+        when(news.findByIdForUpdate(article.id())).thenReturn(Optional.of(article));
 
-        service().delete(ADMIN, article.id());
+        service().delete(ADMIN, article.id(), ExpectedVersion.none());
 
         verify(news).delete(article.id());
         verify(media).deleteIfUnused(IMAGE);
@@ -199,9 +203,9 @@ class NewsAdminServiceTest {
     @DisplayName("Given no such article, when it is unpublished, then it is not found")
     void should_fail_when_unpublished_given_no_article() {
         NewsArticleId id = NewsArticleId.newId(NOW);
-        when(news.findById(id)).thenReturn(Optional.empty());
+        when(news.findByIdForUpdate(id)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service().unpublish(ADMIN, id)).isInstanceOf(NewsArticleNotFound.class);
+        assertThatThrownBy(() -> service().unpublish(ADMIN, id, ExpectedVersion.none())).isInstanceOf(NewsArticleNotFound.class);
     }
 
     @Test
@@ -209,9 +213,9 @@ class NewsAdminServiceTest {
     void should_be_live_when_published_given_the_prague_day_has_begun() {
         Instant pragueJustAfterMidnight = Instant.parse("2026-10-23T22:30:00Z");
         NewsArticle article = NewsArticle.create(NewsArticleId.newId(NOW), content("dominik", Optional.empty()), NOW);
-        when(news.findById(article.id())).thenReturn(Optional.of(article));
+        when(news.findByIdForUpdate(article.id())).thenReturn(Optional.of(article));
 
-        NewsArticleView view = service(pragueJustAfterMidnight).publish(ADMIN, article.id(), LocalDate.parse("2026-10-24"));
+        NewsArticleView view = service(pragueJustAfterMidnight).publish(ADMIN, article.id(), LocalDate.parse("2026-10-24"), ExpectedVersion.none()).view();
 
         assertThat(view.live()).isTrue();
     }
@@ -220,9 +224,9 @@ class NewsAdminServiceTest {
     @DisplayName("Given a draft, when it is published on a later day, then it is not live yet")
     void should_not_be_live_when_published_given_a_later_day() {
         NewsArticle article = NewsArticle.create(NewsArticleId.newId(NOW), content("dominik", Optional.empty()), NOW);
-        when(news.findById(article.id())).thenReturn(Optional.of(article));
+        when(news.findByIdForUpdate(article.id())).thenReturn(Optional.of(article));
 
-        NewsArticleView view = service().publish(ADMIN, article.id(), LocalDate.parse("2026-10-24"));
+        NewsArticleView view = service().publish(ADMIN, article.id(), LocalDate.parse("2026-10-24"), ExpectedVersion.none()).view();
 
         assertThat(view.live()).isFalse();
     }
@@ -233,16 +237,16 @@ class NewsAdminServiceTest {
         NewsArticle article = NewsArticle.create(NewsArticleId.newId(NOW), content("dominik", Optional.empty()), NOW);
         when(news.findById(article.id())).thenReturn(Optional.of(article));
 
-        assertThat(service().get(article.id()).live()).isFalse();
+        assertThat(service().get(article.id()).view().live()).isFalse();
     }
 
     @Test
     @DisplayName("Given a draft, when it is published on today, then it is live")
     void should_be_live_when_published_given_today() {
         NewsArticle article = NewsArticle.create(NewsArticleId.newId(NOW), content("dominik", Optional.empty()), NOW);
-        when(news.findById(article.id())).thenReturn(Optional.of(article));
+        when(news.findByIdForUpdate(article.id())).thenReturn(Optional.of(article));
 
-        assertThat(service().publish(ADMIN, article.id(), LocalDate.parse("2026-10-23")).live()).isTrue();
+        assertThat(service().publish(ADMIN, article.id(), LocalDate.parse("2026-10-23"), ExpectedVersion.none()).view().live()).isTrue();
     }
 
     @Test
@@ -254,7 +258,7 @@ class NewsAdminServiceTest {
         when(people.findAllInOrder()).thenReturn(List.of(pavel));
         when(media.findSize(IMAGE)).thenReturn(Optional.of(new MediaSize(600, 800)));
 
-        NewsArticleView view = service().create(ADMIN, signed("Dominik", pavel.id()));
+        NewsArticleView view = service().create(ADMIN, signed("Dominik", pavel.id())).view();
 
         assertThat(view.signer()).hasValueSatisfying(signer -> {
             assertThat(signer.id()).isEqualTo(pavel.id());
@@ -285,7 +289,7 @@ class NewsAdminServiceTest {
         NewsArticle article = NewsArticle.create(NewsArticleId.newId(NOW), content("dominik", Optional.empty()), NOW);
         when(news.findAllDraftsFirst()).thenReturn(List.of(article));
 
-        assertThat(service().list()).singleElement().satisfies(view -> assertThat(view.signer()).isEmpty());
+        assertThat(service().list()).singleElement().satisfies(versioned -> assertThat(versioned.view().signer()).isEmpty());
 
         verify(people, never()).findAllInOrder();
     }
@@ -304,5 +308,47 @@ class NewsAdminServiceTest {
 
     private static NewsContent content(String slug, Optional<MediaId> image) {
         return new NewsContent(new Slug(slug), "Dominik", Optional.of("Projekt"), "Perex", "Text", image);
+    }
+    @Test
+    @DisplayName("Given an article edited since the version an administrator read, when they save their edit with that version, then it is refused with the current version and article, and nothing is saved or audited")
+    void should_refuse_with_the_current_article_when_updated_given_a_stale_version() {
+        NewsArticle read = NewsArticle.create(NewsArticleId.newId(NOW), content("dominik", Optional.empty()), NOW);
+        String readVersion = versions().of(read);
+        NewsArticle edited = read.edit(content("dominik-znovu", Optional.empty()), NOW.plusSeconds(60));
+        when(news.findByIdForUpdate(read.id())).thenReturn(Optional.of(edited));
+
+        assertThatThrownBy(() -> service().update(ADMIN, read.id(), ExpectedVersion.of(readVersion), command("Dominik", Optional.of("dominik"), Optional.empty())))
+                .isInstanceOfSatisfying(ChangedMeanwhile.class, refusal -> {
+                    assertThat(refusal.code()).isEqualTo("content/changed-meanwhile");
+                    assertThat(refusal.extensions()).containsEntry("version", versions().of(edited))
+                            .containsEntry("current", ContentVersions.StoredNewsArticle.of(edited));
+                });
+
+        verify(news, never()).save(any());
+        verify(events, never()).publishEvent(any());
+    }
+
+    @Test
+    @DisplayName("Given an article unchanged since the version an administrator read, when they delete it with that version, then it is deleted")
+    void should_delete_when_deleted_given_the_current_version() {
+        NewsArticle article = NewsArticle.create(NewsArticleId.newId(NOW), content("dominik", Optional.empty()), NOW);
+        when(news.findByIdForUpdate(article.id())).thenReturn(Optional.of(article));
+
+        service().delete(ADMIN, article.id(), ExpectedVersion.of(versions().of(article)));
+
+        verify(news).delete(article.id());
+    }
+
+    @Test
+    @DisplayName("Given an article that is gone, when it is unpublished with a version, then it is not found rather than changed meanwhile")
+    void should_answer_not_found_when_unpublished_with_a_version_given_no_article() {
+        NewsArticleId id = NewsArticleId.newId(NOW);
+        when(news.findByIdForUpdate(id)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service().unpublish(ADMIN, id, ExpectedVersion.of("0123456789abcdef"))).isInstanceOf(NewsArticleNotFound.class);
+    }
+
+    private static ContentVersions versions() {
+        return new ContentVersions(RowVersionsFixture.canonical());
     }
 }

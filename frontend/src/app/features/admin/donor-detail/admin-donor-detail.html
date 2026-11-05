@@ -1078,3 +1078,9 @@
     </div>
   </app-dialog>
 }
+@if (changedMeanwhile()) {
+  <app-changed-meanwhile-dialog
+    (reloadChosen)="reloadAfterChange()"
+    (dismissed)="reloadAfterChange()"
+  />
+}

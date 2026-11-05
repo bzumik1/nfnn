@@ -187,6 +187,7 @@ describe('Given an administrator on the monthly report page', () => {
           sendHour: 9,
           sections: { donors: false, donations: true, unpairedPayments: false, bankImport: true },
           changedAt: '2026-10-05T07:00:00Z',
+          version: '5e8a1d0c47b2f963',
         },
         sentReports: [
           { month: '2026-09', sentAt: '2026-10-05T05:00:00Z' },
@@ -261,6 +262,7 @@ describe('Given an administrator on the monthly report page', () => {
           sendHour: 18,
           sections: { donors: false, donations: true, unpairedPayments: true, bankImport: true },
           changedAt: '2026-10-23T08:00:00Z',
+          version: 'b7c3e9f2056d1a48',
         },
       }),
     );

@@ -24,13 +24,16 @@ describe('Given the projects API', () => {
 
   afterEach(() => http.verify());
 
-  it('when an project is published, then it posts the date to the publish endpoint and hands the project on', () => {
+  it('when an project is published, then it posts the date with the version read to the publish endpoint and hands the project on', () => {
     let received: ProjectResponse | undefined;
-    api.publish(project().id, '2026-10-20').subscribe((response) => (received = response));
+    api
+      .publish(project().id, '2026-10-20', '9d4b2e7a1c0f5836')
+      .subscribe((response) => (received = response));
 
     const request = http.expectOne(`/api/admin/content/projects/${project().id}/publish`);
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toEqual({ publishedOn: '2026-10-20' });
+    expect(request.request.headers.get('If-Match')).toBe('"9d4b2e7a1c0f5836"');
     request.flush(project());
 
     expect(received).toEqual(project());

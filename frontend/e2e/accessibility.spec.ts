@@ -1147,6 +1147,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
                 importedAt: '2026-10-17T10:00:00Z',
                 unpairedByAdminAt: '2026-10-18T10:00:00Z',
                 donation: null,
+                version: '3f2a9c4e1b7d6085',
               },
             ],
           },
@@ -1185,6 +1186,34 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await expect(
       page.getByRole('dialog').getByRole('radio', { name: /Jana Nováková/ }),
     ).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.route(
+      (url) => url.pathname.endsWith('/pair'),
+      (route) =>
+        route.fulfill({
+          status: 409,
+          contentType: 'application/problem+json',
+          json: {
+            type: 'https://nfnn.cz/problems/donations/changed-meanwhile',
+            title: 'Mezitím se to změnilo',
+            detail: 'Platbu mezitím změnil někdo jiný.',
+            status: 409,
+            version: '1b2c3d4e5f607182',
+            current: { id: '019a1c00-0000-7000-8000-000000001001' },
+          },
+        }),
+    );
+    await page
+      .getByRole('dialog')
+      .getByRole('radio', { name: /Jana Nováková/ })
+      .check();
+    await page
+      .getByRole('dialog')
+      .getByRole('button', { name: /^Přiřadit dárci Jana/ })
+      .click();
+    await expect(page.getByRole('dialog', { name: 'Mezitím se to změnilo' })).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
   });

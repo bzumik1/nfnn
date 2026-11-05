@@ -1,7 +1,10 @@
 package cz.novanadeje.app.donations.interfaces.rest;
 
+import cz.novanadeje.app.donations.application.sync.AdminDonationsRows;
 import cz.novanadeje.app.donations.application.sync.AdminDonationsSyncSnapshot;
+import cz.novanadeje.app.donations.application.sync.AdminSyncRows.DonationRow;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentId;
+import cz.novanadeje.app.donations.domain.donation.Donation;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLink;
@@ -15,9 +18,12 @@ import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Component
@@ -39,28 +45,31 @@ class AdminDonationsSyncProjection {
             .thenComparing(record -> record.id().value().toString());
 
     private final JsonMapper json;
+    private final AdminDonationsRows rows;
 
-    AdminDonationsSyncProjection(JsonMapper json) {
+    AdminDonationsSyncProjection(JsonMapper json, AdminDonationsRows rows) {
         this.json = json;
+        this.rows = rows;
     }
 
     List<SyncChunk> chunksOf(AdminDonationsSyncSnapshot snapshot) {
         SortedMap<String, List<Object>> chunks = new TreeMap<>();
         Set<BankPaymentId> ofErasedDonors = paymentsOfErasedDonors(snapshot);
-        snapshot.payments().forEach(payment -> rowsOf(chunks, PAYMENTS + YearMonth.from(payment.bookedOn())).add(ofErasedDonors.contains(payment.id())
-                ? AdminSyncRows.PaymentRow.withoutPayerOf(payment) : AdminSyncRows.PaymentRow.from(payment)));
-        snapshot.donations().forEach(donation -> rowsOf(chunks, DONATIONS + YearMonth.from(donation.receivedOn()))
-                .add(AdminSyncRows.DonationRow.from(donation)));
+        Map<BankPaymentId, Donation> gifts = snapshot.donations().stream().filter(donation -> donation.bankPayment().isPresent())
+                .collect(Collectors.toMap(donation -> donation.bankPayment().orElseThrow(), Function.identity()));
+        snapshot.payments().forEach(payment -> rowsOf(chunks, PAYMENTS + YearMonth.from(payment.bookedOn()))
+                .add(rows.payment(payment, Optional.ofNullable(gifts.get(payment.id())), ofErasedDonors.contains(payment.id()))));
+        snapshot.donations().forEach(donation -> rowsOf(chunks, DONATIONS + YearMonth.from(donation.receivedOn())).add(DonationRow.from(donation)));
         snapshot.donorRecords().stream().sorted(OLDER_REGISTRATION_FIRST).forEach(record -> {
             YearMonth registered = SyncChunk.monthOf(record.registeredAt());
             rowsOf(chunks, DONOR_RECORDS + registered).add(AdminDonorRecordResponse.from(record));
-            linksOf(record).forEach(link -> rowsOf(chunks, LINKS + registered).add(AdminSyncRows.LinkRow.from(record, link)));
+            linksOf(record).forEach(link -> rowsOf(chunks, LINKS + registered).add(rows.link(record, link)));
         });
-        snapshot.symbolClaims().forEach(claim -> rowsOf(chunks, SYMBOL_CLAIMS).add(AdminSyncRows.SymbolClaimRow.from(claim)));
+        snapshot.symbolClaims().forEach(claim -> rowsOf(chunks, SYMBOL_CLAIMS).add(rows.symbolClaim(claim)));
         snapshot.receipts().forEach(receipt -> rowsOf(chunks, RECEIPTS + DonorSyncProjection.yearOf(receipt).getValue())
                 .add(AdminReceiptItemResponse.from(receipt)));
         snapshot.importState().ifPresent(state -> rowsOf(chunks, IMPORT_STATE).add(ImportStateResponse.from(state)));
-        snapshot.report().ifPresent(report -> rowsOf(chunks, REPORT_SETTINGS).add(AdminSyncRows.ReportSettingsRow.from(report)));
+        snapshot.report().ifPresent(report -> rowsOf(chunks, REPORT_SETTINGS).add(rows.reportSettings(report.settings(), report.changedAt(), report.sentReports())));
         return SyncChunk.allOf(chunks, json);
     }
 

@@ -767,6 +767,75 @@ describe('Given an administrator editing a published news article', () => {
     );
   });
 
+  describe('when someone else saved the article while they were editing it', () => {
+    const current = '7a0f3c9e5d1b2846';
+
+    beforeEach(async () => {
+      await loaded();
+      const title = element<HTMLInputElement>(fixture, '#news-title');
+      title.value = 'Zahrada pro všechny děti';
+      title.dispatchEvent(new Event('input'));
+      await settle(fixture);
+      await submit(fixture);
+      const request = http.expectOne(`${NEWS_URL}/${newsArticle().id}`);
+      expect(request.request.headers.get('If-Match')).toBe(`"${newsArticle().version}"`);
+      request.flush(
+        {
+          type: 'https://nfnn.cz/problems/content/changed-meanwhile',
+          title: 'Mezitím se to změnilo',
+          status: 409,
+          version: current,
+          current: { id: newsArticle().id, title: 'Zahrada pro děti a rodiče' },
+        },
+        { status: 409, statusText: 'Conflict' },
+      );
+      await settle(fixture);
+    });
+
+    it('then the sheet says their edits stay in the form, which still holds them', () => {
+      const sheet = fixture.nativeElement.querySelector('app-changed-meanwhile-dialog dialog');
+      expect(sheet?.querySelector('h2')?.textContent?.trim()).toBe('Mezitím se to změnilo');
+      expect(sheet?.textContent).toContain('zůstávají ve formuláři');
+      expect(element<HTMLInputElement>(fixture, '#news-title').value).toBe(
+        'Zahrada pro všechny děti',
+      );
+    });
+
+    it('and they keep their version, then it is saved over the other one with the version in the refusal', async () => {
+      button(fixture, 'Uložit moji verzi místo ní').click();
+      await settle(fixture);
+
+      const request = http.expectOne(`${NEWS_URL}/${newsArticle().id}`);
+      expect(request.request.method).toBe('PUT');
+      expect(request.request.headers.get('If-Match')).toBe(`"${current}"`);
+      expect(request.request.body.title).toBe('Zahrada pro všechny děti');
+      request.flush(
+        newsArticle({ title: 'Zahrada pro všechny děti', version: 'c3e8a1f05b9d7264' }),
+      );
+      await settle(fixture);
+
+      expect(fixture.nativeElement.querySelector('app-changed-meanwhile-dialog')).toBeNull();
+      expect(text(fixture, '[role="status"]:not(:empty)')).toBe(
+        'Změny jsme uložili a na webu už jsou.',
+      );
+    });
+
+    it('and they discard theirs, then the article is read again and the form shows the other version', async () => {
+      button(fixture, 'Zahodit moje úpravy a načíst ji').click();
+      await settle(fixture);
+
+      http
+        .expectOne(`${NEWS_URL}/${newsArticle().id}`)
+        .flush(newsArticle({ title: 'Zahrada pro děti a rodiče', version: current }));
+      await settle(fixture);
+
+      expect(fixture.nativeElement.querySelector('app-changed-meanwhile-dialog')).toBeNull();
+      expect(element<HTMLInputElement>(fixture, '#news-title').value).toBe(
+        'Zahrada pro děti a rodiče',
+      );
+    });
+  });
+
   it('when they take the article off the site, then it becomes a draft and the page says so', async () => {
     await loaded();
     button(fixture, 'Stáhnout z webu').click();

@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donations.application.bankaccount;
 
+import cz.novanadeje.app.donations.application.pairing.PairingLock;
 import cz.novanadeje.app.donations.domain.bank.BankPayment;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentId;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentRepository;
@@ -72,6 +73,7 @@ class DonorBankAccountsServiceTest {
     private final DonationRepository donations = mock(DonationRepository.class);
     private final BankPaymentRepository payments = mock(BankPaymentRepository.class);
     private final SymbolClaimRepository claims = mock(SymbolClaimRepository.class);
+    private final PairingLock lock = mock(PairingLock.class);
     private final DonorBankAccountsService service = service(ExcludedSenderAccounts.none());
 
     @Test
@@ -330,7 +332,7 @@ class DonorBankAccountsServiceTest {
 
     private DonorBankAccountsService service(ExcludedSenderAccounts excluded) {
         return new DonorBankAccountsService(donorRecords, donations, payments, claims,
-                new SymbolClaimOffers(payments, donorRecords, claims, excluded), excluded, Clock.fixed(NOW, ZoneOffset.UTC));
+                new SymbolClaimOffers(payments, donorRecords, claims, excluded), excluded, lock, Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
     private DonorRecord janaWithStandingOrder(SenderAccountLink... links) {

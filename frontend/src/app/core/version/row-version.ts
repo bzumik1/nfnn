@@ -1,0 +1,23 @@
+import { HttpHeaders } from '@angular/common/http';
+
+import { problemOf } from '../auth/api-problem';
+
+const CHANGED_MEANWHILE = '/changed-meanwhile';
+
+export function ifMatch(version: string): { headers: HttpHeaders } {
+  return { headers: new HttpHeaders({ 'If-Match': `"${version}"` }) };
+}
+
+export function isChangedMeanwhile(failure: unknown): boolean {
+  const problem = problemOf(failure);
+  return problem !== null && problem.status === 409 && problem.type.endsWith(CHANGED_MEANWHILE);
+}
+
+export function versionInRefusal(failure: unknown): string | null {
+  if (!isChangedMeanwhile(failure)) {
+    return null;
+  }
+  const body = (failure as { error: unknown }).error;
+  const version = (body as Record<string, unknown>)['version'];
+  return typeof version === 'string' && version !== '' ? version : null;
+}

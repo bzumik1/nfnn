@@ -19,6 +19,8 @@ export const RECEIPT_ID = '019a0000-0000-7000-8000-000000000017';
 export const REPLACING_DONOR_ID = '019a0000-0000-7000-8000-000000000018';
 export const ERASED_RECEIPT_ID = '019a0000-0000-7000-8000-000000000019';
 export const VERIFICATION_LINK = 'https://nfnn.cz/overit#1003188506188208640000126520415073310';
+export const STALE_VERSION = '0000000000000000';
+export const CURRENT_VERSION = '5e1c0a9f3b7d2486';
 export const PERSON_ID = '019a0000-0000-7000-8000-000000000007';
 export const SIGNED_PERSON_ID = '019a0000-0000-7000-8000-000000000008';
 export const PUSH_SUBSCRIPTION_ID = '019a0000-0000-7000-8000-000000000027';
@@ -37,6 +39,7 @@ export interface RecordedRequest {
   readonly accept: string | undefined;
   readonly contentType: string | undefined;
   readonly forwardedFor: string | undefined;
+  readonly ifMatch: string | undefined;
   readonly body: string;
 }
 
@@ -85,6 +88,7 @@ export class FakeBackend {
       accept: request.headers['accept'],
       contentType: request.headers['content-type'],
       forwardedFor: request.headers['x-forwarded-for'] as string | undefined,
+      ifMatch: request.headers['if-match'],
       body,
     };
     this.requests.push(recorded);
@@ -117,6 +121,21 @@ export class FakeBackend {
     }
     if (request.method !== 'GET' && token !== 'api-token-write') {
       return [403, problem(403, 'auth/forbidden', 'Přístup odepřen', 'Chybí oprávnění.')];
+    }
+    if (request.ifMatch === `"${STALE_VERSION}"`) {
+      return [
+        409,
+        {
+          ...problem(
+            409,
+            'donations/changed-meanwhile',
+            'Mezitím se to změnilo',
+            'Někdo jiný to mezitím změnil.',
+          ),
+          version: CURRENT_VERSION,
+          current: { id: PAYMENT_ID, version: CURRENT_VERSION },
+        },
+      ];
     }
     if (request.method === 'GET' && url.pathname === '/api/admin/donors/me/previous-sign-in') {
       return [200, { previousSignInAt: this.previousSignInAt }];

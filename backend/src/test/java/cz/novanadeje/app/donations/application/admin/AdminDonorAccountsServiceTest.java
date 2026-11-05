@@ -1,5 +1,8 @@
 package cz.novanadeje.app.donations.application.admin;
 
+import cz.novanadeje.app.shared.infrastructure.json.RowVersionsFixture;
+import cz.novanadeje.app.shared.application.version.ExpectedVersion;
+import cz.novanadeje.app.donations.application.sync.AdminDonationsRows;
 import cz.novanadeje.app.donations.application.bankaccount.DonorBankAccountsService;
 import cz.novanadeje.app.donations.application.overview.DonorDonationsService;
 import cz.novanadeje.app.donations.application.pairing.PairingLock;
@@ -87,7 +90,7 @@ class AdminDonorAccountsServiceTest {
     @BeforeEach
     void setUp() {
         service = new AdminDonorAccountsService(donorRecords, donations, receipts, claims, bankAccounts, donorDonations, lock, events,
-                Clock.fixed(NOW, ZoneOffset.UTC));
+                new AdminDonationsRows(RowVersionsFixture.canonical(), donations, donorRecords), Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
     @Test
@@ -105,7 +108,7 @@ class AdminDonorAccountsServiceTest {
         when(receipts.existsYearlyIssuedSince(any(), any(), any())).thenReturn(false);
         when(claims.findByDonor(PETR)).thenReturn(List.of(about, other));
 
-        service.remove(ADMIN, PETR, link.id());
+        service.remove(ADMIN, PETR, link.id(), ExpectedVersion.none());
 
         InOrder order = inOrder(lock, receipts, donations, claims, donorRecords, events);
         order.verify(lock).acquire();
@@ -136,7 +139,7 @@ class AdminDonorAccountsServiceTest {
         when(donations.findBySenderAccountLink(link.id())).thenReturn(List.of(receipted));
         when(receipts.findDonationsWithReceipt(anyCollection())).thenReturn(Set.of(receipted.id()));
 
-        assertThatThrownBy(() -> service.remove(ADMIN, PETR, link.id())).isInstanceOf(SenderAccountLinkHasReceipt.class);
+        assertThatThrownBy(() -> service.remove(ADMIN, PETR, link.id(), ExpectedVersion.none())).isInstanceOf(SenderAccountLinkHasReceipt.class);
 
         verify(donations, never()).delete(any());
         verify(claims, never()).delete(any());
@@ -150,7 +153,7 @@ class AdminDonorAccountsServiceTest {
     void should_refuse_when_removed_given_unknown_link() {
         when(donorRecords.findById(PETR)).thenReturn(Optional.of(record()));
 
-        assertThatThrownBy(() -> service.remove(ADMIN, PETR, SenderAccountLinkId.newId(NOW))).isInstanceOf(SenderAccountLinkNotFound.class);
+        assertThatThrownBy(() -> service.remove(ADMIN, PETR, SenderAccountLinkId.newId(NOW), ExpectedVersion.none())).isInstanceOf(SenderAccountLinkNotFound.class);
 
         verify(donations, never()).delete(any());
         verify(events, never()).publishEvent(any());
@@ -162,7 +165,7 @@ class AdminDonorAccountsServiceTest {
         when(donorRecords.findById(PETR)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.view(PETR)).isInstanceOf(DonorRecordNotFound.class);
-        assertThatThrownBy(() -> service.disconnect(ADMIN, PETR, SenderAccountLinkId.newId(NOW))).isInstanceOf(DonorRecordNotFound.class);
+        assertThatThrownBy(() -> service.disconnect(ADMIN, PETR, SenderAccountLinkId.newId(NOW), ExpectedVersion.none())).isInstanceOf(DonorRecordNotFound.class);
         verify(events, never()).publishEvent(any());
     }
 

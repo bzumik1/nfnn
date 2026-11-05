@@ -33,15 +33,17 @@ public class AdminSymbolClaimsStepDefinitions {
     private final ScenarioDonors scenarioDonors;
     private final SymbolClaimRepository claims;
     private final JdbcClient jdbc;
+    private final DonationRowVersions versions;
     private final Map<String, UUID> rememberedClaims = new HashMap<>();
 
     public AdminSymbolClaimsStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors scenarioDonors, SymbolClaimRepository claims,
-                                            JdbcClient jdbc) {
+                                            JdbcClient jdbc, DonationRowVersions versions) {
         this.api = api;
         this.sessions = sessions;
         this.scenarioDonors = scenarioDonors;
         this.claims = claims;
         this.jdbc = jdbc;
+        this.versions = versions;
     }
 
     @When("{string} asks for the symbol answers")
@@ -59,25 +61,27 @@ public class AdminSymbolClaimsStepDefinitions {
     @When("{string} reverses the symbol answer of {string} to {string}")
     public void reversesTheSymbolAnswerOf(String alias, String donorAlias, String symbol) {
         sessions.actAs(alias);
-        api.post(CLAIMS_PATH + "/" + claimOf(donorAlias, symbol) + "/reverse", Map.of());
+        UUID claim = claimOf(donorAlias, symbol);
+        api.post(CLAIMS_PATH + "/" + claim + "/reverse", Map.of(), ApiClient.ifMatch(versions.ofSymbolClaim(claim)));
     }
 
     @When("{string} deletes the symbol answer of {string} to {string}")
     public void deletesTheSymbolAnswerOf(String alias, String donorAlias, String symbol) {
         sessions.actAs(alias);
-        api.delete(CLAIMS_PATH + "/" + claimOf(donorAlias, symbol));
+        UUID claim = claimOf(donorAlias, symbol);
+        api.delete(CLAIMS_PATH + "/" + claim, ApiClient.ifMatch(versions.ofSymbolClaim(claim)));
     }
 
     @When("{string} reverses an unknown symbol answer")
     public void reversesAnUnknownSymbolAnswer(String alias) {
         sessions.actAs(alias);
-        api.post(CLAIMS_PATH + "/" + UuidV7.generate(Instant.now()) + "/reverse", Map.of());
+        api.post(CLAIMS_PATH + "/" + UuidV7.generate(Instant.now()) + "/reverse", Map.of(), ApiClient.ifMatch(DonationRowVersions.MATCHING_NOTHING));
     }
 
     @When("{string} deletes an unknown symbol answer")
     public void deletesAnUnknownSymbolAnswer(String alias) {
         sessions.actAs(alias);
-        api.delete(CLAIMS_PATH + "/" + UuidV7.generate(Instant.now()));
+        api.delete(CLAIMS_PATH + "/" + UuidV7.generate(Instant.now()), ApiClient.ifMatch(DonationRowVersions.MATCHING_NOTHING));
     }
 
     @Then("the symbol answers are:")

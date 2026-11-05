@@ -1,0 +1,54 @@
+<app-dialog
+  labelledBy="changed-meanwhile-title"
+  presentation="sheet"
+  (dismissed)="dismissed.emit()"
+>
+  <h2 id="changed-meanwhile-title" class="ui-dialog__title" i18n="@@admin.changedMeanwhile.title">
+    Mezitím se to změnilo
+  </h2>
+  @if (keepsDraft()) {
+    <p class="ui-dialog__lead" i18n="@@admin.changedMeanwhile.leadDraft">
+      Zatímco jste psali, uložil změny někdo jiný: jiný správce nebo připojená aplikace. Vaše úpravy
+      jsme neuložili a zůstávají ve formuláři.
+    </p>
+  } @else {
+    <p class="ui-dialog__lead" i18n="@@admin.changedMeanwhile.lead">
+      Mezitím to změnil někdo jiný: jiný správce, připojená aplikace nebo párování plateb z banky.
+      Vaši změnu jsme proto neprovedli. Načtěte aktuální stav a rozhodněte znovu.
+    </p>
+  }
+  <div class="changed-meanwhile-actions">
+    @if (keepsDraft()) {
+      <button
+        type="button"
+        class="ui-button ui-button--primary changed-meanwhile-overwrite"
+        autofocus
+        [disabled]="busy()"
+        (click)="overwriteChosen.emit()"
+        i18n="@@admin.changedMeanwhile.overwrite"
+      >
+        Uložit moji verzi místo ní
+      </button>
+      <button
+        type="button"
+        class="ui-button ui-button--large ui-button--danger-outline changed-meanwhile-reload"
+        [disabled]="busy()"
+        (click)="reloadChosen.emit()"
+        i18n="@@admin.changedMeanwhile.discard"
+      >
+        Zahodit moje úpravy a načíst ji
+      </button>
+    } @else {
+      <button
+        type="button"
+        class="ui-button ui-button--primary changed-meanwhile-reload"
+        autofocus
+        [disabled]="busy()"
+        (click)="reloadChosen.emit()"
+        i18n="@@admin.changedMeanwhile.reload"
+      >
+        Načíst aktuální stav
+      </button>
+    }
+  </div>
+</app-dialog>
