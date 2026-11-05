@@ -4,6 +4,7 @@ import { signal, WritableSignal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { CompactLayout } from '../../../core/layout/compact-layout';
+import { ExternalNavigation } from '../../../core/navigation/external-navigation';
 import { QrCode } from '../../../shared/ui/qr-code/qr-code';
 import { encodeText } from '../../../shared/ui/qr-code/qr-encoder';
 import { QrMatrix } from '../../../shared/ui/qr-code/qr-matrix';
@@ -373,6 +374,30 @@ describe('Given the payment panel on a phone or a tablet', () => {
     expect(await readText(downloads[0].blob as Blob)).toBe(QR_OF_500.spayd);
     expect(handoffStatus()).toBe(
       'Soubor platba.spayd je ve stažených souborech. Některé bankovní aplikace po jeho otevření nabídnou platbu. Neotevřela se vám banka? Zkopírujte údaje výše do bankovní aplikace, nebo pošlete QR jako obrázek a v bance zvolte platbu z obrázku.',
+    );
+  });
+
+  it('when the browser cannot share the file and the service worker answers the payment route, then the payment opens from the device, nothing downloads and a line says what to do if no bank opened', async () => {
+    sharesFiles = (file) => file.type !== 'application/x-shortpaymentdescriptor';
+    vi.stubGlobal('navigator', { ...navigator, serviceWorker: { controller: {} } });
+    const opened: string[] = [];
+    vi.spyOn(ExternalNavigation.prototype, 'assign').mockImplementation((url: string) => {
+      opened.push(url);
+    });
+    await openWithQr();
+
+    button('Otevřít v aplikaci banky').click();
+    await settle();
+    http
+      .expectOne((request) => request.url === '/platba.spayd' && request.method === 'HEAD')
+      .flush('', { headers: { 'Content-Type': 'application/x-shortpaymentdescriptor' } });
+    await settle();
+
+    expect(shared).toEqual([]);
+    expect(downloads).toEqual([]);
+    expect(opened).toEqual([`/platba.spayd?${new URLSearchParams({ data: QR_OF_500.spayd })}`]);
+    expect(handoffStatus()).toBe(
+      'Neotevřela se vám banka? Zkopírujte údaje výše do bankovní aplikace, nebo pošlete QR jako obrázek a v bance zvolte platbu z obrázku.',
     );
   });
 
