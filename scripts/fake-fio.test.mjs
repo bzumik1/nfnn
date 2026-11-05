@@ -22,7 +22,7 @@ test('Given movements on several days, when the statement of a period is built, 
     '2026-10-02',
     '2026-11-05',
   );
-  assert.equal(built.accountStatement.info.dateStart, '2026-10-02+0100');
+  assert.equal(built.accountStatement.info.dateStart, '2026-10-02+0200');
   assert.equal(built.accountStatement.info.dateEnd, '2026-11-05+0100');
   assert.equal(built.accountStatement.info.currency, 'CZK');
   const listed = built.accountStatement.transactionList.transaction;
@@ -55,9 +55,15 @@ test('Given a movement without a sender account, a name or a symbol, when the st
   }
 });
 
+test('Given a period in summer, when its statement is built, then its days carry the Prague summer offset as Fio writes them', () => {
+  const built = statement([movement({ date: '2026-07-15' })], '2026-07-01', '2026-07-31');
+  assert.equal(built.accountStatement.info.dateStart, '2026-07-01+0200');
+  assert.equal(built.accountStatement.transactionList.transaction[0].column0.value, '2026-07-15+0200');
+});
+
 test('Given an empty period, when its statement is built, then it names the period and lists no movement', () => {
   const built = statement([], '2026-08-07', '2026-11-05');
-  assert.equal(built.accountStatement.info.dateStart, '2026-08-07+0100');
+  assert.equal(built.accountStatement.info.dateStart, '2026-08-07+0200');
   assert.deepEqual(built.accountStatement.transactionList.transaction, []);
 });
 

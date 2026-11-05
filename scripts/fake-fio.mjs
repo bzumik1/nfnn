@@ -4,12 +4,15 @@ import { createServer } from 'node:http';
 import { createServer as createTlsServer } from 'node:https';
 import { pathToFileURL } from 'node:url';
 
-const PRAGUE_WINTER_OFFSET = '+0100';
 const PERIOD = /^\/v1\/rest\/periods\/([A-Za-z0-9_-]+)\/(\d{4}-\d{2}-\d{2})\/(\d{4}-\d{2}-\d{2})\/transactions\.json$/;
 const INCOMING_TRANSFER = 'Bezhotovostní příjem';
 
 const cell = (value, name, id) => (value === null || value === undefined ? null : { value, name, id });
-const day = (date) => `${date}${PRAGUE_WINTER_OFFSET}`;
+const PRAGUE_OFFSET = new Intl.DateTimeFormat('en', { timeZone: 'Europe/Prague', timeZoneName: 'longOffset' });
+const day = (date) => {
+  const offset = PRAGUE_OFFSET.formatToParts(new Date(`${date}T12:00:00Z`)).find((part) => part.type === 'timeZoneName').value;
+  return `${date}${offset.replace(/^GMT([+-])(\d{2}):(\d{2})$/, '$1$2$3')}`;
+};
 
 export function statement(movements, from, to) {
   const listed = movements

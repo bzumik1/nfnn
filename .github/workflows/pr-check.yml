@@ -23,6 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
+      contents: read
       pull-requests: read
     outputs:
       code: ${{ steps.files.outputs.code }}
@@ -60,9 +61,9 @@ jobs:
           if [ -n "$PULL_NUMBER" ]; then
             body=$(gh api "repos/$REPOSITORY/pulls/$PULL_NUMBER" --jq '.body // ""')
           else
-            body=$(gh api "repos/$REPOSITORY/commits/$SHA/pulls" --jq '.[0].body // ""')
+            body=$(gh api "repos/$REPOSITORY/commits/$SHA/pulls" --jq 'map(select(.merged_at != null and .base.ref == "main"))[0].body // ""')
           fi
-          lines=$(grep -iE '^[[:space:]]*vzhled' <<<"$body" | head -n 5 || true)
+          lines=$(tr -d '\r' <<<"$body" | grep -iE '^[[:space:]]*vzhled' | head -n 5 || true)
           if [ -n "$lines" ]; then
             echo "The description declares:"
             echo "$lines"

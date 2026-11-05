@@ -16,7 +16,7 @@ import {
 } from 'node:fs';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
-import { join, relative, resolve } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { deflateSync } from 'node:zlib';
 import { decodePng } from './png-pixels.mjs';
@@ -41,7 +41,7 @@ export function publicRoute(route) {
 }
 
 export function declaredAppearance(text) {
-  const lines = text.split(/\r?\n/);
+  const lines = text.replace(/\r/g, '').split('\n');
   const unchanged = lines.some((line) => UNCHANGED_LINE.test(line));
   const changes = lines.map((line) => CHANGES_LINE.exec(line)).filter(Boolean);
   if (unchanged && changes.length > 0) {
@@ -80,12 +80,31 @@ export function staleAcceptances(states, { results, removed }) {
   return states.filter((state) => !differing.has(shotState(`${state}-0.png`)));
 }
 
-export function undeclaredShots({ results, removed }, routes, items) {
+export function undeclaredShots({ results, removed }, routes, items, removedItems = items) {
   const stem = (file) => file.replace(/\.png$/, '');
-  return [...results.filter((result) => !result.passes).map((result) => result.file), ...removed]
-    .map((file) => ({ file, route: routes.get(stem(file)) ?? null }))
-    .filter(({ file, route }) => !items.some((item) => declares(item, file, route)))
-    .sort((left, right) => left.file.localeCompare(right.file));
+  const undeclared = (files, named) =>
+    files
+      .map((file) => ({ file, route: routes.get(stem(file)) ?? null }))
+      .filter(({ file, route }) => !named.some((item) => declares(item, file, route)));
+  return [
+    ...undeclared(results.filter((result) => !result.passes).map((result) => result.file), items),
+    ...undeclared(removed, removedItems),
+  ].sort((left, right) => left.file.localeCompare(right.file));
+}
+
+export const PLAYWRIGHT_PACKAGES = ['@playwright/test', 'playwright', 'playwright-core'];
+
+export function useHeadPlaywright(headModules, baseModules) {
+  for (const name of PLAYWRIGHT_PACKAGES) {
+    const head = join(headModules, name);
+    if (!existsSync(head)) {
+      continue;
+    }
+    const base = join(baseModules, name);
+    rmSync(base, { recursive: true, force: true });
+    mkdirSync(dirname(base), { recursive: true });
+    symlinkSync(head, base, 'dir');
+  }
 }
 
 export function shotKind(file) {
@@ -413,6 +432,8 @@ function prepareBase(root, base, tree, { headSpec, patch }) {
     symlinkSync(join(root, 'frontend/node_modules'), join(tree, 'frontend/node_modules'), 'dir');
   } else if (run('npm', ['ci', '--no-audit', '--no-fund'], { cwd: join(tree, 'frontend') }) !== 0) {
     throw new Error(`npm ci failed in ${tree}`);
+  } else if (existsSync(join(root, 'frontend/node_modules'))) {
+    useHeadPlaywright(join(root, 'frontend/node_modules'), join(tree, 'frontend/node_modules'));
   }
   if (headSpec) {
     cpSync(join(root, 'frontend/e2e/baseline'), join(tree, 'frontend/e2e/baseline'), {
@@ -631,7 +652,7 @@ async function main() {
     const judged = Boolean(given.declared || given.accepted);
     const accepted = given.accepted ? acceptedStates(readFileSync(given.accepted, 'utf8')) : [];
     const items = [...(declaration?.items ?? []), ...accepted];
-    const undeclared = judged ? undeclaredShots(compared, routes, items) : [];
+    const undeclared = judged ? undeclaredShots(compared, routes, items, declaration?.items ?? []) : [];
     const failedRuns = [
       { side: 'base', status: baseRun.status },
       { side: 'head', status: headRun.status },

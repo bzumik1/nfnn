@@ -176,6 +176,7 @@ export function mcpMessages(contentType, text) {
 }
 
 export const BANK_PHASES = ['deployed', 'candidate', 'rollback', 'restored'];
+export const RECEIPT_PHASES = ['deployed', 'rollback'];
 const DONOR_ACCOUNT = { account: '2700190000', bankCode: '0100', name: 'Zkušební Dárce' };
 const STRANGER_ACCOUNT = { account: '1900280006', bankCode: '0300', name: 'Neznámý Plátce' };
 
@@ -199,8 +200,9 @@ export function phaseMovements(phase, symbol, date) {
 }
 
 export function pragueDay(instant, daysBack) {
-  const shifted = new Date(instant.getTime() - daysBack * 86_400_000);
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Prague', year: 'numeric', month: '2-digit', day: '2-digit' }).format(shifted);
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Prague', year: 'numeric', month: '2-digit', day: '2-digit' }).format(instant);
+  const [year, month, day] = today.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day - daysBack)).toISOString().slice(0, 10);
 }
 
 export function bankProblems(planned, donations, unpaired) {
@@ -848,7 +850,16 @@ class Journey {
     }
   }
 
+  async bankRequests() {
+    const answer = await fetch(`${this.fio}/requests`, { signal: AbortSignal.timeout(10_000) });
+    if (!answer.ok) {
+      fail(`the fake Fio bank did not say what it was asked (${answer.status})`);
+    }
+    return answer.json();
+  }
+
   async bank(phase) {
+    const askedBefore = await this.bankRequests();
     const donor = await this.donorSession();
     const account = await this.expect(200, 'GET', '/api/donors/me', { token: donor }, 'the donor\'s account');
     const { gifts, stranger } = phaseMovements(phase, account.variableSymbol, pragueDay(new Date(), 1));
@@ -888,24 +899,29 @@ class Journey {
     await this.bankSettled(donor, admin, `the gifts after the ${stranger.amountMinor / 100} Kč was paired and unpaired by hand`);
     this.say(`The administrator paired the ${stranger.amountMinor / 100} Kč to the donor by hand and unpaired it again`);
 
-    if (phase === 'deployed') {
+    if (RECEIPT_PHASES.includes(phase)) {
+      const earlier = this.state.receipts.map((entry) => entry.number);
       const donations = await this.expect(200, 'GET', '/api/donations/me', { token: donor }, 'the donor\'s gifts');
       const imported = donations.items.find((item) => item.amountMinor === gifts[0].amountMinor);
       const receipt = await this.expect(200, 'POST', `/api/admin/donations/donors/${this.state.donor.id}/receipts`, {
         token: admin,
         json: { donationId: imported.id },
-      }, 'the administrator issuing a receipt for the imported gift');
-      this.checkFrozen(receipt, 'the receipt of the imported gift');
-      const entry = this.remember(receipt, { phase: 'deployed', issuedBy: 'admin' });
-      this.say(`The administrator issued ${entry.number} for the imported gift of ${gifts[0].amountMinor / 100} Kč`);
+      }, `the administrator issuing a receipt for the gift imported under the ${phase} images`);
+      this.checkFrozen(receipt, `the receipt of the gift imported under the ${phase} images`);
+      const entry = this.remember(receipt, { phase, issuedBy: 'admin' });
+      const notAbove = earlier.filter((number) => receiptSerial(number) >= receiptSerial(entry.number));
+      if (notAbove.length > 0) {
+        fail(`the receipt issued under the ${phase} images took ${entry.number}, not above ${notAbove.join(', ')}`);
+      }
+      this.say(`The administrator issued ${entry.number} for the gift of ${gifts[0].amountMinor / 100} Kč imported under the ${phase} images`);
     }
 
-    const asked = await (await fetch(`${this.fio}/requests`, { signal: AbortSignal.timeout(10_000) })).json();
-    if (asked.refused > 0) {
-      fail(`the backend asked the fake Fio bank ${asked.refused} times with a token it does not know`);
+    const asked = await this.bankRequests();
+    if (asked.refused > askedBefore.refused) {
+      fail(`under the ${phase} images the backend asked the fake Fio bank ${asked.refused - askedBefore.refused} times with a token it does not know`);
     }
-    if (asked.periods === 0) {
-      fail('the backend never asked the fake Fio bank for a period');
+    if (asked.periods <= askedBefore.periods) {
+      fail(`under the ${phase} images the backend never asked the fake Fio bank for a period`);
     }
   }
 

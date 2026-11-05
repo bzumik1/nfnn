@@ -65,7 +65,7 @@ jobs:
   report:
     name: Hlášení
     needs: [public-screens, release]
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:

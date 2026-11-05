@@ -1,5 +1,5 @@
 import { strict as assert } from 'node:assert';
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
@@ -24,6 +24,7 @@ import {
   shotState,
   staleAcceptances,
   undeclaredShots,
+  useHeadPlaywright,
   withinTolerance,
 } from './compare-screens.mjs';
 import { decodePng } from './png-pixels.mjs';
@@ -291,6 +292,15 @@ describe('Given the description of a pull request', () => {
     assert.throws(() => declaredAppearance('Vzhled se mění: '), /names no route or state/);
   });
 
+  it('when the description was written in the web form with CRLF line ends, then every line still counts', () => {
+    assert.deepEqual(declaredAppearance('Vzhled se mění: /sprava/platby\r'), { kind: 'changes', items: ['/sprava/platby'] });
+    assert.deepEqual(declaredAppearance('Vzhled se mění: /sprava/platby\r\nVzhled se mění: sign-in-dialog\r'), {
+      kind: 'changes',
+      items: ['/sprava/platby', 'sign-in-dialog'],
+    });
+    assert.deepEqual(declaredAppearance('Vzhled: beze změny\r'), { kind: 'unchanged', items: [] });
+  });
+
   it('when it both keeps and changes the look, then it is refused', () => {
     assert.throws(
       () => declaredAppearance('Vzhled: beze změny\nVzhled se mění: /'),
@@ -333,6 +343,12 @@ describe('Given shots with the routes they were taken at', () => {
       { file: 'old-state-390.png', route: null },
     ]);
     assert.deepEqual(undeclaredShots({ results: [], removed: ['old-state-390.png'] }, routes, ['old-state']), []);
+  });
+
+  it('when the accepted differences name a state whose shot was removed, then the removal is still undeclared', () => {
+    const compared = { results: [differing('home-390.png')], removed: ['news-390.png'] };
+    assert.deepEqual(undeclaredShots(compared, routes, ['home', 'news'], []), [{ file: 'news-390.png', route: null }]);
+    assert.deepEqual(undeclaredShots(compared, routes, ['home', 'news'], ['news']), []);
   });
 
   it('when a differing shot has no recorded route, then only its state declares it', () => {
@@ -452,5 +468,26 @@ describe('Given accepted states and the shots that differ', () => {
       stale: ['news'],
     });
     assert.match(markdown, /už neliší.*\n\n- news/s);
+  });
+});
+
+describe('Given a base checkout whose lock file installed another Playwright than the head', () => {
+  it('when the base is prepared, then it shoots with the head\'s Playwright, so the head\'s installed browser serves both sides', () => {
+    const folder = mkdtempSync(join(tmpdir(), 'nfnn-playwright-'));
+    const headModules = join(folder, 'head/node_modules');
+    const baseModules = join(folder, 'base/node_modules');
+    for (const [modules, version] of [[headModules, '1.65.0'], [baseModules, '1.64.1']]) {
+      for (const name of ['@playwright/test', 'playwright', 'playwright-core', '@angular/core']) {
+        mkdirSync(join(modules, name), { recursive: true });
+        writeFileSync(join(modules, name, 'package.json'), JSON.stringify({ name, version }));
+      }
+    }
+    useHeadPlaywright(headModules, baseModules);
+    const version = (name) => JSON.parse(readFileSync(join(baseModules, name, 'package.json'), 'utf8')).version;
+    assert.equal(version('@playwright/test'), '1.65.0');
+    assert.equal(version('playwright'), '1.65.0');
+    assert.equal(version('playwright-core'), '1.65.0');
+    assert.equal(realpathSync(join(baseModules, 'playwright-core')), realpathSync(join(headModules, 'playwright-core')));
+    assert.equal(version('@angular/core'), '1.64.1');
   });
 });

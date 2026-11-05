@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import { inflateSync } from 'node:zlib';
 import {
   BANK_PHASES,
+  RECEIPT_PHASES,
   backupKeyWords,
   bankProblems,
   base32Decode,
@@ -82,6 +83,11 @@ test('Given connector answers as JSON or as an event stream, when the journey re
   assert.deepEqual(mcpMessages('application/json', ''), []);
 });
 
+test('Given the bank phases, when the journey decides where the administrator issues a receipt, then it is under the older images before the upgrade and again on the candidate\'s schema', () => {
+  assert.deepEqual(RECEIPT_PHASES, ['deployed', 'rollback']);
+  assert.ok(RECEIPT_PHASES.every((phase) => BANK_PHASES.includes(phase)));
+});
+
 test('Given each bank phase, when the journey plans its movements, then the first phase pays with the symbol only and every later one also from the learned account, with an unknown payer each time', () => {
   const planned = BANK_PHASES.map((phase) => phaseMovements(phase, '4821937560', '2026-11-04'));
   assert.deepEqual(
@@ -109,6 +115,8 @@ test('Given instants around midnight in Prague, when the journey names the booki
   assert.equal(pragueDay(new Date('2026-11-04T22:30:00Z'), 0), '2026-11-04');
   assert.equal(pragueDay(new Date('2026-11-04T23:30:00Z'), 1), '2026-11-04');
   assert.equal(pragueDay(new Date('2026-07-01T21:59:00Z'), 1), '2026-06-30');
+  assert.equal(pragueDay(new Date('2026-03-29T22:30:00Z'), 1), '2026-03-29');
+  assert.equal(pragueDay(new Date('2026-10-25T23:30:00Z'), 1), '2026-10-25');
 });
 
 test('Given the planned movements and what the site shows, when the journey checks the bank, then it names every gift missing, doubled or paired otherwise and every unknown payment paired to the donor or not listed as unpaired', () => {
