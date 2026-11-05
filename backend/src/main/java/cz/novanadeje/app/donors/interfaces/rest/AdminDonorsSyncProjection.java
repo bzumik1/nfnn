@@ -22,7 +22,7 @@ class AdminDonorsSyncProjection {
     static final String AUDIT = "audit:";
 
     private static final Comparator<DonorAccountView> OLDER_REGISTRATION_FIRST = Comparator.comparing((DonorAccountView account) -> account.donor().registeredAt())
-            .thenComparing(account -> account.donor().id().value());
+            .thenComparing(account -> account.donor().id().value().toString());
 
     private final JsonMapper json;
 

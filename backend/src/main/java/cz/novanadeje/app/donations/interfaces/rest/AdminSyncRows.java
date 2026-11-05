@@ -40,6 +40,12 @@ final class AdminSyncRows {
                     listed.variableSymbol(), listed.counterpartyAccount(), listed.counterpartyName(), listed.messageForRecipient(), listed.importedAt(),
                     listed.unpairedByAdminAt(), listed.accountVerification());
         }
+
+        static PaymentRow withoutPayerOf(BankPayment payment) {
+            PaymentRow listed = from(payment);
+            return new PaymentRow(listed.id(), listed.bankTransactionId(), listed.bookedOn(), listed.amountMinor(), listed.currency(),
+                    listed.variableSymbol(), null, null, null, listed.importedAt(), listed.unpairedByAdminAt(), listed.accountVerification());
+        }
     }
 
     record DonationRow(UUID id, UUID donorId, UUID paymentId, LocalDate receivedAt, long amountMinor, Currency currency, DonationStatus status,

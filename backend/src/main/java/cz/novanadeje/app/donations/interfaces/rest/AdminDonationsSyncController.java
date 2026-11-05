@@ -17,9 +17,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/admin/donations/sync")
@@ -56,11 +53,9 @@ class AdminDonationsSyncController {
     ) {
         rateLimiter.check(jwt.getSubject());
         AdminDonationsSyncSnapshot snapshot = sync.snapshotFor(DonorReference.of(jwt.getSubject()));
-        Map<String, SyncChunk> chunks = projection.chunksOf(snapshot).stream().collect(Collectors.toMap(SyncChunk::id, Function.identity()));
-        List<String> asked = ids.stream().distinct().toList();
+        SyncChunk.Asked asked = SyncChunk.asked(projection.chunksOf(snapshot), ids);
         return notStored(new AdminDonationsSyncChunksResponse(snapshot.subject().value(), snapshot.administrator(),
-                AdminDonationsSyncSummaryResponse.from(snapshot), asked.stream().filter(chunks::containsKey).map(chunks::get).toList(),
-                asked.stream().filter(id -> !chunks.containsKey(id)).toList()));
+                AdminDonationsSyncSummaryResponse.from(snapshot), asked.chunks(), asked.missing()));
     }
 
     private static <T> ResponseEntity<T> notStored(T body) {
