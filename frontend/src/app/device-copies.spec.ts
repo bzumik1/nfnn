@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import type { DeviceAccount } from './core/auth/session-device';
 import { DeviceVault } from './core/device/store/device-vault';
-import { DonorCopyDownload } from './features/donations/device-copy/donor-copy-download';
+import { DonorCopySync } from './features/donations/device-copy/donor-copy-sync';
 import { DeviceCopies } from './device-copies';
 
 const JANA: DeviceAccount = { email: 'jana@example.cz', userHandle: 'AZDDonsefME' };
@@ -28,7 +28,7 @@ describe('Given the device copies of the app, loaded only when a session first n
     TestBed.configureTestingModule({
       providers: [
         { provide: DeviceVault, useValue: vault },
-        { provide: DonorCopyDownload, useFactory: () => ({ started: ++downloads }) },
+        { provide: DonorCopySync, useFactory: () => ({ started: ++downloads }) },
       ],
     });
     copies = TestBed.inject(DeviceCopies);
@@ -50,7 +50,7 @@ describe('Given the device copies of the app, loaded only when a session first n
         providers: [
           { provide: DeviceVault, useValue: vault },
           {
-            provide: DonorCopyDownload,
+            provide: DonorCopySync,
             useFactory: () => {
               throw new TypeError('Failed to fetch dynamically imported module');
             },
