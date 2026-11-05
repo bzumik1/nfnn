@@ -660,6 +660,13 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
 
     const dialog = page.getByRole('dialog');
+    await dialog.getByRole('button', { name: 'Cizí počítač?' }).click();
+    await expect(
+      dialog.getByRole('checkbox', { name: 'Cizí počítač, nic neukládat' }),
+    ).toBeFocused();
+    expect(await violations(page)).toEqual([]);
+    await dialog.getByRole('button', { name: 'Zpět', exact: true }).click();
+
     await dialog.getByRole('button', { name: 'Registrace' }).click();
     await dialog.getByRole('radio', { name: 'Firma' }).click();
 

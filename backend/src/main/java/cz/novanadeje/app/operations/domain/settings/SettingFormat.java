@@ -78,6 +78,12 @@ public enum SettingFormat {
         Optional<SettingProblem> problemWith(String value) {
             return wholeNumberBetween(value, 2000, 2100) ? Optional.empty() : Optional.of(SettingProblem.INVALID_YEAR);
         }
+    },
+    DAYS {
+        @Override
+        Optional<SettingProblem> problemWith(String value) {
+            return wholeNumberBetween(value, 1, 30) ? Optional.empty() : Optional.of(SettingProblem.INVALID_DAYS);
+        }
     };
 
     private static final Set<String> WEB_SCHEMES = Set.of("http", "https");

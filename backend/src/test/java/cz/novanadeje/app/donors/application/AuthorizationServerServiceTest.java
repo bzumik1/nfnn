@@ -93,7 +93,7 @@ class AuthorizationServerServiceTest {
     @BeforeEach
     void setUp() {
         service = new AuthorizationServerService(clients, codes, refreshTokens, donors, accessTokens, verifier, freshSecondFactor,
-                new OAuthProperties(ISSUER, "/pripojeni", Duration.ofMinutes(5), MCP, API), new DonorSessionProperties(REFRESH_TTL),
+                new OAuthProperties(ISSUER, "/pripojeni", Duration.ofMinutes(5), MCP, API), new DonorSessionProperties(REFRESH_TTL, null),
                 Clock.fixed(NOW, ZoneOffset.UTC), signOuts);
     }
 

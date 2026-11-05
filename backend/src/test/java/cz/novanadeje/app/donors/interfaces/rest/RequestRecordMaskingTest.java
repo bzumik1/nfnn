@@ -34,13 +34,13 @@ class RequestRecordMaskingTest {
     @Test
     @DisplayName("Given a verification confirmation, when it is printed, then the token is masked")
     void should_mask_token_when_printed_given_verification_confirmation() {
-        assertThat(new EmailVerificationConfirmation(TOKEN).toString()).isEqualTo("EmailVerificationConfirmation[token=***]");
+        assertThat(new EmailVerificationConfirmation(TOKEN, null).toString()).isEqualTo("EmailVerificationConfirmation[token=***, session=null]");
     }
 
     @Test
     @DisplayName("Given a login request, when it is printed, then the address and the password are masked")
     void should_mask_email_and_password_when_printed_given_login_request() {
-        assertThat(new LoginRequest("jana@example.cz", PASSWORD).toString()).isEqualTo("LoginRequest[email=***, password=***]");
+        assertThat(new LoginRequest("jana@example.cz", PASSWORD, null).toString()).isEqualTo("LoginRequest[email=***, password=***, session=null]");
     }
 
     @Test

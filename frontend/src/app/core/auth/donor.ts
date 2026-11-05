@@ -1,3 +1,4 @@
+import { SessionKind } from './session-jar';
 import { ConfirmationReturn } from './confirmation-return';
 
 export const PASSWORD_MIN_LENGTH = 12;
@@ -158,6 +159,7 @@ export interface AuthResponse {
   user: Donor;
   accessToken: string;
   accessTokenExpiresAt: string;
+  session?: SessionKind;
 }
 
 export interface PasskeyCredentialDescriptor {
