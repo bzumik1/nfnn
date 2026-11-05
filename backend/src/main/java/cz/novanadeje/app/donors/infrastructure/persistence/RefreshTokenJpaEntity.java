@@ -50,6 +50,12 @@ class RefreshTokenJpaEntity {
     @Column(name = "revoked_at")
     private Instant revokedAt;
 
+    @Column(name = "successor_id")
+    private UUID successorId;
+
+    @Column(name = "superseded_at")
+    private Instant supersededAt;
+
     protected RefreshTokenJpaEntity() {
     }
 
@@ -66,12 +72,14 @@ class RefreshTokenJpaEntity {
         entity.grantedAt = token.grantedAt();
         entity.usedAt = token.usedAt().orElse(null);
         entity.revokedAt = token.revokedAt().orElse(null);
+        entity.successorId = token.successorId().orElse(null);
+        entity.supersededAt = token.supersededAt().orElse(null);
         return entity;
     }
 
     RefreshToken toDomain() {
         Set<OAuthScope> scopes = scope == null ? Set.of() : OAuthScope.parse(scope);
         return RefreshToken.reconstitute(id, new DonorId(donorId), secretHash, issuedAt, expiresAt, secondFactorVerified,
-                clientId == null ? null : new ClientId(clientId), scopes, grantedAt, usedAt, revokedAt);
+                clientId == null ? null : new ClientId(clientId), scopes, grantedAt, usedAt, revokedAt, successorId, supersededAt);
     }
 }

@@ -130,6 +130,23 @@ describe('Given the auth interceptor', () => {
     expect(store.signedIn()).toBe(false);
   });
 
+  it('when the refresh fails for a server error, then the failure reaches the caller and the donor stays signed in', () => {
+    signIn('token-1');
+    let failure: unknown;
+    client.get('/api/donors/me').subscribe({ error: (reason: unknown) => (failure = reason) });
+
+    http
+      .expectOne('/api/donors/me')
+      .flush(problem('auth/expired-token'), { status: 401, statusText: 'Unauthorized' });
+    http
+      .expectOne('/api/donors/auth/refresh')
+      .flush(null, { status: 503, statusText: 'Service Unavailable' });
+
+    expect((failure as HttpErrorResponse).status).toBe(503);
+    expect(store.signedIn()).toBe(true);
+    expect(store.currentAccessToken()).toBe('token-1');
+  });
+
   it('when a 401 is not about an expired token, then it passes through without a refresh', () => {
     signIn('token-1');
     let failure: unknown;
