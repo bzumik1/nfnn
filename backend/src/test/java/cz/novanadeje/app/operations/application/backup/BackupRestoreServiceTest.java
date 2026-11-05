@@ -163,6 +163,21 @@ class BackupRestoreServiceTest {
     }
 
     @Test
+    @DisplayName("Given a finished restore with revocations but no table count, when the backend starts, then the audit keeps the text without counts that the history can read")
+    void should_audit_without_the_revocations_when_started_given_no_table_count() {
+        BackupRun revoked = new BackupRun(RunOutcome.OK, NOW.minusSeconds(60), NOW.minusSeconds(30), Optional.of(FILE), Optional.of(1590L), Optional.empty(),
+                Optional.of(REQUEST), Optional.of(ADMIN), Optional.empty(), Optional.of(new RestoreRevocations(2, 3)));
+        when(store.lastRestore()).thenReturn(Optional.of(revoked));
+        when(records.recordOnce(REQUEST, NOW)).thenReturn(true);
+
+        service.recordFinishedRestore();
+
+        ArgumentCaptor<AdminActionPerformed> audit = ArgumentCaptor.forClass(AdminActionPerformed.class);
+        verify(events).publishEvent(audit.capture());
+        assertThat(audit.getValue().details()).isEqualTo("Databáze obnovena ze zálohy " + FILE + " (požadavek " + REQUEST + ")");
+    }
+
+    @Test
     @DisplayName("Given a failed restore an administrator asked for, when the backend starts, then the failure is audited with its error")
     void should_audit_failure_when_started_given_a_failed_restore() {
         when(store.lastRestore()).thenReturn(Optional.of(restore(RunOutcome.FAILED, Optional.of(ADMIN), Optional.of("pg_restore: error: x"))));
@@ -189,6 +204,6 @@ class BackupRestoreServiceTest {
 
     private static BackupRun restore(RunOutcome outcome, Optional<UUID> admin, Optional<String> error) {
         return new BackupRun(outcome, NOW.minusSeconds(60), NOW.minusSeconds(30), Optional.of(FILE), Optional.of(1590L),
-                outcome == RunOutcome.OK ? Optional.of(37) : Optional.empty(), Optional.of(REQUEST), admin, error);
+                outcome == RunOutcome.OK ? Optional.of(37) : Optional.empty(), Optional.of(REQUEST), admin, error, Optional.empty());
     }
 }

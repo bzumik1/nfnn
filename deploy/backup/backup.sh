@@ -287,7 +287,9 @@ revoke_restored_credentials() {
 
 counted() {
   case "$1" in
-    ''|*[!0-9]*) return 1 ;;
+    ''|*[!0-9]*)
+      echo "the staging copy did not report how many sessions and one-time secrets it revoked" >> "$2"
+      return 1 ;;
   esac
   return 0
 }
@@ -387,7 +389,7 @@ restore_dump() {
       if release_liquibase_lock "$STAGING_DATABASE" "$STATUS/restore.err" \
           && r_revoked=$(revoke_restored_credentials "$STAGING_DATABASE" "$STATUS/restore.err") \
           && r_sessions=${r_revoked%% *} && r_secrets=${r_revoked##* } \
-          && counted "$r_sessions" && counted "$r_secrets" \
+          && counted "$r_sessions" "$STATUS/restore.err" && counted "$r_secrets" "$STATUS/restore.err" \
           && hand_to_app_role "$STAGING_DATABASE" "$STATUS/restore.err" \
           && swap_in_staging; then
         write_status restore "outcome=ok" "started_at=$r_started" "finished_at=$(now_utc)" "file=$r_file" "size=$(file_size "$r_dump")" "tables=$r_tables" "sessions_ended=$r_sessions" "one_time_secrets_spent=$r_secrets" "request=$r_request" "admin=$r_admin"

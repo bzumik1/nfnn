@@ -16,10 +16,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 final class StatusFiles {
 
     private static final Logger log = LoggerFactory.getLogger(StatusFiles.class);
+    private static final Pattern COUNT = Pattern.compile("\\d{1,9}");
 
     private StatusFiles() {
     }
@@ -61,9 +63,13 @@ final class StatusFiles {
     }
 
     private static Optional<RestoreRevocations> revocations(Map<String, String> values) {
-        Optional<Integer> sessions = optional(values, "sessions_ended").map(Integer::parseInt);
-        Optional<Integer> oneTimeSecrets = optional(values, "one_time_secrets_spent").map(Integer::parseInt);
+        Optional<Integer> sessions = count(values, "sessions_ended");
+        Optional<Integer> oneTimeSecrets = count(values, "one_time_secrets_spent");
         return sessions.flatMap(ended -> oneTimeSecrets.map(spent -> new RestoreRevocations(ended, spent)));
+    }
+
+    private static Optional<Integer> count(Map<String, String> values, String key) {
+        return optional(values, key).filter(value -> COUNT.matcher(value).matches()).map(Integer::parseInt);
     }
 
     private static String required(Map<String, String> values, String key) {

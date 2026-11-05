@@ -22,11 +22,6 @@ public record BackupRun(RunOutcome outcome, Instant startedAt, Instant finishedA
         Objects.requireNonNull(revocations, "revocations");
     }
 
-    public BackupRun(RunOutcome outcome, Instant startedAt, Instant finishedAt, Optional<String> fileName, Optional<Long> sizeBytes,
-                     Optional<Integer> tables, Optional<String> requestId, Optional<UUID> requestedBy, Optional<String> error) {
-        this(outcome, startedAt, finishedAt, fileName, sizeBytes, tables, requestId, requestedBy, error, Optional.empty());
-    }
-
     public boolean succeeded() {
         return outcome == RunOutcome.OK;
     }

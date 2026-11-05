@@ -27,7 +27,7 @@ class StatusFilesTest {
                 """);
 
         assertThat(run).contains(new BackupRun(RunOutcome.OK, Instant.parse("2026-10-23T04:36:41Z"), Instant.parse("2026-10-23T04:36:43Z"),
-                Optional.of("nfnn-2026-10-23_0636-rucni.dump.age"), Optional.of(1590L), Optional.empty(), Optional.of("req-1"), Optional.empty(), Optional.empty()));
+                Optional.of("nfnn-2026-10-23_0636-rucni.dump.age"), Optional.of(1590L), Optional.empty(), Optional.of("req-1"), Optional.empty(), Optional.empty(), Optional.empty()));
     }
 
     @Test
@@ -88,11 +88,15 @@ class StatusFilesTest {
     }
 
     @Test
-    @DisplayName("Given the status file of a backup container from before the restore counted what it revoked, when parsed, then no revocations are read")
-    void should_read_no_revocations_when_parsed_given_an_older_backup_container() {
-        Optional<BackupRun> run = StatusFiles.parse("outcome=ok\nstarted_at=2026-11-05T17:20:12Z\nfinished_at=2026-11-05T17:20:13Z\ntables=58\nsessions_ended=2\n");
+    @DisplayName("Given a restore status file with only one of the counts or a count that is no number, when parsed, then the restore is read without revocations")
+    void should_read_no_revocations_when_parsed_given_a_missing_or_unreadable_count() {
+        String restored = "outcome=ok\nstarted_at=2026-11-05T17:20:12Z\nfinished_at=2026-11-05T17:20:13Z\ntables=58\n";
 
-        assertThat(run).hasValueSatisfying(parsed -> assertThat(parsed.revocations()).isEmpty());
+        assertThat(StatusFiles.parse(restored + "sessions_ended=2\n")).hasValueSatisfying(parsed -> assertThat(parsed.revocations()).isEmpty());
+        assertThat(StatusFiles.parse(restored + "sessions_ended=2\none_time_secrets_spent=99999999999\n"))
+                .hasValueSatisfying(parsed -> assertThat(parsed.revocations()).isEmpty());
+        assertThat(StatusFiles.parse(restored + "sessions_ended=-1\none_time_secrets_spent=3\n"))
+                .hasValueSatisfying(parsed -> assertThat(parsed.revocations()).isEmpty());
     }
 
     @Test

@@ -1,4 +1,4 @@
-create or replace function pg_temp.end_sessions() returns bigint language plpgsql as $$
+create or replace function pg_temp.end_sessions() returns bigint language plpgsql set search_path = pg_catalog as $$
 declare
   ended bigint := 0;
 begin
@@ -17,11 +17,14 @@ begin
   if to_regclass('public.donor_device') is not null then
     update public.donor_device set ended_at = now(), end_reason = 'EXPIRED' where ended_at is null;
   end if;
+  if to_regclass('public.operations_push_subscription') is not null then
+    delete from public.operations_push_subscription;
+  end if;
   return ended;
 end
 $$;
 
-create or replace function pg_temp.spend_one_time_secrets() returns bigint language plpgsql as $$
+create or replace function pg_temp.spend_one_time_secrets() returns bigint language plpgsql set search_path = pg_catalog as $$
 declare
   one_time_table text;
   spent bigint;
@@ -31,7 +34,6 @@ begin
       'donor_password_reset_token',
       'donor_email_verification_token',
       'donor_second_factor_challenge',
-      'donor_second_factor_recovery',
       'donor_passkey_challenge',
       'oauth_authorization_code'] loop
     if to_regclass('public.' || one_time_table) is not null then
