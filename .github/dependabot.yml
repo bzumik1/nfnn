@@ -37,6 +37,8 @@ updates:
     ignore:
       - dependency-name: typescript
         versions: [">=6.1"]
+      - dependency-name: "@types/node"
+        versions: [">=25"]
     groups:
       mcp-sdk:
         patterns:
