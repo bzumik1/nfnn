@@ -25,6 +25,7 @@ public final class CaseRows {
     private static final long ID_HIGH = 0x0190a000_0000_7000L;
     private static final long ID_LOW = 0x8000_0000_0000_0000L;
     private static final int ADMINISTRATOR = 0x999;
+    private static final String ADMINISTRATOR_ALIAS = "administrator";
 
     private final String now;
     private final List<Donor> donors = new ArrayList<>();
@@ -78,6 +79,7 @@ public final class CaseRows {
     public JsonNode aliased(JsonNode answer) {
         Map<String, String> aliases = new LinkedHashMap<>();
         ids.forEach((alias, id) -> aliases.put(id.toString(), alias));
+        aliases.put(administratorId().toString(), ADMINISTRATOR_ALIAS);
         return aliased(answer, aliases);
     }
 
@@ -100,6 +102,16 @@ public final class CaseRows {
 
     public static UUID administratorId() {
         return new UUID(ID_HIGH, ID_LOW + ADMINISTRATOR);
+    }
+
+    public void writeAdministrator(JdbcClient jdbc) {
+        jdbc.sql("insert into donor (id, type, name, company_identifier, street, city, postal_code, email, password_hash, variable_symbol, "
+                        + "preferred_locale, registered_at, email_verified_at, erased_at) values (:id, 'PERSON', 'Správce případů', null, 'Dlouhá 12', "
+                        + "'Ústí nad Labem', '400 01', 'spravce@example.cz', null, '3999999999', 'cs', :at, :at, null)")
+                .param("id", administratorId())
+                .param("at", timestamp(now))
+                .update();
+        jdbc.sql("insert into donor_role (donor_id, role) values (:id, 'ADMIN')").param("id", administratorId()).update();
     }
 
     public void write(JdbcClient jdbc, MutableClock clock) {

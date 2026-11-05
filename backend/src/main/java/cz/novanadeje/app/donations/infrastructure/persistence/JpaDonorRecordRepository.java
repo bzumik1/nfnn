@@ -105,6 +105,11 @@ class JpaDonorRecordRepository implements DonorRecordRepository {
     }
 
     @Override
+    public List<DonorRecord> findAll() {
+        return List.of();
+    }
+
+    @Override
     public List<DonorRecord> findByIds(Collection<DonorReference> ids) {
         if (ids.isEmpty()) {
             return List.of();

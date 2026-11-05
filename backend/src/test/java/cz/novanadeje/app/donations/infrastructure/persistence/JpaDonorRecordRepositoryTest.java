@@ -305,6 +305,27 @@ class JpaDonorRecordRepositoryTest {
         assertThat(donorRecords.searchByNameOrSymbol("novák", 20)).extracting(DonorRecord::name).containsExactly("Petr Novák");
     }
 
+    @Test
+    @DisplayName("Given three stored records, one with a learned account, when every record is listed, then all come by id, each with its accounts")
+    void should_list_every_record_by_id_with_links_when_all_listed_given_stored_records() {
+        DonorRecord first = person("Jana Nováková", "4821937560", new DonorReference(UuidV7.generate(NOW)));
+        DonorRecord second = person("Petr Svoboda", "7310945528", new DonorReference(UuidV7.generate(NOW.plusSeconds(1))));
+        DonorRecord third = person("Eva Dvořáková", "5555555555", new DonorReference(UuidV7.generate(NOW.plusSeconds(2))));
+        donorRecords.save(third);
+        donorRecords.save(first);
+        donorRecords.save(second);
+        SenderAccountLink learned = learn(second, storedPayment(1001, second.variableSymbol().value()));
+        donorRecords.saveSenderAccountLink(second.id(), learned);
+        flushAndClear();
+
+        List<DonorRecord> all = donorRecords.findAll();
+
+        assertThat(all).extracting(DonorRecord::id).containsExactly(first.id(), second.id(), third.id());
+        assertThat(all.get(1).senderAccountLinks()).extracting(SenderAccountLink::id).containsExactly(learned.id());
+        assertThat(all.get(0).senderAccountLinks()).isEmpty();
+        assertThat(all.get(2).senderAccountLinks()).isEmpty();
+    }
+
     private static DonorRecord registeredAt(String symbol, Instant at) {
         return DonorRecord.registerPerson(new DonorReference(UuidV7.generate(at)), "Jana Nováková", ADDRESS, new VariableSymbol(symbol),
                 LocaleCode.CS, at);

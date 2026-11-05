@@ -7,6 +7,7 @@ import cz.novanadeje.app.donors.domain.PasskeyRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Repository
@@ -36,6 +37,11 @@ class JpaPasskeyRepository implements PasskeyRepository {
     @Override
     public List<Passkey> findByDonor(DonorId donorId) {
         return jpa.findByDonorIdOrderByCreatedAtAscIdAsc(donorId.value()).stream().map(PasskeyJpaEntity::toDomain).toList();
+    }
+
+    @Override
+    public Map<DonorId, Integer> countByDonors() {
+        return Map.of();
     }
 
     @Override

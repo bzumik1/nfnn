@@ -66,6 +66,11 @@ class JpaBankPaymentRepository implements BankPaymentRepository {
     }
 
     @Override
+    public List<BankPayment> findAllNewestFirst() {
+        return List.of();
+    }
+
+    @Override
     public List<BankPayment> findUnpairedNewestFirst() {
         return toDomain(jpa.findUnpairedNewestFirst());
     }

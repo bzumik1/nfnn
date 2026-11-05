@@ -90,6 +90,18 @@ class JpaPasskeyRepositoryTest {
         assertThat(passkeys.findById(unmarked.id())).get().extracting(found -> found.relyingPartyId().orElseThrow()).isEqualTo("nfnn.cz");
     }
 
+    @Test
+    @DisplayName("Given two passkeys of one donor, one of another and a donor without any, when the passkeys are counted per donor, then each donor with a passkey comes with its count")
+    void should_count_passkeys_per_donor_when_counted_given_passkeys_of_two_donors() {
+        passkeys.save(passkey(jana, "jana-phone", NOW));
+        passkeys.save(passkey(jana, "jana-laptop", NOW.plusSeconds(1)));
+        passkeys.save(passkey(petr, "petr-phone", NOW));
+        donor("eva@example.cz", "4821937569");
+        flushAndClear();
+
+        assertThat(passkeys.countByDonors()).containsExactlyInAnyOrderEntriesOf(java.util.Map.of(jana, 2, petr, 1));
+    }
+
     private static Passkey passkey(DonorId donor, String credentialId, Instant at) {
         return Passkey.register(donor, credentialId, new byte[]{1, 2, 3}, 0, List.of("internal"), "Telefon", "nfnn.cz", at);
     }

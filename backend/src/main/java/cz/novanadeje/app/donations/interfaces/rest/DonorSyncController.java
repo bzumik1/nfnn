@@ -2,6 +2,7 @@ package cz.novanadeje.app.donations.interfaces.rest;
 
 import cz.novanadeje.app.donations.application.sync.DonorSyncService;
 import cz.novanadeje.app.donations.application.sync.DonorSyncSnapshot;
+import cz.novanadeje.app.shared.interfaces.rest.SyncChunk;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Pattern;
