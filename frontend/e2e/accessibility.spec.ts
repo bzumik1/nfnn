@@ -2470,6 +2470,25 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
+  test('when a signed-in donor reads the data on this device, loads them again and opens the deletion, then the card and its dialog break no rule', async ({
+    page,
+  }) => {
+    await signIn(page);
+    await openDonorSection(page, 'Údaje a zabezpečení');
+    await expect(page.getByText(/Uloženo v zařízení · aktualizováno /)).toBeVisible();
+    await page.getByRole('button', { name: 'Načíst data znovu' }).click();
+    await expect(
+      page.getByRole('status').filter({ hasText: 'Data jsou načtená znovu.' }),
+    ).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.getByRole('button', { name: 'Smazat data z tohoto zařízení' }).click();
+    await expect(page.getByRole('dialog').getByRole('button', { name: 'Zrušit' })).toBeFocused();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
   test('when a signed-in donor opens the e-mail and password forms, then neither breaks a rule, with errors shown either', async ({
     page,
   }) => {

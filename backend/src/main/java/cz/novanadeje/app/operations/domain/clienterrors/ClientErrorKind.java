@@ -11,7 +11,10 @@ public enum ClientErrorKind implements ClientErrorTerm {
     VERIFY_SIGNATURE("verify-signature"),
     BOOT("boot"),
     SW_INSTALL("sw-install"),
-    SW_UNRECOVERABLE("sw-unrecoverable");
+    SW_UNRECOVERABLE("sw-unrecoverable"),
+    DEVICE_STORE_OPEN("device-store-open"),
+    DEVICE_STORE_EVICTED("device-store-evicted"),
+    DEVICE_COPY_MISMATCH("device-copy-mismatch");
 
     private final String wire;
 

@@ -116,6 +116,15 @@ describe('Given the privacy policy page', () => {
     expect(sectionText('Účinnost')).toContain('účinné od 5. listopadu 2026');
   });
 
+  it('when it renders, then the cookies section gives the encrypted copy of the donor data a paragraph of its own: what it holds, when sign-out keeps it, how to delete it and that the server is unaffected', () => {
+    expect(texts('#cookies .device-copy')).toEqual([
+      'Po přihlášení si portál do vašeho prohlížeče uloží zašifrovanou kopii údajů o vašich darech, potvrzeních a bankovních účtech. Klíč k ní zná jen vaše zařízení. Když jste se přihlásili heslem, zůstane kopie po odhlášení zamčená tímto heslem; po přihlášení přístupovým klíčem zůstane jen tehdy, když to klíč umí, jinak se odhlášením smaže. Smazat ji můžete kdykoli v dárcovském portálu v části Údaje a zabezpečení tlačítkem „Smazat data z tohoto zařízení“; údaje na serveru tím nezměníte.',
+    ]);
+    expect(sectionText('Cookies')).toContain(
+      'a po přihlášení zašifrovanou kopii vašich údajů, viz níže.',
+    );
+  });
+
   it('when it renders, then the cookies section names the verification keys kept in the browser', () => {
     const cookies = sectionText('Cookies');
 
