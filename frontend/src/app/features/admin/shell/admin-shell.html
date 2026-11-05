@@ -9,15 +9,15 @@
             Ukládáme správu do zařízení
           </p>
           @if (progress.total > 0) {
+            <p class="first-download__count" i18n="@@admin.lock.firstDownload.count">
+              {{ progress.done }} z {{ progress.total }}
+            </p>
             <progress
               class="first-download__bar"
               [value]="progress.done"
               [max]="progress.total"
               aria-hidden="true"
             ></progress>
-            <p class="first-download__count" i18n="@@admin.lock.firstDownload.count">
-              {{ progress.done }} z {{ progress.total }}
-            </p>
           }
         </div>
       }

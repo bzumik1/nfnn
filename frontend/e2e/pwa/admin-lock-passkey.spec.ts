@@ -127,10 +127,12 @@ test.describe('Given an administrator who signs in with a passkey that supports 
     context,
     virtualAuthenticator,
     idbDump,
+    swReady,
   }) => {
     const unlocks: string[] = [];
     await mockAdministration(context, unlocks);
     await page.goto('/');
+    await swReady();
     await createAdministratorPasskey(page);
     expect(await virtualAuthenticator.credentialCount()).toBe(1);
 

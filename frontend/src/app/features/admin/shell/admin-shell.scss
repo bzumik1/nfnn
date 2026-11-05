@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 :host {
   display: block;
   min-height: 100vh;
@@ -11,15 +13,27 @@
 
 .first-download {
   display: grid;
-  gap: var(--space-2);
-  margin: var(--space-4) var(--space-4) 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  max-width: 680px;
+  margin: var(--space-6) var(--space-6) 0;
+
+  @include bp.down(nav) {
+    margin: var(--space-2) var(--space-4) 0;
+  }
 }
 
 .first-download p {
   margin: 0;
 }
 
+.first-download__count {
+  font-variant-numeric: var(--numeric-figures);
+}
+
 .first-download__bar {
+  grid-column: 1 / -1;
   width: 100%;
   accent-color: var(--color-accent);
 }

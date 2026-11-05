@@ -7,6 +7,10 @@ export class DeviceCopies implements SessionDevice {
   private readonly injector = inject(EnvironmentInjector);
   private loading: Promise<SessionDevice> | null = null;
 
+  prepare(): void {
+    void this.vault().catch(() => undefined);
+  }
+
   prfInput(): Promise<Uint8Array<ArrayBuffer> | null> {
     const input = this.vault()
       .then((vault) => vault.prfInput())

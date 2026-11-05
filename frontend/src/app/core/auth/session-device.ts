@@ -13,6 +13,7 @@ export type SignInSecret =
   | { readonly kind: 'none' };
 
 export interface SessionDevice {
+  prepare?(): void;
   prfInput(): Promise<Uint8Array<ArrayBuffer> | null>;
   signedIn(account: DeviceAccount, secret: SignInSecret, storeNothing?: boolean): Promise<void>;
   restored(account: DeviceAccount, storeNothing?: boolean): Promise<void>;
