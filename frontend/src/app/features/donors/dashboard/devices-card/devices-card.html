@@ -29,11 +29,13 @@
             <span class="device-name">{{ name(device) }}</span>
             <span class="device-dates">
               <span class="device-date"
-                ><span i18n="@@donor.account.devices.since">přihlášeno</span>
-                {{ signedInOn(device) }}</span
+                ><span i18n="@@donor.account.devices.since">přihlášeno</span>&ngsp;<span
+                  class="device-date-value"
+                  >{{ signedInOn(device) }}</span
+                ></span
               >&ngsp;<span class="device-date"
-                >· <span i18n="@@donor.account.devices.lastUsed">naposledy použito</span>
-                {{ lastUsed(device) }}</span
+                >·&nbsp;<span i18n="@@donor.account.devices.lastUsed">naposledy použito</span
+                >&ngsp;<span class="device-date-value">{{ lastUsed(device) }}</span></span
               >
             </span>
           </div>
