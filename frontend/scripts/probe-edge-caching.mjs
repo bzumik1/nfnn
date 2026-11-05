@@ -152,10 +152,11 @@ for (const [path, cacheControl] of OWN_CACHE_CONTROL) {
 }
 
 for (const { path, signedInStatus } of RECEIPT_IMAGES) {
-  if (ACCESS_TOKEN === '') {
-    break;
-  }
   const label = `GET ${path} with a donor's token`;
+  if (ACCESS_TOKEN === '') {
+    fail(`${label} is not probed: set PROBE_ACCESS_TOKEN to a donor's access token`);
+    continue;
+  }
   const answer = await request({
     method: 'GET',
     path,

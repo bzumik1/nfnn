@@ -1,6 +1,6 @@
 import { DestroyRef, inject, Injectable, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Subscription } from 'rxjs';
+import { map, Subscription } from 'rxjs';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { DownloadedFile } from '../../donations/donations-api';
 import { PdfDelivery } from '../../donations/receipt-pdf/pdf-delivery';
@@ -17,7 +17,7 @@ import {
   savedReceiptText,
   sharedReceiptText,
 } from '../../donations/receipt-pdf/receipt-progress';
-import { ReceiptsApi } from '../../donations/receipt-pdf/receipts-api';
+import { ReceiptSource, ReceiptsApi } from '../../donations/receipt-pdf/receipts-api';
 import { DownloadProgressState } from '../../../shared/ui/download-progress/download-progress';
 
 interface DownloadTask {
@@ -27,6 +27,9 @@ interface DownloadTask {
 }
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
+
+class ReceiptNoLongerActive extends Error {}
+
 const READ_FAILED = $localize`:@@admin.donorDetail.receiptPdf.readFailed:Potvrzení se nepodařilo načíst. Zkuste to prosím znovu.`;
 const DRAWING_FAILED = $localize`:@@admin.donorDetail.receiptPdf.drawingFailed:PDF se v prohlížeči nepodařilo vytvořit. Zkuste to prosím znovu, případně v jiném prohlížeči.`;
 const FAILURE_TEXTS: Readonly<Record<ReceiptPdfFailureReason, string>> = {
@@ -48,9 +51,14 @@ export class AdminReceiptDownloads {
   private readonly tasks = signal<ReadonlyMap<string, DownloadTask>>(new Map());
   private readonly running = new Map<string, Subscription>();
   private sessionEnded: () => void = () => undefined;
+  private receiptReplaced: (receiptId: string) => void = () => undefined;
 
   whenSessionEnds(handler: () => void): void {
     this.sessionEnded = handler;
+  }
+
+  whenReceiptReplaced(handler: (receiptId: string) => void): void {
+    this.receiptReplaced = handler;
   }
 
   progress(receiptId: string): DownloadProgressState | null {
@@ -78,12 +86,13 @@ export class AdminReceiptDownloads {
       this.open(receiptId, file);
       return;
     }
+    this.dropFinishedTasks();
     this.setTask(receiptId, { progress: null, file: null, failure: null });
     const subscription = new Subscription();
     this.running.set(receiptId, subscription);
     subscription.add(
       this.receiptPdf
-        .draw(this.receiptsApi.administrationSource(receiptId))
+        .draw(this.activeReceipt(receiptId))
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe({
           next: (event) => this.progressed(receiptId, event),
@@ -107,6 +116,22 @@ export class AdminReceiptDownloads {
       file: null,
       failure: null,
     });
+  }
+
+  private activeReceipt(receiptId: string): ReceiptSource {
+    const source = this.receiptsApi.administrationSource(receiptId);
+    return {
+      receipt: () =>
+        source.receipt().pipe(
+          map((issued) => {
+            if (issued.status !== 'ACTIVE') {
+              throw new ReceiptNoLongerActive();
+            }
+            return issued;
+          }),
+        ),
+      image: (sha256) => source.image(sha256),
+    };
   }
 
   private progressed(receiptId: string, event: ReceiptPdfEvent): void {
@@ -155,6 +180,11 @@ export class AdminReceiptDownloads {
   }
 
   private failed(receiptId: string, failure: unknown): void {
+    if (failure instanceof ReceiptNoLongerActive) {
+      this.forget(receiptId);
+      this.receiptReplaced(receiptId);
+      return;
+    }
     if (problemTypeEndsWith(failure, UNAUTHENTICATED)) {
       this.setTask(receiptId, { progress: null, file: null, failure: null });
       this.sessionEnded();
@@ -165,6 +195,25 @@ export class AdminReceiptDownloads {
         ? FAILURE_TEXTS[failure.reason]
         : describeProblem(failure, READ_FAILED);
     this.setTask(receiptId, { progress: null, file: null, failure: text });
+  }
+
+  private dropFinishedTasks(): void {
+    this.tasks.update(
+      (tasks) =>
+        new Map(
+          [...tasks].filter(
+            ([receiptId, task]) => this.running.has(receiptId) || task.file !== null,
+          ),
+        ),
+    );
+  }
+
+  private forget(receiptId: string): void {
+    this.tasks.update((tasks) => {
+      const remaining = new Map(tasks);
+      remaining.delete(receiptId);
+      return remaining;
+    });
   }
 
   private setTask(receiptId: string, task: DownloadTask): void {

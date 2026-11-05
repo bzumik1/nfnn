@@ -902,7 +902,7 @@
                       <button
                         type="button"
                         class="ui-button ui-button--small receipt-pdf"
-                        [attr.aria-label]="receiptPdfLabel(receipt)"
+                        [id]="receiptPdfId(receipt)"
                         [attr.aria-disabled]="pdfs.drawing(receipt.id) ? 'true' : null"
                         [attr.aria-busy]="pdfs.drawing(receipt.id)"
                         (click)="pdfs.press(receipt.id)"
@@ -916,12 +916,15 @@
                         } @else {
                           <span i18n="@@admin.donorDetail.receiptPdf.download">Stáhnout PDF</span>
                         }
+                        <span class="visually-hidden" i18n="@@admin.donorDetail.receiptPdf.of">
+                          potvrzení {{ receipt.number }}</span
+                        >
                       </button>
                       <app-download-progress
                         class="receipt-pdf-progress"
                         [compact]="true"
                         [progress]="pdfs.progress(receipt.id)"
-                        (cancelled)="pdfs.cancel(receipt.id)"
+                        (cancelled)="cancelReceiptPdf(receipt)"
                       />
                       @if (pdfs.failure(receipt.id); as failure) {
                         <p class="ui-field-error receipt-pdf-error" role="alert">{{ failure }}</p>

@@ -28,7 +28,7 @@
     "suite": "backend-junit",
     "test": "donations.application.receipt.AdminReceiptsServiceTest > Given a signature image, when an administrator fetches it, then it comes only while some receipt names it",
     "reason": "1.19 (Phase 1 review B M2, S n4): the administration's image read serves the portrait a receipt shows too, so the donor card can draw it",
-    "replacement": "donations.application.receipt.AdminReceiptsServiceTest > Given a receipt image, when an administrator fetches it, then it comes only while some receipt names it as its signature or portrait"
+    "replacement": "donations.application.receipt.AdminReceiptsServiceTest > Given a receipt image, when an administrator fetches it, then it comes only while some receipt shows it"
   },
   {
     "kind": "retired",

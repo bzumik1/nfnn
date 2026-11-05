@@ -171,6 +171,7 @@ export class AdminDonorDetail {
 
   constructor() {
     this.pdfs.whenSessionEnds(() => this.sendToSignIn());
+    this.pdfs.whenReceiptReplaced((receiptId) => this.receiptReplaced(receiptId));
     this.loadAccount();
     this.loadDonations();
     afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
@@ -215,6 +216,19 @@ export class AdminDonorDetail {
         },
         error: (failure: unknown) => this.donationsState.set(this.stateAfter(failure)),
       });
+  }
+
+  private receiptReplaced(receiptId: string): void {
+    const number = this.receipts().find((receipt) => receipt.id === receiptId)?.number ?? '';
+    this.cardNotice.set({
+      card: 'receipts',
+      notice: {
+        kind: 'alert',
+        text: $localize`:@@admin.donorDetail.receiptPdf.replaced:Potvrzení ${number}:number: mezitím nahradilo novější, a tak jsme jeho PDF nevytvořili. Seznam potvrzení jsme obnovili.`,
+      },
+    });
+    this.refreshDonations();
+    this.focusAfterRender(() => this.noticeElement('receipts'));
   }
 
   private refreshDonations(): void {
@@ -301,10 +315,13 @@ export class AdminDonorDetail {
     return $localize`:@@admin.donorDetail.receipts.single:Dar z ${day}:day:`;
   }
 
-  protected receiptPdfLabel(receipt: AdminReceiptResponse): string {
-    return this.pdfs.ready(receipt.id)
-      ? $localize`:@@admin.donorDetail.receiptPdf.openLabel:Otevřít PDF potvrzení ${receipt.number}:number:`
-      : $localize`:@@admin.donorDetail.receiptPdf.downloadLabel:Stáhnout PDF potvrzení ${receipt.number}:number:`;
+  protected receiptPdfId(receipt: AdminReceiptResponse): string {
+    return `potvrzeni-pdf-${receipt.id}`;
+  }
+
+  protected cancelReceiptPdf(receipt: AdminReceiptResponse): void {
+    this.pdfs.cancel(receipt.id);
+    this.focusAfterRender(() => this.byId(this.receiptPdfId(receipt)));
   }
 
   protected donationsCount(count: number): string {

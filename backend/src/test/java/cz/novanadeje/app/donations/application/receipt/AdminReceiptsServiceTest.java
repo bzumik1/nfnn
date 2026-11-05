@@ -126,7 +126,7 @@ class AdminReceiptsServiceTest {
     }
 
     @Test
-    @DisplayName("Given a receipt image, when an administrator fetches it, then it comes only while some receipt names it as its signature or portrait")
+    @DisplayName("Given a receipt image, when an administrator fetches it, then it comes only while some receipt shows it")
     void should_serve_image_only_when_fetched_given_some_receipt_names_it() {
         StoredReceiptImage image = new StoredReceiptImage(new byte[]{1, 2, 3}, "image/png");
         ContentDigest unnamed = new ContentDigest("b".repeat(64));

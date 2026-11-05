@@ -3,6 +3,7 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
+import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { authInterceptor } from '../../../core/auth/auth-interceptor';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
@@ -69,7 +70,11 @@ describe('Given an administrator on a donor card', () => {
     fixture.detectChanges();
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    http.verify();
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
 
   function text(selector: string): string {
     return (fixture.nativeElement.querySelector(selector)?.textContent ?? '')
@@ -1080,6 +1085,10 @@ describe('Given an administrator on a donor card', () => {
         .trim();
     }
 
+    function buttonText(number: string): string {
+      return (downloadButton(number).textContent ?? '').replace(/\s+/g, ' ').trim();
+    }
+
     function downloadButton(number: string): HTMLButtonElement {
       const found = receiptRow(number).querySelector<HTMLButtonElement>('button.receipt-pdf');
       if (found === null) {
@@ -1102,10 +1111,10 @@ describe('Given an administrator on a donor card', () => {
     });
 
     it('then only the valid receipt offers its PDF, named by its number', () => {
-      expect(downloadButton('2027-000001').textContent?.trim()).toBe('Stáhnout PDF');
-      expect(downloadButton('2027-000001').getAttribute('aria-label')).toBe(
-        'Stáhnout PDF potvrzení 2027-000001',
-      );
+      expect(buttonText('2027-000001')).toBe('Stáhnout PDF potvrzení 2027-000001');
+      expect(
+        downloadButton('2027-000001').querySelector('.visually-hidden')?.textContent,
+      ).toContain('potvrzení 2027-000001');
       expect(receiptRow('2026-000001').querySelector('button.receipt-pdf')).toBeNull();
     });
 
@@ -1115,7 +1124,7 @@ describe('Given an administrator on a donor card', () => {
 
       expect(rowLine('2027-000001')).toBe('Připravujeme údaje potvrzení…');
       expect(downloadButton('2027-000001').getAttribute('aria-disabled')).toBe('true');
-      expect(downloadButton('2027-000001').textContent?.trim()).toBe('Připravujeme PDF…');
+      expect(buttonText('2027-000001')).toBe('Připravujeme PDF… potvrzení 2027-000001');
       const read = http.expectOne(READ_URL);
       expect(read.request.method).toBe('GET');
       read.flush(readAnswer());
@@ -1200,7 +1209,7 @@ describe('Given an administrator on a donor card', () => {
       receiptEnvironment.last().drawAll();
       await settle();
 
-      expect(downloadButton('2027-000001').textContent?.trim()).toBe('Otevřít PDF');
+      expect(buttonText('2027-000001')).toBe('Otevřít PDF potvrzení 2027-000001');
       expect(rowLine('2027-000001')).toBe(
         'Potvrzení potvrzeni-o-daru-2027-000001.pdf je připravené. Otevřete ho tlačítkem Otevřít PDF.',
       );
@@ -1211,8 +1220,88 @@ describe('Given an administrator on a donor card', () => {
       expect(rowLine('2027-000001')).toBe(
         'Potvrzení potvrzeni-o-daru-2027-000001.pdf jste předali z nabídky sdílení.',
       );
-      expect(downloadButton('2027-000001').textContent?.trim()).toBe('Stáhnout PDF');
+      expect(buttonText('2027-000001')).toBe('Stáhnout PDF potvrzení 2027-000001');
       http.expectNone(READ_URL);
+      expect(save).not.toHaveBeenCalled();
+    });
+
+    it('then pressing Zrušit while it is drawn stops the drawing, says so at the row and returns focus to the button', async () => {
+      vi.useFakeTimers();
+      downloadButton('2027-000001').click();
+      await settle();
+      http.expectOne(READ_URL).flush(readAnswer());
+      await settle();
+      await vi.advanceTimersByTimeAsync(8001);
+      await settle();
+      const cancel = receiptRow('2027-000001').querySelector<HTMLButtonElement>(
+        'button.download-progress-cancel',
+      );
+      expect(cancel?.textContent?.trim()).toBe('Zrušit');
+      cancel?.focus();
+      cancel?.click();
+      await settle();
+
+      expect(rowLine('2027-000001')).toBe('Přípravu PDF jste zrušili.');
+      expect(receiptEnvironment.last().terminated).toBe(true);
+      expect(document.activeElement).toBe(downloadButton('2027-000001'));
+      expect(buttonText('2027-000001')).toBe('Stáhnout PDF potvrzení 2027-000001');
+      expect(save).not.toHaveBeenCalled();
+    });
+
+    it('then a receipt replaced since the card loaded draws nothing, says so in the card and lists the receipts again', async () => {
+      downloadButton('2027-000001').click();
+      await settle();
+      http.expectOne(READ_URL).flush({ ...readAnswer(), status: 'REPLACED' });
+      await settle();
+
+      expect(texts('[role="alert"]:not(:empty)')).toContain(
+        'Potvrzení 2027-000001 mezitím nahradilo novější, a tak jsme jeho PDF nevytvořili. Seznam potvrzení jsme obnovili.',
+      );
+      expect(receiptEnvironment.workers).toEqual([]);
+      expect(rowLine('2027-000001')).toBe('');
+      http.expectOne(DETAIL_URL).flush(
+        donorDetail({
+          receipts: [
+            adminReceipt({ id: '019a1c00-0000-7000-8000-00000000f004', number: '2027-000002' }),
+            adminReceipt({ id: VALID_ID, number: '2027-000001', active: false }),
+          ],
+        }),
+      );
+      await settle();
+
+      expect(receiptRow('2027-000001').querySelector('button.receipt-pdf')).toBeNull();
+      expect(buttonText('2027-000002')).toBe('Stáhnout PDF potvrzení 2027-000002');
+    });
+
+    it('then a session that ended sends the administrator home to sign in', async () => {
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+      const open = vi.spyOn(TestBed.inject(LoginDialogService), 'open');
+      downloadButton('2027-000001').click();
+      await settle();
+      const refused = problem(401, 'auth/unauthenticated', 'Přihlaste se', 'Chybí token.');
+      http.expectOne(READ_URL).flush(refused.body, refused.options);
+      http.expectOne('/api/donors/auth/logout').flush(null);
+      await settle();
+
+      expect(navigate).toHaveBeenCalledWith('/');
+      expect(open).toHaveBeenCalled();
+      expect(rowAlert('2027-000001')).toBe('');
+    });
+
+    it('then on an iPhone a share sheet closed without choosing keeps Otevřít PDF for another try', async () => {
+      vi.spyOn(PdfDelivery.prototype, 'needsSecondTap').mockReturnValue(true);
+      const share = vi.spyOn(PdfDelivery.prototype, 'share').mockResolvedValue('dismissed');
+      downloadButton('2027-000001').click();
+      await settle();
+      http.expectOne(READ_URL).flush(readAnswer());
+      await settle();
+      receiptEnvironment.last().drawAll();
+      await settle();
+      downloadButton('2027-000001').click();
+      await settle();
+
+      expect(share).toHaveBeenCalledTimes(1);
+      expect(buttonText('2027-000001')).toBe('Otevřít PDF potvrzení 2027-000001');
       expect(save).not.toHaveBeenCalled();
     });
   });
@@ -1224,6 +1313,8 @@ describe('Given an administrator on a donor card', () => {
       donor: { ...erased.donor, erasedAt: '2026-10-20T08:00:00Z' },
     });
 
-    expect(buttonNames(section('Vydaná potvrzení'))).toContain('Stáhnout PDF');
+    expect(
+      buttonNames(section('Vydaná potvrzení')).some((name) => name.startsWith('Stáhnout PDF')),
+    ).toBe(true);
   });
 });
