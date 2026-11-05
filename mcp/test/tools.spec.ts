@@ -913,7 +913,11 @@ describe('Given an administrator connected with the writing permission', () => {
     const { tools } = await client.listTools();
     const tool = tools.find((candidate) => candidate.name === 'nfnn_import_history');
     expect(tool?.title).toBe('Načíst starší platby');
-    expect(tool?.annotations).toMatchObject({ readOnlyHint: false });
+    expect(tool?.annotations).toMatchObject({
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+    });
     expect(tool?.description).toContain('HISTORY_LOCKED');
     expect(tool?.description).toContain('REQUEST_HISTORY_IMPORT');
   });
