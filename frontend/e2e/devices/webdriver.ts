@@ -6,8 +6,9 @@ import type { Target, Ui } from './ui';
 const ELEMENT = 'element-6066-11e4-a52e-4f735466cecf';
 export const WAIT_MS = 10_000;
 const DRIVER_START_MS = 120_000;
-const SESSION_ATTEMPTS = 3;
-const SESSION_RETRY_PAUSE_MS = 5_000;
+const SESSION_ATTEMPTS = 5;
+const SESSION_RETRY_PAUSE_MS = 10_000;
+const MOBILE_SAFARI = 'com.apple.mobilesafari';
 const COMMAND_TIMEOUT_MS = 120_000;
 const POLL_MS = 100;
 
@@ -59,6 +60,16 @@ function shutDownOtherSimulators(kept: string): void {
   }
 }
 
+function restartSafari(simulator: Simulator): void {
+  for (const action of ['terminate', 'launch']) {
+    try {
+      execFileSync('xcrun', ['simctl', action, simulator.udid, MOBILE_SAFARI], { stdio: 'ignore' });
+    } catch {
+      console.warn(`${simulator.name}: simctl ${action} ${MOBILE_SAFARI} failed`);
+    }
+  }
+}
+
 export function pickSimulator(pattern: RegExp): Simulator {
   const available = availableSimulators();
   const found = available.find((simulator) => pattern.test(simulator.name));
@@ -100,6 +111,7 @@ export class WebDriver {
     if (simulator) {
       shutDownOtherSimulators(simulator.udid);
       execFileSync('xcrun', ['simctl', 'bootstatus', simulator.udid, '-b'], { stdio: 'ignore' });
+      restartSafari(simulator);
     }
     const webDriver = await WebDriver.launch(
       (port) => ['safaridriver', '-p', String(port)],
@@ -143,6 +155,9 @@ export class WebDriver {
           throw error;
         }
         console.warn(`${device}: no WebDriver session at attempt ${attempt}: ${String(error)}`);
+        if (simulator) {
+          restartSafari(simulator);
+        }
         await pause(SESSION_RETRY_PAUSE_MS);
       }
     }
