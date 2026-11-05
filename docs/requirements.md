@@ -71,6 +71,7 @@ Web představí fond a jeho pomoc dětem, usnadní darování a dárcům dá ú�
 - Vystavené potvrzení se nemění. Změní-li se potvrzované údaje (pozdě spárovaný dar, nové jméno nebo adresa), další stažení vystaví náhradní potvrzení s novým číslem, které uvádí, co nahrazuje. Jazyk podle dárce; anglické potvrzení je dvojjazyčné.
 - Web vystavuje potvrzení jen za dary od 1. 1. 2026. Starší dary přehled ukazuje, jen bez PDF.
 - Ověření potvrzení (Jakub 31. 10. 2026): v sekci Potvrzení o daru je jedna karta „Ověřit potvrzení“ (ne odkaz u každého potvrzení), která vede na stránku nfnn.cz/overit. Tam dárce i kdokoli jiný ověří vlastní nebo cizí potvrzení i bez fotoaparátové aplikace: naskenuje QR kód fotoaparátem přímo ve stránce, nahraje PDF potvrzení nebo fotku kódu, nebo vloží odkaz z kódu. Kód se čte jen v prohlížeči a nikam se neposílá.
+- Hromadná potvrzení (Jakub 28. 10. 2026, podoba podle odpovědi Q9): správce vydá roční potvrzení mnoha dárcům najednou na stránce Hromadná potvrzení a prohlížeč z nich nakreslí jedno PDF k tisku; ZIP s jednotlivými soubory není. Vydání je stejné jako u jednoho dárce, takže opakované vydání nic nevydá dvakrát a vymazaný dárce potvrzení nedostane.
 
 ## 5. Příjem a párování darů
 
