@@ -191,3 +191,71 @@ test.describe('Given an address of a section of the old one-page home', () => {
     await expect(page).toHaveURL('about:blank');
   });
 });
+
+async function tabBoxes(page: Page) {
+  return page.evaluate(() => {
+    const bar = document.querySelector('app-tab-bar nav')!.getBoundingClientRect();
+    const tabs = Array.from(document.querySelectorAll('app-tab-bar .tab')).map((tab) => {
+      const icon = tab.querySelector('.tab-icon')!.getBoundingClientRect();
+      const label = tab.querySelector('.tab-label')!.getBoundingClientRect();
+      return {
+        iconRight: icon.right,
+        iconMiddle: icon.top + icon.height / 2,
+        labelLeft: label.left,
+        labelMiddle: label.top + label.height / 2,
+        height: tab.getBoundingClientRect().height,
+      };
+    });
+    return { height: bar.height, tabs };
+  });
+}
+
+test.describe('Given a visitor at a computer with a mouse or a trackpad', () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+  test.skip(
+    ({ browserName }) => browserName !== 'chromium',
+    'the iphone project is a touch screen; Safari on macOS runs the bar in e2e/devices',
+  );
+
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+  });
+
+  test('when the tab bar shows, then it is one slim row with each icon beside its label', async ({
+    page,
+  }) => {
+    await page.goto('/o-nas');
+    await expect(tabs(page).getByRole('link', { name: 'O nás' })).toBeVisible();
+
+    const boxes = await tabBoxes(page);
+
+    expect(boxes.height).toBeLessThanOrEqual(48);
+    for (const tab of boxes.tabs) {
+      expect(tab.iconRight).toBeLessThanOrEqual(tab.labelLeft);
+      expect(Math.abs(tab.iconMiddle - tab.labelMiddle)).toBeLessThanOrEqual(2);
+      expect(tab.height).toBeGreaterThanOrEqual(24);
+    }
+  });
+});
+
+test.describe('Given a visitor on a touch screen as wide as a computer', () => {
+  test.use({ viewport: { width: 1280, height: 800 }, hasTouch: true });
+
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+  });
+
+  test('when the tab bar shows, then each icon stays above its label at the full touch height', async ({
+    page,
+  }) => {
+    await page.goto('/o-nas');
+    await expect(tabs(page).getByRole('link', { name: 'O nás' })).toBeVisible();
+
+    const boxes = await tabBoxes(page);
+
+    expect(boxes.height).toBeGreaterThanOrEqual(62);
+    for (const tab of boxes.tabs) {
+      expect(tab.iconMiddle).toBeLessThan(tab.labelMiddle);
+    }
+  });
+});
