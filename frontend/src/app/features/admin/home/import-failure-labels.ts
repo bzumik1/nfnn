@@ -42,3 +42,15 @@ export const IMPORT_NEXT_STEPS: Record<ImportFailureKind, ImportNextStep> = {
     link: 'logs',
   },
 };
+
+export const HISTORY_NEXT_STEPS: Record<ImportFailureKind, ImportNextStep> = {
+  ...IMPORT_NEXT_STEPS,
+  RATE_LIMITED: {
+    text: $localize`:@@admin.home.history.next.rateLimited:Banka teď odmítá příliš časté dotazy. Starší platby se samy znovu nenačtou: za pár minut stiskněte „Načíst starší platby“ znovu.`,
+    link: null,
+  },
+  TRANSPORT: {
+    text: $localize`:@@admin.home.history.next.transport:Banka teď neodpovídá. Starší platby se samy znovu nenačtou: za chvíli stiskněte „Načíst starší platby“ znovu; pokud to trvá déle, zkontrolujte připojení serveru k internetu.`,
+    link: null,
+  },
+};

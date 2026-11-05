@@ -347,7 +347,22 @@ describe('Given the part for older bank payments on the import card', () => {
         'Platby se nepodařilo stáhnout (05. 11. 2026 11:00). Důvod: Fio nebylo dostupné.',
       );
       expect(text('.history-next-step')).toBe(
-        'Co udělat: Banka teď neodpovídá. Web to zkouší znovu sám každou hodinu; pokud to trvá déle, zkontrolujte připojení serveru k internetu.',
+        'Co udělat: Banka teď neodpovídá. Starší platby se samy znovu nenačtou: za chvíli stiskněte „Načíst starší platby“ znovu; pokud to trvá déle, zkontrolujte připojení serveru k internetu.',
+      );
+      expect(fixture.nativeElement.querySelector('.history-next-step a')).toBeNull();
+    });
+
+    it('then a run the bank kept refusing as too frequent says to press the button again later', async () => {
+      await poll(
+        historyImport({
+          status: 'FAILED',
+          failure: 'RATE_LIMITED',
+          finishedAt: '2026-11-05T10:00:30Z',
+        }),
+      );
+
+      expect(text('.history-next-step')).toBe(
+        'Co udělat: Banka teď odmítá příliš časté dotazy. Starší platby se samy znovu nenačtou: za pár minut stiskněte „Načíst starší platby“ znovu.',
       );
       expect(fixture.nativeElement.querySelector('.history-next-step a')).toBeNull();
     });

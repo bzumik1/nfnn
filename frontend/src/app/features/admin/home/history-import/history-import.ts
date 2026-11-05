@@ -27,7 +27,11 @@ import {
   pragueDay,
 } from '../../../donations/donation-date';
 import { AdminApi, HistoryImportResponse, ImportStateResponse } from '../../admin-api';
-import { IMPORT_FAILURE_LABELS, IMPORT_NEXT_STEPS, ImportNextStep } from '../import-failure-labels';
+import {
+  HISTORY_NEXT_STEPS,
+  IMPORT_FAILURE_LABELS,
+  ImportNextStep,
+} from '../import-failure-labels';
 
 const HISTORY_POLL_MS = 3000;
 const HISTORY_MAX_POLLS = 40;
@@ -82,7 +86,7 @@ export class HistoryImport {
   protected readonly nextStep = computed<ImportNextStep | null>(() => {
     const run = this.run();
     return run?.status === 'FAILED' && this.refusal() === null
-      ? IMPORT_NEXT_STEPS[run.failure ?? 'UNEXPECTED']
+      ? HISTORY_NEXT_STEPS[run.failure ?? 'UNEXPECTED']
       : null;
   });
 
