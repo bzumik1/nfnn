@@ -15,7 +15,12 @@ export function recordClientErrors(): SentClientErrors {
   vi.stubGlobal('fetch', fetchSpy);
   vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(IPHONE_SAFARI);
   TestBed.configureTestingModule({
-    providers: [{ provide: Connectivity, useValue: { browserSaysOffline: () => false } }],
+    providers: [
+      {
+        provide: Connectivity,
+        useValue: { browserSaysOffline: () => false, offline: () => false },
+      },
+    ],
   });
   return {
     bodies: () =>
