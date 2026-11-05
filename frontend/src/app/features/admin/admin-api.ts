@@ -35,6 +35,22 @@ export interface ImportStateResponse {
   lastFailure: ImportFailure | null;
   consecutiveFailures: number;
   reportedOutage: ImportFailureKind | null;
+  historyImport: HistoryImportResponse | null;
+  defaultHistoryFrom: string;
+}
+
+export type HistoryImportStatus = 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'HISTORY_LOCKED' | 'FAILED';
+
+export interface HistoryImportResponse {
+  from: string;
+  to: string;
+  needsUnlockedHistory: boolean;
+  requestedAt: string;
+  startsAt: string;
+  status: HistoryImportStatus;
+  failure: ImportFailureKind | null;
+  added: number | null;
+  finishedAt: string | null;
 }
 
 export type PairingFilter = 'unpaired' | 'paired';
@@ -631,6 +647,10 @@ export class AdminApi {
 
   importState(): Observable<ImportStateResponse> {
     return this.http.get<ImportStateResponse>('/api/admin/donations/import-state');
+  }
+
+  requestHistoryImport(from: string): Observable<HistoryImportResponse> {
+    return this.http.post<HistoryImportResponse>('/api/admin/donations/import/history', { from });
   }
 
   payments(pairing: PairingFilter, query: PaymentQuery = {}): Observable<AdminPaymentListResponse> {

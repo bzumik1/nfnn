@@ -58,6 +58,8 @@ test.describe('Given an administrator with an unpaired bank payment', () => {
             lastFailure: null,
             consecutiveFailures: 0,
             reportedOutage: null,
+            historyImport: null,
+            defaultHistoryFrom: '2026-01-01',
           },
         }),
     );

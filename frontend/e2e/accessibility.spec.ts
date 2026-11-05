@@ -832,6 +832,8 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
             lastFailure: { kind: 'TRANSPORT', message: null, attemptedAt: '2026-10-18T09:00:00Z' },
             consecutiveFailures: 3,
             reportedOutage: 'TRANSPORT',
+            historyImport: null,
+            defaultHistoryFrom: '2026-01-01',
           },
         }),
     );
@@ -909,6 +911,8 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
             lastFailure: null,
             consecutiveFailures: 0,
             reportedOutage: null,
+            historyImport: null,
+            defaultHistoryFrom: '2026-01-01',
           },
         }),
     );

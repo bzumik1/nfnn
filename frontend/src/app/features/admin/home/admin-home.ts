@@ -40,6 +40,8 @@ import {
   unpublishedKeysSentence,
 } from '../settings/receipt-signing-key/unpublished-keys';
 import { signingKeyWarnings } from '../settings/receipt-signing-key/key-warnings';
+import { HistoryImport } from './history-import/history-import';
+import { IMPORT_FAILURE_LABELS } from './import-failure-labels';
 
 type SignatoryState = 'loading' | 'ok' | 'missing' | 'unsigned' | 'error';
 type LoadState = 'loading' | 'ready' | 'error';
@@ -77,7 +79,7 @@ const NEXT_STEPS: Record<ImportFailureKind, NextStep> = {
     link: null,
   },
   HISTORY_LOCKED: {
-    text: $localize`:@@admin.home.import.next.historyLocked:Odemkněte historii v internetovém bankovnictví Fio (Nastavení → API, ikona zámku) a do 10 minut restartujte backend (v ZimaOS restart aplikace).`,
+    text: $localize`:@@admin.home.import.next.historyLocked:Odemkněte historii v internetovém bankovnictví Fio (Nastavení → API, ikona zámku) a do 10 minut stiskněte níže „Načíst starší platby“.`,
     link: null,
   },
   UNAUTHORIZED: {
@@ -98,18 +100,9 @@ const NEXT_STEPS: Record<ImportFailureKind, NextStep> = {
   },
 };
 
-const FAILURE_LABELS: Record<ImportFailureKind, string> = {
-  RATE_LIMITED: $localize`:@@admin.home.import.failure.rateLimited:Fio odmítlo příliš častý dotaz`,
-  HISTORY_LOCKED: $localize`:@@admin.home.import.failure.historyLocked:Historie starší než 90 dní je ve Fio zamčená`,
-  UNAUTHORIZED: $localize`:@@admin.home.import.failure.unauthorized:Fio odmítlo token (chybí, ještě neplatí nebo vypršel)`,
-  TRANSPORT: $localize`:@@admin.home.import.failure.transport:Fio nebylo dostupné`,
-  INVALID_RESPONSE: $localize`:@@admin.home.import.failure.invalidResponse:Fio poslalo odpověď, které web nerozumí`,
-  UNEXPECTED: $localize`:@@admin.home.import.failure.unexpected:Neočekávaná chyba`,
-};
-
 @Component({
   selector: 'app-admin-home',
-  imports: [RouterLink, CopyButton],
+  imports: [RouterLink, CopyButton, HistoryImport],
   templateUrl: './admin-home.html',
   styleUrl: './admin-home.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -226,7 +219,7 @@ export class AdminHome {
   protected readonly lastAttempt = computed(() => time(this.importState()?.lastAttemptedAt));
   protected readonly lastFailure = computed(() => {
     const failure = this.importState()?.lastFailure;
-    return failure ? FAILURE_LABELS[failure.kind] : null;
+    return failure ? IMPORT_FAILURE_LABELS[failure.kind] : null;
   });
   protected readonly lastFailureMessage = computed(
     () => this.importState()?.lastFailure?.message ?? null,
@@ -236,7 +229,7 @@ export class AdminHome {
   );
   protected readonly outage = computed(() => {
     const state = this.importState();
-    return state?.reportedOutage ? FAILURE_LABELS[state.reportedOutage] : null;
+    return state?.reportedOutage ? IMPORT_FAILURE_LABELS[state.reportedOutage] : null;
   });
   protected readonly nextStep = computed(() => {
     const state = this.importState();

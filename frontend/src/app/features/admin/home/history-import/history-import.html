@@ -1,0 +1,54 @@
+<section class="history" aria-labelledby="admin-history-title">
+  <h3 id="admin-history-title" class="ui-card__subtitle" i18n="@@admin.home.history.title">
+    Starší platby z banky
+  </h3>
+  <p class="ui-card__intro history-lead" i18n="@@admin.home.history.lead">
+    Web stahuje platby z banky každou hodinu za posledních 89 dní. Starší platby vydá Fio jen do 10
+    minut po odemčení historie.
+  </p>
+  <ol class="history-steps">
+    <li i18n="@@admin.home.history.step.open">
+      V internetovém bankovnictví Fio otevřete Nastavení → API.
+    </li>
+    <li i18n="@@admin.home.history.step.unlock">
+      U tokenu webu klikněte na ikonu zámku a historii odemkněte.
+    </li>
+    <li i18n="@@admin.home.history.step.load">
+      Do 10 minut zvolte datum a stiskněte Načíst starší platby.
+    </li>
+  </ol>
+  <form
+    #historyForm="ngForm"
+    class="history-form"
+    appFocusFirstInvalid
+    (ngSubmit)="submit(historyForm)"
+    novalidate
+  >
+    <app-form-field
+      class="history-from"
+      label="Stáhnout platby od"
+      i18n-label="@@admin.home.history.from"
+      hint="Platby za posledních 89 dní web stáhne i bez odemčení. Načíst jde i znovu: platby, které web už má, se nezdvojí."
+      i18n-hint="@@admin.home.history.from.hint"
+      [messages]="fromMessages"
+    >
+      <input
+        appFormControl
+        id="history-from"
+        name="from"
+        type="date"
+        required
+        [max]="today"
+        [(ngModel)]="from"
+      />
+    </app-form-field>
+    <button type="submit" class="ui-button ui-button--primary" [disabled]="busy()">
+      @if (busy()) {
+        <span i18n="@@admin.home.history.busy">Žádáme banku…</span>
+      } @else {
+        <span i18n="@@admin.home.history.submit">Načíst starší platby</span>
+      }
+    </button>
+  </form>
+  <app-live-notice [notice]="notice()" />
+</section>

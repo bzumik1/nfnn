@@ -379,6 +379,9 @@
               </dd>
             </div>
           </dl>
+          @if (importState(); as current) {
+            <app-history-import [state]="current" (finished)="importState.set($event)" />
+          }
         }
       }
     </section>

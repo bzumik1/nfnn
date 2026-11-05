@@ -321,6 +321,8 @@ const adminAnswers: Record<string, unknown> = {
     lastFailure: null,
     consecutiveFailures: 0,
     reportedOutage: null,
+    historyImport: null,
+    defaultHistoryFrom: '2026-01-01',
   },
   '/api/admin/donations/overview': overview,
   '/api/admin/operations/backups': backups,
