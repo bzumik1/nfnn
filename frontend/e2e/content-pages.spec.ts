@@ -253,3 +253,92 @@ test.describe('Given a visitor paging through the news', () => {
     expect(asked).toEqual(['0/10', '1/10', '0/10']);
   });
 });
+
+async function pretendBrowserThatShares(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const shared: ShareData[] = [];
+    Object.assign(window, { sharedPages: shared });
+    Object.defineProperty(navigator, 'canShare', { value: () => true, configurable: true });
+    Object.defineProperty(navigator, 'share', {
+      value: async (data: ShareData) => {
+        shared.push({ title: data.title, url: data.url });
+      },
+      configurable: true,
+    });
+  });
+}
+
+async function pretendBrowserWithoutSharing(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'share', { value: undefined, configurable: true });
+    Object.defineProperty(navigator, 'canShare', { value: undefined, configurable: true });
+  });
+}
+
+async function sharedPages(page: Page): Promise<ShareData[]> {
+  return page.evaluate(() => (window as unknown as { sharedPages: ShareData[] }).sharedPages);
+}
+
+test.describe('Given a visitor in a browser that can share', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+    await publishedContent(page);
+    await pretendBrowserThatShares(page);
+  });
+
+  test('when they share a news article and then a project, then the device gets each title with its address on nfnn.cz', async ({
+    page,
+  }) => {
+    await page.goto(`/aktuality/${article.slug}`);
+    await page.getByRole('button', { name: 'Sdílet' }).click();
+
+    await expect
+      .poll(() => sharedPages(page))
+      .toEqual([{ title: article.title, url: `https://nfnn.cz/aktuality/${article.slug}` }]);
+    await expect(page.getByRole('button', { name: 'Kopírovat odkaz' })).toHaveCount(0);
+
+    await page.goto(`/projekty/${project.slug}`);
+    await page.getByRole('button', { name: 'Sdílet' }).click();
+
+    await expect
+      .poll(() => sharedPages(page))
+      .toEqual([{ title: project.title, url: `https://nfnn.cz/projekty/${project.slug}` }]);
+  });
+});
+
+test.describe('Given a visitor in a browser that cannot share', () => {
+  test.use({ permissions: ['clipboard-read', 'clipboard-write'] });
+
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+    await publishedContent(page);
+    await pretendBrowserWithoutSharing(page);
+  });
+
+  test('when they copy the link of a news article, then the clipboard holds its address on nfnn.cz', async ({
+    page,
+  }) => {
+    await page.goto(`/aktuality/${article.slug}`);
+    await expect(page.getByRole('button', { name: 'Sdílet' })).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Kopírovat odkaz' }).click();
+
+    await expect(page.getByRole('button', { name: 'Zkopírováno' })).toBeVisible();
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+      `https://nfnn.cz/aktuality/${article.slug}`,
+    );
+  });
+
+  test('when they copy the link of a project, then the clipboard holds its address on nfnn.cz', async ({
+    page,
+  }) => {
+    await page.goto(`/projekty/${project.slug}`);
+
+    await page.getByRole('button', { name: 'Kopírovat odkaz' }).click();
+
+    await expect(page.getByRole('button', { name: 'Zkopírováno' })).toBeVisible();
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+      `https://nfnn.cz/projekty/${project.slug}`,
+    );
+  });
+});

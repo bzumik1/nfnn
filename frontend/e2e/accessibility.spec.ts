@@ -215,6 +215,48 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
+  test('when their browser can share but refuses to and they press Sdílet on a news article, then neither the button nor the offer to copy the link breaks the rules', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'canShare', { value: () => true, configurable: true });
+      Object.defineProperty(navigator, 'share', {
+        value: () => Promise.reject(new DOMException('Not allowed', 'NotAllowedError')),
+        configurable: true,
+      });
+    });
+    await page.route(
+      (url) => url.pathname === '/api/content/news/zahrada-pro-deti',
+      (route) =>
+        route.fulfill({
+          json: {
+            id: '0199f3e0-0000-7000-8000-00000000c001',
+            slug: 'zahrada-pro-deti',
+            title: 'Zahrada pro děti',
+            tag: 'Projekt',
+            perex: 'Stavíme zahradu, kde si děti budou hrát.',
+            body: 'První odstavec.',
+            coverImage: null,
+            publishedOn: '2026-10-20',
+            createdAt: '2026-10-19T09:00:00Z',
+            updatedAt: '2026-10-20T07:30:00Z',
+          },
+        }),
+    );
+    await page.goto('/aktuality/zahrada-pro-deti');
+    await expect(page.getByRole('heading', { level: 1, name: 'Zahrada pro děti' })).toBeFocused();
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.getByRole('button', { name: 'Sdílet' }).click();
+    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toHaveText(
+      'Sdílení se nepodařilo. Odkaz na stránku si můžete zkopírovat.',
+    );
+    await expect(page.getByRole('button', { name: 'Kopírovat odkaz' })).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
   test('when they open the privacy policy, then nothing on it breaks the rules', async ({
     page,
   }) => {
