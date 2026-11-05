@@ -60,6 +60,7 @@ const SIGNED_IN_PAGES = [
   '/sprava/pruh-prispet',
   '/sprava/lide-fondu',
   '/sprava/zalohy',
+  '/sprava/upozorneni',
   '/sprava/logy',
   '/sprava/nastaveni',
   '/sprava/historie',

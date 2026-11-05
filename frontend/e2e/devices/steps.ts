@@ -273,6 +273,11 @@ export const STEPS: Step[] = [
     open: (ui) => adminPage(ui, PETR_DETAIL_PATH),
   },
   {
+    id: 'admin-alerts',
+    title: 'the push alerts in the administration',
+    open: (ui) => adminPage(ui, '/sprava/upozorneni'),
+  },
+  {
     id: 'admin-yearly-receipts',
     title: 'the bulk receipts in the administration',
     open: async (ui) => {

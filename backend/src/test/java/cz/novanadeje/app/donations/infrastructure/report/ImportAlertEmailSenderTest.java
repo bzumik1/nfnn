@@ -13,6 +13,7 @@ import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.support.Emails;
 import cz.novanadeje.app.support.MailContents;
 import cz.novanadeje.app.support.MailPreviews;
+import cz.novanadeje.app.support.ObservedMailSenders;
 import jakarta.mail.Message;
 import jakarta.mail.Session;
 import jakarta.mail.internet.InternetAddress;
@@ -47,7 +48,7 @@ class ImportAlertEmailSenderTest {
 
     private final JavaMailSender mailSender = mock(JavaMailSender.class);
     private final ReportSettingsRepository settings = mock(ReportSettingsRepository.class);
-    private final ImportAlertEmailSender sender = new ImportAlertEmailSender(mailSender,
+    private final ImportAlertEmailSender sender = new ImportAlertEmailSender(ObservedMailSenders.of(mailSender),
             Emails.branded(mailSender, "info@nfnn.cz", "https://nfnn.cz"), Emails.messages(),
             settings);
     private ListAppender<ILoggingEvent> log;

@@ -1,5 +1,9 @@
 import { provideHttpClient } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+  TestRequest,
+} from '@angular/common/http/testing';
 import { Component, inject, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
@@ -21,6 +25,7 @@ describe('Given an administrator anywhere in the administration', () => {
   const locked = signal(false);
   let fixture: ComponentFixture<AdminShell>;
   let router: Router;
+  let pushSettings: TestRequest[];
 
   beforeEach(async () => {
     compact.set(false);
@@ -47,6 +52,18 @@ describe('Given an administrator anywhere in the administration', () => {
     fixture = TestBed.createComponent(AdminShell);
     await router.navigateByUrl('/sprava');
     await settle();
+    pushSettings = TestBed.inject(HttpTestingController).match('/api/admin/operations/push');
+    for (const request of pushSettings) {
+      request.flush({ publicKey: 'B', subscriptions: [], openAlerts: [] });
+    }
+  });
+
+  it('when the administration opens, then it reads the push settings once for the badge of the app icon', async () => {
+    await router.navigateByUrl('/sprava/darci');
+    await settle();
+
+    expect(pushSettings).toHaveLength(1);
+    TestBed.inject(HttpTestingController).expectNone('/api/admin/operations/push');
   });
 
   afterEach(() => TestBed.inject(HttpTestingController).verify());
@@ -110,6 +127,7 @@ describe('Given an administrator anywhere in the administration', () => {
           ['Správci', '/sprava/spravci'],
           ['Měsíční e-mail', '/sprava/prehledy'],
           ['Zálohy', '/sprava/zalohy'],
+          ['Upozornění na telefon', '/sprava/upozorneni'],
           ['Historie změn', '/sprava/historie'],
         ],
       },
