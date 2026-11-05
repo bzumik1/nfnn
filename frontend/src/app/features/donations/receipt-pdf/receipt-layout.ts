@@ -20,10 +20,13 @@ export interface ReceiptFonts {
   readonly heading: Uint8Array;
 }
 
-export interface ReceiptAssets {
-  readonly fonts: ReceiptFonts;
+export interface ReceiptArtwork {
   readonly signature: ReceiptArt | null;
   readonly portrait: ReceiptArt | null;
+}
+
+export interface ReceiptAssets extends ReceiptArtwork {
+  readonly fonts: ReceiptFonts;
 }
 
 type FontName = 'body' | 'bold' | 'heading';
@@ -112,24 +115,24 @@ function joined(chunks: readonly Uint8Array[]): Uint8Array {
   return bytes;
 }
 
-class ReceiptLayout {
-  private readonly doc: PDFDocument;
-  private readonly root: PdfStructureElement;
-  private readonly left: number;
-  private readonly width: number;
-  private readonly bottom: number;
-  private readonly symbol: QrSymbol;
-  private page = 1;
-  private y: number;
+export interface ReceiptPdfInfo {
+  readonly title: string;
+  readonly author: string;
+  readonly subject: string;
+  readonly createdAt: string;
+}
 
-  constructor(
-    private readonly document: ReceiptDocument,
-    private readonly style: ReceiptStyle,
-    private readonly assets: ReceiptAssets,
-    private readonly onPage: (page: number) => void,
-  ) {
-    this.symbol = verificationSymbol(document.verification.qrText);
-    const issuedAt = new Date(document.issuedAt);
+type PdfImage = ReturnType<PDFDocument['openImage']>;
+
+class ReceiptPdfFile {
+  readonly doc: PDFDocument;
+  readonly root: PdfStructureElement;
+  private readonly images = new Map<Uint8Array, PdfImage>();
+  private readonly ended: Promise<Uint8Array>;
+  private pages = 1;
+
+  constructor(info: ReceiptPdfInfo, style: ReceiptStyle, fonts: ReceiptFonts) {
+    const createdAt = new Date(info.createdAt);
     this.doc = escapingXmp(
       new PDFDocument({
         size: [A4_WIDTH, A4_HEIGHT],
@@ -147,33 +150,100 @@ class ReceiptLayout {
         subset: 'PDF/UA',
         displayTitle: true,
         info: {
-          Title: document.title.cs,
-          Author: document.author,
-          Subject: document.numberLine.cs,
-          Creator: document.author,
-          Producer: document.author,
-          CreationDate: issuedAt,
-          ModDate: issuedAt,
+          Title: info.title,
+          Author: info.author,
+          Subject: info.subject,
+          Creator: info.author,
+          Producer: info.author,
+          CreationDate: createdAt,
+          ModDate: createdAt,
         },
       }),
     );
-    this.doc.registerFont('body', assets.fonts.body);
-    this.doc.registerFont('bold', assets.fonts.bold);
-    this.doc.registerFont('heading', assets.fonts.heading);
+    this.doc.registerFont('body', fonts.body);
+    this.doc.registerFont('bold', fonts.bold);
+    this.doc.registerFont('heading', fonts.heading);
     this.root = this.doc.struct('Document');
     this.doc.addStructure(this.root);
+    const chunks: Uint8Array[] = [];
+    this.ended = new Promise<Uint8Array>((resolve) =>
+      this.doc.on('end', () => resolve(joined(chunks))),
+    );
+    this.doc.on('data', (chunk) => chunks.push(chunk));
+  }
+
+  get currentPage(): number {
+    return this.pages - 1;
+  }
+
+  addPage(): void {
+    this.doc.addPage();
+    this.pages++;
+  }
+
+  startNextReceipt(duplex: boolean): void {
+    if (duplex && this.pages % 2 === 1) {
+      this.addPage();
+    }
+    this.addPage();
+  }
+
+  section(title: string): PdfStructureElement {
+    const section = this.doc.struct('Sect', { title });
+    this.root.add(section);
+    return section;
+  }
+
+  image(bytes: Uint8Array): PdfImage {
+    let image = this.images.get(bytes);
+    if (image === undefined) {
+      image = this.doc.openImage(bytes);
+      this.images.set(bytes, image);
+    }
+    return image;
+  }
+
+  flush(): void {
+    this.doc.flushPages();
+  }
+
+  finish(endRoot: boolean): Promise<Uint8Array> {
+    if (endRoot) {
+      this.root.end();
+    }
+    this.doc.end();
+    return this.ended;
+  }
+}
+
+class ReceiptLayout {
+  private readonly doc: PDFDocument;
+  private readonly left: number;
+  private readonly width: number;
+  private readonly bottom: number;
+  private readonly symbol: QrSymbol;
+  private readonly firstPage: number;
+  private page = 1;
+  private y: number;
+
+  constructor(
+    private readonly file: ReceiptPdfFile,
+    private readonly document: ReceiptDocument,
+    private readonly style: ReceiptStyle,
+    private readonly assets: ReceiptArtwork,
+    private readonly root: PdfStructureElement,
+    private readonly onPage: (page: number) => void,
+  ) {
+    this.doc = file.doc;
+    this.firstPage = file.currentPage;
+    this.symbol = verificationSymbol(document.verification.qrText);
     this.left = style.margins.left;
     this.width = A4_WIDTH - style.margins.left - style.margins.right;
     this.bottom = A4_HEIGHT - style.margins.bottom;
     this.y = style.margins.top;
   }
 
-  draw(): Promise<Uint8Array> {
-    const chunks: Uint8Array[] = [];
-    const ended = new Promise<Uint8Array>((resolve) =>
-      this.doc.on('end', () => resolve(joined(chunks))),
-    );
-    this.doc.on('data', (chunk) => chunks.push(chunk));
+  draw(): void {
     this.onPage(this.page);
     this.header();
     this.replaces();
@@ -182,8 +252,6 @@ class ReceiptLayout {
     this.closing();
     this.root.end();
     this.footers();
-    this.doc.end();
-    return ended;
   }
 
   private get colors(): ReceiptStyle['colors'] {
@@ -331,7 +399,7 @@ class ReceiptLayout {
   }
 
   private newPage(): void {
-    this.doc.addPage();
+    this.file.addPage();
     this.page++;
     this.y = this.style.margins.top;
     this.onPage(this.page);
@@ -875,7 +943,7 @@ class ReceiptLayout {
     if (art.kind === 'vector') {
       this.vector(art.art, x, y, width, height);
     } else {
-      this.doc.image(art.bytes, x, y, { fit: [width, height], valign: 'bottom' });
+      this.doc.image(this.file.image(art.bytes), x, y, { fit: [width, height], valign: 'bottom' });
     }
   }
 
@@ -886,7 +954,7 @@ class ReceiptLayout {
     if (art.kind === 'vector') {
       this.vector(art.art, x, y, PORTRAIT_SIZE, PORTRAIT_SIZE);
     } else {
-      this.doc.image(art.bytes, x, y, {
+      this.doc.image(this.file.image(art.bytes), x, y, {
         cover: [PORTRAIT_SIZE, PORTRAIT_SIZE],
         align: 'center',
         valign: 'center',
@@ -896,7 +964,8 @@ class ReceiptLayout {
   }
 
   private footers(): void {
-    const { start, count } = this.doc.bufferedPageRange();
+    const start = this.firstPage;
+    const count = this.page;
     for (let index = start; index < start + count; index++) {
       this.doc.switchToPage(index);
       this.artifact(() => {
@@ -943,5 +1012,51 @@ export async function drawReceipt(
   assets: ReceiptAssets,
   onPage: (page: number) => void = () => undefined,
 ): Promise<Uint8Array> {
-  return new ReceiptLayout(document, checkedReceiptStyle(style), assets, onPage).draw();
+  const checked = checkedReceiptStyle(style);
+  const file = new ReceiptPdfFile(
+    {
+      title: document.title.cs,
+      author: document.author,
+      subject: document.numberLine.cs,
+      createdAt: document.issuedAt,
+    },
+    checked,
+    assets.fonts,
+  );
+  new ReceiptLayout(file, document, checked, assets, file.root, onPage).draw();
+  return file.finish(false);
+}
+
+export interface ReceiptBundleItem {
+  readonly document: ReceiptDocument;
+  readonly artwork: ReceiptArtwork;
+}
+
+export interface ReceiptBundleOptions {
+  readonly info: ReceiptPdfInfo;
+  readonly duplex: boolean;
+}
+
+export async function drawReceiptBundle(
+  items: readonly ReceiptBundleItem[],
+  options: ReceiptBundleOptions,
+  style: ReceiptStyle,
+  fonts: ReceiptFonts,
+  onReceipt: (index: number) => void = () => undefined,
+): Promise<Uint8Array> {
+  if (items.length === 0) {
+    throw new Error('A bundle of receipts needs at least one receipt.');
+  }
+  const checked = checkedReceiptStyle(style);
+  const file = new ReceiptPdfFile(options.info, checked, fonts);
+  items.forEach((item, index) => {
+    if (index > 0) {
+      file.startNextReceipt(options.duplex);
+    }
+    onReceipt(index);
+    const section = file.section(item.document.number);
+    new ReceiptLayout(file, item.document, checked, item.artwork, section, () => undefined).draw();
+    file.flush();
+  });
+  return file.finish(true);
 }
