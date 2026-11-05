@@ -9,10 +9,12 @@ import cz.novanadeje.app.content.application.project.ProjectAdminService;
 import cz.novanadeje.app.content.application.project.ProjectCommand;
 import cz.novanadeje.app.content.application.project.ProjectView;
 import cz.novanadeje.app.content.domain.project.ProjectCategory;
+import cz.novanadeje.app.donors.application.AccessTokenGrant;
 import cz.novanadeje.app.donors.application.AccessTokenIssuer;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.Role;
 import cz.novanadeje.app.shared.domain.UuidV7;
+import cz.novanadeje.app.shared.infrastructure.security.JwtProperties;
 import cz.novanadeje.app.support.DatabaseCleaner;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -79,6 +81,9 @@ class ServiceWorkerCachedAnswersTest {
 
     @Autowired
     private AccessTokenIssuer accessTokens;
+
+    @Autowired
+    private JwtProperties jwt;
 
     @Autowired
     private NewsAdminService news;
@@ -211,7 +216,7 @@ class ServiceWorkerCachedAnswersTest {
     }
 
     private String bearer(Set<Role> roles) {
-        return "Bearer " + accessTokens.issue(new DonorId(UuidV7.generate(clock.instant())), roles, clock.instant()).token();
+        return "Bearer " + accessTokens.issue(new AccessTokenGrant(new DonorId(UuidV7.generate(clock.instant())), roles, jwt.audience(), Set.of(), clock.instant(), null, null)).token();
     }
 
     private Answer answer(MockHttpServletRequestBuilder request) throws Exception {

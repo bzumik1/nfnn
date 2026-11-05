@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorNotFound;
@@ -8,7 +9,6 @@ import cz.novanadeje.app.donors.domain.EmailNotRegistered;
 import cz.novanadeje.app.donors.domain.NoPasskeys;
 import cz.novanadeje.app.donors.domain.OwnAdministrationRevoked;
 import cz.novanadeje.app.donors.domain.PasskeyRepository;
-import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
 import cz.novanadeje.app.donors.application.event.DonorPasskeysRemoved;
 import cz.novanadeje.app.donors.application.event.DonorSecondFactorReset;
 import cz.novanadeje.app.donors.domain.SecondFactor;
@@ -41,16 +41,16 @@ public class AdministratorService {
     private final DonorRepository donors;
     private final SecondFactorRepository secondFactors;
     private final PasskeyRepository passkeys;
-    private final RefreshTokenRepository refreshTokens;
     private final ApplicationEventPublisher events;
     private final Clock clock;
+    private final DeviceSignOuts signOuts;
 
     public AdministratorService(DonorRepository donors, SecondFactorRepository secondFactors, PasskeyRepository passkeys,
-                                RefreshTokenRepository refreshTokens, ApplicationEventPublisher events, Clock clock) {
+                                ApplicationEventPublisher events, Clock clock, DeviceSignOuts signOuts) {
+        this.signOuts = signOuts;
         this.donors = donors;
         this.secondFactors = secondFactors;
         this.passkeys = passkeys;
-        this.refreshTokens = refreshTokens;
         this.events = events;
         this.clock = clock;
     }
@@ -92,7 +92,7 @@ public class AdministratorService {
         donor.revokeAdministration();
         donors.save(donor);
         Instant now = clock.instant();
-        refreshTokens.revokeAllOf(donorId, now);
+        signOuts.endAllOf(donorId, DeviceSignOutReason.ADMINISTRATION_CHANGED, now);
         donors.forgetSignIns(donorId);
         events.publishEvent(new AdministrationRevoked(donorId.value(), now));
         events.publishEvent(new AdminActionPerformed(adminId.value(), REVOKE_ACTION, Optional.of(donorId.value()),
@@ -108,7 +108,7 @@ public class AdministratorService {
         }
         secondFactors.delete(donorId);
         Instant now = clock.instant();
-        refreshTokens.revokeAllOf(donorId, now);
+        signOuts.endAllOf(donorId, DeviceSignOutReason.CREDENTIALS_CHANGED, now);
         events.publishEvent(new AdminActionPerformed(adminId.value(), RESET_SECOND_FACTOR_ACTION, Optional.of(donorId.value()),
                 "Dvoufaktorové ověření dárce " + donorId + " vypnuto; všechna přihlášení dárce ukončena", now));
         events.publishEvent(new DonorSecondFactorReset(donorId.value(), donor.email(), donor.preferredLocale()));
@@ -123,7 +123,7 @@ public class AdministratorService {
             throw new NoPasskeys();
         }
         Instant now = clock.instant();
-        refreshTokens.revokeAllOf(donorId, now);
+        signOuts.endAllOf(donorId, DeviceSignOutReason.CREDENTIALS_CHANGED, now);
         events.publishEvent(new AdminActionPerformed(adminId.value(), REMOVE_PASSKEYS_ACTION, Optional.of(donorId.value()),
                 "Odebrané přístupové klíče dárce " + donorId + ": " + removed + "; všechna přihlášení dárce ukončena", now));
         events.publishEvent(new DonorPasskeysRemoved(donorId.value(), donor.email(), donor.preferredLocale()));

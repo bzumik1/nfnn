@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @RestController
@@ -35,7 +36,7 @@ class LiveController {
     @GetMapping(produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     ResponseEntity<SseEmitter> stream(@AuthenticationPrincipal Jwt token) {
         LiveSubscriber subscriber = new LiveSubscriber(UUID.fromString(token.getSubject()), administrator(token),
-                token.getIssuedAt(), token.getExpiresAt());
+                session(token), token.getIssuedAt(), token.getExpiresAt());
         return switch (hub.open(subscriber, SseLiveConnection::new)) {
             case LiveOpening.Opened<SseLiveConnection> opened -> ResponseEntity.ok()
                     .cacheControl(CacheControl.noStore())
@@ -46,6 +47,10 @@ class LiveController {
             case LiveOpening.Full<SseLiveConnection> full -> throw new RateLimitExceededException(ProblemTypes.of("live-streams-full"));
             case LiveOpening.Unavailable<SseLiveConnection> unavailable -> throw new LiveUnavailableException();
         };
+    }
+
+    private static Optional<UUID> session(Jwt token) {
+        return Optional.ofNullable(token.getClaimAsString(JwtProperties.SESSION_CLAIM)).map(UUID::fromString);
     }
 
     private static boolean administrator(Jwt token) {

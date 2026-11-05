@@ -21,6 +21,7 @@ import {
   secondFactorEnrolment,
   secondFactorRecovery,
   secondFactorRequired,
+  signedInDevices,
   signIn,
   session,
 } from './donor-session';
@@ -709,6 +710,48 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
     await page.getByRole('button', { name: 'Jak přiřazujeme platby' }).click();
     await expect(page.getByRole('region', { name: 'Jak přiřazujeme platby' })).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when signing out the other devices fails and a signed-in donor then signs out one, then the device card with its alert and its status breaks no rule', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    let listed = signedInDevices;
+    await page.route(
+      (url) => url.pathname === '/api/donors/me/devices',
+      async (route) => {
+        if (route.request().method() === 'DELETE') {
+          await route.fulfill(
+            problem(500, 'about:blank', 'Chyba serveru', 'Zkuste to prosím za chvíli znovu.'),
+          );
+          return;
+        }
+        await route.fulfill({ json: { items: listed } });
+      },
+    );
+    await page.route(
+      (url) => url.pathname.startsWith('/api/donors/me/devices/'),
+      async (route) => {
+        listed = signedInDevices.filter((device) => device.current);
+        await route.fulfill({ status: 204 });
+      },
+    );
+    await signIn(page);
+    await openDonorSection(page, 'Údaje a zabezpečení');
+    const devices = page.locator('.devices');
+    await expect(devices.getByRole('button', { name: 'Odhlásit iPhone · Safari' })).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+
+    await devices.getByRole('button', { name: 'Odhlásit všechna ostatní zařízení' }).click();
+    await expect(devices.getByRole('alert').filter({ hasText: /\S/ })).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+
+    await devices.getByRole('button', { name: 'Odhlásit iPhone · Safari' }).click();
+    await expect(devices.getByRole('status').filter({ hasText: /\S/ })).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
   });

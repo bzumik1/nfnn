@@ -91,7 +91,7 @@ Feature: Donor resets a forgotten password by e-mail
     When the donor sets the new password "a brand new passphrase" with the link from the e-mail
     Then the response status is 204
 
-  Scenario: A reset ends every session but not the access token already issued
+  Scenario: A reset ends every session, the access token already issued included
     Given a person registered with email "jana@example.cz" and password "correct horse battery"
     And the donor signed in with email "jana@example.cz" and password "correct horse battery"
     And the donor asked for a password reset for "jana@example.cz"
@@ -101,7 +101,8 @@ Feature: Donor resets a forgotten password by e-mail
     Then the response status is 401
     And the problem type ends with "auth/invalid-refresh-token"
     When the donor asks for the profile
-    Then the response status is 200
+    Then the response status is 401
+    And the problem type ends with "auth/session-ended"
     When 16 minutes pass
     And the donor asks for the profile
     Then the response status is 401

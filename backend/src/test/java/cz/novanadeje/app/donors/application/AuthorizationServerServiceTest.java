@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.domain.AdministratorRequired;
 import cz.novanadeje.app.donors.domain.AuthorizationCode;
 import cz.novanadeje.app.donors.domain.AuthorizationCodeRepository;
@@ -84,6 +85,8 @@ class AuthorizationServerServiceTest {
     private AccessTokenVerifier verifier;
     @Mock
     private FreshSecondFactorCheck freshSecondFactor;
+    @Mock
+    private DeviceSignOuts signOuts;
 
     private AuthorizationServerService service;
 
@@ -91,7 +94,7 @@ class AuthorizationServerServiceTest {
     void setUp() {
         service = new AuthorizationServerService(clients, codes, refreshTokens, donors, accessTokens, verifier, freshSecondFactor,
                 new OAuthProperties(ISSUER, "/pripojeni", Duration.ofMinutes(5), MCP, API), new DonorSessionProperties(REFRESH_TTL),
-                Clock.fixed(NOW, ZoneOffset.UTC));
+                Clock.fixed(NOW, ZoneOffset.UTC), signOuts);
     }
 
     @Nested
@@ -292,7 +295,7 @@ class AuthorizationServerServiceTest {
             OAuthTokens tokens = service.refresh(secret.value(), CLAUDE.value());
 
             verify(refreshTokens).markUsed(token.id(), NOW);
-            verify(refreshTokens, never()).revokeAllOf(any(), any());
+            verify(signOuts, never()).endAllOf(any(), any(), any());
             ArgumentCaptor<RefreshToken> saved = ArgumentCaptor.forClass(RefreshToken.class);
             verify(refreshTokens).save(saved.capture());
             RefreshToken rotated = saved.getValue();
@@ -310,7 +313,7 @@ class AuthorizationServerServiceTest {
 
             assertThatThrownBy(() -> service.refresh(secret.value(), CLAUDE.value())).isInstanceOf(InvalidGrant.class);
 
-            verify(refreshTokens).revokeAllOf(DONOR, NOW);
+            verify(signOuts).endAllOf(DONOR, DeviceSignOutReason.REPLAY, NOW);
             verify(accessTokens, never()).issue(any(AccessTokenGrant.class));
         }
 
@@ -328,7 +331,7 @@ class AuthorizationServerServiceTest {
 
             assertThatThrownBy(() -> service.refresh(secret.value(), CLAUDE.value())).isInstanceOf(InvalidGrant.class);
 
-            verify(refreshTokens).revokeAllOf(DONOR, NOW);
+            verify(signOuts).endAllOf(DONOR, DeviceSignOutReason.REPLAY, NOW);
         }
 
         @Test
@@ -338,7 +341,7 @@ class AuthorizationServerServiceTest {
 
             assertThatThrownBy(() -> service.refresh(secret.value(), CLAUDE.value())).isInstanceOf(InvalidGrant.class);
 
-            verify(refreshTokens, never()).revokeAllOf(any(), any());
+            verify(signOuts, never()).endAllOf(any(), any(), any());
         }
 
         @Test

@@ -12,6 +12,7 @@ import { problemTypeEndsWith } from './api-problem';
 import { AuthStore } from './auth-store';
 
 const EXPIRED_TOKEN = 'auth/expired-token';
+const SESSION_ENDED = 'auth/session-ended';
 const PROBLEM_MEDIA_TYPE = 'application/problem+json';
 
 export const WITHOUT_ACCESS_TOKEN = new HttpContextToken<boolean>(() => false);
@@ -30,7 +31,10 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
   }
   return send(withBearer(request, token), next).pipe(
     catchError((failure: unknown) => {
-      if (!problemTypeEndsWith(failure, EXPIRED_TOKEN)) {
+      if (
+        !problemTypeEndsWith(failure, EXPIRED_TOKEN) &&
+        !problemTypeEndsWith(failure, SESSION_ENDED)
+      ) {
         return throwError(() => failure);
       }
       return store.refresh().pipe(switchMap((fresh) => send(withBearer(request, fresh), next)));

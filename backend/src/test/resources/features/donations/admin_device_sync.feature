@@ -134,6 +134,7 @@ Feature: An administrator's device keeps a copy of the administration's donation
     And a person "Andrea" is registered
     And "Jana" is an administrator
     And "Andrea" is an administrator
+    And "Andrea" holds a browser token from before the signed-in devices
     And the bank account has these movements:
       | id   | date       | amount | account    | bankCode | name          | variableSymbol |
       | 1001 | 2026-09-10 | 500.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |

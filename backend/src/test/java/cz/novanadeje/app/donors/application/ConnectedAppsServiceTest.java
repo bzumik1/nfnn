@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.DeviceId;
 import cz.novanadeje.app.donors.domain.ClientId;
 import cz.novanadeje.app.donors.domain.ConnectedAppNotFound;
 import cz.novanadeje.app.donors.domain.DonorId;
@@ -81,7 +82,7 @@ class ConnectedAppsServiceTest {
     @Test
     @DisplayName("Given a browser session token, when it is disconnected as a connection, then it is not found")
     void should_not_find_when_disconnected_given_browser_token() {
-        RefreshToken browser = RefreshToken.issue(RefreshTokenSecret.generate(), JANA, NOW, Duration.ofDays(14), true);
+        RefreshToken browser = RefreshToken.issue(RefreshTokenSecret.generate(), JANA, DeviceId.newId(NOW), NOW, Duration.ofDays(14), true);
         when(refreshTokens.findById(browser.id())).thenReturn(Optional.of(browser));
 
         assertThatThrownBy(() -> service().disconnect(JANA, browser.id())).isInstanceOf(ConnectedAppNotFound.class);

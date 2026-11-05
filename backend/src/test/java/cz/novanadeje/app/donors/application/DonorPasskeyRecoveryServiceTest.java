@@ -12,7 +12,6 @@ import cz.novanadeje.app.donors.domain.PasskeyRepository;
 import cz.novanadeje.app.donors.domain.PasswordHasher;
 import cz.novanadeje.app.donors.domain.PasswordResetToken;
 import cz.novanadeje.app.donors.domain.PasswordResetTokenRepository;
-import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
 import cz.novanadeje.app.donors.domain.SecondFactor;
 import cz.novanadeje.app.donors.domain.SecondFactorCodeRejected;
 import cz.novanadeje.app.donors.domain.SecondFactorCodeRequired;
@@ -62,7 +61,7 @@ class DonorPasskeyRecoveryServiceTest {
     @Mock
     private SecondFactorRepository secondFactors;
     @Mock
-    private RefreshTokenRepository refreshTokens;
+    private DeviceSignOuts signOuts;
     @Mock
     private PasskeyRepository passkeys;
     @Mock
@@ -83,7 +82,7 @@ class DonorPasskeyRecoveryServiceTest {
                 new DonorConfirmations(passwordHasher, passkeys, challenges, ceremonies, clock), ceremonies,
                 new PasskeyProperties(Duration.ofMinutes(5), 10, "Nová naděje"), new SecondFactorSessionGuard(secondFactors, passkeys), events,
                 clock);
-        service = new DonorPasskeyRecoveryService(tokens, donors, secondFactors, refreshTokens, passkeyService, clock);
+        service = new DonorPasskeyRecoveryService(tokens, donors, secondFactors, passkeyService, clock, signOuts);
     }
 
     @Test
@@ -128,7 +127,7 @@ class DonorPasskeyRecoveryServiceTest {
                 .isInstanceOf(AdministratorRecoveryRefused.class);
 
         verify(tokens, never()).markUsed(any(), any());
-        verifyNoInteractions(challenges, secondFactors, refreshTokens);
+        verifyNoInteractions(challenges, secondFactors, signOuts);
     }
 
     @Test

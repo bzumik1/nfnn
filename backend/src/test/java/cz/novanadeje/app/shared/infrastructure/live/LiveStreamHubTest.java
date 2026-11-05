@@ -1,5 +1,6 @@
 package cz.novanadeje.app.shared.infrastructure.live;
 
+import cz.novanadeje.app.shared.application.event.DeviceSignedOut;
 import cz.novanadeje.app.shared.application.event.DonorSessionsEnded;
 import cz.novanadeje.app.shared.application.event.LiveFeed;
 import cz.novanadeje.app.shared.application.event.StoredDataChanged;
@@ -13,6 +14,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -28,6 +30,8 @@ class LiveStreamHubTest {
     private static final UUID JANA = UUID.fromString("0190a000-0000-7000-8000-000000000001");
     private static final UUID PETR = UUID.fromString("0190a000-0000-7000-8000-000000000002");
     private static final UUID ADMIN = UUID.fromString("0190a000-0000-7000-8000-000000000003");
+    private static final UUID PHONE = UUID.fromString("0190a000-0000-7000-8000-0000000000a1");
+    private static final UUID LAPTOP = UUID.fromString("0190a000-0000-7000-8000-0000000000a2");
 
     private final MutableClock clock = new MutableClock(NOW, ZoneId.of("Europe/Prague"));
     private LiveStreamHub hub = hub(new LiveProperties(Duration.ofMinutes(1), 5, 50, 10));
@@ -120,7 +124,7 @@ class LiveStreamHubTest {
     @Test
     @DisplayName("Given a stream whose token expires shortly, when the expiry passes, then the stream is closed and forgotten")
     void should_close_stream_when_token_expires_given_short_lived_token() {
-        RecordingConnection jana = open(new LiveSubscriber(JANA, false, NOW, NOW.plusMillis(50)));
+        RecordingConnection jana = open(new LiveSubscriber(JANA, false, Optional.empty(), NOW, NOW.plusMillis(50)));
 
         await().untilAsserted(() -> assertThat(jana.closed()).isTrue());
         assertThat(hub.openStreams()).isZero();
@@ -129,7 +133,7 @@ class LiveStreamHubTest {
     @Test
     @DisplayName("Given a token that has already expired, when a stream is asked for, then the hub refuses it as an ended session")
     void should_refuse_stream_when_opened_given_expired_token() {
-        LiveOpening<RecordingConnection> opening = hub.open(new LiveSubscriber(JANA, false, NOW.minus(TOKEN_LIFETIME), NOW.minusSeconds(1)), RecordingConnection::new);
+        LiveOpening<RecordingConnection> opening = hub.open(new LiveSubscriber(JANA, false, Optional.empty(), NOW.minus(TOKEN_LIFETIME), NOW.minusSeconds(1)), RecordingConnection::new);
 
         assertThat(opening).isInstanceOf(LiveOpening.SessionEnded.class);
     }
@@ -137,18 +141,45 @@ class LiveStreamHubTest {
     @Test
     @DisplayName("Given a donor's streams of an old and a new token, when the donor's sessions end between them, then only the old one closes and the old token cannot open another")
     void should_close_older_streams_and_refuse_older_tokens_when_sessions_end_given_two_tokens() {
-        RecordingConnection old = open(new LiveSubscriber(JANA, false, NOW.minusSeconds(60), NOW.plus(TOKEN_LIFETIME)));
+        RecordingConnection old = open(new LiveSubscriber(JANA, false, Optional.empty(), NOW.minusSeconds(60), NOW.plus(TOKEN_LIFETIME)));
         RecordingConnection petr = open(donor(PETR));
         Instant endedAt = NOW.plusMillis(400);
-        RecordingConnection fresh = open(new LiveSubscriber(JANA, false, NOW, NOW.plus(TOKEN_LIFETIME)));
+        RecordingConnection fresh = open(new LiveSubscriber(JANA, false, Optional.empty(), NOW, NOW.plus(TOKEN_LIFETIME)));
 
         hub.endSessions(new DonorSessionsEnded(JANA, endedAt));
 
         assertThat(old.closed()).isTrue();
         assertThat(fresh.closed()).isFalse();
         assertThat(petr.closed()).isFalse();
-        assertThat(hub.open(new LiveSubscriber(JANA, false, NOW.minusSeconds(60), NOW.plus(TOKEN_LIFETIME)), RecordingConnection::new))
+        assertThat(hub.open(new LiveSubscriber(JANA, false, Optional.empty(), NOW.minusSeconds(60), NOW.plus(TOKEN_LIFETIME)), RecordingConnection::new))
                 .isInstanceOf(LiveOpening.SessionEnded.class);
+    }
+
+    @Test
+    @DisplayName("Given a donor's streams of two devices and one of a token without a device, when the phone is signed out, then only the phone's stream closes and the phone's token cannot open another")
+    void should_close_only_device_stream_and_refuse_its_token_when_device_signed_out_given_two_devices() {
+        RecordingConnection phone = open(onDevice(JANA, PHONE));
+        RecordingConnection laptop = open(onDevice(JANA, LAPTOP));
+        RecordingConnection deviceless = open(donor(JANA));
+
+        hub.endDevice(new DeviceSignedOut(JANA, PHONE, NOW));
+
+        assertThat(phone.closed()).isTrue();
+        assertThat(laptop.closed()).isFalse();
+        assertThat(deviceless.closed()).isFalse();
+        assertThat(hub.open(onDevice(JANA, PHONE), RecordingConnection::new)).isInstanceOf(LiveOpening.SessionEnded.class);
+        assertThat(hub.open(onDevice(JANA, LAPTOP), RecordingConnection::new)).isInstanceOf(LiveOpening.Opened.class);
+    }
+
+    @Test
+    @DisplayName("Given a device signed out long enough ago, when a stream of its token is asked for, then the hub no longer remembers it and only the token's own expiry counts")
+    void should_forget_device_sign_out_when_memory_passes_given_old_sign_out() {
+        hub.endDevice(new DeviceSignedOut(JANA, PHONE, NOW));
+        clock.advance(Duration.ofMinutes(17));
+
+        LiveOpening<RecordingConnection> opening = hub.open(new LiveSubscriber(JANA, false, Optional.of(PHONE), clock.instant(), clock.instant().plusSeconds(60)), RecordingConnection::new);
+
+        assertThat(opening).isInstanceOf(LiveOpening.Opened.class);
     }
 
     @Test
@@ -157,7 +188,7 @@ class LiveStreamHubTest {
         hub.endSessions(new DonorSessionsEnded(JANA, NOW));
         clock.advance(Duration.ofMinutes(17));
 
-        LiveOpening<RecordingConnection> opening = hub.open(new LiveSubscriber(JANA, false, NOW.minusSeconds(60), clock.instant().plusSeconds(60)), RecordingConnection::new);
+        LiveOpening<RecordingConnection> opening = hub.open(new LiveSubscriber(JANA, false, Optional.empty(), NOW.minusSeconds(60), clock.instant().plusSeconds(60)), RecordingConnection::new);
 
         assertThat(opening).isInstanceOf(LiveOpening.Opened.class);
     }
@@ -243,10 +274,14 @@ class LiveStreamHubTest {
     }
 
     private static LiveSubscriber donor(UUID donor) {
-        return new LiveSubscriber(donor, false, NOW, NOW.plus(TOKEN_LIFETIME));
+        return new LiveSubscriber(donor, false, Optional.empty(), NOW, NOW.plus(TOKEN_LIFETIME));
+    }
+
+    private static LiveSubscriber onDevice(UUID donor, UUID device) {
+        return new LiveSubscriber(donor, false, Optional.of(device), NOW, NOW.plus(TOKEN_LIFETIME));
     }
 
     private static LiveSubscriber administrator(UUID donor) {
-        return new LiveSubscriber(donor, true, NOW, NOW.plus(TOKEN_LIFETIME));
+        return new LiveSubscriber(donor, true, Optional.empty(), NOW, NOW.plus(TOKEN_LIFETIME));
     }
 }

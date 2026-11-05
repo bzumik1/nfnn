@@ -18,7 +18,7 @@ class RefreshTokenTest {
     @Test
     @DisplayName("Given a token neither expired nor revoked, when it is checked, then it is usable")
     void should_be_usable_when_checked_given_not_expired_and_not_revoked() {
-        RefreshToken token = RefreshToken.issue(RefreshTokenSecret.generate(), DONOR, NOW, Duration.ofDays(14), false);
+        RefreshToken token = RefreshToken.issue(RefreshTokenSecret.generate(), DONOR, DeviceId.newId(NOW), NOW, Duration.ofDays(14), false);
 
         assertThat(token.isUsableAt(NOW.plus(Duration.ofDays(13)))).isTrue();
     }
@@ -26,7 +26,7 @@ class RefreshTokenTest {
     @Test
     @DisplayName("Given an expired token, when it is checked, then it is not usable")
     void should_not_be_usable_when_checked_given_expired() {
-        RefreshToken token = RefreshToken.issue(RefreshTokenSecret.generate(), DONOR, NOW, Duration.ofDays(14), false);
+        RefreshToken token = RefreshToken.issue(RefreshTokenSecret.generate(), DONOR, DeviceId.newId(NOW), NOW, Duration.ofDays(14), false);
 
         assertThat(token.isUsableAt(NOW.plus(Duration.ofDays(14)))).isFalse();
     }
@@ -34,7 +34,7 @@ class RefreshTokenTest {
     @Test
     @DisplayName("Given a revoked token, when it is checked, then it is not usable")
     void should_not_be_usable_when_checked_given_revoked() {
-        RefreshToken token = RefreshToken.issue(RefreshTokenSecret.generate(), DONOR, NOW, Duration.ofDays(14), false);
+        RefreshToken token = RefreshToken.issue(RefreshTokenSecret.generate(), DONOR, DeviceId.newId(NOW), NOW, Duration.ofDays(14), false);
 
         token.revoke(NOW.plusSeconds(10));
 
@@ -45,7 +45,7 @@ class RefreshTokenTest {
     @Test
     @DisplayName("Given a rotation, when the token is marked used, then it is used but not revoked")
     void should_be_used_but_not_revoked_when_marked_used_given_rotation() {
-        RefreshToken token = RefreshToken.issue(RefreshTokenSecret.generate(), DONOR, NOW, Duration.ofDays(14), false);
+        RefreshToken token = RefreshToken.issue(RefreshTokenSecret.generate(), DONOR, DeviceId.newId(NOW), NOW, Duration.ofDays(14), false);
 
         token.markUsed(NOW.plusSeconds(10));
 
@@ -58,7 +58,7 @@ class RefreshTokenTest {
     @Test
     @DisplayName("Given a sign-out or a password change, when the token is revoked, then it does not count as used")
     void should_not_count_as_used_when_revoked_given_sign_out_or_password_change() {
-        RefreshToken token = RefreshToken.issue(RefreshTokenSecret.generate(), DONOR, NOW, Duration.ofDays(14), false);
+        RefreshToken token = RefreshToken.issue(RefreshTokenSecret.generate(), DONOR, DeviceId.newId(NOW), NOW, Duration.ofDays(14), false);
 
         token.revoke(NOW.plusSeconds(10));
 
@@ -70,7 +70,7 @@ class RefreshTokenTest {
     @DisplayName("Given a secret, when a token is issued, then only its hash is stored")
     void should_store_only_hash_when_issued_given_secret() {
         RefreshTokenSecret secret = RefreshTokenSecret.generate();
-        RefreshToken token = RefreshToken.issue(secret, DONOR, NOW, Duration.ofDays(14), false);
+        RefreshToken token = RefreshToken.issue(secret, DONOR, DeviceId.newId(NOW), NOW, Duration.ofDays(14), false);
 
         assertThat(token.secretHash()).isEqualTo(secret.hash());
         assertThat(token.secretHash()).isNotEqualTo(secret.value());
@@ -80,7 +80,7 @@ class RefreshTokenTest {
     @Test
     @DisplayName("Given the browser, when a token is issued for it, then it belongs to no client")
     void should_belong_to_no_client_when_issued_for_the_browser() {
-        RefreshToken token = RefreshToken.issue(RefreshTokenSecret.generate(), DONOR, NOW, Duration.ofDays(14), false);
+        RefreshToken token = RefreshToken.issue(RefreshTokenSecret.generate(), DONOR, DeviceId.newId(NOW), NOW, Duration.ofDays(14), false);
 
         assertThat(token.clientId()).isEmpty();
         assertThat(token.scopes()).isEmpty();
@@ -148,7 +148,7 @@ class RefreshTokenTest {
     @Test
     @DisplayName("Given an unused token, when it is checked for the reuse grace, then it may not be reissued")
     void should_refuse_reissue_when_checked_given_an_unused_token() {
-        RefreshToken token = RefreshToken.issue(RefreshTokenSecret.generate(), DONOR, NOW.minusSeconds(10), Duration.ofDays(14), false);
+        RefreshToken token = RefreshToken.issue(RefreshTokenSecret.generate(), DONOR, DeviceId.newId(NOW.minusSeconds(10)), NOW.minusSeconds(10), Duration.ofDays(14), false);
 
         assertThat(token.mayBeReissuedAt(NOW)).isFalse();
     }
@@ -158,7 +158,7 @@ class RefreshTokenTest {
     void should_refuse_reissue_when_presented_within_the_grace_given_an_expired_token() {
         Instant issued = NOW.minus(Duration.ofDays(14));
         RefreshToken token = RefreshToken.reconstitute(UUID.randomUUID(), DONOR, RefreshTokenSecret.generate().hash(), issued, NOW, false, null,
-                Set.of(), issued, NOW.minusSeconds(10), null, UUID.randomUUID(), null);
+                Set.of(), issued, NOW.minusSeconds(10), null, UUID.randomUUID(), null, null);
 
         assertThat(token.mayBeReissuedAt(NOW)).isFalse();
     }
@@ -166,7 +166,7 @@ class RefreshTokenTest {
     @Test
     @DisplayName("Given an unused token, when the grace supersedes it, then it is revoked and remembered as superseded")
     void should_revoke_and_mark_superseded_when_superseded_given_an_unused_token() {
-        RefreshToken token = RefreshToken.issue(RefreshTokenSecret.generate(), DONOR, NOW, Duration.ofDays(14), false);
+        RefreshToken token = RefreshToken.issue(RefreshTokenSecret.generate(), DONOR, DeviceId.newId(NOW), NOW, Duration.ofDays(14), false);
 
         assertThat(token.isSuperseded()).isFalse();
         token.supersede(NOW.plusSeconds(10));
@@ -179,6 +179,6 @@ class RefreshTokenTest {
     private static RefreshToken rotated(ClientId client, Instant usedAt, Instant revokedAt, UUID successor) {
         Instant issued = usedAt.minus(Duration.ofDays(1));
         return RefreshToken.reconstitute(UUID.randomUUID(), DONOR, RefreshTokenSecret.generate().hash(), issued, issued.plus(Duration.ofDays(14)),
-                false, client, Set.of(), issued, usedAt, revokedAt, successor, null);
+                false, client, Set.of(), issued, usedAt, revokedAt, successor, null, null);
     }
 }
