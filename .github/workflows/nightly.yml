@@ -62,9 +62,41 @@ jobs:
     name: Zkouška vydání
     uses: ./.github/workflows/release-rehearsal.yml
 
+  sync-convergence:
+    name: Konvergence synchronizace
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Three devices of one donor converge on what a fresh download gives, over 300 seeds
+        run: ./gradlew test --tests "*DonorDeviceSyncTest" -PnoCucumber
+        env:
+          SYNC_CONVERGENCE_SEEDS: "300"
+
+      - name: Keep the test reports
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: konvergence-synchronizace
+          path: backend/build/reports/
+          retention-days: 14
+
   report:
     name: Hlášení
-    needs: [public-screens, release]
+    needs: [public-screens, release, sync-convergence]
     if: ${{ !cancelled() && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -82,6 +114,7 @@ jobs:
             case "$1" in
               public-screens) echo "Veřejné stránky proti v2|veřejný web|další řez, který mění veřejné stránky nebo jejich vzhled (2.4, 2.5, 2.6, 2.7, 2.22, 2.26a)" ;;
               release) echo "Zkouška vydání (nasazená revize a latest)|provoz, schéma a obrazy|další řez s changesetem Liquibase nebo se změnou obrazů, compose, záloh či importu (2.3, 2.4, 2.9, 2.12, 2.17, 2.27)" ;;
+              sync-convergence) echo "Konvergence synchronizace (300 semínek)|kopie dat v zařízení dárce a její synchronizace|další řez, který mění synchronizaci nebo kopii v zařízení (2.13, 2.17)" ;;
               *) echo "$1|neurčeno|doplňte job do tabulky v nightly.yml a v .claude/rules/testing.md" ;;
             esac
           }
