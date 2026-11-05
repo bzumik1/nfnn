@@ -63,7 +63,9 @@ export class DialogHistory {
   }
 
   close(listener?: DialogHistoryListener): void {
-    void listener;
+    if (listener !== undefined && listener !== this.listener) {
+      return;
+    }
     this.listener = null;
     this.wanted = 0;
     this.settle();

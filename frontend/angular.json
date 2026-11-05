@@ -36,6 +36,11 @@
                 "input": "public"
               },
               {
+                "glob": "**/*",
+                "input": "src/themes/nova-nadeje/assets",
+                "output": "/"
+              },
+              {
                 "glob": "*",
                 "input": "src/themes/nova-nadeje/receipt",
                 "output": "receipt-fonts"
@@ -98,6 +103,11 @@
                 {
                   "glob": "**/*",
                   "input": "public"
+                },
+                {
+                  "glob": "**/*",
+                  "input": "src/themes/control/assets",
+                  "output": "/"
                 },
                 {
                   "glob": "*",

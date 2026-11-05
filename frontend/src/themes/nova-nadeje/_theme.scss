@@ -116,6 +116,13 @@
   --color-qr-ground: #ffffff;
   --color-logo: #005dab;
   --color-logo-fill: #ffffff;
+  --color-tab-bar: color-mix(in srgb, #0f172a 66%, transparent);
+  --color-tab-bar-rim: color-mix(in srgb, #ffffff 35%, transparent);
+  --color-tab-pill: color-mix(in srgb, #0f172a 88%, transparent);
+  --color-tab-active: #93c5fd;
+  --color-on-tab-bar: #ffffff;
+  --color-tab-focus-ring: #ffffff;
+  --color-sheet-grabber: #d1d5db;
 
   --font-serif: 'Playfair Display', serif;
   --font-sans: 'Inter', sans-serif;
@@ -193,6 +200,7 @@
   --duration-base: 0.2s;
   --duration-slow: 0.3s;
   --duration-entrance: 0.9s;
+  --duration-sheet: 0.3s;
 
   --radius-xs: 2px;
   --radius-scrollbar: 3px;
@@ -204,6 +212,7 @@
   --radius-card: 16px;
   --radius-media: 20px;
   --radius-dialog: 24px;
+  --radius-sheet: 24px;
   --radius-pill: 50px;
   --radius-round: 50%;
 
@@ -213,6 +222,8 @@
   --shadow-panel: 0 2px 12px rgb(0 0 0 / 0.06);
   --shadow-media: 0 12px 36px rgb(0 0 0 / 0.25);
   --shadow-dialog: 0 24px 80px rgb(0 0 0 / 0.2);
+  --shadow-sheet: 0 -8px 40px rgb(0 0 0 / 0.16);
+  --shadow-tab-bar: 0 8px 32px rgb(15 23 42 / 0.28);
   --shadow-header: 0 2px 20px rgb(0 0 0 / 0.08);
   --shadow-menu: 0 8px 24px rgb(0 0 0 / 0.1);
   --shadow-action-bar: 0 6px 28px rgb(0 0 0 / 0.14);
@@ -234,6 +245,21 @@
   --side-nav-width: 240px;
   --top-bar-height: 65px;
   --floating-notice-height: 0rem;
+  --dialog-max-width: 420px;
+  --dialog-max-width-wide: 520px;
+  --dialog-close-inset: 14px;
+  --dialog-close-size: 32px;
+  --blur-backdrop: 6px;
+  --blur-bar: 20px;
+  --sheet-max-width: 600px;
+  --sheet-grabber-width: 36px;
+  --sheet-grabber-height: 5px;
+  --tab-bar-height: 62px;
+  --tab-bar-gap: 20px;
+  --tab-bar-gap-browser: 16px;
+  --tab-pill-inset: 5px;
+  --list-row-min-height: 56px;
+  --list-group-title-top: 0rem;
 
   --receipt-color-text: #1a1a2e;
   --receipt-color-muted: #555555;
@@ -274,5 +300,13 @@
     --color-border-accent: #1d4ed8;
     --color-border-field: #4b5563;
     --color-divider: #6b7280;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --color-tab-bar: #0f172a;
+    --color-tab-pill: #060d1f;
+    --blur-bar: 0px;
   }
 }

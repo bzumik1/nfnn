@@ -1,4 +1,4 @@
-<app-dialog labelledBy="unsaved-changes-title" (dismissed)="stayed.emit()">
+<app-dialog labelledBy="unsaved-changes-title" [pushesHistory]="false" (dismissed)="stayed.emit()">
   <h2 id="unsaved-changes-title" class="ui-dialog__title" i18n="@@admin.unsavedChanges.title">
     Máte neuložené změny
   </h2>

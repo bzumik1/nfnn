@@ -1,9 +1,12 @@
 import {
+  afterNextRender,
   AfterViewInit,
   ChangeDetectionStrategy,
   Component,
+  computed,
   DOCUMENT,
   ElementRef,
+  Injector,
   OnDestroy,
   inject,
   input,
@@ -12,7 +15,8 @@ import {
 } from '@angular/core';
 
 import { DialogAnnouncer } from './dialog-announcer';
-import { DialogPresentation } from './dialog-presentation';
+import { DialogHistory, DialogHistoryListener } from './dialog-history';
+import { DIALOG_PRESENTATION, DialogPresentation } from './dialog-presentation';
 
 @Component({
   selector: 'app-dialog',
@@ -28,15 +32,35 @@ export class Dialog implements AfterViewInit, OnDestroy {
   readonly dismissed = output<void>();
   protected readonly announcer = inject(DialogAnnouncer);
 
+  private readonly areaPresentation = inject(DIALOG_PRESENTATION);
+  protected readonly look = computed(() => {
+    const chosen = this.presentation();
+    return chosen === 'auto' ? this.areaPresentation : chosen;
+  });
+
   private readonly element = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   private readonly opener = inject(DOCUMENT).activeElement;
+  private readonly history = inject(DialogHistory);
+  private readonly injector = inject(Injector);
+  private readonly historyEntry: DialogHistoryListener = {
+    stepBack: () => undefined,
+    close: () => this.closedByBack(),
+  };
   private pressStartedOnBackdrop = false;
+  private destroyed = false;
 
   ngAfterViewInit(): void {
     this.element().nativeElement.showModal();
+    if (this.pushesHistory()) {
+      this.history.open(this.historyEntry);
+    }
   }
 
   ngOnDestroy(): void {
+    this.destroyed = true;
+    if (this.pushesHistory()) {
+      this.history.close(this.historyEntry);
+    }
     const dialog = this.element().nativeElement;
     if (dialog.open) {
       dialog.close();
@@ -59,5 +83,17 @@ export class Dialog implements AfterViewInit, OnDestroy {
       this.dismiss();
     }
     this.pressStartedOnBackdrop = false;
+  }
+
+  private closedByBack(): void {
+    this.dismiss();
+    afterNextRender(
+      () => {
+        if (!this.destroyed) {
+          this.history.open(this.historyEntry);
+        }
+      },
+      { injector: this.injector },
+    );
   }
 }
