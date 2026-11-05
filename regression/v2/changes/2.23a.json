@@ -189,6 +189,46 @@
     "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
   },
   {
+    "path": "GET /api/admin/content/news*",
+    "scenario": "content/stale_content_writes: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
+    "path": "POST /api/admin/content/news*",
+    "scenario": "content/stale_content_writes: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
+    "path": "PUT /api/admin/content/news*",
+    "scenario": "content/stale_content_writes: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
+    "path": "DELETE /api/admin/content/news*",
+    "scenario": "content/stale_content_writes: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
+    "path": "GET /api/content/news*",
+    "scenario": "content/stale_content_writes: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
     "kind": "retired",
     "suite": "frontend-vitest",
     "test": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when it renders, then its photo waits until it is near and comes in two widths",
@@ -282,8 +322,15 @@
   {
     "kind": "retired",
     "suite": "frontend-playwright",
-    "test": "e2e/admin-people.spec.ts > Given a visitor and people of the foundation kept in the administration > when they open the home page, then \"Kdo fond vede\" shows the cards, the founders note with the signature and the board line instead of the built-in block",
+    "test": "e2e/admin-people.spec.ts > Given a visitor and people of the foundation kept in the administration > when they open the About page, then \"Kdo fond vede\" shows the cards, the founders note with the signature and the board line instead of the built-in block",
     "reason": "2.23a (plan v3, Jakub 2026-10-31): the About section of the O nás tab follows the approved mockup: a square photo with the FOD badge on it, the figures inline, the founders' note as a quote signed with signature, portrait and role, and no founding paragraph or \"Kde pomáháme\" link",
     "replacement": "e2e/admin-people.spec.ts > Given a visitor and people of the foundation kept in the administration > when they open the About page, then the founders’ note shows as a quote signed with the web signature, portrait and role, with the board line, instead of the built-in block"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/about-page/about-page.spec.ts > Given the About page > when it opens, then it names the founding story as its one level-one heading and ends with the contact form",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the O nás tab closes with the Přispět band before the contact form, like the other tab pages",
+    "replacement": "src/app/features/content/about-page/about-page.spec.ts > Given the About page > when it opens, then it names the founding story as its one level-one heading, then asks for a gift and ends with the contact form"
   }
 ]
