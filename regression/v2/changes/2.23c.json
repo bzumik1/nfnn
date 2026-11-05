@@ -1,0 +1,16 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/donate-qr.spec.ts > Given a visitor on the home page > on a phone > when the bank details show, then they come before the QR code",
+    "reason": "Slice 2.23c (Q13, Jakub 2026-10-31): on phones and tablets the QR code of Přispět is folded under Platíte z jiného zařízení?, so the test proves it waits folded under the bank details and shows below them once unfolded",
+    "replacement": "e2e/donate-qr.spec.ts > Given a visitor on the home page > on a phone > when the bank details show, then the QR code waits folded under them until the visitor pays from another device"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/donate-qr.spec.ts > Given a visitor on the home page > on a phone > when the bank details show, then they come before the QR code #2",
+    "reason": "Slice 2.23c (Q13, Jakub 2026-10-31): on phones and tablets the QR code of Přispět is folded under Platíte z jiného zařízení?, so the test proves it waits folded under the bank details and shows below them once unfolded; the second copy is the WebKit iphone project, which runs the same test",
+    "replacement": "e2e/donate-qr.spec.ts > Given a visitor on the home page > on a phone > when the bank details show, then the QR code waits folded under them until the visitor pays from another device #2"
+  }
+]

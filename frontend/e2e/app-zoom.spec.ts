@@ -173,6 +173,10 @@ test.describe('Given a visitor on a phone, where the site behaves like an app', 
     page,
   }) => {
     await page.goto('/');
+    await page
+      .locator('#prispet')
+      .getByRole('button', { name: /Platíte z jiného zařízení\?/ })
+      .click();
     const trigger = page.getByRole('button', {
       name: 'Zvětšit: QR platba na účet Nadačního fondu Nová naděje',
     });
