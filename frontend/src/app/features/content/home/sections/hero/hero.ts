@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { CompactLayout } from '../../../../../core/layout/compact-layout';
 
 @Component({
   selector: 'app-hero',
@@ -8,4 +9,6 @@ import { RouterLink } from '@angular/router';
   styleUrl: './hero.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class Hero {}
+export class Hero {
+  protected readonly compact = inject(CompactLayout).isCompact;
+}
