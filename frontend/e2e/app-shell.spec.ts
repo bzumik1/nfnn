@@ -57,7 +57,7 @@ test.describe('Given a visitor who moves through the tabs and back', () => {
     await page.keyboard.press('Enter');
 
     await expect(page).toHaveURL('/aktuality');
-    await expect(page.getByRole('heading', { level: 1, name: 'Aktuality' })).toBeFocused();
+    await expect(page.getByRole('heading', { level: 1, name: 'Co je u nás nového' })).toBeFocused();
   });
 
   test('when they reload the article and press Zpět, then the list returns without leaving the site', async ({
@@ -86,7 +86,7 @@ test.describe('Given a visitor who moves through the tabs and back', () => {
     await back(page).click();
 
     await expect(page).toHaveURL('/aktuality');
-    await expect(page.getByRole('heading', { level: 1, name: 'Aktuality' })).toBeFocused();
+    await expect(page.getByRole('heading', { level: 1, name: 'Co je u nás nového' })).toBeFocused();
   });
 
   test('when they open an article from outside the site and press Zpět, then its list opens in place of it', async ({
@@ -163,7 +163,7 @@ test.describe('Given an address of a section of the old one-page home', () => {
     ['/#prispet', '/prispet', 'Přispějte na pomůcky pro děti'],
     ['/#o-nas', '/o-nas', null],
     ['/#projekty', '/projekty', 'Pomáháme'],
-    ['/#aktuality', '/aktuality', 'Aktuality'],
+    ['/#aktuality', '/aktuality', 'Co je u nás nového'],
     ['/#uvod', '/', null],
   ] as const) {
     test(`when ${old} is opened, then ${now} shows and Back does not return to the old address`, async ({

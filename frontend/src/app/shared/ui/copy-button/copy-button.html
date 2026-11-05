@@ -8,6 +8,9 @@
     <span i18n="@@ui.copy.done">Zkopírováno</span>
   } @else if (label(); as text) {
     <span>{{ text }}</span>
+    @if (labelDetail(); as detail) {
+      <span class="visually-hidden"> {{ detail }}</span>
+    }
   } @else {
     <span i18n="@@ui.copy.action">Kopírovat</span>
     <span class="visually-hidden"> {{ what() }}</span>

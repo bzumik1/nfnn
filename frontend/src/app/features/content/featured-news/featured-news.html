@@ -1,0 +1,53 @@
+<article class="featured" [class.featured--photo]="image() !== null">
+  @if (image(); as src) {
+    <img
+      class="featured-photo"
+      [src]="src"
+      [srcset]="imageSet()"
+      sizes="(max-width: 1200px) 100vw, 1136px"
+      width="1136"
+      height="480"
+      alt=""
+      fetchpriority="high"
+      [appFocalPoint]="item().coverImage?.focalPoint"
+      focalShape="newsFeatured"
+    />
+  }
+  <div class="featured-text">
+    <p class="featured-meta">
+      @if (item().tag) {
+        <span class="featured-tag">{{ item().tag }}</span
+        >&ngsp;
+      }
+      <span class="featured-date">{{ date() }}</span>
+    </p>
+    <h2 class="featured-title">{{ item().title }}</h2>
+    <p class="featured-perex">{{ item().perex }}</p>
+    <div class="featured-foot">
+      @if (item().signer; as signer) {
+        <div class="signer">
+          <app-avatar class="signer-photo" [name]="signer.name" [src]="portrait()" [size]="40" />
+          <p class="signer-text">
+            <span class="signer-name">{{ signer.name }}</span>
+            @if (signer.role) {
+              <span class="signer-role">{{ signer.role }}</span>
+            }
+          </p>
+        </div>
+      }
+      <div class="featured-actions">
+        <app-share-button
+          class="featured-share"
+          tone="dark"
+          [pageTitle]="item().title"
+          [url]="shareUrl()"
+          [subject]="item().title"
+        />
+        <a class="featured-more" [routerLink]="['/aktuality', item().slug]"
+          ><span class="featured-more-label" i18n="@@content.news.featured.more">Číst celé</span
+          ><span class="visually-hidden">&ngsp;{{ item().title }}</span></a
+        >
+      </div>
+    </div>
+  </div>
+</article>
