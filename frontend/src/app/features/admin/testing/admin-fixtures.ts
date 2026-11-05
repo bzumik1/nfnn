@@ -1,4 +1,6 @@
 import {
+  AdminPushResponse,
+  PushSubscriptionResponse,
   AdminActionResponse,
   AdminActivitySinceResponse,
   DiagnosticsResponse,
@@ -682,4 +684,30 @@ export function receiptSignatory(
 
 export function noReceiptSignatory(): ReceiptSignatoryResponse {
   return { signatory: null, signatures: [] };
+}
+
+export const PUSH_PUBLIC_KEY = `B${'A'.repeat(86)}`;
+
+export function pushSubscription(
+  overrides: Partial<PushSubscriptionResponse> = {},
+): PushSubscriptionResponse {
+  return {
+    id: 'push-this-device',
+    service: 'google',
+    alerts: { bankImport: true, backups: true, mail: true },
+    createdAt: '2026-11-01T09:00:00Z',
+    lastDeliveredAt: '2026-11-03T09:05:00Z',
+    failuresInARow: 0,
+    current: true,
+    ...overrides,
+  };
+}
+
+export function adminPush(overrides: Partial<AdminPushResponse> = {}): AdminPushResponse {
+  return {
+    publicKey: PUSH_PUBLIC_KEY,
+    subscriptions: [],
+    openAlerts: [],
+    ...overrides,
+  };
 }

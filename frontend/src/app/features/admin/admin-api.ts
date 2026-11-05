@@ -37,6 +37,45 @@ export interface ImportStateResponse {
   reportedOutage: ImportFailureKind | null;
 }
 
+export type PushAlertArea = 'bankImport' | 'backups' | 'mail';
+
+export type PushAlertSwitches = Record<PushAlertArea, boolean>;
+
+export type PushService = 'google' | 'apple' | 'mozilla' | 'microsoft';
+
+export interface PushSubscriptionResponse {
+  id: string;
+  service: PushService;
+  alerts: PushAlertSwitches;
+  createdAt: string;
+  lastDeliveredAt: string | null;
+  failuresInARow: number;
+  current: boolean;
+}
+
+export interface OpenAlertResponse {
+  area: PushAlertArea;
+  since: string;
+}
+
+export interface AdminPushResponse {
+  publicKey: string;
+  subscriptions: PushSubscriptionResponse[];
+  openAlerts: OpenAlertResponse[];
+}
+
+export interface PushSubscriptionRequest {
+  endpoint: string;
+  keys: { p256dh: string; auth: string };
+  alerts?: PushAlertSwitches;
+}
+
+export interface PushTestResponse {
+  delivered: number;
+  failed: number;
+  removed: number;
+}
+
 export type PairingFilter = 'unpaired' | 'paired';
 
 export type PairingMethod = 'VARIABLE_SYMBOL' | 'SENDER_ACCOUNT' | 'CONFIRMED_SYMBOL' | 'MANUAL';
@@ -928,6 +967,29 @@ export class AdminApi {
     return this.http.delete<void>(`${LOGGERS_URL}/${encodeURIComponent(logger)}`);
   }
 
+  push(): Observable<AdminPushResponse> {
+    return this.http.get<AdminPushResponse>(PUSH_URL);
+  }
+
+  subscribePush(request: PushSubscriptionRequest): Observable<PushSubscriptionResponse> {
+    return this.http.post<PushSubscriptionResponse>(`${PUSH_URL}/subscriptions`, request);
+  }
+
+  changePushAlerts(id: string, alerts: PushAlertSwitches): Observable<PushSubscriptionResponse> {
+    return this.http.put<PushSubscriptionResponse>(
+      `${PUSH_URL}/subscriptions/${encodeURIComponent(id)}/alerts`,
+      alerts,
+    );
+  }
+
+  removePushSubscription(id: string): Observable<void> {
+    return this.http.delete<void>(`${PUSH_URL}/subscriptions/${encodeURIComponent(id)}`);
+  }
+
+  testPush(): Observable<PushTestResponse> {
+    return this.http.post<PushTestResponse>(`${PUSH_URL}/test`, null);
+  }
+
   diagnostics(): Observable<DiagnosticsResponse> {
     return this.http.get<DiagnosticsResponse>(DIAGNOSTICS_URL);
   }
@@ -938,6 +1000,7 @@ export class AdminApi {
 }
 
 const LOGS_URL = '/api/admin/operations/logs';
+const PUSH_URL = '/api/admin/operations/push';
 const RECEIPT_SIGNATORY_URL = '/api/admin/donations/receipt-signatory';
 
 function receiptSignatureUrl(personId: string): string {

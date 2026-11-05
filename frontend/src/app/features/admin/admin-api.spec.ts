@@ -7,7 +7,13 @@ import {
   ImportStateResponse,
   ReceiptSigningKeysResponse,
 } from './admin-api';
-import { activitySince, importState, receiptSigningKeys } from './testing/admin-fixtures';
+import {
+  activitySince,
+  adminPush,
+  importState,
+  pushSubscription,
+  receiptSigningKeys,
+} from './testing/admin-fixtures';
 
 describe('Given the administration API', () => {
   let api: AdminApi;
@@ -82,5 +88,55 @@ describe('Given the administration API', () => {
     request.flush(activitySince());
 
     expect(received).toEqual(activitySince());
+  });
+
+  it('when the push alerts are read and changed, then each call goes to its endpoint of the contract', () => {
+    const answers: unknown[] = [];
+    api.push().subscribe((response) => answers.push(response));
+    http.expectOne({ method: 'GET', url: '/api/admin/operations/push' }).flush(adminPush());
+
+    api
+      .subscribePush({
+        endpoint: 'https://fcm.googleapis.com/x',
+        keys: { p256dh: 'B1', auth: 'a1' },
+      })
+      .subscribe((response) => answers.push(response));
+    const subscribe = http.expectOne({
+      method: 'POST',
+      url: '/api/admin/operations/push/subscriptions',
+    });
+    expect(subscribe.request.body).toEqual({
+      endpoint: 'https://fcm.googleapis.com/x',
+      keys: { p256dh: 'B1', auth: 'a1' },
+    });
+    subscribe.flush(pushSubscription(), { status: 201, statusText: 'Created' });
+
+    api
+      .changePushAlerts('push 1', { bankImport: false, backups: true, mail: true })
+      .subscribe((response) => answers.push(response));
+    const change = http.expectOne({
+      method: 'PUT',
+      url: '/api/admin/operations/push/subscriptions/push%201/alerts',
+    });
+    expect(change.request.body).toEqual({ bankImport: false, backups: true, mail: true });
+    change.flush(pushSubscription());
+
+    api.removePushSubscription('push 1').subscribe(() => answers.push('removed'));
+    http
+      .expectOne({ method: 'DELETE', url: '/api/admin/operations/push/subscriptions/push%201' })
+      .flush(null, { status: 204, statusText: 'No Content' });
+
+    api.testPush().subscribe((response) => answers.push(response));
+    http
+      .expectOne({ method: 'POST', url: '/api/admin/operations/push/test' })
+      .flush({ delivered: 1, failed: 0, removed: 0 });
+
+    expect(answers).toEqual([
+      adminPush(),
+      pushSubscription(),
+      pushSubscription(),
+      'removed',
+      { delivered: 1, failed: 0, removed: 0 },
+    ]);
   });
 });

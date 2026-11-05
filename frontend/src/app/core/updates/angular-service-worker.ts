@@ -1,7 +1,14 @@
 import { DOCUMENT } from '@angular/common';
 import { EnvironmentProviders, inject, isDevMode, makeEnvironmentProviders } from '@angular/core';
-import { provideServiceWorker, SwUpdate, VersionEvent } from '@angular/service-worker';
+import { provideServiceWorker, SwPush, SwUpdate, VersionEvent } from '@angular/service-worker';
 import { filter, map, Observable } from 'rxjs';
+
+import {
+  devicePushSubscriptionOf,
+  PushNotificationClick,
+  SERVICE_WORKER_PUSH,
+  ServiceWorkerPush,
+} from '../push/service-worker-push';
 
 import {
   SERVICE_WORKER_UPDATES,
@@ -34,12 +41,49 @@ function updatesOf(updates: SwUpdate, view: Window | null): ServiceWorkerUpdates
   );
   return {
     get isEnabled() {
-      return updates.isEnabled && (view?.navigator.serviceWorker?.controller ?? null) !== null;
+      return updates.isEnabled && controlledBy(view);
     },
     versionEvents,
     unrecoverable: updates.unrecoverable.pipe(map((event) => event.reason)),
     checkForUpdate: () => updates.checkForUpdate(),
     activateUpdate: () => updates.activateUpdate(),
+  };
+}
+
+function controlledBy(view: Window | null): boolean {
+  return (view?.navigator.serviceWorker?.controller ?? null) !== null;
+}
+
+function pushSupportedIn(view: Window | null): boolean {
+  return view !== null && 'PushManager' in view && 'Notification' in view;
+}
+
+function controllerChangesOf(container: ServiceWorkerContainer | undefined): Observable<void> {
+  return new Observable<void>((subscriber) => {
+    if (typeof container?.addEventListener !== 'function') {
+      return undefined;
+    }
+    const changed = (): void => subscriber.next();
+    container.addEventListener('controllerchange', changed);
+    return () => container.removeEventListener('controllerchange', changed);
+  });
+}
+
+function pushOf(push: SwPush, view: Window | null): ServiceWorkerPush {
+  const container = view?.navigator.serviceWorker;
+  const notificationClicks: Observable<PushNotificationClick> = push.notificationClicks.pipe(
+    map(({ action, notification }) => ({ action, data: notification?.data })),
+  );
+  return {
+    get isEnabled() {
+      return push.isEnabled && controlledBy(view) && pushSupportedIn(view);
+    },
+    controllerChanges: controllerChangesOf(container),
+    messages: push.messages,
+    notificationClicks,
+    requestSubscription: async (publicKey) =>
+      devicePushSubscriptionOf(await push.requestSubscription({ serverPublicKey: publicKey })),
+    unsubscribe: () => push.unsubscribe().catch(() => undefined),
   };
 }
 
@@ -52,6 +96,10 @@ export function provideAppServiceWorker(): EnvironmentProviders {
     {
       provide: SERVICE_WORKER_UPDATES,
       useFactory: () => updatesOf(inject(SwUpdate), inject(DOCUMENT).defaultView),
+    },
+    {
+      provide: SERVICE_WORKER_PUSH,
+      useFactory: () => pushOf(inject(SwPush), inject(DOCUMENT).defaultView),
     },
   ]);
 }

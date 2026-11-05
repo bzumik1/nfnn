@@ -30,6 +30,7 @@ export const ADMIN_SECTIONS: readonly SideNavGroup[] = [
       { path: '/sprava/spravci', label: $localize`:@@admin.nav.administrators:Správci` },
       { path: '/sprava/prehledy', label: $localize`:@@admin.nav.report:Měsíční e-mail` },
       { path: '/sprava/zalohy', label: $localize`:@@admin.nav.backups:Zálohy` },
+      { path: '/sprava/upozorneni', label: $localize`:@@admin.nav.alerts:Upozornění na telefon` },
       { path: '/sprava/historie', label: $localize`:@@admin.nav.actions:Historie změn` },
     ],
   },
