@@ -10,7 +10,17 @@ const USER_HANDLE = new Uint8Array(16).fill(6);
 interface Answer {
   readonly rawId?: readonly number[];
   readonly userHandle?: Uint8Array | null;
+  readonly flags?: number;
 }
+
+function authenticatorData(flags: number): ArrayBuffer {
+  const data = new Uint8Array(37);
+  data[32] = flags;
+  return data.buffer;
+}
+
+const USER_PRESENT_AND_VERIFIED = 0x05;
+const USER_PRESENT_ONLY = 0x01;
 
 function credentialsAnswering(
   extensionResults: AuthenticationExtensionsClientOutputs | null,
@@ -24,7 +34,10 @@ function credentialsAnswering(
       : {
           type: 'public-key',
           rawId: rawId.buffer,
-          response: { userHandle: userHandle === null ? null : new Uint8Array(userHandle).buffer },
+          response: {
+            userHandle: userHandle === null ? null : new Uint8Array(userHandle).buffer,
+            authenticatorData: authenticatorData(answer.flags ?? USER_PRESENT_AND_VERIFIED),
+          },
           getClientExtensionResults: () => extensionResults,
         },
   );
@@ -130,19 +143,39 @@ describe('Given the passkey PRF of the device copies', () => {
     expect(read?.userHandle).toBeNull();
   });
 
-  it('when a passkey answers that was not asked for, then the PRF is absent', async () => {
-    const { credentials } = credentialsAnswering(
-      { prf: { results: { first: new Uint8Array(32).buffer } } },
-      { rawId: [7, 7] },
-    );
+  for (const [name, answer] of [
+    ['a passkey that was not asked for', { rawId: [7, 7] }],
+    ['without user verification', { flags: USER_PRESENT_ONLY }],
+  ] as const) {
+    it(`when it answers ${name}, then the PRF is absent and the browser bytes are zeroed`, async () => {
+      const output = new Uint8Array(32).fill(8);
+      const { credentials } = credentialsAnswering(
+        { prf: { results: { first: output.buffer } } },
+        answer,
+      );
 
-    expect(
-      await readPrf(credentials, {
-        rpId: 'nfnn.cz',
-        deviceSalt: DEVICE_SALT,
-        credentialIds: [CREDENTIAL],
-      }),
-    ).toBeNull();
+      expect(
+        await readPrf(credentials, {
+          rpId: 'nfnn.cz',
+          deviceSalt: DEVICE_SALT,
+          credentialIds: [CREDENTIAL],
+        }),
+      ).toBeNull();
+      expect(Array.from(output)).toEqual(new Array(32).fill(0));
+    });
+  }
+
+  it('when it answers an output of the wrong length, then the browser bytes are zeroed too', async () => {
+    const output = new Uint8Array(16).fill(8);
+    const { credentials } = credentialsAnswering({ prf: { results: { first: output.buffer } } });
+
+    await readPrf(credentials, {
+      rpId: 'nfnn.cz',
+      deviceSalt: DEVICE_SALT,
+      credentialIds: [CREDENTIAL],
+    });
+
+    expect(Array.from(output)).toEqual(new Array(16).fill(0));
   });
 
   for (const [name, results] of [

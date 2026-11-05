@@ -249,9 +249,26 @@ describe('Given a new device copy', () => {
       ['a fractional memory size', { ...STRONG_PASSWORD_PARAMETERS, memoryKiB: 65536.5 }],
       ['another algorithm', { ...STRONG_PASSWORD_PARAMETERS, algorithm: 'argon2i' }],
       ['another version', { ...STRONG_PASSWORD_PARAMETERS, version: 16 }],
+      ['no parameters at all', null],
+      ['a memory size as text', { ...STRONG_PASSWORD_PARAMETERS, memoryKiB: '131072' }],
     ] as const) {
       it(`and it names ${name}, then it is refused as damaged before any key is derived`, async () => {
         const tampered = { ...wrap, parameters } as unknown as KeyWrap;
+
+        expect((await refusal(openWithPassword(copy, tampered, 'heslo', derivation))).reason).toBe(
+          'damaged',
+        );
+        expect(derivation.requested).toEqual([]);
+      });
+    }
+
+    for (const [name, change] of [
+      ['an IV of 8 bytes', { iv: bytesToBase64Url(new Uint8Array(8)) }],
+      ['a sealed root of 20 bytes', { sealed: bytesToBase64Url(new Uint8Array(20)) }],
+      ['an IV that is not base64url', { iv: '%%' }],
+    ] as const) {
+      it(`and it has ${name}, then it is refused as damaged before any key is derived`, async () => {
+        const tampered = { ...wrap, ...change };
 
         expect((await refusal(openWithPassword(copy, tampered, 'heslo', derivation))).reason).toBe(
           'damaged',

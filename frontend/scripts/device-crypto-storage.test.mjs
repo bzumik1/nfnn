@@ -29,6 +29,12 @@ const WRITES = {
   'a cookie': "document.cookie = 'k=v';\nexport {};\n",
   'origin private files': 'export const root = navigator.storage.getDirectory();\n',
   'the credential store': 'export const stored = navigator.credentials.store(null as never);\n',
+  'origin private files through window':
+    'export const root = window.navigator.storage.getDirectory();\n',
+  'a cookie through window': "window.document.cookie = 'k=v';\nexport {};\n",
+  'a cookie through globalThis': "globalThis.document.cookie = 'k=v';\nexport {};\n",
+  'the cookie store': "export const set = cookieStore.set('k', 'v');\n",
+  'the cookie store through self': "export const set = self.cookieStore.set('k', 'v');\n",
 };
 
 describe('Given the device crypto core, which stores nothing itself', () => {

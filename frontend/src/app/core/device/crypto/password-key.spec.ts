@@ -259,6 +259,22 @@ describe('Given the password key of a device copy', () => {
       });
     }
 
+    it('and the question cannot be sent to it, then the derivation fails and the worker ends', async () => {
+      const worker = new FakeWorker();
+      worker.postMessage = () => {
+        throw new DOMException('Cannot clone', 'DataCloneError');
+      };
+
+      await expect(
+        derivationWith(worker).derive({
+          password: utf8('heslo'),
+          salt: SALT,
+          parameters: STRONG_PASSWORD_PARAMETERS,
+        }),
+      ).rejects.toEqual(new PasswordKeyFailure('failed'));
+      expect(worker.terminated).toBe(true);
+    });
+
     it('and the browser refuses to start the worker, then the derivation fails', async () => {
       const derivation = new WorkerPasswordKeyDerivation(() => {
         throw new DOMException('Refused', 'SecurityError');
