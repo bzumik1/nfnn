@@ -62,7 +62,8 @@ export class DialogHistory {
     this.settle();
   }
 
-  close(): void {
+  close(listener?: DialogHistoryListener): void {
+    void listener;
     this.listener = null;
     this.wanted = 0;
     this.settle();

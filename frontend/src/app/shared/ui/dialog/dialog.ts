@@ -12,6 +12,7 @@ import {
 } from '@angular/core';
 
 import { DialogAnnouncer } from './dialog-announcer';
+import { DialogPresentation } from './dialog-presentation';
 
 @Component({
   selector: 'app-dialog',
@@ -22,6 +23,8 @@ import { DialogAnnouncer } from './dialog-announcer';
 export class Dialog implements AfterViewInit, OnDestroy {
   readonly labelledBy = input.required<string>();
   readonly wide = input(false);
+  readonly presentation = input<DialogPresentation>('auto');
+  readonly pushesHistory = input(true);
   readonly dismissed = output<void>();
   protected readonly announcer = inject(DialogAnnouncer);
 

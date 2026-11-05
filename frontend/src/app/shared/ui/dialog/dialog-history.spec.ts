@@ -89,6 +89,20 @@ describe('Given the history entries of an open dialog', () => {
     expect(routerEvents).toEqual([]);
   });
 
+  it('when a dialog that another one has since replaced closes, then the entry of the open one stays', async () => {
+    const replaced = { stepBack: vi.fn(), close: vi.fn() };
+    history.open(replaced);
+    await open();
+
+    history.close(replaced);
+    await settled();
+
+    expect(depth()).toBe(1);
+    await back();
+    expect(listener.close).toHaveBeenCalledTimes(1);
+    expect(replaced.close).not.toHaveBeenCalled();
+  });
+
   it('when the dialog closes before it ever added an entry, then history is left alone', async () => {
     const before = window.history.length;
 

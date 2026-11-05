@@ -55,6 +55,20 @@ export function receiptTokensOutsideRoot(source) {
   return [...outside].sort();
 }
 
+export function barContrastProblems(theme, source) {
+  void theme;
+  void source;
+  return [];
+}
+
+export function themeAssetProblems({ reference, assets, publicFiles, angular }) {
+  void reference;
+  void assets;
+  void publicFiles;
+  void angular;
+  return [];
+}
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const themeNames = readdirSync(themesDir).filter((name) =>
     statSync(join(themesDir, name)).isDirectory(),

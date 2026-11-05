@@ -1,7 +1,12 @@
+import { BrowserPlatformLocation, Location, PlatformLocation } from '@angular/common';
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter, Router } from '@angular/router';
 import { Dialog } from './dialog';
 import { DialogAnnouncer } from './dialog-announcer';
+import { DialogHistory } from './dialog-history';
+import { DIALOG_PRESENTATION, DialogPresentation } from './dialog-presentation';
+import { FakeDialogHistory } from './testing/fake-dialog-history';
 
 @Component({
   imports: [Dialog],
@@ -128,5 +133,231 @@ describe('Given a dialog opened from a button', () => {
     fixture.detectChanges();
 
     expect(document.activeElement?.id).toBe('opener');
+  });
+});
+
+@Component({
+  imports: [Dialog],
+  template: `
+    @if (open()) {
+      <app-dialog
+        labelledBy="title"
+        [presentation]="presentation()"
+        [pushesHistory]="pushesHistory()"
+        (dismissed)="dismissed()"
+      >
+        <h2 id="title">Název</h2>
+      </app-dialog>
+    }
+  `,
+})
+class PresentedHost {
+  readonly open = signal(true);
+  readonly presentation = signal<DialogPresentation>('auto');
+  readonly pushesHistory = signal(true);
+  readonly busy = signal(false);
+  dismissals = 0;
+
+  dismissed(): void {
+    this.dismissals++;
+    if (!this.busy()) {
+      this.open.set(false);
+    }
+  }
+}
+
+describe('Given a dialog and the way it is presented', () => {
+  let fixture: ComponentFixture<PresentedHost>;
+
+  const native = () => fixture.nativeElement.querySelector('dialog') as HTMLDialogElement;
+  const grabber = () =>
+    fixture.nativeElement.querySelector('.dialog-grabber') as HTMLElement | null;
+
+  const render = async (
+    presentation: DialogPresentation,
+    areaDefault?: 'centered' | 'sheet' | 'full',
+  ): Promise<void> => {
+    TestBed.configureTestingModule({
+      imports: [PresentedHost],
+      providers: [
+        { provide: DialogHistory, useClass: FakeDialogHistory },
+        ...(areaDefault === undefined
+          ? []
+          : [{ provide: DIALOG_PRESENTATION, useValue: areaDefault }]),
+      ],
+    });
+    fixture = TestBed.createComponent(PresentedHost);
+    fixture.componentInstance.presentation.set(presentation);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    await fixture.whenStable();
+  };
+
+  afterEach(() => fixture.nativeElement.remove());
+
+  it('when nothing chooses a presentation, then it is the centered dialog of today, without a grabber', async () => {
+    await render('auto');
+
+    expect(native().dataset['presentation']).toBe('centered');
+    expect(grabber()).toBeNull();
+  });
+
+  it('when the area around it presents dialogs as sheets, then an automatic dialog becomes a sheet', async () => {
+    await render('auto', 'sheet');
+
+    expect(native().dataset['presentation']).toBe('sheet');
+  });
+
+  it('when a dialog asks to be centered inside such an area, then it stays centered', async () => {
+    await render('centered', 'sheet');
+
+    expect(native().dataset['presentation']).toBe('centered');
+  });
+
+  it('when it is a sheet, then it shows a grabber that assistive technology does not hear, and keeps its close button', async () => {
+    await render('sheet');
+
+    expect(grabber()?.getAttribute('aria-hidden')).toBe('true');
+    expect(native().querySelector('.dialog-close')?.getAttribute('aria-label')).toBe('Zavřít');
+  });
+
+  it('when it should fill the screen, then it is presented full, without a grabber', async () => {
+    await render('full');
+
+    expect(native().dataset['presentation']).toBe('full');
+    expect(grabber()).toBeNull();
+  });
+});
+
+describe('Given a dialog and the history entry it keeps', () => {
+  let fixture: ComponentFixture<PresentedHost>;
+  let history: FakeDialogHistory;
+
+  const render = async (pushesHistory = true): Promise<void> => {
+    TestBed.configureTestingModule({
+      imports: [PresentedHost],
+      providers: [{ provide: DialogHistory, useClass: FakeDialogHistory }],
+    });
+    history = TestBed.inject(DialogHistory) as unknown as FakeDialogHistory;
+    fixture = TestBed.createComponent(PresentedHost);
+    fixture.componentInstance.pushesHistory.set(pushesHistory);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    await fixture.whenStable();
+  };
+
+  afterEach(() => fixture.nativeElement.remove());
+
+  it('when it opens, then it asks for a history entry of its own', async () => {
+    await render();
+
+    expect(history.opened).toBe(1);
+    expect(history.listener).not.toBeNull();
+  });
+
+  it('when the visitor goes back, then it asks to be dismissed', async () => {
+    await render();
+
+    history.listener?.close();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.dismissals).toBe(1);
+    expect(fixture.nativeElement.querySelector('dialog')).toBeNull();
+  });
+
+  it('when the visitor goes back while the page keeps it open, then it asks for its entry again', async () => {
+    await render();
+    fixture.componentInstance.busy.set(true);
+
+    history.listener?.close();
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('dialog')).not.toBeNull();
+    expect(history.opened).toBe(2);
+    expect(history.listener).not.toBeNull();
+  });
+
+  it('when it goes away, then it gives its entry back', async () => {
+    await render();
+    const listener = history.listener;
+
+    fixture.componentInstance.open.set(false);
+    await fixture.whenStable();
+
+    expect(history.closed).toBe(1);
+    expect(history.listener).toBeNull();
+    expect(listener).not.toBeNull();
+  });
+
+  it('when its opener keeps the history itself, then it adds no entry and gives none back', async () => {
+    await render(false);
+
+    fixture.componentInstance.open.set(false);
+    await fixture.whenStable();
+
+    expect(history.opened).toBe(0);
+    expect(history.closed).toBe(0);
+  });
+});
+
+@Component({ template: '' })
+class Page {}
+
+describe('Given a page with an open dialog in the browser history', () => {
+  let fixture: ComponentFixture<PresentedHost>;
+  let location: Location;
+
+  const settled = async (): Promise<void> => {
+    for (let round = 0; round < 3; round++) {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      TestBed.tick();
+    }
+  };
+
+  beforeEach(async () => {
+    window.history.pushState(null, '', '/');
+    TestBed.configureTestingModule({
+      imports: [PresentedHost],
+      providers: [
+        provideRouter([
+          { path: '', component: Page },
+          { path: 'sprava/platby', component: Page },
+        ]),
+        { provide: PlatformLocation, useClass: BrowserPlatformLocation },
+      ],
+    });
+    const router = TestBed.inject(Router);
+    location = TestBed.inject(Location);
+    router.initialNavigation();
+    await router.navigateByUrl('/sprava/platby');
+    await settled();
+    fixture = TestBed.createComponent(PresentedHost);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    await settled();
+  });
+
+  afterEach(() => fixture.nativeElement.remove());
+
+  it('when the visitor goes back, then the dialog closes and the page stays', async () => {
+    window.history.go(-1);
+    await settled();
+
+    expect(fixture.nativeElement.querySelector('dialog')).toBeNull();
+    expect(location.path()).toBe('/sprava/platby');
+  });
+
+  it('when the dialog is open, then the page has a history entry for it', () => {
+    expect((window.history.state as Record<string, unknown>)['nfnnDialogDepth']).toBe(1);
+  });
+
+  it('when the dialog closes by its button, then its entry is taken back and the page stays', async () => {
+    (fixture.nativeElement.querySelector('.dialog-close') as HTMLButtonElement).click();
+    await settled();
+
+    expect(
+      (window.history.state as Record<string, unknown> | null)?.['nfnnDialogDepth'],
+    ).toBeUndefined();
+    expect(location.path()).toBe('/sprava/platby');
   });
 });
