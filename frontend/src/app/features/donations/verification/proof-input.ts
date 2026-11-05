@@ -22,8 +22,13 @@ import { proofFragmentInPdf } from './pdf-proof-link';
 import { proofFragment } from './proof-link';
 import { ProofLinkValidator } from './proof-link-validator';
 import type { QrImage } from './qr-image';
-import { QrReader } from './qr-reader';
+import { QrReader, QrReaderOutdated } from './qr-reader';
 import { PictureTooLarge, SCAN_DEVICE } from './scan-device';
+
+export interface FoundProof {
+  readonly fragment: string;
+  readonly scanned: boolean;
+}
 
 export const SCAN_INTERVAL_MS = 250;
 export const SCAN_TIME_LIMIT_MS = 120_000;
@@ -50,6 +55,7 @@ const FILE_TOO_LARGE = $localize`:@@donor.verify.input.fileTooLarge:Soubor je p�
 const PDF_WITHOUT_LINK = $localize`:@@donor.verify.input.pdfWithoutLink:V tomto PDF jsme ověřovací kód nenašli. Nahrajte PDF potvrzení tak, jak jste ho stáhli z webu fondu, nebo načtěte jeho QR kód.`;
 const PICTURE_WITHOUT_CODE = $localize`:@@donor.verify.input.pictureWithoutCode:Na obrázku jsme QR kód nenašli. Vyfoťte kód zblízka a ostře, nebo nahrajte PDF potvrzení.`;
 const PICTURE_TOO_LARGE = $localize`:@@donor.verify.input.pictureTooLarge:Obrázek je příliš velký. Nahrajte fotku nebo snímek obrazovky QR kódu do 50 megapixelů.`;
+const READER_OUTDATED = $localize`:@@donor.verify.input.readerOutdated:Web se mezitím aktualizoval. Obnovte prosím stránku a načtěte kód znovu.`;
 const FILE_UNREADABLE = $localize`:@@donor.verify.input.fileUnreadable:Soubor se nepodařilo otevřít. Nahrajte PDF potvrzení nebo fotku kódu ve formátu JPEG či PNG.`;
 const CAMERA_REFUSALS = ['NotAllowedError', 'SecurityError'];
 const CAMERA_ABSENCES = ['NotFoundError', 'OverconstrainedError'];
@@ -82,7 +88,7 @@ export class ProofInput {
   private limitTimer: ReturnType<typeof setTimeout> | null = null;
   private scanRun = 0;
 
-  readonly found = output<string>();
+  readonly found = output<FoundProof>();
 
   protected readonly hasCamera = this.device.hasCamera();
   protected readonly scan = signal<Scan>('idle');
@@ -170,7 +176,7 @@ export class ProofInput {
     try {
       if (file.type === PDF_TYPE || PDF_NAME.test(file.name)) {
         const fragment = proofFragmentInPdf(new Uint8Array(await file.arrayBuffer()));
-        this.handOver(fragment, PDF_WITHOUT_LINK);
+        this.handOver(fragment, PDF_WITHOUT_LINK, false);
         return;
       }
       let image: QrImage;
@@ -181,9 +187,12 @@ export class ProofInput {
         this.problem.set({ way: 'file', text });
         return;
       }
-      this.handOverCodes(await this.reader.read(image), PICTURE_WITHOUT_CODE);
-    } catch {
-      this.problem.set({ way: 'file', text: FILE_UNREADABLE });
+      this.handOverCodes(await this.reader.read(image), PICTURE_WITHOUT_CODE, true);
+    } catch (failure: unknown) {
+      this.problem.set({
+        way: 'file',
+        text: failure instanceof QrReaderOutdated ? READER_OUTDATED : FILE_UNREADABLE,
+      });
     } finally {
       this.reading.set(false);
     }
@@ -195,7 +204,7 @@ export class ProofInput {
     }
     const fragment = proofFragment(this.link);
     if (fragment !== null) {
-      this.handOverFound(fragment);
+      this.handOverFound(fragment, false);
     }
   }
 
@@ -212,8 +221,8 @@ export class ProofInput {
     try {
       const frame = this.device.frame(video);
       codes = frame === null ? [] : await this.reader.read(frame);
-    } catch {
-      this.cameraFailed(run);
+    } catch (failure: unknown) {
+      this.endScan(run, failure instanceof QrReaderOutdated ? READER_OUTDATED : CAMERA_FAILED);
       return;
     }
     if (run !== this.scanRun) {
@@ -221,7 +230,7 @@ export class ProofInput {
     }
     const fragment = firstProof(codes);
     if (fragment !== null) {
-      this.handOverFound(fragment);
+      this.handOverFound(fragment, true);
       return;
     }
     if (codes.length > 0) {
@@ -247,26 +256,26 @@ export class ProofInput {
     afterNextRender(() => this.focusIfLost(this.scanButton()), { injector: this.injector });
   }
 
-  private handOverCodes(codes: readonly string[], noCode: string): void {
+  private handOverCodes(codes: readonly string[], noCode: string, scanned: boolean): void {
     const fragment = firstProof(codes);
-    this.handOver(fragment, codes.length > 0 ? FOREIGN_CODE : noCode);
+    this.handOver(fragment, codes.length > 0 ? FOREIGN_CODE : noCode, scanned);
   }
 
-  private handOver(fragment: string | null, otherwise: string): void {
+  private handOver(fragment: string | null, otherwise: string, scanned: boolean): void {
     if (fragment === null) {
       this.problem.set({ way: 'file', text: otherwise });
       return;
     }
-    this.handOverFound(fragment);
+    this.handOverFound(fragment, scanned);
   }
 
-  private handOverFound(fragment: string): void {
+  private handOverFound(fragment: string, scanned: boolean): void {
     if (this.destroyRef.destroyed) {
       return;
     }
     this.stopCamera();
     this.problem.set(null);
-    this.found.emit(fragment);
+    this.found.emit({ fragment, scanned });
   }
 
   private stopCamera(): void {

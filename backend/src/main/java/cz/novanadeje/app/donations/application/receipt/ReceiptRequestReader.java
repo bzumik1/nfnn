@@ -68,6 +68,12 @@ public class ReceiptRequestReader {
         }
     }
 
+    public void refuseErasedRecord(DonorReference donor) {
+        if (donorRecords.findById(donor).filter(DonorRecord::isErased).isPresent()) {
+            throw new DonorRecordErased(donor);
+        }
+    }
+
     private DonorRecord record(DonorReference donor) {
         return donorRecords.findById(donor)
                 .orElseThrow(() -> new IllegalStateException("Donor " + donor + " has donations but no donor record"));

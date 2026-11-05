@@ -434,7 +434,7 @@ Feature: A donor issues receipts of their donations as frozen, signed data
     And the frozen receipt shows the current signature image
     When "Jana" fetches the signature image of receipt "2027-000002"
     Then the response status is 200
-    And the image is the current signature, kept by the browser
+    And the image is the current signature, stored by no cache
     When "Jana" reads the issued receipt again
     Then the response status is 200
     And the issued receipt has number "2027-000002"
@@ -490,7 +490,7 @@ Feature: A donor issues receipts of their donations as frozen, signed data
     And the frozen receipt shows a portrait of the signatory
     When "Jana" fetches the portrait image of receipt "2026-000001"
     Then the response status is 200
-    And the image is a 600 pixel square JPEG portrait, kept by the browser and never sniffed as another type
+    And the image is a 600 pixel square JPEG portrait, stored by no cache and never sniffed as another type
     When "Petr" fetches the portrait image of receipt "2026-000001"
     Then the response status is 404
     And the problem type ends with "donations/receipt-image-not-found"
@@ -504,7 +504,7 @@ Feature: A donor issues receipts of their donations as frozen, signed data
     And the frozen receipt still shows the portrait it showed before
     When "Jana" fetches the portrait image of receipt "2026-000001"
     Then the response status is 200
-    And the image is a 600 pixel square JPEG portrait, kept by the browser and never sniffed as another type
+    And the image is a 600 pixel square JPEG portrait, stored by no cache and never sniffed as another type
     When "Jana" issues the receipt of her donation received on 2026-11-01
     Then the response status is 200
     And the frozen receipt shows another portrait than before
@@ -776,3 +776,26 @@ Feature: A donor issues receipts of their donations as frozen, signed data
     Then the response status is 200
     And the issued receipt has number "2027-000001"
     And 1 receipt is stored
+
+  Scenario: A donor erased after signing in gets no new receipt with the earlier token, and the receipt issued before stays active
+    Given today is 2026-12-20
+    And a person "Jana" is registered
+    And a person "Petr" is registered
+    And "Petr" is an administrator
+    And the bank account has these movements:
+      | id   | date       | amount  | account    | bankCode | name          | variableSymbol |
+      | 2001 | 2026-10-01 | 1000.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
+    And the application starts the import
+    And today is 2027-01-15
+    And "Jana" issues her yearly receipt for 2026
+    And the issued receipt has number "2027-000001"
+    And "Petr" erased the donor "Jana"
+    When "Jana" issues her yearly receipt for 2026
+    Then the response status is 409
+    And the problem type ends with "donations/donor-erased"
+    And the problem has the title "Dárce je vymazaný"
+    When "Jana" issues the receipt of her donation received on 2026-10-01
+    Then the response status is 409
+    And the problem type ends with "donations/donor-erased"
+    And 1 receipt is stored
+    And 1 receipt is active

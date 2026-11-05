@@ -1,4 +1,4 @@
-import { expect, Page } from '@playwright/test';
+import { expect, Locator, Page } from '@playwright/test';
 import { FOUNDATION_PAYMENT_DETAILS } from './qr-matrices';
 import { mockReceiptIssuing, ReceiptIssuing } from './receipt-issuing';
 import { noSignature, signatory } from './signature-image';
@@ -246,9 +246,21 @@ export async function mockConnectApi(page: Page): Promise<void> {
   );
 }
 
+async function headerEntry(page: Page): Promise<Locator> {
+  const header = page.locator('.nav-login');
+  await expect(
+    header.or(page.locator('.mobile-menu-btn')).filter({ visible: true }).first(),
+  ).toBeVisible();
+  if (await header.isVisible()) {
+    return header;
+  }
+  await page.locator('.mobile-menu-btn').click();
+  return page.locator('.mobile-login');
+}
+
 export async function openSignInDialog(page: Page): Promise<void> {
   await page.goto('/');
-  await page.locator('.nav-login').click();
+  await (await headerEntry(page)).click();
   await expect(page.getByRole('dialog')).toBeVisible();
 }
 
@@ -259,7 +271,7 @@ export async function signIn(page: Page, user: typeof donor = donor): Promise<vo
   await page.locator('#login-password').fill('correct horse battery');
   await page.getByRole('dialog').locator('.ui-button--block').click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  await page.locator('.nav-login', { hasText: 'Můj přehled' }).click();
+  await (await headerEntry(page)).filter({ hasText: 'Můj přehled' }).click();
   await expect(page).toHaveURL(/\/darce\/prehled$/);
 }
 
@@ -305,9 +317,17 @@ function sectionName(name: string): RegExp {
 }
 
 export async function openDonorSection(page: Page, name: string): Promise<void> {
-  const link = page
-    .getByRole('navigation', { name: 'Můj účet' })
-    .getByRole('link', { name: sectionName(name) });
+  const nav = page.getByRole('navigation', { name: 'Můj účet', includeHidden: true });
+  const link = nav.getByRole('link', { name: sectionName(name), includeHidden: true });
+  const menu = page.getByRole('button', { name: /^Menu účtu/ });
+  await expect(nav.or(menu).filter({ visible: true }).first()).toBeVisible();
+  if (await menu.isVisible()) {
+    await menu.click();
+    await expect(menu).toHaveAttribute('aria-expanded', 'true');
+  }
   await link.click();
   await expect(link).toHaveAttribute('aria-current', 'page');
+  if (await menu.isVisible()) {
+    await expect(menu).toHaveAttribute('aria-expanded', 'false');
+  }
 }

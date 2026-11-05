@@ -4,7 +4,7 @@ import { DestroyRef, inject, Injectable } from '@angular/core';
 import { Connectivity } from '../navigation/connectivity';
 import { APP_REVISION } from './app-revision';
 import { ClientPlatform, detectPlatform } from './client-platform';
-import { ERROR_NAMES, ErrorKind, ErrorName, ErrorPlace } from './error-vocabulary';
+import { ErrorKind, ErrorName, errorNameOf, ErrorPlace } from './error-vocabulary';
 
 export const CLIENT_ERRORS_PATH = '/api/operations/client-errors';
 export const REPEAT_WINDOW_MS = 10 * 60 * 1000;
@@ -22,14 +22,6 @@ interface ClientErrorReport {
   readonly os: ClientPlatform['os'];
   readonly display: ClientPlatform['display'];
   readonly count: number;
-}
-
-const ALLOWED_NAMES: ReadonlySet<string> = new Set(ERROR_NAMES);
-
-export function errorNameOf(error: unknown): ErrorName {
-  const name =
-    typeof error === 'object' && error !== null && 'name' in error ? error.name : undefined;
-  return typeof name === 'string' && ALLOWED_NAMES.has(name) ? (name as ErrorName) : 'Other';
 }
 
 @Injectable({ providedIn: 'root' })

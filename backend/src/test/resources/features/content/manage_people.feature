@@ -576,3 +576,25 @@ Feature: An administrator keeps the people of the foundation that the About sect
     Then the response status is 200
     And the person says:
       | portrait.id | {image:druha.png} |
+
+  Scenario: Only a browser renames the person who signs the receipts, while a connection still renames anyone else
+    Given "Jana" adds a person:
+      | name | Eva Vzorová |
+    And "Jana" adds a person:
+      | name | Adam Vzor |
+    And "Jana" chooses "Eva Vzorová" to sign the receipts as "předsedkyně správní rady"
+    And "Jana" connected the application "https://claude.ai/.well-known/oauth-client" with scope "admin:read admin:write"
+    When the connector exchanges the connector token for an API token
+    And the exchanged API token updates the person "Eva Vzorová":
+      | name | Eva Nová |
+    Then the response status is 403
+    And the problem type ends with "content/receipt-signatory-name-in-browser-only"
+    And the problem has the title "Jméno na potvrzeních jen v prohlížeči"
+    When the exchanged API token updates the person "Adam Vzor":
+      | name | Adam Nový |
+    Then the response status is 200
+    When "Jana" updates the person "Eva Vzorová":
+      | name | Eva Nová |
+    Then the response status is 200
+    And the person says:
+      | name | Eva Nová |

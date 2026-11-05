@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.transaction.TransactionSystemException;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.SimpleTransactionStatus;
 import org.springframework.transaction.support.TransactionCallback;
@@ -112,6 +113,31 @@ class ReceiptSigningKeyWithdrawalTest {
             assertThat(line.getLevel()).isEqualTo(Level.WARN);
             assertThat(line.getFormattedMessage()).isEqualTo("Admin " + ADMIN + " withdrew the receipt signing key 21fe31df");
         });
+    }
+
+    @Test
+    @DisplayName("Given the server's own published key, when an administrator withdraws it, then the warning that it was withdrawn is written only after the transaction commits")
+    void should_warn_only_after_commit_when_withdrawn_given_the_current_key() {
+        List<String> loggedBeforeCommit = new ArrayList<>();
+        transactions.commit = () -> lines.list.forEach(line -> loggedBeforeCommit.add(line.getFormattedMessage()));
+
+        withdrawal.withdraw(ADMIN, OWN, CODE);
+
+        assertThat(loggedBeforeCommit).isEmpty();
+        assertThat(lines.list).extracting(ILoggingEvent::getFormattedMessage).containsExactly("Admin " + ADMIN + " withdrew the receipt signing key 21fe31df");
+    }
+
+    @Test
+    @DisplayName("Given the commit of a withdrawal fails, when an administrator withdraws the server's own key, then the failure reaches the caller and nothing warns that the key was withdrawn")
+    void should_not_warn_when_withdrawn_given_failing_commit() {
+        transactions.commit = () -> {
+            throw new TransactionSystemException("commit failed");
+        };
+
+        assertThatThrownBy(() -> withdrawal.withdraw(ADMIN, OWN, CODE)).isInstanceOf(TransactionSystemException.class);
+
+        assertThat(lines.list).extracting(ILoggingEvent::getFormattedMessage).noneMatch(message -> message.contains("withdrew"));
+        verify(refusals, never()).record(any(), any(), any());
     }
 
     @Test
@@ -318,13 +344,17 @@ class ReceiptSigningKeyWithdrawalTest {
         private boolean open;
         private int started;
         private int rolledBack;
+        private Runnable commit = () -> {
+        };
 
         @Override
         public <T> T execute(TransactionCallback<T> action) {
             open = true;
             started++;
             try {
-                return action.doInTransaction(new SimpleTransactionStatus());
+                T result = action.doInTransaction(new SimpleTransactionStatus());
+                commit.run();
+                return result;
             } catch (RuntimeException failure) {
                 rolledBack++;
                 throw failure;

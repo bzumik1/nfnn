@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { DEVICE_PROJECT_PREFIX, DeviceOptions, POSES } from './e2e/devices/poses';
 
 const theme = process.env.E2E_THEME;
 const builtApp = theme ? `dist/${theme}-theme/browser` : 'dist/frontend/browser';
@@ -9,20 +10,34 @@ const build = theme
   : 'npx ng build';
 const served = process.env.E2E_DIST ?? builtApp;
 
-export default defineConfig({
+export default defineConfig<DeviceOptions>({
   testDir: './e2e',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   failOnFlakyTests: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 3 : undefined,
-  reporter: process.env.CI ? 'github' : 'list',
+  reporter: [[process.env.CI ? 'github' : 'list'], ['./e2e/devices/device-report.ts']],
   use: {
     baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:4200',
     trace: 'on-first-retry',
   },
   projects: [
-    { name: 'chromium', testIgnore: /baseline\//, use: { ...devices['Desktop Chrome'] } },
+    {
+      name: 'chromium',
+      testIgnore: /baseline\/|devices\/devices\.spec\.ts$/,
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'iphone',
+      testMatch: /(receipt-pdf|verify-receipt|donate-qr|second-factor)\.spec\.ts$/,
+      use: { ...devices['iPhone 15'] },
+    },
+    ...POSES.map((pose) => ({
+      name: `${DEVICE_PROJECT_PREFIX}${pose.id}`,
+      testMatch: /devices\/devices\.spec\.ts$/,
+      use: { ...devices[pose.device], textScale: pose.textScale ?? 100 },
+    })),
     {
       name: 'baseline',
       testMatch: /baseline\/.*\.spec\.ts$/,

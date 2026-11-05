@@ -25,8 +25,10 @@ export class FakeReceiptWorker implements ReceiptWorker {
     this.onmessage?.(new MessageEvent('message', { data: message }));
   }
 
-  fail(): void {
-    this.onerror?.(new Event('error'));
+  fail(): Event {
+    const event = new Event('error', { cancelable: true });
+    this.onerror?.(event);
+    return event;
   }
 
   drawAll(pages = 1): void {

@@ -12,12 +12,18 @@ const OWN_CACHE_CONTROL = new Map([
   ['/api/donations/receipt-keys', 'public, max-age=3600'],
 ]);
 const NOT_THERE_YET = [401, 404];
+const UNKNOWN_IMAGE = 'e'.repeat(64);
+const RECEIPT_IMAGES = [
+  { path: `/api/donations/me/receipt-images/${UNKNOWN_IMAGE}`, signedInStatus: 404 },
+  { path: `/api/admin/donations/receipt-images/${UNKNOWN_IMAGE}`, signedInStatus: 403 },
+];
 const ACCESS_TOKEN = process.env.PROBE_ACCESS_TOKEN ?? '';
 const API_ANSWERS = [
   { status: 200, method: 'GET', path: '/api/operations/setup' },
   { status: 200, method: 'GET', path: '/api/content/home' },
   { status: 401, method: 'GET', path: '/api/donors/me' },
   { status: 404, method: 'GET', path: '/api/content/news/probe-neexistuje' },
+  ...RECEIPT_IMAGES.map(({ path }) => ({ status: 401, method: 'GET', path })),
 ];
 const EDGE_ONLY = [
   { method: 'POST', path: '/mcp' },
@@ -143,6 +149,24 @@ for (const [path, cacheControl] of OWN_CACHE_CONTROL) {
       );
     }
   }
+}
+
+for (const { path, signedInStatus } of RECEIPT_IMAGES) {
+  const label = `GET ${path} with a donor's token`;
+  if (ACCESS_TOKEN === '') {
+    fail(`${label} is not probed: set PROBE_ACCESS_TOKEN to a donor's access token`);
+    continue;
+  }
+  const answer = await request({
+    method: 'GET',
+    path,
+    headers: { Authorization: `Bearer ${ACCESS_TOKEN}` },
+  });
+  seen.add(answer.status);
+  if (answer.status !== signedInStatus) {
+    fail(`${label} answered ${answer.status}, expected ${signedInStatus}`);
+  }
+  expectApiNoStore(label, answer);
 }
 
 const signIn = {

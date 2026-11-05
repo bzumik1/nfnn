@@ -3,7 +3,7 @@
 import { isDark } from '../../../shared/ui/qr-code/qr-matrix';
 import { frozenCase, SINGLE_PERSON_CS, YEARLY_366 } from '../receipt-pdf/testing/receipt-fixtures';
 import { verificationSymbol } from '../receipt-pdf/verification-qr';
-import { decodedQrText } from './qr-decoding';
+import { decodedQrText, workerAnswerTo } from './qr-decoding';
 import type { QrImage } from './qr-image';
 
 const QUIET_ZONE = 4;
@@ -52,5 +52,24 @@ describe('Given an image of a verification QR code', () => {
     };
 
     expect(decodedQrText(blank)).toBeNull();
+  });
+});
+
+describe('Given a question to the QR worker', () => {
+  const image: QrImage = { data: new Uint8ClampedArray(4), width: 1, height: 1 };
+
+  it('when reading the image throws, then the worker answers that it found no code, so the page never takes the crash for a worker that does not start', () => {
+    const answer = workerAnswerTo({ id: 7, image }, () => {
+      throw new RangeError('out of memory');
+    });
+
+    expect(answer).toEqual({ id: 7, text: null });
+  });
+
+  it('when the image holds a code, then the worker answers its text', () => {
+    expect(workerAnswerTo({ id: 8, image }, () => 'https://nfnn.cz/overit#1')).toEqual({
+      id: 8,
+      text: 'https://nfnn.cz/overit#1',
+    });
   });
 });
