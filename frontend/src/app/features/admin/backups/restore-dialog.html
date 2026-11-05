@@ -30,7 +30,7 @@
   @if (error(); as error) {
     <p class="restore-error" role="alert">{{ error }}</p>
   }
-  <div class="restore-actions">
+  <div class="ui-dialog__actions restore-actions">
     <button type="button" class="restore-confirm" [disabled]="busy()" (click)="confirm()">
       @if (busy()) {
         <ng-container i18n="@@admin.backups.restoreDialog.busy">Předáváme obnovu…</ng-container>

@@ -50,7 +50,7 @@ const SEARCH_PAUSE_MS = 5_000;
 const PAGE_TOLERANCE = { maxDiffPixelRatio: 0.002 };
 const ELEMENT_TOLERANCE = { maxDiffPixels: 0 };
 const FIXED_BARS_HIDDEN =
-  '.skip-link, app-header, app-header *, app-tab-bar, app-tab-bar *, app-dashboard-top-bar, app-dashboard-top-bar * { visibility: hidden !important; }';
+  '.skip-link, app-header, app-header *, app-tab-bar, app-tab-bar * { visibility: hidden !important; }';
 const DONATE_QR = '#prispet .qr-code';
 const DONATE_BANK = '#prispet .bank';
 const SEND_GIFT_QR = '.send-gift .qr-code';
@@ -433,6 +433,7 @@ const SCREENS_SINCE_V2: Screen[] = [
       await expect(page.getByRole('dialog').getByRole('link').first()).toBeVisible();
     },
   },
+  adminPage('admin-more', '/sprava/vice'),
   {
     name: 'donor-overview-send-gift',
     region: '.send-gift',

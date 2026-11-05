@@ -11,12 +11,16 @@ import {
   inject,
   input,
   output,
+  signal,
   viewChild,
 } from '@angular/core';
 
 import { DialogAnnouncer } from './dialog-announcer';
 import { DialogHistory, DialogHistoryListener } from './dialog-history';
 import { DIALOG_PRESENTATION, DialogPresentation } from './dialog-presentation';
+import { SheetDrag } from './sheet-drag';
+
+const ROOM_ABOVE_STICKY_ACTIONS_PX = 16;
 
 @Component({
   selector: 'app-dialog',
@@ -41,6 +45,14 @@ export class Dialog implements AfterViewInit, OnDestroy {
   });
 
   private readonly element = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
+  private readonly panel = viewChild.required<ElementRef<HTMLElement>>('panel');
+  private readonly drag = new SheetDrag();
+  private readonly dragOffset = signal(0);
+  protected readonly dragging = signal(false);
+  protected readonly dragTranslate = computed(() => {
+    const offset = this.dragOffset();
+    return offset > 0 ? `0 ${offset}px` : null;
+  });
   private readonly opener = inject(DOCUMENT).activeElement;
   private readonly history = inject(DialogHistory);
   private readonly injector = inject(Injector);
@@ -48,6 +60,7 @@ export class Dialog implements AfterViewInit, OnDestroy {
     stepBack: () => undefined,
     close: () => this.closedByBack(),
   };
+  private dragPointer: number | null = null;
   private pressStartedOnBackdrop = false;
   private destroyed = false;
 
@@ -101,6 +114,65 @@ export class Dialog implements AfterViewInit, OnDestroy {
       this.dismiss();
     }
     this.pressStartedOnBackdrop = false;
+  }
+
+  protected startDrag(event: PointerEvent): void {
+    if (!this.dismissible() || !event.isPrimary || event.button !== 0) {
+      return;
+    }
+    event.preventDefault();
+    (event.target as Element).setPointerCapture?.(event.pointerId);
+    this.dragPointer = event.pointerId;
+    this.drag.start(event.clientY, event.timeStamp);
+    this.dragging.set(true);
+  }
+
+  protected followDrag(event: PointerEvent): void {
+    if (this.dragging() && event.pointerId === this.dragPointer) {
+      this.dragOffset.set(this.drag.move(event.clientY, event.timeStamp));
+    }
+  }
+
+  protected endDrag(event: PointerEvent): void {
+    if (!this.dragging() || event.pointerId !== this.dragPointer) {
+      return;
+    }
+    const height = this.panel().nativeElement.getBoundingClientRect().height;
+    const release = this.drag.end(height, event.timeStamp);
+    this.stopDrag();
+    if (release === 'dismiss') {
+      this.dismiss();
+    }
+  }
+
+  protected cancelDrag(event: PointerEvent): void {
+    if (event.pointerId !== this.dragPointer) {
+      return;
+    }
+    this.drag.cancel();
+    this.stopDrag();
+  }
+
+  protected keepFocusAboveActions(event: FocusEvent): void {
+    const target = event.target;
+    const panel = this.panel().nativeElement;
+    const actions = panel.querySelector<HTMLElement>('.ui-dialog__actions');
+    if (!(target instanceof HTMLElement) || actions === null || actions.contains(target)) {
+      return;
+    }
+    if (getComputedStyle(actions).position !== 'sticky') {
+      return;
+    }
+    const covered = target.getBoundingClientRect().bottom - actions.getBoundingClientRect().top;
+    if (covered > 0) {
+      panel.scrollBy({ top: covered + ROOM_ABOVE_STICKY_ACTIONS_PX });
+    }
+  }
+
+  private stopDrag(): void {
+    this.dragPointer = null;
+    this.dragging.set(false);
+    this.dragOffset.set(0);
   }
 
   private closedByBack(): void {

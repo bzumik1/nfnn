@@ -62,7 +62,6 @@ export class DonorArea {
     return this.auth.isAdmin() ? [...sections, DONOR_ADMINISTRATION] : sections;
   });
   protected readonly navLabel = $localize`:@@donor.nav.label:Můj účet`;
-  protected readonly menuLabel = $localize`:@@donor.nav.toggle:Menu účtu`;
 
   constructor() {
     const badges = inject(AccountBadges);

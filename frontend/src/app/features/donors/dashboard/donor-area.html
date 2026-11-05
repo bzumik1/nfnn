@@ -1,12 +1,6 @@
 <app-header />
 
-<app-side-nav
-  navId="donor-nav"
-  [groups]="groups()"
-  [label]="navLabel"
-  [menuLabel]="menuLabel"
-  [panel]="!compact()"
->
+<app-side-nav navId="donor-nav" [groups]="groups()" [label]="navLabel" [panel]="!compact()">
   <div class="container" [class.container--compact]="compact()">
     <router-outlet />
     <p class="contact-line">

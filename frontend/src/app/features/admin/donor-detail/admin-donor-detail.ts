@@ -46,6 +46,7 @@ import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 import { isChangedMeanwhile } from '../../../core/version/row-version';
 import { ChangedMeanwhileDialog } from '../changed-meanwhile/changed-meanwhile-dialog';
 import { AdminReceiptDownloads } from './admin-receipt-downloads';
+import { CompactLayout } from '../../../core/layout/compact-layout';
 
 type LoadState = 'loading' | 'ready' | 'missing' | 'error';
 
@@ -114,6 +115,7 @@ const PAIRING_LABELS: Record<NonNullable<DonationItem['pairedBy']>, string> = {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminDonorDetail {
+  protected readonly compact = inject(CompactLayout).isCompact;
   private readonly api = inject(AdminApi);
   private readonly receiptKeys = inject(ReceiptKeysApi);
   private readonly hostname = inject(DOCUMENT).location.hostname;
