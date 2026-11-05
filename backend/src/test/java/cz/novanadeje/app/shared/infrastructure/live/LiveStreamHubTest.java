@@ -1,5 +1,6 @@
 package cz.novanadeje.app.shared.infrastructure.live;
 
+import cz.novanadeje.app.shared.application.event.DeviceSignedOut;
 import cz.novanadeje.app.shared.application.event.DonorSessionsEnded;
 import cz.novanadeje.app.shared.application.event.LiveFeed;
 import cz.novanadeje.app.shared.application.event.StoredDataChanged;
@@ -13,6 +14,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -28,6 +30,8 @@ class LiveStreamHubTest {
     private static final UUID JANA = UUID.fromString("0190a000-0000-7000-8000-000000000001");
     private static final UUID PETR = UUID.fromString("0190a000-0000-7000-8000-000000000002");
     private static final UUID ADMIN = UUID.fromString("0190a000-0000-7000-8000-000000000003");
+    private static final UUID PHONE = UUID.fromString("0190a000-0000-7000-8000-0000000000a1");
+    private static final UUID LAPTOP = UUID.fromString("0190a000-0000-7000-8000-0000000000a2");
 
     private final MutableClock clock = new MutableClock(NOW, ZoneId.of("Europe/Prague"));
     private LiveStreamHub hub = hub(new LiveProperties(Duration.ofMinutes(1), 5, 50, 10));
@@ -152,6 +156,33 @@ class LiveStreamHubTest {
     }
 
     @Test
+    @DisplayName("Given a donor's streams of two devices and one of a token without a device, when the phone is signed out, then only the phone's stream closes and the phone's token cannot open another")
+    void should_close_only_device_stream_and_refuse_its_token_when_device_signed_out_given_two_devices() {
+        RecordingConnection phone = open(onDevice(JANA, PHONE));
+        RecordingConnection laptop = open(onDevice(JANA, LAPTOP));
+        RecordingConnection deviceless = open(donor(JANA));
+
+        hub.endDevice(new DeviceSignedOut(JANA, PHONE, NOW));
+
+        assertThat(phone.closed()).isTrue();
+        assertThat(laptop.closed()).isFalse();
+        assertThat(deviceless.closed()).isFalse();
+        assertThat(hub.open(onDevice(JANA, PHONE), RecordingConnection::new)).isInstanceOf(LiveOpening.SessionEnded.class);
+        assertThat(hub.open(onDevice(JANA, LAPTOP), RecordingConnection::new)).isInstanceOf(LiveOpening.Opened.class);
+    }
+
+    @Test
+    @DisplayName("Given a device signed out long enough ago, when a stream of its token is asked for, then the hub no longer remembers it and only the token's own expiry counts")
+    void should_forget_device_sign_out_when_memory_passes_given_old_sign_out() {
+        hub.endDevice(new DeviceSignedOut(JANA, PHONE, NOW));
+        clock.advance(Duration.ofMinutes(17));
+
+        LiveOpening<RecordingConnection> opening = hub.open(new LiveSubscriber(JANA, false, Optional.of(PHONE), clock.instant(), clock.instant().plusSeconds(60)), RecordingConnection::new);
+
+        assertThat(opening).isInstanceOf(LiveOpening.Opened.class);
+    }
+
+    @Test
     @DisplayName("Given an ended session long enough ago, when a stream of a token from before it is asked for, then the hub no longer remembers it and only the token's own expiry counts")
     void should_forget_session_end_when_memory_passes_given_old_session_end() {
         hub.endSessions(new DonorSessionsEnded(JANA, NOW));
@@ -244,6 +275,10 @@ class LiveStreamHubTest {
 
     private static LiveSubscriber donor(UUID donor) {
         return new LiveSubscriber(donor, false, NOW, NOW.plus(TOKEN_LIFETIME));
+    }
+
+    private static LiveSubscriber onDevice(UUID donor, UUID device) {
+        return new LiveSubscriber(donor, false, Optional.of(device), NOW, NOW.plus(TOKEN_LIFETIME));
     }
 
     private static LiveSubscriber administrator(UUID donor) {

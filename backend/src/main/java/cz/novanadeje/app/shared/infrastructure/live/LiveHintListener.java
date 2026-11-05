@@ -1,5 +1,6 @@
 package cz.novanadeje.app.shared.infrastructure.live;
 
+import cz.novanadeje.app.shared.application.event.DeviceSignedOut;
 import cz.novanadeje.app.shared.application.event.DonorSessionsEnded;
 import cz.novanadeje.app.shared.application.event.StoredDataChanged;
 import org.springframework.stereotype.Component;
@@ -23,5 +24,10 @@ class LiveHintListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     void onSessionsEnded(DonorSessionsEnded ended) {
         hub.endSessions(ended);
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    void onDeviceSignedOut(DeviceSignedOut signedOut) {
+        hub.endDevice(signedOut);
     }
 }
