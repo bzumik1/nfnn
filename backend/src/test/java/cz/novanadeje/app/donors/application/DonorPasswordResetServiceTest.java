@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.application.event.DonorPasswordChanged;
 import cz.novanadeje.app.donors.application.event.DonorPasswordResetRequested;
 import cz.novanadeje.app.donors.domain.Donor;
@@ -13,7 +14,6 @@ import cz.novanadeje.app.donors.domain.PasswordResetToken;
 import cz.novanadeje.app.donors.domain.PasswordResetTokenRepository;
 import cz.novanadeje.app.donors.domain.PasswordTooWeak;
 import cz.novanadeje.app.donors.domain.RawPassword;
-import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -61,7 +61,7 @@ class DonorPasswordResetServiceTest {
     @Mock
     private PasswordResetTokenRepository tokens;
     @Mock
-    private RefreshTokenRepository refreshTokens;
+    private DeviceSignOuts signOuts;
     @Mock
     private PasswordHasher passwordHasher;
     @Mock
@@ -71,8 +71,8 @@ class DonorPasswordResetServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new DonorPasswordResetService(donors, tokens, refreshTokens, passwordHasher, new DonorPasswordResetProperties(TTL, 3),
-                Clock.fixed(NOW, ZoneOffset.UTC), events);
+        service = new DonorPasswordResetService(donors, tokens, passwordHasher, new DonorPasswordResetProperties(TTL, 3),
+                Clock.fixed(NOW, ZoneOffset.UTC), events, signOuts);
     }
 
     @Test
@@ -82,7 +82,7 @@ class DonorPasswordResetServiceTest {
 
         service.requestReset(EMAIL);
 
-        verifyNoInteractions(tokens, events, passwordHasher, refreshTokens);
+        verifyNoInteractions(tokens, events, passwordHasher, signOuts);
     }
 
     @Test
@@ -92,7 +92,7 @@ class DonorPasswordResetServiceTest {
 
         service.requestReset(EMAIL);
 
-        verifyNoInteractions(tokens, events, passwordHasher, refreshTokens);
+        verifyNoInteractions(tokens, events, passwordHasher, signOuts);
     }
 
     @Test
@@ -142,7 +142,7 @@ class DonorPasswordResetServiceTest {
         assertThatThrownBy(() -> service.confirmReset(secret.value(), "password12345"))
                 .isInstanceOfSatisfying(PasswordTooWeak.class, weak -> assertThat(weak.code()).isEqualTo("donors/password-too-common"));
 
-        verifyNoInteractions(tokens, donors, refreshTokens, passwordHasher);
+        verifyNoInteractions(tokens, donors, signOuts, passwordHasher);
     }
 
     @Test
@@ -150,7 +150,7 @@ class DonorPasswordResetServiceTest {
     void should_refuse_before_lookup_when_confirmed_given_malformed_token() {
         assertThatIllegalArgumentException().isThrownBy(() -> service.confirmReset("not.a.token", NEW_PASSWORD));
 
-        verifyNoInteractions(tokens, donors, refreshTokens, passwordHasher);
+        verifyNoInteractions(tokens, donors, signOuts, passwordHasher);
     }
 
     @Test
@@ -162,7 +162,7 @@ class DonorPasswordResetServiceTest {
         assertThatThrownBy(() -> service.confirmReset(secret.value(), NEW_PASSWORD)).isInstanceOf(InvalidPasswordResetToken.class);
 
         verify(tokens, never()).markUsed(any(), any());
-        verifyNoInteractions(donors, refreshTokens, passwordHasher);
+        verifyNoInteractions(donors, signOuts, passwordHasher);
     }
 
     @Test
@@ -175,7 +175,7 @@ class DonorPasswordResetServiceTest {
         assertThatThrownBy(() -> service.confirmReset(secret.value(), NEW_PASSWORD)).isInstanceOf(InvalidPasswordResetToken.class);
 
         verify(tokens, never()).markUsed(any(), any());
-        verifyNoInteractions(donors, refreshTokens, passwordHasher);
+        verifyNoInteractions(donors, signOuts, passwordHasher);
     }
 
     @Test
@@ -189,7 +189,7 @@ class DonorPasswordResetServiceTest {
         assertThatThrownBy(() -> service.confirmReset(secret.value(), NEW_PASSWORD)).isInstanceOf(InvalidPasswordResetToken.class);
 
         verify(tokens, never()).markUsed(any(), any());
-        verifyNoInteractions(donors, refreshTokens, passwordHasher);
+        verifyNoInteractions(donors, signOuts, passwordHasher);
     }
 
     @Test
@@ -203,7 +203,7 @@ class DonorPasswordResetServiceTest {
         assertThatThrownBy(() -> service.confirmReset(secret.value(), NEW_PASSWORD)).isInstanceOf(InvalidPasswordResetToken.class);
 
         verify(tokens, never()).deleteOthersOf(any(), any());
-        verifyNoInteractions(donors, refreshTokens, passwordHasher);
+        verifyNoInteractions(donors, signOuts, passwordHasher);
     }
 
     @Test
@@ -217,7 +217,7 @@ class DonorPasswordResetServiceTest {
 
         assertThatThrownBy(() -> service.confirmReset(secret.value(), NEW_PASSWORD)).isInstanceOf(InvalidPasswordResetToken.class);
 
-        verifyNoInteractions(refreshTokens, passwordHasher);
+        verifyNoInteractions(signOuts, passwordHasher);
     }
 
     @Test
@@ -237,7 +237,7 @@ class DonorPasswordResetServiceTest {
         verify(donors).save(saved.capture());
         assertThat(saved.getValue().passwordHash()).contains(NEW_HASH);
         verify(tokens).deleteOthersOf(DONOR, token.id());
-        verify(refreshTokens).revokeAllOf(DONOR, NOW);
+        verify(signOuts).endAllOf(DONOR, DeviceSignOutReason.CREDENTIALS_CHANGED, NOW);
         verify(events).publishEvent(new DonorPasswordChanged(DONOR.value(), donor.email(), LocaleCode.CS));
     }
 

@@ -1,5 +1,9 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.DeviceDescription;
+import java.util.UUID;
+import cz.novanadeje.app.donors.domain.DeviceId;
+import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.application.event.DonorPasswordChanged;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
@@ -14,7 +18,6 @@ import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.PasswordHasher;
 import cz.novanadeje.app.donors.domain.PasswordTooWeak;
 import cz.novanadeje.app.donors.domain.RawPassword;
-import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
 import cz.novanadeje.app.donors.domain.Role;
 import cz.novanadeje.app.donors.domain.SecondFactorRepository;
 import cz.novanadeje.app.donors.domain.WrongPassword;
@@ -51,6 +54,9 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class DonorCredentialsServiceTest {
 
+    private static final RequestingDevice DEVICE = new RequestingDevice(Optional.of(new DeviceId(UUID.fromString("019a5a3c-0000-7000-8000-00000000000d"))),
+            DeviceDescription.UNKNOWN);
+
     private static final Instant NOW = Instant.parse("2026-10-22T10:00:00Z");
     private static final DonorId DONOR = DonorId.newId(NOW.minusSeconds(60));
     private static final EmailAddress EMAIL = new EmailAddress("jana@example.cz");
@@ -69,7 +75,7 @@ class DonorCredentialsServiceTest {
     @Mock
     private PasswordHasher passwordHasher;
     @Mock
-    private RefreshTokenRepository refreshTokens;
+    private DeviceSignOuts signOuts;
     @Mock
     private DonorSessionService sessions;
     @Mock
@@ -92,25 +98,25 @@ class DonorCredentialsServiceTest {
     @BeforeEach
     void setUp() {
         service = new DonorCredentialsService(donors, passwordHasher,
-                new DonorConfirmations(passwordHasher, passkeys, challenges, ceremonies, Clock.fixed(NOW, ZoneOffset.UTC)), passkeys, refreshTokens, sessions, new DonorViews(secondFactors, verificationTokens, Clock.fixed(NOW, ZoneOffset.UTC)), emailVerification, events,
-                Clock.fixed(NOW, ZoneOffset.UTC));
+                new DonorConfirmations(passwordHasher, passkeys, challenges, ceremonies, Clock.fixed(NOW, ZoneOffset.UTC)), passkeys, sessions, new DonorViews(secondFactors, verificationTokens, Clock.fixed(NOW, ZoneOffset.UTC)), emailVerification, events,
+                Clock.fixed(NOW, ZoneOffset.UTC), signOuts);
     }
 
     @Test
-    @DisplayName("Given the right current password, when the password is changed, then the new hash is stored, every session is revoked, the donor is told and a new session opens")
+    @DisplayName("Given the right current password, when the password is changed, then the new hash is stored, every other device is signed out, the donor is told and the session continues on this one")
     void should_store_hash_revoke_sessions_and_open_one_when_password_changed_given_right_current_password() {
         Donor donor = donor();
         when(donors.findById(DONOR)).thenReturn(Optional.of(donor));
         when(passwordHasher.matches(new RawPassword(CURRENT), OLD_HASH)).thenReturn(true);
         when(passwordHasher.hash(new RawPassword(NEXT))).thenReturn(NEW_HASH);
-        when(sessions.open(donor, false)).thenReturn(TOKENS);
+        when(sessions.continueOn(donor, false, DEVICE)).thenReturn(TOKENS);
 
-        AuthenticatedDonor result = service.changePassword(DONOR, false, Confirmation.withPassword(CURRENT), NEXT);
+        AuthenticatedDonor result = service.changePassword(DONOR, false, Confirmation.withPassword(CURRENT), NEXT, DEVICE);
 
-        InOrder order = inOrder(donors, refreshTokens, sessions);
+        InOrder order = inOrder(donors, signOuts, sessions);
         order.verify(donors).save(donor);
-        order.verify(refreshTokens).revokeAllOf(DONOR, NOW);
-        order.verify(sessions).open(donor, false);
+        order.verify(signOuts).endAllOf(DONOR, DEVICE.session(), DeviceSignOutReason.CREDENTIALS_CHANGED, NOW);
+        order.verify(sessions).continueOn(donor, false, DEVICE);
         assertThat(donor.passwordHash()).contains(NEW_HASH);
         assertThat(result.tokens()).isEqualTo(TOKENS);
         assertThat(result.donor().email()).isEqualTo("jana@example.cz");
@@ -123,11 +129,11 @@ class DonorCredentialsServiceTest {
         when(donors.findById(DONOR)).thenReturn(Optional.of(donor()));
         when(passwordHasher.matches(new RawPassword("wrong horse battery"), OLD_HASH)).thenReturn(false);
 
-        assertThatThrownBy(() -> service.changePassword(DONOR, false, Confirmation.withPassword("wrong horse battery"), NEXT)).isInstanceOf(WrongPassword.class);
-        assertThatThrownBy(() -> service.changePassword(DONOR, false, Confirmation.withPassword("short"), NEXT)).isInstanceOf(WrongPassword.class);
+        assertThatThrownBy(() -> service.changePassword(DONOR, false, Confirmation.withPassword("wrong horse battery"), NEXT, DEVICE)).isInstanceOf(WrongPassword.class);
+        assertThatThrownBy(() -> service.changePassword(DONOR, false, Confirmation.withPassword("short"), NEXT, DEVICE)).isInstanceOf(WrongPassword.class);
 
         verify(donors, never()).save(any());
-        verifyNoInteractions(refreshTokens, sessions);
+        verifyNoInteractions(signOuts, sessions);
     }
 
     @Test
@@ -136,10 +142,10 @@ class DonorCredentialsServiceTest {
         when(donors.findById(DONOR)).thenReturn(Optional.of(donor()));
         when(passwordHasher.matches(new RawPassword(CURRENT), OLD_HASH)).thenReturn(true);
 
-        assertThatThrownBy(() -> service.changePassword(DONOR, false, Confirmation.withPassword(CURRENT), "password1234")).isInstanceOf(PasswordTooWeak.class);
+        assertThatThrownBy(() -> service.changePassword(DONOR, false, Confirmation.withPassword(CURRENT), "password1234", DEVICE)).isInstanceOf(PasswordTooWeak.class);
 
         verify(donors, never()).save(any());
-        verifyNoInteractions(refreshTokens, sessions);
+        verifyNoInteractions(signOuts, sessions);
     }
 
     @Test
@@ -147,27 +153,27 @@ class DonorCredentialsServiceTest {
     void should_report_not_found_when_password_changed_given_unknown_donor() {
         when(donors.findById(DONOR)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.changePassword(DONOR, false, Confirmation.withPassword(CURRENT), NEXT)).isInstanceOf(DonorNotFound.class);
+        assertThatThrownBy(() -> service.changePassword(DONOR, false, Confirmation.withPassword(CURRENT), NEXT, DEVICE)).isInstanceOf(DonorNotFound.class);
 
-        verifyNoInteractions(passwordHasher, refreshTokens, sessions);
+        verifyNoInteractions(passwordHasher, signOuts, sessions);
     }
 
     @Test
-    @DisplayName("Given a passkey and the right password, when the password is removed, then it is gone, every session is revoked and a new one opens")
+    @DisplayName("Given a passkey and the right password, when the password is removed, then it is gone, every other device is signed out and the session continues on this one")
     void should_remove_password_revoke_sessions_and_open_one_when_removed_given_passkey() {
         Donor donor = donor();
         when(donors.findById(DONOR)).thenReturn(Optional.of(donor));
         when(passwordHasher.matches(new RawPassword(CURRENT), OLD_HASH)).thenReturn(true);
         when(passkeys.countByDonor(DONOR)).thenReturn(1);
-        when(sessions.open(donor, true)).thenReturn(TOKENS);
+        when(sessions.continueOn(donor, true, DEVICE)).thenReturn(TOKENS);
 
-        AuthenticatedDonor result = service.removePassword(DONOR, true, Confirmation.withPassword(CURRENT));
+        AuthenticatedDonor result = service.removePassword(DONOR, true, Confirmation.withPassword(CURRENT), DEVICE);
 
         assertThat(donor.hasPassword()).isFalse();
-        InOrder order = inOrder(donors, refreshTokens, sessions);
+        InOrder order = inOrder(donors, signOuts, sessions);
         order.verify(donors).save(donor);
-        order.verify(refreshTokens).revokeAllOf(DONOR, NOW);
-        order.verify(sessions).open(donor, true);
+        order.verify(signOuts).endAllOf(DONOR, DEVICE.session(), DeviceSignOutReason.CREDENTIALS_CHANGED, NOW);
+        order.verify(sessions).continueOn(donor, true, DEVICE);
         assertThat(result.tokens()).isEqualTo(TOKENS);
     }
 
@@ -179,11 +185,11 @@ class DonorCredentialsServiceTest {
         when(passwordHasher.matches(new RawPassword(CURRENT), OLD_HASH)).thenReturn(true);
         when(passkeys.countByDonor(DONOR)).thenReturn(0);
 
-        assertThatThrownBy(() -> service.removePassword(DONOR, false, Confirmation.withPassword(CURRENT))).isInstanceOf(LastSignInMethod.class);
+        assertThatThrownBy(() -> service.removePassword(DONOR, false, Confirmation.withPassword(CURRENT), DEVICE)).isInstanceOf(LastSignInMethod.class);
 
         assertThat(donor.hasPassword()).isTrue();
         verify(donors, never()).save(any());
-        verifyNoInteractions(refreshTokens, sessions);
+        verifyNoInteractions(signOuts, sessions);
     }
 
     @Test

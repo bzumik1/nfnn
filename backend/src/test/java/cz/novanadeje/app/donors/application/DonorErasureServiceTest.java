@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.application.event.DonorAccountErased;
 import cz.novanadeje.app.donors.domain.AdministratorNotErasable;
 import cz.novanadeje.app.donors.domain.Donor;
@@ -11,7 +12,6 @@ import cz.novanadeje.app.donors.domain.EmailVerificationTokenRepository;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.PasskeyRepository;
 import cz.novanadeje.app.donors.domain.PasswordResetTokenRepository;
-import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
 import cz.novanadeje.app.donors.domain.Role;
 import cz.novanadeje.app.donors.domain.SecondFactorRepository;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
@@ -65,7 +65,7 @@ class DonorErasureServiceTest {
     @Mock
     private PasskeyRepository passkeys;
     @Mock
-    private RefreshTokenRepository refreshTokens;
+    private DeviceSignOuts signOuts;
     @Mock
     private PasswordResetTokenRepository passwordResetTokens;
     @Mock
@@ -77,8 +77,8 @@ class DonorErasureServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new DonorErasureService(donors, secondFactors, passkeys, refreshTokens, passwordResetTokens, emailVerificationTokens, events,
-                Clock.fixed(NOW, ZoneOffset.UTC));
+        service = new DonorErasureService(donors, secondFactors, passkeys, passwordResetTokens, emailVerificationTokens, events,
+                Clock.fixed(NOW, ZoneOffset.UTC), signOuts);
     }
 
     @Test
@@ -89,12 +89,12 @@ class DonorErasureServiceTest {
 
         service.erase(JANA, PETR);
 
-        InOrder order = inOrder(donors, secondFactors, passkeys, refreshTokens, passwordResetTokens, emailVerificationTokens, events);
+        InOrder order = inOrder(donors, secondFactors, passkeys, signOuts, passwordResetTokens, emailVerificationTokens, events);
         ArgumentCaptor<Donor> saved = ArgumentCaptor.forClass(Donor.class);
         order.verify(donors).save(saved.capture());
         order.verify(secondFactors).delete(PETR);
         order.verify(passkeys).deleteAllOf(PETR);
-        order.verify(refreshTokens).revokeAllOf(PETR, NOW);
+        order.verify(signOuts).endAllOf(PETR, DeviceSignOutReason.ERASED, NOW);
         order.verify(passwordResetTokens).deleteAllOf(PETR);
         order.verify(emailVerificationTokens).deleteAllOf(PETR);
         assertThat(saved.getValue()).isSameAs(petr);
@@ -125,7 +125,7 @@ class DonorErasureServiceTest {
         assertThatThrownBy(() -> service.erase(JANA, PETR)).isInstanceOf(DonorNotFound.class);
 
         verify(donors, never()).save(any());
-        verifyNoInteractions(secondFactors, refreshTokens, passwordResetTokens, emailVerificationTokens, events);
+        verifyNoInteractions(secondFactors, signOuts, passwordResetTokens, emailVerificationTokens, events);
     }
 
     @Test
@@ -136,7 +136,7 @@ class DonorErasureServiceTest {
         assertThatThrownBy(() -> service.erase(JANA, PETR)).isInstanceOf(AdministratorNotErasable.class);
 
         verify(donors, never()).save(any());
-        verifyNoInteractions(secondFactors, refreshTokens, passwordResetTokens, emailVerificationTokens, events);
+        verifyNoInteractions(secondFactors, signOuts, passwordResetTokens, emailVerificationTokens, events);
     }
 
     @Test
@@ -149,7 +149,7 @@ class DonorErasureServiceTest {
         assertThatThrownBy(() -> service.erase(JANA, PETR)).isInstanceOf(DonorAlreadyErased.class);
 
         verify(donors, never()).save(any());
-        verifyNoInteractions(secondFactors, refreshTokens, passwordResetTokens, emailVerificationTokens, events);
+        verifyNoInteractions(secondFactors, signOuts, passwordResetTokens, emailVerificationTokens, events);
     }
 
     private static Donor donor(DonorId id, Set<Role> roles, LocaleCode locale) {

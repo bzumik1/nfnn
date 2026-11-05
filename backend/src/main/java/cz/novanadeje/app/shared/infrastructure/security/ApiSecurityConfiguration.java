@@ -80,6 +80,7 @@ class ApiSecurityConfiguration {
                         .requestMatchers("/api/admin/**").access(new AdminWriteAuthorizationManager())
                         .anyRequest().access(new BrowserSessionAuthorizationManager()))
                 .oauth2ResourceServer(resourceServer -> resourceServer
+                        .bearerTokenResolver(new SignInBearerTokenResolver())
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter))
                         .authenticationEntryPoint(errorHandler)
                         .accessDeniedHandler(errorHandler))

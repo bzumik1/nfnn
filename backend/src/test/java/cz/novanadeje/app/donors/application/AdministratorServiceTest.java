@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.domain.AdministratorEmailNotConfirmed;
 import cz.novanadeje.app.donors.domain.AlreadyAdministrator;
 import cz.novanadeje.app.donors.domain.Donor;
@@ -12,7 +13,6 @@ import cz.novanadeje.app.donors.domain.OwnAdministrationRevoked;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.NoPasskeys;
 import cz.novanadeje.app.donors.domain.PasskeyRepository;
-import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
 import cz.novanadeje.app.donors.domain.Role;
 import cz.novanadeje.app.donors.application.event.DonorPasskeysRemoved;
 import cz.novanadeje.app.donors.application.event.DonorSecondFactorReset;
@@ -67,7 +67,7 @@ class AdministratorServiceTest {
     @Mock
     private PasskeyRepository passkeys;
     @Mock
-    private RefreshTokenRepository refreshTokens;
+    private DeviceSignOuts signOuts;
     @Mock
     private ApplicationEventPublisher events;
 
@@ -75,7 +75,7 @@ class AdministratorServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new AdministratorService(donors, secondFactors, passkeys, refreshTokens, events, Clock.fixed(NOW, ZoneOffset.UTC));
+        service = new AdministratorService(donors, secondFactors, passkeys, events, Clock.fixed(NOW, ZoneOffset.UTC), signOuts);
     }
 
     @Test
@@ -106,7 +106,7 @@ class AdministratorServiceTest {
         assertThat(service.contacts()).containsExactly(
                 new AdministratorContact(JANA, new EmailAddress("jana@example.cz"), LocaleCode.CS),
                 new AdministratorContact(PETR, PETR_EMAIL, LocaleCode.EN));
-        verifyNoInteractions(secondFactors, passkeys, refreshTokens, events);
+        verifyNoInteractions(secondFactors, passkeys, signOuts, events);
     }
 
     @Test
@@ -129,7 +129,7 @@ class AdministratorServiceTest {
         assertThat(action.action()).isEqualTo("GRANT_ADMINISTRATION");
         assertThat(action.subjectId()).contains(PETR.value());
         assertThat(action.performedAt()).isEqualTo(NOW);
-        verifyNoInteractions(refreshTokens);
+        verifyNoInteractions(signOuts);
     }
 
     @Test
@@ -151,7 +151,7 @@ class AdministratorServiceTest {
         assertThatThrownBy(() -> service.grant(JANA, PETR_EMAIL)).isInstanceOf(AdministratorEmailNotConfirmed.class);
 
         verify(donors, never()).save(any());
-        verifyNoInteractions(refreshTokens, events);
+        verifyNoInteractions(signOuts, events);
     }
 
     @Test
@@ -175,7 +175,7 @@ class AdministratorServiceTest {
         ArgumentCaptor<Donor> saved = ArgumentCaptor.forClass(Donor.class);
         verify(donors).save(saved.capture());
         assertThat(saved.getValue().roles()).containsExactly(Role.DONOR);
-        verify(refreshTokens).revokeAllOf(PETR, NOW);
+        verify(signOuts).endAllOf(PETR, DeviceSignOutReason.ADMINISTRATION_CHANGED, NOW);
         verify(donors).forgetSignIns(PETR);
         ArgumentCaptor<Object> published = ArgumentCaptor.forClass(Object.class);
         verify(events).publishEvent(published.capture());
@@ -198,7 +198,7 @@ class AdministratorServiceTest {
     void should_refuse_when_revoked_given_own_id() {
         assertThatThrownBy(() -> service.revoke(JANA, JANA)).isInstanceOf(OwnAdministrationRevoked.class);
 
-        verifyNoInteractions(donors, refreshTokens, events);
+        verifyNoInteractions(donors, signOuts, events);
     }
 
     @Test
@@ -208,7 +208,7 @@ class AdministratorServiceTest {
 
         assertThatThrownBy(() -> service.revoke(JANA, PETR)).isInstanceOf(DonorNotFound.class);
 
-        verifyNoInteractions(refreshTokens, events);
+        verifyNoInteractions(signOuts, events);
     }
 
     @Test
@@ -219,7 +219,7 @@ class AdministratorServiceTest {
         assertThatThrownBy(() -> service.revoke(JANA, PETR)).isInstanceOf(NotAdministrator.class);
 
         verify(donors, never()).save(any());
-        verifyNoInteractions(refreshTokens, events);
+        verifyNoInteractions(signOuts, events);
     }
 
     @Test
@@ -233,7 +233,7 @@ class AdministratorServiceTest {
         ArgumentCaptor<Donor> saved = ArgumentCaptor.forClass(Donor.class);
         verify(donors).save(saved.capture());
         assertThat(saved.getValue().isAdministrator()).isTrue();
-        verifyNoInteractions(events, refreshTokens);
+        verifyNoInteractions(events, signOuts);
     }
 
     @Test
@@ -286,7 +286,7 @@ class AdministratorServiceTest {
         service.resetSecondFactor(JANA, PETR);
 
         verify(secondFactors).delete(PETR);
-        verify(refreshTokens).revokeAllOf(PETR, NOW);
+        verify(signOuts).endAllOf(PETR, DeviceSignOutReason.CREDENTIALS_CHANGED, NOW);
         ArgumentCaptor<Object> published = ArgumentCaptor.forClass(Object.class);
         verify(events, org.mockito.Mockito.times(2)).publishEvent(published.capture());
         AdminActionPerformed action = (AdminActionPerformed) published.getAllValues().getFirst();
@@ -306,7 +306,7 @@ class AdministratorServiceTest {
         assertThatThrownBy(() -> service.resetSecondFactor(JANA, PETR)).isInstanceOf(SecondFactorNotEnabled.class);
 
         verify(secondFactors, never()).delete(any());
-        verifyNoInteractions(refreshTokens, events);
+        verifyNoInteractions(signOuts, events);
     }
 
     @Test
@@ -316,7 +316,7 @@ class AdministratorServiceTest {
 
         assertThatThrownBy(() -> service.resetSecondFactor(JANA, PETR)).isInstanceOf(DonorNotFound.class);
 
-        verifyNoInteractions(refreshTokens, events);
+        verifyNoInteractions(signOuts, events);
     }
 
     @Test
@@ -327,7 +327,7 @@ class AdministratorServiceTest {
 
         service.removePasskeys(JANA, PETR);
 
-        verify(refreshTokens).revokeAllOf(PETR, NOW);
+        verify(signOuts).endAllOf(PETR, DeviceSignOutReason.CREDENTIALS_CHANGED, NOW);
         ArgumentCaptor<Object> published = ArgumentCaptor.forClass(Object.class);
         verify(events, org.mockito.Mockito.times(2)).publishEvent(published.capture());
         AdminActionPerformed action = (AdminActionPerformed) published.getAllValues().getFirst();
@@ -346,7 +346,7 @@ class AdministratorServiceTest {
 
         assertThatThrownBy(() -> service.removePasskeys(JANA, PETR)).isInstanceOf(NoPasskeys.class);
 
-        verifyNoInteractions(refreshTokens, events);
+        verifyNoInteractions(signOuts, events);
     }
 
     private static Donor plainDonor(DonorId id, String name, String email) {

@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.application.event.DonorPasswordChanged;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
@@ -11,7 +12,6 @@ import cz.novanadeje.app.donors.domain.PasskeyConfirmationRejected;
 import cz.novanadeje.app.donors.domain.PasskeyRepository;
 import cz.novanadeje.app.donors.domain.PasswordHasher;
 import cz.novanadeje.app.donors.domain.RawPassword;
-import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,22 +31,21 @@ public class DonorCredentialsService {
     private final PasswordHasher passwordHasher;
     private final DonorConfirmations confirmations;
     private final PasskeyRepository passkeys;
-    private final RefreshTokenRepository refreshTokens;
     private final DonorSessionService sessions;
     private final DonorEmailVerificationService emailVerification;
     private final DonorViews views;
     private final ApplicationEventPublisher events;
     private final Clock clock;
+    private final DeviceSignOuts signOuts;
 
     public DonorCredentialsService(DonorRepository donors, PasswordHasher passwordHasher, DonorConfirmations confirmations, PasskeyRepository passkeys,
-                                   RefreshTokenRepository refreshTokens,
                                    DonorSessionService sessions, DonorViews views, DonorEmailVerificationService emailVerification,
-                                   ApplicationEventPublisher events, Clock clock) {
+                                   ApplicationEventPublisher events, Clock clock, DeviceSignOuts signOuts) {
+        this.signOuts = signOuts;
         this.donors = donors;
         this.passwordHasher = passwordHasher;
         this.confirmations = confirmations;
         this.passkeys = passkeys;
-        this.refreshTokens = refreshTokens;
         this.sessions = sessions;
         this.views = views;
         this.emailVerification = emailVerification;
@@ -55,21 +54,22 @@ public class DonorCredentialsService {
     }
 
     @Transactional(noRollbackFor = PasskeyConfirmationRejected.class)
-    public AuthenticatedDonor changePassword(DonorId donorId, boolean secondFactorVerified, Confirmation confirmation, String newPassword) {
+    public AuthenticatedDonor changePassword(DonorId donorId, boolean secondFactorVerified, Confirmation confirmation, String newPassword,
+                                             RequestingDevice device) {
         Donor donor = load(donorId);
         confirmations.confirm(donor, confirmation);
         RawPassword rawPassword = new RawPassword(newPassword);
         Instant now = clock.instant();
         donor.changePassword(passwordHasher.hash(rawPassword));
         donors.save(donor);
-        refreshTokens.revokeAllOf(donor.id(), now);
+        signOuts.endAllOf(donor.id(), device.session(), DeviceSignOutReason.CREDENTIALS_CHANGED, now);
         events.publishEvent(new DonorPasswordChanged(donor.id().value(), donor.email(), donor.preferredLocale()));
         log.info("Password of donor {} changed, every session revoked", donor.id());
-        return views.authenticated(donor, sessions.open(donor, secondFactorVerified));
+        return views.authenticated(donor, sessions.continueOn(donor, secondFactorVerified, device));
     }
 
     @Transactional(noRollbackFor = PasskeyConfirmationRejected.class)
-    public AuthenticatedDonor removePassword(DonorId donorId, boolean secondFactorVerified, Confirmation confirmation) {
+    public AuthenticatedDonor removePassword(DonorId donorId, boolean secondFactorVerified, Confirmation confirmation, RequestingDevice device) {
         Donor donor = load(donorId);
         confirmations.confirm(donor, confirmation);
         if (passkeys.countByDonor(donorId) == 0) {
@@ -78,9 +78,9 @@ public class DonorCredentialsService {
         Instant now = clock.instant();
         donor.removePassword();
         donors.save(donor);
-        refreshTokens.revokeAllOf(donor.id(), now);
+        signOuts.endAllOf(donor.id(), device.session(), DeviceSignOutReason.CREDENTIALS_CHANGED, now);
         log.info("Password of donor {} removed, every session revoked", donor.id());
-        return views.authenticated(donor, sessions.open(donor, secondFactorVerified));
+        return views.authenticated(donor, sessions.continueOn(donor, secondFactorVerified, device));
     }
 
     @Transactional(noRollbackFor = PasskeyConfirmationRejected.class)

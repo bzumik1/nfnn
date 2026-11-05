@@ -1,6 +1,10 @@
 package cz.novanadeje.app.donors.infrastructure.persistence;
 
 import cz.novanadeje.app.donors.domain.ClientId;
+import cz.novanadeje.app.donors.domain.DeviceDescription;
+import cz.novanadeje.app.donors.domain.DeviceId;
+import cz.novanadeje.app.donors.domain.DonorDevice;
+import cz.novanadeje.app.donors.domain.DonorDeviceRepository;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
@@ -43,13 +47,19 @@ class JpaRefreshTokenRepositoryTest {
     @Autowired
     private DonorRepository donors;
     @Autowired
+    private DonorDeviceRepository devices;
+    @Autowired
     private EntityManager entityManager;
 
     private DonorId jana;
+    private DeviceId device;
 
     @BeforeEach
     void setUp() {
         jana = donor("jana@example.cz", "4821937560");
+        DonorDevice signedIn = DonorDevice.signIn(jana, DeviceDescription.UNKNOWN, NOW);
+        devices.save(signedIn);
+        device = signedIn.id();
         flushAndClear();
     }
 
@@ -57,10 +67,10 @@ class JpaRefreshTokenRepositoryTest {
     @DisplayName("Given a used and a revoked token, when they are found by hash, then the use and the revocation survive separately")
     void should_keep_use_and_revocation_apart_when_found_given_both_kinds() {
         RefreshTokenSecret usedSecret = RefreshTokenSecret.generate();
-        RefreshToken used = RefreshToken.issue(usedSecret, jana, NOW, TTL, false);
+        RefreshToken used = RefreshToken.issue(usedSecret, jana, device, NOW, TTL, false);
         used.markUsed(NOW.plusSeconds(60));
         RefreshTokenSecret revokedSecret = RefreshTokenSecret.generate();
-        RefreshToken revoked = RefreshToken.issue(revokedSecret, jana, NOW, TTL, false);
+        RefreshToken revoked = RefreshToken.issue(revokedSecret, jana, device, NOW, TTL, false);
         revoked.revoke(NOW.plusSeconds(120));
         refreshTokens.save(used);
         refreshTokens.save(revoked);
@@ -84,7 +94,7 @@ class JpaRefreshTokenRepositoryTest {
         revoked.revoke(NOW.plusSeconds(60));
         RefreshToken expired = RefreshToken.issueForClient(RefreshTokenSecret.generate(), jana, CLAUDE, Set.of(OAuthScope.ADMIN_READ), NOW,
                 NOW.minus(TTL), TTL);
-        RefreshToken browser = RefreshToken.issue(RefreshTokenSecret.generate(), jana, NOW, TTL, true);
+        RefreshToken browser = RefreshToken.issue(RefreshTokenSecret.generate(), jana, device, NOW, TTL, true);
         RefreshToken live = RefreshToken.issueForClient(RefreshTokenSecret.generate(), jana, CLAUDE, Set.of(OAuthScope.ADMIN_READ), NOW,
                 NOW.plusSeconds(60), TTL);
         for (RefreshToken token : new RefreshToken[]{rotated, revoked, expired, browser, live}) {
@@ -99,11 +109,11 @@ class JpaRefreshTokenRepositoryTest {
     @DisplayName("Given a used and a live token, when every token of the donor is revoked, then both carry the revocation and the use stays")
     void should_revoke_every_token_when_all_revoked_given_used_and_live_tokens() {
         RefreshTokenSecret usedSecret = RefreshTokenSecret.generate();
-        RefreshToken used = RefreshToken.issue(usedSecret, jana, NOW, TTL, false);
+        RefreshToken used = RefreshToken.issue(usedSecret, jana, device, NOW, TTL, false);
         used.markUsed(NOW.plusSeconds(60));
         RefreshTokenSecret liveSecret = RefreshTokenSecret.generate();
         refreshTokens.save(used);
-        refreshTokens.save(RefreshToken.issue(liveSecret, jana, NOW.plusSeconds(60), TTL, false));
+        refreshTokens.save(RefreshToken.issue(liveSecret, jana, device, NOW.plusSeconds(60), TTL, false));
         flushAndClear();
 
         refreshTokens.revokeAllOf(jana, NOW.plusSeconds(120));
@@ -119,7 +129,7 @@ class JpaRefreshTokenRepositoryTest {
     @DisplayName("Given a live token, when it is marked used twice, then only the first use counts and its time stays")
     void should_count_only_first_use_when_marked_used_twice_given_live_token() {
         RefreshTokenSecret secret = RefreshTokenSecret.generate();
-        RefreshToken token = RefreshToken.issue(secret, jana, NOW, TTL, false);
+        RefreshToken token = RefreshToken.issue(secret, jana, device, NOW, TTL, false);
         refreshTokens.save(token);
         flushAndClear();
 
@@ -133,7 +143,7 @@ class JpaRefreshTokenRepositoryTest {
     @DisplayName("Given a token, when it is found by hash for an update, then it is the stored token")
     void should_find_the_stored_token_when_found_for_update_given_a_token() {
         RefreshTokenSecret secret = RefreshTokenSecret.generate();
-        RefreshToken token = RefreshToken.issue(secret, jana, NOW, TTL, true);
+        RefreshToken token = RefreshToken.issue(secret, jana, device, NOW, TTL, true);
         refreshTokens.save(token);
         flushAndClear();
 
@@ -145,9 +155,9 @@ class JpaRefreshTokenRepositoryTest {
     @DisplayName("Given a used token and the token issued after it, when the successor is recorded, then the used token names it")
     void should_name_the_successor_when_recorded_given_a_used_token_and_the_next_one() {
         RefreshTokenSecret secret = RefreshTokenSecret.generate();
-        RefreshToken used = RefreshToken.issue(secret, jana, NOW, TTL, false);
+        RefreshToken used = RefreshToken.issue(secret, jana, device, NOW, TTL, false);
         used.markUsed(NOW.plusSeconds(60));
-        RefreshToken successor = RefreshToken.issue(RefreshTokenSecret.generate(), jana, NOW.plusSeconds(60), TTL, false);
+        RefreshToken successor = RefreshToken.issue(RefreshTokenSecret.generate(), jana, device, NOW.plusSeconds(60), TTL, false);
         refreshTokens.save(used);
         refreshTokens.save(successor);
 
@@ -161,10 +171,10 @@ class JpaRefreshTokenRepositoryTest {
     @Test
     @DisplayName("Given an unused, a used and a revoked token, when each is revoked if unused, then only the unused one is revoked and the others keep their state")
     void should_revoke_only_the_unused_token_when_revoked_if_unused_given_unused_used_and_revoked_tokens() {
-        RefreshToken unused = RefreshToken.issue(RefreshTokenSecret.generate(), jana, NOW, TTL, false);
-        RefreshToken used = RefreshToken.issue(RefreshTokenSecret.generate(), jana, NOW, TTL, false);
+        RefreshToken unused = RefreshToken.issue(RefreshTokenSecret.generate(), jana, device, NOW, TTL, false);
+        RefreshToken used = RefreshToken.issue(RefreshTokenSecret.generate(), jana, device, NOW, TTL, false);
         used.markUsed(NOW.plusSeconds(10));
-        RefreshToken revoked = RefreshToken.issue(RefreshTokenSecret.generate(), jana, NOW, TTL, false);
+        RefreshToken revoked = RefreshToken.issue(RefreshTokenSecret.generate(), jana, device, NOW, TTL, false);
         revoked.revoke(NOW.plusSeconds(10));
         for (RefreshToken token : new RefreshToken[]{unused, used, revoked}) {
             refreshTokens.save(token);
@@ -184,10 +194,10 @@ class JpaRefreshTokenRepositoryTest {
     @Test
     @DisplayName("Given an unused, a used and a revoked token, when each is superseded if unused, then only the unused one is revoked and remembered as superseded")
     void should_supersede_only_the_unused_token_when_superseded_if_unused_given_unused_used_and_revoked_tokens() {
-        RefreshToken unused = RefreshToken.issue(RefreshTokenSecret.generate(), jana, NOW, TTL, false);
-        RefreshToken used = RefreshToken.issue(RefreshTokenSecret.generate(), jana, NOW, TTL, false);
+        RefreshToken unused = RefreshToken.issue(RefreshTokenSecret.generate(), jana, device, NOW, TTL, false);
+        RefreshToken used = RefreshToken.issue(RefreshTokenSecret.generate(), jana, device, NOW, TTL, false);
         used.markUsed(NOW.plusSeconds(10));
-        RefreshToken revoked = RefreshToken.issue(RefreshTokenSecret.generate(), jana, NOW, TTL, false);
+        RefreshToken revoked = RefreshToken.issue(RefreshTokenSecret.generate(), jana, device, NOW, TTL, false);
         revoked.revoke(NOW.plusSeconds(10));
         for (RefreshToken token : new RefreshToken[]{unused, used, revoked}) {
             refreshTokens.save(token);

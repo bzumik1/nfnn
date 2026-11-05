@@ -51,6 +51,7 @@ Web představí fond a jeho pomoc dětem, usnadní darování a dárcům dá ú�
 - Ztracený telefon: jiný správce ověření vypne, nebo ho dárce vypne sám platbou 1 Kč s jednorázovým kódem z bankovního účtu, který má u fondu ověřený aspoň 7 dní. Ztracené klíče odebere správce.
 - Kdo obnovu platbou zahájí znovu, dokud předchozí platí, dostane stejný kód a platnost s větou „Tuto obnovu už jste zahájili …“; obnova ukazuje i QR platbu 1 Kč se zprávou OBNOVA … bez VS (Jakub 24. 10. 2026, kód se proto ukládá i čitelně).
 - Přístupové klíče přidá dárce v přehledu (se současným heslem nebo klíčem), přejmenuje a odebere; o přidání i odebrání dostane e-mail; nejvýš 10. Klíče ze zkušební adresy se po přechodu na nfnn.cz smažou samy.
+- Přihlášená zařízení (krok 2.9 v3): v Údajích a zabezpečení karta „Přihlášená zařízení“ s typem zařízení a prohlížečem, kdy se přihlásilo a kdy bylo naposledy použité; dárce odhlásí jedno zařízení nebo všechna ostatní a odhlášené zařízení server odmítne nejpozději do 30 sekund. „Odhlásit všechna ostatní zařízení“ odhlásí jen zařízení; připojené aplikace (konektor) zůstanou, dokud je správce neodpojí na jejich kartě nebo nezmění heslo (Jakub 5. 11. 2026, Q12). Změna hesla nebo druhého faktoru odhlásí ostatní zařízení a to, na kterém ji dárce udělal, zůstane přihlášené.
 - Bezpečnostní e-maily k účtu (ověření, obnova, změna e-mailu, hesla, klíče nebo druhého faktoru) chodí vždy.
 
 ### Přehled

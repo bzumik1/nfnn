@@ -4,6 +4,8 @@
 
 <app-account-card (sessionEnded)="donations.sendToSignIn()" />
 
+<app-devices-card (sessionEnded)="donations.sendToSignIn()" />
+
 @if (isAdmin()) {
   <app-connected-apps-card (sessionEnded)="donations.sendToSignIn()" />
 }

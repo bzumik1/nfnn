@@ -26,4 +26,10 @@ public interface RefreshTokenRepository {
     List<RefreshToken> findUsableClientTokensOf(DonorId donorId, Instant now);
 
     void revokeAllOf(DonorId donorId, Instant at);
+
+    void revokeAllOfDevice(DeviceId deviceId, Instant at);
+
+    void revokeDevicelessBrowserTokensOf(DonorId donorId, Instant at);
+
+    int deleteSpentBefore(Instant cutoff);
 }

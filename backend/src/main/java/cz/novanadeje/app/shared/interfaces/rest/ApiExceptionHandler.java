@@ -6,6 +6,7 @@ import cz.novanadeje.app.shared.domain.error.Conflict;
 import cz.novanadeje.app.shared.domain.error.DomainException;
 import cz.novanadeje.app.shared.domain.error.NotFound;
 import cz.novanadeje.app.shared.domain.error.RuleViolation;
+import cz.novanadeje.app.shared.infrastructure.security.JwtProperties;
 import org.apache.tomcat.util.http.InvalidParameterException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -138,6 +139,9 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         if (isExpiredToken(ex)) {
             return problem(HttpStatus.UNAUTHORIZED, ProblemTypes.EXPIRED_TOKEN, "problem.expired-token.title");
         }
+        if (isEndedSession(ex)) {
+            return problem(HttpStatus.UNAUTHORIZED, ProblemTypes.SESSION_ENDED, "problem.session-ended.title");
+        }
         return problem(HttpStatus.UNAUTHORIZED, ProblemTypes.UNAUTHENTICATED, "problem.unauthenticated.title");
     }
 
@@ -170,6 +174,12 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         return ex instanceof OAuth2AuthenticationException oauth
                 && oauth.getError().getDescription() != null
                 && oauth.getError().getDescription().contains("expired");
+    }
+
+    private static boolean isEndedSession(AuthenticationException ex) {
+        return ex instanceof OAuth2AuthenticationException oauth
+                && oauth.getError().getDescription() != null
+                && oauth.getError().getDescription().contains(JwtProperties.SESSION_ENDED);
     }
 
     private ProblemDetail problem(HttpStatus status, URI type, String titleKey) {

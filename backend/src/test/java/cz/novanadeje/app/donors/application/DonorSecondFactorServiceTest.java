@@ -1,5 +1,9 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.DeviceDescription;
+import java.util.UUID;
+import cz.novanadeje.app.donors.domain.DeviceId;
+import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.application.event.DonorSecondFactorDisabled;
 import cz.novanadeje.app.donors.application.event.DonorSecondFactorEnabled;
 import cz.novanadeje.app.donors.domain.Donor;
@@ -11,7 +15,6 @@ import cz.novanadeje.app.donors.domain.PasskeyRepository;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.PasswordHasher;
 import cz.novanadeje.app.donors.domain.RawPassword;
-import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
 import cz.novanadeje.app.donors.domain.Role;
 import cz.novanadeje.app.donors.domain.SecondFactor;
 import cz.novanadeje.app.donors.domain.SecondFactorAlreadyEnabled;
@@ -59,6 +62,9 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class DonorSecondFactorServiceTest {
 
+    private static final RequestingDevice DEVICE = new RequestingDevice(Optional.of(new DeviceId(UUID.fromString("019a5a3c-0000-7000-8000-00000000000d"))),
+            DeviceDescription.UNKNOWN);
+
     private static final Instant NOW = Instant.parse("2026-10-22T10:00:00Z");
     private static final DonorId DONOR = DonorId.newId(NOW.minusSeconds(60));
     private static final PasswordHash HASH = new PasswordHash("$hash");
@@ -74,7 +80,7 @@ class DonorSecondFactorServiceTest {
     @Mock
     private EmailVerificationTokenRepository verificationTokens;
     @Mock
-    private RefreshTokenRepository refreshTokens;
+    private DeviceSignOuts signOuts;
     @Mock
     private PasswordHasher passwordHasher;
     @Mock
@@ -92,10 +98,9 @@ class DonorSecondFactorServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new DonorSecondFactorService(donors, secondFactors, refreshTokens,
-                new DonorConfirmations(passwordHasher, passkeys, challenges, ceremonies, Clock.fixed(NOW, ZoneOffset.UTC)), sessions, new DonorViews(secondFactors, verificationTokens, Clock.fixed(NOW, ZoneOffset.UTC)),
+        service = new DonorSecondFactorService(donors, secondFactors, new DonorConfirmations(passwordHasher, passkeys, challenges, ceremonies, Clock.fixed(NOW, ZoneOffset.UTC)), sessions, new DonorViews(secondFactors, verificationTokens, Clock.fixed(NOW, ZoneOffset.UTC)),
                 new SecondFactorSessionGuard(secondFactors, passkeys),
-                new DonorSecondFactorProperties(Duration.ofMinutes(5), 5, "Nová naděje", Duration.ofDays(14)), events, Clock.fixed(NOW, ZoneOffset.UTC));
+                new DonorSecondFactorProperties(Duration.ofMinutes(5), 5, "Nová naděje", Duration.ofDays(14)), events, Clock.fixed(NOW, ZoneOffset.UTC), signOuts);
     }
 
     @Test
@@ -115,7 +120,7 @@ class DonorSecondFactorServiceTest {
         assertThat(enrolment.otpauthUri())
                 .isEqualTo("otpauth://totp/Nov%C3%A1%20nad%C4%9Bje:jana%40example.cz?secret=" + enrolment.secret()
                         + "&issuer=Nov%C3%A1%20nad%C4%9Bje&algorithm=SHA1&digits=6&period=30");
-        verifyNoInteractions(sessions, refreshTokens, events);
+        verifyNoInteractions(sessions, signOuts, events);
     }
 
     @Test
@@ -181,20 +186,20 @@ class DonorSecondFactorServiceTest {
     }
 
     @Test
-    @DisplayName("Given a pending factor and the current code, when it is confirmed, then the factor is enabled, every session is revoked, a verified session opens and the donor is to be told")
+    @DisplayName("Given a pending factor and the current code, when it is confirmed, then the factor is enabled, every other device is signed out, a verified session continues on this one and the donor is to be told")
     void should_enable_revoke_sessions_and_open_verified_one_when_confirmed_given_pending_factor_and_right_code() {
         Donor donor = donor();
         SecondFactor factor = SecondFactor.enrol(DONOR, SECRET, NOW.minusSeconds(60));
         when(donors.findById(DONOR)).thenReturn(Optional.of(donor));
         when(secondFactors.findByDonor(DONOR)).thenReturn(Optional.of(factor));
-        when(sessions.open(donor, true)).thenReturn(TOKENS);
+        when(sessions.continueOn(donor, true, DEVICE)).thenReturn(TOKENS);
 
-        AuthenticatedDonor result = service.confirm(DONOR, codeAt(NOW));
+        AuthenticatedDonor result = service.confirm(DONOR, codeAt(NOW), DEVICE);
 
-        InOrder order = inOrder(secondFactors, refreshTokens, sessions);
+        InOrder order = inOrder(secondFactors, signOuts, sessions);
         order.verify(secondFactors).save(factor);
-        order.verify(refreshTokens).revokeAllOf(DONOR, NOW);
-        order.verify(sessions).open(donor, true);
+        order.verify(signOuts).endAllOf(DONOR, DEVICE.session(), DeviceSignOutReason.CREDENTIALS_CHANGED, NOW);
+        order.verify(sessions).continueOn(donor, true, DEVICE);
         assertThat(factor.isEnabled()).isTrue();
         assertThat(result.donor().secondFactor().enabled()).isTrue();
         assertThat(result.tokens()).isEqualTo(TOKENS);
@@ -208,11 +213,11 @@ class DonorSecondFactorServiceTest {
         when(donors.findById(DONOR)).thenReturn(Optional.of(donor()));
         when(secondFactors.findByDonor(DONOR)).thenReturn(Optional.of(factor));
 
-        assertThatThrownBy(() -> service.confirm(DONOR, "000000")).isInstanceOf(SecondFactorCodeRejected.class);
+        assertThatThrownBy(() -> service.confirm(DONOR, "000000", DEVICE)).isInstanceOf(SecondFactorCodeRejected.class);
 
         assertThat(factor.isEnabled()).isFalse();
         verify(secondFactors, never()).save(any());
-        verifyNoInteractions(refreshTokens, sessions, events);
+        verifyNoInteractions(signOuts, sessions, events);
     }
 
     @Test
@@ -221,27 +226,27 @@ class DonorSecondFactorServiceTest {
         when(donors.findById(DONOR)).thenReturn(Optional.of(donor()));
         when(secondFactors.findByDonor(DONOR)).thenReturn(Optional.empty(), Optional.of(enabledFactor()));
 
-        assertThatThrownBy(() -> service.confirm(DONOR, codeAt(NOW))).isInstanceOf(SecondFactorNotPending.class);
-        assertThatThrownBy(() -> service.confirm(DONOR, codeAt(NOW))).isInstanceOf(SecondFactorAlreadyEnabled.class);
+        assertThatThrownBy(() -> service.confirm(DONOR, codeAt(NOW), DEVICE)).isInstanceOf(SecondFactorNotPending.class);
+        assertThatThrownBy(() -> service.confirm(DONOR, codeAt(NOW), DEVICE)).isInstanceOf(SecondFactorAlreadyEnabled.class);
 
-        verifyNoInteractions(refreshTokens, sessions, events);
+        verifyNoInteractions(signOuts, sessions, events);
     }
 
     @Test
-    @DisplayName("Given an enabled factor, the right password and a fresh code, when it is disabled, then the factor is deleted, every session is revoked, a plain session opens and the donor is to be told")
+    @DisplayName("Given an enabled factor, the right password and a fresh code, when it is disabled, then the factor is deleted, every other device is signed out, a plain session continues on this one and the donor is to be told")
     void should_delete_factor_revoke_sessions_and_open_plain_one_when_disabled_given_right_password_and_code() {
         Donor donor = donor();
         when(donors.findById(DONOR)).thenReturn(Optional.of(donor));
         when(passwordHasher.matches(new RawPassword(PASSWORD), HASH)).thenReturn(true);
         when(secondFactors.findByDonor(DONOR)).thenReturn(Optional.of(enabledFactor()), Optional.empty());
-        when(sessions.open(donor, false)).thenReturn(TOKENS);
+        when(sessions.continueOn(donor, false, DEVICE)).thenReturn(TOKENS);
 
-        AuthenticatedDonor result = service.disable(DONOR, Confirmation.withPassword(PASSWORD), codeAt(NOW));
+        AuthenticatedDonor result = service.disable(DONOR, Confirmation.withPassword(PASSWORD), codeAt(NOW), DEVICE);
 
-        InOrder order = inOrder(secondFactors, refreshTokens, sessions);
+        InOrder order = inOrder(secondFactors, signOuts, sessions);
         order.verify(secondFactors).delete(DONOR);
-        order.verify(refreshTokens).revokeAllOf(DONOR, NOW);
-        order.verify(sessions).open(donor, false);
+        order.verify(signOuts).endAllOf(DONOR, DEVICE.session(), DeviceSignOutReason.CREDENTIALS_CHANGED, NOW);
+        order.verify(sessions).continueOn(donor, false, DEVICE);
         assertThat(result.donor().secondFactor().enabled()).isFalse();
         verify(events).publishEvent(new DonorSecondFactorDisabled(DONOR.value(), new EmailAddress("jana@example.cz"), LocaleCode.CS));
     }
@@ -254,11 +259,11 @@ class DonorSecondFactorServiceTest {
         when(secondFactors.findByDonor(DONOR)).thenReturn(Optional.of(enabledFactor()),
                 Optional.of(SecondFactor.reconstitute(DONOR, SECRET, NOW.minusSeconds(600), NOW.minusSeconds(600), Totp.stepAt(NOW))));
 
-        assertThatThrownBy(() -> service.disable(DONOR, Confirmation.withPassword(PASSWORD), "000000")).isInstanceOf(SecondFactorCodeRejected.class);
-        assertThatThrownBy(() -> service.disable(DONOR, Confirmation.withPassword(PASSWORD), codeAt(NOW))).isInstanceOf(SecondFactorCodeRejected.class);
+        assertThatThrownBy(() -> service.disable(DONOR, Confirmation.withPassword(PASSWORD), "000000", DEVICE)).isInstanceOf(SecondFactorCodeRejected.class);
+        assertThatThrownBy(() -> service.disable(DONOR, Confirmation.withPassword(PASSWORD), codeAt(NOW), DEVICE)).isInstanceOf(SecondFactorCodeRejected.class);
 
         verify(secondFactors, never()).delete(any());
-        verifyNoInteractions(refreshTokens, sessions, events);
+        verifyNoInteractions(signOuts, sessions, events);
     }
 
     @Test
@@ -268,10 +273,10 @@ class DonorSecondFactorServiceTest {
         when(passwordHasher.matches(new RawPassword(PASSWORD), HASH)).thenReturn(true);
         when(secondFactors.findByDonor(DONOR)).thenReturn(Optional.of(SecondFactor.enrol(DONOR, SECRET, NOW)));
 
-        assertThatThrownBy(() -> service.disable(DONOR, Confirmation.withPassword(PASSWORD), codeAt(NOW))).isInstanceOf(SecondFactorNotEnabled.class);
+        assertThatThrownBy(() -> service.disable(DONOR, Confirmation.withPassword(PASSWORD), codeAt(NOW), DEVICE)).isInstanceOf(SecondFactorNotEnabled.class);
 
         verify(secondFactors, never()).delete(any());
-        verify(sessions, never()).open(any(), anyBoolean());
+        verify(sessions, never()).open(any(), anyBoolean(), any());
         verifyNoInteractions(events);
     }
 
@@ -281,9 +286,9 @@ class DonorSecondFactorServiceTest {
         when(donors.findById(DONOR)).thenReturn(Optional.of(donor()));
         when(passwordHasher.matches(new RawPassword("wrong horse battery"), HASH)).thenReturn(false);
 
-        assertThatThrownBy(() -> service.disable(DONOR, Confirmation.withPassword("wrong horse battery"), codeAt(NOW))).isInstanceOf(WrongPassword.class);
+        assertThatThrownBy(() -> service.disable(DONOR, Confirmation.withPassword("wrong horse battery"), codeAt(NOW), DEVICE)).isInstanceOf(WrongPassword.class);
 
-        verifyNoInteractions(secondFactors, refreshTokens, sessions, events);
+        verifyNoInteractions(secondFactors, signOuts, sessions, events);
     }
 
     private static SecondFactor enabledFactor() {

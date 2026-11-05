@@ -791,11 +791,10 @@ Feature: A donor issues receipts of their donations as frozen, signed data
     And the issued receipt has number "2027-000001"
     And "Petr" erased the donor "Jana"
     When "Jana" issues her yearly receipt for 2026
-    Then the response status is 409
-    And the problem type ends with "donations/donor-erased"
-    And the problem has the title "Dárce je vymazaný"
+    Then the response status is 401
+    And the problem type ends with "auth/session-ended"
     When "Jana" issues the receipt of her donation received on 2026-10-01
-    Then the response status is 409
-    And the problem type ends with "donations/donor-erased"
+    Then the response status is 401
+    And the problem type ends with "auth/session-ended"
     And 1 receipt is stored
     And 1 receipt is active

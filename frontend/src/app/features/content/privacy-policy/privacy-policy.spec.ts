@@ -138,6 +138,15 @@ describe('Given the privacy policy page', () => {
     expect(passkey).toContain('otisk prstu ani snímek obličeje k nám nikdy nedorazí');
   });
 
+  it('when it renders, then it says which signed-in devices are kept, without the browser header, and for how long', () => {
+    const device = texts('li').find((item) => item.includes('přihlášení zařízení'));
+    const retention = texts('li').find((item) => item.includes('přihlášená zařízení'));
+
+    expect(device).toContain('druh zařízení a prohlížeče');
+    expect(device).toContain('celý údaj o prohlížeči, který posílá, neukládáme');
+    expect(retention).toContain('400 dní od odhlášení');
+  });
+
   it('when it renders, then it says a gift is assigned by the variable symbol and by a bank account the donor proved', () => {
     const donations = purposeText('Evidence darů a potvrzení o daru');
 
