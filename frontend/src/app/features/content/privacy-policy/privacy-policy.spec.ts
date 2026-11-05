@@ -112,8 +112,15 @@ describe('Given the privacy policy page', () => {
   });
 
   it('when it renders, then the date it applies from stands under the heading and in the closing section', () => {
-    expect(texts('.ui-intro .effective')).toEqual(['Platné od 29. října 2026']);
-    expect(sectionText('Účinnost')).toContain('účinné od 29. října 2026');
+    expect(texts('.ui-intro .effective')).toEqual(['Platné od 5. listopadu 2026']);
+    expect(sectionText('Účinnost')).toContain('účinné od 5. listopadu 2026');
+  });
+
+  it('when it renders, then the cookies section names the verification keys kept in the browser', () => {
+    const cookies = sectionText('Cookies');
+
+    expect(cookies).toContain('veřejné klíče fondu');
+    expect(cookies).toContain('nenesou žádné osobní údaje');
   });
 
   it('when it renders, then it says a company ID fills the name and seat from ARES, which gets only the ID', () => {
