@@ -6,6 +6,9 @@ import cz.novanadeje.app.donations.domain.bank.BankPaymentRepository;
 import cz.novanadeje.app.donations.domain.bank.BankTransactionId;
 import cz.novanadeje.app.donations.domain.bank.SenderAccount;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
+import cz.novanadeje.app.shared.application.event.LiveFeed;
+import cz.novanadeje.app.shared.application.event.StoredDataChanged;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
@@ -21,19 +24,25 @@ import java.util.stream.Collectors;
 class JpaBankPaymentRepository implements BankPaymentRepository {
 
     private final BankPaymentJpaRepository jpa;
+    private final ApplicationEventPublisher events;
 
-    JpaBankPaymentRepository(BankPaymentJpaRepository jpa) {
+    JpaBankPaymentRepository(BankPaymentJpaRepository jpa, ApplicationEventPublisher events) {
         this.jpa = jpa;
+        this.events = events;
     }
 
     @Override
     public void saveAll(List<BankPayment> payments) {
         jpa.saveAll(payments.stream().map(BankPaymentJpaEntity::fromDomain).toList());
+        if (!payments.isEmpty()) {
+            changed();
+        }
     }
 
     @Override
     public void save(BankPayment payment) {
         jpa.saveAndFlush(BankPaymentJpaEntity.fromDomain(payment));
+        changed();
     }
 
     @Override
@@ -112,5 +121,9 @@ class JpaBankPaymentRepository implements BankPaymentRepository {
 
     private static List<BankPayment> toDomain(List<BankPaymentJpaEntity> entities) {
         return entities.stream().map(BankPaymentJpaEntity::toDomain).toList();
+    }
+
+    private void changed() {
+        events.publishEvent(StoredDataChanged.of(LiveFeed.PAYMENTS));
     }
 }

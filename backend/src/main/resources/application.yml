@@ -145,6 +145,11 @@ app:
     settings:
       from-database: false
       key: ${SETTINGS_KEY:}
+  live:
+    heartbeat: PT25S
+    streams-per-donor: 5
+    streams: 50
+    streams-reserved-for-administrators: 10
   security:
     jwt:
       issuer: nova-nadeje

@@ -1,6 +1,7 @@
 import { HttpClient, HttpResponse } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { EMPTY, expand, Observable, switchMap, take, timer } from 'rxjs';
+import { defer, EMPTY, expand, Observable, race, switchMap, take, timer } from 'rxjs';
+import { LiveUpdates } from '../../core/live/live-updates';
 
 export type DonationStatus = 'RECEIVED' | 'REFUNDED';
 
@@ -61,11 +62,13 @@ const EXTENDED_FILE_NAME = /(?:^|;)\s*filename\*\s*=\s*utf-8''([^;\s]+)/i;
 const PLAIN_FILE_NAME = /(?:^|;)\s*filename\s*=\s*(?:"([^"]*)"|([^;\s]+))/i;
 
 const BANK_CHECK_POLL_MS = 2000;
-const BANK_CHECK_MAX_POLLS = 45;
+const BANK_CHECK_LIVE_POLL_MS = 15_000;
+const BANK_CHECK_BUDGET_MS = 90_000;
 
 @Injectable({ providedIn: 'root' })
 export class DonationsApi {
   private readonly http = inject(HttpClient);
+  private readonly live = inject(LiveUpdates);
 
   list(): Observable<DonationListResponse> {
     return this.http.get<DonationListResponse>('/api/donations/me');
@@ -84,12 +87,21 @@ export class DonationsApi {
   }
 
   checkBankUntilDone(): Observable<BankCheckResponse> {
-    return this.requestBankCheck().pipe(
-      expand((check) =>
-        check.checking ? timer(BANK_CHECK_POLL_MS).pipe(switchMap(() => this.bankCheck())) : EMPTY,
-      ),
-      take(BANK_CHECK_MAX_POLLS + 1),
-    );
+    return defer(() => {
+      const giveUpAt = Date.now() + BANK_CHECK_BUDGET_MS;
+      return this.requestBankCheck().pipe(
+        expand((check) =>
+          check.checking && Date.now() < giveUpAt
+            ? this.importEnded().pipe(switchMap(() => this.bankCheck()))
+            : EMPTY,
+        ),
+      );
+    });
+  }
+
+  private importEnded(): Observable<unknown> {
+    const fallback = this.live.connected() ? BANK_CHECK_LIVE_POLL_MS : BANK_CHECK_POLL_MS;
+    return race(this.live.changes(['bank-import']), timer(fallback)).pipe(take(1));
   }
 }
 
