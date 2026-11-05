@@ -94,6 +94,17 @@ class UnhandledExceptionAnswerTest {
     }
 
     @Test
+    @DisplayName("Given the running application, when a client that names no language meets an unhandled failure, then the problem is in Czech")
+    void should_answer_in_czech_when_thrown_given_no_accept_language() throws Exception {
+        MockHttpServletResponse response = mockMvc.perform(get("/api/content/probe-unhandled/7")).andReturn().getResponse();
+
+        assertThat(response.getStatus()).isEqualTo(500);
+        assertThat(response.getContentAsString(StandardCharsets.UTF_8))
+                .contains("\"title\":\"Něco se pokazilo\"")
+                .contains("\"detail\":\"Chyba je na naší straně. Zkuste to prosím později, a když to nepůjde ani potom, napište nám na info@nfnn.cz.\"");
+    }
+
+    @Test
     @DisplayName("Given the running application, when its controller advices are ordered, then the catch-all comes last, after every other advice")
     void should_order_catch_all_last_when_advices_ordered_given_running_application() {
         List<ControllerAdviceBean> advices = List.copyOf(adviceResolver().getExceptionHandlerAdviceCache().keySet());

@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.support.ResourceBundleMessageSource;
 import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.test.web.servlet.MockMvc;
@@ -27,7 +28,14 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 import org.springframework.web.servlet.HandlerMapping;
 
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.mail.MailSendException;
+import org.springframework.transaction.TransactionSystemException;
+
+import java.io.EOFException;
 import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
@@ -39,6 +47,7 @@ class UnhandledExceptionHandlerTest {
 
     private static final String CLIENT_VALUE = "nfnn-client-value";
     private static final String EXCEPTION_TEXT = "nfnn-exception-text";
+    private static final String PARTIAL_BODY = "PARTIAL-BACKUP-BYTES";
 
     private final ListAppender<ILoggingEvent> logged = new ListAppender<>();
     private UnhandledExceptionHandler handler;
@@ -63,9 +72,36 @@ class UnhandledExceptionHandlerTest {
             throw new ClientAbortException(new IOException("Broken pipe"));
         }
 
+        @GetMapping("/probe/wrapped-client-abort")
+        String wrappedClientAbort() {
+            throw new UncheckedIOException(new ClientAbortException(new IOException("Connection reset by peer")));
+        }
+
         @GetMapping("/probe/broken-pipe")
         String brokenPipe() throws IOException {
             throw new IOException("Broken pipe");
+        }
+
+        @GetMapping("/probe/truncated-file")
+        String truncatedFile() {
+            throw new UncheckedIOException(new EOFException("truncated image"));
+        }
+
+        @GetMapping("/probe/commit-over-broken-socket")
+        String commitOverBrokenSocket() {
+            throw new TransactionSystemException("Could not commit", new SocketException("Broken pipe"));
+        }
+
+        @GetMapping("/probe/mail-connection-reset")
+        String mailConnectionReset() {
+            throw new MailSendException("Mail server connection failed", new SocketException("Connection reset by peer"));
+        }
+
+        @GetMapping("/probe/partly-written")
+        void partlyWritten(HttpServletResponse response) throws IOException {
+            response.getOutputStream().write(PARTIAL_BODY.getBytes(StandardCharsets.UTF_8));
+            response.flushBuffer();
+            throw new UncheckedIOException(new IOException("Input/output error"));
         }
 
         @GetMapping("/probe/not-usable")
@@ -194,7 +230,7 @@ class UnhandledExceptionHandlerTest {
         void should_log_placeholder_when_answered_given_no_matched_pattern() {
             MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/" + CLIENT_VALUE);
 
-            handler.handleUnhandled(new IllegalStateException(EXCEPTION_TEXT), request);
+            handler.handleUnhandled(new IllegalStateException(EXCEPTION_TEXT), request, new MockHttpServletResponse());
 
             assertThat(logged.list).singleElement().extracting(ILoggingEvent::getFormattedMessage)
                     .isEqualTo("Unhandled IllegalStateException answered as 500 at GET (unmatched)");
@@ -206,7 +242,7 @@ class UnhandledExceptionHandlerTest {
             MockHttpServletRequest request = new MockHttpServletRequest("NFNN-CLIENT-VALUE", "/probe/receipts/7");
             request.setAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE, "/probe/receipts/{id}");
 
-            handler.handleUnhandled(new IllegalStateException(EXCEPTION_TEXT), request);
+            handler.handleUnhandled(new IllegalStateException(EXCEPTION_TEXT), request, new MockHttpServletResponse());
 
             assertThat(logged.list).singleElement().extracting(ILoggingEvent::getFormattedMessage)
                     .isEqualTo("Unhandled IllegalStateException answered as 500 at OTHER /probe/receipts/{id}");
@@ -218,27 +254,85 @@ class UnhandledExceptionHandlerTest {
     class Disconnects {
 
         @Test
-        @DisplayName("when the container reports the abort, then nothing is answered as 500 and nothing is logged")
-        void should_neither_answer_500_nor_log_when_thrown_given_client_abort() throws Exception {
-            assertQuietlyDropped(mockMvc.perform(get("/probe/client-abort")).andReturn());
+        @DisplayName("when the container reports the abort, then nothing is written and nothing is logged")
+        void should_write_and_log_nothing_when_thrown_given_client_abort() throws Exception {
+            assertNothingWritten(mockMvc.perform(get("/probe/client-abort")).andReturn());
         }
 
         @Test
-        @DisplayName("when writing fails with a broken pipe, then nothing is answered as 500 and nothing is logged")
-        void should_neither_answer_500_nor_log_when_thrown_given_broken_pipe() throws Exception {
-            assertQuietlyDropped(mockMvc.perform(get("/probe/broken-pipe")).andReturn());
+        @DisplayName("when the container's abort arrives wrapped in another exception, then nothing is written and nothing is logged")
+        void should_write_and_log_nothing_when_thrown_given_wrapped_client_abort() throws Exception {
+            assertNothingWritten(mockMvc.perform(get("/probe/wrapped-client-abort")).andReturn());
         }
 
         @Test
-        @DisplayName("when the response is no longer usable, then nothing is answered as 500 and nothing is logged")
-        void should_neither_answer_500_nor_log_when_thrown_given_unusable_response() throws Exception {
-            assertQuietlyDropped(mockMvc.perform(get("/probe/not-usable")).andReturn());
+        @DisplayName("when the response is no longer usable, then nothing is written and nothing is logged")
+        void should_write_and_log_nothing_when_thrown_given_unusable_response() throws Exception {
+            assertNothingWritten(mockMvc.perform(get("/probe/not-usable")).andReturn());
         }
 
-        private void assertQuietlyDropped(MvcResult result) throws Exception {
-            assertThat(result.getResponse().getStatus()).isNotEqualTo(500);
+        private void assertNothingWritten(MvcResult result) throws Exception {
+            assertThat(result.getResponse().getStatus()).isEqualTo(200);
+            assertThat(result.getResponse().getContentType()).isNull();
             assertThat(bodyOf(result)).isEmpty();
             assertThat(logged.list).isEmpty();
+        }
+    }
+
+    @Nested
+    @DisplayName("Given a failure of the server's own connections or files that reads like a disconnect")
+    class ServerSideInputOutput {
+
+        @Test
+        @DisplayName("when a bare broken pipe is thrown, then it is answered as 500 and logged")
+        void should_answer_500_and_log_when_thrown_given_bare_broken_pipe() throws Exception {
+            assertAnsweredAs500(mockMvc.perform(get("/probe/broken-pipe")).andReturn(), "IOException", "/probe/broken-pipe");
+        }
+
+        @Test
+        @DisplayName("when a file ends early, then it is answered as 500 and logged")
+        void should_answer_500_and_log_when_thrown_given_end_of_file() throws Exception {
+            assertAnsweredAs500(mockMvc.perform(get("/probe/truncated-file")).andReturn(), "UncheckedIOException", "/probe/truncated-file");
+        }
+
+        @Test
+        @DisplayName("when a commit fails over a broken database socket, then it is answered as 500 and logged")
+        void should_answer_500_and_log_when_thrown_given_commit_over_broken_socket() throws Exception {
+            assertAnsweredAs500(mockMvc.perform(get("/probe/commit-over-broken-socket")).andReturn(), "TransactionSystemException", "/probe/commit-over-broken-socket");
+        }
+
+        @Test
+        @DisplayName("when the mail server resets the connection, then it is answered as 500 and logged")
+        void should_answer_500_and_log_when_thrown_given_mail_connection_reset() throws Exception {
+            assertAnsweredAs500(mockMvc.perform(get("/probe/mail-connection-reset")).andReturn(), "MailSendException", "/probe/mail-connection-reset");
+        }
+
+        private void assertAnsweredAs500(MvcResult result, String className, String pattern) throws Exception {
+            assertThat(result.getResponse().getStatus()).isEqualTo(500);
+            assertThat(bodyOf(result)).contains("\"type\":\"https://nfnn.cz/problems/internal-error\"");
+            assertThat(logged.list).singleElement().satisfies(line -> {
+                assertThat(line.getLevel()).isEqualTo(Level.ERROR);
+                assertThat(line.getFormattedMessage()).isEqualTo("Unhandled " + className + " answered as 500 at GET " + pattern);
+            });
+        }
+    }
+
+    @Nested
+    @DisplayName("Given a handler that already sent part of its answer")
+    class CommittedResponse {
+
+        @Test
+        @DisplayName("when it then fails, then no problem is appended to what was sent and one ERROR line names the failure")
+        void should_append_nothing_and_log_one_line_when_thrown_given_committed_response() throws Exception {
+            MvcResult result = mockMvc.perform(get("/probe/partly-written")).andReturn();
+
+            assertThat(result.getResponse().getStatus()).isEqualTo(200);
+            assertThat(bodyOf(result)).isEqualTo(PARTIAL_BODY);
+            assertThat(logged.list).singleElement().satisfies(line -> {
+                assertThat(line.getLevel()).isEqualTo(Level.ERROR);
+                assertThat(line.getFormattedMessage()).isEqualTo("Unhandled UncheckedIOException answered as 500 at GET /probe/partly-written");
+                assertThat(line.getThrowableProxy()).isNull();
+            });
         }
     }
 

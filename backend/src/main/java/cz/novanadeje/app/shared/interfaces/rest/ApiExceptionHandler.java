@@ -6,6 +6,8 @@ import cz.novanadeje.app.shared.domain.error.Conflict;
 import cz.novanadeje.app.shared.domain.error.DomainException;
 import cz.novanadeje.app.shared.domain.error.NotFound;
 import cz.novanadeje.app.shared.domain.error.RuleViolation;
+import jakarta.validation.ConstraintViolationException;
+import jakarta.validation.Path;
 import org.apache.tomcat.util.http.InvalidParameterException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -125,6 +127,13 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         return problem;
     }
 
+    @ExceptionHandler(ConstraintViolationException.class)
+    ResponseEntity<Object> handleConstraintViolation(ConstraintViolationException ex, WebRequest request) {
+        return validationProblem(ex, ex.getConstraintViolations().stream()
+                .map(violation -> fieldError(lastNode(violation.getPropertyPath()), violation.getMessage()))
+                .toList(), new HttpHeaders(), request);
+    }
+
     @ExceptionHandler(InvalidParameterException.class)
     ResponseEntity<Object> handleUndecodableParameter(InvalidParameterException ex, WebRequest request) {
         return validationProblem(ex, List.of(), new HttpHeaders(), request);
@@ -205,6 +214,14 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
                         ? beanErrors.getFieldErrors().stream().map(error -> fieldError(error.getField(), error.getDefaultMessage()))
                         : result.getResolvableErrors().stream().map(error -> fieldError(result.getMethodParameter().getParameterName(), error.getDefaultMessage())))
                 .toList();
+    }
+
+    private static String lastNode(Path path) {
+        String name = "";
+        for (Path.Node node : path) {
+            name = node.getName() == null ? name : node.getName();
+        }
+        return name;
     }
 
     private static List<Map<String, String>> listed(List<Map<String, String>> errors) {
