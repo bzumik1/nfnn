@@ -484,7 +484,7 @@ class DonorSessionServiceTest {
     }
 
     @Test
-    @DisplayName("Given a usable token of a device signed out elsewhere, when the session is refreshed, then it is refused and nothing is issued")
+    @DisplayName("Given a usable token of a device signed out elsewhere, when the session is refreshed, then it is refused before it is marked used and nothing is issued")
     void should_refuse_when_refreshed_given_device_signed_out() {
         RefreshTokenSecret secret = RefreshTokenSecret.generate();
         RefreshToken existing = RefreshToken.issue(secret, DONOR, DEVICE, NOW.minus(Duration.ofDays(1)), REFRESH_TTL, false);
@@ -492,11 +492,10 @@ class DonorSessionServiceTest {
         ended.end(DeviceSignOutReason.REMOTE_SIGN_OUT, NOW.minusSeconds(5));
         when(devices.findById(DEVICE)).thenReturn(Optional.of(ended));
         when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(existing));
-        when(donors.findById(DONOR)).thenReturn(Optional.of(donor()));
-        when(refreshTokens.markUsed(existing.id(), NOW)).thenReturn(true);
 
         assertThatThrownBy(() -> service.refresh(secret.value(), DeviceDescription.UNKNOWN)).isInstanceOf(InvalidRefreshToken.class);
 
+        verify(refreshTokens, never()).markUsed(any(), any());
         verify(signOuts, never()).endAllOf(any(), any(), any());
         verify(accessTokens, never()).issue(any(), any(), any(), any());
         verify(refreshTokens, never()).save(any());
@@ -534,6 +533,38 @@ class DonorSessionServiceTest {
         assertThatThrownBy(() -> service.refresh(secret.value(), DeviceDescription.UNKNOWN)).isInstanceOf(InvalidRefreshToken.class);
 
         verify(signOuts).endAllOf(DONOR, DeviceSignOutReason.REPLAY, NOW);
+    }
+
+    @Test
+    @DisplayName("Given a token used exactly the reuse grace ago whose device was signed out elsewhere, when it is presented again, then every session ends as a replay")
+    void should_end_every_session_when_presented_again_given_used_token_of_ended_device_at_the_end_of_the_reuse_grace() {
+        RefreshTokenSecret secret = RefreshTokenSecret.generate();
+        RefreshToken used = rotated(secret, NOW.minus(RefreshToken.REUSE_GRACE), UUID.randomUUID(), false);
+        used.revoke(NOW.minusSeconds(10));
+        DonorDevice ended = signedInDevice();
+        ended.end(DeviceSignOutReason.REMOTE_SIGN_OUT, NOW.minusSeconds(10));
+        lenient().when(devices.findById(DEVICE)).thenReturn(Optional.of(ended));
+        when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(used));
+
+        assertThatThrownBy(() -> service.refresh(secret.value(), DeviceDescription.UNKNOWN)).isInstanceOf(InvalidRefreshToken.class);
+
+        verify(signOuts).endAllOf(DONOR, DeviceSignOutReason.REPLAY, NOW);
+    }
+
+    @Test
+    @DisplayName("Given a token used just within the reuse grace whose device was signed out elsewhere, when it is presented again, then it is refused without ending the donor's other sessions")
+    void should_refuse_without_ending_other_sessions_when_presented_again_given_used_token_of_ended_device_just_within_the_reuse_grace() {
+        RefreshTokenSecret secret = RefreshTokenSecret.generate();
+        RefreshToken used = rotated(secret, NOW.minus(RefreshToken.REUSE_GRACE).plusMillis(1), UUID.randomUUID(), false);
+        used.revoke(NOW.minusSeconds(10));
+        DonorDevice ended = signedInDevice();
+        ended.end(DeviceSignOutReason.REMOTE_SIGN_OUT, NOW.minusSeconds(10));
+        when(devices.findById(DEVICE)).thenReturn(Optional.of(ended));
+        when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(used));
+
+        assertThatThrownBy(() -> service.refresh(secret.value(), DeviceDescription.UNKNOWN)).isInstanceOf(InvalidRefreshToken.class);
+
+        verify(signOuts, never()).endAllOf(any(), any(), any());
     }
 
     @Test

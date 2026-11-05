@@ -78,7 +78,7 @@ public class DonorSessionService {
         if (token.isUsed()) {
             return reissueWithinReuseGrace(token, description, now);
         }
-        if (!token.isUsableAt(now) || token.clientId().isPresent()) {
+        if (!token.isUsableAt(now) || token.clientId().isPresent() || deviceEnded(token)) {
             throw new InvalidRefreshToken();
         }
         Donor donor = donors.findById(token.donorId()).orElseThrow(InvalidRefreshToken::new);
