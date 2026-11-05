@@ -313,6 +313,7 @@ const SCREENS: Screen[] = [
       await page.getByRole('button', { name: 'Jiná částka' }).click();
       await page.locator('#donate-custom-amount').fill('1 234');
       await expect(page.locator(DONATE_BANK)).toContainText('1 234 Kč');
+      await expect(page.locator(DONATE_QR)).not.toHaveAttribute('aria-busy', 'true');
     },
     ready: (page) => elementsShown(page, [DONATE_QR, DONATE_BANK]),
   },
