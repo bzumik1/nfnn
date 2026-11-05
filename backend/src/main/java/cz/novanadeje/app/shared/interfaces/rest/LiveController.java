@@ -7,14 +7,12 @@ import cz.novanadeje.app.shared.infrastructure.live.LiveSubscriber;
 import cz.novanadeje.app.shared.infrastructure.live.SseLiveConnection;
 import cz.novanadeje.app.shared.infrastructure.security.JwtProperties;
 import org.springframework.http.CacheControl;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.ErrorResponseException;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -46,21 +44,13 @@ class LiveController {
                     .body(opened.connection().emitter());
             case LiveOpening.SessionEnded<SseLiveConnection> ended -> throw new LiveSessionEnded();
             case LiveOpening.Full<SseLiveConnection> full -> throw new RateLimitExceededException(ProblemTypes.of("live-streams-full"));
-            case LiveOpening.Unavailable<SseLiveConnection> unavailable -> throw new LiveUnavailable();
+            case LiveOpening.Unavailable<SseLiveConnection> unavailable -> throw new LiveUnavailableException();
         };
     }
 
     private static boolean administrator(Jwt token) {
         List<String> roles = token.getClaimAsStringList(JwtProperties.ROLES_CLAIM);
         return roles != null && roles.contains(ADMIN_ROLE);
-    }
-
-    static final class LiveUnavailable extends ErrorResponseException {
-
-        LiveUnavailable() {
-            super(HttpStatus.SERVICE_UNAVAILABLE);
-            setType(ProblemTypes.of("live-unavailable"));
-        }
     }
 
     static final class LiveSessionEnded extends AuthenticationFailure {

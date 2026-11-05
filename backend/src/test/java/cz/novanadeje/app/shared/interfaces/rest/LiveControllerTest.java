@@ -4,11 +4,13 @@ import cz.novanadeje.app.shared.infrastructure.live.LiveOpening;
 import cz.novanadeje.app.shared.infrastructure.live.LiveStreamHub;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.support.ResourceBundleMessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.ErrorResponseException;
 
 import java.time.Instant;
+import java.util.Locale;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -33,5 +35,25 @@ class LiveControllerTest {
 
         assertThat(refused.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
         assertThat(refused.getBody().getType()).hasToString("https://nfnn.cz/problems/live-unavailable");
+    }
+
+    @Test
+    @DisplayName("Given a hub that is starting or stopping, when the refusal is rendered, then it carries a Czech and an English title and detail like every other problem")
+    void should_carry_czech_and_english_texts_when_refusal_rendered_given_hub_not_running() {
+        LiveStreamHub hub = mock(LiveStreamHub.class);
+        when(hub.open(any(), any())).thenReturn(new LiveOpening.Unavailable<>());
+        Jwt token = Jwt.withTokenValue("token").header("alg", "HS256").subject(UUID.randomUUID().toString())
+                .issuedAt(NOW).expiresAt(NOW.plusSeconds(900)).build();
+        ResourceBundleMessageSource messages = new ResourceBundleMessageSource();
+        messages.setBasename("i18n/messages");
+        messages.setDefaultEncoding("UTF-8");
+        messages.setFallbackToSystemLocale(false);
+
+        ErrorResponseException refused = catchThrowableOfType(ErrorResponseException.class, () -> new LiveController(hub).stream(token));
+
+        assertThat(refused.updateAndGetBody(messages, Locale.forLanguageTag("cs")).getTitle()).isEqualTo("Živé změny teď nejdou");
+        assertThat(refused.updateAndGetBody(messages, Locale.forLanguageTag("cs")).getDetail()).isEqualTo("Server se právě spouští nebo zastavuje. Stránka se připojí znovu sama.");
+        assertThat(refused.updateAndGetBody(messages, Locale.ENGLISH).getTitle()).isEqualTo("Live updates are unavailable");
+        assertThat(refused.updateAndGetBody(messages, Locale.ENGLISH).getDetail()).isEqualTo("The server is starting or stopping. The page reconnects by itself.");
     }
 }

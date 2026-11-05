@@ -171,6 +171,9 @@ export class LiveUpdates {
     this.retry = setTimeout(() => {
       this.retry = null;
       if (this.wanted() && this.stream === null) {
+        if (this.missedSince !== null) {
+          this.missedSince = this.joined;
+        }
         this.connect();
       }
     }, delay);

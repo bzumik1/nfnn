@@ -217,6 +217,19 @@ describe('Given the live updates of a signed-in browser', () => {
       expect(payments.count()).toBe(0);
     });
 
+    it('then a page that starts listening while a lost stream waits to reopen is told to read again with the others, because hints of the wait are lost to it too', () => {
+      send(request, REVISION);
+      request.error(new ProgressEvent('error'));
+      const payments = listen(['payments']);
+      http.expectNone(LIVE);
+
+      vi.advanceTimersByTime(LIVE_RETRY_FIRST_MS);
+      send(stream(), REVISION);
+
+      expect(donations.count()).toBe(1);
+      expect(payments.count()).toBe(1);
+    });
+
     it('then an answer that the client asks for again, as after a refreshed token, is read from its own start', () => {
       send(request, '{"status":401}');
       request.event({ type: HttpEventType.Sent });
