@@ -50,7 +50,46 @@ export async function routeApiDefaults(target: RouteTarget): Promise<readonly st
 
 export const testWithoutBrowser = base;
 
-export const test = base.extend<{ offlineApi: void }>({
+const CSP_VIOLATION_BINDING = '__nfnnCspViolation';
+
+export interface CspViolation {
+  directive: string;
+  blocked: string;
+  page: string;
+}
+
+export const test = base.extend<{ offlineApi: void; cspViolations: CspViolation[] }>({
+  cspViolations: [
+    async ({ context }, use) => {
+      const violations: CspViolation[] = [];
+      await context.exposeBinding(CSP_VIOLATION_BINDING, (_source, violation: CspViolation) => {
+        violations.push(violation);
+      });
+      await context.addInitScript((binding) => {
+        document.addEventListener('securitypolicyviolation', (event) => {
+          const report = (window as unknown as Record<string, (violation: CspViolation) => void>)[
+            binding
+          ];
+          report?.({
+            directive: event.effectiveDirective,
+            blocked: event.blockedURI,
+            page: location.pathname,
+          });
+        });
+      }, CSP_VIOLATION_BINDING);
+      await use(violations);
+      for (const open of context.pages()) {
+        await open
+          .evaluate(() => new Promise((settled) => setTimeout(settled)))
+          .catch(() => undefined);
+      }
+      expect(
+        violations,
+        'no page breaks the Content-Security-Policy or Trusted Types of the frontend nginx',
+      ).toEqual([]);
+    },
+    { auto: true },
+  ],
   offlineApi: [
     async ({ page }, use) => {
       const askedForServerPayment = await routeApiDefaults(page);

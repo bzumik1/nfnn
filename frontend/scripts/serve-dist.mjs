@@ -1,6 +1,7 @@
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { extname, join, resolve, sep } from 'node:path';
+import { readSecurityHeaders } from './security-headers.mjs';
 
 const [folder, portArgument = '4200'] = process.argv.slice(2);
 if (!folder) {
@@ -13,6 +14,8 @@ if (!existsSync(appShell)) {
   console.error(`${appShell} is missing: build the app first (npm run build)`);
   process.exit(1);
 }
+
+const securityHeaders = readSecurityHeaders();
 
 const fileOnly =
   /\.(?:js|mjs|css|map|json|webmanifest|txt|xml|ico|png|jpe?g|gif|svg|webp|avif|woff2?|ttf|otf|pdf)$/i;
@@ -72,11 +75,16 @@ createServer((request, response) => {
   const file = fileFor(pathname);
   if (!file) {
     response
-      .writeHead(404, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' })
+      .writeHead(404, {
+        ...securityHeaders,
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'no-store',
+      })
       .end('<h1>404 Not Found</h1>');
     return;
   }
   response.writeHead(200, {
+    ...securityHeaders,
     'Content-Type': contentTypes[extname(file).toLowerCase()] ?? 'application/octet-stream',
     'Cache-Control': 'no-cache',
     ...(/^\/overit\/?$/.test(pathname) ? { 'X-Robots-Tag': 'noindex' } : {}),

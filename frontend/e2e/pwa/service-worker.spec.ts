@@ -126,7 +126,7 @@ test.describe('Given a page that registered the throwaway probe worker', () => {
     swReady,
   }) => {
     expect(await swReady()).toEqual({
-      scriptURL: expect.stringMatching(/\/pwa-probe-sw\.js$/),
+      scriptURL: expect.stringMatching(/\/ngsw-worker\.js$/),
       state: 'activated',
     });
   });
@@ -244,8 +244,8 @@ test.describe('Given a page that registered the throwaway probe worker', () => {
     const waiting = await waitingVersion(page);
     expect(waiting).not.toBe(current.version);
     expect(site.filesOnlyIn('b')).toEqual([
+      '/ngsw-worker.js',
       '/pwa-marker.txt',
-      '/pwa-probe-sw.js',
       '/pwa-probe.json',
     ]);
     expect(await marker(page)).toBe('a');

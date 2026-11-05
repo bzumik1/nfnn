@@ -10,6 +10,8 @@ import java.util.UUID;
 
 public final class RefreshToken {
 
+    public static final Duration REUSE_GRACE = Duration.ofSeconds(60);
+
     private final UUID id;
     private final DonorId donorId;
     private final String secretHash;
@@ -21,9 +23,12 @@ public final class RefreshToken {
     private final Instant grantedAt;
     private Instant usedAt;
     private Instant revokedAt;
+    private final UUID successorId;
+    private Instant supersededAt;
 
     private RefreshToken(UUID id, DonorId donorId, String secretHash, Instant issuedAt, Instant expiresAt, boolean secondFactorVerified,
-                         ClientId clientId, Set<OAuthScope> scopes, Instant grantedAt, Instant usedAt, Instant revokedAt) {
+                         ClientId clientId, Set<OAuthScope> scopes, Instant grantedAt, Instant usedAt, Instant revokedAt, UUID successorId,
+                         Instant supersededAt) {
         this.id = id;
         this.donorId = donorId;
         this.secretHash = secretHash;
@@ -35,23 +40,26 @@ public final class RefreshToken {
         this.grantedAt = grantedAt;
         this.usedAt = usedAt;
         this.revokedAt = revokedAt;
+        this.successorId = successorId;
+        this.supersededAt = supersededAt;
     }
 
     public static RefreshToken issue(RefreshTokenSecret secret, DonorId donorId, Instant issuedAt, Duration lifetime, boolean secondFactorVerified) {
         return new RefreshToken(UuidV7.generate(issuedAt), donorId, secret.hash(), issuedAt, issuedAt.plus(lifetime), secondFactorVerified, null,
-                Set.of(), issuedAt, null, null);
+                Set.of(), issuedAt, null, null, null, null);
     }
 
     public static RefreshToken issueForClient(RefreshTokenSecret secret, DonorId donorId, ClientId clientId, Set<OAuthScope> scopes,
                                               Instant grantedAt, Instant issuedAt, Duration lifetime) {
         return new RefreshToken(UuidV7.generate(issuedAt), donorId, secret.hash(), issuedAt, issuedAt.plus(lifetime), true, clientId, scopes,
-                grantedAt, null, null);
+                grantedAt, null, null, null, null);
     }
 
     public static RefreshToken reconstitute(UUID id, DonorId donorId, String secretHash, Instant issuedAt, Instant expiresAt,
                                             boolean secondFactorVerified, ClientId clientId, Set<OAuthScope> scopes, Instant grantedAt,
-                                            Instant usedAt, Instant revokedAt) {
-        return new RefreshToken(id, donorId, secretHash, issuedAt, expiresAt, secondFactorVerified, clientId, scopes, grantedAt, usedAt, revokedAt);
+                                            Instant usedAt, Instant revokedAt, UUID successorId, Instant supersededAt) {
+        return new RefreshToken(id, donorId, secretHash, issuedAt, expiresAt, secondFactorVerified, clientId, scopes, grantedAt, usedAt, revokedAt,
+                successorId, supersededAt);
     }
 
     public boolean secondFactorVerified() {
@@ -78,6 +86,11 @@ public final class RefreshToken {
         return usedAt == null && revokedAt == null && now.isBefore(expiresAt);
     }
 
+    public boolean mayBeReissuedAt(Instant now) {
+        return usedAt != null && revokedAt == null && clientId == null && successorId != null && now.isBefore(usedAt.plus(REUSE_GRACE))
+                && now.isBefore(expiresAt);
+    }
+
     public boolean isUsed() {
         return usedAt != null;
     }
@@ -85,6 +98,17 @@ public final class RefreshToken {
     public void markUsed(Instant at) {
         if (usedAt == null) {
             usedAt = at;
+        }
+    }
+
+    public boolean isSuperseded() {
+        return supersededAt != null;
+    }
+
+    public void supersede(Instant at) {
+        revoke(at);
+        if (supersededAt == null) {
+            supersededAt = at;
         }
     }
 
@@ -124,5 +148,13 @@ public final class RefreshToken {
 
     public Optional<Instant> revokedAt() {
         return Optional.ofNullable(revokedAt);
+    }
+
+    public Optional<UUID> successorId() {
+        return Optional.ofNullable(successorId);
+    }
+
+    public Optional<Instant> supersededAt() {
+        return Optional.ofNullable(supersededAt);
     }
 }
