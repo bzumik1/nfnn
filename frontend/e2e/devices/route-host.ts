@@ -23,6 +23,8 @@ interface PageState {
 
 export const BLANK_PATH = '/__blank';
 export const ERRORS_GLOBAL = '__deviceErrors';
+export const EVENTS_GLOBAL = '__deviceEvents';
+const LOGGED_EVENTS = ['pointerdown', 'touchstart', 'click', 'focusin', 'focusout'];
 
 const FILE_ONLY =
   /\.(?:js|mjs|css|map|json|webmanifest|txt|xml|ico|png|jpe?g|gif|svg|webp|avif|woff2?|ttf|otf|pdf)$/i;
@@ -94,6 +96,14 @@ function pageScript(page: PageState): string {
   return `<script>window.${ERRORS_GLOBAL} = [];
 addEventListener('error', (event) => window.${ERRORS_GLOBAL}.push(String(event.message)));
 addEventListener('unhandledrejection', (event) => window.${ERRORS_GLOBAL}.push(String(event.reason && event.reason.message || event.reason)));
+window.${EVENTS_GLOBAL} = [];
+for (const type of ${JSON.stringify(LOGGED_EVENTS)}) {
+  addEventListener(type, (event) => {
+    const target = event.target instanceof Element ? event.target : null;
+    const name = target ? target.tagName.toLowerCase() + (target.className && typeof target.className === 'string' ? '.' + target.className.trim().split(/\\s+/).join('.') : '') : String(event.target);
+    window.${EVENTS_GLOBAL}.push(Math.round(performance.now()) + ' ' + type + ' ' + name);
+  }, true);
+}
 ${session}</script>`;
 }
 

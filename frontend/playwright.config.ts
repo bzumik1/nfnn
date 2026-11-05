@@ -18,6 +18,7 @@ const served = process.env.E2E_DIST ?? builtApp;
 const safari = !!process.env.SAFARI;
 
 const SAFARI_TEST_TIMEOUT_MS = 60_000;
+const SAFARI_MAX_FAILURES = 10;
 const safariProjects = SAFARI_POSES.map((pose) => ({
   name: `${DEVICE_PROJECT_PREFIX}${pose.id}`,
   testMatch: /devices\/safari\.spec\.ts$/,
@@ -30,9 +31,10 @@ export default defineConfig<DeviceOptions, { safariPose?: SafariPose }>({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   failOnFlakyTests: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  retries: process.env.CI && !safari ? 2 : 0,
+  maxFailures: safari ? SAFARI_MAX_FAILURES : undefined,
   workers: safari ? 1 : process.env.CI ? 3 : undefined,
-  reporter: [[process.env.CI ? 'github' : 'list'], ['./e2e/devices/device-report.ts']],
+  reporter: [[process.env.CI && !safari ? 'github' : 'list'], ['./e2e/devices/device-report.ts']],
   use: {
     baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:4200',
     trace: 'on-first-retry',

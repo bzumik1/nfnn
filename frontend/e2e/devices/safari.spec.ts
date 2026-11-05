@@ -1,14 +1,13 @@
+import type { TestInfo } from '@playwright/test';
 import { answerOfflineApi, guardServerPayments, testWithoutBrowser } from '../fixtures';
 import { checksFrom, collectFindings, type Findings, LIMITS } from './layout-checks';
 import type { SafariPose } from './poses';
-import { BLANK_PATH, ERRORS_GLOBAL, RouteHost } from './route-host';
+import { BLANK_PATH, ERRORS_GLOBAL, EVENTS_GLOBAL, RouteHost } from './route-host';
 import { type Browser, runStep, stepTitle, waitUntilSettled } from './run-step';
 import { STEPS } from './steps';
-import { WAIT_MS, WebDriver, webDriverUi } from './webdriver';
+import { NEXT_FRAMES, WAIT_MS, WebDriver, webDriverUi } from './webdriver';
 
 const START_TIMEOUT_MS = 600_000;
-const NEXT_FRAMES =
-  'const done = arguments[arguments.length - 1]; requestAnimationFrame(() => requestAnimationFrame(done));';
 const FONTS_READY =
   'const done = arguments[arguments.length - 1]; document.fonts.ready.then(() => done());';
 const COLLECT_FINDINGS = `return (${collectFindings.toString()})(arguments[0]);`;
@@ -39,7 +38,7 @@ const test = testWithoutBrowser.extend<
     },
     { scope: 'worker', timeout: START_TIMEOUT_MS },
   ],
-  safariPage: async ({ safari }, use) => {
+  safariPage: async ({ safari }, use, testInfo) => {
     const { driver, host, baseUrl, pose } = safari;
     host.reset(pose.textScale ?? 100);
     await driver.navigate(`${baseUrl}${BLANK_PATH}`);
@@ -66,9 +65,25 @@ const test = testWithoutBrowser.extend<
         ),
       screenshot: () => driver.screenshot(),
     });
+    if (testInfo.status !== testInfo.expectedStatus) {
+      await keepFailedScreen(driver, testInfo);
+    }
     askedNothingElse();
   },
 });
+
+async function keepFailedScreen(driver: WebDriver, testInfo: TestInfo): Promise<void> {
+  const shown = testInfo.attachments.some((attachment) => attachment.name === 'screen');
+  const screen = shown ? undefined : await driver.screenshot().catch(() => undefined);
+  if (screen) {
+    await testInfo.attach('screen', { body: screen, contentType: 'image/png' });
+  }
+  const events = await driver
+    .execute<string[]>(`return window.${EVENTS_GLOBAL} || [];`)
+    .catch((error: unknown) => [String(error)]);
+  await testInfo.attach('events', { body: events.join('\n'), contentType: 'text/plain' });
+  console.log(`${testInfo.title}: events before the failure\n${events.join('\n')}`);
+}
 
 test.describe('Given the site in Safari on an iPhone, an iPad or a Mac', () => {
   for (const step of STEPS) {

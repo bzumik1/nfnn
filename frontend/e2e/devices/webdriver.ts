@@ -5,7 +5,10 @@ import type { Target, Ui } from './ui';
 
 const ELEMENT = 'element-6066-11e4-a52e-4f735466cecf';
 export const WAIT_MS = 10_000;
-const DRIVER_START_MS = 30_000;
+const DRIVER_START_MS = 120_000;
+const SESSION_ATTEMPTS = 3;
+const SESSION_RETRY_PAUSE_MS = 5_000;
+const COMMAND_TIMEOUT_MS = 120_000;
 const POLL_MS = 100;
 
 type ElementReference = Record<typeof ELEMENT, string>;
@@ -43,6 +46,17 @@ export function availableSimulators(): Simulator[] {
     .filter(([runtime]) => runtime.includes('.iOS-'))
     .flatMap(([runtime, devices]) => devices.map((device) => ({ ...device, runtime })))
     .sort(newerFirst);
+}
+
+function shutDownOtherSimulators(kept: string): void {
+  const listed = JSON.parse(
+    execFileSync('xcrun', ['simctl', 'list', 'devices', 'booted', '--json'], { encoding: 'utf8' }),
+  ) as { devices: Record<string, { udid: string }[]> };
+  for (const { udid } of Object.values(listed.devices).flat()) {
+    if (udid !== kept) {
+      execFileSync('xcrun', ['simctl', 'shutdown', udid], { stdio: 'ignore' });
+    }
+  }
 }
 
 export function pickSimulator(pattern: RegExp): Simulator {
@@ -84,6 +98,7 @@ export class WebDriver {
         ? pickSimulator(target.devicePattern)
         : undefined;
     if (simulator) {
+      shutDownOtherSimulators(simulator.udid);
       execFileSync('xcrun', ['simctl', 'bootstatus', simulator.udid, '-b'], { stdio: 'ignore' });
     }
     const webDriver = await WebDriver.launch(
@@ -111,35 +126,31 @@ export class WebDriver {
     device: string,
     simulator?: Simulator,
   ): Promise<WebDriver> {
-    const port = await freePort();
-    const endpoint = `http://127.0.0.1:${port}`;
-    const [program = '', ...args] = command(port);
-    const driver = spawn(program, args, { stdio: 'inherit' });
-    const deadline = Date.now() + DRIVER_START_MS;
-    while (!(await ready(endpoint))) {
-      if (Date.now() > deadline) {
+    for (let attempt = 1; ; attempt++) {
+      const port = await freePort();
+      const endpoint = `http://127.0.0.1:${port}`;
+      const [program = '', ...args] = command(port);
+      const driver = spawn(program, args, { stdio: 'inherit' });
+      try {
+        await waitUntilReady(endpoint, program);
+        const created = await call<{ sessionId: string }>(endpoint, 'POST', '/session', {
+          capabilities: { alwaysMatch: capabilities },
+        });
+        return new WebDriver(endpoint, driver, created.sessionId, device, simulator);
+      } catch (error) {
         driver.kill();
-        throw new Error(
-          `${program} did not start; for Safari run \`sudo safaridriver --enable\` once`,
-        );
+        if (attempt >= SESSION_ATTEMPTS) {
+          throw error;
+        }
+        console.warn(`${device}: no WebDriver session at attempt ${attempt}: ${String(error)}`);
+        await pause(SESSION_RETRY_PAUSE_MS);
       }
-      await pause(200);
     }
-    const created = await call<{ sessionId: string }>(endpoint, 'POST', '/session', {
-      capabilities: { alwaysMatch: capabilities },
-    }).catch((error: unknown) => {
-      driver.kill();
-      throw error;
-    });
-    return new WebDriver(endpoint, driver, created.sessionId, device, simulator);
   }
 
   async stop(): Promise<void> {
     await this.command('DELETE', '').catch(() => undefined);
     this.driver.kill();
-    if (this.simulator) {
-      execFileSync('xcrun', ['simctl', 'shutdown', this.simulator.udid], { stdio: 'ignore' });
-    }
   }
 
   command<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -167,6 +178,18 @@ export class WebDriver {
   }
 }
 
+async function waitUntilReady(endpoint: string, program: string): Promise<void> {
+  const deadline = Date.now() + DRIVER_START_MS;
+  while (!(await ready(endpoint))) {
+    if (Date.now() > deadline) {
+      throw new Error(
+        `${program} did not start; for Safari run \`sudo safaridriver --enable\` once`,
+      );
+    }
+    await pause(200);
+  }
+}
+
 async function ready(endpoint: string): Promise<boolean> {
   try {
     const status = (await (await fetch(`${endpoint}/status`)).json()) as {
@@ -180,6 +203,7 @@ async function ready(endpoint: string): Promise<boolean> {
 
 async function call<T>(endpoint: string, method: string, path: string, body?: unknown): Promise<T> {
   const response = await fetch(`${endpoint}${path}`, {
+    signal: AbortSignal.timeout(COMMAND_TIMEOUT_MS),
     method,
     headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body),
@@ -190,6 +214,14 @@ async function call<T>(endpoint: string, method: string, path: string, body?: un
   }
   return answer.value;
 }
+
+export const NEXT_FRAMES =
+  'const done = arguments[arguments.length - 1]; requestAnimationFrame(() => requestAnimationFrame(done));';
+
+const ELEMENT_AT_CENTRE = `
+const box = arguments[0].getBoundingClientRect();
+const top = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+return top ? top.outerHTML.slice(0, 200) : 'nothing';`;
 
 const FIND_SHOWN = `
 const [css, text] = arguments;
@@ -244,25 +276,18 @@ export function webDriverUi(
       await shown(target);
     },
     click: async (target) => {
-      await until(`${described(target)} to take a click`, waits.ms, async () => {
-        const element = await find(target);
-        if (!element) {
-          return false;
-        }
-        await driver.execute(
-          "arguments[0].scrollIntoView({ block: 'center', behavior: 'instant' });",
-          element,
-        );
-        return driver
-          .command('POST', `/element/${element[ELEMENT]}/click`, {})
-          .then(() => true)
-          .catch((error: unknown) => {
-            if (String(error).includes('intercepted')) {
-              return false;
-            }
-            throw error;
-          });
-      });
+      const element = await shown(target);
+      await driver.execute(
+        "arguments[0].scrollIntoView({ block: 'center', behavior: 'instant' });",
+        element,
+      );
+      await driver.executeAsync(NEXT_FRAMES);
+      await driver
+        .command('POST', `/element/${element[ELEMENT]}/click`, {})
+        .catch(async (error: unknown) => {
+          const atCentre = await driver.execute<string>(ELEMENT_AT_CENTRE, element);
+          throw new Error(`${String(error)}; at its centre: ${atCentre}`);
+        });
     },
     waitAttribute: async (target, name, value) => {
       await until(`${described(target)} to have ${name}="${value}"`, waits.ms, async () => {
