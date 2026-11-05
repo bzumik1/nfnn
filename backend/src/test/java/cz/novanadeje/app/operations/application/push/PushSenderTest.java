@@ -146,6 +146,23 @@ class PushSenderTest {
     }
 
     @Test
+    @DisplayName("Given a delivered, a gone, a failing and a throwing device, when a message is attempted, then the attempt names the failing and the throwing one to try again")
+    void should_name_failed_devices_when_attempted_given_mixed_outcomes() {
+        PushSubscription delivered = subscribed("delivered");
+        PushSubscription gone = subscribed("gone");
+        PushSubscription failing = subscribed("failing");
+        PushSubscription throwingOne = subscribed("throwing");
+        outcomes.put(gone.endpoint(), PushOutcome.GONE);
+        outcomes.put(failing.endpoint(), PushOutcome.FAILED);
+        throwing.add(throwingOne.endpoint());
+
+        PushAttempt attempt = sender.attempt(List.of(delivered, gone, failing, throwingOne), new PushMessage(PushMessageKind.MAIL_OUTAGE, 1));
+
+        assertThat(attempt.report()).isEqualTo(new PushDeliveryReport(1, 2, 1));
+        assertThat(attempt.failed()).containsExactly(failing.id(), throwingOne.id());
+    }
+
+    @Test
     @DisplayName("Given no subscriptions, when a message is sent, then nothing is delivered")
     void should_send_nothing_when_sent_given_no_subscriptions() {
         assertThat(sender.send(List.of(), new PushMessage(PushMessageKind.TEST, 0))).isEqualTo(PushDeliveryReport.NONE);

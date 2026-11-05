@@ -1,5 +1,6 @@
 package cz.novanadeje.app.operations.application.push;
 
+import cz.novanadeje.app.operations.domain.alerts.MonitoredArea;
 import cz.novanadeje.app.operations.domain.push.PushAlerts;
 import cz.novanadeje.app.operations.domain.push.PushEndpoint;
 import cz.novanadeje.app.operations.domain.push.PushSubscription;
@@ -26,6 +27,11 @@ class InMemoryPushSubscriptions implements PushSubscriptionRepository {
     @Override
     public synchronized List<PushSubscription> findAllOf(UUID administratorId) {
         return rows.values().stream().filter(row -> row.belongsTo(administratorId)).toList();
+    }
+
+    @Override
+    public synchronized List<PushSubscription> findAllWithAlert(MonitoredArea area) {
+        return rows.values().stream().filter(row -> row.alerts().covers(area)).toList();
     }
 
     @Override

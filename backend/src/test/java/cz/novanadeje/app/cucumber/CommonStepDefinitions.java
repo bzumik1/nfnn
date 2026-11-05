@@ -17,6 +17,7 @@ import cz.novanadeje.app.support.KeptAsideWithdrawnSeeds;
 import cz.novanadeje.app.support.MutableClock;
 import cz.novanadeje.app.support.RateLimiterWindows;
 import cz.novanadeje.app.support.RecordingMailSender;
+import cz.novanadeje.app.support.RecordingPushRetryTimer;
 import cz.novanadeje.app.support.RecordingPushTransport;
 import cz.novanadeje.app.support.ServerReceiptSigningKey;
 import cz.novanadeje.app.support.SwitchablePublicBackupKeyPolicy;
@@ -87,6 +88,7 @@ public class CommonStepDefinitions {
         context.getBean(KeptAsideWithdrawnSeeds.class).reset();
         HistoryImportRuns.forget(context.getBean(HistoryImportTracker.class), context.getBean(SynchronousBankImportRequests.class));
         context.getBean(RecordingPushTransport.class).reset();
+        context.getBean(RecordingPushRetryTimer.class).reset();
     }
 
     @When("{int} second(s) pass(es)")

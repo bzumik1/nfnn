@@ -327,6 +327,31 @@ const adminAnswers: Record<string, unknown> = {
   },
   '/api/admin/donations/overview': overview,
   '/api/admin/operations/backups': backups,
+  '/api/admin/operations/push': {
+    publicKey: `B${'E'.repeat(86)}`,
+    deviceSession: true,
+    subscriptions: [
+      {
+        id: 'push-phone',
+        service: 'apple',
+        alerts: { bankImport: true, backups: false, mail: true },
+        createdAt: '2026-10-20T10:00:00Z',
+        lastDeliveredAt: '2026-10-27T09:05:00Z',
+        failuresInARow: 0,
+        current: false,
+      },
+      {
+        id: 'push-this-device',
+        service: 'google',
+        alerts: { bankImport: true, backups: true, mail: true },
+        createdAt: '2026-10-25T09:00:00Z',
+        lastDeliveredAt: null,
+        failuresInARow: 0,
+        current: true,
+      },
+    ],
+    openAlerts: [{ area: 'backups', since: '2026-10-28T05:15:00Z' }],
+  },
   '/api/admin/donations/donors': {
     items: [
       {

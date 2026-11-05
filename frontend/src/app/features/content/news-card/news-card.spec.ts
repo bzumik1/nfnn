@@ -50,9 +50,6 @@ describe('Given the card of a news article', () => {
     expect(image.getAttribute('srcset')).toContain(`/api/content/media/${IMAGE_ID}?w=960 960w`);
     expect(image.getAttribute('loading')).toBe('lazy');
     expect(image.getAttribute('alt')).toBe('');
-    const more = card.querySelector('.news-more');
-    expect(more?.textContent?.trim()).toBe('Číst dál →');
-    expect(more?.getAttribute('aria-hidden')).toBe('true');
   });
 
   it('when the article has no photo and no tag, then the card shows neither', async () => {
@@ -62,5 +59,53 @@ describe('Given the card of a news article', () => {
 
     expect(fixture.nativeElement.querySelector('img')).toBeNull();
     expect(fixture.nativeElement.querySelector('.news-tag')).toBeNull();
+  });
+});
+
+describe('Given the card of a signed news article', () => {
+  beforeEach(() => {
+    Object.defineProperty(navigator, 'share', {
+      value: () => Promise.resolve(),
+      configurable: true,
+    });
+  });
+
+  afterEach(() => {
+    Reflect.deleteProperty(navigator, 'share');
+  });
+
+  const signed = newsArticle({
+    signer: {
+      id: 'p1',
+      name: 'Pavel Vzorový',
+      role: 'Předseda správní rady',
+      portrait: { id: 'portrait-1', url: '/api/content/media/portrait-1', width: 600, height: 600 },
+    },
+  });
+
+  it('when it is shown on the site, then the signer stands under the perex and Sdílet names the article', async () => {
+    const fixture = await setUp();
+    fixture.componentRef.setInput('item', signed);
+    await fixture.whenStable();
+    const card = fixture.nativeElement as HTMLElement;
+
+    expect(card.querySelector('.signer-name')?.textContent?.trim()).toBe('Pavel Vzorový');
+    expect(card.querySelector('.signer-role')?.textContent?.trim()).toBe('Předseda správní rady');
+    expect(
+      [...card.querySelectorAll('button')].map((button) =>
+        button.textContent?.replace(/\s+/g, ' ').trim(),
+      ),
+    ).toEqual(['Sdílet Zahrada pro děti']);
+  });
+
+  it('when it is previewed in the administration, then the signer shows and nothing can be shared', async () => {
+    const fixture = await setUp();
+    fixture.componentRef.setInput('item', signed);
+    fixture.componentRef.setInput('linked', false);
+    await fixture.whenStable();
+    const card = fixture.nativeElement as HTMLElement;
+
+    expect(card.querySelector('.signer-name')?.textContent?.trim()).toBe('Pavel Vzorový');
+    expect(card.querySelector('button')).toBeNull();
   });
 });

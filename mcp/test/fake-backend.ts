@@ -609,8 +609,10 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
               createdAt: '2026-11-05T06:00:00Z',
               lastDeliveredAt: '2026-11-05T06:05:00Z',
               failuresInARow: 0,
+              current: false,
             },
           ],
+          openAlerts: [{ area: 'backups', since: '2026-11-05T06:15:00Z' }],
         },
       ];
     case `PUT /api/admin/operations/push/subscriptions/${PUSH_SUBSCRIPTION_ID}/alerts`:

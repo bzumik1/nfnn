@@ -230,6 +230,9 @@ class AdminActionFactsTest {
                 arguments("RESTORE_BACKUP",
                         "A restore of nfnn-2026-10-20.sql.gz was requested (request " + OTHER + "); the backend restarts and waits for the backup container",
                         "RESTORE_BACKUP", Map.of("file", "nfnn-2026-10-20.sql.gz")),
+                arguments("BACKUP_RESTORED", "Databáze obnovena ze zálohy nfnn-2026-10-20.sql.gz (požadavek " + OTHER + "), tabulek: 41; ukončená přihlášení: 2,"
+                                + " zneplatněné jednorázové odkazy a kódy: 3",
+                        "BACKUP_RESTORED.withRevocations", Map.of("file", "nfnn-2026-10-20.sql.gz", "tables", "41", "sessions", "2", "secrets", "3")),
                 arguments("BACKUP_RESTORED", "Databáze obnovena ze zálohy nfnn-2026-10-20.sql.gz (požadavek " + OTHER + "), tabulek: 41",
                         "BACKUP_RESTORED.withTables", Map.of("file", "nfnn-2026-10-20.sql.gz", "tables", "41")),
                 arguments("BACKUP_RESTORED", "Databáze obnovena ze zálohy nfnn-2026-10-20.sql.gz (požadavek " + OTHER + ")",

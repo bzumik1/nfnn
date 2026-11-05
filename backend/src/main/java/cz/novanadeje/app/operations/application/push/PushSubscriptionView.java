@@ -9,10 +9,14 @@ import java.util.Optional;
 import java.util.UUID;
 
 public record PushSubscriptionView(UUID id, PushService service, PushAlerts alerts, Instant createdAt, Optional<Instant> lastDeliveredAt,
-                                   int failuresInARow) {
+                                   int failuresInARow, boolean current) {
 
     static PushSubscriptionView of(PushSubscription subscription) {
+        return of(subscription, true);
+    }
+
+    static PushSubscriptionView of(PushSubscription subscription, boolean current) {
         return new PushSubscriptionView(subscription.id().value(), subscription.endpoint().service(), subscription.alerts(),
-                subscription.createdAt(), subscription.lastDeliveredAt(), subscription.failuresInARow());
+                subscription.createdAt(), subscription.lastDeliveredAt(), subscription.failuresInARow(), current);
     }
 }

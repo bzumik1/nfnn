@@ -16,6 +16,7 @@ import cz.novanadeje.app.shared.domain.Money;
 import cz.novanadeje.app.support.Emails;
 import cz.novanadeje.app.support.MailContents;
 import cz.novanadeje.app.support.MailPreviews;
+import cz.novanadeje.app.support.ObservedMailSenders;
 import jakarta.mail.Message;
 import jakarta.mail.Session;
 import jakarta.mail.internet.InternetAddress;
@@ -50,7 +51,7 @@ class MonthlyReportEmailSenderTest {
             new Tally(1, Money.czk(15000)), new Tally(4, Money.czk(188450)), new BankImportStatus(Optional.of(SUCCEEDED_AT), Optional.empty()));
 
     private final JavaMailSender mailSender = mock(JavaMailSender.class);
-    private final MonthlyReportEmailSender sender = new MonthlyReportEmailSender(mailSender,
+    private final MonthlyReportEmailSender sender = new MonthlyReportEmailSender(ObservedMailSenders.of(mailSender),
             Emails.branded(mailSender, "info@nfnn.cz", "https://nfnn.cz"), Emails.messages());
 
     @BeforeEach

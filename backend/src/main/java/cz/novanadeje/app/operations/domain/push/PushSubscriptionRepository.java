@@ -1,5 +1,7 @@
 package cz.novanadeje.app.operations.domain.push;
 
+import cz.novanadeje.app.operations.domain.alerts.MonitoredArea;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -10,6 +12,8 @@ public interface PushSubscriptionRepository {
     Optional<PushSubscription> findById(PushSubscriptionId id);
 
     List<PushSubscription> findAllOf(UUID administratorId);
+
+    List<PushSubscription> findAllWithAlert(MonitoredArea area);
 
     void lockWrites();
 

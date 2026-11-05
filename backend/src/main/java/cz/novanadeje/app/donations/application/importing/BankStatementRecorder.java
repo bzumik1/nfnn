@@ -15,8 +15,10 @@ import cz.novanadeje.app.donations.domain.importing.ImportAlertRepository;
 import cz.novanadeje.app.donations.domain.importing.ImportFailureKind;
 import cz.novanadeje.app.donations.domain.importing.ImportPeriod;
 import cz.novanadeje.app.donations.domain.importing.ImportPlan;
+import cz.novanadeje.app.shared.application.event.OperationalAlertRaised;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,14 +37,16 @@ public class BankStatementRecorder {
     private final BankImportStateRepository states;
     private final ImportAlertRepository alerts;
     private final SecondFactorRecoveryPayments recoveries;
+    private final ApplicationEventPublisher events;
 
     public BankStatementRecorder(BankPaymentRepository payments, PaymentPairingService pairing, BankImportStateRepository states,
-                                 ImportAlertRepository alerts, SecondFactorRecoveryPayments recoveries) {
+                                 ImportAlertRepository alerts, SecondFactorRecoveryPayments recoveries, ApplicationEventPublisher events) {
         this.payments = payments;
         this.pairing = pairing;
         this.states = states;
         this.alerts = alerts;
         this.recoveries = recoveries;
+        this.events = events;
     }
 
     @Transactional
@@ -64,6 +68,9 @@ public class BankStatementRecorder {
             log.error("Fio import outage: {} failed {} times in a row, the foundation is being told", outage.kind(), outage.consecutiveFailures());
             alerts.add(outage, at);
         });
+        if (state.reportedOutage().isPresent()) {
+            events.publishEvent(OperationalAlertRaised.opened(OperationalAlertRaised.Area.BANK_IMPORT, at));
+        }
         states.save(state);
     }
 
@@ -90,6 +97,7 @@ public class BankStatementRecorder {
             alerts.dropWaitingOutages(now);
             alerts.add(recovery, now);
         });
+        events.publishEvent(OperationalAlertRaised.resolved(OperationalAlertRaised.Area.BANK_IMPORT, now));
         states.save(state);
     }
 }

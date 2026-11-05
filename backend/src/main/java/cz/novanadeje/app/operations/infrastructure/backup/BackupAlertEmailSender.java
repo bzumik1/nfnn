@@ -8,11 +8,11 @@ import cz.novanadeje.app.operations.domain.backup.BackupRun;
 import cz.novanadeje.app.shared.application.notification.AlertRecipients;
 import cz.novanadeje.app.shared.infrastructure.mail.BrandedEmails;
 import cz.novanadeje.app.shared.infrastructure.mail.EmailDraft;
+import cz.novanadeje.app.shared.infrastructure.mail.ObservedMailSender;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.MessageSource;
 import org.springframework.mail.MailException;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
@@ -35,12 +35,12 @@ class BackupAlertEmailSender {
     private static final String PROBLEM_TEMPLATE = "email/operations/backup-problem";
     private static final String RECOVERY_TEMPLATE = "email/operations/backup-recovered";
 
-    private final JavaMailSender mailSender;
+    private final ObservedMailSender mailSender;
     private final BrandedEmails emails;
     private final MessageSource messages;
     private final AlertRecipients recipients;
 
-    BackupAlertEmailSender(JavaMailSender mailSender, BrandedEmails emails, MessageSource messages, AlertRecipients recipients) {
+    BackupAlertEmailSender(ObservedMailSender mailSender, BrandedEmails emails, MessageSource messages, AlertRecipients recipients) {
         this.mailSender = mailSender;
         this.emails = emails;
         this.messages = messages;

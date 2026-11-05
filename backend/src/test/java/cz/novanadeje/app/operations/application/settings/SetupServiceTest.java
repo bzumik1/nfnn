@@ -253,7 +253,7 @@ class SetupServiceTest {
     @DisplayName("Given a last restore, when the status is asked, then it names the restore while the setup is open and nothing once it is done")
     void should_name_last_restore_when_asked_given_open_setup() {
         BackupRun failed = new BackupRun(RunOutcome.FAILED, NOW, NOW, Optional.of("u.upload"), Optional.empty(), Optional.empty(),
-                Optional.of("019a1b2c-0000-7000-8000-000000000003"), Optional.empty(), Optional.of("pg_restore: error: x"));
+                Optional.of("019a1b2c-0000-7000-8000-000000000003"), Optional.empty(), Optional.of("pg_restore: error: x"), Optional.empty());
         when(backups.lastRestore()).thenReturn(Optional.of(failed));
 
         assertThat(setup.status(true).lastRestore()).contains(failed);
