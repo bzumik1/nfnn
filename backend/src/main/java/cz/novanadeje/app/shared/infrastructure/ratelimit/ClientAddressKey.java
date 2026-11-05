@@ -7,7 +7,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-public record ClientAddressKey(String value) {
+public record ClientAddressKey(String value) implements RateLimitKey {
 
     private static final String NO_ADDRESS = "no-address";
     private static final int NETWORK_HEXTETS = 4;

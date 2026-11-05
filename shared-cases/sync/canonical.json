@@ -1,0 +1,146 @@
+{
+  "source": "edited",
+  "logic": "The canonical form of a sync chunk's rows and its rowsSha256 (GET /api/donations/me/sync and /sync/chunks): the rows written as RFC 8785 canonical JSON, members sorted by the UTF-16 code units of their names, no whitespace, strings escaped as JSON.stringify escapes them (\\\", \\\\, \\b, \\f, \\n, \\r, \\t, every other character below U+0020 and every lone surrogate as \\u with four lowercase hex digits, everything else as it is), numbers only as integers within the safe range of a JavaScript number (from -(2^53 - 1) to 2^53 - 1), anything else refused; rowsSha256 is the SHA-256 (lowercase hex) of the UTF-8 bytes of that text. The backend (CanonicalRows) and the browser (canonical-rows.ts) both write every case.",
+  "cases": [
+    {
+      "name": "Member names sort by their UTF-16 code units, so a name beyond U+FFFF sorts before U+FFFF",
+      "input": {
+        "rows": [
+          {
+            "\uffff": 2,
+            "b": [
+              true,
+              null,
+              false
+            ],
+            "😀": 1,
+            "a": {
+              "z": 0,
+              "y": -12
+            },
+            "é": 3,
+            "Z": 4
+          }
+        ]
+      },
+      "expected": {
+        "canonical": "[{\"Z\":4,\"a\":{\"y\":-12,\"z\":0},\"b\":[true,null,false],\"é\":3,\"😀\":1,\"\uffff\":2}]",
+        "rowsSha256": "3e0568610efd6c61e6132a7ebffd11f25534ee4a218ca7d9ae94cacc2ab9278d"
+      }
+    },
+    {
+      "name": "Czech letters, a no-break space and the line and paragraph separators stay as they are",
+      "input": {
+        "rows": [
+          {
+            "name": "Jana Nováková",
+            "street": "Dlouhá 12",
+            "amount": "1\u00a0000 Kč",
+            "note": "a\u2028b\u2029c",
+            "city": "Česká Lípa"
+          }
+        ]
+      },
+      "expected": {
+        "canonical": "[{\"amount\":\"1\u00a0000 Kč\",\"city\":\"Česká Lípa\",\"name\":\"Jana Nováková\",\"note\":\"a\u2028b\u2029c\",\"street\":\"Dlouhá 12\"}]",
+        "rowsSha256": "45770660b4098ec3679747261d94e806a03a97d8f291d3d1027ab8feab424685"
+      }
+    },
+    {
+      "name": "Quotes, backslashes and control characters are escaped as JSON.stringify escapes them, and DEL and the solidus are not",
+      "input": {
+        "rows": [
+          "\"\\\b\f\n\r\t\u0000\u0001\u001f\u007f/"
+        ]
+      },
+      "expected": {
+        "canonical": "[\"\\\"\\\\\\b\\f\\n\\r\\t\\u0000\\u0001\\u001f\u007f/\"]",
+        "rowsSha256": "7ca36c8ec21b9ccc17d7654f646c644affc48423e9e9791a50506dee0c699e33"
+      }
+    },
+    {
+      "name": "A lone surrogate is written as its escape",
+      "input": {
+        "rows": [
+          "\ud800",
+          "a\udfffb",
+          "\udc00\ud800"
+        ]
+      },
+      "expected": {
+        "canonical": "[\"\\ud800\",\"a\\udfffb\",\"\\udc00\\ud800\"]",
+        "rowsSha256": "1ed1146b993dc7d5e9892d28aacf6cc06598656c997e14ef1484203711c9302f"
+      }
+    },
+    {
+      "name": "Characters beyond U+FFFF, a skin tone and a combining accent pass as they are",
+      "input": {
+        "rows": [
+          "👍🏽",
+          "e\u0301",
+          "𝄞"
+        ]
+      },
+      "expected": {
+        "canonical": "[\"👍🏽\",\"e\u0301\",\"𝄞\"]",
+        "rowsSha256": "ca06a972db9b0993376475b0ac55015ee77eebaf5e9176ed5848ed327157bc88"
+      }
+    },
+    {
+      "name": "Empty arrays and objects, an empty name, zero and the safe integer bounds",
+      "input": {
+        "rows": [
+          [],
+          {},
+          0,
+          -1,
+          9007199254740991,
+          -9007199254740991,
+          {
+            "": true
+          }
+        ]
+      },
+      "expected": {
+        "canonical": "[[],{},0,-1,9007199254740991,-9007199254740991,{\"\":true}]",
+        "rowsSha256": "5aa151aa4608919df6afa86146dfd1be1c025bdb48a4ed13d2f3d83cb25860a9"
+      }
+    },
+    {
+      "name": "No rows",
+      "input": {
+        "rows": []
+      },
+      "expected": {
+        "canonical": "[]",
+        "rowsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      }
+    },
+    {
+      "name": "A row with a fraction is refused, because the rows hold integers only",
+      "input": {
+        "rows": [
+          {
+            "amountMinor": 1.5
+          }
+        ]
+      },
+      "expected": {
+        "refusal": "not-a-safe-integer"
+      }
+    },
+    {
+      "name": "An integer beyond the safe range of a JavaScript number is refused",
+      "input": {
+        "rows": [
+          {
+            "amountMinor": 9007199254740992
+          }
+        ]
+      },
+      "expected": {
+        "refusal": "not-a-safe-integer"
+      }
+    }
+  ]
+}

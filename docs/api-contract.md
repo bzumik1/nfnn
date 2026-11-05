@@ -475,6 +475,8 @@ The connector is a separate Node 26 container (`mcp/`, TypeScript, MCP TypeScrip
 | `GET` | `/api/donations/me/summary` | donor | Dashboard stat cards: total, count, last donation, totals per year. |
 | `POST` | `/api/donations/me/bank-check` | donor | Asks the bank for new payments now unless the bank was asked in the last 30 seconds; 202 with when the bank data was last updated and whether a check is running. See "Bank check on demand". |
 | `GET` | `/api/donations/me/bank-check` | donor | The same answer without asking the bank; the dashboard polls it while `checking` is true. |
+| `GET` | `/api/donations/me/sync` | donor | The manifest of the caller's device copy: `subject`, the summary with `bankDataAsOf`, and every chunk of the caller's data with its `id`, `rowsSha256` and `count`. See "Device sync". |
+| `GET` | `/api/donations/me/sync/chunks?ids=` | donor | The rows of the chunks named in `ids` (1 to 64, comma-separated in one parameter), with the ids of those the caller no longer has under `missing`. See "Device sync". |
 | `POST` | `/api/donations/me/receipts` | donor | Issues the receipt of one donation (`{"donationId": "…"}`) or of a completed year (`{"year": 2026}`), or returns the active one while the data it certifies is unchanged: 200 with the issued receipt and its frozen data; 429 `donations/rate-limited` after 30 requests in 15 minutes from one address; 409 `donations/receipt-issue-limit` when a replacement is due but the donor was already issued 20 replacements in the last 24 hours; 409 `donations/receipt-signing-paused` while the server's own signing key is withdrawn (slice 1.13); 409 `donations/receipt-signing-key-unpublished` while the server's own key is not published (its row is missing or fails its seal, or it is a public test key outside development), checked before a number is taken (slice 1.22); 409 `donations/donor-erased` when the donor's record was erased after the access token was issued (checked under the donor lock, slice 1.22); 409 `donations/receipt-unprintable` when the data a new receipt would freeze (the donor's name, company identifier and address, the foundation's identity and address, the signatory's name and role) holds a character outside the printable set, checked before a number is taken, so nothing is issued ("Characters a receipt prints"). See "Issued receipts as frozen data". |
 | `GET` | `/api/donations/me/receipts` | donor | Every receipt issued to the caller, replaced ones included, newest issue first, each with its frozen data. |
 | `GET` | `/api/donations/me/receipts/{id}` | donor | One issued receipt of the caller with its frozen data; 404 `donations/receipt-not-found` for an unknown or another donor's id. |
@@ -1011,6 +1013,49 @@ The dashboard calls `POST /api/donations/me/bank-check` every time it opens and 
 - The dashboard shows "Údaje z banky k {čas}" (Prague time) or "Kontrolujeme nové platby v bance…", polls `GET` every 2 seconds for at most 90 seconds while `checking` is true, and loads the summary and the list again whenever the check ends (a cooldown answer included, so a payment imported by another donor's check or the hourly run shows too); after the donor's "Zkontrolovat nové platby" it says how many gifts are new, that none is, or that the bank is still busy. A note under the payments says that an instant payment usually shows within a minute, an ordinary transfer from another bank can take until the next business day, and that pairing needs the donor's variable symbol.
 
 `spring.task.scheduling.pool.size` is 1; on shutdown the scheduler drops tasks still waiting for their time (the next hourly tick, a pending follow-up) and waits up to 30 s only for a running import. Logging: the token is never logged (`FioImportProperties.toString()` masks it and the Fio library masks it in every message); counterparty names, account numbers and symbols are never logged, at any level. At DEBUG `FioBankStatementSource` names each incoming movement by its transaction id and says only whether it carries a sender account, a payer name and a variable symbol (`given` or `missing`), and `PaymentPairingService` names payments by transaction id, donors by id and learned sender accounts by their link id, with the pairing method or the reason a payment stays unpaired (again only whether a symbol and a sender account are given). At INFO every run logs what the bank answered (`FioBankStatementSource`) and one completion line `Fio import {trigger} {period} completed: ... covered {coverage}` with the counts (`ImportBankPaymentsService`); the pairing after a registration logs one INFO line with its counts.
+
+#### Device sync
+
+Plan v3, slice 2.12 (decision D1): a donor's device keeps a copy of the donor's own data and downloads only what changed. The server keeps no state per device: every answer is computed from the database at the time of the request, in one read-only `REPEATABLE READ` transaction (`application/sync/DonorSyncService.snapshotOf`), so the rows of different chunks of one answer come from the same moment and the ids one chunk names (a donation's `bankAccountId` and `symbolClaimId`, a receipt's `donationId`) are rows of the other chunks of that answer.
+
+`GET /api/donations/me/sync`:
+
+```json
+{
+  "subject": "0190a000-0000-7000-8000-000000000001",
+  "summary": { "totalAmountMinor": 60100, "currency": "CZK", "count": 3, "lastReceivedAt": "2026-05-05",
+               "byYear": [{ "year": 2026, "count": 2, "totalAmountMinor": 50100 }, { "year": 2025, "count": 1, "totalAmountMinor": 10000 }],
+               "yearlyReceiptsAvailableThrough": 2025, "receiptsAvailableFrom": 2026, "bankDataAsOf": "2026-10-20T09:00:00Z" },
+  "chunks": [
+    { "id": "bank-accounts", "rowsSha256": "<64 hex>", "count": 1 },
+    { "id": "donations:2025", "rowsSha256": "<64 hex>", "count": 1 },
+    { "id": "donations:2026", "rowsSha256": "<64 hex>", "count": 2 }
+  ]
+}
+```
+
+- `subject` is the donor id of the JWT subject; the summary has the fields of `GET /api/donations/me/summary` plus `bankDataAsOf` of `GET /api/donations/me/bank-check` (null before the first successful import).
+- Chunks, listed by `id` (string order), and only those that hold a row: `donations:<year>` (the donor's donations received in that Prague year, refunded ones too, in the order of `GET /api/donations/me`), `receipts:<year>` (every receipt issued to the donor, replaced and withdrawn ones too, by its year, or for a single receipt the year of its gift, in the order of `GET /api/donations/me/receipts`), `bank-accounts` (by account number, then the older link first) and `symbol-claims` (by account number, then by symbol).
+- `rowsSha256` is the SHA-256, in lowercase hex, of the UTF-8 bytes of the chunk's `rows` written as RFC 8785 canonical JSON (members sorted by name in UTF-16 code units, no whitespace, strings escaped as `JSON.stringify` does, a lone surrogate as its `\u` escape; numbers only as integers within the safe range of a JavaScript number). The shared cases `shared-cases/sync/canonical.json` fix the form, which `shared/infrastructure/json/CanonicalRows` writes on the server and `features/donations/sync/canonical-rows.ts` in the browser. The device compares it with the digest of the chunk it holds and asks only for those that differ; a chunk no longer listed is removed. Two answers over the same rows give the same digest, so a restore from a backup changes the digests of exactly the chunks the restore changed.
+
+`GET /api/donations/me/sync/chunks?ids=donations:2025,donations:2026` answers `{ "subject": "…", "summary": { … }, "chunks": [{ "id", "rowsSha256", "count", "rows": [ … ] }], "missing": ["…"] }`: the summary of the same moment as the rows, the asked chunks in the order asked (a repeated id once), each with the digest its manifest entry carries at the same moment, and under `missing` the asked ids the donor holds no row of (the device removes them). The ids come comma-separated in one `ids` parameter. An id that is not `donations:<4 digits>`, `receipts:<4 digits>`, `bank-accounts` or `symbol-claims`, no id or more than 64 answer 400 `validation`.
+
+Rows:
+
+- `donations:<year>`: `{id, receivedAt, amountMinor, currency, status, source, purpose, pairedBy, bankAccountId, symbolClaimId}`; `purpose` is the enum (`GENERAL`, `ACCOUNT_VERIFICATION`), not its text, `bankAccountId` the id of the bank account (row of `bank-accounts`) the donation was paired through and `symbolClaimId` the id of the confirmed older symbol (row of `symbol-claims`) it was paired by, both null otherwise. The receipt number and `receiptAvailable` of `GET /api/donations/me` are not carried: the device derives them from the receipts chunks and the summary.
+- `receipts:<year>`: each item as `GET /api/donations/me/receipts` lists it (`id`, `status`, `kind`, `number`, `donationId`, `year`, `issuedAt`, `supersededAt` and the frozen `receipt`).
+- `bank-accounts`: `{id, accountNumber, status, verifiedOn, connectedFrom, disconnectedOn, shared, pairingExcluded, verificationPaymentOn, symbolOffer}` as `GET /api/donations/me/bank-accounts` lists them; the counts, totals and confirmed symbols it adds are derived from the other chunks.
+- `symbol-claims`: `{id, accountNumber, variableSymbol, answer}`, every older symbol the donor answered about, `CONFIRMED` or `DECLINED`; a "yes" an administrator reversed stays as `DECLINED`, and an answer an administrator reset is gone.
+
+What a device does with the answers (the client of 2.13 and 2.15 follows these rules, and `DonorDeviceSyncTest` simulates them):
+
+- It keeps each chunk's rows in the order served (a donation row carries no recording time to order it by).
+- It ignores a chunk kind it does not know, and a field of a row it does not know: a later slice may add both (a row version, for instance, which changes every digest once).
+- The summary is outside every digest: the device takes it from the answer it last stored, the manifest when it downloads nothing, otherwise the chunks answer.
+- Each answer is its own moment, so a change can land between the manifest and the chunks. The device stores each chunk with its own `rowsSha256`, removes the chunks listed under `missing`, and when a chunk's digest differs from the manifest it fetched just before, a listed chunk comes back under `missing` or the summaries differ, it syncs once more; the next manifest names what changed. A chunk it did not ask for may have changed between the two requests as well (a gift paired through an account linked meanwhile names a `bankAccountId` that the stored `bank-accounts` chunk lacks), which neither answer shows, so a copy may for a while name an id no stored chunk holds: the device shows such a row without what the missing row would add, and its next manifest heals it.
+- A donor whose record is erased gets a manifest without chunks and with an empty summary while the token it holds is valid, so the device clears its copy; afterwards the token is refused like any other (what the device does then is decided with the device copy in 2.14 and 2.15).
+
+Both endpoints together count 60 requests per donor in 15 minutes, whatever the client address (`DonorSyncRateLimiter`, keyed by the JWT subject), counted after the request is validated and before any read: the 61st answers 429 `donations/rate-limited`. A token of a connected application is refused with 403 `auth/forbidden`, as everywhere outside `/api/admin/**`. Every answer is `Cache-Control: private, no-store`. Nothing is logged. The shared cases `shared-cases/sync/manifest.json` specify the donations chunks and the summary from database rows (`DonorSyncSharedCasesTest`; the browser checks every case's digests in `shared-cases.spec.ts`), and `shared-cases/sync/canonical.json` the canonical form and its digest (`CanonicalRowsSharedCasesTest`, `canonical-rows.spec.ts`).
 
 #### Monthly report
 
@@ -1585,7 +1630,7 @@ Does **not** belong in `shared`: JWT types, `Donation`, `Donor`, JPA-related typ
 | First receipt year | Receipts only for donations received from 1 January 2026 (`RECEIPT_FIRST_YEAR`); older donations are listed without a receipt and issuing one answers 400 `receipt-before-first-year` (Jakub, 22 October 2026). |
 | Receipt of someone else's donation | 404 `donation-not-found`, not 403: no existence leak. |
 | Receipts | Frozen documents: the first download issues, numbers (`YYYY-NNNNNN`) and stores the template and data it rendered; changed certified data issues a replacement with a new number that names the replaced one. Language: the donor's preference at issue, `en` bilingual. |
-| Rate limiting | Own `FixedWindowRateLimiter` over Caffeine, in memory, per client address (`ClientAddressKey`: IPv6 by its /64), at most 50 000 keys per limiter by default, 1 000 for the administrator-only backup key limiter (`shared/infrastructure`). |
+| Rate limiting | Own `FixedWindowRateLimiter` over Caffeine, in memory, per client address (`ClientAddressKey`: IPv6 by its /64) or, for the device sync, per signed-in donor (`SubjectKey`), at most 50 000 keys per limiter by default, 1 000 for the administrator-only backup key limiter (`shared/infrastructure`). |
 | Antispam (contact) | Honeypot + rate limit. No captcha until needed. |
 | PDF preview | None: the dashboard downloads the file. |
 | CORS | Not configured (same-origin in prod, dev proxy in dev). |

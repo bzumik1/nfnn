@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nfnn.cz/shared-cases/schemas/sync/canonical.schema.json",
+  "title": "Canonical sync rows cases: the rows of a sync chunk give their RFC 8785 canonical JSON and its SHA-256, or are refused",
+  "type": "object",
+  "required": ["source", "logic", "cases"],
+  "additionalProperties": false,
+  "properties": {
+    "source": { "$ref": "../defs/source.schema.json" },
+    "logic": { "type": "string", "minLength": 1 },
+    "cases": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/case" } }
+  },
+  "$defs": {
+    "case": {
+      "type": "object",
+      "required": ["name", "input", "expected"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "input": {
+          "type": "object",
+          "required": ["rows"],
+          "additionalProperties": false,
+          "properties": {
+            "rows": { "type": "array", "description": "The rows of a chunk, any JSON values." }
+          }
+        },
+        "expected": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": ["canonical", "rowsSha256"],
+              "additionalProperties": false,
+              "properties": {
+                "canonical": { "type": "string", "pattern": "^\\[" },
+                "rowsSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+              }
+            },
+            {
+              "type": "object",
+              "required": ["refusal"],
+              "additionalProperties": false,
+              "properties": {
+                "refusal": { "const": "not-a-safe-integer" }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}
