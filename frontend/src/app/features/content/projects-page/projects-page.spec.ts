@@ -223,10 +223,11 @@ describe('Given the Pomáháme tab', () => {
     );
   });
 
-  it('when there is no story yet, then it says so and offers no years', async () => {
+  it('when there is no story yet, then it says so, leads home and offers no years', async () => {
     const page = await open('/projekty', []);
 
-    expect(text(page.querySelector('.stories-empty'))).toBe('Zatím tu žádný příběh není.');
+    expect(text(page.querySelector('.stories-empty'))).toBe('Zatím tu žádný projekt není.');
+    expect(text(page.querySelector('.stories-body a[href="/"]'))).toBe('Zpět na úvodní stránku');
     expect(page.querySelector('nav')).toBeNull();
     expect(page.querySelector('.summary')).toBeNull();
   });

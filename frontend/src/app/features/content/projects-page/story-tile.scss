@@ -183,6 +183,10 @@
   }
 }
 
+.tile:not(.tile--large) .tile-category::before {
+  content: none;
+}
+
 @include bp.container-down(stories, tablet) {
   .tile--large {
     min-height: 0;

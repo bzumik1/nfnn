@@ -270,7 +270,12 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
 
     await page.goto('/projekty');
-    await expect(page.locator('app-project-card')).toHaveCount(1);
+    await expect(page.locator('app-story-tile')).toHaveCount(1);
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.getByRole('navigation', { name: 'Roky' }).getByRole('link', { name: 'Vše' }).click();
+    await expect(page.locator('a.strip-all')).toHaveCount(1);
 
     expect(await violations(page)).toEqual([]);
 
@@ -2263,8 +2268,8 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
       route.fulfill(session(200, administrator)),
     );
     await page.goto('/o-nas');
-    await page.locator('#o-nas .signatures').scrollIntoViewIfNeeded();
-    await expect(page.locator('#o-nas .signature-name')).toHaveText('Eva Vzorová');
+    await expect(page.locator('#o-nas .signer-name')).toHaveText(['Eva Vzorová']);
+    await page.locator('#o-nas .signers').scrollIntoViewIfNeeded();
 
     expect(await violations(page)).toEqual([]);
 
