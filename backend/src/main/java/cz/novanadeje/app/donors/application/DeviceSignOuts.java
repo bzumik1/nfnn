@@ -36,13 +36,25 @@ public class DeviceSignOuts {
     @Transactional(propagation = Propagation.MANDATORY)
     public void endAllOf(DonorId donorId, Optional<DeviceId> continuing, DeviceSignOutReason reason, Instant at) {
         refreshTokens.revokeAllOf(donorId, at);
+        devices.findActiveOf(donorId).stream()
+                .filter(device -> continuing.filter(device.id()::equals).isEmpty())
+                .forEach(device -> end(device, reason, at));
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
     public void endOthersOf(DonorId donorId, Optional<DeviceId> kept, Instant at) {
+        refreshTokens.revokeDevicelessBrowserTokensOf(donorId, at);
+        devices.findActiveOf(donorId).stream()
+                .filter(device -> kept.filter(device.id()::equals).isEmpty())
+                .forEach(device -> end(device, DeviceSignOutReason.REMOTE_SIGN_OUT, at));
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
     public void end(DonorDevice device, DeviceSignOutReason reason, Instant at) {
+        refreshTokens.revokeAllOfDevice(device.id(), at);
+        if (device.end(reason, at)) {
+            devices.save(device);
+            events.publishEvent(new DeviceSignedOut(device.donorId().value(), device.id().value(), at));
+        }
     }
 }

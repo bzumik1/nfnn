@@ -22,7 +22,18 @@ final class LiveSessionValidator implements OAuth2TokenValidator<Jwt> {
 
     @Override
     public OAuth2TokenValidatorResult validate(Jwt token) {
-        return claims.validate(token);
+        OAuth2TokenValidatorResult checked = claims.validate(token);
+        if (checked.hasErrors() || token.getClaimAsString(JwtProperties.SCOPE_CLAIM) != null) {
+            return checked;
+        }
+        Optional<UUID> session = sessionOf(token);
+        if (session.isEmpty() && token.hasClaim(JwtProperties.SESSION_CLAIM)) {
+            return ended();
+        }
+        if (session.isPresent() && !liveness.isLive(session.get())) {
+            return ended();
+        }
+        return checked;
     }
 
     private static Optional<UUID> sessionOf(Jwt token) {

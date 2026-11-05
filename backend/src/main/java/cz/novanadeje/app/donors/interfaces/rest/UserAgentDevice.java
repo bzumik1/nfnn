@@ -37,6 +37,14 @@ final class UserAgentDevice {
     }
 
     static DeviceDescription of(String userAgent) {
-        return DeviceDescription.UNKNOWN;
+        if (userAgent == null || userAgent.isBlank()) {
+            return DeviceDescription.UNKNOWN;
+        }
+        String read = userAgent.length() > MAXIMUM_READ_LENGTH ? userAgent.substring(0, MAXIMUM_READ_LENGTH) : userAgent;
+        DevicePlatform platform = PLATFORMS.stream().filter(entry -> entry.getKey().matcher(read).find()).map(Map.Entry::getValue).findFirst()
+                .orElse(DevicePlatform.OTHER);
+        DeviceBrowser browser = BROWSERS.stream().filter(entry -> entry.getKey().matcher(read).find()).map(Map.Entry::getValue).findFirst()
+                .orElse(DeviceBrowser.OTHER);
+        return new DeviceDescription(platform, browser);
     }
 }

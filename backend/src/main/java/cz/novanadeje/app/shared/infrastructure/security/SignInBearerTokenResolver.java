@@ -13,6 +13,9 @@ final class SignInBearerTokenResolver implements BearerTokenResolver {
 
     @Override
     public String resolve(HttpServletRequest request) {
+        if (HttpMethod.POST.matches(request.getMethod()) && request.getRequestURI().startsWith(SIGN_IN_PATHS)) {
+            return null;
+        }
         return bearer.resolve(request);
     }
 }

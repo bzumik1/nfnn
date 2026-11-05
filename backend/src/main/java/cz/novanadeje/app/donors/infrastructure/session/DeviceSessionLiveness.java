@@ -37,10 +37,11 @@ class DeviceSessionLiveness implements SessionLiveness {
 
     @Override
     public boolean isLive(UUID sessionId) {
-        return true;
+        return answers.get(sessionId, id -> devices.isSignedIn(new DeviceId(id), clock.instant()));
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     void forget(DeviceSignedOut signedOut) {
+        answers.invalidate(signedOut.deviceId());
     }
 }

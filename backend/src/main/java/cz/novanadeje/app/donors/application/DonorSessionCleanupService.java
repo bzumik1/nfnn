@@ -32,7 +32,12 @@ public class DonorSessionCleanupService {
 
     @Transactional
     public SessionCleanup cleanUp() {
-        return new SessionCleanup(0, 0, 0);
+        Instant now = clock.instant();
+        List<DonorDevice> expired = devices.findActiveWithoutUsableTokenAt(now);
+        expired.forEach(device -> signOuts.end(device, DeviceSignOutReason.EXPIRED, now));
+        int tokens = refreshTokens.deleteSpentBefore(now.minus(SPENT_TOKEN_RETENTION));
+        int ended = devices.deleteEndedBefore(now.minus(ENDED_DEVICE_RETENTION));
+        return new SessionCleanup(expired.size(), tokens, ended);
     }
 
     public record SessionCleanup(int expiredDevices, int deletedTokens, int deletedDevices) {
