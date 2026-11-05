@@ -149,7 +149,7 @@ describe('Given the part for older bank payments on the import card', () => {
         `#${dateField().getAttribute('aria-describedby')?.split(' ')[0]}`,
       );
       expect((hint?.textContent ?? '').replace(/\s+/g, ' ').trim()).toBe(
-        'Platby za posledních 89 dní web stáhne i bez odemčení. Načíst jde i znovu: platby, které web už má, se nezdvojí.',
+        'Platby za posledních 89 dní web stáhne i bez odemčení. Načíst je můžete i opakovaně: platby, které web už má, se nezdvojí.',
       );
       expect(button().textContent?.trim()).toBe('Načíst starší platby');
       expect(button().disabled).toBe(false);
@@ -332,7 +332,7 @@ describe('Given the part for older bank payments on the import card', () => {
       );
 
       expect(alert()).toBe(
-        'Načtení z 05. 11. 2026 11:00 se nepovedlo, historie ve Fio byla zamčená. Odemkněte ji podle kroků výše a zkuste to znovu.',
+        'Načtení z 05. 11. 2026 11:00 se nepovedlo. Důvod: historie ve Fio byla zamčená. Odemkněte ji podle kroků výše a zkuste to znovu.',
       );
       expect(status()).toBe('');
       expect(finished.length).toBe(1);
@@ -560,7 +560,7 @@ describe('Given the part for older bank payments on the import card', () => {
       );
 
       expect(alert()).toBe(
-        'Načtení z 04. 11. 2026 10:00 se nepovedlo, historie ve Fio byla zamčená. Odemkněte ji podle kroků výše a zkuste to znovu.',
+        'Načtení z 04. 11. 2026 10:00 se nepovedlo. Důvod: historie ve Fio byla zamčená. Odemkněte ji podle kroků výše a zkuste to znovu.',
       );
       expect(busy()).toBe(false);
     });

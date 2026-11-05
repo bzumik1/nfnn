@@ -238,7 +238,7 @@ function describeRun(run: HistoryImportResponse): Notice {
       const at = finishedAt(run);
       return {
         kind: 'alert',
-        text: $localize`:@@admin.home.history.locked:Načtení z ${at}:time: se nepovedlo, historie ve Fio byla zamčená. Odemkněte ji podle kroků výše a zkuste to znovu.`,
+        text: $localize`:@@admin.home.history.locked:Načtení z ${at}:time: se nepovedlo. Důvod: historie ve Fio byla zamčená. Odemkněte ji podle kroků výše a zkuste to znovu.`,
       };
     }
     case 'FAILED': {
