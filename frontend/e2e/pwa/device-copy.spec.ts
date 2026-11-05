@@ -3,6 +3,7 @@ import {
   donorSyncOf,
   mockDonorApi,
   mockDonorSync,
+  openAccountItem,
   openDonorSection,
   openSignInDialog,
   session,
@@ -46,7 +47,7 @@ test.describe('Given a donor who signs in with a password to the site behind its
     await page.locator('#login-password').fill('correct horse battery');
     await page.getByRole('dialog').locator('.ui-button--block').click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
-    await page.locator('.nav-login').filter({ hasText: 'Můj přehled' }).click();
+    await openAccountItem(page, 'Můj přehled');
     await expect(page).toHaveURL(/\/darce\/prehled$/);
     await openDonorSection(page, 'Moje dary');
     await expect(gifts).toHaveCount(2);
