@@ -40,27 +40,33 @@ public final class SoftwarePasskey {
     private final byte[] credentialId;
     private final byte[] userHandle;
     private final KeyPair keys;
+    private final boolean hmacSecret;
     private long signCount;
 
-    private SoftwarePasskey(byte[] credentialId, byte[] userHandle, KeyPair keys, long signCount) {
+    private SoftwarePasskey(byte[] credentialId, byte[] userHandle, KeyPair keys, long signCount, boolean hmacSecret) {
         this.credentialId = credentialId;
         this.userHandle = userHandle;
         this.keys = keys;
         this.signCount = signCount;
+        this.hmacSecret = hmacSecret;
     }
 
     public static SoftwarePasskey forUser(UUID donorId) {
         byte[] credentialId = new byte[32];
         RANDOM.nextBytes(credentialId);
-        return new SoftwarePasskey(credentialId, uuidBytes(donorId), newKeys(), 0);
+        return new SoftwarePasskey(credentialId, uuidBytes(donorId), newKeys(), 0, false);
     }
 
     public SoftwarePasskey withAnotherKey() {
-        return new SoftwarePasskey(credentialId, userHandle, newKeys(), signCount);
+        return new SoftwarePasskey(credentialId, userHandle, newKeys(), signCount, hmacSecret);
     }
 
     public SoftwarePasskey counting() {
-        return new SoftwarePasskey(credentialId, userHandle, keys, 1);
+        return new SoftwarePasskey(credentialId, userHandle, keys, 1, hmacSecret);
+    }
+
+    public SoftwarePasskey withHmacSecretExtension() {
+        return new SoftwarePasskey(credentialId, userHandle, keys, signCount, true);
     }
 
     public String credentialId() {
@@ -77,8 +83,10 @@ public final class SoftwarePasskey {
                 EC2COSEKey.create((ECPublicKey) keys.getPublic(), COSEAlgorithmIdentifier.ES256));
         AuthenticatorData<RegistrationExtensionAuthenticatorOutput> authenticatorData =
                 new AuthenticatorData<>(sha256(RP_ID.getBytes(StandardCharsets.UTF_8)), flags, signCount, attested);
-        byte[] attestationObject = new AttestationObjectConverter(CONVERTER)
-                .convertToBytes(new AttestationObject(authenticatorData, new NoneAttestationStatement()));
+        byte[] attestationObject = hmacSecret
+                ? noneAttestation(withExtension(new AuthenticatorDataConverter(CONVERTER).convert(authenticatorData), HMAC_SECRET_CREATED))
+                : new AttestationObjectConverter(CONVERTER)
+                        .convertToBytes(new AttestationObject(authenticatorData, new NoneAttestationStatement()));
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("clientDataJSON", base64Url(clientData("webauthn.create", challenge, origin)));
         response.put("attestationObject", base64Url(attestationObject));
@@ -95,8 +103,9 @@ public final class SoftwarePasskey {
             signCount++;
         }
         byte flags = (byte) (AuthenticatorData.BIT_UP | (userVerified ? AuthenticatorData.BIT_UV : 0));
-        byte[] authenticatorData = new AuthenticatorDataConverter(CONVERTER)
+        byte[] plainAuthenticatorData = new AuthenticatorDataConverter(CONVERTER)
                 .convert(new AuthenticatorData<>(sha256(RP_ID.getBytes(StandardCharsets.UTF_8)), flags, signCount));
+        byte[] authenticatorData = hmacSecret ? withExtension(plainAuthenticatorData, hmacSecretOutput()) : plainAuthenticatorData;
         byte[] clientData = clientData("webauthn.get", challenge, SITE);
         byte[] signed = ByteBuffer.allocate(authenticatorData.length + 32).put(authenticatorData).put(sha256(clientData)).array();
         Map<String, Object> response = new LinkedHashMap<>();
@@ -105,6 +114,34 @@ public final class SoftwarePasskey {
         response.put("signature", base64Url(sign(signed)));
         response.put("userHandle", base64Url(userHandle));
         return credential(response);
+    }
+
+    private static final int FLAGS_OFFSET = 32;
+    private static final byte[] HMAC_SECRET_NAME = "hmac-secret".getBytes(StandardCharsets.US_ASCII);
+    private static final byte[] HMAC_SECRET_CREATED = cborMapOfOne(new byte[] {(byte) 0xF5});
+
+    private static byte[] hmacSecretOutput() {
+        byte[] output = new byte[48];
+        RANDOM.nextBytes(output);
+        return cborMapOfOne(ByteBuffer.allocate(2 + output.length).put((byte) 0x58).put((byte) output.length).put(output).array());
+    }
+
+    private static byte[] cborMapOfOne(byte[] value) {
+        return ByteBuffer.allocate(2 + HMAC_SECRET_NAME.length + value.length)
+                .put((byte) 0xA1).put((byte) (0x60 + HMAC_SECRET_NAME.length)).put(HMAC_SECRET_NAME).put(value).array();
+    }
+
+    private static byte[] withExtension(byte[] authenticatorData, byte[] extensions) {
+        byte[] extended = ByteBuffer.allocate(authenticatorData.length + extensions.length).put(authenticatorData).put(extensions).array();
+        extended[FLAGS_OFFSET] = (byte) (extended[FLAGS_OFFSET] | AuthenticatorData.BIT_ED);
+        return extended;
+    }
+
+    private static byte[] noneAttestation(byte[] authenticatorData) {
+        byte[] head = {(byte) 0xA3, 0x63, 'f', 'm', 't', 0x64, 'n', 'o', 'n', 'e', 0x67, 'a', 't', 't', 'S', 't', 'm', 't', (byte) 0xA0,
+                0x68, 'a', 'u', 't', 'h', 'D', 'a', 't', 'a', 0x59};
+        return ByteBuffer.allocate(head.length + 2 + authenticatorData.length)
+                .put(head).putShort((short) authenticatorData.length).put(authenticatorData).array();
     }
 
     private Map<String, Object> credential(Map<String, Object> response) {

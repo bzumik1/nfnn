@@ -645,6 +645,59 @@ class DonationReceiptIssuerTest {
         }
 
         @Test
+        @DisplayName("when a bulk issue finds the active receipt still certifying the same data under the lock, then it names that receipt as the one it saw and took no number")
+        void should_name_active_receipt_seen_under_lock_when_issued_in_bulk_given_unchanged_data() {
+            DonationReceipt active = yearlyReceipt(ReceiptDocumentFactory.fingerprintForYear(jana(), YEAR_2026, List.of(MARCH, JUNE)), LocaleCode.CS);
+            givenDonationsOfJana(jana(), JUNE, MARCH);
+            when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.of(active));
+
+            AdministratorIssue issue = issuer.issueForYearInBulk(petr, BROWSER, JANA, YEAR_2026, TODAY);
+
+            assertThat(issue.receipt()).isSameAs(active);
+            assertThat(issue.tookNewNumber()).isFalse();
+            assertThat(issue.replacedActive()).isEmpty();
+            InOrder order = inOrder(receipts);
+            order.verify(receipts).lockDonor(JANA);
+            order.verify(receipts).findActiveForYear(JANA, YEAR_2026);
+            verifyNoInteractions(events);
+        }
+
+        @Test
+        @DisplayName("when a bulk issue replaces the active receipt, then it names the active receipt it replaced and is audited as a single issue")
+        void should_name_replaced_active_receipt_when_issued_in_bulk_given_changed_data() {
+            DonationReceipt active = yearlyReceipt(ReceiptDocumentFactory.fingerprintForYear(jana(), YEAR_2026, List.of(MARCH)), LocaleCode.CS);
+            givenDonationsOfJana(jana(), JUNE, MARCH);
+            when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.of(active));
+            when(receipts.nextSerial()).thenReturn(2L);
+            givenFreezer();
+
+            AdministratorIssue issue = issuer.issueForYearInBulk(petr, BROWSER, JANA, YEAR_2026, TODAY);
+
+            assertThat(issue.tookNewNumber()).isTrue();
+            assertThat(issue.replacedActive()).contains(active.number());
+            verify(events).publishEvent(new AdminActionPerformed(petr, "ISSUE_RECEIPT", Optional.of(issue.receipt().id().value()),
+                    "Potvrzení 2027-000002 za rok 2026 vystaveno dárci " + JANA.value() + "; nahrazuje potvrzení 2027-000001", NOW));
+        }
+
+        @Test
+        @DisplayName("when a bulk issue follows a receipt withdrawn because the gifts changed, then it took a new number but replaced no active receipt")
+        void should_replace_no_active_receipt_when_issued_in_bulk_given_receipt_withdrawn_because_donations_changed() {
+            DonationReceipt outdated = yearlyReceipt(ReceiptDocumentFactory.fingerprintForYear(jana(), YEAR_2026, List.of(MARCH)), LocaleCode.CS);
+            outdated.withdrawBecauseDonationsChanged(EARLIER_AT.plus(Duration.ofDays(1)));
+            givenDonationsOfJana(jana(), JUNE);
+            when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.empty());
+            when(receipts.findLatestOutdatedForYear(JANA, YEAR_2026)).thenReturn(Optional.of(outdated));
+            when(receipts.nextSerial()).thenReturn(2L);
+            givenFreezer();
+
+            AdministratorIssue issue = issuer.issueForYearInBulk(petr, CONNECTED_APPLICATION, JANA, YEAR_2026, TODAY);
+
+            assertThat(issue.tookNewNumber()).isTrue();
+            assertThat(issue.replacedActive()).isEmpty();
+            assertThat(issue.receipt().supersedes()).contains(outdated.id());
+        }
+
+        @Test
         @DisplayName("when the active receipt still certifies the same data, then it is returned and nothing is numbered or audited")
         void should_return_active_receipt_without_audit_when_issued_by_administrator_given_unchanged_data() {
             DonationReceipt active = yearlyReceipt(ReceiptDocumentFactory.fingerprintForYear(jana(), YEAR_2026, List.of(MARCH, JUNE)), LocaleCode.CS);

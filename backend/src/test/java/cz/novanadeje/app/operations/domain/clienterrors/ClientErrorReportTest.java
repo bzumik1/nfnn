@@ -69,6 +69,9 @@ class ClientErrorReportTest {
         assertThat(ClientErrorBucket.of(ClientErrorKind.CHUNK_LOAD)).isEqualTo(ClientErrorBucket.GENERAL);
         assertThat(ClientErrorBucket.of(ClientErrorKind.QR_ENCODE)).isEqualTo(ClientErrorBucket.GENERAL);
         assertThat(ClientErrorBucket.of(ClientErrorKind.VERIFY_PARSE)).isEqualTo(ClientErrorBucket.GENERAL);
+        assertThat(ClientErrorBucket.of(ClientErrorKind.DEVICE_STORE_OPEN)).isEqualTo(ClientErrorBucket.GENERAL);
+        assertThat(ClientErrorBucket.of(ClientErrorKind.DEVICE_STORE_EVICTED)).isEqualTo(ClientErrorBucket.GENERAL);
+        assertThat(ClientErrorBucket.of(ClientErrorKind.DEVICE_COPY_MISMATCH)).isEqualTo(ClientErrorBucket.GENERAL);
     }
 
     private static ClientErrorReport report(Optional<Integer> major, int count) {

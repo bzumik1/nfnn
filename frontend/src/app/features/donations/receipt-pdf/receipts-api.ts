@@ -40,8 +40,12 @@ export class ReceiptsApi {
     return {
       receipt: () =>
         this.http.get<IssuedReceipt>(`${ADMINISTRATION_RECEIPTS}/${encodeURIComponent(receiptId)}`),
-      image: (sha256) => this.imageAt(ADMINISTRATION_IMAGES, sha256),
+      image: (sha256) => this.administrationImage(sha256),
     };
+  }
+
+  administrationImage(sha256: string): Observable<ReceiptImageBytes> {
+    return this.imageAt(ADMINISTRATION_IMAGES, sha256);
   }
 
   private imageAt(base: string, sha256: string): Observable<ReceiptImageBytes> {

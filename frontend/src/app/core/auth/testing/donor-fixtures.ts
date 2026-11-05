@@ -1,3 +1,4 @@
+import type { PrfReading } from '../../device/crypto/prf';
 import {
   AuthResponse,
   Donor,
@@ -10,6 +11,7 @@ import {
 import {
   PasskeyAuthenticator,
   PasskeyCeremonyError,
+  type WithPrf,
   PasskeyFailure,
 } from '../passkey-authenticator';
 
@@ -124,12 +126,14 @@ export function samplePasskey(overrides: Partial<Passkey> = {}): Passkey {
 
 export class FakePasskeyAuthenticator implements Pick<
   PasskeyAuthenticator,
-  'supported' | 'create' | 'get'
+  'supported' | 'create' | 'get' | 'createWithPrf' | 'getWithPrf'
 > {
   available = true;
   failure: PasskeyFailure | null = null;
+  prfOutput: Uint8Array<ArrayBuffer> | null = null;
   readonly created: PasskeyCreationOptions[] = [];
   readonly requested: PasskeySignInOptions[] = [];
+  readonly prfInputs: (Uint8Array<ArrayBuffer> | null)[] = [];
 
   supported(): boolean {
     return this.available;
@@ -147,5 +151,27 @@ export class FakePasskeyAuthenticator implements Pick<
     return this.failure === null
       ? Promise.resolve(SAMPLE_ASSERTION)
       : Promise.reject(new PasskeyCeremonyError(this.failure));
+  }
+
+  async createWithPrf(
+    options: PasskeyCreationOptions,
+    prfInput: Uint8Array<ArrayBuffer> | null,
+  ): Promise<WithPrf<PasskeyRegistrationCredential>> {
+    this.prfInputs.push(prfInput);
+    return { credential: await this.create(options), prf: this.reading(SAMPLE_REGISTRATION.id) };
+  }
+
+  async getWithPrf(
+    options: PasskeySignInOptions,
+    prfInput: Uint8Array<ArrayBuffer> | null,
+  ): Promise<WithPrf<PasskeyAssertionCredential>> {
+    this.prfInputs.push(prfInput);
+    return { credential: await this.get(options), prf: this.reading(SAMPLE_ASSERTION.id) };
+  }
+
+  private reading(credentialId: string): PrfReading | null {
+    return this.prfOutput === null
+      ? null
+      : { credentialId, userHandle: null, output: new Uint8Array(this.prfOutput) };
   }
 }

@@ -1,6 +1,8 @@
 import { ReceiptStyle } from '../receipt-style';
 import {
+  ReceiptBundleRequest,
   ReceiptDrawingRequest,
+  ReceiptWorkerRequest,
   ReceiptWorker,
   ReceiptWorkerMessage,
 } from '../receipt-worker-messages';
@@ -11,10 +13,15 @@ export class FakeReceiptWorker implements ReceiptWorker {
   onmessage: ((event: MessageEvent<ReceiptWorkerMessage>) => void) | null = null;
   onerror: ((event: Event) => void) | null = null;
   readonly requests: ReceiptDrawingRequest[] = [];
+  readonly bundles: ReceiptBundleRequest[] = [];
   terminated = false;
 
-  postMessage(request: ReceiptDrawingRequest): void {
-    this.requests.push(request);
+  postMessage(request: ReceiptWorkerRequest): void {
+    if ('kind' in request) {
+      this.bundles.push(request);
+    } else {
+      this.requests.push(request);
+    }
   }
 
   terminate(): void {

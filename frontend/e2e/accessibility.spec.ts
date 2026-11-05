@@ -56,6 +56,7 @@ import {
   yearlyLine,
 } from './receipt-donations';
 import { answerReceiptIssuing, RECEIPT_ISSUING_URL } from './receipt-issuing';
+import { FOUR_DONORS, mockYearlyReceipts } from './yearly-receipts';
 import {
   noSignatory,
   refusedVector,
@@ -1293,6 +1294,29 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
+  test('when an administrator prints the yearly receipts in bulk, then the page, the list and the result break no rule', async ({
+    page,
+  }) => {
+    await mockYearlyReceipts(page, { donors: FOUR_DONORS, erasedDonors: 1 });
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.goto('/');
+    await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
+    await page.goto('/sprava/hromadna-potvrzeni');
+    await expect(page.getByRole('heading', { level: 1, name: 'Hromadná potvrzení' })).toBeFocused();
+    await expect(page.locator('.donors-table tbody tr')).toHaveCount(4);
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.getByRole('button', { name: 'Vystavit a připravit PDF k tisku' }).click();
+    await expect(page.locator('app-live-notice').getByRole('status')).toHaveText(
+      'PDF k tisku je připravené: obsahuje 3 potvrzení.',
+    );
+
+    expect(await violations(page)).toEqual([]);
+  });
+
   test('when an administrator finds a donor and opens the card, then the search, the card and its confirmations break no rule', async ({
     page,
   }) => {
@@ -2386,6 +2410,25 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.getByLabel('Město').fill('');
     await page.getByRole('button', { name: 'Uložit údaje' }).click();
     await expect(page.getByLabel('Město')).toBeFocused();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when a signed-in donor reads the data on this device, loads them again and opens the deletion, then the card and its dialog break no rule', async ({
+    page,
+  }) => {
+    await signIn(page);
+    await openDonorSection(page, 'Údaje a zabezpečení');
+    await expect(page.getByText(/Uloženo v zařízení · aktualizováno /)).toBeVisible();
+    await page.getByRole('button', { name: 'Načíst data znovu' }).click();
+    await expect(
+      page.getByRole('status').filter({ hasText: 'Data jsou načtená znovu.' }),
+    ).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.getByRole('button', { name: 'Smazat data z tohoto zařízení' }).click();
+    await expect(page.getByRole('dialog').getByRole('button', { name: 'Zrušit' })).toBeFocused();
 
     expect(await violations(page)).toEqual([]);
   });

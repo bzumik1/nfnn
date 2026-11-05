@@ -131,6 +131,9 @@ public record AdminActionFacts(String summaryKey, Map<String, String> values) {
                 variant("yearly", number + "za rok (?<year>\\d{4})" + issued),
                 variant("replacing", number + "za dar " + ID + issued + replacing),
                 full(number + "za dar " + ID + issued)));
+        shapes.put("ISSUE_RECEIPTS", List.of(
+                full("Hromadně vystavena roční potvrzení za rok (?<year>\\d{4}): nová (?<issued>\\d+), nahrazená (?<replaced>\\d+), beze změny"
+                        + " (?<unchanged>\\d+), přeskočená (?<skipped>\\d+)")));
         shapes.put("WITHDRAW_RECEIPT", List.of(
                 full("Potvrzení (?<number>\\d{4}-\\d{6}) za rok (?<year>\\d{4}) dárce " + DONOR_ID + " zrušeno, protože z něj byl odebrán dar " + ID
                         + " platby (?<transaction>\\d+)")));

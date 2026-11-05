@@ -18,6 +18,7 @@ import {
 } from 'rxjs';
 import { AuthApi } from './auth-api';
 import { PasskeyAuthenticator } from './passkey-authenticator';
+import { deviceAccountOf, SESSION_DEVICE, type SignInSecret } from './session-device';
 import {
   isSessionRefreshed,
   isSignedOut,
@@ -54,6 +55,7 @@ export class AuthStore {
   private readonly passkeys = inject(PasskeyAuthenticator);
   private readonly locks = inject(TAB_LOCKS);
   private readonly channel = inject(SESSION_CHANNEL)();
+  private readonly device = inject(SESSION_DEVICE);
   private readonly currentDonor = signal<Donor | null>(null);
   private readonly currentStatus = signal<AuthStatus>('unknown');
   private accessToken: string | null = null;
@@ -72,6 +74,7 @@ export class AuthStore {
         this.adoptAnnounced(event.data.response);
       } else if (isSignedOut(event.data)) {
         this.forget();
+        this.device.signedOutElsewhere();
       }
     });
     inject(DestroyRef).onDestroy(() => this.channel?.close());
@@ -86,27 +89,54 @@ export class AuthStore {
   }
 
   confirmEmail(token: string): Observable<Donor> {
-    return this.api.confirmEmailVerification(token).pipe(map((response) => this.adopt(response)));
+    return this.api
+      .confirmEmailVerification(token)
+      .pipe(map((response) => this.adoptSignIn(response, { kind: 'none' })));
   }
 
   login(email: string, password: string): Observable<Donor> {
-    return this.api.login(email, password).pipe(map((response) => this.adopt(response)));
+    return this.api
+      .login(email, password)
+      .pipe(map((response) => this.adoptSignIn(response, { kind: 'password', password })));
   }
 
-  completeSecondFactor(challenge: string, code: string): Observable<Donor> {
+  completeSecondFactor(challenge: string, code: string, password?: string): Observable<Donor> {
     return this.api
       .completeSecondFactor(challenge, code)
-      .pipe(map((response) => this.adopt(response)));
+      .pipe(
+        map((response) =>
+          this.adoptSignIn(
+            response,
+            password === undefined ? { kind: 'none' } : { kind: 'password', password },
+          ),
+        ),
+      );
   }
 
   signInWithPasskey(): Observable<Donor> {
     return this.api.passkeySignInOptions().pipe(
       switchMap((options) =>
-        from(this.passkeys.get(options)).pipe(
-          switchMap((credential) => this.api.signInWithPasskey(options.challenge, credential)),
+        from(this.device.prfInput()).pipe(
+          switchMap((input) => from(this.passkeys.getWithPrf(options, input))),
+          switchMap(({ credential, prf }) => {
+            let handedOver = false;
+            return this.api.signInWithPasskey(options.challenge, credential).pipe(
+              map((response) => {
+                handedOver = prf !== null;
+                return this.adoptSignIn(
+                  response,
+                  prf === null ? { kind: 'none' } : { kind: 'prf', reading: prf },
+                );
+              }),
+              finalize(() => {
+                if (!handedOver) {
+                  prf?.output.fill(0);
+                }
+              }),
+            );
+          }),
         ),
       ),
-      map((response) => this.adopt(response)),
     );
   }
 
@@ -122,7 +152,7 @@ export class AuthStore {
       ).pipe(
         catchError((failure: unknown) => {
           if (isRefusal(failure)) {
-            this.forget();
+            this.endRefused();
           }
           return throwError(() => failure);
         }),
@@ -142,7 +172,7 @@ export class AuthStore {
             () => undefined,
             (failure: unknown) => this.restoreLater(failure),
           )
-        : Promise.resolve(this.forget());
+        : Promise.resolve(this.forgetWithoutSession());
     }
     return this.restoring;
   }
@@ -153,11 +183,15 @@ export class AuthStore {
         timeout(REFRESH_REQUEST_TIMEOUT_MS),
         catchError(() => of(undefined)),
       );
+    const donor = this.currentDonor();
     return this.underRefreshLock(signOut).pipe(
       catchError(() => signOut()),
       tap(() => {
         this.forget();
         this.announce(signedOut());
+        if (donor !== null) {
+          void this.device.signedOut(deviceAccountOf(donor));
+        }
       }),
       map(() => undefined),
     );
@@ -168,7 +202,13 @@ export class AuthStore {
   }
 
   changePassword(request: ChangePasswordRequest): Observable<Donor> {
-    return this.api.changePassword(request).pipe(map((response) => this.adopt(response)));
+    return this.api.changePassword(request).pipe(
+      map((response) => {
+        const donor = this.adopt(response);
+        void this.device.passwordChanged(deviceAccountOf(donor), request.newPassword);
+        return donor;
+      }),
+    );
   }
 
   requestEmailChange(request: EmailChangeRequest): Observable<void> {
@@ -210,7 +250,13 @@ export class AuthStore {
   }
 
   removePassword(confirmation: Confirmation): Observable<Donor> {
-    return this.api.removePassword(confirmation).pipe(map((response) => this.adopt(response)));
+    return this.api.removePassword(confirmation).pipe(
+      map((response) => {
+        const donor = this.adopt(response);
+        void this.device.passwordRemoved(deviceAccountOf(donor));
+        return donor;
+      }),
+    );
   }
 
   confirmSecondFactor(code: string): Observable<Donor> {
@@ -225,7 +271,7 @@ export class AuthStore {
     return this.api.refresh().pipe(
       timeout(REFRESH_REQUEST_TIMEOUT_MS),
       map((response) => {
-        this.adopt(response);
+        this.adoptRestored(response);
         this.announce(sessionRefreshed(response));
         return response.accessToken;
       }),
@@ -300,7 +346,30 @@ export class AuthStore {
     if (current !== null && current.id !== response.user.id) {
       return;
     }
-    this.adopt(response);
+    this.adoptRestored(response);
+  }
+
+  private adoptRestored(response: AuthResponse): Donor {
+    const before = this.currentDonor();
+    const donor = this.adopt(response);
+    if (before === null || before.id !== donor.id) {
+      void this.device.restored(deviceAccountOf(donor));
+    }
+    return donor;
+  }
+
+  private adoptSignIn(response: AuthResponse, secret: SignInSecret): Donor {
+    const donor = this.adopt(response);
+    void this.device.signedIn(deviceAccountOf(donor), secret);
+    return donor;
+  }
+
+  private endRefused(): void {
+    const donor = this.currentDonor();
+    this.forget();
+    void (donor === null
+      ? this.device.sessionLost()
+      : this.device.signedOut(deviceAccountOf(donor)));
   }
 
   private reloadProfile(): Observable<void> {
@@ -318,6 +387,11 @@ export class AuthStore {
     this.currentStatus.set('signed-in');
     rememberSession(true);
     return response.user;
+  }
+
+  private forgetWithoutSession(): void {
+    this.forget();
+    void this.device.sessionLost();
   }
 
   private forget(): void {

@@ -87,7 +87,25 @@ export interface DonorApiMock {
   summary: unknown;
   list: unknown;
   receipts?: ReceiptIssuing;
+  sync?: DonorSyncMock;
 }
+
+export interface DonorSyncChunk {
+  readonly id: string;
+  readonly rowsSha256: string;
+  readonly count: number;
+  readonly rows: readonly unknown[];
+}
+
+export interface DonorSyncMock {
+  readonly summary: unknown;
+  readonly chunks: readonly DonorSyncChunk[];
+}
+
+export const emptyDonorSync: DonorSyncMock = {
+  summary: { totalAmountMinor: 0, count: 0 },
+  chunks: [],
+};
 
 export const noDonations: DonorApiMock = {
   summary: {
@@ -226,6 +244,35 @@ export async function mockDonorApi(
   await page.route(
     (url) => url.pathname === '/api/donors/me/devices',
     (route) => route.fulfill({ json: { items: signedInDevices } }),
+  );
+  await mockDonorSync(page, donations.sync ?? emptyDonorSync);
+}
+
+export async function mockDonorSync(page: RouteTarget, sync: DonorSyncMock): Promise<void> {
+  await page.route(
+    (url) => url.pathname === '/api/donations/me/sync',
+    (route) =>
+      route.fulfill({
+        json: {
+          subject: donor.id,
+          summary: sync.summary,
+          chunks: sync.chunks.map(({ id, rowsSha256, count }) => ({ id, rowsSha256, count })),
+        },
+      }),
+  );
+  await page.route(
+    (url) => url.pathname === '/api/donations/me/sync/chunks',
+    (route) => {
+      const asked = (new URL(route.request().url()).searchParams.get('ids') ?? '').split(',');
+      route.fulfill({
+        json: {
+          subject: donor.id,
+          summary: sync.summary,
+          chunks: sync.chunks.filter((chunk) => asked.includes(chunk.id)),
+          missing: asked.filter((id) => !sync.chunks.some((chunk) => chunk.id === id)),
+        },
+      });
+    },
   );
 }
 

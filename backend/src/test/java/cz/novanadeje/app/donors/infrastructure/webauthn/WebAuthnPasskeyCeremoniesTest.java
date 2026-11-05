@@ -53,6 +53,22 @@ class WebAuthnPasskeyCeremoniesTest {
     }
 
     @Test
+    @DisplayName("Given a passkey whose authenticator reports the hmac-secret extension behind PRF, when it is registered and signs in, then both pass")
+    void should_verify_registration_and_sign_in_when_the_authenticator_data_carries_the_hmac_secret_extension() {
+        SoftwarePasskey device = SoftwarePasskey.forUser(DONOR.value()).withHmacSecretExtension().counting();
+        LinkSecret registration = LinkSecret.generate();
+
+        VerifiedPasskey verified = ceremonies.verifyRegistration(attestation(device.registration(registration.value())), registration);
+        Passkey passkey = Passkey.register(DONOR, verified.credentialId(), verified.credentialData(), verified.signCount(), verified.transports(),
+                "Mac", "nfnn.cz", NOW);
+        LinkSecret signIn = LinkSecret.generate();
+        long signCount = ceremonies.verifySignIn(assertion(device.assertion(signIn.value())), signIn, passkey);
+
+        assertThat(verified.credentialId()).isEqualTo(device.credentialId());
+        assertThat(signCount).isEqualTo(2);
+    }
+
+    @Test
     @DisplayName("Given a passkey made for another site, another challenge or without user verification, when it is registered, then it is rejected")
     void should_reject_registration_when_site_challenge_or_verification_do_not_match() {
         SoftwarePasskey device = SoftwarePasskey.forUser(DONOR.value());

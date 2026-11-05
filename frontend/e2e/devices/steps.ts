@@ -9,6 +9,7 @@ import {
 } from '../baseline/screen-mocks';
 import { administrator, donor, mockDonorApi, session } from '../donor-session';
 import { serveReceiptKeys, serveReceiptStatus, SINGLE_RECEIPT } from '../receipt-verification';
+import { FOUR_DONORS, mockYearlyReceipts } from '../yearly-receipts';
 import type { Ui } from './ui';
 
 export interface Step {
@@ -196,6 +197,15 @@ export const STEPS: Step[] = [
     open: (ui) => donorPage(ui, '/darce/udaje'),
   },
   {
+    id: 'donor-device-data-delete',
+    title: 'the dialog that deletes the data on this device',
+    open: async (ui) => {
+      await donorPage(ui, '/darce/udaje');
+      await ui.click({ css: 'app-device-data-card button', text: 'Smazat data z tohoto zařízení' });
+      await ui.waitVisible({ css: 'dialog[open] h2', text: 'Smazat data z tohoto zařízení?' });
+    },
+  },
+  {
     id: 'donor-menu',
     title: "the donor's account menu",
     open: async (ui) => {
@@ -218,6 +228,15 @@ export const STEPS: Step[] = [
     id: 'admin-donor-detail',
     title: "a donor's card in the administration",
     open: (ui) => adminPage(ui, PETR_DETAIL_PATH),
+  },
+  {
+    id: 'admin-yearly-receipts',
+    title: 'the bulk receipts in the administration',
+    open: async (ui) => {
+      await mockYearlyReceipts(ui.routes, { donors: FOUR_DONORS, erasedDonors: 1 });
+      await adminPage(ui, '/sprava/hromadna-potvrzeni');
+      await ui.waitVisible({ css: '.donors-table tbody tr' });
+    },
   },
   {
     id: 'admin-settings',
