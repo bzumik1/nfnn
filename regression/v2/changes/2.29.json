@@ -1,0 +1,16 @@
+[
+  {
+    "path": "GET /api/admin/donations/receipts/yearly",
+    "scenario": "donations/admin_yearly_receipts: *",
+    "kind": "added",
+    "reason": "Plan v3 slice 2.29: the donors whose received gifts fall in a completed year, each with the count and sum of the gifts and the active yearly receipt, read by the page Hromadná potvrzení and by the connector's nfnn_yearly_receipts; v2 had no bulk receipts",
+    "contract": "docs/api-contract.md, Bulk yearly receipts"
+  },
+  {
+    "path": "POST /api/admin/donations/receipts/yearly",
+    "scenario": "donations/admin_yearly_receipts: *",
+    "kind": "added",
+    "reason": "Plan v3 slice 2.29: the yearly receipts of up to 50 donors issued at once through the single issuer, each outcome with the receipt the administration reads by its id, by the page Hromadná potvrzení and by the connector's nfnn_issue_receipts (Q9: the browser draws one PDF to print, no ZIP)",
+    "contract": "docs/api-contract.md, Bulk yearly receipts"
+  }
+]

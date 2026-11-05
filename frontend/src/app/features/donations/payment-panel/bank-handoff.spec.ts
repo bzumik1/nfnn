@@ -81,6 +81,18 @@ describe('Given a payment handed to a bank app', () => {
       });
     });
 
+    it('when the site could also open the payment itself, then the phone still offers the file and the site is not asked', async () => {
+      const opened: string[] = [];
+
+      const outcome = await handOver(spaydFile(SPAYD), 'QR platba', () => {
+        opened.push('asked');
+        return Promise.resolve('opened');
+      });
+
+      expect(outcome).toBe('shared');
+      expect(opened).toEqual([]);
+    });
+
     it('when the file is handed over, then the phone offers it under its title and nothing downloads', async () => {
       const downloads = recordDownloads();
       const file = spaydFile(SPAYD);
@@ -125,6 +137,37 @@ describe('Given a payment handed to a bank app', () => {
       expect(outcome).toBe('downloaded');
       expect(downloads).toEqual([{ name: 'platba.spayd', href: 'blob:nfnn/1' }]);
       expect(createdUrls).toEqual([file]);
+    });
+
+    it('when the site opens the payment itself, then it is opened there and nothing downloads', async () => {
+      const downloads = recordDownloads();
+
+      const outcome = await handOver(spaydFile(SPAYD), 'QR platba', () =>
+        Promise.resolve('opened'),
+      );
+
+      expect(outcome).toBe('opened');
+      expect(downloads).toEqual([]);
+    });
+
+    it('when the site cannot open the payment itself, then the file downloads as before', async () => {
+      const downloads = recordDownloads();
+
+      const outcome = await handOver(spaydFile(SPAYD), 'QR platba', () => Promise.resolve(null));
+
+      expect(outcome).toBe('downloaded');
+      expect(downloads.map((download) => download.name)).toEqual(['platba.spayd']);
+    });
+
+    it('when the visitor moved on while the site was getting ready, then neither the payment opens nor the file downloads', async () => {
+      const downloads = recordDownloads();
+
+      const outcome = await handOver(spaydFile(SPAYD), 'QR platba', () =>
+        Promise.resolve('dismissed'),
+      );
+
+      expect(outcome).toBe('dismissed');
+      expect(downloads).toEqual([]);
     });
   });
 

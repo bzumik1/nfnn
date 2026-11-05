@@ -70,6 +70,11 @@ declare module 'pdfkit' {
     margins: { top: number; right: number; bottom: number; left: number };
   }
 
+  interface PdfImage {
+    readonly width: number;
+    readonly height: number;
+  }
+
   class PDFDocument {
     constructor(options?: PdfDocumentOptions);
     page: PdfPage;
@@ -111,7 +116,14 @@ declare module 'pdfkit' {
     translate(x: number, y: number): this;
     scale(x: number, y?: number): this;
     roundedRect(x: number, y: number, width: number, height: number, radius: number): this;
-    image(source: Uint8Array | ArrayBuffer, x: number, y: number, options: PdfImageOptions): this;
+    openImage(source: Uint8Array | ArrayBuffer): PdfImage;
+    flushPages(): void;
+    image(
+      source: Uint8Array | ArrayBuffer | PdfImage,
+      x: number,
+      y: number,
+      options: PdfImageOptions,
+    ): this;
     link(
       x: number,
       y: number,

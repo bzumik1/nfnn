@@ -37,6 +37,7 @@ import {
   sharesImages,
   spaydFile,
 } from './bank-handoff';
+import { LocalPaymentRoute } from './local-payment-route';
 import { ChosenAmount, ChosenAmountStore } from './chosen-amount';
 
 const DEFAULT_AMOUNT = 500;
@@ -88,6 +89,7 @@ export class PaymentPanel {
   private readonly store = inject(PaymentDetailsStore);
   private readonly injector = inject(Injector);
   private readonly chosenAmount = inject(ChosenAmountStore);
+  private readonly localPaymentRoute = inject(LocalPaymentRoute);
   protected readonly compact = inject(CompactLayout).isCompact;
   private readonly bankLabel = viewChild<ElementRef<HTMLElement>>('bankLabel');
   private readonly qrBox = viewChild<ElementRef<HTMLElement>>('qrBox');
@@ -319,13 +321,30 @@ export class PaymentPanel {
     this.clearNotices();
     this.handingOff.set(true);
     try {
-      const handoff = await handOver(spaydFile(payment.spayd), this.shareTitle);
+      const handoff = await handOver(spaydFile(payment.spayd), this.shareTitle, () =>
+        this.openOnDevice(payment.spayd, () => this.payment() === payment),
+      );
       if (this.payment() === payment) {
         this.handoffNotice.set(bankNotice(handoff));
       }
     } finally {
       this.handingOff.set(false);
     }
+  }
+
+  private async openOnDevice(
+    spaydText: string,
+    stillChosen: () => boolean,
+  ): Promise<Handoff | null> {
+    const id = await this.localPaymentRoute.reserve(spaydText);
+    if (!stillChosen()) {
+      return 'dismissed';
+    }
+    if (id === null) {
+      return null;
+    }
+    this.localPaymentRoute.open(id);
+    return 'opened';
   }
 
   async sendQrImage(): Promise<void> {
@@ -454,6 +473,8 @@ function bankNotice(handoff: Handoff): HandoffNotice | null {
       return null;
     case 'downloaded':
       return 'spaydDownloaded';
+    case 'opened':
+      return 'bankNotOpened';
     default:
       return 'bankNotOpened';
   }

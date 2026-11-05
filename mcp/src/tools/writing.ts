@@ -7,6 +7,7 @@ import {
   asRecord,
   plain,
   receiptView,
+  yearlyReceiptsView,
   PROJECT_ORDERS,
   text,
   ToolRefusal,
@@ -638,6 +639,43 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
         },
         `donor ${donorId}`,
       ),
+  );
+
+  server.registerTool(
+    'nfnn_issue_receipts',
+    {
+      title: 'Vystavit roční potvrzení hromadně',
+      description:
+        'Issues the yearly receipts of a completed year to up to 50 donors at once (`donorIds`, each once), as "Vystavit a připravit PDF k tisku" on the page "Hromadná potvrzení" at /sprava does; nfnn_yearly_receipts lists the donors of a year. Each donor goes through the same issuer as nfnn_issue_receipt, one after another: a first receipt is ISSUED with a new number, a receipt whose data are unchanged comes back UNCHANGED, and a donor is SKIPPED with the problem code when nothing can be issued: donations/donor-erased, donations/donor-not-found, donations/yearly-receipt-not-available (no gift that year), donations/receipt-issue-limit, and donations/receipt-replacement-in-browser-only when the donor\'s name, address or gifts changed since the active receipt, whose replacement only an administrator on the web at /sprava issues (the active receipt stays valid). Calling it again changes nothing that was issued. The answer lists, in the order asked, each donor\'s outcome, problem and receipt id and number (read one whole with nfnn_receipt), with the counts. The PDF to print is drawn only in a browser. New numbers are audited as ISSUE_RECEIPT, and the run as ISSUE_RECEIPTS with its counts, naming this application.',
+      inputSchema: z.object({
+        year: z
+          .number()
+          .int()
+          .min(2000)
+          .max(2100)
+          .describe('The completed year of the yearly receipts.'),
+        donorIds: z.array(UUID).min(1).max(50).describe('The donors, at most 50, each once.'),
+      }),
+      annotations: { ...WRITING, idempotentHint: true },
+    },
+    async ({ year, donorIds }, ctx) =>
+      answerChange(deps, ctx, 'nfnn_issue_receipts', async ({ apiToken }) => {
+        const ids = donorIds.map((id) => id.toLowerCase());
+        if (new Set(ids).size !== ids.length) {
+          throw new ToolRefusal(
+            'repeated-donor',
+            'Name each donor in `donorIds` once; nothing was issued.',
+          );
+        }
+        return text(
+          yearlyReceiptsView(
+            await backend.post('/api/admin/donations/receipts/yearly', apiToken, {
+              year,
+              donorIds: ids,
+            }),
+          ),
+        );
+      }),
   );
 
   server.registerTool(

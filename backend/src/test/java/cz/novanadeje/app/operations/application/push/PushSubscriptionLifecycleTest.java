@@ -5,6 +5,7 @@ import cz.novanadeje.app.operations.domain.push.PushClientKeys;
 import cz.novanadeje.app.operations.domain.push.PushEndpoint;
 import cz.novanadeje.app.operations.domain.push.PushSubscription;
 import cz.novanadeje.app.shared.application.event.AdministrationRevoked;
+import cz.novanadeje.app.shared.application.event.DeviceSignedOut;
 import cz.novanadeje.app.shared.application.event.DonorErased;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -47,8 +48,24 @@ class PushSubscriptionLifecycleTest {
         assertThat(subscriptions.all()).containsExactly(petr);
     }
 
+    @Test
+    @DisplayName("Given two devices of one administrator, when one device signs out, then only that device's subscription goes")
+    void should_remove_subscription_of_device_when_device_signed_out_given_two_devices_of_one_administrator() {
+        UUID telefon = UUID.randomUUID();
+        subscribed(JANA, telefon, "jana-telefon");
+        PushSubscription pocitac = subscribed(JANA, UUID.randomUUID(), "jana-pocitac");
+
+        lifecycle.on(new DeviceSignedOut(JANA, telefon, NOW));
+
+        assertThat(subscriptions.all()).containsExactly(pocitac);
+    }
+
     private PushSubscription subscribed(UUID administrator, String name) {
-        PushSubscription subscription = PushSubscription.subscribe(administrator, UUID.randomUUID(),
+        return subscribed(administrator, UUID.randomUUID(), name);
+    }
+
+    private PushSubscription subscribed(UUID administrator, UUID device, String name) {
+        PushSubscription subscription = PushSubscription.subscribe(administrator, device,
                 new PushEndpoint("https://fcm.googleapis.com/fcm/send/" + name), CLIENT, PushAlerts.ALL, NOW);
         subscriptions.save(subscription);
         return subscription;

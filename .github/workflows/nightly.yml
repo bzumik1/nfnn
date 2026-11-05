@@ -94,9 +94,53 @@ jobs:
           path: backend/build/reports/
           retention-days: 14
 
+  bulk-receipts:
+    name: Hromadná potvrzení (300)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "26"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install the frontend's dependencies and Playwright's Chromium headless shell
+        run: |
+          npm ci
+          npx playwright install --with-deps --only-shell chromium
+
+      - name: Build the frontend for production
+        run: npm run build
+
+      - name: The browser issues and draws 300 yearly receipts into one PDF at a quarter of the CPU within the budget
+        run: npx playwright test e2e/bulk-receipts-load.spec.ts --project=chromium
+        env:
+          BULK_RECEIPTS_LOAD: "1"
+          E2E_DIST: dist/frontend/browser
+          CI: "1"
+
+      - name: Keep the Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: hromadna-potvrzeni
+          path: |
+            frontend/playwright-report/
+            frontend/test-results/
+          retention-days: 14
+          if-no-files-found: ignore
+
   report:
     name: Hlášení
-    needs: [public-screens, release, sync-convergence]
+    needs: [public-screens, release, sync-convergence, bulk-receipts]
     if: ${{ !cancelled() && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -115,6 +159,7 @@ jobs:
               public-screens) echo "Veřejné stránky proti v2|veřejný web|další řez, který mění veřejné stránky nebo jejich vzhled (2.4, 2.5, 2.6, 2.7, 2.22, 2.26a)" ;;
               release) echo "Zkouška vydání (nasazená revize a latest)|provoz, schéma a obrazy|další řez s changesetem Liquibase nebo se změnou obrazů, compose, záloh či importu (2.3, 2.4, 2.9, 2.12, 2.17, 2.27)" ;;
               sync-convergence) echo "Konvergence synchronizace (300 semínek)|kopie dat v zařízení dárce a její synchronizace|další řez, který mění synchronizaci nebo kopii v zařízení (2.13, 2.17)" ;;
+              bulk-receipts) echo "Hromadná potvrzení (300 potvrzení při čtvrtinovém výkonu)|kreslení potvrzení v prohlížeči a hromadná potvrzení|další řez, který mění kreslení potvrzení nebo hromadná potvrzení (2.19)" ;;
               *) echo "$1|neurčeno|doplňte job do tabulky v nightly.yml a v .claude/rules/testing.md" ;;
             esac
           }

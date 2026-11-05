@@ -56,6 +56,7 @@ import {
   yearlyLine,
 } from './receipt-donations';
 import { answerReceiptIssuing, RECEIPT_ISSUING_URL } from './receipt-issuing';
+import { FOUR_DONORS, mockYearlyReceipts } from './yearly-receipts';
 import {
   noSignatory,
   refusedVector,
@@ -1345,6 +1346,29 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
       .getByRole('button', { name: 'Vrátit přiřazení darů' })
       .click();
     await expect(page.locator('tbody tr').first()).toContainText('odpověď se změní na Ne');
+
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when an administrator prints the yearly receipts in bulk, then the page, the list and the result break no rule', async ({
+    page,
+  }) => {
+    await mockYearlyReceipts(page, { donors: FOUR_DONORS, erasedDonors: 1 });
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.goto('/');
+    await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
+    await page.goto('/sprava/hromadna-potvrzeni');
+    await expect(page.getByRole('heading', { level: 1, name: 'Hromadná potvrzení' })).toBeFocused();
+    await expect(page.locator('.donors-table tbody tr')).toHaveCount(4);
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.getByRole('button', { name: 'Vystavit a připravit PDF k tisku' }).click();
+    await expect(page.locator('app-live-notice').getByRole('status')).toHaveText(
+      'PDF k tisku je připravené: obsahuje 3 potvrzení.',
+    );
 
     expect(await violations(page)).toEqual([]);
   });

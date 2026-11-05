@@ -172,6 +172,17 @@ Feature: An administrator turns push alerts on for a device, chooses which alert
     And no push subscription of "Petr" is stored
     And 1 push subscription of "Jana" is stored
 
+  Scenario: A device that signs out, or is signed out from another device, loses its push subscription, and the other devices keep theirs
+    Given "Jana" turned push alerts on for the device "telefon" at "https://fcm.googleapis.com/fcm/send/jana-telefon"
+    And "Jana" turned push alerts on for the device "notebook" at "https://fcm.googleapis.com/fcm/send/jana-notebook"
+    And "Jana" turned push alerts on for the device "tablet" at "https://fcm.googleapis.com/fcm/send/jana-tablet"
+    When "Jana" signs out the device "telefon" from the device "notebook"
+    Then the response status is 204
+    And "Jana" has push subscriptions on the devices "notebook, tablet"
+    When "Jana" signs out every other device from the device "notebook"
+    Then the response status is 204
+    And "Jana" has push subscriptions on the devices "notebook"
+
   Scenario: A donor without the administrator role and a visitor without a token are refused
     Given a person "Petr" is registered
     When "Petr" asks for the push settings

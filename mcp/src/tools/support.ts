@@ -123,6 +123,21 @@ export function receiptView(answer: unknown): Record<string, unknown> {
   return { ...issued, receipt, verificationLink: asRecord(receipt['verification'])['qrText'] };
 }
 
+export function yearlyReceiptsView(answer: unknown): Record<string, unknown> {
+  const run = asRecord(answer);
+  const results = Array.isArray(run['results']) ? (run['results'] as unknown[]) : [];
+  return {
+    ...run,
+    results: results.map((entry) => {
+      const { receipt: issued, ...result } = asRecord(entry);
+      const receipt = asRecord(issued);
+      return issued === null || issued === undefined
+        ? { ...result, receiptId: null, number: null }
+        : { ...result, receiptId: receipt['id'], number: receipt['number'] };
+    }),
+  };
+}
+
 export function asRecord(value: unknown): Record<string, unknown> {
   return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
 }
