@@ -21,22 +21,15 @@
     </svg>
     <span i18n="@@ui.share.action">Sdílet</span>
   </button>
-  @if (refusalShown()) {
+}
+@if (refused()) {
+  @for (refusal of [refusals()]; track refusal) {
     <p class="share-failed" role="alert" i18n="@@ui.share.failed">
       Sdílení se nepodařilo. Odkaz na stránku si můžete zkopírovat.
     </p>
   }
-  @if (refused()) {
-    <app-copy-button
-      [value]="url()"
-      [what]="copyWhat"
-      [label]="copyLabel"
-      [copiedStatus]="copiedStatus"
-      [failedStatus]="copyFailedStatus"
-      align="start"
-    />
-  }
-} @else {
+}
+@if (!canShare() || refused()) {
   <app-copy-button
     [value]="url()"
     [what]="copyWhat"

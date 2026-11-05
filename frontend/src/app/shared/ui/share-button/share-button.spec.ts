@@ -137,7 +137,7 @@ describe('Given a share button for a news article', () => {
       expect(writeText).toHaveBeenCalledWith(URL);
     });
 
-    it('and the device refuses, then the visitor tries again and closes the sheet, then the offer to copy the link stays', async () => {
+    it('and the device refuses and the visitor closes the next sheet, then the refusal and the offer to copy the link stay', async () => {
       share.mockRejectedValueOnce(new DOMException('Not allowed', 'NotAllowedError'));
       await press(buttons()[0]);
 
@@ -153,22 +153,33 @@ describe('Given a share button for a news article', () => {
       fixture.detectChanges();
 
       expect(buttonTexts()).toEqual(['Sdílet', 'Kopírovat odkaz']);
+      expect(alert()).toBe('Sdílení se nepodařilo. Odkaz na stránku si můžete zkopírovat.');
     });
 
-    it('and the device refuses twice in a row, then the second refusal is announced again', async () => {
+    it('and the device refuses at once twice in a row, then the second refusal is a new alert', async () => {
       share.mockRejectedValue(new DOMException('Not allowed', 'NotAllowedError'));
       await press(buttons()[0]);
+      const first = fixture.nativeElement.querySelector('[role="alert"]') as HTMLElement;
 
-      buttons()[0].click();
-      fixture.detectChanges();
+      await press(buttons()[0]);
+      const second = fixture.nativeElement.querySelector('[role="alert"]') as HTMLElement;
 
-      expect(alert()).toBe('');
-      expect(buttonTexts()).toEqual(['Sdílet', 'Kopírovat odkaz']);
-
-      await fixture.whenStable();
-      fixture.detectChanges();
-
+      expect(first).not.toBeNull();
+      expect(second).not.toBe(first);
+      expect(first.isConnected).toBe(false);
       expect(alert()).toBe('Sdílení se nepodařilo. Odkaz na stránku si můžete zkopírovat.');
+    });
+
+    it('and the device refuses and the browser refuses to copy too, then it points to the address bar', async () => {
+      share.mockRejectedValue(new DOMException('Not allowed', 'NotAllowedError'));
+      writeText.mockRejectedValue(new Error('denied'));
+      await press(buttons()[0]);
+
+      await press(buttons()[1]);
+
+      expect(statuses()).toEqual([
+        'Zkopírovat se nepodařilo. Odkaz najdete v adresním řádku prohlížeče.',
+      ]);
     });
 
     it('and the device refuses and later shares, then the offer to copy the link goes away', async () => {
