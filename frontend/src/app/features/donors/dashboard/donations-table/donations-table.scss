@@ -1,5 +1,10 @@
 @use 'breakpoints' as bp;
 
+:host {
+  display: block;
+  container: donations-table / inline-size;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -119,8 +124,9 @@ tr.is-verification td.amount {
   }
 }
 
-@include bp.down(cards) {
+@mixin table-as-cards {
   thead {
+    display: block;
     position: absolute;
     width: 1px;
     height: 1px;
@@ -137,7 +143,7 @@ tr.is-verification td.amount {
 
   tbody tr {
     display: grid;
-    grid-template-columns: 1fr auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: var(--space-1-5) var(--space-3);
     padding: var(--space-3-5) var(--space-5);
 
@@ -175,6 +181,7 @@ tr.is-verification td.amount {
 
   td.receipt {
     grid-column: 1 / -1;
+    min-width: 0;
   }
 
   .pairing-tag {
@@ -190,4 +197,12 @@ tr.is-verification td.amount {
   .row-receipt-error {
     max-width: none;
   }
+}
+
+@include bp.down(cards) {
+  @include table-as-cards;
+}
+
+@include bp.container-down(donations-table, phone) {
+  @include table-as-cards;
 }

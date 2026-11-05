@@ -230,9 +230,14 @@
   font-weight: var(--weight-semibold);
 }
 
-@include bp.down(cards) {
+.admin-overview {
+  container: admin-overview / inline-size;
+}
+
+@mixin overview-as-cards {
   .overview-table {
     thead {
+      display: block;
       position: absolute;
       width: 1px;
       height: 1px;
@@ -298,6 +303,14 @@
       margin-bottom: var(--space-0-5);
     }
   }
+}
+
+@include bp.down(cards) {
+  @include overview-as-cards;
+}
+
+@include bp.container-down(admin-overview, phone) {
+  @include overview-as-cards;
 }
 
 .admin-failure-message {
