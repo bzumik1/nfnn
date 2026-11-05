@@ -36,8 +36,9 @@ test.describe('Given a visitor whose page was opened before the server changed i
     });
 
     await page.goto('/');
-    const notice = page.getByRole('status').filter({ hasText: NOTICE });
+    const notice = page.locator('[aria-live="polite"]').filter({ hasText: NOTICE });
     await expect(notice.getByText(NOTICE)).toBeVisible();
+    await expect(page.getByRole('status').filter({ hasText: NOTICE })).toHaveCount(0);
 
     await page.locator('#contact-name').fill('Jana Nováková');
     await page.locator('#contact-email').fill('jana@example.cz');
@@ -53,6 +54,6 @@ test.describe('Given a visitor whose page was opened before the server changed i
     ]);
 
     await expect(page.locator('#contact-name')).toBeVisible();
-    await expect(page.getByRole('status').filter({ hasText: NOTICE })).toHaveCount(0);
+    await expect(page.getByText(NOTICE)).toHaveCount(0);
   });
 });

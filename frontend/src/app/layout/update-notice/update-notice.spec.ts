@@ -49,8 +49,8 @@ describe('Given the notice that the app must load a new version', () => {
   });
 
   const element = () => fixture.nativeElement as HTMLElement;
-  const status = () => element().querySelector('[role="status"]') as HTMLElement;
-  const text = () => status().textContent?.replace(/\s+/g, ' ').trim();
+  const region = () => element().querySelector('[aria-live="polite"]') as HTMLElement;
+  const text = () => region().textContent?.replace(/\s+/g, ' ').trim();
   const button = () =>
     Array.from(element().querySelectorAll('button')).find(
       (candidate) => candidate.textContent?.trim() === 'Načíst novou verzi',
@@ -62,10 +62,15 @@ describe('Given the notice that the app must load a new version', () => {
     await fixture.whenStable();
   }
 
-  it('when the server speaks the API the app is built for, then its status region is there and stays quiet', async () => {
+  it('when the page is shown, then the notice adds no status region beside the ones of the page', () => {
+    expect(element().querySelector('[role="status"]')).toBeNull();
+  });
+
+  it('when the server speaks the API the app is built for, then its live region is there and stays quiet', async () => {
     await serverSpeaks(API_GENERATION);
 
-    expect(status()).not.toBeNull();
+    expect(region()).not.toBeNull();
+    expect(region().getAttribute('aria-atomic')).toBe('true');
     expect(text()).toBe('');
     expect(document.documentElement.classList).not.toContain('has-floating-notice');
   });
@@ -73,7 +78,7 @@ describe('Given the notice that the app must load a new version', () => {
   describe('when the server speaks another API generation', () => {
     beforeEach(() => serverSpeaks(API_GENERATION + 1));
 
-    it('then the status region says so and offers to load the new version, and the page keeps room for it', () => {
+    it('then the live region says so and offers to load the new version, and the page keeps room for it', () => {
       expect(text()).toBe(`${MESSAGE} Načíst novou verzi`);
       expect(button()).toBeDefined();
       expect(document.documentElement.classList).toContain('has-floating-notice');
