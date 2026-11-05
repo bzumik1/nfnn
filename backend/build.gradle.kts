@@ -22,7 +22,7 @@ extra["cucumberVersion"] = "7.34.9"
 extra["archunitVersion"] = "1.5.1"
 extra["fioApiVersion"] = "1.0.0"
 extra["webpImageioVersion"] = "0.3.3"
-extra["webauthn4jVersion"] = "0.31.11.RELEASE"
+extra["webauthn4jVersion"] = "0.32.0.RELEASE"
 
 val mockitoAgent: Configuration = configurations.create("mockitoAgent")
 
