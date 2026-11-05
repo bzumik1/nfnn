@@ -6,8 +6,8 @@ import { AuthStore } from '../../../../core/auth/auth-store';
 import { deviceAccountOf } from '../../../../core/auth/session-device';
 import { SignedOutNotice } from '../../../../core/auth/signed-out-notice';
 import { DeviceVault } from '../../../../core/device/store/device-vault';
-import { Connectivity } from '../../../../core/navigation/connectivity';
 import { LiveNotice, type Notice } from '../../../../shared/ui/live-notice/live-notice';
+import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
 import {
   DonorCopyDownload,
   type DownloadOutcome,
@@ -17,7 +17,7 @@ import { DeleteDeviceDataDialog } from './delete-device-data-dialog';
 
 @Component({
   selector: 'app-device-data-card',
-  imports: [DeleteDeviceDataDialog, LiveNotice],
+  imports: [DeleteDeviceDataDialog, LiveNotice, NeedsConnection],
   templateUrl: './device-data-card.html',
   styleUrl: './device-data-card.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -26,7 +26,6 @@ export class DeviceDataCard {
   private readonly auth = inject(AuthStore);
   private readonly vault = inject(DeviceVault);
   private readonly download = inject(DonorCopyDownload);
-  private readonly connectivity = inject(Connectivity);
   private readonly router = inject(Router);
   private readonly signedOut = inject(SignedOutNotice);
 
@@ -53,13 +52,6 @@ export class DeviceDataCard {
 
   reload(): void {
     if (this.reloading() || this.deleting()) {
-      return;
-    }
-    if (this.connectivity.isOffline()) {
-      this.notice.set({
-        kind: 'alert',
-        text: $localize`:@@donor.deviceData.needsConnection:Bez připojení k internetu data načíst nejde. Připojte se a zkuste to znovu.`,
-      });
       return;
     }
     this.reloading.set(true);

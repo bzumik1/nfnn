@@ -14,6 +14,8 @@ export const WORKS_WITHOUT_CONNECTION = {
     'AuthStore.logout forgets the session on the device when the server cannot be reached, so signing out works offline.',
   'features/donors/connect-app/connect-app.html#switchAccount':
     'It signs out through AuthStore.logout, which works offline, and then opens the sign-in dialog.',
+  'features/donors/dashboard/device-data-card/delete-device-data-dialog.html':
+    'Deleting the copy on this device is local, and the sign-out after it goes through AuthStore.logout, which works offline, so a device without a connection can still drop its data.',
   'features/operations/setup/first-setup.html#openRestore':
     'It only switches the wizard to the restore panel.',
   'features/operations/setup/first-setup.html#closeRestore':
