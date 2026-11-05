@@ -114,6 +114,12 @@
 .receipt-ready-action {
   display: grid;
   justify-items: end;
+  min-width: 0;
+}
+
+.receipt-ready-pdf {
+  max-width: 100%;
+  white-space: normal;
 }
 
 .receipt-saved {

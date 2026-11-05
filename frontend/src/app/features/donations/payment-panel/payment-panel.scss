@@ -2,6 +2,7 @@
 
 :host {
   display: block;
+  container: payment-panel / inline-size;
 }
 
 .bank {
@@ -247,7 +248,7 @@
   gap: var(--space-2) var(--space-3);
 }
 
-@include bp.down(tablet) {
+@mixin stacked-bank-rows {
   .qr {
     align-items: flex-start;
   }
@@ -269,6 +270,7 @@
 
   .bank-value {
     min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   app-copy-button {
@@ -276,7 +278,15 @@
   }
 }
 
-@include bp.down(phone) {
+@include bp.down(tablet) {
+  @include stacked-bank-rows;
+}
+
+@include bp.container-down(payment-panel, phone) {
+  @include stacked-bank-rows;
+}
+
+@mixin qr-above-caption {
   .qr {
     flex-direction: column;
     align-items: stretch;
@@ -285,4 +295,12 @@
   .qr-code {
     align-self: center;
   }
+}
+
+@include bp.down(phone) {
+  @include qr-above-caption;
+}
+
+@include bp.container-down(payment-panel, phone) {
+  @include qr-above-caption;
 }
