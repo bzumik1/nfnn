@@ -18,6 +18,7 @@ export const SETTING_LABELS: Readonly<Record<SettingName, string>> = {
   PAIRING_EXCLUDED_ACCOUNTS: $localize`:@@operations.setting.PAIRING_EXCLUDED_ACCOUNTS:Účty, podle kterých se nepáruje`,
   RECEIPT_FIRST_YEAR: $localize`:@@operations.setting.RECEIPT_FIRST_YEAR:Potvrzení na webu od roku`,
   ADMIN_EMAILS: $localize`:@@operations.setting.ADMIN_EMAILS:E-mail prvního správce`,
+  SESSION_REMEMBER_DAYS: $localize`:@@operations.setting.SESSION_REMEMBER_DAYS:Zapamatované přihlášení (dní)`,
 };
 
 export function settingLabel(name: string): string {

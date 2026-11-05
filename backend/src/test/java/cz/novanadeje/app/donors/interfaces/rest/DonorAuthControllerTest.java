@@ -41,7 +41,7 @@ class DonorAuthControllerTest {
             signInLimiter.check(ADDRESS);
         }
 
-        assertThatThrownBy(() -> controller.login(new LoginRequest("jana@example.cz", "correct horse battery"), requestFrom(ADDRESS)))
+        assertThatThrownBy(() -> controller.login(new LoginRequest("jana@example.cz", "correct horse battery", null), requestFrom(ADDRESS)))
                 .isInstanceOf(RateLimitExceededException.class);
 
         verifyNoInteractions(authentication, registration);
@@ -54,7 +54,7 @@ class DonorAuthControllerTest {
             secondFactorLimiter.check(ADDRESS);
         }
 
-        assertThatThrownBy(() -> controller.completeSecondFactor(new SecondFactorLoginRequest("c".repeat(43), "123456"), requestFrom(ADDRESS)))
+        assertThatThrownBy(() -> controller.completeSecondFactor(new SecondFactorLoginRequest("c".repeat(43), "123456", null), requestFrom(ADDRESS)))
                 .isInstanceOf(RateLimitExceededException.class);
 
         verifyNoInteractions(authentication, registration);

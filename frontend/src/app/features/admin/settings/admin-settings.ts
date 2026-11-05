@@ -55,7 +55,13 @@ interface Confirmation {
 }
 
 type SectionId =
-  'potvrzeni' | 'kontaktni-formular' | 'odesilatel' | 'adresa-webu' | 'odesilani-emailu' | 'banka';
+  | 'potvrzeni'
+  | 'kontaktni-formular'
+  | 'odesilatel'
+  | 'prihlaseni'
+  | 'adresa-webu'
+  | 'odesilani-emailu'
+  | 'banka';
 
 interface SectionPlan {
   id: SectionId;
@@ -104,6 +110,12 @@ const EVERYDAY: readonly SectionPlan[] = [
     title: $localize`:@@admin.settings.section.sender:Odesílatel e-mailů`,
     intro: $localize`:@@admin.settings.section.sender.intro:Z této adresy odcházejí všechny e-maily webu: potvrzení registrace, obnova hesla i měsíční přehled.`,
     names: ['MAIL_FROM'],
+  },
+  {
+    id: 'prihlaseni',
+    title: $localize`:@@admin.settings.section.signIn:Přihlášení`,
+    intro: $localize`:@@admin.settings.section.signIn.intro:Jak dlouho zůstane dárce nebo správce přihlášený v prohlížeči, když při přihlášení zaškrtne „Zapamatovat si mě“. Bez zaškrtnutí skončí zavřením prohlížeče, nejpozději po 12 hodinách bez používání; v nainstalované aplikaci vydrží 400 dní.`,
+    names: ['SESSION_REMEMBER_DAYS'],
   },
 ];
 
@@ -160,6 +172,7 @@ const HINTS: Partial<Readonly<Record<SettingName, string>>> = {
   FIO_HISTORY_FROM: $localize`:@@admin.settings.hint.FIO_HISTORY_FROM:Prázdné znamená posledních 89 dní. Starší platby Fio vydá jen deset minut po odemčení historie v internetovém bankovnictví.`,
   PAIRING_EXCLUDED_ACCOUNTS: $localize`:@@admin.settings.hint.PAIRING_EXCLUDED_ACCOUNTS:Čísla účtů oddělená čárkou, třeba 2900233333/2010. Platby z nich se párují jen podle variabilního symbolu.`,
   RECEIPT_FIRST_YEAR: $localize`:@@admin.settings.hint.RECEIPT_FIRST_YEAR:Za dřívější roky si dárci potvrzení na webu nestáhnou.`,
+  SESSION_REMEMBER_DAYS: $localize`:@@admin.settings.hint.SESSION_REMEMBER_DAYS:Počet dní od 1 do 30 od posledního použití. Výchozí je 14. Změna platí pro nová přihlášení i pro ta, která se od ní obnoví.`,
 };
 
 const INPUTS: Partial<Readonly<Record<SettingName, Input>>> = {

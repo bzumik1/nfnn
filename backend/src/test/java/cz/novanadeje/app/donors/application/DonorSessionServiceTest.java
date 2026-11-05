@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.SessionKind;
 import cz.novanadeje.app.donors.domain.DeviceBrowser;
 import cz.novanadeje.app.donors.domain.DeviceDescription;
 import cz.novanadeje.app.donors.domain.DeviceId;
@@ -70,7 +71,7 @@ class DonorSessionServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new DonorSessionService(refreshTokens, devices, signOuts, donors, accessTokens, new DonorSessionProperties(REFRESH_TTL),
+        service = new DonorSessionService(refreshTokens, devices, signOuts, donors, accessTokens, new DonorSessionProperties(REFRESH_TTL, null),
                 Clock.fixed(NOW, ZoneOffset.UTC));
         lenient().when(devices.findById(DEVICE)).thenReturn(Optional.of(signedInDevice()));
     }
@@ -85,7 +86,7 @@ class DonorSessionServiceTest {
     void should_issue_tokens_and_store_hash_when_signed_in() {
         when(accessTokens.issue(eq(DONOR), eq(Set.of(Role.DONOR)), any(DeviceId.class), eq(NOW))).thenReturn(new IssuedAccessToken("access", NOW.plus(Duration.ofMinutes(15))));
 
-        IssuedTokens tokens = service.signIn(donor(), false, DeviceDescription.UNKNOWN);
+        IssuedTokens tokens = service.signIn(donor(), false, DeviceDescription.UNKNOWN, SessionKind.REMEMBERED);
 
         ArgumentCaptor<RefreshToken> stored = ArgumentCaptor.forClass(RefreshToken.class);
         verify(refreshTokens).save(stored.capture());
@@ -105,7 +106,7 @@ class DonorSessionServiceTest {
         when(accessTokens.issue(eq(DONOR), eq(Set.of(Role.DONOR)), any(DeviceId.class), eq(NOW))).thenReturn(new IssuedAccessToken("access2", NOW.plus(Duration.ofMinutes(15))));
         when(refreshTokens.markUsed(existing.id(), NOW)).thenReturn(true);
 
-        RefreshedSession refreshed = service.refresh(secret.value(), DeviceDescription.UNKNOWN);
+        RefreshedSession refreshed = service.refresh(secret.value(), SessionCookie.BROWSER, DeviceDescription.UNKNOWN);
 
         verify(refreshTokens).markUsed(existing.id(), NOW);
         verify(signOuts, never()).endAllOf(any(), any(), any());
@@ -119,7 +120,7 @@ class DonorSessionServiceTest {
     void should_record_sign_in_when_signed_in_given_administrator_with_second_factor() {
         when(accessTokens.issue(eq(DONOR), eq(Set.of(Role.DONOR, Role.ADMIN)), any(DeviceId.class), eq(NOW))).thenReturn(new IssuedAccessToken("access", NOW.plus(Duration.ofMinutes(15))));
 
-        IssuedTokens tokens = service.signIn(administrator(), true, DeviceDescription.UNKNOWN);
+        IssuedTokens tokens = service.signIn(administrator(), true, DeviceDescription.UNKNOWN, SessionKind.REMEMBERED);
 
         verify(donors).recordSignIn(DONOR, NOW);
         assertThat(tokens.roles()).containsExactlyInAnyOrder(Role.DONOR, Role.ADMIN);
@@ -130,7 +131,7 @@ class DonorSessionServiceTest {
     void should_not_record_sign_in_when_signed_in_given_administrator_without_second_factor() {
         when(accessTokens.issue(eq(DONOR), eq(Set.of(Role.DONOR)), any(DeviceId.class), eq(NOW))).thenReturn(new IssuedAccessToken("access", NOW.plus(Duration.ofMinutes(15))));
 
-        service.signIn(administrator(), false, DeviceDescription.UNKNOWN);
+        service.signIn(administrator(), false, DeviceDescription.UNKNOWN, SessionKind.REMEMBERED);
 
         verify(donors, never()).recordSignIn(any(), any());
     }
@@ -140,7 +141,7 @@ class DonorSessionServiceTest {
     void should_not_record_sign_in_when_signed_in_given_plain_donor() {
         when(accessTokens.issue(eq(DONOR), eq(Set.of(Role.DONOR)), any(DeviceId.class), eq(NOW))).thenReturn(new IssuedAccessToken("access", NOW.plus(Duration.ofMinutes(15))));
 
-        service.signIn(donor(), true, DeviceDescription.UNKNOWN);
+        service.signIn(donor(), true, DeviceDescription.UNKNOWN, SessionKind.REMEMBERED);
 
         verify(donors, never()).recordSignIn(any(), any());
     }
@@ -154,7 +155,7 @@ class DonorSessionServiceTest {
         when(donors.findById(DONOR)).thenReturn(Optional.of(donor()));
         when(refreshTokens.markUsed(existing.id(), NOW)).thenReturn(false);
 
-        assertThatThrownBy(() -> service.refresh(secret.value(), DeviceDescription.UNKNOWN))
+        assertThatThrownBy(() -> service.refresh(secret.value(), SessionCookie.BROWSER, DeviceDescription.UNKNOWN))
                 .isInstanceOf(InvalidRefreshToken.class);
 
         verify(signOuts).endAllOf(DONOR, DeviceSignOutReason.REPLAY, NOW);
@@ -169,7 +170,7 @@ class DonorSessionServiceTest {
         used.markUsed(NOW.minus(Duration.ofHours(1)));
         when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(used));
 
-        assertThatThrownBy(() -> service.refresh(secret.value(), DeviceDescription.UNKNOWN))
+        assertThatThrownBy(() -> service.refresh(secret.value(), SessionCookie.BROWSER, DeviceDescription.UNKNOWN))
                 .isInstanceOf(InvalidRefreshToken.class);
 
         verify(signOuts).endAllOf(DONOR, DeviceSignOutReason.REPLAY, NOW);
@@ -184,7 +185,7 @@ class DonorSessionServiceTest {
         revoked.revoke(NOW.minus(Duration.ofHours(1)));
         when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(revoked));
 
-        assertThatThrownBy(() -> service.refresh(secret.value(), DeviceDescription.UNKNOWN))
+        assertThatThrownBy(() -> service.refresh(secret.value(), SessionCookie.BROWSER, DeviceDescription.UNKNOWN))
                 .isInstanceOf(InvalidRefreshToken.class);
 
         verify(signOuts, never()).endAllOf(any(), any(), any());
@@ -198,7 +199,7 @@ class DonorSessionServiceTest {
         RefreshToken expired = RefreshToken.issue(secret, DONOR, DEVICE, NOW.minus(REFRESH_TTL), REFRESH_TTL, false);
         when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(expired));
 
-        assertThatThrownBy(() -> service.refresh(secret.value(), DeviceDescription.UNKNOWN))
+        assertThatThrownBy(() -> service.refresh(secret.value(), SessionCookie.BROWSER, DeviceDescription.UNKNOWN))
                 .isInstanceOf(InvalidRefreshToken.class);
 
         verify(signOuts, never()).endAllOf(any(), any(), any());
@@ -209,7 +210,7 @@ class DonorSessionServiceTest {
     void should_refuse_when_refreshed_given_unknown_token() {
         when(refreshTokens.findBySecretHashForUpdate(any())).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.refresh(RefreshTokenSecret.generate().value(), DeviceDescription.UNKNOWN))
+        assertThatThrownBy(() -> service.refresh(RefreshTokenSecret.generate().value(), SessionCookie.BROWSER, DeviceDescription.UNKNOWN))
                 .isInstanceOf(InvalidRefreshToken.class);
     }
 
@@ -249,7 +250,7 @@ class DonorSessionServiceTest {
         superseded.supersede(NOW.minusSeconds(20));
         when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(superseded));
 
-        assertThatThrownBy(() -> service.refresh(secret.value(), DeviceDescription.UNKNOWN))
+        assertThatThrownBy(() -> service.refresh(secret.value(), SessionCookie.BROWSER, DeviceDescription.UNKNOWN))
                 .isInstanceOf(InvalidRefreshToken.class);
 
         verify(signOuts).endAllOf(DONOR, DeviceSignOutReason.REPLAY, NOW);
@@ -285,7 +286,7 @@ class DonorSessionServiceTest {
     void should_grant_admin_and_flag_refresh_token_when_signed_in_given_administrator_with_second_factor() {
         when(accessTokens.issue(eq(DONOR), eq(Set.of(Role.DONOR, Role.ADMIN)), any(DeviceId.class), eq(NOW))).thenReturn(new IssuedAccessToken("access", NOW.plus(Duration.ofMinutes(15))));
 
-        IssuedTokens tokens = service.signIn(administrator(), true, DeviceDescription.UNKNOWN);
+        IssuedTokens tokens = service.signIn(administrator(), true, DeviceDescription.UNKNOWN, SessionKind.REMEMBERED);
 
         ArgumentCaptor<RefreshToken> stored = ArgumentCaptor.forClass(RefreshToken.class);
         verify(refreshTokens).save(stored.capture());
@@ -298,7 +299,7 @@ class DonorSessionServiceTest {
     void should_grant_donor_only_when_signed_in_given_administrator_without_second_factor() {
         when(accessTokens.issue(eq(DONOR), eq(Set.of(Role.DONOR)), any(DeviceId.class), eq(NOW))).thenReturn(new IssuedAccessToken("access", NOW.plus(Duration.ofMinutes(15))));
 
-        IssuedTokens tokens = service.signIn(administrator(), false, DeviceDescription.UNKNOWN);
+        IssuedTokens tokens = service.signIn(administrator(), false, DeviceDescription.UNKNOWN, SessionKind.REMEMBERED);
 
         ArgumentCaptor<RefreshToken> stored = ArgumentCaptor.forClass(RefreshToken.class);
         verify(refreshTokens).save(stored.capture());
@@ -316,7 +317,7 @@ class DonorSessionServiceTest {
         when(accessTokens.issue(eq(DONOR), eq(Set.of(Role.DONOR, Role.ADMIN)), any(DeviceId.class), eq(NOW))).thenReturn(new IssuedAccessToken("access2", NOW.plus(Duration.ofMinutes(15))));
         when(refreshTokens.markUsed(existing.id(), NOW)).thenReturn(true);
 
-        RefreshedSession refreshed = service.refresh(secret.value(), DeviceDescription.UNKNOWN);
+        RefreshedSession refreshed = service.refresh(secret.value(), SessionCookie.BROWSER, DeviceDescription.UNKNOWN);
 
         assertThat(refreshed.tokens().roles()).containsExactlyInAnyOrder(Role.DONOR, Role.ADMIN);
         ArgumentCaptor<RefreshToken> saved = ArgumentCaptor.forClass(RefreshToken.class);
@@ -334,7 +335,7 @@ class DonorSessionServiceTest {
         when(accessTokens.issue(eq(DONOR), eq(Set.of(Role.DONOR)), any(DeviceId.class), eq(NOW))).thenReturn(new IssuedAccessToken("access2", NOW.plus(Duration.ofMinutes(15))));
         when(refreshTokens.markUsed(existing.id(), NOW)).thenReturn(true);
 
-        RefreshedSession refreshed = service.refresh(secret.value(), DeviceDescription.UNKNOWN);
+        RefreshedSession refreshed = service.refresh(secret.value(), SessionCookie.BROWSER, DeviceDescription.UNKNOWN);
 
         ArgumentCaptor<RefreshToken> saved = ArgumentCaptor.forClass(RefreshToken.class);
         verify(refreshTokens).save(saved.capture());
@@ -353,7 +354,7 @@ class DonorSessionServiceTest {
         when(refreshTokens.supersedeIfUnused(successor, NOW)).thenReturn(true);
         when(accessTokens.issue(eq(DONOR), eq(Set.of(Role.DONOR, Role.ADMIN)), any(DeviceId.class), eq(NOW))).thenReturn(new IssuedAccessToken("access3", NOW.plus(Duration.ofMinutes(15))));
 
-        RefreshedSession refreshed = service.refresh(secret.value(), DeviceDescription.UNKNOWN);
+        RefreshedSession refreshed = service.refresh(secret.value(), SessionCookie.BROWSER, DeviceDescription.UNKNOWN);
 
         verify(refreshTokens).supersedeIfUnused(successor, NOW);
         verify(signOuts, never()).endAllOf(any(), any(), any());
@@ -377,7 +378,7 @@ class DonorSessionServiceTest {
         when(donors.findById(DONOR)).thenReturn(Optional.of(donor()));
         when(refreshTokens.supersedeIfUnused(successor, NOW)).thenReturn(false);
 
-        assertThatThrownBy(() -> service.refresh(secret.value(), DeviceDescription.UNKNOWN))
+        assertThatThrownBy(() -> service.refresh(secret.value(), SessionCookie.BROWSER, DeviceDescription.UNKNOWN))
                 .isInstanceOf(InvalidRefreshToken.class);
 
         verify(signOuts).endAllOf(DONOR, DeviceSignOutReason.REPLAY, NOW);
@@ -393,7 +394,7 @@ class DonorSessionServiceTest {
         RefreshToken used = rotated(secret, NOW.minus(RefreshToken.REUSE_GRACE), successor, false);
         when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(used));
 
-        assertThatThrownBy(() -> service.refresh(secret.value(), DeviceDescription.UNKNOWN))
+        assertThatThrownBy(() -> service.refresh(secret.value(), SessionCookie.BROWSER, DeviceDescription.UNKNOWN))
                 .isInstanceOf(InvalidRefreshToken.class);
 
         verify(signOuts).endAllOf(DONOR, DeviceSignOutReason.REPLAY, NOW);
@@ -410,7 +411,7 @@ class DonorSessionServiceTest {
         when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(used));
         when(donors.findById(DONOR)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.refresh(secret.value(), DeviceDescription.UNKNOWN))
+        assertThatThrownBy(() -> service.refresh(secret.value(), SessionCookie.BROWSER, DeviceDescription.UNKNOWN))
                 .isInstanceOf(InvalidRefreshToken.class);
 
         verify(refreshTokens, never()).supersedeIfUnused(any(), any());
@@ -426,7 +427,7 @@ class DonorSessionServiceTest {
         when(accessTokens.issue(eq(DONOR), eq(Set.of(Role.DONOR, Role.ADMIN)), any(DeviceId.class), eq(NOW)))
                 .thenReturn(new IssuedAccessToken("access", NOW.plus(Duration.ofMinutes(15))));
 
-        service.signIn(administrator(), true, iphone);
+        service.signIn(administrator(), true, iphone, SessionKind.REMEMBERED);
 
         ArgumentCaptor<DonorDevice> device = ArgumentCaptor.forClass(DonorDevice.class);
         verify(devices).save(device.capture());
@@ -448,7 +449,7 @@ class DonorSessionServiceTest {
         when(refreshTokens.markUsed(existing.id(), NOW)).thenReturn(true);
         when(accessTokens.issue(DONOR, Set.of(Role.DONOR), DEVICE, NOW)).thenReturn(new IssuedAccessToken("access2", NOW.plus(Duration.ofMinutes(15))));
 
-        service.refresh(secret.value(), DeviceDescription.UNKNOWN);
+        service.refresh(secret.value(), SessionCookie.BROWSER, DeviceDescription.UNKNOWN);
 
         ArgumentCaptor<DonorDevice> device = ArgumentCaptor.forClass(DonorDevice.class);
         verify(devices).save(device.capture());
@@ -473,7 +474,7 @@ class DonorSessionServiceTest {
         when(accessTokens.issue(eq(DONOR), eq(Set.of(Role.DONOR)), any(DeviceId.class), eq(NOW)))
                 .thenReturn(new IssuedAccessToken("access2", NOW.plus(Duration.ofMinutes(15))));
 
-        service.refresh(secret.value(), android);
+        service.refresh(secret.value(), SessionCookie.BROWSER, android);
 
         ArgumentCaptor<DonorDevice> device = ArgumentCaptor.forClass(DonorDevice.class);
         verify(devices).save(device.capture());
@@ -493,7 +494,7 @@ class DonorSessionServiceTest {
         when(devices.findById(DEVICE)).thenReturn(Optional.of(ended));
         when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(existing));
 
-        assertThatThrownBy(() -> service.refresh(secret.value(), DeviceDescription.UNKNOWN)).isInstanceOf(InvalidRefreshToken.class);
+        assertThatThrownBy(() -> service.refresh(secret.value(), SessionCookie.BROWSER, DeviceDescription.UNKNOWN)).isInstanceOf(InvalidRefreshToken.class);
 
         verify(refreshTokens, never()).markUsed(any(), any());
         verify(signOuts, never()).endAllOf(any(), any(), any());
@@ -512,7 +513,7 @@ class DonorSessionServiceTest {
         when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(used));
         when(devices.findById(DEVICE)).thenReturn(Optional.of(ended));
 
-        assertThatThrownBy(() -> service.refresh(secret.value(), DeviceDescription.UNKNOWN)).isInstanceOf(InvalidRefreshToken.class);
+        assertThatThrownBy(() -> service.refresh(secret.value(), SessionCookie.BROWSER, DeviceDescription.UNKNOWN)).isInstanceOf(InvalidRefreshToken.class);
 
         verify(signOuts, never()).endAllOf(any(), any(), any());
         verify(refreshTokens, never()).supersedeIfUnused(any(), any());
@@ -530,7 +531,7 @@ class DonorSessionServiceTest {
         lenient().when(devices.findById(DEVICE)).thenReturn(Optional.of(ended));
         when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(superseded));
 
-        assertThatThrownBy(() -> service.refresh(secret.value(), DeviceDescription.UNKNOWN)).isInstanceOf(InvalidRefreshToken.class);
+        assertThatThrownBy(() -> service.refresh(secret.value(), SessionCookie.BROWSER, DeviceDescription.UNKNOWN)).isInstanceOf(InvalidRefreshToken.class);
 
         verify(signOuts).endAllOf(DONOR, DeviceSignOutReason.REPLAY, NOW);
     }
@@ -546,7 +547,7 @@ class DonorSessionServiceTest {
         lenient().when(devices.findById(DEVICE)).thenReturn(Optional.of(ended));
         when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(used));
 
-        assertThatThrownBy(() -> service.refresh(secret.value(), DeviceDescription.UNKNOWN)).isInstanceOf(InvalidRefreshToken.class);
+        assertThatThrownBy(() -> service.refresh(secret.value(), SessionCookie.BROWSER, DeviceDescription.UNKNOWN)).isInstanceOf(InvalidRefreshToken.class);
 
         verify(signOuts).endAllOf(DONOR, DeviceSignOutReason.REPLAY, NOW);
     }
@@ -562,7 +563,7 @@ class DonorSessionServiceTest {
         when(devices.findById(DEVICE)).thenReturn(Optional.of(ended));
         when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(used));
 
-        assertThatThrownBy(() -> service.refresh(secret.value(), DeviceDescription.UNKNOWN)).isInstanceOf(InvalidRefreshToken.class);
+        assertThatThrownBy(() -> service.refresh(secret.value(), SessionCookie.BROWSER, DeviceDescription.UNKNOWN)).isInstanceOf(InvalidRefreshToken.class);
 
         verify(signOuts, never()).endAllOf(any(), any(), any());
     }
@@ -578,7 +579,7 @@ class DonorSessionServiceTest {
         lenient().when(devices.findById(DEVICE)).thenReturn(Optional.of(ended));
         when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(used));
 
-        assertThatThrownBy(() -> service.refresh(secret.value(), DeviceDescription.UNKNOWN)).isInstanceOf(InvalidRefreshToken.class);
+        assertThatThrownBy(() -> service.refresh(secret.value(), SessionCookie.BROWSER, DeviceDescription.UNKNOWN)).isInstanceOf(InvalidRefreshToken.class);
 
         verify(signOuts).endAllOf(DONOR, DeviceSignOutReason.REPLAY, NOW);
     }
@@ -595,7 +596,7 @@ class DonorSessionServiceTest {
         when(refreshTokens.findById(successorId)).thenReturn(Optional.of(successorOnDevice(successorId)));
         when(devices.findById(DEVICE)).thenReturn(Optional.of(ended));
 
-        assertThatThrownBy(() -> service.refresh(secret.value(), DeviceDescription.UNKNOWN)).isInstanceOf(InvalidRefreshToken.class);
+        assertThatThrownBy(() -> service.refresh(secret.value(), SessionCookie.BROWSER, DeviceDescription.UNKNOWN)).isInstanceOf(InvalidRefreshToken.class);
 
         verify(signOuts, never()).endAllOf(any(), any(), any());
         verify(refreshTokens, never()).supersedeIfUnused(any(), any());
@@ -608,7 +609,7 @@ class DonorSessionServiceTest {
         RefreshTokenSecret secret = RefreshTokenSecret.generate();
         UUID successorId = UUID.randomUUID();
         RefreshToken legacy = legacyUsedWithin(secret, successorId);
-        DonorDevice petrs = DonorDevice.reconstitute(DEVICE, DonorId.newId(NOW), DeviceDescription.UNKNOWN, NOW.minus(Duration.ofDays(2)),
+        DonorDevice petrs = DonorDevice.reconstitute(DEVICE, DonorId.newId(NOW), DeviceDescription.UNKNOWN, SessionKind.REMEMBERED, NOW.minus(Duration.ofDays(2)),
                 NOW.minus(Duration.ofDays(1)), null, null);
         when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(legacy));
         when(refreshTokens.findById(successorId)).thenReturn(Optional.of(successorOnDevice(successorId)));
@@ -616,7 +617,7 @@ class DonorSessionServiceTest {
         when(donors.findById(DONOR)).thenReturn(Optional.of(donor()));
         when(refreshTokens.supersedeIfUnused(successorId, NOW)).thenReturn(true);
 
-        assertThatThrownBy(() -> service.refresh(secret.value(), DeviceDescription.UNKNOWN)).isInstanceOf(InvalidRefreshToken.class);
+        assertThatThrownBy(() -> service.refresh(secret.value(), SessionCookie.BROWSER, DeviceDescription.UNKNOWN)).isInstanceOf(InvalidRefreshToken.class);
 
         verify(devices, never()).save(any());
         verify(accessTokens, never()).issue(any(), any(), any(), any());
@@ -640,7 +641,7 @@ class DonorSessionServiceTest {
         when(devices.findById(DEVICE)).thenReturn(Optional.of(opened));
         when(accessTokens.issue(DONOR, Set.of(Role.DONOR), DEVICE, NOW)).thenReturn(new IssuedAccessToken("access2", NOW.plus(Duration.ofMinutes(15))));
 
-        service.refresh(secret.value(), DeviceDescription.UNKNOWN);
+        service.refresh(secret.value(), SessionCookie.BROWSER, DeviceDescription.UNKNOWN);
 
         ArgumentCaptor<DonorDevice> saved = ArgumentCaptor.forClass(DonorDevice.class);
         verify(devices).save(saved.capture());
@@ -708,6 +709,95 @@ class DonorSessionServiceTest {
         assertThat(device.getValue().description()).isEqualTo(iphone);
     }
 
+    @Test
+    @DisplayName("Given each kind of session, when the donor signs in, then the device keeps the kind and the token lasts as long as that kind")
+    void should_keep_kind_and_its_length_when_signed_in_given_each_kind() {
+        when(accessTokens.issue(eq(DONOR), eq(Set.of(Role.DONOR)), any(DeviceId.class), eq(NOW))).thenReturn(new IssuedAccessToken("access", NOW.plus(Duration.ofMinutes(15))));
+
+        assertThat(service.signIn(donor(), false, DeviceDescription.UNKNOWN, SessionKind.APP).refreshTokenExpiresAt()).isEqualTo(NOW.plus(Duration.ofDays(400)));
+        assertThat(service.signIn(donor(), false, DeviceDescription.UNKNOWN, SessionKind.BROWSER).refreshTokenExpiresAt()).isEqualTo(NOW.plus(Duration.ofHours(12)));
+        IssuedTokens publicComputer = service.signIn(donor(), false, DeviceDescription.UNKNOWN, SessionKind.PUBLIC);
+
+        assertThat(publicComputer.refreshTokenExpiresAt()).isEqualTo(NOW.plus(Duration.ofHours(1)));
+        assertThat(publicComputer.session()).isEqualTo(SessionKind.PUBLIC);
+        ArgumentCaptor<DonorDevice> saved = ArgumentCaptor.forClass(DonorDevice.class);
+        verify(devices, times(3)).save(saved.capture());
+        assertThat(saved.getAllValues()).extracting(DonorDevice::kind).containsExactly(SessionKind.APP, SessionKind.BROWSER, SessionKind.PUBLIC);
+    }
+
+    @Test
+    @DisplayName("Given a public computer signed in 11 and a half hours ago, when the session is refreshed, then the new token ends 12 hours after the sign-in")
+    void should_end_twelve_hours_after_sign_in_when_refreshed_given_public_computer() {
+        Instant signedIn = NOW.minus(Duration.ofHours(11).plusMinutes(30));
+        when(devices.findById(DEVICE)).thenReturn(Optional.of(deviceOf(SessionKind.PUBLIC, signedIn)));
+        RefreshTokenSecret secret = RefreshTokenSecret.generate();
+        RefreshToken existing = RefreshToken.issue(secret, DONOR, DEVICE, NOW.minus(Duration.ofMinutes(30)), Duration.ofHours(1), false);
+        when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(existing));
+        when(donors.findById(DONOR)).thenReturn(Optional.of(donor()));
+        when(refreshTokens.markUsed(existing.id(), NOW)).thenReturn(true);
+        when(accessTokens.issue(DONOR, Set.of(Role.DONOR), DEVICE, NOW)).thenReturn(new IssuedAccessToken("access2", NOW.plus(Duration.ofMinutes(15))));
+
+        RefreshedSession refreshed = service.refresh(secret.value(), SessionCookie.BROWSER, DeviceDescription.UNKNOWN);
+
+        assertThat(refreshed.tokens().refreshTokenExpiresAt()).isEqualTo(signedIn.plus(Duration.ofHours(12)));
+        assertThat(refreshed.tokens().session()).isEqualTo(SessionKind.PUBLIC);
+    }
+
+    @Test
+    @DisplayName("Given an app token presented in the browser's cookie, when the session is refreshed, then it is refused without ending any session")
+    void should_refuse_without_ending_sessions_when_refreshed_given_app_token_in_browser_cookie() {
+        when(devices.findById(DEVICE)).thenReturn(Optional.of(deviceOf(SessionKind.APP, NOW.minus(Duration.ofDays(2)))));
+        RefreshTokenSecret secret = RefreshTokenSecret.generate();
+        RefreshToken existing = RefreshToken.issue(secret, DONOR, DEVICE, NOW.minus(Duration.ofDays(1)), Duration.ofDays(400), false);
+        when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(existing));
+
+        assertThatThrownBy(() -> service.refresh(secret.value(), SessionCookie.BROWSER, DeviceDescription.UNKNOWN)).isInstanceOf(InvalidRefreshToken.class);
+
+        verify(refreshTokens, never()).markUsed(any(), any());
+        verify(signOuts, never()).endAllOf(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("Given a browser token presented in the app's cookie, when the session is refreshed, then it is refused without ending any session")
+    void should_refuse_without_ending_sessions_when_refreshed_given_browser_token_in_app_cookie() {
+        RefreshTokenSecret secret = RefreshTokenSecret.generate();
+        RefreshToken existing = RefreshToken.issue(secret, DONOR, DEVICE, NOW.minus(Duration.ofDays(1)), REFRESH_TTL, false);
+        when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(existing));
+
+        assertThatThrownBy(() -> service.refresh(secret.value(), SessionCookie.APP, DeviceDescription.UNKNOWN)).isInstanceOf(InvalidRefreshToken.class);
+
+        verify(refreshTokens, never()).markUsed(any(), any());
+        verify(signOuts, never()).endAllOf(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("Given a token used long ago presented in the other cookie, when it is presented again, then every session ends as a replay")
+    void should_end_every_session_when_presented_again_in_other_cookie_given_used_token_after_the_reuse_grace() {
+        RefreshTokenSecret secret = RefreshTokenSecret.generate();
+        RefreshToken used = rotated(secret, NOW.minus(Duration.ofMinutes(5)), UUID.randomUUID(), false);
+        when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(used));
+
+        assertThatThrownBy(() -> service.refresh(secret.value(), SessionCookie.APP, DeviceDescription.UNKNOWN)).isInstanceOf(InvalidRefreshToken.class);
+
+        verify(signOuts).endAllOf(DONOR, DeviceSignOutReason.REPLAY, NOW);
+    }
+
+    @Test
+    @DisplayName("Given an app device that changed a credential, when its session continues, then the new token keeps the app's kind and length")
+    void should_keep_kind_when_continued_given_app_device() {
+        when(devices.findById(DEVICE)).thenReturn(Optional.of(deviceOf(SessionKind.APP, NOW.minus(Duration.ofDays(2)))));
+        when(accessTokens.issue(DONOR, Set.of(Role.DONOR), DEVICE, NOW)).thenReturn(new IssuedAccessToken("access", NOW.plus(Duration.ofMinutes(15))));
+
+        IssuedTokens tokens = service.continueOn(donor(), false, new RequestingDevice(Optional.of(DEVICE), DeviceDescription.UNKNOWN));
+
+        assertThat(tokens.session()).isEqualTo(SessionKind.APP);
+        assertThat(tokens.refreshTokenExpiresAt()).isEqualTo(NOW.plus(Duration.ofDays(400)));
+    }
+
+    private static DonorDevice deviceOf(SessionKind kind, Instant signedInAt) {
+        return DonorDevice.reconstitute(DEVICE, DONOR, DeviceDescription.UNKNOWN, kind, signedInAt, signedInAt, null, null);
+    }
+
     private static RefreshToken rotated(RefreshTokenSecret secret, Instant usedAt, UUID successor, boolean secondFactorVerified) {
         Instant issued = usedAt.minus(Duration.ofDays(1));
         return RefreshToken.reconstitute(UUID.randomUUID(), DONOR, secret.hash(), issued, issued.plus(REFRESH_TTL), secondFactorVerified, null,
@@ -726,7 +816,7 @@ class DonorSessionServiceTest {
     }
 
     private static DonorDevice signedInDevice() {
-        return DonorDevice.reconstitute(DEVICE, DONOR, DeviceDescription.UNKNOWN, NOW.minus(Duration.ofDays(2)), NOW.minus(Duration.ofDays(1)),
+        return DonorDevice.reconstitute(DEVICE, DONOR, DeviceDescription.UNKNOWN, SessionKind.REMEMBERED, NOW.minus(Duration.ofDays(2)), NOW.minus(Duration.ofDays(1)),
                 null, null);
     }
 

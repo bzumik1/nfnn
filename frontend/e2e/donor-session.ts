@@ -369,6 +369,7 @@ export const adminSettings = {
     adminSetting('FIO_HISTORY_FROM', 'BANK', null),
     adminSetting('PAIRING_EXCLUDED_ACCOUNTS', 'BANK', null),
     adminSetting('RECEIPT_FIRST_YEAR', 'RECEIPTS', '2026'),
+    adminSetting('SESSION_REMEMBER_DAYS', 'SITE', '14'),
   ],
   secretsCanBeStored: true,
 };

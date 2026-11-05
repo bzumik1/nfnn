@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.SessionKind;
 import cz.novanadeje.app.donors.domain.DeviceBrowser;
 import cz.novanadeje.app.donors.domain.DeviceDescription;
 import cz.novanadeje.app.donors.domain.DeviceId;
@@ -45,7 +46,7 @@ class DonorDevicesServiceTest {
     }
 
     private static DonorDevice usedAt(Instant lastUse) {
-        DonorDevice device = DonorDevice.signIn(JANA, IPHONE_SAFARI, SIGNED_IN);
+        DonorDevice device = DonorDevice.signIn(JANA, IPHONE_SAFARI, SessionKind.REMEMBERED, SIGNED_IN);
         device.recordUse(lastUse);
         return device;
     }

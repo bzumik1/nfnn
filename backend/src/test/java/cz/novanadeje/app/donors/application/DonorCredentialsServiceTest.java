@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.SessionKind;
 import cz.novanadeje.app.donors.domain.DeviceDescription;
 import java.util.UUID;
 import cz.novanadeje.app.donors.domain.DeviceId;
@@ -68,7 +69,7 @@ class DonorCredentialsServiceTest {
     private static final PasswordHash OLD_HASH = new PasswordHash("$old");
     private static final PasswordHash NEW_HASH = new PasswordHash("$new");
     private static final IssuedTokens TOKENS = new IssuedTokens("access", NOW.plus(Duration.ofMinutes(15)), "refresh", NOW.plus(Duration.ofDays(14)),
-            Set.of(Role.DONOR));
+            Set.of(Role.DONOR), SessionKind.REMEMBERED);
 
     @Mock
     private DonorRepository donors;

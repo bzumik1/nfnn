@@ -76,6 +76,7 @@ describe('Given the auth store', () => {
     expect(request.request.body).toEqual({
       challenge: SAMPLE_CHALLENGE,
       credential: SAMPLE_ASSERTION,
+      session: 'REMEMBERED',
     });
     request.flush(authResponse('token-3', sampleDonor({ roles: ['DONOR', 'ADMIN'] })));
 
@@ -101,7 +102,11 @@ describe('Given the auth store', () => {
     store.completeSecondFactor('c'.repeat(43), '287082').subscribe();
 
     const request = http.expectOne('/api/donors/auth/login/second-factor');
-    expect(request.request.body).toEqual({ challenge: 'c'.repeat(43), code: '287082' });
+    expect(request.request.body).toEqual({
+      challenge: 'c'.repeat(43),
+      code: '287082',
+      session: 'REMEMBERED',
+    });
     request.flush(
       authResponse(
         'token-2',
@@ -137,6 +142,7 @@ describe('Given the auth store', () => {
     expect(request.request.body).toEqual({
       email: 'jana@example.cz',
       password: 'correct horse battery',
+      session: 'REMEMBERED',
     });
     request.flush(authResponse('token-1'));
 
@@ -174,7 +180,7 @@ describe('Given the auth store', () => {
     store.confirmEmail('abc').subscribe();
 
     const request = http.expectOne('/api/donors/auth/email-verification/confirm');
-    expect(request.request.body).toEqual({ token: 'abc' });
+    expect(request.request.body).toEqual({ token: 'abc', session: 'BROWSER' });
     request.flush(authResponse('token-1'));
 
     expect(store.signedIn()).toBe(true);

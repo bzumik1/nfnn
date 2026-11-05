@@ -1,8 +1,9 @@
-import { InjectionToken } from '@angular/core';
+import { inject, InjectionToken } from '@angular/core';
 import { AuthResponse } from './donor';
+import { BROWSER_JAR, SESSION_JAR } from './session-jar';
 
-export const REFRESH_LOCK_NAME = 'nfnn-refresh';
-export const SESSION_CHANNEL_NAME = 'nfnn-session';
+export const REFRESH_LOCK_NAME = BROWSER_JAR.lockName;
+export const SESSION_CHANNEL_NAME = BROWSER_JAR.channelName;
 export const SESSION_MESSAGE_VERSION = 1;
 export const REFRESH_REQUEST_TIMEOUT_MS = 15_000;
 export const REFRESH_LOCK_WAIT_MS = 20_000;
@@ -30,8 +31,10 @@ export const TAB_LOCKS = new InjectionToken<TabLocks | null>('TAB_LOCKS', {
 
 export const SESSION_CHANNEL = new InjectionToken<() => SessionChannel | null>('SESSION_CHANNEL', {
   providedIn: 'root',
-  factory: () => () =>
-    typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel(SESSION_CHANNEL_NAME),
+  factory: () => {
+    const name = inject(SESSION_JAR).channelName;
+    return () => (typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel(name));
+  },
 });
 
 export function sessionRefreshed(response: AuthResponse): SessionRefreshed {

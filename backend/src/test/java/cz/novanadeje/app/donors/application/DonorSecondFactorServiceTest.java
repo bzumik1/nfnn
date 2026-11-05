@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.SessionKind;
 import cz.novanadeje.app.donors.domain.DeviceDescription;
 import java.util.UUID;
 import cz.novanadeje.app.donors.domain.DeviceId;
@@ -71,7 +72,7 @@ class DonorSecondFactorServiceTest {
     private static final String PASSWORD = "correct horse battery";
     private static final TotpSecret SECRET = new TotpSecret("GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ");
     private static final IssuedTokens TOKENS = new IssuedTokens("access", NOW.plus(Duration.ofMinutes(15)), "refresh", NOW.plus(Duration.ofDays(14)),
-            Set.of(Role.DONOR));
+            Set.of(Role.DONOR), SessionKind.REMEMBERED);
 
     @Mock
     private DonorRepository donors;
@@ -276,7 +277,7 @@ class DonorSecondFactorServiceTest {
         assertThatThrownBy(() -> service.disable(DONOR, Confirmation.withPassword(PASSWORD), codeAt(NOW), DEVICE)).isInstanceOf(SecondFactorNotEnabled.class);
 
         verify(secondFactors, never()).delete(any());
-        verify(sessions, never()).signIn(any(), anyBoolean(), any());
+        verify(sessions, never()).signIn(any(), anyBoolean(), any(), any());
         verifyNoInteractions(events);
     }
 
