@@ -36,6 +36,7 @@ TEST_DATABASE=${TEST_DATABASE:-nfnn_restore_test}
 STAGING_DATABASE=${STAGING_DATABASE:-nfnn_restore_staging}
 RETIRED_DATABASE=${RETIRED_DATABASE:-nfnn_restore_retired}
 OWNERSHIP_SQL=${OWNERSHIP_SQL:-/usr/local/share/nfnn/own-by-app-role.sql}
+REVOCATIONS_SQL=${REVOCATIONS_SQL:-/usr/local/share/nfnn/revoke-restored-credentials.sql}
 LOGS=${LOGS_DIR:-/logs}
 SECRETS=${SECRETS_DIR:-/secrets}
 KEY_FILE=${BACKUP_KEY_FILE:-$SECRETS/backup-key}
@@ -279,9 +280,16 @@ release_liquibase_lock() {
     --command="do \$\$ begin if to_regclass('public.databasechangeloglock') is not null then update public.databasechangeloglock set locked = false, lockgranted = null, lockedby = null where locked; end if; end \$\$" > /dev/null 2>> "$2"
 }
 
-end_sessions() {
-  psql --dbname="$1" --quiet --no-align --tuples-only -v ON_ERROR_STOP=1 \
-    --command="do \$\$ begin if to_regclass('public.donor_refresh_token') is not null then update public.donor_refresh_token set revoked_at = now() where revoked_at is null; end if; if to_regclass('public.donor_device') is not null then update public.donor_device set ended_at = now(), end_reason = 'EXPIRED' where ended_at is null; end if; end \$\$" > /dev/null 2>> "$2"
+revoke_restored_credentials() {
+  psql --dbname="$1" --quiet --no-align --tuples-only --single-transaction -v ON_ERROR_STOP=1 \
+    --file="$REVOCATIONS_SQL" --command="select pg_temp.end_sessions() || ' ' || pg_temp.spend_one_time_secrets()" 2>> "$2"
+}
+
+counted() {
+  case "$1" in
+    ''|*[!0-9]*) return 1 ;;
+  esac
+  return 0
 }
 
 hand_to_app_role() {
@@ -377,10 +385,12 @@ restore_dump() {
       r_error="the backup was taken before receipts moved to the browser, and this server has given out receipt numbers since; the backend would delete the backup's test receipts and number from 1 again, so nothing was restored"
     elif [ "${r_tables:-0}" -gt 0 ] 2>/dev/null && [ "${r_changesets:-0}" -gt 0 ] 2>/dev/null; then
       if release_liquibase_lock "$STAGING_DATABASE" "$STATUS/restore.err" \
-          && end_sessions "$STAGING_DATABASE" "$STATUS/restore.err" \
+          && r_revoked=$(revoke_restored_credentials "$STAGING_DATABASE" "$STATUS/restore.err") \
+          && r_sessions=${r_revoked%% *} && r_secrets=${r_revoked##* } \
+          && counted "$r_sessions" && counted "$r_secrets" \
           && hand_to_app_role "$STAGING_DATABASE" "$STATUS/restore.err" \
           && swap_in_staging; then
-        write_status restore "outcome=ok" "started_at=$r_started" "finished_at=$(now_utc)" "file=$r_file" "size=$(file_size "$r_dump")" "tables=$r_tables" "request=$r_request" "admin=$r_admin"
+        write_status restore "outcome=ok" "started_at=$r_started" "finished_at=$(now_utc)" "file=$r_file" "size=$(file_size "$r_dump")" "tables=$r_tables" "sessions_ended=$r_sessions" "one_time_secrets_spent=$r_secrets" "request=$r_request" "admin=$r_admin"
         log "restore of $r_file succeeded: $r_tables tables"
         return 0
       fi

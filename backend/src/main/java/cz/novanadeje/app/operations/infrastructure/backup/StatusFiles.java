@@ -1,6 +1,7 @@
 package cz.novanadeje.app.operations.infrastructure.backup;
 
 import cz.novanadeje.app.operations.domain.backup.BackupRun;
+import cz.novanadeje.app.operations.domain.backup.RestoreRevocations;
 import cz.novanadeje.app.operations.domain.backup.RunOutcome;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,7 +57,13 @@ final class StatusFiles {
         };
         return Optional.of(new BackupRun(outcome, Instant.parse(required(values, "started_at")), Instant.parse(required(values, "finished_at")),
                 optional(values, "file"), optional(values, "size").map(Long::parseLong), optional(values, "tables").map(Integer::parseInt),
-                optional(values, "request"), optional(values, "admin").map(UUID::fromString), optional(values, "error")));
+                optional(values, "request"), optional(values, "admin").map(UUID::fromString), optional(values, "error"), revocations(values)));
+    }
+
+    private static Optional<RestoreRevocations> revocations(Map<String, String> values) {
+        Optional<Integer> sessions = optional(values, "sessions_ended").map(Integer::parseInt);
+        Optional<Integer> oneTimeSecrets = optional(values, "one_time_secrets_spent").map(Integer::parseInt);
+        return sessions.flatMap(ended -> oneTimeSecrets.map(spent -> new RestoreRevocations(ended, spent)));
     }
 
     private static String required(Map<String, String> values, String key) {
