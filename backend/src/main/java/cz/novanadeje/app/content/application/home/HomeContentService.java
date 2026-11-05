@@ -4,6 +4,7 @@ import cz.novanadeje.app.content.application.about.AboutService;
 import cz.novanadeje.app.content.application.news.NewsSigners;
 import cz.novanadeje.app.content.application.people.PublicPeopleService;
 import cz.novanadeje.app.content.application.project.ProjectView;
+import cz.novanadeje.app.content.domain.media.MediaImageRepository;
 import cz.novanadeje.app.content.domain.news.NewsArticleRepository;
 import cz.novanadeje.app.content.domain.project.ProjectOrderRepository;
 import cz.novanadeje.app.content.domain.project.ProjectRepository;
@@ -27,16 +28,18 @@ public class HomeContentService {
     private final ProjectOrderRepository projectOrders;
     private final AboutService about;
     private final PublicPeopleService people;
+    private final MediaImageRepository media;
     private final Clock clock;
 
     public HomeContentService(NewsArticleRepository news, NewsSigners signers, ProjectRepository projects, ProjectOrderRepository projectOrders, AboutService about,
-                              PublicPeopleService people, Clock clock) {
+                              PublicPeopleService people, MediaImageRepository media, Clock clock) {
         this.news = news;
         this.signers = signers;
         this.projects = projects;
         this.projectOrders = projectOrders;
         this.about = about;
         this.people = people;
+        this.media = media;
         this.clock = clock;
     }
 
@@ -44,7 +47,7 @@ public class HomeContentService {
         LocalDate today = LocalDate.ofInstant(clock.instant(), FoundationZone.ZONE);
         return new HomeContent(
                 signers.views(news.findVisibleNewestFirst(today, 0, NEWS_ON_HOME), today),
-                projects.findVisible(today, projectOrders.current(), 0, PROJECTS_ON_HOME).stream().map(project -> ProjectView.from(project, today)).toList(),
+                ProjectView.all(projects.findVisible(today, projectOrders.current(), 0, PROJECTS_ON_HOME), today, media),
                 about.read(),
                 people.read());
     }

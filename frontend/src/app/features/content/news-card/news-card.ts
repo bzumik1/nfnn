@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { FocalPointCrop } from '../../../shared/ui/focal-point/focal-point';
 import { formatDonationDate } from '../../donations/donation-date';
 import { mediaUrl, NewsArticleResponse } from '../news-api';
 
@@ -15,7 +16,7 @@ const PLACEHOLDER_IMAGES: Record<NewsPlaceholder, string> = {
 
 @Component({
   selector: 'app-news-card',
-  imports: [RouterLink],
+  imports: [RouterLink, FocalPointCrop],
   templateUrl: './news-card.html',
   styleUrl: './news-card.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

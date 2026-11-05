@@ -13,6 +13,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Observable, of, switchMap, tap } from 'rxjs';
 import { FormsModule, NgForm } from '@angular/forms';
 import { Title } from '@angular/platform-browser';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -36,7 +37,6 @@ import {
   MAX_TAG_LENGTH,
   MAX_TITLE_LENGTH,
   MAX_YEAR,
-  mediaUrl,
   MIN_YEAR,
   PROJECT_CATEGORIES,
   ProjectCategory,
@@ -49,6 +49,9 @@ import {
 import { projectCategoryLabel } from '../../content/project-category';
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
+import { FocalPoint } from '../../../shared/ui/focal-point/focal-point';
+import { PhotoResponse, PhotosApi } from '../../content/photos-api';
+import { FocalPointPicker, PreviewShape } from '../focal-point-picker/focal-point-picker';
 import { ContentPreview, PreviewContent } from '../content-preview/content-preview';
 import { GuardsUnsavedChanges } from '../unsaved-changes/unsaved-changes-guard';
 import { UnsavedChangesDialog } from '../unsaved-changes/unsaved-changes-dialog';
@@ -63,7 +66,6 @@ const FORBIDDEN = 'auth/forbidden';
 const NOT_FOUND = 'content/project-not-found';
 const SLUG_TAKEN = 'content/slug-taken';
 const EDIT_TITLE = $localize`:@@admin.projectEditor.pageTitle.edit:Úprava projektu | Správa | Nová naděje – nadační fond`;
-const PREVIEW_WIDTH = 480;
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 @Component({
@@ -80,6 +82,7 @@ const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
     UnsavedChangesDialog,
     ContentPreview,
     ActionBar,
+    FocalPointPicker,
   ],
   templateUrl: './admin-project-editor.html',
   styleUrl: './admin-project-editor.scss',
@@ -88,6 +91,7 @@ const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 })
 export class AdminProjectEditor implements GuardsUnsavedChanges {
   private readonly api = inject(ProjectsApi);
+  private readonly photos = inject(PhotosApi);
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -202,7 +206,28 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
   protected readonly coverUnsaved = computed(
     () => (this.coverImage()?.id ?? null) !== (this.project()?.coverImage?.id ?? null),
   );
-  protected readonly unsaved = computed(() => this.edited() || this.coverUnsaved());
+  protected readonly focalPointUnsaved = computed(() => {
+    const cover = this.coverImage();
+    if (!cover) {
+      return false;
+    }
+    const saved = this.project()?.coverImage;
+    const savedPoint = saved?.id === cover.id ? saved.focalPoint : null;
+    return !samePoint(cover.focalPoint, savedPoint);
+  });
+  protected readonly unsaved = computed(
+    () => this.edited() || this.coverUnsaved() || this.focalPointUnsaved(),
+  );
+  protected readonly focalShapes: readonly PreviewShape[] = [
+    {
+      shape: 'projectCard',
+      label: $localize`:@@admin.projectEditor.focalPoint.card:Karta v Projektech`,
+    },
+    {
+      shape: 'articleTop',
+      label: $localize`:@@admin.projectEditor.focalPoint.top:Nahoře v článku`,
+    },
+  ];
   protected readonly publicUrl = computed(() => {
     const project = this.project();
     return project?.live ? `/projekty/${project.slug}` : null;
@@ -216,10 +241,6 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
       default:
         return $localize`:@@admin.projectEditor.publishDate.hint.draft:Projekt zatím vidíte jen vy. Tlačítko Uložit a zveřejnit ho pustí na web s tímto datem, s pozdějším datem až ten den.`;
     }
-  });
-  protected readonly previewUrl = computed(() => {
-    const image = this.coverImage();
-    return image ? mediaUrl(image.id, PREVIEW_WIDTH) : null;
   });
   private readonly slugOrDraft = signal('');
   protected readonly publicAddressHint = computed(() => {
@@ -384,9 +405,31 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
       this.sendPublish(existing.id, date);
       return;
     }
-    const call = existing
-      ? this.api.update(existing.id, this.request())
-      : this.api.create(this.request());
+    if (existing && !this.edited() && !this.coverUnsaved() && this.focalPointUnsaved()) {
+      this.placeFocalPoint()
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: () => {
+            if (needsPublish) {
+              this.sendPublish(existing.id, date);
+              return;
+            }
+            this.saving.set(null);
+            this.notice.set({ kind: 'status', text: this.savedText(existing, false) });
+          },
+          error: (failure: unknown) => {
+            this.saving.set(null);
+            this.saveFailed(failure);
+          },
+        });
+      return;
+    }
+    const request = this.request();
+    const call = this.placeFocalPoint().pipe(
+      switchMap(() =>
+        existing ? this.api.update(existing.id, request) : this.api.create(request),
+      ),
+    );
     call.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (project) => {
         this.saved(project, existing === null);
@@ -429,7 +472,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
       .subscribe({
         next: (uploaded) => {
           this.uploading.set(false);
-          this.coverImage.set({ id: uploaded.id, url: uploaded.url, alt: null });
+          this.coverImage.set({ id: uploaded.id, url: uploaded.url, alt: null, focalPoint: null });
         },
         error: (failure: unknown) => {
           this.uploading.set(false);
@@ -441,6 +484,27 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
           );
         },
       });
+  }
+
+  protected focalPointChanged(point: FocalPoint | null): void {
+    this.coverImage.update((cover) => cover && { ...cover, focalPoint: point });
+  }
+
+  private placeFocalPoint(): Observable<unknown> {
+    const cover = this.coverImage();
+    return cover && this.focalPointUnsaved()
+      ? this.photos
+          .placeFocalPoint(cover.id, cover.focalPoint)
+          .pipe(tap((photo) => this.keepPlacedPoint(photo)))
+      : of(null);
+  }
+
+  private keepPlacedPoint(photo: PhotoResponse): void {
+    this.project.update((saved) =>
+      saved?.coverImage?.id === photo.id
+        ? { ...saved, coverImage: { ...saved.coverImage, focalPoint: photo.focalPoint } }
+        : saved,
+    );
   }
 
   protected removeImage(): void {
@@ -683,4 +747,8 @@ function todayIso(): string {
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');
   return `${now.getFullYear()}-${month}-${day}`;
+}
+
+function samePoint(a: FocalPoint | null, b: FocalPoint | null): boolean {
+  return a?.x === b?.x && a?.y === b?.y;
 }

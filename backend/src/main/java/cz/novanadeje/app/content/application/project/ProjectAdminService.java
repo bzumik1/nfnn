@@ -58,12 +58,12 @@ public class ProjectAdminService {
     @Transactional(readOnly = true)
     public List<ProjectView> list() {
         LocalDate today = today(clock.instant());
-        return projects.findAllDraftsFirst(orders.current()).stream().map(project -> ProjectView.from(project, today)).toList();
+        return ProjectView.all(projects.findAllDraftsFirst(orders.current()), today, media);
     }
 
     @Transactional(readOnly = true)
     public ProjectView get(ProjectId id) {
-        return ProjectView.from(require(id), today(clock.instant()));
+        return ProjectView.of(require(id), today(clock.instant()), media);
     }
 
     public ProjectView create(UUID adminId, ProjectCommand command) {
@@ -74,7 +74,7 @@ public class ProjectAdminService {
         projects.save(article);
         formerSlugs.forget(content.slug());
         audit(adminId, CREATE_ACTION, article, "Projekt " + id + " „" + content.slug() + "“ napsán", now);
-        return ProjectView.from(article, today(now));
+        return ProjectView.of(article, today(now), media);
     }
 
     public ProjectView update(UUID adminId, ProjectId id, ProjectCommand command) {
@@ -86,7 +86,7 @@ public class ProjectAdminService {
         rememberFormerSlug(article, edited, now);
         dropUnusedImage(article.content().coverImage(), content.coverImage());
         audit(adminId, UPDATE_ACTION, edited, "Projekt " + id + " „" + content.slug() + "“ upraven", now);
-        return ProjectView.from(edited, today(now));
+        return ProjectView.of(edited, today(now), media);
     }
 
     public ProjectView publish(UUID adminId, ProjectId id, LocalDate on) {
@@ -94,7 +94,7 @@ public class ProjectAdminService {
         Project published = require(id).publish(on, now);
         projects.save(published);
         audit(adminId, PUBLISH_ACTION, published, "Projekt " + id + " „" + published.slug() + "“ zveřejněn od " + on, now);
-        return ProjectView.from(published, today(now));
+        return ProjectView.of(published, today(now), media);
     }
 
     public ProjectView unpublish(UUID adminId, ProjectId id) {
@@ -102,7 +102,7 @@ public class ProjectAdminService {
         Project draft = require(id).unpublish(now);
         projects.save(draft);
         audit(adminId, UNPUBLISH_ACTION, draft, "Projekt " + id + " „" + draft.slug() + "“ stažen z webu", now);
-        return ProjectView.from(draft, today(now));
+        return ProjectView.of(draft, today(now), media);
     }
 
     public void delete(UUID adminId, ProjectId id) {

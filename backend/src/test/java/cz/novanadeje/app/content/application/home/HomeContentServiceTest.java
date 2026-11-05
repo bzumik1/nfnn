@@ -52,7 +52,7 @@ class HomeContentServiceTest {
     private final PublicPeopleService people = mock(PublicPeopleService.class);
     private final NewsSigners signers = new NewsSigners(mock(PersonRepository.class), mock(MediaImageRepository.class));
     private final HomeContentService service = new HomeContentService(news, signers, projects, projectOrders, about, people,
-            Clock.fixed(LATE_EVENING_UTC, ZoneOffset.UTC));
+            mock(MediaImageRepository.class), Clock.fixed(LATE_EVENING_UTC, ZoneOffset.UTC));
 
     @Test
     @DisplayName("Given published news and projects, when the home content is read, then it asks for the three newest news articles and the first three projects in the chosen order visible on the Prague day")
@@ -88,7 +88,8 @@ class HomeContentServiceTest {
     @Test
     @DisplayName("Given a photo in the About section, when the home content is read, then it carries the photo with its size and texts")
     void should_carry_the_about_photo_when_read_given_a_photo_in_the_about_section() {
-        AboutPhotoView photo = new AboutPhotoView(MediaId.newId(LATE_EVENING_UTC), 1413, 1884, Optional.of("Chlapec v náručí"), Optional.of("Kde to začalo"));
+        AboutPhotoView photo = new AboutPhotoView(MediaId.newId(LATE_EVENING_UTC), 1413, 1884, Optional.of("Chlapec v náručí"), Optional.of("Kde to začalo"),
+                Optional.empty());
         when(news.findVisibleNewestFirst(eq(PRAGUE_DAY), eq(0), anyInt())).thenReturn(List.of());
         when(projects.findVisible(eq(PRAGUE_DAY), any(), eq(0), anyInt())).thenReturn(List.of());
         when(about.read()).thenReturn(new AboutView(Optional.of(photo)));

@@ -1,11 +1,13 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { FocalPoint } from '../../shared/ui/focal-point/focal-point';
 
 export interface CoverImageResponse {
   id: string;
   url: string;
   alt: string | null;
+  focalPoint: FocalPoint | null;
 }
 
 export type ProjectCategory = 'CHILDREN' | 'ADULTS' | 'ANIMALS' | 'OTHER';

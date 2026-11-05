@@ -1,0 +1,61 @@
+<div
+  class="picker"
+  role="group"
+  aria-label="Bod výřezu fotky"
+  i18n-aria-label="@@admin.focalPoint.group"
+>
+  <button
+    type="button"
+    class="frame"
+    [id]="inputId()"
+    [attr.aria-describedby]="hintId()"
+    aria-label="Fotka, klepnutím nastavíte bod výřezu"
+    i18n-aria-label="@@admin.focalPoint.frame"
+    (click)="choose($event, photo)"
+    (keydown)="move($event)"
+  >
+    <img #photo class="photo" [src]="photoUrl()" alt="" />
+    @if (point(); as spot) {
+      <span class="marker" aria-hidden="true" [style.left.%]="spot.x" [style.top.%]="spot.y"></span>
+    }
+  </button>
+  <div class="picker-row">
+    <p class="picker-status" aria-live="polite" [id]="inputId() + '-status'">{{ summary() }}</p>
+    <button
+      type="button"
+      class="ui-link-button clear"
+      [disabled]="!point()"
+      (click)="clear()"
+      i18n="@@admin.focalPoint.clear"
+    >
+      Zrušit bod
+    </button>
+  </div>
+  <p class="field-hint" [id]="hintId()">
+    <ng-container i18n="@@admin.focalPoint.hint"
+      >Klepněte na místo, které musí zůstat vidět, třeba na obličeje; šipkami bod
+      posunete.</ng-container
+    >
+    @if (hint(); as extra) {
+      {{ ' ' + extra }}
+    }
+  </p>
+  @if (previews().length > 0) {
+    <div class="previews">
+      @for (preview of previews(); track preview.shape) {
+        <figure class="preview">
+          <div class="preview-frame" [style.aspect-ratio]="preview.ratio">
+            <img
+              class="real-img"
+              [src]="previewUrl()"
+              alt=""
+              [appFocalPoint]="point()"
+              [focalShape]="preview.shape"
+            />
+          </div>
+          <figcaption>{{ preview.label }}</figcaption>
+        </figure>
+      }
+    </div>
+  }
+</div>

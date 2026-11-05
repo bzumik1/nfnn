@@ -454,8 +454,8 @@ describe('Given an administrator writing a new news article', () => {
     upload.flush(uploadedImage());
     await settle(fixture);
 
-    expect(element<HTMLImageElement>(fixture, '.image-preview').getAttribute('src')).toBe(
-      `/api/content/media/${IMAGE_ID}?w=480`,
+    expect(element<HTMLImageElement>(fixture, '.frame img').getAttribute('src')).toBe(
+      `/api/content/media/${IMAGE_ID}?w=960`,
     );
     expect(text(fixture, '.image-field [role="status"]')).toBe(
       'Fotka je nahraná. K aktualitě se připojí, až ji uložíte.',
@@ -505,7 +505,7 @@ describe('Given an administrator writing a new news article', () => {
     expect(text(fixture, '.image-field [role="alert"]:not(:empty)')).toBe(
       'Soubor je příliš velký. Nahrát jde soubor nejvýš 10 MB.',
     );
-    expect(fixture.nativeElement.querySelector('.image-preview')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.frame img')).toBeNull();
   });
 });
 
@@ -609,8 +609,8 @@ describe('Given an administrator editing a published news article', () => {
     expect(element<HTMLTextAreaElement>(fixture, '#news-body').value).toBe(
       'První odstavec textu.\n\nDruhý odstavec textu.',
     );
-    expect(element<HTMLImageElement>(fixture, '.image-preview').getAttribute('src')).toBe(
-      `/api/content/media/${IMAGE_ID}?w=480`,
+    expect(element<HTMLImageElement>(fixture, '.frame img').getAttribute('src')).toBe(
+      `/api/content/media/${IMAGE_ID}?w=960`,
     );
     expect(text(fixture, '.publish-state .ui-badge')).toBe('Na webu');
     expect(text(fixture, '#news-publish-date-hint')).toBe(
@@ -620,12 +620,131 @@ describe('Given an administrator editing a published news article', () => {
     expect(text(fixture, '.updated-at')).toBe('Naposledy uloženo 20. 10. 2026 09:30.');
   });
 
+  async function tapPhoto(clientX: number, clientY: number): Promise<void> {
+    const frame = element<HTMLButtonElement>(fixture, 'button.frame');
+    frame.querySelector('img')!.getBoundingClientRect = () => new DOMRect(0, 0, 400, 250);
+    frame.dispatchEvent(new MouseEvent('click', { clientX, clientY, detail: 1 }));
+    await settle(fixture);
+  }
+
+  function placed(focalPoint: { x: number; y: number } | null) {
+    return {
+      id: IMAGE_ID,
+      url: `/api/content/media/${IMAGE_ID}`,
+      width: 1600,
+      height: 1000,
+      focalPoint,
+    };
+  }
+
+  function leavingIsHeld(): boolean {
+    const unload = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(unload);
+    return unload.defaultPrevented;
+  }
+
+  it('when they only tap a spot on the photo and save, then only the photo gets the point and the article is not saved again', async () => {
+    await loaded();
+    expect(
+      Array.from(fixture.nativeElement.querySelectorAll('figure.preview figcaption')).map(
+        (caption) => (caption as HTMLElement).textContent?.trim(),
+      ),
+    ).toEqual(['Karta v Aktualitách', 'Nahoře v článku']);
+
+    await tapPhoto(168, 45);
+    expect(text(fixture, '.picker-status')).toBe('Bod výřezu: 42 % zleva, 18 % shora.');
+    expect(leavingIsHeld()).toBe(true);
+
+    await submit(fixture);
+    const placing = http.expectOne(`${MEDIA_URL}/${IMAGE_ID}`);
+    expect(placing.request.method).toBe('PUT');
+    expect(placing.request.body).toEqual({ focalPoint: { x: 42, y: 18 } });
+    placing.flush(placed({ x: 42, y: 18 }));
+    await settle(fixture);
+
+    http.expectNone(`${NEWS_URL}/${newsArticle().id}`);
+    expect(text(fixture, '[role="status"]:not(:empty)')).toBe(
+      'Změny jsme uložili a na webu už jsou.',
+    );
+    expect(leavingIsHeld()).toBe(false);
+  });
+
+  it('when they change a text and the point and the save of the article fails, then the point counts as saved and the next save sends only the article', async () => {
+    await loaded();
+    await type(fixture, '#news-perex', 'Nový souhrn.');
+    await tapPhoto(168, 45);
+    await submit(fixture);
+
+    http.expectOne(`${MEDIA_URL}/${IMAGE_ID}`).flush(placed({ x: 42, y: 18 }));
+    await settle(fixture);
+    http
+      .expectOne(`${NEWS_URL}/${newsArticle().id}`)
+      .flush(null, { status: 500, statusText: 'Server Error' });
+    await settle(fixture);
+    expect(text(fixture, '.ui-action-bar [role="alert"]')).toBe(
+      'Aktualitu se nepodařilo uložit. Zkuste to prosím znovu.',
+    );
+
+    await submit(fixture);
+    http.expectNone(`${MEDIA_URL}/${IMAGE_ID}`);
+    const saving = http.expectOne(`${NEWS_URL}/${newsArticle().id}`);
+    expect(saving.request.body.perex).toBe('Nový souhrn.');
+    const cover = newsArticle().coverImage!;
+    saving.flush(
+      newsArticle({
+        perex: 'Nový souhrn.',
+        coverImage: { ...cover, focalPoint: { x: 42, y: 18 } },
+      }),
+    );
+    await settle(fixture);
+
+    expect(leavingIsHeld()).toBe(false);
+  });
+
+  it('when they clear a saved point, then the photo is sent without one', async () => {
+    const cover = newsArticle().coverImage!;
+    http
+      .expectOne(`${NEWS_URL}/${newsArticle().id}`)
+      .flush(newsArticle({ coverImage: { ...cover, focalPoint: { x: 30, y: 20 } } }));
+    await settle(fixture);
+    expect(text(fixture, '.picker-status')).toBe('Bod výřezu: 30 % zleva, 20 % shora.');
+
+    button(fixture, 'Zrušit bod').click();
+    await settle(fixture);
+    await submit(fixture);
+
+    const placing = http.expectOne(`${MEDIA_URL}/${IMAGE_ID}`);
+    expect(placing.request.body).toEqual({ focalPoint: null });
+    placing.flush(placed(null));
+    await settle(fixture);
+    http.expectNone(`${NEWS_URL}/${newsArticle().id}`);
+
+    expect(text(fixture, '.picker-status')).toBe('Bez bodu výřezu: web fotku ořízne jako dosud.');
+  });
+
+  it('when placing the point fails, then the article is not saved and the form says why', async () => {
+    await loaded();
+    await tapPhoto(200, 125);
+    await submit(fixture);
+
+    http
+      .expectOne(`${MEDIA_URL}/${IMAGE_ID}`)
+      .flush(null, { status: 500, statusText: 'Server Error' });
+    await settle(fixture);
+
+    http.expectNone(`${NEWS_URL}/${newsArticle().id}`);
+    expect(text(fixture, '.ui-action-bar [role="alert"]')).toBe(
+      'Aktualitu se nepodařilo uložit. Zkuste to prosím znovu.',
+    );
+    expect(text(fixture, '.picker-status')).toBe('Bod výřezu: 50 % zleva, 50 % shora.');
+  });
+
   it('when they remove the photo and save, then the article is updated without a cover image', async () => {
     await loaded();
     button(fixture, 'Odebrat fotku').click();
     await settle(fixture);
 
-    expect(fixture.nativeElement.querySelector('.image-preview')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.frame img')).toBeNull();
 
     await submit(fixture);
     const request = http.expectOne(`${NEWS_URL}/${newsArticle().id}`);
