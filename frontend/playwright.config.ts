@@ -24,6 +24,11 @@ export default defineConfig({
   projects: [
     { name: 'chromium', testIgnore: /baseline\//, use: { ...devices['Desktop Chrome'] } },
     {
+      name: 'iphone',
+      testMatch: /(receipt-pdf|verify-receipt|donate-qr|second-factor)\.spec\.ts$/,
+      use: { ...devices['iPhone 15'] },
+    },
+    {
       name: 'baseline',
       testMatch: /baseline\/.*\.spec\.ts$/,
       snapshotPathTemplate: `${process.env.BASELINE_SCREENS_DIR ?? join(tmpdir(), 'nfnn-baseline-screens')}/{arg}{ext}`,

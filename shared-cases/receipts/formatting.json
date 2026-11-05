@@ -1,5 +1,5 @@
 {
-  "source": "v2-baseline",
+  "source": "edited",
   "logic": "How a v2 receipt prints amounts (ReceiptFormats: hellers as Czech crowns with U+00A0 as the thousands separator and before Kč, hellers only when not whole; English as CZK with a comma and a point), dates (Czech d. M. yyyy without leading zeros, which the web's 15. 03. 2026 is not; English d MMMM yyyy) and the donor (ReceiptData from the donor record: trimmed name, identifier of a company, address as street, postal code city). input.format names the formatter; expected.text or expected.donor is what the receipt's frozen data holds",
   "cases": [
     {
@@ -249,7 +249,7 @@
         "date": "2026-01-01"
       },
       "expected": {
-        "text": "1. 1. 2026"
+        "text": "01. 01. 2026"
       }
     },
     {
@@ -269,7 +269,7 @@
         "date": "2026-03-15"
       },
       "expected": {
-        "text": "15. 3. 2026"
+        "text": "15. 03. 2026"
       }
     },
     {
@@ -289,7 +289,7 @@
         "date": "2026-10-05"
       },
       "expected": {
-        "text": "5. 10. 2026"
+        "text": "05. 10. 2026"
       }
     },
     {
@@ -329,7 +329,7 @@
         "date": "2028-02-29"
       },
       "expected": {
-        "text": "29. 2. 2028"
+        "text": "29. 02. 2028"
       }
     },
     {

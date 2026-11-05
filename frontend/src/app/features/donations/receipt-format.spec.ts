@@ -98,12 +98,8 @@ describe('Given the shared receipt formatting cases of Czech dates', () => {
   const dates = casesOf('czechDate');
 
   for (const date of dates) {
-    it(`when ${date.name} is formatted, then it reads as v2 printed it with two-digit day and month (plan v3 D11, the listed difference)`, () => {
-      const padded = date.text.replace(
-        /^(\d{1,2})\. (\d{1,2})\. /,
-        (_, day: string, month: string) => `${day.padStart(2, '0')}. ${month.padStart(2, '0')}. `,
-      );
-      expect(formatReceiptDate(String(date.value))).toBe(padded);
+    it(`when ${date.name} is formatted, then it reads with a two-digit day and month as the receipt prints it`, () => {
+      expect(formatReceiptDate(String(date.value))).toBe(date.text);
     });
   }
 });
