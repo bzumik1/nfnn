@@ -148,6 +148,18 @@ describe("Given a donor's signed-in devices card", () => {
       expect(document.activeElement).toBe(rows()[1].querySelector('button'));
     });
 
+    it('and the donor signs out the last row while another device stays, then focus moves to the button that signs out every other device', async () => {
+      rows()[2].querySelector<HTMLButtonElement>('button')?.click();
+      await settle();
+      http
+        .expectOne({ method: 'DELETE', url: `${DEVICES_URL}/${UNKNOWN.id}` })
+        .flush(null, { status: 204, statusText: 'No Content' });
+      await settle();
+
+      expect(rows()).toHaveLength(2);
+      expect(document.activeElement).toBe(element('.devices-sign-out-others'));
+    });
+
     it('and the donor signs out every other device, then only this one stays, the status says so and focus moves to the heading', async () => {
       element<HTMLButtonElement>('.devices-sign-out-others').click();
       await settle();

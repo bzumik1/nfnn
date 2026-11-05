@@ -54,19 +54,20 @@ class DeviceSignOutsTest {
         DonorDevice phone = device();
         DonorDevice laptop = device();
         when(devices.findActiveOf(JANA)).thenReturn(List.of(phone, laptop));
+        when(devices.endIfActive(phone.id(), DeviceSignOutReason.CREDENTIALS_CHANGED, NOW)).thenReturn(true);
+        when(devices.endIfActive(laptop.id(), DeviceSignOutReason.CREDENTIALS_CHANGED, NOW)).thenReturn(true);
 
         signOuts().endAllOf(JANA, DeviceSignOutReason.CREDENTIALS_CHANGED, NOW);
 
         InOrder order = inOrder(refreshTokens, devices, events);
         order.verify(refreshTokens).revokeAllOf(JANA, NOW);
+        order.verify(devices).findActiveOf(JANA);
         order.verify(refreshTokens).revokeAllOfDevice(phone.id(), NOW);
-        order.verify(devices).save(phone);
+        order.verify(devices).endIfActive(phone.id(), DeviceSignOutReason.CREDENTIALS_CHANGED, NOW);
         order.verify(events).publishEvent(new DeviceSignedOut(JANA.value(), phone.id().value(), NOW));
         order.verify(refreshTokens).revokeAllOfDevice(laptop.id(), NOW);
-        order.verify(devices).save(laptop);
+        order.verify(devices).endIfActive(laptop.id(), DeviceSignOutReason.CREDENTIALS_CHANGED, NOW);
         order.verify(events).publishEvent(new DeviceSignedOut(JANA.value(), laptop.id().value(), NOW));
-        assertThat(phone.endReason()).contains(DeviceSignOutReason.CREDENTIALS_CHANGED);
-        assertThat(laptop.endReason()).contains(DeviceSignOutReason.CREDENTIALS_CHANGED);
     }
 
     @Test
@@ -75,13 +76,13 @@ class DeviceSignOutsTest {
         DonorDevice continuing = device();
         DonorDevice other = device();
         when(devices.findActiveOf(JANA)).thenReturn(List.of(continuing, other));
+        when(devices.endIfActive(other.id(), DeviceSignOutReason.CREDENTIALS_CHANGED, NOW)).thenReturn(true);
 
         signOuts().endAllOf(JANA, Optional.of(continuing.id()), DeviceSignOutReason.CREDENTIALS_CHANGED, NOW);
 
         verify(refreshTokens).revokeAllOf(JANA, NOW);
-        assertThat(continuing.isActive()).isTrue();
         verify(refreshTokens, never()).revokeAllOfDevice(continuing.id(), NOW);
-        assertThat(other.endReason()).contains(DeviceSignOutReason.CREDENTIALS_CHANGED);
+        verify(devices, never()).endIfActive(continuing.id(), DeviceSignOutReason.CREDENTIALS_CHANGED, NOW);
         verify(events).publishEvent(new DeviceSignedOut(JANA.value(), other.id().value(), NOW));
     }
 
@@ -91,6 +92,7 @@ class DeviceSignOutsTest {
         DonorDevice current = device();
         DonorDevice other = device();
         when(devices.findActiveOf(JANA)).thenReturn(List.of(current, other));
+        when(devices.endIfActive(other.id(), DeviceSignOutReason.REMOTE_SIGN_OUT, NOW)).thenReturn(true);
 
         signOuts().endOthersOf(JANA, Optional.of(current.id()), NOW);
 
@@ -101,8 +103,7 @@ class DeviceSignOutsTest {
         verify(refreshTokens, never()).revokeAllOf(any(), any());
         verify(refreshTokens, never()).revokeAllOfDevice(current.id(), NOW);
         verify(refreshTokens).revokeAllOfDevice(other.id(), NOW);
-        assertThat(current.isActive()).isTrue();
-        assertThat(other.endReason()).contains(DeviceSignOutReason.REMOTE_SIGN_OUT);
+        verify(devices, never()).endIfActive(current.id(), DeviceSignOutReason.REMOTE_SIGN_OUT, NOW);
         verify(events).publishEvent(new DeviceSignedOut(JANA.value(), other.id().value(), NOW));
     }
 
@@ -111,10 +112,11 @@ class DeviceSignOutsTest {
     void should_end_every_device_when_others_signed_out_given_no_current_device() {
         DonorDevice phone = device();
         when(devices.findActiveOf(JANA)).thenReturn(List.of(phone));
+        when(devices.endIfActive(phone.id(), DeviceSignOutReason.REMOTE_SIGN_OUT, NOW)).thenReturn(true);
 
         signOuts().endOthersOf(JANA, Optional.empty(), NOW);
 
-        assertThat(phone.endReason()).contains(DeviceSignOutReason.REMOTE_SIGN_OUT);
+        verify(events).publishEvent(new DeviceSignedOut(JANA.value(), phone.id().value(), NOW));
     }
 
     @Test
@@ -122,6 +124,7 @@ class DeviceSignOutsTest {
     void should_lock_then_end_and_announce_when_ended_given_active_device() {
         DonorDevice phone = device();
         when(devices.findById(phone.id())).thenReturn(Optional.of(phone));
+        when(devices.endIfActive(phone.id(), DeviceSignOutReason.REMOTE_SIGN_OUT, NOW)).thenReturn(true);
 
         boolean ended = signOuts().end(JANA, phone.id(), DeviceSignOutReason.REMOTE_SIGN_OUT, NOW);
 
@@ -130,13 +133,25 @@ class DeviceSignOutsTest {
         order.verify(refreshTokens).lockAllOf(JANA);
         order.verify(devices).findById(phone.id());
         order.verify(refreshTokens).revokeAllOfDevice(phone.id(), NOW);
-        order.verify(devices).save(phone);
+        order.verify(devices).endIfActive(phone.id(), DeviceSignOutReason.REMOTE_SIGN_OUT, NOW);
         order.verify(events).publishEvent(new DeviceSignedOut(JANA.value(), phone.id().value(), NOW));
-        assertThat(phone.endReason()).contains(DeviceSignOutReason.REMOTE_SIGN_OUT);
     }
 
     @Test
-    @DisplayName("Given a device that already ended, when it is ended again, then nothing is revoked, saved or announced and its first reason stays")
+    @DisplayName("Given a device another sign-out ended after it was read, when it is ended, then nothing is announced and the answer is false")
+    void should_announce_nothing_when_ended_given_device_ended_meanwhile() {
+        DonorDevice phone = device();
+        when(devices.findById(phone.id())).thenReturn(Optional.of(phone));
+        when(devices.endIfActive(phone.id(), DeviceSignOutReason.EXPIRED, NOW)).thenReturn(false);
+
+        boolean ended = signOuts().end(JANA, phone.id(), DeviceSignOutReason.EXPIRED, NOW);
+
+        assertThat(ended).isFalse();
+        verify(events, never()).publishEvent(any(Object.class));
+    }
+
+    @Test
+    @DisplayName("Given a device that already ended, when it is ended again, then nothing is revoked, ended or announced")
     void should_change_nothing_when_ended_given_device_already_ended() {
         DonorDevice ended = device();
         ended.end(DeviceSignOutReason.SIGNED_OUT, SIGNED_IN.plusSeconds(60));
@@ -146,13 +161,12 @@ class DeviceSignOutsTest {
 
         assertThat(result).isFalse();
         verify(refreshTokens, never()).revokeAllOfDevice(any(), any());
-        verify(devices, never()).save(any());
+        verify(devices, never()).endIfActive(any(), any(), any());
         verify(events, never()).publishEvent(any(Object.class));
-        assertThat(ended.endReason()).contains(DeviceSignOutReason.SIGNED_OUT);
     }
 
     @Test
-    @DisplayName("Given another donor's device, when it is ended for Jana, then nothing is revoked, saved or announced")
+    @DisplayName("Given another donor's device, when it is ended for Jana, then nothing is revoked, ended or announced")
     void should_change_nothing_when_ended_given_another_donors_device() {
         DonorDevice petrs = DonorDevice.signIn(DonorId.newId(SIGNED_IN), DeviceDescription.UNKNOWN, SIGNED_IN);
         when(devices.findById(petrs.id())).thenReturn(Optional.of(petrs));
@@ -161,8 +175,7 @@ class DeviceSignOutsTest {
 
         assertThat(result).isFalse();
         verify(refreshTokens, never()).revokeAllOfDevice(any(), any());
-        verify(devices, never()).save(any());
+        verify(devices, never()).endIfActive(any(), any(), any());
         verify(events, never()).publishEvent(any(Object.class));
-        assertThat(petrs.isActive()).isTrue();
     }
 }

@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donors.application;
 
 import cz.novanadeje.app.donors.domain.DeviceDescription;
+import cz.novanadeje.app.donors.domain.DeviceId;
 import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorDevice;
@@ -71,9 +72,6 @@ public class DonorSessionService {
         Instant now = clock.instant();
         RefreshToken token = refreshTokens.findBySecretHashForUpdate(RefreshTokenSecret.fromValue(presentedSecret).hash())
                 .orElseThrow(InvalidRefreshToken::new);
-        if (deviceEnded(token)) {
-            throw new InvalidRefreshToken();
-        }
         if (token.isSuperseded()) {
             throw replay(token, now);
         }
@@ -91,6 +89,9 @@ public class DonorSessionService {
     }
 
     private RefreshedSession reissueWithinReuseGrace(RefreshToken token, DeviceDescription description, Instant now) {
+        if (usedWithinReuseGrace(token, now) && deviceEnded(token)) {
+            throw new InvalidRefreshToken();
+        }
         if (!token.mayBeReissuedAt(now)) {
             throw replay(token, now);
         }
@@ -118,17 +119,25 @@ public class DonorSessionService {
         return new RefreshedSession(donor, successor.tokens());
     }
 
+    private static boolean usedWithinReuseGrace(RefreshToken token, Instant now) {
+        return token.usedAt().filter(used -> now.isBefore(used.plus(RefreshToken.REUSE_GRACE))).isPresent();
+    }
+
     private boolean deviceEnded(RefreshToken token) {
-        return token.deviceId().flatMap(devices::findById).filter(device -> !device.isActive()).isPresent();
+        return deviceIdOf(token).flatMap(devices::findById).filter(device -> !device.isActive()).isPresent();
+    }
+
+    private Optional<DeviceId> deviceIdOf(RefreshToken token) {
+        return token.deviceId().or(() -> token.successorId().flatMap(refreshTokens::findById).flatMap(RefreshToken::deviceId));
     }
 
     private DonorDevice deviceOf(RefreshToken token, Donor donor, DeviceDescription description, Instant now) {
-        if (token.deviceId().isEmpty()) {
-            return token.successorId().flatMap(refreshTokens::findById).flatMap(RefreshToken::deviceId).flatMap(devices::findById)
-                    .filter(DonorDevice::isActive)
-                    .orElseGet(() -> DonorDevice.signIn(donor.id(), description, token.issuedAt()));
+        Optional<DeviceId> deviceId = deviceIdOf(token);
+        if (deviceId.isEmpty()) {
+            return DonorDevice.signIn(donor.id(), description, token.issuedAt());
         }
-        return token.deviceId().flatMap(devices::findById).filter(DonorDevice::isActive).orElseThrow(InvalidRefreshToken::new);
+        return deviceId.flatMap(devices::findById).filter(device -> device.isActive() && device.belongsTo(donor.id()))
+                .orElseThrow(InvalidRefreshToken::new);
     }
 
     @Transactional

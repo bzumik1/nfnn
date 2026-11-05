@@ -10,6 +10,8 @@ public interface DonorDeviceRepository {
 
     Optional<DonorDevice> findById(DeviceId id);
 
+    boolean endIfActive(DeviceId id, DeviceSignOutReason reason, Instant at);
+
     List<DonorDevice> findSignedInOf(DonorId donorId, Instant now);
 
     List<DonorDevice> findActiveOf(DonorId donorId);

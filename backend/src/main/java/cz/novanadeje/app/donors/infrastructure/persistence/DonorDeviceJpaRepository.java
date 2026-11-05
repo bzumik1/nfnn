@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.infrastructure.persistence;
 
+import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -25,6 +26,10 @@ interface DonorDeviceJpaRepository extends JpaRepository<DonorDeviceJpaEntity, U
 
     @Query("select d from DonorDeviceJpaEntity d where d.endedAt is null and not " + HAS_USABLE_TOKEN + " order by d.id")
     List<DonorDeviceJpaEntity> findActiveWithoutUsableTokenAt(@Param("now") Instant now);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("update DonorDeviceJpaEntity d set d.endedAt = :at, d.endReason = :reason where d.id = :id and d.endedAt is null")
+    int endIfActive(@Param("id") UUID id, @Param("reason") DeviceSignOutReason reason, @Param("at") Instant at);
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("delete from DonorDeviceJpaEntity d where d.endedAt < :cutoff")

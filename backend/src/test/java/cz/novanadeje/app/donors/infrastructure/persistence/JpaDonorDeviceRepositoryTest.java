@@ -140,6 +140,32 @@ class JpaDonorDeviceRepositoryTest {
     }
 
     @Test
+    @DisplayName("Given an active device already read into the session and then ended by another sign-out, when it is ended again, then the first end and its reason stay and the answer is false")
+    void should_keep_first_end_when_ended_given_device_ended_after_it_was_read() {
+        DonorDevice phone = DonorDevice.signIn(jana, IPHONE_SAFARI, NOW);
+        DonorDevice laptop = DonorDevice.signIn(jana, DeviceDescription.UNKNOWN, NOW);
+        devices.save(phone);
+        devices.save(laptop);
+        flushAndClear();
+        assertThat(devices.findActiveWithoutUsableTokenAt(NOW.plusSeconds(1))).hasSize(2);
+        entityManager.createNativeQuery("update donor_device set ended_at = :at, end_reason = 'REPLAY' where id = :id")
+                .setParameter("at", NOW.plusSeconds(5)).setParameter("id", phone.id().value()).executeUpdate();
+
+        boolean endedPhone = devices.endIfActive(phone.id(), DeviceSignOutReason.EXPIRED, NOW.plusSeconds(10));
+        boolean endedLaptop = devices.endIfActive(laptop.id(), DeviceSignOutReason.EXPIRED, NOW.plusSeconds(10));
+        flushAndClear();
+
+        assertThat(endedPhone).isFalse();
+        assertThat(endedLaptop).isTrue();
+        DonorDevice foundPhone = devices.findById(phone.id()).orElseThrow();
+        assertThat(foundPhone.endReason()).contains(DeviceSignOutReason.REPLAY);
+        assertThat(foundPhone.endedAt()).contains(NOW.plusSeconds(5));
+        DonorDevice foundLaptop = devices.findById(laptop.id()).orElseThrow();
+        assertThat(foundLaptop.endReason()).contains(DeviceSignOutReason.EXPIRED);
+        assertThat(foundLaptop.endedAt()).contains(NOW.plusSeconds(10));
+    }
+
+    @Test
     @DisplayName("Given a device's token, another device's, a device-less browser token and a connected application's, when one device's tokens are revoked, then only its own are")
     void should_revoke_only_own_tokens_when_device_revoked_given_other_tokens() {
         DonorDevice phone = DonorDevice.signIn(jana, IPHONE_SAFARI, NOW);

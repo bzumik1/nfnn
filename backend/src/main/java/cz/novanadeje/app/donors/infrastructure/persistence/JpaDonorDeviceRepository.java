@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donors.infrastructure.persistence;
 
 import cz.novanadeje.app.donors.domain.DeviceId;
+import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.domain.DonorDevice;
 import cz.novanadeje.app.donors.domain.DonorDeviceRepository;
 import cz.novanadeje.app.donors.domain.DonorId;
@@ -27,6 +28,11 @@ class JpaDonorDeviceRepository implements DonorDeviceRepository {
     @Override
     public Optional<DonorDevice> findById(DeviceId id) {
         return jpa.findById(id.value()).map(DonorDeviceJpaEntity::toDomain);
+    }
+
+    @Override
+    public boolean endIfActive(DeviceId id, DeviceSignOutReason reason, Instant at) {
+        return jpa.endIfActive(id.value(), reason, at) == 1;
     }
 
     @Override

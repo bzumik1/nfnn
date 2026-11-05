@@ -55,18 +55,16 @@ public class DeviceSignOuts {
         refreshTokens.lockAllOf(donorId);
         return devices.findById(deviceId)
                 .filter(device -> device.belongsTo(donorId) && device.isActive())
-                .map(device -> {
-                    end(device, reason, at);
-                    return true;
-                })
+                .map(device -> end(device, reason, at))
                 .orElse(false);
     }
 
-    private void end(DonorDevice device, DeviceSignOutReason reason, Instant at) {
+    private boolean end(DonorDevice device, DeviceSignOutReason reason, Instant at) {
         refreshTokens.revokeAllOfDevice(device.id(), at);
-        if (device.end(reason, at)) {
-            devices.save(device);
+        boolean ended = devices.endIfActive(device.id(), reason, at);
+        if (ended) {
             events.publishEvent(new DeviceSignedOut(device.donorId().value(), device.id().value(), at));
         }
+        return ended;
     }
 }
