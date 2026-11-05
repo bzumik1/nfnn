@@ -38,6 +38,17 @@ class SettingTest {
     }
 
     @Test
+    @DisplayName("Given remembered sign-in lengths, when they are checked, then only whole days from 1 to 30 are accepted")
+    void should_accept_only_one_to_thirty_days_when_checked_given_remembered_sign_in_length() {
+        assertThat(Setting.SESSION_REMEMBER_DAYS.check("1")).isEmpty();
+        assertThat(Setting.SESSION_REMEMBER_DAYS.check("30")).isEmpty();
+        assertThat(Setting.SESSION_REMEMBER_DAYS.check("0")).contains(SettingProblem.INVALID_DAYS);
+        assertThat(Setting.SESSION_REMEMBER_DAYS.check("31")).contains(SettingProblem.INVALID_DAYS);
+        assertThat(Setting.SESSION_REMEMBER_DAYS.check("1x")).contains(SettingProblem.INVALID_DAYS);
+        assertThat(Setting.SESSION_REMEMBER_DAYS.changesOnlyInBrowser()).isFalse();
+    }
+
+    @Test
     @DisplayName("Given a placeholder, a line break or an overlong value, when it is checked, then it is refused for any setting")
     void should_refuse_value_when_checked_given_placeholder_control_character_or_length() {
         assertThat(Setting.MAIL_USERNAME.check("${JWT_SECRET}")).contains(SettingProblem.PLACEHOLDER);

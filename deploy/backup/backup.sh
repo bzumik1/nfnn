@@ -279,6 +279,11 @@ release_liquibase_lock() {
     --command="do \$\$ begin if to_regclass('public.databasechangeloglock') is not null then update public.databasechangeloglock set locked = false, lockgranted = null, lockedby = null where locked; end if; end \$\$" > /dev/null 2>> "$2"
 }
 
+end_sessions() {
+  psql --dbname="$1" --quiet --no-align --tuples-only -v ON_ERROR_STOP=1 \
+    --command="do \$\$ begin if to_regclass('public.donor_refresh_token') is not null then update public.donor_refresh_token set revoked_at = now() where revoked_at is null; end if; if to_regclass('public.donor_device') is not null then update public.donor_device set ended_at = now(), end_reason = 'EXPIRED' where ended_at is null; end if; end \$\$" > /dev/null 2>> "$2"
+}
+
 hand_to_app_role() {
   psql --dbname="$1" --quiet --no-align --tuples-only -v ON_ERROR_STOP=1 --file="$OWNERSHIP_SQL" > /dev/null 2>> "$2"
 }
@@ -372,6 +377,7 @@ restore_dump() {
       r_error="the backup was taken before receipts moved to the browser, and this server has given out receipt numbers since; the backend would delete the backup's test receipts and number from 1 again, so nothing was restored"
     elif [ "${r_tables:-0}" -gt 0 ] 2>/dev/null && [ "${r_changesets:-0}" -gt 0 ] 2>/dev/null; then
       if release_liquibase_lock "$STAGING_DATABASE" "$STATUS/restore.err" \
+          && end_sessions "$STAGING_DATABASE" "$STATUS/restore.err" \
           && hand_to_app_role "$STAGING_DATABASE" "$STATUS/restore.err" \
           && swap_in_staging; then
         write_status restore "outcome=ok" "started_at=$r_started" "finished_at=$(now_utc)" "file=$r_file" "size=$(file_size "$r_dump")" "tables=$r_tables" "request=$r_request" "admin=$r_admin"

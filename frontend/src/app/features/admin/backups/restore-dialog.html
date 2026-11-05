@@ -22,14 +22,15 @@
       vrátit stejným tlačítkem.
     </li>
     <li i18n="@@admin.backups.restoreDialog.downtime">
-      Web bude několik minut nedostupný a možná se pak budete muset znovu přihlásit. Když se obnova
-      nepovede, web poběží dál s dnešními daty.
+      Web bude několik minut nedostupný. Obnova ukončí každé přihlášení: všichni, vy i dárci, se
+      přihlásí znovu a konektor v claude.ai je potřeba připojit znovu. Když se obnova nepovede, web
+      poběží dál s dnešními daty.
     </li>
   </ul>
   @if (error(); as error) {
     <p class="restore-error" role="alert">{{ error }}</p>
   }
-  <div class="restore-actions">
+  <div class="ui-dialog__actions restore-actions">
     <button type="button" class="restore-confirm" [disabled]="busy()" (click)="confirm()">
       @if (busy()) {
         <ng-container i18n="@@admin.backups.restoreDialog.busy">Předáváme obnovu…</ng-container>

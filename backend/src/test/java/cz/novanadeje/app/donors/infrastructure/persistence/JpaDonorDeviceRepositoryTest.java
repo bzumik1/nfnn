@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.infrastructure.persistence;
 
+import cz.novanadeje.app.donors.domain.SessionKind;
 import cz.novanadeje.app.donors.domain.ClientId;
 import cz.novanadeje.app.donors.domain.DeviceBrowser;
 import cz.novanadeje.app.donors.domain.DeviceDescription;
@@ -65,9 +66,31 @@ class JpaDonorDeviceRepositoryTest {
     }
 
     @Test
+    @DisplayName("Given an app device, when it is found by id, then it keeps its kind of session")
+    void should_keep_kind_when_found_given_app_device() {
+        DonorDevice app = DonorDevice.signIn(jana, IPHONE_SAFARI, SessionKind.APP, NOW);
+        devices.save(app);
+        flushAndClear();
+
+        assertThat(devices.findById(app.id()).orElseThrow().kind()).isEqualTo(SessionKind.APP);
+    }
+
+    @Test
+    @DisplayName("Given a device stored before sessions had kinds, when it is found by id, then it reads as a remembered sign-in")
+    void should_read_as_remembered_when_found_given_device_without_kind() {
+        DonorDevice older = DonorDevice.signIn(jana, IPHONE_SAFARI, SessionKind.BROWSER, NOW);
+        devices.save(older);
+        flushAndClear();
+        entityManager.createNativeQuery("update donor_device set session_kind = null where id = :id").setParameter("id", older.id().value()).executeUpdate();
+        flushAndClear();
+
+        assertThat(devices.findById(older.id()).orElseThrow().kind()).isEqualTo(SessionKind.REMEMBERED);
+    }
+
+    @Test
     @DisplayName("Given a device used and then ended, when it is found by id, then its description, times and end survive")
     void should_keep_description_times_and_end_when_found_given_ended_device() {
-        DonorDevice phone = DonorDevice.signIn(jana, IPHONE_SAFARI, NOW);
+        DonorDevice phone = DonorDevice.signIn(jana, IPHONE_SAFARI, SessionKind.REMEMBERED, NOW);
         phone.recordUse(NOW.plusSeconds(600));
         phone.end(DeviceSignOutReason.REMOTE_SIGN_OUT, NOW.plusSeconds(900));
         devices.save(phone);
@@ -106,7 +129,7 @@ class JpaDonorDeviceRepositoryTest {
     @Test
     @DisplayName("Given a device whose token was rotated, when it is asked whether it is signed in, then the successor keeps it signed in")
     void should_stay_signed_in_when_asked_given_rotated_token() {
-        DonorDevice phone = DonorDevice.signIn(jana, IPHONE_SAFARI, NOW);
+        DonorDevice phone = DonorDevice.signIn(jana, IPHONE_SAFARI, SessionKind.REMEMBERED, NOW);
         devices.save(phone);
         RefreshToken first = RefreshToken.issue(RefreshTokenSecret.generate(), jana, phone.id(), NOW, TTL, false);
         first.markUsed(NOW.plusSeconds(60));
@@ -142,8 +165,8 @@ class JpaDonorDeviceRepositoryTest {
     @Test
     @DisplayName("Given an active device already read into the session and then ended by another sign-out, when it is ended again, then the first end and its reason stay and the answer is false")
     void should_keep_first_end_when_ended_given_device_ended_after_it_was_read() {
-        DonorDevice phone = DonorDevice.signIn(jana, IPHONE_SAFARI, NOW);
-        DonorDevice laptop = DonorDevice.signIn(jana, DeviceDescription.UNKNOWN, NOW);
+        DonorDevice phone = DonorDevice.signIn(jana, IPHONE_SAFARI, SessionKind.REMEMBERED, NOW);
+        DonorDevice laptop = DonorDevice.signIn(jana, DeviceDescription.UNKNOWN, SessionKind.REMEMBERED, NOW);
         devices.save(phone);
         devices.save(laptop);
         flushAndClear();
@@ -168,8 +191,8 @@ class JpaDonorDeviceRepositoryTest {
     @Test
     @DisplayName("Given a device's token, another device's, a device-less browser token and a connected application's, when one device's tokens are revoked, then only its own are")
     void should_revoke_only_own_tokens_when_device_revoked_given_other_tokens() {
-        DonorDevice phone = DonorDevice.signIn(jana, IPHONE_SAFARI, NOW);
-        DonorDevice laptop = DonorDevice.signIn(jana, DeviceDescription.UNKNOWN, NOW);
+        DonorDevice phone = DonorDevice.signIn(jana, IPHONE_SAFARI, SessionKind.REMEMBERED, NOW);
+        DonorDevice laptop = DonorDevice.signIn(jana, DeviceDescription.UNKNOWN, SessionKind.REMEMBERED, NOW);
         devices.save(phone);
         devices.save(laptop);
         RefreshTokenSecret phoneSecret = browserToken(phone);
@@ -189,7 +212,7 @@ class JpaDonorDeviceRepositoryTest {
     @Test
     @DisplayName("Given a device's token, a device-less browser token, another donor's and a connected application's, when the device-less browser tokens are revoked, then only the donor's device-less browser token is")
     void should_revoke_only_deviceless_browser_tokens_when_revoked_given_other_tokens() {
-        DonorDevice phone = DonorDevice.signIn(jana, IPHONE_SAFARI, NOW);
+        DonorDevice phone = DonorDevice.signIn(jana, IPHONE_SAFARI, SessionKind.REMEMBERED, NOW);
         devices.save(phone);
         RefreshTokenSecret phoneSecret = browserToken(phone);
         RefreshTokenSecret legacySecret = legacyBrowserToken(jana);
@@ -208,7 +231,7 @@ class JpaDonorDeviceRepositoryTest {
     @Test
     @DisplayName("Given a token revoked before the cutoff but expiring after it, one expired before it, one revoked after it, one used but still valid and one live, when the spent ones are deleted, then only those revoked or expired before the cutoff go, even one revoked before it that expires after it")
     void should_delete_only_revoked_or_expired_tokens_when_deleted_given_mixed_tokens() {
-        DonorDevice phone = DonorDevice.signIn(jana, IPHONE_SAFARI, NOW.minus(Duration.ofDays(60)));
+        DonorDevice phone = DonorDevice.signIn(jana, IPHONE_SAFARI, SessionKind.REMEMBERED, NOW.minus(Duration.ofDays(60)));
         devices.save(phone);
         RefreshTokenSecret revokedSecret = token(phone, NOW.minus(Duration.ofDays(35)), null, NOW.minus(Duration.ofDays(34)));
         RefreshTokenSecret recentlyRevokedSecret = token(phone, NOW.minus(Duration.ofDays(20)), null, NOW.minus(Duration.ofDays(10)));
@@ -228,7 +251,7 @@ class JpaDonorDeviceRepositoryTest {
     }
 
     private DonorDevice deviceWithToken(DonorId donor, Instant issuedAt, Duration lifetime) {
-        DonorDevice device = DonorDevice.signIn(donor, IPHONE_SAFARI, issuedAt);
+        DonorDevice device = DonorDevice.signIn(donor, IPHONE_SAFARI, SessionKind.REMEMBERED, issuedAt);
         devices.save(device);
         refreshTokens.save(RefreshToken.issue(RefreshTokenSecret.generate(), donor, device.id(), issuedAt, lifetime, false));
         return device;
@@ -236,7 +259,7 @@ class JpaDonorDeviceRepositoryTest {
 
     private RefreshTokenSecret legacyBrowserToken(DonorId donor) {
         RefreshTokenSecret secret = RefreshTokenSecret.generate();
-        RefreshToken withDevice = RefreshToken.issue(secret, donor, DonorDevice.signIn(donor, IPHONE_SAFARI, NOW).id(), NOW, TTL, false);
+        RefreshToken withDevice = RefreshToken.issue(secret, donor, DonorDevice.signIn(donor, IPHONE_SAFARI, SessionKind.REMEMBERED, NOW).id(), NOW, TTL, false);
         refreshTokens.save(RefreshToken.reconstitute(withDevice.id(), withDevice.donorId(), withDevice.secretHash(), withDevice.issuedAt(),
                 withDevice.expiresAt(), false, null, Set.of(), withDevice.grantedAt(), null, null, null, null, null));
         return secret;

@@ -1486,7 +1486,12 @@ describe('Given an administrator on a donor card opened part by part', () => {
   async function open(
     section: string | null,
     rows = true,
-    answers: { account?: Answer; detail?: Answer; detailBody?: AdminDonorDetailResponse } = {},
+    answers: {
+      account?: Answer;
+      detail?: Answer;
+      detailBody?: AdminDonorDetailResponse;
+      compact?: boolean;
+    } = {},
   ): Promise<void> {
     localStorage.clear();
     await TestBed.configureTestingModule({
@@ -1509,7 +1514,7 @@ describe('Given an administrator on a donor card opened part by part', () => {
         {
           provide: CompactLayout,
           useValue: {
-            isCompact: signal(rows).asReadonly(),
+            isCompact: signal(answers.compact ?? rows).asReadonly(),
             listsAsRows: signal(rows).asReadonly(),
           },
         },
@@ -1589,18 +1594,34 @@ describe('Given an administrator on a donor card opened part by part', () => {
     );
     expect(fixture.nativeElement.querySelector('.donor-summary')).not.toBeNull();
     expect(cardTitles()).toEqual([]);
-    expect(textOf(crumb())).toBe('← Dárci');
+    expect(crumb()).toBeNull();
   });
 
-  it('when a part opens, then only that part shows under the name, and the way back leads to the card', async () => {
+  it('when a part opens on a phone, then only that part shows under the name, and the header alone leads back', async () => {
     await open('dary');
 
     expect(cardTitles()).toEqual(['Dary']);
     expect(fixture.nativeElement.querySelector('.donor-summary')).toBeNull();
     expect(fixture.nativeElement.querySelector('.card-rows')).toBeNull();
     expect(textOf(fixture.nativeElement.querySelector('h1'))).toBe('Jana Nováková');
-    expect(textOf(crumb())).toBe('← Jana Nováková');
-    expect(crumb().getAttribute('href')).toBe(`/sprava/darci/${DONOR_ID}`);
+    expect(crumb()).toBeNull();
+  });
+
+  describe('when the text is so large that a wide screen lists rows', () => {
+    it('then the card leads back to the donors', async () => {
+      await open(null, true, { compact: false });
+
+      expect(fixture.nativeElement.querySelector('.card-rows')).not.toBeNull();
+      expect(textOf(crumb())).toBe('← Dárci');
+    });
+
+    it('and a part opens, then the way back above it leads to the card', async () => {
+      await open('dary', true, { compact: false });
+
+      expect(cardTitles()).toEqual(['Dary']);
+      expect(textOf(crumb())).toBe('← Jana Nováková');
+      expect(crumb().getAttribute('href')).toBe(`/sprava/darci/${DONOR_ID}`);
+    });
   });
 
   it('when the gifts part opens, then its gifts stand as rows under a heading per year with the count and sum', async () => {

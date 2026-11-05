@@ -60,15 +60,6 @@ async function openSignInDialog(ui: Ui): Promise<void> {
   await ui.waitVisible(DIALOG);
 }
 
-async function openSideMenu(ui: Ui): Promise<string | void> {
-  const toggle = { css: '.side-nav-toggle' };
-  if (!(await ui.isVisible(toggle))) {
-    return NOT_ON_THIS_DEVICE;
-  }
-  await ui.click(toggle);
-  await ui.waitAttribute(toggle, 'aria-expanded', 'true');
-}
-
 export const STEPS: Step[] = [
   { id: 'home', title: 'the home page', open: (ui) => publicPage(ui, '/') },
   { id: 'about', title: 'the About tab', open: (ui) => publicPage(ui, '/o-nas') },
@@ -284,11 +275,8 @@ export const STEPS: Step[] = [
     open: (ui) => adminPage(ui, '/sprava/nastaveni'),
   },
   {
-    id: 'admin-menu',
-    title: 'the administration menu',
-    open: async (ui) => {
-      await adminPage(ui, '/sprava');
-      return openSideMenu(ui);
-    },
+    id: 'admin-more',
+    title: 'the occasional and technical sections of the administration',
+    open: (ui) => adminPage(ui, '/sprava/vice'),
   },
 ];

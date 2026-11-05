@@ -1,9 +1,10 @@
 :host {
   display: block;
+  min-height: 100vh;
+  padding-top: calc(var(--header-height) + env(safe-area-inset-top));
+  background: var(--color-surface-alt);
 }
 
-.admin-shell {
-  --list-group-title-top: var(--top-bar-height);
-  min-height: 100vh;
-  background: var(--color-surface-alt);
+.admin-content {
+  padding-bottom: var(--tab-bar-clearance);
 }

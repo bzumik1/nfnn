@@ -1,17 +1,19 @@
 <div class="ui-page container">
-  <p class="ui-crumbs">
-    @if (drill() && section !== null) {
-      <a [routerLink]="['/sprava/darci', donorId]">
-        @if (name(); as name) {
-          <ng-container i18n="@@admin.donorDetail.backToCard">← {{ name }}</ng-container>
-        } @else {
-          <ng-container i18n="@@admin.donorDetail.backToCardUnnamed">← Karta dárce</ng-container>
-        }
-      </a>
-    } @else {
-      <a routerLink="/sprava/darci" i18n="@@admin.donorDetail.backToDonors">← Dárci</a>
-    }
-  </p>
+  @if (!compact()) {
+    <p class="ui-crumbs">
+      @if (drill() && section !== null) {
+        <a [routerLink]="['/sprava/darci', donorId]">
+          @if (name(); as name) {
+            <ng-container i18n="@@admin.donorDetail.backToCard">← {{ name }}</ng-container>
+          } @else {
+            <ng-container i18n="@@admin.donorDetail.backToCardUnnamed">← Karta dárce</ng-container>
+          }
+        </a>
+      } @else {
+        <a routerLink="/sprava/darci" i18n="@@admin.donorDetail.backToDonors">← Dárci</a>
+      }
+    </p>
+  }
   <h1 #title class="ui-page-title" tabindex="-1">
     @if (name(); as name) {
       {{ name }}
@@ -1282,7 +1284,7 @@
     @if (eraseError(); as error) {
       <p class="ui-field-error" role="alert">{{ error }}</p>
     }
-    <div class="erase-actions">
+    <div class="ui-dialog__actions erase-actions">
       <button
         #eraseSubmit
         type="button"

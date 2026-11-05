@@ -1,7 +1,8 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ConfirmationReturn } from './confirmation-return';
+import { SESSION_HEADER, SESSION_JAR, SessionKind } from './session-jar';
 import {
   AuthorizationRequest,
   AuthResponse,
@@ -29,6 +30,7 @@ import {
 @Injectable({ providedIn: 'root' })
 export class AuthApi {
   private readonly http = inject(HttpClient);
+  private readonly jar = inject(SESSION_JAR);
 
   register(request: RegisterDonorRequest): Observable<void> {
     return this.http.post<void>('/api/donors/auth/register', request);
@@ -44,18 +46,26 @@ export class AuthApi {
     );
   }
 
-  confirmEmailVerification(token: string): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>('/api/donors/auth/email-verification/confirm', { token });
+  confirmEmailVerification(token: string, session: SessionKind): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>('/api/donors/auth/email-verification/confirm', {
+      token,
+      session,
+    });
   }
 
-  login(email: string, password: string): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>('/api/donors/auth/login', { email, password });
+  login(email: string, password: string, session: SessionKind): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>('/api/donors/auth/login', { email, password, session });
   }
 
-  completeSecondFactor(challenge: string, code: string): Observable<AuthResponse> {
+  completeSecondFactor(
+    challenge: string,
+    code: string,
+    session: SessionKind,
+  ): Observable<AuthResponse> {
     return this.http.post<AuthResponse>('/api/donors/auth/login/second-factor', {
       challenge,
       code,
+      session,
     });
   }
 
@@ -72,16 +82,25 @@ export class AuthApi {
   signInWithPasskey(
     challenge: string,
     credential: PasskeyAssertionCredential,
+    session: SessionKind,
   ): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>('/api/donors/auth/passkey', { challenge, credential });
+    return this.http.post<AuthResponse>('/api/donors/auth/passkey', {
+      challenge,
+      credential,
+      session,
+    });
   }
 
   refresh(): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>('/api/donors/auth/refresh', null);
+    return this.http.post<AuthResponse>('/api/donors/auth/refresh', null, {
+      headers: this.sessionHeaders(),
+    });
   }
 
   logout(): Observable<void> {
-    return this.http.post<void>('/api/donors/auth/logout', null);
+    return this.http.post<void>('/api/donors/auth/logout', null, {
+      headers: this.sessionHeaders(),
+    });
   }
 
   requestPasswordReset(email: string): Observable<void> {
@@ -208,5 +227,9 @@ export class AuthApi {
 
   signOutOtherDevices(): Observable<void> {
     return this.http.delete<void>('/api/donors/me/devices');
+  }
+
+  private sessionHeaders(): HttpHeaders {
+    return this.jar.installed ? new HttpHeaders({ [SESSION_HEADER]: 'APP' }) : new HttpHeaders();
   }
 }

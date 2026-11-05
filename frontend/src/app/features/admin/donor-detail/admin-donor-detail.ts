@@ -125,6 +125,7 @@ const PAIRING_LABELS: Record<NonNullable<DonationItem['pairedBy']>, string> = {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminDonorDetail {
+  protected readonly compact = inject(CompactLayout).isCompact;
   private readonly api = inject(AdminApi);
   private readonly receiptKeys = inject(ReceiptKeysApi);
   private readonly document = inject(DOCUMENT);

@@ -5,6 +5,7 @@ import cz.novanadeje.app.donors.application.DonorAuthenticationService;
 import cz.novanadeje.app.donors.application.DonorPasskeySignInService;
 import cz.novanadeje.app.donors.application.DonorRegistrationService;
 import cz.novanadeje.app.donors.application.SecondFactorRecoveryService;
+import cz.novanadeje.app.donors.application.SessionCookie;
 import cz.novanadeje.app.donors.domain.InvalidRefreshToken;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -57,13 +58,14 @@ class DonorAuthController {
     @PostMapping("/login")
     ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request, HttpServletRequest http) {
         signInRateLimiter.check(http.getRemoteAddr());
-        return respondWithSession(HttpStatus.OK, authentication.login(request.email(), request.password(), UserAgentDevice.of(http)));
+        return respondWithSession(HttpStatus.OK, authentication.login(request.email(), request.password(), UserAgentDevice.of(http), request.sessionKind()));
     }
 
     @PostMapping("/login/second-factor")
     ResponseEntity<AuthResponse> completeSecondFactor(@Valid @RequestBody SecondFactorLoginRequest request, HttpServletRequest http) {
         secondFactorRateLimiter.check(http.getRemoteAddr());
-        return respondWithSession(HttpStatus.OK, authentication.completeSecondFactor(request.challenge(), request.code(), UserAgentDevice.of(http)));
+        return respondWithSession(HttpStatus.OK, authentication.completeSecondFactor(request.challenge(), request.code(), UserAgentDevice.of(http),
+                request.sessionKind()));
     }
 
     @PostMapping("/login/second-factor/recovery")
@@ -81,20 +83,22 @@ class DonorAuthController {
     @PostMapping("/passkey")
     ResponseEntity<AuthResponse> signInWithPasskey(@Valid @RequestBody PasskeySignInRequest request, HttpServletRequest http) {
         passkeySignInRateLimiter.check(http.getRemoteAddr());
-        return respondWithSession(HttpStatus.OK, passkeySignIn.signIn(request.challenge(), request.assertion(), UserAgentDevice.of(http)));
+        return respondWithSession(HttpStatus.OK, passkeySignIn.signIn(request.challenge(), request.assertion(), UserAgentDevice.of(http), request.sessionKind()));
     }
 
     @PostMapping("/refresh")
     ResponseEntity<AuthResponse> refresh(HttpServletRequest http) {
-        String presented = RefreshTokenCookie.read(http).orElseThrow(InvalidRefreshToken::new);
-        return respondWithSession(HttpStatus.OK, authentication.refresh(presented, UserAgentDevice.of(http)));
+        SessionCookie presentedIn = RefreshTokenCookie.presentedIn(http);
+        String presented = RefreshTokenCookie.read(http, presentedIn).orElseThrow(InvalidRefreshToken::new);
+        return respondWithSession(HttpStatus.OK, authentication.refresh(presented, presentedIn, UserAgentDevice.of(http)));
     }
 
     @PostMapping("/logout")
     ResponseEntity<Void> logout(HttpServletRequest http) {
-        RefreshTokenCookie.read(http).ifPresent(authentication::logout);
+        SessionCookie presentedIn = RefreshTokenCookie.presentedIn(http);
+        RefreshTokenCookie.read(http, presentedIn).ifPresent(authentication::logout);
         return ResponseEntity.noContent()
-                .header(HttpHeaders.SET_COOKIE, RefreshTokenCookie.cleared().toString())
+                .header(HttpHeaders.SET_COOKIE, RefreshTokenCookie.cleared(presentedIn).toString())
                 .build();
     }
 
