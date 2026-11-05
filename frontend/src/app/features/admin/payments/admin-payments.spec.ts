@@ -1001,7 +1001,7 @@ describe('Given an administrator on the bank payments page where lists show as r
       'Říjen 2026',
       'Září 2026',
     ]);
-    expect(months[0].getAttribute('aria-labelledby')).toBe('payments-month-2026-10');
+    expect(months[0].querySelector('h3')?.id).toBe('payments-month-2026-10');
     expect(paymentRows().map((row) => text(row))).toEqual([
       'Nováková Jana 12. 10. 2026 · VS 1111111111 500 Kč jen ručně',
       'Bez jména odesílatele 10. 10. 2026 · bez VS 500 Kč',
@@ -1094,6 +1094,23 @@ describe('Given an administrator on the bank payments page where lists show as r
       expect(text(fixture.nativeElement.querySelector('[role="status"]:not(:empty)'))).toContain(
         'Platba 500 Kč z 10. 10. 2026 už není přiřazena.',
       );
+    });
+
+    it('then a refused unpairing keeps the sheet open and says why inside it', async () => {
+      await openPaired();
+
+      button('Zrušit přiřazení').click();
+      await settle();
+      sheet().querySelector<HTMLButtonElement>('.confirm .ui-button--danger')!.click();
+      await settle();
+      http
+        .expectOne(`/api/admin/donations/payments/${PAYMENT_ID}/unpair`)
+        .flush(null, { status: 500, statusText: 'Error' });
+      await settle();
+
+      expect(document.querySelector('dialog[open]')).toBe(sheet());
+      expect(text(sheet().querySelector('.sheet-actions [role="alert"]'))).not.toBe('');
+      expect(sheet().querySelector('.confirm')).toBeNull();
     });
 
     it('then a live change waits while the sheet is open and is read once it closes', async () => {

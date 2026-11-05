@@ -6,7 +6,6 @@
 
 .container {
   max-width: 1100px;
-  container: payments-page / inline-size;
 }
 
 .admin-toolbar {
@@ -410,7 +409,7 @@
   @include stacked-filter;
 }
 
-@include bp.container-down(payments-page, tablet) {
+.payments-page--rows {
   @include stacked-filter;
 }
 
@@ -499,4 +498,8 @@
 
 .payments-empty p {
   margin-bottom: var(--space-3);
+}
+
+.pair-payment .held-note {
+  max-width: none;
 }

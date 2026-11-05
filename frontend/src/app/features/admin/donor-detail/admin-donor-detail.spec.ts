@@ -26,6 +26,7 @@ import {
   TEST_KEY,
 } from '../../donations/verification/testing/verification-fixtures';
 import { AdminDonorDetail } from './admin-donor-detail';
+import type { AdminDonorDetailResponse } from '../admin-api';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 
 const DONOR_ID = '01a18e56-bdb0-775a-bd0a-a60756831369';
@@ -1480,7 +1481,13 @@ describe('Given an administrator on a donor card opened part by part', () => {
   let fixture: ComponentFixture<AdminDonorDetail>;
   let http: HttpTestingController;
 
-  async function open(section: string | null, rows = true): Promise<void> {
+  type Answer = 'ok' | 'error' | 'pending';
+
+  async function open(
+    section: string | null,
+    rows = true,
+    answers: { account?: Answer; detail?: Answer; detailBody?: AdminDonorDetailResponse } = {},
+  ): Promise<void> {
     localStorage.clear();
     await TestBed.configureTestingModule({
       imports: [AdminDonorDetail],
@@ -1515,11 +1522,19 @@ describe('Given an administrator on a donor card opened part by part', () => {
       .flush(authResponse('token-1', sampleDonor({ roles: ['DONOR', 'ADMIN'] })));
     fixture = TestBed.createComponent(AdminDonorDetail);
     fixture.detectChanges();
-    http.expectOne(ACCOUNT_URL).flush(donorAccount());
-    http.expectOne(DETAIL_URL).flush(donorDetail());
+    answer(ACCOUNT_URL, answers.account ?? 'ok', donorAccount());
+    answer(DETAIL_URL, answers.detail ?? 'ok', answers.detailBody ?? donorDetail());
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
+  }
+
+  function answer(url: string, kind: Answer, body: object): void {
+    if (kind === 'ok') {
+      http.expectOne(url).flush(body);
+    } else if (kind === 'error') {
+      http.expectOne(url).flush(null, { status: 500, statusText: 'Error' });
+    }
   }
 
   afterEach(() => {
@@ -1559,9 +1574,9 @@ describe('Given an administrator on a donor card opened part by part', () => {
     expect(rows.map(textOf)).toEqual([
       'Údaje',
       'Přihlášení',
-      'Bankovní účty Účtů: 1',
+      'Bankovní účty 1 účet',
       'Dary 2 dary za 800 Kč',
-      'Potvrzení Vydaných potvrzení: 1',
+      'Potvrzení 1 vydané potvrzení',
       'Výmaz údajů',
     ]);
     expect(rows.map((row) => row.getAttribute('href'))).toEqual(
@@ -1586,6 +1601,143 @@ describe('Given an administrator on a donor card opened part by part', () => {
     expect(textOf(fixture.nativeElement.querySelector('h1'))).toBe('Jana Nováková');
     expect(textOf(crumb())).toBe('← Jana Nováková');
     expect(crumb().getAttribute('href')).toBe(`/sprava/darci/${DONOR_ID}`);
+  });
+
+  it('when the gifts part opens, then its gifts stand as rows under a heading per year with the count and sum', async () => {
+    await open('dary', true, {
+      detailBody: donorDetail({
+        donations: {
+          items: [
+            adminDonation(),
+            adminDonation({
+              id: '0192f0f1-0000-7000-8000-000000000002',
+              receivedAt: '2026-10-10',
+              amountMinor: 50000,
+              pairedBy: 'VARIABLE_SYMBOL',
+              senderAccount: null,
+              confirmedSymbol: '4821937560',
+              receiptNumber: '2026-000001',
+            }),
+            adminDonation({
+              id: '0192f0f1-0000-7000-8000-000000000003',
+              receivedAt: '2025-12-30',
+              amountMinor: 20000,
+              status: 'REFUNDED',
+            }),
+            adminDonation({
+              id: '0192f0f1-0000-7000-8000-000000000004',
+              receivedAt: '2025-06-01',
+              amountMinor: 10000,
+            }),
+          ],
+          totalAmountMinor: 90000,
+          currency: 'CZK',
+          count: 4,
+        },
+      }),
+    });
+
+    expect(fixture.nativeElement.querySelector('table')).toBeNull();
+    const headings = Array.from(
+      fixture.nativeElement.querySelectorAll('h3.donation-year') as NodeListOf<HTMLElement>,
+    ).map(textOf);
+    expect(headings).toEqual(['2026 · 2 dary · 800 Kč', '2025 · 1 dar · 100 Kč']);
+    const rows = Array.from(
+      fixture.nativeElement.querySelectorAll(
+        '.donation-rows .ui-list__row',
+      ) as NodeListOf<HTMLElement>,
+    ).map(textOf);
+    expect(rows).toHaveLength(4);
+    expect(rows[0]).toMatch(
+      /^12\. 10\. 2026 Obecný příspěvek · .* 2900233333\/2010 300 Kč Potvrzení zatím žádné$/,
+    );
+    expect(rows[1]).toMatch(
+      /^10\. 10\. 2026 Obecný příspěvek · .* VS 4821937560 500 Kč Potvrzení 2026-000001$/,
+    );
+    expect(rows[2]).toContain('vráceno');
+  });
+
+  describe('when the gifts are still loading', () => {
+    it('then the gifts part and the receipts part show the wait under their own titles, and their rows name no count', async () => {
+      await open('dary', true, { detail: 'pending' });
+
+      expect(cardTitles()).toEqual(['Dary']);
+      expect(textOf(fixture.nativeElement.querySelector('section.ui-card [role="status"]'))).toBe(
+        'Načítáme účty, dary a potvrzení…',
+      );
+
+      http.expectOne(DETAIL_URL).flush(donorDetail());
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('section.ui-card [role="status"]')).toBeNull();
+      expect(fixture.nativeElement.querySelectorAll('.donation-rows .ui-list__row')).toHaveLength(
+        2,
+      );
+    });
+
+    it('and the card itself opens, then the rows of gifts and receipts stand without a count', async () => {
+      await open(null, true, { detail: 'pending' });
+
+      const rows = Array.from(
+        fixture.nativeElement.querySelectorAll(
+          '.card-rows a.ui-list__row',
+        ) as NodeListOf<HTMLElement>,
+      ).map(textOf);
+      expect(rows).toContain('Dary');
+      expect(rows).toContain('Potvrzení');
+      http.expectOne(DETAIL_URL).flush(donorDetail());
+    });
+  });
+
+  it('when the gifts cannot be loaded, then the receipts part offers a retry and its row says to open it', async () => {
+    await open('potvrzeni', true, { detail: 'error' });
+
+    expect(cardTitles()).toEqual(['Potvrzení']);
+    const alert = fixture.nativeElement.querySelector(
+      'section.ui-card [role="alert"]',
+    ) as HTMLElement;
+    expect(textOf(alert)).toBe('Účty, dary a potvrzení se nepodařilo načíst. Zkusit znovu');
+
+    (alert.querySelector('button') as HTMLButtonElement).click();
+    http.expectOne(DETAIL_URL).flush(donorDetail());
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(cardTitles()).toEqual(['Vydaná potvrzení']);
+  });
+
+  it('when the card opens and the gifts could not be loaded, then their rows say to open them and try again', async () => {
+    await open(null, true, { detail: 'error' });
+
+    const rows = Array.from(
+      fixture.nativeElement.querySelectorAll(
+        '.card-rows a.ui-list__row',
+      ) as NodeListOf<HTMLElement>,
+    ).map(textOf);
+    expect(rows).toContain('Dary Nepodařilo se načíst, otevřete a zkuste znovu');
+    expect(rows).toContain('Potvrzení Nepodařilo se načíst, otevřete a zkuste znovu');
+  });
+
+  it('when the account cannot be loaded, then the sign-in part offers a retry under its own title', async () => {
+    await open('prihlaseni', true, { account: 'error' });
+
+    expect(cardTitles()).toEqual(['Přihlášení']);
+    const alert = fixture.nativeElement.querySelector(
+      'section.ui-card [role="alert"]',
+    ) as HTMLElement;
+    expect(textOf(alert)).toBe('Účet se nepodařilo načíst. Zkusit znovu');
+
+    (alert.querySelector('button') as HTMLButtonElement).click();
+    http.expectOne(ACCOUNT_URL).flush(donorAccount());
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.ui-load-state--error')).toBeNull();
+    expect(cardTitles()).toEqual(['Přihlášení']);
   });
 
   it('when the address names the erasure, then only the erasure shows', async () => {

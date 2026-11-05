@@ -111,6 +111,10 @@ div.ui-list__row {
   padding-inline: var(--space-6);
 }
 
+.ui-card .ui-list__row:focus-visible {
+  outline-offset: -3px;
+}
+
 .ui-list--inset {
   background: var(--color-surface);
   border-radius: var(--radius-card);

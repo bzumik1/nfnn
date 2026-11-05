@@ -21,6 +21,8 @@ class FakeWindow extends EventTarget {
   width: number;
   rootFontPx: number;
   readonly queries: FakeMediaQueryList[] = [];
+  readonly textSizeWatchers: (() => void)[] = [];
+  readonly ResizeObserver = this.resizeObserverClass();
 
   constructor(width: number, rootFontPx = 16) {
     super();
@@ -50,13 +52,49 @@ class FakeWindow extends EventTarget {
 
   enlargeText(rootFontPx: number): void {
     this.rootFontPx = rootFontPx;
-    this.dispatchEvent(new Event('resize'));
+    this.textSizeWatchers.forEach((watcher) => watcher());
+  }
+
+  private resizeObserverClass() {
+    const watchers = this.textSizeWatchers;
+    return class {
+      constructor(private readonly watcher: () => void) {}
+
+      observe(): void {
+        watchers.push(this.watcher);
+      }
+
+      disconnect(): void {
+        watchers.splice(watchers.indexOf(this.watcher), 1);
+      }
+    };
+  }
+}
+
+class FakeDocument {
+  readonly probes: { style: { cssText: string }; removed: boolean }[] = [];
+  readonly documentElement = {};
+  readonly body = { append: (): void => undefined };
+
+  constructor(readonly defaultView: object | null) {}
+
+  createElement(): object {
+    const probe = {
+      style: { cssText: '' },
+      removed: false,
+      setAttribute: (): void => undefined,
+      remove: (): void => {
+        probe.removed = true;
+      },
+    };
+    this.probes.push(probe);
+    return probe;
   }
 }
 
 function layoutIn(view: object | null): CompactLayout {
   TestBed.configureTestingModule({
-    providers: [{ provide: DOCUMENT, useValue: { defaultView: view, documentElement: {} } }],
+    providers: [{ provide: DOCUMENT, useValue: new FakeDocument(view) }],
   });
   return TestBed.inject(CompactLayout);
 }
@@ -118,13 +156,27 @@ describe('Given the compact layout of the app', () => {
       expect(layoutIn(new FakeWindow(1799, 32)).listsAsRows()).toBe(false);
     });
 
-    it('then enlarging the text of an open page switches its tables to rows', () => {
+    it('then enlarging the text of an open page, which resizes no window, switches its tables to rows through a box one text width wide', () => {
       const view = new FakeWindow(1194);
       const layout = layoutIn(view);
 
       view.enlargeText(32);
 
       expect(layout.listsAsRows()).toBe(true);
+      expect(
+        (TestBed.inject(DOCUMENT) as unknown as FakeDocument).probes[0].style.cssText,
+      ).toContain('width: 1rem');
+    });
+
+    it('then once the app goes, the box that watches the text size goes with it', () => {
+      const view = new FakeWindow(1194);
+      layoutIn(view);
+      const document = TestBed.inject(DOCUMENT) as unknown as FakeDocument;
+
+      TestBed.resetTestingModule();
+
+      expect(document.probes[0].removed).toBe(true);
+      expect(view.textSizeWatchers).toEqual([]);
     });
 
     it('then a browser that cannot answer media queries shows tables, as today', () => {

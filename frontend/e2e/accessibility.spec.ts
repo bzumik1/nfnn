@@ -1307,7 +1307,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
-  test('when an administrator on a phone opens the payments, a paired payment, the history and a donor card part by part, then the rows, the sheet and the parts break no rule', async ({
+  test('when an administrator on a phone opens the payments, a paired payment, the history, the donors and a donor card part by part, then the rows, the sheet and the parts break no rule', async ({
     page,
   }) => {
     await mockDonorApi(page, donorWithDonations);
@@ -1330,6 +1330,11 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
     await page.goto('/sprava/historie');
     await expect(page.locator('.action-rows > li').first()).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+
+    await page.goto('/sprava/darci');
+    await page.getByRole('searchbox', { name: 'Jméno, e-mail nebo variabilní symbol' }).fill('Svo');
+    await expect(page.locator('.donor-rows a.ui-list__row').first()).toBeVisible();
     expect(await violations(page)).toEqual([]);
 
     await page.goto(PETR_DETAIL_PATH);

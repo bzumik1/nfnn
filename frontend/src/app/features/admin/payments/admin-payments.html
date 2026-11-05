@@ -1,4 +1,4 @@
-<div class="ui-page container">
+<div class="ui-page container" [class.payments-page--rows]="rows()">
   <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.payments.heading">Platby z banky</h1>
   <p class="ui-page-intro" i18n="@@admin.payments.intro">
     Platby, které web nedokázal přiřadit žádnému dárci, tu přiřadíte ručně. U přiřazených plateb
@@ -199,7 +199,7 @@
         } @else {
           @if (rows()) {
             @for (month of months(); track month.key) {
-              <section class="payments-month" [attr.aria-labelledby]="monthHeadingId(month.key)">
+              <div class="payments-month">
                 <h3 class="ui-list__group-title" [id]="monthHeadingId(month.key)">
                   {{ month.label }}
                 </h3>
@@ -268,7 +268,7 @@
                     </li>
                   }
                 </ul>
-              </section>
+              </div>
             }
           } @else {
             <table>
@@ -457,6 +457,11 @@
         <dt i18n="@@admin.payments.pair.payment">Platba</dt>
         <dd>
           {{ describe(payment) }}
+          @if (payment.unpairedByAdminAt) {
+            <span class="held-note" i18n="@@admin.payments.heldTag.title"
+              >Správce zrušil přiřazení, web ji proto sám nepřiřadí.</span
+            >
+          }
           @if (payment.accountVerification) {
             <span
               class="ui-badge ui-badge--accent verification-tag"
@@ -469,7 +474,11 @@
       <div>
         <dt i18n="@@admin.payments.col.sender">Odesílatel</dt>
         <dd>
-          {{ payment.counterpartyName ?? '—' }}
+          @if (payment.counterpartyName) {
+            {{ payment.counterpartyName }}
+          } @else {
+            <ng-container i18n="@@admin.payments.row.noName">Bez jména odesílatele</ng-container>
+          }
           @if (payment.counterpartyAccount) {
             <span class="muted">{{ payment.counterpartyAccount }}</span>
           }
@@ -605,6 +614,11 @@
         <dt i18n="@@admin.payments.pair.payment">Platba</dt>
         <dd>
           {{ describe(payment) }}
+          @if (payment.unpairedByAdminAt) {
+            <span class="held-note" i18n="@@admin.payments.heldTag.title"
+              >Správce zrušil přiřazení, web ji proto sám nepřiřadí.</span
+            >
+          }
           @if (payment.accountVerification) {
             <span
               class="ui-badge ui-badge--accent verification-tag"
@@ -617,7 +631,11 @@
       <div>
         <dt i18n="@@admin.payments.col.sender">Odesílatel</dt>
         <dd>
-          {{ payment.counterpartyName ?? '—' }}
+          @if (payment.counterpartyName) {
+            {{ payment.counterpartyName }}
+          } @else {
+            <ng-container i18n="@@admin.payments.row.noName">Bez jména odesílatele</ng-container>
+          }
           @if (payment.counterpartyAccount) {
             <span class="muted">{{ payment.counterpartyAccount }}</span>
           }
@@ -641,7 +659,11 @@
           <dt i18n="@@admin.payments.col.donor">Dárce</dt>
           <dd>
             @if (donation.donorName) {
-              <a [routerLink]="['/sprava/darci', donation.donorId]">{{ donation.donorName }}</a>
+              <a
+                [href]="donorHref(donation.donorId)"
+                (click)="openDonor($event, donation.donorId)"
+                >{{ donation.donorName }}</a
+              >
             } @else {
               <ng-container i18n="@@admin.payments.donor.unknown">dárce bez záznamu</ng-container>
             }
@@ -659,6 +681,11 @@
       }
     </dl>
     <div class="sheet-actions">
+      @if (notice(); as failure) {
+        @if (failure.kind === 'alert') {
+          <p class="ui-field-error" role="alert">{{ failure.text }}</p>
+        }
+      }
       @if (payment.donation?.receiptIssued) {
         <p class="muted" i18n="@@admin.payments.unpair.blocked">
           Nelze zrušit, k daru je vystavené potvrzení.

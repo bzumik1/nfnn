@@ -35,6 +35,7 @@ import { CompactLayout } from '../../../core/layout/compact-layout';
 import { LiveUpdates } from '../../../core/live/live-updates';
 import { isChangedMeanwhile } from '../../../core/version/row-version';
 import { Dialog } from '../../../shared/ui/dialog/dialog';
+import { DialogHistory } from '../../../shared/ui/dialog/dialog-history';
 import { formatMinorUnits } from '../../donations/donation-amount';
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
 import { formatMonth } from '../../donations/donation-month';
@@ -124,6 +125,7 @@ export class AdminPayments {
   private readonly api = inject(AdminApi);
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
+  private readonly dialogHistory = inject(DialogHistory);
   private readonly route = inject(ActivatedRoute);
   private readonly loginDialog = inject(LoginDialogService);
   private readonly destroyRef = inject(DestroyRef);
@@ -462,6 +464,20 @@ export class AdminPayments {
     this.opened.set(payment);
   }
 
+  protected donorHref(donorId: string): string {
+    return this.router.serializeUrl(this.router.createUrlTree(['/sprava/darci', donorId]));
+  }
+
+  protected openDonor(event: MouseEvent, donorId: string): void {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+      return;
+    }
+    event.preventDefault();
+    const url = this.donorHref(donorId);
+    const replaced = this.dialogHistory.handOver(url);
+    void this.router.navigateByUrl(url, { replaceUrl: replaced });
+  }
+
   protected closePayment(): void {
     if (this.busy()) {
       return;
@@ -623,8 +639,8 @@ export class AdminPayments {
         error: (failure: unknown) => {
           this.busy.set(false);
           this.unpairing.set(null);
-          this.opened.set(null);
           if (isChangedMeanwhile(failure)) {
+            this.opened.set(null);
             this.changedMeanwhile.set(true);
             return;
           }
@@ -715,18 +731,15 @@ export class AdminPayments {
 }
 
 function byMonth(items: AdminPaymentResponse[]): MonthGroup[] {
-  const groups: MonthGroup[] = [];
+  const groups = new Map<string, AdminPaymentResponse[]>();
   for (const item of items) {
     const key = item.bookedOn.slice(0, 7);
-    const last = groups.at(-1);
-    if (last?.key === key) {
-      last.items.push(item);
-    } else {
-      const label = formatMonth(key);
-      groups.push({ key, label: label.charAt(0).toUpperCase() + label.slice(1), items: [item] });
-    }
+    groups.set(key, [...(groups.get(key) ?? []), item]);
   }
-  return groups;
+  return [...groups].map(([key, monthItems]) => {
+    const label = formatMonth(key);
+    return { key, label: label.charAt(0).toUpperCase() + label.slice(1), items: monthItems };
+  });
 }
 
 function incomingText(count: number): string {

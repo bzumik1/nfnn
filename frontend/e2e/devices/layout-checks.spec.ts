@@ -246,6 +246,28 @@ test.describe('Given a page checked as on a phone', () => {
     ).toEqual([]);
   });
 
+  test('when a button stands wholly beyond the edge of a box that hides its overflow, then it is cut off', async ({
+    page,
+  }) => {
+    expect(
+      await failingChecks(
+        page,
+        '<section style="width: 200px; overflow: hidden"><div style="width: 340px; display: flex; justify-content: flex-end"><button>Pair</button></div></section>',
+      ),
+    ).toEqual(['no control cut off by a box that hides its overflow']);
+  });
+
+  test('when a control sits in a visually hidden box of one pixel on the screen, then it is not counted as cut off', async ({
+    page,
+  }) => {
+    expect(
+      await failingChecks(
+        page,
+        '<form><div style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%)"><input aria-hidden="true" tabindex="-1"></div><button>Send</button></form>',
+      ),
+    ).not.toContain('no control cut off by a box that hides its overflow');
+  });
+
   test('when a box hides text that does not fit, then the text is cut off', async ({ page }) => {
     expect(
       await failingChecks(

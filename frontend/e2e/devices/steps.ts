@@ -230,6 +230,11 @@ export const STEPS: Step[] = [
     open: (ui) => adminPage(ui, `${PETR_DETAIL_PATH}/bankovni-ucty`),
   },
   {
+    id: 'admin-donor-donations',
+    title: "the gifts part of a donor's card in the administration",
+    open: (ui) => adminPage(ui, `${PETR_DETAIL_PATH}/dary`),
+  },
+  {
     id: 'admin-donor-receipts',
     title: "the receipts part of a donor's card in the administration",
     open: (ui) => adminPage(ui, `${PETR_DETAIL_PATH}/potvrzeni`),

@@ -63,6 +63,12 @@ interface CardSection {
   readonly label: string;
 }
 
+interface DonationYear {
+  readonly year: string;
+  readonly heading: string;
+  readonly items: DonationItem[];
+}
+
 interface IssueChoice {
   readonly key: string;
   readonly label: string;
@@ -121,7 +127,8 @@ const PAIRING_LABELS: Record<NonNullable<DonationItem['pairedBy']>, string> = {
 export class AdminDonorDetail {
   private readonly api = inject(AdminApi);
   private readonly receiptKeys = inject(ReceiptKeysApi);
-  private readonly hostname = inject(DOCUMENT).location.hostname;
+  private readonly document = inject(DOCUMENT);
+  private readonly hostname = this.document.location.hostname;
   private readonly pendingTasks = inject(PendingTasks);
   protected readonly pdfs = inject(AdminReceiptDownloads);
   private readonly auth = inject(AuthStore);
@@ -183,9 +190,44 @@ export class AdminDonorDetail {
     ...(this.donationsState() === 'ready' ? [SECTIONS.donations, SECTIONS.receipts] : []),
   ]);
   protected readonly drillSections = computed<CardSection[]>(() => [
-    ...this.sections(),
-    ...(this.accountState() === 'ready' ? [SECTIONS.erasure] : []),
+    SECTIONS.details,
+    ...(this.accountState() === 'missing' ? [] : [SECTIONS.signIn]),
+    SECTIONS.accounts,
+    ...(this.donationsState() === 'missing' ? [] : [SECTIONS.donations, SECTIONS.receipts]),
+    ...(this.accountState() === 'missing' ? [] : [SECTIONS.erasure]),
   ]);
+  protected readonly partWaiting = computed<{ part: CardSection; state: LoadState } | null>(() => {
+    const part = Object.values(SECTIONS).find(({ id }) => id === this.section);
+    if (part === undefined || part === SECTIONS.details || part === SECTIONS.accounts) {
+      return null;
+    }
+    const state =
+      part === SECTIONS.donations || part === SECTIONS.receipts
+        ? this.donationsState()
+        : this.accountState();
+    return state === 'ready' ? null : { part, state };
+  });
+  protected readonly donationYears = computed<DonationYear[]>(() => {
+    const years: { year: string; items: DonationItem[] }[] = [];
+    for (const item of this.donations()) {
+      const year = item.receivedAt.slice(0, 4);
+      const last = years.at(-1);
+      if (last?.year === year) {
+        last.items.push(item);
+      } else {
+        years.push({ year, items: [item] });
+      }
+    }
+    return years.map(({ year, items }) => {
+      const received = items.filter((item) => item.status !== 'REFUNDED');
+      const total = this.crowns(received.reduce((sum, item) => sum + item.amountMinor, 0));
+      return {
+        year,
+        items,
+        heading: $localize`:@@admin.donorDetail.donations.yearHeading:${year}:year: · ${this.donationsCount(received.length)}:count: · ${total}:total:\u00a0Kč`,
+      };
+    });
+  });
   protected readonly erasedAt = computed(
     () => this.account()?.erasedAt ?? this.detail()?.donor.erasedAt ?? null,
   );
@@ -213,18 +255,22 @@ export class AdminDonorDetail {
     if (section === null) {
       return;
     }
-    let shown = false;
-    afterRenderEffect(
+    const effect = afterRenderEffect(
       () => {
         const listed = this.drillSections().some((part) => part.id === section);
-        if (shown || this.drill() || !listed) {
+        const target = this.byId(section);
+        if (this.drill() || !listed || target === null) {
           return;
         }
-        const target = this.byId(section);
-        if (target !== null) {
-          shown = true;
+        const focused = this.document.activeElement;
+        if (
+          focused === null ||
+          focused === this.document.body ||
+          focused === this.title().nativeElement
+        ) {
           target.focus();
         }
+        effect.destroy();
       },
       { injector: this.injector },
     );
@@ -235,15 +281,22 @@ export class AdminDonorDetail {
   }
 
   protected sectionMeta(part: CardSection): string | null {
+    const fromDonations =
+      part === SECTIONS.accounts || part === SECTIONS.donations || part === SECTIONS.receipts;
+    const state = fromDonations ? this.donationsState() : this.accountState();
+    if (state === 'error') {
+      return $localize`:@@admin.donorDetail.rows.failed:Nepodařilo se načíst, otevřete a zkuste znovu`;
+    }
+    if (fromDonations && state !== 'ready') {
+      return null;
+    }
     switch (part.id) {
       case SECTIONS.accounts.id:
-        return this.donationsState() === 'ready'
-          ? $localize`:@@admin.donorDetail.rows.accounts:Účtů: ${this.bankAccounts().length}:count:`
-          : null;
+        return accountsCount(this.bankAccounts().length);
       case SECTIONS.donations.id:
         return $localize`:@@admin.donorDetail.rows.donations:${this.donationsCount(this.receivedCount())}:count: za ${this.total()}:total:\u00a0Kč`;
       case SECTIONS.receipts.id:
-        return $localize`:@@admin.donorDetail.rows.receipts:Vydaných potvrzení: ${this.receipts().length}:count:`;
+        return receiptsCount(this.receipts().length);
       case SECTIONS.erasure.id:
         return this.erasedAt() === null
           ? null
@@ -814,4 +867,26 @@ function issuedText(issued: AdminIssuedReceiptResponse, alreadyIssued: boolean):
 
 function sectionOf(id: string | null): string | null {
   return id !== null && SECTION_IDS.has(id) ? id : null;
+}
+
+function accountsCount(count: number): string {
+  switch (pluralCategory(count)) {
+    case 'one':
+      return $localize`:@@admin.donorDetail.rows.accounts.one:1 účet`;
+    case 'few':
+      return $localize`:@@admin.donorDetail.rows.accounts.few:${count}:count: účty`;
+    case 'other':
+      return $localize`:@@admin.donorDetail.rows.accounts.many:${count}:count: účtů`;
+  }
+}
+
+function receiptsCount(count: number): string {
+  switch (pluralCategory(count)) {
+    case 'one':
+      return $localize`:@@admin.donorDetail.rows.receipts.one:1 vydané potvrzení`;
+    case 'few':
+      return $localize`:@@admin.donorDetail.rows.receipts.few:${count}:count: vydaná potvrzení`;
+    case 'other':
+      return $localize`:@@admin.donorDetail.rows.receipts.many:${count}:count: vydaných potvrzení`;
+  }
 }

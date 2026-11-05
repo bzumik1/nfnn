@@ -156,8 +156,8 @@ export function collectFindings(limits: { minimumTarget: number; stackedShare: n
       }
       if (style.overflowX === 'hidden' || style.overflowX === 'clip') {
         const bounds = node.getBoundingClientRect();
-        const partlyInside = box.right > bounds.left && box.left < bounds.right;
-        if (partlyInside && (box.left < bounds.left - 1 || box.right > bounds.right + 1)) {
+        const hidingBox = bounds.width <= 1;
+        if (!hidingBox && (box.left < bounds.left - 1 || box.right > bounds.right + 1)) {
           return true;
         }
       }

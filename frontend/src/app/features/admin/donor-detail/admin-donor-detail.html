@@ -159,6 +159,79 @@
       </nav>
     }
 
+    @if (drill() && partWaiting(); as waiting) {
+      <section
+        [id]="waiting.part.id"
+        tabindex="-1"
+        class="ui-card"
+        aria-labelledby="part-waiting-title"
+      >
+        <h2 id="part-waiting-title" class="ui-card__title">{{ waiting.part.label }}</h2>
+        @if (waiting.part === ids.donations || waiting.part === ids.receipts) {
+          @switch (waiting.state) {
+            @case ('loading') {
+              <p
+                class="ui-load-state ui-load-state--inset"
+                role="status"
+                i18n="@@admin.donorDetail.accounts.loading"
+              >
+                Načítáme účty, dary a potvrzení…
+              </p>
+            }
+            @case ('missing') {
+              <p
+                class="ui-load-state ui-load-state--error ui-load-state--inset"
+                role="alert"
+                i18n="@@admin.donorDetail.donations.missing"
+              >
+                Dárce nemá záznam v evidenci darů, takže nemá žádné účty, dary ani potvrzení.
+              </p>
+            }
+            @case ('error') {
+              <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
+                <p i18n="@@admin.donorDetail.donations.error.text">
+                  Účty, dary a potvrzení se nepodařilo načíst.
+                </p>
+                <button
+                  type="button"
+                  class="ui-button ui-button--small"
+                  (click)="loadDonations()"
+                  i18n="@@admin.donorDetail.donations.error.retry"
+                >
+                  Zkusit znovu
+                </button>
+              </div>
+            }
+          }
+        } @else {
+          @switch (waiting.state) {
+            @case ('loading') {
+              <p
+                class="ui-load-state ui-load-state--inset"
+                role="status"
+                i18n="@@admin.donorDetail.account.loading"
+              >
+                Načítáme účet…
+              </p>
+            }
+            @case ('error') {
+              <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
+                <p i18n="@@admin.donorDetail.account.error.text">Účet se nepodařilo načíst.</p>
+                <button
+                  type="button"
+                  class="ui-button ui-button--small"
+                  (click)="loadAccount()"
+                  i18n="@@admin.donorDetail.account.error.retry"
+                >
+                  Zkusit znovu
+                </button>
+              </div>
+            }
+          }
+        }
+      </section>
+    }
+
     @if (shows(ids.details)) {
       <section [id]="ids.details.id" tabindex="-1" class="ui-card" aria-labelledby="details-title">
         <h2 id="details-title" class="ui-card__title" i18n="@@admin.donorDetail.details.title">
@@ -496,13 +569,26 @@
                 Z žádného účtu zatím nepřišla platba s variabilním symbolem dárce.
               </p>
             } @else {
-              <p class="admin-hint admin-hint--card" i18n="@@admin.donorDetail.accounts.hint">
-                Sloupec Dary přiřazené podle účtu počítá jen platby bez variabilního symbolu, které
-                se dárci přiřadily podle účtu; dary se symbolem najdete níže v části Dary. Jen
-                nechcete, aby se dárci přiřazovaly další platby bez symbolu? Vypněte párování,
-                dosavadní dary zůstanou. Účet se dárci přiřadil omylem? Odeberte ho: smažeme i dary,
-                které se přes něj přiřadily, a odpovědi o starších symbolech.
-              </p>
+              @if (drill()) {
+                <p
+                  class="admin-hint admin-hint--card"
+                  i18n="@@admin.donorDetail.accounts.hintParts"
+                >
+                  Údaj Dary přiřazené podle účtu počítá jen platby bez variabilního symbolu, které
+                  se dárci přiřadily podle účtu; dary se symbolem najdete v části Dary na kartě
+                  dárce. Jen nechcete, aby se dárci přiřazovaly další platby bez symbolu? Vypněte
+                  párování, dosavadní dary zůstanou. Účet se dárci přiřadil omylem? Odeberte ho:
+                  smažeme i dary, které se přes něj přiřadily, a odpovědi o starších symbolech.
+                </p>
+              } @else {
+                <p class="admin-hint admin-hint--card" i18n="@@admin.donorDetail.accounts.hint">
+                  Sloupec Dary přiřazené podle účtu počítá jen platby bez variabilního symbolu,
+                  které se dárci přiřadily podle účtu; dary se symbolem najdete níže v části Dary.
+                  Jen nechcete, aby se dárci přiřazovaly další platby bez symbolu? Vypněte párování,
+                  dosavadní dary zůstanou. Účet se dárci přiřadil omylem? Odeberte ho: smažeme i
+                  dary, které se přes něj přiřadily, a odpovědi o starších symbolech.
+                </p>
+              }
               <table class="ui-table" [class.ui-table--stacked]="drill()">
                 <thead>
                   <tr>
@@ -790,75 +876,122 @@
                 >
               }
             </p>
-            <table class="ui-table" [class.ui-table--stacked]="drill()">
-              <thead>
-                <tr>
-                  <th i18n="@@admin.donorDetail.donations.col.date">Přijato</th>
-                  <th class="amount" i18n="@@admin.donorDetail.donations.col.amount">Částka</th>
-                  <th i18n="@@admin.donorDetail.donations.col.purpose">Účel</th>
-                  <th i18n="@@admin.donorDetail.donations.col.pairing">Přiřazení</th>
-                  <th i18n="@@admin.donorDetail.donations.col.receipt">Potvrzení</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (item of donations(); track item.id) {
-                  <tr>
-                    <td
-                      data-label="Přijato"
-                      i18n-data-label="@@admin.donorDetail.donations.col.date"
-                    >
-                      {{ day(item.receivedAt) }}
-                      @if (item.status === 'REFUNDED') {
-                        <span class="tag tag--warn" i18n="@@admin.donorDetail.donations.refunded"
-                          >vráceno</span
-                        >
-                      }
-                    </td>
-                    <td
-                      class="amount"
-                      data-label="Částka"
-                      i18n-data-label="@@admin.donorDetail.donations.col.amount"
-                    >
-                      <span class="ui-mono">{{ crowns(item.amountMinor) }}&nbsp;Kč</span>
-                    </td>
-                    <td
-                      data-label="Účel"
-                      i18n-data-label="@@admin.donorDetail.donations.col.purpose"
-                    >
-                      {{ item.purpose }}
-                    </td>
-                    <td
-                      data-label="Přiřazení"
-                      i18n-data-label="@@admin.donorDetail.donations.col.pairing"
-                    >
-                      {{ pairingLabel(item) }}
-                      @if (item.senderAccount) {
-                        <span class="muted ui-mono">{{ item.senderAccount }}</span>
-                      }
-                      @if (item.confirmedSymbol) {
-                        <span class="muted">
-                          <ng-container i18n="@@admin.donorDetail.donations.symbol"
-                            >VS {{ item.confirmedSymbol }}</ng-container
-                          >
+            @if (drill()) {
+              @for (year of donationYears(); track year.year) {
+                <h3 class="ui-list__group-title donation-year">{{ year.heading }}</h3>
+                <ul class="ui-list donation-rows">
+                  @for (item of year.items; track item.id) {
+                    <li>
+                      <div class="ui-list__row">
+                        <span class="ui-list__title">{{ day(item.receivedAt) }}</span>
+                        <span class="ui-list__meta">
+                          {{ item.purpose }} · {{ pairingLabel(item) }}
+                          @if (item.senderAccount) {
+                            <span class="ui-mono">{{ item.senderAccount }}</span>
+                          }
+                          @if (item.confirmedSymbol) {
+                            <ng-container i18n="@@admin.donorDetail.donations.symbol"
+                              >VS {{ item.confirmedSymbol }}</ng-container
+                            >
+                          }
                         </span>
-                      }
-                    </td>
-                    <td
-                      data-label="Potvrzení"
-                      i18n-data-label="@@admin.donorDetail.donations.col.receipt"
-                    >
-                      @if (item.receiptNumber) {
-                        <span class="ui-mono">{{ item.receiptNumber }}</span>
-                      } @else {
-                        <span class="muted" i18n="@@admin.donorDetail.donations.noReceipt"
-                          >zatím žádné</span
-                        >
-                      }
-                    </td>
+                        <span class="ui-list__value">{{ crowns(item.amountMinor) }}&nbsp;Kč</span>
+                        @if (item.status === 'REFUNDED') {
+                          <span class="ui-list__state">
+                            <span
+                              class="tag tag--warn"
+                              i18n="@@admin.donorDetail.donations.refunded"
+                              >vráceno</span
+                            >
+                          </span>
+                        }
+                        <span class="ui-list__extra donation-receipt">
+                          @if (item.receiptNumber; as number) {
+                            <ng-container i18n="@@admin.donorDetail.donations.row.receipt"
+                              >Potvrzení {{ number }}</ng-container
+                            >
+                          } @else {
+                            <ng-container i18n="@@admin.donorDetail.donations.row.noReceipt"
+                              >Potvrzení zatím žádné</ng-container
+                            >
+                          }
+                        </span>
+                      </div>
+                    </li>
+                  }
+                </ul>
+              }
+            } @else {
+              <table class="ui-table">
+                <thead>
+                  <tr>
+                    <th i18n="@@admin.donorDetail.donations.col.date">Přijato</th>
+                    <th class="amount" i18n="@@admin.donorDetail.donations.col.amount">Částka</th>
+                    <th i18n="@@admin.donorDetail.donations.col.purpose">Účel</th>
+                    <th i18n="@@admin.donorDetail.donations.col.pairing">Přiřazení</th>
+                    <th i18n="@@admin.donorDetail.donations.col.receipt">Potvrzení</th>
                   </tr>
-                }
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  @for (item of donations(); track item.id) {
+                    <tr>
+                      <td
+                        data-label="Přijato"
+                        i18n-data-label="@@admin.donorDetail.donations.col.date"
+                      >
+                        {{ day(item.receivedAt) }}
+                        @if (item.status === 'REFUNDED') {
+                          <span class="tag tag--warn" i18n="@@admin.donorDetail.donations.refunded"
+                            >vráceno</span
+                          >
+                        }
+                      </td>
+                      <td
+                        class="amount"
+                        data-label="Částka"
+                        i18n-data-label="@@admin.donorDetail.donations.col.amount"
+                      >
+                        <span class="ui-mono">{{ crowns(item.amountMinor) }}&nbsp;Kč</span>
+                      </td>
+                      <td
+                        data-label="Účel"
+                        i18n-data-label="@@admin.donorDetail.donations.col.purpose"
+                      >
+                        {{ item.purpose }}
+                      </td>
+                      <td
+                        data-label="Přiřazení"
+                        i18n-data-label="@@admin.donorDetail.donations.col.pairing"
+                      >
+                        {{ pairingLabel(item) }}
+                        @if (item.senderAccount) {
+                          <span class="muted ui-mono">{{ item.senderAccount }}</span>
+                        }
+                        @if (item.confirmedSymbol) {
+                          <span class="muted">
+                            <ng-container i18n="@@admin.donorDetail.donations.symbol"
+                              >VS {{ item.confirmedSymbol }}</ng-container
+                            >
+                          </span>
+                        }
+                      </td>
+                      <td
+                        data-label="Potvrzení"
+                        i18n-data-label="@@admin.donorDetail.donations.col.receipt"
+                      >
+                        @if (item.receiptNumber) {
+                          <span class="ui-mono">{{ item.receiptNumber }}</span>
+                        } @else {
+                          <span class="muted" i18n="@@admin.donorDetail.donations.noReceipt"
+                            >zatím žádné</span
+                          >
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
             <p class="ui-card__footer donor-payments">
               <a
                 routerLink="/sprava/platby"
