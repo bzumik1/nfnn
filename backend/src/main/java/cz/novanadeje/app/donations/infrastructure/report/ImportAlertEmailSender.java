@@ -7,11 +7,11 @@ import cz.novanadeje.app.donations.domain.importing.ImportRecovery;
 import cz.novanadeje.app.donations.domain.report.ReportSettingsRepository;
 import cz.novanadeje.app.shared.infrastructure.mail.BrandedEmails;
 import cz.novanadeje.app.shared.infrastructure.mail.EmailDraft;
+import cz.novanadeje.app.shared.infrastructure.mail.ObservedMailSender;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.MessageSource;
 import org.springframework.mail.MailException;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
@@ -29,12 +29,12 @@ class ImportAlertEmailSender implements ImportAlertSender {
     private static final String OUTAGE_TEMPLATE = "email/donations/import-outage";
     private static final String RECOVERY_TEMPLATE = "email/donations/import-recovered";
 
-    private final JavaMailSender mailSender;
+    private final ObservedMailSender mailSender;
     private final BrandedEmails emails;
     private final MessageSource messages;
     private final ReportSettingsRepository settings;
 
-    ImportAlertEmailSender(JavaMailSender mailSender, BrandedEmails emails, MessageSource messages, ReportSettingsRepository settings) {
+    ImportAlertEmailSender(ObservedMailSender mailSender, BrandedEmails emails, MessageSource messages, ReportSettingsRepository settings) {
         this.mailSender = mailSender;
         this.emails = emails;
         this.messages = messages;

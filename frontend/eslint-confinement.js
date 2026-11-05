@@ -195,7 +195,7 @@ const CONFINED_IMPORTS = [
     allowedIn: ['serviceWorkerAdapter', ...TEST_SCOPES],
     examples: ['@angular/service-worker', '@angular/service-worker/config'],
     message:
-      'The Angular service worker is registered and read only in src/app/core/updates/angular-service-worker.ts; the app asks AppUpdates through SERVICE_WORKER_UPDATES.',
+      'The Angular service worker is registered and read only in src/app/core/updates/angular-service-worker.ts; the app asks AppUpdates through SERVICE_WORKER_UPDATES and reaches push through SERVICE_WORKER_PUSH.',
   },
   {
     patterns: ['idb', 'idb/*'],

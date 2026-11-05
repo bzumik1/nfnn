@@ -20,6 +20,7 @@ type CopyState = 'idle' | 'copied' | 'failed';
   host: {
     '[class.has-failed]': "state() === 'failed'",
     '[class.is-start]': "align() === 'start'",
+    '[class.is-on-dark]': "tone() === 'dark'",
   },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -27,9 +28,11 @@ export class CopyButton {
   readonly value = input.required<string>();
   readonly what = input.required<string>();
   readonly label = input<string | null>(null);
+  readonly labelDetail = input<string | null>(null);
   readonly copiedStatus = input<string | null>(null);
   readonly failedStatus = input<string | null>(null);
   readonly align = input<'start' | 'end'>('end');
+  readonly tone = input<'light' | 'dark'>('light');
 
   protected readonly state = signal<CopyState>('idle');
   private reset: ReturnType<typeof setTimeout> | undefined;

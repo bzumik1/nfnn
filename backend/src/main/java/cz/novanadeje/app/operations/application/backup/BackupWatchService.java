@@ -5,6 +5,7 @@ import cz.novanadeje.app.operations.application.event.BackupRecovered;
 import cz.novanadeje.app.operations.domain.backup.BackupAlertState;
 import cz.novanadeje.app.operations.domain.backup.BackupAlertStateRepository;
 import cz.novanadeje.app.operations.domain.backup.BackupProblem;
+import cz.novanadeje.app.shared.application.event.OperationalAlertRaised;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -44,14 +45,17 @@ public class BackupWatchService {
                 events.publishEvent(new BackupRecovered(state.reportedProblems(), view, now));
                 log.info("Backups are healthy again after {}", state.reportedProblems());
             }
+            events.publishEvent(OperationalAlertRaised.resolved(OperationalAlertRaised.Area.BACKUPS, now));
             return problems;
         }
         if (problems.equals(state.reportedProblems())) {
+            events.publishEvent(OperationalAlertRaised.opened(OperationalAlertRaised.Area.BACKUPS, now));
             log.warn("Backup problems continue: {}", problems);
             return problems;
         }
         states.save(BackupAlertState.reported(problems, now));
         events.publishEvent(new BackupProblemsDetected(problems, view, now));
+        events.publishEvent(OperationalAlertRaised.opened(OperationalAlertRaised.Area.BACKUPS, now));
         log.warn("Backup problems detected: {}", problems);
         return problems;
     }

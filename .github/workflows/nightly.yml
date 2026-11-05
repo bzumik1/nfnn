@@ -32,7 +32,7 @@ jobs:
         working-directory: frontend
         run: |
           npm ci
-          npx playwright install --with-deps --only-shell chromium
+          scripts/install-playwright-browsers.sh --only-shell chromium
 
       - name: The public pages of main look as v2 drew them, but for the accepted differences
         run: |
@@ -115,7 +115,7 @@ jobs:
       - name: Install the frontend's dependencies and Playwright's Chromium headless shell
         run: |
           npm ci
-          npx playwright install --with-deps --only-shell chromium
+          scripts/install-playwright-browsers.sh --only-shell chromium
 
       - name: Build the frontend for production
         run: npm run build
