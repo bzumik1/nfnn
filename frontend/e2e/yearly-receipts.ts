@@ -1,4 +1,4 @@
-import { Page } from '@playwright/test';
+import type { RouteTarget } from './fixtures';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { syntheticPortrait, syntheticSignature, YEARLY_ONE } from './receipt-issuing';
@@ -89,7 +89,7 @@ function issuedReceipt(donor: YearlyDonor, index: number, year: number, withArt:
 }
 
 export async function mockYearlyReceipts(
-  page: Page,
+  page: RouteTarget,
   mock: YearlyReceiptsMock,
 ): Promise<YearlyReceiptsCalls> {
   const year = mock.year ?? 2026;

@@ -9,6 +9,7 @@ import {
   ClientDescription,
   Confirmation,
   ConnectedAppList,
+  SignedInDeviceList,
   Donor,
   RedirectResponse,
   EmailChangeRequest,
@@ -195,5 +196,17 @@ export class AuthApi {
 
   disconnect(id: string): Observable<void> {
     return this.http.delete<void>(`/api/donors/me/connections/${id}`);
+  }
+
+  devices(): Observable<SignedInDeviceList> {
+    return this.http.get<SignedInDeviceList>('/api/donors/me/devices');
+  }
+
+  signOutDevice(id: string): Observable<void> {
+    return this.http.delete<void>(`/api/donors/me/devices/${id}`);
+  }
+
+  signOutOtherDevices(): Observable<void> {
+    return this.http.delete<void>('/api/donors/me/devices');
   }
 }

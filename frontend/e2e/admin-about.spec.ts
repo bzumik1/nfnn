@@ -86,7 +86,9 @@ test.describe('Given an administrator who shows a photo in the About section', (
       mimeType: 'image/png',
       buffer: PNG,
     });
-    await expect(page.locator('.photo-preview')).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Fotka, klepnutím nastavíte bod výřezu' }),
+    ).toBeVisible();
     await expect(
       page.getByText('Fotka je nahraná. Na web se dostane, až ji uložíte.'),
     ).toBeVisible();

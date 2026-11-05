@@ -108,7 +108,9 @@ test.describe('Given an administrator managing the projects', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Úprava projektu' })).toBeFocused();
     await expect(page.getByLabel('Titulek')).toHaveValue('Zahrada pro děti');
     await expect(page.getByLabel('Rok')).toHaveValue('2024');
-    await expect(page.locator('.image-preview')).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Fotka, klepnutím nastavíte bod výřezu' }),
+    ).toBeVisible();
     await expect(page.locator('.publish-state .ui-badge')).toHaveText('Na webu');
     await expect(
       page.getByRole('link', { name: 'Otevřít na webu (v novém okně)' }),
@@ -242,7 +244,9 @@ test.describe('Given an administrator managing the projects', () => {
       mimeType: 'image/png',
       buffer: TINY_PNG,
     });
-    await expect(page.locator('.image-preview')).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Fotka, klepnutím nastavíte bod výřezu' }),
+    ).toBeVisible();
     await expect(page.getByRole('button', { name: 'Odebrat fotku' })).toBeVisible();
     await page.getByRole('button', { name: 'Náhled', exact: true }).click();
     const preview = page.locator('app-content-preview');

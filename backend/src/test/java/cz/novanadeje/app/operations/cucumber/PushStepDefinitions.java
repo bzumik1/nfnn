@@ -5,6 +5,7 @@ import cz.novanadeje.app.cucumber.DonorSessions;
 import cz.novanadeje.app.cucumber.ScenarioDonors;
 import cz.novanadeje.app.operations.infrastructure.push.PushReceiver;
 import cz.novanadeje.app.shared.infrastructure.config.PublicUrlProperties;
+import cz.novanadeje.app.shared.infrastructure.security.JwtProperties;
 import cz.novanadeje.app.support.RecordingPushTransport;
 import io.cucumber.datatable.DataTable;
 import io.cucumber.java.en.Given;
@@ -22,14 +23,19 @@ import tools.jackson.databind.JsonNode;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.sql.Timestamp;
 import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -37,7 +43,6 @@ public class PushStepDefinitions {
 
     private static final String PUSH = "/api/admin/operations/push";
     private static final String SUBSCRIPTIONS = PUSH + "/subscriptions";
-    private static final String SESSION_CLAIM = "sid";
     private static final String PUBLIC_KEY_SHAPE = "B[A-Za-z0-9_-]{86}";
     private static final long VAPID_LIFETIME_SECONDS = 3600;
     private static final int CREATED = 201;
@@ -108,7 +113,7 @@ public class PushStepDefinitions {
 
     @When("{string} turns push alerts on in a browser session that names no device")
     public void turnsPushAlertsOnInASessionThatNamesNoDevice(String alias) {
-        sessions.actAs(alias);
+        actWithoutDevice(alias);
         PushReceiver receiver = PushReceiver.generate();
         api.post(SUBSCRIPTIONS, body("https://fcm.googleapis.com/fcm/send/" + alias.toLowerCase() + "-bez-zarizeni", receiver.p256dh(), receiver.auth()));
     }
@@ -269,7 +274,7 @@ public class PushStepDefinitions {
 
     private void subscribe(String alias, String device, String endpoint, PushReceiver receiver, String p256dh) {
         String key = alias + "/" + device;
-        UUID deviceId = devices.containsKey(key) ? devices.get(key).deviceId() : UUID.nameUUIDFromBytes(key.getBytes(StandardCharsets.UTF_8));
+        UUID deviceId = devices.containsKey(key) ? devices.get(key).deviceId() : UUID.randomUUID();
         actOnDevice(alias, deviceId);
         api.post(SUBSCRIPTIONS, body(endpoint, p256dh, receiver.auth()));
         String subscriptionId = api.lastResponse().getStatusCode().value() == CREATED ? api.lastResponseJson().get("id").asString() : null;
@@ -278,13 +283,37 @@ public class PushStepDefinitions {
 
     private void actOnDevice(String alias, UUID deviceId) {
         sessions.actAs(alias);
+        signedIn(alias, deviceId);
+        actWith(alias, claims -> claims.claim(JwtProperties.SESSION_CLAIM, deviceId.toString()));
+    }
+
+    private void actWithoutDevice(String alias) {
+        sessions.actAs(alias);
+        actWith(alias, claims -> claims.claims(all -> all.remove(JwtProperties.SESSION_CLAIM)));
+    }
+
+    private void actWith(String alias, Consumer<JwtClaimsSet.Builder> session) {
         Jwt browserToken = decoder.decode(donors.accessTokenOf(alias));
         JwtClaimsSet.Builder claims = JwtClaimsSet.builder();
         browserToken.getClaims().forEach(claims::claim);
-        claims.claim(SESSION_CLAIM, deviceId.toString());
-        String onDevice = encoder.encode(JwtEncoderParameters.from(JwsHeader.with(MacAlgorithm.HS256).build(), claims.build())).getTokenValue();
+        session.accept(claims);
+        String token = encoder.encode(JwtEncoderParameters.from(JwsHeader.with(MacAlgorithm.HS256).build(), claims.build())).getTokenValue();
         api.forgetCredentials();
-        api.authorize(onDevice);
+        api.authorize(token);
+    }
+
+    private void signedIn(String alias, UUID deviceId) {
+        Instant now = clock.instant();
+        UUID donorId = donors.idOf(alias);
+        jdbc.sql("""
+                insert into donor_device (id, donor_id, platform, browser, signed_in_at, last_used_at)
+                values (:id, :donor, 'OTHER', 'OTHER', :now, :now) on conflict (id) do nothing""")
+                .param("id", deviceId).param("donor", donorId).param("now", Timestamp.from(now)).update();
+        jdbc.sql("""
+                insert into donor_refresh_token (id, donor_id, secret_hash, issued_at, granted_at, expires_at, device_id)
+                select :id, d.donor_id, :hash, :now, :now, :expires, d.id from donor_device d where d.id = :device""")
+                .param("id", UUID.randomUUID()).param("hash", HexFormat.of().formatHex(UUID.randomUUID().toString().repeat(2).getBytes(StandardCharsets.US_ASCII), 0, 32))
+                .param("now", Timestamp.from(now)).param("expires", Timestamp.from(now.plus(Duration.ofDays(14)))).param("device", deviceId).update();
     }
 
     private Device device(String alias, String device) {

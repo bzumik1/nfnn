@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donors.infrastructure.persistence;
 
 import cz.novanadeje.app.donors.domain.ClientId;
+import cz.novanadeje.app.donors.domain.DeviceId;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.OAuthScope;
 import cz.novanadeje.app.donors.domain.RefreshToken;
@@ -56,6 +57,9 @@ class RefreshTokenJpaEntity {
     @Column(name = "superseded_at")
     private Instant supersededAt;
 
+    @Column(name = "device_id")
+    private UUID deviceId;
+
     protected RefreshTokenJpaEntity() {
     }
 
@@ -74,12 +78,14 @@ class RefreshTokenJpaEntity {
         entity.revokedAt = token.revokedAt().orElse(null);
         entity.successorId = token.successorId().orElse(null);
         entity.supersededAt = token.supersededAt().orElse(null);
+        entity.deviceId = token.deviceId().map(DeviceId::value).orElse(null);
         return entity;
     }
 
     RefreshToken toDomain() {
         Set<OAuthScope> scopes = scope == null ? Set.of() : OAuthScope.parse(scope);
         return RefreshToken.reconstitute(id, new DonorId(donorId), secretHash, issuedAt, expiresAt, secondFactorVerified,
-                clientId == null ? null : new ClientId(clientId), scopes, grantedAt, usedAt, revokedAt, successorId, supersededAt);
+                clientId == null ? null : new ClientId(clientId), scopes, grantedAt, usedAt, revokedAt, successorId, supersededAt,
+                deviceId == null ? null : new DeviceId(deviceId));
     }
 }

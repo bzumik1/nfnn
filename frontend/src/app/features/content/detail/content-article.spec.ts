@@ -50,6 +50,7 @@ describe('Given the page of a news article', () => {
             id: IMAGE_ID,
             url: `/api/content/media/${IMAGE_ID}`,
             alt: 'Děti sázejí stromek',
+            focalPoint: null,
           },
         }),
       ),

@@ -156,6 +156,9 @@ public record AdminActionFacts(String summaryKey, Map<String, String> values) {
                 variant("edited", "Fotka " + ID + " v sekci O nás upravena")));
         shapes.put("REMOVE_ABOUT_PHOTO", List.of(
                 full("Fotka " + ID + " v sekci O nás odebrána")));
+        shapes.put("CHANGE_PHOTO_FOCAL_POINT", List.of(
+                full("Bod výřezu fotky " + ID + " nastaven na (?<x>\\d{1,3}) % zleva a (?<y>\\d{1,3}) % shora"),
+                variant("removed", "Bod výřezu fotky " + ID + " zrušen, fotka se ořezává kolem středu")));
         shapes.put("ADD_PERSON", List.of(full("Osoba " + ID + " přidána mezi lidi fondu")));
         shapes.put("UPDATE_PERSON", List.of(full("Osoba " + ID + " v lidech fondu upravena")));
         shapes.put("REMOVE_PERSON", List.of(full("Osoba " + ID + " odebrána z lidí fondu")));

@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { FocalPointCrop } from '../../../../../shared/ui/focal-point/focal-point';
 import { mediaUrl, ProjectResponse } from '../../../projects-api';
 
 export type ProjectKey = 'dominik' | 'anicka' | 'tomas';
@@ -9,7 +10,7 @@ const CARD_WIDTH_SHARP = 960;
 
 @Component({
   selector: 'app-project-card',
-  imports: [RouterLink],
+  imports: [RouterLink, FocalPointCrop],
   templateUrl: './project-card.html',
   styleUrl: './project-card.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

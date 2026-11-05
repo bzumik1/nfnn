@@ -386,6 +386,19 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
       const about = JSON.parse(body) as Record<string, unknown>;
       return [200, { photo: about['photoId'] === null ? null : aboutPhoto(about) }];
     }
+    case `PUT /api/admin/content/media/${MEDIA_ID}`: {
+      const photo = JSON.parse(body) as Record<string, unknown>;
+      return [
+        200,
+        {
+          id: MEDIA_ID,
+          url: `/api/content/media/${MEDIA_ID}`,
+          width: 1600,
+          height: 1200,
+          focalPoint: photo['focalPoint'] ?? null,
+        },
+      ];
+    }
     case 'POST /api/admin/content/news':
       return [201, { id: UNKNOWN_ID, slug: 'letni-tabor', ...content(body) }];
     case `PUT /api/admin/content/news/${UNKNOWN_ID}`:

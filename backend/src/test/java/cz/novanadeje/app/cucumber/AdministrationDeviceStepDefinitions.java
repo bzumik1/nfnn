@@ -2,19 +2,30 @@ package cz.novanadeje.app.cucumber;
 
 import cz.novanadeje.app.shared.domain.FoundationZone;
 import cz.novanadeje.app.shared.infrastructure.json.CanonicalRows;
+import cz.novanadeje.app.shared.infrastructure.security.JwtProperties;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jwt.JwsHeader;
+import org.springframework.security.oauth2.jwt.JwtClaimsSet;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 
+import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,25 +46,51 @@ public class AdministrationDeviceStepDefinitions {
     private static final List<String> AUDIT_FIELDS = List.of("id", "adminId", "action", "subjectId", "performedAt", "client");
     private static final List<String> SYMBOL_CLAIM_FIELDS = List.of("id", "donorId", "variableSymbol", "answer", "answeredAt");
     private static final int MINIMUM_SECRET_LENGTH = 8;
+    private static final JsonMapper JSON = JsonMapper.builder().build();
 
     private final ApiClient api;
     private final DonorSessions sessions;
     private final ScenarioDonors donors;
     private final JdbcClient jdbc;
+    private final JwtEncoder encoder;
+    private final JwtProperties jwt;
+    private final Clock clock;
     private final Map<String, Device> devices = new LinkedHashMap<>();
+    private final Map<String, String> devicelessTokens = new HashMap<>();
     private Device device;
 
-    public AdministrationDeviceStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors donors, JdbcClient jdbc) {
+    public AdministrationDeviceStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors donors, JdbcClient jdbc, JwtEncoder encoder,
+                                               JwtProperties jwt, Clock clock) {
         this.api = api;
         this.sessions = sessions;
         this.donors = donors;
         this.jdbc = jdbc;
+        this.encoder = encoder;
+        this.jwt = jwt;
+        this.clock = clock;
+    }
+
+    @Given("{string} holds a browser token from before the signed-in devices")
+    public void holdsABrowserTokenFromBeforeTheSignedInDevices(String alias) {
+        sessions.actAs(alias);
+        String payload = donors.accessTokenOf(alias).split("\\.")[1];
+        JsonNode signedIn = JSON.readTree(new String(Base64.getUrlDecoder().decode(payload), StandardCharsets.UTF_8));
+        Instant now = clock.instant();
+        JwtClaimsSet claims = JwtClaimsSet.builder()
+                .issuer(jwt.issuer())
+                .subject(signedIn.get("sub").asString())
+                .audience(List.of(jwt.audience()))
+                .issuedAt(now)
+                .expiresAt(now.plus(jwt.accessTokenTtl()))
+                .claim(JwtProperties.ROLES_CLAIM, signedIn.get(JwtProperties.ROLES_CLAIM).valueStream().map(JsonNode::asString).toList())
+                .build();
+        devicelessTokens.put(alias, encoder.encode(JwtEncoderParameters.from(JwsHeader.with(MacAlgorithm.HS256).build(), claims)).getTokenValue());
     }
 
     @When("an administration device of {string} syncs the {word}")
     public void anAdministrationDeviceSyncs(String alias, String area) {
         device = devices.computeIfAbsent(alias + " " + area, ignored -> new Device());
-        sessions.actAs(alias);
+        act(alias);
         device.downloaded = List.of();
         device.removed = List.of();
         ResponseEntity<String> answered = api.get(manifestPath(area));
@@ -92,31 +129,31 @@ public class AdministrationDeviceStepDefinitions {
 
     @When("{string} asks for the administration's {word} sync manifest")
     public void asksForTheAdministrationsSyncManifest(String alias, String area) {
-        sessions.actAs(alias);
+        act(alias);
         api.get(manifestPath(area));
     }
 
     @When("{string} asks for the administration's {word} sync manifest {int} times")
     public void asksForTheAdministrationsSyncManifestTimes(String alias, String area, int times) {
-        sessions.actAs(alias);
+        act(alias);
         IntStream.range(0, times).forEach(ignored -> assertThat(api.get(manifestPath(area)).getStatusCode().value()).isEqualTo(200));
     }
 
     @When("{string} asks for the administration's {word} sync chunks {string}")
     public void asksForTheAdministrationsSyncChunks(String alias, String area, String ids) {
-        sessions.actAs(alias);
+        act(alias);
         api.get(chunksPath(area) + ids);
     }
 
     @When("{string} asks for the administration's {word} sync chunks {string} {int} times")
     public void asksForTheAdministrationsSyncChunksTimes(String alias, String area, String ids, int times) {
-        sessions.actAs(alias);
+        act(alias);
         IntStream.range(0, times).forEach(ignored -> assertThat(api.get(chunksPath(area) + ids).getStatusCode().value()).isEqualTo(200));
     }
 
     @When("{string} asks for {int} of the administration's {word} sync chunks")
     public void asksForManyOfTheAdministrationsSyncChunks(String alias, int count, String area) {
-        sessions.actAs(alias);
+        act(alias);
         String prefix = "donations".equals(area) ? "payments:" : "audit:";
         api.get(chunksPath(area) + IntStream.range(0, count)
                 .mapToObj(month -> prefix + (2000 + month / 12) + "-" + String.format("%02d", month % 12 + 1))
@@ -511,5 +548,15 @@ public class AdministrationDeviceStepDefinitions {
         private JsonNode manifest;
         private List<String> downloaded = List.of();
         private List<String> removed = List.of();
+    }
+
+    private void act(String alias) {
+        String deviceless = devicelessTokens.get(alias);
+        if (deviceless == null) {
+            sessions.actAs(alias);
+            return;
+        }
+        api.forgetCredentials();
+        api.authorize(deviceless);
     }
 }

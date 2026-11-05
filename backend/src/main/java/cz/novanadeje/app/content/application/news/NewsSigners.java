@@ -1,5 +1,7 @@
 package cz.novanadeje.app.content.application.news;
 
+import cz.novanadeje.app.content.domain.media.FocalPoint;
+import cz.novanadeje.app.content.domain.media.MediaId;
 import cz.novanadeje.app.content.domain.media.MediaImageRepository;
 import cz.novanadeje.app.content.domain.news.NewsArticle;
 import cz.novanadeje.app.content.domain.people.Person;
@@ -29,7 +31,10 @@ public class NewsSigners {
 
     public List<NewsArticleView> views(List<NewsArticle> articles, LocalDate today) {
         Map<PersonId, NewsSignerView> signers = signersOf(articles);
-        return articles.stream().map(article -> NewsArticleView.from(article, today, article.content().signer().map(signers::get))).toList();
+        Map<MediaId, FocalPoint> focalPoints = media.findFocalPoints(articles.stream().flatMap(article -> article.content().coverImage().stream()).toList());
+        return articles.stream()
+                .map(article -> NewsArticleView.from(article, today, article.content().signer().map(signers::get), article.content().coverImage().map(focalPoints::get)))
+                .toList();
     }
 
     public NewsArticleView view(NewsArticle article, LocalDate today) {

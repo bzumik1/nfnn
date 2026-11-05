@@ -48,6 +48,8 @@ export async function routeApiDefaults(target: RouteTarget): Promise<readonly st
   return askedForServerPayment;
 }
 
+export const testWithoutBrowser = base;
+
 const CSP_VIOLATION_BINDING = '__nfnnCspViolation';
 
 export interface CspViolation {

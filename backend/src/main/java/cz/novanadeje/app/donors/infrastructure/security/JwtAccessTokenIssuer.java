@@ -3,6 +3,7 @@ package cz.novanadeje.app.donors.infrastructure.security;
 import cz.novanadeje.app.donors.application.AccessTokenGrant;
 import cz.novanadeje.app.donors.application.AccessTokenIssuer;
 import cz.novanadeje.app.donors.application.IssuedAccessToken;
+import cz.novanadeje.app.donors.domain.DeviceId;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.OAuthScope;
 import cz.novanadeje.app.donors.domain.Role;
@@ -31,8 +32,8 @@ class JwtAccessTokenIssuer implements AccessTokenIssuer {
     }
 
     @Override
-    public IssuedAccessToken issue(DonorId donorId, Set<Role> roles, Instant issuedAt) {
-        return issue(new AccessTokenGrant(donorId, roles, properties.audience(), Set.of(), issuedAt, null, null));
+    public IssuedAccessToken issue(DonorId donorId, Set<Role> roles, DeviceId device, Instant issuedAt) {
+        return issue(new AccessTokenGrant(donorId, roles, properties.audience(), Set.of(), issuedAt, null, null, device));
     }
 
     @Override
@@ -52,6 +53,7 @@ class JwtAccessTokenIssuer implements AccessTokenIssuer {
             claims.claim(JwtProperties.SCOPE_CLAIM, OAuthScope.format(grant.scopes()));
         }
         grant.connectedClient().ifPresent(client -> claims.claim(JwtProperties.CLIENT_CLAIM, client));
+        grant.session().ifPresent(device -> claims.claim(JwtProperties.SESSION_CLAIM, device.toString()));
         JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
         return new IssuedAccessToken(encoder.encode(JwtEncoderParameters.from(header, claims.build())).getTokenValue(), expiresAt);
     }

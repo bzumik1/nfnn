@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.application.event.DonorPasswordChanged;
 import cz.novanadeje.app.donors.application.event.DonorPasswordResetRequested;
 import cz.novanadeje.app.donors.domain.Donor;
@@ -10,7 +11,6 @@ import cz.novanadeje.app.donors.domain.LinkSecret;
 import cz.novanadeje.app.donors.domain.PasswordResetToken;
 import cz.novanadeje.app.donors.domain.PasswordResetTokenRepository;
 import cz.novanadeje.app.donors.domain.RawPassword;
-import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,18 +28,17 @@ public class DonorPasswordResetService {
 
     private final DonorRepository donors;
     private final PasswordResetTokenRepository tokens;
-    private final RefreshTokenRepository refreshTokens;
     private final PasswordHasher passwordHasher;
     private final DonorPasswordResetProperties properties;
     private final Clock clock;
     private final ApplicationEventPublisher events;
+    private final DeviceSignOuts signOuts;
 
-    public DonorPasswordResetService(DonorRepository donors, PasswordResetTokenRepository tokens, RefreshTokenRepository refreshTokens,
-                                     PasswordHasher passwordHasher, DonorPasswordResetProperties properties, Clock clock,
-                                     ApplicationEventPublisher events) {
+    public DonorPasswordResetService(DonorRepository donors, PasswordResetTokenRepository tokens, PasswordHasher passwordHasher, DonorPasswordResetProperties properties, Clock clock,
+                                     ApplicationEventPublisher events, DeviceSignOuts signOuts) {
+        this.signOuts = signOuts;
         this.donors = donors;
         this.tokens = tokens;
-        this.refreshTokens = refreshTokens;
         this.passwordHasher = passwordHasher;
         this.properties = properties;
         this.clock = clock;
@@ -86,7 +85,7 @@ public class DonorPasswordResetService {
         donor.changePassword(passwordHasher.hash(rawPassword));
         donors.save(donor);
         tokens.deleteOthersOf(donor.id(), found.id());
-        refreshTokens.revokeAllOf(donor.id(), now);
+        signOuts.endAllOf(donor.id(), DeviceSignOutReason.CREDENTIALS_CHANGED, now);
         events.publishEvent(new DonorPasswordChanged(donor.id().value(), donor.email(), donor.preferredLocale()));
         log.info("Password reset completed for donor {}", donor.id());
     }
