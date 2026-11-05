@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
-import { mockDonorApi, openSignInDialog, session } from './donor-session';
+import { mockDonorApi, openAccountItem, openSignInDialog, session } from './donor-session';
 
 async function signInCapturingTheKind(page: Page): Promise<unknown[]> {
   const kinds: unknown[] = [];
@@ -91,7 +91,8 @@ test.describe('Given a visitor with the sign-in dialog open in a browser tab', (
 
     expect(kinds).toEqual(['PUBLIC']);
     expect(await sessionFlags(page)).toEqual({ local: null, tab: '1' });
-    await expect(page.getByRole('link', { name: 'Můj přehled' }).first()).toBeVisible();
+    await openAccountItem(page, 'Můj přehled');
+    await expect(page.getByRole('heading', { level: 1, name: 'Můj přehled' })).toBeVisible();
     await page.route('**/api/donors/auth/refresh', async (route) => {
       const answer = session(200);
       await route.fulfill({
