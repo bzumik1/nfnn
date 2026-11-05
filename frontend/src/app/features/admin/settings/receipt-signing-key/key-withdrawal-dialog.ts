@@ -37,7 +37,7 @@ const CODE_MESSAGES: FieldMessages = {
   pattern: $localize`:@@donor.form.code.invalid:Kód má přesně šest číslic.`,
 };
 
-const WITHDRAWAL_FAILED = $localize`:@@admin.signingKey.withdraw.failed:Klíč se nepodařilo stáhnout. Zkuste to prosím znovu.`;
+const WITHDRAWAL_FAILED = $localize`:@@admin.signingKey.withdraw.failed:Klíč se nepodařilo zneplatnit. Zkuste to prosím znovu.`;
 
 @Component({
   selector: 'app-key-withdrawal-dialog',
@@ -108,8 +108,8 @@ export class KeyWithdrawalDialog {
           this.error.set(
             failure instanceof PasskeyCeremonyError
               ? failure.reason === 'unsupported'
-                ? $localize`:@@admin.signingKey.withdraw.passkeyUnsupported:Tento prohlížeč přístupové klíče nepodporuje. Klíč stáhněte v prohlížeči, ve kterém se klíčem přihlašujete.`
-                : $localize`:@@admin.signingKey.withdraw.passkeyCancelled:Zařízení stažení nepotvrdilo. Zkuste to prosím znovu.`
+                ? $localize`:@@admin.signingKey.withdraw.passkeyUnsupported:Tento prohlížeč přístupové klíče nepodporuje. Klíč zneplatněte v prohlížeči, ve kterém se klíčem přihlašujete.`
+                : $localize`:@@admin.signingKey.withdraw.passkeyCancelled:Zařízení zneplatnění nepotvrdilo. Zkuste to prosím znovu.`
               : describeProblem(failure, WITHDRAWAL_FAILED),
           );
         },

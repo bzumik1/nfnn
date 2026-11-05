@@ -322,20 +322,20 @@ test.describe('Given an administrator whose receipt signing key may have leaked'
 
     await page.goto('/sprava/nastaveni');
     const card = page.getByRole('region', { name: 'Klíč k ověřovacím QR kódům' });
-    await card.getByRole('button', { name: 'Stáhnout klíč serveru…' }).click();
-    const dialog = page.getByRole('dialog', { name: 'Stáhnout klíč 21fe31df?' });
+    await card.getByRole('button', { name: 'Zneplatnit klíč serveru…' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Zneplatnit klíč 21fe31df?' });
     await expect(dialog).toContainText('Web se hned restartuje');
     await expect(dialog.getByLabel('Kód z aplikace')).toBeFocused();
     await dialog.getByLabel('Kód z aplikace').fill('123456');
-    await dialog.getByRole('button', { name: 'Stáhnout klíč', exact: true }).click();
+    await dialog.getByRole('button', { name: 'Zneplatnit klíč', exact: true }).click();
 
     await expect(dialog).toBeHidden();
-    await expect(card.locator('dd')).toHaveText(['21fe31df', '13. 11. 2026 12:00', 'Stažený']);
+    await expect(card.locator('dd')).toHaveText(['21fe31df', '13. 11. 2026 12:00', 'Zneplatněný']);
     await expect(card.getByRole('status').filter({ hasText: /\S/ })).toHaveText(
-      'Klíč 21fe31df je stažený. Web se restartuje a vytvoří si nový klíč, obvykle do minuty.',
+      'Klíč 21fe31df je zneplatněný. Web se restartuje a vytvoří si nový klíč, obvykle do minuty.',
     );
     await expect(card.getByRole('status').filter({ hasText: /\S/ })).toHaveText(
-      'Klíč 21fe31df je stažený a web po restartu podepisuje novým klíčem.',
+      'Klíč 21fe31df je zneplatněný a web po restartu podepisuje novým klíčem.',
       { timeout: 15_000 },
     );
     await expect(card.locator('dd').first()).toHaveText('b7e1c2d4');
@@ -355,9 +355,9 @@ test.describe('Given an administrator whose receipt signing key may have leaked'
     );
 
     await page.goto('/sprava/nastaveni');
-    const opener = page.getByRole('button', { name: 'Stáhnout klíč serveru…' });
+    const opener = page.getByRole('button', { name: 'Zneplatnit klíč serveru…' });
     await opener.click();
-    const dialog = page.getByRole('dialog', { name: 'Stáhnout klíč 21fe31df?' });
+    const dialog = page.getByRole('dialog', { name: 'Zneplatnit klíč 21fe31df?' });
     await expect(dialog.getByLabel('Kód z aplikace')).toBeFocused();
     await page.keyboard.press('Escape');
 

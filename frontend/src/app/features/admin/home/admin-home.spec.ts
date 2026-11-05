@@ -748,7 +748,7 @@ describe('Given an administrator on the administration home', () => {
       );
 
       expect(items()).toEqual([
-        'Klíč serveru 21fe31df je stažený a server zatím nemá nový, takže se potvrzení o daru teď nestáhnou. Nový klíč si server vytvoří při startu; když se to nestane do pár minut, obraťte se na technika serveru. Klíč 39f713d0 je v historii správy, ale jeho záznam v databázi chybí (změna mimo web). QR kódy jím podepsané se neověří; obraťte se na technika serveru. Otevřít nastavení',
+        'Klíč serveru 21fe31df je zneplatněný a server zatím nemá nový, takže se potvrzení o daru teď nestáhnou. Nový klíč si server vytvoří při startu; když se to nestane do pár minut, obraťte se na technika serveru. Klíč 39f713d0 je v historii správy, ale jeho záznam v databázi chybí (změna mimo web). QR kódy jím podepsané se neověří; obraťte se na technika serveru. Otevřít nastavení',
       ]);
       const row = attention().querySelector('.attention-list > li') as HTMLElement;
       expect(row.classList).toContain('attention-item--danger');

@@ -92,11 +92,11 @@ class ReceiptSigningKeyWithdrawnEmailSenderTest {
             assertThat(recording.sent()).hasSize(2);
             MimeMessage czech = MailContents.asReceived(recording.sent().getFirst());
             assertThat(czech.getRecipients(Message.RecipientType.TO)).extracting(Object::toString).containsExactly("jana@example.cz");
-            assertThat(czech.getSubject()).isEqualTo("Klíč k ověřovacím QR kódům byl stažen – Nová naděje");
+            assertThat(czech.getSubject()).isEqualTo("Klíč k ověřovacím QR kódům byl zneplatněn – Nová naděje");
             assertThat(MailContents.plainText(czech).replace("\r\n", "\n")).isEqualTo("""
                     Dobrý den,
 
-                    správce jana@example.cz 20. 11. 2026 v 10:30 stáhl ve správě webu Nová naděje klíč 21fe31df, kterým server podepisuje ověřovací QR kódy na potvrzeních o daru. Web tento klíč dál zveřejňuje, ale jako stažený, takže QR kódům jím podepsaným už nikdo nemá věřit. Potvrzení samotná dál platí.
+                    správce jana@example.cz 20. 11. 2026 v 10:30 zneplatnil ve správě webu Nová naděje klíč 21fe31df, kterým server podepisuje ověřovací QR kódy na potvrzeních o daru. Web tento klíč dál zveřejňuje, ale jako zneplatněný, takže QR kódům jím podepsaným už nikdo nemá věřit. Potvrzení samotná dál platí.
 
                     Server se restartuje a vytvoří si nový klíč. Potvrzení vydaná potom podepíše novým klíčem.
 
@@ -110,8 +110,8 @@ class ReceiptSigningKeyWithdrawnEmailSenderTest {
                     """);
             assertThat(MailContents.html(czech))
                     .contains("lang=\"cs\"")
-                    .contains(">Klíč k ověřovacím QR kódům byl stažen</h1>")
-                    .contains("správce jana@example.cz 20. 11. 2026 v 10:30 stáhl")
+                    .contains(">Klíč k ověřovacím QR kódům byl zneplatněn</h1>")
+                    .contains("správce jana@example.cz 20. 11. 2026 v 10:30 zneplatnil")
                     .contains("Server se restartuje a vytvoří si nový klíč.");
             MimeMessage english = MailContents.asReceived(recording.sent().get(1));
             assertThat(english.getRecipients(Message.RecipientType.TO)).extracting(Object::toString).containsExactly("petr@example.cz");

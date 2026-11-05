@@ -1,0 +1,48 @@
+[
+  {
+    "scenario": "donations/admin_receipt_signing_key_withdrawal: *",
+    "kind": "mails",
+    "subject": "Klíč k ověřovacím QR kódům byl stažen – Nová naděje",
+    "reason": "Jakub 2026-11-05: the key withdrawal is called Zneplatnit (decision card); the mail to every administrator says the key was zneplatněn and that the administrator zneplatnil it",
+    "contract": "docs/api-contract.md, Receipt verification proof and signing keys (withdrawal)"
+  },
+  {
+    "scenario": "donations/admin_receipt_signing_key_withdrawal: *",
+    "kind": "added",
+    "subject": "Klíč k ověřovacím QR kódům byl zneplatněn – Nová naděje",
+    "reason": "Jakub 2026-11-05: the key withdrawal is called Zneplatnit (decision card); the mail to every administrator, which replaces the one with the subject ending in byl stažen, has the subject ending in byl zneplatněn",
+    "contract": "docs/api-contract.md, Receipt verification proof and signing keys (withdrawal)"
+  },
+  {
+    "path": "POST /api/admin/donations/receipt-signing-keys/*",
+    "scenario": "donations/admin_receipt_signing_key_withdrawal: *",
+    "kind": "body",
+    "field": "$.title",
+    "reason": "Jakub 2026-11-05: the key withdrawal is called Zneplatnit (decision card); the problem titles of donations/receipt-signing-key-already-withdrawn and donations/receipt-signing-key-withdrawal-paused say zneplatněný and nezneplatní",
+    "contract": "docs/api-contract.md, Receipt verification proof and signing keys (withdrawal)"
+  },
+  {
+    "path": "POST /api/admin/donations/receipt-signing-keys/*",
+    "scenario": "donations/admin_receipt_signing_key_withdrawal: *",
+    "kind": "body",
+    "field": "$.detail",
+    "reason": "Jakub 2026-11-05: the key withdrawal is called Zneplatnit (decision card); the problem details of donations/receipt-signing-key-not-found and donations/receipt-signing-key-withdrawal-paused say Zneplatnit and nezneplatníme",
+    "contract": "docs/api-contract.md, Receipt verification proof and signing keys (withdrawal)"
+  },
+  {
+    "path": "POST /api/admin/donations/donors/*",
+    "scenario": "donations/admin_receipt_signing_key_withdrawal: *",
+    "kind": "body",
+    "field": "$.detail",
+    "reason": "Jakub 2026-11-05: the key withdrawal is called Zneplatnit (decision card); the detail of donations/receipt-signing-paused says the key is zneplatněný",
+    "contract": "docs/api-contract.md, Receipt verification proof and signing keys (receipt-signing-paused)"
+  },
+  {
+    "path": "POST /api/donations/me/receipts*",
+    "scenario": "donations/admin_receipt_signing_key_withdrawal: *",
+    "kind": "body",
+    "field": "$.detail",
+    "reason": "Jakub 2026-11-05: the key withdrawal is called Zneplatnit (decision card); the detail of donations/receipt-signing-paused says the key is zneplatněný",
+    "contract": "docs/api-contract.md, Receipt verification proof and signing keys (receipt-signing-paused)"
+  }
+]

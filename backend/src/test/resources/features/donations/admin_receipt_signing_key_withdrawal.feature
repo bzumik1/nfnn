@@ -18,9 +18,9 @@ Feature: An administrator withdraws a leaked receipt signing key from the web, w
     And the receipt signing keys are:
       | keyId    | status  | registeredAt         | published | current |
       | 21fe31df | revoked | 2026-11-13T11:00:00Z | true      | true    |
-    And the admin action "WITHDRAW_RECEIPT_SIGNING_KEY" by "Jana" is recorded with details containing "Stažen klíč k ověřovacím QR 21fe31df (ověřeno druhým faktorem)"
-    And an e-mail goes to the address of "Jana" with the subject "Klíč k ověřovacím QR kódům byl stažen – Nová naděje"
-    And an e-mail goes to the address of "Petr" with the subject "Klíč k ověřovacím QR kódům byl stažen – Nová naděje"
+    And the admin action "WITHDRAW_RECEIPT_SIGNING_KEY" by "Jana" is recorded with details containing "Zneplatněn klíč k ověřovacím QR 21fe31df (ověřeno druhým faktorem)"
+    And an e-mail goes to the address of "Jana" with the subject "Klíč k ověřovacím QR kódům byl zneplatněn – Nová naděje"
+    And an e-mail goes to the address of "Petr" with the subject "Klíč k ověřovacím QR kódům byl zneplatněn – Nová naděje"
     And the backend restarts once to replace the seed of the receipt signing key "21fe31df"
     When a visitor asks for the receipt keys
     Then the response status is 200
@@ -78,7 +78,7 @@ Feature: An administrator withdraws a leaked receipt signing key from the web, w
     When "Jana" withdraws the receipt signing key "21fe31df" without confirming it again
     Then the response status is 400
     And the problem type ends with "donors/fresh-second-factor-required"
-    And the admin action "WITHDRAW_RECEIPT_SIGNING_KEY_REFUSED" by "Jana" is recorded with details containing "Klíč k ověřovacím QR 21fe31df se nestáhl: druhý faktor nesouhlasil"
+    And the admin action "WITHDRAW_RECEIPT_SIGNING_KEY_REFUSED" by "Jana" is recorded with details containing "Klíč k ověřovacím QR 21fe31df se nezneplatnil: druhý faktor nesouhlasil"
     When "Jana" withdraws the receipt signing key "21fe31df" with the code "000000"
     Then the response status is 400
     And the problem type ends with "donors/second-factor-code-rejected"
@@ -173,7 +173,7 @@ Feature: An administrator withdraws a leaked receipt signing key from the web, w
     Then the response status is 409
     And the problem type ends with "donations/receipt-signing-key-withdrawal-paused"
     And the backend is not restarted for a new receipt signing seed
-    And the problem detail contains "nesouhlasil pětkrát během čtvrt hodiny, proto teď žádný klíč k ověřovacím QR nestáhneme"
+    And the problem detail contains "nesouhlasil pětkrát během čtvrt hodiny, proto teď žádný klíč k ověřovacím QR nezneplatníme"
     And the problem detail contains "změňte si heslo (tím se ukončí všechna ostatní přihlášení)"
     When 14 minutes pass
     And "Jana" withdraws the receipt signing key "21fe31df" with the passkey "iPhone"
