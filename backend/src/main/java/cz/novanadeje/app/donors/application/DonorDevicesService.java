@@ -33,6 +33,8 @@ public class DonorDevicesService {
                         current.filter(device.id()::equals).isPresent()))
                 .sorted(Comparator.comparing(DeviceView::current).reversed()
                         .thenComparing(Comparator.comparing(DeviceView::lastUsedAt).reversed())
+                        .thenComparing(view -> view.description().platform())
+                        .thenComparing(view -> view.description().browser())
                         .thenComparing(view -> view.id().value()))
                 .toList();
     }

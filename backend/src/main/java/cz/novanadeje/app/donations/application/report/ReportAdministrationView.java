@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Optional;
 
 public record ReportAdministrationView(ReportSettings settings, Optional<Instant> changedAt, List<SentReport> sentReports, NextReport nextReport,
-                                       ReportMonth lastEndedMonth) {
+                                       ReportMonth lastEndedMonth, String settingsVersion) {
 
     public record NextReport(ReportMonth month, LocalDate dueOn) {
     }

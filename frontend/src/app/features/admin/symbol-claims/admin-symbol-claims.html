@@ -218,3 +218,10 @@
     }
   </section>
 </div>
+@if (changedMeanwhile()) {
+  <app-changed-meanwhile-dialog
+    subject="symbolClaim"
+    (reloadChosen)="reloadAfterChange()"
+    (dismissed)="reloadAfterChange()"
+  />
+}

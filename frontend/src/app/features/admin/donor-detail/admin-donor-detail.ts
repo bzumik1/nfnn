@@ -30,6 +30,7 @@ import { trustedKeys } from '../../donations/verification/receipt-keys';
 import { ReceiptKeysApi } from '../../donations/verification/receipt-keys-api';
 import {
   AdminApi,
+  AdminBankAccountItem,
   AdminDonorDetailResponse,
   AdminIssuedReceiptResponse,
   AdminReceiptResponse,
@@ -42,6 +43,8 @@ import { FormControlDirective } from '../../../shared/ui/form-field/form-control
 import { FormField } from '../../../shared/ui/form-field/form-field';
 import { DownloadProgress } from '../../../shared/ui/download-progress/download-progress';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
+import { isChangedMeanwhile } from '../../../core/version/row-version';
+import { ChangedMeanwhileDialog } from '../changed-meanwhile/changed-meanwhile-dialog';
 import { AdminReceiptDownloads } from './admin-receipt-downloads';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 
@@ -101,6 +104,7 @@ const PAIRING_LABELS: Record<NonNullable<DonationItem['pairedBy']>, string> = {
     FormControlDirective,
     FormField,
     FormsModule,
+    ChangedMeanwhileDialog,
     LiveNotice,
     RouterLink,
     TrackedForm,
@@ -141,6 +145,10 @@ export class AdminDonorDetail {
   protected readonly detail = signal<AdminDonorDetailResponse | null>(null);
   protected readonly cardNotice = signal<CardNotice | null>(null);
   protected readonly busy = signal(false);
+  protected readonly changedMeanwhile = signal<{
+    reload: (onLoaded?: () => void) => void;
+    card: NoticeCard;
+  } | null>(null);
   protected readonly pending = signal<PendingAction>(null);
   protected readonly erasing = signal(false);
   protected readonly issuing = signal(false);
@@ -204,7 +212,7 @@ export class AdminDonorDetail {
       });
   }
 
-  private refreshAccount(): void {
+  private refreshAccount(onLoaded?: () => void): void {
     this.api
       .donor(this.donorId)
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -212,12 +220,13 @@ export class AdminDonorDetail {
         next: (account) => {
           this.account.set(account);
           this.accountState.set('ready');
+          onLoaded?.();
         },
         error: (failure: unknown) => this.accountState.set(this.stateAfter(failure)),
       });
   }
 
-  protected loadDonations(): void {
+  protected loadDonations(onLoaded?: () => void): void {
     this.donationsState.set('loading');
     this.api
       .donorDonations(this.donorId)
@@ -227,6 +236,7 @@ export class AdminDonorDetail {
           this.detail.set(detail);
           this.donationsState.set('ready');
           this.loadWithdrawnKeysFor(detail);
+          onLoaded?.();
         },
         error: (failure: unknown) => this.donationsState.set(this.stateAfter(failure)),
       });
@@ -475,7 +485,7 @@ export class AdminDonorDetail {
       this.api.resetSecondFactor(this.donorId),
       $localize`:@@admin.donorDetail.reset.done:Dvoufaktorové ověření u ${name}:name: je vypnuté a všechna přihlášení jsme ukončili. Dárce dostal e-mail; po přihlášení heslem si ho může zapnout znovu.`,
       $localize`:@@admin.donorDetail.reset.failed:Dvoufaktorové ověření se nepodařilo vypnout. Zkuste to prosím znovu.`,
-      () => this.refreshAccount(),
+      (onLoaded) => this.refreshAccount(onLoaded),
       'signIn',
     );
   }
@@ -486,7 +496,7 @@ export class AdminDonorDetail {
       this.api.removePasskeys(this.donorId),
       $localize`:@@admin.donorDetail.passkeys.done:Přístupové klíče u ${name}:name: jsme odebrali a všechna přihlášení ukončili. Dárce dostal e-mail; po přihlášení heslem si může přidat nový klíč.`,
       $localize`:@@admin.donorDetail.passkeys.failed:Přístupové klíče se nepodařilo odebrat. Zkuste to prosím znovu.`,
-      () => this.refreshAccount(),
+      (onLoaded) => this.refreshAccount(onLoaded),
       'signIn',
     );
   }
@@ -566,41 +576,59 @@ export class AdminDonorDetail {
       });
   }
 
-  protected disconnect(item: BankAccountItem): void {
+  protected disconnect(item: AdminBankAccountItem): void {
     this.run(
-      this.api.disconnectDonorAccount(this.donorId, item.id),
+      this.api.disconnectDonorAccount(this.donorId, item.id, item.version),
       $localize`:@@admin.donorDetail.disconnect.done:Párování z účtu ${item.accountNumber}:account: je vypnuté: platby bez symbolu z něj už dárci nepřiřadíme, dosavadní dary zůstávají.`,
       $localize`:@@admin.donorDetail.disconnect.failed:Párování se nepodařilo vypnout. Zkuste to prosím znovu.`,
-      () => this.loadDonations(),
+      (onLoaded) => this.loadDonations(onLoaded),
       'accounts',
     );
   }
 
-  protected reconnect(item: BankAccountItem): void {
+  protected reconnect(item: AdminBankAccountItem): void {
     this.run(
-      this.api.reconnectDonorAccount(this.donorId, item.id),
+      this.api.reconnectDonorAccount(this.donorId, item.id, item.version),
       $localize`:@@admin.donorDetail.reconnect.done:Párování z účtu ${item.accountNumber}:account: zase zapneme, jakmile z něj přijde platba s variabilním symbolem dárce.`,
       $localize`:@@admin.donorDetail.reconnect.failed:Párování se nepodařilo zapnout. Zkuste to prosím znovu.`,
-      () => this.loadDonations(),
+      (onLoaded) => this.loadDonations(onLoaded),
       'accounts',
     );
   }
 
-  protected remove(item: BankAccountItem): void {
+  protected remove(item: AdminBankAccountItem): void {
     this.run(
-      this.api.removeDonorAccount(this.donorId, item.id),
+      this.api.removeDonorAccount(this.donorId, item.id, item.version),
       $localize`:@@admin.donorDetail.remove.done:Účet ${item.accountNumber}:account: jsme dárci odebrali: ${this.donationsCount(item.donationCount)}:donations: přiřazené přes něj jsme smazali a platby jsou zase nespárované.`,
       $localize`:@@admin.donorDetail.remove.failed:Účet se nepodařilo odebrat. Zkuste to prosím znovu.`,
-      () => this.loadDonations(),
+      (onLoaded) => this.loadDonations(onLoaded),
       'accounts',
     );
+  }
+
+  protected reloadAfterChange(): void {
+    const changed = this.changedMeanwhile();
+    this.changedMeanwhile.set(null);
+    if (!changed) {
+      return;
+    }
+    changed.reload(() => {
+      this.cardNotice.set({
+        card: changed.card,
+        notice: {
+          kind: 'status',
+          text: $localize`:@@admin.donorDetail.reloaded:Načetli jsme aktuální stav účtů dárce. Zkontrolujte účet a rozhodněte znovu.`,
+        },
+      });
+      this.focusAfterRender(() => this.noticeElement(changed.card));
+    });
   }
 
   private run(
     request: Observable<void>,
     done: string,
     failed: string,
-    reload: () => void,
+    reload: (onLoaded?: () => void) => void,
     card: NoticeCard,
   ): void {
     if (this.busy()) {
@@ -619,6 +647,11 @@ export class AdminDonorDetail {
       error: (failure: unknown) => {
         this.busy.set(false);
         this.pending.set(null);
+        if (isChangedMeanwhile(failure)) {
+          this.cardNotice.set(null);
+          this.changedMeanwhile.set({ reload, card });
+          return;
+        }
         this.cardNotice.set({ card, notice: { kind: 'alert', text: refusal(failure, failed) } });
         this.focusAfterRender(() => this.byId(opener) ?? this.noticeElement(card));
       },

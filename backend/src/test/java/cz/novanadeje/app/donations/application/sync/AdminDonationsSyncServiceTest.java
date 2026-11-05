@@ -97,7 +97,7 @@ class AdminDonationsSyncServiceTest {
         DonationReceipt erasedOnes = Receipts.yearlyReceiptOf(erased.id(), Year.of(2026));
         BankImportState importState = BankImportState.initial(NOW);
         ReportAdministrationView report = new ReportAdministrationView(ReportSettings.defaults(new EmailAddress("info@nfnn.cz")), Optional.empty(),
-                List.of(), new ReportAdministrationView.NextReport(ReportMonth.of(2026, 11), LocalDate.of(2026, 12, 1)), ReportMonth.of(2026, 10));
+                List.of(), new ReportAdministrationView.NextReport(ReportMonth.of(2026, 11), LocalDate.of(2026, 12, 1)), ReportMonth.of(2026, 10), "0123456789abcdef");
         when(administrationHolders.holdsAdministration(ADMIN.value())).thenReturn(true);
         when(records.findAll()).thenReturn(List.of(jana, erased));
         when(payments.findAllNewestFirst()).thenReturn(List.of());

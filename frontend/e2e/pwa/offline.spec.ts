@@ -27,7 +27,7 @@ test.describe('Given a visitor who opened the site once with a connection', () =
           },
         }),
     );
-    await page.goto('/');
+    await page.goto('/prispet');
     await swReady();
     await expect(page.locator('#prispet .qr-code svg[role="img"]')).toBeVisible();
   });
@@ -48,9 +48,6 @@ test.describe('Given a visitor who opened the site once with a connection', () =
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
       await expect(page.locator('#prispet .qr-code svg[role="img"]')).toBeVisible();
       await expect(page.locator('#prispet .bank [role="note"]')).toHaveText(KEPT_NOTE);
-      const send = page.locator('#kontakt').getByRole('button', { name: /^Odeslat zprávu/ });
-      await expect(send).toHaveAttribute('aria-disabled', 'true');
-      await expect(send).toHaveAccessibleDescription('Potřebuje připojení');
 
       await label.click();
 
@@ -59,6 +56,10 @@ test.describe('Given a visitor who opened the site once with a connection', () =
       await expect(sheet).toContainText('Bez připojení můžete jen prohlížet.');
       await page.keyboard.press('Escape');
 
+      await page.getByRole('link', { name: 'O nás' }).first().click();
+      const send = page.locator('#kontakt').getByRole('button', { name: /^Odeslat zprávu/ });
+      await expect(send).toHaveAttribute('aria-disabled', 'true');
+      await expect(send).toHaveAccessibleDescription('Potřebuje připojení');
       await page.locator('app-site-footer').scrollIntoViewIfNeeded();
       const unseen = page.locator('img.is-unavailable').first();
       await expect(unseen).toBeAttached();

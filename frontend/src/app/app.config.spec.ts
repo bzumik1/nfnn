@@ -10,9 +10,12 @@ import {
   chunkLoadRecoveryFeature,
   connectivityAtStart,
   dialogHistoryAtStart,
+  navigationAtStart,
 } from './app.config';
 import { Connectivity } from './core/connectivity/connectivity';
 import { UnseenPhotos } from './core/connectivity/unseen-photos';
+import { BackTarget } from './core/navigation/back-target';
+import { TabMemory } from './core/navigation/tab-memory';
 import { ReportingErrorHandler } from './core/errors/reporting-error-handler';
 import { ExternalNavigation } from './core/navigation/external-navigation';
 import { ChunkProbe } from './core/reload/chunk-probe';
@@ -75,6 +78,27 @@ describe('Given the connectivity of the app', () => {
     expect(started).toHaveBeenCalledTimes(1);
     expect(watchingPhotos).toHaveBeenCalledTimes(1);
     expect(appConfig.providers).toContain(connectivityAtStart);
+  });
+});
+
+describe('Given the way back and the memory of the tabs', () => {
+  it('when the app starts, then they follow the navigation from the first page on, so a deep link knows it has nothing to go back to', () => {
+    const backTarget = vi.fn();
+    const tabMemory = vi.fn();
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        navigationAtStart,
+        { provide: BackTarget, useFactory: () => backTarget() ?? {} },
+        { provide: TabMemory, useFactory: () => tabMemory() ?? {} },
+      ],
+    });
+
+    TestBed.inject(Router);
+
+    expect(backTarget).toHaveBeenCalledTimes(1);
+    expect(tabMemory).toHaveBeenCalledTimes(1);
+    expect(appConfig.providers).toContain(navigationAtStart);
   });
 });
 

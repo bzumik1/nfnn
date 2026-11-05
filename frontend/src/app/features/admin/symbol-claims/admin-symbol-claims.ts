@@ -16,7 +16,9 @@ import { AuthStore } from '../../../core/auth/auth-store';
 import { pluralCategory } from '../../../core/i18n/plural-category';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { formatBankTime } from '../../donations/donation-date';
+import { isChangedMeanwhile } from '../../../core/version/row-version';
 import { AdminApi, SymbolClaimResponse } from '../admin-api';
+import { ChangedMeanwhileDialog } from '../changed-meanwhile/changed-meanwhile-dialog';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 
@@ -27,7 +29,7 @@ const FORBIDDEN = 'auth/forbidden';
 
 @Component({
   selector: 'app-admin-symbol-claims',
-  imports: [LiveNotice, RouterLink, NeedsConnection],
+  imports: [LiveNotice, RouterLink, NeedsConnection, ChangedMeanwhileDialog],
   templateUrl: './admin-symbol-claims.html',
   styleUrl: './admin-symbol-claims.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -49,13 +51,14 @@ export class AdminSymbolClaims {
   protected readonly notice = signal<Notice | null>(null);
   protected readonly busy = signal(false);
   protected readonly pending = signal<string | null>(null);
+  protected readonly changedMeanwhile = signal(false);
 
   constructor() {
     this.load();
     afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
   }
 
-  protected load(): void {
+  protected load(onLoaded?: () => void): void {
     this.state.set('loading');
     this.api
       .symbolClaims()
@@ -64,6 +67,7 @@ export class AdminSymbolClaims {
         next: (list) => {
           this.items.set(list.items);
           this.state.set('ready');
+          onLoaded?.();
         },
         error: (failure: unknown) => {
           if (problemTypeEndsWith(failure, UNAUTHENTICATED)) {
@@ -120,7 +124,7 @@ export class AdminSymbolClaims {
 
   protected reverse(item: SymbolClaimResponse): void {
     this.run(
-      this.api.reverseSymbolClaim(item.id),
+      this.api.reverseSymbolClaim(item.id, item.version),
       $localize`:@@admin.symbolClaims.reverse.done:Přiřazení darů u ${this.donorName(item)}:name: (VS ${item.variableSymbol}:symbol:) jsme vrátili: ${this.donations(item.donationCount)}:donations: jsme smazali a platby s tímto symbolem zase čekají na přiřazení. Odpověď je teď Ne, dárce se už neptáme.`,
       $localize`:@@admin.symbolClaims.reverse.failed:Přiřazení darů se nepodařilo vrátit. Zkuste to prosím znovu.`,
     );
@@ -128,10 +132,21 @@ export class AdminSymbolClaims {
 
   protected reset(item: SymbolClaimResponse): void {
     this.run(
-      this.api.deleteSymbolClaim(item.id),
+      this.api.deleteSymbolClaim(item.id, item.version),
       $localize`:@@admin.symbolClaims.reset.done:Odpověď Ne u ${this.donorName(item)}:name: (VS ${item.variableSymbol}:symbol:) jsme smazali. Pokud otázka pořád platí, dárce ji uvidí znovu ve svém přehledu.`,
       $localize`:@@admin.symbolClaims.reset.failed:Odpověď se nepodařilo smazat. Zkuste to prosím znovu.`,
     );
+  }
+
+  protected reloadAfterChange(): void {
+    this.changedMeanwhile.set(false);
+    this.load(() => {
+      this.notice.set({
+        kind: 'status',
+        text: $localize`:@@admin.symbolClaims.reloaded:Načetli jsme aktuální odpovědi. Zkontrolujte odpověď a rozhodněte znovu.`,
+      });
+      this.focusAfterRender(() => this.noticeElement());
+    });
   }
 
   private run(
@@ -155,6 +170,10 @@ export class AdminSymbolClaims {
       error: (failure: unknown) => {
         this.busy.set(false);
         this.pending.set(null);
+        if (isChangedMeanwhile(failure)) {
+          this.changedMeanwhile.set(true);
+          return;
+        }
         this.notice.set({ kind: 'alert', text: describeProblem(failure, failed) });
         this.focusAfterRender(() => opener() ?? this.noticeElement());
       },

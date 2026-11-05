@@ -5,5 +5,5 @@ import cz.novanadeje.app.donations.domain.donor.SymbolClaim;
 
 import java.util.Optional;
 
-public record SymbolClaimView(SymbolClaim claim, Optional<DonorRecord> donor, long donationCount) {
+public record SymbolClaimView(SymbolClaim claim, Optional<DonorRecord> donor, long donationCount, String version) {
 }

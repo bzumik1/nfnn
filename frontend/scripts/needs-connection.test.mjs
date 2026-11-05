@@ -122,6 +122,19 @@ describe('Given the controls of the app that need a connection', () => {
     assert.deepEqual(controlsWithoutDirective(template, component, new Set(['logout'])), []);
   });
 
+  it('when a danger button calls only handlers listed as working without a connection, then it is not reported, and a submit button still is', () => {
+    const template = [
+      '<button type="button" class="ui-button ui-button--danger-soft" (click)="signOut()">Odhlásit se</button>',
+      '<button type="button" class="ui-button ui-button--danger" (click)="signOut(); remove()">Odebrat</button>',
+      '<button type="submit" class="ui-button ui-button--danger" (click)="signOut()">Smazat</button>',
+    ].join('\n');
+
+    assert.deepEqual(
+      controlsWithoutDirective(template, '', new Set(['signOut'])).map((control) => control.line),
+      [2, 3],
+    );
+  });
+
   it('when the button carries it, also over several lines and beside other attributes, then it is not reported', () => {
     const template = [
       '<button',

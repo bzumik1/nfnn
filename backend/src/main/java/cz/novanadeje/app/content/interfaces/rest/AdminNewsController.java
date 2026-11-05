@@ -2,6 +2,7 @@ package cz.novanadeje.app.content.interfaces.rest;
 
 import cz.novanadeje.app.content.application.news.NewsAdminService;
 import cz.novanadeje.app.content.domain.news.NewsArticleId;
+import cz.novanadeje.app.shared.application.version.ExpectedVersion;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -30,7 +31,7 @@ class AdminNewsController {
 
     @GetMapping
     NewsListResponse list() {
-        return NewsListResponse.from(news.list());
+        return NewsListResponse.fromVersioned(news.list());
     }
 
     @PostMapping
@@ -45,24 +46,26 @@ class AdminNewsController {
     }
 
     @PutMapping("/{id}")
-    NewsArticleResponse update(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody NewsArticleRequest request) {
-        return NewsArticleResponse.from(news.update(admin(jwt), new NewsArticleId(id), request.toCommand()));
+    NewsArticleResponse update(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody NewsArticleRequest request,
+                       ExpectedVersion expected) {
+        return NewsArticleResponse.from(news.update(admin(jwt), new NewsArticleId(id), expected, request.toCommand()));
     }
 
     @PostMapping("/{id}/publish")
-    NewsArticleResponse publish(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody PublishRequest request) {
-        return NewsArticleResponse.from(news.publish(admin(jwt), new NewsArticleId(id), request.publishedOn()));
+    NewsArticleResponse publish(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody PublishRequest request,
+                        ExpectedVersion expected) {
+        return NewsArticleResponse.from(news.publish(admin(jwt), new NewsArticleId(id), request.publishedOn(), expected));
     }
 
     @PostMapping("/{id}/unpublish")
-    NewsArticleResponse unpublish(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
-        return NewsArticleResponse.from(news.unpublish(admin(jwt), new NewsArticleId(id)));
+    NewsArticleResponse unpublish(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, ExpectedVersion expected) {
+        return NewsArticleResponse.from(news.unpublish(admin(jwt), new NewsArticleId(id), expected));
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    void delete(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
-        news.delete(admin(jwt), new NewsArticleId(id));
+    void delete(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, ExpectedVersion expected) {
+        news.delete(admin(jwt), new NewsArticleId(id), expected);
     }
 
     private static UUID admin(Jwt jwt) {

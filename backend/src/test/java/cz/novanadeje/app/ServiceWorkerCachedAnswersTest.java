@@ -1,5 +1,6 @@
 package cz.novanadeje.app;
 
+import cz.novanadeje.app.shared.application.version.ExpectedVersion;
 import cz.novanadeje.app.content.application.media.UploadImageService;
 import cz.novanadeje.app.content.application.media.UploadedImage;
 import cz.novanadeje.app.content.application.news.NewsAdminService;
@@ -159,15 +160,15 @@ class ServiceWorkerCachedAnswersTest {
         LocalDate today = LocalDate.now(clock);
         UUID admin = UuidV7.generate(clock.instant());
         NewsArticleView article = news.create(admin, new NewsArticleCommand("Den otevřených dveří", Optional.empty(), Optional.of("Akce"),
-                "Krátký úvod", "Text článku", Optional.of(photo.id()), Optional.of("Popis fotky"), Optional.empty()));
-        news.publish(admin, article.id(), today.minusDays(1));
+                "Krátký úvod", "Text článku", Optional.of(photo.id()), Optional.of("Popis fotky"), Optional.empty())).view();
+        news.publish(admin, article.id(), today.minusDays(1), ExpectedVersion.none());
         ProjectView project = projects.create(admin, new ProjectCommand("Rehabilitační pomůcky", today.getYear(), ProjectCategory.CHILDREN,
-                Optional.empty(), Optional.empty(), "Krátký úvod", "Text projektu", Optional.of(photo.id()), Optional.of("Popis fotky")));
-        projects.publish(admin, project.id(), today.minusDays(1));
+                Optional.empty(), Optional.empty(), "Krátký úvod", "Text projektu", Optional.of(photo.id()), Optional.of("Popis fotky"))).view();
+        projects.publish(admin, project.id(), today.minusDays(1), ExpectedVersion.none());
         NewsArticleView draftArticle = news.create(admin, new NewsArticleCommand("Připravovaný článek", Optional.empty(), Optional.of("Akce"),
-                "Krátký úvod", "Text článku", Optional.empty(), Optional.empty(), Optional.empty()));
+                "Krátký úvod", "Text článku", Optional.empty(), Optional.empty(), Optional.empty())).view();
         ProjectView draftProject = projects.create(admin, new ProjectCommand("Připravovaný projekt", today.getYear(), ProjectCategory.ADULTS,
-                Optional.empty(), Optional.empty(), "Krátký úvod", "Text projektu", Optional.empty(), Optional.empty()));
+                Optional.empty(), Optional.empty(), "Krátký úvod", "Text projektu", Optional.empty(), Optional.empty())).view();
         String media = "/api/content/media/" + photo.id().value();
         return List.of(
                 "/api/content/home",

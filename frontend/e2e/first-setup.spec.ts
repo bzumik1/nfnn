@@ -160,7 +160,10 @@ test.describe('Given a freshly installed site', () => {
     await expect(
       page.getByRole('heading', { level: 1, name: 'První nastavení webu' }),
     ).toBeFocused();
-    await page.getByRole('navigation').getByRole('link', { name: 'Domů' }).click();
+    await page
+      .getByRole('banner')
+      .getByRole('link', { name: 'Nová naděje – nadační fond' })
+      .click();
 
     await expect(page).toHaveURL(/\/prvni-nastaveni$/);
     await expect(

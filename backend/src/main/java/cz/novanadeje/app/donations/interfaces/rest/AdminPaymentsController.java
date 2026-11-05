@@ -7,6 +7,7 @@ import cz.novanadeje.app.donations.application.receipt.AdministrationChannel;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentId;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
+import cz.novanadeje.app.shared.application.version.ExpectedVersion;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -70,13 +71,14 @@ class AdminPaymentsController {
     }
 
     @PostMapping("/payments/{id}/pair")
-    PairPaymentResponse pair(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody PairPaymentRequest request) {
-        return PairPaymentResponse.from(manualPairing.pair(admin(jwt), new BankPaymentId(id), new DonorReference(request.donorId())));
+    PairPaymentResponse pair(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody PairPaymentRequest request,
+                             ExpectedVersion expected) {
+        return PairPaymentResponse.from(manualPairing.pair(admin(jwt), new BankPaymentId(id), new DonorReference(request.donorId()), expected));
     }
 
     @PostMapping("/payments/{id}/unpair")
-    UnpairPaymentResponse unpair(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
-        return UnpairPaymentResponse.from(manualPairing.unpair(admin(jwt), channelOf(jwt), new BankPaymentId(id)));
+    UnpairPaymentResponse unpair(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, ExpectedVersion expected) {
+        return UnpairPaymentResponse.from(manualPairing.unpair(admin(jwt), channelOf(jwt), new BankPaymentId(id), expected));
     }
 
     private static AdministrationChannel channelOf(Jwt jwt) {

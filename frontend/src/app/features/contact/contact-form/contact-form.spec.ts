@@ -5,6 +5,13 @@ import { provideRouter } from '@angular/router';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
 import { ContactForm } from './contact-form';
+import { foundationPaymentDetails } from '../../donations/testing/payment-details-fixtures';
+
+function answerAccountingDetails(http: HttpTestingController): void {
+  http
+    .match('/api/donations/payment-details')
+    .forEach((request) => request.flush(foundationPaymentDetails()));
+}
 
 describe('Given the contact form', () => {
   let fixture: ComponentFixture<ContactForm>;
@@ -21,7 +28,10 @@ describe('Given the contact form', () => {
     await fixture.whenStable();
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    answerAccountingDetails(http);
+    http.verify();
+  });
 
   function element<T extends HTMLElement>(selector: string): T {
     return fixture.nativeElement.querySelector(selector) as T;
@@ -302,7 +312,10 @@ describe('Given the contact form seen by a signed-in donor', () => {
     http = TestBed.inject(HttpTestingController);
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    answerAccountingDetails(http);
+    http.verify();
+  });
 
   function signIn(type: 'PERSON' | 'COMPANY' = 'PERSON'): void {
     TestBed.inject(AuthStore).login('jana@example.cz', 'correct horse battery').subscribe();
@@ -402,7 +415,11 @@ describe('Given the contact section around the form', () => {
     await fixture.whenStable();
   });
 
-  afterEach(() => TestBed.inject(HttpTestingController).verify());
+  afterEach(() => {
+    const http = TestBed.inject(HttpTestingController);
+    answerAccountingDetails(http);
+    http.verify();
+  });
 
   function text(element: Element | null): string {
     return element?.textContent?.replace(/\s+/g, ' ').trim() ?? '';

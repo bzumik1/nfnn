@@ -23,6 +23,8 @@ import { AuthStore } from './core/auth/auth-store';
 import { SESSION_DEVICE } from './core/auth/session-device';
 import { ReportingErrorHandler } from './core/errors/reporting-error-handler';
 import { ChunkLoadRecovery } from './core/reload/chunk-load-recovery';
+import { BackTarget } from './core/navigation/back-target';
+import { TabMemory } from './core/navigation/tab-memory';
 import { CanonicalLink } from './core/seo/canonical-link';
 import { Connectivity } from './core/connectivity/connectivity';
 import { UnseenPhotos } from './core/connectivity/unseen-photos';
@@ -74,6 +76,11 @@ export const connectivityAtStart: EnvironmentProviders = provideAppInitializer((
   inject(UnseenPhotos);
 });
 
+export const navigationAtStart: EnvironmentProviders = provideAppInitializer(() => {
+  inject(BackTarget);
+  inject(TabMemory);
+});
+
 export const appConfig: ApplicationConfig = {
   providers: [
     deviceCopies,
@@ -92,5 +99,6 @@ export const appConfig: ApplicationConfig = {
     connectivityAtStart,
     pagePinchLockAtStart,
     systemTextSizeAtStart,
+    navigationAtStart,
   ],
 };

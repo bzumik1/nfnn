@@ -32,6 +32,7 @@ import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { pluralCategory } from '../../../core/i18n/plural-category';
 import { LiveUpdates } from '../../../core/live/live-updates';
+import { isChangedMeanwhile } from '../../../core/version/row-version';
 import { Dialog } from '../../../shared/ui/dialog/dialog';
 import { formatMinorUnits } from '../../donations/donation-amount';
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
@@ -48,6 +49,7 @@ import {
 } from '../admin-api';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
+import { ChangedMeanwhileDialog } from '../changed-meanwhile/changed-meanwhile-dialog';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -101,7 +103,7 @@ const METHOD_LABELS: Record<PairingMethod, string> = {
 
 @Component({
   selector: 'app-admin-payments',
-  imports: [LiveNotice, Dialog, RouterLink, NeedsConnection],
+  imports: [LiveNotice, Dialog, RouterLink, NeedsConnection, ChangedMeanwhileDialog],
   templateUrl: './admin-payments.html',
   styleUrl: './admin-payments.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -155,6 +157,8 @@ export class AdminPayments {
   protected readonly pairError = signal<string | null>(null);
 
   protected readonly unpairing = signal<string | null>(null);
+  protected readonly changedMeanwhile = signal(false);
+  private afterReload: (() => void) | null = null;
 
   protected readonly hasMore = computed(() => this.items().length < this.total());
   protected readonly filteredDonorName = computed(
@@ -364,6 +368,8 @@ export class AdminPayments {
   }
 
   private showFirstPage(outcome: PageOutcome): void {
+    const afterReload = this.afterReload;
+    this.afterReload = null;
     if (outcome.kind === 'failed') {
       if (!this.leaveOnRefusal(outcome.failure)) {
         this.state.set('error');
@@ -377,6 +383,7 @@ export class AdminPayments {
       this.unpairedCount.set(outcome.list.total);
     }
     this.state.set('ready');
+    afterReload?.();
   }
 
   private leaveOnRefusal(failure: unknown): boolean {
@@ -461,7 +468,7 @@ export class AdminPayments {
     this.busy.set(true);
     this.pairError.set(null);
     this.api
-      .pairPayment(payment.id, donor.donorId)
+      .pairPayment(payment.id, donor.donorId, payment.version)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (result) => {
@@ -479,6 +486,11 @@ export class AdminPayments {
         },
         error: (failure: unknown) => {
           this.busy.set(false);
+          if (isChangedMeanwhile(failure)) {
+            this.pairing.set(null);
+            this.changedMeanwhile.set(true);
+            return;
+          }
           this.pairError.set(
             describeProblem(
               failure,
@@ -531,7 +543,7 @@ export class AdminPayments {
     }
     this.busy.set(true);
     this.api
-      .unpairPayment(payment.id)
+      .unpairPayment(payment.id, payment.version)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (result) => {
@@ -554,6 +566,10 @@ export class AdminPayments {
         error: (failure: unknown) => {
           this.busy.set(false);
           this.unpairing.set(null);
+          if (isChangedMeanwhile(failure)) {
+            this.changedMeanwhile.set(true);
+            return;
+          }
           this.focusAfterRender(
             () => this.unpairOpener(payment) ?? this.noticeElement()?.nativeElement ?? null,
           );
@@ -566,6 +582,19 @@ export class AdminPayments {
           });
         },
       });
+  }
+
+  protected reloadAfterChange(): void {
+    this.changedMeanwhile.set(false);
+    this.notice.set(null);
+    this.afterReload = () => {
+      this.notice.set({
+        kind: 'status',
+        text: $localize`:@@admin.payments.reloaded:Načetli jsme aktuální stav plateb. Zkontrolujte platbu a rozhodněte znovu.`,
+      });
+      this.focusAfterRender(() => this.noticeElement()?.nativeElement ?? null);
+    };
+    this.load();
   }
 
   protected date(isoDate: string): string {

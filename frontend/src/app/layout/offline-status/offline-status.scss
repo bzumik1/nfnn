@@ -38,6 +38,16 @@
   );
 }
 
+:host-context(html:has(app-tab-bar)) .offline-pill {
+  bottom: var(--tab-bar-clearance);
+}
+
+:host-context(html.has-floating-notice:has(app-tab-bar)) .offline-pill {
+  bottom: calc(
+    var(--tab-bar-clearance) + var(--space-2) + var(--floating-notice-height) + var(--space-3)
+  );
+}
+
 .offline-sheet-text {
   margin: 0 0 var(--space-5);
   color: var(--color-text-secondary);

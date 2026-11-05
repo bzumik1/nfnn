@@ -7,6 +7,8 @@ export interface Problem {
   readonly title: string;
   readonly detail: string;
   readonly errors: readonly string[];
+  readonly version?: string;
+  readonly current?: unknown;
 }
 
 export class BackendProblem extends Error {
@@ -34,12 +36,22 @@ export class BackendClient {
     return String(await this.send('GET', path, apiToken, undefined, 'text/plain'));
   }
 
-  async post(path: string, apiToken: string, body?: unknown): Promise<unknown> {
-    return this.send('POST', path, apiToken, body);
+  async post(
+    path: string,
+    apiToken: string,
+    body?: unknown,
+    expectedVersion?: string,
+  ): Promise<unknown> {
+    return this.send('POST', path, apiToken, body, 'application/json', expectedVersion);
   }
 
-  async put(path: string, apiToken: string, body?: unknown): Promise<unknown> {
-    return this.send('PUT', path, apiToken, body);
+  async put(
+    path: string,
+    apiToken: string,
+    body?: unknown,
+    expectedVersion?: string,
+  ): Promise<unknown> {
+    return this.send('PUT', path, apiToken, body, 'application/json', expectedVersion);
   }
 
   async delete(path: string, apiToken: string): Promise<unknown> {
@@ -58,10 +70,14 @@ export class BackendClient {
     apiToken?: string,
     body?: unknown,
     accept = 'application/json',
+    expectedVersion?: string,
   ): Promise<unknown> {
     const headers: Record<string, string> = { accept, 'accept-language': 'cs' };
     if (apiToken !== undefined) {
       headers['authorization'] = `Bearer ${apiToken}`;
+    }
+    if (expectedVersion !== undefined) {
+      headers['if-match'] = `"${expectedVersion}"`;
     }
     const init: RequestInit = { method, headers };
     if (body instanceof FormData) {
@@ -99,6 +115,8 @@ function problemOf(status: number, body: unknown): Problem {
     title: typeof record['title'] === 'string' ? record['title'] : `HTTP ${status}`,
     detail: typeof record['detail'] === 'string' ? record['detail'] : '',
     errors: Array.isArray(record['errors']) ? record['errors'].map(errorOf) : [],
+    ...(typeof record['version'] === 'string' ? { version: record['version'] } : {}),
+    ...('current' in record ? { current: record['current'] } : {}),
   };
 }
 

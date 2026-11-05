@@ -1,8 +1,11 @@
 package cz.novanadeje.app.content.infrastructure.persistence;
 
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -14,6 +17,10 @@ interface NewsArticleJpaRepository extends JpaRepository<NewsArticleJpaEntity, U
     Optional<NewsArticleJpaEntity> findBySlug(String slug);
 
     boolean existsBySlugAndIdNot(String slug, UUID id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select a from NewsArticleJpaEntity a where a.id = :id")
+    Optional<NewsArticleJpaEntity> findByIdForUpdate(@Param("id") UUID id);
 
     @Query("select a from NewsArticleJpaEntity a order by case when a.publishedOn is null then 0 else 1 end, a.publishedOn desc, a.updatedAt desc")
     List<NewsArticleJpaEntity> findAllDraftsFirst();

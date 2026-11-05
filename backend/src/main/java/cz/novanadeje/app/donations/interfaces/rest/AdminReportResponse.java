@@ -11,13 +11,13 @@ import java.util.Optional;
 
 public record AdminReportResponse(Settings settings, List<Sent> sentReports, Next nextReport, String lastEndedMonth) {
 
-    public record Settings(List<String> recipients, int sendDay, int sendHour, Sections sections, Instant changedAt) {
+    public record Settings(List<String> recipients, int sendDay, int sendHour, Sections sections, Instant changedAt, String version) {
 
-        static Settings from(ReportSettings settings, Optional<Instant> changedAt) {
+        static Settings from(ReportSettings settings, Optional<Instant> changedAt, String version) {
             return new Settings(settings.recipients().values(), settings.sendDay(), settings.sendHour(),
                     new Sections(settings.sections().donors(), settings.sections().donations(), settings.sections().unpairedPayments(),
                             settings.sections().bankImport()),
-                    changedAt.orElse(null));
+                    changedAt.orElse(null), version);
         }
     }
 
@@ -35,7 +35,7 @@ public record AdminReportResponse(Settings settings, List<Sent> sentReports, Nex
     }
 
     static AdminReportResponse from(ReportAdministrationView view) {
-        return new AdminReportResponse(Settings.from(view.settings(), view.changedAt()),
+        return new AdminReportResponse(Settings.from(view.settings(), view.changedAt(), view.settingsVersion()),
                 view.sentReports().stream().map(Sent::from).toList(),
                 new Next(view.nextReport().month().toString(), view.nextReport().dueOn()), view.lastEndedMonth().toString());
     }

@@ -205,6 +205,10 @@ export function pragueDay(instant, daysBack) {
   return new Date(Date.UTC(year, month - 1, day - daysBack)).toISOString().slice(0, 10);
 }
 
+export function ifMatch(row) {
+  return typeof row.version === 'string' ? { 'If-Match': `"${row.version}"` } : {};
+}
+
 export function bankProblems(planned, donations, unpaired) {
   const problems = [];
   const crowns = (movement) => movement.amountMinor / 100;
@@ -643,8 +647,10 @@ class Journey {
       ).split('\n')[0],
     );
     const admin = this.state.adminToken;
+    const unpaired = await this.expect(200, 'GET', '/api/admin/donations/payments?pairing=unpaired', { token: admin }, 'the unpaired payments');
     for (const id of ids) {
-      await this.expect(200, 'POST', `/api/admin/donations/payments/${id}/pair`, { token: admin, json: { donorId } },
+      const payment = unpaired.items.find((item) => item.id === id) ?? fail(`the payment ${id} is not among the unpaired payments`);
+      await this.expect(200, 'POST', `/api/admin/donations/payments/${id}/pair`, { token: admin, json: { donorId }, headers: ifMatch(payment) },
         `pairing the payment ${id} by hand`);
     }
     const donor = await this.donorSession();
@@ -885,13 +891,17 @@ class Journey {
 
     const unpaired = await this.expect(200, 'GET', '/api/admin/donations/payments?pairing=unpaired', { token: admin }, 'the unpaired payments');
     const payment = unpaired.items.find((item) => item.bankTransactionId === stranger.id) ?? fail(`movement ${stranger.id} is not among the unpaired payments`);
-    await this.expect(200, 'POST', `/api/admin/donations/payments/${payment.id}/pair`, { token: admin, json: { donorId: this.state.donor.id } },
+    await this.expect(200, 'POST', `/api/admin/donations/payments/${payment.id}/pair`,
+      { token: admin, json: { donorId: this.state.donor.id }, headers: ifMatch(payment) },
       `pairing the unknown payer's ${stranger.amountMinor / 100} Kč by hand`);
     const withManual = await this.expect(200, 'GET', '/api/donations/me', { token: donor }, 'the donor\'s gifts after the pairing by hand');
     if (!withManual.items.some((item) => item.amountMinor === stranger.amountMinor)) {
       fail(`the donor does not see the ${stranger.amountMinor / 100} Kč paired by hand`);
     }
-    await this.expect(200, 'POST', `/api/admin/donations/payments/${payment.id}/unpair`, { token: admin }, `unpairing the ${stranger.amountMinor / 100} Kč again`);
+    const paired = await this.expect(200, 'GET', '/api/admin/donations/payments?pairing=paired', { token: admin }, 'the paired payments');
+    const pairedPayment = paired.items.find((item) => item.id === payment.id) ?? fail(`the ${stranger.amountMinor / 100} Kč paired by hand is not among the paired payments`);
+    await this.expect(200, 'POST', `/api/admin/donations/payments/${payment.id}/unpair`, { token: admin, headers: ifMatch(pairedPayment) },
+      `unpairing the ${stranger.amountMinor / 100} Kč again`);
     const back = await this.expect(200, 'GET', '/api/admin/donations/payments?pairing=unpaired', { token: admin }, 'the unpaired payments after unpairing');
     if (!back.items.find((item) => item.id === payment.id)?.unpairedByAdminAt) {
       fail(`the unpaired ${stranger.amountMinor / 100} Kč does not say an administrator unpaired it`);

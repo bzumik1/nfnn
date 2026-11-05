@@ -1,8 +1,11 @@
 package cz.novanadeje.app.content.infrastructure.persistence;
 
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -14,6 +17,10 @@ interface ProjectJpaRepository extends JpaRepository<ProjectJpaEntity, UUID> {
     Optional<ProjectJpaEntity> findBySlug(String slug);
 
     boolean existsBySlugAndIdNot(String slug, UUID id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select a from ProjectJpaEntity a where a.id = :id")
+    Optional<ProjectJpaEntity> findByIdForUpdate(@Param("id") UUID id);
 
     String CATEGORY_PRIORITY = "case a.category when 'CHILDREN' then 0 when 'ADULTS' then 1 when 'ANIMALS' then 2 else 3 end";
     String CHOSEN_ORDER = "case when :categoryFirst = true then " + CATEGORY_PRIORITY + " else 0 end, a.year desc, "

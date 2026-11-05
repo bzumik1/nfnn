@@ -527,3 +527,15 @@
     (leaveChosen)="leaveWithoutSaving()"
   />
 }
+@if (changedMeanwhile(); as changed) {
+  <app-changed-meanwhile-dialog
+    subject="content"
+    [keepsDraft]="changed.draft"
+    [canOverwrite]="changed.overwrite && changed.version !== null"
+    [savedAt]="changed.savedAt"
+    [busy]="busy()"
+    (overwriteChosen)="overwriteAfterChange()"
+    (reloadChosen)="reloadAfterChange()"
+    (dismissed)="changed.draft ? keepDraftAfterChange() : reloadAfterChange()"
+  />
+}

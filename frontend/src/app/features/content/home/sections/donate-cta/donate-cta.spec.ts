@@ -189,7 +189,7 @@ describe('Given the donate section', () => {
     await openWithQr();
 
     expect(text('.ui-eyebrow').trim()).toBe('Přispět');
-    expect(text('h2').trim()).toBe('Přispějte na pomůcky pro děti');
+    expect(text('h1').trim()).toBe('Přispějte na pomůcky pro děti');
     expect(squashed('.lead')).toBe(
       'Z darů pořizujeme zdravotní a kompenzační pomůcky a přístroje pro konkrétní děti.',
     );

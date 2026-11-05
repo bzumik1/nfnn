@@ -12,6 +12,7 @@ import cz.novanadeje.app.content.domain.project.ProjectRepository;
 import cz.novanadeje.app.content.domain.project.ProjectContent;
 import cz.novanadeje.app.content.domain.Slug;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -162,6 +163,17 @@ class JpaProjectRepositoryTest {
         flushAndClear();
 
         assertThat(projects.findById(project.id())).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a project saved, when it is read for a change, then it comes back whole with its row locked, and an unknown id finds nothing")
+    void should_find_and_lock_the_row_when_read_for_update_given_a_project_saved() {
+        Project stored = save(project("zamceny", NOW), Optional.of(LocalDate.parse("2026-10-20")));
+        flushAndClear();
+
+        assertThat(projects.findByIdForUpdate(stored.id())).contains(stored);
+        assertThat(entityManager.getLockMode(entityManager.find(ProjectJpaEntity.class, stored.id().value()))).isEqualTo(LockModeType.PESSIMISTIC_WRITE);
+        assertThat(projects.findByIdForUpdate(ProjectId.newId(NOW))).isEmpty();
     }
 
     private Project save(Project project, Optional<LocalDate> publishedOn) {

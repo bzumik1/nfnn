@@ -2,6 +2,7 @@ package cz.novanadeje.app.content.interfaces.rest;
 
 import cz.novanadeje.app.content.application.project.ProjectAdminService;
 import cz.novanadeje.app.content.domain.project.ProjectId;
+import cz.novanadeje.app.shared.application.version.ExpectedVersion;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -30,7 +31,7 @@ class AdminProjectController {
 
     @GetMapping
     ProjectListResponse list() {
-        return ProjectListResponse.from(projects.list());
+        return ProjectListResponse.fromVersioned(projects.list());
     }
 
     @PostMapping
@@ -45,24 +46,26 @@ class AdminProjectController {
     }
 
     @PutMapping("/{id}")
-    ProjectResponse update(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody ProjectRequest request) {
-        return ProjectResponse.from(projects.update(admin(jwt), new ProjectId(id), request.toCommand()));
+    ProjectResponse update(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody ProjectRequest request,
+                       ExpectedVersion expected) {
+        return ProjectResponse.from(projects.update(admin(jwt), new ProjectId(id), expected, request.toCommand()));
     }
 
     @PostMapping("/{id}/publish")
-    ProjectResponse publish(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody PublishRequest request) {
-        return ProjectResponse.from(projects.publish(admin(jwt), new ProjectId(id), request.publishedOn()));
+    ProjectResponse publish(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody PublishRequest request,
+                        ExpectedVersion expected) {
+        return ProjectResponse.from(projects.publish(admin(jwt), new ProjectId(id), request.publishedOn(), expected));
     }
 
     @PostMapping("/{id}/unpublish")
-    ProjectResponse unpublish(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
-        return ProjectResponse.from(projects.unpublish(admin(jwt), new ProjectId(id)));
+    ProjectResponse unpublish(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, ExpectedVersion expected) {
+        return ProjectResponse.from(projects.unpublish(admin(jwt), new ProjectId(id), expected));
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    void delete(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
-        projects.delete(admin(jwt), new ProjectId(id));
+    void delete(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, ExpectedVersion expected) {
+        projects.delete(admin(jwt), new ProjectId(id), expected);
     }
 
     private static UUID admin(Jwt jwt) {

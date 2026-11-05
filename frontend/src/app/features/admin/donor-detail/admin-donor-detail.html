@@ -1087,3 +1087,10 @@
     </div>
   </app-dialog>
 }
+@if (changedMeanwhile()) {
+  <app-changed-meanwhile-dialog
+    subject="donorAccount"
+    (reloadChosen)="reloadAfterChange()"
+    (dismissed)="reloadAfterChange()"
+  />
+}

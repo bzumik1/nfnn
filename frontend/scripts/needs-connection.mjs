@@ -12,6 +12,8 @@ export const WORKS_WITHOUT_CONNECTION = {
     'It is the probe that ends the offline state, so it must run while offline.',
   'features/donors/dashboard/top-bar/top-bar.html#logout':
     'AuthStore.logout forgets the session on the device when the server cannot be reached, so signing out works offline.',
+  'layout/account-sheet/account-sheet.html#signOut':
+    'AuthStore.logout forgets the session on the device when the server cannot be reached, so signing out from the account sheet works offline.',
   'features/donors/connect-app/connect-app.html#switchAccount':
     'It signs out through AuthStore.logout, which works offline, and then opens the sign-in dialog.',
   'features/donors/dashboard/device-data-card/delete-device-data-dialog.html':
@@ -59,12 +61,13 @@ function needsConnection(tag, reaches, worksOffline) {
   if (SUBMIT.test(tag) || !ANY_TYPE.test(tag)) {
     return true;
   }
+  const click = CLICK.exec(tag)?.[1] ?? '';
+  const called = [...click.matchAll(CALLED)].map(([, name]) => name);
   const classes = (CLASS.exec(tag)?.[1] ?? '').split(/\s+/);
   if (classes.some((name) => CHANGE_CLASSES.has(name))) {
-    return true;
+    return called.length === 0 || called.some((name) => !worksOffline.has(name));
   }
-  const click = CLICK.exec(tag)?.[1] ?? '';
-  return [...click.matchAll(CALLED)].some(([, name]) => !worksOffline.has(name) && reaches(name));
+  return called.some((name) => !worksOffline.has(name) && reaches(name));
 }
 
 function methodBodies(component) {
