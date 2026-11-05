@@ -1,4 +1,4 @@
-import { handOver, imageFile, spaydFile } from './bank-handoff';
+import { handOver, imageFile, sharesImages, sharesPaymentFiles, spaydFile } from './bank-handoff';
 
 const SPAYD =
   'SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE';
@@ -81,6 +81,11 @@ describe('Given a payment handed to a bank app', () => {
       });
     });
 
+    it('when asked what it shares, then it takes both the payment file and the QR image', () => {
+      expect(sharesPaymentFiles()).toBe(true);
+      expect(sharesImages()).toBe(true);
+    });
+
     it('when the site could also open the payment itself, then the phone still offers the file and the site is not asked', async () => {
       const opened: string[] = [];
 
@@ -126,6 +131,11 @@ describe('Given a payment handed to a bank app', () => {
         canShare: () => false,
         share: () => Promise.reject(new Error('must not be asked')),
       });
+    });
+
+    it('when asked what it shares, then it takes neither the payment file nor the QR image', () => {
+      expect(sharesPaymentFiles()).toBe(false);
+      expect(sharesImages()).toBe(false);
     });
 
     it('when the file is handed over, then it downloads under its own name', async () => {
@@ -174,6 +184,10 @@ describe('Given a payment handed to a bank app', () => {
   describe('Given a browser without Web Share', () => {
     beforeEach(() => {
       vi.stubGlobal('navigator', { ...navigator, share: undefined, canShare: undefined });
+    });
+
+    it('when asked what it shares, then it shares no payment file', () => {
+      expect(sharesPaymentFiles()).toBe(false);
     });
 
     it('when the file is handed over, then it downloads under its own name', async () => {

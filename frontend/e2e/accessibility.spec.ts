@@ -187,7 +187,9 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/prispet');
     await page.getByRole('button', { name: 'Otevřít v aplikaci banky' }).click();
-    await expect(page.locator('#prispet .bank-app-hint')).toContainText('Neotevřela se vám banka?');
+    await expect(page.locator('#prispet .bank-app-hint')).toContainText(
+      'Nenašli jste v nabídce svou banku?',
+    );
 
     expect(await violations(page)).toEqual([]);
   });
