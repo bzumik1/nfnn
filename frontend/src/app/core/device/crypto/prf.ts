@@ -50,23 +50,34 @@ export async function readPrf(
     return null;
   }
   const publicKey = credential as PublicKeyCredential;
-  const output = takenOutput(publicKey.getClientExtensionResults().prf?.results?.first);
-  const credentialId = bytesToBase64Url(new Uint8Array(publicKey.rawId));
+  const response = publicKey.response as AuthenticatorAssertionResponse;
+  return prfReadingOf(publicKey, response.authenticatorData, request.credentialIds);
+}
+
+export function prfReadingOf(
+  credential: PublicKeyCredential,
+  authenticatorData: ArrayBuffer,
+  credentialIds: readonly string[],
+): PrfReading | null {
+  const output = takenOutput(credential.getClientExtensionResults().prf?.results?.first);
+  const credentialId = bytesToBase64Url(new Uint8Array(credential.rawId));
   if (output === null) {
     return null;
   }
-  const response = publicKey.response as AuthenticatorAssertionResponse;
   if (
-    (request.credentialIds.length > 0 && !request.credentialIds.includes(credentialId)) ||
-    !userVerified(response.authenticatorData)
+    (credentialIds.length > 0 && !credentialIds.includes(credentialId)) ||
+    !userVerified(authenticatorData)
   ) {
     output.fill(0);
     return null;
   }
-  const userHandle = response.userHandle;
+  const userHandle = (credential.response as Partial<AuthenticatorAssertionResponse>).userHandle;
   return {
     credentialId,
-    userHandle: userHandle === null ? null : bytesToBase64Url(new Uint8Array(userHandle)),
+    userHandle:
+      userHandle === null || userHandle === undefined
+        ? null
+        : bytesToBase64Url(new Uint8Array(userHandle)),
     output,
   };
 }

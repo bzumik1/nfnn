@@ -6,7 +6,8 @@
   [class.dialog--viewer]="look() === 'viewer'"
   [attr.data-presentation]="look()"
   [attr.aria-labelledby]="labelledBy()"
-  (close)="dismiss()"
+  (cancel)="onCancel($event)"
+  (close)="onClose()"
   (pointerdown)="onPointerDown($event)"
   (click)="onClick($event)"
 >
@@ -17,6 +18,7 @@
     <button
       type="button"
       class="dialog-close"
+      [disabled]="!dismissible()"
       (click)="dismiss()"
       aria-label="Zavřít"
       i18n-aria-label="@@ui.dialog.close"

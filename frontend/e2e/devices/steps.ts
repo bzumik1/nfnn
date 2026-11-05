@@ -197,6 +197,15 @@ export const STEPS: Step[] = [
     open: (ui) => donorPage(ui, '/darce/udaje'),
   },
   {
+    id: 'donor-device-data-delete',
+    title: 'the dialog that deletes the data on this device',
+    open: async (ui) => {
+      await donorPage(ui, '/darce/udaje');
+      await ui.click({ css: 'app-device-data-card button', text: 'Smazat data z tohoto zařízení' });
+      await ui.waitVisible({ css: 'dialog[open] h2', text: 'Smazat data z tohoto zařízení?' });
+    },
+  },
+  {
     id: 'donor-menu',
     title: "the donor's account menu",
     open: async (ui) => {
