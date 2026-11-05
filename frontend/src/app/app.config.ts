@@ -24,6 +24,7 @@ import { ReportingErrorHandler } from './core/errors/reporting-error-handler';
 import { ChunkLoadRecovery } from './core/reload/chunk-load-recovery';
 import { CanonicalLink } from './core/seo/canonical-link';
 import { versionInterceptor } from './core/version/version-interceptor';
+import { pagePinchLockAtStart } from './core/zoom/page-pinch-lock';
 import { DialogHistory } from './shared/ui/dialog/dialog-history';
 
 const scrollOptions: InMemoryScrollingOptions = {
@@ -60,5 +61,6 @@ export const appConfig: ApplicationConfig = {
     provideAppInitializer(() => inject(AuthStore).restore()),
     provideAppInitializer(() => inject(CanonicalLink).start()),
     dialogHistoryAtStart,
+    pagePinchLockAtStart,
   ],
 };

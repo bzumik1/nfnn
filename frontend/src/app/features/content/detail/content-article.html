@@ -25,15 +25,17 @@
   <div class="body ui-container">
     @if (image(); as src) {
       <figure class="photo">
-        <img
-          [src]="src"
-          [srcset]="imageSet()"
-          sizes="(max-width: 1100px) 100vw, 960px"
-          width="960"
-          height="600"
-          [alt]="page().imageAlt"
-          class="real-img"
-        />
+        <app-zoomable class="photo-zoom" [content]="enlarged()!">
+          <img
+            [src]="src"
+            [srcset]="imageSet()"
+            sizes="(max-width: 1100px) 100vw, 960px"
+            width="960"
+            height="600"
+            [alt]="page().imageAlt"
+            class="real-img"
+          />
+        </app-zoomable>
       </figure>
     }
     <app-markdown class="prose" [text]="page().body" />

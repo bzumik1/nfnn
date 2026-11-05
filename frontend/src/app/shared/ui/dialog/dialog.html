@@ -3,6 +3,7 @@
   class="dialog"
   [class.dialog--sheet]="look() === 'sheet'"
   [class.dialog--full]="look() === 'full'"
+  [class.dialog--viewer]="look() === 'viewer'"
   [attr.data-presentation]="look()"
   [attr.aria-labelledby]="labelledBy()"
   (close)="dismiss()"

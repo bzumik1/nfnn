@@ -1,0 +1,15 @@
+:host {
+  display: block;
+}
+
+.zoomable {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: zoom-in;
+}
