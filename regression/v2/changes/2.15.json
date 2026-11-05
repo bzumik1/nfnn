@@ -122,5 +122,26 @@
     "caseFile": "shared-cases/schemas/donor-donations/list.schema.json",
     "reason": "2.15: the schema of the new donor-donations/list.json cases",
     "contract": ".claude/rules/testing.md, Logic on both sides"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/device-data-card/device-data-card.spec.ts > Given the card \"Data v tomto zařízení\" > when the donor asks to load the data again > and the download ends as mismatch, then the alert does not blame the connection",
+    "replacement": "src/app/features/donors/dashboard/device-data-card/device-data-card.spec.ts > Given the card \"Data v tomto zařízení\" > when the donor asks to load the data again > and the data do not match the server’s summary, then the alert says they could not be checked, which a stored time beside it does not contradict",
+    "reason": "2.15 (U7): a mismatch now says the server's data could not be checked (donor.deviceData.reloadUnverified) instead of the connection-neutral alert"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/device-data-card/device-data-card.spec.ts > Given the card \"Data v tomto zařízení\" > when the donor asks to load the data again > and the download ends as no-copy, then the alert does not blame the connection",
+    "replacement": "src/app/features/donors/dashboard/device-data-card/device-data-card.spec.ts > Given the card \"Data v tomto zařízení\" > when the donor asks to load the data again > and the copy is closed meanwhile, then the alert does not blame the connection",
+    "reason": "2.15: the no-copy case is the copy closed meanwhile, named so"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/device-copy.spec.ts > Given a donor who signs in with a password on a device that keeps an encrypted copy > when she loads the page again, then the same copy opens with its session key, without her password and without downloading again #2",
+    "reason": "2.15: a restored copy is caught up by the sync, so a reload asks for the manifest (and only the manifest when nothing changed)",
+    "replacement": "e2e/device-copy.spec.ts > Given a donor who signs in with a password on a device that keeps an encrypted copy > when she loads the page again, then the same copy opens with its session key, without her password, and only its manifest is asked for to catch it up #2"
   }
 ]
