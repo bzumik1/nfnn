@@ -37,6 +37,7 @@ import {
   IMAGE_FILE_NAME,
   imageFile,
   sharesImages,
+  sharesPaymentFiles,
   spaydFile,
 } from './bank-handoff';
 import { LocalPaymentRoute } from './local-payment-route';
@@ -61,7 +62,8 @@ interface Payment {
   readonly matrix: QrMatrix;
 }
 
-type HandoffNotice = 'bankNotOpened' | 'spaydDownloaded' | 'imageSaved';
+type HandoffNotice =
+  'bankNotOpened' | 'spaydDownloaded' | 'imageSaved' | 'imageNotShared' | 'fileNotShared';
 
 interface PreparedImage {
   readonly matrix: QrMatrix;
@@ -195,6 +197,8 @@ export class PaymentPanel {
 
   private readonly shareTitle = $localize`:@@home.donate.bankApp.shareTitle:QR platba`;
   protected readonly sendsImages = sharesImages();
+  protected readonly sendsFiles = sharesPaymentFiles();
+  protected readonly opensWithImage = this.sendsImages && this.sendsFiles;
   protected readonly qrShown = signal(false);
   protected readonly handingOff = signal(false);
   protected readonly handoffNotice = signal<HandoffNotice | null>(null);
@@ -208,6 +212,9 @@ export class PaymentPanel {
       (!this.sendsImages || this.preparedImage()?.matrix === matrix)
     );
   });
+  protected readonly openReady = computed(() =>
+    this.opensWithImage ? this.imageReady() : this.handoffReady(),
+  );
 
   protected readonly bankAccount = computed(() => this.details()?.account ?? null);
 
@@ -244,7 +251,7 @@ export class PaymentPanel {
 
   constructor() {
     this.store.load();
-    effect(() => this.focusAfterRetry(this.state().kind));
+    effect(() => this.focusAfterRetry(this.state().kind, this.openReady()));
     afterRenderEffect(() => this.prepareImage());
     inject(DestroyRef).onDestroy(() => {
       clearTimeout(this.redrawTimer);
@@ -326,17 +333,39 @@ export class PaymentPanel {
 
   async openInBankApp(): Promise<void> {
     const payment = this.payment();
+    if (payment === null || !this.openReady() || this.handingOff()) {
+      return;
+    }
+    const png = this.opensWithImage ? (this.preparedImage()?.png ?? null) : null;
+    if (png !== null) {
+      await this.handOverPayment(payment, imageFile(png), imageNotice);
+      return;
+    }
+    await this.handOverPayment(payment, spaydFile(payment.spayd), bankNotice, () =>
+      this.openOnDevice(payment.spayd, () => this.payment() === payment),
+    );
+  }
+
+  async sendPaymentFile(): Promise<void> {
+    const payment = this.payment();
     if (payment === null || !this.handoffReady() || this.handingOff()) {
       return;
     }
+    await this.handOverPayment(payment, spaydFile(payment.spayd), fileNotice);
+  }
+
+  private async handOverPayment(
+    payment: Payment,
+    file: File,
+    notice: (handoff: Handoff) => HandoffNotice | null,
+    openLocally?: () => Promise<Handoff | null>,
+  ): Promise<void> {
     this.clearNotices();
     this.handingOff.set(true);
     try {
-      const handoff = await handOver(spaydFile(payment.spayd), this.shareTitle, () =>
-        this.openOnDevice(payment.spayd, () => this.payment() === payment),
-      );
+      const handoff = await handOver(file, this.shareTitle, openLocally);
       if (this.payment() === payment) {
-        this.handoffNotice.set(bankNotice(handoff));
+        this.handoffNotice.set(notice(handoff));
       }
     } finally {
       this.handingOff.set(false);
@@ -395,6 +424,7 @@ export class PaymentPanel {
   }
 
   private clearNotices(): void {
+    this.retried = false;
     this.savedQrFile.set(null);
     this.handoffNotice.set(null);
   }
@@ -445,11 +475,11 @@ export class PaymentPanel {
     }, ANNOUNCE_DELAY_MS);
   }
 
-  private focusAfterRetry(kind: QrState['kind']): void {
+  private focusAfterRetry(kind: QrState['kind'], openReady: boolean): void {
     if (kind === 'ready') {
       this.failureAlerts.set(false);
     }
-    if (!this.retried || kind === 'loading') {
+    if (!this.retried || kind === 'loading' || (kind === 'ready' && this.compact() && !openReady)) {
       return;
     }
     this.retried = false;
@@ -484,11 +514,17 @@ function bankNotice(handoff: Handoff): HandoffNotice | null {
       return null;
     case 'downloaded':
       return 'spaydDownloaded';
-    case 'opened':
-      return 'bankNotOpened';
     default:
       return 'bankNotOpened';
   }
+}
+
+function imageNotice(handoff: Handoff): HandoffNotice | null {
+  return handoff === 'shared' ? null : 'imageNotShared';
+}
+
+function fileNotice(handoff: Handoff): HandoffNotice | null {
+  return handoff === 'shared' ? null : 'fileNotShared';
 }
 
 function initialChoice(

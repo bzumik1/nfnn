@@ -144,7 +144,7 @@
       #bankAppOpen
       type="button"
       class="bank-app-open ui-button ui-button--primary ui-button--block"
-      [disabled]="!handoffReady()"
+      [disabled]="!openReady()"
       [attr.aria-disabled]="handingOff() || null"
       (click)="openInBankApp()"
     >
@@ -179,14 +179,31 @@
         @case ('bankNotOpened') {
           <p class="ui-callout bank-app-hint"><ng-container [ngTemplateOutlet]="notOpened" /></p>
         }
+        @case ('imageNotShared') {
+          <p class="ui-callout bank-app-hint">
+            <span i18n="@@home.donate.bankApp.imageNotShared"
+              ><strong>Nenašli jste v nabídce svou banku?</strong> Klepněte znovu, zvolte Uložit
+              obrázek a v bankovní aplikaci načtěte QR platbu z Fotek. Nebo zkopírujte údaje výše do
+              bankovní aplikace.</span
+            >
+          </p>
+        }
+        @case ('fileNotShared') {
+          <p class="ui-callout bank-app-hint">
+            <span i18n="@@home.donate.bankApp.fileNotShared"
+              ><strong>Neotevřela se vám banka?</strong> Zkuste Otevřít v aplikaci banky, které
+              pošle QR jako obrázek, nebo zkopírujte údaje výše do bankovní aplikace.</span
+            >
+          </p>
+        }
       }
     </div>
     <button
       type="button"
-      class="bank-app-image ui-button ui-button--block"
-      [disabled]="!imageReady()"
+      class="bank-app-second ui-button ui-button--block"
+      [disabled]="opensWithImage ? !handoffReady() : !imageReady()"
       [attr.aria-disabled]="handingOff() || null"
-      (click)="sendQrImage()"
+      (click)="opensWithImage ? sendPaymentFile() : sendQrImage()"
     >
       <svg
         class="bank-app-icon"
@@ -201,7 +218,9 @@
         <path d="M12 15V3M7 8l5-5 5 5" />
         <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" />
       </svg>
-      @if (sendsImages) {
+      @if (opensWithImage) {
+        <span i18n="@@home.donate.bankApp.sendFile">Poslat jako soubor platby</span>
+      } @else if (sendsImages) {
         <span i18n="@@home.donate.bankApp.sendImage">Poslat QR jako obrázek</span>
       } @else {
         <span i18n="@@home.donate.qr.save">Uložit QR kód</span>
