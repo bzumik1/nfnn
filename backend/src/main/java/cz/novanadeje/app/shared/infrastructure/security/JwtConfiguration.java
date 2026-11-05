@@ -3,7 +3,9 @@ package cz.novanadeje.app.shared.infrastructure.security;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import cz.novanadeje.app.shared.application.session.SessionLiveness;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2TokenValidator;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
@@ -35,10 +37,12 @@ class JwtConfiguration {
     }
 
     @Bean
-    JwtDecoder jwtDecoder(JwtProperties properties, Clock clock) {
+    JwtDecoder jwtDecoder(JwtProperties properties, Clock clock, SessionLiveness liveness) {
         JwtClaimValidator<List<String>> audience = new JwtClaimValidator<>(JwtClaimNames.AUD,
                 claimed -> claimed != null && claimed.contains(properties.audience()));
-        return decoder(properties, clock, audience);
+        NimbusJwtDecoder decoder = decoder(properties, clock, audience);
+        decoder.setJwtValidator(new LiveSessionValidator(validators(properties, clock, audience), liveness));
+        return decoder;
     }
 
     @Bean
@@ -48,13 +52,17 @@ class JwtConfiguration {
 
     private static NimbusJwtDecoder decoder(JwtProperties properties, Clock clock, JwtClaimValidator<List<String>> audience) {
         NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(secretKey(properties)).macAlgorithm(MacAlgorithm.HS256).build();
+        decoder.setJwtValidator(validators(properties, clock, audience));
+        return decoder;
+    }
+
+    private static OAuth2TokenValidator<Jwt> validators(JwtProperties properties, Clock clock, JwtClaimValidator<List<String>> audience) {
         JwtTimestampValidator timestamps = new JwtTimestampValidator(CLOCK_SKEW);
         timestamps.setClock(clock);
         JwtIssuerValidator issuer = new JwtIssuerValidator(properties.issuer());
-        decoder.setJwtValidator(audience == null
+        return audience == null
                 ? new DelegatingOAuth2TokenValidator<Jwt>(timestamps, issuer)
-                : new DelegatingOAuth2TokenValidator<Jwt>(timestamps, issuer, audience));
-        return decoder;
+                : new DelegatingOAuth2TokenValidator<Jwt>(timestamps, issuer, audience);
     }
 
     @Bean

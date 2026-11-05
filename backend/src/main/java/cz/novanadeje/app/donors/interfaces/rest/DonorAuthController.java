@@ -57,13 +57,13 @@ class DonorAuthController {
     @PostMapping("/login")
     ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request, HttpServletRequest http) {
         signInRateLimiter.check(http.getRemoteAddr());
-        return respondWithSession(HttpStatus.OK, authentication.login(request.email(), request.password()));
+        return respondWithSession(HttpStatus.OK, authentication.login(request.email(), request.password(), UserAgentDevice.of(http)));
     }
 
     @PostMapping("/login/second-factor")
     ResponseEntity<AuthResponse> completeSecondFactor(@Valid @RequestBody SecondFactorLoginRequest request, HttpServletRequest http) {
         secondFactorRateLimiter.check(http.getRemoteAddr());
-        return respondWithSession(HttpStatus.OK, authentication.completeSecondFactor(request.challenge(), request.code()));
+        return respondWithSession(HttpStatus.OK, authentication.completeSecondFactor(request.challenge(), request.code(), UserAgentDevice.of(http)));
     }
 
     @PostMapping("/login/second-factor/recovery")
@@ -81,13 +81,13 @@ class DonorAuthController {
     @PostMapping("/passkey")
     ResponseEntity<AuthResponse> signInWithPasskey(@Valid @RequestBody PasskeySignInRequest request, HttpServletRequest http) {
         passkeySignInRateLimiter.check(http.getRemoteAddr());
-        return respondWithSession(HttpStatus.OK, passkeySignIn.signIn(request.challenge(), request.assertion()));
+        return respondWithSession(HttpStatus.OK, passkeySignIn.signIn(request.challenge(), request.assertion(), UserAgentDevice.of(http)));
     }
 
     @PostMapping("/refresh")
     ResponseEntity<AuthResponse> refresh(HttpServletRequest http) {
         String presented = RefreshTokenCookie.read(http).orElseThrow(InvalidRefreshToken::new);
-        return respondWithSession(HttpStatus.OK, authentication.refresh(presented));
+        return respondWithSession(HttpStatus.OK, authentication.refresh(presented, UserAgentDevice.of(http)));
     }
 
     @PostMapping("/logout")

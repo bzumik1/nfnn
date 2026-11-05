@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.domain.AdministratorRecoveryRefused;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorRepository;
@@ -8,7 +9,6 @@ import cz.novanadeje.app.donors.domain.LinkSecret;
 import cz.novanadeje.app.donors.domain.PasskeyRejected;
 import cz.novanadeje.app.donors.domain.PasswordResetToken;
 import cz.novanadeje.app.donors.domain.PasswordResetTokenRepository;
-import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
 import cz.novanadeje.app.donors.domain.SecondFactor;
 import cz.novanadeje.app.donors.domain.SecondFactorCodeRejected;
 import cz.novanadeje.app.donors.domain.SecondFactorCodeRequired;
@@ -30,16 +30,16 @@ public class DonorPasskeyRecoveryService {
     private final PasswordResetTokenRepository tokens;
     private final DonorRepository donors;
     private final SecondFactorRepository secondFactors;
-    private final RefreshTokenRepository refreshTokens;
     private final DonorPasskeyService passkeys;
     private final Clock clock;
+    private final DeviceSignOuts signOuts;
 
     public DonorPasskeyRecoveryService(PasswordResetTokenRepository tokens, DonorRepository donors, SecondFactorRepository secondFactors,
-                                       RefreshTokenRepository refreshTokens, DonorPasskeyService passkeys, Clock clock) {
+                                       DonorPasskeyService passkeys, Clock clock, DeviceSignOuts signOuts) {
+        this.signOuts = signOuts;
         this.tokens = tokens;
         this.donors = donors;
         this.secondFactors = secondFactors;
-        this.refreshTokens = refreshTokens;
         this.passkeys = passkeys;
         this.clock = clock;
     }
@@ -70,7 +70,7 @@ public class DonorPasskeyRecoveryService {
         }
         PasskeyView added = passkeys.registerFor(donor, challenge, name, attestation);
         tokens.deleteOthersOf(donor.id(), found.id());
-        refreshTokens.revokeAllOf(donor.id(), now);
+        signOuts.endAllOf(donor.id(), DeviceSignOutReason.CREDENTIALS_CHANGED, now);
         log.info("Passkey recovery completed for donor {}, every session revoked", donor.id());
         return added;
     }

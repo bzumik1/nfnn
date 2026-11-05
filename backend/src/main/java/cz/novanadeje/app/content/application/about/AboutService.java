@@ -40,7 +40,7 @@ public class AboutService {
     public AboutView read() {
         return new AboutView(about.find()
                 .flatMap(AboutSection::photo)
-                .flatMap(photo -> media.findSize(photo.image()).map(size -> AboutPhotoView.of(photo, size))));
+                .flatMap(photo -> media.findSize(photo.image()).map(size -> AboutPhotoView.of(photo, size, media))));
     }
 
     public AboutView change(UUID adminId, AboutCommand command) {
@@ -56,7 +56,7 @@ public class AboutService {
         about.save(changed);
         current.imageLeftBy(changed).ifPresent(media::deleteIfUnused);
         audit(adminId, current.image(), changed.image(), now);
-        return new AboutView(next.flatMap(photo -> size.map(photoSize -> AboutPhotoView.of(photo, photoSize))));
+        return new AboutView(next.flatMap(photo -> size.map(photoSize -> AboutPhotoView.of(photo, photoSize, media))));
     }
 
     private void audit(UUID adminId, Optional<MediaId> before, Optional<MediaId> after, Instant now) {

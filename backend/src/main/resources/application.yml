@@ -159,6 +159,8 @@ app:
   donors:
     session:
       refresh-token-ttl: P14D
+    session-cleanup:
+      cron: "0 10 4 * * *"
     password-reset:
       token-ttl: PT1H
       max-live-links: 3

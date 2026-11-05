@@ -1,0 +1,113 @@
+[
+  {
+    "path": "PUT /api/admin/content/media/{id}",
+    "scenario": "content/place_photo_focal_point: *",
+    "kind": "added",
+    "reason": "2.23b (Jakub 2026-10-31 15:28): an administrator or a connected application with admin:write places or removes the focal point of a photo, a call v2 did not have; the connector's nfnn_set_photo_focal_point sends it",
+    "contract": "docs/api-contract.md, Photos (focal point); MCP connector"
+  },
+  {
+    "path": "POST /api/admin/content/news*",
+    "scenario": "content/clean_up_unused_photos: *",
+    "kind": "added",
+    "field": "$*.focalPoint",
+    "reason": "2.23b (Jakub 2026-10-31 15:28): every cover image and the About photo carry the photo's focal point, null while none is set, so the site crops every shape around it",
+    "contract": "docs/api-contract.md, content — public CMS (coverImage.focalPoint, About photo)"
+  },
+  {
+    "path": "POST /api/admin/content/projects*",
+    "scenario": "content/clean_up_unused_photos: *",
+    "kind": "added",
+    "field": "$*.focalPoint",
+    "reason": "2.23b (Jakub 2026-10-31 15:28): every cover image and the About photo carry the photo's focal point, null while none is set, so the site crops every shape around it",
+    "contract": "docs/api-contract.md, content — public CMS (coverImage.focalPoint, About photo)"
+  },
+  {
+    "path": "GET /api/admin/content/about*",
+    "scenario": "content/manage_about: *",
+    "kind": "added",
+    "field": "$*.focalPoint",
+    "reason": "2.23b (Jakub 2026-10-31 15:28): every cover image and the About photo carry the photo's focal point, null while none is set, so the site crops every shape around it",
+    "contract": "docs/api-contract.md, content — public CMS (coverImage.focalPoint, About photo)"
+  },
+  {
+    "path": "GET /api/content/home*",
+    "scenario": "content/manage_about: *",
+    "kind": "added",
+    "field": "$*.focalPoint",
+    "reason": "2.23b (Jakub 2026-10-31 15:28): every cover image and the About photo carry the photo's focal point, null while none is set, so the site crops every shape around it",
+    "contract": "docs/api-contract.md, content — public CMS (coverImage.focalPoint, About photo)"
+  },
+  {
+    "path": "POST /api/admin/content/news*",
+    "scenario": "content/manage_about: *",
+    "kind": "added",
+    "field": "$*.focalPoint",
+    "reason": "2.23b (Jakub 2026-10-31 15:28): every cover image and the About photo carry the photo's focal point, null while none is set, so the site crops every shape around it",
+    "contract": "docs/api-contract.md, content — public CMS (coverImage.focalPoint, About photo)"
+  },
+  {
+    "path": "PUT /api/admin/content/about*",
+    "scenario": "content/manage_about: *",
+    "kind": "added",
+    "field": "$*.focalPoint",
+    "reason": "2.23b (Jakub 2026-10-31 15:28): every cover image and the About photo carry the photo's focal point, null while none is set, so the site crops every shape around it",
+    "contract": "docs/api-contract.md, content — public CMS (coverImage.focalPoint, About photo)"
+  },
+  {
+    "path": "GET /api/content/news*",
+    "scenario": "content/manage_news: *",
+    "kind": "added",
+    "field": "$*.focalPoint",
+    "reason": "2.23b (Jakub 2026-10-31 15:28): every cover image and the About photo carry the photo's focal point, null while none is set, so the site crops every shape around it",
+    "contract": "docs/api-contract.md, content — public CMS (coverImage.focalPoint, About photo)"
+  },
+  {
+    "path": "POST /api/admin/content/news*",
+    "scenario": "content/manage_news: *",
+    "kind": "added",
+    "field": "$*.focalPoint",
+    "reason": "2.23b (Jakub 2026-10-31 15:28): every cover image and the About photo carry the photo's focal point, null while none is set, so the site crops every shape around it",
+    "contract": "docs/api-contract.md, content — public CMS (coverImage.focalPoint, About photo)"
+  },
+  {
+    "path": "PUT /api/admin/content/news*",
+    "scenario": "content/manage_news: *",
+    "kind": "added",
+    "field": "$*.focalPoint",
+    "reason": "2.23b (Jakub 2026-10-31 15:28): every cover image and the About photo carry the photo's focal point, null while none is set, so the site crops every shape around it",
+    "contract": "docs/api-contract.md, content — public CMS (coverImage.focalPoint, About photo)"
+  },
+  {
+    "path": "GET /api/admin/content/projects*",
+    "scenario": "content/manage_projects: *",
+    "kind": "added",
+    "field": "$*.focalPoint",
+    "reason": "2.23b (Jakub 2026-10-31 15:28): every cover image and the About photo carry the photo's focal point, null while none is set, so the site crops every shape around it",
+    "contract": "docs/api-contract.md, content — public CMS (coverImage.focalPoint, About photo)"
+  },
+  {
+    "path": "GET /api/content/projects*",
+    "scenario": "content/manage_projects: *",
+    "kind": "added",
+    "field": "$*.focalPoint",
+    "reason": "2.23b (Jakub 2026-10-31 15:28): every cover image and the About photo carry the photo's focal point, null while none is set, so the site crops every shape around it",
+    "contract": "docs/api-contract.md, content — public CMS (coverImage.focalPoint, About photo)"
+  },
+  {
+    "path": "POST /api/admin/content/projects*",
+    "scenario": "content/manage_projects: *",
+    "kind": "added",
+    "field": "$*.focalPoint",
+    "reason": "2.23b (Jakub 2026-10-31 15:28): every cover image and the About photo carry the photo's focal point, null while none is set, so the site crops every shape around it",
+    "contract": "docs/api-contract.md, content — public CMS (coverImage.focalPoint, About photo)"
+  },
+  {
+    "path": "PUT /api/admin/content/projects*",
+    "scenario": "content/manage_projects: *",
+    "kind": "added",
+    "field": "$*.focalPoint",
+    "reason": "2.23b (Jakub 2026-10-31 15:28): every cover image and the About photo carry the photo's focal point, null while none is set, so the site crops every shape around it",
+    "contract": "docs/api-contract.md, content — public CMS (coverImage.focalPoint, About photo)"
+  }
+]

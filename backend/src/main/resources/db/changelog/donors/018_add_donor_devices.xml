@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="018-add-donor-devices" author="nfnn">
+        <createTable tableName="donor_device">
+            <column name="id" type="uuid">
+                <constraints primaryKey="true" primaryKeyName="pk_donor_device" nullable="false"/>
+            </column>
+            <column name="donor_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="platform" type="varchar(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="browser" type="varchar(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="signed_in_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+            <column name="last_used_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ended_at" type="timestamp with time zone"/>
+            <column name="end_reason" type="varchar(30)"/>
+        </createTable>
+        <sql>alter table donor_device add constraint ck_donor_device_end check ((ended_at is null) = (end_reason is null))</sql>
+        <addForeignKeyConstraint baseTableName="donor_device" baseColumnNames="donor_id"
+                                 referencedTableName="donor" referencedColumnNames="id"
+                                 constraintName="fk_donor_device_donor" onDelete="CASCADE"/>
+        <createIndex tableName="donor_device" indexName="ix_donor_device_donor">
+            <column name="donor_id"/>
+        </createIndex>
+        <addColumn tableName="donor_refresh_token">
+            <column name="device_id" type="uuid"/>
+        </addColumn>
+        <addForeignKeyConstraint baseTableName="donor_refresh_token" baseColumnNames="device_id"
+                                 referencedTableName="donor_device" referencedColumnNames="id"
+                                 constraintName="fk_donor_refresh_token_device" onDelete="CASCADE"/>
+        <createIndex tableName="donor_refresh_token" indexName="ix_donor_refresh_token_device">
+            <column name="device_id"/>
+        </createIndex>
+        <createIndex tableName="donor_device" indexName="ix_donor_device_ended_at">
+            <column name="ended_at"/>
+        </createIndex>
+        <createIndex tableName="donor_refresh_token" indexName="ix_donor_refresh_token_revoked_at">
+            <column name="revoked_at"/>
+        </createIndex>
+        <createIndex tableName="donor_refresh_token" indexName="ix_donor_refresh_token_expires_at">
+            <column name="expires_at"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

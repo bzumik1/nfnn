@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.application.event.AdministratorSecondFactorRecovered;
 import cz.novanadeje.app.donors.application.event.DonorSecondFactorRecovered;
 import cz.novanadeje.app.donors.domain.Donor;
@@ -8,7 +9,6 @@ import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.InvalidSecondFactorChallenge;
 import cz.novanadeje.app.donors.domain.LinkSecret;
 import cz.novanadeje.app.donors.domain.PasswordHash;
-import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
 import cz.novanadeje.app.donors.domain.Role;
 import cz.novanadeje.app.donors.domain.SecondFactor;
 import cz.novanadeje.app.donors.domain.SecondFactorChallenge;
@@ -84,7 +84,7 @@ class SecondFactorRecoveryServiceTest {
     @Mock
     private SecondFactorRecoveryRepository recoveries;
     @Mock
-    private RefreshTokenRepository refreshTokens;
+    private DeviceSignOuts signOuts;
     @Mock
     private SecondFactorRecoveryTargets targets;
     @Mock
@@ -94,8 +94,8 @@ class SecondFactorRecoveryServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new SecondFactorRecoveryService(donors, secondFactors, challenges, recoveries, refreshTokens, targets,
-                new DonorSecondFactorProperties(Duration.ofMinutes(5), 5, "Nová naděje", RECOVERY_TTL), events, Clock.fixed(NOW, ZoneOffset.UTC));
+        service = new SecondFactorRecoveryService(donors, secondFactors, challenges, recoveries, targets,
+                new DonorSecondFactorProperties(Duration.ofMinutes(5), 5, "Nová naděje", RECOVERY_TTL), events, Clock.fixed(NOW, ZoneOffset.UTC), signOuts);
     }
 
     @Test
@@ -223,10 +223,10 @@ class SecondFactorRecoveryServiceTest {
 
         service.complete(new SecondFactorRecoveryPaid(JANA.value(), CODE, "…5399/0800", NOW.minusSeconds(5)));
 
-        InOrder order = inOrder(recoveries, secondFactors, refreshTokens, events);
+        InOrder order = inOrder(recoveries, secondFactors, signOuts, events);
         order.verify(recoveries).markUsed(recovery.id(), NOW);
         order.verify(secondFactors).delete(JANA);
-        order.verify(refreshTokens).revokeAllOf(JANA, NOW);
+        order.verify(signOuts).endAllOf(JANA, DeviceSignOutReason.CREDENTIALS_CHANGED, NOW);
         order.verify(events).publishEvent(new DonorSecondFactorRecovered(JANA.value(), jana.email(), LocaleCode.CS, "…5399/0800"));
         order.verifyNoMoreInteractions();
     }
@@ -275,7 +275,7 @@ class SecondFactorRecoveryServiceTest {
         service.complete(new SecondFactorRecoveryPaid(JANA.value(), new SecondFactorRecoveryCode("MNPQ2345"), "…5399/0800", NOW));
 
         verify(recoveries, never()).markUsed(any(), any());
-        verifyNoInteractions(secondFactors, refreshTokens, events);
+        verifyNoInteractions(secondFactors, signOuts, events);
     }
 
     @Test
@@ -289,7 +289,7 @@ class SecondFactorRecoveryServiceTest {
         service.complete(new SecondFactorRecoveryPaid(JANA.value(), CODE, "…5399/0800", NOW));
 
         verify(secondFactors, never()).delete(any());
-        verifyNoInteractions(refreshTokens, events);
+        verifyNoInteractions(signOuts, events);
     }
 
     private LinkSecret waitingSignIn(DonorId donorId) {

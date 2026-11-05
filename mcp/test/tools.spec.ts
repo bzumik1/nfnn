@@ -88,6 +88,7 @@ describe('Given an administrator connected with the reading permission only', ()
       'nfnn_send_report',
       'nfnn_send_test_email',
       'nfnn_set_log_level',
+      'nfnn_set_photo_focal_point',
       'nfnn_set_project_order',
       'nfnn_set_push_alerts',
       'nfnn_set_web_signature',
@@ -1050,6 +1051,59 @@ describe('Given an administrator connected with the writing permission', () => {
       ],
       ['PUT', { photoId: null, photoAlt: null, caption: null }, 'Bearer api-token-write'],
     ]);
+  });
+
+  it('when a focal point is placed on a photo and then removed, then the administration gets the point and then none, and the answer carries the photo', async () => {
+    const placed = await client.callTool({
+      name: 'nfnn_set_photo_focal_point',
+      arguments: { photoId: MEDIA_ID, focalPoint: { x: 42, y: 18 } },
+    });
+    expect(placed.isError).toBeFalsy();
+    expect(textOf(placed)).toContain('"focalPoint":{"x":42,"y":18}');
+    const removed = await client.callTool({
+      name: 'nfnn_set_photo_focal_point',
+      arguments: { photoId: MEDIA_ID, focalPoint: null },
+    });
+    expect(removed.isError).toBeFalsy();
+    expect(textOf(removed)).toContain('"focalPoint":null');
+
+    const writes = stack.backend.requests
+      .filter((request) => request.path === `/api/admin/content/media/${MEDIA_ID}`)
+      .map((request) => [request.method, JSON.parse(request.body), request.authorization]);
+    expect(writes).toEqual([
+      ['PUT', { focalPoint: { x: 42, y: 18 } }, 'Bearer api-token-write'],
+      ['PUT', { focalPoint: null }, 'Bearer api-token-write'],
+    ]);
+  });
+
+  it('when a focal point outside the photo is placed, then nothing reaches the administration', async () => {
+    const outside = await client.callTool({
+      name: 'nfnn_set_photo_focal_point',
+      arguments: { photoId: MEDIA_ID, focalPoint: { x: 101, y: 50 } },
+    });
+    const fraction = await client.callTool({
+      name: 'nfnn_set_photo_focal_point',
+      arguments: { photoId: MEDIA_ID, focalPoint: { x: 42.5, y: 50 } },
+    });
+
+    expect(outside.isError).toBe(true);
+    expect(fraction.isError).toBe(true);
+    expect(
+      stack.backend.requests.filter((request) =>
+        request.path.startsWith('/api/admin/content/media'),
+      ),
+    ).toEqual([]);
+  });
+
+  it('when the tools are listed, then the focal point tool says what the point does and that a replaced photo starts without one', async () => {
+    const { tools } = await client.listTools();
+    const description = tools.find(
+      (tool) => tool.name === 'nfnn_set_photo_focal_point',
+    )?.description;
+    expect(description).toContain('as before with focalPoint null');
+    expect(description).toContain('content/focal-point-on-person-image');
+    expect(description).toContain('CHANGE_PHOTO_FOCAL_POINT');
+    expect(description).toContain('nfnn_update_news');
   });
 
   it('when the About photo is set without texts, then they go as empty', async () => {

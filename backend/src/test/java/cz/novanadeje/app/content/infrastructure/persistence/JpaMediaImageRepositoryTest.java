@@ -3,6 +3,7 @@ package cz.novanadeje.app.content.infrastructure.persistence;
 import cz.novanadeje.app.content.domain.about.AboutPhoto;
 import cz.novanadeje.app.content.domain.about.AboutSection;
 import cz.novanadeje.app.content.domain.about.AboutSectionRepository;
+import cz.novanadeje.app.content.domain.media.FocalPoint;
 import cz.novanadeje.app.content.domain.media.MediaId;
 import cz.novanadeje.app.content.domain.media.MediaImage;
 import cz.novanadeje.app.content.domain.media.MediaImageRepository;
@@ -25,10 +26,13 @@ import cz.novanadeje.app.content.domain.project.ProjectRepository;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 import java.time.Instant;
@@ -36,6 +40,8 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.entry;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -187,6 +193,46 @@ class JpaMediaImageRepositoryTest {
 
         assertThat(media.findSize(portrait.id())).contains(new MediaSize(1413, 1884));
         assertThat(media.findSize(MediaId.newId(NOW))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given two stored images, when a focal point is placed on one, then only that one reads it back, and a removed point leaves it without one")
+    void should_read_the_focal_point_back_when_placed_given_two_stored_images() {
+        MediaImage first = image(2000, 1200, 480);
+        MediaImage second = image(1200, 2000, 480);
+        media.save(first);
+        media.save(second);
+        flushAndClear();
+
+        assertThat(media.placeFocalPoint(first.id(), Optional.of(new FocalPoint(42, 18)))).isTrue();
+        flushAndClear();
+
+        assertThat(media.findFocalPoints(List.of(first.id(), second.id()))).containsExactly(entry(first.id(), new FocalPoint(42, 18)));
+        assertThat(media.findFocalPoints(List.of())).isEmpty();
+
+        assertThat(media.placeFocalPoint(first.id(), Optional.empty())).isTrue();
+        flushAndClear();
+
+        assertThat(media.findFocalPoints(List.of(first.id(), second.id()))).isEmpty();
+        assertThat(media.findById(first.id())).isPresent();
+    }
+
+    @Test
+    @DisplayName("Given an unknown image, when a focal point is placed on it, then nothing is stored and the repository says so")
+    void should_store_nothing_when_placed_given_an_unknown_image() {
+        assertThat(media.placeFocalPoint(MediaId.newId(NOW), Optional.of(new FocalPoint(50, 50)))).isFalse();
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @ValueSource(strings = {"focal_x = 40", "focal_y = 40", "focal_x = 101, focal_y = 50", "focal_x = 50, focal_y = -1"})
+    @DisplayName("Given a stored image, when its row gets only one coordinate or one outside the photo, then the database refuses it")
+    void should_refuse_half_or_outside_points_when_written_given_a_stored_image(String assignment) {
+        MediaImage image = image(2000, 1200, 480);
+        media.save(image);
+        flushAndClear();
+
+        assertThatThrownBy(() -> jdbc.sql("update content_media set " + assignment + " where id = :id").param("id", image.id().value()).update())
+                .isInstanceOf(DataIntegrityViolationException.class);
     }
 
     private void flushAndClear() {

@@ -240,7 +240,7 @@ test.describe('Given a visitor on the home page', () => {
       }
       expect(Buffer.concat(chunks).toString('utf8')).toBe(PAYMENT_QR_1000_SPAYD);
       await expect(
-        page.locator('#prispet').getByRole('status').filter({ hasText: /\S/ }),
+        page.locator('#prispet .bank-app').getByRole('status').filter({ hasText: /\S/ }),
       ).toContainText('Soubor platba.spayd je ve stažených souborech.');
     });
 
@@ -280,7 +280,7 @@ test.describe('Given a visitor on the home page', () => {
         await page.getByRole('button', { name: 'Otevřít v aplikaci banky' }).click();
 
         await expect(
-          page.locator('#prispet').getByRole('status').filter({ hasText: /\S/ }),
+          page.locator('#prispet .bank-app').getByRole('status').filter({ hasText: /\S/ }),
         ).toHaveText(
           'Neotevřela se vám banka? Zkopírujte údaje výše do bankovní aplikace, nebo pošlete QR jako obrázek a v bance zvolte platbu z obrázku.',
         );

@@ -1,5 +1,6 @@
 package cz.novanadeje.app.shared.infrastructure.live;
 
+import cz.novanadeje.app.shared.application.event.DeviceSignedOut;
 import cz.novanadeje.app.shared.application.event.DonorSessionsEnded;
 import cz.novanadeje.app.shared.application.event.LiveFeed;
 import cz.novanadeje.app.shared.application.event.StoredDataChanged;
@@ -49,6 +50,7 @@ public class LiveStreamHub implements SmartLifecycle {
     private ScheduledExecutorService executor;
     private final List<LiveStream> streams = new ArrayList<>();
     private final Map<UUID, Instant> sessionsEnded = new HashMap<>();
+    private final Map<UUID, Instant> devicesSignedOut = new HashMap<>();
     private long opened;
     private volatile boolean running;
 
@@ -152,6 +154,21 @@ public class LiveStreamHub implements SmartLifecycle {
         closing.forEach(LiveStream::close);
     }
 
+    public void endDevice(DeviceSignedOut signedOut) {
+        List<LiveStream> closing;
+        synchronized (this) {
+            Instant now = clock.instant();
+            devicesSignedOut.values().removeIf(at -> at.plus(sessionEndMemory).isBefore(now));
+            devicesSignedOut.put(signedOut.deviceId(), signedOut.at());
+            closing = streams.stream()
+                    .filter(stream -> stream.subscriber.donor().equals(signedOut.donorId())
+                            && stream.subscriber.session().filter(signedOut.deviceId()::equals).isPresent())
+                    .toList();
+            streams.removeAll(closing);
+        }
+        closing.forEach(LiveStream::close);
+    }
+
     synchronized int openStreams() {
         return streams.size();
     }
@@ -185,7 +202,8 @@ public class LiveStreamHub implements SmartLifecycle {
 
     private boolean endedBefore(LiveSubscriber subscriber, Instant now) {
         Instant cutoff = sessionsEnded.get(subscriber.donor());
-        return cutoff != null && !cutoff.plus(sessionEndMemory).isBefore(now) && subscriber.issuedAt().isBefore(cutoff);
+        return cutoff != null && !cutoff.plus(sessionEndMemory).isBefore(now) && subscriber.issuedAt().isBefore(cutoff)
+                || subscriber.session().map(devicesSignedOut::get).filter(at -> !at.plus(sessionEndMemory).isBefore(now)).isPresent();
     }
 
     private synchronized void forget(LiveStream stream) {

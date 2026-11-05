@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.application.event.DonorSecondFactorDisabled;
 import cz.novanadeje.app.donors.application.event.DonorSecondFactorEnabled;
 import cz.novanadeje.app.donors.domain.Donor;
@@ -7,7 +8,6 @@ import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorNotFound;
 import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.PasskeyConfirmationRejected;
-import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
 import cz.novanadeje.app.donors.domain.SecondFactor;
 import cz.novanadeje.app.donors.domain.SecondFactorAlreadyEnabled;
 import cz.novanadeje.app.donors.domain.SecondFactorCodeRejected;
@@ -31,7 +31,6 @@ public class DonorSecondFactorService {
 
     private final DonorRepository donors;
     private final SecondFactorRepository secondFactors;
-    private final RefreshTokenRepository refreshTokens;
     private final DonorConfirmations confirmations;
     private final DonorSessionService sessions;
     private final DonorViews views;
@@ -39,14 +38,14 @@ public class DonorSecondFactorService {
     private final DonorSecondFactorProperties properties;
     private final ApplicationEventPublisher events;
     private final Clock clock;
+    private final DeviceSignOuts signOuts;
 
-    public DonorSecondFactorService(DonorRepository donors, SecondFactorRepository secondFactors, RefreshTokenRepository refreshTokens,
-                                    DonorConfirmations confirmations, DonorSessionService sessions, DonorViews views,
+    public DonorSecondFactorService(DonorRepository donors, SecondFactorRepository secondFactors, DonorConfirmations confirmations, DonorSessionService sessions, DonorViews views,
                                     SecondFactorSessionGuard sessionGuard, DonorSecondFactorProperties properties, ApplicationEventPublisher events,
-                                    Clock clock) {
+                                    Clock clock, DeviceSignOuts signOuts) {
+        this.signOuts = signOuts;
         this.donors = donors;
         this.secondFactors = secondFactors;
-        this.refreshTokens = refreshTokens;
         this.confirmations = confirmations;
         this.sessions = sessions;
         this.views = views;
@@ -72,7 +71,7 @@ public class DonorSecondFactorService {
     }
 
     @Transactional
-    public AuthenticatedDonor confirm(DonorId donorId, String code) {
+    public AuthenticatedDonor confirm(DonorId donorId, String code, RequestingDevice device) {
         Donor donor = load(donorId);
         SecondFactor factor = secondFactors.findByDonor(donorId).orElseThrow(SecondFactorNotPending::new);
         if (factor.isEnabled()) {
@@ -81,24 +80,24 @@ public class DonorSecondFactorService {
         Instant now = clock.instant();
         factor.confirm(code, now);
         secondFactors.save(factor);
-        refreshTokens.revokeAllOf(donorId, now);
+        signOuts.endAllOf(donorId, device.session(), DeviceSignOutReason.CREDENTIALS_CHANGED, now);
         events.publishEvent(new DonorSecondFactorEnabled(donorId.value(), donor.email(), donor.preferredLocale()));
         log.info("Second factor enabled for donor {}, every session revoked", donorId);
-        return views.authenticated(donor, sessions.open(donor, true));
+        return views.authenticated(donor, sessions.continueOn(donor, true, device));
     }
 
     @Transactional(noRollbackFor = {SecondFactorCodeRejected.class, PasskeyConfirmationRejected.class})
-    public AuthenticatedDonor disable(DonorId donorId, Confirmation confirmation, String code) {
+    public AuthenticatedDonor disable(DonorId donorId, Confirmation confirmation, String code, RequestingDevice device) {
         Donor donor = load(donorId);
         confirmations.confirm(donor, confirmation);
         SecondFactor factor = secondFactors.findByDonor(donorId).filter(SecondFactor::isEnabled).orElseThrow(SecondFactorNotEnabled::new);
         Instant now = clock.instant();
         factor.check(code, now);
         secondFactors.delete(donorId);
-        refreshTokens.revokeAllOf(donorId, now);
+        signOuts.endAllOf(donorId, device.session(), DeviceSignOutReason.CREDENTIALS_CHANGED, now);
         events.publishEvent(new DonorSecondFactorDisabled(donorId.value(), donor.email(), donor.preferredLocale()));
         log.info("Second factor disabled for donor {}, every session revoked", donorId);
-        return views.authenticated(donor, sessions.open(donor, false));
+        return views.authenticated(donor, sessions.continueOn(donor, false, device));
     }
 
     private Donor load(DonorId donorId) {
