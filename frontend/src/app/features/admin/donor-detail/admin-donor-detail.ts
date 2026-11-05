@@ -8,13 +8,15 @@ import {
   inject,
   Injector,
   linkedSignal,
+  PendingTasks,
   signal,
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
+import { DOCUMENT } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { Observable } from 'rxjs';
+import { from, Observable, switchMap } from 'rxjs';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
@@ -24,6 +26,8 @@ import { BankAccountItem } from '../../donations/bank-accounts-api';
 import { formatMinorUnits } from '../../donations/donation-amount';
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
 import { DonationItem } from '../../donations/donations-api';
+import { trustedKeys } from '../../donations/verification/receipt-keys';
+import { ReceiptKeysApi } from '../../donations/verification/receipt-keys-api';
 import {
   AdminApi,
   AdminDonorDetailResponse,
@@ -107,6 +111,9 @@ const PAIRING_LABELS: Record<NonNullable<DonationItem['pairedBy']>, string> = {
 })
 export class AdminDonorDetail {
   private readonly api = inject(AdminApi);
+  private readonly receiptKeys = inject(ReceiptKeysApi);
+  private readonly hostname = inject(DOCUMENT).location.hostname;
+  private readonly pendingTasks = inject(PendingTasks);
   protected readonly pdfs = inject(AdminReceiptDownloads);
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
@@ -149,6 +156,8 @@ export class AdminDonorDetail {
     () => this.donations().filter((item) => item.status === 'REFUNDED').length,
   );
   protected readonly receipts = computed(() => this.detail()?.receipts ?? []);
+  private readonly withdrawnKeyIds = signal<ReadonlySet<string>>(new Set());
+  private withdrawnKeysRequested = false;
   protected readonly total = computed(() =>
     this.crowns(this.detail()?.donations.totalAmountMinor ?? 0),
   );
@@ -215,9 +224,45 @@ export class AdminDonorDetail {
         next: (detail) => {
           this.detail.set(detail);
           this.donationsState.set('ready');
+          this.loadWithdrawnKeysFor(detail);
         },
         error: (failure: unknown) => this.donationsState.set(this.stateAfter(failure)),
       });
+  }
+
+  private loadWithdrawnKeysFor(detail: AdminDonorDetailResponse): void {
+    if (this.withdrawnKeysRequested || !detail.receipts.some((receipt) => receipt.active)) {
+      return;
+    }
+    this.withdrawnKeysRequested = true;
+    this.receiptKeys
+      .list()
+      .pipe(
+        switchMap((list) => {
+          const settled = this.pendingTasks.add();
+          return from(trustedKeys(list, this.hostname).finally(settled));
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (trusted) =>
+          this.withdrawnKeyIds.set(
+            new Set(
+              (trusted?.keys ?? [])
+                .filter((key) => key.status === 'revoked')
+                .map((key) => key.keyId),
+            ),
+          ),
+        error: () => this.withdrawnKeyIds.set(new Set()),
+      });
+  }
+
+  protected signedWithWithdrawnKey(receipt: AdminReceiptResponse): boolean {
+    return this.withdrawnKeyIds().has(receipt.keyId);
+  }
+
+  protected withdrawnKeyNoteId(receipt: AdminReceiptResponse): string {
+    return `receipt-key-note-${receipt.id}`;
   }
 
   private receiptReplaced(receiptId: string): void {
@@ -238,7 +283,10 @@ export class AdminDonorDetail {
       .donorDonations(this.donorId)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (detail) => this.detail.set(detail),
+        next: (detail) => {
+          this.detail.set(detail);
+          this.loadWithdrawnKeysFor(detail);
+        },
         error: (failure: unknown) => this.donationsState.set(this.stateAfter(failure)),
       });
   }

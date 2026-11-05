@@ -46,7 +46,11 @@ class ApiSecurityConfiguration {
 
     private static final String[] BROWSER_ONLY_GETS = {
             "/api/admin/donations/receipt-signatures/*",
-            "/api/admin/donations/receipt-images/*"};
+            "/api/admin/donations/receipt-images/*",
+            "/api/admin/donations/sync",
+            "/api/admin/donations/sync/chunks",
+            "/api/admin/donors/sync",
+            "/api/admin/donors/sync/chunks"};
 
     @Bean
     SecurityFilterChain apiSecurityFilterChain(HttpSecurity http, ProblemDetailSecurityErrorHandler errorHandler,

@@ -81,8 +81,8 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v6
 
-      - name: Three devices of one donor converge on what a fresh download gives, over 300 seeds
-        run: ./gradlew test --tests "*DonorDeviceSyncTest" -PnoCucumber
+      - name: Three devices of one donor and three of the administration converge on what a fresh download gives, over 300 seeds
+        run: ./gradlew test --tests "*DonorDeviceSyncTest" --tests "*AdminDeviceSyncTest" -PnoCucumber
         env:
           SYNC_CONVERGENCE_SEEDS: "300"
 

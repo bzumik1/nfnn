@@ -15,6 +15,7 @@ import {
   syntheticPortrait,
   syntheticSignature,
 } from './receipt-issuing';
+import { KEY_LIST, REVOKED_KEY_LIST, serveReceiptKeys } from './receipt-verification';
 
 const PETR_ID = '019a1c00-0000-7000-8000-00000000a002';
 const LINK_ID = '0192f0c4-0000-7000-8000-000000000001';
@@ -104,6 +105,7 @@ const petrDetail = {
       issuedAt: '2026-10-17T09:00:00Z',
       locale: 'cs',
       active: true,
+      keyId: '21fe31df',
     },
   ],
 };
@@ -458,6 +460,49 @@ test.describe('Given an administrator on the donors page', () => {
       expect.stringMatching(/^https:\/\/nfnn\.cz\/overit#/),
     ]);
   });
+
+  for (const { list, warned } of [
+    { list: REVOKED_KEY_LIST, warned: true },
+    { list: KEY_LIST, warned: false },
+  ]) {
+    test(`when the published key list names the key of a valid receipt ${warned ? 'withdrawn' : 'in force'}, then its row ${warned ? 'warns under the button what /overit shows' : 'shows no warning'}`, async ({
+      page,
+    }) => {
+      const receipt = petrDetail.receipts[0];
+      await page.route(
+        (url) => url.pathname === PETR_ACCOUNT,
+        (route) => route.fulfill({ json: petrAccount }),
+      );
+      await page.route(
+        (url) => url.pathname === PETR_DONATIONS,
+        (route) => route.fulfill({ json: petrDetail }),
+      );
+      await serveReceiptKeys(page, list);
+      const keysRead = page.waitForResponse(
+        (response) => new URL(response.url()).pathname === '/api/donations/receipt-keys',
+      );
+      await page.goto(`/sprava/darci/${PETR_ID}`);
+      await keysRead;
+      const row = page
+        .getByRole('region', { name: 'Vydaná potvrzení' })
+        .getByRole('row')
+        .filter({ hasText: receipt.number });
+      await expect(
+        row.getByRole('button', { name: `Stáhnout PDF potvrzení ${receipt.number}` }),
+      ).toBeVisible();
+      const warning = row.getByText('QR na tomto potvrzení podepsal zneplatněný klíč.', {
+        exact: false,
+      });
+      if (warned) {
+        await expect(warning).toHaveText(
+          'QR na tomto potvrzení podepsal zneplatněný klíč. Stránka /overit ho ukáže jako zneplatněné.',
+        );
+      } else {
+        await expect(row).toContainText('platné');
+        await expect(warning).toHaveCount(0);
+      }
+    });
+  }
 
   test('when removing an account is refused because of a receipt, then the alert shows the reason and the account stays', async ({
     page,

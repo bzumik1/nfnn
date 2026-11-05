@@ -3,6 +3,7 @@ package cz.novanadeje.app.donations;
 import cz.novanadeje.app.IntegrationTest;
 import cz.novanadeje.app.donations.application.report.MonthlyReportSender;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimRepository;
+import cz.novanadeje.app.shared.application.audit.AdminActionTrail;
 import cz.novanadeje.app.support.TestSupportConfiguration;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.TestPropertySource;
@@ -20,6 +21,6 @@ import java.lang.annotation.Target;
 @IntegrationTest
 @Import(TestSupportConfiguration.class)
 @TestPropertySource(properties = "app.donations.receipt.first-year=2026")
-@MockitoSpyBean(types = {MonthlyReportSender.class, SymbolClaimRepository.class})
+@MockitoSpyBean(types = {MonthlyReportSender.class, SymbolClaimRepository.class, AdminActionTrail.class})
 public @interface DonationRowsContext {
 }

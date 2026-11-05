@@ -123,6 +123,20 @@ class JpaSecondFactorRepositoryTest {
         assertThat(secondFactors.findByDonor(jana)).isEmpty();
     }
 
+    @Test
+    @DisplayName("Given a confirmed factor, a pending one and a donor without any, when the donors with an enabled factor are asked for, then only the confirmed one's donor comes")
+    void should_name_only_confirmed_factor_donors_when_asked_given_pending_and_confirmed_factors() {
+        DonorId petr = donor("petr@example.cz", "4821937561");
+        donor("eva@example.cz", "4821937562");
+        SecondFactor confirmed = SecondFactor.enrol(jana, SECRET, NOW);
+        confirmed.confirm(Totp.codeAt(SECRET, Totp.stepAt(NOW)), NOW);
+        secondFactors.save(confirmed);
+        secondFactors.save(SecondFactor.enrol(petr, SECRET, NOW));
+        flushAndClear();
+
+        assertThat(secondFactors.findDonorsWithEnabledFactor()).containsExactly(jana);
+    }
+
     private DonorId donor(String email, String variableSymbol) {
         Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null,
                 new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new EmailAddress(email), new PasswordHash("$hash"),

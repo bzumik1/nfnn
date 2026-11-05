@@ -384,3 +384,35 @@ test.describe('Given a visitor on a computer', () => {
     await expect(level).toHaveText('100\u00a0%');
   });
 });
+
+async function openedFromHomeScreen(page: Page, touchPoints: number): Promise<void> {
+  await page.addInitScript((points) => {
+    Object.defineProperty(Navigator.prototype, 'standalone', { get: () => true });
+    Object.defineProperty(Navigator.prototype, 'maxTouchPoints', { get: () => points });
+  }, touchPoints);
+}
+
+test.describe('Given the app opened from the home screen of an iPhone, which has no aA menu', () => {
+  test('when the first page shows, then its text size comes from the system setting', async ({
+    page,
+  }) => {
+    await openedFromHomeScreen(page, 5);
+    await page.goto('/');
+
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await expect(page.locator('html')).toHaveClass(/\bfollows-system-text-size\b/);
+  });
+});
+
+test.describe('Given the site in a browser tab or added to the Dock of a Mac', () => {
+  test('when the first page shows, then its text size stays the browser’s', async ({ page }) => {
+    await openedFromHomeScreen(page, 0);
+    await page.goto('/');
+
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await expect(page.locator('html')).not.toHaveClass(/\bfollows-system-text-size\b/);
+    expect(await page.evaluate(() => getComputedStyle(document.documentElement).fontSize)).toBe(
+      '16px',
+    );
+  });
+});

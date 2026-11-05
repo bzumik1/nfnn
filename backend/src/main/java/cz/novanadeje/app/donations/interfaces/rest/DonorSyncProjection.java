@@ -2,6 +2,7 @@ package cz.novanadeje.app.donations.interfaces.rest;
 
 import cz.novanadeje.app.donations.application.bankaccount.BankAccountView;
 import cz.novanadeje.app.donations.application.sync.DonorSyncSnapshot;
+import cz.novanadeje.app.shared.interfaces.rest.SyncChunk;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaim;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptLine;
@@ -48,14 +49,14 @@ class DonorSyncProjection {
         snapshot.symbolClaims().stream()
                 .sorted(BY_ACCOUNT_THEN_SYMBOL)
                 .forEach(claim -> rowsOf(chunks, SYMBOL_CLAIMS).add(SyncRows.SymbolClaimRow.from(claim)));
-        return chunks.entrySet().stream().map(chunk -> SyncChunk.of(chunk.getKey(), json.valueToTree(chunk.getValue()))).toList();
+        return SyncChunk.allOf(chunks, json);
     }
 
     private static List<Object> rowsOf(SortedMap<String, List<Object>> chunks, String id) {
         return chunks.computeIfAbsent(id, ignored -> new ArrayList<>());
     }
 
-    private static Year yearOf(DonationReceipt receipt) {
+    static Year yearOf(DonationReceipt receipt) {
         return receipt.year().orElseGet(() -> receipt.frozen().document().lines().stream()
                 .map(ReceiptLine::receivedOn)
                 .map(Year::from)
