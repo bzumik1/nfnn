@@ -1,9 +1,21 @@
 import { Page } from '@playwright/test';
+import { existsSync, readdirSync } from 'node:fs';
 import { expect, pwaTest as test } from './pwa-fixtures';
 import { serveReceiptKeys } from '../receipt-verification';
-import { MARKER, PLANTED_DEDICATED_WORKER, PLANTED_SCOPE, PLANTED_WORKER } from './pwa-site';
+import {
+  MARKER,
+  PLANTED_DEDICATED_WORKER,
+  PLANTED_SCOPE,
+  PLANTED_WORKER,
+  startPwaSite,
+} from './pwa-site';
 
 const POLICY = '/zasady-ochrany-osobnich-udaju';
+const HOST_LINKS = '/sys/class/net';
+
+function hostLinks(): readonly string[] {
+  return readdirSync(HOST_LINKS).sort();
+}
 
 interface ScriptUrlPolicies {
   readonly defaultPolicy: unknown;
@@ -213,5 +225,29 @@ test.describe('Given a page outside the app that stored data in the browser', ()
     cacheDump,
   }) => {
     expect(await cacheDump()).toEqual([{ cache: 'nfnn-probe-cache', url: '/probe' }]);
+  });
+});
+
+test.describe('Given the host the browsers of every worker run on', () => {
+  test.skip(
+    !existsSync(HOST_LINKS),
+    'Docker Desktop runs the containers in a virtual machine, so no link of theirs reaches the host the browser runs on',
+  );
+
+  test('when a site starts, goes down, comes back and is removed, then the host gains and loses no network link, so a browser loading a page never sees its network change', async ({
+    pwaDist,
+  }) => {
+    const before = hostLinks();
+    const site = await startPwaSite(pwaDist);
+    try {
+      expect(hostLinks()).toEqual(before);
+      await site.takeDown();
+      expect(hostLinks()).toEqual(before);
+      await site.bringUp();
+      expect(hostLinks()).toEqual(before);
+    } finally {
+      await site.dispose();
+    }
+    expect(hostLinks()).toEqual(before);
   });
 });
