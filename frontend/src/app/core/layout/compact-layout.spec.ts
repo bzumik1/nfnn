@@ -25,6 +25,10 @@ class FakeWindow {
     this.width = width;
   }
 
+  get innerWidth(): number {
+    return this.width;
+  }
+
   matchMedia(media: string): FakeMediaQueryList {
     const query = new FakeMediaQueryList(media, () => this.width);
     this.queries.push(query);
@@ -70,6 +74,18 @@ describe('Given the compact layout of the app', () => {
     view.resize(1280);
 
     expect(onPhone).toBe(true);
+    expect(layout.isCompact()).toBe(false);
+  });
+
+  it('when the window has no width for a moment, as Chromium reports while it captures a page beyond its viewport, then the layout stays as it was', () => {
+    const view = new FakeWindow(1280);
+    const layout = layoutIn(view);
+
+    view.resize(1);
+    const withoutWidth = layout.isCompact();
+    view.resize(1280);
+
+    expect(withoutWidth).toBe(false);
     expect(layout.isCompact()).toBe(false);
   });
 
