@@ -10,5 +10,12 @@
     "caseFile": "shared-cases/schemas/sync/admin-manifest.schema.json",
     "reason": "2.17: the schema of the new administration sync manifest cases (the rows of schemas/defs/rows.schema.json as input; the manifest with its payments, donations and donor-records chunks and their rows as the expected value)",
     "contract": "docs/api-contract.md, Device sync of the administration"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.interfaces.rest.AdminOverviewSharedCasesTest > Given *, when the backend selects its rows with the real queries and compiles the year overview, then the administration gets the expected overview",
+    "replacement": "donations.interfaces.rest.AdminOverviewSharedCasesTest > Given an empty database in March, when the backend selects its rows with the real queries and compiles the year overview, alone and in the administration's sync manifest for every offered year, then the administration gets the expected overview, and the manifest's summary of that year and of every other offered year is the overview of that year",
+    "reason": "2.17 renames every admin-overview case test: each case now also asks the administration's sync manifest and checks every offered year of its summary against /overview?year=, so the when and then of each name say so; every case still runs under its new name"
   }
 ]
