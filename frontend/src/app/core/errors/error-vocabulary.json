@@ -8,7 +8,10 @@
     "verify-parse",
     "verify-signature"
   ],
-  "places": ["global", "navigation"],
+  "places": [
+    "global",
+    "navigation"
+  ],
   "names": [
     "Error",
     "AggregateError",
@@ -38,7 +41,26 @@
     "HttpErrorResponse",
     "Other"
   ],
-  "browsers": ["chrome", "edge", "firefox", "safari", "samsung", "opera", "other"],
-  "operatingSystems": ["android", "ios", "ipados", "macos", "windows", "linux", "other"],
-  "displayModes": ["browser", "standalone"]
+  "browsers": [
+    "chrome",
+    "edge",
+    "firefox",
+    "safari",
+    "samsung",
+    "opera",
+    "other"
+  ],
+  "operatingSystems": [
+    "android",
+    "ios",
+    "ipados",
+    "macos",
+    "windows",
+    "linux",
+    "other"
+  ],
+  "displayModes": [
+    "browser",
+    "standalone"
+  ]
 }

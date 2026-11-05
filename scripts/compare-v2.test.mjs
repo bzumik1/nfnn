@@ -589,7 +589,13 @@ describe('Given a slice file that is not a valid declaration', () => {
       }),
     );
     assert.equal(result.status, 0, result.output);
-    for (const path of ['GET /api/nowhere*', 'GET /api/*/x', 'GET /api/']) {
+    for (const path of [
+      'GET /api/nowhere*',
+      'GET /api/*/x',
+      'GET /api/',
+      'GET /api/nowhere?q=x',
+      'GET /api/a b',
+    ]) {
       refused({ ...added, path, scenario: anywhere }, /entry 1.*path.*METHOD \/api\/<context>\//);
     }
     refused(

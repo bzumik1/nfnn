@@ -36,9 +36,16 @@ describe('Given the version interceptor', () => {
 
   function serverAnswers(generation: string): void {
     client.get('/api/content/home').subscribe();
-    http
-      .expectOne('/api/content/home')
-      .flush({}, { headers: { 'Nfnn-Api': generation, 'Nfnn-Revision': '0123abc' } });
+    http.expectOne('/api/content/home').flush(
+      {},
+      {
+        headers: {
+          'Cache-Control': 'no-store',
+          'Nfnn-Api': generation,
+          'Nfnn-Revision': '0123abc',
+        },
+      },
+    );
   }
 
   it('when the app calls the API, then the call names the revision the app was built from', () => {
@@ -47,6 +54,38 @@ describe('Given the version interceptor', () => {
     const request = http.expectOne('/api/content/home');
     expect(request.request.headers.get('Nfnn-App')).toBe(APP_REVISION);
     request.flush({});
+  });
+
+  it('when the app calls the API, then the call names the API generation the app speaks, so the server can refuse a write the app sends before it learns of a new one', () => {
+    client.post('/api/contact/messages', {}).subscribe();
+
+    const request = http.expectOne('/api/contact/messages');
+    expect(request.request.headers.get('Nfnn-App-Api')).toBe(String(API_GENERATION));
+    request.flush({});
+  });
+
+  it('when the server refuses a write because the app speaks another generation, then the app learns the new generation and holds the next write', () => {
+    let failure: unknown;
+    client
+      .post('/api/contact/messages', {})
+      .subscribe({ error: (error: unknown) => (failure = error) });
+    http.expectOne('/api/contact/messages').flush(
+      {
+        type: `https://nfnn.cz/problems/${UPDATE_REQUIRED}`,
+        title: 'Web mezitím dostal novou verzi',
+        detail: 'Nic jsme neodeslali. Načtěte stránku znovu a zkuste to ještě jednou.',
+      },
+      {
+        status: 426,
+        statusText: 'Upgrade Required',
+        headers: { 'Cache-Control': 'no-store', 'Nfnn-Api': NEWER },
+      },
+    );
+
+    expect(problemTypeEndsWith(failure, UPDATE_REQUIRED)).toBe(true);
+    expect(version.mustUpdate()).toBe(true);
+    client.post('/api/contact/messages', {}).subscribe({ error: () => undefined });
+    http.expectNone('/api/contact/messages');
   });
 
   it('when the app loads a file that is not the API, then the call names no revision', () => {
@@ -67,19 +106,23 @@ describe('Given the version interceptor', () => {
 
   it('when an API refusal names a newer generation, then the app learns it from the refusal too', () => {
     client.get('/api/donors/me').subscribe({ error: () => undefined });
-    http
-      .expectOne('/api/donors/me')
-      .flush(
-        { type: 'https://nfnn.cz/problems/auth/unauthorized' },
-        { status: 401, statusText: 'Unauthorized', headers: { 'Nfnn-Api': NEWER } },
-      );
+    http.expectOne('/api/donors/me').flush(
+      { type: 'https://nfnn.cz/problems/auth/unauthorized' },
+      {
+        status: 401,
+        statusText: 'Unauthorized',
+        headers: { 'Cache-Control': 'no-store', 'Nfnn-Api': NEWER },
+      },
+    );
 
     expect(version.mustUpdate()).toBe(true);
   });
 
   it('when a file outside the API names a version, then the app ignores it', () => {
     client.get('/receipt-fonts/body.ttf').subscribe();
-    http.expectOne('/receipt-fonts/body.ttf').flush('', { headers: { 'Nfnn-Api': NEWER } });
+    http
+      .expectOne('/receipt-fonts/body.ttf')
+      .flush('', { headers: { 'Cache-Control': 'no-store', 'Nfnn-Api': NEWER } });
 
     expect(version.mustUpdate()).toBe(false);
   });
@@ -110,8 +153,12 @@ describe('Given the version interceptor', () => {
       http.expectOne('/api/donations/me/summary').flush({});
     });
 
-    for (const path of ['/api/donors/auth/refresh', '/api/donors/auth/logout']) {
-      it(`then keeping or ending the session (${path}) still works`, () => {
+    for (const path of [
+      '/api/donors/auth/refresh',
+      '/api/donors/auth/logout',
+      '/api/donations/receipts/status',
+    ]) {
+      it(`then keeping or ending the session or asking a receipt's status (${path}) still works`, () => {
         client.post(path, null).subscribe();
 
         http.expectOne(path).flush(null);

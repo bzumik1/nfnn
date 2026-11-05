@@ -1,3 +1,5 @@
+/// <reference types="@angular/localize" />
+
 import {
   HttpErrorResponse,
   HttpEventType,
@@ -8,13 +10,17 @@ import { inject } from '@angular/core';
 import { catchError, tap, throwError } from 'rxjs';
 
 import { APP_REVISION } from '../errors/app-revision';
-import { APP_REVISION_HEADER, ServerVersion } from './server-version';
+import { APP_API_HEADER, APP_REVISION_HEADER, ServerVersion } from './server-version';
 
 export const UPDATE_REQUIRED = 'app/update-required';
 
 const API_PATH = '/api/';
 const READING_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
-const SESSION_KEEPING_PATHS = new Set(['/api/donors/auth/refresh', '/api/donors/auth/logout']);
+const POSTS_ACROSS_GENERATIONS = new Set([
+  '/api/donors/auth/refresh',
+  '/api/donors/auth/logout',
+  '/api/donations/receipts/status',
+]);
 const UPGRADE_REQUIRED = 426;
 
 export const versionInterceptor: HttpInterceptorFn = (request, next) => {
@@ -25,7 +31,13 @@ export const versionInterceptor: HttpInterceptorFn = (request, next) => {
   if (version.mustUpdate() && changesData(request)) {
     return throwError(() => updateRequired(request));
   }
-  return next(request.clone({ setHeaders: { [APP_REVISION_HEADER]: APP_REVISION } })).pipe(
+  const named = request.clone({
+    setHeaders: {
+      [APP_REVISION_HEADER]: APP_REVISION,
+      [APP_API_HEADER]: String(version.appApiGeneration),
+    },
+  });
+  return next(named).pipe(
     tap((event) => {
       if (event.type === HttpEventType.ResponseHeader || event.type === HttpEventType.Response) {
         version.observe(event.headers);
@@ -43,7 +55,7 @@ export const versionInterceptor: HttpInterceptorFn = (request, next) => {
 function changesData(request: HttpRequest<unknown>): boolean {
   return (
     !READING_METHODS.has(request.method.toUpperCase()) &&
-    !SESSION_KEEPING_PATHS.has(request.url.split(/[?#]/)[0])
+    !POSTS_ACROSS_GENERATIONS.has(request.url.split(/[?#]/)[0])
   );
 }
 

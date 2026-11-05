@@ -7,6 +7,7 @@ import { API_GENERATION } from './api-generation';
 export const SERVER_REVISION_HEADER = 'Nfnn-Revision';
 export const SERVER_API_HEADER = 'Nfnn-Api';
 export const APP_REVISION_HEADER = 'Nfnn-App';
+export const APP_API_HEADER = 'Nfnn-App-Api';
 
 export const APP_API_GENERATION = new InjectionToken<number>('APP_API_GENERATION', {
   providedIn: 'root',
@@ -15,6 +16,7 @@ export const APP_API_GENERATION = new InjectionToken<number>('APP_API_GENERATION
 
 const GENERATION = /^[1-9][0-9]{0,8}$/;
 const UNKNOWN_REVISION = 'dev';
+const NOT_STORED = /(^|[\s,])no-store([\s,]|$)/i;
 
 @Injectable({ providedIn: 'root' })
 export class ServerVersion {
@@ -29,7 +31,12 @@ export class ServerVersion {
     return generation !== null && generation !== this.appGeneration;
   });
 
+  readonly appApiGeneration = this.appGeneration;
+
   observe(headers: HttpHeaders): void {
+    if (!NOT_STORED.test(headers.get('Cache-Control') ?? '')) {
+      return;
+    }
     const generation = headers.get(SERVER_API_HEADER);
     if (generation !== null && GENERATION.test(generation)) {
       this.generationSeen.set(Number(generation));

@@ -19,6 +19,7 @@ import {
 } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
+import { UPDATE_REQUIRED } from '../../../core/version/version-interceptor';
 import { BankAccountItem, BankAccountsApi } from '../../donations/bank-accounts-api';
 import {
   BankCheckResponse,
@@ -99,6 +100,7 @@ const PROBLEMS_SHOWN_WITH_DETAIL: Readonly<Record<string, string>> = {
   'donations/receipt-signatory-missing': RECEIPT_FAILED,
   'donations/receipt-issue-limit': RECEIPT_FAILED,
   'donations/receipt-too-long': RECEIPT_FAILED,
+  [UPDATE_REQUIRED]: RECEIPT_FAILED,
 };
 const YEARLY_PROBLEMS_SHOWN_AS_TITLE = [
   'donations/year-not-yet-completed',

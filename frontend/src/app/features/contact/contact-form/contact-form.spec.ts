@@ -231,6 +231,25 @@ describe('Given the contact form', () => {
     expect(element('.form-error a')?.getAttribute('href')).toBe('mailto:info@nfnn.cz');
   });
 
+  it('when the message is held because the site has a new version, then the form keeps the text and says to copy it and load the page again', async () => {
+    await fillInValidMessage();
+
+    await submit();
+    http.expectOne('/api/contact/messages').flush(
+      {
+        type: 'https://nfnn.cz/problems/app/update-required',
+        title: 'Web mezitím dostal novou verzi',
+      },
+      { status: 426, statusText: 'Upgrade Required' },
+    );
+    fixture.detectChanges();
+
+    expect(element('.form-error').textContent?.replace(/\s+/g, ' ').trim()).toBe(
+      'Web mezitím dostal novou verzi, a tak jsme zprávu neodeslali. Zkopírujte si její text, načtěte stránku znovu a odešlete ji ještě jednou.',
+    );
+    expect(element<HTMLTextAreaElement>('#contact-message').value).not.toBe('');
+  });
+
   it('when the server fails, then the form stays with a generic error and can be sent again', async () => {
     await fillInValidMessage();
 

@@ -57,7 +57,9 @@ describe('Given the notice that the app must load a new version', () => {
     );
 
   async function serverSpeaks(generation: number): Promise<void> {
-    TestBed.inject(ServerVersion).observe(new HttpHeaders({ 'Nfnn-Api': String(generation) }));
+    TestBed.inject(ServerVersion).observe(
+      new HttpHeaders({ 'Cache-Control': 'no-store', 'Nfnn-Api': String(generation) }),
+    );
     fixture.detectChanges();
     await fixture.whenStable();
   }
