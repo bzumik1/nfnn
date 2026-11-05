@@ -11,6 +11,7 @@ npm run lint:styles          # Stylelint: v komponentách jen tokeny z motivu; k
 npm test -- --watch=false    # Vitest
 npm run build                # produkční build do dist/frontend/browser/
 npm run e2e                  # Playwright proti produkčnímu buildu (jednou předtím npm run e2e:install, v cloudu npx playwright install --with-deps --only-shell chromium webkit)
+npm run e2e:devices          # jen telefony a tablety (e2e/devices/): kontroly rozvržení a snímky v test-results/device-report/index.html
 E2E_THEME=control npx playwright test e2e/theme.spec.ts   # kontrolní motiv přebarví každou stránku
 ```
 

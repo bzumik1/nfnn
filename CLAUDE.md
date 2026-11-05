@@ -32,6 +32,7 @@ Before building, read the sections you touch (grep them: `api-contract.md` is to
 | `npm test -- --watch=false` | Vitest |
 | `npm run build` | production build to `dist/frontend/browser/` |
 | `npm run e2e` | Playwright against the production build (`ng build`, served by `scripts/serve-dist.mjs` like nginx) |
+| `npm run e2e:devices` | only the phone and tablet poses (`e2e/devices/`): layout checks and a screen per step in `test-results/device-report/` |
 | **Connector, in `mcp/`** | |
 | `npm ci`, `npm run check`, `npm run build` | `check` is Prettier, `tsc` and Vitest, as in CI |
 | **Stack** | `cp .env.example .env && docker compose up -d --build`, site on :8080; the `prod` profile asks for the server's settings at `/prvni-nastaveni` and generates its keys into the `backend-secrets` volume |
