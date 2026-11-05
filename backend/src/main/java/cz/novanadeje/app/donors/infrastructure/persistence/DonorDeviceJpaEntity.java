@@ -5,6 +5,7 @@ import cz.novanadeje.app.donors.domain.DeviceDescription;
 import cz.novanadeje.app.donors.domain.DeviceId;
 import cz.novanadeje.app.donors.domain.DevicePlatform;
 import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
+import cz.novanadeje.app.donors.domain.DeviceWipe;
 import cz.novanadeje.app.donors.domain.DonorDevice;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.SessionKind;
@@ -16,6 +17,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 @Entity
@@ -53,6 +55,13 @@ class DonorDeviceJpaEntity {
     @Column(name = "end_reason", length = 30)
     private DeviceSignOutReason endReason;
 
+    @Column(name = "status_secret_hash", length = 64, updatable = false)
+    private String statusSecretHash;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "wipe", length = 20, updatable = false)
+    private DeviceWipe wipe;
+
     protected DonorDeviceJpaEntity() {
     }
 
@@ -67,11 +76,14 @@ class DonorDeviceJpaEntity {
         entity.lastUsedAt = device.lastUsedAt();
         entity.endedAt = device.endedAt().orElse(null);
         entity.endReason = device.endReason().orElse(null);
+        entity.statusSecretHash = device.statusSecretHash().orElse(null);
+        entity.wipe = device.wipe().orElse(null);
         return entity;
     }
 
     DonorDevice toDomain() {
         return DonorDevice.reconstitute(new DeviceId(id), new DonorId(donorId), new DeviceDescription(platform, browser),
-                sessionKind == null ? SessionKind.UNNAMED : sessionKind, signedInAt, lastUsedAt, endedAt, endReason);
+                sessionKind == null ? SessionKind.UNNAMED : sessionKind, signedInAt, lastUsedAt, endedAt, endReason, Optional.ofNullable(statusSecretHash),
+                Optional.ofNullable(wipe));
     }
 }

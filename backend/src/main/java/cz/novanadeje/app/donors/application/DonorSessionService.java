@@ -3,6 +3,7 @@ package cz.novanadeje.app.donors.application;
 import cz.novanadeje.app.donors.domain.DeviceDescription;
 import cz.novanadeje.app.donors.domain.DeviceId;
 import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
+import cz.novanadeje.app.donors.domain.DeviceStatusSecret;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorDevice;
 import cz.novanadeje.app.donors.domain.DonorDeviceRepository;
@@ -53,7 +54,8 @@ public class DonorSessionService {
         if (roles.contains(Role.ADMIN)) {
             donors.recordSignIn(donor.id(), now);
         }
-        return issue(newDevice(donor, description, kind, now), secondFactorVerified, roles, now).tokens();
+        NewDevice opened = newDevice(donor, description, kind, now);
+        return issue(opened.device(), secondFactorVerified, roles, now, opened.statusSecret()).tokens();
     }
 
     @Transactional(readOnly = true)
@@ -64,14 +66,14 @@ public class DonorSessionService {
     @Transactional
     public IssuedTokens continueOn(Donor donor, boolean secondFactorVerified, RequestingDevice requesting) {
         Instant now = clock.instant();
-        DonorDevice device = lastingDevice(donor, requesting, now)
+        NewDevice continued = lastingDevice(donor, requesting, now)
                 .map(found -> {
                     found.recordUse(now);
                     devices.save(found);
-                    return found;
+                    return new NewDevice(found, Optional.<DeviceStatusSecret>empty());
                 })
                 .orElseGet(() -> newDevice(donor, requesting.description(), SessionKind.BROWSER, now));
-        return issue(device, secondFactorVerified, donor.sessionRoles(secondFactorVerified), now).tokens();
+        return issue(continued.device(), secondFactorVerified, donor.sessionRoles(secondFactorVerified), now, continued.statusSecret()).tokens();
     }
 
     @Transactional(noRollbackFor = InvalidRefreshToken.class)
@@ -124,7 +126,7 @@ public class DonorSessionService {
         DonorDevice device = deviceOf(token, donor, description, now);
         device.recordUse(now);
         devices.save(device);
-        Issued successor = issue(device, token.secondFactorVerified(), donor.sessionRoles(token.secondFactorVerified()), now);
+        Issued successor = issue(device, token.secondFactorVerified(), donor.sessionRoles(token.secondFactorVerified()), now, Optional.empty());
         refreshTokens.recordSuccessor(token.id(), successor.refreshTokenId());
         return new RefreshedSession(donor, successor.tokens());
     }
@@ -181,13 +183,15 @@ public class DonorSessionService {
         return device.isActive() && properties.lengths().expiresAt(device.kind(), device.signedInAt(), now).isAfter(now);
     }
 
-    private DonorDevice newDevice(Donor donor, DeviceDescription description, SessionKind kind, Instant now) {
-        DonorDevice device = DonorDevice.signIn(donor.id(), description, kind, now);
+    private NewDevice newDevice(Donor donor, DeviceDescription description, SessionKind kind, Instant now) {
+        Optional<DeviceStatusSecret> statusSecret = kind.keepsNothing() ? Optional.empty() : Optional.of(DeviceStatusSecret.generate());
+        DonorDevice device = statusSecret.map(secret -> DonorDevice.signIn(donor.id(), description, kind, now, secret))
+                .orElseGet(() -> DonorDevice.signIn(donor.id(), description, kind, now));
         devices.save(device);
-        return device;
+        return new NewDevice(device, statusSecret);
     }
 
-    private Issued issue(DonorDevice device, boolean secondFactorVerified, Set<Role> roles, Instant now) {
+    private Issued issue(DonorDevice device, boolean secondFactorVerified, Set<Role> roles, Instant now, Optional<DeviceStatusSecret> statusSecret) {
         IssuedAccessToken access = accessTokens.issue(device.donorId(), roles, device.id(), now);
         RefreshTokenSecret secret = RefreshTokenSecret.generate();
         Instant expiresAt = properties.lengths().expiresAt(device.kind(), device.signedInAt(), now);
@@ -195,9 +199,12 @@ public class DonorSessionService {
                 secondFactorVerified);
         refreshTokens.save(refresh);
         return new Issued(refresh.id(), new IssuedTokens(access.token(), access.expiresAt(), secret.value(), refresh.expiresAt(), roles,
-                device.kind()));
+                device.kind(), statusSecret));
     }
 
     private record Issued(UUID refreshTokenId, IssuedTokens tokens) {
+    }
+
+    private record NewDevice(DonorDevice device, Optional<DeviceStatusSecret> statusSecret) {
     }
 }

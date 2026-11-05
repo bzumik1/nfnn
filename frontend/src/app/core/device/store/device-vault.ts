@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import { AdministrationAccess } from '../../auth/administration-access';
 import type { DeviceAccount, SessionDevice, SignInSecret } from '../../auth/session-device';
+import { SignedOutNotice } from '../../auth/signed-out-notice';
 import { TAB_LOCKS } from '../../auth/session-tabs';
 import { ErrorReporter } from '../../errors/error-reporter';
 import {
@@ -34,6 +35,8 @@ import {
   WorkerPasswordKeyDerivation,
 } from '../crypto/password-key';
 import { prfInput, type PrfReading, readPrf } from '../crypto/prf';
+import type { DeviceStatusResponse } from '../status/device-status-api';
+import { DEVICE_STATUS_SOURCE } from '../status/device-status-source';
 import { AccountStore, type CopyContents } from './account-store';
 import type { DeviceStorage, StorageChange } from './device-storage';
 import { idbDeviceStoragePresent, openIdbDeviceStorage } from './idb-device-storage';
@@ -131,6 +134,8 @@ export class DeviceVault implements SessionDevice {
   private readonly reporter = inject(ErrorReporter);
   private readonly passkeys = inject(PASSKEY_READER);
   private readonly access = inject(AdministrationAccess);
+  private readonly statusSource = inject(DEVICE_STATUS_SOURCE);
+  private readonly signedOutNotice = inject(SignedOutNotice);
   private readonly openedCopy = signal<OpenedCopy | null>(null);
   private readonly currentMode = signal<VaultMode | null>(null);
   private readonly lockedCopy = signal(false);
@@ -178,11 +183,18 @@ export class DeviceVault implements SessionDevice {
     });
   }
 
-  signedIn(account: DeviceAccount, secret: SignInSecret, storeNothing = false): Promise<void> {
+  signedIn(
+    account: DeviceAccount,
+    secret: SignInSecret,
+    storeNothing = false,
+    deviceSecret?: string,
+  ): Promise<void> {
     this.sessionGeneration++;
     return this.run(async () => {
       try {
-        await this.withMemoryFallback(() => this.openAtSignIn(account, secret, storeNothing));
+        await this.withMemoryFallback(() =>
+          this.openAtSignIn(account, secret, storeNothing, deviceSecret),
+        );
         if (account.administrator === true) {
           await this.openAdministrationAtSignIn(account, secret, storeNothing);
         }
@@ -197,7 +209,7 @@ export class DeviceVault implements SessionDevice {
       this.withMemoryFallback(() =>
         storeNothing ? this.openInMemoryAtRestore(account) : this.openAtRestore(account),
       ),
-    );
+    ).then(() => this.checkStatus());
   }
 
   signedOut(account: DeviceAccount): Promise<void> {
@@ -206,7 +218,7 @@ export class DeviceVault implements SessionDevice {
       const storage = await this.storageOf(account);
       this.closeOpen();
       await this.endSessions(storage);
-    });
+    }).then(() => this.checkStatus());
   }
 
   sessionLost(): Promise<void> {
@@ -214,7 +226,7 @@ export class DeviceVault implements SessionDevice {
     return this.run(async () => {
       this.closeOpen();
       await this.endSessions(await this.presentStorage().catch(() => null));
-    });
+    }).then(() => this.checkStatus());
   }
 
   signedOutElsewhere(): void {
@@ -487,10 +499,77 @@ export class DeviceVault implements SessionDevice {
     return locks.request(`${COPY_LOCK_PREFIX}${store.copyId}`, work) as Promise<T>;
   }
 
+  private async checkStatus(): Promise<void> {
+    try {
+      const secrets = await this.run(() => this.secretsHeld());
+      for (const deviceSecret of secrets) {
+        const answer = await this.statusSource(deviceSecret);
+        if (answer !== null) {
+          await this.run(() => this.obey(deviceSecret, answer));
+        }
+      }
+    } catch {
+      return;
+    }
+  }
+
+  private async secretsHeld(): Promise<readonly string[]> {
+    const storage = await this.statusStorage();
+    if (storage === null) {
+      return [];
+    }
+    const secrets = (await storage.entries()).map((entry) => entry.deviceSecret);
+    return [...new Set(secrets.filter((held): held is string => held !== undefined))];
+  }
+
+  private async obey(deviceSecret: string, answer: DeviceStatusResponse): Promise<void> {
+    const wipe = wipeOf(answer);
+    const storage = wipe === null ? null : await this.statusStorage();
+    if (wipe === null || storage === null) {
+      return;
+    }
+    const entries = await storage.entries();
+    const holders = entries.filter((entry) => entry.deviceSecret === deviceSecret);
+    const accounts = new Set(holders.map((entry) => entry.userHandleTag));
+    const wiped = entries.filter(
+      (entry) =>
+        (holders.includes(entry) ||
+          (entry.userHandleTag !== null && accounts.has(entry.userHandleTag))) &&
+        (wipe === 'all' || entry.kind === 'administration'),
+    );
+    if (wiped.length === 0) {
+      return;
+    }
+    const remaining = entries.length - wiped.length;
+    await storage.write({
+      deleteCopies: wiped.map((entry) => entry.copyId),
+      ...(remaining === 0 ? { deviceSalt: null } : {}),
+    });
+    const opened = this.openedCopy()?.store.copyId;
+    if (wiped.some((entry) => entry.copyId === opened)) {
+      this.closeOpen();
+    }
+    for (const entry of wiped) {
+      this.announce(entry.copyId, 'deleted');
+    }
+    await this.afterRemoval(storage);
+    if (wiped.some(isDonor)) {
+      this.signedOutNotice.show('device-data-deleted');
+    }
+  }
+
+  private async statusStorage(): Promise<DeviceStorage | null> {
+    if (this.memoryOnly !== null) {
+      return null;
+    }
+    return this.presentStorage().catch(() => null);
+  }
+
   private async openAtSignIn(
     account: DeviceAccount,
     secret: SignInSecret,
     storeNothing: boolean,
+    deviceSecret?: string,
   ): Promise<void> {
     this.closeOpen();
     if (storeNothing) {
@@ -506,7 +585,7 @@ export class DeviceVault implements SessionDevice {
       opening === 'undecided' ||
       (entry !== null && opening === null && !refusedBy(entry.wraps, secret))
     ) {
-      await this.committed(storage, withoutSessions(entries));
+      await this.committed(storage, heldAfterSessions(entries, entry!, deviceSecret));
       this.lockedCopy.set(true);
       return;
     }
@@ -523,7 +602,7 @@ export class DeviceVault implements SessionDevice {
       storage,
       joined(withoutSessions(others), {
         deleteCopies: entry !== null && opening === null ? [entry.copyId] : [],
-        putEntries: [{ copyId: copy.copyId, kind: 'donor', ...tags, wraps }],
+        putEntries: [heldBy({ copyId: copy.copyId, kind: 'donor', ...tags, wraps }, deviceSecret)],
         putSessionKeys: [{ copyId: copy.copyId, key: sessionKey }],
       }),
     );
@@ -1112,6 +1191,45 @@ function withoutSessions(entries: readonly RegistryEntry[]): StorageChange {
     putEntries: kept,
     deleteSessionKeys: kept.map((entry) => entry.copyId),
   };
+}
+
+function heldAfterSessions(
+  entries: readonly RegistryEntry[],
+  entry: RegistryEntry,
+  deviceSecret: string | undefined,
+): StorageChange {
+  const change = withoutSessions(entries);
+  const putEntries = change.putEntries ?? [];
+  const kept = putEntries.find((candidate) => candidate.copyId === entry.copyId) ?? entry;
+  if ((change.deleteCopies ?? []).includes(entry.copyId)) {
+    return change;
+  }
+  return {
+    ...change,
+    putEntries: [
+      ...putEntries.filter((candidate) => candidate.copyId !== entry.copyId),
+      heldBy(kept, deviceSecret),
+    ],
+  };
+}
+
+function heldBy(entry: RegistryEntry, deviceSecret: string | undefined): RegistryEntry {
+  const { copyId, kind, lookupTag, userHandleTag, wraps } = entry;
+  const held = { copyId, kind, lookupTag, userHandleTag, wraps };
+  return deviceSecret === undefined ? held : { ...held, deviceSecret };
+}
+
+function wipeOf(answer: DeviceStatusResponse): 'all' | 'administration' | null {
+  switch (answer.status) {
+    case 'wipe-all':
+    case 'unknown':
+      return 'all';
+    case 'wipe-admin':
+      return 'administration';
+    case 'signed-in':
+    case 'signed-out':
+      return answer.administrator ? null : 'administration';
+  }
 }
 
 function joined(first: StorageChange, second: StorageChange): StorageChange {

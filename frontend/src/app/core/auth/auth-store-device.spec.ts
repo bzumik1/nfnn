@@ -34,15 +34,22 @@ class RecordingDevice implements SessionDevice {
   input: Uint8Array<ArrayBuffer> | null = PRF_INPUT;
   secrets: SignInSecret[] = [];
   storesNothing: boolean[] = [];
+  deviceSecrets: (string | undefined)[] = [];
 
   async prfInput() {
     this.calls.push(['prfInput']);
     return this.input;
   }
-  async signedIn(account: DeviceAccount, secret: SignInSecret, storeNothing = false) {
+  async signedIn(
+    account: DeviceAccount,
+    secret: SignInSecret,
+    storeNothing = false,
+    deviceSecret?: string,
+  ) {
     this.calls.push(['signedIn', account, secret.kind]);
     this.secrets.push(secret);
     this.storesNothing.push(storeNothing);
+    this.deviceSecrets.push(deviceSecret);
   }
   async restored(account: DeviceAccount, storeNothing = false) {
     this.calls.push(['restored', account]);
@@ -107,6 +114,22 @@ describe('Given the auth store on a device that keeps a copy of the donor data',
 
     expect(device.calls).toEqual([['signedIn', JANA, 'password']]);
     expect(device.secrets[0]).toEqual({ kind: 'password', password: 'correct horse battery' });
+  });
+
+  it('when the sign-in answer carries a device secret, then the device keeps it with the copy', () => {
+    store.login('jana@example.cz', 'correct horse battery').subscribe();
+    http
+      .expectOne('/api/donors/auth/login')
+      .flush({ ...authResponse('token-1'), deviceSecret: 'd'.repeat(43) });
+
+    expect(device.deviceSecrets).toEqual(['d'.repeat(43)]);
+  });
+
+  it('when the sign-in answer carries no device secret, then the device gets none', () => {
+    store.login('jana@example.cz', 'correct horse battery').subscribe();
+    http.expectOne('/api/donors/auth/login').flush(authResponse('token-1'));
+
+    expect(device.deviceSecrets).toEqual([undefined]);
   });
 
   it('when the second factor completes a password sign-in, then the device gets the password the dialog kept', () => {
