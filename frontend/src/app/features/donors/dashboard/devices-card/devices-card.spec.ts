@@ -163,9 +163,12 @@ describe("Given a donor's signed-in devices card", () => {
       expect(document.activeElement).toBe(element('h2'));
     });
 
-    it('and signing out fails, then the reason is shown and the row stays', async () => {
-      rows()[1].querySelector<HTMLButtonElement>('button')?.click();
+    it('and signing out fails, then the reason is shown, the row stays and focus is back on its button', async () => {
+      const button = rows()[1].querySelector<HTMLButtonElement>('button');
+      button?.focus();
+      button?.click();
       await settle();
+      element<HTMLElement>('h2')?.focus();
       http
         .expectOne({ method: 'DELETE', url: `${DEVICES_URL}/${IPHONE.id}` })
         .flush(problem('x', 'Server neodpovídá'), { status: 500, statusText: 'Server Error' });
@@ -173,6 +176,23 @@ describe("Given a donor's signed-in devices card", () => {
 
       expect(text(element('[role="alert"]'))).toContain('Server neodpovídá');
       expect(rows()).toHaveLength(3);
+      expect(document.activeElement).toBe(rows()[1].querySelector('button'));
+    });
+
+    it('and signing out every other device fails, then the reason is shown, every row stays and focus is back on the button', async () => {
+      const others = element<HTMLButtonElement>('.devices-sign-out-others');
+      others?.focus();
+      others?.click();
+      await settle();
+      element<HTMLElement>('h2')?.focus();
+      http
+        .expectOne({ method: 'DELETE', url: DEVICES_URL })
+        .flush(problem('x', 'Server neodpovídá'), { status: 500, statusText: 'Server Error' });
+      await settle();
+
+      expect(text(element('[role="alert"]'))).toContain('Server neodpovídá');
+      expect(rows()).toHaveLength(3);
+      expect(document.activeElement).toBe(element('.devices-sign-out-others'));
     });
 
     it('and the iPhone was already signed out elsewhere, then its row goes with the usual status and no alert', async () => {

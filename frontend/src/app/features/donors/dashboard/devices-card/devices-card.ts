@@ -84,7 +84,7 @@ export class DevicesCard {
           this.removed(device);
           return;
         }
-        this.failed(failure);
+        this.failed(failure, () => this.document.getElementById(this.signOutButtonId(device)));
       },
     });
   }
@@ -105,7 +105,7 @@ export class DevicesCard {
         );
         this.focusAfterRender(() => this.heading().nativeElement);
       },
-      error: (failure: unknown) => this.failed(failure),
+      error: (failure: unknown) => this.failed(failure, () => this.othersButton()?.nativeElement),
     });
   }
 
@@ -159,11 +159,12 @@ export class DevicesCard {
     this.signedOut.set('');
   }
 
-  private failed(failure: unknown): void {
+  private failed(failure: unknown, pressed: () => HTMLElement | null | undefined): void {
     this.signingOut.set(null);
     if (this.sessionLost(failure)) {
       return;
     }
+    this.focusAfterRender(pressed);
     this.actionError.set(
       describeProblem(
         failure,
