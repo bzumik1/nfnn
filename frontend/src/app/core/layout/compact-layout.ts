@@ -4,6 +4,7 @@ import { computed, DestroyRef, inject, Injectable, Signal, signal } from '@angul
 import { BREAKPOINTS, downQuery } from './breakpoints';
 
 const DEFAULT_ROOT_FONT_PX = 16;
+const NO_WIDTH = 1;
 
 @Injectable({ providedIn: 'root' })
 export class CompactLayout {
@@ -23,6 +24,9 @@ export class CompactLayout {
       parseFloat(view.getComputedStyle?.(document.documentElement).fontSize ?? '') ||
       DEFAULT_ROOT_FONT_PX;
     const follow = (): void => {
+      if (view.innerWidth <= NO_WIDTH) {
+        return;
+      }
       this.compact.set(query.matches);
       this.narrowForText.set(
         view.innerWidth <= (BREAKPOINTS.nav * rootFontPx()) / DEFAULT_ROOT_FONT_PX,

@@ -128,6 +128,18 @@ describe('Given the compact layout of the app', () => {
     expect(layout.isCompact()).toBe(false);
   });
 
+  it('when the window has no width for a moment, as Chromium reports while it captures a page beyond its viewport, then the layout stays as it was', () => {
+    const view = new FakeWindow(1280);
+    const layout = layoutIn(view);
+
+    view.resize(1);
+    const withoutWidth = layout.isCompact();
+    view.resize(1280);
+
+    expect(withoutWidth).toBe(false);
+    expect(layout.isCompact()).toBe(false);
+  });
+
   it('when the browser cannot answer media queries, then the layout is wide, as today', () => {
     expect(layoutIn({}).isCompact()).toBe(false);
     TestBed.resetTestingModule();
