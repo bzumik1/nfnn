@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
-FROM node:24-alpine AS build
+FROM node:26-alpine AS build
 WORKDIR /workspace
 COPY package.json package-lock.json* ./
 RUN npm ci
@@ -8,7 +8,7 @@ COPY . .
 ARG REVISION=dev
 RUN npm run build -- --configuration=production --define "NFNN_APP_REVISION='${REVISION}'"
 
-FROM nginx:1.30-alpine
+FROM nginx:1.31-alpine
 RUN mkdir -p /logs
 COPY --from=build /workspace/dist/frontend/browser /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
