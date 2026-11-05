@@ -43,6 +43,7 @@ import { FormField } from '../../../shared/ui/form-field/form-field';
 import { DownloadProgress } from '../../../shared/ui/download-progress/download-progress';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 import { AdminReceiptDownloads } from './admin-receipt-downloads';
+import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 
 type LoadState = 'loading' | 'ready' | 'missing' | 'error';
 
@@ -103,6 +104,7 @@ const PAIRING_LABELS: Record<NonNullable<DonationItem['pairedBy']>, string> = {
     LiveNotice,
     RouterLink,
     TrackedForm,
+    NeedsConnection,
   ],
   providers: [AdminReceiptDownloads],
   templateUrl: './admin-donor-detail.html',

@@ -73,6 +73,7 @@
             <p class="ui-field-error" role="alert">{{ codeError() }}</p>
           }
           <button
+            appNeedsConnection
             type="submit"
             class="ui-button ui-button--primary ui-button--block"
             [disabled]="unlocking()"
@@ -493,6 +494,7 @@
             Po uložení se web asi na minutu restartuje.
           </p>
           <button
+            appNeedsConnection
             type="submit"
             class="ui-button ui-button--primary ui-button--block"
             [disabled]="saving()"
@@ -685,6 +687,7 @@
           }
           <div class="restore-actions">
             <button
+              appNeedsConnection
               type="submit"
               class="ui-button ui-button--primary ui-button--block"
               [disabled]="

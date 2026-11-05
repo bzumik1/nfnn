@@ -119,6 +119,7 @@
                             čekající na přiřazení a odpověď se změní na Ne. Vrátit?</span
                           >
                           <button
+                            appNeedsConnection
                             type="button"
                             class="ui-button ui-button--small ui-button--danger"
                             [disabled]="busy()"
@@ -157,6 +158,7 @@
                             se znovu?</span
                           >
                           <button
+                            appNeedsConnection
                             type="button"
                             class="ui-button ui-button--small ui-button--danger"
                             [disabled]="busy()"

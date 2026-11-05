@@ -51,6 +51,7 @@
                 </p>
                 <div class="passkeys-buttons">
                   <button
+                    appNeedsConnection
                     type="button"
                     class="ui-button passkeys-action ui-button--danger-soft"
                     [disabled]="removing() !== null"
@@ -102,6 +103,7 @@
                 }
                 <div class="passkeys-buttons">
                   <button
+                    appNeedsConnection
                     type="submit"
                     class="ui-button ui-button--primary passkeys-save"
                     [disabled]="renameSaving()"
@@ -136,6 +138,7 @@
                 </button>
                 @if (!lastSignInMethod()) {
                   <button
+                    appNeedsConnection
                     type="button"
                     class="ui-button passkeys-action ui-button--danger-soft"
                     [disabled]="removing() !== null"
@@ -257,6 +260,7 @@
 
       <div class="passkeys-buttons">
         <button
+          appNeedsConnection
           type="submit"
           class="ui-button ui-button--primary passkeys-save"
           [disabled]="saving()"

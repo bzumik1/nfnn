@@ -18,6 +18,7 @@ import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { formatBankTime } from '../../donations/donation-date';
 import { AdminApi, SymbolClaimResponse } from '../admin-api';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
+import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -26,7 +27,7 @@ const FORBIDDEN = 'auth/forbidden';
 
 @Component({
   selector: 'app-admin-symbol-claims',
-  imports: [LiveNotice, RouterLink],
+  imports: [LiveNotice, RouterLink, NeedsConnection],
   templateUrl: './admin-symbol-claims.html',
   styleUrl: './admin-symbol-claims.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

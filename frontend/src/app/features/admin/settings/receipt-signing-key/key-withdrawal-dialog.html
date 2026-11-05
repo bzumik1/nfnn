@@ -106,6 +106,7 @@
     }
     <div class="withdrawal-actions">
       <button
+        appNeedsConnection
         type="submit"
         class="ui-button ui-button--danger"
         [disabled]="withdrawing() || (!asksCode() && !passkeySupported)"

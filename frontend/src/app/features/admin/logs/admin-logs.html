@@ -112,7 +112,12 @@
                   required
                 />
               </app-form-field>
-              <button type="submit" class="ui-button" [disabled]="searchState() === 'loading'">
+              <button
+                appNeedsConnection
+                type="submit"
+                class="ui-button"
+                [disabled]="searchState() === 'loading'"
+              >
                 @if (searchState() === 'loading') {
                   <ng-container i18n="@@admin.logs.search.busy">Hledáme…</ng-container>
                 } @else {
@@ -302,6 +307,7 @@
               />
             </app-form-field>
             <button
+              appNeedsConnection
               type="submit"
               class="ui-button ui-button--primary"
               [disabled]="levelState() === 'loading'"

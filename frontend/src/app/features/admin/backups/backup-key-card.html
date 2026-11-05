@@ -79,7 +79,12 @@
               </app-form-field>
             }
             <div class="key-actions">
-              <button type="submit" class="ui-button ui-button--primary" [disabled]="confirming()">
+              <button
+                appNeedsConnection
+                type="submit"
+                class="ui-button ui-button--primary"
+                [disabled]="confirming()"
+              >
                 @if (confirming()) {
                   <ng-container i18n="@@admin.backups.key.confirm.busy">Potvrzujeme…</ng-container>
                 } @else {
@@ -173,6 +178,7 @@
           }
           <div class="key-actions">
             <button
+              appNeedsConnection
               #revealButton
               type="submit"
               class="ui-button ui-button--primary"

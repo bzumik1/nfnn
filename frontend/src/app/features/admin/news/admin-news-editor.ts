@@ -52,6 +52,7 @@ import { FocalPointPicker, PreviewShape } from '../focal-point-picker/focal-poin
 import { ContentPreview, PreviewContent } from '../content-preview/content-preview';
 import { GuardsUnsavedChanges } from '../unsaved-changes/unsaved-changes-guard';
 import { UnsavedChangesDialog } from '../unsaved-changes/unsaved-changes-dialog';
+import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 
 type LoadState = 'loading' | 'ready' | 'error';
 type EditorMode = 'edit' | 'preview';
@@ -80,6 +81,7 @@ const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
     ContentPreview,
     ActionBar,
     FocalPointPicker,
+    NeedsConnection,
   ],
   templateUrl: './admin-news-editor.html',
   styleUrl: './admin-news-editor.scss',

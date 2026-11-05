@@ -328,6 +328,7 @@
             <div class="bar-actions">
               @if (isPublished()) {
                 <button
+                  appNeedsConnection
                   #saveButton
                   type="submit"
                   class="ui-button ui-button--primary"
@@ -369,6 +370,7 @@
                 }
               } @else {
                 <button
+                  appNeedsConnection
                   #saveButton
                   type="submit"
                   class="ui-button"
@@ -381,6 +383,7 @@
                   }
                 </button>
                 <button
+                  appNeedsConnection
                   type="submit"
                   class="ui-button ui-button--primary"
                   [disabled]="busy() || uploading()"
@@ -420,6 +423,7 @@
                   >Opravdu smazat aktualitu „{{ articleTitle }}“?</span
                 >
                 <button
+                  appNeedsConnection
                   type="button"
                   class="ui-button ui-button--danger"
                   [disabled]="deleting()"

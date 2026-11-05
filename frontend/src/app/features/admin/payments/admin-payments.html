@@ -294,6 +294,7 @@
                       <span class="confirm" role="group" [attr.aria-label]="unpairLabel(item)">
                         <span class="confirm-question">{{ unpairQuestion(item) }}</span>
                         <button
+                          appNeedsConnection
                           type="button"
                           class="ui-button ui-button--small ui-button--danger"
                           [disabled]="busy()"

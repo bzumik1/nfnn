@@ -277,6 +277,7 @@
                     skončí.</span
                   >
                   <button
+                    appNeedsConnection
                     type="button"
                     class="ui-button ui-button--small ui-button--danger"
                     [disabled]="busy()"
@@ -330,6 +331,7 @@
                     >Dárce se jimi pak nepřihlásí a všechna jeho přihlášení skončí. Odebrat?</span
                   >
                   <button
+                    appNeedsConnection
                     type="button"
                     class="ui-button ui-button--small ui-button--danger"
                     [disabled]="busy()"
@@ -530,6 +532,7 @@
                               nepřiřadíme. Vypnout?</span
                             >
                             <button
+                              appNeedsConnection
                               type="button"
                               class="ui-button ui-button--small ui-button--danger"
                               [disabled]="busy()"
@@ -609,6 +612,7 @@
                               Odebrat?</span
                             >
                             <button
+                              appNeedsConnection
                               type="button"
                               class="ui-button ui-button--small ui-button--danger"
                               [disabled]="busy()"
@@ -819,6 +823,7 @@
                   </select>
                 </app-form-field>
                 <button
+                  appNeedsConnection
                   #issueSubmit
                   type="submit"
                   class="ui-button ui-button--primary"
@@ -1053,6 +1058,7 @@
     }
     <div class="erase-actions">
       <button
+        appNeedsConnection
         #eraseSubmit
         type="button"
         class="ui-button ui-button--danger"

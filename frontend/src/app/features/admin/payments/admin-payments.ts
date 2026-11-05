@@ -47,6 +47,7 @@ import {
   PaymentQuery,
 } from '../admin-api';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
+import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -100,7 +101,7 @@ const METHOD_LABELS: Record<PairingMethod, string> = {
 
 @Component({
   selector: 'app-admin-payments',
-  imports: [LiveNotice, Dialog, RouterLink],
+  imports: [LiveNotice, Dialog, RouterLink, NeedsConnection],
   templateUrl: './admin-payments.html',
   styleUrl: './admin-payments.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

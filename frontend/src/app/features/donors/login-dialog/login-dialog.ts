@@ -63,6 +63,7 @@ import {
   POSTAL_CODE_MESSAGES,
   STREET_MESSAGES,
 } from '../donor-field-messages';
+import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 
 interface RegistrationFields {
   name: string;
@@ -120,6 +121,7 @@ const REGISTRATION_FIELDS: Readonly<Record<string, string>> = {
     QrCode,
     CompanyIdentifierValidator,
     PrintableOnReceiptValidator,
+    NeedsConnection,
   ],
   templateUrl: './login-dialog.html',
   styleUrl: './login-dialog.scss',
