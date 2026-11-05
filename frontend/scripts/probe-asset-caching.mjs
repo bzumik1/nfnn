@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { immutableLocations } from './immutable-locations.mjs';
+import { readSecurityHeaders } from './security-headers.mjs';
 
 const [baseUrl, distDir, nginxConf] = process.argv.slice(2);
 if (!baseUrl || !distDir || !nginxConf) {
@@ -11,6 +12,7 @@ if (!baseUrl || !distDir || !nginxConf) {
 const IMMUTABLE = 'public, max-age=31536000, immutable';
 const SHELL_AT_EDGE = 'max-age=0, stale-if-error=604800';
 const HOURLY_AT_EDGE = 'max-age=3600, stale-if-error=604800';
+const CONTENT_SECURITY_POLICY = readSecurityHeaders()['Content-Security-Policy'];
 const HASHED_BUNDLE = /^(?:chunk|main|polyfills|styles|worker)-[A-Za-z0-9_-]{8}\.(?:js|css)$/;
 const HASHED_RECEIPT_FONT = /^receipt-fonts\/(?:body|body-bold|heading)\.[0-9a-f]{16}\.ttf$/;
 const NEVER_IMMUTABLE = [
@@ -174,8 +176,8 @@ for (const file of built) {
   if (contentType !== null && answer.contentEncoding !== 'gzip') {
     fail(`/${file} is sent without gzip ("${answer.contentEncoding}")`);
   }
-  if (!answer.csp) {
-    fail(`/${file} carries no Content-Security-Policy`);
+  if (answer.csp !== CONTENT_SECURITY_POLICY) {
+    fail(`/${file} carries the Content-Security-Policy "${answer.csp}", not the snippet's`);
   }
   if (answer.server !== 'nginx') {
     fail(`/${file} names the server as "${answer.server}", expected "nginx" without its version`);
@@ -201,8 +203,8 @@ for (const path of [...MISSING_HASHED, ...MISSING_ASSETS]) {
       `missing ${path} answered with Cloudflare-CDN-Cache-Control "${answer.edge}", so Cloudflare could keep its 404`,
     );
   }
-  if (!answer.csp) {
-    fail(`missing ${path} carries no Content-Security-Policy`);
+  if (answer.csp !== CONTENT_SECURITY_POLICY) {
+    fail(`missing ${path} carries the Content-Security-Policy "${answer.csp}", not the snippet's`);
   }
 }
 
@@ -221,6 +223,11 @@ for (const path of APP_ROUTES) {
   }
   if (answer.validator === '') {
     fail(`the app route ${path} carries neither ETag nor Last-Modified`);
+  }
+  if (answer.csp !== CONTENT_SECURITY_POLICY) {
+    fail(
+      `the app route ${path} carries the Content-Security-Policy "${answer.csp}", not the snippet's`,
+    );
   }
 }
 

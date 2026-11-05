@@ -23,7 +23,7 @@ import { promisify } from 'node:util';
 const run = promisify(execFile);
 
 const FRONTEND = join(__dirname, '..', '..');
-export const PROBE_WORKER = '/pwa-probe-sw.js';
+export const PROBE_WORKER = '/ngsw-worker.js';
 export const PROBE_MANIFEST = '/pwa-probe.json';
 export const MARKER = '/pwa-marker.txt';
 export const VARIANTS = ['a', 'b'] as const;
