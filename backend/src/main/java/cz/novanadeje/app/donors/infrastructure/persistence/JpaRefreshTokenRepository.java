@@ -36,16 +36,17 @@ class JpaRefreshTokenRepository implements RefreshTokenRepository {
 
     @Override
     public Optional<RefreshToken> findBySecretHashForUpdate(String secretHash) {
-        return Optional.empty();
+        return jpa.findForUpdateBySecretHash(secretHash).map(RefreshTokenJpaEntity::toDomain);
     }
 
     @Override
     public void recordSuccessor(UUID tokenId, UUID successorId) {
+        jpa.recordSuccessor(tokenId, successorId);
     }
 
     @Override
     public boolean revokeIfUnused(UUID tokenId, Instant at) {
-        return false;
+        return jpa.revokeIfUnused(tokenId, at) == 1;
     }
 
     @Override

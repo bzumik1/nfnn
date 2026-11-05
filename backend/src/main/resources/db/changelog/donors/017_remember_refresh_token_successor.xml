@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="017-remember-refresh-token-successor" author="nfnn">
+        <addColumn tableName="donor_refresh_token">
+            <column name="successor_id" type="uuid"/>
+        </addColumn>
+        <addForeignKeyConstraint baseTableName="donor_refresh_token" baseColumnNames="successor_id"
+                                 referencedTableName="donor_refresh_token" referencedColumnNames="id"
+                                 constraintName="fk_donor_refresh_token_successor" onDelete="SET NULL"/>
+        <createIndex tableName="donor_refresh_token" indexName="ix_donor_refresh_token_successor">
+            <column name="successor_id"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

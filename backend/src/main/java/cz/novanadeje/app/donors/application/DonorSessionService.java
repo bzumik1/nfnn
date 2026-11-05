@@ -13,7 +13,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 
 @Service
 public class DonorSessionService {
@@ -40,22 +42,21 @@ public class DonorSessionService {
         if (roles.contains(Role.ADMIN)) {
             donors.recordSignIn(donor.id(), now);
         }
-        return issue(donor.id(), roles, secondFactorVerified, now);
+        return issue(donor.id(), roles, secondFactorVerified, now).tokens();
     }
 
     @Transactional
     public IssuedTokens open(Donor donor, boolean secondFactorVerified) {
-        return issue(donor.id(), donor.sessionRoles(secondFactorVerified), secondFactorVerified, clock.instant());
+        return issue(donor.id(), donor.sessionRoles(secondFactorVerified), secondFactorVerified, clock.instant()).tokens();
     }
 
     @Transactional(noRollbackFor = InvalidRefreshToken.class)
     public RefreshedSession refresh(String presentedSecret) {
         Instant now = clock.instant();
-        RefreshToken token = refreshTokens.findBySecretHash(RefreshTokenSecret.fromValue(presentedSecret).hash())
+        RefreshToken token = refreshTokens.findBySecretHashForUpdate(RefreshTokenSecret.fromValue(presentedSecret).hash())
                 .orElseThrow(InvalidRefreshToken::new);
         if (token.isUsed()) {
-            refreshTokens.revokeAllOf(token.donorId(), now);
-            throw new InvalidRefreshToken();
+            return reissueWithinReuseGrace(token, now);
         }
         if (!token.isUsableAt(now) || token.clientId().isPresent()) {
             throw new InvalidRefreshToken();
@@ -65,7 +66,22 @@ public class DonorSessionService {
             refreshTokens.revokeAllOf(token.donorId(), now);
             throw new InvalidRefreshToken();
         }
-        return new RefreshedSession(donor, issue(donor.id(), donor.sessionRoles(token.secondFactorVerified()), token.secondFactorVerified(), now));
+        return succeed(token, donor, now);
+    }
+
+    private RefreshedSession reissueWithinReuseGrace(RefreshToken token, Instant now) {
+        Optional<Donor> donor = token.mayBeReissuedAt(now) ? donors.findById(token.donorId()) : Optional.empty();
+        if (donor.isEmpty() || !refreshTokens.revokeIfUnused(token.successorId().orElseThrow(), now)) {
+            refreshTokens.revokeAllOf(token.donorId(), now);
+            throw new InvalidRefreshToken();
+        }
+        return succeed(token, donor.get(), now);
+    }
+
+    private RefreshedSession succeed(RefreshToken token, Donor donor, Instant now) {
+        Issued successor = issue(donor.id(), donor.sessionRoles(token.secondFactorVerified()), token.secondFactorVerified(), now);
+        refreshTokens.recordSuccessor(token.id(), successor.refreshTokenId());
+        return new RefreshedSession(donor, successor.tokens());
     }
 
     @Transactional
@@ -76,11 +92,14 @@ public class DonorSessionService {
         });
     }
 
-    private IssuedTokens issue(DonorId donorId, Set<Role> roles, boolean secondFactorVerified, Instant now) {
+    private Issued issue(DonorId donorId, Set<Role> roles, boolean secondFactorVerified, Instant now) {
         IssuedAccessToken access = accessTokens.issue(donorId, roles, now);
         RefreshTokenSecret secret = RefreshTokenSecret.generate();
         RefreshToken refresh = RefreshToken.issue(secret, donorId, now, properties.refreshTokenTtl(), secondFactorVerified);
         refreshTokens.save(refresh);
-        return new IssuedTokens(access.token(), access.expiresAt(), secret.value(), refresh.expiresAt(), roles);
+        return new Issued(refresh.id(), new IssuedTokens(access.token(), access.expiresAt(), secret.value(), refresh.expiresAt(), roles));
+    }
+
+    private record Issued(UUID refreshTokenId, IssuedTokens tokens) {
     }
 }
