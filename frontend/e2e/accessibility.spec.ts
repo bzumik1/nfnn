@@ -2832,9 +2832,9 @@ test.describe('Given a visitor on a phone who relies on WCAG 2.2 AA', () => {
     const question = page.getByRole('group', { name: /Z tohoto účtu k nám chodí/ });
     await expect(question).toBeVisible();
 
-    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
-      360,
-    );
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.scrollWidth))
+      .toBeLessThanOrEqual(360);
     for (const name of ['Ano, jsou moje', 'Ne, nejsou moje']) {
       const size = await question.getByRole('button', { name }).boundingBox();
       expect(size?.width).toBeGreaterThanOrEqual(24);

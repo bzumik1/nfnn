@@ -60,7 +60,7 @@
     "suite": "frontend-vitest",
     "test": "src/app/shared/ui/side-nav/side-nav.spec.ts > Given a side panel of an area > when the menu is opened > then picking an item navigates there and closes it",
     "reason": "Slice 2.24 (plan v3, approved mockup ucet-a-sprava-mobil-po-revizi-2026-10-31): the side panel lost its menu button; on phones the donor area reaches its sections from the account sheet (2.23) and the administration from the section rows of its overview and /sprava/vice",
-    "replacement": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when the window is as narrow as a phone or a tablet > then the sections of every day and the way to the rest follow the attention card, each one tap away"
+    "replacement": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when the window is as narrow as a phone or a tablet > then the sections of every day and the way to the rest follow what is new since the last sign-in, each one tap away"
   },
   {
     "kind": "retired",
@@ -138,5 +138,260 @@
     "test": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the administration menu, then nothing is cut off, stacked, covered or too small",
     "reason": "Slice 2.24 (plan v3, approved mockup ucet-a-sprava-mobil-po-revizi-2026-10-31): the side panel lost its menu button; on phones the donor area reaches its sections from the account sheet (2.23) and the administration from the section rows of its overview and /sprava/vice; the device step admin-menu became admin-more",
     "replacement": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the occasional and technical sections of the administration, then nothing is cut off, stacked, covered or too small"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the administration menu, then nothing is cut off, stacked, covered or too small #2",
+    "reason": "Slice 2.24 (plan v3, approved mockup ucet-a-sprava-mobil-po-revizi-2026-10-31): the side panel lost its menu button; on phones the donor area reaches its sections from the account sheet (2.23) and the administration from the section rows of its overview and /sprava/vice; the device step admin-menu became admin-more",
+    "replacement": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the occasional and technical sections of the administration, then nothing is cut off, stacked, covered or too small #2"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the administration menu, then nothing is cut off, stacked, covered or too small #3",
+    "reason": "Slice 2.24 (plan v3, approved mockup ucet-a-sprava-mobil-po-revizi-2026-10-31): the side panel lost its menu button; on phones the donor area reaches its sections from the account sheet (2.23) and the administration from the section rows of its overview and /sprava/vice; the device step admin-menu became admin-more",
+    "replacement": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the occasional and technical sections of the administration, then nothing is cut off, stacked, covered or too small #3"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the administration menu, then nothing is cut off, stacked, covered or too small #4",
+    "reason": "Slice 2.24 (plan v3, approved mockup ucet-a-sprava-mobil-po-revizi-2026-10-31): the side panel lost its menu button; on phones the donor area reaches its sections from the account sheet (2.23) and the administration from the section rows of its overview and /sprava/vice; the device step admin-menu became admin-more",
+    "replacement": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the occasional and technical sections of the administration, then nothing is cut off, stacked, covered or too small #4"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the administration menu, then nothing is cut off, stacked, covered or too small #5",
+    "reason": "Slice 2.24 (plan v3, approved mockup ucet-a-sprava-mobil-po-revizi-2026-10-31): the side panel lost its menu button; on phones the donor area reaches its sections from the account sheet (2.23) and the administration from the section rows of its overview and /sprava/vice; the device step admin-menu became admin-more",
+    "replacement": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the occasional and technical sections of the administration, then nothing is cut off, stacked, covered or too small #5"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the administration menu, then nothing is cut off, stacked, covered or too small #6",
+    "reason": "Slice 2.24 (plan v3, approved mockup ucet-a-sprava-mobil-po-revizi-2026-10-31): the side panel lost its menu button; on phones the donor area reaches its sections from the account sheet (2.23) and the administration from the section rows of its overview and /sprava/vice; the device step admin-menu became admin-more",
+    "replacement": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the occasional and technical sections of the administration, then nothing is cut off, stacked, covered or too small #6"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the administration menu, then nothing is cut off, stacked, covered or too small #7",
+    "reason": "Slice 2.24 (plan v3, approved mockup ucet-a-sprava-mobil-po-revizi-2026-10-31): the side panel lost its menu button; on phones the donor area reaches its sections from the account sheet (2.23) and the administration from the section rows of its overview and /sprava/vice; the device step admin-menu became admin-more",
+    "replacement": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the occasional and technical sections of the administration, then nothing is cut off, stacked, covered or too small #7"
+  },
+  {
+    "path": "GET /api/admin/*",
+    "scenario": "content/place_photo_focal_point: *",
+    "kind": "headers",
+    "field": "nfnn-api",
+    "reason": "2.18 (#332) bumped the API generation from 1 to 2, so every /api answer names nfnn-api 2; the recording of main this PR is compared with (9e0de65, the newest green push run, since the push run of 38f51b6 failed) predates 2.18, and these scenarios came to main after the recording 2.18 itself was compared with, so 2.18.json does not name them",
+    "contract": "docs/api-contract.md, Conventions (Versions)"
+  },
+  {
+    "path": "GET /api/content/*",
+    "scenario": "content/place_photo_focal_point: *",
+    "kind": "headers",
+    "field": "nfnn-api",
+    "reason": "2.18 (#332) bumped the API generation from 1 to 2, so every /api answer names nfnn-api 2; the recording of main this PR is compared with (9e0de65, the newest green push run, since the push run of 38f51b6 failed) predates 2.18, and these scenarios came to main after the recording 2.18 itself was compared with, so 2.18.json does not name them",
+    "contract": "docs/api-contract.md, Conventions (Versions)"
+  },
+  {
+    "path": "POST /api/admin/*",
+    "scenario": "content/place_photo_focal_point: *",
+    "kind": "headers",
+    "field": "nfnn-api",
+    "reason": "2.18 (#332) bumped the API generation from 1 to 2, so every /api answer names nfnn-api 2; the recording of main this PR is compared with (9e0de65, the newest green push run, since the push run of 38f51b6 failed) predates 2.18, and these scenarios came to main after the recording 2.18 itself was compared with, so 2.18.json does not name them",
+    "contract": "docs/api-contract.md, Conventions (Versions)"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "content/place_photo_focal_point: *",
+    "kind": "headers",
+    "field": "nfnn-api",
+    "reason": "2.18 (#332) bumped the API generation from 1 to 2, so every /api answer names nfnn-api 2; the recording of main this PR is compared with (9e0de65, the newest green push run, since the push run of 38f51b6 failed) predates 2.18, and these scenarios came to main after the recording 2.18 itself was compared with, so 2.18.json does not name them",
+    "contract": "docs/api-contract.md, Conventions (Versions)"
+  },
+  {
+    "path": "PUT /api/admin/*",
+    "scenario": "content/place_photo_focal_point: *",
+    "kind": "headers",
+    "field": "nfnn-api",
+    "reason": "2.18 (#332) bumped the API generation from 1 to 2, so every /api answer names nfnn-api 2; the recording of main this PR is compared with (9e0de65, the newest green push run, since the push run of 38f51b6 failed) predates 2.18, and these scenarios came to main after the recording 2.18 itself was compared with, so 2.18.json does not name them",
+    "contract": "docs/api-contract.md, Conventions (Versions)"
+  },
+  {
+    "path": "DELETE /api/admin/*",
+    "scenario": "donations/admin_yearly_receipts: *",
+    "kind": "headers",
+    "field": "nfnn-api",
+    "reason": "2.18 (#332) bumped the API generation from 1 to 2, so every /api answer names nfnn-api 2; the recording of main this PR is compared with (9e0de65, the newest green push run, since the push run of 38f51b6 failed) predates 2.18, and these scenarios came to main after the recording 2.18 itself was compared with, so 2.18.json does not name them",
+    "contract": "docs/api-contract.md, Conventions (Versions)"
+  },
+  {
+    "path": "GET /api/admin/*",
+    "scenario": "donations/admin_yearly_receipts: *",
+    "kind": "headers",
+    "field": "nfnn-api",
+    "reason": "2.18 (#332) bumped the API generation from 1 to 2, so every /api answer names nfnn-api 2; the recording of main this PR is compared with (9e0de65, the newest green push run, since the push run of 38f51b6 failed) predates 2.18, and these scenarios came to main after the recording 2.18 itself was compared with, so 2.18.json does not name them",
+    "contract": "docs/api-contract.md, Conventions (Versions)"
+  },
+  {
+    "path": "PATCH /api/donors/*",
+    "scenario": "donations/admin_yearly_receipts: *",
+    "kind": "headers",
+    "field": "nfnn-api",
+    "reason": "2.18 (#332) bumped the API generation from 1 to 2, so every /api answer names nfnn-api 2; the recording of main this PR is compared with (9e0de65, the newest green push run, since the push run of 38f51b6 failed) predates 2.18, and these scenarios came to main after the recording 2.18 itself was compared with, so 2.18.json does not name them",
+    "contract": "docs/api-contract.md, Conventions (Versions)"
+  },
+  {
+    "path": "POST /api/admin/*",
+    "scenario": "donations/admin_yearly_receipts: *",
+    "kind": "headers",
+    "field": "nfnn-api",
+    "reason": "2.18 (#332) bumped the API generation from 1 to 2, so every /api answer names nfnn-api 2; the recording of main this PR is compared with (9e0de65, the newest green push run, since the push run of 38f51b6 failed) predates 2.18, and these scenarios came to main after the recording 2.18 itself was compared with, so 2.18.json does not name them",
+    "contract": "docs/api-contract.md, Conventions (Versions)"
+  },
+  {
+    "path": "POST /api/donations/*",
+    "scenario": "donations/admin_yearly_receipts: *",
+    "kind": "headers",
+    "field": "nfnn-api",
+    "reason": "2.18 (#332) bumped the API generation from 1 to 2, so every /api answer names nfnn-api 2; the recording of main this PR is compared with (9e0de65, the newest green push run, since the push run of 38f51b6 failed) predates 2.18, and these scenarios came to main after the recording 2.18 itself was compared with, so 2.18.json does not name them",
+    "contract": "docs/api-contract.md, Conventions (Versions)"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/admin_yearly_receipts: *",
+    "kind": "headers",
+    "field": "nfnn-api",
+    "reason": "2.18 (#332) bumped the API generation from 1 to 2, so every /api answer names nfnn-api 2; the recording of main this PR is compared with (9e0de65, the newest green push run, since the push run of 38f51b6 failed) predates 2.18, and these scenarios came to main after the recording 2.18 itself was compared with, so 2.18.json does not name them",
+    "contract": "docs/api-contract.md, Conventions (Versions)"
+  },
+  {
+    "path": "DELETE /api/admin/*",
+    "scenario": "donations/donor_device_sync: *",
+    "kind": "headers",
+    "field": "nfnn-api",
+    "reason": "2.18 (#332) bumped the API generation from 1 to 2, so every /api answer names nfnn-api 2; the recording of main this PR is compared with (9e0de65, the newest green push run, since the push run of 38f51b6 failed) predates 2.18, and these scenarios came to main after the recording 2.18 itself was compared with, so 2.18.json does not name them",
+    "contract": "docs/api-contract.md, Conventions (Versions)"
+  },
+  {
+    "path": "DELETE /api/donors/*",
+    "scenario": "donors/donor_devices: *",
+    "kind": "headers",
+    "field": "nfnn-api",
+    "reason": "2.18 (#332) bumped the API generation from 1 to 2, so every /api answer names nfnn-api 2; the recording of main this PR is compared with (9e0de65, the newest green push run, since the push run of 38f51b6 failed) predates 2.18, and these scenarios came to main after the recording 2.18 itself was compared with, so 2.18.json does not name them",
+    "contract": "docs/api-contract.md, Conventions (Versions)"
+  },
+  {
+    "path": "GET /api/admin/*",
+    "scenario": "donors/donor_devices: *",
+    "kind": "headers",
+    "field": "nfnn-api",
+    "reason": "2.18 (#332) bumped the API generation from 1 to 2, so every /api answer names nfnn-api 2; the recording of main this PR is compared with (9e0de65, the newest green push run, since the push run of 38f51b6 failed) predates 2.18, and these scenarios came to main after the recording 2.18 itself was compared with, so 2.18.json does not name them",
+    "contract": "docs/api-contract.md, Conventions (Versions)"
+  },
+  {
+    "path": "GET /api/donors/*",
+    "scenario": "donors/donor_devices: *",
+    "kind": "headers",
+    "field": "nfnn-api",
+    "reason": "2.18 (#332) bumped the API generation from 1 to 2, so every /api answer names nfnn-api 2; the recording of main this PR is compared with (9e0de65, the newest green push run, since the push run of 38f51b6 failed) predates 2.18, and these scenarios came to main after the recording 2.18 itself was compared with, so 2.18.json does not name them",
+    "contract": "docs/api-contract.md, Conventions (Versions)"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donors/donor_devices: *",
+    "kind": "headers",
+    "field": "nfnn-api",
+    "reason": "2.18 (#332) bumped the API generation from 1 to 2, so every /api answer names nfnn-api 2; the recording of main this PR is compared with (9e0de65, the newest green push run, since the push run of 38f51b6 failed) predates 2.18, and these scenarios came to main after the recording 2.18 itself was compared with, so 2.18.json does not name them",
+    "contract": "docs/api-contract.md, Conventions (Versions)"
+  },
+  {
+    "path": "PUT /api/donors/*",
+    "scenario": "donors/donor_devices: *",
+    "kind": "headers",
+    "field": "nfnn-api",
+    "reason": "2.18 (#332) bumped the API generation from 1 to 2, so every /api answer names nfnn-api 2; the recording of main this PR is compared with (9e0de65, the newest green push run, since the push run of 38f51b6 failed) predates 2.18, and these scenarios came to main after the recording 2.18 itself was compared with, so 2.18.json does not name them",
+    "contract": "docs/api-contract.md, Conventions (Versions)"
+  },
+  {
+    "path": "DELETE /api/donors/*",
+    "scenario": "operations/admin_push: *",
+    "kind": "headers",
+    "field": "nfnn-api",
+    "reason": "2.18 (#332) bumped the API generation from 1 to 2, so every /api answer names nfnn-api 2; the recording of main this PR is compared with (9e0de65, the newest green push run, since the push run of 38f51b6 failed) predates 2.18, and these scenarios came to main after the recording 2.18 itself was compared with, so 2.18.json does not name them",
+    "contract": "docs/api-contract.md, Conventions (Versions)"
+  },
+  {
+    "path": "GET /api/admin/content/news/{id}",
+    "scenario": "content/place_photo_focal_point: *",
+    "kind": "added",
+    "field": "$.version",
+    "reason": "2.18 (#332, plan v3 D4): the administration's answers name the row version of a versioned record and its writes send it as If-Match; the recording of main this PR is compared with (9e0de65) predates 2.18, and these scenarios came after the recording 2.18 itself was compared with",
+    "contract": "docs/api-contract.md, Stale writes"
+  },
+  {
+    "path": "POST /api/admin/content/news",
+    "scenario": "content/place_photo_focal_point: *",
+    "kind": "added",
+    "field": "$.version",
+    "reason": "2.18 (#332, plan v3 D4): the administration's answers name the row version of a versioned record and its writes send it as If-Match; the recording of main this PR is compared with (9e0de65) predates 2.18, and these scenarios came after the recording 2.18 itself was compared with",
+    "contract": "docs/api-contract.md, Stale writes"
+  },
+  {
+    "path": "POST /api/admin/content/news/{id}/publish",
+    "scenario": "content/place_photo_focal_point: *",
+    "kind": "added",
+    "field": "$.version",
+    "reason": "2.18 (#332, plan v3 D4): the administration's answers name the row version of a versioned record and its writes send it as If-Match; the recording of main this PR is compared with (9e0de65) predates 2.18, and these scenarios came after the recording 2.18 itself was compared with",
+    "contract": "docs/api-contract.md, Stale writes"
+  },
+  {
+    "path": "POST /api/admin/content/projects",
+    "scenario": "content/place_photo_focal_point: *",
+    "kind": "added",
+    "field": "$.version",
+    "reason": "2.18 (#332, plan v3 D4): the administration's answers name the row version of a versioned record and its writes send it as If-Match; the recording of main this PR is compared with (9e0de65) predates 2.18, and these scenarios came after the recording 2.18 itself was compared with",
+    "contract": "docs/api-contract.md, Stale writes"
+  },
+  {
+    "path": "POST /api/admin/content/projects/{id}/publish",
+    "scenario": "content/place_photo_focal_point: *",
+    "kind": "added",
+    "field": "$.version",
+    "reason": "2.18 (#332, plan v3 D4): the administration's answers name the row version of a versioned record and its writes send it as If-Match; the recording of main this PR is compared with (9e0de65) predates 2.18, and these scenarios came after the recording 2.18 itself was compared with",
+    "contract": "docs/api-contract.md, Stale writes"
+  },
+  {
+    "path": "PUT /api/admin/content/news/{id}",
+    "scenario": "content/place_photo_focal_point: *",
+    "kind": "added",
+    "field": "$.version",
+    "reason": "2.18 (#332, plan v3 D4): the administration's answers name the row version of a versioned record and its writes send it as If-Match; the recording of main this PR is compared with (9e0de65) predates 2.18, and these scenarios came after the recording 2.18 itself was compared with",
+    "contract": "docs/api-contract.md, Stale writes"
+  },
+  {
+    "path": "POST /api/admin/content/news/{id}/publish",
+    "scenario": "content/place_photo_focal_point: *",
+    "kind": "request",
+    "reason": "2.18 (#332, plan v3 D4): the administration's answers name the row version of a versioned record and its writes send it as If-Match; the recording of main this PR is compared with (9e0de65) predates 2.18, and these scenarios came after the recording 2.18 itself was compared with",
+    "contract": "docs/api-contract.md, Stale writes"
+  },
+  {
+    "path": "POST /api/admin/content/projects/{id}/publish",
+    "scenario": "content/place_photo_focal_point: *",
+    "kind": "request",
+    "reason": "2.18 (#332, plan v3 D4): the administration's answers name the row version of a versioned record and its writes send it as If-Match; the recording of main this PR is compared with (9e0de65) predates 2.18, and these scenarios came after the recording 2.18 itself was compared with",
+    "contract": "docs/api-contract.md, Stale writes"
+  },
+  {
+    "path": "PUT /api/admin/content/news/{id}",
+    "scenario": "content/place_photo_focal_point: *",
+    "kind": "request",
+    "reason": "2.18 (#332, plan v3 D4): the administration's answers name the row version of a versioned record and its writes send it as If-Match; the recording of main this PR is compared with (9e0de65) predates 2.18, and these scenarios came after the recording 2.18 itself was compared with",
+    "contract": "docs/api-contract.md, Stale writes"
   }
 ]

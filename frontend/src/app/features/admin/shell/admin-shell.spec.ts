@@ -33,7 +33,7 @@ describe('Given an administrator anywhere in the administration', () => {
         { provide: CompactLayout, useValue: { isCompact: compact.asReadonly() } },
         {
           provide: ADMINISTRATION_LOCK,
-          useValue: { locked: locked.asReadonly(), panel: LockPanel },
+          useValue: { locked: locked.asReadonly(), panel: signal(LockPanel).asReadonly() },
         },
         provideRouter([
           { path: 'sprava', component: Page },

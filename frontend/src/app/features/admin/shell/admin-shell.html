@@ -3,7 +3,7 @@
 <app-side-nav navId="admin-nav" [groups]="groups" [label]="navLabel" [panel]="!compact()">
   <div class="admin-content">
     @if (lock.locked()) {
-      @if (lock.panel; as panel) {
+      @if (lock.panel(); as panel) {
         <ng-container *ngComponentOutlet="panel" />
       }
     } @else {

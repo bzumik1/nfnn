@@ -901,8 +901,8 @@ describe('Given an administrator on the administration home', () => {
       fixture.detectChanges();
     });
 
-    it('then the sections of every day and the way to the rest follow the attention card, each one tap away', () => {
-      expect(fixture.nativeElement.querySelector('.attention')?.nextElementSibling).toBe(
+    it('then the sections of every day and the way to the rest follow what is new since the last sign-in, each one tap away', () => {
+      expect(fixture.nativeElement.querySelector('.since')?.nextElementSibling).toBe(
         sections()?.closest('app-admin-section-rows'),
       );
       expect(rows()).toEqual([

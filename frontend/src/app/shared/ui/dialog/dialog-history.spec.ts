@@ -177,6 +177,34 @@ describe('Given the history entries of an open dialog', () => {
       expect(order).toEqual(['upper', 'first']);
       expect(location.path()).toBe('/stranka');
     });
+
+    it('and the visitor goes back past both while each takes its own entry back on closing, then no entry is added again', async () => {
+      upper.close.mockImplementation(() => history.close(upper as DialogHistoryListener));
+      listener.close.mockImplementation(() => history.close(listener as DialogHistoryListener));
+      const length = window.history.length;
+
+      await back(2);
+
+      expect(upper.close).toHaveBeenCalledTimes(1);
+      expect(listener.close).toHaveBeenCalledTimes(1);
+      expect(window.history.length).toBe(length);
+      expect(depth()).toBeUndefined();
+      expect(location.path()).toBe('/stranka');
+    });
+
+    it('and the first moves on to a further step under the upper one, then Back still closes the upper one first', async () => {
+      history.showStep(1, listener as DialogHistoryListener);
+      await settled();
+      expect(depth()).toBe(3);
+
+      await back();
+
+      expect(upper.close).toHaveBeenCalledTimes(1);
+      expect(listener.stepBack).not.toHaveBeenCalled();
+      await back();
+      expect(listener.stepBack).toHaveBeenCalledTimes(1);
+      expect(listener.close).not.toHaveBeenCalled();
+    });
   });
 
   it('when one dialog closes and another opens in the same moment, then Back closes only the new one and stays on the page', async () => {

@@ -60,12 +60,15 @@ export class DialogHistory {
     this.settle();
   }
 
-  showStep(depth: number): void {
-    const top = this.dialogs.at(-1);
-    if (top === undefined) {
+  showStep(depth: number, listener?: DialogHistoryListener): void {
+    const dialog =
+      listener === undefined
+        ? this.dialogs.at(-1)
+        : this.dialogs.find((open) => open.listener === listener);
+    if (dialog === undefined) {
       return;
     }
-    top.steps = 1 + depth;
+    dialog.steps = 1 + depth;
     this.settle();
   }
 
@@ -108,7 +111,7 @@ export class DialogHistory {
       return;
     }
     if (this.location.path(true) !== this.entryPath) {
-      const closing = this.dialogs.reverse();
+      const closing = [...this.dialogs].reverse();
       this.release();
       closing.forEach((dialog) => dialog.listener.close());
       return;
@@ -116,22 +119,24 @@ export class DialogHistory {
     event.stopImmediatePropagation();
     let stepsBack = this.owned - depth;
     this.owned = depth;
+    const told: (() => void)[] = [];
     while (stepsBack > 0) {
       const top = this.dialogs.at(-1);
       if (top === undefined) {
-        return;
+        break;
       }
       if (stepsBack >= top.steps) {
         stepsBack -= top.steps;
         this.dialogs.pop();
-        top.listener.close();
+        told.push(() => top.listener.close());
       } else {
         top.steps -= stepsBack;
         for (; stepsBack > 0; stepsBack--) {
-          top.listener.stepBack();
+          told.push(() => top.listener.stepBack());
         }
       }
     }
+    told.forEach((tell) => tell());
   }
 
   private settle(): void {

@@ -49,9 +49,11 @@
               <span class="ui-list__title">{{ row.label }}</span>
               @if (row.badge; as badge) {
                 @if (badge.count > 0) {
-                  <span class="ui-list__value ui-list__count" aria-hidden="true">{{
-                    badge.count
-                  }}</span>
+                  <span
+                    class="ui-list__value ui-list__count ui-list__count--warning"
+                    aria-hidden="true"
+                    >{{ badge.count }}</span
+                  >
                   <span class="visually-hidden">{{ badge.description }}</span>
                 }
               }

@@ -18,15 +18,17 @@
     [class.dialog-panel--wide]="wide()"
     [class.dialog-panel--dragging]="dragging()"
     [style.translate]="dragTranslate()"
+    (focusin)="keepFocusAboveActions($event)"
   >
-    @if (look() === 'sheet') {
+    @if (look() === 'sheet' && dismissible()) {
       <span
         class="dialog-grabber"
         aria-hidden="true"
         (pointerdown)="startDrag($event)"
         (pointermove)="followDrag($event)"
-        (pointerup)="endDrag()"
-        (pointercancel)="cancelDrag()"
+        (pointerup)="endDrag($event)"
+        (pointercancel)="cancelDrag($event)"
+        (lostpointercapture)="cancelDrag($event)"
       ></span>
     }
     <button

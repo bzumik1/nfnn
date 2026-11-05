@@ -1,6 +1,12 @@
+@use 'breakpoints' as bp;
+
 .ui-page {
   margin: 0;
-  padding: var(--space-8) var(--space-6) var(--space-12);
+  padding: var(--space-8) var(--space-6) var(--space-6);
+
+  @include bp.down(nav) {
+    padding: var(--space-2) var(--space-4) var(--space-6);
+  }
 }
 
 .ui-page-head {

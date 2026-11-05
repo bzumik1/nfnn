@@ -579,16 +579,21 @@ function unpairedText({ count, totalMinor }: UnpairedSummary): string {
   }
 }
 
-const DAILY_ICONS: readonly SectionIcon[] = ['payments', 'donors', 'news', 'projects'];
+const DAILY_ICONS: Readonly<Record<string, SectionIcon>> = {
+  [ADMIN_PAYMENTS_PATH]: 'payments',
+  '/sprava/darci': 'donors',
+  '/sprava/aktuality': 'news',
+  '/sprava/projekty': 'projects',
+};
 
 function sectionRows(unpaired: number): readonly SectionRowGroup[] {
   return [
     {
       id: 'admin-home-daily',
       label: ADMIN_DAILY.label ?? '',
-      rows: ADMIN_DAILY.items.map((item, index) => ({
+      rows: ADMIN_DAILY.items.map((item) => ({
         ...item,
-        icon: DAILY_ICONS[index],
+        icon: DAILY_ICONS[item.path],
         ...(item.path === ADMIN_PAYMENTS_PATH
           ? { badge: { count: unpaired, description: unpairedBadge(unpaired) } }
           : {}),

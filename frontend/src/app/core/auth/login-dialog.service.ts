@@ -59,7 +59,7 @@ export class LoginDialogService {
   }
 
   showStep(depth: number): void {
-    this.history.showStep(depth);
+    this.history.showStep(depth, this.historyEntry);
   }
 
   onStepBack(handler: (() => void) | null): void {

@@ -31,6 +31,18 @@ describe('Given the pages of the administration', () => {
     expect(parentOf('vice')).toBe('/sprava');
   });
 
+  it('when a page leads back to the overview or to the further sections, then that page lists it, so a phone reaches it in two taps', () => {
+    const backTo = (parent: string): string[] =>
+      pages
+        .filter((page) => page.path !== 'vice' && page.data?.['parent'] === parent)
+        .map((page) => page.path ?? '')
+        .sort();
+    expect(backTo('/sprava')).toEqual(ADMIN_DAILY.items.map((item) => pathOf(item.path)).sort());
+    expect(backTo('/sprava/vice')).toEqual(
+      [...ADMIN_OCCASIONAL.items, ...ADMIN_TECHNICAL.items].map((item) => pathOf(item.path)).sort(),
+    );
+  });
+
   it('when a donor or an editor opens, then the back button leads to its list', () => {
     expect(
       ['darci/:id', 'aktuality/nova', 'aktuality/:id', 'projekty/nova', 'projekty/:id'].map(

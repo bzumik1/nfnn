@@ -122,9 +122,6 @@
       max(var(--space-5), env(safe-area-inset-left));
     box-shadow: var(--shadow-sheet);
     animation: sheetIn var(--duration-sheet) ease both;
-  }
-
-  .dialog--sheet .dialog-panel {
     transition: translate var(--duration-base) ease;
   }
 

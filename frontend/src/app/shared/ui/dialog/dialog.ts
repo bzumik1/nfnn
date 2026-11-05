@@ -20,6 +20,8 @@ import { DialogHistory, DialogHistoryListener } from './dialog-history';
 import { DIALOG_PRESENTATION, DialogPresentation } from './dialog-presentation';
 import { SheetDrag } from './sheet-drag';
 
+const ROOM_ABOVE_STICKY_ACTIONS_PX = 16;
+
 @Component({
   selector: 'app-dialog',
   templateUrl: './dialog.html',
@@ -58,6 +60,7 @@ export class Dialog implements AfterViewInit, OnDestroy {
     stepBack: () => undefined,
     close: () => this.closedByBack(),
   };
+  private dragPointer: number | null = null;
   private pressStartedOnBackdrop = false;
   private destroyed = false;
 
@@ -114,34 +117,60 @@ export class Dialog implements AfterViewInit, OnDestroy {
   }
 
   protected startDrag(event: PointerEvent): void {
-    if (!this.dismissible() || !event.isPrimary) {
+    if (!this.dismissible() || !event.isPrimary || event.button !== 0) {
       return;
     }
+    event.preventDefault();
     (event.target as Element).setPointerCapture?.(event.pointerId);
+    this.dragPointer = event.pointerId;
     this.drag.start(event.clientY, event.timeStamp);
     this.dragging.set(true);
   }
 
   protected followDrag(event: PointerEvent): void {
-    if (this.dragging()) {
+    if (this.dragging() && event.pointerId === this.dragPointer) {
       this.dragOffset.set(this.drag.move(event.clientY, event.timeStamp));
     }
   }
 
-  protected endDrag(): void {
-    if (!this.dragging()) {
+  protected endDrag(event: PointerEvent): void {
+    if (!this.dragging() || event.pointerId !== this.dragPointer) {
       return;
     }
-    const release = this.drag.end(this.panel().nativeElement.getBoundingClientRect().height);
-    this.dragging.set(false);
-    this.dragOffset.set(0);
+    const height = this.panel().nativeElement.getBoundingClientRect().height;
+    const release = this.drag.end(height, event.timeStamp);
+    this.stopDrag();
     if (release === 'dismiss') {
       this.dismiss();
     }
   }
 
-  protected cancelDrag(): void {
-    this.drag.end(Number.POSITIVE_INFINITY);
+  protected cancelDrag(event: PointerEvent): void {
+    if (event.pointerId !== this.dragPointer) {
+      return;
+    }
+    this.drag.cancel();
+    this.stopDrag();
+  }
+
+  protected keepFocusAboveActions(event: FocusEvent): void {
+    const target = event.target;
+    const panel = this.panel().nativeElement;
+    const actions = panel.querySelector<HTMLElement>('.ui-dialog__actions');
+    if (!(target instanceof HTMLElement) || actions === null || actions.contains(target)) {
+      return;
+    }
+    if (getComputedStyle(actions).position !== 'sticky') {
+      return;
+    }
+    const covered = target.getBoundingClientRect().bottom - actions.getBoundingClientRect().top;
+    if (covered > 0) {
+      panel.scrollBy({ top: covered + ROOM_ABOVE_STICKY_ACTIONS_PX });
+    }
+  }
+
+  private stopDrag(): void {
+    this.dragPointer = null;
     this.dragging.set(false);
     this.dragOffset.set(0);
   }

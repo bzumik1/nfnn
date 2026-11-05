@@ -4,6 +4,7 @@ const MINIMUM_CLOSING_DISTANCE_PX = 72;
 const CLOSING_SHARE_OF_HEIGHT = 0.25;
 const FLICK_SPEED_PX_PER_MS = 0.5;
 const FLICK_DISTANCE_PX = 24;
+const FLICK_REST_MS = 100;
 
 export class SheetDrag {
   private startY: number | null = null;
@@ -34,16 +35,23 @@ export class SheetDrag {
     return this.offset;
   }
 
-  end(height: number): SheetRelease {
-    const offset = this.offset;
-    const dragging = this.startY !== null;
+  cancel(): void {
     this.startY = null;
     this.offset = 0;
+  }
+
+  end(height: number, time: number): SheetRelease {
+    const offset = this.offset;
+    const dragging = this.startY !== null;
+    this.cancel();
     if (!dragging) {
       return 'return';
     }
     const closingDistance = Math.max(MINIMUM_CLOSING_DISTANCE_PX, height * CLOSING_SHARE_OF_HEIGHT);
-    const flicked = this.speed >= FLICK_SPEED_PX_PER_MS && offset >= FLICK_DISTANCE_PX;
+    const flicked =
+      time - this.lastTime <= FLICK_REST_MS &&
+      this.speed >= FLICK_SPEED_PX_PER_MS &&
+      offset >= FLICK_DISTANCE_PX;
     return offset >= closingDistance || flicked ? 'dismiss' : 'return';
   }
 }
