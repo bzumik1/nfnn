@@ -18,9 +18,17 @@
   }
 }
 
-input.form-control[type='date'] {
-  min-width: 0;
-  max-width: 100%;
+@supports (-webkit-touch-callout: none) {
+  input.form-control[type='date'] {
+    display: block;
+    min-width: 0;
+    appearance: none;
+  }
+
+  input.form-control[type='date']::-webkit-date-and-time-value {
+    min-height: 1lh;
+    text-align: left;
+  }
 }
 
 textarea.form-control {
