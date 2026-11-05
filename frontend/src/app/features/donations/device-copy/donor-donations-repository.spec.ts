@@ -41,7 +41,11 @@ describe('Given the repository the donor pages read their gifts from', () => {
     const read = firstValueFrom(repository.fresh('sync'));
     await answerServer();
 
-    expect(await read).toMatchObject({ source: 'server', items: twoYearDonations().items });
+    expect(await read).toMatchObject({
+      source: 'server',
+      owner: null,
+      items: twoYearDonations().items,
+    });
   });
 
   describe('when a copy is open', () => {
@@ -52,11 +56,12 @@ describe('Given the repository the donor pages read their gifts from', () => {
       TestBed.inject(DonorCopyLink).copy.set(copy);
     });
 
-    it('and holds the gifts, then they are held as of when the copy stored them', () => {
+    it('and holds the gifts, then they are held as of when the copy stored them, with the donor whose copy it is', () => {
       copy.shown.set(copyViewOf(twoYearSummary(), twoYearDonations()));
 
       expect(repository.held()).toEqual<DonorDonationsRead>({
         source: 'copy',
+        owner: 'jana',
         summary: copyViewOf(twoYearSummary(), twoYearDonations()).summary,
         items: twoYearDonations().items,
         at: COPY_STORED_AT,

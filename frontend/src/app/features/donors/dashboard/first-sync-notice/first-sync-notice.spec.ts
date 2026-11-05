@@ -23,6 +23,7 @@ describe('Given the line about the first saving of the donor’s data on this de
     keeps = signal(true);
     const copy: DonorCopy = {
       open: signal(true),
+      owner: signal<string | null>('jana'),
       view,
       firstSync: running,
       keepsOnDevice: keeps,

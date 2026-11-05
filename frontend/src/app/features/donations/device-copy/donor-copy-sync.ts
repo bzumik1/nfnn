@@ -46,6 +46,7 @@ export class DonorCopySync implements DonorCopy {
 
   readonly syncing = computed(() => this.running() > 0);
   readonly open = computed(() => this.vault.opened() !== null);
+  readonly owner = computed(() => this.vault.opened()?.account.userHandle ?? null);
   readonly keepsOnDevice = computed(() => this.vault.mode() === 'stored');
   readonly view = computed(() => donorCopyView(this.vault.opened()?.store.contents() ?? null));
   readonly firstSync = computed(

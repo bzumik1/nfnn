@@ -182,6 +182,7 @@ export class DonorDonations {
   private pendingStarted = false;
   private latestDonationsRequest = 0;
   private shown: DonorDonationsRead | null = null;
+  private shownOwner: string | null = null;
   private bankCheckEndedAt: number | null = null;
   private readonly printedDonor = computed(() => {
     const donor = this.auth.donor();
@@ -210,10 +211,11 @@ export class DonorDonations {
         return;
       }
       untracked(() => {
-        if (this.shown?.source === 'server' && held.at < this.shown.at) {
+        const switched = this.shownOwner !== null && held.owner !== this.shownOwner;
+        if (!switched && this.shown?.source === 'server' && held.at < this.shown.at) {
           return;
         }
-        if (this.state() === 'ready') {
+        if (this.state() === 'ready' && !switched) {
           this.offerDonations(held);
         } else {
           this.latestDonationsRequest++;
@@ -297,6 +299,9 @@ export class DonorDonations {
   private showDonations(read: DonorDonationsRead): void {
     this.incoming.set(null);
     this.shown = read;
+    if (read.owner !== null) {
+      this.shownOwner = read.owner;
+    }
     this.summary.set(read.summary);
     this.items.set(read.items);
     if (read.bankDataAsOf !== null && this.bankDataAsOf() === null) {

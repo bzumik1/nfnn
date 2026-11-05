@@ -5,6 +5,7 @@ export type SyncOutcome = 'stored' | 'failed' | 'mismatch' | 'no-copy';
 
 export interface DonorCopy {
   readonly open: Signal<boolean>;
+  readonly owner: Signal<string | null>;
   readonly view: Signal<DonorCopyView | null>;
   readonly firstSync: Signal<boolean>;
   readonly keepsOnDevice: Signal<boolean>;

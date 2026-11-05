@@ -378,6 +378,33 @@ describe('Given the sync of the donor copy', () => {
     expect(vault.stored[0].chunks[0].rows).toEqual(gifts2026.rows);
   });
 
+  it('when a chunk names another digest than the manifest although its rows give the manifest’s, then the sync starts again rather than store it under that digest', async () => {
+    const renamed: SyncChunk = { ...gifts2026, rowsSha256: gifts2025.rowsSha256 };
+    open('empty');
+
+    await vi.waitFor(() => answerManifest([gifts2026]));
+    await answerChunks(['donations:2026'], [renamed], { summary: summaryOf([gifts2026]) });
+    await vi.waitFor(() => answerManifest([gifts2026]));
+    await answerChunks(['donations:2026'], [gifts2026]);
+    await settled();
+
+    expect(vault.stored).toHaveLength(1);
+    expect(vault.stored[0].chunks[0].rowsSha256).toBe(gifts2026.rowsSha256);
+  });
+
+  it('when an asked chunk is neither served nor listed as missing, twice, then nothing is stored and the mismatch is reported', async () => {
+    open('empty');
+
+    await vi.waitFor(() => answerManifest([gifts2026]));
+    await answerChunks(['donations:2026'], [], { summary: summaryOf([gifts2026]) });
+    await vi.waitFor(() => answerManifest([gifts2026]));
+    await answerChunks(['donations:2026'], [], { summary: summaryOf([gifts2026]) });
+    await settled();
+
+    expect(vault.stored).toEqual([]);
+    expect(reporter.report).toHaveBeenCalledTimes(1);
+  });
+
   it('when a changed chunk comes back missing or with another summary twice, then nothing is stored and the mismatch is reported', async () => {
     open('empty');
 

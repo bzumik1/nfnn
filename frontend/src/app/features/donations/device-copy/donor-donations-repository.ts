@@ -8,6 +8,7 @@ export type DonationsFreshness = 'catch-up' | 'sync';
 
 export interface DonorDonationsRead {
   readonly source: 'copy' | 'server';
+  readonly owner: string | null;
   readonly summary: DonationSummaryResponse;
   readonly items: readonly DonationItem[];
   readonly at: string;
@@ -35,6 +36,7 @@ export class DonorDonationsRepository {
       ? null
       : {
           source: 'copy',
+          owner: this.copy()?.owner() ?? null,
           summary: view.summary,
           items: view.items,
           at: view.storedAt,
@@ -63,6 +65,7 @@ export class DonorDonationsRepository {
     return forkJoin({ summary: this.api.summary(), list: this.api.list() }).pipe(
       map(({ summary, list }) => ({
         source: 'server' as const,
+        owner: null,
         summary,
         items: list.items,
         at: new Date().toISOString(),

@@ -11,10 +11,12 @@ export class FakeDonorCopy implements DonorCopy {
   readonly shown = signal<DonorCopyView | null>(null);
   readonly first = signal(false);
   readonly keeps = signal(true);
+  readonly owned = signal<string | null>('jana');
   readonly open = this.opened.asReadonly();
   readonly view = this.shown.asReadonly();
   readonly firstSync = this.first.asReadonly();
   readonly keepsOnDevice = this.keeps.asReadonly();
+  readonly owner = this.owned.asReadonly();
   readonly pending: ((outcome: SyncOutcome) => void)[] = [];
   readonly sync = vi.fn(() => this.next());
   readonly catchUp = vi.fn(() => this.next());

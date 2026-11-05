@@ -3120,6 +3120,23 @@ describe('Given a signed-in donor in the donor area', () => {
       copy.finish('stored');
     });
 
+    it('then a copy that opens for another donor in its place replaces the list at once instead of offering its gifts as new ones', async () => {
+      copy.shown.set(copyViewOf(twoYearSummary(), twoYearDonations()));
+      await open('/darce/dary');
+      copy.finish('stored');
+      await settle();
+
+      const other = donationItem({ id: 'petr-1', receivedAt: '2026-05-05', amountMinor: 70000 });
+      copy.owned.set('petr');
+      copy.shown.set(
+        copyViewOf(twoYearSummary(), { ...twoYearDonations(), items: [other], count: 1 }),
+      );
+      await settle();
+
+      expect(rows()).toBe(1);
+      expect(text('.bank-check-incoming')).toBe('');
+    });
+
     it('then a gift the catch-up brings after the copy was shown does not move the list until the bank check ends', async () => {
       copy.shown.set(copyViewOf(twoYearSummary(), twoYearDonations()));
       await open('/darce/dary');
