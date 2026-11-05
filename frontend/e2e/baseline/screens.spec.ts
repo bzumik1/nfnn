@@ -509,6 +509,7 @@ function shootEach(screens: Screen[]): void {
         }
         if (screen.region || screen.elements) {
           await page.addStyleTag({ content: FIXED_BARS_HIDDEN });
+          await page.mouse.move(0, 0);
         }
         if (screen.region) {
           await page
