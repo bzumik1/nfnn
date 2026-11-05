@@ -2,19 +2,23 @@ import type { Mock } from 'vitest';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { Subject } from 'rxjs';
 
 import { authInterceptor } from '../../../core/auth/auth-interceptor';
 import { AuthStore } from '../../../core/auth/auth-store';
+import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
 import { AppBadge } from '../../../core/push/app-badge';
 import {
+  BrowserPushSubscriptionState,
   DevicePushSubscription,
   NO_PUSH,
+  NotificationPermissionAnswer,
   SERVICE_WORKER_PUSH,
   ServiceWorkerPush,
 } from '../../../core/push/service-worker-push';
+import { AdminPushResponse } from '../admin-api';
 import { adminPush, PUSH_PUBLIC_KEY, pushSubscription } from '../testing/admin-fixtures';
 import { AdminAlerts } from './admin-alerts';
 
@@ -37,7 +41,9 @@ function problem(status: number, type: string, title: string, detail: string) {
 }
 
 type FakePush = ServiceWorkerPush & {
+  requestPermission: Mock<() => Promise<NotificationPermissionAnswer>>;
   requestSubscription: Mock<(publicKey: string) => Promise<DevicePushSubscription>>;
+  browserSubscription: Mock<() => Promise<BrowserPushSubscriptionState>>;
   unsubscribe: Mock<() => Promise<void>>;
 };
 
@@ -46,6 +52,12 @@ function fakePush(controllerChanges = new Subject<void>()): FakePush {
     ...NO_PUSH,
     isEnabled: true,
     controllerChanges,
+    requestPermission: vi.fn<() => Promise<NotificationPermissionAnswer>>(() =>
+      Promise.resolve('granted'),
+    ),
+    browserSubscription: vi.fn<() => Promise<BrowserPushSubscriptionState>>(() =>
+      Promise.resolve('subscribed'),
+    ),
     requestSubscription: vi.fn<(publicKey: string) => Promise<DevicePushSubscription>>(() =>
       Promise.resolve(DEVICE),
     ),
@@ -186,6 +198,41 @@ describe('Given an administrator on the alerts page', () => {
         'Na jiném zařízení upozornění zapnutá nemáte.',
       );
     });
+
+    it('then a working area reads that it has no fault, and no test alert is offered without a device', () => {
+      expect(sectionText('Co se hlídá')).toContain('Bez poruchy');
+      expect(fixture.nativeElement.querySelector('#alerts-test-title')).toBeNull();
+    });
+  });
+
+  it('when the sign-in names no device, then the page says why alerts cannot be turned on here and never asks the browser', async () => {
+    withPushApi();
+    await open(adminPush({ deviceSession: false }));
+
+    expect(sectionText('Toto zařízení')).toContain(
+      'Toto přihlášení zatím nerozlišuje zařízení, a proto na něm upozornění zapnout nejde.',
+    );
+    expect(() => button('Zapnout upozornění na tomto zařízení')).toThrow();
+    expect(push.requestPermission).not.toHaveBeenCalled();
+  });
+
+  it('when the server does not say whether the sign-in names a device, then it counts as one that does not', async () => {
+    withPushApi();
+    const older: Partial<AdminPushResponse> = adminPush();
+    delete older.deviceSession;
+    await open(older);
+
+    expect(sectionText('Toto zařízení')).toContain('Toto přihlášení zatím nerozlišuje zařízení');
+  });
+
+  it('when an older server sends no open alerts, then the page treats them as none', async () => {
+    withPushApi();
+    const older: Partial<AdminPushResponse> = adminPush();
+    delete older.openAlerts;
+    await open(older);
+
+    expect(badge.show).toHaveBeenCalledWith(0);
+    expect(sectionText('Co se hlídá')).not.toContain('Nefunguje');
   });
 
   it('when the administrator turns the alerts on, then the browser subscribes with the server key and the device is posted', async () => {
@@ -193,6 +240,7 @@ describe('Given an administrator on the alerts page', () => {
     await open();
 
     button('Zapnout upozornění na tomto zařízení').click();
+    expect(push.requestPermission).toHaveBeenCalledTimes(1);
     await settle();
 
     expect(push.requestSubscription).toHaveBeenCalledWith(PUSH_PUBLIC_KEY);
@@ -206,15 +254,54 @@ describe('Given an administrator on the alerts page', () => {
     await settle();
 
     expect(status()).toContain('Upozornění jsme na tomto zařízení zapnuli.');
+    expect(document.activeElement?.textContent?.trim()).toBe('Toto zařízení');
+    http
+      .expectOne({ method: 'GET', url: PUSH_URL })
+      .flush(adminPush({ subscriptions: [pushSubscription()] }));
+    await settle();
+
     expect(checkboxes(section('Toto zařízení')).map((box) => box.checked)).toEqual([
       true,
       true,
       true,
     ]);
-    expect(button('Poslat zkušební upozornění')).toBeTruthy();
+    expect(button('Poslat zkušební upozornění na všechna moje zařízení')).toBeTruthy();
   });
 
-  it('when the browser refuses the permission, then the page says how to allow notifications', async () => {
+  it('when the subscribe took over a device of an older session, then the list read again drops it', async () => {
+    withPushApi();
+    await open(
+      adminPush({ subscriptions: [pushSubscription({ id: 'push-old-session', current: false })] }),
+    );
+    expect(sectionText('Další zařízení')).toContain('Google, zapnuto 01. 11. 2026');
+
+    button('Zapnout upozornění na tomto zařízení').click();
+    await settle();
+    http
+      .expectOne({ method: 'POST', url: `${PUSH_URL}/subscriptions` })
+      .flush(pushSubscription(), { status: 201, statusText: 'Created' });
+    await settle();
+    http
+      .expectOne({ method: 'GET', url: PUSH_URL })
+      .flush(adminPush({ subscriptions: [pushSubscription()] }));
+    await settle();
+
+    expect(sectionText('Další zařízení')).toContain('Na jiném zařízení upozornění zapnutá nemáte.');
+  });
+
+  it('when the administrator refuses the permission, then nothing is subscribed and the page says how to allow notifications', async () => {
+    withPushApi();
+    push.requestPermission.mockResolvedValue('denied');
+    await open();
+
+    button('Zapnout upozornění na tomto zařízení').click();
+    await settle();
+
+    expect(push.requestSubscription).not.toHaveBeenCalled();
+    expect(alerts()).toContain('Prohlížeč upozornění nezapnul.');
+  });
+
+  it('when the browser fails to subscribe, then the page says how to allow notifications', async () => {
     withPushApi();
     push.requestSubscription.mockImplementation(() =>
       Promise.reject(new DOMException('denied', 'NotAllowedError')),
@@ -226,6 +313,27 @@ describe('Given an administrator on the alerts page', () => {
 
     expect(alerts()).toContain('Prohlížeč upozornění nezapnul.');
     expect(button('Zapnout upozornění na tomto zařízení').disabled).toBe(false);
+  });
+
+  it('when the administrator already has ten devices, then the page points to removing one here', async () => {
+    withPushApi();
+    await open();
+
+    button('Zapnout upozornění na tomto zařízení').click();
+    await settle();
+    const limit = problem(
+      409,
+      'operations/push-subscription-limit',
+      'Příliš mnoho zařízení',
+      'Vypněte je nejdřív na zařízení, které už nepoužíváte.',
+    );
+    http
+      .expectOne({ method: 'POST', url: `${PUSH_URL}/subscriptions` })
+      .flush(limit.body, limit.options);
+    await settle();
+
+    expect(push.unsubscribe).toHaveBeenCalled();
+    expect(alerts()).toContain('Odeberte níže v části Další zařízení to, které už nepoužíváte');
   });
 
   it('when the server refuses the device, then the browser subscription is dropped and the refusal shown', async () => {
@@ -270,6 +378,17 @@ describe('Given an administrator on the alerts page', () => {
       );
     });
 
+    it('then this device shows its last delivery too', () => {
+      expect(sectionText('Toto zařízení')).toContain('Naposledy doručeno 03. 11. 2026 10:05.');
+    });
+
+    it('then the test alert stands on its own and names every device', () => {
+      expect(sectionText('Zkušební upozornění')).toContain(
+        'Poslat zkušební upozornění na všechna moje zařízení',
+      );
+      expect(sectionText('Toto zařízení')).not.toContain('zkušební');
+    });
+
     it('then it shows the switches of this device and lists the other one with its delivery', () => {
       expect(checkboxes(section('Toto zařízení')).map((box) => box.checked)).toEqual([
         true,
@@ -292,7 +411,13 @@ describe('Given an administrator on the alerts page', () => {
       mail.dispatchEvent(new Event('change'));
       await settle();
 
-      expect(checkboxes(section('Toto zařízení')).every((box) => box.disabled)).toBe(true);
+      const switches = checkboxes(section('Toto zařízení'));
+      expect(switches.every((box) => box.getAttribute('aria-disabled') === 'true')).toBe(true);
+      expect(switches.some((box) => box.disabled)).toBe(false);
+      switches[0].checked = false;
+      switches[0].dispatchEvent(new Event('change'));
+      await settle();
+      expect(switches[0].checked).toBe(true);
       const request = http.expectOne({
         method: 'PUT',
         url: `${PUSH_URL}/subscriptions/push-this-device/alerts`,
@@ -306,7 +431,7 @@ describe('Given an administrator on the alerts page', () => {
       );
       await settle();
 
-      expect(status()).toContain('Uloženo: Odesílání e-mailů – vypnuto.');
+      expect(status()).toContain('Uloženo pro toto zařízení: Odesílání e-mailů – vypnuto.');
       expect(checkboxes(section('Toto zařízení')).map((box) => box.checked)).toEqual([
         true,
         true,
@@ -325,11 +450,12 @@ describe('Given an administrator on the alerts page', () => {
       await settle();
 
       expect(alerts()).toContain('Změnu se nepodařilo uložit.');
+      expect(status()).not.toContain('Uloženo');
       expect(checkboxes(section('Další zařízení'))[1].checked).toBe(false);
     });
 
     it('and a test alert is sent, then the counts are reported in Czech', async () => {
-      button('Poslat zkušební upozornění').click();
+      button('Poslat zkušební upozornění na všechna moje zařízení').click();
       await settle();
 
       expect(button('Posíláme zkušební upozornění…').disabled).toBe(true);
@@ -338,11 +464,27 @@ describe('Given an administrator on the alerts page', () => {
         .flush({ delivered: 1, failed: 0, removed: 0 });
       await settle();
 
-      expect(status()).toBe('Zkušební upozornění jsme předali ke doručení na 1 zařízení.');
+      expect(status()).toBe(
+        'Zkušební upozornění jsme předali k doručení na 1 zařízení. Pokud do minuty nedorazí, zkontrolujte, že má zařízení pro tento web povolená oznámení a není v režimu Nerušit.',
+      );
+    });
+
+    it('and the test alert reaches no device, then the page says what to do', async () => {
+      button('Poslat zkušební upozornění na všechna moje zařízení').click();
+      await settle();
+      http
+        .expectOne({ method: 'POST', url: `${PUSH_URL}/test` })
+        .flush({ delivered: 0, failed: 0, removed: 2 });
+      await settle();
+
+      expect(status()).toContain(
+        'Zkušební upozornění se nepodařilo předat na žádné zařízení. Zapněte upozornění znovu na zařízení, kde je chcete dostávat.',
+      );
+      http.expectOne({ method: 'GET', url: PUSH_URL }).flush(adminPush());
     });
 
     it('and a test alert finds gone devices, then the counts name them and the list is read again', async () => {
-      button('Poslat zkušební upozornění').click();
+      button('Poslat zkušební upozornění na všechna moje zařízení').click();
       await settle();
       http
         .expectOne({ method: 'POST', url: `${PUSH_URL}/test` })
@@ -350,7 +492,7 @@ describe('Given an administrator on the alerts page', () => {
       await settle();
 
       expect(status()).toBe(
-        'Zkušební upozornění jsme předali ke doručení na 1 zařízení. Na 2 zařízení se ho předat nepodařilo. 2 zařízení už upozornění nepřijímala, a tak jsme je odebrali.',
+        'Zkušební upozornění jsme předali k doručení na 1 zařízení. Pokud do minuty nedorazí, zkontrolujte, že má zařízení pro tento web povolená oznámení a není v režimu Nerušit. Na 2 zařízení se ho předat nepodařilo. 2 zařízení už upozornění nepřijímala, a tak jsme je odebrali.',
       );
       http
         .expectOne({ method: 'GET', url: PUSH_URL })
@@ -358,7 +500,7 @@ describe('Given an administrator on the alerts page', () => {
     });
 
     it('and the test is refused by the rate limit, then the refusal is shown', async () => {
-      button('Poslat zkušební upozornění').click();
+      button('Poslat zkušební upozornění na všechna moje zařízení').click();
       await settle();
       const limited = problem(
         429,
@@ -385,6 +527,42 @@ describe('Given an administrator on the alerts page', () => {
       expect(push.unsubscribe).toHaveBeenCalled();
       expect(status()).toContain('Upozornění jsme na tomto zařízení vypnuli.');
       expect(button('Zapnout upozornění na tomto zařízení')).toBeTruthy();
+      expect(document.activeElement?.textContent?.trim()).toBe('Toto zařízení');
+    });
+
+    it('and the other device is being removed, then its button names the running removal', async () => {
+      button('Odebrat zařízení Apple, zapnuto 30. 10. 2026').click();
+      await settle();
+
+      expect(button('Odebíráme zařízení Apple, zapnuto 30. 10. 2026').textContent?.trim()).toBe(
+        'Odebíráme…',
+      );
+      http
+        .expectOne({ method: 'DELETE', url: `${PUSH_URL}/subscriptions/push-phone` })
+        .flush(null, { status: 204, statusText: 'No Content' });
+      await settle();
+      expect(document.activeElement?.textContent?.trim()).toBe('Další zařízení');
+    });
+
+    it('and a switch of the other device is saved, then the line names that device', async () => {
+      const bank = checkboxes(section('Další zařízení'))[0];
+      bank.checked = false;
+      bank.dispatchEvent(new Event('change'));
+      await settle();
+      http.expectOne({ method: 'PUT', url: `${PUSH_URL}/subscriptions/push-phone/alerts` }).flush(
+        pushSubscription({
+          id: 'push-phone',
+          service: 'apple',
+          current: false,
+          createdAt: '2026-10-30T10:00:00Z',
+          alerts: { bankImport: false, backups: false, mail: true },
+        }),
+      );
+      await settle();
+
+      expect(status()).toContain(
+        'Uloženo pro Apple (30. 10. 2026): Import plateb z banky – vypnuto.',
+      );
     });
 
     it('and the other device is removed, then it leaves the list', async () => {
@@ -401,6 +579,39 @@ describe('Given an administrator on the alerts page', () => {
         'Na jiném zařízení upozornění zapnutá nemáte.',
       );
     });
+  });
+
+  it('when the server lists this device but the browser no longer holds its subscription, then the page says so and offers turning on again', async () => {
+    withPushApi();
+    push.browserSubscription.mockResolvedValue('not-subscribed');
+    await open(adminPush({ subscriptions: [pushSubscription()] }));
+
+    expect(sectionText('Toto zařízení')).toContain(
+      'Prohlížeč ale upozornění od tohoto webu už nepřijímá',
+    );
+    button('Zapnout znovu').click();
+    await settle();
+    push.browserSubscription.mockResolvedValue('subscribed');
+    http
+      .expectOne({ method: 'POST', url: `${PUSH_URL}/subscriptions` })
+      .flush(pushSubscription(), { status: 201, statusText: 'Created' });
+    await settle();
+    http
+      .expectOne({ method: 'GET', url: PUSH_URL })
+      .flush(adminPush({ subscriptions: [pushSubscription()] }));
+    await settle();
+
+    expect(sectionText('Toto zařízení')).not.toContain('už nepřijímá');
+  });
+
+  it('when the server lists this device but notifications are now blocked, then the page says how to allow them', async () => {
+    withPushApi('denied');
+    await open(adminPush({ subscriptions: [pushSubscription()] }));
+
+    expect(sectionText('Toto zařízení')).toContain(
+      'Prohlížeč ale upozornění tohoto webu teď blokuje',
+    );
+    expect(() => button('Zapnout znovu')).toThrow();
   });
 
   it('when notifications are blocked for the site, then the page says how to allow them', async () => {
@@ -441,6 +652,41 @@ describe('Given an administrator on the alerts page', () => {
     await settle();
 
     expect(text('[role="alert"]')).toContain('Server teď upozornění posílat neumí');
+  });
+
+  it('when the load is refused as the session is gone, then the administrator is sent home to sign in', async () => {
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    const dialog = vi.spyOn(TestBed.inject(LoginDialogService), 'open');
+    fixture = TestBed.createComponent(AdminAlerts);
+    fixture.detectChanges();
+    const refused = problem(401, 'auth/unauthenticated', 'Přihlaste se', 'Chybí token.');
+    http.expectOne(PUSH_URL).flush(refused.body, refused.options);
+    http.expectOne('/api/donors/auth/logout').flush(null);
+    await settle();
+
+    expect(navigate).toHaveBeenCalledWith('/');
+    expect(dialog).toHaveBeenCalledWith('login', expect.anything());
+  });
+
+  it('when the load is refused as the account is no administrator, then the page goes to the donor overview', async () => {
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    fixture = TestBed.createComponent(AdminAlerts);
+    fixture.detectChanges();
+    const refused = problem(403, 'auth/forbidden', 'Přístup odepřen', 'Jen pro správce.');
+    http.expectOne(PUSH_URL).flush(refused.body, refused.options);
+    await settle();
+
+    expect(navigate).toHaveBeenCalledWith('/darce/prehled');
+  });
+
+  it('when the load is refused by the rate limit, then the page names the refusal', async () => {
+    fixture = TestBed.createComponent(AdminAlerts);
+    fixture.detectChanges();
+    const limited = problem(429, 'operations/rate-limited', 'Příliš mnoho pokusů', 'Za chvíli.');
+    http.expectOne(PUSH_URL).flush(limited.body, limited.options);
+    await settle();
+
+    expect(text('[role="alert"]')).toContain('Příliš mnoho pokusů. Za chvíli.');
   });
 
   it('when the page fails to load, then a retry reads it again', async () => {

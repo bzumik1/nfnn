@@ -60,8 +60,9 @@ export interface OpenAlertResponse {
 
 export interface AdminPushResponse {
   publicKey: string;
+  deviceSession?: boolean;
   subscriptions: PushSubscriptionResponse[];
-  openAlerts: OpenAlertResponse[];
+  openAlerts?: OpenAlertResponse[];
 }
 
 export interface PushSubscriptionRequest {

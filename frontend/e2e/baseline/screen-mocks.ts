@@ -327,6 +327,7 @@ const adminAnswers: Record<string, unknown> = {
   '/api/admin/operations/backups': backups,
   '/api/admin/operations/push': {
     publicKey: `B${'E'.repeat(86)}`,
+    deviceSession: true,
     subscriptions: [
       {
         id: 'push-phone',

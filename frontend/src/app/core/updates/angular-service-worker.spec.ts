@@ -1,8 +1,10 @@
+import type { Mock } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { SwPush, SwRegistrationOptions, SwUpdate, VersionEvent } from '@angular/service-worker';
 import { firstValueFrom, Subject, toArray } from 'rxjs';
 
 import {
+  PUSH_CALL_TIMEOUT_MS,
   provideAppServiceWorker,
   SERVICE_WORKER_REGISTRATION,
   SERVICE_WORKER_SCRIPT,
@@ -189,12 +191,120 @@ describe('Given the app service worker providers', () => {
       await expect(pushWith(swPush).requestSubscription('BServerKey')).rejects.toThrow();
     });
 
+    function browserSubscription(key: Uint8Array | null) {
+      return {
+        endpoint: 'https://fcm.googleapis.com/fcm/send/old-device',
+        options: { applicationServerKey: key?.buffer ?? null },
+        unsubscribe: vi.fn(() => Promise.resolve(true)),
+      };
+    }
+
+    function registeredWith(
+      subscription: object | null,
+      controller: object | null = {},
+    ): { getSubscription: Mock<() => Promise<object | null>> } {
+      const pushManager = { getSubscription: vi.fn(() => Promise.resolve(subscription)) };
+      Object.defineProperty(navigator, 'serviceWorker', {
+        configurable: true,
+        value: { controller, getRegistration: () => Promise.resolve({ pushManager }) },
+      });
+      return pushManager;
+    }
+
+    function keyBytes(publicKey: string): Uint8Array {
+      const base64 = publicKey.replace(/-/g, '+').replace(/_/g, '/');
+      return Uint8Array.from(atob(base64.padEnd(Math.ceil(base64.length / 4) * 4, '=')), (c) =>
+        c.charCodeAt(0),
+      );
+    }
+
+    const SERVER_KEY = `B${'A'.repeat(86)}`;
+    const OTHER_KEY = `B${'Q'.repeat(86)}`;
+
     it('when the device was not subscribed, then unsubscribing still succeeds', async () => {
-      controlledBy({});
-      const swPush = angularPush();
+      registeredWith(null);
+
+      await expect(pushWith(angularPush()).unsubscribe()).resolves.toBeUndefined();
+    });
+
+    it('when no worker controls the page, then unsubscribing still ends the browser subscription through the registration', async () => {
+      const subscription = browserSubscription(keyBytes(SERVER_KEY));
+      registeredWith(subscription, null);
+      const swPush = angularPush({ unsubscribe: vi.fn(() => new Promise<void>(() => undefined)) });
 
       await expect(pushWith(swPush).unsubscribe()).resolves.toBeUndefined();
-      expect(swPush.unsubscribe).toHaveBeenCalled();
+      expect(subscription.unsubscribe).toHaveBeenCalled();
+    });
+
+    it('when the registration never answers, then unsubscribing gives up after a while instead of hanging', async () => {
+      vi.useFakeTimers();
+      try {
+        Object.defineProperty(navigator, 'serviceWorker', {
+          configurable: true,
+          value: { controller: null, getRegistration: () => new Promise(() => undefined) },
+        });
+        let settled = false;
+        void pushWith(angularPush())
+          .unsubscribe()
+          .then(() => (settled = true));
+
+        await vi.advanceTimersByTimeAsync(PUSH_CALL_TIMEOUT_MS);
+
+        expect(settled).toBe(true);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('when the browser holds a subscription under another server key, then it is ended before subscribing again', async () => {
+      withPushSurface();
+      const old = browserSubscription(keyBytes(OTHER_KEY));
+      registeredWith(old);
+      const swPush = angularPush();
+
+      await pushWith(swPush).requestSubscription(SERVER_KEY);
+
+      expect(old.unsubscribe).toHaveBeenCalled();
+      expect(swPush.requestSubscription).toHaveBeenCalledWith({ serverPublicKey: SERVER_KEY });
+    });
+
+    it('when the browser holds a subscription under the same server key, then it is kept', async () => {
+      withPushSurface();
+      const same = browserSubscription(keyBytes(SERVER_KEY));
+      registeredWith(same);
+      const swPush = angularPush();
+
+      await pushWith(swPush).requestSubscription(SERVER_KEY);
+
+      expect(same.unsubscribe).not.toHaveBeenCalled();
+      expect(swPush.requestSubscription).toHaveBeenCalled();
+    });
+
+    it('when the browser is asked, then it says whether it still holds a push subscription', async () => {
+      const pushManager = registeredWith(browserSubscription(keyBytes(SERVER_KEY)));
+      const push = pushWith(angularPush());
+
+      expect(await push.browserSubscription()).toBe('subscribed');
+
+      pushManager.getSubscription.mockResolvedValue(null);
+
+      expect(await push.browserSubscription()).toBe('not-subscribed');
+    });
+
+    it('when the page asks for the permission, then the browser is asked at once and its answer returned', async () => {
+      controlledBy({});
+      const requestPermission = vi.fn(() => Promise.resolve('granted'));
+      Object.defineProperty(window, 'PushManager', { configurable: true, value: class {} });
+      Object.defineProperty(window, 'Notification', {
+        configurable: true,
+        value: { permission: 'default', requestPermission },
+      });
+      const push = pushWith(angularPush());
+
+      const answer = push.requestPermission();
+
+      expect(requestPermission).toHaveBeenCalledTimes(1);
+      expect(await answer).toBe('granted');
     });
 
     it('when a notification is clicked, then the app sees the action and the data of the notification', async () => {

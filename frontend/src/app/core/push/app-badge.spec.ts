@@ -1,16 +1,24 @@
+import { signal, WritableSignal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Subject } from 'rxjs';
+
+import { AuthStore } from '../auth/auth-store';
 
 import { AppBadge } from './app-badge';
 import { NO_PUSH, SERVICE_WORKER_PUSH } from './service-worker-push';
 
 describe('Given the badge of the app icon', () => {
   let messages: Subject<unknown>;
+  let isAdmin: WritableSignal<boolean>;
 
   beforeEach(() => {
     messages = new Subject<unknown>();
+    isAdmin = signal(false);
     TestBed.configureTestingModule({
-      providers: [{ provide: SERVICE_WORKER_PUSH, useValue: { ...NO_PUSH, messages } }],
+      providers: [
+        { provide: SERVICE_WORKER_PUSH, useValue: { ...NO_PUSH, messages } },
+        { provide: AuthStore, useValue: { isAdmin } },
+      ],
     });
   });
 
@@ -44,6 +52,38 @@ describe('Given the badge of the app icon', () => {
 
     expect(badge.clearAppBadge).toHaveBeenCalled();
     expect(badge.setAppBadge).not.toHaveBeenCalled();
+  });
+
+  it('when a test alert arrives while two alerts are open, then the badge keeps showing two', () => {
+    const badge = withBadging();
+    TestBed.inject(AppBadge).start();
+
+    messages.next({ v: 1, kind: 'test', count: 2 });
+
+    expect(badge.setAppBadge).toHaveBeenCalledWith(2);
+    expect(badge.clearAppBadge).not.toHaveBeenCalled();
+  });
+
+  it('when the administrator signs out or loses the role, then the badge is cleared', () => {
+    const badge = withBadging();
+    isAdmin.set(true);
+    TestBed.inject(AppBadge).start();
+    TestBed.tick();
+
+    expect(badge.clearAppBadge).not.toHaveBeenCalled();
+
+    isAdmin.set(false);
+    TestBed.tick();
+
+    expect(badge.clearAppBadge).toHaveBeenCalledTimes(1);
+  });
+
+  it('when the app starts without an administrator, then the badge is left as it is', () => {
+    const badge = withBadging();
+    TestBed.inject(AppBadge).start();
+    TestBed.tick();
+
+    expect(badge.clearAppBadge).not.toHaveBeenCalled();
   });
 
   it('when a malformed message arrives, then the badge stays as it was', () => {

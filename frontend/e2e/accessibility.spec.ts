@@ -1614,7 +1614,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
   test('when an administrator manages the alerts of their devices, then the page with this device subscribed and another listed breaks no rule', async ({
     page,
   }) => {
-    await fakePushDevice(page);
+    await fakePushDevice(page, { subscribedWith: `B${'E'.repeat(86)}` });
     await mockDonorApi(page);
     const device = {
       service: 'google',
@@ -1629,6 +1629,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
         route.fulfill({
           json: {
             publicKey: `B${'E'.repeat(86)}`,
+            deviceSession: true,
             subscriptions: [
               { ...device, id: 'push-phone', service: 'apple', current: false, failuresInARow: 2 },
               { ...device, id: 'push-this-device', current: true },
@@ -1653,9 +1654,11 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await expect(page.getByRole('checkbox')).toHaveCount(6);
     expect(await violations(page)).toEqual([]);
 
-    await page.getByRole('button', { name: 'Poslat zkušební upozornění' }).click();
+    await page
+      .getByRole('button', { name: 'Poslat zkušební upozornění na všechna moje zařízení' })
+      .click();
     await expect(page.getByRole('status').filter({ hasText: /\S/ })).toHaveText(
-      'Zkušební upozornění jsme předali ke doručení na 2 zařízení.',
+      /^Zkušební upozornění jsme předali k doručení na 2 zařízení\./,
     );
     expect(await violations(page)).toEqual([]);
   });

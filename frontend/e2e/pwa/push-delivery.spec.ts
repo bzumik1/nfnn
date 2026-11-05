@@ -81,7 +81,7 @@ test.describe('Given the app whose own service worker controls the page with not
     const cdp = await context.newCDPSession(page);
     const origin = new URL(site.url).origin;
     const registrationId = await workerRegistrationId(cdp, `${origin}/`);
-    const outage = alertMessage('backups-outage', 1, '/sprava/zalohy');
+    const outage = alertMessage('backups-outage', 1);
     outage.notification.title = 'Zálohy nefungují';
     outage.notification.body = 'Poslední záloha se nepodařila.';
 
@@ -103,7 +103,7 @@ test.describe('Given the app whose own service worker controls the page with not
       ]);
     await expect.poll(() => badges(page)).toEqual([1]);
 
-    const recovered = alertMessage('backups-recovered', 0, '/sprava/zalohy');
+    const recovered = alertMessage('backups-recovered', 0);
     recovered.notification.title = 'Zálohy zase fungují';
     recovered.notification.body = 'Záloha se znovu podařila.';
     await cdp.send('ServiceWorker.deliverPushMessage', {

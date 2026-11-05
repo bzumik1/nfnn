@@ -1,5 +1,7 @@
 export const ALERTS_PAGE = '/sprava/upozorneni';
 
+export const MAX_OPEN_ALERT_COUNT = 999;
+
 const ROUTE_OF_KIND: Readonly<Record<string, string>> = {
   test: ALERTS_PAGE,
   'bank-import-outage': '/sprava',
@@ -19,7 +21,10 @@ export function routeOfAlert(data: unknown): string {
 
 export function openAlertCountOf(message: unknown): number | null {
   const count = fieldOf(message, 'count');
-  return typeof count === 'number' && Number.isInteger(count) && count >= 0 && count <= 99
+  return typeof count === 'number' &&
+    Number.isInteger(count) &&
+    count >= 0 &&
+    count <= MAX_OPEN_ALERT_COUNT
     ? count
     : null;
 }

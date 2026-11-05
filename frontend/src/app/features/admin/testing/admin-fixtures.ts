@@ -706,6 +706,7 @@ export function pushSubscription(
 export function adminPush(overrides: Partial<AdminPushResponse> = {}): AdminPushResponse {
   return {
     publicKey: PUSH_PUBLIC_KEY,
+    deviceSession: true,
     subscriptions: [],
     openAlerts: [],
     ...overrides,

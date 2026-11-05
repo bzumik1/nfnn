@@ -1,9 +1,10 @@
 /// <reference types="@angular/localize" />
 
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { SideNav, SideNavGroup } from '../../../shared/ui/side-nav/side-nav';
 import { DashboardTopBar } from '../../donors/dashboard/top-bar/top-bar';
+import { AlertBadgeRefresh } from './alert-badge-refresh';
 
 export const ADMIN_SECTIONS: readonly SideNavGroup[] = [
   {
@@ -59,4 +60,8 @@ export class AdminShell {
   protected readonly groups = ADMIN_SECTIONS;
   protected readonly navLabel = $localize`:@@admin.nav.label:Správa`;
   protected readonly menuLabel = $localize`:@@admin.nav.toggle:Menu správy`;
+
+  constructor() {
+    inject(AlertBadgeRefresh).watch(inject(DestroyRef));
+  }
 }

@@ -12,12 +12,18 @@ export interface PushNotificationClick {
   readonly data: unknown;
 }
 
+export type NotificationPermissionAnswer = 'granted' | 'denied' | 'default';
+
+export type BrowserPushSubscriptionState = 'subscribed' | 'not-subscribed' | 'unknown';
+
 export interface ServiceWorkerPush {
   readonly isEnabled: boolean;
   readonly controllerChanges: Observable<void>;
   readonly messages: Observable<unknown>;
   readonly notificationClicks: Observable<PushNotificationClick>;
+  requestPermission(): Promise<NotificationPermissionAnswer>;
   requestSubscription(publicKey: string): Promise<DevicePushSubscription>;
+  browserSubscription(): Promise<BrowserPushSubscriptionState>;
   unsubscribe(): Promise<void>;
 }
 
@@ -26,7 +32,9 @@ export const NO_PUSH: ServiceWorkerPush = {
   controllerChanges: EMPTY,
   messages: EMPTY,
   notificationClicks: EMPTY,
+  requestPermission: () => Promise.resolve('default'),
   requestSubscription: () => Promise.reject(new Error('Push is not available')),
+  browserSubscription: () => Promise.resolve('unknown'),
   unsubscribe: () => Promise.resolve(),
 };
 

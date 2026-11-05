@@ -14,7 +14,7 @@
     }
     @case ('error') {
       <div class="ui-load-state ui-load-state--error" role="alert">
-        <p i18n="@@admin.alerts.error.text">Upozornění se nepodařilo načíst.</p>
+        <p>{{ loadError() }}</p>
         <button type="button" class="ui-button" (click)="load()" i18n="@@admin.alerts.error.retry">
           Zkusit znovu
         </button>
@@ -52,7 +52,7 @@
                     >
                   } @else {
                     <span class="ui-badge ui-badge--success" i18n="@@admin.alerts.watched.badge.ok"
-                      >V pořádku</span
+                      >Bez poruchy</span
                     >
                   }
                 </span>
@@ -77,13 +77,63 @@
       </section>
 
       <section class="ui-card ui-card--padded" aria-labelledby="alerts-device-title">
-        <h2 id="alerts-device-title" class="ui-card__title" i18n="@@admin.alerts.device.title">
+        <h2
+          id="alerts-device-title"
+          class="ui-card__title"
+          tabindex="-1"
+          i18n="@@admin.alerts.device.title"
+        >
           Toto zařízení
         </h2>
         @if (current(); as device) {
           <p class="ui-card__intro" i18n="@@admin.alerts.device.on">
             Upozornění máte na tomto zařízení zapnutá ({{ serviceName(device) }}, od
             {{ since(device) }}).
+          </p>
+          @if (currentLost()) {
+            @if (availability() === 'denied') {
+              <p
+                class="ui-callout ui-callout--warning lost"
+                i18n="@@admin.alerts.device.lostDenied"
+              >
+                Prohlížeč ale upozornění tohoto webu teď blokuje, takže žádné nedorazí. Povolte je v
+                nastavení prohlížeče u tohoto webu (obvykle ikona vedle adresy, Oprávnění, Oznámení)
+                a stránku načtěte znovu.
+              </p>
+            } @else {
+              <p class="ui-callout ui-callout--warning lost" i18n="@@admin.alerts.device.lost">
+                Prohlížeč ale upozornění od tohoto webu už nepřijímá (například po smazání dat
+                webu), takže žádné nedorazí. Zapněte je prosím znovu.
+              </p>
+              <div class="actions again">
+                <button
+                  type="button"
+                  class="ui-button ui-button--primary"
+                  [disabled]="subscribing()"
+                  (click)="turnOn()"
+                >
+                  @if (subscribing()) {
+                    <span i18n="@@admin.alerts.device.turningOn">Zapínáme upozornění…</span>
+                  } @else {
+                    <span i18n="@@admin.alerts.device.turnOnAgain">Zapnout znovu</span>
+                  }
+                </button>
+              </div>
+            }
+          }
+          <p class="device-meta">
+            @if (lastDelivery(device); as delivered) {
+              <span i18n="@@admin.alerts.device.lastDelivered"
+                >Naposledy doručeno {{ delivered }}.</span
+              >
+            } @else {
+              <span i18n="@@admin.alerts.device.neverDelivered">Zatím nic nedoručeno.</span>
+            }
+            @if (device.failuresInARow > 0) {
+              <span i18n="@@admin.alerts.device.failures"
+                >Nedoručeno {{ device.failuresInARow }}× po sobě.</span
+              >
+            }
           </p>
           <fieldset class="switches">
             <legend i18n="@@admin.alerts.device.switches">Hlásit na tomto zařízení</legend>
@@ -93,26 +143,14 @@
                   #deviceSwitch
                   type="checkbox"
                   [checked]="device.alerts[area]"
-                  [disabled]="savingAlerts() !== null"
-                  (change)="changeAlert(device, area, deviceSwitch.checked)"
+                  [attr.aria-disabled]="savingAlerts() !== null ? 'true' : null"
+                  (change)="changeAlert(device, area, deviceSwitch)"
                 />
                 <span>{{ areaLabels[area] }}</span>
               </label>
             }
           </fieldset>
           <div class="actions">
-            <button
-              type="button"
-              class="ui-button ui-button--primary"
-              [disabled]="testing()"
-              (click)="sendTest()"
-            >
-              @if (testing()) {
-                <span i18n="@@admin.alerts.test.sending">Posíláme zkušební upozornění…</span>
-              } @else {
-                <span i18n="@@admin.alerts.test.send">Poslat zkušební upozornění</span>
-              }
-            </button>
             <button
               type="button"
               class="ui-button ui-button--danger-outline"
@@ -126,6 +164,11 @@
               }
             </button>
           </div>
+        } @else if (!deviceSession()) {
+          <p class="ui-card__intro" i18n="@@admin.alerts.device.noDeviceSession">
+            Toto přihlášení zatím nerozlišuje zařízení, a proto na něm upozornění zapnout nejde. Až
+            to web umožní, stačí se odhlásit a znovu přihlásit.
+          </p>
         } @else {
           @switch (availability()) {
             @case ('available') {
@@ -133,26 +176,28 @@
                 Na tomto zařízení upozornění zatím zapnutá nemáte. Prohlížeč se zeptá, jestli mu
                 upozornění dovolíte.
               </p>
-              <button
-                type="button"
-                class="ui-button ui-button--primary"
-                [disabled]="subscribing()"
-                (click)="turnOn()"
-              >
-                @if (subscribing()) {
-                  <span i18n="@@admin.alerts.device.turningOn">Zapínáme upozornění…</span>
-                } @else {
-                  <span i18n="@@admin.alerts.device.turnOn"
-                    >Zapnout upozornění na tomto zařízení</span
-                  >
-                }
-              </button>
+              <div class="actions">
+                <button
+                  type="button"
+                  class="ui-button ui-button--primary"
+                  [disabled]="subscribing()"
+                  (click)="turnOn()"
+                >
+                  @if (subscribing()) {
+                    <span i18n="@@admin.alerts.device.turningOn">Zapínáme upozornění…</span>
+                  } @else {
+                    <span i18n="@@admin.alerts.device.turnOn"
+                      >Zapnout upozornění na tomto zařízení</span
+                    >
+                  }
+                </button>
+              </div>
             }
             @case ('home-screen') {
               <p class="ui-card__intro" i18n="@@admin.alerts.device.homeScreen">
                 Na iPhonu a iPadu chodí upozornění jen webu přidanému na plochu. V Safari klepněte
-                na Sdílet, zvolte Přidat na plochu, otevřete web z ikony na ploše a zapněte
-                upozornění tady.
+                na Sdílet, zvolte Přidat na plochu, otevřete web z ikony na ploše, přihlaste se tam
+                a zapněte upozornění tady.
               </p>
             }
             @case ('denied') {
@@ -181,11 +226,16 @@
       </section>
 
       <section class="ui-card ui-card--padded" aria-labelledby="alerts-others-title">
-        <h2 id="alerts-others-title" class="ui-card__title" i18n="@@admin.alerts.others.title">
+        <h2
+          id="alerts-others-title"
+          class="ui-card__title"
+          tabindex="-1"
+          i18n="@@admin.alerts.others.title"
+        >
           Další zařízení
         </h2>
         @if (others().length === 0) {
-          <p class="ui-card__empty" i18n="@@admin.alerts.others.none">
+          <p class="ui-card__intro others-none" i18n="@@admin.alerts.others.none">
             Na jiném zařízení upozornění zapnutá nemáte.
           </p>
         } @else {
@@ -216,8 +266,8 @@
                         #otherSwitch
                         type="checkbox"
                         [checked]="device.alerts[area]"
-                        [disabled]="savingAlerts() !== null"
-                        (change)="changeAlert(device, area, otherSwitch.checked)"
+                        [attr.aria-disabled]="savingAlerts() !== null ? 'true' : null"
+                        (change)="changeAlert(device, area, otherSwitch)"
                       />
                       <span>{{ areaLabels[area] }}</span>
                     </label>
@@ -242,6 +292,35 @@
         }
         <app-live-notice [notice]="othersNotice()" />
       </section>
+
+      @if (hasDevices()) {
+        <section class="ui-card ui-card--padded" aria-labelledby="alerts-test-title">
+          <h2 id="alerts-test-title" class="ui-card__title" i18n="@@admin.alerts.test.title">
+            Zkušební upozornění
+          </h2>
+          <p class="ui-card__intro" i18n="@@admin.alerts.test.intro">
+            Pošle zkušební upozornění na všechna zařízení, na kterých upozornění máte zapnutá, ať si
+            ověříte, že dorazí.
+          </p>
+          <div class="actions">
+            <button
+              type="button"
+              class="ui-button ui-button--primary"
+              [disabled]="testing()"
+              (click)="sendTest()"
+            >
+              @if (testing()) {
+                <span i18n="@@admin.alerts.test.sending">Posíláme zkušební upozornění…</span>
+              } @else {
+                <span i18n="@@admin.alerts.test.send"
+                  >Poslat zkušební upozornění na všechna moje zařízení</span
+                >
+              }
+            </button>
+          </div>
+          <app-live-notice [notice]="testNotice()" />
+        </section>
+      }
     }
   }
 </div>

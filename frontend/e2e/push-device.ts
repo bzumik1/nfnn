@@ -1,4 +1,30 @@
 import type { Page } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+interface NotificationCase {
+  readonly input: { readonly kind: string };
+  readonly expected: { readonly tag: string; readonly url: string };
+}
+
+const NOTIFICATION_CASES: readonly NotificationCase[] = (
+  JSON.parse(
+    readFileSync(join(__dirname, '..', '..', 'shared-cases', 'push', 'notification.json'), 'utf8'),
+  ) as { cases: NotificationCase[] }
+).cases;
+
+function notificationOf(kind: string): NotificationCase['expected'] {
+  const found = NOTIFICATION_CASES.find((sharedCase) => sharedCase.input.kind === kind);
+  if (found === undefined) {
+    throw new Error(`shared-cases/push/notification.json has no case of the kind ${kind}`);
+  }
+  return found.expected;
+}
+
+export interface PushDeviceOptions {
+  readonly subscribedWith?: string;
+  readonly permission?: 'granted' | 'denied' | 'default';
+}
 
 export const DEVICE_ENDPOINT = 'https://fcm.googleapis.com/fcm/send/e2e-device';
 export const DEVICE_P256DH = `B${'Q'.repeat(86)}`;
@@ -7,21 +33,30 @@ export const DEVICE_AUTH = 'A'.repeat(22);
 export interface PushDeviceRecord {
   readonly subscribedWith: readonly string[];
   readonly unsubscribed: number;
+  readonly permissionRequests: number;
   readonly badges: readonly (number | null)[];
 }
 
-export async function fakePushDevice(page: Page): Promise<void> {
+export async function fakePushDevice(page: Page, options: PushDeviceOptions = {}): Promise<void> {
   await page.addInitScript(
-    ({ endpoint, p256dh, auth }) => {
+    ({ endpoint, p256dh, auth, subscribedWith, permission }) => {
       const listeners = new Map<string, Set<(event: unknown) => void>>();
       const record = {
         subscribedWith: [] as string[],
         unsubscribed: 0,
+        permissionRequests: 0,
         badges: [] as (number | null)[],
       };
-      let subscribed = false;
+      const bytesOf = (key: string): Uint8Array =>
+        Uint8Array.from(atob(key.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0));
+      let subscribed = subscribedWith !== null;
+      let applicationServerKey: ArrayBuffer | null =
+        subscribedWith === null ? null : (bytesOf(subscribedWith).buffer as ArrayBuffer);
       const subscription = {
         endpoint,
+        get options() {
+          return { userVisibleOnly: true, applicationServerKey };
+        },
         toJSON: () => ({ endpoint, keys: { p256dh, auth } }),
         unsubscribe: () => {
           subscribed = false;
@@ -32,6 +67,7 @@ export async function fakePushDevice(page: Page): Promise<void> {
       const pushManager = {
         subscribe: (options: { applicationServerKey: Uint8Array }) => {
           subscribed = true;
+          applicationServerKey = new Uint8Array(options.applicationServerKey).slice().buffer;
           record.subscribedWith.push(
             btoa(String.fromCharCode(...new Uint8Array(options.applicationServerKey)))
               .replace(/\+/g, '-')
@@ -65,7 +101,14 @@ export async function fakePushDevice(page: Page): Promise<void> {
       };
       Object.defineProperty(Notification, 'permission', {
         configurable: true,
-        get: () => 'granted',
+        get: () => permission,
+      });
+      Object.defineProperty(Notification, 'requestPermission', {
+        configurable: true,
+        value: () => {
+          record.permissionRequests += 1;
+          return Promise.resolve(permission);
+        },
       });
       Object.defineProperty(Navigator.prototype, 'serviceWorker', {
         configurable: true,
@@ -96,7 +139,13 @@ export async function fakePushDevice(page: Page): Promise<void> {
         },
       });
     },
-    { endpoint: DEVICE_ENDPOINT, p256dh: DEVICE_P256DH, auth: DEVICE_AUTH },
+    {
+      endpoint: DEVICE_ENDPOINT,
+      p256dh: DEVICE_P256DH,
+      auth: DEVICE_AUTH,
+      subscribedWith: options.subscribedWith ?? null,
+      permission: options.permission ?? 'granted',
+    },
   );
 }
 
@@ -115,7 +164,7 @@ export function workerPosts(page: Page, data: unknown): Promise<void> {
   );
 }
 
-export function alertMessage(kind: string, count: number, route: string) {
+export function alertMessage(kind: string, count: number, route = notificationOf(kind).url) {
   return {
     v: 1,
     kind,
@@ -123,7 +172,7 @@ export function alertMessage(kind: string, count: number, route: string) {
     notification: {
       title: 'Nová naděje',
       body: 'Zkušební upozornění',
-      tag: `nfnn-${kind.replace(/-(?:outage|recovered)$/, '')}`,
+      tag: notificationOf(kind).tag,
       renotify: true,
       lang: 'cs',
       icon: '/icon-192.png',

@@ -4,7 +4,9 @@ import { provideServiceWorker, SwPush, SwUpdate, VersionEvent } from '@angular/s
 import { filter, map, Observable } from 'rxjs';
 
 import {
+  BrowserPushSubscriptionState,
   devicePushSubscriptionOf,
+  NotificationPermissionAnswer,
   PushNotificationClick,
   SERVICE_WORKER_PUSH,
   ServiceWorkerPush,
@@ -18,6 +20,17 @@ import {
 
 export const SERVICE_WORKER_SCRIPT = 'ngsw-worker.js';
 export const SERVICE_WORKER_REGISTRATION = 'registerWhenStable:30000';
+export const PUSH_CALL_TIMEOUT_MS = 5_000;
+
+interface BrowserPushSubscription {
+  readonly options?: { readonly applicationServerKey?: ArrayBuffer | null };
+  unsubscribe(): Promise<boolean>;
+}
+
+interface NotificationSurface {
+  readonly permission?: string;
+  requestPermission?: () => Promise<string> | undefined;
+}
 
 function versionEventOf(event: VersionEvent): ServiceWorkerVersionEvent | null {
   switch (event.type) {
@@ -81,10 +94,105 @@ function pushOf(push: SwPush, view: Window | null): ServiceWorkerPush {
     controllerChanges: controllerChangesOf(container),
     messages: push.messages,
     notificationClicks,
-    requestSubscription: async (publicKey) =>
-      devicePushSubscriptionOf(await push.requestSubscription({ serverPublicKey: publicKey })),
-    unsubscribe: () => push.unsubscribe().catch(() => undefined),
+    requestPermission: () => requestPermissionIn(view),
+    requestSubscription: async (publicKey) => {
+      const existing = await withinTime(browserSubscriptionIn(container), null);
+      if (existing !== null && !holdsKey(existing, publicKey)) {
+        await withinTime(
+          existing.unsubscribe().then(() => undefined),
+          undefined,
+        );
+      }
+      return devicePushSubscriptionOf(
+        await push.requestSubscription({ serverPublicKey: publicKey }),
+      );
+    },
+    browserSubscription: () =>
+      withinTime<BrowserPushSubscriptionState>(
+        browserSubscriptionIn(container).then((subscription) =>
+          subscription === null ? 'not-subscribed' : 'subscribed',
+        ),
+        'unknown',
+      ),
+    unsubscribe: () =>
+      withinTime(
+        browserSubscriptionIn(container).then((subscription) =>
+          subscription?.unsubscribe().then(() => undefined),
+        ),
+        undefined,
+      ),
   };
+}
+
+function requestPermissionIn(view: Window | null): Promise<NotificationPermissionAnswer> {
+  const notification = (view as (Window & { Notification?: NotificationSurface }) | null)
+    ?.Notification;
+  try {
+    const asked = notification?.requestPermission?.();
+    return Promise.resolve(asked ?? notification?.permission).then(permissionOf, () => 'default');
+  } catch {
+    return Promise.resolve('default');
+  }
+}
+
+function permissionOf(answer: string | undefined): NotificationPermissionAnswer {
+  return answer === 'granted' || answer === 'denied' ? answer : 'default';
+}
+
+function browserSubscriptionIn(
+  container: ServiceWorkerContainer | undefined,
+): Promise<BrowserPushSubscription | null> {
+  if (typeof container?.getRegistration !== 'function') {
+    return Promise.resolve(null);
+  }
+  return container
+    .getRegistration()
+    .then(
+      (registration) =>
+        (registration?.pushManager?.getSubscription() ??
+          null) as Promise<BrowserPushSubscription | null> | null,
+    )
+    .then((subscription) => subscription ?? null);
+}
+
+function holdsKey(subscription: BrowserPushSubscription, publicKey: string): boolean {
+  const held = subscription.options?.applicationServerKey;
+  if (!held) {
+    return false;
+  }
+  const heldBytes = new Uint8Array(held);
+  const wanted = bytesOfBase64Url(publicKey);
+  return (
+    wanted !== null &&
+    heldBytes.length === wanted.length &&
+    heldBytes.every((byte, index) => byte === wanted[index])
+  );
+}
+
+function bytesOfBase64Url(text: string): Uint8Array | null {
+  try {
+    const base64 = text.replace(/-/g, '+').replace(/_/g, '/');
+    const binary = atob(base64.padEnd(Math.ceil(base64.length / 4) * 4, '='));
+    return Uint8Array.from(binary, (character) => character.charCodeAt(0));
+  } catch {
+    return null;
+  }
+}
+
+function withinTime<T>(work: Promise<T>, fallback: T): Promise<T> {
+  return new Promise<T>((resolve) => {
+    const timer = setTimeout(() => resolve(fallback), PUSH_CALL_TIMEOUT_MS);
+    work.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      () => {
+        clearTimeout(timer);
+        resolve(fallback);
+      },
+    );
+  });
 }
 
 export function provideAppServiceWorker(): EnvironmentProviders {
