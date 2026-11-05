@@ -1,0 +1,41 @@
+[
+  {
+    "path": "POST /api/admin/donations/import/history",
+    "scenario": "donations/admin_history_import: *",
+    "kind": "added",
+    "reason": "Plan v3 2.33 (Jakub 2026-11-05, roadmap PR #312): an administrator loads older bank payments from /sprava without a restart; v2 had no such endpoint, and the connector's nfnn_import_history calls it",
+    "contract": "docs/api-contract.md, Administration: GET /api/admin/donations/import-state and POST /api/admin/donations/import/history; MCP connector"
+  },
+  {
+    "path": "GET /api/admin/donations/import-state",
+    "scenario": "donations/admin_import_state: *",
+    "kind": "added",
+    "field": "$.historyImport",
+    "reason": "Plan v3 2.33 (Jakub 2026-11-05, roadmap PR #312): an administrator loads older bank payments from /sprava without a restart: the import state names the last run of older payments since the start (or null) and the day the administration offers for one; the fields before them answer as they did",
+    "contract": "docs/api-contract.md, Administration: GET /api/admin/donations/import-state and POST /api/admin/donations/import/history"
+  },
+  {
+    "path": "GET /api/admin/donations/import-state",
+    "scenario": "donations/admin_import_state: *",
+    "kind": "added",
+    "field": "$.defaultHistoryFrom",
+    "reason": "Plan v3 2.33 (Jakub 2026-11-05, roadmap PR #312): an administrator loads older bank payments from /sprava without a restart: the import state names the last run of older payments since the start (or null) and the day the administration offers for one; the fields before them answer as they did",
+    "contract": "docs/api-contract.md, Administration: GET /api/admin/donations/import-state and POST /api/admin/donations/import/history"
+  },
+  {
+    "path": "GET /api/admin/donations/import-state",
+    "scenario": "donors/admin_administrators: *",
+    "kind": "added",
+    "field": "$.historyImport",
+    "reason": "Plan v3 2.33 (Jakub 2026-11-05, roadmap PR #312): an administrator loads older bank payments from /sprava without a restart: the import state names the last run of older payments since the start (or null) and the day the administration offers for one; the fields before them answer as they did",
+    "contract": "docs/api-contract.md, Administration: GET /api/admin/donations/import-state and POST /api/admin/donations/import/history"
+  },
+  {
+    "path": "GET /api/admin/donations/import-state",
+    "scenario": "donors/admin_administrators: *",
+    "kind": "added",
+    "field": "$.defaultHistoryFrom",
+    "reason": "Plan v3 2.33 (Jakub 2026-11-05, roadmap PR #312): an administrator loads older bank payments from /sprava without a restart: the import state names the last run of older payments since the start (or null) and the day the administration offers for one; the fields before them answer as they did",
+    "contract": "docs/api-contract.md, Administration: GET /api/admin/donations/import-state and POST /api/admin/donations/import/history"
+  }
+]

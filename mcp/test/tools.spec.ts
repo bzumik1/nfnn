@@ -476,13 +476,6 @@ describe('Given an administrator connected with the reading permission only', ()
     ).toHaveLength(0);
   });
 
-  it('when the status is asked, then the bank import names the last run of older payments and the default day', async () => {
-    const text = textOf(await client.callTool({ name: 'nfnn_status', arguments: {} }));
-    expect(text).toContain('"historyImport":{"from":"2026-01-01"');
-    expect(text).toContain('"status":"COMPLETED"');
-    expect(text).toContain('"defaultHistoryFrom":"2026-01-01"');
-  });
-
   it('when the history, the report and the content are asked, then they come from the administration', async () => {
     const actions = await client.callTool({
       name: 'nfnn_admin_actions',

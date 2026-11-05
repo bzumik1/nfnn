@@ -8,9 +8,9 @@ Feature: An administrator loads older bank payments without restarting the serve
 
   Scenario: Locked history ends the run as locked and leaves the covered period as it was
     Given the bank account has these movements:
-      | id   | date       | amount | account    | bankCode |
-      | 2001 | 2026-02-10 | 300.00 | 2900233333 | 2010     |
-      | 2002 | 2026-10-20 | 500.00 | 2900233333 | 2010     |
+      | id   | date       | amount | account    | bankCode | name         |
+      | 2001 | 2026-02-10 | 300.00 | 2900233333 | 2010     | Svoboda Petr |
+      | 2002 | 2026-10-20 | 500.00 | 2900233333 | 2010     | Svoboda Petr |
     And the application starts the import
     And 60 seconds pass
     When "Jana" asks for older bank payments from 2026-01-01
@@ -36,9 +36,9 @@ Feature: An administrator loads older bank payments without restarting the serve
   Scenario: After the history is unlocked the same request loads the older payments, pairs them and widens the covered period
     Given a person "Petr" is registered
     And the bank account has these movements:
-      | id   | date       | amount | account    | bankCode | variableSymbol |
-      | 2001 | 2026-02-10 | 300.00 | 2900233333 | 2010     | {Petr}         |
-      | 2002 | 2026-10-20 | 500.00 | 2900233333 | 2010     | {Petr}         |
+      | id   | date       | amount | account    | bankCode | variableSymbol | name         |
+      | 2001 | 2026-02-10 | 300.00 | 2900233333 | 2010     | {Petr}         | Svoboda Petr |
+      | 2002 | 2026-10-20 | 500.00 | 2900233333 | 2010     | {Petr}         | Svoboda Petr |
     And the application starts the import
     And 60 seconds pass
     And the bank history is unlocked
@@ -59,8 +59,8 @@ Feature: An administrator loads older bank payments without restarting the serve
 
   Scenario Outline: A request <days> days back needs the unlocked history only beyond the 89 days Fio serves without it
     Given the bank account has these movements:
-      | id   | date       | amount | account    | bankCode |
-      | 2001 | 2026-08-08 | 300.00 | 2900233333 | 2010     |
+      | id   | date       | amount | account    | bankCode | name         |
+      | 2001 | 2026-08-08 | 300.00 | 2900233333 | 2010     | Svoboda Petr |
     When "Jana" asks for older bank payments from <from>
     Then the response status is 202
     And the history import says:
@@ -74,10 +74,10 @@ Feature: An administrator loads older bank payments without restarting the serve
 
   Scenario: Reading a covered window again stores nothing twice and closes the gap a long pause left
     Given the bank account has these movements:
-      | id   | date       | amount | account    | bankCode |
-      | 2001 | 2026-10-20 | 300.00 | 2900233333 | 2010     |
-      | 2002 | 2026-12-15 | 400.00 | 2900233333 | 2010     |
-      | 2003 | 2027-03-20 | 500.00 | 2900233333 | 2010     |
+      | id   | date       | amount | account    | bankCode | name         |
+      | 2001 | 2026-10-20 | 300.00 | 2900233333 | 2010     | Svoboda Petr |
+      | 2002 | 2026-12-15 | 400.00 | 2900233333 | 2010     | Svoboda Petr |
+      | 2003 | 2027-03-20 | 500.00 | 2900233333 | 2010     | Svoboda Petr |
     And the application starts the import
     And 150 days pass
     And the hourly import runs
