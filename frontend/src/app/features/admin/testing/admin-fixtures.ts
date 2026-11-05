@@ -1,4 +1,5 @@
 import {
+  AdminBankAccountItem,
   AdminActionResponse,
   AdminActivitySinceResponse,
   DiagnosticsResponse,
@@ -39,7 +40,6 @@ import {
   YearlyReceiptsIssueResponse,
 } from '../admin-api';
 import { frozenCase, YEARLY_ONE } from '../../donations/receipt-pdf/testing/receipt-fixtures';
-import { BankAccountItem } from '../../donations/bank-accounts-api';
 import { DonationItem } from '../../donations/donations-api';
 
 export function importState(overrides: Partial<ImportStateResponse> = {}): ImportStateResponse {
@@ -60,6 +60,7 @@ export function unpairedPayment(
 ): AdminPaymentResponse {
   return {
     id: '019a1c00-0000-7000-8000-000000001001',
+    version: '3f2a9c4e1b7d6085',
     bankTransactionId: 1001,
     bookedOn: '2026-10-10',
     amountMinor: 50000,
@@ -124,6 +125,7 @@ export function administrator(
 export function symbolClaim(overrides: Partial<SymbolClaimResponse> = {}): SymbolClaimResponse {
   return {
     id: '019a1c00-0000-7000-8000-00000000c001',
+    version: 'a41e7c0d95b3f268',
     donorId: '01a18e56-bdb0-775a-bd0a-a60756831369',
     donorName: 'Jana Nováková',
     account: '1234567/0800',
@@ -173,9 +175,12 @@ export function donorAccount(overrides: Partial<DonorAccountResponse> = {}): Don
   };
 }
 
-export function adminBankAccount(overrides: Partial<BankAccountItem> = {}): BankAccountItem {
+export function adminBankAccount(
+  overrides: Partial<AdminBankAccountItem> = {},
+): AdminBankAccountItem {
   return {
     id: '0192f0c4-0000-7000-8000-000000000001',
+    version: '6c1b0e5f3a7d2c90',
     accountNumber: '2900233333/2010',
     status: 'ACTIVE',
     verifiedOn: '2026-10-17',
@@ -310,6 +315,7 @@ export function reportView(overrides: Partial<AdminReportResponse> = {}): AdminR
       sendHour: 7,
       sections: { donors: true, donations: true, unpairedPayments: true, bankImport: true },
       changedAt: null,
+      version: '0d7e5b2c84a1f936',
     },
     sentReports: [],
     nextReport: { month: '2026-09', dueOn: '2026-10-01' },

@@ -26,7 +26,12 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptWithdrawal;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptWithdrawalInBrowserOnly;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptWithdrawalReason;
 import cz.novanadeje.app.donations.domain.receipt.FirstReceiptYear;
+import cz.novanadeje.app.donations.application.sync.AdminDonationsRows;
+import cz.novanadeje.app.donations.application.sync.AdminSyncRows;
+import cz.novanadeje.app.donations.domain.ChangedMeanwhile;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.shared.application.version.ExpectedVersion;
+import cz.novanadeje.app.shared.infrastructure.json.RowVersionsFixture;
 import cz.novanadeje.app.shared.domain.UuidV7;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -53,6 +58,7 @@ import static cz.novanadeje.app.shared.domain.Money.czk;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -80,7 +86,7 @@ class ManualPairingServiceTest {
     private final PairingLock lock = mock(PairingLock.class);
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
     private final ManualPairingService service = new ManualPairingService(payments, donorRecords, donations, receipts, lock, events, FROM_2026,
-            Clock.fixed(NOW, ZoneOffset.UTC));
+            new AdminDonationsRows(RowVersionsFixture.canonical(), donations, donorRecords), Clock.fixed(NOW, ZoneOffset.UTC));
 
     @BeforeEach
     void janaIsRegisteredAndTwoPaymentsAreStored() {
@@ -92,7 +98,7 @@ class ManualPairingServiceTest {
     @Test
     @DisplayName("Given an unpaired payment and a donor, when paired by hand, then the lock is taken first, a MANUAL donation is stored and the action is audited")
     void should_store_manual_donation_and_audit_when_paired_given_unpaired_payment() {
-        ManualPairingResult result = service.pair(ADMIN, unknownSymbol.id(), janaId);
+        ManualPairingResult result = service.pair(ADMIN, unknownSymbol.id(), janaId, ExpectedVersion.none());
 
         ArgumentCaptor<Donation> stored = ArgumentCaptor.forClass(Donation.class);
         InOrder order = inOrder(lock, receipts, donations, events);
@@ -121,7 +127,7 @@ class ManualPairingServiceTest {
     void should_name_changed_yearly_receipt_when_paired_given_issued_yearly_receipt() {
         when(receipts.findActiveForYear(janaId, Year.of(2026))).thenReturn(Optional.of(yearlyReceiptOf(janaId, Year.of(2026))));
 
-        ManualPairingResult result = service.pair(ADMIN, unknownSymbol.id(), janaId);
+        ManualPairingResult result = service.pair(ADMIN, unknownSymbol.id(), janaId, ExpectedVersion.none());
 
         assertThat(result.changedYearlyReceipts()).containsExactly(Year.of(2026));
     }
@@ -131,7 +137,7 @@ class ManualPairingServiceTest {
     void should_report_no_changed_receipt_when_paired_given_payment_before_first_receipt_year() {
         when(receipts.findActiveForYear(janaId, Year.of(2025))).thenReturn(Optional.of(yearlyReceiptOf(janaId, Year.of(2025))));
 
-        ManualPairingResult result = service.pair(ADMIN, lastYear.id(), janaId);
+        ManualPairingResult result = service.pair(ADMIN, lastYear.id(), janaId, ExpectedVersion.none());
 
         assertThat(result.changedYearlyReceipts()).isEmpty();
     }
@@ -141,7 +147,7 @@ class ManualPairingServiceTest {
     void should_refuse_when_paired_given_unknown_payment() {
         BankPaymentId unknown = BankPaymentId.newId(NOW);
 
-        assertThatThrownBy(() -> service.pair(ADMIN, unknown, janaId)).isInstanceOf(BankPaymentNotFound.class);
+        assertThatThrownBy(() -> service.pair(ADMIN, unknown, janaId, ExpectedVersion.none())).isInstanceOf(BankPaymentNotFound.class);
 
         verify(donations, never()).save(any());
         verify(events, never()).publishEvent(any());
@@ -152,7 +158,7 @@ class ManualPairingServiceTest {
     void should_refuse_when_paired_given_already_paired_payment() {
         when(donations.existsForBankPayment(unknownSymbol.id())).thenReturn(true);
 
-        assertThatThrownBy(() -> service.pair(ADMIN, unknownSymbol.id(), janaId)).isInstanceOf(BankPaymentAlreadyPaired.class);
+        assertThatThrownBy(() -> service.pair(ADMIN, unknownSymbol.id(), janaId, ExpectedVersion.none())).isInstanceOf(BankPaymentAlreadyPaired.class);
 
         verify(donations, never()).save(any());
     }
@@ -162,7 +168,7 @@ class ManualPairingServiceTest {
     void should_refuse_when_paired_given_unknown_donor() {
         DonorReference unknown = new DonorReference(UuidV7.generate(NOW.plusSeconds(1)));
 
-        assertThatThrownBy(() -> service.pair(ADMIN, unknownSymbol.id(), unknown)).isInstanceOf(DonorRecordNotFound.class);
+        assertThatThrownBy(() -> service.pair(ADMIN, unknownSymbol.id(), unknown, ExpectedVersion.none())).isInstanceOf(DonorRecordNotFound.class);
 
         verify(donations, never()).save(any());
     }
@@ -172,7 +178,7 @@ class ManualPairingServiceTest {
     void should_delete_donation_hold_payment_and_audit_when_unpaired_given_paired_payment() {
         when(donations.findByBankPayment(unknownSymbol.id())).thenReturn(Optional.of(paired));
 
-        List<Year> changed = service.unpair(ADMIN, AdministrationChannel.BROWSER, unknownSymbol.id());
+        List<Year> changed = service.unpair(ADMIN, AdministrationChannel.BROWSER, unknownSymbol.id(), ExpectedVersion.none());
 
         ArgumentCaptor<BankPayment> held = ArgumentCaptor.forClass(BankPayment.class);
         ArgumentCaptor<AdminActionPerformed> audited = ArgumentCaptor.forClass(AdminActionPerformed.class);
@@ -197,7 +203,7 @@ class ManualPairingServiceTest {
         when(donations.findByBankPayment(unknownSymbol.id())).thenReturn(Optional.of(paired));
         when(receipts.findActiveForYear(janaId, Year.of(2026))).thenReturn(Optional.of(yearly));
 
-        List<Year> changed = service.unpair(ADMIN, AdministrationChannel.BROWSER, unknownSymbol.id());
+        List<Year> changed = service.unpair(ADMIN, AdministrationChannel.BROWSER, unknownSymbol.id(), ExpectedVersion.none());
 
         ArgumentCaptor<DonationReceipt> saved = ArgumentCaptor.forClass(DonationReceipt.class);
         ArgumentCaptor<AdminActionPerformed> audited = ArgumentCaptor.forClass(AdminActionPerformed.class);
@@ -227,7 +233,7 @@ class ManualPairingServiceTest {
         when(donations.findByBankPayment(unknownSymbol.id())).thenReturn(Optional.of(paired));
         when(receipts.findActiveForYear(janaId, Year.of(2026))).thenReturn(Optional.of(yearly));
 
-        assertThatThrownBy(() -> service.unpair(ADMIN, AdministrationChannel.CONNECTED_APPLICATION, unknownSymbol.id()))
+        assertThatThrownBy(() -> service.unpair(ADMIN, AdministrationChannel.CONNECTED_APPLICATION, unknownSymbol.id(), ExpectedVersion.none()))
                 .isInstanceOf(ReceiptWithdrawalInBrowserOnly.class);
 
         assertThat(yearly.isActive()).isTrue();
@@ -244,7 +250,7 @@ class ManualPairingServiceTest {
         when(donations.findByBankPayment(unknownSymbol.id())).thenReturn(Optional.of(paired));
         when(receipts.findActiveForYear(janaId, Year.of(2026))).thenReturn(Optional.of(yearly));
 
-        assertThat(service.unpair(ADMIN, AdministrationChannel.CONNECTED_APPLICATION, unknownSymbol.id())).isEmpty();
+        assertThat(service.unpair(ADMIN, AdministrationChannel.CONNECTED_APPLICATION, unknownSymbol.id(), ExpectedVersion.none())).isEmpty();
 
         verify(donations).delete(paired.id());
         assertThat(yearly.isActive()).isTrue();
@@ -256,7 +262,7 @@ class ManualPairingServiceTest {
         when(donations.findByBankPayment(unknownSymbol.id())).thenReturn(Optional.of(paired));
         when(receipts.findActiveForYear(janaId, Year.of(2026))).thenReturn(Optional.empty());
 
-        assertThat(service.unpair(ADMIN, AdministrationChannel.CONNECTED_APPLICATION, unknownSymbol.id())).isEmpty();
+        assertThat(service.unpair(ADMIN, AdministrationChannel.CONNECTED_APPLICATION, unknownSymbol.id(), ExpectedVersion.none())).isEmpty();
 
         verify(donations).delete(paired.id());
         verify(payments).save(any());
@@ -269,7 +275,7 @@ class ManualPairingServiceTest {
         when(donations.findByBankPayment(unknownSymbol.id())).thenReturn(Optional.of(paired));
         when(receipts.findActiveForYear(janaId, Year.of(2026))).thenReturn(Optional.of(yearlyReceiptOf(janaId, Year.of(2026))));
 
-        List<Year> changed = service.unpair(ADMIN, AdministrationChannel.BROWSER, unknownSymbol.id());
+        List<Year> changed = service.unpair(ADMIN, AdministrationChannel.BROWSER, unknownSymbol.id(), ExpectedVersion.none());
 
         assertThat(changed).isEmpty();
         verify(receipts, never()).save(any());
@@ -282,7 +288,7 @@ class ManualPairingServiceTest {
         when(donations.findByBankPayment(unknownSymbol.id())).thenReturn(Optional.of(paired));
         when(receipts.existsForDonation(paired.id())).thenReturn(true);
 
-        assertThatThrownBy(() -> service.unpair(ADMIN, AdministrationChannel.BROWSER, unknownSymbol.id())).isInstanceOf(DonationHasReceipt.class);
+        assertThatThrownBy(() -> service.unpair(ADMIN, AdministrationChannel.BROWSER, unknownSymbol.id(), ExpectedVersion.none())).isInstanceOf(DonationHasReceipt.class);
 
         verify(donations, never()).delete(any());
         verify(payments, never()).save(any());
@@ -292,7 +298,7 @@ class ManualPairingServiceTest {
     @Test
     @DisplayName("Given an unpaired payment, when unpaired, then the conflict is reported")
     void should_refuse_when_unpaired_given_unpaired_payment() {
-        assertThatThrownBy(() -> service.unpair(ADMIN, AdministrationChannel.BROWSER, unknownSymbol.id())).isInstanceOf(BankPaymentNotPaired.class);
+        assertThatThrownBy(() -> service.unpair(ADMIN, AdministrationChannel.BROWSER, unknownSymbol.id(), ExpectedVersion.none())).isInstanceOf(BankPaymentNotPaired.class);
 
         verify(payments, never()).save(any());
     }
@@ -305,7 +311,7 @@ class ManualPairingServiceTest {
         when(receipts.existsForDonation(paired.id())).thenReturn(true);
         when(receipts.findActiveForYear(janaId, Year.of(2026))).thenReturn(Optional.of(yearly));
 
-        assertThatThrownBy(() -> service.unpair(ADMIN, AdministrationChannel.BROWSER, unknownSymbol.id())).isInstanceOf(DonationHasReceipt.class);
+        assertThatThrownBy(() -> service.unpair(ADMIN, AdministrationChannel.BROWSER, unknownSymbol.id(), ExpectedVersion.none())).isInstanceOf(DonationHasReceipt.class);
 
         assertThat(yearly.isActive()).isTrue();
         verify(receipts, never()).save(any());
@@ -314,11 +320,47 @@ class ManualPairingServiceTest {
     @Test
     @DisplayName("Given an unknown payment, when unpaired, then it is not found")
     void should_refuse_when_unpaired_given_unknown_payment() {
-        assertThatThrownBy(() -> service.unpair(ADMIN, AdministrationChannel.BROWSER, BankPaymentId.newId(NOW))).isInstanceOf(BankPaymentNotFound.class);
+        assertThatThrownBy(() -> service.unpair(ADMIN, AdministrationChannel.BROWSER, BankPaymentId.newId(NOW), ExpectedVersion.none())).isInstanceOf(BankPaymentNotFound.class);
     }
 
     private DonationReceipt yearlyReceiptListing(Donation donation) {
         return DonationReceipt.issue(DonationReceiptId.newId(NOW), janaId, NOW, new ReceiptFingerprint("5".repeat(64)),
                 frozen(yearlyDocument(janaRecord, List.of(donation))), Optional.empty());
+    }
+    @Test
+    @DisplayName("Given the payment was paired since an administrator read it, when they pair it with the version they read, then the lock is taken first and it is refused with the current version and row, storing and auditing nothing")
+    void should_refuse_with_the_current_row_when_paired_given_a_stale_version() {
+        AdminDonationsRows rows = new AdminDonationsRows(RowVersionsFixture.canonical(), donations, donorRecords);
+        String readVersion = rows.currentPayment(unknownSymbol).version();
+        when(donations.findByBankPayment(unknownSymbol.id())).thenReturn(Optional.of(paired));
+        String currentVersion = rows.currentPayment(unknownSymbol).version();
+
+        assertThatThrownBy(() -> service.pair(ADMIN, unknownSymbol.id(), janaId, ExpectedVersion.of(readVersion)))
+                .isInstanceOfSatisfying(ChangedMeanwhile.class, refusal -> {
+                    assertThat(refusal.code()).isEqualTo("donations/changed-meanwhile");
+                    assertThat(currentVersion).isNotEqualTo(readVersion);
+                    assertThat(refusal.extensions()).containsEntry("version", currentVersion);
+                    assertThat(refusal.extensions().get("current")).isInstanceOfSatisfying(AdminSyncRows.PaymentWithGift.class, current -> {
+                        assertThat(current.payment().version()).isEqualTo(currentVersion);
+                        assertThat(current.donation()).isNotNull();
+                    });
+                });
+
+        InOrder order = inOrder(lock, donations);
+        order.verify(lock).acquire();
+        order.verify(donations, atLeastOnce()).findByBankPayment(unknownSymbol.id());
+        verify(donations, never()).save(any());
+        verify(events, never()).publishEvent(any());
+    }
+
+    @Test
+    @DisplayName("Given a paired payment unchanged since an administrator read it, when they unpair it with that version, then it is unpaired")
+    void should_unpair_when_unpaired_given_the_current_version() {
+        when(donations.findByBankPayment(unknownSymbol.id())).thenReturn(Optional.of(paired));
+        String version = new AdminDonationsRows(RowVersionsFixture.canonical(), donations, donorRecords).currentPayment(unknownSymbol).version();
+
+        service.unpair(ADMIN, AdministrationChannel.BROWSER, unknownSymbol.id(), ExpectedVersion.of(version));
+
+        verify(donations).delete(paired.id());
     }
 }

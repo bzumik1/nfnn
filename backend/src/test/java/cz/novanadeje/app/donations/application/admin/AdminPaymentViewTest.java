@@ -20,7 +20,7 @@ class AdminPaymentViewTest {
     @DisplayName("Given a 1 Kč payment announcing an account verification, when the administration reads it, then it is marked as an account verification")
     void should_be_account_verification_when_read_given_verification_payment() {
         AdminPaymentView view = new AdminPaymentView(
-                payment(2001, BOOKED_ON, Money.czk(100), SENDER, "4821937560", "Ověření účtu Nadační fond Nová naděje"), Optional.empty());
+                payment(2001, BOOKED_ON, Money.czk(100), SENDER, "4821937560", "Ověření účtu Nadační fond Nová naděje"), Optional.empty(), "0123456789abcdef");
 
         assertThat(view.accountVerification()).isTrue();
     }
@@ -29,7 +29,7 @@ class AdminPaymentViewTest {
     @DisplayName("Given a gift with a message, when the administration reads it, then it is not an account verification")
     void should_not_be_account_verification_when_read_given_gift() {
         AdminPaymentView view = new AdminPaymentView(
-                payment(2002, BOOKED_ON, Money.czk(50000), SENDER, "4821937560", "Ověření účtu Nadační fond Nová naděje"), Optional.empty());
+                payment(2002, BOOKED_ON, Money.czk(50000), SENDER, "4821937560", "Ověření účtu Nadační fond Nová naděje"), Optional.empty(), "0123456789abcdef");
 
         assertThat(view.accountVerification()).isFalse();
     }

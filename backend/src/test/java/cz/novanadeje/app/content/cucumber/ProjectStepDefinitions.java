@@ -29,14 +29,17 @@ public class ProjectStepDefinitions {
     private final ScenarioDonors scenarioDonors;
     private final JdbcClient jdbc;
     private final UploadedImages images;
+    private final ContentRowVersions versions;
     private final Map<String, String> projectIdsBySlug = new LinkedHashMap<>();
 
-    public ProjectStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors scenarioDonors, JdbcClient jdbc, UploadedImages images) {
+    public ProjectStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors scenarioDonors, JdbcClient jdbc, UploadedImages images,
+                               ContentRowVersions versions) {
         this.api = api;
         this.sessions = sessions;
         this.scenarioDonors = scenarioDonors;
         this.jdbc = jdbc;
         this.images = images;
+        this.versions = versions;
     }
 
     @When("{string} creates a project:")
@@ -55,26 +58,30 @@ public class ProjectStepDefinitions {
     @When("{string} changes the project {string}:")
     public void changesTheProject(String alias, String slug, Map<String, String> fields) {
         sessions.actAs(alias);
-        api.put(ADMIN_PROJECTS + "/" + projectId(slug), projectBody(fields));
+        String id = projectId(slug);
+        api.put(ADMIN_PROJECTS + "/" + id, projectBody(fields), ApiClient.ifMatch(versions.ofProject(id)));
         rememberProject();
     }
 
     @When("{string} publishes the project {string} on {date}")
     public void publishesTheProjectOn(String alias, String slug, LocalDate publishedOn) {
         sessions.actAs(alias);
-        api.post(ADMIN_PROJECTS + "/" + projectIdOrRandom(slug) + "/publish", Map.of("publishedOn", publishedOn.toString()));
+        String id = projectIdOrRandom(slug);
+        api.post(ADMIN_PROJECTS + "/" + id + "/publish", Map.of("publishedOn", publishedOn.toString()), ApiClient.ifMatch(versions.ofProject(id)));
     }
 
     @When("{string} withdraws the project {string}")
     public void withdrawsTheProject(String alias, String slug) {
         sessions.actAs(alias);
-        api.post(ADMIN_PROJECTS + "/" + projectId(slug) + "/unpublish", Map.of());
+        String id = projectId(slug);
+        api.post(ADMIN_PROJECTS + "/" + id + "/unpublish", Map.of(), ApiClient.ifMatch(versions.ofProject(id)));
     }
 
     @When("{string} deletes the project {string}")
     public void deletesTheProject(String alias, String slug) {
         sessions.actAs(alias);
-        api.delete(ADMIN_PROJECTS + "/" + projectId(slug));
+        String id = projectId(slug);
+        api.delete(ADMIN_PROJECTS + "/" + id, ApiClient.ifMatch(versions.ofProject(id)));
     }
 
     @When("{string} asks for the projects")
@@ -97,7 +104,7 @@ public class ProjectStepDefinitions {
             assertThat(api.lastResponse().getStatusCode().value()).isEqualTo(201);
             rememberProject();
             api.post(ADMIN_PROJECTS + "/" + api.lastResponseJson().get("id").asString() + "/publish",
-                    Map.of("publishedOn", firstDate.plusDays(i - 1).toString()));
+                    Map.of("publishedOn", firstDate.plusDays(i - 1).toString()), ApiClient.ifMatch(api.lastResponseJson().get("version").asString()));
             assertThat(api.lastResponse().getStatusCode().value()).isEqualTo(200);
         }
     }

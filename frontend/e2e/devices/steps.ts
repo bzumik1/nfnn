@@ -220,6 +220,31 @@ export const STEPS: Step[] = [
     },
   },
   {
+    id: 'admin-changed-meanwhile',
+    title: 'the sheet of a write refused because someone else saved meanwhile',
+    open: async (ui) => {
+      await adminPage(ui, '/sprava/prehledy');
+      await ui.routes.route(
+        (url) => url.pathname === '/api/admin/donations/report/settings',
+        (route) =>
+          route.fulfill({
+            status: 409,
+            contentType: 'application/problem+json',
+            json: {
+              type: 'https://nfnn.cz/problems/donations/changed-meanwhile',
+              title: 'Mezitím se to změnilo',
+              detail: 'Nastavení mezitím změnil někdo jiný.',
+              status: 409,
+              version: '9e4b2d7c1a0f6358',
+              current: { recipients: ['info@nfnn.cz'], changedAt: '2026-10-20T08:15:00Z' },
+            },
+          }),
+      );
+      await ui.click({ css: 'form.settings-form button[type="submit"]' });
+      await ui.waitVisible(DIALOG);
+    },
+  },
+  {
     id: 'admin-settings',
     title: 'the settings in the administration',
     open: (ui) => adminPage(ui, '/sprava/nastaveni'),

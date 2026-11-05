@@ -111,6 +111,11 @@ async function elementsShown(page: Page, elements: string[]): Promise<void> {
   }
 }
 
+async function paymentDrawn(page: Page, elements: string[]): Promise<void> {
+  await elementsShown(page, elements);
+  await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
+}
+
 function adminPage(name: string, path: string, more: Partial<Screen> = {}): Screen {
   return {
     name,
@@ -299,7 +304,7 @@ const SCREENS: Screen[] = [
       await page.getByRole('button', { name: '1 000 Kč' }).click();
       await expect(page.locator(DONATE_BANK)).toContainText('1 000 Kč');
     },
-    ready: (page) => elementsShown(page, [DONATE_QR, DONATE_BANK]),
+    ready: (page) => paymentDrawn(page, [DONATE_QR, DONATE_BANK]),
   },
   {
     name: 'home-donate-own-amount',
@@ -314,7 +319,7 @@ const SCREENS: Screen[] = [
       await page.locator('#donate-custom-amount').fill('1 234');
       await expect(page.locator(DONATE_BANK)).toContainText('1 234 Kč');
     },
-    ready: (page) => elementsShown(page, [DONATE_QR, DONATE_BANK]),
+    ready: (page) => paymentDrawn(page, [DONATE_QR, DONATE_BANK]),
   },
   {
     name: 'home-donate-signed-in',
@@ -327,7 +332,7 @@ const SCREENS: Screen[] = [
       await openDonateSection(page, true);
       await expect(page.locator(DONATE_BANK)).toContainText(donor.variableSymbol);
     },
-    ready: (page) => elementsShown(page, [DONATE_QR, DONATE_BANK]),
+    ready: (page) => paymentDrawn(page, [DONATE_QR, DONATE_BANK]),
   },
   {
     name: 'home-donate-qr-error',
@@ -443,7 +448,7 @@ const SCREENS_SINCE_V2: Screen[] = [
       await expect(page.locator(SEND_GIFT_BANK)).toContainText(donor.variableSymbol);
       await unfoldPaymentQr(page, '.send-gift');
     },
-    ready: (page) => elementsShown(page, [SEND_GIFT_QR, SEND_GIFT_BANK]),
+    ready: (page) => paymentDrawn(page, [SEND_GIFT_QR, SEND_GIFT_BANK]),
   },
 ];
 

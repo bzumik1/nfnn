@@ -1,5 +1,9 @@
 package cz.novanadeje.app.donations.application.admin;
 
+import cz.novanadeje.app.donations.application.sync.AdminSyncRows.LinkRow;
+import cz.novanadeje.app.shared.application.version.ExpectedVersion;
+import cz.novanadeje.app.donations.domain.ChangedMeanwhile;
+import cz.novanadeje.app.donations.application.sync.AdminDonationsRows;
 import cz.novanadeje.app.donations.application.bankaccount.DonorBankAccountsService;
 import cz.novanadeje.app.donations.application.overview.DonationOverview;
 import cz.novanadeje.app.donations.application.overview.DonorDonationsService;
@@ -54,11 +58,12 @@ public class AdminDonorAccountsService {
     private final DonorDonationsService donorDonations;
     private final PairingLock lock;
     private final ApplicationEventPublisher events;
+    private final AdminDonationsRows rows;
     private final Clock clock;
 
     public AdminDonorAccountsService(DonorRecordRepository donorRecords, DonationRepository donations, DonationReceiptRepository receipts,
                                      SymbolClaimRepository claims, DonorBankAccountsService bankAccounts, DonorDonationsService donorDonations,
-                                     PairingLock lock, ApplicationEventPublisher events, Clock clock) {
+                                     PairingLock lock, ApplicationEventPublisher events, AdminDonationsRows rows, Clock clock) {
         this.donorRecords = donorRecords;
         this.donations = donations;
         this.receipts = receipts;
@@ -67,6 +72,7 @@ public class AdminDonorAccountsService {
         this.donorDonations = donorDonations;
         this.lock = lock;
         this.events = events;
+        this.rows = rows;
         this.clock = clock;
     }
 
@@ -76,11 +82,16 @@ public class AdminDonorAccountsService {
         DonationOverview overview = donorDonations.listDonations(donor, Optional.empty());
         Map<DonationId, LocalDate> receivedDays = overview.list().items().stream()
                 .collect(Collectors.toMap(Donation::id, Donation::receivedOn));
-        return new AdminDonorView(record, bankAccounts.listBankAccounts(donor), overview, receipts.findByDonorNewestFirst(donor), receivedDays);
+        Map<SenderAccountLinkId, String> linkVersions = record.senderAccountLinks().stream()
+                .collect(Collectors.toMap(SenderAccountLink::id, link -> rows.link(record, link).version()));
+        return new AdminDonorView(record, bankAccounts.listBankAccounts(donor), overview, receipts.findByDonorNewestFirst(donor), receivedDays,
+                linkVersions);
     }
 
-    public void disconnect(UUID adminId, DonorReference donor, SenderAccountLinkId linkId) {
+    public void disconnect(UUID adminId, DonorReference donor, SenderAccountLinkId linkId, ExpectedVersion expected) {
+        lock.acquire();
         DonorRecord record = recordOf(donor);
+        requireUnchanged(record, linkId, expected);
         Instant now = clock.instant();
         SenderAccountLink link = record.disconnectSenderAccount(linkId, FoundationCalendar.today(clock), now);
         donorRecords.saveSenderAccountLink(donor, link);
@@ -89,8 +100,10 @@ public class AdminDonorAccountsService {
         log.info("Admin {} disconnected sender account link {} of donor {}", adminId, linkId, donor);
     }
 
-    public void reconnect(UUID adminId, DonorReference donor, SenderAccountLinkId linkId) {
+    public void reconnect(UUID adminId, DonorReference donor, SenderAccountLinkId linkId, ExpectedVersion expected) {
+        lock.acquire();
         DonorRecord record = recordOf(donor);
+        requireUnchanged(record, linkId, expected);
         Instant now = clock.instant();
         SenderAccountLink awaiting = record.reconnectSenderAccount(linkId, FoundationCalendar.today(clock), now);
         if (!donorRecords.saveSenderAccountLink(donor, awaiting)) {
@@ -102,11 +115,11 @@ public class AdminDonorAccountsService {
         log.info("Admin {} asked to reconnect sender account link {} of donor {} as {}", adminId, linkId, donor, awaiting.id());
     }
 
-    public void remove(UUID adminId, DonorReference donor, SenderAccountLinkId linkId) {
+    public void remove(UUID adminId, DonorReference donor, SenderAccountLinkId linkId, ExpectedVersion expected) {
         lock.acquire();
         Instant now = clock.instant();
         DonorRecord record = recordOf(donor);
-        SenderAccountLink link = record.senderAccountLink(linkId).orElseThrow(() -> new SenderAccountLinkNotFound(linkId));
+        SenderAccountLink link = requireUnchanged(record, linkId, expected);
         receipts.lockDonor(donor);
         List<Donation> paired = donations.findBySenderAccountLink(linkId);
         if (ReceiptCoverage.anyReceiptCovers(receipts, donor, paired)) {
@@ -122,6 +135,15 @@ public class AdminDonorAccountsService {
                         + paired.size() + ", smazané odpovědi o starších symbolech: " + answers.size(), now));
         log.info("Admin {} removed sender account link {} of donor {}: {} donations and {} symbol claims deleted", adminId, linkId, donor,
                 paired.size(), answers.size());
+    }
+
+    private SenderAccountLink requireUnchanged(DonorRecord record, SenderAccountLinkId linkId, ExpectedVersion expected) {
+        SenderAccountLink link = record.senderAccountLink(linkId).orElseThrow(() -> new SenderAccountLinkNotFound(linkId));
+        LinkRow current = rows.link(record, link);
+        if (!expected.admits(current.version())) {
+            throw new ChangedMeanwhile(current.version(), current);
+        }
+        return link;
     }
 
     private DonorRecord recordOf(DonorReference donor) {

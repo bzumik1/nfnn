@@ -21,6 +21,7 @@ export interface FakeRequest {
   readonly method: string;
   readonly path: string;
   readonly contentType?: string;
+  readonly ifMatch?: string;
   readonly body?: string;
 }
 
@@ -341,6 +342,9 @@ export async function askFakeBackend(
     accept: call?.accept ?? 'application/json',
     authorization: 'Bearer api-token-write',
   };
+  if (request.ifMatch !== undefined) {
+    headers['if-match'] = request.ifMatch;
+  }
   let body: string | FormData | undefined = request.body;
   if (request.contentType !== undefined) {
     headers['content-type'] = request.contentType;
@@ -448,6 +452,7 @@ export function checkBackendShapes(input: {
   readonly fixtures: readonly FixtureAnswer[];
   readonly addedSinceV2?: readonly string[];
   readonly recordedOnlyAsNull?: Readonly<Record<string, string>>;
+  readonly statusesSinceV2?: Readonly<Record<string, string>>;
 }): string[] {
   const { calls, recorded, fixtures } = input;
   const added = new Set(input.addedSinceV2 ?? []);
@@ -480,6 +485,9 @@ export function checkBackendShapes(input: {
     }
     const sameStatus = answers.filter((answer) => answer.status === fixture.status);
     if (sameStatus.length === 0) {
+      if (`${name} ${fixture.status}` in (input.statusesSinceV2 ?? {})) {
+        continue;
+      }
       const statuses = [...new Set(answers.map((answer) => answer.status))].sort();
       problems.push(
         `the fake answers ${request} with ${fixture.status}, but the transcripts of ${name} record only ${statuses.join(', ')}`,

@@ -8,6 +8,7 @@ import {
   backupKeyWords,
   bankProblems,
   base32Decode,
+  ifMatch,
   mcpMessages,
   phaseMovements,
   pragueDay,
@@ -144,4 +145,12 @@ test('Given the planned movements and what the site shows, when the journey chec
     ],
   );
   assert.deepEqual(bankProblems(planned, [], unpaired), gifts.map((gift) => `the donor does not hold the gift of ${gift.amountMinor / 100} Kč`));
+});
+
+test('Given an administration row with a version, when the journey writes it, then it names the version in If-Match', () => {
+  assert.deepEqual(ifMatch({ id: 'p', version: '0d7e5b2c84a1f936' }), { 'If-Match': '"0d7e5b2c84a1f936"' });
+});
+
+test('Given a row without a version, when the journey writes it, then it sends no If-Match', () => {
+  assert.deepEqual(ifMatch({ id: 'p' }), {});
 });

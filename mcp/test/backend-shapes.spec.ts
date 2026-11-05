@@ -267,6 +267,18 @@ describe('Given recorded transcripts', () => {
     ]);
   });
 
+  it('when a fixture answers with a status recorded only since v2 and listed so, then the check accepts it', () => {
+    const problems = checkBackendShapes({
+      calls: [OVERVIEW],
+      recorded: recorded(),
+      fixtures: [answer({ type: 'x' }, 409)],
+      statusesSinceV2: {
+        'GET /api/admin/donations/overview 409': 'a refusal the scenarios of v2 never meet',
+      },
+    });
+    expect(problems).toEqual([]);
+  });
+
   it('when the fake serves a path the connector never calls, then the check names it', () => {
     const problems = checkBackendShapes({
       calls: [OVERVIEW],
@@ -346,8 +358,16 @@ describe('Given the connector, its fake backend and the recorded transcripts', (
           ? declaredAdditions(join(REPOSITORY, 'regression/v2/changes'))
           : [],
       recordedOnlyAsNull: RECORDED_ONLY_AS_NULL,
+      statusesSinceV2: recordedDirectory === undefined ? STATUSES_SINCE_V2 : {},
     });
     expect(problems).toEqual([]);
+    expect(fixtures).toContainEqual(
+      expect.objectContaining({
+        method: 'PUT',
+        path: '/api/admin/donations/report/settings',
+        status: 409,
+      }),
+    );
     expect(calls.map((call) => `${call.method} ${call.template}`)).toContain(
       'GET /api/admin/donations/overview',
     );
@@ -393,7 +413,17 @@ const RECORDED_ONLY_AS_NULL = {
     'the level configured before an override; the scenarios override loggers without one',
 };
 
+const STATUSES_SINCE_V2 = {
+  'PUT /api/admin/donations/report/settings 409':
+    'the refusal of a stale version (2.18, donations/admin_stale_writes), which v2 cannot answer; checked against a fresh recording (API_TRANSCRIPTS_DIR)',
+};
+
 const FAKE_ROUTES_OUTSIDE_CASES: FakeRequest[] = [
+  {
+    method: 'PUT',
+    path: '/api/admin/donations/report/settings',
+    ifMatch: `"${fake.STALE_VERSION}"`,
+  },
   { method: 'GET', path: '/.well-known/oauth-authorization-server' },
   { method: 'GET', path: '/actuator/info' },
   { method: 'GET', path: '/actuator/health' },
