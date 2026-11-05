@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="008-track-operational-alerts" author="nfnn">
+        <createTable tableName="operations_alert">
+            <column name="area" type="varchar(20)">
+                <constraints primaryKey="true" primaryKeyName="pk_operations_alert" nullable="false"/>
+            </column>
+            <column name="open_since" type="timestamp with time zone"/>
+            <column name="changes" type="bigint" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <sql>alter table operations_alert add constraint ck_operations_alert_area check (area in ('BANK_IMPORT', 'BACKUPS', 'MAIL'))</sql>
+        <sql>alter table operations_alert add constraint ck_operations_alert_changes check (changes &gt;= 0)</sql>
+    </changeSet>
+
+</databaseChangeLog>

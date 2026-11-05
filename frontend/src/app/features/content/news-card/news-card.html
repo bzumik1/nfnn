@@ -30,6 +30,34 @@
       }
     </h3>
     <p class="news-perex">{{ item().perex }}</p>
-    <span class="news-more" aria-hidden="true" i18n="@@home.news.card.more">Číst dál →</span>
+    @if (item().signer || linked()) {
+      <div class="news-foot">
+        @if (item().signer; as signer) {
+          <div class="signer">
+            <app-avatar
+              class="signer-photo"
+              [name]="signer.name"
+              [src]="signerPortrait()"
+              [size]="40"
+              loading="lazy"
+            />
+            <p class="signer-text">
+              <span class="signer-name">{{ signer.name }}</span>
+              @if (signer.role) {
+                <span class="signer-role">{{ signer.role }}</span>
+              }
+            </p>
+          </div>
+        }
+        @if (linked()) {
+          <app-share-button
+            class="news-share"
+            [pageTitle]="item().title"
+            [url]="shareUrl()"
+            [subject]="item().title"
+          />
+        }
+      </div>
+    }
   </div>
 </article>

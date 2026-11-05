@@ -251,3 +251,46 @@ describe('Given a share button for a news article', () => {
     });
   });
 });
+
+describe('Given a share button in a list of articles', () => {
+  let fixture: ComponentFixture<ShareButton>;
+
+  async function render(): Promise<void> {
+    await TestBed.configureTestingModule({ imports: [ShareButton] }).compileComponents();
+    fixture = TestBed.createComponent(ShareButton);
+    fixture.componentRef.setInput('pageTitle', TITLE);
+    fixture.componentRef.setInput('url', URL);
+    fixture.componentRef.setInput('subject', TITLE);
+    fixture.detectChanges();
+    await fixture.whenStable();
+  }
+
+  const buttonTexts = () =>
+    ([...fixture.nativeElement.querySelectorAll('button')] as HTMLButtonElement[]).map((button) =>
+      button.textContent?.replace(/\s+/g, ' ').trim(),
+    );
+  const shownTexts = () =>
+    ([...fixture.nativeElement.querySelectorAll('button')] as HTMLButtonElement[]).map((button) =>
+      [...button.querySelectorAll('span:not(.visually-hidden)')]
+        .map((span) => span.textContent?.trim())
+        .join(' '),
+    );
+
+  afterEach(() => forgetNavigatorStubs());
+
+  it('when the browser can share, then the button names the article it shares and shows only Sdílet', async () => {
+    giveNavigator(vi.fn<ShareFn>().mockResolvedValue(undefined), () => true);
+    await render();
+
+    expect(buttonTexts()).toEqual([`Sdílet ${TITLE}`]);
+    expect(shownTexts()).toEqual(['Sdílet']);
+  });
+
+  it('when the browser cannot share, then the copy button names the article whose link it copies', async () => {
+    giveNavigator(undefined, undefined);
+    await render();
+
+    expect(buttonTexts()).toEqual([`Kopírovat odkaz ${TITLE}`]);
+    expect(shownTexts()).toEqual(['Kopírovat odkaz']);
+  });
+});

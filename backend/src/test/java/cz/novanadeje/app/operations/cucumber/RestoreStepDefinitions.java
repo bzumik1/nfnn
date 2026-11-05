@@ -85,6 +85,12 @@ public class RestoreStepDefinitions {
                 + requestId + "\nadmin=" + donors.idOf(alias) + "\n");
     }
 
+    @Given("the backup container restored {string} for {string} under the request {string}, ending {int} sessions and spending {int} one-time secrets")
+    public void theBackupContainerRestoredAndRevoked(String fileName, String alias, String requestId, int sessions, int secrets) {
+        writeRestoreStatus("outcome=ok\nstarted_at=2026-11-05T08:00:00Z\nfinished_at=2026-11-05T08:00:05Z\nfile=" + fileName + "\nsize=1000\ntables=37\nsessions_ended="
+                + sessions + "\none_time_secrets_spent=" + secrets + "\nrequest=" + requestId + "\nadmin=" + donors.idOf(alias) + "\n");
+    }
+
     @Given("the backup container failed to restore {string} for {string} under the request {string} with {string}")
     public void theBackupContainerFailedToRestore(String fileName, String alias, String requestId, String error) {
         String admin = "nobody".equals(alias) ? "" : donors.idOf(alias).toString();

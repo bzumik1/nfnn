@@ -5,6 +5,7 @@ import {
   afterNextRender,
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   DOCUMENT,
   effect,
   ElementRef,
@@ -22,6 +23,7 @@ import { SuspendsDialogs } from '../../../shared/ui/dialog/dialog-suspension';
 import { SideNav } from '../../../shared/ui/side-nav/side-nav';
 import { ADMIN_SECTIONS } from './admin-sections';
 import { ADMINISTRATION_LOCK } from './administration-lock';
+import { AlertBadgeRefresh } from './alert-badge-refresh';
 
 @Component({
   selector: 'app-admin-shell',
@@ -43,6 +45,7 @@ export class AdminShell {
   private wasLocked = false;
 
   constructor() {
+    inject(AlertBadgeRefresh).watch(inject(DestroyRef));
     effect(() => {
       const locked = this.lock.locked();
       untracked(() => this.followLock(locked));

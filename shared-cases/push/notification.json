@@ -1,0 +1,76 @@
+{
+  "source": "edited",
+  "logic": "Plan v3 slice 2.28: the kind of a push alert gives the tag that replaces the last notification of its area and the route a click on it opens. The backend writes both into the notification it sends (PushPayloads); the open app routes a click by the kind alone (core/push/alert-routes.ts), so a click opens the same page whether a tab is open or not",
+  "cases": [
+    {
+      "name": "the test alert",
+      "input": {
+        "kind": "test"
+      },
+      "expected": {
+        "tag": "nfnn-test",
+        "url": "/sprava/upozorneni"
+      }
+    },
+    {
+      "name": "the bank-import-outage alert",
+      "input": {
+        "kind": "bank-import-outage"
+      },
+      "expected": {
+        "tag": "nfnn-bank-import",
+        "url": "/sprava"
+      }
+    },
+    {
+      "name": "the bank-import-recovered alert",
+      "input": {
+        "kind": "bank-import-recovered"
+      },
+      "expected": {
+        "tag": "nfnn-bank-import",
+        "url": "/sprava"
+      }
+    },
+    {
+      "name": "the backups-outage alert",
+      "input": {
+        "kind": "backups-outage"
+      },
+      "expected": {
+        "tag": "nfnn-backups",
+        "url": "/sprava/zalohy"
+      }
+    },
+    {
+      "name": "the backups-recovered alert",
+      "input": {
+        "kind": "backups-recovered"
+      },
+      "expected": {
+        "tag": "nfnn-backups",
+        "url": "/sprava/zalohy"
+      }
+    },
+    {
+      "name": "the mail-outage alert",
+      "input": {
+        "kind": "mail-outage"
+      },
+      "expected": {
+        "tag": "nfnn-mail",
+        "url": "/sprava/nastaveni"
+      }
+    },
+    {
+      "name": "the mail-recovered alert",
+      "input": {
+        "kind": "mail-recovered"
+      },
+      "expected": {
+        "tag": "nfnn-mail",
+        "url": "/sprava/nastaveni"
+      }
+    }
+  ]
+}
