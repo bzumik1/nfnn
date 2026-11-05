@@ -668,6 +668,29 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
+  test('when the connection is gone, then the offline label, Přispět from the kept details, the send button that waits for the connection and the offline sheet break no rule', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await expect(page.locator('.qr-code svg')).toBeVisible();
+    await page.route('**/api/**', (route) => route.abort('internetdisconnected'));
+    await page.reload();
+    const label = page.getByRole('button', { name: /^Offline/ });
+    await expect(label).toBeVisible();
+    await expect(page.locator('#prispet .bank [role="note"]')).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Odeslat zprávu/ })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+
+    expect(await violations(page)).toEqual([]);
+
+    await label.click();
+    await expect(page.getByRole('dialog', { name: 'Jste offline' })).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
   test('when they send the contact form empty, then its error messages break no rule either', async ({
     page,
   }) => {
