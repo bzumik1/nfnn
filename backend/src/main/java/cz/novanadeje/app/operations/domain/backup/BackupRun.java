@@ -6,7 +6,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 public record BackupRun(RunOutcome outcome, Instant startedAt, Instant finishedAt, Optional<String> fileName, Optional<Long> sizeBytes,
-                        Optional<Integer> tables, Optional<String> requestId, Optional<UUID> requestedBy, Optional<String> error) {
+                        Optional<Integer> tables, Optional<String> requestId, Optional<UUID> requestedBy, Optional<String> error,
+                        Optional<RestoreRevocations> revocations) {
 
     public BackupRun {
         Objects.requireNonNull(outcome, "outcome");
@@ -18,6 +19,12 @@ public record BackupRun(RunOutcome outcome, Instant startedAt, Instant finishedA
         Objects.requireNonNull(requestId, "requestId");
         Objects.requireNonNull(requestedBy, "requestedBy");
         Objects.requireNonNull(error, "error");
+        Objects.requireNonNull(revocations, "revocations");
+    }
+
+    public BackupRun(RunOutcome outcome, Instant startedAt, Instant finishedAt, Optional<String> fileName, Optional<Long> sizeBytes,
+                     Optional<Integer> tables, Optional<String> requestId, Optional<UUID> requestedBy, Optional<String> error) {
+        this(outcome, startedAt, finishedAt, fileName, sizeBytes, tables, requestId, requestedBy, error, Optional.empty());
     }
 
     public boolean succeeded() {

@@ -1,6 +1,7 @@
 package cz.novanadeje.app.operations.infrastructure.backup;
 
 import cz.novanadeje.app.operations.domain.backup.BackupRun;
+import cz.novanadeje.app.operations.domain.backup.RestoreRevocations;
 import cz.novanadeje.app.operations.domain.backup.RunOutcome;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -66,6 +67,32 @@ class StatusFilesTest {
             assertThat(parsed.requestId()).contains("019a1b2c-0000-7000-8000-000000000001");
             assertThat(parsed.requestedBy()).contains(UUID.fromString("019a1b2c-0000-7000-8000-00000000000a"));
         });
+    }
+
+    @Test
+    @DisplayName("Given the status file of a restore that ended the sessions and spent the one-time secrets of the backup, when parsed, then both counts are read")
+    void should_read_the_revocations_when_parsed_given_a_restore_that_revoked() {
+        Optional<BackupRun> run = StatusFiles.parse("""
+                outcome=ok
+                started_at=2026-11-05T17:20:12Z
+                finished_at=2026-11-05T17:20:13Z
+                file=nfnn-2026-11-05_0300.dump.age
+                tables=58
+                sessions_ended=2
+                one_time_secrets_spent=3
+                request=019a1b2c-0000-7000-8000-000000000001
+                admin=019a1b2c-0000-7000-8000-00000000000a
+                """);
+
+        assertThat(run).hasValueSatisfying(parsed -> assertThat(parsed.revocations()).contains(new RestoreRevocations(2, 3)));
+    }
+
+    @Test
+    @DisplayName("Given the status file of a backup container from before the restore counted what it revoked, when parsed, then no revocations are read")
+    void should_read_no_revocations_when_parsed_given_an_older_backup_container() {
+        Optional<BackupRun> run = StatusFiles.parse("outcome=ok\nstarted_at=2026-11-05T17:20:12Z\nfinished_at=2026-11-05T17:20:13Z\ntables=58\nsessions_ended=2\n");
+
+        assertThat(run).hasValueSatisfying(parsed -> assertThat(parsed.revocations()).isEmpty());
     }
 
     @Test

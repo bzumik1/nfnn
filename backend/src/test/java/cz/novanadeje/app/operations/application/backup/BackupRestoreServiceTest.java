@@ -5,6 +5,7 @@ import cz.novanadeje.app.operations.domain.backup.BackupFile;
 import cz.novanadeje.app.operations.domain.backup.BackupKey;
 import cz.novanadeje.app.operations.domain.backup.BackupNotFound;
 import cz.novanadeje.app.operations.domain.backup.BackupRun;
+import cz.novanadeje.app.operations.domain.backup.RestoreRevocations;
 import cz.novanadeje.app.operations.domain.backup.PublicBackupKey;
 import cz.novanadeje.app.operations.domain.backup.RestorePending;
 import cz.novanadeje.app.operations.domain.backup.RestoreRecordRepository;
@@ -142,6 +143,23 @@ class BackupRestoreServiceTest {
         assertThat(audit.getValue().action()).isEqualTo("BACKUP_RESTORED");
         assertThat(audit.getValue().adminId()).isEqualTo(ADMIN);
         assertThat(audit.getValue().details()).isEqualTo("Databáze obnovena ze zálohy " + FILE + " (požadavek " + REQUEST + "), tabulek: 37");
+    }
+
+    @Test
+    @DisplayName("Given a finished restore that ended the backup's sessions and spent its one-time secrets, when the backend starts, then the audit names both counts")
+    void should_audit_the_revocations_when_started_given_a_restore_that_revoked() {
+        BackupRun restored = restore(RunOutcome.OK, Optional.of(ADMIN), Optional.empty());
+        BackupRun revoked = new BackupRun(restored.outcome(), restored.startedAt(), restored.finishedAt(), restored.fileName(), restored.sizeBytes(), restored.tables(),
+                restored.requestId(), restored.requestedBy(), restored.error(), Optional.of(new RestoreRevocations(2, 3)));
+        when(store.lastRestore()).thenReturn(Optional.of(revoked));
+        when(records.recordOnce(REQUEST, NOW)).thenReturn(true);
+
+        service.recordFinishedRestore();
+
+        ArgumentCaptor<AdminActionPerformed> audit = ArgumentCaptor.forClass(AdminActionPerformed.class);
+        verify(events).publishEvent(audit.capture());
+        assertThat(audit.getValue().details()).isEqualTo("Databáze obnovena ze zálohy " + FILE + " (požadavek " + REQUEST + "), tabulek: 37"
+                + "; ukončená přihlášení: 2, zneplatněné jednorázové odkazy a kódy: 3");
     }
 
     @Test
