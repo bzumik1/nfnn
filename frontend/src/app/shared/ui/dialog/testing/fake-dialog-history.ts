@@ -14,7 +14,10 @@ export class FakeDialogHistory {
     this.listener = listener;
   }
 
-  showStep(depth: number): void {
+  showStep(depth: number, listener?: DialogHistoryListener): void {
+    if (listener !== undefined && listener !== this.listener) {
+      return;
+    }
     if (this.steps.at(-1) !== depth) {
       this.steps.push(depth);
     }

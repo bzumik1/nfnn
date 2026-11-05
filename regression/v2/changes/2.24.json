@@ -1,0 +1,184 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/shell/admin-shell.spec.ts > Given an administrator anywhere in the administration > when the menu button is shown, then it names the administration and controls the panel",
+    "reason": "Slice 2.24 (plan v3, approved mockup ucet-a-sprava-mobil-po-revizi-2026-10-31): the side panel lost its menu button; on phones the donor area reaches its sections from the account sheet (2.23) and the administration from the section rows of its overview and /sprava/vice",
+    "replacement": "src/app/features/admin/shell/admin-shell.spec.ts > Given an administrator anywhere in the administration > when the window narrows to a phone or a tablet > then no menu button stands above the page, since the overview lists the sections"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when bank accounts carry questions about an older symbol > then Bankovní účty in the side panel and the menu button show how many wait for an answer",
+    "reason": "Slice 2.24 (plan v3, approved mockup ucet-a-sprava-mobil-po-revizi-2026-10-31): the side panel lost its menu button; on phones the donor area reaches its sections from the account sheet (2.23) and the administration from the section rows of its overview and /sprava/vice",
+    "replacement": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when bank accounts carry questions about an older symbol > then Bankovní účty in the side panel shows how many wait for an answer"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when bank accounts carry questions about an older symbol > then the bank accounts section keeps the menu button free of it and its own list updates the badge",
+    "reason": "Slice 2.24 (plan v3, approved mockup ucet-a-sprava-mobil-po-revizi-2026-10-31): the side panel lost its menu button; on phones the donor area reaches its sections from the account sheet (2.23) and the administration from the section rows of its overview and /sprava/vice",
+    "replacement": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when bank accounts carry questions about an older symbol > then the bank accounts section updates the badge from its own list"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/side-nav/side-nav.spec.ts > Given a side panel of an area > when a page is open, then the current section is named beside the menu button for sighted users",
+    "reason": "Slice 2.24 (plan v3, approved mockup ucet-a-sprava-mobil-po-revizi-2026-10-31): the side panel lost its menu button; on phones the donor area reaches its sections from the account sheet (2.23) and the administration from the section rows of its overview and /sprava/vice",
+    "replacement": "src/app/shared/ui/side-nav/side-nav.spec.ts > Given a side panel of an area > when it is shown, then it holds only links and no menu button, since phones reach the sections from elsewhere"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/side-nav/side-nav.spec.ts > Given a side panel of an area > when an item carries a badge > then the menu button leaves it out while its own section is open",
+    "reason": "Slice 2.24 (plan v3, approved mockup ucet-a-sprava-mobil-po-revizi-2026-10-31): the side panel lost its menu button; on phones the donor area reaches its sections from the account sheet (2.23) and the administration from the section rows of its overview and /sprava/vice",
+    "replacement": "src/app/shared/ui/side-nav/side-nav.spec.ts > Given a side panel of an area > when an item carries a badge > then its link shows the count to sighted users and says what waits to screen readers"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/side-nav/side-nav.spec.ts > Given a side panel of an area > when an item carries a badge > then the menu button shows it too while another section is open",
+    "reason": "Slice 2.24 (plan v3, approved mockup ucet-a-sprava-mobil-po-revizi-2026-10-31): the side panel lost its menu button; on phones the donor area reaches its sections from the account sheet (2.23) and the administration from the section rows of its overview and /sprava/vice",
+    "replacement": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when the window is as narrow as a phone or a tablet > then the payments row shows how many payments wait to be paired and says it to screen readers"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/side-nav/side-nav.spec.ts > Given a side panel of an area > when the menu button is shown, then it controls the panel and starts collapsed",
+    "reason": "Slice 2.24 (plan v3, approved mockup ucet-a-sprava-mobil-po-revizi-2026-10-31): the side panel lost its menu button; on phones the donor area reaches its sections from the account sheet (2.23) and the administration from the section rows of its overview and /sprava/vice",
+    "replacement": "src/app/shared/ui/side-nav/side-nav.spec.ts > Given a side panel of an area > when it is shown, then it holds only links and no menu button, since phones reach the sections from elsewhere"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/side-nav/side-nav.spec.ts > Given a side panel of an area > when the menu is opened > then Escape closes it and returns focus to the button",
+    "reason": "Slice 2.24 (plan v3, approved mockup ucet-a-sprava-mobil-po-revizi-2026-10-31): the side panel lost its menu button; on phones the donor area reaches its sections from the account sheet (2.23) and the administration from the section rows of its overview and /sprava/vice",
+    "replacement": "src/app/shared/ui/side-nav/side-nav.spec.ts > Given a side panel of an area > when it is shown, then it holds only links and no menu button, since phones reach the sections from elsewhere"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/side-nav/side-nav.spec.ts > Given a side panel of an area > when the menu is opened > then picking an item navigates there and closes it",
+    "reason": "Slice 2.24 (plan v3, approved mockup ucet-a-sprava-mobil-po-revizi-2026-10-31): the side panel lost its menu button; on phones the donor area reaches its sections from the account sheet (2.23) and the administration from the section rows of its overview and /sprava/vice",
+    "replacement": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when the window is as narrow as a phone or a tablet > then the sections of every day and the way to the rest follow what is new since the last sign-in, each one tap away"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/side-nav/side-nav.spec.ts > Given a side panel of an area > when the menu is opened > then the panel opens",
+    "reason": "Slice 2.24 (plan v3, approved mockup ucet-a-sprava-mobil-po-revizi-2026-10-31): the side panel lost its menu button; on phones the donor area reaches its sections from the account sheet (2.23) and the administration from the section rows of its overview and /sprava/vice",
+    "replacement": "src/app/shared/ui/side-nav/side-nav.spec.ts > Given a side panel of an area > when it is shown, then it holds only links and no menu button, since phones reach the sections from elsewhere"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/top-bar/top-bar.spec.ts > Given a signed-in donor at the dashboard top bar > when they sign out, then they land on the home page and the notice says they signed out",
+    "reason": "Slice 2.24: the dashboard top bar is gone; the administration has the app header of 2.23, whose account sheet signs out, leads to the donor overview and the administration and shows the portrait",
+    "replacement": "src/app/layout/account-sheet/account-sheet.spec.ts > Given the account sheet of a signed-in donor > when the donor signs out, then the session ends, the home page opens and says they were signed out"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/top-bar/top-bar.spec.ts > Given the dashboard top bar > when a donor without the administrator role sees it > then it shows their name and no link to the administration",
+    "reason": "Slice 2.24: the dashboard top bar is gone; the administration has the app header of 2.23, whose account sheet signs out, leads to the donor overview and the administration and shows the portrait",
+    "replacement": "src/app/layout/account-sheet/account-sheet.spec.ts > Given the account sheet of a signed-in donor > when it opens, then it names the donor and their variable symbol over the sections of the account"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/top-bar/top-bar.spec.ts > Given the dashboard top bar > when an administrator linked to a person of the foundation with a portrait sees it > then the portrait of that person stands beside their name, hidden from the screen reader",
+    "reason": "Slice 2.24: the dashboard top bar is gone; the administration has the app header of 2.23, whose account sheet signs out, leads to the donor overview and the administration and shows the portrait",
+    "replacement": "src/app/layout/app-header/app-header.spec.ts > Given the header of the app > when an administrator linked to a person of the foundation with a portrait is signed in, then the account button shows that portrait"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/top-bar/top-bar.spec.ts > Given the dashboard top bar > when an administrator sees it and their person cannot be read > then their name keeps the plain icon",
+    "reason": "Slice 2.24: the dashboard top bar is gone; the administration has the app header of 2.23, whose account sheet signs out, leads to the donor overview and the administration and shows the portrait",
+    "replacement": "src/app/layout/app-header/app-header.spec.ts > Given the header of the app > when an administrator without a portrait is signed in, then the account button keeps the initials"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/top-bar/top-bar.spec.ts > Given the dashboard top bar > when an administrator sees it in the administration > and they are no person of the foundation, then their name keeps the plain icon",
+    "reason": "Slice 2.24: the dashboard top bar is gone; the administration has the app header of 2.23, whose account sheet signs out, leads to the donor overview and the administration and shows the portrait",
+    "replacement": "src/app/layout/app-header/app-header.spec.ts > Given the header of the app > when an administrator without a portrait is signed in, then the account button keeps the initials"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/top-bar/top-bar.spec.ts > Given the dashboard top bar > when an administrator sees it in the administration > then it leads back to their own overview instead",
+    "reason": "Slice 2.24: the dashboard top bar is gone; the administration has the app header of 2.23, whose account sheet signs out, leads to the donor overview and the administration and shows the portrait",
+    "replacement": "src/app/features/admin/shell/admin-shell.spec.ts > Given an administrator anywhere in the administration > when it opens, then the app header offers the account and the site tabs stay at the bottom, as everywhere in the app"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/top-bar/top-bar.spec.ts > Given the dashboard top bar > when an administrator sees it in the donor area > then it offers the administration",
+    "reason": "Slice 2.24: the dashboard top bar is gone; the administration has the app header of 2.23, whose account sheet signs out, leads to the donor overview and the administration and shows the portrait",
+    "replacement": "src/app/layout/account-sheet/account-sheet.spec.ts > Given the account sheet of a signed-in donor > when the donor is an administrator, then the sheet also leads to the administration, named as theirs alone"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/accessibility.spec.ts > Given a visitor who relies on WCAG 2.2 AA > when an administrator opens the administration menu on a phone, then the open side panel breaks no rule",
+    "reason": "Slice 2.24 (plan v3, approved mockup ucet-a-sprava-mobil-po-revizi-2026-10-31): the side panel lost its menu button; on phones the donor area reaches its sections from the account sheet (2.23) and the administration from the section rows of its overview and /sprava/vice",
+    "replacement": "e2e/accessibility.spec.ts > Given a visitor who relies on WCAG 2.2 AA > when an administrator opens the administration on a phone, then its overview with the section rows and the page of further sections break no rule"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/admin.spec.ts > Given an administrator > when they use a phone, then the panel opens from the menu button and closes after a pick",
+    "reason": "Slice 2.24 (plan v3, approved mockup ucet-a-sprava-mobil-po-revizi-2026-10-31): the side panel lost its menu button; on phones the donor area reaches its sections from the account sheet (2.23) and the administration from the section rows of its overview and /sprava/vice",
+    "replacement": "e2e/admin.spec.ts > Given an administrator > when they use a phone, then every section is two taps from the overview and the back button retraces them"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the administration menu, then nothing is cut off, stacked, covered or too small",
+    "reason": "Slice 2.24 (plan v3, approved mockup ucet-a-sprava-mobil-po-revizi-2026-10-31): the side panel lost its menu button; on phones the donor area reaches its sections from the account sheet (2.23) and the administration from the section rows of its overview and /sprava/vice; the device step admin-menu became admin-more",
+    "replacement": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the occasional and technical sections of the administration, then nothing is cut off, stacked, covered or too small"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the administration menu, then nothing is cut off, stacked, covered or too small #2",
+    "reason": "Slice 2.24 (plan v3, approved mockup ucet-a-sprava-mobil-po-revizi-2026-10-31): the side panel lost its menu button; on phones the donor area reaches its sections from the account sheet (2.23) and the administration from the section rows of its overview and /sprava/vice; the device step admin-menu became admin-more",
+    "replacement": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the occasional and technical sections of the administration, then nothing is cut off, stacked, covered or too small #2"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the administration menu, then nothing is cut off, stacked, covered or too small #3",
+    "reason": "Slice 2.24 (plan v3, approved mockup ucet-a-sprava-mobil-po-revizi-2026-10-31): the side panel lost its menu button; on phones the donor area reaches its sections from the account sheet (2.23) and the administration from the section rows of its overview and /sprava/vice; the device step admin-menu became admin-more",
+    "replacement": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the occasional and technical sections of the administration, then nothing is cut off, stacked, covered or too small #3"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the administration menu, then nothing is cut off, stacked, covered or too small #4",
+    "reason": "Slice 2.24 (plan v3, approved mockup ucet-a-sprava-mobil-po-revizi-2026-10-31): the side panel lost its menu button; on phones the donor area reaches its sections from the account sheet (2.23) and the administration from the section rows of its overview and /sprava/vice; the device step admin-menu became admin-more",
+    "replacement": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the occasional and technical sections of the administration, then nothing is cut off, stacked, covered or too small #4"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the administration menu, then nothing is cut off, stacked, covered or too small #5",
+    "reason": "Slice 2.24 (plan v3, approved mockup ucet-a-sprava-mobil-po-revizi-2026-10-31): the side panel lost its menu button; on phones the donor area reaches its sections from the account sheet (2.23) and the administration from the section rows of its overview and /sprava/vice; the device step admin-menu became admin-more",
+    "replacement": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the occasional and technical sections of the administration, then nothing is cut off, stacked, covered or too small #5"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the administration menu, then nothing is cut off, stacked, covered or too small #6",
+    "reason": "Slice 2.24 (plan v3, approved mockup ucet-a-sprava-mobil-po-revizi-2026-10-31): the side panel lost its menu button; on phones the donor area reaches its sections from the account sheet (2.23) and the administration from the section rows of its overview and /sprava/vice; the device step admin-menu became admin-more",
+    "replacement": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the occasional and technical sections of the administration, then nothing is cut off, stacked, covered or too small #6"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the administration menu, then nothing is cut off, stacked, covered or too small #7",
+    "reason": "Slice 2.24 (plan v3, approved mockup ucet-a-sprava-mobil-po-revizi-2026-10-31): the side panel lost its menu button; on phones the donor area reaches its sections from the account sheet (2.23) and the administration from the section rows of its overview and /sprava/vice; the device step admin-menu became admin-more",
+    "replacement": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the occasional and technical sections of the administration, then nothing is cut off, stacked, covered or too small #7"
+  }
+]

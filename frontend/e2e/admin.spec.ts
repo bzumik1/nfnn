@@ -5,6 +5,7 @@ import {
   donor,
   mockDonorApi,
   adminSettings,
+  openAccountItem,
   problem,
   receiptSigningKeys,
   session,
@@ -298,7 +299,7 @@ test.describe('Given an administrator', () => {
       'prosinec 2025 1 1 0 500 Kč 500 Kč 0 Kč',
     ]);
 
-    await page.getByRole('link', { name: 'Můj přehled', exact: true }).click();
+    await openAccountItem(page, 'Můj přehled');
 
     await expect(page).toHaveURL(/\/darce\/prehled$/);
   });
@@ -461,7 +462,7 @@ test.describe('Given an administrator', () => {
     await page.goto('/sprava');
 
     const panel = page.getByRole('navigation', { name: 'Správa' });
-    await expect(page.getByRole('button', { name: 'Menu správy' })).toBeHidden();
+    await expect(page.getByRole('navigation', { name: 'Sekce správy' })).toHaveCount(0);
     await expect(panel.getByRole('link', { name: 'Přehled', exact: true })).toHaveAttribute(
       'aria-current',
       'page',
@@ -480,7 +481,7 @@ test.describe('Given an administrator', () => {
     );
   });
 
-  test('when they use a phone, then the panel opens from the menu button and closes after a pick', async ({
+  test('when they use a phone, then every section is two taps from the overview and the back button retraces them', async ({
     page,
   }) => {
     await mockImportState(page, quietImport);
@@ -488,28 +489,29 @@ test.describe('Given an administrator', () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/sprava');
 
-    const menu = page.getByRole('button', { name: 'Menu správy' });
-    const panel = page.getByRole('navigation', { name: 'Správa' });
-    await expect(menu).toHaveAttribute('aria-expanded', 'false');
-    await expect(panel).toBeHidden();
+    const sections = page.getByRole('navigation', { name: 'Sekce správy' });
+    const back = page.getByRole('banner').getByRole('button', { name: 'Zpět' });
+    await expect(page.getByRole('navigation', { name: 'Správa' })).toHaveCount(0);
+    await expect(sections.getByRole('link', { name: /Platby z banky/ })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Hlavní sekce' })).toBeVisible();
 
-    await menu.click();
+    await sections.getByRole('link', { name: /Lidé fondu, správci, zálohy/ }).click();
 
-    await expect(menu).toHaveAttribute('aria-expanded', 'true');
-    await expect(panel.getByRole('link', { name: 'Zálohy' })).toBeVisible();
-
-    await page.keyboard.press('Tab');
-    await page.keyboard.press('Escape');
-
-    await expect(panel).toBeHidden();
-    await expect(menu).toBeFocused();
-
-    await menu.click();
-    await panel.getByRole('link', { name: 'Zálohy' }).click();
+    await expect(page).toHaveURL(/\/sprava\/vice$/);
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Občas a pro technika' }),
+    ).toBeFocused();
+    await page
+      .getByRole('navigation', { name: 'Další sekce správy' })
+      .getByRole('link', { name: 'Zálohy' })
+      .click();
 
     await expect(page).toHaveURL(/\/sprava\/zalohy$/);
-    await expect(panel).toBeHidden();
-    await expect(menu).toHaveAttribute('aria-expanded', 'false');
+
+    await back.click();
+    await expect(page).toHaveURL(/\/sprava\/vice$/);
+    await back.click();
+    await expect(page).toHaveURL(/\/sprava$/);
   });
 
   test('when they come back later with a remembered session, then the administration opens straight away', async ({
