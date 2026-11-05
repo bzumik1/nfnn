@@ -11,7 +11,7 @@ import {
   chunkLoadNotice,
   chunkLoadPageHeading,
   LostChunks,
-  openHomeThenLoseNewChunks,
+  openAboutThenLoseNewChunks,
   openPolicyFromFooter,
   policyHeading,
   policyPath,
@@ -22,7 +22,7 @@ test.describe('Given a visitor whose open tab is older than the deployed version
   test('when they open a page whose chunk is gone, then the app loads it from the server once and shows it', async ({
     page,
   }) => {
-    const chunks = await openHomeThenLoseNewChunks(page);
+    const chunks = await openAboutThenLoseNewChunks(page);
     chunks.bringBackAtDocument(1);
 
     await openPolicyFromFooter(page);
@@ -36,7 +36,7 @@ test.describe('Given a visitor whose open tab is older than the deployed version
   test('when the page is still missing after that load, then a page of its own offers to load it again or to go home', async ({
     page,
   }) => {
-    const chunks = await openHomeThenLoseNewChunks(page);
+    const chunks = await openAboutThenLoseNewChunks(page);
 
     await openPolicyFromFooter(page);
 
@@ -62,13 +62,11 @@ test.describe('Given a visitor whose open tab is older than the deployed version
     chunks.loseEveryChunkNotLoadedYet();
     chunks.bringBackAtDocument(2);
 
-    await page.goto('/#prispet');
+    await page.goto('/o-nas#kontakt');
 
-    await expect(
-      page.getByRole('heading', { level: 2, name: 'Přispějte na pomůcky pro děti' }),
-    ).toBeVisible();
-    await expect(page).toHaveURL(/\/#prispet$/);
-    expect(chunks.documents).toEqual(['/', '/']);
+    await expect(page.getByRole('heading', { level: 2, name: 'Kontaktujte nás' })).toBeVisible();
+    await expect(page).toHaveURL(/\/o-nas#kontakt$/);
+    expect(chunks.documents).toEqual(['/o-nas', '/o-nas']);
   });
 });
 
@@ -80,7 +78,7 @@ test.describe('Given a visitor whose browser keeps no session storage', () => {
   test('when they open a page whose chunk is gone, then the app never reloads by itself and offers a reload that takes the focus', async ({
     page,
   }) => {
-    const chunks = await openHomeThenLoseNewChunks(page);
+    const chunks = await openAboutThenLoseNewChunks(page);
 
     await openPolicyFromFooter(page);
 
@@ -106,18 +104,16 @@ test.describe('Given a visitor whose browser keeps no session storage', () => {
     await chunks.open(policyPath);
     chunks.loseEveryChunkNotLoadedYet();
 
-    await page.goto('/#prispet');
+    await page.goto('/o-nas#kontakt');
     await expect(page.getByRole('heading', chunkLoadPageHeading)).toBeVisible();
-    expect(chunks.documents).toEqual(['/']);
+    expect(chunks.documents).toEqual(['/o-nas']);
 
     chunks.bringBack();
     await page.getByRole('button', { name: 'Načíst znovu' }).click();
 
-    await expect(
-      page.getByRole('heading', { level: 2, name: 'Přispějte na pomůcky pro děti' }),
-    ).toBeVisible();
-    await expect(page).toHaveURL(/\/#prispet$/);
-    expect(chunks.documents).toEqual(['/', '/']);
+    await expect(page.getByRole('heading', { level: 2, name: 'Kontaktujte nás' })).toBeVisible();
+    await expect(page).toHaveURL(/\/o-nas#kontakt$/);
+    expect(chunks.documents).toEqual(['/o-nas', '/o-nas']);
   });
 });
 
@@ -129,11 +125,11 @@ test.describe('Given a visitor with the sign-in dialog open and no session stora
   test('when a page they opened before the dialog cannot be loaded, then the dialog announces the message in its own status region, since the focus stays in the dialog', async ({
     page,
   }) => {
-    const chunks = await openHomeThenLoseNewChunks(page);
+    const chunks = await openAboutThenLoseNewChunks(page);
     const release = chunks.hold();
 
     await openPolicyFromFooter(page);
-    await page.locator('.nav-login').click();
+    await page.getByRole('banner').getByRole('button', { name: 'Přihlásit se' }).click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
     release();
@@ -154,7 +150,7 @@ test.describe('Given a visitor who lost the connection', () => {
     page,
     context,
   }) => {
-    const chunks = await openHomeThenLoseNewChunks(page);
+    const chunks = await openAboutThenLoseNewChunks(page);
     chunks.bringBack();
     await context.setOffline(true);
 
@@ -176,7 +172,7 @@ test.describe('Given a visitor whose connection fails while the browser still sa
     page,
   }) => {
     const chunks = await LostChunks.watch(page);
-    await chunks.open('/');
+    await chunks.open('/o-nas');
     chunks.cutOffEveryChunkNotLoadedYet();
 
     await openPolicyFromFooter(page);

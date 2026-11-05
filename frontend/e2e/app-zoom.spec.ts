@@ -172,7 +172,7 @@ test.describe('Given a visitor on a phone, where the site behaves like an app', 
   test('when they tap the payment QR in Přispět, then the code opens large in the viewer and the plus button enlarges it further', async ({
     page,
   }) => {
-    await page.goto('/');
+    await page.goto('/prispet');
     await page
       .locator('#prispet')
       .getByRole('button', { name: /Platíte z jiného zařízení\?/ })

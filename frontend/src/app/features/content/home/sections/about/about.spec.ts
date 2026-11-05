@@ -45,7 +45,7 @@ describe('Given the about section', () => {
     )!;
 
     expect(link.textContent?.trim()).toBe('Kde pomáháme →');
-    expect(link.getAttribute('href')).toBe('/#projekty');
+    expect(link.getAttribute('href')).toBe('/projekty');
   });
 
   describe('when it renders who runs the foundation today', () => {

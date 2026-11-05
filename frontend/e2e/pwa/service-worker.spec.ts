@@ -305,6 +305,8 @@ test.describe('Given the app registered its own service worker', () => {
     };
     const chunks = Object.keys(manifest.hashTable).filter((path) => path.startsWith('/chunk-'));
     expect(chunks.length).toBeGreaterThan(0);
+    await page.goto('/o-nas');
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     for (const chunk of chunks) {
       site.remove(chunk);
     }
@@ -343,7 +345,7 @@ test.describe('Given the app registered its own service worker', () => {
 
 test.describe('Given a visitor who already acted on the page when a new version is deployed', () => {
   test.beforeEach(async ({ page, swReady }) => {
-    await page.goto('/');
+    await page.goto('/o-nas');
     await swReady();
     await page.getByRole('heading', { level: 1 }).click();
   });
@@ -386,8 +388,8 @@ test.describe('Given a visitor who already acted on the page when a new version 
     await settle(page);
     expect(await sameDocument(page)).toBe(true);
 
-    await page.getByRole('link', { name: 'O nás', exact: true }).first().click();
-    await expect(page).toHaveURL(/\/#o-nas$/);
+    await page.getByRole('link', { name: 'Kontakt', exact: true }).click();
+    await expect(page).toHaveURL(/\/o-nas#kontakt$/);
     await settle(page);
     expect(await sameDocument(page)).toBe(true);
     expect(await marker(page)).toBe('a');

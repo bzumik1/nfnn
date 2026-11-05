@@ -1,6 +1,6 @@
 import { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
-import { mockDonorApi, problem } from './donor-session';
+import { mockDonorApi, openSection, problem } from './donor-session';
 
 const IMAGE_ID = '0199f3e0-0000-7000-8000-00000000a001';
 const TINY_PNG = Buffer.from(
@@ -64,27 +64,24 @@ async function publishedContent(page: Page): Promise<void> {
   );
 }
 
-test.describe('Given a visitor on the home page', () => {
+test.describe('Given a visitor on the Aktuality and Pomáháme tabs', () => {
   test.beforeEach(async ({ page }) => {
     await mockDonorApi(page);
   });
 
-  test('when news and projects are published, then the home page shows them and each card leads to its page', async ({
+  test('when news and projects are published, then the tabs list them and each card leads to its page', async ({
     page,
   }) => {
     await publishedContent(page);
 
-    await page.goto('/');
+    await page.goto('/aktuality');
 
-    const news = page.locator('#aktuality .news-card');
+    await expect(page).toHaveTitle('Aktuality | Nová naděje – nadační fond');
+    const news = page.locator('.news-card');
     await expect(news).toHaveCount(1);
     await expect(news.locator('.news-tag')).toHaveText('Projekt');
     await expect(news.locator('.news-date')).toHaveText('20. 10. 2026');
     await expect(news.locator('img')).toBeVisible();
-    const projects = page.locator('#projekty app-project-card');
-    await expect(projects).toHaveCount(1);
-    await expect(projects.locator('.card-year')).toHaveText('2024');
-    await expect(page.getByText('Pomohli jsme Dominikovi získat nový vozík')).toHaveCount(0);
 
     await page.getByRole('link', { name: 'Zahrada pro děti' }).click();
 
@@ -100,8 +97,13 @@ test.describe('Given a visitor on the home page', () => {
 
     await expect(page).toHaveURL('/aktuality');
     await expect(page.getByRole('heading', { level: 1, name: 'Aktuality' })).toBeFocused();
-    await expect(page.locator('.news-card')).toHaveCount(1);
-    await page.goto('/');
+    await openSection(page, 'Pomáháme');
+
+    await expect(page).toHaveURL('/projekty');
+    await expect(page).toHaveTitle('Kde pomáháme | Nová naděje – nadační fond');
+    const projects = page.locator('app-project-card');
+    await expect(projects).toHaveCount(1);
+    await expect(projects.locator('.card-year')).toHaveText('2024');
     await page.getByRole('link', { name: 'Dominik, 7 let' }).click();
 
     await expect(page).toHaveURL('/projekty/dominik-7-let');
@@ -114,33 +116,24 @@ test.describe('Given a visitor on the home page', () => {
     );
   });
 
-  test('when nothing is published yet, then the placeholder cards stay and lead nowhere', async ({
+  test('when nothing is published yet, then each tab says so and leads back to the home page', async ({
     page,
   }) => {
-    await page.goto('/');
+    await page.route(
+      (url) => url.pathname === '/api/content/news' || url.pathname === '/api/content/projects',
+      (route) =>
+        route.fulfill({ json: { items: [], page: 0, size: 10, total: 0, hasMore: false } }),
+    );
 
-    await expect(page.locator('#aktuality .news-card')).toHaveCount(3);
-    await expect(page.locator('#projekty app-project-card')).toHaveCount(3);
-    await expect(page.getByText('Pomohli jsme Dominikovi získat nový vozík')).toBeVisible();
-    await expect(page.locator('#aktuality a, #projekty a')).toHaveCount(0);
-  });
+    await page.goto('/aktuality');
 
-  test('when news and projects are published, then the home page links to their whole lists', async ({
-    page,
-  }) => {
-    await publishedContent(page);
-
-    await page.goto('/');
-    await page.getByRole('link', { name: 'Kde všude pomáháme' }).click();
-
-    await expect(page).toHaveURL('/projekty');
-    await expect(page).toHaveTitle('Kde pomáháme | Nová naděje – nadační fond');
-    await expect(page.locator('app-project-card')).toHaveCount(1);
-    await page.goto('/');
-    await page.getByRole('link', { name: 'Všechny aktuality' }).click();
-
-    await expect(page).toHaveURL('/aktuality');
-    await expect(page).toHaveTitle('Aktuality | Nová naděje – nadační fond');
+    await expect(page.getByText('Zatím tu žádná aktualita není.')).toBeVisible();
+    await openSection(page, 'Pomáháme');
+    await expect(page.getByText('Zatím tu žádný projekt není.')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Zpět na úvodní stránku' })).toHaveAttribute(
+      'href',
+      '/',
+    );
   });
 
   test('when the address is one the article had before, then the article shows under its current address', async ({
@@ -185,20 +178,28 @@ test.describe('Given a visitor reading a news article', () => {
     await publishedContent(page);
   });
 
-  test('when they look at the header, then Aktuality is marked as the current place and leads to the list', async ({
+  test('when they look at the tabs, then Aktuality is marked as the current place and leads to the list', async ({
     page,
   }) => {
     await page.goto(`/aktuality/${article.slug}`);
-    const news = page.locator('.desktop-nav').getByRole('link', { name: 'Aktuality' });
-    await expect(news).toHaveAttribute('aria-current', 'page');
+    const tabs = page.getByRole('navigation', { name: 'Hlavní sekce' });
+    const news = tabs.getByRole('link', { name: 'Aktuality' });
+    await expect(news).toHaveAttribute('aria-current', 'true');
 
     await news.click();
 
     await expect(page).toHaveURL(/\/aktuality$/);
     await expect(page.getByRole('heading', { level: 1, name: 'Aktuality' })).toBeVisible();
-    await expect(
-      page.locator('.desktop-nav').getByRole('link', { name: 'Kde pomáháme' }),
-    ).toHaveAttribute('href', '/#projekty');
+    await expect(tabs.getByRole('link', { name: 'Pomáháme' })).toHaveAttribute('href', '/projekty');
+  });
+
+  test('when they press the back button of the article, then the list opens', async ({ page }) => {
+    await page.goto(`/aktuality/${article.slug}`);
+
+    await page.getByRole('banner').getByRole('button', { name: 'Zpět' }).click();
+
+    await expect(page).toHaveURL(/\/aktuality$/);
+    await expect(page.getByRole('heading', { level: 1, name: 'Aktuality' })).toBeVisible();
   });
 });
 

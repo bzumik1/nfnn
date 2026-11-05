@@ -25,11 +25,13 @@ const GROUPS: SideNavGroup[] = [
     [groups]="groups()"
     label="Oblast"
     menuLabel="Menu oblasti"
+    [panel]="panel()"
     ><p class="projected">Obsah</p></app-side-nav
   >`,
 })
 class Host {
   readonly groups = signal<readonly SideNavGroup[]>(GROUPS);
+  readonly panel = signal(true);
 }
 
 function withBadge(count: number, description: string): SideNavGroup[] {
@@ -95,6 +97,23 @@ describe('Given a side panel of an area', () => {
       'Věci',
     );
     expect(clean(fixture.nativeElement.querySelector('.projected')?.textContent)).toBe('Obsah');
+  });
+
+  it('when the area asks for no panel, then only the content stays, in the same main landmark, and is not made again when the panel returns', async () => {
+    const projected = fixture.nativeElement.querySelector('.projected');
+
+    fixture.componentInstance.panel.set(false);
+    await settle();
+
+    expect(fixture.nativeElement.querySelector('nav')).toBeNull();
+    expect(fixture.nativeElement.querySelector('button')).toBeNull();
+    expect(fixture.nativeElement.querySelector('main#obsah .projected')).toBe(projected);
+
+    fixture.componentInstance.panel.set(true);
+    await settle();
+
+    expect(nav()).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('main#obsah .projected')).toBe(projected);
   });
 
   it('when the area home is open, then only the exact link is the current page', () => {

@@ -94,9 +94,9 @@ export class LostChunks {
   }
 }
 
-export async function openHomeThenLoseNewChunks(page: Page): Promise<LostChunks> {
+export async function openAboutThenLoseNewChunks(page: Page): Promise<LostChunks> {
   const chunks = await LostChunks.watch(page);
-  await chunks.open('/');
+  await chunks.open('/o-nas');
   chunks.loseEveryChunkNotLoadedYet();
   return chunks;
 }

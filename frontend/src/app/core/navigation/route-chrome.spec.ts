@@ -1,0 +1,64 @@
+import { Component } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
+import { provideRouter, Router } from '@angular/router';
+import { RouteChrome } from './route-chrome';
+
+@Component({ template: '' })
+class Blank {}
+
+describe('Given the chrome a route asks for', () => {
+  let router: Router;
+  let chrome: RouteChrome;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([
+          { path: '', pathMatch: 'full', component: Blank, data: { landing: true, head: 'photo' } },
+          {
+            path: 'darce',
+            data: { head: 'light', parent: '/', backOnWide: false },
+            children: [{ path: 'prehled', component: Blank }],
+          },
+          { path: 'aktuality/:slug', component: Blank, data: { parent: '/aktuality' } },
+          { path: '**', component: Blank },
+        ]),
+      ],
+    });
+    router = TestBed.inject(Router);
+    chrome = TestBed.inject(RouteChrome);
+  });
+
+  it('when a page names nothing, then it has a dark head, the tab bar and no way back', async () => {
+    await router.navigateByUrl('/aktuality');
+
+    expect(chrome.current()).toEqual({
+      parent: null,
+      head: 'dark',
+      tabBar: true,
+      landing: false,
+      phoneFooter: false,
+      backOnWide: true,
+    });
+  });
+
+  it('when a page names its parent, then the back button leads there', async () => {
+    await router.navigateByUrl('/aktuality/clanek');
+
+    expect(chrome.current().parent).toBe('/aktuality');
+  });
+
+  it('when an area names its chrome, then its pages inherit it', async () => {
+    await router.navigateByUrl('/darce/prehled');
+
+    expect(chrome.current()).toEqual(
+      expect.objectContaining({ head: 'light', parent: '/', backOnWide: false }),
+    );
+  });
+
+  it('when the landing page opens, then it lies over the photo as the landing', async () => {
+    await router.navigateByUrl('/');
+
+    expect(chrome.current()).toEqual(expect.objectContaining({ head: 'photo', landing: true }));
+  });
+});

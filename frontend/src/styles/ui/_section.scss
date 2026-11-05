@@ -3,7 +3,8 @@
 .ui-container {
   max-width: var(--content-max);
   margin: 0 auto;
-  padding: 0 var(--space-8);
+  padding: 0 max(var(--space-8), env(safe-area-inset-right)) 0
+    max(var(--space-8), env(safe-area-inset-left));
 }
 
 .ui-eyebrow {
@@ -114,7 +115,8 @@
 
 @include bp.down(tablet) {
   .ui-container {
-    padding: 0 var(--space-5);
+    padding: 0 max(var(--space-5), env(safe-area-inset-right)) 0
+      max(var(--space-5), env(safe-area-inset-left));
   }
 
   .ui-intro {

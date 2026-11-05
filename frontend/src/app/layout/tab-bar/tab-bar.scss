@@ -1,0 +1,113 @@
+@use 'breakpoints' as bp;
+
+:host {
+  display: contents;
+}
+
+.tab-bar {
+  position: fixed;
+  left: calc(env(safe-area-inset-left) + var(--tab-bar-gap));
+  right: calc(env(safe-area-inset-right) + var(--tab-bar-gap));
+  bottom: var(--tab-bar-gap-browser);
+  z-index: 150;
+  max-width: var(--tab-bar-max-width);
+  margin: 0 auto;
+  border: 1px solid var(--color-tab-bar-rim);
+  container: tab-bar / inline-size;
+  border-radius: var(--radius-pill);
+  background: var(--color-tab-bar);
+  backdrop-filter: blur(var(--blur-bar));
+  box-shadow: var(--shadow-tab-bar);
+}
+
+@media (display-mode: standalone) {
+  .tab-bar {
+    bottom: max(
+      var(--tab-bar-gap),
+      env(safe-area-inset-bottom) - var(--tab-bar-home-indicator-overlap)
+    );
+  }
+}
+
+.tab-bar-list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(min-content, 1fr));
+  min-height: var(--tab-bar-height);
+  margin: 0;
+  padding: var(--tab-pill-inset);
+  list-style: none;
+}
+
+.tab-bar-item {
+  display: flex;
+}
+
+.tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-0-5);
+  min-width: 0;
+  padding: var(--space-1) var(--space-0-5);
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  color: var(--color-on-tab-bar);
+  font-family: var(--font-sans);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-snug);
+  text-align: center;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+
+  &:focus-visible {
+    outline: 3px solid var(--color-tab-focus-ring);
+    outline-offset: -3px;
+  }
+}
+
+.tab-icon {
+  width: var(--tab-icon-size);
+  height: var(--tab-icon-size);
+  stroke-width: 1.75;
+}
+
+.tab-label {
+  overflow-wrap: normal;
+}
+
+@include bp.container-down(tab-bar, tabs) {
+  .tab-bar-list {
+    grid-template-columns: repeat(2, minmax(min-content, 1fr));
+  }
+}
+
+.tab--current {
+  background: var(--color-tab-pill);
+  border-color: var(--color-tab-bar-rim);
+  color: var(--color-tab-active);
+  font-weight: var(--weight-bold);
+
+  .tab-icon {
+    stroke-width: 2.5;
+  }
+}
+
+@media (forced-colors: active) {
+  .tab-bar {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+
+  .tab {
+    color: LinkText;
+  }
+
+  .tab--current {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+    color: Highlight;
+  }
+}

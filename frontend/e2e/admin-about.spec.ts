@@ -128,7 +128,7 @@ test.describe('Given a visitor and an About section with a photo', () => {
     await servePhotos(page);
   });
 
-  test('when they open the home page, then the section shows the whole photo with its description and caption instead of the placeholder', async ({
+  test('when they open the About page, then the section shows the whole photo with its description and caption instead of the placeholder', async ({
     page,
   }) => {
     await page.route(
@@ -137,7 +137,7 @@ test.describe('Given a visitor and an About section with a photo', () => {
         route.fulfill({ json: { news: [], projects: [], about: { photo: aboutPhoto() } } }),
     );
 
-    await page.goto('/');
+    await page.goto('/o-nas');
     const figure = page.locator('#o-nas figure');
     await figure.scrollIntoViewIfNeeded();
 
