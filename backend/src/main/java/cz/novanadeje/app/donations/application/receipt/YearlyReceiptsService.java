@@ -27,6 +27,7 @@ import java.time.LocalDate;
 import java.time.Year;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -114,6 +115,7 @@ public class YearlyReceiptsService {
     private YearlyReceiptCandidates candidatesOf(Year year, LocalDate today) {
         Map<DonorReference, List<Donation>> gifts = donations.findReceivedOnBetween(year.atDay(1), year.atMonth(12).atEndOfMonth()).stream()
                 .filter(Donation::isReceived)
+                .sorted(Comparator.comparing(Donation::receivedOn).thenComparing(gift -> gift.id().value()))
                 .collect(Collectors.groupingBy(Donation::donor, LinkedHashMap::new, Collectors.toList()));
         Map<DonorReference, DonationReceipt> active = receipts.findActiveForYearOfEveryDonor(year).stream()
                 .collect(Collectors.toMap(DonationReceipt::donor, Function.identity()));

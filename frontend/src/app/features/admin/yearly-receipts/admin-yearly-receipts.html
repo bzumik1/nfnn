@@ -43,32 +43,34 @@
           Vystavit a vytisknout
         </h2>
         <form class="issue-form" appFocusFirstInvalid (ngSubmit)="start()" novalidate>
-          <app-form-field
-            label="Rok"
-            i18n-label="@@admin.yearlyReceipts.year"
-            hint="Roční potvrzení jde vystavit jen za rok, který už skončil."
-            i18n-hint="@@admin.yearlyReceipts.year.hint"
-          >
-            <select
-              appFormControl
-              id="yearly-receipts-year"
-              name="year"
-              [ngModel]="chosenYear()"
-              (ngModelChange)="chooseYear($event)"
-              [disabled]="busy()"
+          <div class="year-choice">
+            <app-form-field
+              label="Rok"
+              i18n-label="@@admin.yearlyReceipts.year"
+              hint="Roční potvrzení jde vystavit jen za rok, který už skončil."
+              i18n-hint="@@admin.yearlyReceipts.year.hint"
             >
-              @for (year of years(); track year) {
-                <option [ngValue]="year">{{ year }}</option>
-              }
-            </select>
-          </app-form-field>
+              <select
+                appFormControl
+                id="yearly-receipts-year"
+                name="year"
+                [ngModel]="chosenYear()"
+                (ngModelChange)="chooseYear($event)"
+                [disabled]="busy()"
+              >
+                @for (year of years(); track year) {
+                  <option [ngValue]="year">{{ year }}</option>
+                }
+              </select>
+            </app-form-field>
 
-          <div role="status">
-            @if (switching()) {
-              <p class="ui-load-state" i18n="@@admin.yearlyReceipts.switching">
-                Načítáme dárce za rok {{ chosenYear() }}…
-              </p>
-            }
+            <div role="status">
+              @if (switching()) {
+                <p class="ui-load-state" i18n="@@admin.yearlyReceipts.switching">
+                  Načítáme dárce za rok {{ chosenYear() }}…
+                </p>
+              }
+            </div>
           </div>
 
           @if (!switching()) {
@@ -106,7 +108,6 @@
                   name="duplex"
                   [ngModel]="duplex()"
                   (ngModelChange)="chooseDuplex($event)"
-                  [disabled]="busy()"
                 />
                 <span i18n="@@admin.yearlyReceipts.duplex"
                   >Tisknu oboustranně (vložíme prázdné strany, aby každé potvrzení začalo na novém
@@ -128,10 +129,12 @@
                   >
                 }
               </button>
-              <p class="keep-open" i18n="@@admin.yearlyReceipts.keepOpen">
-                Nechte prosím stránku otevřenou, dokud nebude PDF hotové. Odchodem se příprava
-                zastaví; vystavená potvrzení zůstanou.
-              </p>
+              @if (file() === null) {
+                <p class="keep-open" i18n="@@admin.yearlyReceipts.keepOpen">
+                  Nechte prosím stránku otevřenou, dokud nebude PDF hotové. Odchodem se příprava
+                  zastaví; vystavená potvrzení zůstanou.
+                </p>
+              }
             }
           }
         </form>

@@ -218,6 +218,11 @@ export class AdminYearlyReceipts {
 
   protected chooseDuplex(duplex: boolean): void {
     this.duplex.set(duplex);
+    if (this.run() === 'drawing') {
+      this.running?.unsubscribe();
+      this.draw();
+      return;
+    }
     if (this.run() !== 'done' || this.file() === null) {
       return;
     }

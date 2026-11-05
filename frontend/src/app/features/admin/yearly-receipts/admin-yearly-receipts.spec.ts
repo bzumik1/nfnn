@@ -612,6 +612,32 @@ describe('Given an administrator on the bulk receipts page', () => {
       expect(button('Připravujeme PDF…').getAttribute('aria-disabled')).toBe('true');
     });
 
+    it('and two-sided printing is turned off while drawing, then the choice keeps the focus and the PDF is drawn again one-sided', async () => {
+      const choice = query<HTMLInputElement>('input[type="checkbox"]');
+      if (choice === null) {
+        throw new Error('no two-sided choice');
+      }
+      const first = environment.last();
+      choice.focus();
+      choice.click();
+      fixture.detectChanges();
+
+      expect(choice.disabled).toBe(false);
+      expect(document.activeElement).toBe(choice);
+      expect(first.terminated).toBe(true);
+      await vi.waitFor(() => {
+        for (const request of http.match(`/api/admin/donations/receipt-images/${digest}`)) {
+          request.flush(arrayBuffer(SIGNATURE_BYTES), {
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        expect(environment.workers).toHaveLength(2);
+      });
+      environment.last().say({ kind: 'ready' });
+      fixture.detectChanges();
+      expect(environment.last().bundles[0].options.duplex).toBe(false);
+    });
+
     describe('and the PDF is ready', () => {
       beforeEach(async () => {
         environment.last().say({ kind: 'done', bytes: new TextEncoder().encode('%PDF-1.7') });

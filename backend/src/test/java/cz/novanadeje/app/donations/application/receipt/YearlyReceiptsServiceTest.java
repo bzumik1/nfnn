@@ -177,6 +177,17 @@ class YearlyReceiptsServiceTest {
         assertThat(service.candidates(YEAR_2026).donors()).extracting(YearlyReceiptCandidate::donor).containsExactly(ACME, JANA);
     }
 
+    @Test
+    @DisplayName("Given the gifts come back out of date order, when the candidates of a year are listed, then the donor of the earliest gift comes first")
+    void should_list_donor_of_earliest_gift_first_when_listed_given_gifts_out_of_date_order() {
+        when(donations.findReceivedOnBetween(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31))).thenReturn(List.of(
+                receivedFromJana(LocalDate.of(2026, 3, 1), 100000), receivedFromAcme(LocalDate.of(2026, 2, 1), 70000)));
+        when(receipts.findActiveForYearOfEveryDonor(YEAR_2026)).thenReturn(List.of());
+        when(donorRecords.findByIds(any())).thenReturn(List.of(jana(), acme()));
+
+        assertThat(service.candidates(YEAR_2026).donors()).extracting(YearlyReceiptCandidate::donor).containsExactly(ACME, JANA);
+    }
+
     @SuppressWarnings("unchecked")
     private static TransactionTemplate runningEveryCallback() {
         TransactionTemplate template = mock(TransactionTemplate.class);
