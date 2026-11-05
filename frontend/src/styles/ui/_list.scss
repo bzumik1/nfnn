@@ -50,6 +50,10 @@ div.ui-list__row {
   overflow-wrap: anywhere;
 }
 
+.ui-list__row:not(:has(.ui-list__meta)) > .ui-list__title {
+  grid-row: 1 / span 2;
+}
+
 .ui-list__meta {
   grid-column: 2;
   font-size: var(--text-sm);

@@ -433,6 +433,7 @@ const SCREENS_SINCE_V2: Screen[] = [
       await expect(page.getByRole('dialog').getByRole('link').first()).toBeVisible();
     },
   },
+  adminPage('admin-more', '/sprava/vice'),
   {
     name: 'donor-overview-send-gift',
     region: '.send-gift',
