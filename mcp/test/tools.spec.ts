@@ -60,6 +60,7 @@ describe('Given an administrator connected with the reading permission only', ()
       'nfnn_donor',
       'nfnn_find_donors',
       'nfnn_issue_receipt',
+      'nfnn_issue_receipts',
       'nfnn_log',
       'nfnn_log_files',
       'nfnn_log_levels',
@@ -108,6 +109,7 @@ describe('Given an administrator connected with the reading permission only', ()
       'nfnn_update_project',
       'nfnn_update_report_settings',
       'nfnn_upload_photo',
+      'nfnn_yearly_receipts',
     ]);
     expect(tools.find((tool) => tool.name === 'nfnn_status')?.annotations?.readOnlyHint).toBe(true);
     expect(
@@ -464,6 +466,18 @@ describe('Given an administrator connected with the reading permission only', ()
     });
     expect(result.isError).toBe(true);
     expect(textOf(result)).toContain('404 donations/receipt-not-found');
+  });
+
+  it('when the yearly receipts are issued with the reading permission only, then nothing reaches the administration', async () => {
+    const result = await client.callTool({
+      name: 'nfnn_issue_receipts',
+      arguments: { year: 2026, donorIds: [DONOR_ID] },
+    });
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toContain('This connection may only read');
+    expect(
+      stack.backend.requests.filter((request) => request.path.endsWith('/receipts/yearly')),
+    ).toHaveLength(0);
   });
 
   it('when a receipt is issued with the reading permission only, then nothing reaches the administration and the answer says how to allow changes', async () => {
@@ -1259,6 +1273,66 @@ describe('Given an administrator connected with the writing permission', () => {
       `POST /api/admin/donations/donors/${DONOR_ID}/bank-accounts/${PAYMENT_ID}/disconnect`,
       `POST /api/admin/donations/donors/${DONOR_ID}/bank-accounts/${PAYMENT_ID}/reconnect`,
     ]);
+  });
+
+  it('when the donors of a year are listed and their yearly receipts issued at once, then the list names the year and the issue answers each outcome with the number but no frozen data', async () => {
+    const listed = await client.callTool({ name: 'nfnn_yearly_receipts', arguments: {} });
+    const ofYear = await client.callTool({
+      name: 'nfnn_yearly_receipts',
+      arguments: { year: 2026 },
+    });
+    const issued = await client.callTool({
+      name: 'nfnn_issue_receipts',
+      arguments: { year: 2026, donorIds: [DONOR_ID.toUpperCase(), UNKNOWN_ID] },
+    });
+    expect(listed.isError).toBeFalsy();
+    expect(issued.isError).toBeFalsy();
+    const calls = stack.backend.requests.filter((request) =>
+      request.path.startsWith('/api/admin/donations/receipts/yearly'),
+    );
+    expect(calls.map((call) => `${call.method} ${call.path}`)).toEqual([
+      'GET /api/admin/donations/receipts/yearly',
+      'GET /api/admin/donations/receipts/yearly?year=2026',
+      'POST /api/admin/donations/receipts/yearly',
+    ]);
+    expect(JSON.parse(calls[2]?.body ?? '{}')).toEqual({
+      year: 2026,
+      donorIds: [DONOR_ID, UNKNOWN_ID],
+    });
+    expect(calls[2]?.authorization).toBe('Bearer api-token-write');
+    const donors = JSON.parse(textOf(ofYear)) as Record<string, unknown>;
+    expect(donors['erasedDonors']).toBe(1);
+    expect(textOf(ofYear)).toContain('"totalAmount":3500');
+    const run = JSON.parse(textOf(issued)) as Record<string, unknown>;
+    expect(run['results']).toEqual([
+      expect.objectContaining({
+        donorId: DONOR_ID,
+        outcome: 'ISSUED',
+        receiptId: RECEIPT_ID,
+        number: '2027-000001',
+      }),
+      expect.objectContaining({
+        donorId: UNKNOWN_ID,
+        outcome: 'SKIPPED',
+        problem: 'donations/donor-not-found',
+        receiptId: null,
+        number: null,
+      }),
+    ]);
+    expect(textOf(issued)).not.toContain('"receipt"');
+    expect(run['issued']).toBe(1);
+  });
+
+  it('when the yearly receipts name a donor twice, then nothing reaches the administration', async () => {
+    const result = await client.callTool({
+      name: 'nfnn_issue_receipts',
+      arguments: { year: 2026, donorIds: [DONOR_ID, DONOR_ID.toUpperCase()] },
+    });
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toContain('Name each donor in `donorIds` once');
+    expect(
+      stack.backend.requests.filter((request) => request.path.endsWith('/receipts/yearly')),
+    ).toHaveLength(0);
   });
 
   it('when a yearly receipt and the receipt of one donation are issued, then each asks for its own subject and the issued receipt comes back with its verification link', async () => {

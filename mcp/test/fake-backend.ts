@@ -711,6 +711,53 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
           'Takové potvrzení u vás nemáme.',
         ),
       ];
+    case 'GET /api/admin/donations/receipts/yearly':
+      return [
+        200,
+        {
+          year: Number(url.searchParams.get('year') ?? '2026'),
+          yearlyReceiptsAvailableThrough: 2026,
+          receiptsAvailableFrom: 2026,
+          donors: [
+            {
+              donorId: DONOR_ID,
+              name: 'Jana Nováková',
+              type: 'PERSON',
+              giftCount: 2,
+              totalAmountMinor: 350000,
+              receipt: { id: RECEIPT_ID, number: '2027-000001', issuedAt: '2027-01-15T11:00:00Z' },
+            },
+          ],
+          erasedDonors: 1,
+        },
+      ];
+    case 'POST /api/admin/donations/receipts/yearly':
+      return [
+        200,
+        {
+          year: 2026,
+          results: [
+            {
+              donorId: DONOR_ID,
+              outcome: 'ISSUED',
+              problem: null,
+              replacedNumber: null,
+              receipt: issuedReceipt({ year: 2026 }),
+            },
+            {
+              donorId: UNKNOWN_ID,
+              outcome: 'SKIPPED',
+              problem: 'donations/donor-not-found',
+              replacedNumber: null,
+              receipt: null,
+            },
+          ],
+          issued: 1,
+          replaced: 0,
+          unchanged: 0,
+          skipped: 1,
+        },
+      ];
     case `POST /api/admin/donations/donors/${DONOR_ID}/receipts`:
       return [200, issuedReceipt(JSON.parse(body || '{}') as ReceiptSubject)];
     case `POST /api/admin/donations/donors/${UNKNOWN_ID}/receipts`:
