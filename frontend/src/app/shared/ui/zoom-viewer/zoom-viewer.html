@@ -1,0 +1,79 @@
+<app-dialog presentation="viewer" [labelledBy]="titleId" (dismissed)="close()">
+  <div class="zoom-viewer">
+    <h2 class="visually-hidden" [id]="titleId">
+      @if (photo()) {
+        <ng-container i18n="@@ui.zoomViewer.title.photo">Zvětšená fotka</ng-container>
+      } @else {
+        <ng-container i18n="@@ui.zoomViewer.title.qr">Zvětšený QR kód</ng-container>
+      }
+    </h2>
+    <p class="visually-hidden" [id]="hintId" i18n="@@ui.zoomViewer.hint">
+      Přiblížíte prsty, dvojitým ťuknutím, kolečkem myši nebo klávesami plus a minus. Nula vrátí
+      původní velikost, šipky posouvají přiblížený obraz.
+    </p>
+    <div
+      #stage
+      class="zoom-stage"
+      [class.is-zoomed]="!atRest()"
+      tabindex="0"
+      role="group"
+      [attr.aria-labelledby]="titleId"
+      [attr.aria-describedby]="hintId"
+      (pointerdown)="press($event)"
+      (pointermove)="drag($event)"
+      (pointerup)="release($event)"
+      (pointercancel)="abandon($event)"
+      (wheel)="turn($event)"
+      (keydown)="key($event)"
+    >
+      <div #shown class="zoom-content" [class.is-easing]="easing()" [style.transform]="transform()">
+        @if (photo(); as photo) {
+          <img
+            class="zoom-photo"
+            [src]="photo.src"
+            [alt]="photo.alt"
+            [attr.width]="photo.width"
+            [attr.height]="photo.height"
+            draggable="false"
+          />
+        } @else if (qr(); as qr) {
+          <app-qr-code class="zoom-qr" [matrix]="qr.matrix" [label]="qr.label" />
+        }
+      </div>
+    </div>
+    <div class="zoom-tools">
+      <button
+        type="button"
+        class="zoom-tool"
+        [attr.aria-disabled]="atRest()"
+        (click)="step('out')"
+        aria-label="Oddálit"
+        i18n-aria-label="@@ui.zoomViewer.out"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor">
+          <path d="M5 12h14" stroke-width="2" stroke-linecap="round" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        class="zoom-tool zoom-level"
+        (click)="reset()"
+        [attr.aria-label]="resetLabel()"
+      >
+        {{ level() }}
+      </button>
+      <button
+        type="button"
+        class="zoom-tool"
+        [attr.aria-disabled]="atLimit()"
+        (click)="step('in')"
+        aria-label="Přiblížit"
+        i18n-aria-label="@@ui.zoomViewer.in"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor">
+          <path d="M5 12h14M12 5v14" stroke-width="2" stroke-linecap="round" />
+        </svg>
+      </button>
+    </div>
+  </div>
+</app-dialog>

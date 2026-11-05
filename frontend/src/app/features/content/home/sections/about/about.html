@@ -24,16 +24,18 @@
     @if (photo(); as photo) {
       <figure class="about-figure" [style.--about-photo-ratio]="photo.width / photo.height">
         <div class="about-frame">
-          <img
-            loading="lazy"
-            [attr.srcset]="photoSet()"
-            sizes="(max-width: 768px) calc(100vw - 32px), 560px"
-            [src]="photoSource()"
-            [attr.width]="photo.width"
-            [attr.height]="photo.height"
-            [alt]="photo.alt ?? ''"
-            class="about-photo"
-          />
+          <app-zoomable class="about-zoom" [content]="enlarged()!">
+            <img
+              loading="lazy"
+              [attr.srcset]="photoSet()"
+              sizes="(max-width: 768px) calc(100vw - 32px), 560px"
+              [src]="photoSource()"
+              [attr.width]="photo.width"
+              [attr.height]="photo.height"
+              [alt]="photo.alt ?? ''"
+              class="about-photo"
+            />
+          </app-zoomable>
           <ng-container [ngTemplateOutlet]="badge" />
         </div>
         @if (photo.caption) {

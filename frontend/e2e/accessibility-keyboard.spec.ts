@@ -140,12 +140,15 @@ test.describe('Given a visitor who uses only the keyboard or a screen reader', (
 
     await card.getByRole('button', { name: 'Jiná částka' }).focus();
     const order: string[] = [];
-    for (let step = 0; step < 6; step++) {
+    for (let step = 0; step < 7; step++) {
       await page.keyboard.press('Tab');
       order.push(
-        await page.evaluate(() =>
-          (document.activeElement as HTMLElement).textContent!.replace(/\s+/g, ' ').trim(),
-        ),
+        await page.evaluate(() => {
+          const focused = document.activeElement as HTMLElement;
+          return (
+            focused.textContent!.replace(/\s+/g, ' ').trim() || focused.getAttribute('aria-label')!
+          );
+        }),
       );
     }
     expect(order).toEqual([
@@ -154,6 +157,7 @@ test.describe('Given a visitor who uses only the keyboard or a screen reader', (
       'Kopírovat variabilní symbol',
       'Kopírovat IBAN',
       'Jak nastavit trvalý příkaz',
+      'Zvětšit: QR platba na účet Nadačního fondu Nová naděje',
       'Uložit QR kód',
     ]);
   });

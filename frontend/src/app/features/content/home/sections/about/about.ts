@@ -7,6 +7,8 @@ import { AboutPhotoResponse } from '../../../about-api';
 import { mediaUrl } from '../../../news-api';
 import { PublicPeopleResponse } from '../../../people-api';
 import { Avatar } from '../../../../../shared/ui/avatar/avatar';
+import { ZoomPhoto } from '../../../../../shared/ui/zoom-viewer/zoom-content';
+import { Zoomable } from '../../../../../shared/ui/zoom-viewer/zoomable';
 
 const PHOTO_WIDTHS = [480, 960, 1440];
 const LARGEST_WIDTH = PHOTO_WIDTHS[PHOTO_WIDTHS.length - 1];
@@ -16,7 +18,7 @@ const NO_BREAK_SPACE = '\u00a0';
 
 @Component({
   selector: 'app-about',
-  imports: [RouterLink, NgTemplateOutlet, Avatar],
+  imports: [RouterLink, NgTemplateOutlet, Avatar, Zoomable],
   templateUrl: './about.html',
   styleUrl: './about.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -56,6 +58,19 @@ export class About {
       ),
       `${mediaUrl(photo.id, LARGEST_WIDTH)} ${largest}w`,
     ].join(', ');
+  });
+
+  protected readonly enlarged = computed<ZoomPhoto | null>(() => {
+    const photo = this.photo();
+    return photo
+      ? {
+          kind: 'photo',
+          src: mediaUrl(photo.id, LARGEST_WIDTH),
+          alt: photo.alt ?? '',
+          width: photo.width,
+          height: photo.height,
+        }
+      : null;
   });
 
   protected portraitSource(imageId: string): string {
