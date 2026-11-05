@@ -1,6 +1,6 @@
 import { Page } from '@playwright/test';
 import { expect, pwaTest as test } from './pwa-fixtures';
-import { PROBE_WORKER } from './pwa-site';
+import { MARKER, PROBE_WORKER } from './pwa-site';
 
 const POLICY = '/zasady-ochrany-osobnich-udaju';
 
@@ -19,48 +19,59 @@ test.describe('Given the pwaTest fixture watching a page of the production build
     await logged;
   });
 
-  test('when an error escapes the page, then the test fails', async ({ page }) => {
-    test.fail(true, 'planted: an uncaught error must fail the test');
-    await page.route('/api/operations/client-errors', (route) => route.fulfill({ status: 204 }));
-    await openPolicy(page);
+  test('when an error escapes a page, then the fixture records it as uncaught with the page address', async ({
+    page,
+    browserProblems,
+  }) => {
+    browserProblems.expectOne(
+      /^uncaught error: planted uncaught error \(http:\/\/localhost:\d+\/pwa-marker\.txt\)$/,
+    );
+    await page.goto(MARKER);
 
-    const thrown = page.waitForEvent('console', (message) => message.type() === 'error');
     await page.evaluate(() => {
       setTimeout(() => {
         throw new Error('planted uncaught error');
       });
     });
-    await thrown;
   });
 
-  test('when an inline script is added to the page, then the Content-Security-Policy refuses it and the test fails', async ({
+  test('when an inline script is added to the page, then the fixture records the Content-Security-Policy violation and the refusal the browser logs', async ({
     page,
+    browserProblems,
   }) => {
-    test.fail(true, 'planted: a Content-Security-Policy violation must fail the test');
+    browserProblems.expectOne(
+      /^Content-Security-Policy violation: script-src-elem blocked inline \(http:\/\/localhost:\d+\/zasady-ochrany-osobnich-udaju\)$/,
+    );
+    browserProblems.expectOne(/^console error: Executing inline script violates/);
     await openPolicy(page);
 
-    const refused = page.waitForEvent('console', (message) => message.type() === 'error');
     await page.evaluate(() => {
       const script = document.createElement('script');
       script.textContent = 'window.planted = true;';
       document.body.append(script);
     });
-    await refused;
   });
 
-  test('when a service worker logs a console error, then the test fails', async ({
+  test('when a service worker logs a console error, then the fixture records it', async ({
     page,
-    context,
     swReady,
+    browserProblems,
   }) => {
-    test.fail(true, 'planted: a console error of the service worker must fail the test');
+    browserProblems.expectOne(/^console error: pwa probe worker error [0-9a-f]{16}/);
     await openPolicy(page);
     await page.evaluate((script) => navigator.serviceWorker.register(script), PROBE_WORKER);
     await swReady();
 
-    const logged = context.waitForEvent('console', (message) => message.type() === 'error');
     await page.evaluate(() => navigator.serviceWorker.controller?.postMessage('log-error'));
-    await logged;
+  });
+
+  test('when an expected problem never happens, then the test fails', async ({
+    page,
+    browserProblems,
+  }) => {
+    test.fail(true, 'planted: an expected problem that never comes must fail the test');
+    browserProblems.expectOne(/^console error: never logged$/);
+    await openPolicy(page);
   });
 
   test.describe('when the test allows a console error by its text', () => {

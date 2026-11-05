@@ -11,7 +11,7 @@ test.describe('Given a page with a virtual platform authenticator that supports 
     await page.goto(POLICY);
 
     const result = await page.evaluate(async () => {
-      const bytes = (text: string): Uint8Array => new TextEncoder().encode(text);
+      const bytes = (text: string): Uint8Array<ArrayBuffer> => new TextEncoder().encode(text);
       const hex = (buffer: ArrayBuffer | undefined): string =>
         Array.from(new Uint8Array(buffer ?? new ArrayBuffer(0)))
           .map((byte) => byte.toString(16).padStart(2, '0'))
@@ -59,30 +59,58 @@ test.describe('Given a page with a virtual platform authenticator that supports 
   });
 });
 
-test.describe('Given the web app opened from the home screen', () => {
-  test.use({ displayMode: 'standalone' });
+const displayAnswers = (): Record<string, unknown> => ({
+  standalone: window.matchMedia('(display-mode: standalone)').matches,
+  browser: window.matchMedia('(display-mode: browser)').matches,
+  combined: window.matchMedia('(display-mode: standalone) and (max-width: 1px)').matches,
+  negated: window.matchMedia('not (display-mode: standalone)').matches,
+  wide: window.matchMedia('(min-width: 1px)').matches,
+  narrow: window.matchMedia('(max-width: 1px)').matches,
+  installed: (navigator as Navigator & { standalone?: boolean }).standalone,
+});
 
-  test('when the page asks for the display mode, then it reads standalone while other media queries keep their real answers', async ({
+test.describe('Given the web app opened from the home screen of an iPhone', () => {
+  test.use({ displayMode: 'ios-home-screen' });
+
+  test('when the page asks for the display mode, then it reads standalone from the media query and the iOS flag', async ({
     page,
   }) => {
     await page.goto(POLICY);
 
-    expect(
-      await page.evaluate(() => ({
-        standalone: window.matchMedia('(display-mode: standalone)').matches,
-        wide: window.matchMedia('(min-width: 1px)').matches,
-        narrow: window.matchMedia('(max-width: 1px)').matches,
-        installed: (navigator as Navigator & { standalone?: boolean }).standalone,
-      })),
-    ).toEqual({ standalone: true, wide: true, narrow: false, installed: true });
+    expect(await page.evaluate(displayAnswers)).toEqual(
+      expect.objectContaining({ standalone: true, browser: false, installed: true }),
+    );
+  });
+});
+
+test.describe('Given the web app installed from Chrome', () => {
+  test.use({ displayMode: 'standalone' });
+
+  test('when the page asks for the display mode, then only the exact display-mode queries change and every other query keeps its real answer', async ({
+    page,
+  }) => {
+    await page.goto(POLICY);
+
+    expect(await page.evaluate(displayAnswers)).toEqual({
+      standalone: true,
+      browser: false,
+      combined: false,
+      negated: true,
+      wide: true,
+      narrow: false,
+      installed: undefined,
+    });
   });
 
   test.describe('when an error escapes the app', () => {
     test.use({ allowedConsoleErrors: [/^ERROR Error: planted for the display mode/] });
 
-    test('then its report names the standalone display', async ({ page }) => {
+    test('then its report names the standalone display, read from the media query', async ({
+      page,
+      context,
+    }) => {
       const reports: Request[] = [];
-      await page.route('/api/operations/client-errors', (route) => {
+      await context.route('/api/operations/client-errors', (route) => {
         reports.push(route.request());
         return route.fulfill({ status: 204 });
       });

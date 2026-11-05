@@ -8,9 +8,10 @@ test.use({ cameraShows: `${PROOF_ADDRESS}${SINGLE_RECEIPT.fragment}` });
 test.describe('Given a fake camera that films the verification QR code of a receipt', () => {
   test('when the visitor scans with the camera on /overit, then the real camera pipeline reads the code and the page verifies it', async ({
     page,
+    context,
   }) => {
-    await serveReceiptKeys(page);
-    await serveReceiptStatus(page, 'active');
+    await serveReceiptKeys(context);
+    await serveReceiptStatus(context, 'active');
     await page.goto('/overit');
 
     await page.getByRole('button', { name: 'Naskenovat QR kód' }).click();

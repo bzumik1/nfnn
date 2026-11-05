@@ -32,6 +32,8 @@ export type Variant = (typeof VARIANTS)[number];
 const SERVED = 'html';
 const STARTUP_ATTEMPTS = 100;
 const STARTUP_PAUSE_MS = 100;
+const PORT_ATTEMPTS = 3;
+export const CONTAINER_LABEL = 'nfnn-pwa';
 
 export interface PwaSite {
   readonly url: string;
@@ -74,16 +76,19 @@ self.addEventListener('activate', (event) => {
   );
 });
 self.addEventListener('message', (event) => {
+  const reply = (answer) => event.ports[0] && event.ports[0].postMessage(answer);
   if (event.data === 'version') {
-    event.source.postMessage({ version: VERSION });
+    reply({ version: VERSION });
   } else if (event.data === 'skip-waiting') {
-    self.skipWaiting();
+    event.waitUntil(self.skipWaiting());
   } else if (event.data === 'log-error') {
     console.error('pwa probe worker error ' + VERSION);
   } else if (event.data && event.data.fetch) {
-    fetch(event.data.fetch).then(
-      (response) => response.text().then((body) => event.source.postMessage({ status: response.status, body })),
-      (error) => event.source.postMessage({ failed: String(error) }),
+    event.waitUntil(
+      fetch(event.data.fetch).then(
+        (response) => response.text().then((body) => reply({ status: response.status, body })),
+        (error) => reply({ failed: String(error) }),
+      ),
     );
   }
 });
@@ -184,6 +189,47 @@ function servedLink(root: string, variant: Variant): void {
   renameSync(next, join(root, SERVED));
 }
 
+async function startContainer(root: string): Promise<{ port: number; container: string }> {
+  for (let attempt = 1; ; attempt++) {
+    const port = await freePort();
+    const container = `nfnn-pwa-${port}`;
+    try {
+      await run('docker', [
+        'run',
+        '-d',
+        '--name',
+        container,
+        '--label',
+        CONTAINER_LABEL,
+        '-p',
+        `127.0.0.1:${port}:80`,
+        '--add-host',
+        'backend:127.0.0.1',
+        '--add-host',
+        'mcp:127.0.0.1',
+        '-v',
+        `${root}:/usr/share/nginx:ro`,
+        '-v',
+        `${join(FRONTEND, 'nginx.conf')}:/etc/nginx/conf.d/default.conf:ro`,
+        '-v',
+        `${join(FRONTEND, 'nginx-security-headers.conf')}:/etc/nginx/snippets/security-headers.conf:ro`,
+        '--tmpfs',
+        '/logs',
+        nginxImage(),
+      ]);
+      return { port, container };
+    } catch (error) {
+      await run('docker', ['rm', '-f', container]).catch(() => undefined);
+      if (
+        attempt >= PORT_ATTEMPTS ||
+        !/port is already allocated|address already in use/i.test(String(error))
+      ) {
+        throw error;
+      }
+    }
+  }
+}
+
 export async function startPwaSite(dist: string): Promise<PwaSite> {
   if (!existsSync(join(dist, 'index.html'))) {
     throw new Error(
@@ -193,37 +239,13 @@ export async function startPwaSite(dist: string): Promise<PwaSite> {
   const root = mkdtempSync(join(tmpdir(), 'nfnn-pwa-'));
   chmodSync(root, 0o755);
   const stash = join(root, 'removed');
-  const logs = join(root, 'logs');
   mkdirSync(stash);
-  mkdirSync(logs);
   for (const variant of VARIANTS) {
     cpSync(dist, join(root, variant), { recursive: true });
     writeProbeVariant(join(root, variant), variant);
   }
   servedLink(root, 'a');
-  const port = await freePort();
-  const container = `nfnn-pwa-${port}`;
-  await run('docker', [
-    'run',
-    '-d',
-    '--name',
-    container,
-    '-p',
-    `127.0.0.1:${port}:80`,
-    '--add-host',
-    'backend:127.0.0.1',
-    '--add-host',
-    'mcp:127.0.0.1',
-    '-v',
-    `${root}:/usr/share/nginx:ro`,
-    '-v',
-    `${join(FRONTEND, 'nginx.conf')}:/etc/nginx/conf.d/default.conf:ro`,
-    '-v',
-    `${join(FRONTEND, 'nginx-security-headers.conf')}:/etc/nginx/snippets/security-headers.conf:ro`,
-    '-v',
-    `${logs}:/logs`,
-    nginxImage(),
-  ]);
+  const { port, container } = await startContainer(root);
   const url = `http://localhost:${port}`;
   let current: Variant = 'a';
   const removed: { from: string; kept: string }[] = [];

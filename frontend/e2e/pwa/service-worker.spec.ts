@@ -11,47 +11,73 @@ async function registerProbeWorker(page: Page): Promise<void> {
   }, PROBE_WORKER);
 }
 
+const ANSWER_TIMEOUT_MS = 5_000;
+const UPDATE_TIMEOUT_MS = 10_000;
+
 async function askWorker(page: Page, message: unknown): Promise<unknown> {
   return page.evaluate(
-    (sent) =>
-      new Promise((resolve) => {
-        navigator.serviceWorker.addEventListener('message', (event) => resolve(event.data), {
-          once: true,
-        });
-        navigator.serviceWorker.controller?.postMessage(sent);
+    ({ sent, timeoutMs }) =>
+      new Promise((resolve, reject) => {
+        const controller = navigator.serviceWorker.controller;
+        if (controller === null) {
+          reject(new Error('no service worker controls the page'));
+          return;
+        }
+        const channel = new MessageChannel();
+        const timer = setTimeout(
+          () => reject(new Error(`the worker did not answer ${JSON.stringify(sent)} in time`)),
+          timeoutMs,
+        );
+        channel.port1.onmessage = (event) => {
+          clearTimeout(timer);
+          resolve(event.data);
+        };
+        controller.postMessage(sent, [channel.port2]);
       }),
-    message,
+    { sent: message, timeoutMs: ANSWER_TIMEOUT_MS },
   );
 }
 
 async function waitingVersion(page: Page): Promise<string> {
-  return page.evaluate(async () => {
-    const registration = await navigator.serviceWorker.getRegistration();
-    if (registration === undefined) {
-      throw new Error('no registration');
-    }
-    await registration.update();
-    const waiting = await new Promise<ServiceWorker>((resolve) => {
-      const settled = (): void => {
-        if (registration.waiting !== null) {
-          resolve(registration.waiting);
-        }
-      };
-      settled();
-      registration.addEventListener('updatefound', () => {
+  return page.evaluate(
+    async ({ answerMs, updateMs }) => {
+      const registration = await navigator.serviceWorker.getRegistration();
+      if (registration === undefined) {
+        throw new Error('no registration');
+      }
+      await registration.update();
+      const waiting = await new Promise<ServiceWorker>((resolve, reject) => {
+        const timer = setTimeout(
+          () => reject(new Error('no update of the worker was waiting in time')),
+          updateMs,
+        );
+        const settled = (): void => {
+          if (registration.waiting !== null) {
+            clearTimeout(timer);
+            resolve(registration.waiting);
+          }
+        };
+        settled();
+        registration.addEventListener('updatefound', () => {
+          registration.installing?.addEventListener('statechange', settled);
+        });
         registration.installing?.addEventListener('statechange', settled);
       });
-      registration.installing?.addEventListener('statechange', settled);
-    });
-    return new Promise<string>((resolve) => {
-      navigator.serviceWorker.addEventListener(
-        'message',
-        (event) => resolve((event.data as { version: string }).version),
-        { once: true },
-      );
-      waiting.postMessage('version');
-    });
-  });
+      return new Promise<string>((resolve, reject) => {
+        const channel = new MessageChannel();
+        const timer = setTimeout(
+          () => reject(new Error('the waiting worker did not tell its version in time')),
+          answerMs,
+        );
+        channel.port1.onmessage = (event) => {
+          clearTimeout(timer);
+          resolve((event.data as { version: string }).version);
+        };
+        waiting.postMessage('version', [channel.port2]);
+      });
+    },
+    { answerMs: ANSWER_TIMEOUT_MS, updateMs: UPDATE_TIMEOUT_MS },
+  );
 }
 
 async function marker(page: Page): Promise<string> {
@@ -139,7 +165,7 @@ test.describe('Given a page that registered the throwaway probe worker', () => {
   test.describe('when the browser goes offline', () => {
     test.use({ allowedConsoleErrors: [APP_API_OFFLINE] });
 
-    test('then a visited route renders from the worker cache, and the worker reaches neither a mocked API path nor the server', async ({
+    test('then a route never opened renders from the cached app shell, and the worker reaches neither a mocked API path nor the server', async ({
       page,
       goOffline,
     }) => {
@@ -153,6 +179,25 @@ test.describe('Given a page that registered the throwaway probe worker', () => {
       });
       expect(await askWorker(page, { fetch: PROBE_MANIFEST })).toEqual({
         failed: expect.stringContaining('TypeError'),
+      });
+    });
+
+    test('then the network cut alone keeps the worker from the server, while a route the test registered still answers it', async ({
+      page,
+      context,
+    }) => {
+      await context.route('**/api/content/news', (route) =>
+        route.fulfill({ json: { routed: 'offline' } }),
+      );
+
+      await context.setOffline(true);
+
+      expect(await askWorker(page, { fetch: PROBE_MANIFEST })).toEqual({
+        failed: expect.stringContaining('TypeError'),
+      });
+      expect(await askWorker(page, { fetch: '/api/content/news' })).toEqual({
+        status: 200,
+        body: '{"routed":"offline"}',
       });
     });
   });
@@ -209,6 +254,7 @@ test.describe('Given a page that registered the throwaway probe worker', () => {
   test('when the waiting variant B takes over, then the page reloads into B', async ({
     page,
     site,
+    swReady,
   }) => {
     site.switchTo('b');
     const version = await waitingVersion(page);
@@ -220,8 +266,19 @@ test.describe('Given a page that registered the throwaway probe worker', () => {
       );
       registration?.waiting?.postMessage('skip-waiting');
       await changed;
+      const controller = navigator.serviceWorker.controller;
+      if (controller !== null && controller.state !== 'activated') {
+        await new Promise<void>((activated) =>
+          controller.addEventListener('statechange', () => {
+            if (controller.state === 'activated') {
+              activated();
+            }
+          }),
+        );
+      }
     });
     await page.reload();
+    await swReady();
 
     expect(await askWorker(page, 'version')).toEqual({ version });
     expect(await marker(page)).toBe('b');

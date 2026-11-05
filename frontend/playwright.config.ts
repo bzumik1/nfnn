@@ -9,6 +9,9 @@ const build = theme
   ? `npx ng build --configuration=production,${theme}-theme --output-path=dist/${theme}-theme`
   : 'npx ng build';
 const served = process.env.E2E_DIST ?? builtApp;
+const askedProjects = process.argv.filter((argument) => argument.startsWith('--project='));
+const onlyWebApp =
+  askedProjects.length > 0 && askedProjects.every((argument) => argument === '--project=pwa');
 
 export default defineConfig<DeviceOptions>({
   testDir: './e2e',
@@ -63,14 +66,15 @@ export default defineConfig<DeviceOptions>({
       },
     },
   ],
-  webServer: process.env.E2E_BASE_URL
-    ? undefined
-    : {
-        command: process.env.E2E_DIST
-          ? `node scripts/serve-dist.mjs ${served}`
-          : `${build} && node scripts/serve-dist.mjs ${served}`,
-        url: 'http://localhost:4200',
-        reuseExistingServer: !process.env.CI,
-        timeout: 120_000,
-      },
+  webServer:
+    process.env.E2E_BASE_URL || onlyWebApp
+      ? undefined
+      : {
+          command: process.env.E2E_DIST
+            ? `node scripts/serve-dist.mjs ${served}`
+            : `${build} && node scripts/serve-dist.mjs ${served}`,
+          url: 'http://localhost:4200',
+          reuseExistingServer: !process.env.CI,
+          timeout: 120_000,
+        },
 });

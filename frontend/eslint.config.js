@@ -121,6 +121,15 @@ module.exports = defineConfig([
           ],
         },
       ],
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            "CallExpression[callee.object.name='page'][callee.property.name=/^(route|unroute|routeFromHAR)$/]",
+          message:
+            'Route on the context (context.route): a page route never sees the requests of a service worker, so once a worker controls the page the mock stops answering.',
+        },
+      ],
     },
   },
   {

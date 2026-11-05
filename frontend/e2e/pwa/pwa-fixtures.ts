@@ -1,13 +1,13 @@
 import { BrowserContext, CDPSession, expect, Page, Route, test as base } from '@playwright/test';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { unmockedApi } from '../fixtures';
-import { FOUNDATION_PAYMENT_DETAILS } from '../qr-matrices';
+import { NO_SERVER_PAYMENT, routeApiDefaults } from '../fixtures';
 import { qrCodeY4m } from '../receipt-code-files';
+import { requestsInFlight, settled } from '../settled';
 import { builtDist, PwaSite, startPwaSite } from './pwa-site';
 
-export type DisplayMode = 'browser' | 'standalone';
+export type DisplayMode = 'browser' | 'standalone' | 'ios-home-screen';
 
 export interface WorkerState {
   readonly scriptURL: string;
@@ -29,6 +29,10 @@ export interface StorageDump {
 
 export type IdbDump = Record<string, Record<string, readonly unknown[]>>;
 
+export interface BrowserProblems {
+  expectOne(pattern: RegExp): void;
+}
+
 export interface VirtualAuthenticator {
   readonly authenticatorId: string;
   credentialCount(): Promise<number>;
@@ -47,7 +51,8 @@ interface PwaWorkerOptions {
 interface PwaFixtures {
   site: PwaSite;
   pwaApi: void;
-  browserProblems: void;
+  pageRequests: () => number;
+  browserProblems: BrowserProblems;
   standaloneStub: void;
   swReady: () => Promise<WorkerState>;
   goOffline: () => Promise<void>;
@@ -65,31 +70,39 @@ interface PwaWorkerFixtures {
 const OFFLINE = (route: Route): Promise<void> => route.abort('internetdisconnected');
 
 const VIOLATION_BINDING = '__nfnnPwaSecurityPolicyViolation';
+const READY_TIMEOUT_MS = 10_000;
+const CLAIM_TIMEOUT_MS = 5_000;
+const SETTLE_TIMEOUT_MS = 10_000;
+const EXPECTED_PROBLEM_TIMEOUT_MS = 5_000;
 
-async function routeApiByDefault(context: BrowserContext): Promise<void> {
-  await context.route(
-    (url) => url.pathname.startsWith('/api/'),
-    (route) => route.fulfill(unmockedApi),
-  );
-  await context.route(
-    (url) => url.pathname === '/api/operations/setup',
-    (route) => route.fulfill({ json: { required: false, codeRequired: true } }),
-  );
-  await context.route(
-    (url) => url.pathname === '/api/content/home',
-    (route) => route.fulfill({ json: { news: [], projects: [] } }),
-  );
-  await context.route(
-    (url) => url.pathname === '/api/donations/payment-details',
-    (route) => route.fulfill({ json: FOUNDATION_PAYMENT_DETAILS }),
+async function waitForController(page: Page): Promise<boolean> {
+  return page.evaluate(
+    async ({ readyMs, claimMs }) => {
+      await Promise.race([
+        navigator.serviceWorker.ready,
+        new Promise((_, reject) =>
+          setTimeout(
+            () => reject(new Error(`no service worker became ready within ${readyMs} ms`)),
+            readyMs,
+          ),
+        ),
+      ]);
+      if (navigator.serviceWorker.controller === null) {
+        await new Promise((claimed) => {
+          navigator.serviceWorker.addEventListener('controllerchange', claimed, { once: true });
+          setTimeout(claimed, claimMs);
+        });
+      }
+      return navigator.serviceWorker.controller !== null;
+    },
+    { readyMs: READY_TIMEOUT_MS, claimMs: CLAIM_TIMEOUT_MS },
   );
 }
 
-async function waitForController(page: Page): Promise<boolean> {
-  return page.evaluate(async () => {
-    await navigator.serviceWorker.ready;
-    return navigator.serviceWorker.controller !== null;
-  });
+async function flushPendingReports(context: BrowserContext): Promise<void> {
+  for (const open of context.pages()) {
+    await open.evaluate(() => new Promise((done) => setTimeout(done))).catch(() => undefined);
+  }
 }
 
 export const pwaTest = base.extend<PwaFixtures & PwaOptions, PwaWorkerFixtures & PwaWorkerOptions>({
@@ -113,16 +126,21 @@ export const pwaTest = base.extend<PwaFixtures & PwaOptions, PwaWorkerFixtures &
         await use(launchOptions);
         return;
       }
-      const video = join(mkdtempSync(join(tmpdir(), 'nfnn-pwa-camera-')), 'camera.y4m');
+      const folder = mkdtempSync(join(tmpdir(), 'nfnn-pwa-camera-'));
+      const video = join(folder, 'camera.y4m');
       writeFileSync(video, qrCodeY4m(cameraShows));
-      await use({
-        ...launchOptions,
-        args: [
-          ...(launchOptions.args ?? []),
-          '--use-fake-device-for-media-stream',
-          `--use-file-for-fake-video-capture=${video}`,
-        ],
-      });
+      try {
+        await use({
+          ...launchOptions,
+          args: [
+            ...(launchOptions.args ?? []),
+            '--use-fake-device-for-media-stream',
+            `--use-file-for-fake-video-capture=${video}`,
+          ],
+        });
+      } finally {
+        rmSync(folder, { recursive: true, force: true });
+      }
     },
     { scope: 'worker' },
   ],
@@ -145,44 +163,67 @@ export const pwaTest = base.extend<PwaFixtures & PwaOptions, PwaWorkerFixtures &
 
   pwaApi: [
     async ({ context }, use) => {
-      await routeApiByDefault(context);
+      const askedForServerPayment = await routeApiDefaults(context);
       await use();
+      expect(askedForServerPayment, NO_SERVER_PAYMENT).toEqual([]);
     },
     { auto: true },
   ],
 
+  pageRequests: async ({ page }, use) => {
+    await use(requestsInFlight(page));
+  },
+
   browserProblems: [
     async ({ context, allowedConsoleErrors }, use) => {
       const problems: string[] = [];
-      const allowed = (text: string): boolean =>
-        allowedConsoleErrors.some((pattern) => pattern.test(text));
+      const expected: RegExp[] = [];
+      const record = (kind: string, text: string, where: string | undefined): void => {
+        const located = where === undefined || where === '' ? text : `${text} (${where})`;
+        if (!allowedConsoleErrors.some((pattern) => pattern.test(located))) {
+          problems.push(`${kind}: ${located}`);
+        }
+      };
       context.on('console', (message) => {
-        const where = message.location().url;
-        const text = where === '' ? message.text() : `${message.text()} (${where})`;
-        if (message.type() === 'error' && !allowed(text)) {
-          problems.push(`console error: ${text}`);
+        if (message.type() === 'error') {
+          record('console error', message.text(), message.location().url);
         }
       });
       context.on('weberror', (error) => {
-        if (!allowed(error.error().message)) {
-          problems.push(`uncaught error: ${error.error().message}`);
-        }
+        record('uncaught error', error.error().message, error.page()?.url());
       });
-      await context.exposeBinding(VIOLATION_BINDING, (_source, violation: string) => {
-        if (!allowed(violation)) {
-          problems.push(`Content-Security-Policy violation: ${violation}`);
-        }
-      });
+      await context.exposeBinding(
+        VIOLATION_BINDING,
+        (_source, violation: { text: string; where: string }) => {
+          record('Content-Security-Policy violation', violation.text, violation.where);
+        },
+      );
       await context.addInitScript((binding) => {
         document.addEventListener('securitypolicyviolation', (event) => {
-          const report = (window as unknown as Record<string, (text: string) => void>)[binding];
-          report(`${event.violatedDirective} blocked ${event.blockedURI || 'inline'}`);
+          const report = (window as unknown as Record<string, (sent: object) => void>)[binding];
+          report({
+            text: `${event.violatedDirective} blocked ${event.blockedURI || 'inline'}`,
+            where: event.documentURI,
+          });
         });
       }, VIOLATION_BINDING);
-      await use();
+      await use({ expectOne: (pattern) => expected.push(pattern) });
+      await flushPendingReports(context);
+      for (const pattern of expected) {
+        await expect
+          .poll(() => problems.some((problem) => pattern.test(problem)), {
+            message: `the fixture records the expected problem ${pattern}`,
+            timeout: EXPECTED_PROBLEM_TIMEOUT_MS,
+          })
+          .toBe(true);
+        problems.splice(
+          problems.findIndex((problem) => pattern.test(problem)),
+          1,
+        );
+      }
       expect(
         problems,
-        'a page of the installed web app logs no console error, throws nothing uncaught and violates no Content-Security-Policy directive',
+        'a page or service worker of the installed web app logs no console error, throws nothing uncaught and violates no Content-Security-Policy directive',
       ).toEqual([]);
     },
     { auto: true },
@@ -190,18 +231,22 @@ export const pwaTest = base.extend<PwaFixtures & PwaOptions, PwaWorkerFixtures &
 
   standaloneStub: [
     async ({ context, displayMode }, use) => {
-      if (displayMode === 'standalone') {
-        await context.addInitScript(() => {
+      if (displayMode !== 'browser') {
+        await context.addInitScript((homeScreen) => {
           const matchMedia = window.matchMedia.bind(window);
-          const standalone = /\(\s*display-mode\s*:\s*standalone\s*\)/;
+          const answers: Record<string, boolean> = {
+            '(display-mode:standalone)': true,
+            '(display-mode:browser)': false,
+          };
           window.matchMedia = (query: string): MediaQueryList => {
             const real = matchMedia(query);
-            if (!standalone.test(query)) {
+            const answer = answers[query.replace(/\s+/g, '').toLowerCase()];
+            if (answer === undefined) {
               return real;
             }
             const fixed = (value: unknown): PropertyDescriptor => ({ value, enumerable: true });
             return Object.create(Object.getPrototypeOf(real) as object, {
-              matches: fixed(true),
+              matches: fixed(answer),
               media: fixed(real.media),
               onchange: { value: null, writable: true },
               addListener: fixed(() => undefined),
@@ -211,15 +256,17 @@ export const pwaTest = base.extend<PwaFixtures & PwaOptions, PwaWorkerFixtures &
               dispatchEvent: fixed(() => false),
             }) as MediaQueryList;
           };
-          Object.defineProperty(navigator, 'standalone', { configurable: true, value: true });
-        });
+          if (homeScreen) {
+            Object.defineProperty(navigator, 'standalone', { configurable: true, value: true });
+          }
+        }, displayMode === 'ios-home-screen');
       }
       await use();
     },
     { auto: true },
   ],
 
-  swReady: async ({ page }, use) => {
+  swReady: async ({ page, pageRequests }, use) => {
     await use(async () => {
       if (!(await waitForController(page))) {
         await page.reload();
@@ -228,6 +275,7 @@ export const pwaTest = base.extend<PwaFixtures & PwaOptions, PwaWorkerFixtures &
           'the service worker controls the page after one reload',
         ).toBe(true);
       }
+      await settled(page, pageRequests, SETTLE_TIMEOUT_MS);
       return page.evaluate(() => {
         const controller = navigator.serviceWorker.controller;
         return { scriptURL: controller?.scriptURL ?? '', state: controller?.state ?? '' };
@@ -284,7 +332,8 @@ export const pwaTest = base.extend<PwaFixtures & PwaOptions, PwaWorkerFixtures &
         for (const name of await caches.keys()) {
           const cache = await caches.open(name);
           for (const request of await cache.keys()) {
-            entries.push({ cache: name, url: new URL(request.url).pathname });
+            const url = new URL(request.url);
+            entries.push({ cache: name, url: `${url.pathname}${url.search}` });
           }
         }
         return entries.sort((one, other) => one.url.localeCompare(other.url));

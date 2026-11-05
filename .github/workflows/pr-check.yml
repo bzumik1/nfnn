@@ -365,15 +365,15 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: "24"
+          node-version: "26"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
       - run: npm ci
 
-      - name: Start installing Playwright's Chromium and pulling the nginx image while the app builds
+      - name: Pull the nginx image, with Playwright's full Chromium installing in the background
         run: |
-          (npx playwright install --with-deps chromium > "$RUNNER_TEMP/playwright-install.log" 2>&1; echo $? > "$RUNNER_TEMP/playwright-install.status") &
+          (npx playwright install --with-deps --no-shell chromium > "$RUNNER_TEMP/playwright-install.log" 2>&1; echo $? > "$RUNNER_TEMP/playwright-install.status") &
           image=$(sed -n 's/^FROM \(nginx:[^ ]*\)$/\1/p' Dockerfile)
           [ -n "$image" ] || { echo "::error::frontend/Dockerfile names no nginx base image"; exit 1; }
           docker pull --quiet "$image"

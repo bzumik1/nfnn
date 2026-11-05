@@ -63,6 +63,11 @@ function qrCodeLuma(qrText: string, pixelsPerModule: number): QrCodeLuma {
 export function qrCodeY4m(qrText: string, width = 640, height = 480): Buffer {
   const pixelsPerModule = Math.max(1, Math.floor((height - 40) / qrCodeLuma(qrText, 1).side));
   const { side, luma } = qrCodeLuma(qrText, pixelsPerModule);
+  if (side > width || side > height) {
+    throw new Error(
+      `the QR code of ${qrText.length} characters needs ${side} px and does not fit a ${width}×${height} camera frame`,
+    );
+  }
   const frameLuma = Buffer.alloc(width * height, 0xff);
   const left = Math.floor((width - side) / 2);
   const top = Math.floor((height - side) / 2);
