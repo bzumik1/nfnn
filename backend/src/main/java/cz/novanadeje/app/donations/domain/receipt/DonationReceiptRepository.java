@@ -35,6 +35,8 @@ public interface DonationReceiptRepository {
 
     List<DonationReceipt> findByDonorNewestFirst(DonorReference donor);
 
+    List<DonationReceipt> findActiveForYearOfEveryDonor(Year year);
+
     boolean showsImage(DonorReference donor, ContentDigest image);
 
     Optional<ReceiptStanding> findStandingByStatusDigest(ContentDigest statusDigest);

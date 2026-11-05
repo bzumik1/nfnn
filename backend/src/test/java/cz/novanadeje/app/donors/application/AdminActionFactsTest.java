@@ -114,6 +114,8 @@ class AdminActionFactsTest {
                         "ISSUE_RECEIPT.yearly", Map.of("number", "2027-000002", "year", "2026", "donor", DONOR)),
                 arguments("ISSUE_RECEIPT", "Potvrzení 2027-000003 za rok 2026 vystaveno dárci " + DONOR + "; nahrazuje potvrzení 2027-000002",
                         "ISSUE_RECEIPT.yearlyReplacing", Map.of("number", "2027-000003", "year", "2026", "donor", DONOR, "replaced", "2027-000002")),
+                arguments("ISSUE_RECEIPTS", "Hromadně vystavena roční potvrzení za rok 2026: nová 12, nahrazená 2, beze změny 28, přeskočená 1",
+                        "ISSUE_RECEIPTS", Map.of("year", "2026", "issued", "12", "replaced", "2", "unchanged", "28", "skipped", "1")),
                 arguments("WITHDRAW_RECEIPT", "Potvrzení 2027-000002 za rok 2026 dárce " + DONOR + " zrušeno, protože z něj byl odebrán dar " + OTHER
                                 + " platby 26683551",
                         "WITHDRAW_RECEIPT", Map.of("number", "2027-000002", "year", "2026", "donor", DONOR, "transaction", "26683551")),

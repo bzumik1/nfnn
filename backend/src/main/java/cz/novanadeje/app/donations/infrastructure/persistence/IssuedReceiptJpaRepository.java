@@ -34,6 +34,8 @@ interface IssuedReceiptJpaRepository extends JpaRepository<IssuedReceiptJpaEntit
 
     Optional<IssuedReceiptJpaEntity> findByDonorIdAndReceiptYearAndStatus(UUID donorId, Integer receiptYear, ReceiptStatus status);
 
+    List<IssuedReceiptJpaEntity> findByReceiptYearAndStatus(Integer receiptYear, ReceiptStatus status);
+
     Optional<IssuedReceiptJpaEntity> findFirstByDonorIdAndReceiptYearAndStatusAndWithdrawalReasonOrderByIssuedAtDescNumberDesc(UUID donorId,
             Integer receiptYear, ReceiptStatus status, ReceiptWithdrawalReason withdrawalReason);
 

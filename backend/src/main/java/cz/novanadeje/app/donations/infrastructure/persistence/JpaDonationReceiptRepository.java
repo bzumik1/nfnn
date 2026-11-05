@@ -56,6 +56,11 @@ class JpaDonationReceiptRepository implements DonationReceiptRepository {
     }
 
     @Override
+    public List<DonationReceipt> findActiveForYearOfEveryDonor(Year year) {
+        throw new UnsupportedOperationException("2.29");
+    }
+
+    @Override
     public Optional<DonationReceipt> findLatestOutdatedForYear(DonorReference donor, Year year) {
         return jpa.findFirstByDonorIdAndReceiptYearAndStatusAndWithdrawalReasonOrderByIssuedAtDescNumberDesc(donor.value(), year.getValue(),
                         ReceiptStatus.WITHDRAWN, ReceiptWithdrawalReason.DONATIONS_CHANGED)
