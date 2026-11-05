@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="026-withdraw-receipts-when-donations-change" author="nfnn">
+        <addColumn tableName="issued_receipt">
+            <column name="withdrawn_at" type="timestamp with time zone"/>
+            <column name="withdrawal_reason" type="varchar(24)"/>
+        </addColumn>
+        <sql>alter table issued_receipt add constraint ck_issued_receipt_withdrawal check ((withdrawn_at is null) = (withdrawal_reason is null) and (withdrawn_at is null or status = 'WITHDRAWN'))</sql>
+        <sql>alter table issued_receipt add constraint ck_issued_receipt_withdrawal_reason check (withdrawal_reason in ('DONATIONS_CHANGED'))</sql>
+    </changeSet>
+</databaseChangeLog>

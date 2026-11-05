@@ -3,7 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { WITHOUT_ACCESS_TOKEN } from '../../../core/auth/auth-interceptor';
 
-export type ReceiptStatus = 'active' | 'replaced' | 'withdrawn' | 'unknown';
+export type ReceiptStatus = 'active' | 'replaced' | 'withdrawn' | 'outdated' | 'unknown';
 
 export interface ReceiptStatusResponse {
   readonly status: ReceiptStatus;

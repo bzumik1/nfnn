@@ -8,4 +8,8 @@ public enum AdministrationChannel {
     boolean mayReplaceReceipts() {
         return this == BROWSER;
     }
+
+    public boolean mayWithdrawReceipts() {
+        return this == BROWSER;
+    }
 }

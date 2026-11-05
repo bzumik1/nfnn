@@ -10,6 +10,8 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptFingerprint;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptKind;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptStatus;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptVerification;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptWithdrawal;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptWithdrawalReason;
 import cz.novanadeje.app.donations.domain.receipt.proof.ReceiptProof;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyId;
 import jakarta.persistence.Column;
@@ -94,6 +96,13 @@ class IssuedReceiptJpaEntity {
     @Column(name = "superseded_at")
     private Instant supersededAt;
 
+    @Column(name = "withdrawn_at")
+    private Instant withdrawnAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "withdrawal_reason", length = 24)
+    private ReceiptWithdrawalReason withdrawalReason;
+
     protected IssuedReceiptJpaEntity() {
     }
 
@@ -120,12 +129,16 @@ class IssuedReceiptJpaEntity {
         entity.statusSha256 = frozen.statusDigest().value();
         entity.supersedesId = receipt.supersedes().map(DonationReceiptId::value).orElse(null);
         entity.supersededAt = receipt.supersededAt().orElse(null);
+        entity.withdrawnAt = receipt.withdrawal().map(ReceiptWithdrawal::at).orElse(null);
+        entity.withdrawalReason = receipt.withdrawal().map(ReceiptWithdrawal::reason).orElse(null);
         return entity;
     }
 
     void changedAs(DonationReceipt receipt) {
         this.status = receipt.status();
         this.supersededAt = receipt.supersededAt().orElse(null);
+        this.withdrawnAt = receipt.withdrawal().map(ReceiptWithdrawal::at).orElse(null);
+        this.withdrawalReason = receipt.withdrawal().map(ReceiptWithdrawal::reason).orElse(null);
     }
 
     UUID getDonationId() {
@@ -148,7 +161,8 @@ class IssuedReceiptJpaEntity {
                 frozenReceipt,
                 Optional.ofNullable(supersedesId).map(DonationReceiptId::new),
                 status,
-                Optional.ofNullable(supersededAt));
+                Optional.ofNullable(supersededAt),
+                Optional.ofNullable(withdrawnAt).map(at -> new ReceiptWithdrawal(at, withdrawalReason)));
         if (!receipt.number().value().equals(number) || receipt.kind() != kind || !receipt.issuedOn().equals(issuedOn)
                 || !receipt.locale().tag().equals(locale) || !receipt.donation().map(DonationId::value).equals(Optional.ofNullable(donationId))
                 || !receipt.year().map(Year::getValue).equals(Optional.ofNullable(receiptYear))

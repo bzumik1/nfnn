@@ -127,7 +127,7 @@ describe('Given the receipt verifier', () => {
       expect(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null')).toEqual(KEY_LIST);
     });
 
-    for (const status of ['replaced', 'withdrawn', 'unknown']) {
+    for (const status of ['replaced', 'withdrawn', 'outdated', 'unknown']) {
       it(`and the fund answers ${status}, then the outcome carries that status`, async () => {
         const outcome = verifier.verify(SINGLE.fragment);
 

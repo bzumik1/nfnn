@@ -10,6 +10,7 @@ type ResultKind =
   | 'signed-no-answer'
   | 'replaced'
   | 'withdrawn'
+  | 'outdated'
   | 'unrecorded'
   | 'invalid'
   | 'revoked'
@@ -30,6 +31,7 @@ const TONES: Readonly<Record<ResultKind, Tone>> = {
   'signed-no-answer': 'caution',
   replaced: 'caution',
   withdrawn: 'danger',
+  outdated: 'caution',
   unrecorded: 'caution',
   invalid: 'danger',
   revoked: 'danger',
@@ -68,6 +70,7 @@ const ANSWERED: readonly string[] = [
   'active',
   'replaced',
   'withdrawn',
+  'outdated',
   'unknown',
 ] satisfies readonly ReceiptStatus[];
 
@@ -107,6 +110,8 @@ function kindOf(outcome: FinalOutcome): ResultKind {
           return 'replaced';
         case 'withdrawn':
           return 'withdrawn';
+        case 'outdated':
+          return 'outdated';
         case 'unknown':
           return 'unrecorded';
         case 'no-answer':

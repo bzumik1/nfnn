@@ -7,6 +7,8 @@ import cz.novanadeje.app.donations.domain.donation.DonationPurpose;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptKind;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptWithdrawal;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptWithdrawalReason;
 import cz.novanadeje.app.shared.domain.DonorType;
 
 import java.time.Instant;
@@ -43,12 +45,14 @@ record AdminDonorDetailResponse(AdminDonorRecordResponse donor, List<BankAccount
     }
 
     record ReceiptItemResponse(UUID id, String number, ReceiptKind kind, UUID donationId, LocalDate donationReceivedOn, Integer year,
-                               LocalDate issuedOn, Instant issuedAt, String locale, boolean active) {
+                               LocalDate issuedOn, Instant issuedAt, String locale, boolean active, Instant withdrawnAt,
+                               ReceiptWithdrawalReason withdrawalReason) {
 
         static ReceiptItemResponse from(DonationReceipt receipt, LocalDate donationReceivedOn) {
             return new ReceiptItemResponse(receipt.id().value(), receipt.number().value(), receipt.kind(),
                     receipt.donation().map(DonationId::value).orElse(null), donationReceivedOn, receipt.year().map(Year::getValue).orElse(null),
-                    receipt.issuedOn(), receipt.issuedAt(), receipt.locale().tag(), receipt.isActive());
+                    receipt.issuedOn(), receipt.issuedAt(), receipt.locale().tag(), receipt.isActive(),
+                    receipt.withdrawal().map(ReceiptWithdrawal::at).orElse(null), receipt.withdrawal().map(ReceiptWithdrawal::reason).orElse(null));
         }
     }
 }

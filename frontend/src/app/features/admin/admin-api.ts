@@ -193,6 +193,8 @@ export interface AdminDonorRecordResponse {
 
 export type ReceiptKind = 'SINGLE' | 'YEARLY';
 
+export type ReceiptWithdrawalReason = 'DONATIONS_CHANGED';
+
 export interface AdminReceiptResponse {
   id: string;
   number: string;
@@ -204,6 +206,8 @@ export interface AdminReceiptResponse {
   issuedAt: string;
   locale: string;
   active: boolean;
+  withdrawnAt: string | null;
+  withdrawalReason: ReceiptWithdrawalReason | null;
 }
 
 export interface AdminDonorDetailResponse {
@@ -236,6 +240,8 @@ export interface AdminIssuedReceiptResponse {
   year: number | null;
   issuedAt: string;
   supersededAt: string | null;
+  withdrawnAt: string | null;
+  withdrawalReason: ReceiptWithdrawalReason | null;
   donorErased: boolean;
   receipt: AdminFrozenReceiptResponse;
 }

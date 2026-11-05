@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donations.application.pairing;
 
+import cz.novanadeje.app.donations.application.receipt.AdministrationChannel;
 import cz.novanadeje.app.donations.domain.bank.BankPayment;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentAlreadyPaired;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentId;
@@ -15,8 +16,10 @@ import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordNotFound;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
+import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
 import cz.novanadeje.app.donations.domain.receipt.FirstReceiptYear;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptWithdrawalInBrowserOnly;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,6 +40,7 @@ public class ManualPairingService {
 
     static final String PAIR_ACTION = "PAIR_PAYMENT";
     static final String UNPAIR_ACTION = "UNPAIR_PAYMENT";
+    static final String WITHDRAW_RECEIPT_ACTION = "WITHDRAW_RECEIPT";
 
     private static final Logger log = LoggerFactory.getLogger(ManualPairingService.class);
 
@@ -80,7 +84,7 @@ public class ManualPairingService {
         return new ManualPairingResult(donation.id(), changedYearlyReceipts(donor.id(), donation.receivedYear()));
     }
 
-    public List<Year> unpair(UUID adminId, BankPaymentId paymentId) {
+    public List<Year> unpair(UUID adminId, AdministrationChannel channel, BankPaymentId paymentId) {
         lock.acquire();
         Instant now = clock.instant();
         BankPayment payment = payments.findById(paymentId).orElseThrow(() -> new BankPaymentNotFound(paymentId));
@@ -89,13 +93,25 @@ public class ManualPairingService {
         if (receipts.existsForDonation(donation.id())) {
             throw new DonationHasReceipt(donation.id());
         }
+        Optional<DonationReceipt> withdrawn = receipts.findActiveForYear(donation.donor(), donation.receivedYear())
+                .filter(yearly -> yearly.lists(donation.id()));
+        if (withdrawn.isPresent() && !channel.mayWithdrawReceipts()) {
+            throw new ReceiptWithdrawalInBrowserOnly(withdrawn.get().number());
+        }
+        withdrawn.ifPresent(yearly -> {
+            yearly.withdrawBecauseDonationsChanged(now);
+            receipts.save(yearly);
+        });
         donations.delete(donation.id());
         payments.save(payment.unpairedByAdmin(now));
         events.publishEvent(new AdminActionPerformed(adminId, UNPAIR_ACTION, Optional.of(paymentId.value()),
                 "Dar " + donation.id() + " dárce " + donation.donor() + " (spárován podle " + donation.pairedBy().orElseThrow()
                         + ") odebrán z platby " + payment.transactionId() + "; platba se od teď páruje jen ručně", now));
+        withdrawn.ifPresent(yearly -> events.publishEvent(new AdminActionPerformed(adminId, WITHDRAW_RECEIPT_ACTION, Optional.of(yearly.id().value()),
+                "Potvrzení " + yearly.number() + " za rok " + donation.receivedYear() + " dárce " + donation.donor()
+                        + " zrušeno, protože z něj byl odebrán dar " + donation.id() + " platby " + payment.transactionId(), now)));
         log.info("Admin {} unpaired bank payment {} from donor {}", adminId, payment.transactionId(), donation.donor());
-        return changedYearlyReceipts(donation.donor(), donation.receivedYear());
+        return withdrawn.map(yearly -> List.of(donation.receivedYear())).orElse(List.of());
     }
 
     private List<Year> changedYearlyReceipts(DonorReference donor, Year year) {

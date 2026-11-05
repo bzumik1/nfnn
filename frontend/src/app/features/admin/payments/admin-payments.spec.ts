@@ -290,7 +290,7 @@ describe('Given an administrator on the bank payments page', () => {
       await listResponds(paymentList([], { availableYears: [] }), PAIRED_PAGE);
 
       expect(text('[role="status"]:not(:empty)')).toBe(
-        'Platba 500 Kč z 10. 10. 2026 už není přiřazena. Web ji sám znovu nepřiřadí; najdete ji mezi platbami čekajícími na přiřazení. Dárce si už stáhl roční potvrzení za 2026; při dalším stažení dostane nové. Dejte mu prosím vědět.',
+        'Platba 500 Kč z 10. 10. 2026 už není přiřazena. Web ji sám znovu nepřiřadí; najdete ji mezi platbami čekajícími na přiřazení. Roční potvrzení za 2026, na kterém dar byl, je teď zrušené; ověření ukáže, že platilo ke dni vystavení. Zbyly-li dárci za ten rok další dary, může si stáhnout nové. Dejte mu prosím vědět.',
       );
       expect(document.activeElement).toBe(element('app-live-notice'));
       const donorLink = element<HTMLAnchorElement>('.donor-link a');

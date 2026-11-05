@@ -59,6 +59,21 @@
         <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a> s číslem potvrzení.
       </p>
     }
+    @case ('outdated') {
+      <h1
+        id="verify-title"
+        class="ui-panel__title"
+        tabindex="-1"
+        i18n="@@donor.verify.outdated.title"
+      >
+        Potvrzení platilo ke dni vystavení
+      </h1>
+      <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.outdated.text">
+        Fond ho vystavil podle darů, které v tu chvíli evidoval. Od té doby se dary dárce změnily,
+        proto platí jen novější potvrzení. Pokud ho nemáte, napište na
+        <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a> s číslem tohoto potvrzení.
+      </p>
+    }
     @case ('unrecorded') {
       <h1
         id="verify-title"

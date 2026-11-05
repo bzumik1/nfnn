@@ -48,7 +48,7 @@ type FreshKeys =
 
 const NEWER_TEXT_VERSION = /^[2-9][0-9]*$/;
 const REQUEST_TIMEOUT_MS = 5_000;
-const STATUSES: readonly string[] = ['active', 'replaced', 'withdrawn', 'unknown'];
+const STATUSES: readonly string[] = ['active', 'replaced', 'withdrawn', 'outdated', 'unknown'];
 
 @Injectable({ providedIn: 'root' })
 export class ReceiptVerifier {

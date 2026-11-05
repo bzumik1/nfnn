@@ -219,6 +219,8 @@ export function adminReceipt(overrides: Partial<AdminReceiptResponse> = {}): Adm
     issuedAt: '2026-10-17T09:00:00Z',
     locale: 'cs',
     active: true,
+    withdrawnAt: null,
+    withdrawalReason: null,
     ...overrides,
   };
 }
@@ -280,6 +282,8 @@ export function issuedReceipt(
     year: null,
     issuedAt: '2026-10-17T09:00:00Z',
     supersededAt: null,
+    withdrawnAt: null,
+    withdrawalReason: null,
     donorErased: false,
     receipt: {
       number: '2026-000002',

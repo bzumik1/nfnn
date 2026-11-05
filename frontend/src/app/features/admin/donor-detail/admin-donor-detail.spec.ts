@@ -478,6 +478,31 @@ describe('Given an administrator on a donor card', () => {
     expect(receipts).toContain('nahrazeno novějším');
   });
 
+  it('when a yearly receipt was withdrawn because a gift on it was unpaired, then the receipts card says it was cancelled as the gifts changed, not replaced', async () => {
+    await loaded(
+      donorAccount(),
+      donorDetail({
+        receipts: [
+          adminReceipt({
+            kind: 'YEARLY',
+            donationId: null,
+            donationReceivedOn: null,
+            year: 2026,
+            active: false,
+            withdrawnAt: '2027-01-15T09:00:00Z',
+            withdrawalReason: 'DONATIONS_CHANGED',
+          }),
+        ],
+      }),
+    );
+
+    const receipts = sectionText('Vydaná potvrzení');
+    expect(receipts).toContain('Rok 2026');
+    expect(receipts).toContain('zrušeno, dary se změnily');
+    expect(receipts).not.toContain('nahrazeno novějším');
+    expect(section('Vydaná potvrzení').querySelector('.receipt-pdf')).toBeNull();
+  });
+
   function issueSelect(): HTMLSelectElement {
     return section('Vydaná potvrzení').querySelector('select') as HTMLSelectElement;
   }

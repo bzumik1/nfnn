@@ -1,0 +1,91 @@
+[
+  {
+    "scenario": "donations/admin_payments: Pairing and unpairing in a year with an issued yearly receipt name that year so the administrator can tell the donor*",
+    "kind": "removed",
+    "reason": "Slice 1.26 (Phase 1 gate, architect M1; Jakub 2026-11-05, card 'Zrušit ho hned'): unpairing a gift listed on the donor's active yearly receipt withdraws that receipt in the same transaction; the scenario is split: unpairing a gift the receipt does not list now leaves it valid and names no year, and unpairing a gift it lists withdraws it (new scenarios)",
+    "contract": "docs/api-contract.md, Bank payments and Issued receipts in the administration"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/admin_payments.feature > An administrator pairs bank payments by hand - Pairing and unpairing in a year with an issued yearly receipt name that year so the administrator can tell the donor",
+    "reason": "Slice 1.26 (Phase 1 gate, architect M1; Jakub 2026-11-05, card 'Zrušit ho hned'): unpairing a gift listed on the donor's active yearly receipt withdraws that receipt in the same transaction; the unpairing in that scenario removes a gift the receipt does not list, which now changes no receipt",
+    "replacement": "feature_classpath_features/donations/admin_payments.feature > An administrator pairs bank payments by hand - Pairing in a year with an issued yearly receipt names that year so the administrator can tell the donor, and unpairing a gift the receipt does not list leaves it valid"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.pairing.ManualPairingServiceTest > Given a paired payment of a year with an issued yearly receipt, when unpaired, then that year is reported",
+    "reason": "Slice 1.26 (Phase 1 gate, architect M1; Jakub 2026-11-05, card 'Zrušit ho hned'): unpairing a gift listed on the donor's active yearly receipt withdraws that receipt in the same transaction; a year is reported only when its receipt listed the gift and was withdrawn",
+    "replacement": "donations.application.pairing.ManualPairingServiceTest > Given a donation listed on the donor's active yearly receipt, when unpaired, then that receipt is withdrawn because the donations changed, saved before the donation goes, audited and its year reported"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.DonationReceiptTest > Given a missing part or a supersede time that does not match the status, when a receipt is issued or reconstituted, then it is refused",
+    "reason": "Slice 1.26 (Phase 1 gate, architect M1; Jakub 2026-11-05, card 'Zrušit ho hned'): unpairing a gift listed on the donor's active yearly receipt withdraws that receipt in the same transaction; a receipt also carries its withdrawal, which only a withdrawn receipt may have",
+    "replacement": "donations.domain.receipt.DonationReceiptTest > Given a missing part, or a supersede time or a withdrawal that does not match the status, when a receipt is issued or reconstituted, then it is refused"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.persistence.JpaDonationReceiptRepositoryTest > Given an active, a replaced and a withdrawn receipt, when a status is read by a status digest, then each digest gives its own receipt's status and any other digest finds none",
+    "reason": "Slice 1.26 (Phase 1 gate, architect M1; Jakub 2026-11-05, card 'Zrušit ho hned'): unpairing a gift listed on the donor's active yearly receipt withdraws that receipt in the same transaction; the status question now reads the receipt's standing, which tells a receipt withdrawn because the gifts changed (outdated) from any other withdrawal",
+    "replacement": "donations.infrastructure.persistence.JpaDonationReceiptRepositoryTest > Given an active, a replaced, a withdrawn and an outdated receipt, when a standing is read by a status digest, then each digest gives its own receipt's standing and any other digest finds none"
+  },
+  {
+    "path": "GET /api/admin/donations/donors/{id}",
+    "scenario": "donations/admin_donor_accounts: *",
+    "kind": "added",
+    "field": "$.receipts[*].withdraw*",
+    "reason": "Slice 1.26 (Phase 1 gate, architect M1; Jakub 2026-11-05, card 'Zrušit ho hned'): unpairing a gift listed on the donor's active yearly receipt withdraws that receipt in the same transaction; on the donor card the issued receipt gains withdrawnAt and withdrawalReason (DONATIONS_CHANGED when an unpairing withdrew it, otherwise null)",
+    "contract": "docs/api-contract.md, Donor accounts"
+  },
+  {
+    "path": "GET /api/admin/donations/donors/{id}",
+    "scenario": "donations/admin_donor_erasure: *",
+    "kind": "added",
+    "field": "$.receipts[*].withdraw*",
+    "reason": "Slice 1.26 (Phase 1 gate, architect M1; Jakub 2026-11-05, card 'Zrušit ho hned'): unpairing a gift listed on the donor's active yearly receipt withdraws that receipt in the same transaction; on the donor card the issued receipt gains withdrawnAt and withdrawalReason (DONATIONS_CHANGED when an unpairing withdrew it, otherwise null)",
+    "contract": "docs/api-contract.md, Donor accounts"
+  },
+  {
+    "path": "GET /api/admin/donations/receipts",
+    "scenario": "donations/admin_receipts: *",
+    "kind": "added",
+    "field": "$.items[*].withdraw*",
+    "reason": "Slice 1.26 (Phase 1 gate, architect M1; Jakub 2026-11-05, card 'Zrušit ho hned'): unpairing a gift listed on the donor's active yearly receipt withdraws that receipt in the same transaction; in the administration's receipt list the issued receipt gains withdrawnAt and withdrawalReason (DONATIONS_CHANGED when an unpairing withdrew it, otherwise null)",
+    "contract": "docs/api-contract.md, Issued receipts in the administration"
+  },
+  {
+    "path": "GET /api/admin/donations/receipts/{id}",
+    "scenario": "donations/admin_receipts: *",
+    "kind": "added",
+    "field": "$.withdraw*",
+    "reason": "Slice 1.26 (Phase 1 gate, architect M1; Jakub 2026-11-05, card 'Zrušit ho hned'): unpairing a gift listed on the donor's active yearly receipt withdraws that receipt in the same transaction; the issued receipt gains withdrawnAt and withdrawalReason (DONATIONS_CHANGED when an unpairing withdrew it, otherwise null)",
+    "contract": "docs/api-contract.md, Issued receipts in the administration"
+  },
+  {
+    "path": "POST /api/admin/donations/donors/{id}/receipts",
+    "scenario": "donations/admin_receipts: *",
+    "kind": "added",
+    "field": "$.withdraw*",
+    "reason": "Slice 1.26 (Phase 1 gate, architect M1; Jakub 2026-11-05, card 'Zrušit ho hned'): unpairing a gift listed on the donor's active yearly receipt withdraws that receipt in the same transaction; the issued receipt gains withdrawnAt and withdrawalReason (DONATIONS_CHANGED when an unpairing withdrew it, otherwise null)",
+    "contract": "docs/api-contract.md, Issued receipts in the administration"
+  },
+  {
+    "path": "POST /api/admin/donations/donors/{id}/receipts",
+    "scenario": "donors/connected_apps: *",
+    "kind": "added",
+    "field": "$.withdraw*",
+    "reason": "Slice 1.26 (Phase 1 gate, architect M1; Jakub 2026-11-05, card 'Zrušit ho hned'): unpairing a gift listed on the donor's active yearly receipt withdraws that receipt in the same transaction; the issued receipt gains withdrawnAt and withdrawalReason (DONATIONS_CHANGED when an unpairing withdrew it, otherwise null)",
+    "contract": "docs/api-contract.md, Issued receipts in the administration"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.interfaces.rest.ReceiptStatusLoggingTest > Given the production log levels, when the statuses active, replaced, withdrawn and unknown are asked, refused as invalid and refused for the rate limit, then not one line is written",
+    "reason": "Slice 1.26: the status endpoint answers a fifth word, outdated, so the logging test asks it too and its name says so",
+    "replacement": "donations.interfaces.rest.ReceiptStatusLoggingTest > Given the production log levels, when the statuses active, replaced, withdrawn, outdated and unknown are asked, refused as invalid and refused for the rate limit, then not one line is written"
+  }
+]
