@@ -59,6 +59,7 @@ describe('Given an administrator connected with the reading permission only', ()
       'nfnn_create_project',
       'nfnn_diagnostics',
       'nfnn_disconnect_bank_account',
+      'nfnn_donate_band',
       'nfnn_donor',
       'nfnn_find_donors',
       'nfnn_issue_receipt',
@@ -91,6 +92,7 @@ describe('Given an administrator connected with the reading permission only', ()
       'nfnn_send_report',
       'nfnn_send_test_email',
       'nfnn_set_log_level',
+      'nfnn_set_news_look_back_year',
       'nfnn_set_photo_focal_point',
       'nfnn_set_project_order',
       'nfnn_set_push_alerts',
@@ -105,6 +107,7 @@ describe('Given an administrator connected with the reading permission only', ()
       'nfnn_unpublish_project',
       'nfnn_update_about',
       'nfnn_update_backup_schedule',
+      'nfnn_update_donate_band',
       'nfnn_update_founders_note',
       'nfnn_update_news',
       'nfnn_update_people_footnote',
@@ -121,6 +124,64 @@ describe('Given an administrator connected with the reading permission only', ()
     expect(
       tools.find((tool) => tool.name === 'nfnn_remove_web_signature')?.annotations?.destructiveHint,
     ).toBe(true);
+    expect(
+      tools.find((tool) => tool.name === 'nfnn_update_donate_band')?.annotations?.destructiveHint,
+    ).toBe(true);
+    expect(tools.find((tool) => tool.name === 'nfnn_donate_band')?.annotations?.readOnlyHint).toBe(
+      true,
+    );
+  });
+
+  it('when the tools are listed, then the look-back year tool says one article per year, how it is refused and how it is audited', async () => {
+    const { tools } = await client.listTools();
+    const description = tools.find(
+      (tool) => tool.name === 'nfnn_set_news_look_back_year',
+    )?.description;
+    expect(description).toContain('At most one article looks back on a year');
+    expect(description).toContain('content/look-back-year-taken');
+    expect(description).toContain('CHANGE_NEWS_LOOK_BACK_YEAR');
+    expect(tools.find((tool) => tool.name === 'nfnn_update_news')?.description).toContain(
+      'nfnn_set_news_look_back_year',
+    );
+    expect(tools.find((tool) => tool.name === 'nfnn_news_article')?.description).toContain(
+      'lookBackYear',
+    );
+    expect(tools.find((tool) => tool.name === 'nfnn_content')?.description).toContain(
+      'lookBackYear',
+    );
+  });
+
+  it('when the donate band is asked, then its photo comes with its size, description and focal point', async () => {
+    const result = await client.callTool({ name: 'nfnn_donate_band', arguments: {} });
+    expect(result.isError).toBeFalsy();
+    const text = textOf(result);
+    expect(text).toContain(`"id":"${MEDIA_ID}"`);
+    expect(text).toContain('"width":1600,"height":900');
+    expect(text).toContain('"alt":"Děti u stolu"');
+    expect(stack.backend.requests.map((request) => request.path)).toContain(
+      '/api/admin/content/donate-band',
+    );
+  });
+
+  it('when the donate band photo or the look-back year is changed with the reading permission only, then nothing reaches the administration', async () => {
+    const band = await client.callTool({
+      name: 'nfnn_update_donate_band',
+      arguments: { photoId: null },
+    });
+    const year = await client.callTool({
+      name: 'nfnn_set_news_look_back_year',
+      arguments: { id: UNKNOWN_ID, year: 2025 },
+    });
+    expect(band.isError).toBe(true);
+    expect(textOf(band)).toContain('may only read, so nothing was changed');
+    expect(year.isError).toBe(true);
+    expect(
+      stack.backend.requests.some(
+        (request) =>
+          request.path === '/api/admin/content/donate-band' ||
+          request.path.endsWith('/look-back-year'),
+      ),
+    ).toBe(false);
   });
 
   it('when the tools are listed, then the web signature tools say the image goes up only as a file and is never the receipt signature', async () => {
@@ -1269,6 +1330,84 @@ describe('Given an administrator connected with the writing permission', () => {
     expect(description).toContain('content/focal-point-on-person-image');
     expect(description).toContain('CHANGE_PHOTO_FOCAL_POINT');
     expect(description).toContain('nfnn_update_news');
+  });
+
+  it('when the donate band photo is set and then removed, then the administration gets the photo with its description and then no photo and no description', async () => {
+    const set = await client.callTool({
+      name: 'nfnn_update_donate_band',
+      arguments: { photoId: MEDIA_ID, photoAlt: 'Děti u stolu kreslí' },
+    });
+    expect(set.isError).toBeFalsy();
+    expect(textOf(set)).toContain('"alt":"Děti u stolu kreslí"');
+    const removed = await client.callTool({
+      name: 'nfnn_update_donate_band',
+      arguments: { photoId: null, photoAlt: 'Zůstane?' },
+    });
+    expect(removed.isError).toBeFalsy();
+    expect(textOf(removed)).toContain('"photo":null');
+    await client.callTool({ name: 'nfnn_update_donate_band', arguments: { photoId: MEDIA_ID } });
+
+    const writes = stack.backend.requests
+      .filter((request) => request.path === '/api/admin/content/donate-band')
+      .map((request) => [request.method, JSON.parse(request.body), request.authorization]);
+    expect(writes).toEqual([
+      ['PUT', { photoId: MEDIA_ID, photoAlt: 'Děti u stolu kreslí' }, 'Bearer api-token-write'],
+      ['PUT', { photoId: null, photoAlt: null }, 'Bearer api-token-write'],
+      ['PUT', { photoId: MEDIA_ID, photoAlt: null }, 'Bearer api-token-write'],
+    ]);
+  });
+
+  it('when a news article is set to look back on a year and then on none, then only the year reaches the administration, with the version read', async () => {
+    const set = await client.callTool({
+      name: 'nfnn_set_news_look_back_year',
+      arguments: { id: UNKNOWN_ID, year: 2025, expectedVersion: CURRENT_VERSION },
+    });
+    expect(set.isError).toBeFalsy();
+    expect(textOf(set)).toContain('"lookBackYear":2025');
+    const removed = await client.callTool({
+      name: 'nfnn_set_news_look_back_year',
+      arguments: { id: UNKNOWN_ID, year: null },
+    });
+    expect(removed.isError).toBeFalsy();
+    expect(textOf(removed)).toContain('"lookBackYear":null');
+    const outside = await client.callTool({
+      name: 'nfnn_set_news_look_back_year',
+      arguments: { id: UNKNOWN_ID, year: 2004 },
+    });
+    expect(outside.isError).toBe(true);
+
+    const writes = stack.backend.requests
+      .filter((request) => request.path.endsWith('/look-back-year'))
+      .map((request) => [request.method, request.path, JSON.parse(request.body), request.ifMatch]);
+    expect(writes).toEqual([
+      [
+        'PUT',
+        `/api/admin/content/news/${UNKNOWN_ID}/look-back-year`,
+        { year: 2025 },
+        `"${CURRENT_VERSION}"`,
+      ],
+      ['PUT', `/api/admin/content/news/${UNKNOWN_ID}/look-back-year`, { year: null }, undefined],
+    ]);
+  });
+
+  it('when a news article is written with the year it looks back on, then the year goes with it, and a year another article has is refused with the reason', async () => {
+    const article = { title: 'Ohlédnutí za rokem 2025', perex: 'Krátce.', body: 'Text.' };
+    const created = await client.callTool({
+      name: 'nfnn_create_news',
+      arguments: { ...article, lookBackYear: 2025 },
+    });
+    expect(textOf(created)).toContain('"lookBackYear":2025');
+    const taken = await client.callTool({
+      name: 'nfnn_set_news_look_back_year',
+      arguments: { id: UNKNOWN_ID, year: 2024 },
+    });
+    expect(taken.isError).toBe(true);
+    expect(textOf(taken)).toContain('409 content/look-back-year-taken');
+
+    const post = stack.backend.requests.find(
+      (request) => request.method === 'POST' && request.path === '/api/admin/content/news',
+    );
+    expect(JSON.parse(post?.body ?? '{}')).toEqual({ ...article, lookBackYear: 2025 });
   });
 
   it('when the About photo is set without texts, then they go as empty', async () => {
