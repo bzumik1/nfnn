@@ -11,7 +11,10 @@
 .ui-list__row {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto auto;
-  gap: var(--space-1) var(--space-3);
+  grid-template-areas:
+    'lead title value chevron'
+    'lead meta value chevron';
+  gap: var(--space-1) 0;
   align-items: center;
   width: 100%;
   min-height: var(--list-row-min-height);
@@ -30,6 +33,16 @@ div.ui-list__row {
   cursor: default;
 }
 
+.ui-list__row:not(:has(.ui-list__meta, .ui-list__state)) {
+  grid-template-areas: 'lead title value chevron';
+}
+
+.ui-list__row:has(.ui-list__state) {
+  grid-template-areas:
+    'lead title value chevron'
+    'lead meta state chevron';
+}
+
 @media (hover: hover) {
   a.ui-list__row:hover,
   button.ui-list__row:hover {
@@ -38,28 +51,28 @@ div.ui-list__row {
 }
 
 .ui-list__lead {
-  grid-column: 1;
-  grid-row: 1 / span 2;
+  grid-area: lead;
+  margin-inline-end: var(--space-3);
   display: flex;
   align-items: center;
 }
 
 .ui-list__title {
-  grid-column: 2;
+  grid-area: title;
   font-weight: var(--weight-semibold);
   overflow-wrap: anywhere;
 }
 
 .ui-list__meta {
-  grid-column: 2;
+  grid-area: meta;
   font-size: var(--text-sm);
   color: var(--color-text-muted);
   overflow-wrap: anywhere;
 }
 
 .ui-list__value {
-  grid-column: 3;
-  grid-row: 1 / span 2;
+  grid-area: value;
+  margin-inline-start: var(--space-3);
   font-variant-numeric: var(--numeric-figures);
   font-weight: var(--weight-semibold);
   text-align: end;
@@ -67,9 +80,19 @@ div.ui-list__row {
 }
 
 .ui-list__chevron {
-  grid-column: 4;
-  grid-row: 1 / span 2;
+  grid-area: chevron;
+  margin-inline-start: var(--space-3);
   color: var(--color-text-subtle);
+}
+
+.ui-list__state {
+  grid-area: state;
+  justify-self: end;
+  margin-inline-start: var(--space-3);
+}
+
+.ui-list__extra {
+  grid-column: title-start / -1;
 }
 
 .ui-list__group-title {
@@ -81,6 +104,11 @@ div.ui-list__row {
   color: var(--color-text-secondary);
   font-size: var(--text-sm);
   font-weight: var(--weight-semibold);
+}
+
+.ui-card .ui-list__row,
+.ui-card .ui-list__group-title {
+  padding-inline: var(--space-6);
 }
 
 .ui-list--inset {

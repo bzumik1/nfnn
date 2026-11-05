@@ -1,5 +1,6 @@
 import {
   afterNextRender,
+  afterRenderEffect,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -20,6 +21,7 @@ import { from, Observable, switchMap } from 'rxjs';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
+import { CompactLayout } from '../../../core/layout/compact-layout';
 import { pluralCategory } from '../../../core/i18n/plural-category';
 import { TrackedForm } from '../../../core/updates/tracked-form';
 import { BankAccountItem } from '../../donations/bank-accounts-api';
@@ -86,7 +88,10 @@ const SECTIONS = {
   },
   donations: { id: 'dary', label: $localize`:@@admin.donorDetail.nav.donations:Dary` },
   receipts: { id: 'potvrzeni', label: $localize`:@@admin.donorDetail.nav.receipts:Potvrzení` },
+  erasure: { id: 'vymaz', label: $localize`:@@admin.donorDetail.nav.erasure:Výmaz údajů` },
 } satisfies Record<string, CardSection>;
+
+const SECTION_IDS: ReadonlySet<string> = new Set(Object.values(SECTIONS).map(({ id }) => id));
 
 const PAIRING_LABELS: Record<NonNullable<DonationItem['pairedBy']>, string> = {
   VARIABLE_SYMBOL: $localize`:@@admin.donorDetail.pairing.variableSymbol:podle variabilního symbolu`,
@@ -153,6 +158,8 @@ export class AdminDonorDetail {
   protected readonly eraseConfirmed = signal(false);
   protected readonly eraseError = signal<string | null>(null);
   protected readonly ids = SECTIONS;
+  protected readonly section = sectionOf(this.route.snapshot.paramMap.get('section'));
+  protected readonly drill = inject(CompactLayout).listsAsRows;
 
   protected readonly name = computed(
     () => this.account()?.name ?? this.detail()?.donor.name ?? null,
@@ -175,6 +182,10 @@ export class AdminDonorDetail {
     SECTIONS.accounts,
     ...(this.donationsState() === 'ready' ? [SECTIONS.donations, SECTIONS.receipts] : []),
   ]);
+  protected readonly drillSections = computed<CardSection[]>(() => [
+    ...this.sections(),
+    ...(this.accountState() === 'ready' ? [SECTIONS.erasure] : []),
+  ]);
   protected readonly erasedAt = computed(
     () => this.account()?.erasedAt ?? this.detail()?.donor.erasedAt ?? null,
   );
@@ -194,6 +205,52 @@ export class AdminDonorDetail {
     this.loadAccount();
     this.loadDonations();
     afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
+    this.showSectionOnWideScreens();
+  }
+
+  private showSectionOnWideScreens(): void {
+    const section = this.section;
+    if (section === null) {
+      return;
+    }
+    let shown = false;
+    afterRenderEffect(
+      () => {
+        const listed = this.drillSections().some((part) => part.id === section);
+        if (shown || this.drill() || !listed) {
+          return;
+        }
+        const target = this.byId(section);
+        if (target !== null) {
+          shown = true;
+          target.focus();
+        }
+      },
+      { injector: this.injector },
+    );
+  }
+
+  protected shows(part: CardSection): boolean {
+    return !this.drill() || this.section === part.id;
+  }
+
+  protected sectionMeta(part: CardSection): string | null {
+    switch (part.id) {
+      case SECTIONS.accounts.id:
+        return this.donationsState() === 'ready'
+          ? $localize`:@@admin.donorDetail.rows.accounts:Účtů: ${this.bankAccounts().length}:count:`
+          : null;
+      case SECTIONS.donations.id:
+        return $localize`:@@admin.donorDetail.rows.donations:${this.donationsCount(this.receivedCount())}:count: za ${this.total()}:total:\u00a0Kč`;
+      case SECTIONS.receipts.id:
+        return $localize`:@@admin.donorDetail.rows.receipts:Vydaných potvrzení: ${this.receipts().length}:count:`;
+      case SECTIONS.erasure.id:
+        return this.erasedAt() === null
+          ? null
+          : $localize`:@@admin.donorDetail.rows.erased:Údaje jsou vymazané`;
+      default:
+        return null;
+    }
   }
 
   protected loadAccount(): void {
@@ -753,4 +810,8 @@ function issuedText(issued: AdminIssuedReceiptResponse, alreadyIssued: boolean):
   return replaced === null
     ? $localize`:@@admin.donorDetail.issue.done:Vystavili jsme potvrzení ${issued.number}:number: z ${time}:time:. Je platné.`
     : $localize`:@@admin.donorDetail.issue.replacing:Vystavili jsme potvrzení ${issued.number}:number: z ${time}:time:, které nahrazuje potvrzení ${replaced.number}:replaced:. Je platné.`;
+}
+
+function sectionOf(id: string | null): string | null {
+  return id !== null && SECTION_IDS.has(id) ? id : null;
 }

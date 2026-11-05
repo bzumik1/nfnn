@@ -6,6 +6,7 @@
 
 .container {
   max-width: 1100px;
+  container: payments-page / inline-size;
 }
 
 .admin-toolbar {
@@ -395,13 +396,51 @@
   cursor: pointer;
 }
 
-@include bp.down(tablet) {
+@mixin stacked-filter {
   .payments-filter {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
 
   .payments-field--text {
     grid-column: 1 / -1;
+  }
+}
+
+@include bp.down(tablet) {
+  @include stacked-filter;
+}
+
+@include bp.container-down(payments-page, tablet) {
+  @include stacked-filter;
+}
+
+.payments-card--rows {
+  overflow: clip;
+}
+
+.payments-month + .payments-month {
+  border-top: 1px solid var(--color-divider);
+}
+
+.payment-row .ui-list__value {
+  font-family: var(--font-serif);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+}
+
+.sheet-actions {
+  margin-top: var(--space-2);
+
+  .confirm {
+    display: grid;
+    justify-items: start;
+    max-width: none;
+  }
+
+  .confirm-question {
+    margin: 0;
+    font-size: var(--text-md);
+    line-height: var(--leading-normal);
   }
 }
 

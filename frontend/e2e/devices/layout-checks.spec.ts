@@ -202,6 +202,50 @@ test.describe('Given a page checked as on a phone', () => {
     ).toEqual([]);
   });
 
+  test('when a card that hides its overflow is narrower than its table, then the button at the end is cut off', async ({
+    page,
+  }) => {
+    expect(
+      await failingChecks(
+        page,
+        '<section style="width: 300px; overflow: hidden"><table style="width: 360px"><tr><td style="width: 240px">Row</td><td><button>Pair</button></td></tr></table></section>',
+      ),
+    ).toEqual(['no control cut off by a box that hides its overflow']);
+  });
+
+  test('when the table scrolls inside its own scroller, then its button is not cut off', async ({
+    page,
+  }) => {
+    expect(
+      await failingChecks(
+        page,
+        '<section style="width: 300px; overflow: hidden"><div style="overflow-x: auto"><table style="width: 360px"><tr><td style="width: 240px">Row</td><td><button>Pair</button></td></tr></table></div></section>',
+      ),
+    ).toEqual([]);
+  });
+
+  test('when a button stands absolutely beyond a box that hides its overflow but is not its containing block, then it is not cut off', async ({
+    page,
+  }) => {
+    expect(
+      await failingChecks(
+        page,
+        '<div style="position: relative; width: 300px; height: 80px"><div style="overflow: hidden; width: 200px; height: 80px"><button style="position: absolute; top: 0; right: 0">Close</button></div></div>',
+      ),
+    ).toEqual([]);
+  });
+
+  test('when a field is moved far off the screen out of a box that hides its overflow, then it is not counted as cut off', async ({
+    page,
+  }) => {
+    expect(
+      await failingChecks(
+        page,
+        '<form><div style="position: absolute; left: -10000px; width: 1px; overflow: hidden"><input aria-hidden="true" tabindex="-1"></div><button>Send</button></form>',
+      ),
+    ).toEqual([]);
+  });
+
   test('when a box hides text that does not fit, then the text is cut off', async ({ page }) => {
     expect(
       await failingChecks(

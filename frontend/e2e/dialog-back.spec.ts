@@ -67,7 +67,10 @@ async function back(page: Page): Promise<void> {
 }
 
 async function openPairing(page: Page): Promise<void> {
-  await page.getByRole('button', { name: 'Přiřadit dárci' }).click();
+  await page
+    .getByRole('button', { name: /^(Přiřadit dárci|Nováková Jana .*)$/ })
+    .first()
+    .click();
   await expect(page.getByRole('dialog')).toBeVisible();
 }
 
@@ -125,7 +128,7 @@ test.describe('Given an administrator with the pairing dialog of a payment open'
 
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(page).toHaveURL(/\/sprava\/platby$/);
-    await expect(page.locator('tbody tr')).toContainText('Nováková Jana');
+    await expect(page.locator('[data-payment-row]')).toContainText('Nováková Jana');
   });
 
   test('when they close it with its button and go back, then the page before the payments opens', async ({

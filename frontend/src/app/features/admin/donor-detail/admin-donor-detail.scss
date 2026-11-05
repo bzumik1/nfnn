@@ -303,7 +303,7 @@ td.amount {
   color: var(--color-warning);
 }
 
-@include bp.down(cards) {
+@mixin stacked-cells {
   td.action,
   td.amount {
     text-align: left;
@@ -327,6 +327,22 @@ td.amount {
     margin-left: 0;
     margin-right: var(--space-1-5);
   }
+}
+
+@include bp.down(cards) {
+  @include stacked-cells;
+}
+
+.ui-table--stacked {
+  @include stacked-cells;
+}
+
+.admin-actions .ui-button {
+  white-space: normal;
+}
+
+.card-rows {
+  margin-bottom: var(--space-5);
 }
 
 .donor-payments a {

@@ -1,6 +1,7 @@
 import type { MockInstance } from 'vitest';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
@@ -25,6 +26,7 @@ import {
   TEST_KEY,
 } from '../../donations/verification/testing/verification-fixtures';
 import { AdminDonorDetail } from './admin-donor-detail';
+import { CompactLayout } from '../../../core/layout/compact-layout';
 
 const DONOR_ID = '01a18e56-bdb0-775a-bd0a-a60756831369';
 const LINK_ID = '0192f0c4-0000-7000-8000-000000000001';
@@ -1471,5 +1473,142 @@ describe('Given an administrator on a donor card', () => {
     expect(
       buttonNames(section('Vydaná potvrzení')).some((name) => name.startsWith('Stáhnout PDF')),
     ).toBe(true);
+  });
+});
+
+describe('Given an administrator on a donor card opened part by part', () => {
+  let fixture: ComponentFixture<AdminDonorDetail>;
+  let http: HttpTestingController;
+
+  async function open(section: string | null, rows = true): Promise<void> {
+    localStorage.clear();
+    await TestBed.configureTestingModule({
+      imports: [AdminDonorDetail],
+      providers: [
+        provideHttpClient(withInterceptors([authInterceptor])),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: {
+              paramMap: convertToParamMap(
+                section === null ? { id: DONOR_ID } : { id: DONOR_ID, section },
+              ),
+            },
+          },
+        },
+        { provide: RECEIPT_PDF_ENVIRONMENT, useValue: new FakeReceiptPdfEnvironment() },
+        {
+          provide: CompactLayout,
+          useValue: {
+            isCompact: signal(rows).asReadonly(),
+            listsAsRows: signal(rows).asReadonly(),
+          },
+        },
+      ],
+    }).compileComponents();
+    http = TestBed.inject(HttpTestingController);
+    TestBed.inject(AuthStore).login('jana@example.cz', 'correct horse battery').subscribe();
+    http
+      .expectOne('/api/donors/auth/login')
+      .flush(authResponse('token-1', sampleDonor({ roles: ['DONOR', 'ADMIN'] })));
+    fixture = TestBed.createComponent(AdminDonorDetail);
+    fixture.detectChanges();
+    http.expectOne(ACCOUNT_URL).flush(donorAccount());
+    http.expectOne(DETAIL_URL).flush(donorDetail());
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+  }
+
+  afterEach(() => {
+    http.match(KEYS_URL).forEach((request) => request.flush(keyListWith([TEST_KEY])));
+    http.verify();
+  });
+
+  function spaced(node: Node): string {
+    if (node.nodeType === Node.TEXT_NODE) {
+      return node.textContent ?? '';
+    }
+    return Array.from(node.childNodes).map(spaced).join(' ');
+  }
+
+  function textOf(node: Element | null): string {
+    return (node === null ? '' : spaced(node)).replace(/\s+/g, ' ').trim();
+  }
+
+  function cardTitles(): string[] {
+    return Array.from(
+      fixture.nativeElement.querySelectorAll('section.ui-card > h2') as NodeListOf<HTMLElement>,
+    ).map(textOf);
+  }
+
+  function crumb(): HTMLAnchorElement {
+    return fixture.nativeElement.querySelector('.ui-crumbs a');
+  }
+
+  it('when the card opens, then the summary stands over one row per part, each with what it holds, and no part is shown yet', async () => {
+    await open(null);
+
+    const rows = Array.from(
+      fixture.nativeElement.querySelectorAll(
+        '.card-rows a.ui-list__row',
+      ) as NodeListOf<HTMLAnchorElement>,
+    );
+    expect(rows.map(textOf)).toEqual([
+      'Údaje',
+      'Přihlášení',
+      'Bankovní účty Účtů: 1',
+      'Dary 2 dary za 800 Kč',
+      'Potvrzení Vydaných potvrzení: 1',
+      'Výmaz údajů',
+    ]);
+    expect(rows.map((row) => row.getAttribute('href'))).toEqual(
+      ['udaje', 'prihlaseni', 'bankovni-ucty', 'dary', 'potvrzeni', 'vymaz'].map(
+        (part) => `/sprava/darci/${DONOR_ID}/${part}`,
+      ),
+    );
+    expect(fixture.nativeElement.querySelector('.card-rows')?.getAttribute('aria-label')).toBe(
+      'Části karty dárce',
+    );
+    expect(fixture.nativeElement.querySelector('.donor-summary')).not.toBeNull();
+    expect(cardTitles()).toEqual([]);
+    expect(textOf(crumb())).toBe('← Dárci');
+  });
+
+  it('when a part opens, then only that part shows under the name, and the way back leads to the card', async () => {
+    await open('dary');
+
+    expect(cardTitles()).toEqual(['Dary']);
+    expect(fixture.nativeElement.querySelector('.donor-summary')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.card-rows')).toBeNull();
+    expect(textOf(fixture.nativeElement.querySelector('h1'))).toBe('Jana Nováková');
+    expect(textOf(crumb())).toBe('← Jana Nováková');
+    expect(crumb().getAttribute('href')).toBe(`/sprava/darci/${DONOR_ID}`);
+  });
+
+  it('when the address names the erasure, then only the erasure shows', async () => {
+    await open('vymaz');
+
+    expect(cardTitles()).toEqual(['Výmaz osobních údajů (GDPR)']);
+  });
+
+  it('when the address names no known part, then the card opens with its rows', async () => {
+    await open('nic');
+
+    expect(cardTitles()).toEqual([]);
+    expect(fixture.nativeElement.querySelectorAll('.card-rows a.ui-list__row')).toHaveLength(6);
+  });
+
+  it('when a part is opened on a wide screen, then the whole card shows and the part takes the focus', async () => {
+    await open('potvrzeni', false);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('.card-rows')).toBeNull();
+    expect(cardTitles()).toContain('Údaje');
+    expect(cardTitles()).toContain('Vydaná potvrzení');
+    expect(document.activeElement?.id).toBe('potvrzeni');
+    expect(textOf(crumb())).toBe('← Dárci');
   });
 });

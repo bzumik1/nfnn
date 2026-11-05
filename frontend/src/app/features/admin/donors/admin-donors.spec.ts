@@ -1,5 +1,6 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { authInterceptor } from '../../../core/auth/auth-interceptor';
@@ -7,6 +8,7 @@ import { AuthStore } from '../../../core/auth/auth-store';
 import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
 import { donorAccount } from '../testing/admin-fixtures';
 import { AdminDonors } from './admin-donors';
+import { CompactLayout } from '../../../core/layout/compact-layout';
 
 const SEARCH_URL = '/api/admin/donors';
 
@@ -225,5 +227,92 @@ describe('Given an administrator on the donors page', () => {
     fixture.detectChanges();
 
     expect(navigate).toHaveBeenCalledWith('/darce/prehled');
+  });
+});
+
+describe('Given an administrator on the donors page where lists show as rows', () => {
+  let fixture: ComponentFixture<AdminDonors>;
+  let http: HttpTestingController;
+
+  beforeEach(async () => {
+    vi.useFakeTimers();
+    localStorage.clear();
+    await TestBed.configureTestingModule({
+      imports: [AdminDonors],
+      providers: [
+        provideHttpClient(withInterceptors([authInterceptor])),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        {
+          provide: CompactLayout,
+          useValue: {
+            isCompact: signal(true).asReadonly(),
+            listsAsRows: signal(true).asReadonly(),
+          },
+        },
+      ],
+    }).compileComponents();
+    http = TestBed.inject(HttpTestingController);
+    TestBed.inject(AuthStore).login('jana@example.cz', 'correct horse battery').subscribe();
+    http
+      .expectOne('/api/donors/auth/login')
+      .flush(authResponse('token-1', sampleDonor({ roles: ['DONOR', 'ADMIN'] })));
+    fixture = TestBed.createComponent(AdminDonors);
+    fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    http.verify();
+    vi.useRealTimers();
+  });
+
+  function spaced(node: Node): string {
+    if (node.nodeType === Node.TEXT_NODE) {
+      return node.textContent ?? '';
+    }
+    return Array.from(node.childNodes).map(spaced).join(' ');
+  }
+
+  function rowText(row: Element): string {
+    return spaced(row).replace(/\s+/g, ' ').trim();
+  }
+
+  it('when donors are found, then each is one row leading to the card, with the symbol and e-mail under the name and only the tags that say something', async () => {
+    const input = fixture.nativeElement.querySelector('#donor-search') as HTMLInputElement;
+    input.value = 'nov';
+    input.dispatchEvent(new Event('input'));
+    await vi.advanceTimersByTimeAsync(300);
+    http
+      .expectOne((candidate) => candidate.url === SEARCH_URL)
+      .flush({
+        items: [
+          donorAccount(),
+          donorAccount({
+            donorId: '019a1c00-0000-7000-8000-00000000a003',
+            type: 'COMPANY',
+            name: 'Stavby Novák s.r.o.',
+            companyIdentifier: '45274649',
+            email: 'stavby@example.cz',
+            variableSymbol: '7310945528',
+            administrator: true,
+          }),
+        ],
+        hasMore: false,
+      });
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('table')).toBeNull();
+    const rows = Array.from(
+      fixture.nativeElement.querySelectorAll(
+        '.donor-rows a.ui-list__row',
+      ) as NodeListOf<HTMLElement>,
+    );
+    expect(rows.map(rowText)).toEqual([
+      'Jana Nováková VS 4821937560 · jana@example.cz',
+      'Stavby Novák s.r.o. VS 7310945528 · stavby@example.cz · IČO 45274649 Správce',
+    ]);
+    expect(rows[0].getAttribute('href')).toBe('/sprava/darci/01a18e56-bdb0-775a-bd0a-a60756831369');
   });
 });

@@ -103,7 +103,10 @@ describe('Given a signed-in donor in the donor area', () => {
         provideHttpClient(withInterceptors([authInterceptor])),
         provideHttpClientTesting(),
         { provide: RECEIPT_PDF_ENVIRONMENT, useValue: receiptEnvironment },
-        { provide: CompactLayout, useValue: { isCompact: compact.asReadonly() } },
+        {
+          provide: CompactLayout,
+          useValue: { isCompact: compact.asReadonly(), listsAsRows: compact.asReadonly() },
+        },
         provideRouter([
           { path: 'darce', children: donorsRoutes },
           { path: '', children: [] },
@@ -1483,6 +1486,37 @@ describe('Given a signed-in donor in the donor area', () => {
         ...root().querySelectorAll<HTMLElement>(`${yearSection(2026)} tbody tr:first-child td`),
       ].map((cell) => cell.dataset['label']);
       expect(labels).toEqual(['Datum', 'Částka', 'Účel', 'Stav', 'Potvrzení']);
+    });
+
+    it('then on a phone every year lists its gifts as rows with the date, the purpose, the amount, a refund and the receipt under them', async () => {
+      compact.set(true);
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      expect(root().querySelector('.payments-card table')).toBeNull();
+      const rowsOf = (year: number) =>
+        [...root().querySelectorAll<HTMLElement>(`${yearSection(year)} .donation-rows > li`)].map(
+          (row) =>
+            [...row.querySelectorAll<HTMLElement>('.ui-list__row > *')]
+              .map((part) => normalized(part.textContent ?? ''))
+              .filter((part) => part !== ''),
+        );
+      expect(rowsOf(2026).map((row) => row.slice(0, 3))).toEqual([
+        ['15. 03. 2026', 'Obecný příspěvek', '500 Kč'],
+        ['10. 01. 2026', 'Obecný příspěvek', '1 000 Kč'],
+      ]);
+      expect(rowsOf(2026)[0][3]).toContain('Stáhnout PDF');
+      expect(rowsOf(2025)[1].slice(0, 4)).toEqual([
+        '20. 08. 2025',
+        'Obecný příspěvek',
+        '2 000 Kč',
+        'Vráceno',
+      ]);
+      expect(
+        root()
+          .querySelector(`${yearSection(2026)} .donation-rows`)
+          ?.getAttribute('aria-labelledby'),
+      ).toBe('gifts-year-2026');
     });
 
     it('then a donation with hellers shows two decimals', async () => {

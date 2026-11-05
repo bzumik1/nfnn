@@ -1,5 +1,6 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
@@ -14,6 +15,7 @@ import {
   unpairedPayment,
 } from '../testing/admin-fixtures';
 import { AdminPayments } from './admin-payments';
+import { CompactLayout } from '../../../core/layout/compact-layout';
 import { LiveUpdates } from '../../../core/live/live-updates';
 import { FakeLiveUpdates } from '../../../core/live/testing/live-fixtures';
 
@@ -893,6 +895,218 @@ describe('Given an administrator on the bank payments page', () => {
       await listResponds(paymentList([]));
 
       expect(url()).toBe('/sprava/platby');
+    });
+  });
+});
+
+describe('Given an administrator on the bank payments page where lists show as rows', () => {
+  let fixture: ComponentFixture<unknown>;
+  let http: HttpTestingController;
+
+  beforeEach(async () => {
+    localStorage.clear();
+    await TestBed.configureTestingModule({
+      imports: [AdminPayments],
+      providers: [
+        provideHttpClient(withInterceptors([authInterceptor])),
+        provideHttpClientTesting(),
+        provideRouter([{ path: 'sprava/platby', component: AdminPayments }]),
+        {
+          provide: CompactLayout,
+          useValue: {
+            isCompact: signal(true).asReadonly(),
+            listsAsRows: signal(true).asReadonly(),
+          },
+        },
+      ],
+    }).compileComponents();
+    http = TestBed.inject(HttpTestingController);
+    TestBed.inject(AuthStore).login('admin@example.cz', 'correct horse battery').subscribe();
+    http
+      .expectOne('/api/donors/auth/login')
+      .flush(authResponse('token-1', sampleDonor({ roles: ['DONOR', 'ADMIN'] })));
+    const harness = await RouterTestingHarness.create('/sprava/platby');
+    fixture = harness.fixture;
+    await settle();
+  });
+
+  afterEach(() => http.verify());
+
+  async function settle(): Promise<void> {
+    await fixture.whenStable();
+    fixture.detectChanges();
+  }
+
+  async function listResponds(body: object, params = FIRST_PAGE): Promise<void> {
+    http.expectOne(`${PAYMENTS_URL}?${params}`).flush(body);
+    await settle();
+  }
+
+  function spaced(node: Node): string {
+    if (node.nodeType === Node.TEXT_NODE) {
+      return node.textContent ?? '';
+    }
+    return Array.from(node.childNodes).map(spaced).join(' ');
+  }
+
+  function text(node: Element | null): string {
+    return (node === null ? '' : spaced(node)).replace(/\s+/g, ' ').trim();
+  }
+
+  function paymentRows(): HTMLButtonElement[] {
+    return Array.from(fixture.nativeElement.querySelectorAll('button.payment-row'));
+  }
+
+  function button(name: string): HTMLButtonElement {
+    const found = Array.from(document.querySelectorAll('button')).find(
+      (candidate) => text(candidate) === name,
+    );
+    if (!found) {
+      throw new Error(`No button "${name}"`);
+    }
+    return found;
+  }
+
+  function sheet(): HTMLDialogElement {
+    const found = document.querySelector<HTMLDialogElement>('dialog[open]');
+    if (!found) {
+      throw new Error('No open dialog');
+    }
+    return found;
+  }
+
+  it('when unpaired payments arrive, then they stand as rows under the heading of their month, newest first, with no table', async () => {
+    await listResponds(
+      paymentList([
+        unpairedPayment({
+          id: 'p1',
+          bookedOn: '2026-10-12',
+          unpairedByAdminAt: '2026-10-18T08:00:00Z',
+        }),
+        unpairedPayment({ id: 'p2', counterpartyName: null, variableSymbol: null }),
+        unpairedPayment({
+          id: 'p3',
+          bookedOn: '2026-09-30',
+          amountMinor: 25050,
+          accountVerification: true,
+        }),
+      ]),
+    );
+
+    expect(fixture.nativeElement.querySelector('table')).toBeNull();
+    const months = Array.from(
+      fixture.nativeElement.querySelectorAll('.payments-month') as NodeListOf<HTMLElement>,
+    );
+    expect(months.map((month) => text(month.querySelector('h3')))).toEqual([
+      'Říjen 2026',
+      'Září 2026',
+    ]);
+    expect(months[0].getAttribute('aria-labelledby')).toBe('payments-month-2026-10');
+    expect(paymentRows().map((row) => text(row))).toEqual([
+      'Nováková Jana 12. 10. 2026 · VS 1111111111 500 Kč jen ručně',
+      'Bez jména odesílatele 10. 10. 2026 · bez VS 500 Kč',
+      'Nováková Jana 30. 09. 2026 · VS 1111111111 250,50 Kč Ověření účtu',
+    ]);
+    expect(paymentRows()[0].getAttribute('aria-haspopup')).toBe('dialog');
+  });
+
+  it('when an unpaired row is pressed, then the pairing dialog opens for that payment', async () => {
+    await listResponds(paymentList([unpairedPayment()]));
+
+    paymentRows()[0].click();
+    await settle();
+    http.expectOne((request) => request.url === DONORS_URL).flush({ items: [] });
+    http.expectOne((request) => request.url === ACCOUNTS_URL).flush({ items: [], hasMore: false });
+    await settle();
+
+    expect(text(sheet().querySelector('h2'))).toBe('Přiřadit platbu dárci');
+  });
+
+  describe('when the administrator opens a paired payment', () => {
+    async function openPaired(payment = unpairedPayment({ donation: pairedDonation() })) {
+      await listResponds(paymentList([unpairedPayment()]));
+      button('Přiřazené').click();
+      await settle();
+      await listResponds(paymentList([payment], { availableYears: [2026] }), PAIRED_PAGE);
+      paymentRows()[0].click();
+      await settle();
+    }
+
+    it('then its row names the donor and a sheet shows the payment, the donor with a link and the method', async () => {
+      await listResponds(paymentList([unpairedPayment()]));
+      button('Přiřazené').click();
+      await settle();
+      await listResponds(
+        paymentList(
+          [
+            unpairedPayment({ donation: pairedDonation() }),
+            unpairedPayment({
+              id: 'p2',
+              donation: pairedDonation({ id: 'd2', donorName: null, status: 'REFUNDED' }),
+            }),
+          ],
+          { availableYears: [2026] },
+        ),
+        PAIRED_PAGE,
+      );
+
+      expect(paymentRows().map((row) => text(row))).toEqual([
+        'Nováková Jana 10. 10. 2026 · VS 1111111111 · dárce Jana Nováková 500 Kč',
+        'Nováková Jana 10. 10. 2026 · VS 1111111111 · dárce bez záznamu 500 Kč vráceno',
+      ]);
+      paymentRows()[0].click();
+      await settle();
+
+      expect(text(sheet().querySelector('h2'))).toBe('Přiřazená platba');
+      expect(text(sheet().querySelector('.pair-payment'))).toContain(
+        'Dárce Jana Nováková podle variabilního symbolu',
+      );
+      expect(sheet().querySelector('.pair-payment a')?.getAttribute('href')).toBe(
+        '/sprava/darci/01a18e56-bdb0-775a-bd0a-a60756831369',
+      );
+    });
+
+    it('then a gift with an issued receipt cannot be unpaired from the sheet', async () => {
+      await openPaired(unpairedPayment({ donation: pairedDonation({ receiptIssued: true }) }));
+
+      expect(text(sheet().querySelector('.sheet-actions'))).toBe(
+        'Nelze zrušit, k daru je vystavené potvrzení.',
+      );
+    });
+
+    it('then unpairing from the sheet asks first, posts once confirmed, closes the sheet and reloads', async () => {
+      await openPaired();
+
+      button('Zrušit přiřazení').click();
+      await settle();
+      expect(text(sheet().querySelector('.confirm-question'))).toContain('Zrušit přiřazení?');
+      http.expectNone(`/api/admin/donations/payments/${PAYMENT_ID}/unpair`);
+
+      sheet().querySelector<HTMLButtonElement>('.confirm .ui-button--danger')!.click();
+      await settle();
+      http
+        .expectOne(`/api/admin/donations/payments/${PAYMENT_ID}/unpair`)
+        .flush({ changedYearlyReceipts: [] });
+      await settle();
+      await listResponds(paymentList([], { availableYears: [] }), PAIRED_PAGE);
+
+      expect(document.querySelector('dialog[open]')).toBeNull();
+      expect(text(fixture.nativeElement.querySelector('[role="status"]:not(:empty)'))).toContain(
+        'Platba 500 Kč z 10. 10. 2026 už není přiřazena.',
+      );
+    });
+
+    it('then a live change waits while the sheet is open and is read once it closes', async () => {
+      await openPaired();
+      const live = TestBed.inject(LiveUpdates) as unknown as FakeLiveUpdates;
+
+      live.hint('payments');
+      http.expectNone(`${PAYMENTS_URL}?${PAIRED_PAGE}`);
+      sheet().querySelector<HTMLButtonElement>('[aria-label="Zavřít"]')!.click();
+      await settle();
+      await listResponds(paymentList([], { availableYears: [] }), PAIRED_PAGE);
+
+      expect(document.querySelector('dialog[open]')).toBeNull();
     });
   });
 });
