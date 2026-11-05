@@ -15,6 +15,10 @@ export function imageFile(png: Blob): File {
   return new File([png], IMAGE_FILE_NAME, { type: IMAGE_MEDIA_TYPE });
 }
 
+export function sharesPaymentFiles(): boolean {
+  return deviceShares(spaydFile(''));
+}
+
 export function sharesImages(): boolean {
   return deviceShares(imageFile(new Blob([], { type: IMAGE_MEDIA_TYPE })));
 }
