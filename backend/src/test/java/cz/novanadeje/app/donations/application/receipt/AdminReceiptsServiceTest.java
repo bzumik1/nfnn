@@ -126,16 +126,16 @@ class AdminReceiptsServiceTest {
     }
 
     @Test
-    @DisplayName("Given a signature image, when an administrator fetches it, then it comes only while some receipt names it")
+    @DisplayName("Given a receipt image, when an administrator fetches it, then it comes only while some receipt shows it")
     void should_serve_image_only_when_fetched_given_some_receipt_names_it() {
         StoredReceiptImage image = new StoredReceiptImage(new byte[]{1, 2, 3}, "image/png");
         ContentDigest unnamed = new ContentDigest("b".repeat(64));
-        when(receipts.anyShowsSignatureImage(SIGNATURE)).thenReturn(true);
+        when(receipts.anyShowsImage(SIGNATURE)).thenReturn(true);
         when(images.find(SIGNATURE)).thenReturn(Optional.of(image));
         when(images.find(unnamed)).thenReturn(Optional.of(image));
 
-        assertThat(service(NOW).signatureImage(SIGNATURE)).isSameAs(image);
-        assertThatThrownBy(() -> service(NOW).signatureImage(unnamed)).isInstanceOf(ReceiptImageNotFound.class);
+        assertThat(service(NOW).image(SIGNATURE)).isSameAs(image);
+        assertThatThrownBy(() -> service(NOW).image(unnamed)).isInstanceOf(ReceiptImageNotFound.class);
     }
 
     @Test

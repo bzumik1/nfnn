@@ -1,0 +1,40 @@
+[
+  {
+    "path": "GET /api/donations/me/receipt-images/*",
+    "scenario": "donations/donation_receipts_frozen: *",
+    "kind": "headers",
+    "field": "cache-control",
+    "reason": "1.19 (Phase 1 review S M2, coordinator's brief for 1.19): both receipt image reads answer private, no-store instead of a year in the browser's cache, as security.md's Edge cache rule requires of every /api answer outside its three exceptions, so the handwritten signature is never kept on the disk of the computer that drew a PDF",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data and Issued receipts in the administration; docs/security-overview.md, Receipt PDF in the browser"
+  },
+  {
+    "path": "GET /api/donations/me/receipt-images/*",
+    "scenario": "donations/admin_receipt_signature: *",
+    "kind": "headers",
+    "field": "cache-control",
+    "reason": "1.19 (Phase 1 review S M2, coordinator's brief for 1.19): both receipt image reads answer private, no-store instead of a year in the browser's cache, as security.md's Edge cache rule requires of every /api answer outside its three exceptions, so the handwritten signature is never kept on the disk of the computer that drew a PDF",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data and Issued receipts in the administration; docs/security-overview.md, Receipt PDF in the browser"
+  },
+  {
+    "path": "GET /api/admin/donations/receipt-images/*",
+    "scenario": "donations/admin_receipts: *",
+    "kind": "headers",
+    "field": "cache-control",
+    "reason": "1.19 (Phase 1 review S M2, coordinator's brief for 1.19): both receipt image reads answer private, no-store instead of a year in the browser's cache, as security.md's Edge cache rule requires of every /api answer outside its three exceptions, so the handwritten signature is never kept on the disk of the computer that drew a PDF",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data and Issued receipts in the administration; docs/security-overview.md, Receipt PDF in the browser"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.receipt.AdminReceiptsServiceTest > Given a signature image, when an administrator fetches it, then it comes only while some receipt names it",
+    "reason": "1.19 (Phase 1 review B M2, S n4): the administration's image read serves the portrait a receipt shows too, so the donor card can draw it",
+    "replacement": "donations.application.receipt.AdminReceiptsServiceTest > Given a receipt image, when an administrator fetches it, then it comes only while some receipt shows it"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.persistence.JpaDonationReceiptRepositoryTest > Given a receipt that shows a signature image, when asked whether any receipt shows an image, then that image does and another does not",
+    "reason": "1.19 (Phase 1 review B M2, S n4): anyShowsImage asks for the portrait as well as the signature",
+    "replacement": "donations.infrastructure.persistence.JpaDonationReceiptRepositoryTest > Given a receipt that shows a signature image and a portrait, when asked whether any receipt shows an image, then both images do and another does not"
+  }
+]

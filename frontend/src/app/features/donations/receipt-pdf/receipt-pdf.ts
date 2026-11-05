@@ -3,7 +3,6 @@ import { defer, from, Observable, of, switchMap, tap, timeout } from 'rxjs';
 import { ErrorReporter } from '../../../core/errors/error-reporter';
 import { ErrorKind, ErrorName, errorNameOf } from '../../../core/errors/error-vocabulary';
 import { DownloadedFile } from '../donations-api';
-import { ReceiptSubject } from './frozen-receipt';
 import { ReceiptArt, receiptArt } from './receipt-art';
 import { receiptCaptions } from './receipt-captions';
 import {
@@ -14,7 +13,7 @@ import {
 } from './receipt-document';
 import { resolveReceiptStyle, ReceiptStyle, ReceiptStyleRefused } from './receipt-style';
 import { ReceiptWorker } from './receipt-worker-messages';
-import { ReceiptsApi } from './receipts-api';
+import { ReceiptSource } from './receipts-api';
 
 export type ReceiptPdfPhase = 'data' | 'tools' | 'drawing';
 
@@ -71,21 +70,20 @@ export const RECEIPT_DRAWING_TIMEOUT_MS = 120_000;
 
 @Injectable({ providedIn: 'root' })
 export class ReceiptPdf {
-  private readonly api = inject(ReceiptsApi);
   private readonly environment = inject(RECEIPT_PDF_ENVIRONMENT);
   private readonly reporter = inject(ErrorReporter);
 
-  draw(subject: ReceiptSubject): Observable<ReceiptPdfEvent> {
+  draw(source: ReceiptSource): Observable<ReceiptPdfEvent> {
     return new Observable<ReceiptPdfEvent>((subscriber) => {
       let worker: ReceiptWorker | null = null;
       subscriber.next({ kind: 'phase', phase: 'data', page: 0, pages: 0 });
-      const subscription = this.api
-        .issue(subject)
+      const subscription = source
+        .receipt()
         .pipe(
           switchMap((issued) =>
-            this.art(issued.receipt.signatory.signatureImage?.sha256 ?? null).pipe(
+            this.art(source, issued.receipt.signatory.signatureImage?.sha256 ?? null).pipe(
               switchMap((signature) =>
-                this.art(issued.receipt.signatory.portraitImage?.sha256 ?? null).pipe(
+                this.art(source, issued.receipt.signatory.portraitImage?.sha256 ?? null).pipe(
                   switchMap((portrait) => of({ issued, signature, portrait })),
                 ),
               ),
@@ -192,11 +190,11 @@ export class ReceiptPdf {
     }
   }
 
-  private art(sha256: string | null): Observable<ReceiptArt | null> {
+  private art(source: ReceiptSource, sha256: string | null): Observable<ReceiptArt | null> {
     if (sha256 === null) {
       return of(null);
     }
-    return this.api.image(sha256).pipe(
+    return source.image(sha256).pipe(
       switchMap((image) =>
         defer(() =>
           from(

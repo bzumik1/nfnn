@@ -69,8 +69,8 @@ public class AdminReceiptsService {
     }
 
     @Transactional(readOnly = true)
-    public StoredReceiptImage signatureImage(ContentDigest digest) {
-        if (!receipts.anyShowsSignatureImage(digest)) {
+    public StoredReceiptImage image(ContentDigest digest) {
+        if (!receipts.anyShowsImage(digest)) {
             throw new ReceiptImageNotFound(digest);
         }
         return images.find(digest).orElseThrow(() -> new ReceiptImageNotFound(digest));

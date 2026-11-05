@@ -434,7 +434,7 @@ Feature: A donor issues receipts of their donations as frozen, signed data
     And the frozen receipt shows the current signature image
     When "Jana" fetches the signature image of receipt "2027-000002"
     Then the response status is 200
-    And the image is the current signature, kept by the browser
+    And the image is the current signature, stored by no cache
     When "Jana" reads the issued receipt again
     Then the response status is 200
     And the issued receipt has number "2027-000002"
@@ -490,7 +490,7 @@ Feature: A donor issues receipts of their donations as frozen, signed data
     And the frozen receipt shows a portrait of the signatory
     When "Jana" fetches the portrait image of receipt "2026-000001"
     Then the response status is 200
-    And the image is a 600 pixel square JPEG portrait, kept by the browser and never sniffed as another type
+    And the image is a 600 pixel square JPEG portrait, stored by no cache and never sniffed as another type
     When "Petr" fetches the portrait image of receipt "2026-000001"
     Then the response status is 404
     And the problem type ends with "donations/receipt-image-not-found"
@@ -504,7 +504,7 @@ Feature: A donor issues receipts of their donations as frozen, signed data
     And the frozen receipt still shows the portrait it showed before
     When "Jana" fetches the portrait image of receipt "2026-000001"
     Then the response status is 200
-    And the image is a 600 pixel square JPEG portrait, kept by the browser and never sniffed as another type
+    And the image is a 600 pixel square JPEG portrait, stored by no cache and never sniffed as another type
     When "Jana" issues the receipt of her donation received on 2026-11-01
     Then the response status is 200
     And the frozen receipt shows another portrait than before

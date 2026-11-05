@@ -221,6 +221,19 @@ td.action {
   text-align: right;
 }
 
+td.receipt-pdf-cell {
+  inline-size: 15rem;
+}
+
+.receipt-pdf-progress {
+  justify-items: end;
+  text-align: right;
+}
+
+.receipt-pdf-error {
+  margin: var(--space-1-5) 0 0;
+}
+
 th.amount,
 td.amount {
   text-align: right;
@@ -288,6 +301,15 @@ td.amount {
 @include bp.down(cards) {
   td.action,
   td.amount {
+    text-align: left;
+  }
+
+  td.receipt-pdf-cell {
+    inline-size: auto;
+  }
+
+  .receipt-pdf-progress {
+    justify-items: start;
     text-align: left;
   }
 

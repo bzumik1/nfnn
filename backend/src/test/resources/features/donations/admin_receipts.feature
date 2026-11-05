@@ -200,7 +200,7 @@ Feature: An administrator or a connected application issues a donor's receipt an
     And the frozen receipt shows the current signature image
     When "Petr" fetches in the administration the signature image of receipt "2027-000002"
     Then the response status is 200
-    And the image is the current signature, kept by the browser
+    And the image is the current signature, stored by no cache
     When "Petr" reads in the administration the receipt with id "0192f0f1-0000-7000-8000-000000000000"
     Then the response status is 404
     And the problem type ends with "donations/receipt-not-found"
@@ -210,6 +210,19 @@ Feature: An administrator or a connected application issues a donor's receipt an
     When "Petr" lists the issued receipts in the administration, 101 on page 0
     Then the response status is 400
     And the problem type ends with "validation"
+
+  Scenario: The administration fetches the portrait a receipt shows, so the donor card can draw the receipt, and no cache stores it
+    Given "Petr" uploads a 900 by 600 pixel PNG image named "prvni.png"
+    And "Petr" adds a person:
+      | name     | Adam Vzor |
+      | portrait | prvni.png |
+    And "Petr" chooses "Adam Vzor" to sign the receipts as "místopředseda správní rady"
+    When "Petr" issues in the administration the yearly receipt of "Jana" for 2026
+    Then the response status is 200
+    And the frozen receipt shows a portrait of the signatory
+    When "Petr" fetches in the administration the portrait image of receipt "2027-000001"
+    Then the response status is 200
+    And the image is a 600 pixel square JPEG portrait, stored by no cache and never sniffed as another type
 
   Scenario: A connected application with the writing permission issues a receipt, which the audit trail names it for
     Given "Petr" connected the application "https://claude.ai/.well-known/oauth-client" with scope "admin:read admin:write"

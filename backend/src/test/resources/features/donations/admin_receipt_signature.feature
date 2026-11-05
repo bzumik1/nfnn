@@ -88,7 +88,7 @@ Feature: An administrator chooses who signs the donation receipts and uploads th
     And the frozen receipt shows the current signature image
     When "Jana" fetches the signature image of receipt "2026-000001"
     Then the response status is 200
-    And the image is the current vector signature as its canonical JSON, kept by the browser and never sniffed
+    And the image is the current vector signature as its canonical JSON, stored by no cache and never sniffed
     When "Petr" fetches the signature image of receipt "2026-000001"
     Then the response status is 404
     And the problem type ends with "donations/receipt-image-not-found"

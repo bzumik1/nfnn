@@ -375,12 +375,12 @@ public class DonorFrozenReceiptStepDefinitions {
         assertThat(answeredReceipt().get("receipt").get("signatory").get("portraitImage").get("sha256").asString()).isEqualTo(before);
     }
 
-    @Then("the image is a {int} pixel square JPEG portrait, kept by the browser and never sniffed as another type")
+    @Then("the image is a {int} pixel square JPEG portrait, stored by no cache and never sniffed as another type")
     public void theImageIsASquareJpegPortrait(int side) throws IOException {
         HttpHeaders headers = api.lastResponse().getHeaders();
         assertThat(headers.getContentType()).hasToString("image/jpeg");
         assertThat(headers.getFirst("X-Content-Type-Options")).isEqualTo("nosniff");
-        assertThat(headers.getCacheControl()).isEqualTo("private, max-age=31536000, immutable");
+        assertThat(headers.getCacheControl()).isEqualTo("private, no-store");
         BufferedImage portrait = ImageIO.read(new ByteArrayInputStream(api.lastResponseBytes()));
         assertThat(portrait.getWidth()).isEqualTo(side);
         assertThat(portrait.getHeight()).isEqualTo(side);
@@ -405,16 +405,16 @@ public class DonorFrozenReceiptStepDefinitions {
         assertThat(vector.get("paths").get(0).properties()).extracting(Map.Entry::getKey).containsExactly("d", "fill", "opacity");
     }
 
-    @Then("the image is the current signature, kept by the browser")
+    @Then("the image is the current signature, stored by no cache")
     public void theImageIsTheCurrentSignature() {
         HttpHeaders headers = api.lastResponse().getHeaders();
         assertThat(headers.getContentType()).hasToString("image/png");
-        assertThat(headers.getCacheControl()).isEqualTo("private, max-age=31536000, immutable");
+        assertThat(headers.getCacheControl()).isEqualTo("private, no-store");
         assertThat(sha256(api.lastResponseBytes())).isEqualTo(currentSignatureImage());
     }
 
-    @Then("the image is the current vector signature as its canonical JSON, kept by the browser and never sniffed")
-    public void theImageIsTheCurrentVectorSignatureKeptByTheBrowser() {
+    @Then("the image is the current vector signature as its canonical JSON, stored by no cache and never sniffed")
+    public void theImageIsTheCurrentVectorSignatureStoredByNoCache() {
         assertCanonicalVectorAnswer(currentSignatureImage());
     }
 
@@ -518,7 +518,7 @@ public class DonorFrozenReceiptStepDefinitions {
         HttpHeaders headers = api.lastResponse().getHeaders();
         assertThat(headers.getContentType()).hasToString("application/json");
         assertThat(headers.getFirst("X-Content-Type-Options")).isEqualTo("nosniff");
-        assertThat(headers.getCacheControl()).isEqualTo("private, max-age=31536000, immutable");
+        assertThat(headers.getCacheControl()).isEqualTo("private, no-store");
         byte[] body = api.lastResponseBytes();
         assertThat(sha256(body)).isEqualTo(digest);
         assertThat(new String(body, StandardCharsets.UTF_8)).startsWith("{\"viewBox\":[").contains("\"paths\":[{\"d\":\"M").doesNotContain("\n", "<");

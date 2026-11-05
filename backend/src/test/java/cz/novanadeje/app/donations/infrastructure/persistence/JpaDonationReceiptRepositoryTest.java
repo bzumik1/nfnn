@@ -634,14 +634,15 @@ class JpaDonationReceiptRepositoryTest {
     }
 
     @Test
-    @DisplayName("Given a receipt that shows a signature image, when asked whether any receipt shows an image, then that image does and another does not")
+    @DisplayName("Given a receipt that shows a signature image and a portrait, when asked whether any receipt shows an image, then both images do and another does not")
     void should_tell_whether_any_receipt_shows_image_when_asked_given_signed_receipt() {
         DonorReference jana = storedDonor("4821937560");
         receipts.save(single(jana, storedDonation(jana, LocalDate.of(2026, 3, 15)), "2026-000001"));
         flushAndClear();
 
-        assertThat(receipts.anyShowsSignatureImage(SIGNATURE.digest())).isTrue();
-        assertThat(receipts.anyShowsSignatureImage(OTHER_SIGNATURE.digest())).isFalse();
+        assertThat(receipts.anyShowsImage(SIGNATURE.digest())).isTrue();
+        assertThat(receipts.anyShowsImage(PORTRAIT.digest())).isTrue();
+        assertThat(receipts.anyShowsImage(OTHER_SIGNATURE.digest())).isFalse();
     }
 
     private List<String> numbersOf(ReceiptQuery query) {
