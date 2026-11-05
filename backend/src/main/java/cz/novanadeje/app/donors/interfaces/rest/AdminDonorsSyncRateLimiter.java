@@ -18,7 +18,7 @@ class AdminDonorsSyncRateLimiter {
     private final FixedWindowRateLimiter limiter;
 
     AdminDonorsSyncRateLimiter(Clock clock) {
-        this.limiter = new FixedWindowRateLimiter(REQUESTS_PER_WINDOW, WINDOW, clock);
+        this.limiter = new FixedWindowRateLimiter(REQUESTS_PER_WINDOW, WINDOW, FixedWindowRateLimiter.ADMINISTRATOR_ONLY_MAXIMUM_TRACKED_KEYS, clock);
     }
 
     void check(String administrator) {

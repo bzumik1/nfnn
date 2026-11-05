@@ -1,0 +1,14 @@
+[
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/sync/admin-manifest.json",
+    "reason": "2.17 adds the administration's device sync: database rows and an administrator give the manifest of GET /api/admin/donations/sync (subject, administrator, chunks with id, rowsSha256 and count) joined with the rows /sync/chunks answers for each chunk. Only the chunks of payments, gifts and donor records are specified here (payments:, donations: and donor-records: by month; donor records by the Prague month of registration, an erased donor as its stored placeholder), the other chunks come from the admin_device_sync features; rowsSha256 is computed over the rows as aliased, so each side computes it from the case itself. The backend (AdminSyncSharedCasesTest) writes the rows and asks both endpoints with the real queries; the browser (shared-cases.spec.ts) hashes every chunk's rows as a device will, and reads the cases into the administration's device copy from 2.18. A new file with its schema; the source is edited",
+    "contract": "docs/api-contract.md, Device sync of the administration; .claude/rules/testing.md, Logic on both sides"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/schemas/sync/admin-manifest.schema.json",
+    "reason": "2.17: the schema of the new administration sync manifest cases (the rows of schemas/defs/rows.schema.json as input; the manifest with its payments, donations and donor-records chunks and their rows as the expected value)",
+    "contract": "docs/api-contract.md, Device sync of the administration"
+  }
+]

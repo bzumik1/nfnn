@@ -435,7 +435,9 @@ describe('Given the sync manifest cases', () => {
 
 describe('Given the administration sync manifest cases', () => {
   it("when the rows of each chunk are written as canonical JSON and hashed as an administrator's device will, then they give the chunk's rowsSha256 and count", async () => {
-    const chunks = sharedCases(ADMIN_SYNC_CASES).flatMap((sharedCase) => sharedCase.expected.chunks);
+    const chunks = sharedCases(ADMIN_SYNC_CASES).flatMap(
+      (sharedCase) => sharedCase.expected.chunks,
+    );
     const digests = await Promise.all(chunks.map((chunk) => rowsSha256(chunk.rows)));
 
     expect(chunks.length).toBeGreaterThan(0);
