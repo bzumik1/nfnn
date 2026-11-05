@@ -933,6 +933,15 @@
                       @if (pdfs.failure(receipt.id); as failure) {
                         <p class="ui-field-error receipt-pdf-error" role="alert">{{ failure }}</p>
                       }
+                      @if (signedWithWithdrawnKey(receipt)) {
+                        <p
+                          class="ui-callout ui-callout--warning receipt-key-note"
+                          i18n="@@admin.donorDetail.receiptPdf.withdrawnKey"
+                        >
+                          QR na tomto potvrzení podepsal zneplatněný klíč. Stránka /overit ho ukáže
+                          jako zneplatněné.
+                        </p>
+                      }
                     }
                   </td>
                 </tr>

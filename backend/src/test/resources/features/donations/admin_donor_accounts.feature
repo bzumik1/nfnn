@@ -27,8 +27,8 @@ Feature: An administrator sees a donor's bank accounts, donations and receipts a
     And the donor's donations total 100000 in 3 donations
     And the donor's donation received on 2026-10-10 carries receipt number "2026-000001"
     And the donor's receipts are:
-      | number      | kind   | donationReceivedOn | year | issuedOn   | active |
-      | 2026-000001 | SINGLE | 2026-10-10         |      | 2026-10-17 | true   |
+      | number      | kind   | donationReceivedOn | year | issuedOn   | active | keyId    |
+      | 2026-000001 | SINGLE | 2026-10-10         |      | 2026-10-17 | true   | 21fe31df |
 
   Scenario: A donor who never gave has an empty card
     When "Jana" opens the donations of "Petr"
