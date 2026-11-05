@@ -100,6 +100,23 @@ class DonorBankAccountsServiceTest {
     }
 
     @Test
+    @DisplayName("Given two live links created at the same instant, when listed, then they come in the order of their account numbers whatever order they are stored in")
+    void should_order_by_account_when_listed_given_links_created_at_the_same_instant() {
+        SenderAccountLink first = active(OTHER_ACCOUNT, NOW);
+        SenderAccountLink second = active(ACCOUNT, NOW);
+        when(donorRecords.findBySenderAccount(any())).thenReturn(List.of());
+        when(donations.findByDonorNewestFirst(JANA)).thenReturn(List.of());
+
+        when(donorRecords.findById(JANA)).thenReturn(Optional.of(record(JANA, first, second)));
+        List<BankAccountView> stored = service.listBankAccounts(JANA);
+        when(donorRecords.findById(JANA)).thenReturn(Optional.of(record(JANA, second, first)));
+        List<BankAccountView> reversed = service.listBankAccounts(JANA);
+
+        assertThat(stored).extracting(view -> view.link().id()).containsExactly(first.id(), second.id());
+        assertThat(reversed).extracting(view -> view.link().id()).containsExactly(first.id(), second.id());
+    }
+
+    @Test
     @DisplayName("Given an active link another donor also uses, when listed, then it is shared, and a disconnected one never is")
     void should_mark_shared_when_listed_given_account_another_donor_uses() {
         SenderAccountLink link = active(ACCOUNT, NOW);
