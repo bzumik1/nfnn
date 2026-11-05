@@ -58,13 +58,19 @@ describe('Given the security headers the frontend nginx sends', () => {
     assert.deepEqual(policy.get('manifest-src'), ["'self'"]);
   });
 
-  it('when scripts and workers are loaded, then no eval, inline script, blob or data address is allowed', () => {
+  it('when scripts and workers are loaded, then no eval, inline script, blob or data address is allowed, only WebAssembly a script of the site compiles', () => {
     for (const directive of ['default-src', 'script-src', 'worker-src']) {
       for (const source of ["'unsafe-eval'", "'unsafe-inline'", 'blob:', 'data:', '*']) {
         assert.ok(!policy.get(directive).includes(source), `${directive} must not allow ${source}`);
       }
     }
-    assert.deepEqual(policy.get('script-src'), ["'self'"]);
+    assert.deepEqual(policy.get('script-src'), ["'self'", "'wasm-unsafe-eval'"]);
+  });
+
+  it('when any directive is read, then none allows unsafe-eval', () => {
+    for (const [name, sources] of policy) {
+      assert.ok(!sources.includes("'unsafe-eval'"), `${name} must not allow 'unsafe-eval'`);
+    }
   });
 
   it('when a plugin or a frame of another site is asked for, then nothing is allowed', () => {
