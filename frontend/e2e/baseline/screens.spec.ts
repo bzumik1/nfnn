@@ -1,4 +1,6 @@
 import { Locator, Page } from '@playwright/test';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import {
   connectionRequest,
   donor,
@@ -433,6 +435,18 @@ async function settle(page: Page, screen: Screen): Promise<void> {
   });
 }
 
+function recordRoute(page: Page, shots: string[]): void {
+  const folder = process.env.BASELINE_SCREENS_ROUTES;
+  if (!folder) {
+    return;
+  }
+  mkdirSync(folder, { recursive: true });
+  const route = new URL(page.url()).pathname;
+  for (const shot of shots) {
+    writeFileSync(join(folder, `${shot}.route`), `${route}\n`);
+  }
+}
+
 async function shootElement(
   target: Locator,
   file: string,
@@ -454,6 +468,10 @@ function shootEach(screens: Screen[]): void {
         await page.setViewportSize({ width, height: HEIGHT });
         await screen.open(page, width);
         await settle(page, screen);
+        recordRoute(page, [
+          `${screen.name}-${width}`,
+          ...(screen.elements ?? []).map((shot) => `${shot.name}-${width}`),
+        ]);
 
         if (!screen.region) {
           await expect(page).toHaveScreenshot(`${screen.name}-${width}.png`, {

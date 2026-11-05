@@ -175,18 +175,56 @@ export function mcpMessages(contentType, text) {
     .map((data) => JSON.parse(data));
 }
 
-export const BANK_PHASES = [];
+export const BANK_PHASES = ['deployed', 'candidate', 'rollback', 'restored'];
+const DONOR_ACCOUNT = { account: '2700190000', bankCode: '0100', name: 'Zkušební Dárce' };
+const STRANGER_ACCOUNT = { account: '1900280006', bankCode: '0300', name: 'Neznámý Plátce' };
 
-export function phaseMovements() {
-  throw new Error('not planned yet');
+export function phaseMovements(phase, symbol, date) {
+  const index = BANK_PHASES.indexOf(phase);
+  if (index < 0) {
+    throw new Error(`unknown bank phase ${phase}: ${BANK_PHASES.join(', ')}`);
+  }
+  const movement = (kind, fields) => ({
+    id: 880_000_000 + index * 10 + kind,
+    date,
+    amountMinor: (kind * 100 + index * 10 + 1) * 100,
+    message: `Zkouška vydání ${phase}`,
+    ...fields,
+  });
+  const gifts = [movement(1, { ...DONOR_ACCOUNT, variableSymbol: symbol, pairedBy: 'VARIABLE_SYMBOL' })];
+  if (index > 0) {
+    gifts.push(movement(2, { ...DONOR_ACCOUNT, variableSymbol: null, pairedBy: 'SENDER_ACCOUNT' }));
+  }
+  return { gifts, stranger: movement(3, { ...STRANGER_ACCOUNT, variableSymbol: null }) };
 }
 
-export function pragueDay() {
-  throw new Error('not named yet');
+export function pragueDay(instant, daysBack) {
+  const shifted = new Date(instant.getTime() - daysBack * 86_400_000);
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Prague', year: 'numeric', month: '2-digit', day: '2-digit' }).format(shifted);
 }
 
-export function bankProblems() {
-  throw new Error('not checked yet');
+export function bankProblems(planned, donations, unpaired) {
+  const problems = [];
+  const crowns = (movement) => movement.amountMinor / 100;
+  for (const gift of planned.filter((movement) => movement.role === 'gift')) {
+    const held = donations.filter((donation) => donation.amountMinor === gift.amountMinor);
+    if (held.length === 0) {
+      problems.push(`the donor does not hold the gift of ${crowns(gift)} Kč`);
+    } else if (held.length > 1) {
+      problems.push(`the donor holds the gift of ${crowns(gift)} Kč ${held.length} times`);
+    } else if (held[0].pairedBy !== gift.pairedBy) {
+      problems.push(`the gift of ${crowns(gift)} Kč is paired by ${held[0].pairedBy} instead of ${gift.pairedBy}`);
+    }
+  }
+  for (const stranger of planned.filter((movement) => movement.role === 'stranger')) {
+    if (donations.some((donation) => donation.amountMinor === stranger.amountMinor)) {
+      problems.push(`the unknown payer's ${crowns(stranger)} Kč is paired to the donor`);
+    }
+    if (!unpaired.some((payment) => payment.bankTransactionId === stranger.id)) {
+      problems.push(`the unknown payer's ${crowns(stranger)} Kč (movement ${stranger.id}) is not among the unpaired payments`);
+    }
+  }
+  return problems;
 }
 
 class JourneyFailure extends Error {}
@@ -223,6 +261,7 @@ class Journey {
     this.site = named.site ?? 'http://localhost:8089';
     this.mail = named.mail ?? 'http://127.0.0.1:8025';
     this.client = named.client ?? '203.0.113.60';
+    this.fio = named.fio ?? 'http://127.0.0.1:8090';
     this.withoutConnector = named['without-connector'] === true;
     this.statePath = named.state ?? fail('--state names the file the journey keeps its state in');
     this.state = existsSync(this.statePath) ? JSON.parse(readFileSync(this.statePath, 'utf8')) : {};
@@ -325,6 +364,7 @@ class Journey {
           { name: 'MAIL_FROM', value: 'info@nfnn.cz' },
           { name: 'CONTACT_RECIPIENT', value: 'info@nfnn.cz' },
           { name: 'ADMIN_EMAILS', value: 'spravce@example.cz' },
+          ...(process.env.FAKE_FIO_TOKEN ? [{ name: 'FIO_TOKEN', value: process.env.FAKE_FIO_TOKEN }] : []),
         ],
         backupKeyWords: backupKeyWords(backupKey.key, backupKey.checkPositions, wordlist),
       },
@@ -808,6 +848,84 @@ class Journey {
     }
   }
 
+  async bank(phase) {
+    const donor = await this.donorSession();
+    const account = await this.expect(200, 'GET', '/api/donors/me', { token: donor }, 'the donor\'s account');
+    const { gifts, stranger } = phaseMovements(phase, account.variableSymbol, pragueDay(new Date(), 1));
+    const booked = await fetch(`${this.fio}/movements`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify([...gifts, stranger]),
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!booked.ok) {
+      fail(`the fake Fio bank did not take the movements of the ${phase} phase (${booked.status})`);
+    }
+    const ids = new Set([...gifts, stranger].map((movement) => movement.id));
+    this.state.bank = [
+      ...(this.state.bank ?? []).filter((movement) => !ids.has(movement.id)),
+      ...gifts.map((gift) => ({ ...gift, role: 'gift' })),
+      { ...stranger, role: 'stranger' },
+    ];
+    this.save();
+    const admin = await this.adminSession();
+    await this.bankSettled(donor, admin, `the import under the ${phase} images to pair every gift and leave every unknown payment unpaired`);
+    this.say(`Under the ${phase} images the import from the fake Fio bank paired ${gifts.map((gift) => `${gift.amountMinor / 100} Kč by ${gift.pairedBy}`).join(' and ')} and left ${stranger.amountMinor / 100} Kč of an unknown payer unpaired`);
+
+    const unpaired = await this.expect(200, 'GET', '/api/admin/donations/payments?pairing=unpaired', { token: admin }, 'the unpaired payments');
+    const payment = unpaired.items.find((item) => item.bankTransactionId === stranger.id) ?? fail(`movement ${stranger.id} is not among the unpaired payments`);
+    await this.expect(200, 'POST', `/api/admin/donations/payments/${payment.id}/pair`, { token: admin, json: { donorId: this.state.donor.id } },
+      `pairing the unknown payer's ${stranger.amountMinor / 100} Kč by hand`);
+    const withManual = await this.expect(200, 'GET', '/api/donations/me', { token: donor }, 'the donor\'s gifts after the pairing by hand');
+    if (!withManual.items.some((item) => item.amountMinor === stranger.amountMinor)) {
+      fail(`the donor does not see the ${stranger.amountMinor / 100} Kč paired by hand`);
+    }
+    await this.expect(200, 'POST', `/api/admin/donations/payments/${payment.id}/unpair`, { token: admin }, `unpairing the ${stranger.amountMinor / 100} Kč again`);
+    const back = await this.expect(200, 'GET', '/api/admin/donations/payments?pairing=unpaired', { token: admin }, 'the unpaired payments after unpairing');
+    if (!back.items.find((item) => item.id === payment.id)?.unpairedByAdminAt) {
+      fail(`the unpaired ${stranger.amountMinor / 100} Kč does not say an administrator unpaired it`);
+    }
+    await this.bankSettled(donor, admin, `the gifts after the ${stranger.amountMinor / 100} Kč was paired and unpaired by hand`);
+    this.say(`The administrator paired the ${stranger.amountMinor / 100} Kč to the donor by hand and unpaired it again`);
+
+    if (phase === 'deployed') {
+      const donations = await this.expect(200, 'GET', '/api/donations/me', { token: donor }, 'the donor\'s gifts');
+      const imported = donations.items.find((item) => item.amountMinor === gifts[0].amountMinor);
+      const receipt = await this.expect(200, 'POST', `/api/admin/donations/donors/${this.state.donor.id}/receipts`, {
+        token: admin,
+        json: { donationId: imported.id },
+      }, 'the administrator issuing a receipt for the imported gift');
+      this.checkFrozen(receipt, 'the receipt of the imported gift');
+      const entry = this.remember(receipt, { phase: 'deployed', issuedBy: 'admin' });
+      this.say(`The administrator issued ${entry.number} for the imported gift of ${gifts[0].amountMinor / 100} Kč`);
+    }
+
+    const asked = await (await fetch(`${this.fio}/requests`, { signal: AbortSignal.timeout(10_000) })).json();
+    if (asked.refused > 0) {
+      fail(`the backend asked the fake Fio bank ${asked.refused} times with a token it does not know`);
+    }
+    if (asked.periods === 0) {
+      fail('the backend never asked the fake Fio bank for a period');
+    }
+  }
+
+  async bankSettled(donor, admin, what) {
+    let round = 0;
+    await this.waitUntil(what, 180, async () => {
+      round += 1;
+      if (round % 5 === 1) {
+        await this.expect(202, 'POST', '/api/donations/me/bank-check', { token: donor }, 'the donor\'s bank check');
+      }
+      const donations = await this.expect(200, 'GET', '/api/donations/me', { token: donor }, 'the donor\'s gifts');
+      const unpaired = await this.expect(200, 'GET', '/api/admin/donations/payments?pairing=unpaired', { token: admin }, 'the unpaired payments');
+      const problems = bankProblems(this.state.bank, donations.items, unpaired.items);
+      if (problems.length > 0) {
+        throw new Error(problems.join('; '));
+      }
+      return true;
+    });
+  }
+
   forgetAfterBackup() {
     this.state.receipts = this.state.receipts.map((entry) =>
       entry.phase === 'deployed' ? entry : { ...entry, gone: true },
@@ -851,12 +969,14 @@ async function main(argv) {
       return journey.forgetAfterBackup();
     case 'adopted':
       return journey.adopted();
+    case 'bank':
+      return journey.bank(typeof named.phase === 'string' ? named.phase : fail(`--phase names the phase: ${BANK_PHASES.join(', ')}`));
     case 'admin-session':
       return process.stdout.write((await journey.adminSession()) + '\n');
     case 'totp':
       return process.stdout.write((await journey.freshCode()) + '\n');
     default:
-      fail(`unknown command ${command}: setup, restore-setup, receipts, check, forget-after-backup, adopted, admin-session or totp`);
+      fail(`unknown command ${command}: setup, restore-setup, receipts, bank, check, forget-after-backup, adopted, admin-session or totp`);
   }
 }
 

@@ -106,7 +106,8 @@ test('Given each bank phase, when the journey plans its movements, then the firs
 
 test('Given instants around midnight in Prague, when the journey names the booking day, then it is the Prague day the given days back', () => {
   assert.equal(pragueDay(new Date('2026-11-04T23:30:00Z'), 0), '2026-11-05');
-  assert.equal(pragueDay(new Date('2026-11-04T22:30:00Z'), 1), '2026-11-04');
+  assert.equal(pragueDay(new Date('2026-11-04T22:30:00Z'), 0), '2026-11-04');
+  assert.equal(pragueDay(new Date('2026-11-04T23:30:00Z'), 1), '2026-11-04');
   assert.equal(pragueDay(new Date('2026-07-01T21:59:00Z'), 1), '2026-06-30');
 });
 

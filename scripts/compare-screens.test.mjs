@@ -1,24 +1,28 @@
 import { strict as assert } from 'node:assert';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import {
+  acceptedStates,
   compareImages,
   cropAround,
   declaredAppearance,
   diffImage,
   ELEMENT_TOLERANCE_PIXELS,
   encodePng,
+  onlyPublic,
   options,
   outsideRepository,
   PAGE_TOLERANCE_RATIO,
   pairShots,
   publicRoute,
+  readRoutes,
   reportMarkdown,
   shotKind,
   shotState,
+  staleAcceptances,
   undeclaredShots,
   withinTolerance,
 } from './compare-screens.mjs';
@@ -363,5 +367,90 @@ describe('Given shots with the routes they were taken at', () => {
     assert.match(markdown, /\| home-390\.png \| \/ \| page \| 900 \|.*\| ne \|/);
     assert.match(markdown, /\| admin-payments-1280\.png \| \/sprava\/platby \| page \| 900 \|.*\| ano \|/);
     assert.match(markdown, /Vzhled se mění: \/sprava\/platby, \//);
+  });
+});
+
+describe('Given the routes the two runs recorded', () => {
+  it('when they are read, then each shot has the route of the head, and of the base only where the head took none', () => {
+    const head = mkdtempSync(join(tmpdir(), 'nfnn-routes-head-'));
+    const base = mkdtempSync(join(tmpdir(), 'nfnn-routes-base-'));
+    writeFileSync(join(head, 'home-390.route'), '/\n');
+    writeFileSync(join(base, 'home-390.route'), '/stara\n');
+    writeFileSync(join(base, 'old-state-390.route'), '/odebrana\n');
+    writeFileSync(join(head, 'home-390.png'), '');
+    assert.deepEqual(
+      [...readRoutes(head, base, join(tmpdir(), 'nfnn-routes-missing'))].sort(),
+      [
+        ['home-390', '/'],
+        ['old-state-390', '/odebrana'],
+      ],
+    );
+  });
+
+  it('when only the public pages are compared, then shots of the donor area and the administration drop out and a shot without a route stays', () => {
+    const routes = new Map([
+      ['home-390', '/'],
+      ['admin-home-390', '/sprava'],
+      ['donor-overview-390', '/darce/prehled'],
+    ]);
+    const kept = onlyPublic(
+      {
+        results: ['home-390.png', 'admin-home-390.png', 'unknown-390.png'].map((file) => ({ file, passes: false })),
+        added: ['donor-overview-390.png'],
+        removed: ['home-390.png'],
+      },
+      routes,
+    );
+    assert.deepEqual(kept.results.map((result) => result.file), ['home-390.png', 'unknown-390.png']);
+    assert.deepEqual(kept.added, []);
+    assert.deepEqual(kept.removed, ['home-390.png']);
+  });
+});
+
+describe('Given the accepted differences of the public pages since v2', () => {
+  it('when they are read, then each names its state with the change it came with and why', () => {
+    assert.deepEqual(
+      acceptedStates(JSON.stringify({ shots: [{ state: 'home', since: '#205', reason: 'the hero names the foundation' }] })),
+      ['home'],
+    );
+  });
+
+  it('when an entry lacks its state, its change or its reason, then it is refused', () => {
+    assert.throws(() => acceptedStates('{}'), /no list "shots"/);
+    assert.throws(() => acceptedStates(JSON.stringify({ shots: [{ state: 'Home page', since: '#1', reason: 'x' }] })), /names no state/);
+    assert.throws(() => acceptedStates(JSON.stringify({ shots: [{ state: 'home', reason: 'x' }] })), /needs its reason and the change/);
+    assert.throws(() => acceptedStates(JSON.stringify({ shots: [{ state: 'home', since: '#1', reason: ' ' }] })), /needs its reason/);
+  });
+
+  it('when the file in the repository is read, then every entry is valid', () => {
+    assert.ok(acceptedStates(readFileSync(join(root, 'regression/public-screens-since-v2.json'), 'utf8')).length >= 0);
+  });
+});
+
+describe('Given accepted states and the shots that differ', () => {
+  it('when an accepted state differs in no shot any more, then it is named as stale', () => {
+    assert.deepEqual(
+      staleAcceptances(['home', 'news', 'project'], {
+        results: [
+          { file: 'home--donate-qr-390.png', passes: false },
+          { file: 'news-390.png', passes: true },
+        ],
+        removed: ['project-1280.png'],
+      }),
+      ['news'],
+    );
+  });
+
+  it('when the report names stale accepted states, then it asks to remove them', () => {
+    const markdown = reportMarkdown({
+      base: 'abc1234',
+      head: 'def5678',
+      results: [],
+      added: [],
+      removed: [],
+      failedRuns: [],
+      stale: ['news'],
+    });
+    assert.match(markdown, /už neliší.*\n\n- news/s);
   });
 });
