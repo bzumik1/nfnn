@@ -783,6 +783,82 @@ class DonorSessionServiceTest {
     }
 
     @Test
+    @DisplayName("Given an app token used 10 seconds ago whose successor was never used, when it is presented again in the browser's cookie, then it is refused without touching the successor or ending any session")
+    void should_refuse_without_superseding_when_presented_again_in_browser_cookie_given_app_token_within_the_reuse_grace() {
+        when(devices.findById(DEVICE)).thenReturn(Optional.of(deviceOf(SessionKind.APP, NOW.minus(Duration.ofDays(2)))));
+        RefreshTokenSecret secret = RefreshTokenSecret.generate();
+        UUID successor = UUID.randomUUID();
+        RefreshToken used = rotated(secret, NOW.minusSeconds(10), successor, false);
+        when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(used));
+
+        assertThatThrownBy(() -> service.refresh(secret.value(), SessionCookie.BROWSER, DeviceDescription.UNKNOWN)).isInstanceOf(InvalidRefreshToken.class);
+
+        verify(refreshTokens, never()).supersedeIfUnused(any(), any());
+        verify(refreshTokens, never()).markUsed(any(), any());
+        verify(refreshTokens, never()).save(any());
+        verify(signOuts, never()).endAllOf(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("Given an app token used 10 seconds ago whose successor was never used, when it is presented again in the app's cookie, then the app gets a new token for its 400 days")
+    void should_reissue_for_the_app_when_presented_again_in_app_cookie_given_app_token_within_the_reuse_grace() {
+        when(devices.findById(DEVICE)).thenReturn(Optional.of(deviceOf(SessionKind.APP, NOW.minus(Duration.ofDays(2)))));
+        RefreshTokenSecret secret = RefreshTokenSecret.generate();
+        UUID successor = UUID.randomUUID();
+        RefreshToken used = rotated(secret, NOW.minusSeconds(10), successor, false);
+        when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(used));
+        when(donors.findById(DONOR)).thenReturn(Optional.of(donor()));
+        when(refreshTokens.supersedeIfUnused(successor, NOW)).thenReturn(true);
+        when(accessTokens.issue(DONOR, Set.of(Role.DONOR), DEVICE, NOW)).thenReturn(new IssuedAccessToken("access", NOW.plus(Duration.ofMinutes(15))));
+
+        RefreshedSession refreshed = service.refresh(secret.value(), SessionCookie.APP, DeviceDescription.UNKNOWN);
+
+        assertThat(refreshed.tokens().session()).isEqualTo(SessionKind.APP);
+        assertThat(refreshed.tokens().refreshTokenExpiresAt()).isEqualTo(NOW.plus(Duration.ofDays(400)));
+        verify(signOuts, never()).endAllOf(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("Given a public-computer session whose device was signed out a moment ago, when it continues after a credential change, then the new device is a public computer too")
+    void should_keep_the_public_kind_when_continued_given_its_device_just_ended() {
+        DonorDevice ended = deviceOf(SessionKind.PUBLIC, NOW.minus(Duration.ofMinutes(20)));
+        ended.end(DeviceSignOutReason.REMOTE_SIGN_OUT, NOW.minusSeconds(5));
+        when(devices.findById(DEVICE)).thenReturn(Optional.of(ended));
+        when(accessTokens.issue(eq(DONOR), eq(Set.of(Role.DONOR)), any(DeviceId.class), eq(NOW))).thenReturn(new IssuedAccessToken("access", NOW.plus(Duration.ofMinutes(15))));
+
+        IssuedTokens tokens = service.continueOn(donor(), false, new RequestingDevice(Optional.of(DEVICE), DeviceDescription.UNKNOWN));
+
+        assertThat(tokens.session()).isEqualTo(SessionKind.PUBLIC);
+        assertThat(tokens.refreshTokenExpiresAt()).isEqualTo(NOW.plus(Duration.ofHours(1)));
+    }
+
+    @Test
+    @DisplayName("Given a session that names no device of the donor, when it continues after a credential change, then the new device lasts only for this browser session")
+    void should_continue_as_a_browser_session_when_continued_given_no_device_of_the_donor() {
+        when(accessTokens.issue(eq(DONOR), eq(Set.of(Role.DONOR)), any(DeviceId.class), eq(NOW))).thenReturn(new IssuedAccessToken("access", NOW.plus(Duration.ofMinutes(15))));
+
+        IssuedTokens tokens = service.continueOn(donor(), false, new RequestingDevice(Optional.empty(), DeviceDescription.UNKNOWN));
+
+        assertThat(tokens.session()).isEqualTo(SessionKind.BROWSER);
+        assertThat(tokens.refreshTokenExpiresAt()).isEqualTo(NOW.plus(Duration.ofHours(12)));
+    }
+
+    @Test
+    @DisplayName("Given a public-computer session past its 12 hours, when it continues after a credential change, then a new public-computer device signs in instead of storing a token that has already expired")
+    void should_sign_in_a_new_public_device_when_continued_given_the_public_session_past_its_twelve_hours() {
+        when(devices.findById(DEVICE)).thenReturn(Optional.of(deviceOf(SessionKind.PUBLIC, NOW.minus(Duration.ofHours(12)).minus(Duration.ofMinutes(5)))));
+        when(accessTokens.issue(eq(DONOR), eq(Set.of(Role.DONOR)), any(DeviceId.class), eq(NOW))).thenReturn(new IssuedAccessToken("access", NOW.plus(Duration.ofMinutes(15))));
+
+        IssuedTokens tokens = service.continueOn(donor(), false, new RequestingDevice(Optional.of(DEVICE), DeviceDescription.UNKNOWN));
+
+        ArgumentCaptor<DonorDevice> device = ArgumentCaptor.forClass(DonorDevice.class);
+        verify(devices).save(device.capture());
+        assertThat(device.getValue().id()).isNotEqualTo(DEVICE);
+        assertThat(tokens.session()).isEqualTo(SessionKind.PUBLIC);
+        assertThat(tokens.refreshTokenExpiresAt()).isEqualTo(NOW.plus(Duration.ofHours(1)));
+    }
+
+    @Test
     @DisplayName("Given an app device that changed a credential, when its session continues, then the new token keeps the app's kind and length")
     void should_keep_kind_when_continued_given_app_device() {
         when(devices.findById(DEVICE)).thenReturn(Optional.of(deviceOf(SessionKind.APP, NOW.minus(Duration.ofDays(2)))));

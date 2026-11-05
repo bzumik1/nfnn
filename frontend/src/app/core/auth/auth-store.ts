@@ -111,7 +111,7 @@ export class AuthStore {
   login(
     email: string,
     password: string,
-    chosen: BrowserSessionKind = 'REMEMBERED',
+    chosen: BrowserSessionKind = 'BROWSER',
   ): Observable<Donor> {
     return this.api
       .login(email, password, sessionKindFor(this.jar, chosen))
@@ -122,7 +122,7 @@ export class AuthStore {
     challenge: string,
     code: string,
     password?: string,
-    chosen: BrowserSessionKind = 'REMEMBERED',
+    chosen: BrowserSessionKind = 'BROWSER',
   ): Observable<Donor> {
     return this.api
       .completeSecondFactor(challenge, code, sessionKindFor(this.jar, chosen))
@@ -136,7 +136,7 @@ export class AuthStore {
       );
   }
 
-  signInWithPasskey(chosen: BrowserSessionKind = 'REMEMBERED'): Observable<Donor> {
+  signInWithPasskey(chosen: BrowserSessionKind = 'BROWSER'): Observable<Donor> {
     const session = sessionKindFor(this.jar, chosen);
     return this.api.passkeySignInOptions().pipe(
       switchMap((options) =>

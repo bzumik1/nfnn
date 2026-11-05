@@ -25,6 +25,10 @@ Feature: A sign-in lasts as long as its kind of session
     And the app refreshes its session
     Then the response status is 200
     And the refresh cookie "refresh_token_app" lasts 400 days
+    When 400 days pass
+    And 1 minute passes
+    And the app refreshes its session
+    Then the response status is 401
 
   Scenario: A remembered sign-in lasts 14 days from its last use, to the minute
     When "Jana" signs in and is remembered
@@ -97,6 +101,17 @@ Feature: A sign-in lasts as long as its kind of session
     Then the response status is 204
     And the browser keeps the refresh cookies "refresh_token_app"
     When the app refreshes its session
+    Then the response status is 200
+
+  Scenario: The installed app signs out its own session and leaves the browser tab signed in
+    When "Jana" signs in in the installed app
+    And "Jana" signs in for this browser session
+    And the app signs out
+    Then the response status is 204
+    And the browser keeps the refresh cookies "refresh_token"
+    When the app presents the refresh token it signed out with
+    Then the response status is 401
+    When the browser refreshes its session
     Then the response status is 200
 
   Scenario: A refresh token presented in the other session's cookie is refused without ending any session

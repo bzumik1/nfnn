@@ -4,6 +4,7 @@ import cz.novanadeje.app.donors.application.DonorAuthenticationService;
 import cz.novanadeje.app.donors.application.DonorPasskeySignInService;
 import cz.novanadeje.app.donors.application.DonorRegistrationService;
 import cz.novanadeje.app.donors.application.SecondFactorRecoveryService;
+import cz.novanadeje.app.donors.domain.SessionKind;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.interfaces.rest.RateLimitExceededException;
 import cz.novanadeje.app.support.MutableClock;
@@ -15,7 +16,11 @@ import java.time.Instant;
 import java.time.ZoneId;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verifyNoInteractions;
 
 class DonorAuthControllerTest {
@@ -84,6 +89,18 @@ class DonorAuthControllerTest {
                 .isInstanceOf(RateLimitExceededException.class);
 
         verifyNoInteractions(registration, authentication);
+    }
+
+    @Test
+    @DisplayName("Given a passkey sign-in on a public computer, when it is answered, then the sign-in opens a public-computer session")
+    void should_open_a_public_session_when_signing_in_with_a_passkey_given_a_public_computer() {
+        when(passkeySignIn.signIn(any(), any(), any(), any())).thenThrow(new IllegalStateException("stop after the call"));
+        PasskeySignInRequest request = new PasskeySignInRequest("c".repeat(43),
+                new PasskeySignInRequest.Credential("a2V5", new PasskeySignInRequest.Response("Y2xpZW50", "YXV0aA", "c2ln", "dXNlcg")), SessionKind.PUBLIC);
+
+        assertThatThrownBy(() -> controller.signInWithPasskey(request, requestFrom(ADDRESS))).isInstanceOf(IllegalStateException.class);
+
+        verify(passkeySignIn).signIn(eq("c".repeat(43)), any(), any(), eq(SessionKind.PUBLIC));
     }
 
     private static RegisterDonorRequest registrationRequest() {

@@ -152,6 +152,8 @@ Nasazení i návrat k předchozí verzi se zkouší naostro na kopii serveru: u 
 
 Pokud novější verze měnila databázi (v jejím commitu přibyl soubor v `backend/src/main/resources/db/changelog/`), starší backend s novější databází fungovat nemusí. Pak po změně tagu obnov zálohu z doby před aktualizací (viz Obnova); dary a registrace mezi zálohou a obnovou se ztratí, platby z banky z posledních 90 dní se ale při dalším stažení z Fio doplní znovu. Proto před aktualizací, která mění databázi, udělej zálohu na požádání.
 
+Přihlášení po návratu na verzi starší než 2.10 (druhy přihlášení): nainstalovaná aplikace má od 2.10 vlastní cookie, kterou starší backend nezná, takže se v ní musí znovu přihlásit; přihlášení v prohlížeči (i „Cizí počítač“) běží dál, ale starší backend je při dalším obnovení prodlouží na 14 dní jako dřív a cookie už zůstane i po zavření prohlížeče. Po návratu zpátky na novou verzi platí zase délky podle druhu.
+
 Podpis na potvrzení: od kroku 1.16 (`68627d7`) se podpis nahrává u osoby v Lidech fondu (tabulka `donation_person_receipt_signature`). Verze starší než 1.16 čte jen dřívější jediný podpis z tabulky `donation_receipt_signature`, do které 1.16 už nic nezapisuje, takže po návratu na ni vystavuje nová potvrzení s podpisem nahraným ještě před 1.16 (nebo bez podpisu); nahrát ve správě nové verze sken místo SVG na tom nic nezmění. Co se návratem rozbije, jsou potvrzení vystavená novější verzí s podpisem SVG: verze starší než ta, která přinesla podpis SVG, je nenakreslí. Na takovou verzi se proto po vystavení prvního potvrzení s podpisem SVG nevracej.
 
 ## Logy

@@ -114,7 +114,7 @@ const EVERYDAY: readonly SectionPlan[] = [
   {
     id: 'prihlaseni',
     title: $localize`:@@admin.settings.section.signIn:Přihlášení`,
-    intro: $localize`:@@admin.settings.section.signIn.intro:Jak dlouho zůstane dárce nebo správce přihlášený v prohlížeči, když při přihlášení zaškrtne „Zapamatovat si mě“. Bez zaškrtnutí skončí zavřením prohlížeče, nejpozději po 12 hodinách bez používání; v nainstalované aplikaci vydrží 400 dní.`,
+    intro: $localize`:@@admin.settings.section.signIn.intro:Jak dlouho zůstane dárce nebo správce přihlášený v prohlížeči, když při přihlášení zaškrtne „Zapamatovat si mě“. Bez zaškrtnutí skončí zavřením prohlížeče, nejpozději po 12 hodinách bez používání; v nainstalované aplikaci vydrží 400 dní od posledního použití.`,
     names: ['SESSION_REMEMBER_DAYS'],
   },
 ];

@@ -58,14 +58,15 @@ public class DonorSessionService {
     @Transactional
     public IssuedTokens continueOn(Donor donor, boolean secondFactorVerified, RequestingDevice requesting) {
         Instant now = clock.instant();
-        DonorDevice device = requesting.session().flatMap(devices::findById)
-                .filter(found -> found.isActive() && found.belongsTo(donor.id()))
+        Optional<DonorDevice> own = requesting.session().flatMap(devices::findById).filter(found -> found.belongsTo(donor.id()));
+        DonorDevice device = own
+                .filter(found -> found.isActive() && properties.lengths().expiresAt(found.kind(), found.signedInAt(), now).isAfter(now))
                 .map(found -> {
                     found.recordUse(now);
                     devices.save(found);
                     return found;
                 })
-                .orElseGet(() -> newDevice(donor, requesting.description(), SessionKind.UNNAMED, now));
+                .orElseGet(() -> newDevice(donor, requesting.description(), own.map(DonorDevice::kind).orElse(SessionKind.BROWSER), now));
         return issue(device, secondFactorVerified, donor.sessionRoles(secondFactorVerified), now).tokens();
     }
 

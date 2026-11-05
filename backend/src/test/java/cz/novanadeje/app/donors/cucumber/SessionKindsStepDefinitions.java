@@ -38,6 +38,7 @@ public class SessionKindsStepDefinitions {
     private final MutableClock clock;
     private final Map<String, String> jar = new TreeMap<>();
     private String accessToken;
+    private String signedOutAppToken;
 
     public SessionKindsStepDefinitions(ApiClient api, ScenarioDonors donors, TotpCodes totpCodes, MutableClock clock) {
         this.api = api;
@@ -105,6 +106,20 @@ public class SessionKindsStepDefinitions {
         send(Optional.empty(), cookies());
         api.post(LOGOUT_PATH, Map.of());
         keep(api.lastResponse());
+    }
+
+    @When("the app signs out")
+    public void theAppSignsOut() {
+        signedOutAppToken = cookie(APP_COOKIE);
+        send(Optional.of("APP"), cookies());
+        api.post(LOGOUT_PATH, Map.of());
+        keep(api.lastResponse());
+    }
+
+    @When("the app presents the refresh token it signed out with")
+    public void theAppPresentsTheRefreshTokenItSignedOutWith() {
+        send(Optional.of("APP"), APP_COOKIE + "=" + signedOutAppToken);
+        api.post(REFRESH_PATH, Map.of());
     }
 
     @When("the browser presents the app's refresh token as its own")

@@ -59,7 +59,7 @@ test.describe('Given a visitor with the sign-in dialog open in a browser tab', (
     expect(kinds).toEqual(['REMEMBERED']);
   });
 
-  test('when they choose a public computer, then the hint says nothing stays, the sign-in asks for a public session and nothing is left in the browser storage', async ({
+  test('when they choose a public computer, then the hint says nothing stays, the sign-in asks for a public session and the session flag stays only in the session storage of the tab', async ({
     page,
   }) => {
     const kinds = await signInCapturingTheKind(page);

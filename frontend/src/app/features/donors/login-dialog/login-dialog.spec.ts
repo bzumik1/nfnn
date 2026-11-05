@@ -749,6 +749,24 @@ describe('Given the sign-in dialog', () => {
       expect(element('.session-check').textContent).toContain('Zapamatovat si mě');
     });
 
+    it('and signs in on a public computer with the second factor on, then the code step keeps the public computer', async () => {
+      await click('.session-switch');
+      await fillIn('#login-email', 'jana@example.cz');
+      await fillIn('#login-password', 'correct horse battery');
+      await submit('.login-form');
+      http
+        .expectOne('/api/donors/auth/login')
+        .flush(secondFactorRequired(), { status: 401, statusText: 'Unauthorized' });
+      await settle();
+      await fillIn('#login-code', '287082');
+      await submit('.code-form');
+      const request = http.expectOne('/api/donors/auth/login/second-factor');
+
+      expect(request.request.body.session).toBe('PUBLIC');
+      request.flush(authResponse('token-1'));
+      await settle();
+    });
+
     it('and signs in with a passkey on a public computer, then the passkey sign-in is for a public computer', async () => {
       await click('.session-switch');
       await click('.passkey-btn');

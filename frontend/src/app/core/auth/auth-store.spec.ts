@@ -76,7 +76,7 @@ describe('Given the auth store', () => {
     expect(request.request.body).toEqual({
       challenge: SAMPLE_CHALLENGE,
       credential: SAMPLE_ASSERTION,
-      session: 'REMEMBERED',
+      session: 'BROWSER',
     });
     request.flush(authResponse('token-3', sampleDonor({ roles: ['DONOR', 'ADMIN'] })));
 
@@ -105,7 +105,7 @@ describe('Given the auth store', () => {
     expect(request.request.body).toEqual({
       challenge: 'c'.repeat(43),
       code: '287082',
-      session: 'REMEMBERED',
+      session: 'BROWSER',
     });
     request.flush(
       authResponse(
@@ -142,7 +142,7 @@ describe('Given the auth store', () => {
     expect(request.request.body).toEqual({
       email: 'jana@example.cz',
       password: 'correct horse battery',
-      session: 'REMEMBERED',
+      session: 'BROWSER',
     });
     request.flush(authResponse('token-1'));
 
