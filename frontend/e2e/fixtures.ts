@@ -48,7 +48,20 @@ export async function routeApiDefaults(target: RouteTarget): Promise<readonly st
   return askedForServerPayment;
 }
 
-export const test = base.extend<{ offlineApi: void }>({
+export interface CspViolation {
+  directive: string;
+  blocked: string;
+  page: string;
+}
+
+export const test = base.extend<{ offlineApi: void; cspViolations: CspViolation[] }>({
+  cspViolations: [
+    async ({ context }, use) => {
+      const violations: CspViolation[] = [];
+      await use(violations);
+    },
+    { auto: true },
+  ],
   offlineApi: [
     async ({ page }, use) => {
       const askedForServerPayment = await routeApiDefaults(page);
