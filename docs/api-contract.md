@@ -1151,7 +1151,7 @@ Every endpoint: 401 without a token, 403 `auth/forbidden` for a donor without th
 
 #### Donor accounts (`/api/admin/donations/donors/{donorId}/...`)
 
-`donations/interfaces/rest/AdminDonorAccountsController` → `application/admin/AdminDonorAccountsService`. `GET /api/admin/donations/donors/{donorId}` (read-only) answers the donation side of the donor card: the `donor_record` (404 `donations/donor-not-found` when the donor never registered an account, so the card says so), `bankAccounts` as `GET /api/donations/me/bank-accounts` lists them for the donor (`DonorBankAccountsService.listBankAccounts`, the same items with `donationCount`, `totalAmountMinor`, `lastDonationOn`, `shared`, `pairingExcluded`), `donations` as `GET /api/donations/me` lists them (`DonorDonationsService.listDonations`, every donation, `purposeText` localized by `Accept-Language`) and `receipts`, every row of `issued_receipt` of the donor newest issue first (`DonationReceiptRepository.findByDonorNewestFirst`), superseded and withdrawn ones included (`withdrawnAt` and `withdrawalReason` `DONATIONS_CHANGED` for one an unpairing withdrew, slice 1.26, so the card says "zrušeno, dary se změnily"):
+`donations/interfaces/rest/AdminDonorAccountsController` → `application/admin/AdminDonorAccountsService`. `GET /api/admin/donations/donors/{donorId}` (read-only) answers the donation side of the donor card: the `donor_record` (404 `donations/donor-not-found` when the donor never registered an account, so the card says so), `bankAccounts` as `GET /api/donations/me/bank-accounts` lists them for the donor (`DonorBankAccountsService.listBankAccounts`, the same items with `donationCount`, `totalAmountMinor`, `lastDonationOn`, `shared`, `pairingExcluded`), `donations` as `GET /api/donations/me` lists them (`DonorDonationsService.listDonations`, every donation, `purposeText` localized by `Accept-Language`) and `receipts`, every row of `issued_receipt` of the donor newest issue first (`DonationReceiptRepository.findByDonorNewestFirst`), superseded and withdrawn ones included (`withdrawnAt` and `withdrawalReason` `DONATIONS_CHANGED` for one an unpairing withdrew, slice 1.26, so the card says "zrušeno, dary se změnily"), each with the `keyId` of the key its verification QR is signed with (the frozen receipt's `verification.keyId`), so the card warns at a receipt whose key `GET /api/donations/receipt-keys` lists as `revoked` (Jakub 2026-11-05):
 
 ```json
 { "donor": { "donorId": "01a1…", "name": "Petr Svoboda", "type": "PERSON", "variableSymbol": "7310945528", "companyIdentifier": null,
@@ -1161,7 +1161,7 @@ Every endpoint: 401 without a token, 403 `auth/forbidden` for a donor without th
   "donations": { "items": [ Donation ], "totalAmountMinor": 80000, "currency": "CZK", "count": 2 },
   "receipts": [{ "id": "019a…", "number": "2026-000001", "kind": "SINGLE", "donationId": "0192…", "donationReceivedOn": "2026-10-10",
                  "year": null, "issuedOn": "2026-10-17", "issuedAt": "2026-10-17T09:00:00Z", "locale": "cs", "active": true,
-                 "withdrawnAt": null, "withdrawalReason": null }],
+                 "withdrawnAt": null, "withdrawalReason": null, "keyId": "21fe31df" }],
   "yearlyReceiptsAvailableThrough": 2026, "receiptsAvailableFrom": 2026 }
 ```
 
