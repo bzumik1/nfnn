@@ -3133,25 +3133,18 @@ describe('Given a signed-in donor in the donor area', () => {
       copy.finish('stored');
     });
 
-    it('then a copy still empty is waited for and its first sync is shown', async () => {
+    it('then while a copy is still empty, the gifts come from the server and its first sync starts', async () => {
       await open('/darce/dary');
 
-      http.expectNone('/api/donations/me/summary');
       expect(copy.sync).toHaveBeenCalledTimes(1);
+      await respond(twoYearSummary(), twoYearDonations());
+      expect(rows()).toBe(twoYearDonations().items.length);
+
       copy.finish('stored', copyViewOf(twoYearSummary(), twoYearDonations()));
       await settle();
 
       expect(rows()).toBe(twoYearDonations().items.length);
-    });
-
-    it('then a first sync that fails with nothing in the copy falls back to the server', async () => {
-      await open('/darce/dary');
-      copy.finish('failed');
-      await settle();
-
-      await respond(twoYearSummary(), twoYearDonations());
-
-      expect(rows()).toBe(twoYearDonations().items.length);
+      http.expectNone('/api/donations/me');
     });
 
     it('then a copy that opens only after the server failed to answer is shown', async () => {

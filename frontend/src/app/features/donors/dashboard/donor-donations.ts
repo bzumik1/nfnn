@@ -359,7 +359,11 @@ export class DonorDonations {
 
   private fromCopy(copy: DonorCopy, request: number): Observable<readonly DonationItem[] | null> {
     const held = copy.view();
-    const shownAtOnce = held !== null && this.state() !== 'ready';
+    if (held === null) {
+      void copy.sync();
+      return this.fromServer(request);
+    }
+    const shownAtOnce = this.state() !== 'ready';
     if (shownAtOnce) {
       this.showCopy(held);
     }

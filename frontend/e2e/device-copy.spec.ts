@@ -259,6 +259,7 @@ test.describe('Given a donor whose copy on this device holds her gifts and her y
           ...twoGifts.summary,
           count: 3,
           totalAmountMinor: 105000,
+          lastReceivedAt: '2026-04-02',
           byYear: [{ year: 2026, count: 2, totalAmountMinor: 80000 }, twoGifts.summary.byYear[1]],
         },
         { gifts: [newGift, ...twoGifts.list.items], receipts: [yearly] },
