@@ -639,7 +639,7 @@ class DonorSessionServiceTest {
         UUID successorId = UUID.randomUUID();
         RefreshToken legacy = legacyUsedWithin(secret, successorId);
         DonorDevice petrs = DonorDevice.reconstitute(DEVICE, DonorId.newId(NOW), DeviceDescription.UNKNOWN, SessionKind.REMEMBERED, NOW.minus(Duration.ofDays(2)),
-                NOW.minus(Duration.ofDays(1)), null, null);
+                NOW.minus(Duration.ofDays(1)), null, null, null, null);
         when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(legacy));
         when(refreshTokens.findById(successorId)).thenReturn(Optional.of(successorOnDevice(successorId)));
         when(devices.findById(DEVICE)).thenReturn(Optional.of(petrs));
@@ -697,8 +697,9 @@ class DonorSessionServiceTest {
     void should_issue_on_same_device_when_continued_given_active_own_device() {
         when(accessTokens.issue(DONOR, Set.of(Role.DONOR), DEVICE, NOW)).thenReturn(new IssuedAccessToken("access", NOW.plus(Duration.ofMinutes(15))));
 
-        service.continueOn(donor(), false, new RequestingDevice(Optional.of(DEVICE), DeviceDescription.UNKNOWN));
+        IssuedTokens tokens = service.continueOn(donor(), false, new RequestingDevice(Optional.of(DEVICE), DeviceDescription.UNKNOWN));
 
+        assertThat(tokens.deviceSecret()).isEmpty();
         ArgumentCaptor<DonorDevice> device = ArgumentCaptor.forClass(DonorDevice.class);
         verify(devices).save(device.capture());
         assertThat(device.getValue().id()).isEqualTo(DEVICE);
@@ -872,6 +873,7 @@ class DonorSessionServiceTest {
 
         IssuedTokens tokens = service.continueOn(donor(), false, new RequestingDevice(Optional.empty(), DeviceDescription.UNKNOWN));
 
+        assertThat(tokens.deviceSecret()).isEmpty();
         assertThat(tokens.session()).isEqualTo(SessionKind.BROWSER);
         assertThat(tokens.refreshTokenExpiresAt()).isEqualTo(NOW.plus(Duration.ofHours(12)));
     }
@@ -900,7 +902,7 @@ class DonorSessionServiceTest {
     }
 
     private static DonorDevice deviceOf(SessionKind kind, Instant signedInAt) {
-        return DonorDevice.reconstitute(DEVICE, DONOR, DeviceDescription.UNKNOWN, kind, signedInAt, signedInAt, null, null);
+        return DonorDevice.reconstitute(DEVICE, DONOR, DeviceDescription.UNKNOWN, kind, signedInAt, signedInAt, null, null, null, null);
     }
 
     private static RefreshToken rotated(RefreshTokenSecret secret, Instant usedAt, UUID successor, boolean secondFactorVerified) {
@@ -922,7 +924,7 @@ class DonorSessionServiceTest {
 
     private static DonorDevice signedInDevice() {
         return DonorDevice.reconstitute(DEVICE, DONOR, DeviceDescription.UNKNOWN, SessionKind.REMEMBERED, NOW.minus(Duration.ofDays(2)), NOW.minus(Duration.ofDays(1)),
-                null, null);
+                null, null, null, null);
     }
 
     private static Donor administrator() {

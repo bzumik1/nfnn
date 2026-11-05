@@ -45,15 +45,9 @@ public final class DonorDevice {
     }
 
     public static DonorDevice reconstitute(DeviceId id, DonorId donorId, DeviceDescription description, SessionKind kind, Instant signedInAt,
-                                           Instant lastUsedAt, Instant endedAt, DeviceSignOutReason endReason) {
-        return new DonorDevice(id, donorId, description, kind, signedInAt, lastUsedAt, endedAt, endReason, null, null);
-    }
-
-    public static DonorDevice reconstitute(DeviceId id, DonorId donorId, DeviceDescription description, SessionKind kind, Instant signedInAt,
-                                           Instant lastUsedAt, Instant endedAt, DeviceSignOutReason endReason, Optional<String> statusSecretHash,
-                                           Optional<DeviceWipe> wipe) {
-        return new DonorDevice(id, donorId, description, kind, signedInAt, lastUsedAt, endedAt, endReason, statusSecretHash.orElse(null),
-                wipe.orElse(null));
+                                           Instant lastUsedAt, Instant endedAt, DeviceSignOutReason endReason, String statusSecretHash,
+                                           DeviceWipe wipe) {
+        return new DonorDevice(id, donorId, description, kind, signedInAt, lastUsedAt, endedAt, endReason, statusSecretHash, wipe);
     }
 
     public DeviceStatus status() {

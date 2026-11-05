@@ -268,7 +268,7 @@ describe('Given the device vault that asks the server how its sign-ins stand', (
     expect((await storedEntries())[0].deviceSecret).toBeUndefined();
   });
 
-  it('when Jana signs in on a public computer, then nothing is asked while that session lasts', async () => {
+  it('when Petr signs in on a public computer after Jana, then nothing is asked while that session lasts', async () => {
     await vault.signedIn(JANA, { kind: 'password', password: PASSWORD }, false, IPHONE);
     await vault.signedOut(JANA);
     source.mockClear();
@@ -291,5 +291,164 @@ describe('Given the device vault that asks the server how its sign-ins stand', (
     expect(
       entries.map((entry) => [entry.deviceSecret, entry.wraps.map((wrap) => wrap.kind)]),
     ).toEqual([[LATER, ['password']]]);
+  });
+
+  it('when Jana signs in again while the answer about her earlier sign-in is on its way, then the new sign-in wins and nothing is deleted', async () => {
+    await vault.signedIn(JANA, { kind: 'password', password: PASSWORD }, false, IPHONE);
+    let release: (answer: DeviceStatusResponse) => void = () => undefined;
+    source.mockImplementationOnce(() => new Promise((resolve) => (release = resolve)));
+    const signedOut = vault.signedOut(JANA);
+    await vi.waitFor(() => expect(source).toHaveBeenCalledTimes(1));
+
+    await vault.signedIn(JANA, { kind: 'password', password: PASSWORD }, false, LATER);
+    release({ status: 'wipe-all', administrator: false });
+    await signedOut;
+
+    expect(vault.opened()).not.toBeNull();
+    expect((await storedEntries()).map((entry) => entry.deviceSecret)).toEqual([LATER]);
+    expect(notice.shown()).toBe(false);
+  });
+
+  describe('when Jana and Petr both keep copies, each with an administration copy, and a copy of no account is planted', () => {
+    beforeEach(async () => {
+      await vault.signedIn(PETR, { kind: 'password', password: 'Petrovo heslo' }, false, PETRS);
+      await vault.signedOut(PETR);
+      const petrs = (await storedEntries())[0];
+      await withStorage((storage) =>
+        storage.write({
+          putEntries: [
+            {
+              copyId: 'petrs-administration-copy',
+              kind: 'administration',
+              lookupTag: 'petrs-administration-lookup',
+              userHandleTag: petrs.userHandleTag,
+              wraps: [],
+            },
+            {
+              copyId: 'copy-of-no-account',
+              kind: 'administration',
+              lookupTag: 'no-account-lookup',
+              userHandleTag: null,
+              wraps: [],
+            },
+          ],
+        }),
+      );
+      source.mockClear();
+      await vault.signedIn(JANA, { kind: 'password', password: PASSWORD }, false, IPHONE);
+      await plantAdministrationCopyOf(
+        (await storedEntries()).find((entry) => entry.deviceSecret === IPHONE)!,
+      );
+      answer(PETRS, 'signed-out', true);
+    });
+
+    it("then deleting Jana's administration copy leaves Petr's copies and the copy of no account", async () => {
+      answer(IPHONE, 'wipe-admin');
+
+      await vault.signedOut(JANA);
+
+      expect((await storedEntries()).map((entry) => entry.copyId).sort()).toEqual(
+        [
+          'copy-of-no-account',
+          'petrs-administration-copy',
+          (await storedEntries()).find((entry) => entry.deviceSecret === IPHONE)!.copyId,
+          (await storedEntries()).find((entry) => entry.deviceSecret === PETRS)!.copyId,
+        ].sort(),
+      );
+    });
+
+    it("then deleting everything of Jana leaves Petr's copies and the copy of no account", async () => {
+      answer(IPHONE, 'wipe-all');
+
+      await vault.signedOut(JANA);
+
+      expect((await storedEntries()).map((entry) => entry.copyId).sort()).toEqual(
+        [
+          'copy-of-no-account',
+          'petrs-administration-copy',
+          (await storedEntries()).find((entry) => entry.deviceSecret === PETRS)!.copyId,
+        ].sort(),
+      );
+    });
+  });
+
+  it('when another copy of her account holds the secret of a later sign-in, then an order about the earlier one leaves it', async () => {
+    await vault.signedIn(JANA, { kind: 'password', password: PASSWORD }, false, IPHONE);
+    const janas = (await storedEntries())[0];
+    await withStorage((storage) =>
+      storage.write({
+        putEntries: [
+          {
+            copyId: 'administration-copy-of-a-later-sign-in',
+            kind: 'administration',
+            lookupTag: 'administration-lookup',
+            userHandleTag: janas.userHandleTag,
+            wraps: [],
+            deviceSecret: LATER,
+          },
+        ],
+      }),
+    );
+    answer(IPHONE, 'wipe-all');
+    answer(LATER, 'signed-in', true);
+
+    await vault.signedOut(JANA);
+
+    expect((await storedEntries()).map((entry) => entry.copyId)).toEqual([
+      'administration-copy-of-a-later-sign-in',
+    ]);
+  });
+
+  it('when the copy open in this tab is told to delete itself at a restore, then it closes, and no signed-out notice is shown while the session lasts', async () => {
+    await vault.signedIn(JANA, { kind: 'password', password: PASSWORD }, false, IPHONE);
+    const tab = anotherTab();
+    answer(IPHONE, 'wipe-all');
+
+    await tab.restored(JANA);
+
+    expect(tab.opened()).toBeNull();
+    expect(await databaseNames()).not.toContain(DEVICE_DATABASE);
+    expect(notice.shown()).toBe(false);
+  });
+
+  it('when a locked copy is told to delete itself, then it is gone and nothing is locked any more', async () => {
+    await vault.signedIn(JANA, { kind: 'password', password: PASSWORD }, false, IPHONE);
+    await vault.signedOut(JANA);
+    await vault.signedIn(JANA, { kind: 'none' }, false, LATER);
+    expect(vault.locked()).toBe(true);
+    answer(LATER, 'wipe-all');
+
+    await vault.sessionLost();
+
+    expect(vault.locked()).toBe(false);
+    expect(await databaseNames()).not.toContain(DEVICE_DATABASE);
+  });
+
+  it('when the answer about one secret cannot be read, then the next secret is still asked', async () => {
+    await vault.signedIn(JANA, { kind: 'password', password: PASSWORD }, false, IPHONE);
+    await vault.signedOut(JANA);
+    await vault.signedIn(PETR, { kind: 'password', password: 'Petrovo heslo' }, false, PETRS);
+    source.mockClear();
+    source.mockRejectedValueOnce(new Error('offline'));
+    answer(PETRS, 'wipe-all');
+    answer(IPHONE, 'wipe-all');
+
+    await vault.signedOut(PETR);
+
+    expect(source).toHaveBeenCalledTimes(2);
+    expect(await storedEntries()).toHaveLength(1);
+  });
+
+  it('when an answer outside the closed list reaches the vault, then nothing is deleted', async () => {
+    await vault.signedIn(JANA, { kind: 'password', password: PASSWORD }, false, IPHONE);
+    await plantAdministrationCopyOf((await storedEntries())[0]);
+    answers.set(IPHONE, {
+      status: 'erase',
+      administrator: 'no',
+    } as unknown as DeviceStatusResponse);
+
+    await vault.signedOut(JANA);
+
+    expect(await storedEntries()).toHaveLength(2);
   });
 });

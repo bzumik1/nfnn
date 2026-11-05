@@ -83,7 +83,6 @@ class DonorDeviceJpaEntity {
 
     DonorDevice toDomain() {
         return DonorDevice.reconstitute(new DeviceId(id), new DonorId(donorId), new DeviceDescription(platform, browser),
-                sessionKind == null ? SessionKind.UNNAMED : sessionKind, signedInAt, lastUsedAt, endedAt, endReason, Optional.ofNullable(statusSecretHash),
-                Optional.ofNullable(wipe));
+                sessionKind == null ? SessionKind.UNNAMED : sessionKind, signedInAt, lastUsedAt, endedAt, endReason, statusSecretHash, wipe);
     }
 }

@@ -142,6 +142,7 @@ export class DeviceVault implements SessionDevice {
   private readonly openedAdministration = signal<OpenedCopy | null>(null);
   private administrationStorage: DeviceStorage | null = null;
   private administrationChannel: CopyChannel | null = null;
+  private lockedCopyId: string | null = null;
   private sharedStorage: Promise<DeviceStorage> | null = null;
   private memoryOnly: MemoryDeviceStorage | null = null;
   private activeStorage: DeviceStorage | null = null;
@@ -209,7 +210,7 @@ export class DeviceVault implements SessionDevice {
       this.withMemoryFallback(() =>
         storeNothing ? this.openInMemoryAtRestore(account) : this.openAtRestore(account),
       ),
-    ).then(() => this.checkStatus());
+    ).then(() => this.checkStatus(false));
   }
 
   signedOut(account: DeviceAccount): Promise<void> {
@@ -218,7 +219,7 @@ export class DeviceVault implements SessionDevice {
       const storage = await this.storageOf(account);
       this.closeOpen();
       await this.endSessions(storage);
-    }).then(() => this.checkStatus());
+    }).then(() => this.checkStatus(true));
   }
 
   sessionLost(): Promise<void> {
@@ -226,7 +227,7 @@ export class DeviceVault implements SessionDevice {
     return this.run(async () => {
       this.closeOpen();
       await this.endSessions(await this.presentStorage().catch(() => null));
-    }).then(() => this.checkStatus());
+    }).then(() => this.checkStatus(true));
   }
 
   signedOutElsewhere(): void {
@@ -499,17 +500,17 @@ export class DeviceVault implements SessionDevice {
     return locks.request(`${COPY_LOCK_PREFIX}${store.copyId}`, work) as Promise<T>;
   }
 
-  private async checkStatus(): Promise<void> {
-    try {
-      const secrets = await this.run(() => this.secretsHeld());
-      for (const deviceSecret of secrets) {
+  private async checkStatus(signedOut: boolean): Promise<void> {
+    const secrets = await this.run(() => this.secretsHeld()).catch(() => []);
+    for (const deviceSecret of secrets) {
+      try {
         const answer = await this.statusSource(deviceSecret);
         if (answer !== null) {
-          await this.run(() => this.obey(deviceSecret, answer));
+          await this.run(() => this.obey(deviceSecret, answer, signedOut));
         }
+      } catch {
+        continue;
       }
-    } catch {
-      return;
     }
   }
 
@@ -522,7 +523,11 @@ export class DeviceVault implements SessionDevice {
     return [...new Set(secrets.filter((held): held is string => held !== undefined))];
   }
 
-  private async obey(deviceSecret: string, answer: DeviceStatusResponse): Promise<void> {
+  private async obey(
+    deviceSecret: string,
+    answer: DeviceStatusResponse,
+    signedOut: boolean,
+  ): Promise<void> {
     const wipe = wipeOf(answer);
     const storage = wipe === null ? null : await this.statusStorage();
     if (wipe === null || storage === null) {
@@ -534,7 +539,9 @@ export class DeviceVault implements SessionDevice {
     const wiped = entries.filter(
       (entry) =>
         (holders.includes(entry) ||
-          (entry.userHandleTag !== null && accounts.has(entry.userHandleTag))) &&
+          (entry.userHandleTag !== null &&
+            accounts.has(entry.userHandleTag) &&
+            entry.deviceSecret === undefined)) &&
         (wipe === 'all' || entry.kind === 'administration'),
     );
     if (wiped.length === 0) {
@@ -546,14 +553,14 @@ export class DeviceVault implements SessionDevice {
       ...(remaining === 0 ? { deviceSalt: null } : {}),
     });
     const opened = this.openedCopy()?.store.copyId;
-    if (wiped.some((entry) => entry.copyId === opened)) {
+    if (wiped.some((entry) => entry.copyId === opened || entry.copyId === this.lockedCopyId)) {
       this.closeOpen();
     }
     for (const entry of wiped) {
       this.announce(entry.copyId, 'deleted');
     }
     await this.afterRemoval(storage);
-    if (wiped.some(isDonor)) {
+    if (signedOut && holders.some((entry) => isDonor(entry) && wiped.includes(entry))) {
       this.signedOutNotice.show('device-data-deleted');
     }
   }
@@ -586,7 +593,7 @@ export class DeviceVault implements SessionDevice {
       (entry !== null && opening === null && !refusedBy(entry.wraps, secret))
     ) {
       await this.committed(storage, heldAfterSessions(entries, entry!, deviceSecret));
-      this.lockedCopy.set(true);
+      this.lockCopy(entry!.copyId);
       return;
     }
     const others = entries.filter((candidate) => candidate.copyId !== entry?.copyId);
@@ -857,7 +864,7 @@ export class DeviceVault implements SessionDevice {
     }
     if (entry !== null) {
       await this.committed(storage, withoutSessions(entries));
-      this.lockedCopy.set(true);
+      this.lockCopy(entry.copyId);
       return;
     }
     if (entries.length === 0 && storage.kind === 'indexed-db' && hadStoredCopy()) {
@@ -1022,6 +1029,7 @@ export class DeviceVault implements SessionDevice {
     const opened = this.openedCopy();
     this.openedCopy.set(null);
     this.lockedCopy.set(false);
+    this.lockedCopyId = null;
     opened?.store.close();
     this.channel?.close();
     this.channel = null;
@@ -1031,6 +1039,11 @@ export class DeviceVault implements SessionDevice {
       this.currentMode.set(this.sharedStorage === null ? null : 'stored');
     }
     this.activeStorage = null;
+  }
+
+  private lockCopy(copyId: string): void {
+    this.lockedCopyId = copyId;
+    this.lockedCopy.set(true);
   }
 
   private async afterRemoval(storage: DeviceStorage): Promise<void> {
@@ -1228,7 +1241,9 @@ function wipeOf(answer: DeviceStatusResponse): 'all' | 'administration' | null {
       return 'administration';
     case 'signed-in':
     case 'signed-out':
-      return answer.administrator ? null : 'administration';
+      return answer.administrator === true ? null : 'administration';
+    default:
+      return null;
   }
 }
 

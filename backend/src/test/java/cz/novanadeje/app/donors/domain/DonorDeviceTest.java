@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
@@ -41,7 +42,7 @@ class DonorDeviceTest {
     @DisplayName("Given a time ending a device without its reason, when it is reconstituted, then it is refused")
     void should_refuse_when_reconstituted_given_end_without_reason() {
         assertThatIllegalArgumentException().isThrownBy(() -> DonorDevice.reconstitute(DeviceId.newId(NOW), JANA, IPHONE_SAFARI, SessionKind.REMEMBERED, NOW, NOW,
-                NOW, null));
+                NOW, null, null, null));
     }
 
     @Nested
@@ -127,9 +128,9 @@ class DonorDeviceTest {
     @DisplayName("Given devices told to delete the administration's copy or everything, when their status is read, then the order is the status")
     void should_name_the_order_when_status_read_given_wipe() {
         DonorDevice administration = DonorDevice.reconstitute(DeviceId.newId(NOW), JANA, IPHONE_SAFARI, SessionKind.APP, NOW, NOW, NOW,
-                DeviceSignOutReason.ADMINISTRATION_CHANGED, java.util.Optional.of("a".repeat(64)), java.util.Optional.of(DeviceWipe.ADMINISTRATION));
+                DeviceSignOutReason.ADMINISTRATION_CHANGED, "a".repeat(64), DeviceWipe.ADMINISTRATION);
         DonorDevice all = DonorDevice.reconstitute(DeviceId.newId(NOW), JANA, IPHONE_SAFARI, SessionKind.APP, NOW, NOW, NOW,
-                DeviceSignOutReason.REMOTE_SIGN_OUT, java.util.Optional.of("b".repeat(64)), java.util.Optional.of(DeviceWipe.ALL));
+                DeviceSignOutReason.REMOTE_SIGN_OUT, "b".repeat(64), DeviceWipe.ALL);
 
         assertThat(administration.status()).isEqualTo(DeviceStatus.WIPE_ADMINISTRATION);
         assertThat(all.status()).isEqualTo(DeviceStatus.WIPE_ALL);
@@ -140,7 +141,7 @@ class DonorDeviceTest {
     void should_wipe_only_for_remote_sign_out_and_erasure_when_asked_given_each_reason() {
         for (DeviceSignOutReason reason : DeviceSignOutReason.values()) {
             boolean wipes = reason == DeviceSignOutReason.REMOTE_SIGN_OUT || reason == DeviceSignOutReason.ERASED;
-            assertThat(reason.wipe()).as(reason.name()).isEqualTo(wipes ? java.util.Optional.of(DeviceWipe.ALL) : java.util.Optional.empty());
+            assertThat(reason.wipe()).as(reason.name()).isEqualTo(wipes ? Optional.of(DeviceWipe.ALL) : Optional.empty());
         }
     }
 

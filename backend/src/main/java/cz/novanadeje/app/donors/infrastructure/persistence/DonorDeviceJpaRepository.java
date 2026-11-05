@@ -36,13 +36,13 @@ interface DonorDeviceJpaRepository extends JpaRepository<DonorDeviceJpaEntity, U
     Optional<DonorDeviceJpaEntity> findByStatusSecretHash(String statusSecretHash);
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
-    @Query("update DonorDeviceJpaEntity d set d.wipe = :wipe where d.id = :id and (d.wipe is null or d.wipe = :wipe"
-            + " or :wipe = cz.novanadeje.app.donors.domain.DeviceWipe.ALL)")
+    @Query("update DonorDeviceJpaEntity d set d.wipe = :wipe where d.id = :id"
+            + " and (d.wipe is null or d.wipe <> cz.novanadeje.app.donors.domain.DeviceWipe.ALL)")
     int directWipe(@Param("id") UUID id, @Param("wipe") DeviceWipe wipe);
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
-    @Query("update DonorDeviceJpaEntity d set d.wipe = :wipe where d.donorId = :donorId and (d.wipe is null or d.wipe = :wipe"
-            + " or :wipe = cz.novanadeje.app.donors.domain.DeviceWipe.ALL)")
+    @Query("update DonorDeviceJpaEntity d set d.wipe = :wipe where d.donorId = :donorId"
+            + " and (d.wipe is null or d.wipe <> cz.novanadeje.app.donors.domain.DeviceWipe.ALL)")
     int directWipeOfDonor(@Param("donorId") UUID donorId, @Param("wipe") DeviceWipe wipe);
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)

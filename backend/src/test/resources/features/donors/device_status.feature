@@ -179,12 +179,21 @@ Feature: A device asks the status of its sign-in and deletes its stored copy onl
     And the problem type ends with "validation"
     And the problem lists an error for field "deviceSecret"
 
-  Scenario: Asking is limited per client address
+  Scenario: The sixty-first question within 15 minutes from one /64 network is refused until the window ends, another network is answered
     Given "Jana" signs in on the "iPhone"
-    When the "iPhone" asked the status of its sign-in 60 times
-    When the "iPhone" asks the status of its sign-in
+    And the following requests come from the client address "2001:db8:42:7::10"
+    And the "iPhone" asked the status of its sign-in 60 times
+    When the following requests come from the client address "2001:db8:42:7::99"
+    And the "iPhone" asks the status of its sign-in
     Then the response status is 429
     And the problem type ends with "donors/rate-limited"
-    When the following requests come from another client address
+    When the following requests come from the client address "2001:db8:42:8::10"
+    And the "iPhone" asks the status of its sign-in
+    Then the response status is 200
+    When 14 minutes pass
+    And the following requests come from the client address "2001:db8:42:7::10"
+    And the "iPhone" asks the status of its sign-in
+    Then the response status is 429
+    When 1 minutes pass
     And the "iPhone" asks the status of its sign-in
     Then the response status is 200

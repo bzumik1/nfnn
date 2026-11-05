@@ -46,6 +46,24 @@ describe('Given the status source of the device copies', () => {
     expect(await asked).toBeNull();
   });
 
+  for (const status of [0, 403, 404, 500]) {
+    it(`when the request fails with ${status}, then it gives no answer`, async () => {
+      const asked = TestBed.inject(DEVICE_STATUS_SOURCE)(SECRET);
+
+      http.expectOne('/api/donors/devices/status').flush(null, { status, statusText: 'Refused' });
+
+      expect(await asked).toBeNull();
+    });
+  }
+
+  it('when the server answers 200 with a word outside the closed list, then it gives no answer', async () => {
+    const asked = TestBed.inject(DEVICE_STATUS_SOURCE)(SECRET);
+
+    http.expectOne('/api/donors/devices/status').flush({ status: 'erase', administrator: false });
+
+    expect(await asked).toBeNull();
+  });
+
   it('when the server does not answer in time, then it gives no answer', async () => {
     vi.useFakeTimers();
     const asked = TestBed.inject(DEVICE_STATUS_SOURCE)(SECRET);

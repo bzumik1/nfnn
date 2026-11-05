@@ -55,7 +55,7 @@ class DeviceStatusServiceTest {
 
     private static DonorDevice device(Instant endedAt, DeviceSignOutReason reason, DeviceWipe wipe) {
         return DonorDevice.reconstitute(DeviceId.newId(NOW), JANA, new DeviceDescription(DevicePlatform.IPHONE, DeviceBrowser.SAFARI), SessionKind.APP, NOW,
-                NOW, endedAt, reason, Optional.of(SECRET.hash()), Optional.ofNullable(wipe));
+                NOW, endedAt, reason, SECRET.hash(), wipe);
     }
 
     private void accountIs(boolean administrator) {
@@ -93,6 +93,15 @@ class DeviceStatusServiceTest {
         accountIs(false);
 
         assertThat(service().statusOf(SECRET)).isEqualTo(new DeviceStatusView(DeviceStatus.SIGNED_OUT, false));
+    }
+
+    @Test
+    @DisplayName("Given a device of an administrator ended by a replay, when its status is asked, then it is signed out for an administrator, so the administration copy stays")
+    void should_be_signed_out_for_administrator_when_asked_given_device_of_administrator_ended_by_replay() {
+        when(devices.findByStatusSecretHash(SECRET.hash())).thenReturn(Optional.of(device(NOW, DeviceSignOutReason.REPLAY, null)));
+        accountIs(true);
+
+        assertThat(service().statusOf(SECRET)).isEqualTo(new DeviceStatusView(DeviceStatus.SIGNED_OUT, true));
     }
 
     @Test
