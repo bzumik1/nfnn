@@ -22,6 +22,7 @@ export function project(overrides: Partial<ProjectResponse> = {}): ProjectRespon
     live: true,
     createdAt: '2026-10-19T09:00:00Z',
     updatedAt: '2026-10-20T07:30:00Z',
+    version: '8e2d6b0f13a7c594',
     ...overrides,
   };
 }

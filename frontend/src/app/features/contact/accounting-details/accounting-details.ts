@@ -25,4 +25,8 @@ export class AccountingDetails {
     const account = this.account();
     return account ? formatIban(account.iban) : '';
   });
+
+  constructor() {
+    this.paymentDetails.load();
+  }
 }

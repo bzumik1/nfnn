@@ -194,6 +194,11 @@ export function collectFindings(limits: { minimumTarget: number; stackedShare: n
     .map((toggle) => document.getElementById(toggle.getAttribute('aria-controls') ?? ''))
     .filter((panel): panel is HTMLElement => panel !== null);
   const atTop = window.scrollY === 0;
+  const atEnd = window.scrollY + viewportHeight >= document.documentElement.scrollHeight - 1;
+  const scrolledUnder = (chrome: Element): boolean => {
+    const box = chrome.getBoundingClientRect();
+    return box.top + box.height / 2 > viewportHeight / 2 ? !atEnd : !atTop;
+  };
   const covered = onScreen
     .map((element) => ({ element, hit: coveredAtCentre(element) }))
     .filter(({ element, hit }) => {
@@ -204,7 +209,8 @@ export function collectFindings(limits: { minimumTarget: number; stackedShare: n
         return false;
       }
       const chrome = layer(hit);
-      const scrolledUnderChrome = chrome !== null && chrome !== layer(element) && !atTop;
+      const scrolledUnderChrome =
+        chrome !== null && chrome !== layer(element) && scrolledUnder(chrome);
       return !scrolledUnderChrome;
     })
     .map(({ element, hit }) => `${describe(element)} under ${describe(hit!)}`);
@@ -212,7 +218,7 @@ export function collectFindings(limits: { minimumTarget: number; stackedShare: n
   const focused = document.activeElement;
   const focusCovered =
     focused &&
-    focused !== document.body &&
+    focused.matches(controlSelector) &&
     shown(focused) &&
     inViewport(focused.getBoundingClientRect())
       ? [coveredAtCentre(focused)]
@@ -251,7 +257,12 @@ export function collectFindings(limits: { minimumTarget: number; stackedShare: n
   const tooClose = (element: Element): boolean => {
     const own = centre(element.getBoundingClientRect());
     return targets.some((other) => {
-      if (other === element || other.contains(element) || element.contains(other)) {
+      if (
+        other === element ||
+        other.contains(element) ||
+        element.contains(other) ||
+        layer(other) !== layer(element)
+      ) {
         return false;
       }
       const box = other.getBoundingClientRect();

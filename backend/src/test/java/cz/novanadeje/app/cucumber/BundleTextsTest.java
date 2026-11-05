@@ -33,6 +33,16 @@ class BundleTextsTest {
     }
 
     @Test
+    @DisplayName("Given a changed-meanwhile refusal with the stored version and the current record, when the answer is checked, then the record's stored values pass while its title still must be a site text")
+    void should_pass_the_current_record_when_checked_given_a_changed_meanwhile_refusal() {
+        String changed = "\"type\":\"https://nfnn.cz/problems/content/changed-meanwhile\",\"status\":409,\"version\":\"0123456789abcdef\","
+                + "\"current\":{\"title\":\"Zahrada pro děti\"}";
+
+        assertThatCode(() -> check("{" + changed + ",\"title\":\"Mezitím se to změnilo\"}")).doesNotThrowAnyException();
+        assertThatThrownBy(() -> check("{" + changed + ",\"title\":\"nfnn-client-value\"}")).isInstanceOf(AssertionError.class);
+    }
+
+    @Test
     @DisplayName("Given a validator message that repeats the value it checked, when the answer is checked, then it fails")
     void should_fail_when_checked_given_validator_message_with_validated_value() {
         assertThatThrownBy(() -> check(withFieldMessage("kontrolní číslice pro nfnn-client-value je neplatná, kontrolní součet Luhn Modulo 10 se nezdařil")))

@@ -9,9 +9,13 @@ import cz.novanadeje.app.content.domain.project.ProjectNotFound;
 import cz.novanadeje.app.content.domain.project.ProjectOrderRepository;
 import cz.novanadeje.app.content.domain.project.ProjectRepository;
 import cz.novanadeje.app.content.domain.project.ProjectContent;
+import cz.novanadeje.app.content.application.ContentVersions;
+import cz.novanadeje.app.content.application.Versioned;
+import cz.novanadeje.app.content.domain.ChangedMeanwhile;
 import cz.novanadeje.app.content.domain.FormerSlugs;
 import cz.novanadeje.app.content.domain.SlugTaken;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.shared.application.version.ExpectedVersion;
 import cz.novanadeje.app.shared.domain.FoundationZone;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,6 +29,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.IntStream;
 
 @Service
 @Transactional
@@ -42,31 +47,35 @@ public class ProjectAdminService {
     private final ProjectOrderRepository orders;
     private final MediaImageRepository media;
     private final FormerSlugs formerSlugs;
+    private final ContentVersions versions;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public ProjectAdminService(ProjectRepository projects, ProjectOrderRepository orders, MediaImageRepository media, FormerSlugs formerSlugs,
-                               ApplicationEventPublisher events, Clock clock) {
+                               ContentVersions versions, ApplicationEventPublisher events, Clock clock) {
         this.projects = projects;
         this.orders = orders;
         this.media = media;
         this.formerSlugs = formerSlugs;
+        this.versions = versions;
         this.events = events;
         this.clock = clock;
     }
 
     @Transactional(readOnly = true)
-    public List<ProjectView> list() {
+    public List<Versioned<ProjectView>> list() {
         LocalDate today = today(clock.instant());
-        return ProjectView.all(projects.findAllDraftsFirst(orders.current()), today, media);
+        List<Project> all = projects.findAllDraftsFirst(orders.current());
+        List<ProjectView> views = ProjectView.all(all, today, media);
+        return IntStream.range(0, all.size()).mapToObj(index -> new Versioned<>(views.get(index), versions.of(all.get(index)))).toList();
     }
 
     @Transactional(readOnly = true)
-    public ProjectView get(ProjectId id) {
-        return ProjectView.of(require(id), today(clock.instant()), media);
+    public Versioned<ProjectView> get(ProjectId id) {
+        return versioned(require(id), today(clock.instant()));
     }
 
-    public ProjectView create(UUID adminId, ProjectCommand command) {
+    public Versioned<ProjectView> create(UUID adminId, ProjectCommand command) {
         Instant now = clock.instant();
         ProjectId id = ProjectId.newId(now);
         ProjectContent content = checked(command.toContent(), id);
@@ -74,40 +83,42 @@ public class ProjectAdminService {
         projects.save(article);
         formerSlugs.forget(content.slug());
         audit(adminId, CREATE_ACTION, article, "Projekt " + id + " „" + content.slug() + "“ napsán", now);
-        return ProjectView.of(article, today(now), media);
+        return versioned(article, today(now));
     }
 
-    public ProjectView update(UUID adminId, ProjectId id, ProjectCommand command) {
+    public Versioned<ProjectView> update(UUID adminId, ProjectId id, ExpectedVersion expected, ProjectCommand command) {
+        Project article = requireUnchanged(id, expected);
         Instant now = clock.instant();
-        Project article = require(id);
         ProjectContent content = checked(command.toContent(), id);
         Project edited = article.edit(content, now);
         projects.save(edited);
         rememberFormerSlug(article, edited, now);
         dropUnusedImage(article.content().coverImage(), content.coverImage());
         audit(adminId, UPDATE_ACTION, edited, "Projekt " + id + " „" + content.slug() + "“ upraven", now);
-        return ProjectView.of(edited, today(now), media);
+        return versioned(edited, today(now));
     }
 
-    public ProjectView publish(UUID adminId, ProjectId id, LocalDate on) {
+    public Versioned<ProjectView> publish(UUID adminId, ProjectId id, LocalDate on, ExpectedVersion expected) {
+        Project stored = requireUnchanged(id, expected);
         Instant now = clock.instant();
-        Project published = require(id).publish(on, now);
+        Project published = stored.publish(on, now);
         projects.save(published);
         audit(adminId, PUBLISH_ACTION, published, "Projekt " + id + " „" + published.slug() + "“ zveřejněn od " + on, now);
-        return ProjectView.of(published, today(now), media);
+        return versioned(published, today(now));
     }
 
-    public ProjectView unpublish(UUID adminId, ProjectId id) {
+    public Versioned<ProjectView> unpublish(UUID adminId, ProjectId id, ExpectedVersion expected) {
+        Project stored = requireUnchanged(id, expected);
         Instant now = clock.instant();
-        Project draft = require(id).unpublish(now);
+        Project draft = stored.unpublish(now);
         projects.save(draft);
         audit(adminId, UNPUBLISH_ACTION, draft, "Projekt " + id + " „" + draft.slug() + "“ stažen z webu", now);
-        return ProjectView.of(draft, today(now), media);
+        return versioned(draft, today(now));
     }
 
-    public void delete(UUID adminId, ProjectId id) {
+    public void delete(UUID adminId, ProjectId id, ExpectedVersion expected) {
+        Project article = requireUnchanged(id, expected);
         Instant now = clock.instant();
-        Project article = require(id);
         projects.delete(id);
         dropUnusedImage(article.content().coverImage(), Optional.empty());
         audit(adminId, DELETE_ACTION, article, "Projekt " + id + " „" + article.slug() + "“ smazán", now);
@@ -132,6 +143,19 @@ public class ProjectAdminService {
 
     private void dropUnusedImage(Optional<MediaId> previous, Optional<MediaId> current) {
         previous.filter(image -> !current.equals(previous)).ifPresent(media::deleteIfUnused);
+    }
+
+    private Versioned<ProjectView> versioned(Project project, LocalDate today) {
+        return new Versioned<>(ProjectView.of(project, today, media), versions.of(project));
+    }
+
+    private Project requireUnchanged(ProjectId id, ExpectedVersion expected) {
+        Project current = projects.findByIdForUpdate(id).orElseThrow(() -> new ProjectNotFound(id));
+        String version = versions.of(current);
+        if (!expected.admits(version)) {
+            throw new ChangedMeanwhile(version, ContentVersions.StoredProject.of(current));
+        }
+        return current;
     }
 
     private Project require(ProjectId id) {

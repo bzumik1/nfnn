@@ -3,7 +3,14 @@ import { expect, NO_SERVER_PAYMENT, routeApiDefaults, testWithoutBrowser } from 
 import { checksFrom, collectFindings, type Findings, LIMITS } from './layout-checks';
 import type { SafariPose } from './poses';
 import { BLANK_PATH, ERRORS_GLOBAL, EVENTS_GLOBAL, RouteHost } from './route-host';
-import { type Browser, runStep, stepTitle, waitUntilSettled } from './run-step';
+import {
+  type Browser,
+  finishedAnimations,
+  runStep,
+  scrollToEnd,
+  stepTitle,
+  waitUntilSettled,
+} from './run-step';
 import { STEPS } from './steps';
 import { NEXT_FRAMES, WAIT_MS, WebDriver, webDriverUi } from './webdriver';
 
@@ -11,6 +18,8 @@ const START_TIMEOUT_MS = 600_000;
 const FONTS_READY =
   'const done = arguments[arguments.length - 1]; document.fonts.ready.then(() => done());';
 const COLLECT_FINDINGS = `return (${collectFindings.toString()})(arguments[0]);`;
+const ANIMATIONS_FINISHED = `const done = arguments[arguments.length - 1]; (${finishedAnimations.toString()})().then(() => done());`;
+const SCROLL_TO_END = `return (${scrollToEnd.toString()})();`;
 
 interface Safari {
   driver: WebDriver;
@@ -56,6 +65,14 @@ const test = testWithoutBrowser.extend<
           () => host.inFlight(),
         );
         await driver.executeAsync(FONTS_READY);
+        await driver.executeAsync(ANIMATIONS_FINISHED);
+      },
+      scrollToEnd: async () => {
+        const scrolled = await driver.execute<boolean>(SCROLL_TO_END);
+        if (scrolled) {
+          await driver.executeAsync(NEXT_FRAMES);
+        }
+        return scrolled;
       },
       checks: async () =>
         checksFrom(

@@ -42,7 +42,7 @@ public class AdministrationDeviceStepDefinitions {
 
     private static final Set<String> AREAS = Set.of("donations", "donors");
     private static final List<String> PAYMENT_FIELDS = List.of("id", "bankTransactionId", "bookedOn", "amountMinor", "currency", "variableSymbol",
-            "counterpartyAccount", "counterpartyName", "messageForRecipient", "importedAt", "unpairedByAdminAt", "accountVerification");
+            "counterpartyAccount", "counterpartyName", "messageForRecipient", "importedAt", "unpairedByAdminAt", "accountVerification", "version");
     private static final List<String> AUDIT_FIELDS = List.of("id", "adminId", "action", "subjectId", "performedAt", "client");
     private static final List<String> SYMBOL_CLAIM_FIELDS = List.of("id", "donorId", "variableSymbol", "answer", "answeredAt");
     private static final int MINIMUM_SECRET_LENGTH = 8;

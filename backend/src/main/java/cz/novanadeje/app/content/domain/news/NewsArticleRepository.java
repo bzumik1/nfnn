@@ -12,6 +12,8 @@ public interface NewsArticleRepository {
 
     Optional<NewsArticle> findById(NewsArticleId id);
 
+    Optional<NewsArticle> findByIdForUpdate(NewsArticleId id);
+
     Optional<NewsArticle> findBySlug(Slug slug);
 
     boolean isSlugTakenByAnother(Slug slug, NewsArticleId except);

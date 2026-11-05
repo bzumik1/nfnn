@@ -258,6 +258,14 @@
   --tab-bar-gap: 20px;
   --tab-bar-gap-browser: 16px;
   --tab-pill-inset: 5px;
+  --tab-bar-max-width: 420px;
+  --tab-bar-home-indicator-overlap: 13px;
+  --tab-icon-size: 22px;
+  --tab-bar-rendered-height: var(--tab-bar-height);
+  --tab-bar-clearance: calc(
+    var(--tab-bar-rendered-height) + 2 * var(--tab-bar-gap-browser) + env(safe-area-inset-bottom)
+  );
+  --back-button-size: 44px;
   --list-row-min-height: 56px;
   --list-group-title-top: 0rem;
 

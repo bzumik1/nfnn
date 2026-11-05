@@ -387,7 +387,9 @@ function validated(entry, file, index, baselineCommit) {
         );
       }
     } else if ('path' in entry || !PATH_OPTIONAL.has(entry.kind)) {
-      const exactTemplate = entry.kind === 'added' && EXACT_API_TEMPLATE.test(entry.path ?? '');
+      const exactTemplate =
+        (entry.kind === 'added' || (entry.kind === 'headers' && typeof entry.field === 'string')) &&
+        EXACT_API_TEMPLATE.test(entry.path ?? '');
       if (!REQUEST_ANCHOR.test(entry.path ?? '') && !exactTemplate) {
         problem(
           'path must start with "METHOD /api/<context>/" (GET, POST, PUT, PATCH, DELETE or the literal upper-case method a scenario sends; content, donors, donations, contact, operations or admin), "METHOD /actuator/", "METHOD /.well-known/" or "METHOD /oauth"',

@@ -15,7 +15,7 @@ record AdminSymbolClaimListResponse(List<Item> items) {
     }
 
     record Item(UUID id, UUID donorId, String donorName, String account, String variableSymbol, SymbolClaimAnswer answer, Instant answeredAt,
-                long donationCount) {
+                long donationCount, String version) {
 
         static Item from(SymbolClaimView view) {
             return new Item(
@@ -26,7 +26,8 @@ record AdminSymbolClaimListResponse(List<Item> items) {
                     view.claim().symbol().value(),
                     view.claim().answer(),
                     view.claim().answeredAt(),
-                    view.donationCount());
+                    view.donationCount(),
+                    view.version());
         }
     }
 }

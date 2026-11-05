@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donations.application.bankaccount;
 
+import cz.novanadeje.app.donations.application.pairing.PairingLock;
 import cz.novanadeje.app.donations.domain.FoundationCalendar;
 import cz.novanadeje.app.donations.domain.bank.BankPayment;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentId;
@@ -56,16 +57,18 @@ public class DonorBankAccountsService {
     private final SymbolClaimRepository claims;
     private final SymbolClaimOffers offers;
     private final ExcludedSenderAccounts excluded;
+    private final PairingLock lock;
     private final Clock clock;
 
     public DonorBankAccountsService(DonorRecordRepository donorRecords, DonationRepository donations, BankPaymentRepository payments,
-                                    SymbolClaimRepository claims, SymbolClaimOffers offers, ExcludedSenderAccounts excluded, Clock clock) {
+                                    SymbolClaimRepository claims, SymbolClaimOffers offers, ExcludedSenderAccounts excluded, PairingLock lock, Clock clock) {
         this.donorRecords = donorRecords;
         this.donations = donations;
         this.payments = payments;
         this.claims = claims;
         this.offers = offers;
         this.excluded = excluded;
+        this.lock = lock;
         this.clock = clock;
     }
 
@@ -108,6 +111,7 @@ public class DonorBankAccountsService {
 
     @Transactional
     public void disconnect(DonorReference donor, SenderAccountLinkId linkId) {
+        lock.acquire();
         DonorRecord record = donorRecords.findById(donor).orElseThrow(() -> new SenderAccountLinkNotFound(linkId));
         Instant now = clock.instant();
         SenderAccountLink link = record.disconnectSenderAccount(linkId, FoundationCalendar.today(clock), now);
@@ -117,6 +121,7 @@ public class DonorBankAccountsService {
 
     @Transactional
     public void reconnect(DonorReference donor, SenderAccountLinkId linkId) {
+        lock.acquire();
         DonorRecord record = donorRecords.findById(donor).orElseThrow(() -> new SenderAccountLinkNotFound(linkId));
         SenderAccountLink awaiting = record.reconnectSenderAccount(linkId, FoundationCalendar.today(clock), clock.instant());
         if (!donorRecords.saveSenderAccountLink(donor, awaiting)) {

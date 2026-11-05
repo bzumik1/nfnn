@@ -82,7 +82,8 @@
         "messageForRecipient",
         "importedAt",
         "unpairedByAdminAt",
-        "accountVerification"
+        "accountVerification",
+        "version"
       ],
       "additionalProperties": false,
       "properties": {
@@ -97,7 +98,8 @@
         "messageForRecipient": { "type": ["string", "null"] },
         "importedAt": { "$ref": "../defs/rows.schema.json#/$defs/instant" },
         "unpairedByAdminAt": { "oneOf": [{ "$ref": "../defs/rows.schema.json#/$defs/instant" }, { "type": "null" }] },
-        "accountVerification": { "type": "boolean" }
+        "accountVerification": { "type": "boolean" },
+        "version": { "type": "string", "pattern": "^[0-9a-f]{16}$" }
       }
     },
     "donationRow": {

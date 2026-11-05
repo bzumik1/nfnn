@@ -23,6 +23,8 @@ import { AuthStore } from './core/auth/auth-store';
 import { SESSION_DEVICE } from './core/auth/session-device';
 import { ReportingErrorHandler } from './core/errors/reporting-error-handler';
 import { ChunkLoadRecovery } from './core/reload/chunk-load-recovery';
+import { BackTarget } from './core/navigation/back-target';
+import { TabMemory } from './core/navigation/tab-memory';
 import { CanonicalLink } from './core/seo/canonical-link';
 import { AppInstall } from './core/install/app-install';
 import { AppUpdates } from './core/updates/app-updates';
@@ -61,6 +63,11 @@ export const dialogHistoryAtStart: EnvironmentProviders = provideAppInitializer(
 
 export const deviceCopies: Provider = { provide: SESSION_DEVICE, useExisting: DeviceCopies };
 
+export const navigationAtStart: EnvironmentProviders = provideAppInitializer(() => {
+  inject(BackTarget);
+  inject(TabMemory);
+});
+
 export const appConfig: ApplicationConfig = {
   providers: [
     deviceCopies,
@@ -78,5 +85,6 @@ export const appConfig: ApplicationConfig = {
     dialogHistoryAtStart,
     pagePinchLockAtStart,
     systemTextSizeAtStart,
+    navigationAtStart,
   ],
 };

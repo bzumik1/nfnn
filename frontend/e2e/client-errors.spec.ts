@@ -3,7 +3,7 @@ import { Request } from '@playwright/test';
 import { mockDonorApi } from './donor-session';
 import { expect, test } from './fixtures';
 import {
-  openHomeThenLoseNewChunks,
+  openAboutThenLoseNewChunks,
   openPolicyFromFooter,
   chunkLoadPageHeading,
 } from './lost-chunks';
@@ -62,7 +62,7 @@ test.describe('Given a visitor whose open tab is older than the deployed version
     page,
   }) => {
     const reports: { kind: string; place: string; load: number }[] = [];
-    const chunks = await openHomeThenLoseNewChunks(page);
+    const chunks = await openAboutThenLoseNewChunks(page);
     await page.route('/api/operations/client-errors', (route) => {
       const { kind, place } = route.request().postDataJSON() as { kind: string; place: string };
       reports.push({ kind, place, load: chunks.documents.length });

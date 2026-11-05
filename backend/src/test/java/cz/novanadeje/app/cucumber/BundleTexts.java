@@ -33,7 +33,7 @@ final class BundleTexts {
     private static final List<String> BUNDLES = List.of("i18n/messages.properties", "i18n/messages_cs.properties", "i18n/messages_en.properties");
     private static final List<String> VALIDATOR_BUNDLES = Stream.of("", "_cs", "_de", "_sk")
             .map(suffix -> "org/hibernate/validator/ValidationMessages" + suffix + ".properties").toList();
-    private static final Set<String> SERVER_VALUES = Set.of("type", "instance", "status", "challenge", "challengeExpiresAt");
+    private static final Set<String> SERVER_VALUES = Set.of("type", "instance", "status", "challenge", "challengeExpiresAt", "version", "current");
     private static final Set<String> ERROR_NAMES = Set.of("field", "code");
     private static final Pattern PLACEHOLDER = Pattern.compile("\\$\\{([^}]*)}|\\{([^}]*)}");
     private static final Pattern CONDITION_TEXT = Pattern.compile("'([^']*)'");

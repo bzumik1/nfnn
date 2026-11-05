@@ -1,9 +1,14 @@
-<app-dashboard-top-bar [wide]="true" />
+<app-header />
 
-<app-side-nav navId="donor-nav" [groups]="groups()" [label]="navLabel" [menuLabel]="menuLabel">
-  <div class="container">
+<app-side-nav
+  navId="donor-nav"
+  [groups]="groups()"
+  [label]="navLabel"
+  [menuLabel]="menuLabel"
+  [panel]="!compact()"
+>
+  <div class="container" [class.container--compact]="compact()">
     <router-outlet />
-
     <p class="contact-line">
       <span i18n="@@donor.dashboard.help">Máte dotaz k platbě? Napište nám na</span>&ngsp;<a
         href="mailto:info@nfnn.cz"
@@ -14,3 +19,4 @@
 </app-side-nav>
 
 <app-first-sync-notice />
+<app-tab-bar />

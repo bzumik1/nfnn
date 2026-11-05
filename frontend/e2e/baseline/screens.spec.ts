@@ -50,7 +50,7 @@ const SEARCH_PAUSE_MS = 5_000;
 const PAGE_TOLERANCE = { maxDiffPixelRatio: 0.002 };
 const ELEMENT_TOLERANCE = { maxDiffPixels: 0 };
 const FIXED_BARS_HIDDEN =
-  '.skip-link, app-site-header, app-site-header *, app-dashboard-top-bar, app-dashboard-top-bar * { visibility: hidden !important; }';
+  '.skip-link, app-header, app-header *, app-tab-bar, app-tab-bar *, app-dashboard-top-bar, app-dashboard-top-bar * { visibility: hidden !important; }';
 const DONATE_QR = '#prispet .qr-code';
 const DONATE_BANK = '#prispet .bank';
 const SEND_GIFT_QR = '.send-gift .qr-code';
@@ -100,7 +100,7 @@ async function openDonateSection(page: Page, signedIn = false): Promise<void> {
   if (signedIn) {
     await rememberedSession(page, donor);
   }
-  await page.goto('/');
+  await page.goto('/prispet');
   await unfoldPaymentQr(page);
   await expect(page.locator(DONATE_QR).getByRole('img')).toBeVisible();
 }
@@ -109,6 +109,11 @@ async function elementsShown(page: Page, elements: string[]): Promise<void> {
   for (const selector of elements) {
     await expect(page.locator(selector)).toBeVisible();
   }
+}
+
+async function paymentDrawn(page: Page, elements: string[]): Promise<void> {
+  await elementsShown(page, elements);
+  await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
 }
 
 function adminPage(name: string, path: string, more: Partial<Screen> = {}): Screen {
@@ -131,12 +136,12 @@ async function openDialogAt(page: Page, width: number): Promise<void> {
 }
 
 const SCREENS: Screen[] = [
-  publicPage('home', '/', {
+  publicPage('home', '/prispet', {
     elements: [element('home--donate-qr', DONATE_QR), element('home--donate-bank', DONATE_BANK)],
     open: async (page) => {
       await mockDonorApi(page);
       await mockPublicContent(page);
-      await page.goto('/');
+      await page.goto('/prispet');
       await unfoldPaymentQr(page);
     },
   }),
@@ -299,7 +304,7 @@ const SCREENS: Screen[] = [
       await page.getByRole('button', { name: '1 000 Kč' }).click();
       await expect(page.locator(DONATE_BANK)).toContainText('1 000 Kč');
     },
-    ready: (page) => elementsShown(page, [DONATE_QR, DONATE_BANK]),
+    ready: (page) => paymentDrawn(page, [DONATE_QR, DONATE_BANK]),
   },
   {
     name: 'home-donate-own-amount',
@@ -314,7 +319,7 @@ const SCREENS: Screen[] = [
       await page.locator('#donate-custom-amount').fill('1 234');
       await expect(page.locator(DONATE_BANK)).toContainText('1 234 Kč');
     },
-    ready: (page) => elementsShown(page, [DONATE_QR, DONATE_BANK]),
+    ready: (page) => paymentDrawn(page, [DONATE_QR, DONATE_BANK]),
   },
   {
     name: 'home-donate-signed-in',
@@ -327,7 +332,7 @@ const SCREENS: Screen[] = [
       await openDonateSection(page, true);
       await expect(page.locator(DONATE_BANK)).toContainText(donor.variableSymbol);
     },
-    ready: (page) => elementsShown(page, [DONATE_QR, DONATE_BANK]),
+    ready: (page) => paymentDrawn(page, [DONATE_QR, DONATE_BANK]),
   },
   {
     name: 'home-donate-qr-error',
@@ -337,7 +342,7 @@ const SCREENS: Screen[] = [
       await mockDonorApi(page);
       await mockPublicContent(page);
       await failPaymentDetails(page);
-      await page.goto('/');
+      await page.goto('/prispet');
       await expect(page.locator('#prispet .qr-error')).toBeVisible();
       const otherDevice = page
         .locator('#prispet')
@@ -415,6 +420,19 @@ const SCREENS: Screen[] = [
 ];
 
 const SCREENS_SINCE_V2: Screen[] = [
+  publicPage('landing', '/'),
+  publicPage('about', '/o-nas'),
+  {
+    name: 'account-sheet',
+    open: async (page) => {
+      await mockDonorApi(page, donorWithDonations);
+      await rememberedSession(page, donor);
+      await page.goto('/darce/prehled');
+      await expect(page.locator('h1').first()).toBeVisible();
+      await page.getByRole('banner').getByRole('button', { name: 'Účet' }).click();
+      await expect(page.getByRole('dialog').getByRole('link').first()).toBeVisible();
+    },
+  },
   {
     name: 'donor-overview-send-gift',
     region: '.send-gift',
@@ -430,7 +448,7 @@ const SCREENS_SINCE_V2: Screen[] = [
       await expect(page.locator(SEND_GIFT_BANK)).toContainText(donor.variableSymbol);
       await unfoldPaymentQr(page, '.send-gift');
     },
-    ready: (page) => elementsShown(page, [SEND_GIFT_QR, SEND_GIFT_BANK]),
+    ready: (page) => paymentDrawn(page, [SEND_GIFT_QR, SEND_GIFT_BANK]),
   },
 ];
 
