@@ -1,5 +1,6 @@
-import { computed, inject, Injectable } from '@angular/core';
-import { Observable, tap } from 'rxjs';
+import { computed, inject, Injectable, signal } from '@angular/core';
+import { Router } from '@angular/router';
+import { firstValueFrom, Observable, tap } from 'rxjs';
 import { AdministrationAccess } from '../../../core/auth/administration-access';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { type DeviceAccount, deviceAccountOf } from '../../../core/auth/session-device';
@@ -13,8 +14,12 @@ export class AdministrationLockService {
   private readonly access = inject(AdministrationAccess);
   private readonly vault = inject(DeviceVault);
   private readonly api = inject(AdministrationSyncApi);
+  private readonly router = inject(Router);
+  private readonly leaving = signal(false);
 
-  readonly locked = computed(() => this.auth.isAdmin() && !this.access.unlocked());
+  readonly locked = computed(
+    () => (this.auth.isAdmin() || this.leaving()) && !this.access.unlocked(),
+  );
   readonly keepsPage = this.access.keepsPage;
   readonly firstDownload = inject(AdministrationCopyDownload).firstDownload;
 
@@ -34,9 +39,10 @@ export class AdministrationLockService {
     if (account === null) {
       return false;
     }
-    const unlocked = await this.vault
+    const opened = await this.vault
       .unlockAdministrationWithPasskey(account, this.auth.storesNothing())
       .catch(() => false);
+    const unlocked = opened && this.stillSignedInAs(account);
     if (unlocked) {
       this.access.unlock();
     }
@@ -44,17 +50,32 @@ export class AdministrationLockService {
   }
 
   unlockWithPassword(password: string, code: string): Observable<void> {
+    const account = this.account();
     return this.api.unlock(password, code).pipe(
       tap(() => {
-        const account = this.account();
-        this.access.unlock();
-        if (account !== null) {
-          void this.vault
-            .unlockAdministrationWithPassword(account, password, this.auth.storesNothing())
-            .catch(() => undefined);
+        if (account === null || !this.stillSignedInAs(account)) {
+          return;
         }
+        this.access.unlock();
+        void this.vault
+          .unlockAdministrationWithPassword(account, password, this.auth.storesNothing())
+          .catch(() => undefined);
       }),
     );
+  }
+
+  async signOut(): Promise<void> {
+    this.leaving.set(true);
+    try {
+      await firstValueFrom(this.auth.logout()).catch(() => undefined);
+      await this.router.navigateByUrl('/');
+    } finally {
+      this.leaving.set(false);
+    }
+  }
+
+  private stillSignedInAs(account: DeviceAccount): boolean {
+    return this.auth.isAdmin() && this.account()?.userHandle === account.userHandle;
   }
 
   private account(): DeviceAccount | null {

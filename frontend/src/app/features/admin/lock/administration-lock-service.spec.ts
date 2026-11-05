@@ -2,7 +2,8 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { firstValueFrom } from 'rxjs';
+import { provideRouter, Router } from '@angular/router';
+import { firstValueFrom, of, throwError } from 'rxjs';
 import { AdministrationAccess } from '../../../core/auth/administration-access';
 import { AuthStore } from '../../../core/auth/auth-store';
 import type { Donor } from '../../../core/auth/donor';
@@ -26,8 +27,14 @@ describe('Given the lock of the administration in this tab', () => {
   let access: AdministrationAccess;
   let lock: AdministrationLockService;
   let http: HttpTestingController;
+  let logout: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
+    logout = vi.fn(() => {
+      donor.set(null);
+      admin.set(false);
+      return of(undefined);
+    });
     donor = signal<Donor | null>(ADMINISTRATOR);
     admin = signal(true);
     publicComputer = signal(false);
@@ -40,12 +47,14 @@ describe('Given the lock of the administration in this tab', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
+        provideRouter([]),
         {
           provide: AuthStore,
           useValue: {
             donor: donor.asReadonly(),
             isAdmin: admin.asReadonly(),
             storesNothing: publicComputer.asReadonly(),
+            logout,
           },
         },
         { provide: DeviceVault, useValue: vault },
@@ -111,6 +120,31 @@ describe('Given the lock of the administration in this tab', () => {
     );
   });
 
+  it('when she signs out while the server checks the password, then neither the administration nor the copy opens', async () => {
+    const unlocked = firstValueFrom(lock.unlockWithPassword('správné heslo', '482913'));
+    const request = http.expectOne('/api/admin/donors/devices/current/unlock');
+    donor.set(null);
+    admin.set(false);
+    request.flush(null, { status: 204, statusText: 'No Content' });
+    await unlocked;
+
+    expect(access.unlocked()).toBe(false);
+    expect(vault.unlockAdministrationWithPassword).not.toHaveBeenCalled();
+  });
+
+  it('when another administrator signs in while the passkey is asked, then the administration stays locked', async () => {
+    vault.unlockAdministrationWithPasskey.mockImplementation(async () => {
+      donor.set(
+        sampleDonor({ id: '0190c3a2-7b1e-7cc1-8a52-0000000000ff', roles: ['DONOR', 'ADMIN'] }),
+      );
+      return true;
+    });
+
+    expect(await lock.unlockWithPasskey()).toBe(false);
+
+    expect(access.unlocked()).toBe(false);
+  });
+
   it('when the server refuses the code, then the administration stays locked and the copy stays closed', async () => {
     const unlocked = firstValueFrom(lock.unlockWithPassword('správné heslo', '000000'));
     http
@@ -132,5 +166,31 @@ describe('Given the lock of the administration in this tab', () => {
     access.lock();
 
     expect(lock.locked()).toBe(true);
+  });
+
+  describe('when the administrator signs out from the lock panel', () => {
+    it('then the administration stays locked the whole way out, so a kept page never shows, and the site opens', async () => {
+      const seen: boolean[] = [];
+      const router = TestBed.inject(Router);
+      const navigate = router.navigateByUrl.bind(router);
+      vi.spyOn(router, 'navigateByUrl').mockImplementation((url, extras) => {
+        seen.push(lock.locked());
+        return navigate(url, extras);
+      });
+
+      await lock.signOut();
+
+      expect(logout).toHaveBeenCalledOnce();
+      expect(seen).toEqual([true]);
+      expect(router.url).toBe('/');
+    });
+
+    it('and the server cannot be reached, then the site opens all the same', async () => {
+      logout.mockReturnValue(throwError(() => new Error('offline')));
+
+      await lock.signOut();
+
+      expect(TestBed.inject(Router).url).toBe('/');
+    });
   });
 });

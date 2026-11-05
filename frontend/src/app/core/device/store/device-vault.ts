@@ -146,6 +146,7 @@ export class DeviceVault implements SessionDevice {
   private persistAsked = false;
   private pendingSalt: string | null = null;
   private sessionsWritten = new Set<string>();
+  private sessionGeneration = 0;
   private readonly copies = new WeakMap<AccountStore, OpenCopy>();
 
   readonly opened = this.openedCopy.asReadonly();
@@ -175,6 +176,7 @@ export class DeviceVault implements SessionDevice {
   }
 
   signedIn(account: DeviceAccount, secret: SignInSecret, storeNothing = false): Promise<void> {
+    this.sessionGeneration++;
     return this.run(async () => {
       try {
         await this.withMemoryFallback(() => this.openAtSignIn(account, secret, storeNothing));
@@ -196,6 +198,7 @@ export class DeviceVault implements SessionDevice {
   }
 
   signedOut(account: DeviceAccount): Promise<void> {
+    this.sessionGeneration++;
     return this.run(async () => {
       const storage = await this.storageOf(account);
       this.closeOpen();
@@ -204,6 +207,7 @@ export class DeviceVault implements SessionDevice {
   }
 
   sessionLost(): Promise<void> {
+    this.sessionGeneration++;
     return this.run(async () => {
       this.closeOpen();
       await this.endSessions(await this.presentStorage().catch(() => null));
@@ -211,10 +215,12 @@ export class DeviceVault implements SessionDevice {
   }
 
   signedOutElsewhere(): void {
+    this.sessionGeneration++;
     void this.run(async () => this.closeOpen());
   }
 
   forget(account: DeviceAccount): Promise<void> {
+    this.sessionGeneration++;
     return this.run(async () => {
       const storage = await this.storageOf(account);
       this.pendingSalt = null;
@@ -248,6 +254,8 @@ export class DeviceVault implements SessionDevice {
       const administration = this.administrationFor(account);
       if (administration !== null && this.administrationStorage !== null) {
         await this.rewrapWithPassword(this.administrationStorage, administration.store, password);
+      } else {
+        await this.dropLockedAdministrationPasswordWraps(account);
       }
     });
   }
@@ -295,6 +303,8 @@ export class DeviceVault implements SessionDevice {
         const administration = this.administrationFor(account);
         if (administration !== null && this.administrationStorage !== null) {
           await this.addPrfWrap(this.administrationStorage, administration.store, reading);
+        } else {
+          await this.dropLockedAdministrationPasswordWraps(account);
         }
       } finally {
         reading.output.fill(0);
@@ -346,6 +356,7 @@ export class DeviceVault implements SessionDevice {
     account: DeviceAccount,
     storeNothing: boolean,
   ): Promise<boolean> {
+    const generation = this.sessionGeneration;
     const asked = await this.run(async () => {
       const storage = await this.administrationStorageFor(storeNothing);
       const salt = storage === null ? null : await storage.deviceSalt();
@@ -371,7 +382,10 @@ export class DeviceVault implements SessionDevice {
     }
     return this.run(async () => {
       try {
-        const storage = await this.administrationStorageFor(storeNothing);
+        const storage =
+          generation === this.sessionGeneration
+            ? await this.administrationStorageFor(storeNothing)
+            : null;
         if (storage === null) {
           return false;
         }
@@ -434,6 +448,32 @@ export class DeviceVault implements SessionDevice {
       await this.committed(storage, { deleteCopies: revoked.map((entry) => entry.copyId) });
       await this.afterRemoval(storage);
     });
+  }
+
+  private async dropLockedAdministrationPasswordWraps(account: DeviceAccount): Promise<void> {
+    const storage = await this.storageOf(account);
+    const tags = storage === null ? null : await this.tagsIn(storage, account);
+    if (storage === null || tags === null) {
+      return;
+    }
+    const locked = (await storage.entries()).filter(
+      (entry) =>
+        entry.kind === ADMINISTRATION_KIND &&
+        entry.userHandleTag === tags.userHandleTag &&
+        entry.wraps.some((wrap) => wrap.kind === 'password'),
+    );
+    if (locked.length === 0) {
+      return;
+    }
+    const rewrapped = locked.map((entry) => ({
+      ...entry,
+      wraps: entry.wraps.filter((wrap) => wrap.kind !== 'password'),
+    }));
+    await this.committed(storage, {
+      deleteCopies: rewrapped.filter((entry) => entry.wraps.length === 0).map((e) => e.copyId),
+      putEntries: rewrapped.filter((entry) => entry.wraps.length > 0),
+    });
+    await this.afterRemoval(storage);
   }
 
   withCopyLock<T>(store: AccountStore, work: () => Promise<T>): Promise<T> {
@@ -532,7 +572,7 @@ export class DeviceVault implements SessionDevice {
       opening === 'undecided' ||
       (entry !== null &&
         opening === null &&
-        !(how.replacesRefused && refusedBy(entry.wraps, secret)))
+        !(how.replacesRefused && replaceableBy(entry.wraps, secret)))
     ) {
       return 'locked';
     }
@@ -1103,6 +1143,13 @@ function refusedBy(wraps: readonly KeyWrap[], secret: SignInSecret): boolean {
     case 'none':
       return false;
   }
+}
+
+function replaceableBy(wraps: readonly KeyWrap[], secret: SignInSecret): boolean {
+  return (
+    refusedBy(wraps, secret) ||
+    (secret.kind === 'prf' && !wraps.some((wrap) => wrap.kind === 'prf'))
+  );
 }
 
 function withoutPrfOf(wraps: readonly KeyWrap[], credentialId: string): KeyWrap[] {

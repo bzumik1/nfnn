@@ -228,6 +228,62 @@ describe('Given the device vault keeping a copy of the administration for an adm
       expect(await storedEntries()).toEqual([]);
     });
 
+    it('and she changes her password while the administration is locked, then the copy only the old password opens leaves the device', async () => {
+      const copyId = vault.administration()!.store.copyId;
+      await vault.lockAdministration();
+
+      await vault.passwordChanged(JANA, 'Nové heslo 2026');
+
+      expect((await storedEntries()).map((entry) => entry.copyId)).not.toContain(copyId);
+      expect(await donorWraps()).toEqual(['password', 'session']);
+    });
+
+    it('and she adds a passkey while the administration is locked, then the copy kept under her password leaves the device', async () => {
+      const copyId = vault.administration()!.store.copyId;
+      await vault.lockAdministration();
+
+      await vault.passkeyAdded(JANA, prfReading());
+
+      expect((await storedEntries()).map((entry) => entry.copyId)).not.toContain(copyId);
+      expect(await donorWraps()).toEqual(['password', 'prf', 'session']);
+    });
+
+    it('and she signs in again with a passkey, then a fresh copy under the passkey alone replaces the one under her password', async () => {
+      const copyId = vault.administration()!.store.copyId;
+      await vault.signedOut(JANA);
+      access.ended();
+
+      await signIn(JANA, { kind: 'prf', reading: prfReading() });
+
+      expect(vault.administration()?.store.copyId).not.toBe(copyId);
+      expect(vault.administration()?.reason).toBe('empty');
+      expect(await administrationWraps()).toEqual(['prf']);
+      expect(
+        (await storedEntries()).filter((entry) => entry.kind === 'administration'),
+      ).toHaveLength(1);
+    });
+
+    it('and the app starts again after the role was taken away, then the copy stays on the device, locked, until the server tells the device to delete it', async () => {
+      await vault.signedOut(JANA);
+      access.ended();
+      const restarted = anotherStart();
+
+      await restarted.restored({ ...JANA, administrator: false });
+
+      expect(restarted.administration()).toBeNull();
+      expect(await administrationWraps()).toEqual(['password']);
+    });
+
+    it('and she signs out while her password unlock waits for the vault, then the administration does not open again', async () => {
+      await vault.lockAdministration();
+      const unlocking = vault.unlockAdministrationWithPassword(JANA, PASSWORD, false);
+      const signingOut = vault.signedOut(JANA);
+
+      await Promise.all([unlocking, signingOut]);
+
+      expect(vault.administration()).toBeNull();
+    });
+
     it('and she signs out, then the administration closes and stays on the device under her password', async () => {
       await vault.signedOut(JANA);
 
@@ -255,6 +311,28 @@ describe('Given the device vault keeping a copy of the administration for an adm
       expect(vault.administration()?.store.copyId).toBe(copyId);
       expect(credentials.asked[0].rpId).toBe('nfnn.cz');
       expect(credentials.asked[0].allowCredentials?.length).toBe(1);
+    });
+
+    it('and she signs out while the passkey is still being asked, then the administration does not open for her afterwards', async () => {
+      await vault.lockAdministration();
+      let answer: () => void = () => undefined;
+      const asked = new Promise<void>((resolve) => (answer = resolve));
+      let ceremonyStarted = false;
+      const get = credentials.get.bind(credentials);
+      credentials.get = async (options) => {
+        ceremonyStarted = true;
+        await asked;
+        return get(options);
+      };
+      const unlocking = vault.unlockAdministrationWithPasskey(JANA, false);
+      await vi.waitFor(() => expect(ceremonyStarted).toBe(true));
+
+      const signingOut = vault.signedOut(JANA);
+      answer();
+
+      expect(await unlocking).toBe(false);
+      await signingOut;
+      expect(vault.administration()).toBeNull();
     });
 
     it('and another passkey answers, then nothing opens and the copy is kept', async () => {

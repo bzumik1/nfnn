@@ -4,10 +4,24 @@ import { DirtyForms } from '../updates/dirty-forms';
 
 export const ADMINISTRATION_LOCK_AFTER_MS = 5 * 60 * 1000;
 
-export const ACCESS_CLOCK = new InjectionToken<() => number>('ACCESS_CLOCK', {
+export interface AccessInstant {
+  readonly monotonic: number;
+  readonly wall: number;
+}
+
+export const ACCESS_CLOCK = new InjectionToken<() => AccessInstant>('ACCESS_CLOCK', {
   providedIn: 'root',
-  factory: () => () => performance.now(),
+  factory: () => () => ({ monotonic: performance.now(), wall: Date.now() }),
 });
+
+function awayLongEnough(since: AccessInstant, now: AccessInstant): boolean {
+  const wallAway = now.wall - since.wall;
+  return (
+    now.monotonic - since.monotonic >= ADMINISTRATION_LOCK_AFTER_MS ||
+    wallAway >= ADMINISTRATION_LOCK_AFTER_MS ||
+    wallAway < 0
+  );
+}
 
 @Injectable({ providedIn: 'root' })
 export class AdministrationAccess {
@@ -16,7 +30,7 @@ export class AdministrationAccess {
   private readonly now = inject(ACCESS_CLOCK);
   private readonly open = signal(false);
   private readonly pageKept = signal(false);
-  private hiddenSince: number | null = null;
+  private hiddenSince: AccessInstant | null = null;
   private timer: ReturnType<typeof setTimeout> | null = null;
 
   readonly unlocked = this.open.asReadonly();
@@ -24,9 +38,15 @@ export class AdministrationAccess {
 
   constructor() {
     const changed = () => this.visibilityChanged();
+    const returned = () => this.lockIfAwayLongEnough();
+    const window = this.document.defaultView;
     this.document.addEventListener('visibilitychange', changed);
+    this.document.addEventListener('resume', returned);
+    window?.addEventListener('pageshow', returned);
     inject(DestroyRef).onDestroy(() => {
       this.document.removeEventListener('visibilitychange', changed);
+      this.document.removeEventListener('resume', returned);
+      window?.removeEventListener('pageshow', returned);
       this.stopTimer();
     });
   }
@@ -61,9 +81,13 @@ export class AdministrationAccess {
       return;
     }
     this.stopTimer();
-    const since = this.hiddenSince;
+    this.lockIfAwayLongEnough();
     this.hiddenSince = null;
-    if (since !== null && this.now() - since >= ADMINISTRATION_LOCK_AFTER_MS) {
+  }
+
+  private lockIfAwayLongEnough(): void {
+    const since = this.hiddenSince;
+    if (since !== null && awayLongEnough(since, this.now())) {
       this.lock();
     }
   }
