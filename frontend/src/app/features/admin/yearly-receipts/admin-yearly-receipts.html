@@ -1,0 +1,270 @@
+<div class="ui-page container">
+  <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.yearlyReceipts.heading">
+    Hromadná potvrzení
+  </h1>
+  <p class="ui-page-intro" i18n="@@admin.yearlyReceipts.intro">
+    Roční potvrzení o darech za skončený rok pro všechny dárce najednou. Potvrzení, která platí a
+    jejichž dary se nezměnily, zůstanou, jak jsou; chybějící se vystaví a ta, u kterých se dary od
+    vystavení změnily, se nahradí. Všechna pak dostanete v jednom PDF k tisku. Jednotlivé potvrzení
+    k poslání e-mailem stáhnete na kartě dárce.
+  </p>
+
+  @switch (state()) {
+    @case ('loading') {
+      <p class="ui-load-state" role="status" i18n="@@admin.yearlyReceipts.loading">
+        Načítáme dárce za rok…
+      </p>
+    }
+    @case ('error') {
+      <div class="ui-load-state ui-load-state--error" role="alert">
+        <p i18n="@@admin.yearlyReceipts.error.text">Dárce za rok se nepodařilo načíst.</p>
+        <button
+          type="button"
+          class="ui-button"
+          (click)="reload()"
+          i18n="@@admin.yearlyReceipts.error.retry"
+        >
+          Zkusit znovu
+        </button>
+      </div>
+    }
+    @case ('no-year') {
+      <p class="ui-card ui-card--padded no-year" i18n="@@admin.yearlyReceipts.noYear">
+        Roční potvrzení půjde hromadně vystavit po skončení prvního roku, za který je fond vydává.
+      </p>
+    }
+    @case ('ready') {
+      <section class="ui-card ui-card--padded" aria-labelledby="yearly-receipts-issue-title">
+        <h2
+          id="yearly-receipts-issue-title"
+          class="ui-card__title"
+          i18n="@@admin.yearlyReceipts.issue.title"
+        >
+          Vystavit a vytisknout
+        </h2>
+        <form class="issue-form" appFocusFirstInvalid (ngSubmit)="start()" novalidate>
+          <app-form-field
+            label="Rok"
+            i18n-label="@@admin.yearlyReceipts.year"
+            hint="Roční potvrzení jde vystavit jen za rok, který už skončil."
+            i18n-hint="@@admin.yearlyReceipts.year.hint"
+          >
+            <select
+              appFormControl
+              id="yearly-receipts-year"
+              name="year"
+              [ngModel]="chosenYear()"
+              (ngModelChange)="chooseYear($event)"
+              [disabled]="busy()"
+            >
+              @for (year of years(); track year) {
+                <option [ngValue]="year">{{ year }}</option>
+              }
+            </select>
+          </app-form-field>
+
+          <dl class="ui-data-list summary">
+            <div>
+              <dt i18n="@@admin.yearlyReceipts.summary.donors">
+                Dárci s dary za rok {{ chosenYear() }}
+              </dt>
+              <dd>{{ summary().donors }}</dd>
+            </div>
+            <div>
+              <dt i18n="@@admin.yearlyReceipts.summary.issued">Potvrzení už vystavená</dt>
+              <dd>{{ summary().issued }}</dd>
+            </div>
+            <div>
+              <dt i18n="@@admin.yearlyReceipts.summary.fresh">Vystaví se nově</dt>
+              <dd>{{ summary().fresh }}</dd>
+            </div>
+            <div>
+              <dt i18n="@@admin.yearlyReceipts.summary.erased">Vymazaní dárci, přeskočí se</dt>
+              <dd>{{ summary().erased }}</dd>
+            </div>
+          </dl>
+
+          @if (donors().length === 0) {
+            <p class="ui-card__empty empty" i18n="@@admin.yearlyReceipts.empty">
+              Za rok {{ chosenYear() }} nemá dary žádný dárce.
+            </p>
+          } @else {
+            <label class="duplex">
+              <input
+                type="checkbox"
+                name="duplex"
+                [ngModel]="duplex()"
+                (ngModelChange)="duplex.set($event)"
+                [disabled]="busy()"
+              />
+              <span i18n="@@admin.yearlyReceipts.duplex"
+                >Tisknu oboustranně (každé potvrzení začne na novém listu)</span
+              >
+            </label>
+            <button
+              type="submit"
+              class="ui-button ui-button--primary issue-button"
+              [disabled]="busy()"
+            >
+              @if (busy()) {
+                <span i18n="@@admin.yearlyReceipts.issue.running">Připravujeme PDF…</span>
+              } @else {
+                <span i18n="@@admin.yearlyReceipts.issue.start"
+                  >Vystavit a připravit PDF k tisku</span
+                >
+              }
+            </button>
+          }
+        </form>
+
+        <app-download-progress [progress]="progress()" (cancelled)="cancel()" />
+
+        <div #failureRegion class="failure" role="alert" tabindex="-1">
+          @if (failure(); as failure) {
+            <p class="ui-notice ui-notice--alert">{{ failure }}</p>
+            <button
+              type="button"
+              class="ui-button ui-button--small"
+              (click)="retry()"
+              i18n="@@admin.yearlyReceipts.retry"
+            >
+              Zkusit znovu
+            </button>
+          }
+        </div>
+
+        <app-live-notice #noticeRegion tabindex="-1" [notice]="notice()" />
+
+        @if (file()) {
+          <div class="pdf-actions">
+            <button type="button" class="ui-button ui-button--primary" (click)="save()">
+              @if (downloaded()) {
+                <span i18n="@@admin.yearlyReceipts.pdf.downloadAgain">Stáhnout znovu</span>
+              } @else {
+                <span i18n="@@admin.yearlyReceipts.pdf.download">Stáhnout PDF</span>
+              }
+            </button>
+            <button
+              type="button"
+              class="ui-button"
+              (click)="open()"
+              i18n="@@admin.yearlyReceipts.pdf.open"
+            >
+              Otevřít PDF
+            </button>
+          </div>
+        }
+      </section>
+
+      @if (finished()) {
+        <section class="ui-card ui-card--padded results" aria-labelledby="yearly-receipts-results">
+          <h2
+            id="yearly-receipts-results"
+            class="ui-card__title"
+            i18n="@@admin.yearlyReceipts.results.title"
+          >
+            Výsledek
+          </h2>
+          <dl class="ui-data-list outcomes">
+            <div>
+              <dt i18n="@@admin.yearlyReceipts.results.issued">Nově vystaveno</dt>
+              <dd>{{ outcomes().ISSUED }}</dd>
+            </div>
+            <div>
+              <dt i18n="@@admin.yearlyReceipts.results.unchanged">Beze změny</dt>
+              <dd>{{ outcomes().UNCHANGED }}</dd>
+            </div>
+            <div>
+              <dt i18n="@@admin.yearlyReceipts.results.replaced">
+                Nahrazeno, dary se od vystavení změnily
+              </dt>
+              <dd>{{ outcomes().REPLACED }}</dd>
+            </div>
+            <div>
+              <dt i18n="@@admin.yearlyReceipts.results.skipped">Přeskočeno</dt>
+              <dd>{{ outcomes().SKIPPED }}</dd>
+            </div>
+          </dl>
+          @if (replaced().length > 0) {
+            <div class="replaced">
+              <h3 class="list-title" i18n="@@admin.yearlyReceipts.replaced.title">
+                Nahrazená potvrzení
+              </h3>
+              <ul class="lines">
+                @for (line of replaced(); track line.number) {
+                  <li i18n="@@admin.yearlyReceipts.replaced.line">
+                    {{ line.name }}: {{ line.number }} nahrazuje {{ line.replaced }}
+                  </li>
+                }
+              </ul>
+            </div>
+          }
+          @if (skipped().length > 0) {
+            <div class="skipped">
+              <h3 class="list-title" i18n="@@admin.yearlyReceipts.skipped.title">
+                Přeskočení dárci
+              </h3>
+              <ul class="lines">
+                @for (line of skipped(); track $index) {
+                  <li>{{ line.name }}: {{ line.reason }}</li>
+                }
+              </ul>
+            </div>
+          }
+        </section>
+      }
+
+      @if (donors().length > 0) {
+        <section class="ui-card" aria-labelledby="yearly-receipts-donors">
+          <h2
+            id="yearly-receipts-donors"
+            class="ui-card__title ui-card__bar"
+            i18n="@@admin.yearlyReceipts.donors.title"
+          >
+            Dárci za rok {{ chosenYear() }}
+          </h2>
+          <table class="ui-table donors-table">
+            <thead>
+              <tr>
+                <th scope="col" i18n="@@admin.yearlyReceipts.col.donor">Dárce</th>
+                <th scope="col" class="number" i18n="@@admin.yearlyReceipts.col.gifts">Dary</th>
+                <th scope="col" class="number" i18n="@@admin.yearlyReceipts.col.total">Celkem</th>
+                <th scope="col" i18n="@@admin.yearlyReceipts.col.receipt">Potvrzení</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (donor of donors(); track donor.donorId) {
+                <tr>
+                  <td data-label="Dárce" i18n-data-label="@@admin.yearlyReceipts.col.donor">
+                    {{ donor.name }}
+                  </td>
+                  <td
+                    class="number"
+                    data-label="Dary"
+                    i18n-data-label="@@admin.yearlyReceipts.col.gifts"
+                  >
+                    {{ donor.giftCount }}
+                  </td>
+                  <td
+                    class="number"
+                    data-label="Celkem"
+                    i18n-data-label="@@admin.yearlyReceipts.col.total"
+                  >
+                    {{ amount(donor) }}&nbsp;Kč
+                  </td>
+                  <td data-label="Potvrzení" i18n-data-label="@@admin.yearlyReceipts.col.receipt">
+                    @if (donor.receipt; as receipt) {
+                      <span class="ui-mono">{{ receipt.number }}</span>
+                    } @else {
+                      <span class="muted" i18n="@@admin.yearlyReceipts.receipt.none">zatím ne</span>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </section>
+      }
+    }
+  }
+</div>
