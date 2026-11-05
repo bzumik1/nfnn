@@ -320,6 +320,15 @@ describe('Given an administrator on the bulk receipts page', () => {
       fixture.detectChanges();
     });
 
+    it('then the button stays focusable but says it is busy, so the focus does not fall to the page', () => {
+      const running = button('Připravujeme PDF…');
+
+      expect(running.disabled).toBe(false);
+      expect(running.getAttribute('aria-disabled')).toBe('true');
+      running.click();
+      expectIssue();
+    });
+
     it('then they go in batches of at most 50 in the order of the list, each after the one before', async () => {
       const first = expectIssue();
       expect(first.request.body).toEqual({

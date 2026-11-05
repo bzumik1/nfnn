@@ -104,7 +104,8 @@
             <button
               type="submit"
               class="ui-button ui-button--primary issue-button"
-              [disabled]="busy()"
+              [attr.aria-disabled]="busy() ? 'true' : null"
+              [attr.aria-busy]="busy()"
             >
               @if (busy()) {
                 <span i18n="@@admin.yearlyReceipts.issue.running">Připravujeme PDF…</span>
