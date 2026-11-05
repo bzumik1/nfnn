@@ -329,6 +329,16 @@ describe('Given an administrator on the bulk receipts page', () => {
       expectIssue();
     });
 
+    it('and the page is left while a batch is issuing, then the run stops without drawing anything', async () => {
+      const pending = expectIssue();
+
+      expect(() => fixture.destroy()).not.toThrow();
+      await settle();
+
+      expect(pending.cancelled).toBe(true);
+      expect(environment.workers).toHaveLength(0);
+    });
+
     it('then they go in batches of at most 50 in the order of the list, each after the one before', async () => {
       const first = expectIssue();
       expect(first.request.body).toEqual({

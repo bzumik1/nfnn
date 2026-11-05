@@ -185,6 +185,7 @@ export class AdminYearlyReceipts {
 
   constructor() {
     this.load(null);
+    this.destroyRef.onDestroy(() => this.running?.unsubscribe());
     afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
   }
 
@@ -301,10 +302,7 @@ export class AdminYearlyReceipts {
     this.run.set('issuing');
     this.issuingProgress();
     this.running = from(batches)
-      .pipe(
-        concatMap((donorIds) => this.api.issueYearlyReceipts(this.year, donorIds)),
-        takeUntilDestroyed(this.destroyRef),
-      )
+      .pipe(concatMap((donorIds) => this.api.issueYearlyReceipts(this.year, donorIds)))
       .subscribe({
         next: (answer) => {
           this.results.update((results) => {
@@ -346,7 +344,6 @@ export class AdminYearlyReceipts {
         fileName: bundleFileName(this.year),
         image: (sha256) => this.receiptsApi.administrationImage(sha256),
       })
-      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (event) => this.drawn(event, receipts.length),
         error: (failure: unknown) => {
