@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="013-keep-a-focal-point-on-photos" author="nfnn">
+        <addColumn tableName="content_media">
+            <column name="focal_x" type="smallint"/>
+            <column name="focal_y" type="smallint"/>
+        </addColumn>
+        <sql>alter table content_media add constraint ck_content_media_focal_point check (
+            (focal_x is null and focal_y is null)
+            or (focal_x is not null and focal_y is not null and focal_x between 0 and 100 and focal_y between 0 and 100))</sql>
+    </changeSet>
+</databaseChangeLog>

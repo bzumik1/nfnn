@@ -45,6 +45,7 @@ enum AdminHandlerReach {
         table.put("GET /api/admin/content/about", CONNECTOR);
         table.put("PUT /api/admin/content/about", CONNECTOR);
         table.put("POST /api/admin/content/media", CONNECTOR);
+        table.put("PUT /api/admin/content/media/{id}", CONNECTOR);
         table.put("GET /api/admin/content/news", CONNECTOR);
         table.put("POST /api/admin/content/news", CONNECTOR);
         table.put("GET /api/admin/content/news/{id}", CONNECTOR);
