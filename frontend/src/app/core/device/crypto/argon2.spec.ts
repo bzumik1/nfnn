@@ -113,6 +113,24 @@ describe('Given the Argon2id worker', () => {
     });
   });
 
+  it('when it has derived the key, then the password bytes it received are zeroed', async () => {
+    const password = utf8('heslo');
+
+    await argon2WorkerAnswer({
+      password,
+      salt: utf8('sixteen byte slt'),
+      parameters: {
+        algorithm: 'argon2id',
+        version: 19,
+        memoryKiB: 64,
+        iterations: 1,
+        parallelism: 1,
+      },
+    });
+
+    expect(Array.from(password)).toEqual([0, 0, 0, 0, 0]);
+  });
+
   it('when the parameters are not ones it can run, then it answers a failure instead of a key', async () => {
     const answer = await argon2WorkerAnswer({
       password: utf8('heslo'),

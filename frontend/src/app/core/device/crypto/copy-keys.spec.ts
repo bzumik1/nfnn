@@ -3,6 +3,7 @@ import {
   generateSessionKey,
   type KeyWrap,
   OpenCopy,
+  type PasswordWrap,
   openWithPassword,
   openWithPrf,
   openWithSessionKey,
@@ -200,6 +201,104 @@ describe('Given a new device copy', () => {
       expect(
         (await refusal(openWithSessionKey(copy, wrap, await generateSessionKey()))).reason,
       ).toBe('wrong-wrap');
+    });
+  });
+
+  describe('when a stored password wrap was tampered with', () => {
+    let derivation: SmallArgon2Derivation;
+    let wrap: PasswordWrap;
+
+    beforeEach(async () => {
+      derivation = new SmallArgon2Derivation();
+      wrap = await copy.wrapWithPassword('heslo', derivation, () => 0);
+      derivation.requested.length = 0;
+    });
+
+    for (const [name, parameters] of [
+      ['4 GiB of memory', { ...STRONG_PASSWORD_PARAMETERS, memoryKiB: 4 * 1024 * 1024 }],
+      ['less than 64 MiB', { ...STRONG_PASSWORD_PARAMETERS, memoryKiB: 1024 }],
+      ['no passes', { ...STRONG_PASSWORD_PARAMETERS, iterations: 0 }],
+      ['a thousand passes', { ...STRONG_PASSWORD_PARAMETERS, iterations: 1000 }],
+      ['four lanes', { ...STRONG_PASSWORD_PARAMETERS, parallelism: 4 }],
+      ['a fractional memory size', { ...STRONG_PASSWORD_PARAMETERS, memoryKiB: 65536.5 }],
+      ['another algorithm', { ...STRONG_PASSWORD_PARAMETERS, algorithm: 'argon2i' }],
+      ['another version', { ...STRONG_PASSWORD_PARAMETERS, version: 16 }],
+    ] as const) {
+      it(`(${name}), then it is refused as damaged before any key is derived`, async () => {
+        const tampered = { ...wrap, parameters } as unknown as KeyWrap;
+
+        expect((await refusal(openWithPassword(copy, tampered, 'heslo', derivation))).reason).toBe(
+          'damaged',
+        );
+        expect(derivation.requested).toEqual([]);
+      });
+    }
+
+    it('(a salt of 8 bytes), then it is refused as damaged before any key is derived', async () => {
+      const tampered = { ...wrap, salt: bytesToBase64Url(new Uint8Array(8)) };
+
+      expect((await refusal(openWithPassword(copy, tampered, 'heslo', derivation))).reason).toBe(
+        'damaged',
+      );
+      expect(derivation.requested).toEqual([]);
+    });
+
+    it('(other accepted parameters), then the wrap does not open, because its parameters are bound to it', async () => {
+      const tampered = {
+        ...wrap,
+        parameters: { ...wrap.parameters, iterations: 4 },
+      };
+
+      expect((await refusal(openWithPassword(copy, tampered, 'heslo', derivation))).reason).toBe(
+        'wrong-secret',
+      );
+    });
+
+    it('(another salt), then the wrap does not open', async () => {
+      const tampered = { ...wrap, salt: bytesToBase64Url(new Uint8Array(16).fill(1)) };
+
+      expect((await refusal(openWithPassword(copy, tampered, 'heslo', derivation))).reason).toBe(
+        'wrong-secret',
+      );
+    });
+  });
+
+  describe('when a stored wrap or record is not base64url', () => {
+    it('then the record is refused as damaged', async () => {
+      const sealed = await copy.sealRecord(GIFTS_2026, utf8('{}'));
+
+      expect(
+        (await refusal(copy.openRecord(GIFTS_2026, { ...sealed, sealed: 'not base64url!' })))
+          .reason,
+      ).toBe('damaged');
+      expect((await refusal(copy.openRecord(GIFTS_2026, { ...sealed, iv: 'AAAA' }))).reason).toBe(
+        'damaged',
+      );
+    });
+
+    it('then a passkey or password wrap is refused as damaged', async () => {
+      const prfWrap = await copy.wrapWithPrf(CREDENTIAL, PRF_OUTPUT);
+      const passwordWrap = await copy.wrapWithPassword(
+        'heslo',
+        new SmallArgon2Derivation(),
+        () => 0,
+      );
+
+      expect((await refusal(openWithPrf(copy, { ...prfWrap, iv: '%%' }, PRF_OUTPUT))).reason).toBe(
+        'damaged',
+      );
+      expect(
+        (
+          await refusal(
+            openWithPassword(
+              copy,
+              { ...passwordWrap, salt: '***' },
+              'heslo',
+              new SmallArgon2Derivation(),
+            ),
+          )
+        ).reason,
+      ).toBe('damaged');
     });
   });
 

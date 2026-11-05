@@ -1,6 +1,12 @@
-import { OpenCopy } from './copy-keys';
+import { generateSessionKey, OpenCopy } from './copy-keys';
 import { base64UrlToBytes, bytesToBase64Url, utf8 } from './device-bytes';
-import { lookupTag, newDeviceSalt, registryEntry, userHandleTag } from './device-registry';
+import {
+  lookupTag,
+  mayWrapWithPassword,
+  newDeviceSalt,
+  registryEntry,
+  userHandleTag,
+} from './device-registry';
 
 const EMAIL = 'Jana.Novakova@Example.cz';
 
@@ -77,5 +83,25 @@ describe('Given the plaintext registry of device copies', () => {
 
     expect(entry.userHandleTag).toBeNull();
     expect(entry.kind).toBe('administration');
+  });
+
+  describe('when a copy is to get a password wrap', () => {
+    it('then a donor copy may always have one', async () => {
+      const copy = await OpenCopy.create();
+      const prf = await copy.wrapWithPrf('Y3JlZA', new Uint8Array(32).fill(1));
+
+      expect(mayWrapWithPassword('donor', [])).toBe(true);
+      expect(mayWrapWithPassword('donor', [prf])).toBe(true);
+    });
+
+    it('then the administration copy may have one only while no passkey PRF wraps it', async () => {
+      const copy = await OpenCopy.create();
+      const prf = await copy.wrapWithPrf('Y3JlZA', new Uint8Array(32).fill(1));
+      const session = await copy.wrapWithSessionKey(await generateSessionKey());
+
+      expect(mayWrapWithPassword('administration', [])).toBe(true);
+      expect(mayWrapWithPassword('administration', [session])).toBe(true);
+      expect(mayWrapWithPassword('administration', [prf])).toBe(false);
+    });
   });
 });

@@ -25,6 +25,7 @@ export interface ScriptedOutcome {
 
 export class ScriptedDerivation implements PasswordKeyDerivation {
   readonly requested: Argon2Parameters[] = [];
+  readonly timeouts: (number | undefined)[] = [];
   private readonly inner = new SmallArgon2Derivation();
   private elapsed = 0;
 
@@ -32,9 +33,13 @@ export class ScriptedDerivation implements PasswordKeyDerivation {
 
   readonly now = (): number => this.elapsed;
 
-  async derive(question: PasswordKeyQuestion): Promise<Uint8Array<ArrayBuffer>> {
+  async derive(
+    question: PasswordKeyQuestion,
+    timeoutMs?: number,
+  ): Promise<Uint8Array<ArrayBuffer>> {
     const outcome = this.outcomes[this.requested.length] ?? {};
     this.requested.push(question.parameters);
+    this.timeouts.push(timeoutMs);
     this.elapsed += outcome.takesMs ?? 0;
     if (outcome.fails !== undefined) {
       throw outcome.fails;

@@ -28,6 +28,7 @@ export const STRONG_PARAMETERS_BUDGET_MS = 1000;
 export const PASSWORD_KEY_LENGTH = 32;
 export const PASSWORD_SALT_LENGTH = 16;
 export const DERIVATION_TIMEOUT_MS = 30_000;
+export const STRONG_ATTEMPT_TIMEOUT_MS = 5_000;
 
 export type PasswordKeyFailureReason = 'memory' | 'timeout' | 'failed';
 
@@ -47,7 +48,7 @@ export type PasswordKeyAnswer =
   { readonly key: Uint8Array<ArrayBuffer> } | { readonly failure: PasswordKeyFailureReason };
 
 export interface PasswordKeyDerivation {
-  derive(question: PasswordKeyQuestion): Promise<Uint8Array<ArrayBuffer>>;
+  derive(question: PasswordKeyQuestion, timeoutMs?: number): Promise<Uint8Array<ArrayBuffer>>;
 }
 
 export interface MeasuredPasswordKey {
@@ -106,7 +107,8 @@ export class WorkerPasswordKeyDerivation implements PasswordKeyDerivation {
     private readonly timeoutMs = DERIVATION_TIMEOUT_MS,
   ) {}
 
-  derive(question: PasswordKeyQuestion): Promise<Uint8Array<ArrayBuffer>> {
+  derive(question: PasswordKeyQuestion, timeoutMs?: number): Promise<Uint8Array<ArrayBuffer>> {
+    void timeoutMs;
     const worker = this.startWorker();
     return new Promise<Uint8Array<ArrayBuffer>>((resolve, reject) => {
       const timer = setTimeout(() => finish(new PasswordKeyFailure('timeout')), this.timeoutMs);

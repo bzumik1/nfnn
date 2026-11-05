@@ -54,3 +54,9 @@ async function tagOf(
   );
   return bytesToBase64Url(new Uint8Array(digest));
 }
+
+export function mayWrapWithPassword(kind: CopyKind, wraps: readonly KeyWrap[]): boolean {
+  void kind;
+  void wraps;
+  return true;
+}
