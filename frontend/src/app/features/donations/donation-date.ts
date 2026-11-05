@@ -18,9 +18,19 @@ export function formatBankTime(isoInstant: string): string {
   return `${parts['day']}. ${parts['month']}. ${parts['year']} ${parts['hour']}:${parts['minute']}`;
 }
 
+const BANK_CLOCK = new Intl.DateTimeFormat('cs-CZ', {
+  timeZone: 'Europe/Prague',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hourCycle: 'h23',
+});
+
 export function formatBankClock(isoInstant: string): string {
-  const parts = pragueParts(isoInstant);
-  return `${parts['hour']}:${parts['minute']}`;
+  const parts = Object.fromEntries(
+    BANK_CLOCK.formatToParts(new Date(isoInstant)).map((part) => [part.type, part.value]),
+  );
+  return `${parts['hour']}:${parts['minute']}:${parts['second']}`;
 }
 
 export function pragueDay(isoInstant: string): string {

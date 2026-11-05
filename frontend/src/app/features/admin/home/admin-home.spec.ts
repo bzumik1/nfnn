@@ -176,9 +176,12 @@ describe('Given an administrator on the administration home', () => {
     );
 
     expect(text('.admin-next-step')).toBe(
-      'Co udělat: Odemkněte historii v internetovém bankovnictví Fio (Nastavení → API, ikona zámku) a do 10 minut stiskněte níže „Načíst starší platby“.',
+      'Co udělat: Odemkněte historii v internetovém bankovnictví Fio (Nastavení → API, ikona zámku) a do 10 minut stiskněte níže „Načíst starší platby“. Přejít ke starším platbám',
     );
     expect(text('.admin-next-step')).not.toContain('restart');
+    expect(fixture.nativeElement.querySelector('.admin-next-step a')?.getAttribute('href')).toBe(
+      '/sprava#starsi-platby',
+    );
   });
 
   it('when the import card is ready, then it holds the part for older payments with the default day', async () => {
@@ -193,37 +196,57 @@ describe('Given an administrator on the administration home', () => {
     expect((card.querySelector('input#history-from') as HTMLInputElement).value).toBe('2025-01-01');
   });
 
-  it('when a run of older payments finishes, then the covered period shows the state the run ended with', async () => {
+  async function finishRun(added: number): Promise<void> {
+    http.expectOne(UNPAIRED_URL).flush(paymentList([]));
+    http.expectOne(IMPORT_STATE_URL).flush(
+      importState({
+        coveredFrom: '2026-08-08',
+        coveredTo: '2026-11-04',
+        historyImport: historyImport({ status: 'RUNNING' }),
+      }),
+    );
+    await settleWithFakeTimers();
+    expect(dataRows()['Stažené období']).toBe('08. 08. 2026 – 04. 11. 2026');
+    await vi.advanceTimersByTimeAsync(3000);
+
+    http.expectOne(IMPORT_STATE_URL).flush(
+      importState({
+        coveredFrom: '2026-01-01',
+        coveredTo: '2026-11-05',
+        historyImport: historyImport({
+          status: 'COMPLETED',
+          added,
+          finishedAt: '2026-11-05T10:01:00Z',
+        }),
+      }),
+    );
+    await settleWithFakeTimers();
+  }
+
+  it('when a run of older payments finishes with new payments, then the covered period shows the state the run ended with and the unpaired payments are asked again', async () => {
     vi.useFakeTimers();
     try {
-      http.expectOne(IMPORT_STATE_URL).flush(
-        importState({
-          coveredFrom: '2026-08-08',
-          coveredTo: '2026-11-04',
-          historyImport: historyImport({ status: 'RUNNING' }),
-        }),
-      );
-      await settleWithFakeTimers();
-      expect(dataRows()['Stažené období']).toBe('08. 08. 2026 – 04. 11. 2026');
-      await vi.advanceTimersByTimeAsync(3000);
-
-      http.expectOne(IMPORT_STATE_URL).flush(
-        importState({
-          coveredFrom: '2026-01-01',
-          coveredTo: '2026-11-05',
-          historyImport: historyImport({
-            status: 'COMPLETED',
-            added: 2,
-            finishedAt: '2026-11-05T10:01:00Z',
-          }),
-        }),
-      );
-      await settleWithFakeTimers();
+      await finishRun(2);
 
       expect(dataRows()['Stažené období']).toBe('01. 01. 2026 – 05. 11. 2026');
       expect(text('app-history-import [role="status"]')).toBe(
-        'Hotovo: staženo období 01. 01. 2026 – 05. 11. 2026, 2 nové platby.',
+        'Hotovo (05. 11. 2026 11:01): staženo období 01. 01. 2026 – 05. 11. 2026, 2 nové platby.',
       );
+      http.expectOne(UNPAIRED_URL).flush(paymentList([unpairedPayment()]));
+      await settleWithFakeTimers();
+      expect(text('.attention-unpaired')).toContain('1 platba čeká na přiřazení dárci');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('when a run of older payments finishes without new payments, then the unpaired payments are not asked again', async () => {
+    vi.useFakeTimers();
+    try {
+      await finishRun(0);
+
+      expect(dataRows()['Stažené období']).toBe('01. 01. 2026 – 05. 11. 2026');
+      http.expectNone(UNPAIRED_URL);
     } finally {
       vi.useRealTimers();
     }

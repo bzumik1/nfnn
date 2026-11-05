@@ -12,28 +12,45 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule, NgForm } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { catchError, EMPTY, Subscription, switchMap, take, takeWhile, timer } from 'rxjs';
-import { describeProblem } from '../../../../core/auth/api-problem';
+import { describeProblem, problemTypeEndsWith } from '../../../../core/auth/api-problem';
 import { pluralCategory } from '../../../../core/i18n/plural-category';
 import { FocusFirstInvalid } from '../../../../shared/ui/form-field/focus-first-invalid';
 import { FormControlDirective } from '../../../../shared/ui/form-field/form-control';
 import { FieldMessages, FormField } from '../../../../shared/ui/form-field/form-field';
 import { LiveNotice, Notice } from '../../../../shared/ui/live-notice/live-notice';
-import { formatBankClock, formatDonationDate, pragueDay } from '../../../donations/donation-date';
+import {
+  formatBankClock,
+  formatBankTime,
+  formatDonationDate,
+  pragueDay,
+} from '../../../donations/donation-date';
 import { AdminApi, HistoryImportResponse, ImportStateResponse } from '../../admin-api';
-import { IMPORT_FAILURE_LABELS } from '../import-failure-labels';
+import { IMPORT_FAILURE_LABELS, IMPORT_NEXT_STEPS, ImportNextStep } from '../import-failure-labels';
 
-export const HISTORY_POLL_MS = 3000;
-export const HISTORY_MAX_POLLS = 40;
+const HISTORY_POLL_MS = 3000;
+const HISTORY_MAX_POLLS = 40;
+const EARLIEST_DAY = '2000-01-01';
+const TOO_EARLY = 'donations/history-start-too-early';
+const IN_FUTURE = 'donations/history-start-in-future';
 
 const FROM_MESSAGES: FieldMessages = {
   required: $localize`:@@admin.home.history.from.required:Zadejte prosím den, od kterého se mají platby stáhnout.`,
   max: $localize`:@@admin.home.history.from.max:Zvolte prosím den nejpozději dnes.`,
+  min: $localize`:@@admin.home.history.from.min:Zvolte prosím den nejdříve 01. 01. 2000.`,
 };
 
 @Component({
   selector: 'app-history-import',
-  imports: [FormsModule, FormField, FormControlDirective, FocusFirstInvalid, LiveNotice],
+  imports: [
+    FormsModule,
+    RouterLink,
+    FormField,
+    FormControlDirective,
+    FocusFirstInvalid,
+    LiveNotice,
+  ],
   templateUrl: './history-import.html',
   styleUrl: './history-import.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -48,6 +65,7 @@ export class HistoryImport {
 
   protected readonly fromMessages = FROM_MESSAGES;
   protected readonly today = pragueDay(new Date().toISOString());
+  protected readonly earliest = EARLIEST_DAY;
   protected readonly from = linkedSignal({
     source: () => this.state().defaultHistoryFrom,
     computation: (day) => day,
@@ -58,6 +76,15 @@ export class HistoryImport {
   protected readonly refusal = signal<string | null>(null);
 
   protected readonly busy = computed(() => this.requesting() || isActive(this.run()));
+  protected readonly running = computed(
+    () => !this.requesting() && this.run()?.status === 'RUNNING',
+  );
+  protected readonly nextStep = computed<ImportNextStep | null>(() => {
+    const run = this.run();
+    return run?.status === 'FAILED' && this.refusal() === null
+      ? IMPORT_NEXT_STEPS[run.failure ?? 'UNEXPECTED']
+      : null;
+  });
 
   protected readonly notice = computed<Notice | null>(() => {
     const refusal = this.refusal();
@@ -67,7 +94,7 @@ export class HistoryImport {
     if (this.stillRunning()) {
       return {
         kind: 'status',
-        text: $localize`:@@admin.home.history.stillRunning:Stahování ještě běží; výsledek uvidíte po obnovení stránky.`,
+        text: $localize`:@@admin.home.history.stillRunning:Stahování ještě běží. Výsledek zjistíte tlačítkem níže nebo po obnovení stránky.`,
       };
     }
     const run = this.run();
@@ -87,10 +114,10 @@ export class HistoryImport {
       return;
     }
     this.refusal.set(null);
-    const control = form.controls['from'];
     if (form.valid && this.from() > this.today) {
-      control?.setErrors({ max: true });
-      control?.markAsTouched();
+      markFrom(form, 'max');
+    } else if (form.valid && this.from() < EARLIEST_DAY) {
+      markFrom(form, 'min');
     }
     if (form.invalid) {
       return;
@@ -110,6 +137,14 @@ export class HistoryImport {
         },
         error: (failure: unknown) => {
           this.requesting.set(false);
+          if (problemTypeEndsWith(failure, TOO_EARLY)) {
+            markFrom(form, 'min');
+            return;
+          }
+          if (problemTypeEndsWith(failure, IN_FUTURE)) {
+            markFrom(form, 'max');
+            return;
+          }
           this.refusal.set(
             describeProblem(
               failure,
@@ -118,6 +153,10 @@ export class HistoryImport {
           );
         },
       });
+  }
+
+  protected checkAgain(): void {
+    this.watch();
   }
 
   private watch(): void {
@@ -142,6 +181,12 @@ export class HistoryImport {
   }
 }
 
+function markFrom(form: NgForm, error: 'min' | 'max'): void {
+  const control = form.controls['from'];
+  control?.setErrors({ [error]: true });
+  control?.markAsTouched();
+}
+
 function isActive(run: HistoryImportResponse | null | undefined): boolean {
   return run?.status === 'QUEUED' || run?.status === 'RUNNING';
 }
@@ -153,8 +198,8 @@ function describeRun(run: HistoryImportResponse): Notice {
         kind: 'status',
         text:
           Date.parse(run.startsAt) > Date.now()
-            ? $localize`:@@admin.home.history.queued:Čekáme na banku, stahování začne v ${formatBankClock(run.startsAt)}:time:.`
-            : $localize`:@@admin.home.history.waiting:Stahování čeká na řadu…`,
+            ? $localize`:@@admin.home.history.queued:Fio přijímá jeden dotaz za 30 sekund. Stahování začne samo nejpozději v ${formatBankClock(run.startsAt)}:time:, stránku nechte otevřenou.`
+            : $localize`:@@admin.home.history.waiting:Stahování začne za chvíli…`,
       };
     case 'RUNNING':
       return {
@@ -165,24 +210,32 @@ function describeRun(run: HistoryImportResponse): Notice {
       const from = formatDonationDate(run.from);
       const to = formatDonationDate(run.to);
       const added = addedPayments(run.added ?? 0);
+      const at = finishedAt(run);
       return {
         kind: 'status',
-        text: $localize`:@@admin.home.history.completed:Hotovo: staženo období ${from}:from: – ${to}:to:, ${added}:added:.`,
+        text: $localize`:@@admin.home.history.completed:Hotovo (${at}:time:): staženo období ${from}:from: – ${to}:to:, ${added}:added:.`,
       };
     }
-    case 'HISTORY_LOCKED':
+    case 'HISTORY_LOCKED': {
+      const at = finishedAt(run);
       return {
         kind: 'alert',
-        text: $localize`:@@admin.home.history.locked:Historie ve Fio je zamčená. Odemkněte ji podle kroků výše a zkuste to znovu.`,
+        text: $localize`:@@admin.home.history.locked:Načtení z ${at}:time: se nepovedlo, historie ve Fio byla zamčená. Odemkněte ji podle kroků výše a zkuste to znovu.`,
       };
+    }
     case 'FAILED': {
+      const at = finishedAt(run);
       const reason = IMPORT_FAILURE_LABELS[run.failure ?? 'UNEXPECTED'];
       return {
         kind: 'alert',
-        text: $localize`:@@admin.home.history.failed:Platby se nepodařilo stáhnout: ${reason}:reason:. Zkuste to znovu.`,
+        text: $localize`:@@admin.home.history.failed:Platby se nepodařilo stáhnout (${at}:time:). Důvod: ${reason}:reason:.`,
       };
     }
   }
+}
+
+function finishedAt(run: HistoryImportResponse): string {
+  return formatBankTime(run.finishedAt ?? run.requestedAt);
 }
 
 function addedPayments(count: number): string {

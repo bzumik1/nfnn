@@ -446,9 +446,10 @@ test.describe('Given an administrator', () => {
     const card = page.getByRole('region', { name: 'Stav stahování plateb z banky' });
     const part = card.getByRole('region', { name: 'Starší platby z banky' });
     await expect(part.getByRole('listitem')).toHaveText([
+      'Níže zvolte den, od kterého platby chcete.',
       'V internetovém bankovnictví Fio otevřete Nastavení → API.',
-      'U tokenu webu klikněte na ikonu zámku a historii odemkněte.',
-      'Do 10 minut zvolte datum a stiskněte Načíst starší platby.',
+      'U tokenu, který používá tento web, klikněte na ikonu zámku a historii odemkněte.',
+      'Do 10 minut se vraťte sem a stiskněte „Načíst starší platby“.',
     ]);
     const from = part.getByLabel('Stáhnout platby od');
     await expect(from).toHaveValue('2026-01-01');
@@ -456,17 +457,23 @@ test.describe('Given an administrator', () => {
     await from.fill('2025-06-01');
     await part.getByRole('button', { name: 'Načíst starší platby' }).click();
 
-    await expect(part.getByRole('status')).toHaveText('Čekáme na banku, stahování začne v 11:00.');
-    await expect(part.getByRole('button', { name: 'Žádáme banku…' })).toBeDisabled();
+    await expect(part.getByRole('status')).toHaveText(
+      'Fio přijímá jeden dotaz za 30 sekund. Stahování začne samo nejpozději v 11:00:25, stránku nechte otevřenou.',
+    );
+    const waiting = part.getByRole('button', { name: 'Žádáme banku…' });
+    await expect(waiting).toHaveAttribute('aria-disabled', 'true');
+    await expect(waiting).toBeFocused();
     expect(posted).toEqual([{ from: '2025-06-01' }]);
 
     await page.clock.fastForward(3000);
 
     await expect(part.getByRole('status')).toHaveText(
-      'Hotovo: staženo období 01. 06. 2025 – 05. 11. 2026, 12 nových plateb.',
+      'Hotovo (05. 11. 2026 11:00): staženo období 01. 06. 2025 – 05. 11. 2026, 12 nových plateb.',
     );
     await expect(value(page, 'Stažené období')).toHaveText('01. 06. 2025 – 05. 11. 2026');
-    await expect(part.getByRole('button', { name: 'Načíst starší platby' })).toBeEnabled();
+    await expect(part.getByRole('button', { name: 'Načíst starší platby' })).not.toHaveAttribute(
+      'aria-disabled',
+    );
   });
 
   test('when the receipt signing key of the server fails its seal, then a red row leads to the key in the settings, which names it unpublished', async ({

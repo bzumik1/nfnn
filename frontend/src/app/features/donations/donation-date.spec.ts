@@ -29,9 +29,9 @@ describe('Given the time the bank data was last updated', () => {
 });
 
 describe('Given the moment a bank request starts', () => {
-  it('when only its time is formatted, then it reads as the Prague hour and minute', () => {
-    expect(formatBankClock('2026-11-05T10:00:20Z')).toBe('11:00');
-    expect(formatBankClock('2026-07-05T07:09:00Z')).toBe('09:09');
+  it('when only its time is formatted, then it reads as the Prague hour, minute and second', () => {
+    expect(formatBankClock('2026-11-05T10:00:20Z')).toBe('11:00:20');
+    expect(formatBankClock('2026-07-05T07:09:05.123Z')).toBe('09:09:05');
   });
 });
 

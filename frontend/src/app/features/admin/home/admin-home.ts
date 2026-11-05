@@ -26,7 +26,6 @@ import {
   AdminOverviewResponse,
   AdministratorResponse,
   BackupRunResponse,
-  ImportFailureKind,
   ImportStateResponse,
   TallyResponse,
 } from '../admin-api';
@@ -41,15 +40,13 @@ import {
 } from '../settings/receipt-signing-key/unpublished-keys';
 import { signingKeyWarnings } from '../settings/receipt-signing-key/key-warnings';
 import { HistoryImport } from './history-import/history-import';
-import { IMPORT_FAILURE_LABELS } from './import-failure-labels';
+import { IMPORT_FAILURE_LABELS, IMPORT_NEXT_STEPS } from './import-failure-labels';
 
 type SignatoryState = 'loading' | 'ok' | 'missing' | 'unsigned' | 'error';
 type LoadState = 'loading' | 'ready' | 'error';
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const FORBIDDEN = 'auth/forbidden';
-
-type NextStepLink = 'settings' | 'logs' | null;
 
 interface UnpairedSummary {
   readonly count: number;
@@ -67,38 +64,6 @@ interface SinceFigure {
   readonly link: string | null;
   readonly query: Record<string, string> | null;
 }
-
-interface NextStep {
-  readonly text: string;
-  readonly link: NextStepLink;
-}
-
-const NEXT_STEPS: Record<ImportFailureKind, NextStep> = {
-  RATE_LIMITED: {
-    text: $localize`:@@admin.home.import.next.rateLimited:Banka teď odmítá příliš časté dotazy. Web to zkusí znovu sám, nic dělat nemusíte.`,
-    link: null,
-  },
-  HISTORY_LOCKED: {
-    text: $localize`:@@admin.home.import.next.historyLocked:Odemkněte historii v internetovém bankovnictví Fio (Nastavení → API, ikona zámku) a do 10 minut stiskněte níže „Načíst starší platby“.`,
-    link: null,
-  },
-  UNAUTHORIZED: {
-    text: $localize`:@@admin.home.import.next.unauthorized:V internetovém bankovnictví Fio (Nastavení → API) vytvořte nový token typu „Sledování účtu“ (platí 180 dní) a vložte ho v Nastavení jako Token Fio API.`,
-    link: 'settings',
-  },
-  TRANSPORT: {
-    text: $localize`:@@admin.home.import.next.transport:Banka teď neodpovídá. Web to zkouší znovu sám každou hodinu; pokud to trvá déle, zkontrolujte připojení serveru k internetu.`,
-    link: null,
-  },
-  INVALID_RESPONSE: {
-    text: $localize`:@@admin.home.import.next.invalidResponse:Podrobnosti jsou v logu backendu; může jít o změnu Fio API.`,
-    link: 'logs',
-  },
-  UNEXPECTED: {
-    text: $localize`:@@admin.home.import.next.unexpected:Podrobnosti jsou v logu backendu.`,
-    link: 'logs',
-  },
-};
 
 @Component({
   selector: 'app-admin-home',
@@ -233,7 +198,7 @@ export class AdminHome {
   });
   protected readonly nextStep = computed(() => {
     const state = this.importState();
-    return state?.reportedOutage ? NEXT_STEPS[state.reportedOutage] : null;
+    return state?.reportedOutage ? IMPORT_NEXT_STEPS[state.reportedOutage] : null;
   });
   protected readonly neverAttempted = computed(
     () => this.state() === 'ready' && this.importState()?.lastAttemptedAt == null,
@@ -454,6 +419,14 @@ export class AdminHome {
 
   protected amount(tally: TallyResponse): string {
     return `${formatMinorUnits(tally.totalMinor)}\u00a0Kč`;
+  }
+
+  protected historyFinished(state: ImportStateResponse): void {
+    this.importState.set(state);
+    const run = state.historyImport;
+    if (run?.status === 'COMPLETED' && (run.added ?? 0) > 0) {
+      this.loadUnpaired();
+    }
   }
 
   protected load(): void {

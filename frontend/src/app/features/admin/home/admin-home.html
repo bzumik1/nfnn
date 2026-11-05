@@ -106,6 +106,14 @@
                       >Otevřít logy</a
                     >
                   }
+                  @case ('history') {
+                    <a
+                      routerLink="/sprava"
+                      fragment="starsi-platby"
+                      i18n="@@admin.home.import.next.history"
+                      >Přejít ke starším platbám</a
+                    >
+                  }
                 }
               </p>
             }
@@ -380,7 +388,7 @@
             </div>
           </dl>
           @if (importState(); as current) {
-            <app-history-import [state]="current" (finished)="importState.set($event)" />
+            <app-history-import [state]="current" (finished)="historyFinished($event)" />
           }
         }
       }

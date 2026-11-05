@@ -1,20 +1,21 @@
-<section class="history" aria-labelledby="admin-history-title">
+<section id="starsi-platby" class="history" tabindex="-1" aria-labelledby="admin-history-title">
   <h3 id="admin-history-title" class="ui-card__subtitle" i18n="@@admin.home.history.title">
     Starší platby z banky
   </h3>
   <p class="ui-card__intro history-lead" i18n="@@admin.home.history.lead">
-    Web stahuje platby z banky každou hodinu za posledních 89 dní. Starší platby vydá Fio jen do 10
-    minut po odemčení historie.
+    Nové platby web stahuje z banky sám každou hodinu. Platby starší než 89 dní vydá Fio jen do 10
+    minut po odemčení historie v internetovém bankovnictví.
   </p>
   <ol class="history-steps">
+    <li i18n="@@admin.home.history.step.date">Níže zvolte den, od kterého platby chcete.</li>
     <li i18n="@@admin.home.history.step.open">
       V internetovém bankovnictví Fio otevřete Nastavení → API.
     </li>
     <li i18n="@@admin.home.history.step.unlock">
-      U tokenu webu klikněte na ikonu zámku a historii odemkněte.
+      U tokenu, který používá tento web, klikněte na ikonu zámku a historii odemkněte.
     </li>
-    <li i18n="@@admin.home.history.step.load">
-      Do 10 minut zvolte datum a stiskněte Načíst starší platby.
+    <li i18n="@@admin.home.history.step.press">
+      Do 10 minut se vraťte sem a stiskněte „Načíst starší platby“.
     </li>
   </ol>
   <form
@@ -38,12 +39,19 @@
         name="from"
         type="date"
         required
+        [min]="earliest"
         [max]="today"
         [(ngModel)]="from"
       />
     </app-form-field>
-    <button type="submit" class="ui-button ui-button--primary" [disabled]="busy()">
-      @if (busy()) {
+    <button
+      type="submit"
+      class="ui-button ui-button--primary"
+      [attr.aria-disabled]="busy() ? 'true' : null"
+    >
+      @if (running()) {
+        <span i18n="@@admin.home.history.busy.running">Stahujeme platby…</span>
+      } @else if (busy()) {
         <span i18n="@@admin.home.history.busy">Žádáme banku…</span>
       } @else {
         <span i18n="@@admin.home.history.submit">Načíst starší platby</span>
@@ -51,4 +59,30 @@
     </button>
   </form>
   <app-live-notice [notice]="notice()" />
+  @if (stillRunning()) {
+    <button
+      type="button"
+      class="ui-button ui-button--quiet history-check-again"
+      (click)="checkAgain()"
+      i18n="@@admin.home.history.checkAgain"
+    >
+      Zjistit výsledek
+    </button>
+  }
+  @if (nextStep(); as step) {
+    <p class="history-next-step">
+      <span class="history-next-step-label" i18n="@@admin.home.history.next.label">Co udělat:</span>
+      {{ step.text }}
+      @switch (step.link) {
+        @case ('settings') {
+          <a routerLink="/sprava/nastaveni" i18n="@@admin.home.history.next.settings"
+            >Otevřít Nastavení</a
+          >
+        }
+        @case ('logs') {
+          <a routerLink="/sprava/logy" i18n="@@admin.home.history.next.logs">Otevřít logy</a>
+        }
+      }
+    </p>
+  }
 </section>
