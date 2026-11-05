@@ -7,14 +7,12 @@ import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
-import cz.novanadeje.app.donations.domain.receipt.DonationReceiptId;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
 import cz.novanadeje.app.donations.domain.receipt.FirstReceiptYear;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptCalendar;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatoryMissing;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatoryNeedsRenaming;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatoryUnprintable;
-import cz.novanadeje.app.donations.domain.receipt.ReplacedReceipt;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyUnpublished;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningPaused;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
@@ -66,45 +64,51 @@ public class YearlyReceiptsService {
     }
 
     @Transactional(readOnly = true)
-    public YearlyReceiptCandidates candidates(Optional<Year> requested) {
+    public YearlyReceiptCandidates candidates(Year year) {
         LocalDate today = FoundationCalendar.today(clock);
-        Year year = requested.orElseGet(() -> ReceiptCalendar.lastCompleted(today));
         DonationReceiptService.requireCompletedYear(firstYear, year, today);
         return candidatesOf(year, today);
+    }
+
+    @Transactional(readOnly = true)
+    public YearlyReceiptCandidates candidatesOfLastCompletedYear() {
+        return candidates(ReceiptCalendar.lastCompleted(FoundationCalendar.today(clock)));
     }
 
     public YearlyReceiptsRun issue(UUID adminId, AdministrationChannel channel, Year year, List<DonorReference> donors) {
         LocalDate today = FoundationCalendar.today(clock);
         DonationReceiptService.requireCompletedYear(firstYear, year, today);
         List<YearlyReceiptResult> results = new ArrayList<>();
-        for (DonorReference donor : donors) {
-            results.add(issueOne(adminId, channel, donor, year, today));
+        try {
+            for (DonorReference donor : donors) {
+                results.add(issueOne(adminId, channel, donor, year, today));
+            }
+        } finally {
+            audit(adminId, new YearlyReceiptsRun(year, results));
         }
-        YearlyReceiptsRun run = new YearlyReceiptsRun(year, results);
+        return new YearlyReceiptsRun(year, results);
+    }
+
+    private void audit(UUID adminId, YearlyReceiptsRun run) {
         if (run.tookNewNumbers()) {
             transaction.executeWithoutResult(status -> events.publishEvent(
                     new AdminActionPerformed(adminId, ISSUE_ACTION, Optional.empty(), auditDetails(run), clock.instant())));
         }
-        return run;
     }
 
     private YearlyReceiptResult issueOne(UUID adminId, AdministrationChannel channel, DonorReference donor, Year year, LocalDate today) {
-        Optional<DonationReceiptId> before = transaction.execute(status -> receipts.findActiveForYear(donor, year).map(DonationReceipt::id));
-        DonationReceipt receipt;
+        AdministratorIssue issue;
         try {
-            receipt = issuer.issueForYearByAdministrator(adminId, channel, donor, year, today);
+            issue = issuer.issueForYearInBulk(adminId, channel, donor, year, today);
         } catch (ReceiptSigningPaused | ReceiptSigningKeyUnpublished | ReceiptSignatoryMissing | ReceiptSignatoryNeedsRenaming
                  | ReceiptSignatoryUnprintable signingStopped) {
             throw signingStopped;
         } catch (DomainException refused) {
             return YearlyReceiptResult.skipped(donor, refused.code());
         }
-        if (before.filter(receipt.id()::equals).isPresent()) {
-            return new YearlyReceiptResult(donor, YearlyReceiptOutcome.UNCHANGED, Optional.of(receipt), Optional.empty(), Optional.empty());
-        }
-        Optional<ReplacedReceipt> replaced = receipt.frozen().document().replaces();
-        return new YearlyReceiptResult(donor, replaced.isPresent() ? YearlyReceiptOutcome.REPLACED : YearlyReceiptOutcome.ISSUED, Optional.of(receipt),
-                Optional.empty(), replaced.map(ReplacedReceipt::number));
+        YearlyReceiptOutcome outcome = !issue.tookNewNumber() ? YearlyReceiptOutcome.UNCHANGED
+                : issue.replacedActive().isPresent() ? YearlyReceiptOutcome.REPLACED : YearlyReceiptOutcome.ISSUED;
+        return new YearlyReceiptResult(donor, outcome, Optional.of(issue.receipt()), Optional.empty(), issue.replacedActive());
     }
 
     private YearlyReceiptCandidates candidatesOf(Year year, LocalDate today) {
@@ -114,8 +118,10 @@ public class YearlyReceiptsService {
         Map<DonorReference, DonationReceipt> active = receipts.findActiveForYearOfEveryDonor(year).stream()
                 .collect(Collectors.toMap(DonationReceipt::donor, Function.identity()));
         List<DonorRecord> records = donorRecords.findByIds(gifts.keySet());
-        List<YearlyReceiptCandidate> candidates = records.stream()
-                .filter(record -> !record.isErased())
+        Map<DonorReference, DonorRecord> recordsById = records.stream().collect(Collectors.toMap(DonorRecord::id, Function.identity()));
+        List<YearlyReceiptCandidate> candidates = gifts.keySet().stream()
+                .map(recordsById::get)
+                .filter(record -> record != null && !record.isErased())
                 .map(record -> candidate(record, gifts.get(record.id()), Optional.ofNullable(active.get(record.id()))))
                 .toList();
         return new YearlyReceiptCandidates(year, new ReceiptYears(ReceiptCalendar.lastCompleted(today), firstYear.year()), candidates,

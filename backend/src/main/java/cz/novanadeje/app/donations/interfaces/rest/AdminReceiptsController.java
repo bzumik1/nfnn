@@ -56,7 +56,7 @@ class AdminReceiptsController {
     ResponseEntity<YearlyReceiptCandidatesResponse> yearlyCandidates(
             @RequestParam(required = false) @Min(FIRST_FOUR_DIGIT_YEAR) @Max(LAST_FOUR_DIGIT_YEAR) Integer year
     ) {
-        return notStored(YearlyReceiptCandidatesResponse.from(yearlyReceipts.candidates(Optional.ofNullable(year).map(Year::of))));
+        return notStored(YearlyReceiptCandidatesResponse.from(year == null ? yearlyReceipts.candidatesOfLastCompletedYear() : yearlyReceipts.candidates(Year.of(year))));
     }
 
     @PostMapping("/receipts/yearly")

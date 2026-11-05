@@ -88,11 +88,16 @@ public class DonationReceiptIssuer {
         refuseUnlessOwnKeyIsPublished(donor);
         receipts.lockDonor(donor);
         requests.requireLiveRecord(donor);
-        return issueByAdministrator(adminId, channel, requests.forDonation(donor, donation, today));
+        return issueByAdministrator(adminId, channel, requests.forDonation(donor, donation, today)).receipt();
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public DonationReceipt issueForYearByAdministrator(UUID adminId, AdministrationChannel channel, DonorReference donor, Year year, LocalDate today) {
+        return issueForYearInBulk(adminId, channel, donor, year, today).receipt();
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public AdministratorIssue issueForYearInBulk(UUID adminId, AdministrationChannel channel, DonorReference donor, Year year, LocalDate today) {
         refuseUnlessOwnKeyIsPublished(donor);
         receipts.lockDonor(donor);
         requests.requireLiveRecord(donor);
@@ -113,18 +118,18 @@ public class DonationReceiptIssuer {
         }
     }
 
-    private DonationReceipt issueByAdministrator(UUID adminId, AdministrationChannel channel, ReceiptRequest request) {
+    private AdministratorIssue issueByAdministrator(UUID adminId, AdministrationChannel channel, ReceiptRequest request) {
         Optional<DonationReceipt> active = activeReceipt(request);
         Optional<DonationReceipt> replaced = active.filter(previous -> !previous.certifies(request.fingerprint()));
         if (replaced.isPresent() && !channel.mayReplaceReceipts()) {
             throw new ReceiptReplacementInBrowserOnly(replaced.get().number());
         }
-        DonationReceipt receipt = issue(request, active);
-        if (active.filter(previous -> previous.id().equals(receipt.id())).isEmpty()) {
-            events.publishEvent(new AdminActionPerformed(adminId, ISSUE_ACTION, Optional.of(receipt.id().value()), auditDetails(receipt),
-                    receipt.issuedAt()));
+        AdministratorIssue issue = new AdministratorIssue(issue(request, active), active);
+        if (issue.tookNewNumber()) {
+            events.publishEvent(new AdminActionPerformed(adminId, ISSUE_ACTION, Optional.of(issue.receipt().id().value()), auditDetails(issue.receipt()),
+                    issue.receipt().issuedAt()));
         }
-        return receipt;
+        return issue;
     }
 
     private static String auditDetails(DonationReceipt receipt) {

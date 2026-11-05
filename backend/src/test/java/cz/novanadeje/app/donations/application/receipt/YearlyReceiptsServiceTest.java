@@ -65,10 +65,8 @@ class YearlyReceiptsServiceTest {
     @DisplayName("Given one donor to issue and one the issuer refuses as erased, when the yearly receipts are issued, then the first is issued, the second skipped with the refusal's code, and one audit row counts them")
     void should_issue_and_skip_with_code_and_audit_counts_when_issued_given_one_refused_donor() {
         DonationReceipt issued = yearlyReceiptOf(JANA, YEAR_2026);
-        when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.empty());
-        when(receipts.findActiveForYear(ACME, YEAR_2026)).thenReturn(Optional.empty());
-        when(issuer.issueForYearByAdministrator(PETR, BROWSER, JANA, YEAR_2026, TODAY)).thenReturn(issued);
-        when(issuer.issueForYearByAdministrator(PETR, BROWSER, ACME, YEAR_2026, TODAY)).thenThrow(new DonorRecordErased(ACME));
+        when(issuer.issueForYearInBulk(PETR, BROWSER, JANA, YEAR_2026, TODAY)).thenReturn(new AdministratorIssue(issued, Optional.empty()));
+        when(issuer.issueForYearInBulk(PETR, BROWSER, ACME, YEAR_2026, TODAY)).thenThrow(new DonorRecordErased(ACME));
 
         YearlyReceiptsRun run = service.issue(PETR, BROWSER, YEAR_2026, List.of(JANA, ACME));
 
@@ -80,11 +78,10 @@ class YearlyReceiptsServiceTest {
     }
 
     @Test
-    @DisplayName("Given a donor whose active receipt the issuer returns again, when the yearly receipts are issued, then it is unchanged and nothing is audited")
+    @DisplayName("Given a donor whose active receipt the issuer saw under the lock and returns again, when the yearly receipts are issued, then it is unchanged and nothing is audited")
     void should_report_unchanged_and_audit_nothing_when_issued_given_active_receipt_returned() {
         DonationReceipt active = yearlyReceiptOf(JANA, YEAR_2026);
-        when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.of(active));
-        when(issuer.issueForYearByAdministrator(PETR, BROWSER, JANA, YEAR_2026, TODAY)).thenReturn(active);
+        when(issuer.issueForYearInBulk(PETR, BROWSER, JANA, YEAR_2026, TODAY)).thenReturn(new AdministratorIssue(active, Optional.of(active)));
 
         YearlyReceiptsRun run = service.issue(PETR, BROWSER, YEAR_2026, List.of(JANA));
 
@@ -93,10 +90,36 @@ class YearlyReceiptsServiceTest {
     }
 
     @Test
+    @DisplayName("Given a donor whose active receipt the issuer replaced under the lock, when the yearly receipts are issued, then it is replaced naming that receipt")
+    void should_report_replaced_with_number_seen_under_lock_when_issued_given_active_receipt_replaced() {
+        DonationReceipt active = yearlyReceiptOf(JANA, YEAR_2026);
+        DonationReceipt replacement = yearlyReceiptOf(JANA, YEAR_2026);
+        when(issuer.issueForYearInBulk(PETR, BROWSER, JANA, YEAR_2026, TODAY)).thenReturn(new AdministratorIssue(replacement, Optional.of(active)));
+
+        YearlyReceiptsRun run = service.issue(PETR, BROWSER, YEAR_2026, List.of(JANA));
+
+        assertThat(run.results()).containsExactly(
+                new YearlyReceiptResult(JANA, YearlyReceiptOutcome.REPLACED, Optional.of(replacement), Optional.empty(), Optional.of(active.number())));
+    }
+
+    @Test
+    @DisplayName("Given a run that issued one receipt before the signing key was withdrawn, when the yearly receipts are issued, then the run is refused and its one audit row counts what it issued")
+    void should_audit_what_was_issued_and_refuse_when_issued_given_signing_paused_after_first_donor() {
+        DonationReceipt issued = yearlyReceiptOf(JANA, YEAR_2026);
+        when(issuer.issueForYearInBulk(PETR, BROWSER, JANA, YEAR_2026, TODAY)).thenReturn(new AdministratorIssue(issued, Optional.empty()));
+        when(issuer.issueForYearInBulk(PETR, BROWSER, ACME, YEAR_2026, TODAY))
+                .thenThrow(new ReceiptSigningPaused(new ReceiptSigningKeyId("21fe31df")));
+
+        assertThatThrownBy(() -> service.issue(PETR, BROWSER, YEAR_2026, List.of(JANA, ACME))).isInstanceOf(ReceiptSigningPaused.class);
+
+        verify(events).publishEvent(new AdminActionPerformed(PETR, "ISSUE_RECEIPTS", Optional.empty(),
+                "Hromadně vystavena roční potvrzení za rok 2026: nová 1, nahrazená 0, beze změny 0, přeskočená 0", NOW));
+    }
+
+    @Test
     @DisplayName("Given a withdrawn signing key, when the yearly receipts are issued, then the whole run is refused as a single issue would be and nothing is audited")
     void should_refuse_whole_run_when_issued_given_signing_paused() {
-        when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.empty());
-        when(issuer.issueForYearByAdministrator(PETR, BROWSER, JANA, YEAR_2026, TODAY))
+        when(issuer.issueForYearInBulk(PETR, BROWSER, JANA, YEAR_2026, TODAY))
                 .thenThrow(new ReceiptSigningPaused(new ReceiptSigningKeyId("21fe31df")));
 
         assertThatThrownBy(() -> service.issue(PETR, BROWSER, YEAR_2026, List.of(JANA, ACME))).isInstanceOf(ReceiptSigningPaused.class);
@@ -106,8 +129,7 @@ class YearlyReceiptsServiceTest {
     @Test
     @DisplayName("Given nobody chosen to sign the receipts, when the yearly receipts are issued, then the whole run is refused as a single issue would be and nothing is audited")
     void should_refuse_whole_run_when_issued_given_signatory_missing() {
-        when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.empty());
-        when(issuer.issueForYearByAdministrator(PETR, BROWSER, JANA, YEAR_2026, TODAY)).thenThrow(new ReceiptSignatoryMissing());
+        when(issuer.issueForYearInBulk(PETR, BROWSER, JANA, YEAR_2026, TODAY)).thenThrow(new ReceiptSignatoryMissing());
 
         assertThatThrownBy(() -> service.issue(PETR, BROWSER, YEAR_2026, List.of(JANA, ACME))).isInstanceOf(ReceiptSignatoryMissing.class);
         verifyNoInteractions(events);
@@ -119,7 +141,7 @@ class YearlyReceiptsServiceTest {
         Year running = Year.of(2027);
 
         assertThatThrownBy(() -> service.issue(PETR, BROWSER, running, List.of(JANA))).isInstanceOf(YearNotYetCompleted.class);
-        assertThatThrownBy(() -> service.candidates(Optional.of(running))).isInstanceOf(YearNotYetCompleted.class);
+        assertThatThrownBy(() -> service.candidates(running)).isInstanceOf(YearNotYetCompleted.class);
         verifyNoInteractions(issuer, donations);
     }
 
@@ -133,15 +155,26 @@ class YearlyReceiptsServiceTest {
                 receivedFromJana(LocalDate.of(2026, 3, 1), 100000), receivedFromJana(LocalDate.of(2026, 5, 1), 25000),
                 refundedToJana(LocalDate.of(2026, 6, 1), 5000), receivedFromAcme(LocalDate.of(2026, 7, 1), 70000)));
         when(receipts.findActiveForYearOfEveryDonor(YEAR_2026)).thenReturn(List.of(janasReceipt));
-        when(donorRecords.findByIds(any())).thenReturn(List.of(jana(), erased));
+        when(donorRecords.findByIds(any())).thenReturn(List.of(erased, jana()));
 
-        YearlyReceiptCandidates candidates = service.candidates(Optional.empty());
+        YearlyReceiptCandidates candidates = service.candidatesOfLastCompletedYear();
 
         assertThat(candidates.year()).isEqualTo(YEAR_2026);
         assertThat(candidates.years()).isEqualTo(new ReceiptYears(YEAR_2026, YEAR_2026));
         assertThat(candidates.donors()).containsExactly(
                 new YearlyReceiptCandidate(JANA, jana().name(), jana().type(), 2, 125000, Optional.of(janasReceipt)));
         assertThat(candidates.erasedDonors()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Given the records come back in another order than the gifts, when the candidates of a year are listed, then the donors come in the order of their first gift")
+    void should_list_donors_in_order_of_first_gift_when_listed_given_records_in_other_order() {
+        when(donations.findReceivedOnBetween(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31))).thenReturn(List.of(
+                receivedFromAcme(LocalDate.of(2026, 2, 1), 70000), receivedFromJana(LocalDate.of(2026, 3, 1), 100000)));
+        when(receipts.findActiveForYearOfEveryDonor(YEAR_2026)).thenReturn(List.of());
+        when(donorRecords.findByIds(any())).thenReturn(List.of(jana(), acme()));
+
+        assertThat(service.candidates(YEAR_2026).donors()).extracting(YearlyReceiptCandidate::donor).containsExactly(ACME, JANA);
     }
 
     @SuppressWarnings("unchecked")
