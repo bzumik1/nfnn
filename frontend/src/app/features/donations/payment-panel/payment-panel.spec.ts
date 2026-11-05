@@ -21,6 +21,7 @@ interface Downloaded {
 }
 
 function readText(file: Blob): Promise<string> {
+  vi.useRealTimers();
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result as string);
@@ -30,7 +31,7 @@ function readText(file: Blob): Promise<string> {
 }
 
 describe('Given the payment panel on a phone or a tablet', () => {
-  let fixture: ComponentFixture<PaymentPanel>;
+  let created: ComponentFixture<PaymentPanel> | null;
   let http: HttpTestingController;
   let shared: ShareData[];
   let shareRefusal: Error | null;
@@ -81,7 +82,7 @@ describe('Given the payment panel on a phone or a tablet', () => {
       ],
     }).compileComponents();
     vi.useFakeTimers();
-    fixture = TestBed.createComponent(PaymentPanel);
+    created = null;
     http = TestBed.inject(HttpTestingController);
   });
 
@@ -92,8 +93,13 @@ describe('Given the payment panel on a phone or a tablet', () => {
     vi.restoreAllMocks();
   });
 
+  function panel(): ComponentFixture<PaymentPanel> {
+    created ??= TestBed.createComponent(PaymentPanel);
+    return created;
+  }
+
   function element<T extends HTMLElement>(selector: string): T {
-    return fixture.nativeElement.querySelector(selector) as T;
+    return panel().nativeElement.querySelector(selector) as T;
   }
 
   function squashed(selector: string): string {
@@ -101,7 +107,7 @@ describe('Given the payment panel on a phone or a tablet', () => {
   }
 
   function buttons(): HTMLButtonElement[] {
-    return Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[];
+    return Array.from(panel().nativeElement.querySelectorAll('button')) as HTMLButtonElement[];
   }
 
   function button(label: string): HTMLButtonElement {
@@ -127,9 +133,9 @@ describe('Given the payment panel on a phone or a tablet', () => {
   }
 
   async function settle(milliseconds = 0): Promise<void> {
-    fixture.detectChanges();
+    panel().detectChanges();
     await vi.advanceTimersByTimeAsync(milliseconds);
-    fixture.detectChanges();
+    panel().detectChanges();
   }
 
   async function openWithQr(): Promise<void> {
@@ -149,7 +155,7 @@ describe('Given the payment panel on a phone or a tablet', () => {
     await openWithQr();
 
     const order = Array.from(
-      fixture.nativeElement.querySelectorAll(
+      panel().nativeElement.querySelectorAll(
         '.bank, .bank-app-open, .bank-app-image, .other-device, .qr',
       ) as NodeListOf<Element>,
     ).map((part) => part.classList[0]);
@@ -212,7 +218,7 @@ describe('Given the payment panel on a phone or a tablet', () => {
   });
 
   it('when a signed-in donor taps Otevřít v aplikaci banky, then the file carries their variable symbol', async () => {
-    fixture.componentRef.setInput('variableSymbol', '1234567890');
+    panel().componentRef.setInput('variableSymbol', '1234567890');
     await openWithQr();
 
     await tap('Otevřít v aplikaci banky');

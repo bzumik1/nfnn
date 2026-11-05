@@ -304,3 +304,111 @@
 @include bp.container-down(payment-panel, phone) {
   @include qr-above-caption;
 }
+
+.qr[hidden] {
+  display: none;
+}
+
+.bank-app {
+  display: grid;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+
+  .ui-button--block {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2-5);
+    margin-top: 0;
+    white-space: normal;
+  }
+}
+
+.bank-app-icon {
+  flex-shrink: 0;
+  width: 1.25em;
+  height: 1.25em;
+}
+
+.bank-app-image {
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-border-accent);
+}
+
+.bank-app-status:empty {
+  display: none;
+}
+
+.bank-app-hint {
+  margin-top: 0;
+  background: var(--color-surface-accent);
+  border-color: var(--color-border-accent);
+  color: var(--color-text-soft);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+
+  strong {
+    color: var(--color-text);
+  }
+}
+
+.other-device {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
+  margin-top: var(--space-2);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-media);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  text-align: start;
+  cursor: pointer;
+}
+
+.other-device-text {
+  display: grid;
+  gap: var(--space-0-5);
+}
+
+.other-device-title {
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+}
+
+.other-device-hint {
+  font-size: var(--text-sm);
+  color: var(--color-text-soft);
+}
+
+.other-device-chevron {
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  color: var(--color-text-soft);
+  transition: transform var(--duration-base);
+
+  &.is-open {
+    transform: rotate(180deg);
+  }
+}
+
+.qr[role='region'] .qr-image,
+.qr[role='region'] .qr-placeholder {
+  width: min(260px, 100%);
+}
+
+.qr[role='region'] .qr-placeholder {
+  height: auto;
+  aspect-ratio: 1;
+}
+
+.qr-caption {
+  font-size: var(--text-sm);
+  color: var(--color-text-soft);
+  line-height: var(--leading-relaxed);
+  text-align: center;
+}

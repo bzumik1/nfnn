@@ -124,7 +124,133 @@
 
 <ng-content select="[afterBankDetails]" />
 
-<div class="qr">
+@if (compact()) {
+  <div class="bank-app">
+    <button
+      type="button"
+      class="bank-app-open ui-button ui-button--primary ui-button--block"
+      [disabled]="!handoffReady() || handingOff()"
+      (click)="openInBankApp()"
+    >
+      <svg
+        class="bank-app-icon"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M3 10h18L12 4 3 10Z" />
+        <path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18" />
+      </svg>
+      <span i18n="@@home.donate.bankApp.open">Otevřít v aplikaci banky</span>
+    </button>
+    <div class="bank-app-status" role="status">
+      @switch (handoffNotice()) {
+        @case ('imageSaved') {
+          <p class="ui-form-status">{{ savedQrText() }}</p>
+        }
+        @case ('spaydDownloaded') {
+          <p class="ui-callout bank-app-hint">
+            <span i18n="@@home.donate.bankApp.downloaded"
+              >Soubor platba.spayd je ve stažených souborech. Otevřete ho a vyberte svou bankovní
+              aplikaci.</span
+            >&ngsp;<ng-container [ngTemplateOutlet]="notOpened" />
+          </p>
+        }
+        @case ('bankNotOpened') {
+          <p class="ui-callout bank-app-hint"><ng-container [ngTemplateOutlet]="notOpened" /></p>
+        }
+      }
+    </div>
+    <button
+      type="button"
+      class="bank-app-image ui-button ui-button--block"
+      [disabled]="!handoffReady() || handingOff() || !qrMatrix()"
+      (click)="sendQrImage()"
+    >
+      <svg
+        class="bank-app-icon"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M12 15V3M7 8l5-5 5 5" />
+        <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" />
+      </svg>
+      @if (sendsImages) {
+        <span i18n="@@home.donate.bankApp.sendImage">Poslat QR jako obrázek</span>
+      } @else {
+        <span i18n="@@home.donate.qr.save">Uložit QR kód</span>
+      }
+    </button>
+    <ng-container [ngTemplateOutlet]="failureNotice" />
+    <button
+      type="button"
+      class="other-device"
+      [id]="otherDeviceId()"
+      [attr.aria-controls]="qrRegionId()"
+      [attr.aria-expanded]="qrShown()"
+      (click)="toggleQr()"
+    >
+      <span class="other-device-text">
+        <span class="other-device-title" i18n="@@home.donate.otherDevice.title"
+          >Platíte z jiného zařízení?</span
+        >&ngsp;
+        @if (qrShown()) {
+          <span class="other-device-hint" i18n="@@home.donate.otherDevice.scan"
+            >Naskenujte kód aplikací banky</span
+          >
+        } @else {
+          <span class="other-device-hint" i18n="@@home.donate.otherDevice.show"
+            >Zobrazit QR kód ke skenování</span
+          >
+        }
+      </span>
+      <svg
+        class="other-device-chevron"
+        [class.is-open]="qrShown()"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="m6 9 6 6 6-6" />
+      </svg>
+    </button>
+  </div>
+}
+
+<ng-template #notOpened>
+  @if (sendsImages) {
+    <span i18n="@@home.donate.bankApp.notOpened"
+      ><strong>Neotevřela se vám banka?</strong> Zkopírujte údaje výše do bankovní aplikace, nebo
+      pošlete QR jako obrázek a v bance zvolte platbu z obrázku.</span
+    >
+  } @else {
+    <span i18n="@@home.donate.bankApp.notOpenedSave">
+      <strong>Neotevřela se vám banka?</strong> Zkopírujte údaje výše do bankovní aplikace, nebo si
+      uložte QR kód a v bance zvolte platbu z obrázku.</span
+    >
+  }
+</ng-template>
+
+<div
+  class="qr"
+  [id]="qrRegionId()"
+  [attr.role]="compact() ? 'region' : null"
+  [attr.aria-labelledby]="compact() ? otherDeviceId() : null"
+  [hidden]="compact() && !qrShown()"
+>
   <div #qrBox class="qr-code" tabindex="-1" [attr.aria-busy]="busy()">
     @if (qrMatrix(); as matrix) {
       <app-qr-code
@@ -147,59 +273,79 @@
       </div>
     }
   </div>
-  <div class="qr-text">
-    <p class="qr-title" i18n="@@home.donate.qr.title">Naskenujte a přispějte</p>
-    <p class="qr-desc" i18n="@@home.donate.qr.desc">
-      Načtěte QR kód mobilní bankovní aplikací pro okamžitou platbu přímo na účet nadačního fondu.
-      Na telefonu si ho uložte a v bankovní aplikaci otevřete z galerie.
-    </p>
+  @if (compact()) {
     @if (qrMatrix()) {
-      <button type="button" class="qr-save" [disabled]="saving() || redrawing()" (click)="saveQr()">
-        @if (saving()) {
-          <ng-container i18n="@@home.donate.qr.saving">Připravujeme obrázek…</ng-container>
-        } @else {
-          <ng-container i18n="@@home.donate.qr.save">Uložit QR kód</ng-container>
-        }
-      </button>
-    }
-    <p class="ui-form-status qr-saved" role="status">
-      @if (savedQrText(); as saved) {
-        <span>{{ saved }}</span>
-      }
-    </p>
-    <div [attr.role]="failureAlerts() ? null : 'status'">
-      @if (failure(); as failure) {
-        <div
-          class="ui-callout ui-callout--danger qr-error"
-          [attr.role]="failureAlerts() ? 'alert' : null"
+      <p class="qr-caption">
+        <ng-container i18n="@@home.donate.qr.caption"
+          >QR platba na účet Nadačního fondu Nová naděje, {{ drawnCrowns() }}&nbsp;Kč.</ng-container
         >
-          @if (failure === 'refused') {
-            <p i18n="@@home.donate.qr.refused">
-              QR kód teď nejde vytvořit. Zaplaťte prosím podle bankovního spojení.
-            </p>
-          } @else {
-            <p i18n="@@home.donate.qr.error">
-              QR platbu se nepodařilo připravit. Zkuste to prosím znovu.
-            </p>
-          }
-          <button
-            #retryButton
-            type="button"
-            class="qr-retry"
-            (click)="retry()"
-            i18n="@@home.donate.qr.retry"
-          >
-            Zkusit znovu
-          </button>
-        </div>
-      }
-    </div>
-  </div>
-  <p class="visually-hidden qr-announcement" role="status">
-    @if (announcedAmount(); as announced) {
-      <span i18n="@@home.donate.qr.ready"
-        >QR platba na {{ crowns(announced) }}&nbsp;Kč je připravená.</span
-      >
+      </p>
     }
-  </p>
+  } @else {
+    <div class="qr-text">
+      <p class="qr-title" i18n="@@home.donate.qr.title">Naskenujte a přispějte</p>
+      <p class="qr-desc" i18n="@@home.donate.qr.desc">
+        Načtěte QR kód mobilní bankovní aplikací pro okamžitou platbu přímo na účet nadačního fondu.
+        Na telefonu si ho uložte a v bankovní aplikaci otevřete z galerie.
+      </p>
+      @if (qrMatrix()) {
+        <button
+          type="button"
+          class="qr-save"
+          [disabled]="saving() || redrawing()"
+          (click)="saveQr()"
+        >
+          @if (saving()) {
+            <ng-container i18n="@@home.donate.qr.saving">Připravujeme obrázek…</ng-container>
+          } @else {
+            <ng-container i18n="@@home.donate.qr.save">Uložit QR kód</ng-container>
+          }
+        </button>
+      }
+      <p class="ui-form-status qr-saved" role="status">
+        @if (savedQrText(); as saved) {
+          <span>{{ saved }}</span>
+        }
+      </p>
+      <ng-container [ngTemplateOutlet]="failureNotice" />
+    </div>
+  }
 </div>
+
+<p class="visually-hidden qr-announcement" role="status">
+  @if (announcedAmount(); as announced) {
+    <span i18n="@@home.donate.qr.ready"
+      >QR platba na {{ crowns(announced) }}&nbsp;Kč je připravená.</span
+    >
+  }
+</p>
+
+<ng-template #failureNotice>
+  <div [attr.role]="failureAlerts() ? null : 'status'">
+    @if (failure(); as failure) {
+      <div
+        class="ui-callout ui-callout--danger qr-error"
+        [attr.role]="failureAlerts() ? 'alert' : null"
+      >
+        @if (failure === 'refused') {
+          <p i18n="@@home.donate.qr.refused">
+            QR kód teď nejde vytvořit. Zaplaťte prosím podle bankovního spojení.
+          </p>
+        } @else {
+          <p i18n="@@home.donate.qr.error">
+            QR platbu se nepodařilo připravit. Zkuste to prosím znovu.
+          </p>
+        }
+        <button
+          #retryButton
+          type="button"
+          class="qr-retry"
+          (click)="retry()"
+          i18n="@@home.donate.qr.retry"
+        >
+          Zkusit znovu
+        </button>
+      </div>
+    }
+  </div>
+</ng-template>

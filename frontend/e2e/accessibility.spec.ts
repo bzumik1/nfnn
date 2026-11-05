@@ -129,6 +129,21 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
+  test('when they pay from a phone and unfold the QR code for another device, then nothing in Přispět breaks the rules', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/');
+    await expect(page.getByRole('button', { name: 'Otevřít v aplikaci banky' })).toBeEnabled();
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.getByRole('button', { name: /Platíte z jiného zařízení\?/ }).click();
+    await expect(page.locator('#prispet .qr-code svg')).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
   test('when the home page shows published news and projects and they open both pages, then nothing breaks the rules', async ({
     page,
   }) => {

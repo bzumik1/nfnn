@@ -87,11 +87,21 @@ export class QrCode {
     });
   }
 
-  async pngBlob(_sidePx: number): Promise<Blob> {
-    throw new Error('not yet');
+  async pngBlob(sidePx: number): Promise<Blob> {
+    const canvas = await this.drawnCanvas(sidePx);
+    return new Promise((resolve, reject) =>
+      canvas.toBlob(
+        (blob) => (blob ? resolve(blob) : reject(new Error('The QR image was not drawn'))),
+        'image/png',
+      ),
+    );
   }
 
   async pngDataUrl(sidePx: number): Promise<string> {
+    return (await this.drawnCanvas(sidePx)).toDataURL('image/png');
+  }
+
+  private async drawnCanvas(sidePx: number): Promise<HTMLCanvasElement> {
     const source = this.svg().nativeElement;
     const copy = source.cloneNode(true) as SVGSVGElement;
     copy.querySelectorAll('.is-off, .qr-ring').forEach((element) => element.remove());
@@ -118,7 +128,7 @@ export class QrCode {
     canvas.width = sidePx;
     canvas.height = sidePx;
     canvas.getContext('2d')?.drawImage(image, 0, 0, sidePx, sidePx);
-    return canvas.toDataURL('image/png');
+    return canvas;
   }
 
   private animateFrom(

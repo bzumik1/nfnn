@@ -1,17 +1,43 @@
+import { saveBlob } from '../file-download';
+
 export type Handoff = 'shared' | 'dismissed' | 'refused' | 'downloaded';
 
+const SPAYD_FILE_NAME = 'platba.spayd';
+const SPAYD_MEDIA_TYPE = 'application/x-shortpaymentdescriptor';
+const IMAGE_FILE_NAME = 'qr-platba-nova-nadeje.png';
+const IMAGE_MEDIA_TYPE = 'image/png';
+
 export function spaydFile(text: string): File {
-  return new File([text], 'stub');
+  return new File([text], SPAYD_FILE_NAME, { type: SPAYD_MEDIA_TYPE });
 }
 
 export function imageFile(png: Blob): File {
-  return new File([png], 'stub');
+  return new File([png], IMAGE_FILE_NAME, { type: IMAGE_MEDIA_TYPE });
 }
 
-export function deviceShares(_file: File): boolean {
-  return false;
+export function sharesImages(): boolean {
+  return deviceShares(imageFile(new Blob([], { type: IMAGE_MEDIA_TYPE })));
 }
 
-export async function handOver(_file: File, _title: string): Promise<Handoff> {
-  return 'refused';
+export async function handOver(file: File, title: string): Promise<Handoff> {
+  if (!deviceShares(file)) {
+    saveBlob({ blob: file, fileName: file.name });
+    return 'downloaded';
+  }
+  try {
+    await navigator.share({ files: [file], title });
+    return 'shared';
+  } catch (failure) {
+    return failure instanceof DOMException && failure.name === 'AbortError'
+      ? 'dismissed'
+      : 'refused';
+  }
+}
+
+function deviceShares(file: File): boolean {
+  return (
+    typeof navigator.share === 'function' &&
+    typeof navigator.canShare === 'function' &&
+    navigator.canShare({ files: [file] })
+  );
 }

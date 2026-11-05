@@ -1,7 +1,9 @@
 /// <reference types="@angular/localize" />
 
+import { NgTemplateOutlet } from '@angular/common';
 import {
   afterNextRender,
+  afterRenderEffect,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -14,6 +16,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { CompactLayout } from '../../../core/layout/compact-layout';
 import { CopyButton } from '../../../shared/ui/copy-button/copy-button';
 import { QrCode } from '../../../shared/ui/qr-code/qr-code';
 import { encodeText } from '../../../shared/ui/qr-code/qr-encoder';
@@ -22,7 +25,9 @@ import { formatCrowns } from '../donation-amount';
 import { formatIban } from '../iban-format';
 import { PaymentAccount, PaymentDetails } from '../payment-details-api';
 import { PaymentDetailsStore } from '../payment-details-store';
+import { saveBlob } from '../file-download';
 import { spayd } from '../spayd';
+import { Handoff, handOver, imageFile, sharesImages, spaydFile } from './bank-handoff';
 import { ChosenAmount, ChosenAmountStore } from './chosen-amount';
 
 const DEFAULT_AMOUNT = 500;
@@ -40,9 +45,16 @@ interface AmountPreset {
   readonly label: string;
 }
 
+interface Payment {
+  readonly spayd: string;
+  readonly matrix: QrMatrix;
+}
+
+type HandoffNotice = 'bankNotOpened' | 'spaydDownloaded' | 'imageSaved';
+
 type QrState =
   | { readonly kind: 'loading' }
-  | { readonly kind: 'ready'; readonly matrix: QrMatrix }
+  | { readonly kind: 'ready'; readonly payment: Payment }
   | { readonly kind: 'unavailable' }
   | { readonly kind: 'refused' }
   | { readonly kind: 'amountInvalid' };
@@ -54,7 +66,7 @@ export type PaymentAccountState =
 
 @Component({
   selector: 'app-payment-panel',
-  imports: [CopyButton, QrCode],
+  imports: [CopyButton, NgTemplateOutlet, QrCode],
   templateUrl: './payment-panel.html',
   styleUrl: './payment-panel.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -63,6 +75,7 @@ export class PaymentPanel {
   private readonly store = inject(PaymentDetailsStore);
   private readonly injector = inject(Injector);
   private readonly chosenAmount = inject(ChosenAmountStore);
+  protected readonly compact = inject(CompactLayout).isCompact;
   private readonly bankLabel = viewChild<ElementRef<HTMLElement>>('bankLabel');
   private readonly qrBox = viewChild<ElementRef<HTMLElement>>('qrBox');
   private readonly retryButton = viewChild<ElementRef<HTMLButtonElement>>('retryButton');
@@ -122,13 +135,19 @@ export class PaymentPanel {
     if (amount === null) {
       return { kind: 'amountInvalid' };
     }
-    const matrix = paymentMatrix(stored.details, amount, this.variableSymbol());
-    return matrix === null ? { kind: 'refused' } : { kind: 'ready', matrix };
+    const payment = paymentOf(stored.details, amount, this.variableSymbol());
+    return payment === null ? { kind: 'refused' } : { kind: 'ready', payment };
   });
 
-  protected readonly qrMatrix = computed(() => {
+  private readonly payment = computed(() => {
     const state = this.state();
-    return state.kind === 'ready' ? state.matrix : null;
+    return state.kind === 'ready' ? state.payment : null;
+  });
+
+  protected readonly qrMatrix = computed(() => this.payment()?.matrix ?? null);
+  protected readonly drawnCrowns = computed(() => {
+    const amount = this.drawnAmount();
+    return amount === null ? '' : formatCrowns(amount);
   });
 
   protected readonly busy = computed(() => this.state().kind === 'loading' || this.redrawing());
@@ -147,6 +166,16 @@ export class PaymentPanel {
   });
 
   protected readonly announcedAmount = this.announced.asReadonly();
+
+  private readonly shareTitle = $localize`:@@home.donate.bankApp.shareTitle:QR platba`;
+  protected readonly sendsImages = sharesImages();
+  protected readonly qrShown = signal(false);
+  protected readonly handingOff = signal(false);
+  protected readonly handoffNotice = signal<HandoffNotice | null>(null);
+  protected readonly handoffReady = computed(() => this.payment() !== null && !this.redrawing());
+  private readonly preparedImage = signal<{ readonly matrix: QrMatrix; readonly png: Blob } | null>(
+    null,
+  );
 
   protected readonly bankAccount = computed(() => this.details()?.account ?? null);
 
@@ -167,6 +196,8 @@ export class PaymentPanel {
   protected readonly customAmountId = computed(() => `${this.idPrefix()}-custom-amount`);
   protected readonly amountHintId = computed(() => `${this.idPrefix()}-amount-hint`);
   protected readonly redrawHintId = computed(() => `${this.idPrefix()}-redraw-hint`);
+  protected readonly qrRegionId = computed(() => `${this.idPrefix()}-qr`);
+  protected readonly otherDeviceId = computed(() => `${this.idPrefix()}-other-device`);
   protected readonly customAmountDescription = computed(() =>
     this.showAmountHint() ? `${this.redrawHintId()} ${this.amountHintId()}` : this.redrawHintId(),
   );
@@ -174,6 +205,7 @@ export class PaymentPanel {
   constructor() {
     this.store.load();
     effect(() => this.focusAfterRetry(this.state().kind));
+    afterRenderEffect(() => this.prepareImage());
     inject(DestroyRef).onDestroy(() => {
       clearTimeout(this.redrawTimer);
       clearTimeout(this.announceTimer);
@@ -181,7 +213,7 @@ export class PaymentPanel {
   }
 
   choosePreset(amount: number): void {
-    this.savedQrFile.set(null);
+    this.clearNotices();
     this.customChosen.set(false);
     this.presetAmount.set(amount);
     this.chosenAmount.remember({ amount, custom: false });
@@ -193,7 +225,7 @@ export class PaymentPanel {
     if (this.customChosen()) {
       return;
     }
-    this.savedQrFile.set(null);
+    this.clearNotices();
     this.customAmount.set(null);
     this.customText.set('');
     this.customAmountLeft.set(false);
@@ -205,7 +237,7 @@ export class PaymentPanel {
   }
 
   enterCustomAmount(event: Event): void {
-    this.savedQrFile.set(null);
+    this.clearNotices();
     const typed = wholeCrowns((event.target as HTMLInputElement).value);
     this.customAmount.set(typed);
     const amount = wholeAmountInRange(typed);
@@ -246,6 +278,75 @@ export class PaymentPanel {
     } finally {
       this.saving.set(false);
     }
+  }
+
+  toggleQr(): void {
+    this.qrShown.update((shown) => !shown);
+  }
+
+  async openInBankApp(): Promise<void> {
+    const payment = this.payment();
+    if (payment === null || !this.handoffReady() || this.handingOff()) {
+      return;
+    }
+    this.clearNotices();
+    this.handingOff.set(true);
+    try {
+      const handoff = await handOver(spaydFile(payment.spayd), this.shareTitle);
+      this.handoffNotice.set(bankNotice(handoff));
+    } finally {
+      this.handingOff.set(false);
+    }
+  }
+
+  async sendQrImage(): Promise<void> {
+    const qrCode = this.qrCode();
+    const matrix = this.qrMatrix();
+    if (!qrCode || matrix === null || !this.handoffReady() || this.handingOff()) {
+      return;
+    }
+    this.clearNotices();
+    this.handingOff.set(true);
+    try {
+      const prepared = this.preparedImage();
+      const png =
+        prepared?.matrix === matrix ? prepared.png : await qrCode.pngBlob(SAVED_QR_SIDE_PX);
+      const file = imageFile(png);
+      const handoff = await handOver(file, this.shareTitle);
+      if (handoff === 'refused') {
+        saveBlob({ blob: file, fileName: file.name });
+      }
+      if (handoff === 'refused' || handoff === 'downloaded') {
+        this.savedQrFile.set(file.name);
+        this.handoffNotice.set('imageSaved');
+      }
+    } finally {
+      this.handingOff.set(false);
+    }
+  }
+
+  private clearNotices(): void {
+    this.savedQrFile.set(null);
+    this.handoffNotice.set(null);
+  }
+
+  private prepareImage(): void {
+    const qrCode = this.qrCode();
+    const matrix = this.qrMatrix();
+    if (!this.compact() || !this.sendsImages || !qrCode || matrix === null || this.redrawing()) {
+      return;
+    }
+    if (this.preparedImage()?.matrix === matrix) {
+      return;
+    }
+    qrCode.pngBlob(SAVED_QR_SIDE_PX).then(
+      (png) => {
+        if (this.qrMatrix() === matrix) {
+          this.preparedImage.set({ matrix, png });
+        }
+      },
+      () => undefined,
+    );
   }
 
   private redrawLater(): void {
@@ -291,19 +392,30 @@ export class PaymentPanel {
   }
 }
 
-function paymentMatrix(
+function paymentOf(
   details: PaymentDetails,
   amount: number,
   variableSymbol: string | null,
-): QrMatrix | null {
+): Payment | null {
   const payment = spayd(details, { amountMinor: amount * MINOR_PER_CROWN, variableSymbol });
   if (!('spayd' in payment)) {
     return null;
   }
   try {
-    return encodeText(payment.spayd, PAYMENT_QR_LEVEL);
+    return { spayd: payment.spayd, matrix: encodeText(payment.spayd, PAYMENT_QR_LEVEL) };
   } catch {
     return null;
+  }
+}
+
+function bankNotice(handoff: Handoff): HandoffNotice | null {
+  switch (handoff) {
+    case 'shared':
+      return null;
+    case 'downloaded':
+      return 'spaydDownloaded';
+    default:
+      return 'bankNotOpened';
   }
 }
 
