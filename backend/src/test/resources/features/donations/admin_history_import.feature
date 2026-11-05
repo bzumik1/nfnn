@@ -57,7 +57,7 @@ Feature: An administrator loads older bank payments without restarting the serve
       | historyImport.added     | 1          |
       | historyImport.finishedAt | 2026-11-05T11:01:00Z |
 
-  Scenario Outline: A request <days> days back needs the unlocked history only beyond the 89 days Fio serves without it
+  Scenario Outline: A request <days> days back needs the unlocked history beyond the 89 days the site asks for without it
     Given the bank account has these movements:
       | id   | date       | amount | account    | bankCode | name         |
       | 2001 | 2026-08-08 | 300.00 | 2900233333 | 2010     | Svoboda Petr |
@@ -70,6 +70,7 @@ Feature: An administrator loads older bank payments without restarting the serve
     Examples:
       | days | from       | needsUnlock | status         |
       | 89   | 2026-08-08 | false       | COMPLETED      |
+      | 90   | 2026-08-07 | true        | COMPLETED      |
       | 91   | 2026-08-06 | true        | HISTORY_LOCKED |
 
   Scenario: Reading a covered window again stores nothing twice and closes the gap a long pause left
@@ -130,12 +131,47 @@ Feature: An administrator loads older bank payments without restarting the serve
     Then the response status is 400
     And the problem lists an error for field "from"
 
-  Scenario: Requests are limited per client address
+  Scenario: A malformed day is refused before anything is recorded
+    When "Jana" sends POST "/api/admin/donations/import/history" as "application/json" with the body '{"from": "2026-13-45"}'
+    Then the response status is 400
+    And no admin action is recorded for "Jana"
+
+  Scenario: Without a Fio token the request is refused as the import being off and nothing is recorded
+    Given the bank import is off
+    When "Jana" asks for older bank payments from 2026-01-01
+    Then the response status is 409
+    And the problem type ends with "donations/bank-import-off"
+    And no admin action is recorded for "Jana"
+    When "Jana" asks for the import state
+    Then the import state names no run of older payments
+
+  Scenario: Requests are limited per client address before anything is recorded, and another address is still served
     When "Jana" asks for older bank payments from 2026-10-01 10 times
     Then the response status is 202
     When "Jana" asks for older bank payments from 2026-10-01
     Then the response status is 429
     And the problem type ends with "donations/rate-limited"
+    And the admin action "REQUEST_HISTORY_IMPORT" by "Jana" is recorded 10 times
+    When the following requests come from another client address
+    And "Jana" asks for older bank payments from 2026-10-01
+    Then the response status is 202
+    And the admin action "REQUEST_HISTORY_IMPORT" by "Jana" is recorded 11 times
+
+  Scenario: A deeper request still waiting keeps its day when a later day is asked for
+    Given the application starts the import
+    And 10 seconds pass
+    When "Jana" asks for older bank payments from 2026-01-01
+    And "Jana" asks for older bank payments from 2026-10-01
+    Then the history import says:
+      | from   | 2026-01-01 |
+      | status | QUEUED     |
+
+  Scenario: A connected application with the writing permission asks for older payments and the audit names it
+    Given "Jana" connected the application "https://claude.ai/.well-known/oauth-client" with scope "admin:read admin:write"
+    When the connector exchanges the connector token for an API token
+    And the exchanged API token asks for older bank payments from 2026-09-01
+    Then the response status is 202
+    And the admin action "REQUEST_HISTORY_IMPORT" by "Jana" came through "claude.ai"
 
   Scenario: A donor without the administrator role is refused
     Given a person "Petr" is registered

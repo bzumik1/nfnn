@@ -1,7 +1,5 @@
 package cz.novanadeje.app.donations.application.importing;
 
-import java.time.Instant;
-import java.time.LocalDate;
 
 public interface BankImportRequests {
 
@@ -11,5 +9,5 @@ public interface BankImportRequests {
 
     boolean enabled();
 
-    void requestHistoryImport(LocalDate from, Instant at);
+    void requestHistoryImport(HistoryImportRun run);
 }

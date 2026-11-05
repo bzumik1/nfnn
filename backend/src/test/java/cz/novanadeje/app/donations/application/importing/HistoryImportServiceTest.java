@@ -32,6 +32,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -70,8 +72,8 @@ class HistoryImportServiceTest {
 
         HistoryImportRun run = service.request(ADMIN, LocalDate.of(2026, 1, 1));
 
-        assertThat(run).isEqualTo(HistoryImportRun.queued(new ImportPeriod(LocalDate.of(2026, 1, 1), TODAY), true, NOW, NOW));
-        verify(imports).requestHistoryImport(LocalDate.of(2026, 1, 1), NOW);
+        assertThat(run).isEqualTo(HistoryImportRun.queued(run.id(), new ImportPeriod(LocalDate.of(2026, 1, 1), TODAY), true, NOW, NOW));
+        verify(imports).requestHistoryImport(run);
         ArgumentCaptor<AdminActionPerformed> audited = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events).publishEvent(audited.capture());
         assertThat(audited.getValue()).isEqualTo(new AdminActionPerformed(ADMIN, "REQUEST_HISTORY_IMPORT", Optional.empty(),
@@ -91,7 +93,7 @@ class HistoryImportServiceTest {
 
         assertThat(run.startsAt()).isEqualTo(NOW.plusSeconds(20));
         assertThat(run.needsUnlockedHistory()).isFalse();
-        verify(imports).requestHistoryImport(LocalDate.of(2026, 9, 1), NOW.plusSeconds(20));
+        verify(imports).requestHistoryImport(run);
     }
 
     @Test
@@ -100,10 +102,11 @@ class HistoryImportServiceTest {
         when(imports.enabled()).thenReturn(true);
         when(states.current()).thenReturn(BankImportState.initial(NOW));
         doAnswer(invocation -> {
-            tracker.started(LocalDate.of(2026, 1, 1));
-            tracker.abandoned(ImportFailureKind.UNEXPECTED, NOW);
+            HistoryImportRun handed = invocation.getArgument(0);
+            tracker.started(handed.id());
+            tracker.abandoned(handed.id(), ImportFailureKind.UNEXPECTED, NOW);
             return null;
-        }).when(imports).requestHistoryImport(any(), any());
+        }).when(imports).requestHistoryImport(any());
 
         HistoryImportRun run = service.request(ADMIN, LocalDate.of(2026, 1, 1));
 
@@ -116,11 +119,88 @@ class HistoryImportServiceTest {
         when(imports.enabled()).thenReturn(true);
 
         assertThatThrownBy(() -> service.request(ADMIN, TODAY.plusDays(1))).isInstanceOf(HistoryStartInFuture.class);
+
+        verify(events, never()).publishEvent(any());
+        verify(imports, never()).requestHistoryImport(any());
+        assertThat(tracker.last()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a start before 2000, when older payments are asked for, then the request is refused before anything is audited or queued")
+    void should_refuse_without_audit_when_requested_given_start_before_2000() {
+        when(imports.enabled()).thenReturn(true);
+
         assertThatThrownBy(() -> service.request(ADMIN, LocalDate.of(1999, 12, 31))).isInstanceOf(HistoryStartTooEarly.class);
 
         verify(events, never()).publishEvent(any());
-        verify(imports, never()).requestHistoryImport(any(), any());
+        verify(imports, never()).requestHistoryImport(any());
         assertThat(tracker.last()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given an import attempted exactly 30 seconds ago, when older payments are asked for, then the run starts now")
+    void should_start_now_when_requested_given_attempt_exactly_thirty_seconds_ago() {
+        when(imports.enabled()).thenReturn(true);
+        when(states.current()).thenReturn(attemptedAt(NOW.minusSeconds(30)));
+
+        assertThat(service.request(ADMIN, LocalDate.of(2026, 9, 1)).startsAt()).isEqualTo(NOW);
+    }
+
+    @Test
+    @DisplayName("Given an import attempted 31 seconds ago, when older payments are asked for, then the run starts now and never in the past")
+    void should_start_now_when_requested_given_attempt_thirty_one_seconds_ago() {
+        when(imports.enabled()).thenReturn(true);
+        when(states.current()).thenReturn(attemptedAt(NOW.minusSeconds(31)));
+
+        assertThat(service.request(ADMIN, LocalDate.of(2026, 9, 1)).startsAt()).isEqualTo(NOW);
+    }
+
+    @Test
+    @DisplayName("Given a deeper run still queued, when a later day is asked for, then the queued run keeps its earlier day and the audit names the day asked for")
+    void should_keep_earlier_day_when_requested_given_deeper_run_queued() {
+        when(imports.enabled()).thenReturn(true);
+        when(states.current()).thenReturn(BankImportState.initial(NOW));
+        service.request(ADMIN, LocalDate.of(2025, 1, 1));
+
+        HistoryImportRun run = service.request(ADMIN, LocalDate.of(2026, 10, 1));
+
+        assertThat(run.requested().from()).isEqualTo(LocalDate.of(2025, 1, 1));
+        assertThat(run.needsUnlockedHistory()).isTrue();
+        ArgumentCaptor<AdminActionPerformed> audited = ArgumentCaptor.forClass(AdminActionPerformed.class);
+        verify(events, times(2)).publishEvent(audited.capture());
+        assertThat(audited.getAllValues().getLast().details()).isEqualTo("Vyžádáno načtení starších plateb z banky od 2026-10-01");
+    }
+
+    @Test
+    @DisplayName("Given a deeper run that already ended, when a later day is asked for, then the new run starts from the later day")
+    void should_start_from_later_day_when_requested_given_deeper_run_ended() {
+        when(imports.enabled()).thenReturn(true);
+        when(states.current()).thenReturn(BankImportState.initial(NOW));
+        HistoryImportRun deep = service.request(ADMIN, LocalDate.of(2025, 1, 1));
+        tracker.abandoned(deep.id(), ImportFailureKind.HISTORY_LOCKED, NOW);
+
+        HistoryImportRun run = service.request(ADMIN, LocalDate.of(2026, 10, 1));
+
+        assertThat(run.requested().from()).isEqualTo(LocalDate.of(2026, 10, 1));
+    }
+
+    @Test
+    @DisplayName("Given a scheduler that refuses the run, when older payments are asked for, then the run ends as failed instead of staying queued and the refusal goes on")
+    void should_end_failed_when_requested_given_scheduler_refuses() {
+        when(imports.enabled()).thenReturn(true);
+        when(states.current()).thenReturn(BankImportState.initial(NOW));
+        doThrow(new IllegalStateException("shutting down")).when(imports).requestHistoryImport(any());
+
+        assertThatThrownBy(() -> service.request(ADMIN, LocalDate.of(2026, 1, 1))).isInstanceOf(IllegalStateException.class);
+
+        assertThat(tracker.last()).map(HistoryImportRun::status).contains(HistoryImportStatus.FAILED);
+        assertThat(tracker.last()).flatMap(HistoryImportRun::failure).contains(ImportFailureKind.UNEXPECTED);
+    }
+
+    private static BankImportState attemptedAt(Instant at) {
+        BankImportState attempted = BankImportState.initial(at);
+        attempted.failed(ImportFailureKind.TRANSPORT, "timed out", at);
+        return attempted;
     }
 
     @Test

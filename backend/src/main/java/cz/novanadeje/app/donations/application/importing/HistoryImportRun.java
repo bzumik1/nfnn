@@ -6,7 +6,7 @@ import cz.novanadeje.app.donations.domain.importing.ImportPeriod;
 import java.time.Instant;
 import java.util.Optional;
 
-public record HistoryImportRun(ImportPeriod requested, boolean needsUnlockedHistory, Instant requestedAt, Instant startsAt,
+public record HistoryImportRun(long id, ImportPeriod requested, boolean needsUnlockedHistory, Instant requestedAt, Instant startsAt,
                                HistoryImportStatus status, Optional<ImportFailureKind> failure, Optional<Integer> added,
                                Optional<Instant> finishedAt) {
 
@@ -19,8 +19,8 @@ public record HistoryImportRun(ImportPeriod requested, boolean needsUnlockedHist
         }
     }
 
-    public static HistoryImportRun queued(ImportPeriod requested, boolean needsUnlockedHistory, Instant requestedAt, Instant startsAt) {
-        return new HistoryImportRun(requested, needsUnlockedHistory, requestedAt, startsAt, HistoryImportStatus.QUEUED,
+    public static HistoryImportRun queued(long id, ImportPeriod requested, boolean needsUnlockedHistory, Instant requestedAt, Instant startsAt) {
+        return new HistoryImportRun(id, requested, needsUnlockedHistory, requestedAt, startsAt, HistoryImportStatus.QUEUED,
                 Optional.empty(), Optional.empty(), Optional.empty());
     }
 
@@ -29,24 +29,23 @@ public record HistoryImportRun(ImportPeriod requested, boolean needsUnlockedHist
     }
 
     HistoryImportRun running() {
-        return withStatus(HistoryImportStatus.RUNNING, startsAt, Optional.empty(), Optional.empty(), Optional.empty());
+        return new HistoryImportRun(id, requested, needsUnlockedHistory, requestedAt, startsAt, HistoryImportStatus.RUNNING,
+                Optional.empty(), Optional.empty(), Optional.empty());
     }
 
     HistoryImportRun waitingUntil(Instant at) {
-        return withStatus(HistoryImportStatus.QUEUED, at, Optional.empty(), Optional.empty(), Optional.empty());
+        return new HistoryImportRun(id, requested, needsUnlockedHistory, requestedAt, at, HistoryImportStatus.QUEUED,
+                Optional.empty(), Optional.empty(), Optional.empty());
     }
 
     HistoryImportRun completed(int newPayments, Instant at) {
-        return withStatus(HistoryImportStatus.COMPLETED, startsAt, Optional.empty(), Optional.of(newPayments), Optional.of(at));
+        return new HistoryImportRun(id, requested, needsUnlockedHistory, requestedAt, startsAt, HistoryImportStatus.COMPLETED,
+                Optional.empty(), Optional.of(newPayments), Optional.of(at));
     }
 
     HistoryImportRun failed(ImportFailureKind kind, Instant at) {
         HistoryImportStatus outcome = kind == ImportFailureKind.HISTORY_LOCKED ? HistoryImportStatus.HISTORY_LOCKED : HistoryImportStatus.FAILED;
-        return withStatus(outcome, startsAt, Optional.of(kind), Optional.empty(), Optional.of(at));
-    }
-
-    private HistoryImportRun withStatus(HistoryImportStatus next, Instant nextStart, Optional<ImportFailureKind> kind, Optional<Integer> newPayments,
-                                        Optional<Instant> at) {
-        return new HistoryImportRun(requested, needsUnlockedHistory, requestedAt, nextStart, next, kind, newPayments, at);
+        return new HistoryImportRun(id, requested, needsUnlockedHistory, requestedAt, startsAt, outcome,
+                Optional.of(kind), Optional.empty(), Optional.of(at));
     }
 }

@@ -171,10 +171,31 @@ class ImportPlannerTest {
     }
 
     @Test
-    @DisplayName("Given a requested start of today, when a history run plans, then it asks for today alone")
-    void should_plan_today_when_history_run_given_start_today() {
-        assertThat(ImportPlanner.plan(coverage("2026-07-20", "2026-10-16"), TODAY, withHistoryFrom("2026-10-17"), HISTORY))
+    @DisplayName("Given no coverage and a requested start of today, when a history run plans, then it asks for today alone")
+    void should_plan_today_when_history_run_given_start_today_and_no_coverage() {
+        assertThat(ImportPlanner.plan(ImportCoverage.none(), TODAY, withHistoryFrom("2026-10-17"), HISTORY))
                 .isEqualTo(new ImportPlan(period("2026-10-17", "2026-10-17"), false));
+    }
+
+    @Test
+    @DisplayName("Given a coverage up to yesterday and a requested start of today, when a history run plans, then it reaches back over the overlap so the coverage stays continuous")
+    void should_reach_back_over_overlap_when_history_run_given_start_today_and_coverage() {
+        assertThat(ImportPlanner.plan(coverage("2026-07-20", "2026-10-16"), TODAY, withHistoryFrom("2026-10-17"), HISTORY))
+                .isEqualTo(new ImportPlan(period("2026-10-13", "2026-10-17"), false));
+    }
+
+    @Test
+    @DisplayName("Given a coverage that ended a while ago and a requested start after it, when a history run plans, then it starts at the coverage's end less the overlap and leaves no gap")
+    void should_start_at_coverage_end_when_history_run_given_start_after_coverage() {
+        assertThat(ImportPlanner.plan(coverage("2026-07-01", "2026-10-01"), TODAY, withHistoryFrom("2026-10-10"), HISTORY))
+                .isEqualTo(new ImportPlan(period("2026-09-28", "2026-10-17"), false));
+    }
+
+    @Test
+    @DisplayName("Given a coverage that ended before the window and a requested start inside it, when a history run plans, then it starts at the window's edge without the unlock")
+    void should_start_at_window_edge_when_history_run_given_coverage_ended_before_window() {
+        assertThat(ImportPlanner.plan(coverage("2026-01-01", "2026-03-01"), TODAY, withHistoryFrom("2026-10-10"), HISTORY))
+                .isEqualTo(new ImportPlan(period("2026-07-20", "2026-10-17"), false));
     }
 
     @Test

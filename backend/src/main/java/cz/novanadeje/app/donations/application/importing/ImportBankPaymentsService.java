@@ -16,7 +16,6 @@ import org.springframework.stereotype.Service;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.Optional;
 
 @Service
@@ -67,14 +66,14 @@ public class ImportBankPaymentsService {
         return Optional.of(importIncomingPayments(ImportTrigger.ON_DEMAND, settings));
     }
 
-    public ImportReport importHistory(LocalDate from, ImportSettings settings) {
-        historyImports.started(from);
+    public ImportReport importHistory(HistoryImportRun run, ImportSettings settings) {
+        historyImports.started(run.id());
         try {
-            ImportReport report = importIncomingPayments(ImportTrigger.HISTORY, settings.withHistoryFrom(from));
-            historyImports.finished(from, report, clock.instant());
+            ImportReport report = importIncomingPayments(ImportTrigger.HISTORY, settings.withHistoryFrom(run.requested().from()));
+            historyImports.finished(run.id(), report, clock.instant());
             return report;
         } catch (RuntimeException unexpected) {
-            historyImports.abandoned(ImportFailureKind.UNEXPECTED, clock.instant());
+            historyImports.abandoned(run.id(), ImportFailureKind.UNEXPECTED, clock.instant());
             throw unexpected;
         }
     }

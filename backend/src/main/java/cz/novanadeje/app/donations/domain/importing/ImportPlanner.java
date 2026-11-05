@@ -13,7 +13,7 @@ public final class ImportPlanner {
         return switch (trigger) {
             case HOURLY, ON_DEMAND -> hourly(coverage, today, settings, servableFrom);
             case STARTUP -> startup(coverage, today, settings, servableFrom);
-            case HISTORY -> history(today, settings, servableFrom);
+            case HISTORY -> history(coverage, today, settings, servableFrom);
         };
     }
 
@@ -34,9 +34,11 @@ public final class ImportPlanner {
         return new ImportPlan(new ImportPeriod(desiredFrom, today), desiredFrom.isBefore(servableFrom));
     }
 
-    private static ImportPlan history(LocalDate today, ImportSettings settings, LocalDate servableFrom) {
-        LocalDate from = earlier(settings.historyFrom()
-                .orElseThrow(() -> new IllegalArgumentException("A history import needs the day it starts from")), today);
+    private static ImportPlan history(ImportCoverage coverage, LocalDate today, ImportSettings settings, LocalDate servableFrom) {
+        LocalDate requested = settings.historyFrom()
+                .orElseThrow(() -> new IllegalArgumentException("A history import needs the day it starts from"));
+        LocalDate continuous = coverage.isEmpty() ? requested : earlier(requested, later(coverage.coveredTo().minus(settings.overlap()), servableFrom));
+        LocalDate from = earlier(continuous, today);
         return new ImportPlan(new ImportPeriod(from, today), from.isBefore(servableFrom));
     }
 

@@ -2,9 +2,10 @@ package cz.novanadeje.app.donations.application.importing;
 
 import cz.novanadeje.app.donations.domain.importing.BankCalendar;
 import cz.novanadeje.app.donations.domain.importing.BankImportOff;
+import cz.novanadeje.app.donations.domain.importing.BankImportState;
 import cz.novanadeje.app.donations.domain.importing.BankImportStateRepository;
 import cz.novanadeje.app.donations.domain.importing.HistoryImportStart;
-import cz.novanadeje.app.donations.domain.importing.ImportCoverage;
+import cz.novanadeje.app.donations.domain.importing.ImportFailureKind;
 import cz.novanadeje.app.donations.domain.importing.ImportPlan;
 import cz.novanadeje.app.donations.domain.importing.ImportPlanner;
 import cz.novanadeje.app.donations.domain.importing.ImportTrigger;
@@ -49,17 +50,27 @@ public class HistoryImportService {
         }
         LocalDate today = BankCalendar.today(clock);
         HistoryImportStart start = HistoryImportStart.of(from, today);
-        ImportPlan plan = ImportPlanner.plan(ImportCoverage.none(), today, properties.toSettings().withHistoryFrom(start.from()), ImportTrigger.HISTORY);
+        LocalDate runFrom = tracker.last()
+                .filter(run -> run.status() == HistoryImportStatus.QUEUED)
+                .map(run -> run.requested().from())
+                .filter(queued -> queued.isBefore(start.from()))
+                .orElse(start.from());
+        BankImportState state = states.current();
+        ImportPlan plan = ImportPlanner.plan(state.coverage(), today, properties.toSettings().withHistoryFrom(runFrom), ImportTrigger.HISTORY);
         Instant now = clock.instant();
-        Instant startsAt = states.current().lastAttemptedAt()
+        Instant startsAt = state.lastAttemptedAt()
                 .map(attempted -> attempted.plus(properties.onDemandCooldown()))
                 .filter(now::isBefore)
                 .orElse(now);
         transaction.executeWithoutResult(status -> events.publishEvent(new AdminActionPerformed(adminId, ACTION, Optional.empty(),
                 "Vyžádáno načtení starších plateb z banky od " + start.from(), now)));
-        HistoryImportRun run = HistoryImportRun.queued(plan.period(), plan.needsUnlockedHistory(), now, startsAt);
-        tracker.queued(run);
-        imports.requestHistoryImport(start.from(), startsAt);
+        HistoryImportRun run = tracker.queue(plan.period(), plan.needsUnlockedHistory(), now, startsAt);
+        try {
+            imports.requestHistoryImport(run);
+        } catch (RuntimeException refused) {
+            tracker.abandoned(run.id(), ImportFailureKind.UNEXPECTED, now);
+            throw refused;
+        }
         return tracker.last().orElse(run);
     }
 }

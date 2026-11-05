@@ -2,10 +2,13 @@ package cz.novanadeje.app.donations.cucumber;
 
 import cz.novanadeje.app.cucumber.ApiClient;
 import cz.novanadeje.app.cucumber.DonorSessions;
+import cz.novanadeje.app.cucumber.ScenarioDonors;
 import cz.novanadeje.app.support.MutableClock;
 import cz.novanadeje.app.support.SynchronousBankImportRequests;
+import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import tools.jackson.databind.JsonNode;
 
 import java.time.Instant;
@@ -22,12 +25,46 @@ public class AdminHistoryImportStepDefinitions {
     private final DonorSessions sessions;
     private final SynchronousBankImportRequests imports;
     private final MutableClock clock;
+    private final ScenarioDonors scenarioDonors;
+    private final JdbcClient jdbc;
+    private String exchangedApiToken;
 
-    public AdminHistoryImportStepDefinitions(ApiClient api, DonorSessions sessions, SynchronousBankImportRequests imports, MutableClock clock) {
+    public AdminHistoryImportStepDefinitions(ApiClient api, DonorSessions sessions, SynchronousBankImportRequests imports, MutableClock clock,
+                                             ScenarioDonors scenarioDonors, JdbcClient jdbc) {
         this.api = api;
         this.sessions = sessions;
         this.imports = imports;
         this.clock = clock;
+        this.scenarioDonors = scenarioDonors;
+        this.jdbc = jdbc;
+    }
+
+    @Given("the bank import is off")
+    public void theBankImportIsOff() {
+        imports.turnOff();
+    }
+
+    @When("the exchanged API token asks for older bank payments from {date}")
+    public void theExchangedApiTokenAsksForOlderBankPaymentsFrom(LocalDate from) {
+        JsonNode last = api.lastResponseJson();
+        if (last != null && last.has("access_token")) {
+            exchangedApiToken = last.get("access_token").asString();
+        }
+        api.forgetCredentials();
+        api.authorize(exchangedApiToken);
+        api.post(PATH, Map.of("from", from.toString()));
+    }
+
+    @Then("the admin action {string} by {string} is recorded {int} times")
+    public void theAdminActionByIsRecordedTimes(String action, String alias, int times) {
+        assertThat(jdbc.sql("select count(*) from admin_action where action = ? and admin_id = ?")
+                .param(action).param(scenarioDonors.idOf(alias)).query(Long.class).single()).isEqualTo(times);
+    }
+
+    @Then("the admin action {string} by {string} came through {string}")
+    public void theAdminActionByCameThrough(String action, String alias, String client) {
+        assertThat(jdbc.sql("select client from admin_action where action = ? and admin_id = ?")
+                .param(action).param(scenarioDonors.idOf(alias)).query(String.class).list()).singleElement().asString().contains(client);
     }
 
     @When("{string} asks for older bank payments from {date}")

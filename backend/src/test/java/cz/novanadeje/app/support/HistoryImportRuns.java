@@ -19,6 +19,6 @@ public final class HistoryImportRuns {
             throw new IllegalStateException("HistoryImportTracker no longer keeps its run in last, so a recorded scenario would inherit "
                     + "the previous one's history import; adapt HistoryImportRuns", changed);
         }
-        requests.forgetQueuedHistoryImport();
+        requests.reset();
     }
 }
