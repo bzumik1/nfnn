@@ -10,17 +10,13 @@ import { inject } from '@angular/core';
 import { catchError, tap, throwError } from 'rxjs';
 
 import { APP_REVISION } from '../errors/app-revision';
+import { POSTS_ACROSS_GENERATIONS } from './api-generation';
 import { APP_API_HEADER, APP_REVISION_HEADER, ServerVersion } from './server-version';
 
 export const UPDATE_REQUIRED = 'app/update-required';
 
 const API_PATH = '/api/';
 const READING_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
-const POSTS_ACROSS_GENERATIONS = new Set([
-  '/api/donors/auth/refresh',
-  '/api/donors/auth/logout',
-  '/api/donations/receipts/status',
-]);
 const UPGRADE_REQUIRED = 426;
 
 export const versionInterceptor: HttpInterceptorFn = (request, next) => {

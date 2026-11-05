@@ -24,6 +24,16 @@ class ApiGenerationTest {
     }
 
     @Test
+    @DisplayName("Given the writes the browser app sends across generations, when the server's list is compared, then both pass the same writes")
+    void should_pass_the_same_writes_when_compared_given_the_writes_the_app_sends_across_generations() {
+        JsonNode posts = JsonMapper.builder().build().readTree(APP_GENERATION.toFile()).get("postsAcrossGenerations");
+
+        assertThat(posts).withFailMessage("%s names no postsAcrossGenerations", APP_GENERATION).isNotNull();
+        assertThat(posts.valueStream().map(JsonNode::asString).toList())
+                .containsExactlyInAnyOrderElementsOf(VersionHeadersFilter.POSTS_ACROSS_GENERATIONS);
+    }
+
+    @Test
     @DisplayName("Given the server's API generation, when it is read, then it is a positive whole number the app can compare")
     void should_be_positive_when_read_given_the_server_generation() {
         assertThat(VersionHeadersFilter.API_GENERATION).isPositive();

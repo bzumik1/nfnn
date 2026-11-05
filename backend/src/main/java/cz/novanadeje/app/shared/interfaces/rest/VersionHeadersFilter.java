@@ -37,7 +37,7 @@ class VersionHeadersFilter extends OncePerRequestFilter {
     private static final int UPGRADE_REQUIRED = 426;
     private static final Pattern GENERATION = Pattern.compile("[1-9][0-9]{0,8}");
     private static final Set<String> READING_METHODS = Set.of("GET", "HEAD", "OPTIONS");
-    private static final Set<String> POSTS_ACROSS_GENERATIONS =
+    static final Set<String> POSTS_ACROSS_GENERATIONS =
             Set.of("/api/donors/auth/refresh", "/api/donors/auth/logout", "/api/donations/receipts/status");
 
     private final BuildProperties build;

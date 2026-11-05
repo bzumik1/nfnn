@@ -1,3 +1,8 @@
 {
-  "generation": 1
+  "generation": 1,
+  "postsAcrossGenerations": [
+    "/api/donors/auth/refresh",
+    "/api/donors/auth/logout",
+    "/api/donations/receipts/status"
+  ]
 }
