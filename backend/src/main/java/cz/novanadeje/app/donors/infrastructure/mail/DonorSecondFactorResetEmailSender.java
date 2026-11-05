@@ -4,11 +4,11 @@ import cz.novanadeje.app.donors.application.event.DonorSecondFactorReset;
 import cz.novanadeje.app.shared.infrastructure.mail.BrandedEmails;
 import cz.novanadeje.app.shared.infrastructure.mail.EmailDraft;
 import cz.novanadeje.app.shared.infrastructure.mail.MailSenderProperties;
+import cz.novanadeje.app.shared.infrastructure.mail.ObservedMailSender;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.MessageSource;
 import org.springframework.mail.MailException;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
@@ -25,12 +25,12 @@ class DonorSecondFactorResetEmailSender {
     private static final String KEYS = "donors.secondFactorReset.email.";
     private static final String TEMPLATE = "email/donors/second-factor-reset";
 
-    private final JavaMailSender mailSender;
+    private final ObservedMailSender mailSender;
     private final BrandedEmails emails;
     private final MessageSource messages;
     private final MailSenderProperties sender;
 
-    DonorSecondFactorResetEmailSender(JavaMailSender mailSender, BrandedEmails emails, MessageSource messages, MailSenderProperties sender) {
+    DonorSecondFactorResetEmailSender(ObservedMailSender mailSender, BrandedEmails emails, MessageSource messages, MailSenderProperties sender) {
         this.mailSender = mailSender;
         this.emails = emails;
         this.messages = messages;

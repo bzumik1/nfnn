@@ -140,6 +140,9 @@ describe('Given an administrator connected with the reading permission only', ()
     expect(result.isError).toBeFalsy();
     expect(textOf(result)).toContain(`"id":"${PUSH_SUBSCRIPTION_ID}"`);
     expect(textOf(result)).toContain('"bankImport":true');
+    expect(textOf(result)).toContain(
+      '"openAlerts":[{"area":"backups","since":"2026-11-05T07:15:00+01:00"}]',
+    );
     expect(textOf(result)).not.toContain('publicKey');
     const { tools } = await client.listTools();
     const description = tools.find((tool) => tool.name === 'nfnn_push_alerts')?.description;

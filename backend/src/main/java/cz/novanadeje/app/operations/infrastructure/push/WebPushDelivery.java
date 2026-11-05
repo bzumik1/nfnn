@@ -9,7 +9,6 @@ import cz.novanadeje.app.shared.infrastructure.config.PublicUrlProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.Map;
@@ -18,20 +17,22 @@ import java.util.Map;
 class WebPushDelivery implements PushDelivery {
 
     static final Duration TIME_TO_LIVE = Duration.ofDays(1);
-    static final int PADDED_MESSAGE_BYTES = 128;
+    static final int PADDED_MESSAGE_BYTES = 1024;
 
     private final PushTransport transport;
+    private final PushPayloads payloads;
     private final WebPushEncryption encryption;
     private final PublicUrlProperties site;
     private final Clock clock;
 
     @Autowired
-    WebPushDelivery(PushTransport transport, PublicUrlProperties site, Clock clock) {
-        this(transport, WebPushEncryption.random(), site, clock);
+    WebPushDelivery(PushTransport transport, PushPayloads payloads, PublicUrlProperties site, Clock clock) {
+        this(transport, payloads, WebPushEncryption.random(), site, clock);
     }
 
-    WebPushDelivery(PushTransport transport, WebPushEncryption encryption, PublicUrlProperties site, Clock clock) {
+    WebPushDelivery(PushTransport transport, PushPayloads payloads, WebPushEncryption encryption, PublicUrlProperties site, Clock clock) {
         this.transport = transport;
+        this.payloads = payloads;
         this.encryption = encryption;
         this.site = site;
         this.clock = clock;
@@ -40,7 +41,7 @@ class WebPushDelivery implements PushDelivery {
     @Override
     public PushOutcome deliver(PushSubscription subscription, PushMessage message, VapidKeys keys) {
         byte[] body = encryption.encrypt(subscription.keys().p256dhBytes(), subscription.keys().authBytes(),
-                message.json().getBytes(StandardCharsets.UTF_8), PADDED_MESSAGE_BYTES);
+                payloads.of(message), PADDED_MESSAGE_BYTES);
         Map<String, String> headers = Map.of(
                 "Authorization", VapidToken.authorization(keys, subscription.endpoint(), site.publicUrl(), clock.instant()),
                 "Content-Encoding", "aes128gcm",

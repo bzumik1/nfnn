@@ -4,13 +4,13 @@ import cz.novanadeje.app.contact.application.event.ContactMessageReceived;
 import cz.novanadeje.app.shared.domain.FoundationZone;
 import cz.novanadeje.app.shared.infrastructure.mail.BrandedEmails;
 import cz.novanadeje.app.shared.infrastructure.mail.EmailDraft;
+import cz.novanadeje.app.shared.infrastructure.mail.ObservedMailSender;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
-import org.springframework.context.MessageSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.MessageSource;
 import org.springframework.mail.MailException;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
@@ -32,12 +32,12 @@ class ContactMessageEmailForwarder {
 
     private static final Logger log = LoggerFactory.getLogger(ContactMessageEmailForwarder.class);
 
-    private final JavaMailSender mailSender;
+    private final ObservedMailSender mailSender;
     private final BrandedEmails emails;
     private final MessageSource messages;
     private final ContactMailProperties properties;
 
-    ContactMessageEmailForwarder(JavaMailSender mailSender, BrandedEmails emails, MessageSource messages, ContactMailProperties properties) {
+    ContactMessageEmailForwarder(ObservedMailSender mailSender, BrandedEmails emails, MessageSource messages, ContactMailProperties properties) {
         this.mailSender = mailSender;
         this.emails = emails;
         this.messages = messages;

@@ -1,5 +1,6 @@
 package cz.novanadeje.app.operations.domain.push;
 
+
 public record PushMessage(PushMessageKind kind, int count) {
 
     public static final int VERSION = 1;
@@ -11,7 +12,4 @@ public record PushMessage(PushMessageKind kind, int count) {
         }
     }
 
-    public String json() {
-        return "{\"v\":" + VERSION + ",\"kind\":\"" + kind.token() + "\",\"count\":" + count + "}";
-    }
 }

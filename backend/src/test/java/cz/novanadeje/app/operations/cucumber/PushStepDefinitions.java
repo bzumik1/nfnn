@@ -6,6 +6,9 @@ import cz.novanadeje.app.cucumber.ScenarioDonors;
 import cz.novanadeje.app.operations.infrastructure.push.PushReceiver;
 import cz.novanadeje.app.shared.infrastructure.config.PublicUrlProperties;
 import cz.novanadeje.app.shared.infrastructure.security.JwtProperties;
+import cz.novanadeje.app.support.AsyncTaskTracker;
+import cz.novanadeje.app.support.MutableClock;
+import cz.novanadeje.app.support.RecordingPushRetryTimer;
 import cz.novanadeje.app.support.RecordingPushTransport;
 import io.cucumber.datatable.DataTable;
 import io.cucumber.java.en.Given;
@@ -20,11 +23,11 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
-import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -47,6 +50,7 @@ public class PushStepDefinitions {
     private static final String PUBLIC_KEY_SHAPE = "B[A-Za-z0-9_-]{86}";
     private static final long VAPID_LIFETIME_SECONDS = 3600;
     private static final int CREATED = 201;
+    private static final JsonMapper JSON = JsonMapper.builder().build();
 
     private final ApiClient api;
     private final DonorSessions sessions;
@@ -56,12 +60,15 @@ public class PushStepDefinitions {
     private final JwtDecoder decoder;
     private final JdbcClient jdbc;
     private final PublicUrlProperties site;
-    private final Clock clock;
+    private final MutableClock clock;
+    private final RecordingPushRetryTimer retries;
+    private final AsyncTaskTracker asyncTasks;
     private final Map<String, Device> devices = new HashMap<>();
     private String publicKey;
 
     public PushStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors donors, RecordingPushTransport pushService, JwtEncoder encoder,
-                               JwtDecoder decoder, JdbcClient jdbc, PublicUrlProperties site, Clock clock) {
+                               JwtDecoder decoder, JdbcClient jdbc, PublicUrlProperties site, MutableClock clock, RecordingPushRetryTimer retries,
+                               AsyncTaskTracker asyncTasks) {
         this.api = api;
         this.sessions = sessions;
         this.donors = donors;
@@ -71,11 +78,19 @@ public class PushStepDefinitions {
         this.jdbc = jdbc;
         this.site = site;
         this.clock = clock;
+        this.retries = retries;
+        this.asyncTasks = asyncTasks;
     }
 
     @When("{string} asks for the push settings")
     public void asksForThePushSettings(String alias) {
         sessions.actAs(alias);
+        api.get(PUSH);
+    }
+
+    @When("{string} asks for the push settings on the device {string}")
+    public void asksForThePushSettingsOnTheDevice(String alias, String device) {
+        actOnDevice(alias, device(alias, device).deviceId());
         api.get(PUSH);
     }
 
@@ -117,6 +132,12 @@ public class PushStepDefinitions {
         actWithoutDevice(alias);
         PushReceiver receiver = PushReceiver.generate();
         api.post(SUBSCRIPTIONS, body("https://fcm.googleapis.com/fcm/send/" + alias.toLowerCase() + "-bez-zarizeni", receiver.p256dh(), receiver.auth()));
+    }
+
+    @When("{string} asks for the push settings in a browser session that names no device")
+    public void asksForThePushSettingsInASessionThatNamesNoDevice(String alias) {
+        actWithoutDevice(alias);
+        api.get(PUSH);
     }
 
     @When("{string} sends a test push alert")
@@ -204,6 +225,7 @@ public class PushStepDefinitions {
                     case "service", "failuresInARow" -> subscription.get(column).asString();
                     case "bankImport", "backups", "mail" -> onOff(subscription.get("alerts").get(column).asBoolean());
                     case "delivered" -> subscription.get("lastDeliveredAt").isNull() ? "never" : "yes";
+                    case "current" -> subscription.get("current").asBoolean() ? "yes" : "no";
                     default -> throw new IllegalArgumentException("Unknown column " + column);
                 });
             }
@@ -260,6 +282,73 @@ public class PushStepDefinitions {
     @Then("no push alert was sent")
     public void noPushAlertWasSent() {
         assertThat(pushService.sent()).isEmpty();
+    }
+
+    @Then("the push settings say the session names a device")
+    public void thePushSettingsSayTheSessionNamesADevice() {
+        assertThat(api.lastResponseJson().get("deviceSession").asBoolean()).isTrue();
+    }
+
+    @Then("the push settings say the session names no device")
+    public void thePushSettingsSayTheSessionNamesNoDevice() {
+        assertThat(api.lastResponseJson().get("deviceSession").asBoolean()).isFalse();
+    }
+
+    @Then("the push subscription is not the device of the asking session")
+    public void thePushSubscriptionIsNotTheDeviceOfTheAskingSession() {
+        assertThat(api.lastResponseJson().get("current").asBoolean()).isFalse();
+    }
+
+    @Then("the push settings list no open alert")
+    public void thePushSettingsListNoOpenAlert() {
+        assertThat(api.lastResponseJson().get("openAlerts").isEmpty()).isTrue();
+    }
+
+    @Then("the push settings list the open alerts:")
+    public void thePushSettingsListTheOpenAlerts(DataTable table) {
+        List<Map<String, String>> actual = new ArrayList<>();
+        api.lastResponseJson().get("openAlerts").forEach(alert -> actual.add(Map.of("area", alert.get("area").asString(), "since", alert.get("since").asString())));
+        assertThat(actual).containsExactlyElementsOf(table.asMaps());
+    }
+
+    @Then("the device {string} of {string} received no push alert")
+    public void theDeviceReceivedNoPushAlert(String device, String alias) {
+        asyncTasks.awaitIdleAfter("the push alerts");
+        assertThat(sentTo(device(alias, device))).isEmpty();
+    }
+
+    @Then("the device {string} of {string} received the push alerts:")
+    public void theDeviceReceivedThePushAlerts(String device, String alias, DataTable table) {
+        asyncTasks.awaitIdleAfter("the push alerts");
+        Device known = device(alias, device);
+        List<Map<String, String>> actual = new ArrayList<>();
+        for (RecordingPushTransport.Sent message : sentTo(known)) {
+            JsonNode alert = JSON.readTree(known.receiver().decrypt(message.body()));
+            JsonNode notification = alert.get("notification");
+            actual.add(Map.of("kind", alert.get("kind").asString(), "count", alert.get("count").asString(),
+                    "title", notification.get("title").asString(), "url", notification.get("data").get("onActionClick").get("default").get("url").asString()));
+        }
+        assertThat(actual).containsExactlyElementsOf(table.asMaps());
+    }
+
+    @Then("a push alert retry is due in {int} minute(s)")
+    public void aPushAlertRetryIsDueIn(int minutes) {
+        asyncTasks.awaitIdleAfter("the push alerts");
+        assertThat(retries.pending()).containsExactly(clock.instant().plus(Duration.ofMinutes(minutes)));
+    }
+
+    @Then("no push alert retry is due")
+    public void noPushAlertRetryIsDue() {
+        asyncTasks.awaitIdleAfter("the push alerts");
+        assertThat(retries.pending()).isEmpty();
+    }
+
+    @When("the push alert retries run")
+    public void thePushAlertRetriesRun() {
+        asyncTasks.awaitIdleAfter("the push alerts");
+        retries.pending().stream().max(Instant::compareTo).ifPresent(clock::set);
+        retries.fireAll();
+        asyncTasks.awaitIdleAfter("the push alert retries");
     }
 
     @Then("no push subscription of {string} is stored")
@@ -334,6 +423,10 @@ public class PushStepDefinitions {
                 select :id, d.donor_id, :hash, :now, :now, :expires, d.id from donor_device d where d.id = :device""")
                 .param("id", UUID.randomUUID()).param("hash", HexFormat.of().formatHex(UUID.randomUUID().toString().repeat(2).getBytes(StandardCharsets.US_ASCII), 0, 32))
                 .param("now", Timestamp.from(now)).param("expires", Timestamp.from(now.plus(Duration.ofDays(14)))).param("device", deviceId).update();
+    }
+
+    private List<RecordingPushTransport.Sent> sentTo(Device device) {
+        return pushService.sent().stream().filter(message -> message.endpoint().equals(device.endpoint())).toList();
     }
 
     private Device device(String alias, String device) {
