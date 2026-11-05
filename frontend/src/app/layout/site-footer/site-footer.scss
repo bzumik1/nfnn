@@ -1,13 +1,24 @@
 @use 'breakpoints' as bp;
 
+:host {
+  display: block;
+  --footer-tab-room: 0rem;
+}
+
+:host(.with-tab-bar) {
+  --footer-tab-room: var(--tab-bar-clearance);
+}
+
 .footer {
   background: var(--color-surface-inverse-strong);
-  padding: var(--space-13) 0 var(--space-7);
+  padding: var(--space-13) 0 calc(var(--space-7) + var(--footer-tab-room));
   color: color-mix(in srgb, var(--color-on-inverse) 50%, transparent);
 }
 
 :host-context(.has-floating-notice) .footer {
-  padding-bottom: calc(var(--space-7) + var(--floating-notice-height) + var(--space-8));
+  padding-bottom: calc(
+    var(--space-7) + var(--floating-notice-height) + var(--space-8) + var(--footer-tab-room)
+  );
 }
 
 .footer-top {

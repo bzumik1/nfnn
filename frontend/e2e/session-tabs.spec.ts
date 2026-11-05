@@ -161,9 +161,7 @@ test.describe('Given a donor whose session lives in two tabs of one browser', ()
     await page.goto('/');
 
     await expect(
-      page
-        .getByRole('navigation', { name: 'Hlavní menu' })
-        .getByRole('button', { name: 'Přihlásit se' }),
+      page.getByRole('banner').getByRole('button', { name: 'Přihlásit se' }),
     ).toBeVisible();
     expect(server.refreshes.map((refresh) => refresh.presented)).toEqual(['cookie-0']);
     expect(await page.evaluate((key) => localStorage.getItem(key), SESSION_HINT)).toBe('1');

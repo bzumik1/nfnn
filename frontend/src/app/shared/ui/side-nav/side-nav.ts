@@ -41,13 +41,14 @@ export interface SideNavGroup {
   host: { '(keydown.escape)': 'closeMenu($event)' },
 })
 export class SideNav {
-  private readonly side = viewChild.required<ElementRef<HTMLElement>>('side');
-  private readonly toggle = viewChild.required<ElementRef<HTMLButtonElement>>('toggle');
+  private readonly side = viewChild<ElementRef<HTMLElement>>('side');
+  private readonly toggle = viewChild<ElementRef<HTMLButtonElement>>('toggle');
 
   readonly groups = input.required<readonly SideNavGroup[]>();
   readonly label = input.required<string>();
   readonly menuLabel = input.required<string>();
   readonly navId = input('side-nav');
+  readonly panel = input(true);
 
   protected readonly menuOpen = signal(false);
 
@@ -86,11 +87,11 @@ export class SideNav {
   }
 
   protected closeMenu(event: Event): void {
-    if (!this.menuOpen() || !this.side().nativeElement.contains(event.target as Node)) {
+    if (!this.menuOpen() || !this.side()?.nativeElement.contains(event.target as Node)) {
       return;
     }
     this.menuOpen.set(false);
-    this.toggle().nativeElement.focus();
+    this.toggle()?.nativeElement.focus();
   }
 }
 

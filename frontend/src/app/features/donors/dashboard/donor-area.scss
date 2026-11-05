@@ -1,12 +1,19 @@
 :host {
   display: block;
   min-height: 100vh;
+  padding-top: calc(var(--header-height) + env(safe-area-inset-top));
   background: var(--color-surface-alt);
 }
 
 .container {
   max-width: 960px;
-  padding: var(--space-8) var(--space-6) var(--space-12);
+  padding: var(--space-8) var(--space-6) var(--tab-bar-clearance);
+}
+
+.container--compact {
+  margin: 0 auto;
+  padding-top: var(--space-2);
+  padding-inline: var(--space-4);
 }
 
 .contact-line {

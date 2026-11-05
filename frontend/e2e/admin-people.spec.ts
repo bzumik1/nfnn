@@ -403,7 +403,7 @@ test.describe('Given a visitor and people of the foundation kept in the administ
     await servePhotos(page);
   });
 
-  test('when they open the home page, then "Kdo fond vede" shows the cards, the founders note with the signature and the board line instead of the built-in block', async ({
+  test('when they open the About page, then "Kdo fond vede" shows the cards, the founders note with the signature and the board line instead of the built-in block', async ({
     page,
   }) => {
     await page.route(
@@ -436,7 +436,7 @@ test.describe('Given a visitor and people of the foundation kept in the administ
         }),
     );
 
-    await page.goto('/');
+    await page.goto('/o-nas');
     const board = page.locator('#o-nas .board');
     await board.scrollIntoViewIfNeeded();
 

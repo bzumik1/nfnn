@@ -1,6 +1,6 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
-import { currentListSection } from '../site-header/current-section';
+import { CompactLayout } from '../../core/layout/compact-layout';
 
 @Component({
   selector: 'app-site-footer',
@@ -11,5 +11,5 @@ import { currentListSection } from '../site-header/current-section';
 })
 export class SiteFooter {
   protected readonly year = new Date().getFullYear();
-  protected readonly current = currentListSection();
+  protected readonly compact = inject(CompactLayout).isCompact;
 }

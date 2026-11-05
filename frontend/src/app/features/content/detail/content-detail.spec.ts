@@ -187,7 +187,7 @@ describe('Given a visitor opening a project', () => {
         (link) => [link.getAttribute('href'), link.textContent?.trim()],
       ),
     ).toEqual([
-      ['/#prispet', 'Přispět'],
+      ['/prispet', 'Přispět'],
       ['/projekty', 'Kde všude pomáháme'],
     ]);
     expect(text(fixture, '.actions-lead')).toBe(
