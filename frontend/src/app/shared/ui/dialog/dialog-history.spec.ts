@@ -279,3 +279,46 @@ describe('Given a page reloaded while a dialog had its entry open', () => {
     expect(location.path()).toBe('');
   });
 });
+
+describe('Given a page reloaded while a dialog had its entry open, whose route loads only after a while', () => {
+  const settled = async (): Promise<void> => {
+    for (let round = 0; round < 3; round++) {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      TestBed.tick();
+    }
+  };
+
+  it('when the app starts, then the router never copies the stale mark, so a dialog opened later still closes on Back without leaving the page', async () => {
+    window.history.pushState(null, '', '/');
+    window.history.pushState(null, '', '/stranka');
+    window.history.pushState({ nfnnDialogDepth: 1 }, '', '/stranka');
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([
+          { path: '', component: Page },
+          {
+            path: 'stranka',
+            loadComponent: () =>
+              new Promise<typeof Page>((resolve) => setTimeout(() => resolve(Page), 40)),
+          },
+        ]),
+        { provide: PlatformLocation, useClass: BrowserPlatformLocation },
+      ],
+    });
+    const history = TestBed.inject(DialogHistory);
+    const router = TestBed.inject(Router);
+    const location = TestBed.inject(Location);
+    router.initialNavigation();
+    await vi.waitFor(() => expect(router.navigated).toBe(true));
+    await settled();
+    const listener = { stepBack: vi.fn(), close: vi.fn() };
+
+    history.open(listener);
+    await settled();
+    window.history.go(-1);
+    await settled();
+
+    expect(listener.close).toHaveBeenCalledTimes(1);
+    expect(location.path()).toBe('/stranka');
+  });
+});

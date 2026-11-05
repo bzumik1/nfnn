@@ -190,17 +190,17 @@ export function barContrastProblems(theme, source) {
           );
         }
       }
-      for (const pair of SOLID_BAR_PAIRS) {
-        const layers = [pair.top, ...pair.under].map((token) => colourOf(values.get(token)));
-        if (layers.some((layer) => layer.alpha !== 1)) {
-          continue;
-        }
-        const ratio = contrast(layers[0].rgb, layers[1].rgb);
-        if (ratio < pair.minimum) {
-          problems.push(
-            `theme ${theme}${label}: ${pair.top} on ${pair.under.join(' over ')} over a ${page.name} page is ${ratio.toFixed(2)}:1, below ${pair.minimum}:1`,
-          );
-        }
+    }
+    for (const pair of SOLID_BAR_PAIRS) {
+      const layers = [pair.top, ...pair.under].map((token) => colourOf(values.get(token)));
+      if (layers.some((layer) => layer.alpha !== 1)) {
+        continue;
+      }
+      const ratio = contrast(layers[0].rgb, layers[1].rgb);
+      if (ratio < pair.minimum) {
+        problems.push(
+          `theme ${theme}${label}: solid ${pair.top} on ${pair.under.join(' over ')} is ${ratio.toFixed(2)}:1, below ${pair.minimum}:1`,
+        );
       }
     }
   }

@@ -31,6 +31,37 @@ async function openPayments(page: Page): Promise<void> {
   await expect(page.getByRole('heading', { level: 1, name: 'Platby z banky' })).toBeVisible();
 }
 
+interface Probe {
+  dialogEntries: number;
+  pops: number;
+}
+
+async function countDialogEntries(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const record = window as unknown as { dialogEntries: number; pops: number };
+    record.dialogEntries = 0;
+    record.pops = 0;
+    window.addEventListener('popstate', () => record.pops++, { capture: true });
+    const pushState = history.pushState.bind(history);
+    history.pushState = (state: unknown, title: string, url?: string | URL | null) => {
+      if (typeof state === 'object' && state !== null && 'nfnnDialogDepth' in state) {
+        record.dialogEntries++;
+      }
+      pushState(state, title, url);
+    };
+  });
+}
+
+function dialogEntries(page: Page): Promise<number> {
+  return page.evaluate(() => (window as unknown as Probe).dialogEntries);
+}
+
+async function entryTakenBack(page: Page): Promise<void> {
+  await expect
+    .poll(() => page.evaluate(() => (history.state as Record<string, unknown>)['nfnnDialogDepth']))
+    .toBeUndefined();
+}
+
 async function back(page: Page): Promise<void> {
   await page.evaluate(() => history.back());
 }
@@ -46,6 +77,7 @@ test.describe('Given an administrator with the pairing dialog of a payment open'
   test.beforeEach(async ({ page }) => {
     pairing = [];
     let pairedNow = false;
+    await countDialogEntries(page);
     await mockDonorApi(page);
     await page.route(
       (url) => url.pathname === PAYMENTS,
@@ -101,6 +133,7 @@ test.describe('Given an administrator with the pairing dialog of a payment open'
   }) => {
     await page.getByRole('dialog').getByLabel('Zavřít').click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
+    await entryTakenBack(page);
 
     await back(page);
 
@@ -115,14 +148,30 @@ test.describe('Given an administrator with the pairing dialog of a payment open'
     await dialog.getByRole('radio', { name: /Jana Nováková/ }).check();
     await dialog.getByRole('button', { name: 'Přiřadit dárci Jana Nováková' }).click();
     await expect.poll(() => pairing.length).toBe(1);
+    const entries = await dialogEntries(page);
 
     await back(page);
 
+    await expect.poll(() => dialogEntries(page)).toBe(entries + 1);
     await expect(dialog).toBeVisible();
     await expect(page).toHaveURL(/\/sprava\/platby$/);
     await pairing[0].fulfill({ json: { donationId: 'd1', changedYearlyReceipts: [] } });
     await expect(dialog).toHaveCount(0);
+    await entryTakenBack(page);
     await back(page);
+    await expect(page).toHaveURL(/\/$/);
+  });
+
+  test('when they reload the page with the dialog open, then one Back leaves the payments', async ({
+    page,
+  }) => {
+    await page.reload();
+    await expect(page.getByRole('heading', { level: 1, name: 'Platby z banky' })).toBeVisible();
+    await expect.poll(() => page.evaluate(() => (window as unknown as Probe).pops)).toBe(1);
+    await entryTakenBack(page);
+
+    await back(page);
+
     await expect(page).toHaveURL(/\/$/);
   });
 
@@ -131,6 +180,7 @@ test.describe('Given an administrator with the pairing dialog of a payment open'
   }) => {
     await page.getByRole('dialog').getByLabel('Zavřít').click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
+    await entryTakenBack(page);
     await page.evaluate(() => history.forward());
     await expect
       .poll(() =>

@@ -188,8 +188,7 @@ describe('Given the colours of the tab bar over the page', () => {
     `;
 
     assert.deepEqual(barContrastProblems('solid', solid), [
-      'theme solid under @media (prefers-reduced-transparency: reduce): --color-tab-pill on --color-tab-bar over a white page is 1.08:1, below 3:1',
-      'theme solid under @media (prefers-reduced-transparency: reduce): --color-tab-pill on --color-tab-bar over a black page is 1.08:1, below 3:1',
+      'theme solid under @media (prefers-reduced-transparency: reduce): solid --color-tab-pill on --color-tab-bar is 1.08:1, below 3:1',
     ]);
   });
 });

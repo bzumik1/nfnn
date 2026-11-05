@@ -146,6 +146,7 @@ export class DialogHistory {
     if (history === undefined || stale === 0) {
       return;
     }
+    history.replaceState(withoutDepth(history.state), '');
     this.ownPops++;
     history.go(-stale);
   }
@@ -165,4 +166,10 @@ function stateOf(state: unknown): Record<string, unknown> {
 function depthOf(state: unknown): number {
   const depth = stateOf(state)[DEPTH_KEY];
   return typeof depth === 'number' ? depth : 0;
+}
+
+function withoutDepth(state: unknown): Record<string, unknown> {
+  const rest = { ...stateOf(state) };
+  delete rest[DEPTH_KEY];
+  return rest;
 }
