@@ -140,6 +140,8 @@ Správce je čte ve webu na `/sprava/logy` a Claude přes konektor (viz [MCP kon
 
 Web i konektor čtou logy přes backend, takže když backend neběží, ukáže je jen Zima: `sudo docker logs nfnn-backend` nebo `sudo tail -n 200 /DATA/AppData/nfnn/logs/backend.log`. Co v logu není: compose uložený ZimaOS, proměnné v kontejnerech a kontejner, který ZimaOS vůbec nevytvořil; na to zůstává tvůj příkaz na Zimě.
 
+Když web u každého odeslání píše „Web mezitím dostal novou verzi“ a nepomůže ani načtení stránky, běží frontend a backend z různých commitů s jinou generací API (hlavička `Nfnn-Api`): server pak každý zápis odmítne stavem 426, který v `nginx-access.log` u `POST`/`PUT`/`DELETE` uvidíte. Pomůže uložit aplikaci v ZimaOS znovu, aby se oba obrazy stáhly ze stejného commitu (`nfnn_status` jmenuje revizi backendu).
+
 Do 23. 10. 2026 složku vystavoval ještě kontejner `nfnn-ops` přes tunel Cloudflare na `ops.nfnn.cz`. Po přeinstalaci s aktuálním `deploy/compose.yml` ho zbývá uklidit: na Zimě zmizí s celou složkou `env/` (viz [Přechod z env souborů](#přechod-z-env-souborů)), v Cloudflare Zero Trust smazat tunel `nfnn-ops` (s ním i DNS záznam `ops`), aplikaci Access `NFNN logy` a servisní token `claude-nfnn`, a z prostředí projektu na claude.ai proměnné `NFNN_OPS_CLIENT_ID` a `NFNN_OPS_CLIENT_SECRET`.
 
 ## MCP konektor

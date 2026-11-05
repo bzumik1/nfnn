@@ -576,6 +576,34 @@ describe('Given a slice file that is not a valid declaration', () => {
     assert.equal(result.status, 0, result.output);
   });
 
+  it('when an addition names the exact template of a request outside every context, then the comparison accepts it', () => {
+    const added = {
+      kind: 'added',
+      field: 'nfnn-*',
+      reason: 'r',
+      contract: 'docs/api-contract.md, Conventions',
+    };
+    const result = compare(
+      workspace({
+        changes: { '0.9.json': [{ ...added, path: 'GET /api/nowhere', scenario: anywhere }] },
+      }),
+    );
+    assert.equal(result.status, 0, result.output);
+    for (const path of [
+      'GET /api/nowhere*',
+      'GET /api/*/x',
+      'GET /api/',
+      'GET /api/nowhere?q=x',
+      'GET /api/a b',
+    ]) {
+      refused({ ...added, path, scenario: anywhere }, /entry 1.*path.*METHOD \/api\/<context>\//);
+    }
+    refused(
+      { ...body, path: 'GET /api/nowhere', scenario: anywhere },
+      /entry 1.*path.*METHOD \/api\/<context>\//,
+    );
+  });
+
   it('when a method is a glob or not upper case, then the comparison refuses it', () => {
     for (const path of [
       'QKZW* /api/content/news',

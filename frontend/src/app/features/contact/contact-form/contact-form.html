@@ -144,6 +144,16 @@
                 <a href="mailto:info&#64;nfnn.cz">info&#64;nfnn.cz</a>.
               </p>
             }
+            @case ('updateRequired') {
+              <p
+                class="ui-callout ui-callout--danger form-error"
+                role="alert"
+                i18n="@@home.contact.form.error.updateRequired"
+              >
+                Web mezitím dostal novou verzi, a tak jsme zprávu neodeslali. Zkopírujte si její
+                text, načtěte stránku znovu a odešlete ji ještě jednou.
+              </p>
+            }
             @case ('generic') {
               <p
                 class="ui-callout ui-callout--danger form-error"
