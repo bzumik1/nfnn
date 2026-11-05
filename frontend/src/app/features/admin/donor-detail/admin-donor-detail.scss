@@ -221,6 +221,10 @@ td.action {
   text-align: right;
 }
 
+td.receipt-pdf-cell {
+  inline-size: 15rem;
+}
+
 .receipt-pdf-progress {
   justify-items: end;
   text-align: right;
@@ -298,6 +302,10 @@ td.amount {
   td.action,
   td.amount {
     text-align: left;
+  }
+
+  td.receipt-pdf-cell {
+    inline-size: auto;
   }
 
   .receipt-pdf-progress {
