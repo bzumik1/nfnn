@@ -18,6 +18,8 @@ interface NewsArticleJpaRepository extends JpaRepository<NewsArticleJpaEntity, U
 
     boolean existsBySlugAndIdNot(String slug, UUID id);
 
+    boolean existsByLookBackYearAndIdNot(Short lookBackYear, UUID id);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select a from NewsArticleJpaEntity a where a.id = :id")
     Optional<NewsArticleJpaEntity> findByIdForUpdate(@Param("id") UUID id);

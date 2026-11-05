@@ -46,6 +46,11 @@ class JpaNewsArticleRepository implements NewsArticleRepository {
     }
 
     @Override
+    public boolean isLookBackYearTakenByAnother(int year, NewsArticleId except) {
+        return jpa.existsByLookBackYearAndIdNot((short) year, except.value());
+    }
+
+    @Override
     public List<NewsArticle> findAllDraftsFirst() {
         return jpa.findAllDraftsFirst().stream().map(NewsArticleJpaEntity::toDomain).toList();
     }

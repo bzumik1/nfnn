@@ -16,6 +16,7 @@ import cz.novanadeje.app.content.domain.people.PersonRepository;
 import cz.novanadeje.app.content.domain.Slug;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
+import jakarta.persistence.PersistenceException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +30,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -63,6 +65,33 @@ class JpaNewsArticleRepositoryTest {
         assertThat(news.findBySlug(new Slug("dominik"))).contains(article);
         assertThat(news.isSlugTakenByAnother(new Slug("dominik"), article.id())).isFalse();
         assertThat(news.isSlugTakenByAnother(new Slug("dominik"), NewsArticleId.newId(NOW))).isTrue();
+    }
+
+    @Test
+    @DisplayName("Given an article looking back on a year, when it is saved and read, then the year comes back and counts as taken only for another article")
+    void should_round_trip_the_year_and_tell_it_taken_when_saved_given_a_look_back_year() {
+        NewsArticle article = article("ohlednuti-2025", NOW).lookBackOn(Optional.of(2025), NOW);
+
+        news.save(article);
+        flushAndClear();
+
+        assertThat(news.findById(article.id())).hasValueSatisfying(read -> assertThat(read.lookBackYear()).contains(2025));
+        assertThat(news.isLookBackYearTakenByAnother(2025, article.id())).isFalse();
+        assertThat(news.isLookBackYearTakenByAnother(2025, NewsArticleId.newId(NOW))).isTrue();
+        assertThat(news.isLookBackYearTakenByAnother(2024, NewsArticleId.newId(NOW))).isFalse();
+    }
+
+    @Test
+    @DisplayName("Given an article looking back on a year, when a second one for the same year is written past the check, then the database refuses it, while articles without a year are many")
+    void should_refuse_a_second_article_when_saved_given_the_year_taken() {
+        news.save(article("prvni", NOW).lookBackOn(Optional.of(2025), NOW));
+        news.save(article("bez-roku", NOW));
+        news.save(article("taky-bez-roku", NOW));
+        flushAndClear();
+
+        news.save(article("druha", NOW).lookBackOn(Optional.of(2025), NOW));
+
+        assertThatThrownBy(entityManager::flush).isInstanceOf(PersistenceException.class).rootCause().hasMessageContaining("uq_content_news_look_back_year");
     }
 
     @Test

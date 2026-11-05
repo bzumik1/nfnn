@@ -105,6 +105,14 @@ const NEWS = {
     'Id of the person of the foundation who signs the article (nfnn_people): the site shows their portrait, name and role under it. Left out means unsigned. On the web the default is the person linked to the writing administrator; here choose it yourself.',
   ),
 };
+const LOOK_BACK_YEAR = z
+  .number()
+  .int()
+  .min(2005)
+  .max(2100)
+  .describe(
+    'The year the article looks back on ("Ohlédnutí za rokem 2025"), so the Pomáháme tab leads from that year to it. At most one article looks back on a year (409 content/look-back-year-taken).',
+  );
 const PROJECT_CATEGORY = z
   .enum(['CHILDREN', 'ADULTS', 'ANIMALS', 'OTHER'])
   .describe(
@@ -443,8 +451,8 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Napsat aktualitu',
       description:
-        'Creates a news article as a draft (not on the site until nfnn_publish_news), signed by a person of the foundation when signerId is given; audited as CREATE_NEWS. Texts are Czech, sentence case; the signature is not written into the body.',
-      inputSchema: z.object(NEWS),
+        'Creates a news article as a draft (not on the site until nfnn_publish_news), signed by a person of the foundation when signerId is given and looking back on lookBackYear when given; audited as CREATE_NEWS. Texts are Czech, sentence case; the signature is not written into the body.',
+      inputSchema: z.object({ ...NEWS, lookBackYear: LOOK_BACK_YEAR.optional() }),
       annotations: WRITING,
     },
     async (article, ctx) =>
@@ -458,7 +466,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Upravit aktualitu',
       description:
-        'Replaces the texts, the photo and the signer of a news article, draft or published (the published date stays); send every field (signerId is signer.id of nfnn_news_article; left out removes the signer), read them with nfnn_news_article first. Audited as UPDATE_NEWS.',
+        'Replaces the texts, the photo and the signer of a news article, draft or published (the published date and the year it looks back on stay; that year is changed with nfnn_set_news_look_back_year); send every field (signerId is signer.id of nfnn_news_article; left out removes the signer), read them with nfnn_news_article first. Audited as UPDATE_NEWS.',
       inputSchema: z.object({ id: UUID, ...NEWS, expectedVersion: EXPECTED_VERSION }),
       annotations: { ...WRITING, idempotentHint: true },
     },
@@ -470,6 +478,37 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
         async ({ apiToken }) =>
           text(
             await backend.put(`/api/admin/content/news/${id}`, apiToken, article, expectedVersion),
+          ),
+        `news ${id}`,
+      ),
+  );
+
+  server.registerTool(
+    'nfnn_set_news_look_back_year',
+    {
+      title: 'Ohlédnutí za rokem',
+      description:
+        'Links a news article, draft or published, to the year it looks back on (lookBackYear of nfnn_news_article and nfnn_content), or removes the link with year null; nothing else of the article changes. At most one article looks back on a year: a year another article has is refused (409 content/look-back-year-taken), so remove it there first. Read the article with nfnn_news_article first and pass its version. Audited as CHANGE_NEWS_LOOK_BACK_YEAR; setting the year the article already has changes nothing.',
+      inputSchema: z.object({
+        id: UUID,
+        year: LOOK_BACK_YEAR.nullable(),
+        expectedVersion: EXPECTED_VERSION,
+      }),
+      annotations: { ...WRITING, idempotentHint: true },
+    },
+    async ({ id, year, expectedVersion }, ctx) =>
+      answerChange(
+        deps,
+        ctx,
+        'nfnn_set_news_look_back_year',
+        async ({ apiToken }) =>
+          text(
+            await backend.put(
+              `/api/admin/content/news/${id}/look-back-year`,
+              apiToken,
+              { year },
+              expectedVersion,
+            ),
           ),
         `news ${id}`,
       ),
@@ -559,14 +598,48 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
   );
 
   server.registerTool(
+    'nfnn_update_donate_band',
+    {
+      title: 'Fotka v pruhu Přispět',
+      description:
+        'Sets the photo of the closing Přispět band (shown at the end of the O nás, Pomáháme and Aktuality tabs), with its alt, or removes it with photoId null: the band then shows without a photo, the alt goes too, and the removed or replaced photo is deleted unless a news article, project or the About section still uses it. Send every field; read them with nfnn_donate_band first. A photo of people goes up through nfnn_photo_upload_link (or the web), never from a public address. Its focal point is set with nfnn_set_photo_focal_point. Audited as CHANGE_DONATE_BAND_PHOTO or REMOVE_DONATE_BAND_PHOTO.',
+      inputSchema: z.object({
+        photoId: UUID.nullable().describe(
+          'Id of an uploaded photo (nfnn_photo_upload_link, nfnn_upload_photo, or the one nfnn_donate_band shows); null removes the photo.',
+        ),
+        photoAlt: z
+          .string()
+          .max(200)
+          .optional()
+          .describe(
+            'One sentence saying what the photo shows, for screen readers and when it does not load.',
+          ),
+      }),
+      annotations: { ...WRITING, destructiveHint: true, idempotentHint: true },
+    },
+    async ({ photoId, photoAlt }, ctx) =>
+      answerChange(deps, ctx, 'nfnn_update_donate_band', async ({ apiToken }) =>
+        text(
+          await backend.put(
+            '/api/admin/content/donate-band',
+            apiToken,
+            photoId === null
+              ? { photoId, photoAlt: null }
+              : { photoId, photoAlt: photoAlt ?? null },
+          ),
+        ),
+      ),
+  );
+
+  server.registerTool(
     'nfnn_set_photo_focal_point',
     {
       title: 'Bod výřezu fotky',
       description:
-        'Marks on a photo the spot that must stay visible (a face, say) as percentages from its left and top edge: the site then crops every shape it shows the photo in (the card in a list, the top of an article) around that spot, and as before with focalPoint null, as it does for a photo without one; the About photo is still shown whole, so its point takes effect once that section crops it. A portrait or web signature of a person of the foundation takes no point (400 content/focal-point-on-person-image). The point belongs to the photo, so every news article, project and the About section that show it crop alike; a photo put in place of another (coverImageId of nfnn_update_news or nfnn_update_project, photoId of nfnn_update_about) starts without one. The current point is the focalPoint of the photo in nfnn_news_article, nfnn_project and nfnn_about. Audited as CHANGE_PHOTO_FOCAL_POINT; placing the point a photo already has changes nothing.',
+        'Marks on a photo the spot that must stay visible (a face, say) as percentages from its left and top edge: the site then crops every shape it shows the photo in (the card in a list, the top of an article) around that spot, and as before with focalPoint null, as it does for a photo without one; the About photo is still shown whole, so its point takes effect once that section crops it. A portrait or web signature of a person of the foundation takes no point (400 content/focal-point-on-person-image). The point belongs to the photo, so every news article, project, the About section and the Přispět band that show it crop alike; a photo put in place of another (coverImageId of nfnn_update_news or nfnn_update_project, photoId of nfnn_update_about or nfnn_update_donate_band) starts without one. The current point is the focalPoint of the photo in nfnn_news_article, nfnn_project, nfnn_about and nfnn_donate_band. Audited as CHANGE_PHOTO_FOCAL_POINT; placing the point a photo already has changes nothing.',
       inputSchema: z.object({
         photoId: UUID.describe(
-          'Id of an uploaded photo: the coverImage of a news article or project, the About photo, or one just uploaded.',
+          'Id of an uploaded photo: the coverImage of a news article or project, the About photo, the photo of the Přispět band, or one just uploaded.',
         ),
         focalPoint: z
           .object({
@@ -897,7 +970,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     'nfnn_upload_photo',
     {
       title: 'Nahrát fotku z adresy',
-      description: `Downloads a photo from a public https address (the image file itself: JPEG, PNG, WebP or GIF, at most ${MAX_PHOTO_BYTES / 1024 / 1024} MB, 3 redirects, 15 s) and uploads it to the site as the web does: turned upright, converted to WebP in sizes for every screen. Answers the photo id for coverImageId of nfnn_create_news, nfnn_update_news, nfnn_create_project or nfnn_update_project, or for photoId of nfnn_update_about; the photo shows nowhere until one of them uses it. Never use it for a photo of a person (the About photo, a portrait for nfnn_add_person or nfnn_update_person) or a web signature for nfnn_set_web_signature: those go through nfnn_photo_upload_link. Addresses in private networks are refused. For a file on this computer use nfnn_photo_upload_link.`,
+      description: `Downloads a photo from a public https address (the image file itself: JPEG, PNG, WebP or GIF, at most ${MAX_PHOTO_BYTES / 1024 / 1024} MB, 3 redirects, 15 s) and uploads it to the site as the web does: turned upright, converted to WebP in sizes for every screen. Answers the photo id for coverImageId of nfnn_create_news, nfnn_update_news, nfnn_create_project or nfnn_update_project, or for photoId of nfnn_update_about or nfnn_update_donate_band; the photo shows nowhere until one of them uses it. Never use it for a photo of a person (the About photo, a portrait for nfnn_add_person or nfnn_update_person) or a web signature for nfnn_set_web_signature: those go through nfnn_photo_upload_link. Addresses in private networks are refused. For a file on this computer use nfnn_photo_upload_link.`,
       inputSchema: z.object({ url: z.string().min(1).max(2000) }),
       annotations: { ...WRITING, openWorldHint: true },
     },
@@ -916,7 +989,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     'nfnn_photo_upload_link',
     {
       title: 'Odkaz pro nahrání fotky',
-      description: `A one-time address to upload a photo file from a computer, e.g. from a shell with curl: PUT the file there with the ticket header and the image's Content-Type (at most ${MAX_PHOTO_BYTES / 1024 / 1024} MB). The ticket works once, for at most 10 minutes; the answer of the PUT is the photo id (and its size) for coverImageId, photoId of nfnn_update_about, portraitId of nfnn_add_person and nfnn_update_person or imageId of nfnn_set_web_signature, as nfnn_upload_photo answers it. Photos of people and web signatures go up only this way.`,
+      description: `A one-time address to upload a photo file from a computer, e.g. from a shell with curl: PUT the file there with the ticket header and the image's Content-Type (at most ${MAX_PHOTO_BYTES / 1024 / 1024} MB). The ticket works once, for at most 10 minutes; the answer of the PUT is the photo id (and its size) for coverImageId, photoId of nfnn_update_about and nfnn_update_donate_band, portraitId of nfnn_add_person and nfnn_update_person or imageId of nfnn_set_web_signature, as nfnn_upload_photo answers it. Photos of people and web signatures go up only this way.`,
       annotations: WRITING,
     },
     async (ctx) =>

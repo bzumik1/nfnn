@@ -4,6 +4,7 @@ import cz.novanadeje.app.content.domain.media.MediaId;
 import cz.novanadeje.app.content.domain.media.MediaSize;
 import cz.novanadeje.app.content.domain.media.MediaImageRepository;
 import cz.novanadeje.app.content.domain.media.MediaNotFound;
+import cz.novanadeje.app.content.domain.news.LookBackYearTaken;
 import cz.novanadeje.app.content.domain.news.NewsArticle;
 import cz.novanadeje.app.content.domain.news.NewsArticleId;
 import cz.novanadeje.app.content.domain.news.NewsArticleNotFound;
@@ -19,6 +20,7 @@ import cz.novanadeje.app.content.domain.FormerSlugs;
 import cz.novanadeje.app.content.domain.Slug;
 import cz.novanadeje.app.content.domain.SlugTaken;
 import cz.novanadeje.app.content.application.ContentVersions;
+import cz.novanadeje.app.content.application.Versioned;
 import cz.novanadeje.app.content.domain.ChangedMeanwhile;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
@@ -43,6 +45,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -52,6 +55,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class NewsAdminServiceTest {
 
+    private static final Instant BEFORE = Instant.parse("2026-10-22T08:00:00Z");
     private static final Instant NOW = Instant.parse("2026-10-23T08:00:00Z");
     private static final UUID ADMIN = UUID.fromString("019a1c00-0000-7000-8000-00000000a001");
     private static final MediaId IMAGE = MediaId.newId(NOW);
@@ -364,6 +368,123 @@ class NewsAdminServiceTest {
         when(news.findByIdForUpdate(id)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service().unpublish(ADMIN, id, ExpectedVersion.of("0123456789abcdef"))).isInstanceOf(NewsArticleNotFound.class);
+    }
+
+    @Test
+    @DisplayName("Given a year no other article looks back on, when an article is created with it, then it looks back on that year")
+    void should_look_back_on_the_year_when_created_given_a_free_year() {
+        when(news.isSlugTakenByAnother(any(), any())).thenReturn(false);
+        when(news.isLookBackYearTakenByAnother(anyInt(), any())).thenReturn(false);
+
+        NewsArticleView view = service().create(ADMIN, command("Ohlédnutí za rokem 2025", Optional.empty(), Optional.empty()), Optional.of(2025)).view();
+
+        assertThat(view.lookBackYear()).contains(2025);
+        ArgumentCaptor<NewsArticle> saved = ArgumentCaptor.forClass(NewsArticle.class);
+        verify(news).save(saved.capture());
+        assertThat(saved.getValue().lookBackYear()).contains(2025);
+    }
+
+    @Test
+    @DisplayName("Given another article looking back on the year, when an article is created with it, then it is refused and nothing is saved")
+    void should_refuse_when_created_given_a_taken_year() {
+        when(news.isSlugTakenByAnother(any(), any())).thenReturn(false);
+        when(news.isLookBackYearTakenByAnother(anyInt(), any())).thenReturn(true);
+
+        assertThatThrownBy(() -> service().create(ADMIN, command("Ohlédnutí", Optional.empty(), Optional.empty()), Optional.of(2025)))
+                .isInstanceOfSatisfying(LookBackYearTaken.class, refusal -> assertThat(refusal.code()).isEqualTo("content/look-back-year-taken"));
+
+        verify(news, never()).save(any());
+        verify(events, never()).publishEvent(any());
+    }
+
+    @Test
+    @DisplayName("Given an article and a free year, when it is set to look back on the year with its current version, then it is saved with a new version and audited with the year")
+    void should_save_and_audit_when_the_year_is_set_given_a_free_year() {
+        NewsArticle article = NewsArticle.create(NewsArticleId.newId(BEFORE), content("ohlednuti", Optional.empty()), BEFORE);
+        when(news.findByIdForUpdate(article.id())).thenReturn(Optional.of(article));
+        when(news.isLookBackYearTakenByAnother(2025, article.id())).thenReturn(false);
+
+        Versioned<NewsArticleView> changed = service().changeLookBackYear(ADMIN, article.id(), ExpectedVersion.of(versions().of(article)), Optional.of(2025));
+
+        assertThat(changed.view().lookBackYear()).contains(2025);
+        assertThat(changed.version()).isNotEqualTo(versions().of(article));
+        ArgumentCaptor<NewsArticle> saved = ArgumentCaptor.forClass(NewsArticle.class);
+        verify(news).save(saved.capture());
+        assertThat(saved.getValue().lookBackYear()).contains(2025);
+        assertThat(saved.getValue().updatedAt()).isEqualTo(NOW);
+        assertThat(changed.version()).isEqualTo(versions().of(saved.getValue()));
+        ArgumentCaptor<AdminActionPerformed> audit = ArgumentCaptor.forClass(AdminActionPerformed.class);
+        verify(events).publishEvent(audit.capture());
+        assertThat(audit.getValue().action()).isEqualTo("CHANGE_NEWS_LOOK_BACK_YEAR");
+        assertThat(audit.getValue().subjectId()).contains(article.id().value());
+        assertThat(audit.getValue().details()).isEqualTo("Aktualita " + article.id() + " „ohlednuti“ se ohlíží za rokem 2025; titulek „Dominik“");
+    }
+
+    @Test
+    @DisplayName("Given an article looking back on a year, when the year is removed, then it looks back on none and the removal is audited")
+    void should_audit_the_removal_when_the_year_is_removed_given_one() {
+        NewsArticle article = NewsArticle.create(NewsArticleId.newId(BEFORE), content("ohlednuti", Optional.empty()), Optional.of(2025), BEFORE);
+        when(news.findByIdForUpdate(article.id())).thenReturn(Optional.of(article));
+
+        Versioned<NewsArticleView> changed = service().changeLookBackYear(ADMIN, article.id(), ExpectedVersion.of(versions().of(article)), Optional.empty());
+
+        assertThat(changed.view().lookBackYear()).isEmpty();
+        ArgumentCaptor<AdminActionPerformed> audit = ArgumentCaptor.forClass(AdminActionPerformed.class);
+        verify(events).publishEvent(audit.capture());
+        assertThat(audit.getValue().details()).isEqualTo("Aktualita " + article.id() + " „ohlednuti“ se už neohlíží za žádným rokem; titulek „Dominik“");
+    }
+
+    @Test
+    @DisplayName("Given an article already looking back on the year, when the same year is set again, then nothing is saved or audited and the version stays")
+    void should_change_nothing_when_the_same_year_is_set_given_it_already() {
+        NewsArticle article = NewsArticle.create(NewsArticleId.newId(BEFORE), content("ohlednuti", Optional.empty()), Optional.of(2025), BEFORE);
+        when(news.findByIdForUpdate(article.id())).thenReturn(Optional.of(article));
+
+        Versioned<NewsArticleView> unchanged = service().changeLookBackYear(ADMIN, article.id(), ExpectedVersion.of(versions().of(article)), Optional.of(2025));
+
+        assertThat(unchanged.version()).isEqualTo(versions().of(article));
+        verify(news, never()).save(any());
+        verify(events, never()).publishEvent(any());
+    }
+
+    @Test
+    @DisplayName("Given another article looking back on the year, when an article is set to look back on it, then it is refused and nothing is saved")
+    void should_refuse_when_the_year_is_set_given_it_taken() {
+        NewsArticle article = NewsArticle.create(NewsArticleId.newId(BEFORE), content("ohlednuti", Optional.empty()), BEFORE);
+        when(news.findByIdForUpdate(article.id())).thenReturn(Optional.of(article));
+        when(news.isLookBackYearTakenByAnother(2025, article.id())).thenReturn(true);
+
+        assertThatThrownBy(() -> service().changeLookBackYear(ADMIN, article.id(), ExpectedVersion.none(), Optional.of(2025)))
+                .isInstanceOf(LookBackYearTaken.class);
+
+        verify(news, never()).save(any());
+        verify(events, never()).publishEvent(any());
+    }
+
+    @Test
+    @DisplayName("Given an article changed since the version read, when its year is set with that version, then it is refused as changed meanwhile and nothing is saved")
+    void should_refuse_when_the_year_is_set_given_a_stale_version() {
+        NewsArticle read = NewsArticle.create(NewsArticleId.newId(BEFORE), content("ohlednuti", Optional.empty()), BEFORE);
+        NewsArticle edited = read.edit(content("ohlednuti-znovu", Optional.empty()), NOW);
+        when(news.findByIdForUpdate(read.id())).thenReturn(Optional.of(edited));
+
+        assertThatThrownBy(() -> service().changeLookBackYear(ADMIN, read.id(), ExpectedVersion.of(versions().of(read)), Optional.of(2025)))
+                .isInstanceOf(ChangedMeanwhile.class);
+
+        verify(news, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Given an article looking back on a year, when its texts are replaced, then it still looks back on that year")
+    void should_keep_the_year_when_updated_given_one() {
+        NewsArticle article = NewsArticle.create(NewsArticleId.newId(BEFORE), content("ohlednuti", Optional.empty()), Optional.of(2025), BEFORE);
+        when(news.findByIdForUpdate(article.id())).thenReturn(Optional.of(article));
+        when(news.isSlugTakenByAnother(any(), any())).thenReturn(false);
+
+        NewsArticleView view = service().update(ADMIN, article.id(), ExpectedVersion.of(versions().of(article)),
+                command("Ohlédnutí", Optional.of("ohlednuti"), Optional.empty())).view();
+
+        assertThat(view.lookBackYear()).contains(2025);
     }
 
     private static ContentVersions versions() {

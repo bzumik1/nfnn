@@ -3,6 +3,9 @@ package cz.novanadeje.app.content.infrastructure.persistence;
 import cz.novanadeje.app.content.domain.about.AboutPhoto;
 import cz.novanadeje.app.content.domain.about.AboutSection;
 import cz.novanadeje.app.content.domain.about.AboutSectionRepository;
+import cz.novanadeje.app.content.domain.donateband.DonateBand;
+import cz.novanadeje.app.content.domain.donateband.DonateBandPhoto;
+import cz.novanadeje.app.content.domain.donateband.DonateBandRepository;
 import cz.novanadeje.app.content.domain.media.FocalPoint;
 import cz.novanadeje.app.content.domain.media.MediaId;
 import cz.novanadeje.app.content.domain.media.MediaImage;
@@ -58,6 +61,8 @@ class JpaMediaImageRepositoryTest {
     private ProjectRepository projects;
     @Autowired
     private AboutSectionRepository about;
+    @Autowired
+    private DonateBandRepository donateBand;
     @Autowired
     private PersonRepository people;
     @Autowired
@@ -149,6 +154,23 @@ class JpaMediaImageRepositoryTest {
         MediaImage shown = image(1413, 1884, NOW.minusSeconds(864_000), 480);
         media.save(shown);
         about.save(AboutSection.withoutPhoto(NOW).show(Optional.of(new AboutPhoto(shown.id(), Optional.empty(), Optional.empty())), NOW));
+        flushAndClear();
+
+        boolean deletedIfUnused = media.deleteIfUnused(shown.id());
+        int cleanedUp = media.deleteUnusedUploadedBefore(NOW.minusSeconds(604_800));
+        flushAndClear();
+
+        assertThat(deletedIfUnused).isFalse();
+        assertThat(cleanedUp).isZero();
+        assertThat(media.exists(shown.id())).isTrue();
+    }
+
+    @Test
+    @DisplayName("Given the photo the donate band shows, when it is deleted only if unused or the old unused photos are cleaned up, then it stays")
+    void should_keep_the_donate_band_photo_when_cleaned_up_given_the_band_shows_it() {
+        MediaImage shown = image(1600, 900, NOW.minusSeconds(864_000), 480);
+        media.save(shown);
+        donateBand.save(DonateBand.withoutPhoto(NOW).show(Optional.of(new DonateBandPhoto(shown.id(), Optional.empty())), NOW));
         flushAndClear();
 
         boolean deletedIfUnused = media.deleteIfUnused(shown.id());

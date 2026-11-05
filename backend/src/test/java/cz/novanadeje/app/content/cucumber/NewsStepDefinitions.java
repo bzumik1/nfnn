@@ -22,6 +22,7 @@ public class NewsStepDefinitions {
 
     private static final String ADMIN_NEWS = "/api/admin/content/news";
     private static final String PUBLIC_NEWS = "/api/content/news";
+    private static final String ACCESS_TOKEN = "access_token";
 
     private final ApiClient api;
     private final DonorSessions sessions;
@@ -30,6 +31,7 @@ public class NewsStepDefinitions {
     private final UploadedImages images;
     private final ContentRowVersions versions;
     private final Map<String, String> articleIdsBySlug = new LinkedHashMap<>();
+    private String exchangedApiToken;
 
     public NewsStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors scenarioDonors, JdbcClient jdbc, UploadedImages images,
                                ContentRowVersions versions) {
@@ -81,6 +83,39 @@ public class NewsStepDefinitions {
         sessions.actAs(alias);
         String id = articleId(slug);
         api.delete(ADMIN_NEWS + "/" + id, ApiClient.ifMatch(versions.ofArticle(id)));
+    }
+
+    @When("{string} sets the news article {string} to look back on the year {int}")
+    public void setsTheNewsArticleToLookBackOnTheYear(String alias, String slug, int year) {
+        sessions.actAs(alias);
+        sendLookBackYear(slug, year);
+    }
+
+    @When("{string} sets the news article {string} to look back on no year")
+    public void setsTheNewsArticleToLookBackOnNoYear(String alias, String slug) {
+        sessions.actAs(alias);
+        sendLookBackYear(slug, null);
+    }
+
+    @When("someone without a token sets the news article {string} to look back on the year {int}")
+    public void someoneWithoutATokenSetsTheNewsArticleToLookBackOnTheYear(String slug, int year) {
+        api.forgetCredentials();
+        sendLookBackYear(slug, year);
+    }
+
+    @When("the exchanged API token sets the news article {string} to look back on the year {int}")
+    public void theExchangedApiTokenSetsTheNewsArticleToLookBackOnTheYear(String slug, int year) {
+        actAsExchangedApiToken();
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("year", year);
+        api.put(ADMIN_NEWS + "/" + articleId(slug) + "/look-back-year", body);
+    }
+
+    @When("the exchanged API token creates a news article:")
+    public void theExchangedApiTokenCreatesANewsArticle(Map<String, String> fields) {
+        actAsExchangedApiToken();
+        api.post(ADMIN_NEWS, articleBody(fields));
+        rememberArticle();
     }
 
     @When("{string} asks for the news articles")
@@ -165,6 +200,22 @@ public class NewsStepDefinitions {
         assertThat(recorded).singleElement().asString().contains(details);
     }
 
+    private void sendLookBackYear(String slug, Integer year) {
+        String id = articleId(slug);
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("year", year);
+        api.put(ADMIN_NEWS + "/" + id + "/look-back-year", body, ApiClient.ifMatch(versions.ofArticle(id)));
+    }
+
+    private void actAsExchangedApiToken() {
+        JsonNode last = api.lastResponseJson();
+        if (last != null && last.has(ACCESS_TOKEN)) {
+            exchangedApiToken = last.get(ACCESS_TOKEN).asString();
+        }
+        api.forgetCredentials();
+        api.authorize(exchangedApiToken);
+    }
+
     private Map<String, Object> articleBody(Map<String, String> fields) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("title", text(fields.get("title")));
@@ -184,6 +235,9 @@ public class NewsStepDefinitions {
         }
         if (fields.containsKey("signer")) {
             body.put("signerId", signerId(fields.get("signer")));
+        }
+        if (fields.containsKey("lookBackYear")) {
+            body.put("lookBackYear", Integer.valueOf(fields.get("lookBackYear")));
         }
         return body;
     }
