@@ -69,6 +69,7 @@ const PLAIN_SETTING = z.enum([
   'FIO_HISTORY_FROM',
   'PAIRING_EXCLUDED_ACCOUNTS',
   'RECEIPT_FIRST_YEAR',
+  'SESSION_REMEMBER_DAYS',
 ]);
 const SLUG = z
   .string()
@@ -352,7 +353,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Změnit nastavení webu',
       description:
-        'Changes plain settings of the site (see nfnn_settings for the current values); an empty value returns a setting to its default. Every value is checked as at startup before anything is stored, a refused one comes back with its reason. A real change restarts the backend, so the site does not answer for about a minute; audited as CHANGE_SETTINGS. Secrets (SMTP password, Fio token) and the address of the site are changed only in the web administration; moving the mail server, port, user or STARTTLS needs the SMTP password again, so it is done there too.',
+        'Changes plain settings of the site (see nfnn_settings for the current values); an empty value returns a setting to its default. SESSION_REMEMBER_DAYS is how many days (1 to 30, default 14) a browser sign-in with "Zapamatovat si mě" lasts from its last use. Every value is checked as at startup before anything is stored, a refused one comes back with its reason. A real change restarts the backend, so the site does not answer for about a minute; audited as CHANGE_SETTINGS. Secrets (SMTP password, Fio token) and the address of the site are changed only in the web administration; moving the mail server, port, user or STARTTLS needs the SMTP password again, so it is done there too.',
       inputSchema: z.object({
         changes: z
           .array(z.object({ name: PLAIN_SETTING, value: z.string().max(1000) }))
@@ -970,7 +971,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     'nfnn_upload_photo',
     {
       title: 'Nahrát fotku z adresy',
-      description: `Downloads a photo from a public https address (the image file itself: JPEG, PNG, WebP or GIF, at most ${MAX_PHOTO_BYTES / 1024 / 1024} MB, 3 redirects, 15 s) and uploads it to the site as the web does: turned upright, converted to WebP in sizes for every screen. Answers the photo id for coverImageId of nfnn_create_news, nfnn_update_news, nfnn_create_project or nfnn_update_project, or for photoId of nfnn_update_about or nfnn_update_donate_band; the photo shows nowhere until one of them uses it. Never use it for a photo of a person (the About photo, a portrait for nfnn_add_person or nfnn_update_person) or a web signature for nfnn_set_web_signature: those go through nfnn_photo_upload_link. Addresses in private networks are refused. For a file on this computer use nfnn_photo_upload_link.`,
+      description: `Downloads a photo from a public https address (the image file itself: JPEG, PNG, WebP or GIF, at most ${MAX_PHOTO_BYTES / 1024 / 1024} MB, 3 redirects, 15 s) and uploads it to the site as the web does: turned upright, converted to WebP in sizes for every screen. Answers the photo id for coverImageId of nfnn_create_news, nfnn_update_news, nfnn_create_project or nfnn_update_project, ; the photo shows nowhere until one of them uses it. Never use it for a photo of a person (the About photo for nfnn_update_about, the photo of the Přispět band for nfnn_update_donate_band, a portrait for nfnn_add_person or nfnn_update_person) or a web signature for nfnn_set_web_signature: those go through nfnn_photo_upload_link. Addresses in private networks are refused. For a file on this computer use nfnn_photo_upload_link.`,
       inputSchema: z.object({ url: z.string().min(1).max(2000) }),
       annotations: { ...WRITING, openWorldHint: true },
     },

@@ -1231,6 +1231,31 @@ describe('Given an administrator editing a published news article', () => {
     );
   });
 
+  it('when they also move the date of the published article and another article already looks back on the chosen year, then the alert says the article stays on the web under its old date', async () => {
+    await loaded();
+    await chooseLookBackYear('2025');
+    await type(fixture, '#news-publish-date', '2026-10-25');
+    await submit(fixture);
+    http.expectOne(`${NEWS_URL}/${newsArticle().id}`).flush(newsArticle());
+    await settle(fixture);
+
+    const taken = problem(
+      409,
+      'content/look-back-year-taken',
+      'Rok už má ohlédnutí',
+      'Za rokem 2025 se už ohlíží jiná aktualita.',
+    );
+    http
+      .expectOne(`${NEWS_URL}/${newsArticle().id}/look-back-year`)
+      .flush(taken.body, taken.options);
+    await settle(fixture);
+
+    http.expectNone(`${NEWS_URL}/${newsArticle().id}/publish`);
+    expect(text(fixture, '[role="alert"]:not(:empty)')).toBe(
+      'Ostatní změny jsme uložili, rok ohlédnutí a nové datum zveřejnění ale ne, takže aktualita zůstává na webu s původním datem. Rok už má ohlédnutí. Za rokem 2025 se už ohlíží jiná aktualita.',
+    );
+  });
+
   it('when another article already looks back on the chosen year, then the rest is saved, the alert says why and the choice stays to try again', async () => {
     await loaded();
     await chooseLookBackYear('2025');

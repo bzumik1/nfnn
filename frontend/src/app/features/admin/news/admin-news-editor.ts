@@ -62,6 +62,7 @@ import {
   ChangedMeanwhileDialog,
   ChangedMeanwhileState,
 } from '../changed-meanwhile/changed-meanwhile-dialog';
+import { CompactLayout } from '../../../core/layout/compact-layout';
 
 type LoadState = 'loading' | 'ready' | 'error';
 type EditorMode = 'edit' | 'preview';
@@ -98,6 +99,7 @@ const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminNewsEditor implements GuardsUnsavedChanges {
+  protected readonly compact = inject(CompactLayout).isCompact;
   private readonly api = inject(NewsApi);
   private readonly photos = inject(PhotosApi);
   private readonly peopleApi = inject(PeopleApi);
@@ -469,7 +471,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
         this.saved(article, existing === null);
         if (refusal !== null) {
           this.saving.set(null);
-          this.lookBackRefused(refusal, lookBackYear, needsPublish);
+          this.lookBackRefused(refusal, lookBackYear, needsPublish, article.publishedOn !== null);
           return;
         }
         if (needsPublish) {
@@ -561,13 +563,20 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     );
   }
 
-  private lookBackRefused(refusal: unknown, year: number | null, publishing: boolean): void {
+  private lookBackRefused(
+    refusal: unknown,
+    year: number | null,
+    publishing: boolean,
+    onTheWeb: boolean,
+  ): void {
     this.lookBackYear = year;
     this.articleForm()?.controls['lookBackYear']?.markAsDirty();
     this.edited.set(true);
-    const outcome = publishing
-      ? $localize`:@@admin.newsEditor.lookBackYear.notPublished:Aktualitu jsme uložili jako koncept, ale nezveřejnili, protože rok ohlédnutí se uložit nepodařilo.`
-      : $localize`:@@admin.newsEditor.lookBackYear.notSaved:Ostatní změny jsme uložili, rok ohlédnutí ale ne.`;
+    const outcome = !publishing
+      ? $localize`:@@admin.newsEditor.lookBackYear.notSaved:Ostatní změny jsme uložili, rok ohlédnutí ale ne.`
+      : onTheWeb
+        ? $localize`:@@admin.newsEditor.lookBackYear.dateNotChanged:Ostatní změny jsme uložili, rok ohlédnutí a nové datum zveřejnění ale ne, takže aktualita zůstává na webu s původním datem.`
+        : $localize`:@@admin.newsEditor.lookBackYear.notPublished:Aktualitu jsme uložili jako koncept, ale nezveřejnili, protože rok ohlédnutí se uložit nepodařilo.`;
     const reason = describeProblem(
       refusal,
       $localize`:@@admin.newsEditor.lookBackYear.retry:Zkuste to prosím znovu.`,
