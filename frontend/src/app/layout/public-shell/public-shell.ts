@@ -3,7 +3,6 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
-  DOCUMENT,
   ElementRef,
   inject,
   Injector,
@@ -14,12 +13,11 @@ import {
   NavigationEnd,
   NavigationSkipped,
   NavigationSkippedCode,
-  NavigationStart,
   Router,
   RouterOutlet,
 } from '@angular/router';
 import { CompactLayout } from '../../core/layout/compact-layout';
-import { BackTarget } from '../../core/navigation/back-target';
+import { PageFocus } from '../../core/navigation/page-focus';
 import { RouteChrome } from '../../core/navigation/route-chrome';
 import { AppHeader } from '../app-header/app-header';
 import { TabBar } from '../tab-bar/tab-bar';
@@ -36,11 +34,9 @@ import { SetupRedirect } from '../../features/operations/setup/setup-redirect';
 })
 export class PublicShell {
   private readonly content = viewChild.required<ElementRef<HTMLElement>>('content');
-  private readonly document = inject(DOCUMENT);
   private readonly injector = inject(Injector);
   private readonly router = inject(Router);
-  private readonly back = inject(BackTarget);
-  private returningInHistory = false;
+  private readonly pageFocus = inject(PageFocus);
   private readonly chrome = inject(RouteChrome).current;
   private readonly compact = inject(CompactLayout).isCompact;
   protected readonly tabBar = computed(() => this.chrome().tabBar);
@@ -54,13 +50,7 @@ export class PublicShell {
   constructor() {
     inject(SetupRedirect).checkOnce();
     this.router.events.pipe(takeUntilDestroyed()).subscribe((event) => {
-      if (event instanceof NavigationStart) {
-        this.returningInHistory = event.navigationTrigger === 'popstate';
-      } else if (
-        event instanceof NavigationEnd &&
-        event.id > 1 &&
-        (!this.returningInHistory || this.back.returningByButton)
-      ) {
+      if (event instanceof NavigationEnd && this.pageFocus.movesOnLastNavigation()) {
         const fragment = this.router.parseUrl(event.urlAfterRedirects).fragment;
         afterNextRender(() => this.followNavigation(fragment), { injector: this.injector });
       } else if (
@@ -78,24 +68,6 @@ export class PublicShell {
   }
 
   private followNavigation(fragment: string | null): void {
-    if (this.document.querySelector('dialog[open]')) {
-      return;
-    }
-    const main = this.content().nativeElement;
-    if (fragment) {
-      this.focusQuietly(this.document.getElementById(fragment));
-    } else if (!main.contains(this.document.activeElement)) {
-      this.focusQuietly(main.querySelector<HTMLElement>('h1') ?? main);
-    }
-  }
-
-  private focusQuietly(target: HTMLElement | null): void {
-    if (target === null) {
-      return;
-    }
-    if (target.tabIndex < 0 && !target.hasAttribute('tabindex')) {
-      target.setAttribute('tabindex', '-1');
-    }
-    target.focus({ preventScroll: true });
+    this.pageFocus.follow(this.content().nativeElement, fragment);
   }
 }

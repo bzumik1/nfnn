@@ -80,4 +80,18 @@ describe('Given the portrait of the signed-in administrator', () => {
 
     expect(portrait.url()).toBeNull();
   });
+
+  it('when the first administrator signs out before their portrait arrives and another signs in, then the late answer never takes the place of the second one', () => {
+    signInAdministrator('0199f3e0-0000-7000-8000-0000000000a1');
+    const first = http.expectOne(MINE);
+    donor.set(null);
+    admin.set(false);
+    signInAdministrator('0199f3e0-0000-7000-8000-0000000000a2');
+    const second = http.expectOne(MINE);
+
+    second.flush(member('0199f3e0-0000-7000-8000-00000000c102'));
+    first.flush(member('0199f3e0-0000-7000-8000-00000000c101'));
+
+    expect(portrait.url()).toBe('/api/content/media/0199f3e0-0000-7000-8000-00000000c102?w=480');
+  });
 });

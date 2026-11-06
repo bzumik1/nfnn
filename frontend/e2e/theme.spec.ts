@@ -57,6 +57,7 @@ const SIGNED_IN_PAGES = [
   '/sprava/projekty',
   '/sprava/projekty/nova',
   '/sprava/o-nas',
+  '/sprava/pruh-prispet',
   '/sprava/lide-fondu',
   '/sprava/zalohy',
   '/sprava/upozorneni',

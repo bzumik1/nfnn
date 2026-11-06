@@ -75,6 +75,18 @@ public class StaleContentWritesStepDefinitions {
         api.put("/api/admin/content/news/" + idOf(NEWS, slug), body(NEWS, slug, title), ApiClient.ifMatch(version));
     }
 
+    @When("{string} sets the news article {string} to look back on the year {int} from the version read before")
+    public void setsTheNewsArticleToLookBackOnTheYearFromTheVersionReadBefore(String alias, String slug, int year) {
+        sessions.actAs(alias);
+        api.put("/api/admin/content/news/" + idOf(NEWS, slug) + "/look-back-year", Map.of("year", year), ApiClient.ifMatch(readVersions.get(alias + "/" + slug)));
+    }
+
+    @When("{string} sets the news article {string} to look back on the year {int} naming no version")
+    public void setsTheNewsArticleToLookBackOnTheYearNamingNoVersion(String alias, String slug, int year) {
+        sessions.actAs(alias);
+        api.put("/api/admin/content/news/" + idOf(NEWS, slug) + "/look-back-year", Map.of("year", year));
+    }
+
     @When("{string} withdraws the news article {string} naming no version")
     public void withdrawsTheNewsArticleNamingNoVersion(String alias, String slug) {
         sessions.actAs(alias);

@@ -36,10 +36,11 @@ public record PublicPeopleResponse(List<Card> featured, List<BoardMember> board,
         }
     }
 
-    public record Signature(String url, int width, int height, String name) {
+    public record Signature(String url, int width, int height, String name, String role, PersonImageResponse portrait) {
 
         static Signature from(SignatureView view) {
-            return new Signature(MediaUrls.of(view.image().id()), view.image().width(), view.image().height(), view.name());
+            return new Signature(MediaUrls.of(view.image().id()), view.image().width(), view.image().height(), view.name(), view.role().orElse(null),
+                    view.portrait().map(PersonImageResponse::from).orElse(null));
         }
     }
 }

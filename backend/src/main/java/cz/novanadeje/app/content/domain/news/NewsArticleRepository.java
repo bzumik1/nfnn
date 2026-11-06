@@ -18,6 +18,8 @@ public interface NewsArticleRepository {
 
     boolean isSlugTakenByAnother(Slug slug, NewsArticleId except);
 
+    boolean isLookBackYearTakenByAnother(int year, NewsArticleId except);
+
     List<NewsArticle> findAllDraftsFirst();
 
     List<NewsArticle> findVisibleNewestFirst(LocalDate today, int offset, int limit);

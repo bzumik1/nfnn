@@ -30,14 +30,19 @@ export class AccountPortrait {
     const donorId = donor.id;
     this.askedFor = donorId;
     this.people.mine().subscribe({
-      next: ({ member }) =>
-        this.loaded.set({
-          donorId,
-          url: member?.portrait ? `${member.portrait.url}?w=480` : null,
-        }),
+      next: ({ member }) => {
+        if (this.askedFor === donorId) {
+          this.loaded.set({
+            donorId,
+            url: member?.portrait ? `${member.portrait.url}?w=480` : null,
+          });
+        }
+      },
       error: () => {
-        this.askedFor = null;
-        this.loaded.set({ donorId, url: null });
+        if (this.askedFor === donorId) {
+          this.askedFor = null;
+          this.loaded.set({ donorId, url: null });
+        }
       },
     });
   }

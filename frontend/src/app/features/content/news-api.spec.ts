@@ -33,6 +33,21 @@ describe('Given the news API', () => {
     expect(received).toEqual(newsArticle());
   });
 
+  it('when the year an article looks back on is set, then it puts only the year with the version read to its own endpoint, so an older tab saving the article never clears it', () => {
+    let received: NewsArticleResponse | undefined;
+    api
+      .setLookBackYear(newsArticle().id, 2025, '9d4b2e7a1c0f5836')
+      .subscribe((response) => (received = response));
+
+    const request = http.expectOne(`/api/admin/content/news/${newsArticle().id}/look-back-year`);
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toEqual({ year: 2025 });
+    expect(request.request.headers.get('If-Match')).toBe('"9d4b2e7a1c0f5836"');
+    request.flush(newsArticle({ lookBackYear: 2025 }));
+
+    expect(received?.lookBackYear).toBe(2025);
+  });
+
   it('when an image is uploaded, then it sends the file as the "file" part of a multipart request', () => {
     let received: UploadedImageResponse | undefined;
     const file = new File(['fake'], 'zahrada.png', { type: 'image/png' });

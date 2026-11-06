@@ -49,7 +49,8 @@ public class PublicPeopleService {
 
     private List<SignatureView> signatures(List<Person> featured) {
         return featured.stream()
-                .flatMap(person -> PersonImageView.of(person.webSignature(), media).map(image -> new SignatureView(image, person.details().name())).stream())
+                .flatMap(person -> PersonImageView.of(person.webSignature(), media).map(image -> new SignatureView(image, person.details().name(),
+                        person.details().role(), PersonImageView.of(person.details().portrait(), media))).stream())
                 .toList();
     }
 }

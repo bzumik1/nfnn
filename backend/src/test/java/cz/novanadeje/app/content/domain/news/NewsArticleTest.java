@@ -120,6 +120,45 @@ class NewsArticleTest {
                 Optional.of("x".repeat(201)))).hasMessageContaining("description");
     }
 
+    @Test
+    @DisplayName("Given a new article, when it is created, then it looks back on no year")
+    void should_look_back_on_no_year_when_created() {
+        assertThat(NewsArticle.create(NewsArticleId.newId(CREATED), content(), CREATED).lookBackYear()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a published article, when it is set to look back on a year, then it does so, its publication stays and the update time moves")
+    void should_look_back_on_the_year_when_set_given_a_published_article() {
+        NewsArticle article = NewsArticle.create(NewsArticleId.newId(CREATED), content(), CREATED).publish(LocalDate.parse("2026-10-23"), CREATED);
+
+        NewsArticle looking = article.lookBackOn(Optional.of(2025), LATER);
+
+        assertThat(looking.lookBackYear()).contains(2025);
+        assertThat(looking.publishedOn()).contains(LocalDate.parse("2026-10-23"));
+        assertThat(looking.updatedAt()).isEqualTo(LATER);
+        assertThat(looking.lookBackOn(Optional.empty(), LATER).lookBackYear()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given an article looking back on a year, when its content is edited, then it still looks back on that year")
+    void should_keep_the_look_back_year_when_edited_given_one() {
+        NewsArticle article = NewsArticle.create(NewsArticleId.newId(CREATED), content(), Optional.of(2024), CREATED);
+
+        assertThat(article.edit(content(), LATER).lookBackYear()).contains(2024);
+        assertThat(article.unpublish(LATER).lookBackYear()).contains(2024);
+    }
+
+    @Test
+    @DisplayName("Given a year before 2005 or after 2100, when an article is set to look back on it, then it is refused")
+    void should_refuse_when_set_given_a_year_out_of_range() {
+        NewsArticle article = NewsArticle.create(NewsArticleId.newId(CREATED), content(), CREATED);
+
+        assertThatThrownBy(() -> article.lookBackOn(Optional.of(2004), LATER)).hasMessageContaining("2005");
+        assertThatThrownBy(() -> article.lookBackOn(Optional.of(2101), LATER)).hasMessageContaining("2100");
+        assertThat(article.lookBackOn(Optional.of(2005), LATER).lookBackYear()).contains(2005);
+        assertThat(article.lookBackOn(Optional.of(2100), LATER).lookBackYear()).contains(2100);
+    }
+
     private static NewsContent content() {
         return new NewsContent(new Slug("dominik"), "Pomohli jsme Dominikovi", Optional.of("Projekt"), "Perex o Dominikovi.", "Celý text.", Optional.empty());
     }

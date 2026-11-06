@@ -420,6 +420,26 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
       const about = JSON.parse(body) as Record<string, unknown>;
       return [200, { photo: about['photoId'] === null ? null : aboutPhoto(about) }];
     }
+    case 'GET /api/admin/content/donate-band':
+      return [200, { photo: donateBandPhoto({ photoAlt: 'Děti u stolu' }) }];
+    case 'PUT /api/admin/content/donate-band': {
+      const band = JSON.parse(body) as Record<string, unknown>;
+      return [200, { photo: band['photoId'] === null ? null : donateBandPhoto(band) }];
+    }
+    case `PUT /api/admin/content/news/${UNKNOWN_ID}/look-back-year`: {
+      const year = (JSON.parse(body) as { year: number | null }).year;
+      return year === 2024
+        ? [
+            409,
+            problem(
+              409,
+              'content/look-back-year-taken',
+              'Rok už má jiná aktualita',
+              'Ohlédnutí za tímto rokem už je v jiné aktualitě.',
+            ),
+          ]
+        : [200, { id: UNKNOWN_ID, title: 'Koncept', lookBackYear: year }];
+    }
     case `PUT /api/admin/content/media/${MEDIA_ID}`: {
       const photo = JSON.parse(body) as Record<string, unknown>;
       return [
@@ -1083,6 +1103,17 @@ function aboutPhoto(about: Record<string, unknown>): Record<string, unknown> {
     height: 1600,
     alt: about['photoAlt'] ?? null,
     caption: about['caption'] ?? null,
+  };
+}
+
+function donateBandPhoto(band: Record<string, unknown>): Record<string, unknown> {
+  return {
+    id: MEDIA_ID,
+    url: `/api/content/media/${MEDIA_ID}`,
+    width: 1600,
+    height: 900,
+    alt: band['photoAlt'] ?? null,
+    focalPoint: null,
   };
 }
 

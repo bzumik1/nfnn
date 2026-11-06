@@ -37,7 +37,7 @@ class AdminNewsController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     NewsArticleResponse create(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody NewsArticleRequest request) {
-        return NewsArticleResponse.from(news.create(admin(jwt), request.toCommand()));
+        return NewsArticleResponse.from(news.create(admin(jwt), request.toCommand(), request.chosenLookBackYear()));
     }
 
     @GetMapping("/{id}")
@@ -49,6 +49,12 @@ class AdminNewsController {
     NewsArticleResponse update(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody NewsArticleRequest request,
                        ExpectedVersion expected) {
         return NewsArticleResponse.from(news.update(admin(jwt), new NewsArticleId(id), expected, request.toCommand()));
+    }
+
+    @PutMapping("/{id}/look-back-year")
+    NewsArticleResponse changeLookBackYear(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody LookBackYearRequest request,
+                                           ExpectedVersion expected) {
+        return NewsArticleResponse.from(news.changeLookBackYear(admin(jwt), new NewsArticleId(id), expected, request.chosenYear()));
     }
 
     @PostMapping("/{id}/publish")

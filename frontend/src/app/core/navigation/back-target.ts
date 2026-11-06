@@ -13,6 +13,7 @@ export class BackTarget {
   private depth = 0;
   private behind: string | null = null;
   private path: string | null = null;
+  private left: string | null = null;
   private started = false;
   private popped = false;
   private restoredDepth = 0;
@@ -41,6 +42,10 @@ export class BackTarget {
 
   get returningByButton(): boolean {
     return this.byButton;
+  }
+
+  get leftPath(): string | null {
+    return this.left;
   }
 
   back(parent: string): void {
@@ -79,6 +84,7 @@ export class BackTarget {
       this.behind = this.path;
     }
     this.started = true;
+    this.left = this.path;
     this.path = pathOf(this.router.url);
     if (!extras.skipLocationChange) {
       this.location.replaceState(this.location.path(true), '', {

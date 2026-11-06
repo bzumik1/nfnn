@@ -13,7 +13,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { catchError, forkJoin, Observable, of, switchMap, tap } from 'rxjs';
+import { catchError, forkJoin, map, Observable, of, switchMap, tap } from 'rxjs';
 import { FormsModule, NgForm } from '@angular/forms';
 import { Title } from '@angular/platform-browser';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -36,6 +36,7 @@ import {
   MAX_SLUG_LENGTH,
   MAX_TAG_LENGTH,
   MAX_TITLE_LENGTH,
+  MIN_LOOK_BACK_YEAR,
   NewsApi,
   NewsArticleRequest,
   NewsArticleResponse,
@@ -186,6 +187,8 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
   protected body = '';
   protected coverImageAlt = '';
   protected signerId = '';
+  protected lookBackYear: number | null = null;
+  protected readonly lookBackYears = yearsBackTo(MIN_LOOK_BACK_YEAR);
   protected publishDate = todayIso();
   private slugEdited = false;
 
@@ -473,16 +476,23 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
       return;
     }
     const request = this.request();
+    const lookBackYear = this.lookBackYear;
     const call = this.placeFocalPoint().pipe(
       switchMap(() =>
         existing
           ? this.api.update(existing.id, request, existing.version ?? '')
           : this.api.create(request),
       ),
+      switchMap((article) => this.placeLookBackYear(article, lookBackYear)),
     );
     call.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: (article) => {
+      next: ({ article, refusal }) => {
         this.saved(article, existing === null);
+        if (refusal !== null) {
+          this.saving.set(null);
+          this.lookBackRefused(refusal, lookBackYear, needsPublish, article.publishedOn !== null);
+          return;
+        }
         if (needsPublish) {
           this.publishDate = date;
           this.sendPublish(article.id, date, article.version ?? '');
@@ -557,6 +567,40 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
           .placeFocalPoint(cover.id, cover.focalPoint)
           .pipe(tap((photo) => this.keepPlacedPoint(photo)))
       : of(null);
+  }
+
+  private placeLookBackYear(
+    article: NewsArticleResponse,
+    year: number | null,
+  ): Observable<{ article: NewsArticleResponse; refusal: unknown }> {
+    if ((article.lookBackYear ?? null) === year) {
+      return of({ article, refusal: null });
+    }
+    return this.api.setLookBackYear(article.id, year, article.version ?? '').pipe(
+      map((placed) => ({ article: placed, refusal: null })),
+      catchError((refusal: unknown) => of({ article, refusal })),
+    );
+  }
+
+  private lookBackRefused(
+    refusal: unknown,
+    year: number | null,
+    publishing: boolean,
+    onTheWeb: boolean,
+  ): void {
+    this.lookBackYear = year;
+    this.articleForm()?.controls['lookBackYear']?.markAsDirty();
+    this.edited.set(true);
+    const outcome = !publishing
+      ? $localize`:@@admin.newsEditor.lookBackYear.notSaved:Ostatní změny jsme uložili, rok ohlédnutí ale ne.`
+      : onTheWeb
+        ? $localize`:@@admin.newsEditor.lookBackYear.dateNotChanged:Ostatní změny jsme uložili, rok ohlédnutí a nové datum zveřejnění ale ne, takže aktualita zůstává na webu s původním datem.`
+        : $localize`:@@admin.newsEditor.lookBackYear.notPublished:Aktualitu jsme uložili jako koncept, ale nezveřejnili, protože rok ohlédnutí se uložit nepodařilo.`;
+    const reason = describeProblem(
+      refusal,
+      $localize`:@@admin.newsEditor.lookBackYear.retry:Zkuste to prosím znovu.`,
+    );
+    this.notice.set({ kind: 'alert', text: `${outcome} ${reason}` });
   }
 
   private keepPlacedPoint(photo: PhotoResponse): void {
@@ -837,6 +881,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     this.coverImage.set(article.coverImage);
     this.coverImageAlt = article.coverImage?.alt ?? '';
     this.signerId = article.signer?.id ?? '';
+    this.lookBackYear = article.lookBackYear ?? null;
     this.publishDate = article.publishedOn ?? (this.publishDate || todayIso());
   }
 
@@ -870,6 +915,14 @@ function todayIso(): string {
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');
   return `${now.getFullYear()}-${month}-${day}`;
+}
+
+function yearsBackTo(first: number): number[] {
+  const years: number[] = [];
+  for (let year = new Date().getFullYear(); year >= first; year--) {
+    years.push(year);
+  }
+  return years;
 }
 
 function samePoint(a: FocalPoint | null, b: FocalPoint | null): boolean {

@@ -4,6 +4,7 @@ import cz.novanadeje.app.content.domain.media.MediaId;
 import cz.novanadeje.app.content.domain.media.MediaImage;
 import cz.novanadeje.app.content.domain.media.MediaImageRepository;
 import cz.novanadeje.app.content.domain.media.MediaVariant;
+import cz.novanadeje.app.content.domain.news.LookBackYearTaken;
 import cz.novanadeje.app.content.domain.news.NewsArticle;
 import cz.novanadeje.app.content.domain.news.NewsArticleId;
 import cz.novanadeje.app.content.domain.news.NewsArticleRepository;
@@ -29,6 +30,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -63,6 +65,33 @@ class JpaNewsArticleRepositoryTest {
         assertThat(news.findBySlug(new Slug("dominik"))).contains(article);
         assertThat(news.isSlugTakenByAnother(new Slug("dominik"), article.id())).isFalse();
         assertThat(news.isSlugTakenByAnother(new Slug("dominik"), NewsArticleId.newId(NOW))).isTrue();
+    }
+
+    @Test
+    @DisplayName("Given an article looking back on a year, when it is saved and read, then the year comes back and counts as taken only for another article")
+    void should_round_trip_the_year_and_tell_it_taken_when_saved_given_a_look_back_year() {
+        NewsArticle article = article("ohlednuti-2025", NOW).lookBackOn(Optional.of(2025), NOW);
+
+        news.save(article);
+        flushAndClear();
+
+        assertThat(news.findById(article.id())).hasValueSatisfying(read -> assertThat(read.lookBackYear()).contains(2025));
+        assertThat(news.isLookBackYearTakenByAnother(2025, article.id())).isFalse();
+        assertThat(news.isLookBackYearTakenByAnother(2025, NewsArticleId.newId(NOW))).isTrue();
+        assertThat(news.isLookBackYearTakenByAnother(2024, NewsArticleId.newId(NOW))).isFalse();
+    }
+
+    @Test
+    @DisplayName("Given an article looking back on a year, when a second one for the same year is written past the check, then the database refuses it as the year taken, while articles without a year are many")
+    void should_refuse_a_second_article_as_the_year_taken_when_saved_given_the_year_taken() {
+        news.save(article("prvni", NOW).lookBackOn(Optional.of(2025), NOW));
+        news.save(article("bez-roku", NOW));
+        news.save(article("taky-bez-roku", NOW));
+        flushAndClear();
+
+        assertThatThrownBy(() -> news.save(article("druha", NOW).lookBackOn(Optional.of(2025), NOW)))
+                .isInstanceOf(LookBackYearTaken.class)
+                .hasFieldOrPropertyWithValue("code", LookBackYearTaken.CODE);
     }
 
     @Test

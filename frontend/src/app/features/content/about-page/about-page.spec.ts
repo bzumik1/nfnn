@@ -4,6 +4,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { aboutPhoto } from '../testing/about-fixtures';
 import { publicPeople } from '../testing/people-fixtures';
+import { DONATE_BAND_PHOTO_ID, donateBandPhoto } from '../testing/donate-band-fixtures';
 import { AboutPage } from './about-page';
 import { foundationPaymentDetails } from '../../donations/testing/payment-details-fixtures';
 
@@ -32,7 +33,7 @@ describe('Given the About page', () => {
     return fixture.nativeElement as HTMLElement;
   }
 
-  it('when it opens, then it names the founding story as its one level-one heading and ends with the contact form', () => {
+  it('when it opens, then it names the founding story as its one level-one heading, then asks for a gift and ends with the contact form', () => {
     http.expectOne('/api/content/home').flush({ news: [], projects: [] });
     fixture.detectChanges();
 
@@ -40,7 +41,27 @@ describe('Given the About page', () => {
       'Vznik a poslání',
     ]);
     expect(root().querySelector('#o-nas')).not.toBeNull();
+    const band = root().querySelector('app-donate-band')!;
+    expect(band.querySelector('h2')?.textContent).toBe('Pomozte nám napsat další příběh');
+    expect(Array.from(band.querySelectorAll('a')).map((link) => link.textContent?.trim())).toEqual([
+      'Přispět',
+      'Kde pomáháme',
+    ]);
+    expect(band.querySelector('img')?.getAttribute('src')).toBe('/images/donate-720.webp');
     expect(root().lastElementChild?.querySelector('#kontakt')).not.toBeNull();
+  });
+
+  it('when the home content carries a photo for the Přispět band, then the band shows it', () => {
+    http.expectOne('/api/content/home').flush({
+      news: [],
+      projects: [],
+      donateBand: { photo: donateBandPhoto() },
+    });
+    fixture.detectChanges();
+
+    expect(root().querySelector('app-donate-band img')?.getAttribute('src')).toBe(
+      `/api/content/media/${DONATE_BAND_PHOTO_ID}?w=480`,
+    );
   });
 
   it('when the home content carries a photo for the About section, then the section shows it instead of the placeholder', () => {
@@ -62,9 +83,9 @@ describe('Given the About page', () => {
       .flush({ news: [], projects: [], about: { photo: null }, people: publicPeople() });
     fixture.detectChanges();
 
-    const board = root().querySelector('#o-nas .board')!;
-    expect(board.querySelector('.board-name')?.textContent?.trim()).toBe('Eva Vzorová');
-    expect(board.querySelector('.founders-note')).not.toBeNull();
+    const board = root().querySelector('#o-nas .founders')!;
+    expect(board.querySelector('.signer-name')?.textContent?.trim()).toBe('Eva Vzorová');
+    expect(board.querySelector('blockquote')).not.toBeNull();
     expect(board.querySelector('img[src^="/images/"]')).toBeNull();
   });
 
@@ -74,9 +95,9 @@ describe('Given the About page', () => {
       .flush({ news: [], projects: [], about: { photo: null }, people: null });
     fixture.detectChanges();
 
-    const board = root().querySelector('#o-nas .board')!;
-    expect(board.querySelectorAll('.board-person img[src^="/images/"]').length).toBe(2);
-    expect(board.querySelector('.founders-note')).toBeNull();
+    const board = root().querySelector('#o-nas .founders')!;
+    expect(board.querySelectorAll('.signer img[src^="/images/"]').length).toBe(2);
+    expect(board.querySelector('blockquote')).toBeNull();
   });
 
   it('when the home content has no About photo or cannot be loaded, then the About section keeps its placeholder photo', () => {
@@ -84,7 +105,7 @@ describe('Given the About page', () => {
     fixture.detectChanges();
 
     const section = root().querySelector('#o-nas')!;
-    expect(section.querySelector('figure')).toBeNull();
-    expect(section.querySelector('img')?.getAttribute('src')).toBe('/images/about-720.webp');
+    expect(section.querySelector('figure img')?.getAttribute('src')).toBe('/images/about-720.webp');
+    expect(section.querySelector('figure app-zoomable')).toBeNull();
   });
 });

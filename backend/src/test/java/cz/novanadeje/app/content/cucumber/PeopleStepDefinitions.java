@@ -308,7 +308,7 @@ public class PeopleStepDefinitions {
     @Then("the home founders note is signed by:")
     public void theHomeFoundersNoteIsSignedBy(DataTable table) {
         List<Map<String, String>> actual = new ArrayList<>();
-        api.lastResponseJson().get("people").get("note").get("signatures").forEach(signature -> actual.add(row(signature, List.of("name", "url", "width", "height"))));
+        api.lastResponseJson().get("people").get("note").get("signatures").forEach(signature -> actual.add(row(signature, table.row(0))));
         assertThat(actual).containsExactlyElementsOf(table.asMaps().stream().map(this::resolved).toList());
     }
 

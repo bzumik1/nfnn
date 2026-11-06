@@ -31,14 +31,15 @@ public class ContentVersions {
     }
 
     public record StoredNewsArticle(UUID id, String slug, String title, String tag, String perex, String body, UUID coverImage,
-                                    String coverImageAlt, UUID signer, LocalDate publishedOn, Instant createdAt, Instant updatedAt) {
+                                    String coverImageAlt, UUID signer, LocalDate publishedOn, Integer lookBackYear, Instant createdAt,
+                                    Instant updatedAt) {
 
         public static StoredNewsArticle of(NewsArticle article) {
             return new StoredNewsArticle(article.id().value(), article.slug().value(), article.content().title(),
                     article.content().tag().orElse(null), article.content().perex(), article.content().body(),
                     article.content().coverImage().map(MediaId::value).orElse(null), article.content().coverImageAlt().orElse(null),
-                    article.content().signer().map(PersonId::value).orElse(null), article.publishedOn().orElse(null), article.createdAt(),
-                    article.updatedAt());
+                    article.content().signer().map(PersonId::value).orElse(null), article.publishedOn().orElse(null),
+                    article.lookBackYear().orElse(null), article.createdAt(), article.updatedAt());
         }
     }
 

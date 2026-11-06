@@ -1,0 +1,208 @@
+@use 'breakpoints' as bp;
+@use 'pressed';
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.tile {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+  transition:
+    box-shadow var(--duration-base),
+    transform var(--duration-base);
+
+  @media (hover: hover) {
+    &:hover {
+      box-shadow: var(--shadow-card-hover);
+      transform: translateY(-2px);
+    }
+  }
+}
+
+.tile:has(.tile-link:active) {
+  @include pressed.look {
+    @include pressed.shrinks;
+  }
+}
+
+.tile-media {
+  position: relative;
+  aspect-ratio: 360 / 196;
+  overflow: hidden;
+  background: var(--color-accent-soft);
+
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.tile-heart {
+  position: absolute;
+  inset: 0;
+  width: var(--space-10);
+  height: var(--space-10);
+  margin: auto;
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 1.6;
+}
+
+.tile-tag {
+  position: absolute;
+  top: var(--space-2-5);
+  left: var(--space-2-5);
+  max-width: calc(100% - var(--space-5));
+  overflow: hidden;
+  padding: var(--space-0-75) var(--space-2-5);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-accent);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-bold);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.tile-body {
+  padding: var(--space-3) var(--space-4) var(--space-4);
+}
+
+.tile-title {
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-snug);
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.tile-link {
+  color: inherit;
+  text-decoration: none;
+
+  &:active {
+    background-image: none;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius-card);
+  }
+
+  &:focus-visible {
+    outline: none;
+  }
+
+  &:focus-visible::after {
+    outline: 3px solid var(--color-focus-ring);
+    outline-offset: 2px;
+  }
+}
+
+.tile-category {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  margin-top: var(--space-2);
+  color: var(--color-text-soft);
+  font-size: var(--text-xs);
+
+  &::before {
+    content: '';
+    width: var(--space-1-5);
+    height: var(--space-1-5);
+    border-radius: var(--radius-pill);
+    background: var(--color-accent);
+  }
+}
+
+.tile--large {
+  display: grid;
+  grid-template-areas: 'tile';
+  min-height: max(100%, 22rem);
+  border: none;
+  background: var(--color-surface-inverse);
+
+  .tile-media {
+    grid-area: tile;
+    aspect-ratio: auto;
+  }
+
+  .tile-media::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      180deg,
+      transparent 30%,
+      color-mix(in srgb, var(--color-surface-inverse) 88%, transparent) 78%
+    );
+  }
+
+  &.tile--no-photo .tile-media {
+    background: color-mix(in srgb, var(--color-accent) 22%, var(--color-surface-inverse));
+  }
+
+  .tile-tag {
+    top: var(--space-4);
+    left: var(--space-4);
+    background: color-mix(in srgb, var(--color-surface-inverse) 70%, transparent);
+    color: var(--color-on-inverse);
+  }
+
+  .tile-heart {
+    stroke: var(--color-on-inverse);
+  }
+
+  .tile-body {
+    z-index: 1;
+    grid-area: tile;
+    align-self: end;
+    padding: var(--space-16) var(--space-5) var(--space-5);
+  }
+
+  .tile-title {
+    font-family: var(--font-serif);
+    font-size: var(--text-heading);
+    font-weight: var(--weight-bold);
+    line-height: var(--leading-heading);
+    color: var(--color-on-inverse);
+  }
+
+  .tile-perex {
+    margin-top: var(--space-2);
+    color: color-mix(in srgb, var(--color-on-inverse) 85%, transparent);
+    font-size: var(--text-md);
+    line-height: var(--leading-relaxed);
+  }
+
+  .tile-category {
+    color: color-mix(in srgb, var(--color-on-inverse) 85%, transparent);
+
+    &::before {
+      background: var(--color-accent-on-inverse);
+    }
+  }
+}
+
+.tile:not(.tile--large) .tile-category::before {
+  content: none;
+}
+
+@include bp.container-down(stories, tablet) {
+  .tile--large {
+    min-height: 0;
+    aspect-ratio: 1;
+  }
+}

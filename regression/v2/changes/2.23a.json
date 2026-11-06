@@ -1,0 +1,350 @@
+[
+  {
+    "path": "PUT /api/admin/content/news/{id}/look-back-year",
+    "scenario": "content/look_back_on_a_year: *",
+    "kind": "added",
+    "reason": "2.23a: an administrator or a connected application with admin:write links a news article to the year it looks back on, a call v2 did not have; the connector's nfnn_set_news_look_back_year sends it",
+    "contract": "docs/api-contract.md, content — public CMS (look-back-year); MCP connector"
+  },
+  {
+    "path": "GET /api/admin/content/donate-band",
+    "scenario": "content/manage_donate_band: *",
+    "kind": "added",
+    "reason": "2.23a: the administration reads the photo of the closing Přispět band, a call v2 did not have; the connector's nfnn_donate_band sends it",
+    "contract": "docs/api-contract.md, content — public CMS (donate-band); MCP connector"
+  },
+  {
+    "path": "PUT /api/admin/content/donate-band",
+    "scenario": "content/manage_donate_band: *",
+    "kind": "added",
+    "reason": "2.23a: an administrator or a connected application with admin:write sets or removes the photo of the closing Přispět band, a call v2 did not have; the connector's nfnn_update_donate_band sends it",
+    "contract": "docs/api-contract.md, content — public CMS (donate-band); MCP connector"
+  },
+  {
+    "path": "GET /api/content/home*",
+    "scenario": "content/choose_project_order: *",
+    "kind": "added",
+    "field": "$.donateBand",
+    "reason": "2.23a: the home answer carries donateBand, the photo of the closing Přispět band (null while none is set)",
+    "contract": "docs/api-contract.md, content — public CMS (GET /api/content/home, Band photo)"
+  },
+  {
+    "path": "POST /api/admin/content/news*",
+    "scenario": "content/clean_up_unused_photos: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
+    "path": "PUT /api/admin/content/news*",
+    "scenario": "content/clean_up_unused_photos: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
+    "path": "GET /api/content/home*",
+    "scenario": "content/home_content: *",
+    "kind": "added",
+    "field": "$.donateBand",
+    "reason": "2.23a: the home answer carries donateBand, the photo of the closing Přispět band (null while none is set)",
+    "contract": "docs/api-contract.md, content — public CMS (GET /api/content/home, Band photo)"
+  },
+  {
+    "path": "GET /api/content/home*",
+    "scenario": "content/home_content: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
+    "path": "POST /api/admin/content/news*",
+    "scenario": "content/home_content: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
+    "path": "GET /api/content/home*",
+    "scenario": "content/manage_about: *",
+    "kind": "added",
+    "field": "$.donateBand",
+    "reason": "2.23a: the home answer carries donateBand, the photo of the closing Přispět band (null while none is set)",
+    "contract": "docs/api-contract.md, content — public CMS (GET /api/content/home, Band photo)"
+  },
+  {
+    "path": "POST /api/admin/content/news*",
+    "scenario": "content/manage_about: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
+    "path": "GET /api/admin/content/news*",
+    "scenario": "content/manage_news: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
+    "path": "GET /api/content/news*",
+    "scenario": "content/manage_news: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
+    "path": "POST /api/admin/content/news*",
+    "scenario": "content/manage_news: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
+    "path": "PUT /api/admin/content/news*",
+    "scenario": "content/manage_news: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
+    "path": "GET /api/content/home*",
+    "scenario": "content/manage_people: *",
+    "kind": "added",
+    "field": "$.donateBand",
+    "reason": "2.23a: the home answer carries donateBand, the photo of the closing Přispět band (null while none is set)",
+    "contract": "docs/api-contract.md, content — public CMS (GET /api/content/home, Band photo)"
+  },
+  {
+    "path": "GET /api/content/home*",
+    "scenario": "content/manage_people: *",
+    "kind": "added",
+    "field": "$*.signatures[*].portrait",
+    "reason": "2.23a: each signature under the founders' note carries its person's role and portrait (null when the person has none), so the site shows who signs it",
+    "contract": "docs/api-contract.md, content — public CMS (People of the foundation, public)"
+  },
+  {
+    "path": "GET /api/content/home*",
+    "scenario": "content/manage_people: *",
+    "kind": "added",
+    "field": "$*.signatures[*].role",
+    "reason": "2.23a: each signature under the founders' note carries its person's role and portrait (null when the person has none), so the site shows who signs it",
+    "contract": "docs/api-contract.md, content — public CMS (People of the foundation, public)"
+  },
+  {
+    "path": "GET /api/admin/content/news*",
+    "scenario": "content/place_photo_focal_point: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
+    "path": "GET /api/content/home*",
+    "scenario": "content/place_photo_focal_point: *",
+    "kind": "added",
+    "field": "$.donateBand",
+    "reason": "2.23a: the home answer carries donateBand, the photo of the closing Přispět band (null while none is set)",
+    "contract": "docs/api-contract.md, content — public CMS (GET /api/content/home, Band photo)"
+  },
+  {
+    "path": "GET /api/content/home*",
+    "scenario": "content/place_photo_focal_point: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
+    "path": "GET /api/content/news*",
+    "scenario": "content/place_photo_focal_point: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
+    "path": "POST /api/admin/content/news*",
+    "scenario": "content/place_photo_focal_point: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
+    "path": "PUT /api/admin/content/news*",
+    "scenario": "content/place_photo_focal_point: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
+    "path": "GET /api/admin/content/news*",
+    "scenario": "content/stale_content_writes: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
+    "path": "POST /api/admin/content/news*",
+    "scenario": "content/stale_content_writes: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
+    "path": "PUT /api/admin/content/news*",
+    "scenario": "content/stale_content_writes: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
+    "path": "DELETE /api/admin/content/news*",
+    "scenario": "content/stale_content_writes: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
+    "path": "GET /api/content/news*",
+    "scenario": "content/stale_content_writes: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when it renders, then its photo waits until it is near and comes in two widths",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the About section of the O nás tab follows the approved mockup: a square photo with the FOD badge on it, the figures inline, the founders' note as a quote signed with signature, portrait and role, and no founding paragraph or \"Kde pomáháme\" link",
+    "replacement": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when it renders, then the placeholder photo waits until it is near, comes in two widths and is cropped square around the middle"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when it renders, then it opens with what the foundation does, then the work with FOD and then its founding",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the About section of the O nás tab follows the approved mockup: a square photo with the FOD badge on it, the figures inline, the founders' note as a quote signed with signature, portrait and role, and no founding paragraph or \"Kde pomáháme\" link",
+    "replacement": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when it renders, then it opens with what the foundation does, then the work with FOD with the figures under it"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when it renders, then its link to the projects says where the foundation helps",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the About section of the O nás tab follows the approved mockup: a square photo with the FOD badge on it, the figures inline, the founders' note as a quote signed with signature, portrait and role, and no founding paragraph or \"Kde pomáháme\" link",
+    "replacement": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when it renders, then it opens with what the foundation does, then the work with FOD with the figures under it"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when it renders who runs the foundation today > then a heading under the founding story names it and the two founders follow with their roles",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the About section of the O nás tab follows the approved mockup: a square photo with the FOD badge on it, the figures inline, the founders' note as a quote signed with signature, portrait and role, and no founding paragraph or \"Kde pomáháme\" link",
+    "replacement": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when it renders who runs the foundation without the administration > then a heading names them and the two founders follow with their roles"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when it renders who runs the foundation today > then the whole board is listed as in the registry, without the auditor",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the About section of the O nás tab follows the approved mockup: a square photo with the FOD badge on it, the figures inline, the founders' note as a quote signed with signature, portrait and role, and no founding paragraph or \"Kde pomáháme\" link",
+    "replacement": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when it renders who runs the foundation without the administration > then the whole board is listed as in the registry, without the auditor"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when it renders who runs the foundation today > then their portraits stay out of the screen reader, since their names are beside them, and load late in two widths",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the About section of the O nás tab follows the approved mockup: a square photo with the FOD badge on it, the figures inline, the founders' note as a quote signed with signature, portrait and role, and no founding paragraph or \"Kde pomáháme\" link",
+    "replacement": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when it renders who runs the foundation without the administration > then their portraits stay out of the screen reader, since their names are beside them, and load late in two widths"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when an administrator has set a photo for it > then the badge about the work with FOD stays beside the photo, outside its caption",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the About section of the O nás tab follows the approved mockup: a square photo with the FOD badge on it, the figures inline, the founders' note as a quote signed with signature, portrait and role, and no founding paragraph or \"Kde pomáháme\" link",
+    "replacement": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when an administrator has set a photo for it > then the badge about the work with FOD stays on the photo, outside its caption and outside the button"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when an administrator keeps the people of the foundation > then the featured people replace the built-in cards in their order, with their roles",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the About section of the O nás tab follows the approved mockup: a square photo with the FOD badge on it, the figures inline, the founders' note as a quote signed with signature, portrait and role, and no founding paragraph or \"Kde pomáháme\" link",
+    "replacement": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when an administrator keeps the people of the foundation > and there is no note, then the featured people stand under the heading of who runs the fund"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when an administrator keeps the people of the foundation > then a portrait loads late from the stored copy and stays out of the screen reader, and a card without one shows the initials instead",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the About section of the O nás tab follows the approved mockup: a square photo with the FOD badge on it, the figures inline, the founders' note as a quote signed with signature, portrait and role, and no founding paragraph or \"Kde pomáháme\" link",
+    "replacement": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when an administrator keeps the people of the foundation > and the note has no signature yet, then the featured people stand under the quote instead, a card without a portrait with the initials"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when an administrator keeps the people of the foundation > then the board line names every member with no-break spaces inside the names and the notes in parentheses",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the About section of the O nás tab follows the approved mockup: a square photo with the FOD badge on it, the figures inline, the founders' note as a quote signed with signature, portrait and role, and no founding paragraph or \"Kde pomáháme\" link",
+    "replacement": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when an administrator keeps the people of the foundation > then the board line names every member with no-break spaces inside the names and the notes in parentheses, and the line under the board follows it"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when an administrator keeps the people of the foundation > then the founders note follows the cards in its paragraphs, with the signatures side by side and a name under each",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the About section of the O nás tab follows the approved mockup: a square photo with the FOD badge on it, the figures inline, the founders' note as a quote signed with signature, portrait and role, and no founding paragraph or \"Kde pomáháme\" link",
+    "replacement": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when an administrator keeps the people of the foundation > then each signature stands under the quote with the portrait, the name and the role of who signed it"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when an administrator keeps the people of the foundation > then the line under the board follows the board line as its own paragraph",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the About section of the O nás tab follows the approved mockup: a square photo with the FOD badge on it, the figures inline, the founders' note as a quote signed with signature, portrait and role, and no founding paragraph or \"Kde pomáháme\" link",
+    "replacement": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when an administrator keeps the people of the foundation > then the board line names every member with no-break spaces inside the names and the notes in parentheses, and the line under the board follows it"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when an administrator keeps the people of the foundation > and there is no note, nobody featured, nobody on the board and no line under it, then only the heading stays",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the About section of the O nás tab follows the approved mockup: a square photo with the FOD badge on it, the figures inline, the founders' note as a quote signed with signature, portrait and role, and no founding paragraph or \"Kde pomáháme\" link",
+    "replacement": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when an administrator keeps the people of the foundation > and there is no note, nobody featured, nobody on the board and no line under it, then nothing of them shows"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/admin-people.spec.ts > Given a visitor and people of the foundation kept in the administration > when they open the About page, then \"Kdo fond vede\" shows the cards, the founders note with the signature and the board line instead of the built-in block",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the About section of the O nás tab follows the approved mockup: a square photo with the FOD badge on it, the figures inline, the founders' note as a quote signed with signature, portrait and role, and no founding paragraph or \"Kde pomáháme\" link",
+    "replacement": "e2e/admin-people.spec.ts > Given a visitor and people of the foundation kept in the administration > when they open the About page, then the founders’ note shows as a quote signed with the web signature, portrait and role, with the board line, instead of the built-in block"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/about-page/about-page.spec.ts > Given the About page > when it opens, then it names the founding story as its one level-one heading and ends with the contact form",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the O nás tab closes with the Přispět band before the contact form, like the other tab pages",
+    "replacement": "src/app/features/content/about-page/about-page.spec.ts > Given the About page > when it opens, then it names the founding story as its one level-one heading, then asks for a gift and ends with the contact form"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/list/content-list.spec.ts > Given a visitor opening the list of projects > when the projects arrive, then each project card links to its page",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the Pomáháme tab follows the approved mockup (summary tiles, year chips, story tiles, Přispět band), so the projects list it replaced is gone with its spec; 2.26 moved the news to the Aktuality tab, so nothing else used it",
+    "replacement": "src/app/features/content/projects-page/projects-page.spec.ts > Given the Pomáháme tab > when it opens without a year asked, then the newest year with a story is chosen and shown with its first story large"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/list/content-list.spec.ts > Given a visitor opening the list of projects > when nothing is published yet, then the page says so",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the Pomáháme tab follows the approved mockup (summary tiles, year chips, story tiles, Přispět band), so the projects list it replaced is gone with its spec; 2.26 moved the news to the Aktuality tab, so nothing else used it",
+    "replacement": "src/app/features/content/projects-page/projects-page.spec.ts > Given the Pomáháme tab > when there is no story yet, then it says so, leads home and offers no years"
+  }
+]

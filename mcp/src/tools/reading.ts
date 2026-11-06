@@ -456,7 +456,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Aktuality a projekty',
       description:
-        'Every news article and project of the site, drafts included, with id, slug, title, tag, perex, the year and category of a project, photo, published date, live (whether the site shows it today: published and the published date not after today in Prague) and the length of the text, but not the text itself: read one whole with nfnn_news_article or nfnn_project.',
+        'Every news article and project of the site, drafts included, with id, slug, title, tag, perex, the year and category of a project, the year a news article looks back on (lookBackYear, set with nfnn_set_news_look_back_year), photo, published date, live (whether the site shows it today: published and the published date not after today in Prague) and the length of the text, but not the text itself: read one whole with nfnn_news_article or nfnn_project.',
       annotations: READ_ONLY,
     },
     async (ctx) =>
@@ -487,7 +487,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Aktualita',
       description:
-        'One news article whole, draft or published: every field nfnn_update_news takes, with its text and photo (coverImage.focalPoint is the spot the site crops around, set with nfnn_set_photo_focal_point), and live (whether the site shows it today; false for a draft and before its published date).',
+        'One news article whole, draft or published: every field nfnn_update_news takes, with its text and photo (coverImage.focalPoint is the spot the site crops around, set with nfnn_set_photo_focal_point), the year it looks back on (lookBackYear, null for none, set with nfnn_set_news_look_back_year) and its version, and live (whether the site shows it today; false for a draft and before its published date).',
       inputSchema: z.object({ id: UUID }),
       annotations: READ_ONLY,
     },
@@ -518,6 +518,20 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
         async ({ apiToken }) =>
           text(await backend.get(`/api/admin/content/projects/${id}`, apiToken)),
         `project ${id}`,
+      ),
+  );
+
+  server.registerTool(
+    'nfnn_donate_band',
+    {
+      title: 'Fotka v pruhu Přispět',
+      description:
+        'The photo of the closing Přispět band that ends the O nás, Pomáháme and Aktuality tabs: its id, size in pixels, alt (read by screen readers) and focalPoint (set with nfnn_set_photo_focal_point), or photo null while the band shows without one. Change it with nfnn_update_donate_band.',
+      annotations: READ_ONLY,
+    },
+    async (ctx) =>
+      answer(deps, ctx, 'nfnn_donate_band', async ({ apiToken }) =>
+        text(await backend.get('/api/admin/content/donate-band', apiToken)),
       ),
   );
 

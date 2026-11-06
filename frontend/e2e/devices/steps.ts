@@ -186,6 +186,19 @@ export const STEPS: Step[] = [
   },
   { id: 'news', title: 'the news list', open: (ui) => publicPage(ui, '/aktuality') },
   {
+    id: 'projects',
+    title: 'the Pomáháme tab on its newest year',
+    open: (ui) => publicPage(ui, '/projekty'),
+  },
+  {
+    id: 'projects-all',
+    title: 'the Pomáháme tab with every year as a strip',
+    open: async (ui) => {
+      await publicPage(ui, '/projekty?rok=vse');
+      await ui.waitVisible({ css: 'a.strip-all' });
+    },
+  },
+  {
     id: 'news-feed',
     title: 'the news feed with signers, the stories of the year and paging',
     open: newsFeed,

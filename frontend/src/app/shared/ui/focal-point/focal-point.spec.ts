@@ -18,6 +18,15 @@ describe('Given a photo shown in a shape of the site', () => {
       expect(objectPosition(undefined, 'projectCard')).toBe('50% 20%');
       expect(objectPosition(null, 'articleTop')).toBe('50% 50%');
     });
+
+    it('then the wide band and its phone cut keep the upper part, where faces are, and the square the middle', () => {
+      expect(PHOTO_SHAPES.band.ratio).toBe(3);
+      expect(PHOTO_SHAPES.bandPhone.ratio).toBe(1.5);
+      expect(objectPosition(null, 'bandPhone')).toBe('50% 30%');
+      expect(PHOTO_SHAPES.square.ratio).toBe(1);
+      expect(objectPosition(null, 'band')).toBe('50% 30%');
+      expect(objectPosition(null, 'square')).toBe('50% 40%');
+    });
   });
 
   describe('when it has a focal point', () => {

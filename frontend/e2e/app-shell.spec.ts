@@ -113,6 +113,18 @@ test.describe('Given a signed-in donor on a phone who opens a section from the a
     await expect(page).toHaveURL('/o-nas');
   });
 
+  test('when they choose a section, then its heading takes the focus, also for the next section chosen inside the account', async ({
+    page,
+  }) => {
+    await openAccountItem(page, 'Moje dary');
+    await expect(page.getByRole('heading', { level: 1, name: 'Moje dary' })).toBeFocused();
+
+    await openAccountItem(page, 'Potvrzení o daru');
+
+    await expect(page).toHaveURL('/darce/potvrzeni');
+    await expect(page.getByRole('heading', { level: 1, name: 'Potvrzení o daru' })).toBeFocused();
+  });
+
   test('when they go back with the browser, then the page the sheet was opened on returns', async ({
     page,
   }) => {
@@ -162,7 +174,7 @@ test.describe('Given an address of a section of the old one-page home', () => {
   for (const [old, now, heading] of [
     ['/#prispet', '/prispet', 'Přispějte na pomůcky pro děti'],
     ['/#o-nas', '/o-nas', null],
-    ['/#projekty', '/projekty', 'Pomáháme'],
+    ['/#projekty', '/projekty', 'Komu jsme pomohli'],
     ['/#aktuality', '/aktuality', 'Co je u nás nového'],
     ['/#uvod', '/', null],
   ] as const) {
