@@ -1195,7 +1195,7 @@ describe('Given an administrator editing a published project on a device that ke
     });
 
     it('and they continue it, then the form takes it and saves it under the version read', async () => {
-      expect(text(fixture, 'app-draft-offer')).toContain('Máte tu rozepsaný text');
+      expect(text(fixture, 'app-draft-offer')).toContain('Máte tu rozepsané úpravy');
       expect(element<HTMLInputElement>(fixture, '#projects-title').value).toBe('Zahrada pro děti');
 
       button(fixture, 'Pokračovat v rozepsaném').click();
@@ -1204,7 +1204,7 @@ describe('Given an administrator editing a published project on a device that ke
         'Zahrada pro všechny děti',
       );
       expect(text(fixture, '[role="status"]:not(:empty)')).toBe(
-        'Pokračujete v rozepsaném textu. Uloží se, až ho uložíte.',
+        'Pokračujete v rozepsaných úpravách. Zatím jsou jen na tomto zařízení a platit začnou, až je uložíte.',
       );
 
       await submit(fixture);
@@ -1223,7 +1223,7 @@ describe('Given an administrator editing a published project on a device that ke
       expect(shelf.draftOf('administration', key)).toBeNull();
       expect(element<HTMLInputElement>(fixture, '#projects-title').value).toBe('Zahrada pro děti');
       expect(text(fixture, '[role="status"]:not(:empty)')).toBe(
-        'Rozepsaný text jsme z tohoto zařízení zahodili.',
+        'Rozepsané úpravy jsme z tohoto zařízení zahodili.',
       );
     });
   });

@@ -511,7 +511,7 @@ describe('Given an administrator changing the settings on a device that keeps dr
     shelf.seed('administration', {
       key: 'settings',
       base: await valuesBase(startedFrom),
-      values: { ...shown(), CONTACT_RECIPIENT: 'pavel@example.cz' },
+      values: { CONTACT_RECIPIENT: 'pavel@example.cz' },
       savedAt: '2026-11-06T09:00:00.000Z',
     });
   }
@@ -533,7 +533,7 @@ describe('Given an administrator changing the settings on a device that keeps dr
     await type('#setting-MAIL_PASSWORD', 'Tajné heslo SMTP 2026');
 
     const kept = shelf.draftOf('administration', 'settings');
-    expect(kept?.values).toMatchObject({ CONTACT_RECIPIENT: 'pavel@example.cz' });
+    expect(kept?.values).toEqual({ CONTACT_RECIPIENT: 'pavel@example.cz' });
     expect(JSON.stringify(shelf.kept)).not.toContain('Tajné heslo SMTP 2026');
     expect(Object.keys(kept?.values as object)).not.toContain('MAIL_PASSWORD');
     expect(Object.keys(kept?.values as object)).not.toContain('FIO_TOKEN');
@@ -586,6 +586,72 @@ describe('Given an administrator changing the settings on a device that keeps dr
     await settle();
     expect(shelf.draftOf('administration', 'settings')).toBeNull();
     expect(element<HTMLInputElement>('#setting-CONTACT_RECIPIENT').value).toBe('info@nfnn.cz');
+  });
+
+  it('when they save their change, then the draft leaves the device', async () => {
+    await open();
+    await type('#setting-CONTACT_RECIPIENT', 'pavel@example.cz');
+    expect(shelf.draftOf('administration', 'settings')).not.toBeNull();
+
+    element<HTMLFormElement>('form.settings-form').dispatchEvent(new Event('submit'));
+    await settle();
+    button('Uložit a restartovat').click();
+    await settle();
+    http.expectOne(SETTINGS_URL).flush({ changed: ['CONTACT_RECIPIENT'], restarting: false });
+    await settle();
+    http.match(SETTINGS_URL).forEach((reload) => reload.flush(settingsView()));
+    await settle();
+
+    expect(shelf.draftOf('administration', 'settings')).toBeNull();
+  });
+
+  it('when they continue a kept change, then the focus moves to the page heading and the form counts as unsaved', async () => {
+    await keptDraft(shown());
+    await open();
+
+    button('Pokračovat v rozepsaném').click();
+    await settle();
+
+    expect(document.activeElement).toBe(element('h1'));
+    expect(element('[role="status"]:not(:empty)').textContent).toContain(
+      'Pokračujete v rozepsaných úpravách',
+    );
+  });
+
+  it('when the kept change is older than settings saved since, then continuing it changes only the field it holds and saving it over the newer ones sends only that field', async () => {
+    await keptDraft({ ...shown(), MAIL_HOST: 'stary.smtp.example.cz' });
+    await open();
+
+    button('Pokračovat v rozepsaném').click();
+    await settle();
+    expect(element<HTMLInputElement>('#setting-MAIL_HOST').value).toBe('smtp-relay.brevo.com');
+    element<HTMLFormElement>('form.settings-form').dispatchEvent(new Event('submit'));
+    await settle();
+    button('Uložit svou verzi místo novější').click();
+    await settle();
+    expect(element('.confirm-changes').textContent?.replace(/\s+/g, ' ').trim()).toBe(
+      'Mění se: Kam chodí zprávy z kontaktního formuláře.',
+    );
+    button('Uložit a restartovat').click();
+    await settle();
+
+    expect(http.expectOne(SETTINGS_URL).request.body).toEqual({
+      changes: [{ name: 'CONTACT_RECIPIENT', value: 'pavel@example.cz' }],
+    });
+  });
+
+  it('when a kept change is offered, then the form waits for the choice and the offer says passwords are not kept', async () => {
+    await keptDraft(shown());
+    await open();
+
+    expect(element<HTMLFormElement>('form.settings-form').inert).toBe(true);
+    expect(element('app-draft-offer').textContent).toContain('Hesla a tokeny');
+
+    button('Zahodit').click();
+    await settle();
+
+    expect(element<HTMLFormElement>('form.settings-form').inert).toBe(false);
+    expect(document.activeElement).toBe(element('h1'));
   });
 
   it('when they discard the kept change, then it leaves the device', async () => {

@@ -15,7 +15,7 @@ import {
 import { NgTemplateOutlet } from '@angular/common';
 import { TrackedForm } from '../../../core/updates/tracked-form';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, NgForm } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { describeProblem, problemOf, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
@@ -190,6 +190,8 @@ const INPUTS: Partial<Readonly<Record<SettingName, Input>>> = {
   FIO_HISTORY_FROM: 'date',
 };
 
+const SETTINGS_RELOADED_TEXT = $localize`:@@admin.settings.draft.reloaded:Vaše úpravy jsme zahodili a načetli uložené nastavení.`;
+
 @Component({
   selector: 'app-admin-settings',
   imports: [
@@ -222,6 +224,7 @@ export class AdminSettings {
   private readonly title = viewChild<ElementRef<HTMLHeadingElement>>('title');
   private readonly saveButton = viewChild<ElementRef<HTMLButtonElement>>('saveButton');
   private readonly confirmCancel = viewChild<ElementRef<HTMLButtonElement>>('confirmCancel');
+  private readonly settingsForm = viewChild(NgForm);
 
   protected readonly state = signal<LoadState>('loading');
   protected readonly fields = signal<Field[]>([]);
@@ -234,6 +237,7 @@ export class AdminSettings {
   protected readonly secretsCanBeStored = signal(true);
   protected readonly notice = signal<Notice | null>(null);
   protected readonly saveError = signal('');
+  private focusTitleOnLoad = false;
   protected readonly fieldErrors = signal<string[]>([]);
   protected readonly confirmation = signal<Confirmation | null>(null);
   protected readonly saveStatus = signal<string | null>(null);
@@ -259,6 +263,7 @@ export class AdminSettings {
             : field,
         ),
       ),
+    changedFieldsOnly: true,
   });
   protected readonly unreadableSecrets = computed(() =>
     this.fields()
@@ -287,7 +292,12 @@ export class AdminSettings {
           }
           this.state.set('ready');
           this.draft.ready();
-          this.focusFragment();
+          if (this.focusTitleOnLoad) {
+            this.focusTitleOnLoad = false;
+            this.focusTitle();
+          } else {
+            this.focusFragment();
+          }
         },
         error: (failure: unknown) => {
           if (problemTypeEndsWith(failure, UNAUTHENTICATED)) {
@@ -335,11 +345,14 @@ export class AdminSettings {
   protected resumeDraft(): void {
     this.draft.resume();
     this.notice.set({ kind: 'status', text: DRAFT_RESUMED_TEXT });
+    afterNextRender(() => this.settingsForm()?.form.markAsDirty(), { injector: this.injector });
+    this.focusTitle();
   }
 
   protected discardDraft(): void {
     this.draft.discard();
     this.notice.set({ kind: 'status', text: DRAFT_DISCARDED_TEXT });
+    this.focusTitle();
   }
 
   protected overwriteStaleDraft(): void {
@@ -351,6 +364,8 @@ export class AdminSettings {
   protected reloadAfterStaleDraft(): void {
     this.staleDraft.set(false);
     this.draft.discard();
+    this.notice.set({ kind: 'status', text: SETTINGS_RELOADED_TEXT });
+    this.focusTitleOnLoad = true;
     this.load();
   }
 
@@ -515,6 +530,10 @@ export class AdminSettings {
       warnings: removed.map((field) => this.removalEffect(field)).filter((text) => text !== ''),
       mailUnverified: mailChanged && this.verifiedMail !== JSON.stringify(this.testEmailRequest()),
     };
+  }
+
+  private focusTitle(): void {
+    afterNextRender(() => this.title()?.nativeElement.focus(), { injector: this.injector });
   }
 
   private focusSaveButton(): void {

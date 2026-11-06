@@ -683,7 +683,7 @@
               (discarded)="discardText('note')"
             />
           }
-          <div class="fields">
+          <div class="fields" [inert]="noteDraft.offer() !== null">
             <app-form-field
               label="Text pod kartami (nepovinné)"
               i18n-label="@@admin.people.note.label"
@@ -701,7 +701,7 @@
               ></textarea>
             </app-form-field>
           </div>
-          <div class="form-actions">
+          <div class="form-actions" [inert]="noteDraft.offer() !== null">
             <button
               appNeedsConnection
               type="submit"
@@ -741,7 +741,7 @@
               (discarded)="discardText('footnote')"
             />
           }
-          <div class="fields">
+          <div class="fields" [inert]="footnoteDraft.offer() !== null">
             <app-form-field
               label="Text řádku (nepovinné)"
               i18n-label="@@admin.people.footnote.label"
@@ -759,7 +759,7 @@
               ></textarea>
             </app-form-field>
           </div>
-          <div class="form-actions">
+          <div class="form-actions" [inert]="footnoteDraft.offer() !== null">
             <button
               appNeedsConnection
               type="submit"

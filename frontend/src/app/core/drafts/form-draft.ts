@@ -21,6 +21,7 @@ export interface FormDraftOptions<V> {
   readonly key: () => string | null;
   readonly values: () => V;
   readonly apply: (values: V) => void;
+  readonly changedFieldsOnly?: boolean;
 }
 
 const VERSION_BASE = 'version:';
@@ -36,7 +37,9 @@ export class FormDraft<V> {
   private found: StoredDraft | null = null;
   private resumedBase: string | null = null;
   private keptKey: string | null = null;
+  private holder: string | null = null;
   private timer: ReturnType<typeof setTimeout> | null = null;
+  private pending = false;
   private work: Promise<void> = Promise.resolve();
   private generation = 0;
   private stopped = false;
@@ -68,9 +71,20 @@ export class FormDraft<V> {
     });
     effect(() => {
       const based = this.base();
-      if (based !== null && this.shelf.open(this.options.copy)) {
-        untracked(() => this.lookUp(based.key, based.base));
+      const holder = this.shelf.holder(this.options.copy);
+      if (holder === null) {
+        return;
       }
+      untracked(() => {
+        if (this.holder !== null && this.holder !== holder) {
+          this.accountChanged();
+          return;
+        }
+        this.holder = holder;
+        if (based !== null) {
+          this.lookUp(based.key, based.base);
+        }
+      });
     });
   }
 
@@ -85,26 +99,27 @@ export class FormDraft<V> {
     const based = (base: string) => {
       if (generation === this.generation) {
         this.base.set({ key, base });
+        if (this.pending && this.timer === null) {
+          this.keepAfter(0);
+        }
       }
     };
     if (version !== undefined && version !== null && version !== '') {
       based(`${VERSION_BASE}${version}`);
     } else {
-      void digestOf(snapshot).then((digest) => based(`${VALUES_BASE}${digest}`));
+      this.base.set(null);
+      this.queue(async () => based(`${VALUES_BASE}${await digestOf(snapshot)}`));
     }
   }
 
   changed(): void {
-    if (this.stopped || this.offered() !== null || this.base() === null) {
+    if (this.stopped || this.offered() !== null || this.generation === 0) {
       return;
     }
-    if (this.timer !== null) {
-      clearTimeout(this.timer);
+    this.pending = true;
+    if (this.timer === null) {
+      this.keepAfter(0);
     }
-    this.timer = setTimeout(() => {
-      this.timer = null;
-      void this.keepNow();
-    }, this.delayMs);
   }
 
   resume(): void {
@@ -118,7 +133,7 @@ export class FormDraft<V> {
     this.keptKey = found.key;
     this.offered.set(null);
     this.resumedStaleDraft.set(offer.stale);
-    this.options.apply(structuredClone(found.values) as V);
+    this.options.apply(structuredClone(this.whole(found.values)) as V);
   }
 
   discard(): void {
@@ -129,14 +144,29 @@ export class FormDraft<V> {
     this.keptKey = null;
     this.offered.set(null);
     this.resumedStaleDraft.set(false);
-    if (key !== null) {
-      this.queue(() => this.shelf.drop(this.options.copy, key));
+    const holder = this.holder;
+    if (key !== null && holder !== null) {
+      this.queue(() => this.shelf.drop(this.options.copy, holder, key));
     }
   }
 
   saved(version?: string | null): void {
     this.discard();
     this.ready(version);
+  }
+
+  rebased(version?: string | null): void {
+    const based = this.base();
+    if (this.stopped || based === null || this.offered() !== null || !version) {
+      return;
+    }
+    this.resumedBase = null;
+    this.resumedStaleDraft.set(false);
+    this.base.set({ key: based.key, base: `${VERSION_BASE}${version}` });
+    this.pending = true;
+    if (this.timer === null) {
+      this.keepAfter(0);
+    }
   }
 
   left(): void {
@@ -156,18 +186,50 @@ export class FormDraft<V> {
   }
 
   flush(): Promise<void> {
-    if (this.timer !== null) {
+    if (this.pending && this.base() !== null) {
       this.cancelTimer();
       void this.keepNow();
     }
     return this.work;
   }
 
+  private keepAfter(delayMs: number): void {
+    this.timer = setTimeout(() => {
+      this.timer = null;
+      if (this.pending && this.base() !== null) {
+        this.pending = false;
+        void this.keepNow();
+        this.keepAfter(this.delayMs);
+      }
+    }, delayMs);
+  }
+
   private cancelTimer(): void {
+    this.pending = false;
     if (this.timer !== null) {
       clearTimeout(this.timer);
       this.timer = null;
     }
+  }
+
+  private accountChanged(): void {
+    this.cancelTimer();
+    this.found = null;
+    this.resumedBase = null;
+    this.keptKey = null;
+    this.holder = null;
+    this.offered.set(null);
+    this.resumedStaleDraft.set(false);
+    this.stopped = true;
+  }
+
+  private currentHolder(): string | null {
+    const now = this.shelf.holder(this.options.copy);
+    if (this.holder !== null && now !== null && now !== this.holder) {
+      this.accountChanged();
+      return null;
+    }
+    return now !== null && now === this.holder ? now : null;
   }
 
   private keepNow(): Promise<void> {
@@ -176,52 +238,95 @@ export class FormDraft<V> {
     if (this.stopped || based === null || key === null || this.offered() !== null) {
       return this.work;
     }
+    const holder = this.currentHolder();
+    if (holder === null) {
+      return this.work;
+    }
     const snapshot = stableJson(this.options.values());
     if (snapshot === this.baseValues) {
-      const kept = this.keptKey;
-      this.keptKey = null;
       this.resumedBase = null;
       this.resumedStaleDraft.set(false);
-      if (kept !== null) {
-        this.queue(() => this.shelf.drop(this.options.copy, kept));
-      }
+      this.queue(async () => {
+        const kept = this.keptKey;
+        this.keptKey = null;
+        if (kept !== null) {
+          await this.shelf.drop(this.options.copy, holder, kept);
+        }
+      });
       return this.work;
     }
     const draft: StoredDraft = {
       key,
       base: this.resumedBase ?? based.base,
-      values: JSON.parse(snapshot) as unknown,
+      values: this.kept(snapshot),
       savedAt: new Date().toISOString(),
     };
-    const previous = this.keptKey;
-    this.keptKey = key;
     this.queue(async () => {
+      const previous = this.keptKey;
       if (previous !== null && previous !== key) {
-        await this.shelf.drop(this.options.copy, previous);
+        await this.shelf.drop(this.options.copy, holder, previous);
+        this.keptKey = null;
       }
-      await this.shelf.keep(this.options.copy, draft);
+      if (this.offered() !== null || holder !== this.holder) {
+        return;
+      }
+      if (await this.shelf.keep(this.options.copy, holder, draft)) {
+        this.keptKey = key;
+      }
     });
     return this.work;
   }
 
   private lookUp(key: string, base: string): void {
     const generation = this.generation;
+    const holder = this.holder;
+    if (holder === null) {
+      return;
+    }
     this.queue(async () => {
       if (this.keptKey === key) {
         return;
       }
-      const found = (await this.shelf.list(this.options.copy)).find((draft) => draft.key === key);
-      if (generation !== this.generation || this.stopped || found === undefined) {
+      const found = (await this.shelf.list(this.options.copy, holder)).find(
+        (draft) => draft.key === key,
+      );
+      if (
+        generation !== this.generation ||
+        this.stopped ||
+        holder !== this.holder ||
+        found === undefined
+      ) {
         return;
       }
-      if (stableJson(found.values) === this.baseValues) {
-        await this.shelf.drop(this.options.copy, key);
+      if (stableJson(this.whole(found.values)) === this.baseValues) {
+        await this.shelf.drop(this.options.copy, holder, key);
         return;
       }
       this.cancelTimer();
       this.found = found;
       this.offered.set({ savedAt: found.savedAt, stale: found.base !== base });
     });
+  }
+
+  private kept(snapshot: string): unknown {
+    const values = JSON.parse(snapshot) as unknown;
+    if (!this.options.changedFieldsOnly || !isRecord(values) || this.baseValues === null) {
+      return values;
+    }
+    const base = JSON.parse(this.baseValues) as Record<string, unknown>;
+    return Object.fromEntries(
+      Object.entries(values).filter(
+        ([name, value]) => stableJson(value) !== stableJson(base[name]),
+      ),
+    );
+  }
+
+  private whole(values: unknown): unknown {
+    if (!this.options.changedFieldsOnly || !isRecord(values) || this.baseValues === null) {
+      return values;
+    }
+    const base = JSON.parse(this.baseValues) as unknown;
+    return isRecord(base) ? { ...base, ...values } : values;
   }
 
   private queue(work: () => Promise<void>): void {
@@ -250,6 +355,10 @@ function sorted(value: unknown): unknown {
     );
   }
   return value;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
 async function digestOf(text: string): Promise<string> {

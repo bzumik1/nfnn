@@ -9,8 +9,18 @@ export class MemoryDraftShelf implements DraftShelf {
   readonly kept: StoredDraft[] = [];
   readonly dropped: string[] = [];
 
-  open(copy: DraftCopy): boolean {
-    return this.opened().has(copy);
+  private readonly accounts = signal<Readonly<Record<DraftCopy, string>>>({
+    administration: 'administration-copy',
+    donor: 'donor-copy',
+  });
+
+  holder(copy: DraftCopy): string | null {
+    return this.opened().has(copy) ? this.accounts()[copy] : null;
+  }
+
+  switchAccount(copy: DraftCopy, holder: string): void {
+    this.accounts.update((accounts) => ({ ...accounts, [copy]: holder }));
+    this.stored.delete(copy);
   }
 
   setOpen(copy: DraftCopy, open: boolean): void {
@@ -33,12 +43,12 @@ export class MemoryDraftShelf implements DraftShelf {
     return this.stored.get(copy)?.get(key) ?? null;
   }
 
-  async list(copy: DraftCopy): Promise<readonly StoredDraft[]> {
-    return this.open(copy) ? structuredClone([...this.shelfOf(copy).values()]) : [];
+  async list(copy: DraftCopy, holder: string): Promise<readonly StoredDraft[]> {
+    return this.holds(copy, holder) ? structuredClone([...this.shelfOf(copy).values()]) : [];
   }
 
-  async keep(copy: DraftCopy, draft: StoredDraft): Promise<boolean> {
-    if (!this.open(copy)) {
+  async keep(copy: DraftCopy, holder: string, draft: StoredDraft): Promise<boolean> {
+    if (!this.holds(copy, holder)) {
       return false;
     }
     this.kept.push(structuredClone(draft));
@@ -46,11 +56,15 @@ export class MemoryDraftShelf implements DraftShelf {
     return true;
   }
 
-  async drop(copy: DraftCopy, key: string): Promise<void> {
-    if (this.open(copy)) {
+  async drop(copy: DraftCopy, holder: string, key: string): Promise<void> {
+    if (this.holds(copy, holder)) {
       this.dropped.push(key);
       this.shelfOf(copy).delete(key);
     }
+  }
+
+  private holds(copy: DraftCopy, holder: string): boolean {
+    return this.holder(copy) === holder;
   }
 
   private shelfOf(copy: DraftCopy): Map<string, StoredDraft> {

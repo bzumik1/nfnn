@@ -12,8 +12,8 @@
       @if (fromDraft()) {
         <p class="ui-dialog__lead" i18n="@@admin.changedMeanwhile.leadFromDraft">
           Od chvíle, kdy jste text na tomto zařízení rozepsali, uložil novější verzi někdo jiný:
-          jiný správce, připojená aplikace, nebo vy na jiném zařízení. Vaše úpravy jsme neuložili a
-          zůstávají ve formuláři.
+          jiný správce, připojená aplikace nebo vy v jiném okně či na jiném zařízení. Vaše úpravy
+          jsme neuložili a zůstávají ve formuláři.
         </p>
       } @else if (canOverwrite()) {
         <p class="ui-dialog__lead" i18n="@@admin.changedMeanwhile.leadDraft">

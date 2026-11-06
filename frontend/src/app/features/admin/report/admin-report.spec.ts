@@ -663,7 +663,7 @@ describe('Given an administrator changing the monthly report on a device that ke
   it('when the device kept settings of the version they open and they continue them, then the form takes them and saves under that version', async () => {
     keptDraft(`version:${version}`);
     await open();
-    expect(element('app-draft-offer').textContent).toContain('Máte tu rozepsaný text');
+    expect(element('app-draft-offer').textContent).toContain('Máte tu rozepsané úpravy');
 
     button('Pokračovat v rozepsaném').click();
     await settle();

@@ -8,6 +8,7 @@ import { DraftOffer } from './draft-offer';
     savedAt="6. 11. 2026 10:00"
     [stale]="stale()"
     [photo]="photo()"
+    [secrets]="secrets()"
     [headingLevel]="3"
     (resumed)="choices.push('resume')"
     (discarded)="choices.push('discard')"
@@ -16,6 +17,7 @@ import { DraftOffer } from './draft-offer';
 class Host {
   readonly stale = signal(false);
   readonly photo = signal(false);
+  readonly secrets = signal(false);
   readonly choices: string[] = [];
 }
 
@@ -29,12 +31,11 @@ describe('Given a draft offered back on a form', () => {
     await fixture.whenStable();
   });
 
-  it('when it shows, then a region named by its heading says when the text was written and offers both choices', () => {
-    const heading = root.querySelector('[role="heading"]')!;
+  it('when it shows, then a region named by its heading says when the edits were made and offers both choices', () => {
+    const heading = root.querySelector('h3')!;
     const region = root.querySelector('section')!;
 
-    expect(heading.textContent?.trim()).toBe('Máte tu rozepsaný text');
-    expect(heading.getAttribute('aria-level')).toBe('3');
+    expect(heading.textContent?.trim()).toBe('Máte tu rozepsané úpravy');
     expect(region.getAttribute('aria-labelledby')).toBe(heading.id);
     expect(region.textContent).toContain('neuložené úpravy z 6. 11. 2026 10:00');
     expect(region.textContent).not.toContain('Uložená verze se od té doby změnila');
@@ -55,7 +56,14 @@ describe('Given a draft offered back on a form', () => {
     fixture.componentInstance.photo.set(true);
     await fixture.whenStable();
 
-    expect(root.textContent).toContain('Rozepsaný text neuchovává fotky');
+    expect(root.textContent).toContain('Rozepsané úpravy neuchovávají fotky');
+  });
+
+  it('when the form has passwords or tokens, then it says they are not kept', async () => {
+    fixture.componentInstance.secrets.set(true);
+    await fixture.whenStable();
+
+    expect(root.textContent).toContain('Hesla a tokeny se z bezpečnostních důvodů neuchovávají');
   });
 
   it('when a choice is pressed, then it is reported', () => {

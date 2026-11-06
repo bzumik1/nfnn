@@ -71,6 +71,7 @@
           }
           <form
             #settingsForm="ngForm"
+            [inert]="draft.offer() !== null"
             class="settings-form"
             appFocusFirstInvalid
             (ngSubmit)="save(settingsForm)"
