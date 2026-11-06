@@ -86,14 +86,14 @@ export const adminRoutes: Routes = [
       },
       {
         path: 'aktuality/nova',
-        data: { parent: '/sprava/aktuality' },
+        data: { parent: '/sprava/aktuality', tabBar: false },
         title: $localize`:@@admin.newsEditor.pageTitle.new:Nová aktualita | Správa | Nová naděje – nadační fond`,
         loadComponent: () => import('./news/admin-news-editor').then((m) => m.AdminNewsEditor),
         canDeactivate: [unsavedChangesGuard],
       },
       {
         path: 'aktuality/:id',
-        data: { parent: '/sprava/aktuality' },
+        data: { parent: '/sprava/aktuality', tabBar: false },
         title: $localize`:@@admin.newsEditor.pageTitle.edit:Úprava aktuality | Správa | Nová naděje – nadační fond`,
         loadComponent: () => import('./news/admin-news-editor').then((m) => m.AdminNewsEditor),
         canDeactivate: [unsavedChangesGuard],
@@ -106,7 +106,7 @@ export const adminRoutes: Routes = [
       },
       {
         path: 'projekty/nova',
-        data: { parent: '/sprava/projekty' },
+        data: { parent: '/sprava/projekty', tabBar: false },
         title: $localize`:@@admin.projectEditor.pageTitle.new:Nový projekt | Správa | Nová naděje – nadační fond`,
         loadComponent: () =>
           import('./projects/admin-project-editor').then((m) => m.AdminProjectEditor),
@@ -114,7 +114,7 @@ export const adminRoutes: Routes = [
       },
       {
         path: 'projekty/:id',
-        data: { parent: '/sprava/projekty' },
+        data: { parent: '/sprava/projekty', tabBar: false },
         title: $localize`:@@admin.projectEditor.pageTitle.edit:Úprava projektu | Správa | Nová naděje – nadační fond`,
         loadComponent: () =>
           import('./projects/admin-project-editor').then((m) => m.AdminProjectEditor),

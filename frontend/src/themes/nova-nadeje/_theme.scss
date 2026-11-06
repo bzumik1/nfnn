@@ -97,6 +97,11 @@
 
   --color-on-image: #ffffff;
   --color-image-shade: #080c24;
+  --hero-top-scrim: linear-gradient(
+    to bottom,
+    color-mix(in srgb, #000000 28%, transparent),
+    transparent 22%
+  );
   --color-backdrop: rgb(10 15 40 / 0.6);
 
   --color-border: #e5e7eb;
@@ -279,6 +284,7 @@
 
   --content-max: 1200px;
   --header-height: 72px;
+  --page-top: calc(var(--safe-area-top) + var(--header-height) + var(--space-4));
   --text-header-action: min(
     var(--text-sm),
     (60vw - 1.2 * var(--space-5) - 2 * var(--space-4-5) - 3px) / 5.6

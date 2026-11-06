@@ -10,6 +10,10 @@
 }
 
 .admin-content {
+  padding-bottom: var(--space-12);
+}
+
+.admin-content--with-tab-bar {
   padding-bottom: var(--tab-bar-clearance);
 }
 
