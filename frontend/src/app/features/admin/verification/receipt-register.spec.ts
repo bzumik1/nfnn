@@ -157,7 +157,7 @@ describe('Given a receipt whose signature the page verified', () => {
       ['another number of gifts', { giftCount: 3 }],
       ['another total', { totalAmountMinor: 120_100 }],
       ['another year', { year: 2025 }],
-    ])('with %s, then the entry says the copy differs', (_, change) => {
+    ])('and it holds it with %s, then the entry says the copy differs', (_, change) => {
       expect(registerEntry(SIGNED_YEARLY, [receiptRow(change)])).toEqual({
         state: 'differs',
         donorId: 'donor-1',
@@ -213,6 +213,10 @@ describe('Given a receipt whose signature the page verified and the answer of th
       on: null,
       by: null,
     });
+  });
+
+  it('when the fund answered outdated but the copy holds it as active, then the view says the copy is behind the fund, never active', () => {
+    expect(registerView(SIGNED_YEARLY, active, 'outdated').state).toBe('stale');
   });
 
   it('when the fund answered withdrawn but the copy holds it as outdated, then the view says the copy is behind the fund', () => {

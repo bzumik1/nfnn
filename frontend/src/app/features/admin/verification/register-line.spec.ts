@@ -154,7 +154,7 @@ describe('Given the register line under a verified receipt', () => {
   });
 
   describe('when the fund answered', () => {
-    it('as the copy holds it, active, then it shows only the badge and repeats no sentence', async () => {
+    it('and the answer is active as the copy holds it, then it shows only the badge and repeats no sentence', async () => {
       rows.set([receiptRow()]);
 
       const element = await render('active');
@@ -162,7 +162,7 @@ describe('Given the register line under a verified receipt', () => {
       expect(stateText(element)).toBe('Platné');
     });
 
-    it('as the copy holds it, replaced, then it adds the day and the newer number the fund did not say', async () => {
+    it('and the answer is replaced as the copy holds it, then it adds the day and the newer number the fund did not say', async () => {
       rows.set([
         receiptRow({ status: 'REPLACED', supersededAt: '2027-01-31T23:30:00Z' }),
         receiptRow({ id: 'n', number: '2026-000020', issuedAt: '2027-01-31T23:30:00Z' }),
@@ -175,7 +175,7 @@ describe('Given the register line under a verified receipt', () => {
       );
     });
 
-    it('replaced while the copy holds it as active, then it says the copy is behind and the fund counts, never valid', async () => {
+    it('and the answer is replaced while the copy holds it as active, then it says the copy is behind and the fund counts, never valid', async () => {
       rows.set([receiptRow()]);
 
       const element = await render('replaced');
@@ -187,7 +187,7 @@ describe('Given the register line under a verified receipt', () => {
       expect(element.querySelector('a')?.getAttribute('href')).toBe('/sprava/darci/donor-1');
     });
 
-    it('active while the copy does not hold its number, then it says the copy misses it, why, and that the answer counts, and links no donor', async () => {
+    it('and the answer is active while the copy does not hold its number, then it says the copy misses it, why, and that the answer counts, and links no donor', async () => {
       rows.set([]);
 
       const element = await render('active');
@@ -198,7 +198,7 @@ describe('Given the register line under a verified receipt', () => {
       expect(element.querySelector('a')).toBeNull();
     });
 
-    it('replaced while the copy holds its number with other data, then it says they disagree in red and to tell the technician', async () => {
+    it('and the answer is replaced while the copy holds its number with other data, then it says they disagree in red and to tell the technician', async () => {
       rows.set([receiptRow({ giftCount: 3 })]);
 
       const element = await render('replaced');
@@ -209,7 +209,7 @@ describe('Given the register line under a verified receipt', () => {
       expect(element.querySelector('.ui-badge--danger')).not.toBeNull();
     });
 
-    it('as the copy holds it, outdated, then it adds only the day and repeats no next step', async () => {
+    it('and the answer is outdated as the copy holds it, then it adds only the day and repeats no next step', async () => {
       rows.set([
         receiptRow({
           status: 'WITHDRAWN',
@@ -223,7 +223,7 @@ describe('Given the register line under a verified receipt', () => {
       expect(stateText(element)).toBe('Zastaralé Fond ho 02. 02. 2027 zrušil.');
     });
 
-    it('that it does not know the receipt the copy holds with these data, then it says they disagree and never valid', async () => {
+    it('and the fund does not know the receipt the copy holds with these data, then it says they disagree and never valid', async () => {
       rows.set([receiptRow()]);
 
       const element = await render('unknown');
@@ -234,7 +234,7 @@ describe('Given the register line under a verified receipt', () => {
       expect(element.querySelector('.ui-badge--danger')).not.toBeNull();
     });
 
-    it('that it does not know the receipt and neither does the copy, then it says the copy agrees', async () => {
+    it('and the fund does not know the receipt and neither does the copy, then it says the copy agrees', async () => {
       rows.set([]);
 
       const element = await render('unknown');

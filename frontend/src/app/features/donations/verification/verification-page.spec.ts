@@ -657,6 +657,32 @@ describe('Given the verification page in another context, as the administration 
     },
   );
 
+  it.each([
+    [{ state: 'signed', receipt: YEARLY, status: 'withdrawn' }, 'Nepovažujte ho za platné.'],
+    [
+      { state: 'signed', receipt: YEARLY, status: 'outdated' },
+      'na kartě dárce uvidíte, zda už ho má.',
+    ],
+    [
+      { state: 'signed', receipt: YEARLY, status: 'unknown' },
+      'Nepovažujte ho za platné a pošlete jeho číslo technikovi.',
+    ],
+    [{ state: 'revoked' }, 'Nepovažujte ho za platné a pošlete jeho číslo technikovi.'],
+    [
+      { state: 'unknown-key', reach: 'online' },
+      'Nepovažujte ho za platné a pošlete jeho číslo technikovi.',
+    ],
+    [{ state: 'keys-refused' }, 'Dejte prosím vědět technikovi.'],
+  ] as const)(
+    'when the outcome is %o, then the verdict names the next step of the administration and links no e-mail',
+    async (outcome, next) => {
+      const root = await open(`/sprava/overit#${FRAGMENT}`, outcome as VerificationOutcome);
+
+      expect(root.querySelector('.verify-lead')?.textContent?.replace(/\s+/g, ' ')).toContain(next);
+      expect(root.querySelector('a[href^="mailto:"]')).toBeNull();
+    },
+  );
+
   it('when the fund could not be asked, then the status line points to the register line under it', async () => {
     const root = await open(`/sprava/overit#${FRAGMENT}`, {
       state: 'signed',
