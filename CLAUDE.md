@@ -51,7 +51,7 @@ Before building, read the sections you touch (grep them: `api-contract.md` is to
 
 Cloud sessions (skill `cloud-session`): Gradle needs a Maven Central mirror, `LC_ALL=C.UTF-8` and, for Testcontainers, `dockerd`; the preinstalled Node 22.22.0 is too old for `ng` (install Node 26 first); the preinstalled Chromium is older than Playwright's pin (`npx playwright install --only-shell chromium` once).
 
-T3 Code worktrees (`t3.json`): a new worktree runs `scripts/setup-worktree.sh` (`npm ci` in `frontend/` and `mcp/` when `node_modules` is older than the lock file) before the agent starts. Wait while `.t3/setup-running` names a live PID (`kill -0 "$(cat .t3/setup-running)"`); if `.t3/setup-failed` exists, read it and run `bash scripts/setup-worktree.sh` again (also when no marker exists). A settled thread's build output goes with `scripts/clean-worktree.sh`.
+T3 Code worktrees (`t3.json`): a new worktree runs `scripts/setup-worktree.sh` (`npm ci` in `frontend/` and `mcp/` when `node_modules` is missing or older than `package-lock.json`) before the agent starts. Wait while `.t3/setup-running` names a live PID whose command is `setup-worktree.sh` (`ps -p "$(cat .t3/setup-running)" -o command= | grep setup-worktree.sh`); if `.t3/setup-failed` exists, read it and run `bash scripts/setup-worktree.sh` again (also when no marker exists). A settled thread's build output goes with `scripts/clean-worktree.sh`.
 
 ## Production logs
 

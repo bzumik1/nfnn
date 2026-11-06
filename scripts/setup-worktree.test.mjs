@@ -162,19 +162,79 @@ describe('Given a worktree with the frontend and the connector', () => {
     assert.ok(!existsSync(join(root, '.t3', 'setup-running')));
   });
 
-  test('when setup-running names a live process, then the setup refuses and leaves the markers alone', () => {
+  test('when setup-running names a live process that is another setup, then the setup refuses and leaves the markers alone', async () => {
+    fakeNpm(bin, npmLog);
+    const other = join(scratch, 'other', 'setup-worktree.sh');
+    mkdirSync(dirname(other));
+    writeFileSync(other, 'sleep 30\n');
+    const owner = spawn('bash', [other], { stdio: 'ignore' });
+    try {
+      mkdirSync(join(root, '.t3'));
+      writeFileSync(join(root, '.t3', 'setup-running'), `${owner.pid}\n`);
+      writeFileSync(join(root, '.t3', 'setup-failed'), 'earlier');
+
+      const result = run(SETUP, root, bin);
+
+      assert.notEqual(result.status, 0);
+      assert.match(result.stderr, new RegExp(`already running as ${owner.pid}`));
+      assert.deepEqual(calls(), []);
+      assert.equal(readFileSync(join(root, '.t3', 'setup-running'), 'utf8').trim(), String(owner.pid));
+      assert.equal(readFileSync(join(root, '.t3', 'setup-failed'), 'utf8'), 'earlier');
+    } finally {
+      owner.kill('SIGKILL');
+    }
+  });
+
+  test('when setup-running names a live process that is no setup, as after a reboot reused the PID, then the setup runs', () => {
     fakeNpm(bin, npmLog);
     mkdirSync(join(root, '.t3'));
     writeFileSync(join(root, '.t3', 'setup-running'), `${process.pid}\n`);
-    writeFileSync(join(root, '.t3', 'setup-failed'), 'earlier');
 
     const result = run(SETUP, root, bin);
 
-    assert.notEqual(result.status, 0);
-    assert.match(result.stderr, new RegExp(`already running as ${process.pid}`));
-    assert.deepEqual(calls(), []);
-    assert.equal(readFileSync(join(root, '.t3', 'setup-running'), 'utf8').trim(), String(process.pid));
-    assert.equal(readFileSync(join(root, '.t3', 'setup-failed'), 'utf8'), 'earlier');
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(calls().length, 2);
+    assert.ok(existsSync(join(root, '.t3', 'setup-done')));
+  });
+
+  test('when two setups start at the same moment, then only one installs and the other refuses', async () => {
+    mkdirSync(bin, { recursive: true });
+    writeFileSync(
+      join(bin, 'npm'),
+      `#!/usr/bin/env bash\necho "$(basename "$PWD")" >> '${npmLog}'\nsleep 1\nmkdir -p node_modules && touch node_modules/.package-lock.json\n`,
+    );
+    chmodSync(join(bin, 'npm'), 0o755);
+    const start = () =>
+      new Promise((resolve) => {
+        const child = spawn('bash', [SETUP], { cwd: root, stdio: 'ignore', env: { ...process.env, PATH: `${bin}:${process.env.PATH}` } });
+        child.on('exit', (code) => resolve(code));
+      });
+
+    const codes = await Promise.all([start(), start()]);
+
+    assert.deepEqual([...codes].sort(), [0, 1]);
+    assert.deepEqual(calls(), ['frontend', 'mcp']);
+    assert.ok(existsSync(join(root, '.t3', 'setup-done')));
+  });
+
+  test('when the setup keeps its standard input open and npm reads it, then npm reads nothing and the setup finishes', async () => {
+    mkdirSync(bin, { recursive: true });
+    writeFileSync(join(bin, 'npm'), '#!/usr/bin/env bash\nread -r answer\nmkdir -p node_modules && touch node_modules/.package-lock.json\n');
+    chmodSync(join(bin, 'npm'), 0o755);
+    const setup = spawn('bash', [SETUP], {
+      cwd: root,
+      detached: true,
+      stdio: ['pipe', 'ignore', 'ignore'],
+      env: { ...process.env, PATH: `${bin}:${process.env.PATH}` },
+    });
+    const exited = new Promise((resolve) => setup.on('exit', (code) => resolve(code)));
+
+    const code = await Promise.race([exited, new Promise((resolve) => setTimeout(() => resolve('still running'), 5_000))]);
+    if (code === 'still running') process.kill(-setup.pid, 'SIGKILL');
+    setup.stdin.destroy();
+
+    assert.equal(code, 0);
+    assert.ok(existsSync(join(root, '.t3', 'setup-done')));
   });
 
   async function interruptedSetup(signal, { group }) {
