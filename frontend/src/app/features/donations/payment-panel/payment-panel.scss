@@ -141,6 +141,10 @@
   font-size: var(--text-md);
 }
 
+.iban-half {
+  display: inline-block;
+}
+
 .qr {
   display: flex;
   gap: var(--space-6);

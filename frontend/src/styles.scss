@@ -59,6 +59,10 @@ html:has(app-landing) {
   }
 }
 
+html.footer-in-view body {
+  background: var(--color-surface-inverse-strong);
+}
+
 :focus-visible {
   outline: 3px solid var(--color-focus-ring);
   outline-offset: 2px;

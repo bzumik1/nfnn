@@ -113,7 +113,10 @@
       <div class="bank-row">
         <span class="bank-key" i18n="@@home.donate.bank.iban">IBAN</span>
         <span class="bank-value-wrap">
-          <span class="bank-value">{{ ibanInGroups() }}</span>
+          <span class="bank-value"
+            ><span class="iban-half">{{ ibanLines()[0] }}</span
+            >&ngsp;<span class="iban-half">{{ ibanLines()[1] }}</span></span
+          >
           <app-copy-button
             [value]="account.iban"
             what="IBAN"

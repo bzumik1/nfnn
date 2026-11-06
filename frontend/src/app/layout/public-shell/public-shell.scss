@@ -6,6 +6,10 @@ main {
   display: block;
 }
 
+:host:has(app-site-footer) main {
+  background: var(--color-surface);
+}
+
 main:focus {
   outline: none;
 }
