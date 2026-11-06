@@ -14,23 +14,36 @@ Feature: An administrator manages who administers the site
     And administrator "Jana" has two-factor authentication on
 
   Scenario: An administrator makes a registered donor an administrator by e-mail
+    Given "Petr" enables the second factor
     When "Jana" makes "Petr" an administrator
     Then the response status is 201
-    And the administrator response names "Petr" without two-factor authentication
+    And the administrator response names "Petr" with two-factor authentication
     And the admin action "GRANT_ADMINISTRATION" by "Jana" on "Petr" is recorded
     When "Jana" lists the administrators
     Then the administrators are Jana, Petr
-    And administrator "Petr" has two-factor authentication off
+    And administrator "Petr" has two-factor authentication on
 
-  Scenario: The new administrator gets in only with two-factor authentication at the next sign-in
-    Given "Jana" made "Petr" an administrator
+  Scenario: A donor who signs in with a passkey may become an administrator without the authenticator app
+    Given "Petr" added a passkey named "iPhone"
+    When "Jana" makes "Petr" an administrator
+    Then the response status is 201
+    And the administrator response names "Petr" without two-factor authentication
+    And "Petr" is an administrator in the database
+
+  Scenario: A donor who holds neither the authenticator app nor a passkey cannot become an administrator
+    When "Jana" makes "Petr" an administrator
+    Then the response status is 409
+    And the problem type ends with "donors/administrator-without-second-factor"
+    And the problem has the title "Dárce zatím nemá dvoufaktorové ověření"
+    And the admin action "GRANT_ADMINISTRATION" by "Jana" is not recorded
+    And "Petr" is not an administrator in the database
+
+  Scenario: The new administrator reaches the administration only from a session opened with the second factor
+    Given "Petr" enables the second factor
+    And "Jana" made "Petr" an administrator
     When "Petr" asks for the import state
     Then the response status is 403
     When "Petr" signs in again
-    And "Petr" asks for the import state
-    Then the response status is 403
-    When "Petr" enables the second factor
-    And "Petr" signs in again
     And "Petr" asks for the import state
     Then the response status is 200
 
@@ -132,7 +145,8 @@ Feature: An administrator manages who administers the site
     Given the configuration names "Petr" and "nikdo@example.cz" as administrators
     When the application starts
     Then "Petr" is not an administrator in the database
-    When "Jana" makes "Petr" an administrator
+    When "Petr" enables the second factor
+    And "Jana" makes "Petr" an administrator
     And "Jana" removes "Petr" from the administrators
     And the application starts
     Then "Petr" is not an administrator in the database

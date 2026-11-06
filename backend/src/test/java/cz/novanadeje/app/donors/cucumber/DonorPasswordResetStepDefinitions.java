@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donors.cucumber;
 
 import cz.novanadeje.app.cucumber.ApiClient;
+import cz.novanadeje.app.cucumber.ScenarioDonors;
 import cz.novanadeje.app.donors.domain.LinkSecret;
 import cz.novanadeje.app.donors.domain.PasswordResetToken;
 import cz.novanadeje.app.donors.domain.PasswordResetTokenRepository;
@@ -11,6 +12,7 @@ import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import jakarta.mail.Message;
+import jakarta.mail.MessagingException;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import org.springframework.http.ResponseEntity;
@@ -41,10 +43,12 @@ public class DonorPasswordResetStepDefinitions {
     private final RecordingMailSender mailSender;
     private final JdbcClient jdbc;
     private final PasswordResetTokenRepository tokens;
+    private final ScenarioDonors scenarioDonors;
     private final List<Integer> requestStatuses = new ArrayList<>();
 
     public DonorPasswordResetStepDefinitions(ApiClient api, RecordingMailSender mailSender, JdbcClient jdbc,
-                                             PasswordResetTokenRepository tokens) {
+                                             PasswordResetTokenRepository tokens, ScenarioDonors scenarioDonors) {
+        this.scenarioDonors = scenarioDonors;
         this.api = api;
         this.mailSender = mailSender;
         this.jdbc = jdbc;
@@ -82,6 +86,37 @@ public class DonorPasswordResetStepDefinitions {
         ResponseEntity<String> response = askForReset(email);
         assertThat(response.getStatusCode().value()).withFailMessage("The reset request answered %s", response.getBody()).isEqualTo(202);
         await().atMost(MAIL_WAIT).untilAsserted(() -> assertThat(mailSender.sent()).hasSize(mailsBefore + 1));
+    }
+
+    @When("a password reset is asked for the e-mail of {string}")
+    public void aPasswordResetIsAskedForTheEmailOf(String alias) {
+        askForReset(scenarioDonors.credentialsOf(alias).email());
+    }
+
+    @Given("{string} asked for a password reset")
+    public void askedForAPasswordReset(String alias) {
+        String email = scenarioDonors.credentialsOf(alias).email();
+        ResponseEntity<String> response = askForReset(email);
+        assertThat(response.getStatusCode().value()).withFailMessage("The reset request answered %s", response.getBody()).isEqualTo(202);
+        await().atMost(MAIL_WAIT).untilAsserted(() -> assertThat(resetEmailsTo(email)).hasSize(1));
+    }
+
+    @When("{string} sets the new password {string} with the reset link sent to them")
+    public void setsTheNewPasswordWithTheResetLinkSentToThem(String alias, String password) {
+        api.forgetCredentials();
+        confirm(tokenOf(resetEmailsTo(scenarioDonors.credentialsOf(alias).email()).getLast()), password);
+    }
+
+    @Then("a reset e-mail is sent to {string}")
+    public void aResetEmailIsSentTo(String alias) {
+        String email = scenarioDonors.credentialsOf(alias).email();
+        await().atMost(MAIL_WAIT).untilAsserted(() -> assertThat(resetEmailsTo(email)).hasSize(1));
+    }
+
+    @Then("no reset e-mail is sent to {string}")
+    public void noResetEmailIsSentTo(String alias) {
+        await().pollDelay(SETTLE).atMost(MAIL_WAIT).until(() -> true);
+        assertThat(resetEmailsTo(scenarioDonors.credentialsOf(alias).email())).isEmpty();
     }
 
     @When("the donor sets the new password {string} with the link from the e-mail")
@@ -183,6 +218,21 @@ public class DonorPasswordResetStepDefinitions {
     @And("the problem has the title {string}")
     public void theProblemHasTheTitle(String title) {
         assertThat(api.lastResponseJson().get("title").asString()).isEqualTo(title);
+    }
+
+    private List<MimeMessage> resetEmailsTo(String email) {
+        return mailSender.sent().stream()
+                .filter(message -> MailContents.plainText(message).contains("obnova-hesla#token="))
+                .filter(message -> sentTo(message, email))
+                .toList();
+    }
+
+    private static boolean sentTo(MimeMessage message, String email) {
+        try {
+            return Arrays.stream(message.getRecipients(Message.RecipientType.TO)).map(Object::toString).anyMatch(email::equals);
+        } catch (MessagingException unreadable) {
+            throw new IllegalStateException(unreadable);
+        }
     }
 
     private ResponseEntity<String> askForReset(String email) {

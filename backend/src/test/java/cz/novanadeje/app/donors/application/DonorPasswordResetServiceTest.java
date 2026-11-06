@@ -10,10 +10,12 @@ import cz.novanadeje.app.donors.domain.InvalidPasswordResetToken;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.PasswordHasher;
 import cz.novanadeje.app.donors.domain.LinkSecret;
+import cz.novanadeje.app.donors.domain.PasskeyRepository;
 import cz.novanadeje.app.donors.domain.PasswordResetToken;
 import cz.novanadeje.app.donors.domain.PasswordResetTokenRepository;
 import cz.novanadeje.app.donors.domain.PasswordTooWeak;
 import cz.novanadeje.app.donors.domain.RawPassword;
+import cz.novanadeje.app.donors.domain.SecondFactorRepository;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -66,13 +68,17 @@ class DonorPasswordResetServiceTest {
     private PasswordHasher passwordHasher;
     @Mock
     private ApplicationEventPublisher events;
+    @Mock
+    private SecondFactorRepository secondFactors;
+    @Mock
+    private PasskeyRepository passkeys;
 
     private DonorPasswordResetService service;
 
     @BeforeEach
     void setUp() {
         service = new DonorPasswordResetService(donors, tokens, passwordHasher, new DonorPasswordResetProperties(TTL, 3),
-                Clock.fixed(NOW, ZoneOffset.UTC), events, signOuts);
+                Clock.fixed(NOW, ZoneOffset.UTC), events, signOuts, new SecondFactorHoldings(secondFactors, passkeys));
     }
 
     @Test
@@ -119,6 +125,31 @@ class DonorPasswordResetServiceTest {
         assertThat(stored.getValue().donorId()).isEqualTo(DONOR);
         assertThat(stored.getValue().issuedAt()).isEqualTo(NOW);
         assertThat(event.toString()).doesNotContain(event.secret().value());
+    }
+
+    @Test
+    @DisplayName("Given an administrator holding neither the authenticator app nor a passkey, when a reset is requested, then nothing is stored and nothing is published")
+    void should_store_and_publish_nothing_when_requested_given_administrator_without_second_factor() {
+        when(donors.findByEmail(EMAIL)).thenReturn(Optional.of(administrator()));
+        when(secondFactors.findByDonor(DONOR)).thenReturn(Optional.empty());
+        when(passkeys.countByDonor(DONOR)).thenReturn(0);
+
+        service.requestReset(EMAIL);
+
+        verifyNoInteractions(tokens, events, passwordHasher, signOuts);
+    }
+
+    @Test
+    @DisplayName("Given an administrator holding a passkey, when a reset is requested, then the link is stored and sent")
+    void should_store_and_publish_link_when_requested_given_administrator_with_passkey() {
+        when(donors.findByEmail(EMAIL)).thenReturn(Optional.of(administrator()));
+        when(secondFactors.findByDonor(DONOR)).thenReturn(Optional.empty());
+        when(passkeys.countByDonor(DONOR)).thenReturn(1);
+
+        service.requestReset(EMAIL);
+
+        verify(tokens).save(any());
+        verify(events).publishEvent(any(DonorPasswordResetRequested.class));
     }
 
     @Test
@@ -221,6 +252,23 @@ class DonorPasswordResetServiceTest {
     }
 
     @Test
+    @DisplayName("Given a live token of an administrator who has held no second factor since it was sent, when a reset is confirmed, then it is invalid and the password stays")
+    void should_be_invalid_and_keep_password_when_confirmed_given_administrator_without_second_factor() {
+        LinkSecret secret = LinkSecret.generate();
+        PasswordResetToken token = PasswordResetToken.issue(secret, DONOR, NOW.minusSeconds(60), TTL);
+        when(tokens.findBySecretHash(secret.hash())).thenReturn(Optional.of(token));
+        when(tokens.markUsed(token.id(), NOW)).thenReturn(true);
+        when(donors.findById(DONOR)).thenReturn(Optional.of(administrator()));
+        when(secondFactors.findByDonor(DONOR)).thenReturn(Optional.empty());
+        when(passkeys.countByDonor(DONOR)).thenReturn(0);
+
+        assertThatThrownBy(() -> service.confirmReset(secret.value(), NEW_PASSWORD)).isInstanceOf(InvalidPasswordResetToken.class);
+
+        verify(donors, never()).save(any());
+        verifyNoInteractions(signOuts, passwordHasher, events);
+    }
+
+    @Test
     @DisplayName("Given a live token, when a reset is confirmed, then the password changes, the other links go, every session is revoked and the donor is told")
     void should_change_password_delete_others_and_revoke_sessions_when_confirmed_given_live_token() {
         LinkSecret secret = LinkSecret.generate();
@@ -245,6 +293,12 @@ class DonorPasswordResetServiceTest {
         Donor donor = unverifiedDonor(locale);
         donor.verifyEmail(NOW);
         return donor;
+    }
+
+    private static Donor administrator() {
+        Donor administrator = donor(LocaleCode.CS);
+        administrator.grantAdministration();
+        return administrator;
     }
 
     private static Donor unverifiedDonor() {

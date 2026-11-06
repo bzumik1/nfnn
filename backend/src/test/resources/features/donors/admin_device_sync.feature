@@ -17,6 +17,7 @@ Feature: An administrator's device keeps a copy of the accounts and the administ
     And "Jana" asks to recover the second factor by payment
     And a password reset is asked for "petr@example.cz"
     And "Andrea" approved the connection for "https://claude.ai/.well-known/oauth-client"
+    And "Petr" enables the second factor
     And "Andrea" made "Petr" an administrator
     And 1 minute passes
     And "Andrea" removes "Petr" from the administrators
@@ -46,7 +47,8 @@ Feature: An administrator's device keeps a copy of the accounts and the administ
     And an administration device of "Andrea" syncs the donors
     Then the administration device downloaded the chunks "accounts:2026-09"
     And the administration device removed no chunk
-    When "Andrea" makes "Jana" an administrator
+    When "Jana" enables the second factor
+    And "Andrea" makes "Jana" an administrator
     And an administration device of "Andrea" syncs the donors
     Then the administration device downloaded the chunks "accounts:2026-09, audit:2026-10"
     And the administration device's chunks of accounts hold every account as the administration reads it
