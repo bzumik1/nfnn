@@ -71,7 +71,7 @@
   <p class="ui-callout ui-callout--warning overview-question">
     <span i18n="@@donor.overview.question"
       >Máme na vás otázku k platbám z účtu
-      <span class="overview-account">{{ account.accountNumber }}</span
+      <span class="overview-account ui-figures">{{ account.accountNumber }}</span
       >.</span
     >&ngsp;<a routerLink="/darce/ucty" i18n="@@donor.overview.question.answer">Odpovědět</a>
   </p>
@@ -119,7 +119,7 @@
         Poslední dar
       </h2>
       <p class="last-gift-main">
-        <span class="last-gift-amount">{{ crowns(gift.amountMinor) }}&nbsp;Kč</span>
+        <span class="last-gift-amount ui-figures">{{ crowns(gift.amountMinor) }}&nbsp;Kč</span>
         <span class="last-gift-date">{{ formatDate(gift.receivedAt) }}</span>
         <span
           class="ui-badge ui-badge--success last-gift-status"
@@ -140,7 +140,9 @@
   <dl class="ui-card overview-stats">
     <div class="overview-stat">
       <dt i18n="@@donor.dashboard.stat.total">Celkem darováno</dt>
-      <dd class="stat-value">{{ crowns(donations.summary()?.totalAmountMinor ?? 0) }}&nbsp;Kč</dd>
+      <dd class="stat-value ui-figures">
+        {{ crowns(donations.summary()?.totalAmountMinor ?? 0) }}&nbsp;Kč
+      </dd>
     </div>
     <div class="overview-stat">
       <dt i18n="@@donor.dashboard.stat.count">Počet darů</dt>
@@ -160,7 +162,7 @@
     @if (currentYear(); as year) {
       <div class="overview-stat">
         <dt i18n="@@donor.overview.stat.currentYear">Darováno v roce {{ year.year }}</dt>
-        <dd class="stat-value">{{ crowns(year.totalAmountMinor) }}&nbsp;Kč</dd>
+        <dd class="stat-value ui-figures">{{ crowns(year.totalAmountMinor) }}&nbsp;Kč</dd>
       </div>
     }
   </dl>

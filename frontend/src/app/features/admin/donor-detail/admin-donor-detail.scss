@@ -44,11 +44,9 @@
   }
 
   dt {
-    font-size: var(--text-2xs);
-    font-weight: var(--weight-bold);
-    color: var(--color-text-subtle);
-    letter-spacing: var(--tracking-wide);
-    text-transform: uppercase;
+    font-size: var(--text-md);
+    font-weight: var(--weight-regular);
+    color: var(--color-text-soft);
   }
 
   dd {
@@ -86,9 +84,9 @@
 }
 
 .erase-title {
-  font-family: var(--font-serif);
+  font-family: var(--font-title);
   font-size: var(--text-3xl);
-  font-weight: var(--weight-bold);
+  font-weight: var(--weight-semibold);
   margin-bottom: var(--space-3);
 }
 
@@ -171,11 +169,9 @@
   margin: 0;
 
   dt {
-    font-size: var(--text-2xs);
-    font-weight: var(--weight-bold);
-    color: var(--color-text-subtle);
-    letter-spacing: var(--tracking-wide);
-    text-transform: uppercase;
+    font-size: var(--text-md);
+    font-weight: var(--weight-regular);
+    color: var(--color-text-soft);
     margin-bottom: var(--space-1);
   }
 

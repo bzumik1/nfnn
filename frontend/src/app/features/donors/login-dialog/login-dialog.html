@@ -97,7 +97,7 @@
               <div class="recovery-row">
                 <dt i18n="@@donor.login.recovery.account">Číslo účtu</dt>
                 <dd>
-                  <span class="recovery-value">{{ instructions.accountNumber }}</span>
+                  <span class="recovery-value ui-figures">{{ instructions.accountNumber }}</span>
                   <app-copy-button
                     [value]="instructions.accountNumber"
                     what="číslo účtu"
@@ -108,7 +108,7 @@
               <div class="recovery-row">
                 <dt i18n="@@donor.login.recovery.amount">Částka</dt>
                 <dd>
-                  <span class="recovery-value"
+                  <span class="recovery-value ui-figures"
                     >{{ amount(instructions) }}&nbsp;<ng-container
                       i18n="@@donor.login.recovery.currency"
                       >Kč</ng-container
@@ -119,7 +119,7 @@
               <div class="recovery-row">
                 <dt i18n="@@donor.login.recovery.message">Zpráva pro příjemce</dt>
                 <dd>
-                  <span class="recovery-value">{{ instructions.message }}</span>
+                  <span class="recovery-value ui-mono">{{ instructions.message }}</span>
                   <app-copy-button
                     [value]="instructions.message"
                     what="zprávu pro příjemce"

@@ -14,9 +14,9 @@
 }
 
 .help-title {
-  font-family: var(--font-serif);
+  font-family: var(--font-title);
   font-size: var(--text-xl);
-  font-weight: var(--weight-bold);
+  font-weight: var(--weight-semibold);
   color: var(--color-text);
   margin-bottom: var(--space-3);
 }
@@ -41,10 +41,8 @@
 }
 
 .help-symbol {
-  font-family: var(--font-mono);
   font-weight: var(--weight-bold);
   color: var(--color-text);
-  white-space: nowrap;
 }
 
 .help-contact {

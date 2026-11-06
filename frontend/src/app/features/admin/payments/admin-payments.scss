@@ -122,11 +122,9 @@
 .payments-card th {
   padding: var(--space-3) var(--space-5);
   text-align: left;
-  font-size: var(--text-2xs);
-  font-weight: var(--weight-bold);
-  color: var(--color-text-subtle);
-  letter-spacing: var(--tracking-wide);
-  text-transform: uppercase;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-secondary);
 }
 
 .payments-card tbody tr {
@@ -148,9 +146,6 @@
   font-size: var(--text-lg);
   font-weight: var(--weight-bold);
   color: var(--color-text);
-  font-family: var(--font-serif);
-  font-variant-numeric: var(--numeric-figures);
-  white-space: nowrap;
 }
 
 .payments-card th.amount,
@@ -189,15 +184,7 @@
   overflow-wrap: anywhere;
 }
 
-@include bp.up(cards) {
-  .payments-card .sender-account {
-    white-space: nowrap;
-    overflow-wrap: normal;
-  }
-}
-
 .symbol {
-  font-family: var(--font-mono);
   font-weight: var(--weight-bold);
   color: var(--color-text);
 }
@@ -264,9 +251,9 @@
 }
 
 .pair-title {
-  font-family: var(--font-serif);
+  font-family: var(--font-title);
   font-size: var(--text-3xl);
-  font-weight: var(--weight-bold);
+  font-weight: var(--weight-semibold);
   color: var(--color-text);
   margin-bottom: var(--space-4);
 }
@@ -281,11 +268,9 @@
   margin-bottom: var(--space-5);
 
   dt {
-    font-size: var(--text-2xs);
-    font-weight: var(--weight-bold);
-    color: var(--color-text-subtle);
-    letter-spacing: var(--tracking-wide);
-    text-transform: uppercase;
+    font-size: var(--text-md);
+    font-weight: var(--weight-regular);
+    color: var(--color-text-soft);
     margin-bottom: var(--space-0-5);
   }
 
@@ -421,7 +406,6 @@
 }
 
 .payment-row .ui-list__value {
-  font-family: var(--font-serif);
   font-size: var(--text-lg);
   font-weight: var(--weight-bold);
 }
@@ -473,11 +457,9 @@
     content: attr(data-label);
     display: block;
     font-family: var(--font-sans);
-    font-size: var(--text-2xs);
-    font-weight: var(--weight-bold);
-    color: var(--color-text-subtle);
-    letter-spacing: var(--tracking-wide);
-    text-transform: uppercase;
+    font-size: var(--text-md);
+    font-weight: var(--weight-regular);
+    color: var(--color-text-soft);
     margin-bottom: var(--space-0-5);
   }
 

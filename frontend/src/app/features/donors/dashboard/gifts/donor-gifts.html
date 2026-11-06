@@ -34,7 +34,9 @@
             <p class="gift-year-sum">
               <app-gift-count [gifts]="group.gifts" [verifications]="group.verifications" />
               ·
-              <span class="gift-year-total">{{ crowns(group.totalAmountMinor) }}&nbsp;Kč</span>
+              <span class="gift-year-total ui-figures"
+                >{{ crowns(group.totalAmountMinor) }}&nbsp;Kč</span
+              >
             </p>
             @switch (group.receipt) {
               @case ('available') {

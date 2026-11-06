@@ -67,6 +67,23 @@
   font-variant-numeric: var(--numeric-figures);
 }
 
+.ui-figures {
+  font-family: var(--font-figures);
+  font-variant-numeric: var(--numeric-figures);
+  font-feature-settings: var(--figure-features);
+  white-space: nowrap;
+}
+
+.ui-figures--groups {
+  white-space: normal;
+  overflow-wrap: normal;
+
+  > * {
+    display: inline-block;
+    white-space: nowrap;
+  }
+}
+
 .ui-callout {
   margin-top: var(--space-3);
   padding: var(--space-2-5) var(--space-3-5);
