@@ -517,18 +517,21 @@ export function administrationCopyGift(
   };
 }
 
-export const ADMINISTRATION_FIRST_DOWNLOAD = 'Ukládáme správu do zařízení';
+const ADMINISTRATION_FIRST_DOWNLOAD = 'Ukládáme správu do zařízení';
 
-export async function openAdministrationPage(
+export async function openUnlockedAdministrationPage(
   page: Page,
   path: string,
   heading: string,
 ): Promise<void> {
-  const firstDownload = page.waitForResponse(
-    (response) => new URL(response.url()).pathname === '/api/admin/donations/sync',
-  );
-  await page.goto(path);
-  await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible();
-  await firstDownload;
+  await Promise.all([
+    page
+      .goto(path)
+      .then(() => expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible()),
+    page.waitForResponse(
+      (response) => new URL(response.url()).pathname === '/api/admin/donations/sync',
+      { timeout: 10_000 },
+    ),
+  ]);
   await expect(page.getByText(ADMINISTRATION_FIRST_DOWNLOAD)).toBeHidden();
 }

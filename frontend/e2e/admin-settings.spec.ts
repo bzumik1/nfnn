@@ -4,7 +4,7 @@ import {
   administrator,
   adminSettings,
   mockDonorApi,
-  openAdministrationPage,
+  openUnlockedAdministrationPage,
   receiptSigningKeys,
   session,
 } from './donor-session';
@@ -73,7 +73,7 @@ test.describe('Given an administrator on the settings page', () => {
       },
     );
 
-    await openAdministrationPage(page, '/sprava/nastaveni', 'Nastavení');
+    await openUnlockedAdministrationPage(page, '/sprava/nastaveni', 'Nastavení');
     await expect(page.getByRole('heading', { level: 1, name: 'Nastavení' })).toBeFocused();
     await expect(page.locator('.secret-state').first()).toHaveText(
       'Heslo nebo klíč SMTP: Nastaveno',

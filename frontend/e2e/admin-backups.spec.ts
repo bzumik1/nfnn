@@ -1,6 +1,11 @@
 import { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
-import { administrator, mockDonorApi, openAdministrationPage, session } from './donor-session';
+import {
+  administrator,
+  mockDonorApi,
+  openUnlockedAdministrationPage,
+  session,
+} from './donor-session';
 
 const BACKUPS = '/api/admin/operations/backups';
 const REQUESTS = '/api/admin/operations/backups/requests';
@@ -222,7 +227,7 @@ test.describe('Given an administrator on the backups page', () => {
       },
     );
 
-    await openAdministrationPage(page, '/sprava/zalohy', 'Zálohy');
+    await openUnlockedAdministrationPage(page, '/sprava/zalohy', 'Zálohy');
     await page.getByRole('button', { name: 'Zálohovat teď' }).click();
 
     await expect(page.getByRole('button', { name: 'Zálohujeme…' })).toBeDisabled();
@@ -289,7 +294,7 @@ test.describe('Given an administrator on the backups page', () => {
     };
     await page.clock.install();
 
-    await openAdministrationPage(page, '/sprava/zalohy', 'Zálohy');
+    await openUnlockedAdministrationPage(page, '/sprava/zalohy', 'Zálohy');
     await page
       .getByRole('button', { name: 'Obnovit databázi ze zálohy nfnn-2026-10-22_0300.dump.age' })
       .click();
