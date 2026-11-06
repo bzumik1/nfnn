@@ -38,6 +38,7 @@ export class FormDraft<V> {
   private resumedBase: string | null = null;
   private keptKey: string | null = null;
   private holder: string | null = null;
+  private account: string | null;
   private timer: ReturnType<typeof setTimeout> | null = null;
   private pending = false;
   private work: Promise<void> = Promise.resolve();
@@ -69,13 +70,23 @@ export class FormDraft<V> {
       document.defaultView?.removeEventListener('pagehide', leaving);
       void this.flush().then(() => (this.stopped = true));
     });
+    this.account = untracked(() => this.shelf.account());
     effect(() => {
       const based = this.base();
-      const holder = this.shelf.holder(this.options.copy);
+      const signedIn = this.shelf.account();
+      const account = untracked(() => this.account);
+      if (account !== null && signedIn !== null && signedIn !== account) {
+        untracked(() => this.accountChanged());
+        return;
+      }
+      const holder = account === null ? null : this.shelf.holder(this.options.copy, account);
       if (holder === null) {
         return;
       }
       untracked(() => {
+        if (this.stopped) {
+          return;
+        }
         if (this.holder !== null && this.holder !== holder) {
           this.accountChanged();
           return;
@@ -83,6 +94,9 @@ export class FormDraft<V> {
         this.holder = holder;
         if (based !== null) {
           this.lookUp(based.key, based.base);
+          if (this.pending && this.timer === null) {
+            this.keepAfter(0);
+          }
         }
       });
     });
@@ -93,6 +107,7 @@ export class FormDraft<V> {
     if (key === null || this.stopped) {
       return;
     }
+    this.account ??= this.shelf.account();
     const snapshot = stableJson(this.options.values());
     this.baseValues = snapshot;
     const generation = ++this.generation;
@@ -137,7 +152,14 @@ export class FormDraft<V> {
   }
 
   discard(): void {
-    const key = this.found?.key ?? this.keptKey ?? this.base()?.key ?? null;
+    const answersOffer = this.offered() !== null;
+    this.forget(this.found?.key ?? this.keptKey ?? this.base()?.key ?? null);
+    if (answersOffer && !this.stopped && stableJson(this.options.values()) !== this.baseValues) {
+      this.changed();
+    }
+  }
+
+  private forget(key: string | null): void {
     this.cancelTimer();
     this.found = null;
     this.resumedBase = null;
@@ -151,7 +173,7 @@ export class FormDraft<V> {
   }
 
   saved(version?: string | null): void {
-    this.discard();
+    this.forget(this.found?.key ?? this.keptKey ?? this.base()?.key ?? null);
     this.ready(version);
   }
 
@@ -170,7 +192,7 @@ export class FormDraft<V> {
   }
 
   left(): void {
-    this.discard();
+    this.forget(this.keptKey);
     this.stopped = true;
   }
 
@@ -183,6 +205,10 @@ export class FormDraft<V> {
     return this.resumedStaleDraft() && base !== null && base.startsWith(VERSION_BASE)
       ? base.slice(VERSION_BASE.length)
       : null;
+  }
+
+  settled(): Promise<void> {
+    return this.work;
   }
 
   flush(): Promise<void> {
@@ -199,7 +225,9 @@ export class FormDraft<V> {
       if (this.pending && this.base() !== null) {
         this.pending = false;
         void this.keepNow();
-        this.keepAfter(this.delayMs);
+        if (!this.pending) {
+          this.keepAfter(this.delayMs);
+        }
       }
     }, delayMs);
   }
@@ -224,7 +252,14 @@ export class FormDraft<V> {
   }
 
   private currentHolder(): string | null {
-    const now = this.shelf.holder(this.options.copy);
+    const account = this.account;
+    if (account === null || this.shelf.account() !== account) {
+      if (account !== null && this.shelf.account() !== null) {
+        this.accountChanged();
+      }
+      return null;
+    }
+    const now = this.shelf.holder(this.options.copy, account);
     if (this.holder !== null && now !== null && now !== this.holder) {
       this.accountChanged();
       return null;
@@ -240,6 +275,7 @@ export class FormDraft<V> {
     }
     const holder = this.currentHolder();
     if (holder === null) {
+      this.pending = !this.stopped;
       return this.work;
     }
     const snapshot = stableJson(this.options.values());

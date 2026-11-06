@@ -62,11 +62,12 @@ test.describe('Given a donor who edits the data on the receipt on a device that 
   test('when she deletes the data on this device, then the edit leaves the device with the copy', async ({
     page,
   }) => {
+    expect((await rawDevice(page)).drafts).toBeGreaterThan(0);
+
     await page.getByRole('button', { name: 'Smazat data z tohoto zařízení' }).click();
     await page.getByRole('dialog').getByRole('button', { name: 'Smazat data a odhlásit' }).click();
 
     await expect(page).toHaveURL(/\/$/);
     await expect.poll(async () => (await rawDevice(page)).databases).not.toContain(DEVICE_DATABASE);
-    expect((await rawDevice(page)).drafts).toBe(0);
   });
 });

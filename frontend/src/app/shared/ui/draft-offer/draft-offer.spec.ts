@@ -73,3 +73,47 @@ describe('Given a draft offered back on a form', () => {
     expect(fixture.componentInstance.choices).toEqual(['resume', 'discard']);
   });
 });
+
+@Component({
+  imports: [DraftOffer],
+  template: `<button type="button" class="outside">Jinde</button>
+    <form [inert]="shown()"><input name="title" /></form>
+    @if (shown()) {
+      <app-draft-offer savedAt="6. 11. 2026 10:00" />
+    }`,
+})
+class FormHost {
+  readonly shown = signal(false);
+}
+
+describe('Given a form that a draft offer may lock while the visitor is in it', () => {
+  let fixture: ComponentFixture<FormHost>;
+  let root: HTMLElement;
+
+  beforeEach(async () => {
+    fixture = TestBed.createComponent(FormHost);
+    root = fixture.nativeElement as HTMLElement;
+    document.body.appendChild(root);
+    await fixture.whenStable();
+  });
+
+  afterEach(() => root.remove());
+
+  it('when the offer shows while the focus is in the form, then the focus moves to the offer heading', async () => {
+    root.querySelector('input')!.focus();
+
+    fixture.componentInstance.shown.set(true);
+    await fixture.whenStable();
+
+    expect(document.activeElement?.textContent?.trim()).toBe('Máte tu rozepsané úpravy');
+  });
+
+  it('when the offer shows while the focus is elsewhere on the page, then the focus stays there', async () => {
+    root.querySelector<HTMLButtonElement>('.outside')!.focus();
+
+    fixture.componentInstance.shown.set(true);
+    await fixture.whenStable();
+
+    expect(document.activeElement?.textContent?.trim()).toBe('Jinde');
+  });
+});

@@ -9,6 +9,7 @@ import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
 import { reportView } from '../testing/admin-fixtures';
 import {
+  draftWorkOf,
   MemoryDraftShelf,
   memoryDraftShelfProviders,
 } from '../../../core/drafts/testing/memory-draft-shelf';
@@ -570,6 +571,7 @@ describe('Given an administrator changing the monthly report on a device that ke
   async function settle(): Promise<void> {
     for (let round = 0; round < 3; round++) {
       await new Promise((resolve) => setTimeout(resolve, 0));
+      await draftWorkOf(fixture.componentInstance);
       await fixture.whenStable();
       fixture.detectChanges();
     }
@@ -703,7 +705,7 @@ describe('Given an administrator changing the monthly report on a device that ke
     );
     await settle();
     expect(element('app-changed-meanwhile-dialog dialog').textContent).toContain(
-      'Od chvíle, kdy jste text na tomto zařízení rozepsali',
+      'Od chvíle, kdy jste na tomto zařízení začali s úpravami',
     );
 
     button('Zahodit své úpravy a načíst novější verzi').click();

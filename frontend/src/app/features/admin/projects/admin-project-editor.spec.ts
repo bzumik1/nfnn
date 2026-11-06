@@ -15,6 +15,7 @@ import {
   uploadedImage,
 } from '../../content/testing/project-fixtures';
 import {
+  draftWorkOf,
   MemoryDraftShelf,
   memoryDraftShelfProviders,
 } from '../../../core/drafts/testing/memory-draft-shelf';
@@ -1141,6 +1142,7 @@ describe('Given an administrator editing a published project on a device that ke
   async function drafted(): Promise<void> {
     for (let round = 0; round < 3; round++) {
       await new Promise((resolve) => setTimeout(resolve, 0));
+      await draftWorkOf(fixture.componentInstance);
       await settle(fixture);
     }
   }
@@ -1204,7 +1206,7 @@ describe('Given an administrator editing a published project on a device that ke
         'Zahrada pro všechny děti',
       );
       expect(text(fixture, '[role="status"]:not(:empty)')).toBe(
-        'Pokračujete v rozepsaných úpravách. Zatím jsou jen na tomto zařízení a platit začnou, až je uložíte.',
+        'Pokračujete v rozepsaných úpravách. Zůstanou jen na tomto zařízení, dokud je neuložíte.',
       );
 
       await submit(fixture);
@@ -1252,7 +1254,7 @@ describe('Given an administrator editing a published project on a device that ke
     await settle(fixture);
 
     expect(element(fixture, 'app-changed-meanwhile-dialog dialog').textContent).toContain(
-      'Od chvíle, kdy jste text na tomto zařízení rozepsali',
+      'Od chvíle, kdy jste na tomto zařízení začali s úpravami',
     );
     button(fixture, 'Uložit svou verzi místo novější').click();
     await settle(fixture);

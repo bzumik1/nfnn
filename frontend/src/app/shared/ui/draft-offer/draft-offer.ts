@@ -1,10 +1,19 @@
 /// <reference types="@angular/localize" />
 
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import {
+  afterNextRender,
+  ChangeDetectionStrategy,
+  Component,
+  DOCUMENT,
+  ElementRef,
+  inject,
+  input,
+  output,
+} from '@angular/core';
 
 let nextId = 0;
 
-export const DRAFT_RESUMED_TEXT = $localize`:@@ui.draftOffer.resumed:Pokračujete v rozepsaných úpravách. Zatím jsou jen na tomto zařízení a platit začnou, až je uložíte.`;
+export const DRAFT_RESUMED_TEXT = $localize`:@@ui.draftOffer.resumed:Pokračujete v rozepsaných úpravách. Zůstanou jen na tomto zařízení, dokud je neuložíte.`;
 export const DRAFT_DISCARDED_TEXT = $localize`:@@ui.draftOffer.discarded:Rozepsané úpravy jsme z tohoto zařízení zahodili.`;
 
 @Component({
@@ -23,4 +32,24 @@ export class DraftOffer {
   readonly discarded = output<void>();
 
   protected readonly titleId = `draft-offer-title-${nextId++}`;
+
+  constructor() {
+    const document = inject(DOCUMENT);
+    const host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+    afterNextRender(() => {
+      const active = document.activeElement;
+      if (active === null || active === document.body || insideInert(active)) {
+        host.querySelector<HTMLElement>('.draft-offer__title')?.focus();
+      }
+    });
+  }
+}
+
+function insideInert(element: Element): boolean {
+  for (let node: Element | null = element; node !== null; node = node.parentElement) {
+    if (node instanceof HTMLElement && node.inert) {
+      return true;
+    }
+  }
+  return false;
 }

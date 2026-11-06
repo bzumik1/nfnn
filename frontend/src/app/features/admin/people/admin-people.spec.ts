@@ -23,6 +23,7 @@ import {
   vectorReceiptSignature,
 } from '../testing/admin-fixtures';
 import {
+  draftWorkOf,
   MemoryDraftShelf,
   memoryDraftShelfProviders,
   valuesBase,
@@ -973,6 +974,7 @@ describe('Given an administrator writing the texts of the people page on a devic
   async function drafted(): Promise<void> {
     for (let round = 0; round < 3; round++) {
       await new Promise((resolve) => setTimeout(resolve, 0));
+      await draftWorkOf(fixture.componentInstance);
       await settle(fixture);
     }
   }
@@ -1077,7 +1079,7 @@ describe('Given an administrator writing the texts of the people page on a devic
       await submit(fixture, 'form:has(#founders-note)');
       http.expectNone(`${PEOPLE_URL}/note`);
       expect(element(fixture, 'app-changed-meanwhile-dialog dialog').textContent).toContain(
-        'Od chvíle, kdy jste text na tomto zařízení rozepsali',
+        'Od chvíle, kdy jste na tomto zařízení začali s úpravami',
       );
 
       button(fixture, 'Uložit svou verzi místo novější').click();
@@ -1170,7 +1172,7 @@ describe('Given an administrator writing the texts of the people page on a devic
 
     http.expectNone(`${PEOPLE_URL}/footnote`);
     expect(element(fixture, 'app-changed-meanwhile-dialog dialog').textContent).toContain(
-      'Od chvíle, kdy jste text na tomto zařízení rozepsali',
+      'Od chvíle, kdy jste na tomto zařízení začali s úpravami',
     );
   });
 });
