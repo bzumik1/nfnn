@@ -214,6 +214,10 @@
     var(--tab-bar-rendered-height) + 2 * var(--tab-bar-gap-browser) + env(safe-area-inset-bottom)
   );
   --back-button-size: 45px;
+  --window-controls-room-inline: 75px;
+  --window-controls-room-block: 55px;
+  --window-controls-inset-inline: 0px;
+  --window-controls-inset-block: 0px;
   --scroll-edge-fade: 15px;
   --touch-target-size: 45px;
   --list-row-min-height: 55px;
