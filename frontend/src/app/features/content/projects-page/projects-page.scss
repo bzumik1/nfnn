@@ -138,8 +138,10 @@
   font-weight: var(--weight-semibold);
   text-decoration: none;
 
-  &:hover {
-    background: var(--color-surface-alt);
+  @media (hover: hover) {
+    &:hover {
+      background: var(--color-surface-alt);
+    }
   }
 
   &[aria-current] {
@@ -184,8 +186,10 @@
   font-weight: var(--weight-semibold);
   text-decoration: none;
 
-  &:hover {
-    text-decoration: underline;
+  @media (hover: hover) {
+    &:hover {
+      text-decoration: underline;
+    }
   }
 }
 
@@ -225,8 +229,10 @@
   text-align: center;
   text-decoration: none;
 
-  &:hover {
-    text-decoration: underline;
+  @media (hover: hover) {
+    &:hover {
+      text-decoration: underline;
+    }
   }
 }
 

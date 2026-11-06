@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'pressed';
 
 :host {
   display: block;
@@ -17,9 +18,17 @@
     box-shadow var(--duration-base),
     transform var(--duration-base);
 
-  &:hover {
-    box-shadow: var(--shadow-card-hover);
-    transform: translateY(-2px);
+  @media (hover: hover) {
+    &:hover {
+      box-shadow: var(--shadow-card-hover);
+      transform: translateY(-2px);
+    }
+  }
+}
+
+.tile:has(.tile-link:active) {
+  @include pressed.look {
+    @include pressed.shrinks;
   }
 }
 
@@ -79,6 +88,10 @@
 .tile-link {
   color: inherit;
   text-decoration: none;
+
+  &:active {
+    background-image: none;
+  }
 
   &::after {
     content: '';
