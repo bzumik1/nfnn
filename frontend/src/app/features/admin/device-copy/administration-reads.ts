@@ -1,7 +1,8 @@
 import { HttpHeaders } from '@angular/common/http';
-import { computed, inject, Injectable } from '@angular/core';
+import { computed, effect, inject, Injectable, untracked } from '@angular/core';
 import { catchError, concat, defer, from, map, type Observable, of, switchMap } from 'rxjs';
 import { Connectivity, isUnreachable } from '../../../core/connectivity/connectivity';
+import { AdministrationWrites } from '../../../core/admin-writes/administration-writes';
 import { ShownAnswers } from '../../../core/connectivity/shown-answers';
 import { DeviceVault, type OpenedCopy } from '../../../core/device/store/device-vault';
 import {
@@ -50,9 +51,9 @@ export class AdministrationReads {
   private readonly connectivity = inject(Connectivity);
   private readonly shown = inject(ShownAnswers);
   private readonly vault = inject(DeviceVault);
+  private readonly writes = inject(AdministrationWrites);
   private checkedCopy: OpenedCopy | null = null;
-  private changes = 0;
-  private freshFor = -1;
+  private freshFor = 0;
   private checkedAt = Number.NEGATIVE_INFINITY;
   private failedAt = Number.NEGATIVE_INFINITY;
 
@@ -68,8 +69,15 @@ export class AdministrationReads {
     latest(this.download.checkedAt(), this.copy.storedAt()),
   );
 
+  constructor() {
+    effect(() => {
+      const opened = this.vault.administration();
+      untracked(() => this.forgetAnotherCopy(opened));
+    });
+  }
+
   changed(): void {
-    this.changes += 1;
+    this.writes.record();
   }
 
   paymentList(
@@ -79,10 +87,11 @@ export class AdministrationReads {
     return this.read(
       () => {
         const rows = this.donationsRows();
-        if (rows === null || (pairing === 'paired' && this.holdsErasedBankGifts(rows))) {
+        if (rows === null) {
           return null;
         }
-        return paymentList(rows, pairing, query);
+        const answer = paymentList(rows, pairing, query);
+        return pairing === 'paired' && this.listsErasedGifts(rows, answer, query) ? null : answer;
       },
       () => this.api.payments(pairing, query),
     );
@@ -186,8 +195,9 @@ export class AdministrationReads {
     if (this.connectivity.offline()) {
       return true;
     }
-    this.forgetAnotherCopy();
-    const changes = this.changes;
+    const opened = this.vault.administration();
+    this.forgetAnotherCopy(opened);
+    const changes = this.writes.made();
     const changed = changes !== this.freshFor;
     if (!changed && Date.now() - this.checkedAt < REFRESH_AFTER_MS) {
       return true;
@@ -195,7 +205,10 @@ export class AdministrationReads {
     if (Date.now() - this.failedAt < REFRESH_AFTER_MS) {
       return false;
     }
-    const outcome = await this.download.refresh(changed && changes > 0);
+    const outcome = await this.download.refresh(changed);
+    if (this.vault.administration() !== opened) {
+      return false;
+    }
     if (outcome === 'stored' || outcome === 'unchanged') {
       this.checkedAt = Date.now();
       this.failedAt = Number.NEGATIVE_INFINITY;
@@ -206,26 +219,39 @@ export class AdministrationReads {
     return this.connectivity.offline();
   }
 
-  private forgetAnotherCopy(): void {
-    const opened = this.vault.administration();
+  private forgetAnotherCopy(opened: OpenedCopy | null): void {
     if (opened !== this.checkedCopy) {
       this.checkedCopy = opened;
       this.checkedAt = Number.NEGATIVE_INFINITY;
       this.failedAt = Number.NEGATIVE_INFINITY;
-      this.freshFor = -1;
+      this.freshFor = this.writes.made();
     }
   }
 
-  private holdsErasedBankGifts(rows: DonationsCopyRows): boolean {
+  private listsErasedGifts(
+    rows: DonationsCopyRows,
+    answer: AdminPaymentListResponse,
+    query: PaymentQuery,
+  ): boolean {
     if (this.connectivity.offline()) {
       return false;
     }
     const erased = new Set(
       rows.donorRecords.flatMap((record) => (record.erasedAt === null ? [] : [record.donorId])),
     );
-    return rows.donations.some(
-      (donation) => donation.paymentId !== null && erased.has(donation.donorId),
-    );
+    if (erased.size === 0) {
+      return false;
+    }
+    const searched =
+      query.text === undefined || query.text.trim() === ''
+        ? answer.items
+        : paymentList(rows, 'paired', {
+            ...query,
+            text: undefined,
+            offset: undefined,
+            limit: undefined,
+          }).items;
+    return searched.some((item) => item.donation !== null && erased.has(item.donation.donorId));
   }
 
   private donationsRows(): DonationsCopyRows | null {

@@ -209,6 +209,7 @@ export class AdminDonorDetail {
       const offline = this.connectivity.offline();
       untracked(() => {
         if (wasOffline && !offline && this.bankAccountsSource() === 'offline') {
+          this.bankAccountsSource.set('pending');
           this.readCard();
         }
         wasOffline = offline;

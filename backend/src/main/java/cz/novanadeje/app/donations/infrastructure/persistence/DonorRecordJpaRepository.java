@@ -21,7 +21,7 @@ interface DonorRecordJpaRepository extends JpaRepository<DonorRecordJpaEntity, U
 
     @Query("select r from DonorRecordJpaEntity r where r.erasedAt is null"
             + " and (lower(function('translate', r.name, '" + AccentFolding.ACCENTED + "', '" + AccentFolding.PLAIN + "')) like concat('%', :query, '%') escape '!'"
-            + " or r.variableSymbol like concat(:query, '%') escape '!') order by r.name, r.donorId")
+            + " or r.variableSymbol like concat(:query, '%') escape '!') order by collate(r.name as ucs_basic), r.donorId")
     List<DonorRecordJpaEntity> searchByNameOrSymbol(@Param("query") String query, Pageable page);
 
     List<DonorRecordJpaEntity> findAllByOrderByDonorIdAsc();

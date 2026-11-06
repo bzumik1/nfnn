@@ -44,7 +44,10 @@ export class AdministrationCopyDownload {
     readonly copy: OpenedCopy;
     readonly outcome: Promise<AdministrationDownloadOutcome>;
   } | null = null;
-  private queued: Promise<AdministrationDownloadOutcome> | null = null;
+  private queued: {
+    readonly copy: OpenedCopy;
+    readonly outcome: Promise<AdministrationDownloadOutcome>;
+  } | null = null;
 
   readonly firstDownload = this.progress.asReadonly();
   readonly checkedAt = this.checked.asReadonly();
@@ -68,14 +71,17 @@ export class AdministrationCopyDownload {
     if (!startingNow || running === null) {
       return this.synced(opened);
     }
-    if (this.queued === null) {
+    if (this.queued?.copy !== opened) {
       const next = (): Promise<AdministrationDownloadOutcome> => {
-        this.queued = null;
+        if (this.queued?.outcome === outcome) {
+          this.queued = null;
+        }
         return this.refresh();
       };
-      this.queued = running.then(next, next);
+      const outcome = running.then(next, next);
+      this.queued = { copy: opened, outcome };
     }
-    return this.queued;
+    return this.queued.outcome;
   }
 
   private synced(opened: OpenedCopy): Promise<AdministrationDownloadOutcome> {

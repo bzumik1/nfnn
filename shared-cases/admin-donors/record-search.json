@@ -885,6 +885,57 @@
           }
         ]
       }
+    },
+    {
+      "name": "A character beyond the Basic Multilingual Plane orders by its code point, after the full-width letters, as the database orders its bytes",
+      "input": {
+        "now": "2026-10-20T10:00:00Z",
+        "donors": [
+          { "alias": "a1", "registeredAt": "2024-01-10T10:00:00Z", "erasedAt": null, "name": "Ｚdeněk Astra", "variableSymbol": "4200000001" },
+          { "alias": "a2", "registeredAt": "2024-02-10T10:00:00Z", "erasedAt": null, "name": "𝐀dam Astra", "variableSymbol": "4200000002" }
+        ],
+        "payments": [],
+        "donations": [],
+        "chunks": {
+          "donations/donor-records:2024-01": [
+            {
+              "donorId": "donor:a1",
+              "name": "Ｚdeněk Astra",
+              "type": "PERSON",
+              "variableSymbol": "4200000001",
+              "companyIdentifier": null,
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "preferredLocale": "cs",
+              "registeredAt": "2024-01-10T10:00:00Z",
+              "erasedAt": null
+            }
+          ],
+          "donations/donor-records:2024-02": [
+            {
+              "donorId": "donor:a2",
+              "name": "𝐀dam Astra",
+              "type": "PERSON",
+              "variableSymbol": "4200000002",
+              "companyIdentifier": null,
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "preferredLocale": "cs",
+              "registeredAt": "2024-02-10T10:00:00Z",
+              "erasedAt": null
+            }
+          ]
+        },
+        "queries": [{ "query": "astra" }]
+      },
+      "expected": {
+        "answers": [
+          {
+            "items": [
+              { "donorId": "donor:a1", "name": "Ｚdeněk Astra", "type": "PERSON", "variableSymbol": "4200000001", "companyIdentifier": null },
+              { "donorId": "donor:a2", "name": "𝐀dam Astra", "type": "PERSON", "variableSymbol": "4200000002", "companyIdentifier": null }
+            ]
+          }
+        ]
+      }
     }
   ]
 }
