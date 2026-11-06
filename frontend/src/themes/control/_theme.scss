@@ -50,6 +50,7 @@
   --color-tab-bar: color-mix(in srgb, #1c2b25 72%, transparent);
   --color-tab-bar-rim: color-mix(in srgb, #fdfcf7 30%, transparent);
   --color-tab-pill: color-mix(in srgb, #111a16 92%, transparent);
+  --color-tab-pill-rim: var(--color-tab-bar-rim);
   --color-tab-active: #5eead4;
   --color-on-tab-bar: #fdfcf7;
   --color-tab-focus-ring: #fdba74;

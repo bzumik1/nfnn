@@ -374,6 +374,14 @@ export function webDriverUi(
       const atCentre = await driver.execute<string>(ELEMENT_AT_CENTRE, element);
       throw new Error(`no press clicked ${described(target)}; at its centre: ${atCentre}`);
     },
+    fill: async (target, text) => {
+      const element = await shown(target);
+      await driver.execute(
+        "arguments[0].focus(); arguments[0].value = arguments[1]; arguments[0].dispatchEvent(new Event('input', { bubbles: true }));",
+        element,
+        text,
+      );
+    },
     waitAttribute: async (target, name, value) => {
       await until(`${described(target)} to have ${name}="${value}"`, waits.ms, async () => {
         const element = await find(target);

@@ -482,7 +482,6 @@ test.describe('Given an administrator on the donors page', () => {
         (response) => new URL(response.url()).pathname === '/api/donations/receipt-keys',
       );
       await page.goto(`/sprava/darci/${PETR_ID}`);
-      await keysRead;
       const row = page
         .getByRole('region', { name: 'Vydaná potvrzení' })
         .getByRole('row')
@@ -490,6 +489,7 @@ test.describe('Given an administrator on the donors page', () => {
       await expect(
         row.getByRole('button', { name: `Stáhnout PDF potvrzení ${receipt.number}` }),
       ).toBeVisible();
+      await keysRead;
       const warning = row.getByText('QR na tomto potvrzení podepsal zneplatněný klíč.', {
         exact: false,
       });

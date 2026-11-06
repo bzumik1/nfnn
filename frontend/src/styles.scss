@@ -36,6 +36,10 @@ html:has(app-tab-bar) {
   scroll-padding-bottom: var(--tab-bar-clearance);
 }
 
+html:has(app-landing) {
+  background: var(--color-image-shade);
+}
+
 :focus-visible {
   outline: 3px solid var(--color-focus-ring);
   outline-offset: 2px;

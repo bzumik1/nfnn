@@ -1,6 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { AdministrationAccess } from './administration-access';
 import { AuthStore, SESSION_HINT_KEY } from './auth-store';
 import { Donor } from './donor';
 import { PasskeyAuthenticator } from './passkey-authenticator';
@@ -245,6 +246,19 @@ describe('Given the auth store', () => {
     expect(store.currentAccessToken()).toBeNull();
     expect(store.status()).toBe('anonymous');
     expect(localStorage.getItem(SESSION_HINT_KEY)).toBeNull();
+  });
+
+  it('when the donor signs in here and then signs out, then the administration of this tab unlocks with the sign-in and locks again with the sign-out', () => {
+    const access = TestBed.inject(AdministrationAccess);
+    signIn();
+    expect(access.unlocked()).toBe(true);
+
+    store.logout().subscribe();
+    http
+      .expectOne('/api/donors/auth/logout')
+      .flush(null, { status: 204, statusText: 'No Content' });
+
+    expect(access.unlocked()).toBe(false);
   });
 
   it('when the profile is updated, then the store shows the new profile', () => {
@@ -697,6 +711,18 @@ describe('Given the auth store in one of several tabs of the browser', () => {
     expect(store.status()).toBe('anonymous');
     expect(store.currentAccessToken()).toBeNull();
     expect(localStorage.getItem(SESSION_HINT_KEY)).toBeNull();
+  });
+
+  it('when another tab signs out, then the administration of this tab locks, and a session another tab announces later leaves it locked', () => {
+    const access = TestBed.inject(AdministrationAccess);
+    signInFirst();
+    expect(access.unlocked()).toBe(true);
+
+    channel.deliverFromAnotherTab(signedOut());
+    expect(access.unlocked()).toBe(false);
+    channel.deliverFromAnotherTab(sessionRefreshed(authResponse('token-12')));
+
+    expect(access.unlocked()).toBe(false);
   });
 
   it('when another tab announces the session of another donor, then this tab keeps its own', () => {

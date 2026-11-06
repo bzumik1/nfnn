@@ -1,12 +1,17 @@
 /// <reference types="@angular/localize" />
 
+import { inject, signal } from '@angular/core';
 import { Routes } from '@angular/router';
+import { AdministrationLockPanel } from './lock/administration-lock-panel';
+import { AdministrationLockService } from './lock/administration-lock-service';
+import { ADMINISTRATION_LOCK, type AdministrationLock } from './shell/administration-lock';
 import { ADMIN_HOME_PATH, ADMIN_MORE_PATH } from './shell/admin-sections';
 import { unsavedChangesGuard } from './unsaved-changes/unsaved-changes-guard';
 
 export const adminRoutes: Routes = [
   {
     path: '',
+    providers: [{ provide: ADMINISTRATION_LOCK, useFactory: administrationLock }],
     loadComponent: () => import('./shell/admin-shell').then((m) => m.AdminShell),
     children: [
       {
@@ -153,3 +158,13 @@ export const adminRoutes: Routes = [
     ],
   },
 ];
+
+function administrationLock(): AdministrationLock {
+  const lock = inject(AdministrationLockService);
+  return {
+    locked: lock.locked,
+    panel: signal(AdministrationLockPanel).asReadonly(),
+    keepsPage: lock.keepsPage,
+    firstDownload: lock.firstDownload,
+  };
+}
