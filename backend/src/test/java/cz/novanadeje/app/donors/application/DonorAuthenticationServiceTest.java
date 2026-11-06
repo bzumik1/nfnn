@@ -36,11 +36,17 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.SimpleTransactionStatus;
 
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.Set;
@@ -84,13 +90,14 @@ class DonorAuthenticationServiceTest {
     @Mock
     private SecondFactorChallengeRepository challenges;
 
+    private final CountingTransactions transactions = new CountingTransactions();
     private DonorAuthenticationService service;
     private Donor donor;
 
     @BeforeEach
     void setUp() {
         service = new DonorAuthenticationService(donors, passwordHasher, sessions, new DonorViews(secondFactors, verificationTokens, Clock.fixed(NOW, ZoneOffset.UTC)), secondFactors, challenges,
-                new DonorSecondFactorProperties(CHALLENGE_TTL, CHALLENGE_ATTEMPTS, "Nová naděje", Duration.ofDays(14)), new SecondFactorCodes(secondFactors, wrongCodes), Clock.fixed(NOW, ZoneOffset.UTC));
+                new DonorSecondFactorProperties(CHALLENGE_TTL, CHALLENGE_ATTEMPTS, "Nová naděje", Duration.ofDays(14)), new SecondFactorCodes(secondFactors, wrongCodes), transactions, Clock.fixed(NOW, ZoneOffset.UTC));
         donor = Donor.register(DonorId.newId(NOW), DonorType.COMPANY, "Stavby Novák s.r.o.", new CompanyIdentifier("45274649"),
                 new PostalAddress("Průmyslová 5", "Teplice", "415 01"), EMAIL, HASH, new VariableSymbol("1234567890"), LocaleCode.CS, NOW);
         donor.verifyEmail(NOW);
@@ -147,6 +154,60 @@ class DonorAuthenticationServiceTest {
 
         assertThat(result.donor().companyIdentifier()).isEqualTo("45274649");
         assertThat(result.tokens().refreshToken()).isEqualTo("refresh");
+    }
+
+    @Test
+    @DisplayName("Given the matching password, when a donor signs in, then the password is compared outside any transaction and the session opens in one")
+    void should_compare_password_outside_transaction_and_open_session_inside_when_logged_in_given_matching_password() {
+        List<Integer> openWhenCompared = new ArrayList<>();
+        List<Integer> openWhenSignedIn = new ArrayList<>();
+        when(donors.findByEmail(EMAIL)).thenReturn(Optional.of(donor));
+        when(passwordHasher.matches(new RawPassword("correct horse battery"), HASH)).thenAnswer(compare -> {
+            openWhenCompared.add(transactions.open);
+            return true;
+        });
+        when(sessions.signIn(donor, false, DeviceDescription.UNKNOWN, SessionKind.REMEMBERED)).thenAnswer(signIn -> {
+            openWhenSignedIn.add(transactions.open);
+            return TOKENS;
+        });
+
+        service.login("jana@example.cz", "correct horse battery", DeviceDescription.UNKNOWN, SessionKind.REMEMBERED);
+
+        assertThat(openWhenCompared).containsExactly(0);
+        assertThat(openWhenSignedIn).containsExactly(1);
+        assertThat(transactions.open).isZero();
+        assertThat(transactions.rolledBack).isZero();
+    }
+
+    @Test
+    @DisplayName("Given the password changed after it was read, when the donor signs in with the old one, then it is refused and no session opens")
+    void should_refuse_when_logged_in_given_password_changed_after_read() {
+        Donor changed = Donor.register(donor.id(), DonorType.COMPANY, "Stavby Novák s.r.o.", new CompanyIdentifier("45274649"),
+                new PostalAddress("Průmyslová 5", "Teplice", "415 01"), EMAIL, new PasswordHash("$changed"), new VariableSymbol("1234567890"),
+                LocaleCode.CS, NOW);
+        changed.verifyEmail(NOW);
+        when(donors.findByEmail(EMAIL)).thenReturn(Optional.of(donor), Optional.of(changed));
+        when(passwordHasher.matches(new RawPassword("correct horse battery"), HASH)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.login("jana@example.cz", "correct horse battery", DeviceDescription.UNKNOWN, SessionKind.REMEMBERED))
+                .isInstanceOf(InvalidCredentials.class);
+
+        verify(sessions, never()).signIn(any(), anyBoolean(), any(), any());
+    }
+
+    @Test
+    @DisplayName("Given a donor with an enabled second factor, when signing in with the right password, then the challenge is committed, not rolled back")
+    void should_commit_challenge_when_logged_in_given_enabled_second_factor() {
+        when(donors.findByEmail(EMAIL)).thenReturn(Optional.of(donor));
+        when(passwordHasher.matches(new RawPassword("correct horse battery"), HASH)).thenReturn(true);
+        when(secondFactors.findByDonor(donor.id())).thenReturn(Optional.of(enabledFactor()));
+
+        assertThatThrownBy(() -> service.login("jana@example.cz", "correct horse battery", DeviceDescription.UNKNOWN, SessionKind.REMEMBERED))
+                .isInstanceOf(SecondFactorRequired.class);
+
+        assertThat(transactions.rolledBack).isZero();
+        assertThat(transactions.open).isZero();
+        verify(challenges).save(any());
     }
 
     @Test
@@ -349,6 +410,29 @@ class DonorAuthenticationServiceTest {
         assertThatThrownBy(() -> service.completeSecondFactor("not a challenge", codeAt(NOW), DeviceDescription.UNKNOWN, SessionKind.REMEMBERED)).isInstanceOf(InvalidSecondFactorChallenge.class);
 
         verifyNoInteractions(secondFactors, sessions);
+    }
+
+    private static final class CountingTransactions implements PlatformTransactionManager {
+
+        private int open;
+        private int rolledBack;
+
+        @Override
+        public TransactionStatus getTransaction(TransactionDefinition definition) {
+            open++;
+            return new SimpleTransactionStatus();
+        }
+
+        @Override
+        public void commit(TransactionStatus status) {
+            open--;
+        }
+
+        @Override
+        public void rollback(TransactionStatus status) {
+            open--;
+            rolledBack++;
+        }
     }
 
     private SecondFactor enabledFactor() {
