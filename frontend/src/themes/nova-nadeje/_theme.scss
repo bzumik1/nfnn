@@ -147,7 +147,7 @@
   --text-cta-title: clamp(max(1rem, min(1.625rem, 16vw)), 3.5vw, 2.75rem);
   --text-article-title: clamp(max(1rem, min(2.125rem, 16vw)), 5vw, 3.5rem);
   --text-page-title: clamp(max(1rem, min(2.25rem, 16vw)), 5.5vw, 3.75rem);
-  --text-hero: clamp(3.25rem, 8vw, 6.25rem);
+  --text-hero: clamp(max(1rem, min(3.25rem, 27vw)), 8vw, 6.25rem);
   --text-hero-short: max(2.25rem, min(6vw, 13svh));
 
   --weight-regular: 400;
