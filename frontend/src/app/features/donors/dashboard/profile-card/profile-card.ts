@@ -32,6 +32,7 @@ import {
   POSTAL_CODE_MESSAGES,
   STREET_MESSAGES,
 } from '../../donor-field-messages';
+import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
 
 interface ProfileFields {
   name: string;
@@ -63,6 +64,7 @@ const PROFILE_FIELDS: Readonly<Record<string, string>> = {
     FormControlDirective,
     FocusFirstInvalid,
     PrintableOnReceiptValidator,
+    NeedsConnection,
   ],
   templateUrl: './profile-card.html',
   styleUrl: './profile-card.scss',

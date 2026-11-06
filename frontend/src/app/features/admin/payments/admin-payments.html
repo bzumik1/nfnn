@@ -130,6 +130,7 @@
     }
     @if (incomingLabel(); as label) {
       &ngsp;<button
+        appNeedsConnection
         type="button"
         class="ui-button ui-button--small ui-button--primary payments-incoming"
         (click)="showIncoming()"
@@ -374,6 +375,7 @@
                         <span class="confirm" role="group" [attr.aria-label]="unpairLabel(item)">
                           <span class="confirm-question">{{ unpairQuestion(item) }}</span>
                           <button
+                            appNeedsConnection
                             type="button"
                             class="ui-button ui-button--small ui-button--danger"
                             [disabled]="busy()"
@@ -424,6 +426,7 @@
               >Zobrazeno {{ items().length }} z {{ total() }}.</span
             >
             <button
+              appNeedsConnection
               type="button"
               class="ui-button ui-button--small"
               [disabled]="loadingMore()"
@@ -581,6 +584,7 @@
 
     <div class="ui-dialog__actions pair-actions">
       <button
+        appNeedsConnection
         type="button"
         class="pair-submit"
         [disabled]="selectedDonor() === null || busy()"
@@ -694,6 +698,7 @@
         <div class="confirm" role="group" [attr.aria-label]="unpairLabel(payment)">
           <p class="confirm-question">{{ unpairQuestion(payment) }}</p>
           <button
+            appNeedsConnection
             type="button"
             class="ui-button ui-button--small ui-button--danger"
             [disabled]="busy()"

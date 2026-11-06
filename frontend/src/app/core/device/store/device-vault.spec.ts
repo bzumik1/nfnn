@@ -423,9 +423,11 @@ describe('Given the device vault over IndexedDB with real WebCrypto', () => {
       await other.restored(JANA);
       expect(other.opened()).not.toBeNull();
 
-      await vault.forget(JANA);
+      const forgetting = vault.forget(JANA);
+      void other.lockAdministration();
+      await forgetting;
 
-      expect(other.opened()).toBeNull();
+      await vi.waitFor(() => expect(other.opened()).toBeNull());
     });
 
     it('and another tab has her copy open and this tab stores new gifts, then the other tab shows them', async () => {

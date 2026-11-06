@@ -8,6 +8,7 @@ import {
   servePaymentDetails,
 } from '../baseline/screen-mocks';
 import { administrator, donor, mockDonorApi, session } from '../donor-session';
+import { ADMINISTRATION_UNLOCK_PATH } from '../fixtures';
 import { serveReceiptKeys, serveReceiptStatus, SINGLE_RECEIPT } from '../receipt-verification';
 import { FOUR_DONORS, mockYearlyReceipts } from '../yearly-receipts';
 import type { Ui } from './ui';
@@ -21,6 +22,7 @@ export interface Step {
 export const NOT_ON_THIS_DEVICE = 'not on this device';
 
 const DIALOG = { css: 'dialog' };
+const LOCK_PANEL = { css: '.lock-panel h1' };
 const OTHER_DEVICE = { css: '#prispet button.other-device' };
 const DONATE_QR = { css: '#prispet .qr-code [role="img"]' };
 
@@ -99,11 +101,25 @@ async function donorPage(ui: Ui, path: string): Promise<void> {
   await visit(ui, path);
 }
 
-async function adminPage(ui: Ui, path: string): Promise<void> {
+async function lockedAdministration(ui: Ui, path: string): Promise<void> {
   await mockDonorApi(ui.routes, donorWithDonations);
   await mockAdministration(ui.routes);
+  await ui.routes.route(
+    (url) => url.pathname === ADMINISTRATION_UNLOCK_PATH,
+    (route) => route.fulfill({ status: 204 }),
+  );
   await rememberedSession(ui, administrator);
-  await visit(ui, path);
+  await ui.goto(path);
+  await ui.waitVisible(LOCK_PANEL);
+}
+
+async function adminPage(ui: Ui, path: string): Promise<void> {
+  await lockedAdministration(ui, path);
+  await ui.click({ css: 'button.lock-use-password' });
+  await ui.fill({ css: '#zamek-heslo' }, 'correct horse battery');
+  await ui.fill({ css: '#zamek-kod' }, '123456');
+  await ui.click({ css: 'button.lock-unlock' });
+  await ui.waitVisible({ css: '.admin-page h1' });
 }
 
 async function openSignInDialog(ui: Ui): Promise<void> {
@@ -241,6 +257,20 @@ export const STEPS: Step[] = [
       await donorPage(ui, '/darce/prehled');
       await ui.click({ css: 'header button.account-button' });
       await ui.waitVisible({ css: 'dialog[open] a' });
+    },
+  },
+  {
+    id: 'admin-lock',
+    title: 'the locked administration',
+    open: (ui) => lockedAdministration(ui, '/sprava'),
+  },
+  {
+    id: 'admin-unlock-password',
+    title: 'the password and code that unlock the administration',
+    open: async (ui) => {
+      await lockedAdministration(ui, '/sprava');
+      await ui.click({ css: 'button.lock-use-password' });
+      await ui.waitVisible({ css: '#zamek-heslo' });
     },
   },
   { id: 'admin-home', title: 'the administration', open: (ui) => adminPage(ui, '/sprava') },

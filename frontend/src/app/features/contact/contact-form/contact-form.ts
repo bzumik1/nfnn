@@ -25,6 +25,7 @@ import { FormField } from '../../../shared/ui/form-field/form-field';
 import { placeServerErrors } from '../../../shared/ui/form-field/server-errors';
 import { AccountingDetails } from '../accounting-details/accounting-details';
 import { ContactApi, ContactMessageRequest } from '../contact-api';
+import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 
 const TOO_MANY_REQUESTS = 429;
 const MESSAGE_FIELDS: Readonly<Record<string, string>> = {
@@ -42,6 +43,7 @@ const MESSAGE_FIELDS: Readonly<Record<string, string>> = {
     FormControlDirective,
     FocusFirstInvalid,
     AccountingDetails,
+    NeedsConnection,
   ],
   templateUrl: './contact-form.html',
   styleUrl: './contact-form.scss',
@@ -142,7 +144,7 @@ export class ContactForm {
   }
 }
 
-type Failure = 'tooMany' | 'updateRequired' | 'generic';
+type Failure = 'tooMany' | 'updateRequired' | 'offline' | 'generic';
 
 function emptyMessage(): ContactMessageRequest {
   return { fullName: '', email: '', message: '', website: '' };
@@ -151,6 +153,9 @@ function emptyMessage(): ContactMessageRequest {
 function classifyFailure(failure: unknown): Failure {
   if (failure instanceof HttpErrorResponse && failure.status === TOO_MANY_REQUESTS) {
     return 'tooMany';
+  }
+  if (failure instanceof HttpErrorResponse && failure.status === 0) {
+    return 'offline';
   }
   return problemTypeEndsWith(failure, UPDATE_REQUIRED) ? 'updateRequired' : 'generic';
 }

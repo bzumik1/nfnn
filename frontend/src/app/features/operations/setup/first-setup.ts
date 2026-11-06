@@ -51,6 +51,7 @@ import {
 } from './setup-api';
 import { Notice } from '../../../shared/ui/live-notice/live-notice';
 import { testEmailNotice } from '../test-email';
+import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 
 type BackupKeyState = 'idle' | 'loading' | 'ready' | 'unavailable' | 'error';
 
@@ -111,6 +112,7 @@ const SETTING_FIELDS: Readonly<Partial<Record<SettingName, string>>> = {
     BackupKeyPanel,
     BackupKeyWordValidator,
     BackupKeyValidator,
+    NeedsConnection,
   ],
   templateUrl: './first-setup.html',
   styleUrl: './first-setup.scss',

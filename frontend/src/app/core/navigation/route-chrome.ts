@@ -10,6 +10,7 @@ export interface RouteChromeData {
   readonly landing?: boolean;
   readonly phoneFooter?: boolean;
   readonly backOnWide?: boolean;
+  readonly logoBesideBack?: boolean;
 }
 
 export interface Chrome {
@@ -19,6 +20,7 @@ export interface Chrome {
   readonly landing: boolean;
   readonly phoneFooter: boolean;
   readonly backOnWide: boolean;
+  readonly logoBesideBack: boolean;
 }
 
 const PLAIN: Chrome = {
@@ -28,6 +30,7 @@ const PLAIN: Chrome = {
   landing: false,
   phoneFooter: false,
   backOnWide: true,
+  logoBesideBack: true,
 };
 
 @Injectable({ providedIn: 'root' })
@@ -62,6 +65,7 @@ function chromeOf(root: ActivatedRouteSnapshot): Chrome {
       landing: data.landing ?? false,
       phoneFooter: data.phoneFooter ?? false,
       backOnWide: data.backOnWide ?? chrome.backOnWide,
+      logoBesideBack: data.logoBesideBack ?? chrome.logoBesideBack,
     };
   }
   return chrome;

@@ -35,6 +35,7 @@ import {
   MAX_ABOUT_PHOTO_ALT_LENGTH,
 } from '../../content/about-api';
 import { MAX_IMAGE_BYTES, NewsApi } from '../../content/news-api';
+import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -61,6 +62,7 @@ const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
     FileButton,
     LiveNotice,
     FocalPointPicker,
+    NeedsConnection,
   ],
   templateUrl: './admin-about.html',
   styleUrl: './admin-about.scss',

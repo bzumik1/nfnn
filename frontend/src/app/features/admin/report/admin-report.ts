@@ -37,6 +37,7 @@ import {
 } from './email-list';
 import { followingMonth, formatReportMonth, previousMonths } from './report-month';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
+import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 import {
   isChangedMeanwhile,
   savedAtInRefusal,
@@ -69,6 +70,7 @@ const SEND_HOURS = Array.from({ length: 24 }, (_, index) => index);
     FormControlDirective,
     FocusFirstInvalid,
     EmailListValidator,
+    NeedsConnection,
     ChangedMeanwhileDialog,
   ],
   templateUrl: './admin-report.html',

@@ -13,7 +13,13 @@
     @case ('error') {
       <div class="ui-load-state ui-load-state--error" role="alert">
         <p i18n="@@admin.people.error.text">Lidi fondu se nepodařilo načíst.</p>
-        <button type="button" class="ui-button" (click)="load()" i18n="@@admin.people.error.retry">
+        <button
+          appNeedsConnection
+          type="button"
+          class="ui-button"
+          (click)="load()"
+          i18n="@@admin.people.error.retry"
+        >
           Zkusit znovu
         </button>
       </div>
@@ -119,6 +125,7 @@
                   </div>
                   <div class="ui-person-row__actions">
                     <button
+                      appNeedsConnection
                       type="button"
                       class="ui-button ui-button--small ui-button--quiet"
                       [id]="'person-up-' + member.id"
@@ -130,6 +137,7 @@
                       <span i18n="@@admin.people.move.up">Výš</span>
                     </button>
                     <button
+                      appNeedsConnection
                       type="button"
                       class="ui-button ui-button--small ui-button--quiet"
                       [id]="'person-down-' + member.id"
@@ -376,7 +384,12 @@
               </div>
 
               <div class="form-actions">
-                <button type="submit" class="ui-button ui-button--primary" [disabled]="busy()">
+                <button
+                  appNeedsConnection
+                  type="submit"
+                  class="ui-button ui-button--primary"
+                  [disabled]="busy()"
+                >
                   @if (saving()) {
                     <ng-container i18n="@@admin.people.saving">Ukládáme…</ng-container>
                   } @else if (adding()) {
@@ -444,6 +457,7 @@
                   </app-file-button>
                   @if (member.webSignature) {
                     <button
+                      appNeedsConnection
                       type="button"
                       class="ui-button ui-button--small ui-button--danger-outline"
                       [disabled]="busy()"
@@ -485,6 +499,7 @@
                         Nepodařilo se zjistit, kdo podepisuje potvrzení.
                       </p>
                       <button
+                        appNeedsConnection
                         type="button"
                         class="ui-button ui-button--small"
                         (click)="retrySignatory()"
@@ -553,6 +568,7 @@
                         </app-form-field>
                         <div class="form-actions">
                           <button
+                            appNeedsConnection
                             type="submit"
                             class="ui-button ui-button--primary"
                             [disabled]="busy()"
@@ -603,6 +619,7 @@
                         >Opravdu odebrat z webu osobu {{ member.name }}?</span
                       >
                       <button
+                        appNeedsConnection
                         type="button"
                         class="ui-button ui-button--danger"
                         [disabled]="removing()"
@@ -676,7 +693,12 @@
             </app-form-field>
           </div>
           <div class="form-actions">
-            <button type="submit" class="ui-button ui-button--primary" [disabled]="savingNote()">
+            <button
+              appNeedsConnection
+              type="submit"
+              class="ui-button ui-button--primary"
+              [disabled]="savingNote()"
+            >
               @if (savingNote()) {
                 <ng-container i18n="@@admin.people.note.saving">Ukládáme…</ng-container>
               } @else {
@@ -721,6 +743,7 @@
           </div>
           <div class="form-actions">
             <button
+              appNeedsConnection
               type="submit"
               class="ui-button ui-button--primary"
               [disabled]="savingFootnote()"

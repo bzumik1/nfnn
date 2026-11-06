@@ -79,7 +79,12 @@
               </app-form-field>
             }
             <div class="key-actions">
-              <button type="submit" class="ui-button ui-button--primary" [disabled]="confirming()">
+              <button
+                appNeedsConnection
+                type="submit"
+                class="ui-button ui-button--primary"
+                [disabled]="confirming()"
+              >
                 @if (confirming()) {
                   <ng-container i18n="@@admin.backups.key.confirm.busy">Potvrzujeme…</ng-container>
                 } @else {
@@ -133,6 +138,7 @@
                 <span i18n="@@admin.backups.key.orPasskey">Nebo bez kódu:</span>
                 &ngsp;
                 <button
+                  appNeedsConnection
                   type="button"
                   class="ui-link-button"
                   [disabled]="revealing()"
@@ -173,6 +179,7 @@
           }
           <div class="key-actions">
             <button
+              appNeedsConnection
               #revealButton
               type="submit"
               class="ui-button ui-button--primary"
@@ -198,6 +205,7 @@
       } @else {
         <div class="key-actions">
           <button
+            appNeedsConnection
             #showButton
             type="button"
             class="ui-button ui-button--primary"

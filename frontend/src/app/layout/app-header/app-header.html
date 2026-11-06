@@ -5,7 +5,7 @@
   [class.app-header--on-dark]="onDark()"
   [class.app-header--on-photo]="onPhoto()"
 >
-  <div class="app-header-inner">
+  <div class="app-header-inner" [class.app-header-inner--without-logo]="!showsLogo()">
     @if (parent()) {
       <button type="button" class="back-button" [attr.aria-label]="backLabel" (click)="back()">
         <svg
@@ -23,15 +23,17 @@
         </svg>
       </button>
     }
-    <a class="brand" [class.brand--after-back]="parent()" routerLink="/">
-      <img
-        [src]="onDark() ? '/images/logo-on-dark.svg' : '/images/logo.svg'"
-        alt="Nová naděje – nadační fond"
-        i18n-alt="@@layout.header.logoAlt"
-        width="115"
-        height="40"
-      />
-    </a>
+    @if (showsLogo()) {
+      <a class="brand" [class.brand--after-back]="parent()" routerLink="/">
+        <img
+          [src]="onDark() ? '/images/logo-on-dark.svg' : '/images/logo.svg'"
+          alt="Nová naděje – nadační fond"
+          i18n-alt="@@layout.header.logoAlt"
+          width="115"
+          height="40"
+        />
+      </a>
+    }
     @if (auth.signedIn()) {
       <button type="button" class="account-button" aria-haspopup="dialog" (click)="openAccount()">
         <span class="visually-hidden" i18n="@@layout.header.account">Účet</span>

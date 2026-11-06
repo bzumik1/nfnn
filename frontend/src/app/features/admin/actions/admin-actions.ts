@@ -19,6 +19,7 @@ import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { formatBankTime } from '../../donations/donation-date';
 import { AdminActionResponse, AdminApi } from '../admin-api';
+import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -91,7 +92,7 @@ const SERVER_ACTOR = '00000000-0000-0000-0000-000000000000';
 
 @Component({
   selector: 'app-admin-actions',
-  imports: [RouterLink],
+  imports: [NeedsConnection, RouterLink],
   templateUrl: './admin-actions.html',
   styleUrl: './admin-actions.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

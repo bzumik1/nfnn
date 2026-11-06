@@ -18,14 +18,16 @@
     <p class="hero-lead" i18n="@@home.hero.lead">
       Pomáháme zdravotně postiženým dětem k lepšímu životu. Každý příspěvek mění příběh.
     </p>
-    <div class="hero-btns">
-      <a class="ui-cta" routerLink="/prispet" i18n="@@home.hero.cta.primary">Přispět</a>
-      <a
-        class="ui-cta ui-cta--ghost ui-cta--on-image"
-        routerLink="/projekty"
-        i18n="@@home.hero.cta.secondary"
-        >Kde pomáháme</a
-      >
-    </div>
+    @if (!compact()) {
+      <div class="hero-btns">
+        <a class="ui-cta" routerLink="/prispet" i18n="@@home.hero.cta.primary">Přispět</a>
+        <a
+          class="ui-cta ui-cta--ghost ui-cta--on-image"
+          routerLink="/projekty"
+          i18n="@@home.hero.cta.secondary"
+          >Kde pomáháme</a
+        >
+      </div>
+    }
   </div>
 </section>

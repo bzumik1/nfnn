@@ -20,6 +20,7 @@ import { isChangedMeanwhile } from '../../../core/version/row-version';
 import { AdminApi, SymbolClaimResponse } from '../admin-api';
 import { ChangedMeanwhileDialog } from '../changed-meanwhile/changed-meanwhile-dialog';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
+import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -28,7 +29,7 @@ const FORBIDDEN = 'auth/forbidden';
 
 @Component({
   selector: 'app-admin-symbol-claims',
-  imports: [LiveNotice, RouterLink, ChangedMeanwhileDialog],
+  imports: [LiveNotice, RouterLink, NeedsConnection, ChangedMeanwhileDialog],
   templateUrl: './admin-symbol-claims.html',
   styleUrl: './admin-symbol-claims.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

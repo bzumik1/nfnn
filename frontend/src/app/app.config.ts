@@ -27,6 +27,9 @@ import { ChunkLoadRecovery } from './core/reload/chunk-load-recovery';
 import { BackTarget } from './core/navigation/back-target';
 import { TabMemory } from './core/navigation/tab-memory';
 import { CanonicalLink } from './core/seo/canonical-link';
+import { Connectivity } from './core/connectivity/connectivity';
+import { UnseenPhotos } from './core/connectivity/unseen-photos';
+import { connectivityInterceptor } from './core/connectivity/connectivity-interceptor';
 import { AppInstall } from './core/install/app-install';
 import { AlertNotificationClicks } from './core/push/alert-notification-clicks';
 import { AppBadge } from './core/push/app-badge';
@@ -52,7 +55,12 @@ export const chunkLoadRecoveryFeature: NavigationErrorHandlerFeature = withNavig
 
 export const appHttpClient: EnvironmentProviders = provideHttpClient(
   withXhr(),
-  withInterceptors([authInterceptor, versionInterceptor, serviceWorkerBypassInterceptor]),
+  withInterceptors([
+    authInterceptor,
+    versionInterceptor,
+    serviceWorkerBypassInterceptor,
+    connectivityInterceptor,
+  ]),
 );
 
 export const appErrorHandler: Provider = {
@@ -65,6 +73,11 @@ export const dialogHistoryAtStart: EnvironmentProviders = provideAppInitializer(
 );
 
 export const deviceCopies: Provider = { provide: SESSION_DEVICE, useExisting: DeviceCopies };
+
+export const connectivityAtStart: EnvironmentProviders = provideAppInitializer(() => {
+  inject(Connectivity);
+  inject(UnseenPhotos);
+});
 
 export const navigationAtStart: EnvironmentProviders = provideAppInitializer(() => {
   inject(BackTarget);
@@ -91,6 +104,7 @@ export const appConfig: ApplicationConfig = {
     provideAppInitializer(() => inject(PublicSessionIdle).start()),
     provideAppInitializer(() => inject(CanonicalLink).start()),
     dialogHistoryAtStart,
+    connectivityAtStart,
     pagePinchLockAtStart,
     systemTextSizeAtStart,
     navigationAtStart,

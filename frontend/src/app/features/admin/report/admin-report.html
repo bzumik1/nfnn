@@ -16,7 +16,13 @@
     @case ('error') {
       <div class="ui-load-state ui-load-state--error" role="alert">
         <p i18n="@@admin.report.error.text">Nastavení přehledu se nepodařilo načíst.</p>
-        <button type="button" class="ui-button" (click)="load()" i18n="@@admin.report.error.retry">
+        <button
+          appNeedsConnection
+          type="button"
+          class="ui-button"
+          (click)="load()"
+          i18n="@@admin.report.error.retry"
+        >
           Zkusit znovu
         </button>
       </div>
@@ -140,7 +146,12 @@
               <p class="form-error" role="alert">{{ settingsError() }}</p>
             }
 
-            <button type="submit" class="ui-button ui-button--primary" [disabled]="saving()">
+            <button
+              appNeedsConnection
+              type="submit"
+              class="ui-button ui-button--primary"
+              [disabled]="saving()"
+            >
               @if (saving()) {
                 <span i18n="@@admin.report.settings.saving">Ukládáme…</span>
               } @else {
@@ -194,6 +205,7 @@
                   >Poslat přehled za {{ selectedMonthLabel() }} na {{ currentRecipients() }}?</span
                 >
                 <button
+                  appNeedsConnection
                   type="button"
                   class="ui-button ui-button--primary"
                   [disabled]="sending()"
