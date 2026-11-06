@@ -549,7 +549,7 @@ jobs:
           done
           for run in $(awk '{ print $2 }' <<<"$runs"); do
             if keeps "$run"; then
-              echo "::error::No successful push run of the last 50 commits on main up to ${base:0:12} keeps its recording and test lists, although run $run does. Re-run the PR check of the newest commit on main (Actions, PR check, the push run, Re-run all jobs), then re-run this check (testing.md, \"Regression against v2\")."
+              echo "::error::No successful push run of the last 50 commits on main up to ${base:0:12} keeps its recording and test lists, although run $run does. Re-run the PR check of the newest commit on main (Actions, PR check, the push run, Re-run all jobs), then re-run this check (testing-regression.md, \"Regression against v2\")."
               exit 1
             fi
           done

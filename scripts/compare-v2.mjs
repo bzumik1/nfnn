@@ -183,7 +183,7 @@ function wordsOf(text, words) {
 function transcripts(directory, what, data) {
   if (!existsSync(directory)) {
     throw new InvalidInput(
-      `The ${what} ${directory} does not exist; record it with API_TRANSCRIPTS=record (.claude/rules/testing.md, "Regression against v2")`,
+      `The ${what} ${directory} does not exist; record it with API_TRANSCRIPTS=record (.claude/rules/testing-regression.md, "Regression against v2")`,
     );
   }
   const features = new Map();
@@ -950,7 +950,7 @@ function forbiddenLogData(line, shape, data) {
   for (const word of data.words) {
     if (words.has(word) && !data.aliases.has(word)) {
       found.push(
-        `the recorded name or address word ${word} (rename the fixture value or add the word to COMMON_WORDS with a reason in testing.md)`,
+        `the recorded name or address word ${word} (rename the fixture value or add the word to COMMON_WORDS with a reason in testing-regression.md)`,
       );
     }
   }

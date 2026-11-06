@@ -207,7 +207,7 @@ interface TranscriptFile {
 export function recordedAnswers(directory: string): RecordedAnswers {
   if (!existsSync(directory)) {
     throw new Error(
-      `${directory} does not exist; record it with API_TRANSCRIPTS=record (.claude/rules/testing.md, "Regression against v2")`,
+      `${directory} does not exist; record it with API_TRANSCRIPTS=record (.claude/rules/testing-regression.md, "Regression against v2")`,
     );
   }
   const answers = new Map<string, RecordedAnswer[]>();
