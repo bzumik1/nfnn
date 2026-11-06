@@ -856,6 +856,39 @@ describe('Given a signed-in donor in the donor area', () => {
   });
 
   describe('when the overview opens', () => {
+    it('then the card Poslat dar thanks for a gift the live stream brings after the donor copies a bank detail, reading the gifts only through the overview and offering no link to it', async () => {
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: { writeText: () => Promise.resolve() },
+      });
+      const live = TestBed.inject(LiveUpdates) as unknown as FakeLiveUpdates;
+      await open('/darce/prehled');
+      await respond(twoYearSummary(), twoYearDonations());
+      bankCheck.flush(
+        { bankDataAsOf: EARLIER, checking: false },
+        { status: 202, statusText: 'Accepted' },
+      );
+      await settle();
+      await respond(twoYearSummary(), twoYearDonations());
+
+      element('.send-gift .bank-row app-copy-button button')?.click();
+      await settle();
+      live.hint('donations');
+      const list = twoYearDonations();
+      const newGift = donationItem({ id: 'd-5', receivedAt: '2026-04-02', amountMinor: 30000 });
+      await respond(twoYearSummary(), {
+        ...list,
+        items: [newGift, ...list.items],
+        count: list.count + 1,
+      });
+
+      expect(text('.send-gift .gift-arrival [role="status"]')).toBe(
+        'Váš dar 300 Kč dorazil. Děkujeme!',
+      );
+      expect(element('.send-gift .gift-arrival a')).toBeNull();
+      Reflect.deleteProperty(navigator, 'clipboard');
+    });
+
     it('then an amount chosen in the card Poslat dar stays chosen after the donor leaves the overview and comes back', async () => {
       await open('/darce/prehled');
       await respond(twoYearSummary(), twoYearDonations());

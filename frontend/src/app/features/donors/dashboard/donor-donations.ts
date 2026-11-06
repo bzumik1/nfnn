@@ -46,6 +46,7 @@ import {
   DonationSummaryResponse,
   DownloadedFile,
 } from '../../donations/donations-api';
+import { GiftFeed } from '../../donations/gift-arrival/gift-feed';
 import { ReceiptSubject } from '../../donations/receipt-pdf/frozen-receipt';
 import { giftsOnActiveYearlyReceipts } from './yearly-receipt';
 import { PdfDelivery } from '../../donations/receipt-pdf/pdf-delivery';
@@ -137,7 +138,7 @@ interface IncomingDonations {
 }
 
 @Injectable()
-export class DonorDonations {
+export class DonorDonations implements GiftFeed {
   private readonly router = inject(Router);
   private readonly auth = inject(AuthStore);
   private readonly loginDialog = inject(LoginDialogService);
@@ -171,6 +172,12 @@ export class DonorDonations {
   readonly incomingCount = computed(() =>
     this.checkingBank() ? 0 : (this.incoming()?.added ?? 0),
   );
+
+  readonly gifts = computed(() =>
+    this.state() === 'ready' ? (this.incoming()?.read.items ?? this.items()) : null,
+  );
+  readonly asking = this.checkingBank.asReadonly();
+  readonly listedHere = true;
 
   readonly bankAccounts = signal<readonly BankAccountItem[]>([]);
   readonly accountsWithQuestion = computed(() =>
@@ -246,6 +253,20 @@ export class DonorDonations {
         error: () => this.bankAccounts.set([]),
       });
     this.followLiveChanges();
+  }
+
+  requestGifts(): void {
+    if (this.state() === 'error') {
+      this.load();
+    }
+  }
+
+  follow(): Observable<unknown> {
+    return EMPTY;
+  }
+
+  askBank(): void {
+    this.checkBank(false);
   }
 
   showIncoming(): void {

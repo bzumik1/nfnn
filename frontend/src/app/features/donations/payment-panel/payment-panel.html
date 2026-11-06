@@ -76,6 +76,7 @@
           <app-copy-button
             [value]="account.number"
             what="číslo účtu"
+            (copied)="noteIntentToPay()"
             i18n-what="@@home.donate.bank.copyAccount"
           />
         </span>
@@ -92,6 +93,7 @@
             <app-copy-button
               [value]="'' + chosen"
               what="částku"
+              (copied)="noteIntentToPay()"
               i18n-what="@@home.donate.bank.copyAmount"
             />
           </span>
@@ -105,6 +107,7 @@
             <app-copy-button
               [value]="symbol"
               what="variabilní symbol"
+              (copied)="noteIntentToPay()"
               i18n-what="@@home.donate.bank.copyVs"
             />
           </span>
@@ -120,6 +123,7 @@
           <app-copy-button
             [value]="account.iban"
             what="IBAN"
+            (copied)="noteIntentToPay()"
             i18n-what="@@home.donate.bank.copyIban"
           />
         </span>
@@ -140,6 +144,34 @@
 }
 
 <ng-content select="[afterBankDetails]" />
+
+<div
+  class="gift-arrival"
+  [class.ui-notice]="arrivalText() !== null"
+  [class.ui-notice--status]="arrivalText() !== null"
+>
+  <p class="gift-arrival-text" role="status">
+    @if (arrivalText(); as text) {
+      <span>{{ text }}</span>
+    }
+  </p>
+  @if (arrivalText() !== null) {
+    <div class="gift-arrival-actions">
+      @if (!arrivalListedHere) {
+        <a routerLink="/darce/prehled" i18n="@@home.donate.arrived.overview">Zobrazit v přehledu</a>
+      }
+      <button
+        #arrivalClose
+        type="button"
+        class="ui-button ui-button--small gift-arrival-close"
+        (click)="closeThanks()"
+        i18n="@@home.donate.arrived.close"
+      >
+        Zavřít
+      </button>
+    </div>
+  }
+</div>
 
 @if (compact()) {
   <div #bankApp class="bank-app" tabindex="-1" [attr.aria-busy]="busy()">
