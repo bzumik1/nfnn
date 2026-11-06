@@ -1,3 +1,7 @@
+---
+paths:
+  - "frontend/**"
+---
 # Frontend rules: Angular, UI, UX
 
 ## Angular 22 (standalone, zoneless, signals)
