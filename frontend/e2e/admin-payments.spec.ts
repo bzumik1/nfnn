@@ -1,5 +1,6 @@
 import { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
+import { browserEntries, siteSteps, stepBack } from './app-history';
 import { administrator, mockDonorApi, problem, session, signIn } from './donor-session';
 
 const PAYMENTS = '/api/admin/donations/payments';
@@ -343,7 +344,7 @@ test.describe('Given an administrator with many paired payments', () => {
     await mockDonorApi(page);
   });
 
-  test('when they search, load the next page and open a donor, then Back returns to the same search', async ({
+  test('when they search, load the next page and open a donor, then a step back returns to the same search', async ({
     page,
   }) => {
     const requests: string[] = [];
@@ -385,7 +386,7 @@ test.describe('Given an administrator with many paired payments', () => {
 
     await page.locator('tbody tr').first().getByRole('link', { name: 'Jana Nováková' }).click();
     await expect(page).toHaveURL(/\/sprava\/darci\//);
-    await page.goBack();
+    await stepBack(page);
 
     await expect(page).toHaveURL(/\/sprava\/platby\?stav=prirazene&q=nov$/);
     await expect(page.getByRole('searchbox', { name: 'Hledat', exact: true })).toHaveValue('nov');
@@ -416,14 +417,15 @@ test.describe('Given an administrator with paired payments on a phone', () => {
     await rememberedSession(page);
   });
 
-  test("when they open a paired payment's sheet and follow its donor, then one Back returns to the payments with the sheet closed", async ({
+  test("when they open a paired payment's sheet and follow its donor, then one step back returns to the payments with the sheet closed", async ({
     page,
   }) => {
     await page.goto('/sprava/platby?stav=prirazene');
     const row = page.locator('button[data-payment-row]');
     await expect(row).toHaveCount(1);
     await expect(page.locator('table')).toHaveCount(0);
-    const entriesBefore = await page.evaluate(() => history.length);
+    const entriesBefore = await browserEntries(page);
+    const stepsBefore = await siteSteps(page);
 
     await row.click();
     const sheet = page.getByRole('dialog', { name: 'Přiřazená platba' });
@@ -432,8 +434,9 @@ test.describe('Given an administrator with paired payments on a phone', () => {
 
     await expect(page).toHaveURL(new RegExp(`/sprava/darci/${administrator.id}$`));
     await expect(page.getByRole('dialog')).toHaveCount(0);
-    expect(await page.evaluate(() => history.length)).toBe(entriesBefore + 1);
-    await page.goBack();
+    expect(await browserEntries(page)).toBe(entriesBefore);
+    expect(await siteSteps(page)).toBe(stepsBefore + 1);
+    await stepBack(page);
 
     await expect(page).toHaveURL(/\/sprava\/platby\?stav=prirazene$/);
     await expect(page.locator('button[data-payment-row]')).toHaveCount(1);

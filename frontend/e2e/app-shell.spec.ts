@@ -1,5 +1,6 @@
 import { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
+import { browserEntries, stepBack } from './app-history';
 import { mockDonorApi, openAccountItem, signIn } from './donor-session';
 
 const article = {
@@ -122,16 +123,27 @@ test.describe('Given a signed-in donor on a phone who opens a section from the a
     await expect(page).toHaveURL('/o-nas');
   });
 
-  test('when they go back with the browser, then the page the sheet was opened on returns', async ({
+  test('when the app steps back, as its swipe does, then the page the sheet was opened on returns', async ({
     page,
   }) => {
     await openAccountItem(page, 'Moje dary');
     await expect(page).toHaveURL('/darce/dary');
 
-    await page.goBack();
+    await stepBack(page);
 
     await expect(page).toHaveURL('/o-nas');
     await expect(page.getByRole('dialog')).toHaveCount(0);
+  });
+
+  test('when they open a section from the sheet, then the browser gains no entry, so its Back would leave the site', async ({
+    page,
+  }) => {
+    const entries = await browserEntries(page);
+
+    await openAccountItem(page, 'Moje dary');
+
+    await expect(page).toHaveURL('/darce/dary');
+    expect(await browserEntries(page)).toBe(entries);
   });
 
   test('when they press Zpět, then the page the sheet was opened on returns', async ({ page }) => {
@@ -143,7 +155,7 @@ test.describe('Given a signed-in donor on a phone who opens a section from the a
     await expect(page).toHaveURL('/o-nas');
   });
 
-  test('when they choose the section already open, then the sheet closes and one Back leaves it', async ({
+  test('when they choose the section already open, then the sheet closes and one step back leaves it', async ({
     page,
   }) => {
     await openAccountItem(page, 'Moje dary');
@@ -157,7 +169,7 @@ test.describe('Given a signed-in donor on a phone who opens a section from the a
     await sheet.getByRole('link', { name: 'Moje dary' }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(page).toHaveURL('/darce/dary');
-    await page.goBack();
+    await stepBack(page);
 
     await expect(page).toHaveURL('/o-nas');
   });

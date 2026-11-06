@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { adminGuard } from './core/auth/admin-guard';
 import { APP_ENTRY_PATH, appEntryGuard } from './core/auth/app-entry-guard';
 import { donorGuard } from './core/auth/donor-guard';
+import { RouteChromeData } from './core/navigation/route-chrome';
 
 export const routes: Routes = [
   {
@@ -54,6 +55,7 @@ export const routes: Routes = [
       },
       {
         path: 'overit',
+        data: { parent: '/' } satisfies RouteChromeData,
         title: $localize`:@@donor.verify.pageTitle:Ověření potvrzení o daru | Nová naděje – nadační fond`,
         loadComponent: () =>
           import('./features/donations/verification/verification-page').then(

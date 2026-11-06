@@ -1,5 +1,6 @@
 import { CDPSession, devices, Locator, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
+import { stepBack } from './app-history';
 import { mockDonorApi } from './donor-session';
 
 const IMAGE_ID = '0199f3e0-0000-7000-8000-00000000a001';
@@ -116,7 +117,7 @@ test.describe('Given a visitor on a phone, where the site behaves like an app', 
     );
   });
 
-  test('when they tap the photo of a news article and spread two fingers on it, then the photo grows in the viewer while the page stays at its size, and Back returns to the photo', async ({
+  test('when they tap the photo of a news article and spread two fingers on it, then the photo grows in the viewer while the page stays at its size, and a step back returns to the photo', async ({
     page,
   }) => {
     await publishedArticle(page);
@@ -142,7 +143,7 @@ test.describe('Given a visitor on a phone, where the site behaves like an app', 
       '100\u00a0%',
     );
 
-    await page.goBack();
+    await stepBack(page);
 
     await expect(viewer).toBeHidden();
     await expect(page).toHaveURL(`/aktuality/${article.slug}`);
