@@ -196,6 +196,16 @@ public class DonorPasskeyStepDefinitions {
         asksForANewPasskey(Map.of("token", resetToken(), "code", code));
     }
 
+    @Given("{string} asked for a new passkey with the link from the e-mail and code {string} {int} times, each from another client address")
+    public void askedForANewPasskeyWithTheLinkAndCodeTimesEachFromAnotherClientAddress(String alias, String code, int times) {
+        for (int attempt = 0; attempt < times; attempt++) {
+            api.comeFromAnotherAddress();
+            asksForANewPasskeyWithTheLinkAndCode(alias, code);
+            assertThat(api.lastResponse().getStatusCode().value()).withFailMessage("Request %d answered %s", attempt + 1, api.lastResponse().getBody()).isEqualTo(400);
+            assertThat(api.lastResponseJson().get("type").asString()).endsWith("donors/second-factor-code-rejected");
+        }
+    }
+
     @When("{string} asks for a new passkey with the link from the e-mail and the current code")
     public void asksForANewPasskeyWithTheLinkAndTheCurrentCode(String alias) {
         asksForANewPasskey(Map.of("token", resetToken(), "code", totpCodes.freshCode(scenarioDonors.secondFactorSecretOf(alias))));

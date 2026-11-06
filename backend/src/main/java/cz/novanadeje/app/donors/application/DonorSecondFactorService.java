@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.SecondFactorCodesPaused;
 import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.application.event.DonorSecondFactorDisabled;
 import cz.novanadeje.app.donors.application.event.DonorSecondFactorEnabled;
@@ -39,11 +40,13 @@ public class DonorSecondFactorService {
     private final ApplicationEventPublisher events;
     private final Clock clock;
     private final DeviceSignOuts signOuts;
+    private final SecondFactorCodes codes;
 
     public DonorSecondFactorService(DonorRepository donors, SecondFactorRepository secondFactors, DonorConfirmations confirmations, DonorSessionService sessions, DonorViews views,
                                     SecondFactorSessionGuard sessionGuard, DonorSecondFactorProperties properties, ApplicationEventPublisher events,
-                                    Clock clock, DeviceSignOuts signOuts) {
+                                    Clock clock, DeviceSignOuts signOuts, SecondFactorCodes codes) {
         this.signOuts = signOuts;
+        this.codes = codes;
         this.donors = donors;
         this.secondFactors = secondFactors;
         this.confirmations = confirmations;
@@ -70,7 +73,7 @@ public class DonorSecondFactorService {
         return new SecondFactorEnrolment(secret.value(), otpauthUri);
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = {SecondFactorCodeRejected.class, SecondFactorCodesPaused.class})
     public AuthenticatedDonor confirm(DonorId donorId, String code, RequestingDevice device) {
         Donor donor = load(donorId);
         SecondFactor factor = secondFactors.findByDonor(donorId).orElseThrow(SecondFactorNotPending::new);
@@ -78,7 +81,7 @@ public class DonorSecondFactorService {
             throw new SecondFactorAlreadyEnabled();
         }
         Instant now = clock.instant();
-        factor.confirm(code, now);
+        codes.confirm(factor, code, now);
         sessions.requireLasting(donor, device);
         secondFactors.save(factor);
         signOuts.endAllOf(donorId, device.session(), DeviceSignOutReason.CREDENTIALS_CHANGED, now);
@@ -87,13 +90,13 @@ public class DonorSecondFactorService {
         return views.authenticated(donor, sessions.continueOn(donor, true, device));
     }
 
-    @Transactional(noRollbackFor = {SecondFactorCodeRejected.class, PasskeyConfirmationRejected.class})
+    @Transactional(noRollbackFor = {SecondFactorCodeRejected.class, SecondFactorCodesPaused.class, PasskeyConfirmationRejected.class})
     public AuthenticatedDonor disable(DonorId donorId, Confirmation confirmation, String code, RequestingDevice device) {
         Donor donor = load(donorId);
         confirmations.confirm(donor, confirmation);
         SecondFactor factor = secondFactors.findByDonor(donorId).filter(SecondFactor::isEnabled).orElseThrow(SecondFactorNotEnabled::new);
         Instant now = clock.instant();
-        factor.check(code, now);
+        codes.check(factor, code, now);
         sessions.requireLasting(donor, device);
         secondFactors.delete(donorId);
         signOuts.endAllOf(donorId, device.session(), DeviceSignOutReason.CREDENTIALS_CHANGED, now);

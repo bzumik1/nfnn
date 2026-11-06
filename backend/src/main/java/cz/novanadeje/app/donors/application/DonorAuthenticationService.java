@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.SecondFactorCodesPaused;
 import cz.novanadeje.app.donors.domain.SessionKind;
 import cz.novanadeje.app.donors.domain.DeviceDescription;
 import cz.novanadeje.app.donors.domain.Donor;
@@ -41,11 +42,12 @@ public class DonorAuthenticationService {
     private final SecondFactorRepository secondFactors;
     private final SecondFactorChallengeRepository challenges;
     private final DonorSecondFactorProperties secondFactorProperties;
+    private final SecondFactorCodes codes;
     private final Clock clock;
 
     public DonorAuthenticationService(DonorRepository donors, PasswordHasher passwordHasher, DonorSessionService sessions, DonorViews views,
                                       SecondFactorRepository secondFactors, SecondFactorChallengeRepository challenges,
-                                      DonorSecondFactorProperties secondFactorProperties, Clock clock) {
+                                      DonorSecondFactorProperties secondFactorProperties, SecondFactorCodes codes, Clock clock) {
         this.donors = donors;
         this.passwordHasher = passwordHasher;
         this.sessions = sessions;
@@ -53,6 +55,7 @@ public class DonorAuthenticationService {
         this.secondFactors = secondFactors;
         this.challenges = challenges;
         this.secondFactorProperties = secondFactorProperties;
+        this.codes = codes;
         this.clock = clock;
     }
 
@@ -86,7 +89,7 @@ public class DonorAuthenticationService {
         return views.authenticated(donor, sessions.signIn(donor, false, device, kind));
     }
 
-    @Transactional(noRollbackFor = InvalidSecondFactorCode.class)
+    @Transactional(noRollbackFor = {InvalidSecondFactorCode.class, SecondFactorCodesPaused.class})
     public AuthenticatedDonor completeSecondFactor(String challenge, String code, DeviceDescription device, SessionKind kind) {
         Instant now = clock.instant();
         LinkSecret secret;
@@ -104,7 +107,7 @@ public class DonorAuthenticationService {
             throw new InvalidSecondFactorChallenge();
         }
         try {
-            factor.verify(code, now);
+            codes.verify(factor, code, now);
         } catch (InvalidSecondFactorCode wrong) {
             log.info("Second factor of donor {} refused, attempt {} of {}", donor.id(), found.failedAttempts() + 1, secondFactorProperties.challengeAttempts());
             throw wrong;
@@ -112,7 +115,6 @@ public class DonorAuthenticationService {
         if (!challenges.markUsed(found.id(), now)) {
             throw new InvalidSecondFactorChallenge();
         }
-        secondFactors.save(factor);
         return views.authenticated(donor, sessions.signIn(donor, true, device, kind));
     }
 
