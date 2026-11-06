@@ -26,10 +26,10 @@ A thread wakes only on events: Jakub's message, a finished background task, a PR
 2. Within about 3 minutes, for the pushed head SHA, read the PR's `mergeable_state` (`unknown` right after a push: ask again a minute later) and look for a `PR check` run of that SHA (GitHub tools: `actions_list` with `list_workflow_runs` for `pr-check.yml` and the branch). `dirty`, or no run: "When no run starts, or only `gate` runs" below.
 3. Never end a turn that waits on CI unless a run of the head SHA was seen and a `send_later` check is scheduled about 20 minutes after the push, naming the PR and the SHA. Each check acts or schedules the next one (10 minutes later while the run is in progress, up to 35 minutes after the push; after that, treat it as no run). A check that fires after the merge only confirms it and stops.
 
-### When no run starts, or only `gate` runs
+### When no run starts, or only `agent-context` and `gate` run
 - Conflict (`dirty`): GitHub runs no workflow on a PR that conflicts with its base. Rebase onto `origin/main` now, resolve, `git push --force-with-lease`, start again.
 - Base other than `main`: `pr-check.yml` and `roadmap-check.yml` run only for PRs to `main`. Retarget the PR to `main` (see Branches) or keep it a draft and say why it has no CI.
-- Only `docs/`, `.claude/` or Markdown changed: the `PR check` run skips every job but `changes` and `gate`, and `gate` passes within a minute. Read the whole diff again, then merge (`CLAUDE.md`).
+- Only `docs/`, `.claude/` or Markdown changed: the `PR check` run skips every job but `changes`, `agent-context` and `gate`. `agent-context` fails on undeclared growth of what agents always load (`Kontext agenta roste: <reason>` in the description). Wait for `gate`, read the whole diff again, then merge (`CLAUDE.md`).
 - No run otherwise: in T3 Code, on the "No checks have reported" wake, look at githubstatus.com once and tell Jakub at once; in a claude.ai project thread, look at githubstatus.com and again after 10 minutes, then tell Jakub. Keep the watch or the scheduled check.
 
 ### When a run ends

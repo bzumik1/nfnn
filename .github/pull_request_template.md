@@ -22,13 +22,15 @@
 
 <!-- Paste the report of the compare-v2 job (its job summary or the artifact srovnani-s-v2). If CI runs no jobs (only docs/, .claude/ or Markdown), say so instead. -->
 
-<!-- The two lines below are read by CI, each only as a whole line of its own. Replace each comment, keeping the word before the colon: -->
+<!-- The three lines below are read by CI, each only as a whole line of its own. Replace each comment, keeping the words before the colon: -->
 <!-- roadmap: write "beze změny" after the colon when docs/roadmap.md does not change; when it changes, delete the line. Left as it is, roadmap-check fails. -->
 <!-- look: write "beze změny" after the colon, or rewrite the line as "Vzhled se mění: /sprava/platby, /darce/*, sign-in-dialog" (routes or states of the screens spec). Left as it is, nothing may differ on the screens. -->
-<!-- pr-check has no trigger on an edited description: after editing the look line, push again or use "Re-run all jobs" (re-running only the failed job keeps the old reading). -->
+<!-- agent context: when the PR grows what every agent thread loads (CLAUDE.md, the rules without paths:, the skill and agent descriptions, the connector's tools or instructions), write the reason after the colon; otherwise leave the comment. Left as it is, it declares nothing, and the Kontext agenta job fails on any growth. -->
+<!-- pr-check has no trigger on an edited description: after editing the look or agent context line, push again or use "Re-run all jobs" (re-running only the failed job keeps the old reading). -->
 
 Roadmapa: <!-- beze změny -->
 Vzhled: <!-- beze změny -->
+Kontext agenta roste: <!-- reason -->
 
 <!-- Suppressions: for each file where the diff adds a suppression or a skipped test (@SuppressWarnings, @Disabled, eslint-disable, @ts-expect-error, it.skip, .only, a relaxed test or lint setting …), and for every changed file under .github/workflows/ or .github/actions/, script that decides a required check or file of the build definition (listed in docs/system-overview.md, Suppression guard; on purpose: such a change cannot be judged line by line), and for a changed line in the "scripts" of a package.json, write the line below once per file with the path and why, at least 10 characters; one line covers every suppression of its file, later pushes included. Left as it is, it declares nothing. Editing the description runs the check Výjimky again by itself. -->
 Výjimka: <!-- path/to/File.java: why the suppression must stay -->

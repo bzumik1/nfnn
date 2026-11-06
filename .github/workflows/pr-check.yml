@@ -28,6 +28,7 @@ jobs:
     outputs:
       code: ${{ steps.files.outputs.code }}
       appearance: ${{ steps.appearance.outputs.lines }}
+      context-growth: ${{ steps.context-growth.outputs.lines }}
     steps:
       - name: Find whether the change touches code or only docs/, .claude/ and Markdown
         id: files
@@ -46,7 +47,7 @@ jobs:
             echo "The pull request changes code, so every job runs."
             echo "code=true" >> "$GITHUB_OUTPUT"
           else
-            echo "The pull request changes only docs/, .claude/ or Markdown, so no job runs and the gate passes."
+            echo "The pull request changes only docs/, .claude/ or Markdown, so only the agent context job runs before the gate."
             echo "code=false" >> "$GITHUB_OUTPUT"
           fi
 
@@ -71,6 +72,77 @@ jobs:
             echo "The description declares no look, so nothing may change on the screens."
           fi
           echo "lines=$(printf '%s' "$lines" | base64 -w 0)" >> "$GITHUB_OUTPUT"
+
+      - name: Read the growth of the agent context the description declares
+        id: context-growth
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          PULL_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          body=$(gh api "repos/$REPOSITORY/pulls/$PULL_NUMBER" --jq '.body // ""')
+          lines=$(tr -d '\r' <<<"$body" | perl -0pe 's/<!--.*?-->//gs' | grep -iE '^[[:space:]]*kontext agenta' | head -n 5 || true)
+          if [ -n "$lines" ]; then
+            echo "The description declares:"
+            echo "$lines"
+          else
+            echo "The description declares no growth of the agent context."
+          fi
+          echo "lines=$(printf '%s' "$lines" | base64 -w 0)" >> "$GITHUB_OUTPUT"
+
+  agent-context:
+    name: Kontext agenta
+    needs: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26"
+          cache: npm
+          cache-dependency-path: mcp/package-lock.json
+
+      - name: Build the change's connector, whose tool list and instructions are measured
+        working-directory: mcp
+        run: |
+          npm ci
+          npm run build
+
+      - name: Check out and build the base the change is measured against
+        if: github.event_name == 'pull_request'
+        run: |
+          git worktree add --detach "$RUNNER_TEMP/base" HEAD^1
+          if [ -f "$RUNNER_TEMP/base/mcp/src/tool-list.ts" ]; then
+            cd "$RUNNER_TEMP/base/mcp"
+            npm ci
+            npm run build
+          else
+            echo "The base has no mcp/src/tool-list.ts, so its connector values are left out of the comparison."
+          fi
+
+      - name: The agent context grows over the base only where the description declares it
+        if: github.event_name == 'pull_request'
+        env:
+          GROWTH: ${{ needs.changes.outputs.context-growth }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: |
+          printf '%s' "$GROWTH" | base64 -d > "$RUNNER_TEMP/context-growth.md"
+          report=()
+          if [ "$AUTHOR" = "dependabot[bot]" ]; then
+            echo "Dependabot writes no description, so any growth is only reported."
+            report=(--report-only)
+          fi
+          node scripts/agent-context-budget.mjs --base="$RUNNER_TEMP/base" --description="$RUNNER_TEMP/context-growth.md" --summary="$GITHUB_STEP_SUMMARY" "${report[@]}"
+
+      - name: Report the agent context of main
+        if: github.event_name == 'push'
+        run: node scripts/agent-context-budget.mjs --summary="$GITHUB_STEP_SUMMARY"
 
   backend:
     needs: changes
@@ -1609,18 +1681,18 @@ jobs:
 
   gate:
     if: always()
-    needs: [changes, backend, acceptance, frontend, e2e, e2e-report, pwa, visual, mcp, main-recording, compare-v2, stack, release]
+    needs: [changes, agent-context, backend, acceptance, frontend, e2e, e2e-report, pwa, visual, mcp, main-recording, compare-v2, stack, release]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Every job passed, or the change touches no code and no job ran
+      - name: Every job passed, or the change touches no code and only the agent context ran
         env:
           CODE: ${{ needs.changes.outputs.code }}
           NEEDS: ${{ toJSON(needs) }}
         run: |
           jq -r 'to_entries[] | "\(.key): \(.value.result)"' <<<"$NEEDS"
           if [ "$CODE" = true ]; then expected=success; else expected=skipped; fi
-          if ! jq -e --arg expected "$expected" '.changes.result == "success" and ([del(.changes)[] | .result] | all(. == $expected))' <<<"$NEEDS" > /dev/null; then
-            echo "::error::every job must pass on a change to code (and none run on a change to docs/, .claude/ or Markdown only); see the results above"
+          if ! jq -e --arg expected "$expected" '.changes.result == "success" and .["agent-context"].result == "success" and ([del(.changes, .["agent-context"])[] | .result] | all(. == $expected))' <<<"$NEEDS" > /dev/null; then
+            echo "::error::the agent context and every other job must pass on a change to code (and only the agent context run on a change to docs/, .claude/ or Markdown only); see the results above"
             exit 1
           fi
