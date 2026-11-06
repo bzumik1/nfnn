@@ -9,6 +9,7 @@ const eslint = new ESLint({ cwd: frontend });
 
 async function refusals(file, text) {
   const [result] = await eslint.lintText(text, { filePath: join(frontend, file) });
+  assert.equal(result.fatalErrorCount, 0, 'the planted source parses');
   return result.messages
     .filter((message) => message.ruleId === 'no-restricted-syntax')
     .map((message) => message.message);
@@ -42,6 +43,27 @@ describe('Given an e2e spec', () => {
     );
 
     assert.equal(found.length, 1);
+  });
+
+  it('when it names the fixed wait in brackets, then it is refused', async () => {
+    const found = await refusals(
+      'e2e/planted.spec.ts',
+      spec("import { expect, test } from './fixtures';", "  await page['waitForTimeout'](300);\n"),
+    );
+
+    assert.equal(found.length, 1);
+  });
+
+  it('when it takes the fixed wait out of the page, then it is refused', async () => {
+    const found = await refusals(
+      'e2e/planted.spec.ts',
+      spec(
+        "import { expect, test } from './fixtures';",
+        '  const { waitForTimeout } = page;\n  await waitForTimeout.call(page, 300);\n',
+      ),
+    );
+
+    assert.notEqual(found.length, 0);
   });
 
   it('when a directive tries to switch the rule off, then the fixed wait is still refused', async () => {
