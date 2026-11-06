@@ -1,3 +1,4 @@
+SET search_path = pg_catalog;
 DO $$
 DECLARE
   relation record;

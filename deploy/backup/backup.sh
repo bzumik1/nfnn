@@ -4,12 +4,20 @@
 # and replaces the live one by renaming only when it succeeded, after a -pred-obnovou backup, so a
 # failed restore leaves the current data as they were. A restored database keeps every sequence (the
 # receipt numbers) at the higher of its current and restored value, and a Liquibase lock caught in
-# the dump is released. A restored database is handed to the application role novanadeje_app, as
-# nfnn-postgres does at every start, because the backend logs in as that role and is no superuser.
+# the dump is released. Whatever a dump or the site's data can run (its SQL, a trigger, a check, an
+# index expression, a function in a view) runs as the application role novanadeje_app and never as
+# the superuser: every restore and every query of the site's databases connects as that role, and a
+# database a restore fills is created for it to own, so pg_restore --no-owner --no-privileges makes
+# it the owner of everything, as the backend needs. The superuser only dumps (pg_dump reads every
+# object whatever its owner and runs no function of the data: since PostgreSQL 17 it reads only
+# tables, restrict_nonsystem_relation_kind) and creates, renames and drops databases and ends their
+# sessions, connected to the maintenance database postgres, where the application role can create
+# nothing.
 # $BACKUPS/status/restore.running exists while one runs and the backend waits
 # for it to go. Everything is reported in the container log, in $LOGS/backup.log and in key=value
 # files under $BACKUPS/status, which the backend reads for the administration page.
-# The database password is read from $SECRETS_DIR/db-password once nfnn-postgres marks it ready.
+# The superuser's password is read from $SECRETS_DIR/db-password and the application role's from
+# $SECRETS_DIR/db-app-password once nfnn-postgres marks them ready.
 # Every dump is encrypted with age to the backup key in $SECRETS_DIR/backup-key, which the backend
 # generates, and named .dump.age; an older unencrypted dump is encrypted at start. A restore and a
 # test restore decrypt into a pipe and never write a plain copy, because $BACKUPS is the folder an
@@ -35,7 +43,8 @@ KEEP_DAYS=${KEEP_DAYS:-30}
 TEST_DATABASE=${TEST_DATABASE:-nfnn_restore_test}
 STAGING_DATABASE=${STAGING_DATABASE:-nfnn_restore_staging}
 RETIRED_DATABASE=${RETIRED_DATABASE:-nfnn_restore_retired}
-OWNERSHIP_SQL=${OWNERSHIP_SQL:-/usr/local/share/nfnn/own-by-app-role.sql}
+APP_ROLE=${APP_ROLE:-novanadeje_app}
+APP_PASSWORD=""
 REVOCATIONS_SQL=${REVOCATIONS_SQL:-/usr/local/share/nfnn/revoke-restored-credentials.sql}
 LOGS=${LOGS_DIR:-/logs}
 SECRETS=${SECRETS_DIR:-/secrets}
@@ -95,6 +104,15 @@ read_database_password() {
   done
   PGPASSWORD=$(cat "$SECRETS/db-password")
   export PGPASSWORD
+  APP_PASSWORD=$(cat "$SECRETS/db-app-password" 2>/dev/null)
+}
+
+as_app() {
+  env PGUSER="$APP_ROLE" PGPASSWORD="$APP_PASSWORD" "$@"
+}
+
+create_app_database() {
+  createdb --maintenance-db=postgres --owner="$APP_ROLE" --template=template0 "$1"
 }
 
 valid_key() {
@@ -123,10 +141,11 @@ decryptable() {
 restore_into() {
   if is_encrypted "$2"; then
     (set -o pipefail && age --decrypt --identity "$3" "$2" 2>> "$4" \
-      | pg_restore --exit-on-error --single-transaction --dbname="$1" 2>> "$4")
+      | as_app pg_restore --exit-on-error --single-transaction --no-owner --no-privileges --dbname="$1" 2>> "$4")
   else
-    pg_restore --exit-on-error --single-transaction --dbname="$1" "$2" 2>> "$4"
-  fi
+    as_app pg_restore --exit-on-error --single-transaction --no-owner --no-privileges --dbname="$1" "$2" 2>> "$4"
+  fi && as_app psql --dbname="$1" --quiet --no-align --tuples-only -v ON_ERROR_STOP=1 \
+    --command="alter schema public owner to \"$APP_ROLE\"" > /dev/null 2>> "$4"
 }
 
 dumped_data() {
@@ -200,7 +219,7 @@ compare_rows() {
   m_counts=$(dumped_rows "$1" "$2" "$4") || { m_mismatch=" (the backup could not be read)"; return 1; }
   while read -r m_table m_dumped; do
     [ -n "$m_table" ] || continue
-    m_restored=$(psql --dbname="$3" --tuples-only --no-align --command="select count(*) from public.\"$m_table\"" 2>> "$4" | tr -d '[:space:]')
+    m_restored=$(as_app psql --dbname="$3" --tuples-only --no-align --command="select count(*) from public.\"$m_table\"" 2>> "$4" | tr -d '[:space:]')
     if [ -z "$m_restored" ] || [ "$m_dumped" != "$m_restored" ]; then
       m_mismatch="$m_mismatch $m_table"
     else
@@ -230,9 +249,9 @@ test_restore() {
     return 1
   fi
   dropdb --if-exists "$TEST_DATABASE" > /dev/null 2>&1
-  if createdb "$TEST_DATABASE" 2>> "$STATUS/test-restore.err" \
+  if create_app_database "$TEST_DATABASE" 2>> "$STATUS/test-restore.err" \
       && restore_into "$TEST_DATABASE" "$t_newest" "$KEY_FILE" "$STATUS/test-restore.err"; then
-    t_tables=$(psql --dbname="$TEST_DATABASE" --tuples-only --no-align --command="select count(*) from information_schema.tables where table_schema = 'public'" 2>> "$STATUS/test-restore.err" | tr -d '[:space:]')
+    t_tables=$(as_app psql --dbname="$TEST_DATABASE" --tuples-only --no-align --command="select count(*) from information_schema.tables where table_schema = 'public'" 2>> "$STATUS/test-restore.err" | tr -d '[:space:]')
     t_changesets=$(applied_changesets "$TEST_DATABASE" "$STATUS/test-restore.err")
     t_rows_match=false
     if compare_rows "$t_newest" "$KEY_FILE" "$TEST_DATABASE" "$STATUS/test-restore.err"; then
@@ -259,7 +278,7 @@ test_restore() {
 }
 
 database_is_empty() {
-  e_tables=$(psql --tuples-only --no-align --command="select count(*) from information_schema.tables where table_schema = 'public'" | tr -d '[:space:]')
+  e_tables=$(as_app psql --tuples-only --no-align --command="select count(*) from information_schema.tables where table_schema = 'public'" | tr -d '[:space:]')
   [ "${e_tables:-1}" = "0" ]
 }
 
@@ -276,12 +295,12 @@ allow_connections() {
 }
 
 release_liquibase_lock() {
-  psql --dbname="$1" --quiet --no-align --tuples-only -v ON_ERROR_STOP=1 \
+  as_app psql --dbname="$1" --quiet --no-align --tuples-only -v ON_ERROR_STOP=1 \
     --command="do \$\$ begin if to_regclass('public.databasechangeloglock') is not null then update public.databasechangeloglock set locked = false, lockgranted = null, lockedby = null where locked; end if; end \$\$" > /dev/null 2>> "$2"
 }
 
 revoke_restored_credentials() {
-  psql --dbname="$1" --quiet --no-align --tuples-only --single-transaction -v ON_ERROR_STOP=1 \
+  as_app psql --dbname="$1" --quiet --no-align --tuples-only --single-transaction -v ON_ERROR_STOP=1 \
     --file="$REVOCATIONS_SQL" --command="select pg_temp.end_sessions() || ' ' || pg_temp.spend_one_time_secrets()" 2>> "$2"
 }
 
@@ -294,20 +313,16 @@ counted() {
   return 0
 }
 
-hand_to_app_role() {
-  psql --dbname="$1" --quiet --no-align --tuples-only -v ON_ERROR_STOP=1 --file="$OWNERSHIP_SQL" > /dev/null 2>> "$2"
-}
-
 applied_changesets() {
-  psql --dbname="$1" --tuples-only --no-align --command="select count(*) from public.databasechangelog" 2>> "$2" | tr -d '[:space:]'
+  as_app psql --dbname="$1" --tuples-only --no-align --command="select count(*) from public.databasechangelog" 2>> "$2" | tr -d '[:space:]'
 }
 
 receipt_switch_applied() {
-  [ "$(psql --dbname="$1" --tuples-only --no-align --command="select count(*) from public.databasechangelog where id = '$RECEIPT_SWITCH_CHANGESET'" 2> /dev/null | tr -d '[:space:]')" = 1 ]
+  [ "$(as_app psql --dbname="$1" --tuples-only --no-align --command="select count(*) from public.databasechangelog where id = '$RECEIPT_SWITCH_CHANGESET'" 2> /dev/null | tr -d '[:space:]')" = 1 ]
 }
 
 receipt_number_taken() {
-  [ "$(psql --dbname="$1" --tuples-only --no-align --command="select case when to_regclass('public.donation_receipt_number_seq') is null then 'f' else (select is_called::text from public.donation_receipt_number_seq) end" 2> /dev/null | tr -d '[:space:]')" = true ]
+  [ "$(as_app psql --dbname="$1" --tuples-only --no-align --command="select case when to_regclass('public.donation_receipt_number_seq') is null then 'f' else (select is_called::text from public.donation_receipt_number_seq) end" 2> /dev/null | tr -d '[:space:]')" = true ]
 }
 
 rewinds_receipt_numbers() {
@@ -329,10 +344,10 @@ recover_interrupted_restore() {
 
 keep_sequences_ahead() {
   server_psql --command="alter database \"$RETIRED_DATABASE\" with allow_connections true" > /dev/null 2>> "$STATUS/restore.err" || return 1
-  k_values=$(psql --dbname="$RETIRED_DATABASE" --quiet --no-align --tuples-only -v ON_ERROR_STOP=1 \
+  k_values=$(as_app psql --dbname="$RETIRED_DATABASE" --quiet --no-align --tuples-only -v ON_ERROR_STOP=1 \
     --command="select coalesce(string_agg(format('(%L, %s)', sequencename, last_value), ', '), '') from pg_sequences where schemaname = 'public' and last_value is not null" 2>> "$STATUS/restore.err") || return 1
   [ -n "$k_values" ] || return 0
-  psql --dbname="$STAGING_DATABASE" --quiet --no-align --tuples-only -v ON_ERROR_STOP=1 \
+  as_app psql --dbname="$STAGING_DATABASE" --quiet --no-align --tuples-only -v ON_ERROR_STOP=1 \
     --command="select setval(format('public.%I', s.sequencename)::regclass, v.last_value) from pg_sequences s join (values $k_values) as v (sequencename, last_value) on v.sequencename = s.sequencename where s.schemaname = 'public' and (s.last_value is null or s.last_value < v.last_value)" > /dev/null 2>> "$STATUS/restore.err"
 }
 
@@ -379,9 +394,9 @@ restore_dump() {
   fi
   dropdb --if-exists "$STAGING_DATABASE" > /dev/null 2>&1
   r_tables=0
-  if createdb "$STAGING_DATABASE" 2>> "$STATUS/restore.err" \
+  if create_app_database "$STAGING_DATABASE" 2>> "$STATUS/restore.err" \
       && restore_into "$STAGING_DATABASE" "$r_dump" "$r_identity" "$STATUS/restore.err"; then
-    r_tables=$(psql --dbname="$STAGING_DATABASE" --tuples-only --no-align --command="select count(*) from information_schema.tables where table_schema = 'public'" 2>> "$STATUS/restore.err" | tr -d '[:space:]')
+    r_tables=$(as_app psql --dbname="$STAGING_DATABASE" --tuples-only --no-align --command="select count(*) from information_schema.tables where table_schema = 'public'" 2>> "$STATUS/restore.err" | tr -d '[:space:]')
     r_changesets=$(applied_changesets "$STAGING_DATABASE" "$STATUS/restore.err")
     if [ "${r_tables:-0}" -gt 0 ] 2>/dev/null && [ "${r_changesets:-0}" -gt 0 ] 2>/dev/null && rewinds_receipt_numbers "$STAGING_DATABASE"; then
       r_error="the backup was taken before receipts moved to the browser, and this server has given out receipt numbers since; the backend would delete the backup's test receipts and number from 1 again, so nothing was restored"
@@ -390,7 +405,6 @@ restore_dump() {
           && r_revoked=$(revoke_restored_credentials "$STAGING_DATABASE" "$STATUS/restore.err") \
           && r_sessions=${r_revoked%% *} && r_secrets=${r_revoked##* } \
           && counted "$r_sessions" "$STATUS/restore.err" && counted "$r_secrets" "$STATUS/restore.err" \
-          && hand_to_app_role "$STAGING_DATABASE" "$STATUS/restore.err" \
           && swap_in_staging; then
         write_status restore "outcome=ok" "started_at=$r_started" "finished_at=$(now_utc)" "file=$r_file" "size=$(file_size "$r_dump")" "tables=$r_tables" "sessions_ended=$r_sessions" "one_time_secrets_spent=$r_secrets" "request=$r_request" "admin=$r_admin"
         log "restore of $r_file succeeded: $r_tables tables"
