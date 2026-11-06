@@ -42,6 +42,7 @@ export class Dialog implements AfterViewInit, OnDestroy {
   readonly describedBy = input<string | null>(null);
   readonly wide = input(false);
   readonly tall = input(false);
+  readonly grouped = input(false);
   readonly presentation = input<DialogPresentation>('auto');
   readonly pushesHistory = input(true);
   readonly dismissible = input(true);

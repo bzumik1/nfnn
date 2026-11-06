@@ -62,6 +62,8 @@
   --color-sheet-grabber: #8a877c;
   --color-sheet-close: color-mix(in srgb, var(--color-text) 10%, var(--color-surface));
   --color-on-sheet-close: var(--color-text);
+  --color-sheet-grouped: var(--color-surface-muted);
+  --color-sheet-group: var(--color-surface);
 
   --font-serif: Georgia, 'Times New Roman', serif;
   --font-sans: system-ui, 'Segoe UI', Roboto, Arial, sans-serif;
@@ -159,6 +161,7 @@
   --radius-media: 4px;
   --radius-dialog: 6px;
   --radius-sheet: var(--radius-dialog);
+  --radius-sheet-group: var(--radius-media);
   --radius-pill: 4px;
   --radius-round: 50%;
 
@@ -210,6 +213,7 @@
   --sheet-close-size: var(--back-button-size);
   --sheet-close-inset: var(--space-4);
   --sheet-top-gap: var(--space-2);
+  --sheet-group-gap: var(--space-6);
   --tab-bar-height: 60px;
   --tab-bar-gap: 15px;
   --tab-bar-gap-browser: 15px;
@@ -271,6 +275,7 @@
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
+    --color-sheet-grouped: var(--color-surface-alt);
     --color-accent: #5eead4;
     --color-accent-soft: #133a35;
     --color-accent-bg: #10302b;

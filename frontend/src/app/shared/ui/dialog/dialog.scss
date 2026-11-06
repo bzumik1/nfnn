@@ -45,6 +45,10 @@
   &--wide {
     max-width: var(--dialog-max-width-wide);
   }
+
+  &--grouped {
+    background: var(--color-sheet-grouped);
+  }
 }
 
 .dialog-close {

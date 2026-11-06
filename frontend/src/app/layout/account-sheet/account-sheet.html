@@ -2,6 +2,7 @@
   labelledBy="account-sheet-title"
   [presentation]="presentation()"
   [tall]="true"
+  [grouped]="true"
   (dismissed)="close()"
 >
   <div class="account-head">
@@ -46,7 +47,7 @@
   </div>
 
   <nav class="account-nav" aria-labelledby="account-sheet-title">
-    <ul class="ui-list">
+    <ul class="ui-list ui-list--grouped">
       @for (item of items(); track item.path) {
         <li>
           <a
@@ -129,7 +130,7 @@
   </nav>
 
   @if (installWay() !== 'none') {
-    <ul class="ui-list account-install">
+    <ul class="ui-list ui-list--grouped account-install">
       <li>
         <button
           type="button"
@@ -174,18 +175,22 @@
     </ul>
   }
 
-  <button
-    type="button"
-    class="ui-button ui-button--danger-soft ui-button--block account-sign-out"
-    [disabled]="signingOut()"
-    (click)="signOut()"
-  >
-    @if (signingOut()) {
-      <span i18n="@@layout.account.signingOut">Odhlašujeme…</span>
-    } @else {
-      <span i18n="@@donor.dashboard.logout">Odhlásit se</span>
-    }
-  </button>
+  <ul class="ui-list ui-list--grouped account-sign-out-group">
+    <li>
+      <button
+        type="button"
+        class="ui-list__row ui-list__row--danger account-sign-out"
+        [disabled]="signingOut()"
+        (click)="signOut()"
+      >
+        @if (signingOut()) {
+          <span class="ui-list__title" i18n="@@layout.account.signingOut">Odhlašujeme…</span>
+        } @else {
+          <span class="ui-list__title" i18n="@@donor.dashboard.logout">Odhlásit se</span>
+        }
+      </button>
+    </li>
+  </ul>
 
   <div class="account-foundation">
     <p>

@@ -47,9 +47,9 @@
   color: var(--color-text-muted);
 }
 
-.account-nav,
-.account-install {
-  margin: 0 calc(-1 * var(--space-4));
+.account-install,
+.account-sign-out-group {
+  margin-top: var(--sheet-group-gap);
 }
 
 .account-install-how {
@@ -62,17 +62,13 @@
   font-weight: var(--weight-medium);
 }
 
-.account-sign-out {
-  margin-top: var(--space-4);
-}
-
 .account-foundation {
   margin-top: var(--space-5);
   padding-top: var(--space-4);
   border-top: 1px solid var(--color-border);
   font-size: var(--text-xs);
   line-height: var(--leading-relaxed);
-  color: var(--color-text-subtle);
+  color: var(--color-text-muted);
 
   p {
     margin: 0 0 var(--space-1);
