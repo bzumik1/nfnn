@@ -1,4 +1,5 @@
 import { Location } from '@angular/common';
+import { Component, input } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By, Meta } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
@@ -6,10 +7,12 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import type { SignedReceipt } from './receipt-proof';
 import {
   ReceiptVerifier,
+  type SignedStatus,
   type VerificationOutcome,
   type VerificationStep,
 } from './receipt-verifier';
 import { ProofInput } from './proof-input';
+import { VERIFICATION_CONTEXT } from './verification-context';
 import { VerificationPage } from './verification-page';
 
 const SINGLE: SignedReceipt = {
@@ -533,5 +536,179 @@ describe('Given the verification page', () => {
     await settle();
 
     expect(verifier.calls).toEqual([FRAGMENT, '1234']);
+  });
+
+  it('when it opens without a code after the shell focused its checking heading, then the empty page keeps the focus on its heading', async () => {
+    let answer: (outcome: VerificationOutcome) => void = () => undefined;
+    verifier.answer = () => new Promise((resolve) => (answer = resolve));
+    harness = await RouterTestingHarness.create('/overit');
+    await settle();
+    heading().focus();
+
+    answer({ state: 'empty' });
+    await settle();
+
+    expect(heading().textContent).toContain('Ověření potvrzení o daru');
+    expect(document.activeElement).toBe(heading());
+  });
+
+  it('when it opens without a code while the focus is on nothing, then it leaves the focus where the shell left it', async () => {
+    (document.activeElement as HTMLElement | null)?.blur();
+
+    await open('/overit');
+
+    expect(document.activeElement).toBe(document.body);
+  });
+});
+
+@Component({
+  selector: 'app-test-register',
+  template: '<p class="test-register">{{ receipt().number }} {{ status() }}</p>',
+})
+class TestRegister {
+  readonly receipt = input.required<SignedReceipt>();
+  readonly status = input.required<SignedStatus>();
+}
+
+describe('Given the verification page in another context, as the administration shows it', () => {
+  let harness: RouterTestingHarness;
+  let verifier: FakeVerifier;
+
+  beforeEach(() => {
+    verifier = new FakeVerifier();
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([{ path: 'sprava/overit', component: VerificationPage }]),
+        { provide: ReceiptVerifier, useValue: verifier },
+        {
+          provide: VERIFICATION_CONTEXT,
+          useValue: {
+            path: '/sprava/overit',
+            audience: 'administration',
+            registerLine: TestRegister,
+          },
+        },
+      ],
+    });
+  });
+
+  async function open(url: string, outcome: VerificationOutcome): Promise<HTMLElement> {
+    verifier.answer = () => Promise.resolve(outcome);
+    harness = await RouterTestingHarness.create(url);
+    for (let round = 0; round < 3; round++) {
+      harness.detectChanges();
+      await harness.fixture.whenStable();
+    }
+    return harness.routeNativeElement as HTMLElement;
+  }
+
+  it('when it opens with the code of a signed receipt, then it verifies it, drops the code from its own address and shows the register line of the context for the receipt and the answer right under the verdict', async () => {
+    const root = await open(`/sprava/overit#${FRAGMENT}`, {
+      state: 'signed',
+      receipt: YEARLY,
+      status: 'replaced',
+    });
+
+    expect(verifier.calls).toEqual([FRAGMENT]);
+    expect(TestBed.inject(Location).path(true)).toBe('/sprava/overit');
+    expect(root.querySelector('.test-register')?.textContent).toBe('2027-000007 replaced');
+    expect(
+      root.querySelector('.test-register')?.compareDocumentPosition(root.querySelector('dl')!),
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(root.querySelector('.verify-domain')).toBeNull();
+  });
+
+  it('when the fund replaced the receipt, then the verdict sends the administrator to the donor card and not to the fund by e-mail', async () => {
+    const root = await open(`/sprava/overit#${FRAGMENT}`, {
+      state: 'signed',
+      receipt: YEARLY,
+      status: 'replaced',
+    });
+
+    expect(root.querySelector('.verify-lead')?.textContent).toContain(
+      'Platí to novější; najdete ho na kartě dárce.',
+    );
+    expect(root.querySelector('a[href^="mailto:"]')).toBeNull();
+  });
+
+  it('when the signature is invalid, then the verdict tells the administrator to send its number to the technician', async () => {
+    const root = await open(`/sprava/overit#${FRAGMENT}`, { state: 'invalid' });
+
+    expect(root.querySelector('.verify-lead')?.textContent).toContain(
+      'Nepovažujte ho za platné a pošlete jeho číslo technikovi.',
+    );
+    expect(root.querySelector('a[href^="mailto:"]')).toBeNull();
+  });
+
+  it.each(['no-answer', 'unanswered'] as const)(
+    'when the fund did not answer (%s), then the verdict points to the register line under it and to trying again',
+    async (status) => {
+      const root = await open(`/sprava/overit#${FRAGMENT}`, {
+        state: 'signed',
+        receipt: YEARLY,
+        status,
+      });
+
+      expect(root.querySelector('.verify-lead')?.textContent?.replace(/\s+/g, ' ')).toContain(
+        'Jak ho vedou údaje správy v tomto zařízení, uvádíme hned pod tím; odpověď fondu dostanete, když to za chvíli zkusíte znovu.',
+      );
+      expect(root.querySelector('.verify-lead')?.textContent).not.toContain('nevíte');
+      expect(root.querySelector('.test-register')?.textContent).toBe(`2027-000007 ${status}`);
+    },
+  );
+
+  it.each([
+    [{ state: 'signed', receipt: YEARLY, status: 'withdrawn' }, 'Nepovažujte ho za platné.'],
+    [
+      { state: 'signed', receipt: YEARLY, status: 'outdated' },
+      'na kartě dárce uvidíte, zda už ho má.',
+    ],
+    [
+      { state: 'signed', receipt: YEARLY, status: 'unknown' },
+      'Nepovažujte ho za platné a pošlete jeho číslo technikovi.',
+    ],
+    [{ state: 'revoked' }, 'Nepovažujte ho za platné a pošlete jeho číslo technikovi.'],
+    [
+      { state: 'unknown-key', reach: 'online' },
+      'Nepovažujte ho za platné a pošlete jeho číslo technikovi.',
+    ],
+    [{ state: 'keys-refused' }, 'Dejte prosím vědět technikovi.'],
+  ] as const)(
+    'when the outcome is %o, then the verdict names the next step of the administration and links no e-mail',
+    async (outcome, next) => {
+      const root = await open(`/sprava/overit#${FRAGMENT}`, outcome as VerificationOutcome);
+
+      expect(root.querySelector('.verify-lead')?.textContent?.replace(/\s+/g, ' ')).toContain(next);
+      expect(root.querySelector('a[href^="mailto:"]')).toBeNull();
+    },
+  );
+
+  it('when the fund could not be asked, then the status line points to the register line under it', async () => {
+    const root = await open(`/sprava/overit#${FRAGMENT}`, {
+      state: 'signed',
+      receipt: YEARLY,
+      status: 'offline',
+    });
+
+    expect(root.querySelector('.verify-status')?.textContent).toContain(
+      'Bez připojení se fondu nezeptáme.',
+    );
+  });
+
+  it('when the code cannot be verified, then no register line is shown', async () => {
+    const root = await open(`/sprava/overit#${FRAGMENT}`, { state: 'invalid' });
+
+    expect(root.querySelector('.test-register')).toBeNull();
+  });
+
+  it('when it opens without a code, then it names the page as the navigation does, keeps to reading here and shows no note about the public address', async () => {
+    const root = await open('/sprava/overit', { state: 'empty' });
+
+    expect(root.querySelector('h1')?.textContent?.trim()).toBe('Ověřit potvrzení');
+    expect(root.querySelector('.verify-lead')?.textContent).toContain(
+      'Načtěte QR kód z potvrzení o daru tady na stránce.',
+    );
+    expect(root.querySelector('.verify-lead')?.textContent).not.toContain('fotoaparátem telefonu');
+    expect(root.querySelector('.verify-domain')).toBeNull();
   });
 });

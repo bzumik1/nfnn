@@ -59,6 +59,13 @@ export const adminRoutes: Routes = [
           import('./yearly-receipts/admin-yearly-receipts').then((m) => m.AdminYearlyReceipts),
       },
       {
+        path: 'overit',
+        data: { parent: ADMIN_MORE_PATH },
+        title: $localize`:@@admin.verify.pageTitle:Ověřit potvrzení | Správa | Nová naděje – nadační fond`,
+        loadComponent: () =>
+          import('./verification/admin-verification').then((m) => m.AdminVerification),
+      },
+      {
         path: 'spravci',
         data: { parent: ADMIN_MORE_PATH },
         title: $localize`:@@admin.administrators.pageTitle:Správci | Správa | Nová naděje – nadační fond`,

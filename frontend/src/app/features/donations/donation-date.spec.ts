@@ -1,4 +1,10 @@
-import { formatBankTime, formatDonationDate, pragueDay, pragueHour } from './donation-date';
+import {
+  formatBankTime,
+  formatDonationDate,
+  formatPragueClock,
+  pragueDay,
+  pragueHour,
+} from './donation-date';
 
 describe('Given a date the donations API sends', () => {
   it('when it is formatted, then it reads as day, month and year with leading zeros', () => {
@@ -34,5 +40,10 @@ describe('Given an instant the API sends', () => {
   it('when its Prague hour is asked for, then it counts in Prague summer and winter time', () => {
     expect(pragueHour('2026-10-01T05:00:00Z')).toBe(7);
     expect(pragueHour('2026-11-01T06:00:00Z')).toBe(7);
+  });
+
+  it('when its Prague time of day is asked for, then it comes as HH:MM on a 24-hour clock', () => {
+    expect(formatPragueClock('2026-11-06T02:35:00Z')).toBe('03:35');
+    expect(formatPragueClock('2026-07-01T21:05:00Z')).toBe('23:05');
   });
 });

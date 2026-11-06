@@ -1,4 +1,8 @@
-<section class="ui-panel-page" aria-labelledby="verify-title">
+<section
+  [class.ui-panel-page]="context.audience === 'public'"
+  [class.verify-embedded]="context.audience === 'administration'"
+  aria-labelledby="verify-title"
+>
   <div class="ui-panel verify-panel">
     @switch (page().state) {
       @case ('checking') {
@@ -27,19 +31,35 @@
       }
       @case ('empty') {
         <div class="ui-status">
-          <h1
-            id="verify-title"
-            class="ui-panel__title"
-            tabindex="-1"
-            i18n="@@donor.verify.empty.title"
-          >
-            Ověření potvrzení o daru
-          </h1>
-          <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.empty.text">
-            Každé potvrzení o daru od fondu Nová naděje nese QR kód. Načtěte ho tady nebo
-            fotoaparátem telefonu a ukážeme, jaké údaje v kódu fond podepsal. Porovnejte je pak s
-            papírem. Kód čteme jen ve vašem zařízení.
-          </p>
+          @if (context.audience === 'administration') {
+            <h1
+              id="verify-title"
+              class="ui-panel__title"
+              tabindex="-1"
+              i18n="@@admin.verify.empty.title"
+            >
+              Ověřit potvrzení
+            </h1>
+            <p class="ui-panel__lead verify-lead" i18n="@@admin.verify.empty.text">
+              Načtěte QR kód z potvrzení o daru tady na stránce. Ukážeme, jaké údaje v něm fond
+              podepsal, a pod tím, jak potvrzení vedou údaje správy v tomto zařízení, i bez
+              připojení. Kód čteme jen v tomto zařízení.
+            </p>
+          } @else {
+            <h1
+              id="verify-title"
+              class="ui-panel__title"
+              tabindex="-1"
+              i18n="@@donor.verify.empty.title"
+            >
+              Ověření potvrzení o daru
+            </h1>
+            <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.empty.text">
+              Každé potvrzení o daru od fondu Nová naděje nese QR kód. Načtěte ho tady nebo
+              fotoaparátem telefonu a ukážeme, jaké údaje v kódu fond podepsal. Porovnejte je pak s
+              papírem. Kód čteme jen ve vašem zařízení.
+            </p>
+          }
         </div>
         <app-proof-input (found)="verifyProof($event)" />
       }
@@ -57,9 +77,11 @@
         }
       }
     }
-    <p class="verify-domain" i18n="@@donor.verify.domain">
-      Fond ověřuje potvrzení jen na adrese nfnn.cz/overit. Zkontrolujte, že ji máte v adresním řádku
-      prohlížeče.
-    </p>
+    @if (context.audience === 'public') {
+      <p class="verify-domain" i18n="@@donor.verify.domain">
+        Fond ověřuje potvrzení jen na adrese nfnn.cz/overit. Zkontrolujte, že ji máte v adresním
+        řádku prohlížeče.
+      </p>
+    }
   </div>
 </section>

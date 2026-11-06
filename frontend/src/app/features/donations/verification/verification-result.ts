@@ -1,7 +1,9 @@
-import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { NgComponentOutlet } from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { type ReceiptDisplay, receiptDisplay } from '../receipt-format';
 import type { ReceiptStatus } from './receipt-status-api';
 import type { VerificationOutcome } from './receipt-verifier';
+import { VERIFICATION_CONTEXT } from './verification-context';
 
 export type FinalOutcome = Exclude<VerificationOutcome, { readonly state: 'empty' }>;
 
@@ -76,6 +78,7 @@ const ANSWERED: readonly string[] = [
 
 @Component({
   selector: 'app-verification-result',
+  imports: [NgComponentOutlet],
   templateUrl: './verification-result.html',
   styleUrl: './verification-result.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -85,12 +88,19 @@ export class VerificationResult {
   readonly scanned = input(false);
   readonly retry = output<void>();
 
+  protected readonly context = inject(VERIFICATION_CONTEXT);
+  protected readonly administration = this.context.audience === 'administration';
+
   protected readonly kind = computed(() => kindOf(this.outcome()));
   protected readonly tone = computed(() => TONES[this.kind()]);
   protected readonly icon = computed(() => ICONS[this.tone()]);
   protected readonly status = computed(() => {
     const outcome = this.outcome();
     return outcome.state === 'signed' ? outcome.status : null;
+  });
+  protected readonly signed = computed(() => {
+    const outcome = this.outcome();
+    return outcome.state === 'signed' ? outcome : null;
   });
   protected readonly receipt = computed<ReceiptDisplay | null>(() => {
     const outcome = this.outcome();
