@@ -108,7 +108,7 @@ test.describe('Given an administrator on the alerts page of a device with a serv
     await expect(watched.getByRole('link')).toHaveText([
       /Import plateb z banky\s*Bez poruchy/,
       /Zálohy\s*Bez poruchy/,
-      /Odesílání e-mailů\s*Nefunguje od 04\. 11\. 2026 06:15/,
+      /Odesílání e-mailů\s*Nefunguje od 4\. 11\. 2026 6:15/,
     ]);
     await expect(watched.getByRole('link').nth(2)).toHaveAttribute('href', '/sprava/nastaveni');
     expect((await deviceRecord(page)).badges).toContain(1);
@@ -188,7 +188,7 @@ test.describe('Given an administrator on the alerts page of a device with a serv
 
     const others = page.getByRole('region', { name: 'Další zařízení' });
     const phoneSwitches = others.getByRole('group', { name: 'Apple, zapnuto 30. 10. 2026' });
-    await expect(phoneSwitches).toContainText('Naposledy doručeno 03. 11. 2026 10:05.');
+    await expect(phoneSwitches).toContainText('Naposledy doručeno 3. 11. 2026 10:05.');
     await expect(phoneSwitches).toContainText('Nedoručeno 2× po sobě.');
 
     await phoneSwitches.getByRole('checkbox', { name: 'Import plateb z banky' }).uncheck();

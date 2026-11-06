@@ -8,6 +8,7 @@ import {
   Injectable,
   Injector,
   signal,
+  untracked,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -15,7 +16,6 @@ import {
   catchError,
   EMPTY,
   filter,
-  forkJoin,
   last,
   map,
   Observable,
@@ -34,6 +34,11 @@ import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { LiveUpdates } from '../../../core/live/live-updates';
 import { UPDATE_REQUIRED } from '../../../core/version/version-interceptor';
 import { BankAccountItem, BankAccountsApi } from '../../donations/bank-accounts-api';
+import { copyBackedReceiptSource } from '../../donations/device-copy/copy-receipt-source';
+import {
+  type DonorDonationsRead,
+  DonorDonationsRepository,
+} from '../../donations/device-copy/donor-donations-repository';
 import {
   BankCheckResponse,
   DonationItem,
@@ -124,8 +129,7 @@ const NOT_FOUND = 404;
 const BANK_CHECK_COOLDOWN_MS = 30_000;
 
 interface IncomingDonations {
-  readonly summary: DonationSummaryResponse;
-  readonly items: readonly DonationItem[];
+  readonly read: DonorDonationsRead;
   readonly added: number;
 }
 
@@ -144,6 +148,7 @@ export class DonorDonations {
   private readonly document = inject(DOCUMENT);
   private readonly injector = inject(Injector);
   private readonly live = inject(LiveUpdates);
+  private readonly repository = inject(DonorDonationsRepository);
   private readonly pendingDownload =
     inject(ActivatedRoute).snapshot.queryParamMap.get(RECEIPT_RESTART_PARAM);
 
@@ -176,6 +181,8 @@ export class DonorDonations {
   private readonly focusedAtStart = new Map<string, Element | null>();
   private pendingStarted = false;
   private latestDonationsRequest = 0;
+  private shown: DonorDonationsRead | null = null;
+  private shownOwner: string | null = null;
   private bankCheckEndedAt: number | null = null;
   private readonly printedDonor = computed(() => {
     const donor = this.auth.donor();
@@ -198,6 +205,24 @@ export class DonorDonations {
       }
       printedBefore = printed;
     });
+    effect(() => {
+      const held = this.repository.held();
+      if (held === null) {
+        return;
+      }
+      untracked(() => {
+        const switched = this.shownOwner !== null && held.owner !== this.shownOwner;
+        if (!switched && this.shown?.source === 'server' && held.at < this.shown.at) {
+          return;
+        }
+        if (this.state() === 'ready' && !switched) {
+          this.offerDonations(held);
+        } else {
+          this.latestDonationsRequest++;
+          this.showRead(held);
+        }
+      });
+    });
     this.load();
     this.checkBank(false);
     this.bankAccountsApi
@@ -213,7 +238,7 @@ export class DonorDonations {
   showIncoming(): void {
     const incoming = this.incoming();
     if (incoming !== null) {
-      this.showDonations(incoming.summary, incoming.items);
+      this.showDonations(incoming.read);
     }
   }
 
@@ -251,27 +276,37 @@ export class DonorDonations {
       return this.reloadDonations();
     }
     const startedAfter = this.latestDonationsRequest;
-    return forkJoin({ summary: this.donations.summary(), list: this.donations.list() }).pipe(
-      tap(({ summary, list }) => {
-        if (startedAfter !== this.latestDonationsRequest) {
-          return;
-        }
-        const shown = new Set(this.items().map((item) => item.id));
-        const added = list.items.filter((item) => !shown.has(item.id)).length;
-        if (added === 0) {
-          this.showDonations(summary, list.items);
-        } else {
-          this.incoming.set({ summary, items: list.items, added });
+    return this.repository.fresh('sync').pipe(
+      tap((read) => {
+        if (startedAfter === this.latestDonationsRequest) {
+          this.offerDonations(read);
         }
       }),
       catchError(() => EMPTY),
     );
   }
 
-  private showDonations(summary: DonationSummaryResponse, items: readonly DonationItem[]): void {
+  private offerDonations(read: DonorDonationsRead): void {
+    const shown = new Set(this.items().map((item) => item.id));
+    const added = read.items.filter((item) => !shown.has(item.id)).length;
+    if (added === 0) {
+      this.showDonations(read);
+    } else {
+      this.incoming.set({ read, added });
+    }
+  }
+
+  private showDonations(read: DonorDonationsRead): void {
     this.incoming.set(null);
-    this.summary.set(summary);
-    this.items.set(items);
+    this.shown = read;
+    if (read.owner !== null) {
+      this.shownOwner = read.owner;
+    }
+    this.summary.set(read.summary);
+    this.items.set(read.items);
+    if (read.bankDataAsOf !== null && this.bankDataAsOf() === null) {
+      this.bankDataAsOf.set(read.bankDataAsOf);
+    }
   }
 
   showBankAccounts(items: readonly BankAccountItem[]): void {
@@ -310,27 +345,40 @@ export class DonorDonations {
     this.reloadDonations().subscribe();
   }
 
-  private reloadDonations(): Observable<readonly DonationItem[] | null> {
+  private reloadDonations(offered = false): Observable<readonly DonationItem[] | null> {
     const request = ++this.latestDonationsRequest;
-    return forkJoin({ summary: this.donations.summary(), list: this.donations.list() }).pipe(
-      map(({ summary, list }) => {
+    const held = this.repository.held();
+    const atOnce = held !== null && this.state() !== 'ready';
+    if (atOnce) {
+      this.showRead(held);
+    }
+    return this.repository.fresh(atOnce ? 'catch-up' : 'sync').pipe(
+      map((read) => {
         if (request === this.latestDonationsRequest) {
-          this.showDonations(summary, list.items);
-          this.state.set('ready');
-          this.startPendingDownload();
+          if (atOnce || offered) {
+            this.offerDonations(read);
+          } else {
+            this.showRead(read);
+          }
         }
-        return list.items;
+        return read.items;
       }),
       catchError((failure: unknown) => {
         if (this.sessionEnded(failure)) {
           this.sendToSignIn();
-        } else if (request === this.latestDonationsRequest) {
+        } else if (request === this.latestDonationsRequest && this.shown?.source !== 'copy') {
           this.state.set('error');
         }
         return of(null);
       }),
       takeUntilDestroyed(this.destroyRef),
     );
+  }
+
+  private showRead(read: DonorDonationsRead): void {
+    this.showDonations(read);
+    this.state.set('ready');
+    this.startPendingDownload();
   }
 
   sendToSignIn(): void {
@@ -517,10 +565,15 @@ export class DonorDonations {
           if (byDonor || check.bankDataAsOf !== asOfBefore) {
             this.bankDataArrived.update((count) => count + 1);
           }
-          this.reloadDonations().subscribe((items) => {
+          this.reloadDonations(!byDonor && this.shown?.source === 'copy').subscribe((items) => {
             this.bankCheckEnded();
-            if (byDonor && items !== null) {
+            if (!byDonor) {
+              return;
+            }
+            if (items !== null) {
               this.bankCheckOutcome.set(outcomeOf(check, items, known));
+            } else if (this.state() === 'ready' && this.auth.status() !== 'anonymous') {
+              this.bankCheckOutcome.set({ kind: 'failed' });
             }
           });
         },
@@ -560,7 +613,13 @@ export class DonorDonations {
     this.downloads.update((running) => new Set(running).add(key));
     this.focusedAtStart.set(key, this.document.activeElement);
     const subscription = this.receiptPdf
-      .draw(this.receiptsApi.donorSource(subject))
+      .draw(
+        copyBackedReceiptSource(
+          this.receiptsApi.donorSource(subject),
+          () => this.repository.view(),
+          subject,
+        ),
+      )
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (event) => this.receiptProgressed(key, scope, event),

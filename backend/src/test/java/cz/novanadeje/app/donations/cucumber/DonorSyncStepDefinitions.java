@@ -259,6 +259,12 @@ public class DonorSyncStepDefinitions {
         assertThat(chunk(id).get("rows").valueStream().toList()).containsExactlyElementsOf(listed);
     }
 
+    @Then("the device's chunk {string} holds receipts with the statuses {string}")
+    public void theDevicesChunkHoldsReceiptsWithTheStatuses(String id, String statuses) {
+        assertThat(chunk(id).get("rows").valueStream().map(row -> row.get("status").asString()).toList())
+                .containsExactly(statuses.split(",\\s*"));
+    }
+
     @Then("the device's chunk {string} holds every bank account {string} lists")
     public void theDevicesChunkHoldsEveryListedBankAccount(String id, String alias) {
         sessions.actAs(alias);

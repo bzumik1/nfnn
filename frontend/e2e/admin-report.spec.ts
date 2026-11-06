@@ -55,12 +55,12 @@ test.describe('Given an administrator on the monthly report page', () => {
 
     await expect(
       page.getByText(
-        'Přehled za září 2026 měl odejít 01. 10. 2026 v 7:00, ale zatím neodešel. Web ho zkusí poslat znovu v příští celou hodinu; poslat ho můžete i hned níže.',
+        'Přehled za září 2026 měl odejít 1. 10. 2026 v 7:00, ale zatím neodešel. Web ho zkusí poslat znovu v příští celou hodinu; poslat ho můžete i hned níže.',
       ),
     ).toBeVisible();
     await expect(
       page.getByText(
-        'Poslat jde jen měsíc, který už skončil: přehled za říjen 2026 půjde poslat od 01. 11. 2026.',
+        'Poslat jde jen měsíc, který už skončil: přehled za říjen 2026 půjde poslat od 1. 11. 2026.',
       ),
     ).toBeVisible();
   });
@@ -92,10 +92,10 @@ test.describe('Given an administrator on the monthly report page', () => {
     await expect(page).toHaveTitle('Měsíční e-mail | Správa | Nová naděje – nadační fond');
     await expect(page.getByRole('heading', { level: 1, name: 'Měsíční e-mail' })).toBeFocused();
     await expect(
-      page.getByText('Příští přehled za říjen 2026 odejde 01. 11. 2026 v 7:00.'),
+      page.getByText('Příští přehled za říjen 2026 odejde 1. 11. 2026 v 7:00.'),
     ).toBeVisible();
     await expect(page.getByText('Nastavení jste zatím neměnili.')).toBeVisible();
-    await expect(page.locator('tbody tr')).toHaveText(['září 2026 01. 10. 2026 07:00']);
+    await expect(page.locator('tbody tr')).toHaveText(['září 2026 1. 10. 2026 7:00']);
 
     await page.getByLabel('Příjemci').fill('pavel@example.cz\njakub@example.cz');
     await page.getByLabel('Den odeslání').selectOption({ label: '5.' });
@@ -108,7 +108,7 @@ test.describe('Given an administrator on the monthly report page', () => {
     );
     await expect(page.getByText('Naposledy změněno 23. 10. 2026 10:00.')).toBeVisible();
     await expect(
-      page.getByText('Příští přehled za říjen 2026 odejde 05. 11. 2026 v 18:00.'),
+      page.getByText('Příští přehled za říjen 2026 odejde 5. 11. 2026 v 18:00.'),
     ).toBeVisible();
     expect(saved).toEqual([
       {
@@ -189,10 +189,10 @@ test.describe('Given an administrator on the monthly report page', () => {
     );
     await expect(page.locator('tbody tr')).toHaveText([
       'říjen 2026 23. 10. 2026 10:00',
-      'září 2026 01. 10. 2026 07:00',
+      'září 2026 1. 10. 2026 7:00',
     ]);
     await expect(
-      page.getByText('Příští přehled za listopad 2026 odejde 01. 12. 2026 v 7:00.'),
+      page.getByText('Příští přehled za listopad 2026 odejde 1. 12. 2026 v 7:00.'),
     ).toBeVisible();
     expect(sent).toEqual([{ month: '2026-10' }]);
   });

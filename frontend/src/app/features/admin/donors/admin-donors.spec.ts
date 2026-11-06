@@ -130,6 +130,15 @@ describe('Given an administrator on the donors page', () => {
     expect(text('[role="status"]')).toBe('Nalezení dárci: 2');
   });
 
+  it('when a found donor registered on an early morning of a single-digit day and month, then the registration reads as the Prague day without leading zeros and without the time', async () => {
+    await searched('nov', [donorAccount({ registeredAt: '2026-03-05T07:00:00Z' })]);
+
+    const [row] = rows();
+    expect((row.querySelector('td[data-label="Registrace"]')?.textContent ?? '').trim()).toBe(
+      '5. 3. 2026',
+    );
+  });
+
   it('when a found donor was erased, then the row carries the erased tag and no other account tag', async () => {
     await searched('4821', [
       donorAccount({
