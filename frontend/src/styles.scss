@@ -35,6 +35,10 @@ html.follows-system-text-size {
   font-family: var(--font-sans);
 }
 
+:where(h1, h2, h3) {
+  overflow-wrap: break-word;
+}
+
 html:has(app-tab-bar) {
   scroll-padding-bottom: var(--tab-bar-clearance);
 }

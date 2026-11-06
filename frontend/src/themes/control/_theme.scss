@@ -72,12 +72,12 @@
   --text-4xl: 1.5rem;
   --text-5xl: 1.75rem;
   --text-6xl: 2.5rem;
-  --text-heading: clamp(1.5rem, 3.5vw, 1.875rem);
-  --text-section-title-compact: clamp(1.625rem, 3.5vw, 2.5rem);
-  --text-section-title: clamp(1.75rem, 3.5vw, 2.75rem);
-  --text-cta-title: clamp(1.5rem, 3vw, 2.5rem);
-  --text-article-title: clamp(2rem, 4.5vw, 3.25rem);
-  --text-page-title: clamp(2rem, 5vw, 3.5rem);
+  --text-heading: clamp(max(1rem, min(1.5rem, 16vw)), 3.5vw, 1.875rem);
+  --text-section-title-compact: clamp(max(1rem, min(1.625rem, 16vw)), 3.5vw, 2.5rem);
+  --text-section-title: clamp(max(1rem, min(1.75rem, 16vw)), 3.5vw, 2.75rem);
+  --text-cta-title: clamp(max(1rem, min(1.5rem, 16vw)), 3vw, 2.5rem);
+  --text-article-title: clamp(max(1rem, min(2rem, 16vw)), 4.5vw, 3.25rem);
+  --text-page-title: clamp(max(1rem, min(2rem, 16vw)), 5vw, 3.5rem);
   --text-hero: clamp(2.75rem, 7vw, 5.5rem);
   --text-hero-short: max(2rem, min(5.5vw, 12svh));
 
@@ -176,6 +176,10 @@
 
   --content-max: 1140px;
   --header-height: 68px;
+  --text-header-action: min(
+    var(--text-sm),
+    (60vw - 1.2 * var(--space-5) - 2 * var(--space-4-5) - 3px) / 5.6
+  );
   --side-nav-layout-max: 1280px;
   --side-nav-width: 230px;
   --floating-notice-height: 0rem;
