@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.AdministratorWithoutSecondFactor;
 import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
@@ -41,13 +42,15 @@ public class AdministratorService {
     private final DonorRepository donors;
     private final SecondFactorRepository secondFactors;
     private final PasskeyRepository passkeys;
+    private final SecondFactorHoldings holdings;
     private final ApplicationEventPublisher events;
     private final Clock clock;
     private final DeviceSignOuts signOuts;
 
     public AdministratorService(DonorRepository donors, SecondFactorRepository secondFactors, PasskeyRepository passkeys,
-                                ApplicationEventPublisher events, Clock clock, DeviceSignOuts signOuts) {
+                                SecondFactorHoldings holdings, ApplicationEventPublisher events, Clock clock, DeviceSignOuts signOuts) {
         this.signOuts = signOuts;
+        this.holdings = holdings;
         this.donors = donors;
         this.secondFactors = secondFactors;
         this.passkeys = passkeys;
@@ -76,6 +79,9 @@ public class AdministratorService {
     public AdministratorView grant(DonorId adminId, EmailAddress email) {
         Donor donor = donors.findByEmail(email).orElseThrow(EmailNotRegistered::new);
         donor.grantAdministration();
+        if (!holdings.holdsAny(donor.id())) {
+            throw new AdministratorWithoutSecondFactor(donor.id());
+        }
         donors.save(donor);
         events.publishEvent(new AdminActionPerformed(adminId.value(), GRANT_ACTION, Optional.of(donor.id().value()),
                 "Role správce udělena dárci " + donor.id(), clock.instant()));

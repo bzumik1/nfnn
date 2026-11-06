@@ -7,6 +7,8 @@ Feature: An administrator reads what administrators changed and when
     And a person "Petr" is registered
     And a person "Eva" is registered
     And "Jana" is an administrator
+    And "Petr" enables the second factor
+    And "Eva" enables the second factor
 
   Scenario: The trail lists every administrator's change newest first with who did it, what and on whom
     Given "Jana" made "Petr" an administrator
@@ -56,7 +58,6 @@ Feature: An administrator reads what administrators changed and when
 
   Scenario: A change made by an administrator who is no longer one still names the administrator
     Given "Jana" made "Petr" an administrator
-    And "Petr" enables the second factor
     And "Petr" signs in again
     And 1 minutes pass
     And "Petr" made "Eva" an administrator

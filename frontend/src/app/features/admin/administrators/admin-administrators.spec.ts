@@ -250,6 +250,34 @@ describe('Given an administrator on the administrators page', () => {
     expect(element<HTMLInputElement>('#grant-email').value).toBe('nikdo@example.cz');
   });
 
+  it('when the donor holds no second factor yet, then the form says so beforehand and the refusal stays at the form with the backend title and detail', async () => {
+    peopleArrive();
+    await listed([jana]);
+    expect(text('.grant-intro')).toContain(
+      'Správcem může být jen dárce, který už má zapnutý kód z ověřovací aplikace nebo přidaný přístupový klíč',
+    );
+
+    const input = element<HTMLInputElement>('#grant-email');
+    input.value = 'petr@example.cz';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    element<HTMLFormElement>('form').dispatchEvent(new Event('submit'));
+    fixture.detectChanges();
+    const refusal = problem(
+      409,
+      'donors/administrator-without-second-factor',
+      'Dárce zatím nemá dvoufaktorové ověření',
+      'Správcem může být jen účet chráněný kódem z ověřovací aplikace nebo přístupovým klíčem.',
+    );
+    http.expectOne('/api/admin/donors/administrators').flush(refusal.body, refusal.options);
+    fixture.detectChanges();
+
+    expect(text('.form-error')).toBe(
+      'Dárce zatím nemá dvoufaktorové ověření. Správcem může být jen účet chráněný kódem z ověřovací aplikace nebo přístupovým klíčem.',
+    );
+    expect(element<HTMLInputElement>('#grant-email').value).toBe('petr@example.cz');
+  });
+
   it('when another administrator is removed after the confirmation, then the list reloads and the status says their sign-ins ended', async () => {
     peopleArrive();
     await listed();

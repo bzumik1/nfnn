@@ -17,6 +17,7 @@ Feature: An administrator's device keeps a copy of the accounts and the administ
     And "Jana" asks to recover the second factor by payment
     And a password reset is asked for "petr@example.cz"
     And "Andrea" approved the connection for "https://claude.ai/.well-known/oauth-client"
+    And "Petr" enables the second factor
     And "Andrea" made "Petr" an administrator
     And 1 minute passes
     And "Andrea" removes "Petr" from the administrators
@@ -35,6 +36,7 @@ Feature: An administrator's device keeps a copy of the accounts and the administ
   Scenario: A changed profile changes only the chunk of the donor's registration month, a new action only its month of the trail
     Given today is 2026-09-20
     And a person "Jana" is registered
+    And "Jana" enables the second factor
     And today is 2026-10-17
     And a person "Andrea" is registered
     And "Andrea" is an administrator
