@@ -15,6 +15,7 @@ import { Router } from '@angular/router';
 import { SoftKeyboard } from '../../core/layout/soft-keyboard';
 import { APP_TABS, AppTab } from '../../core/navigation/app-tabs';
 import { BackTarget } from '../../core/navigation/back-target';
+import { RouteChrome } from '../../core/navigation/route-chrome';
 import { TabMemory } from '../../core/navigation/tab-memory';
 import { FOUNDATION_STAR } from '../../shared/ui/foundation-star/foundation-star';
 import { keepRoomForTabBar } from './tab-bar-room';
@@ -36,6 +37,8 @@ export class TabBar {
 
   protected readonly tabs = APP_TABS;
   protected readonly current = computed(() => this.memory.currentTab()?.id ?? null);
+  private readonly chrome = inject(RouteChrome).current;
+  protected readonly onDark = computed(() => this.chrome().darkThroughout);
   protected readonly label = $localize`:@@layout.tabs.label:Hlavní sekce`;
   private readonly backTarget = inject(BackTarget);
 
