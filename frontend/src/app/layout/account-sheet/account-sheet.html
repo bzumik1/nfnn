@@ -1,4 +1,9 @@
-<app-dialog labelledBy="account-sheet-title" [presentation]="presentation()" (dismissed)="close()">
+<app-dialog
+  labelledBy="account-sheet-title"
+  [presentation]="presentation()"
+  [tall]="true"
+  (dismissed)="close()"
+>
   <div class="account-head">
     <span class="account-initials" aria-hidden="true">
       @if (portrait(); as source) {

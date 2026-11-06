@@ -60,6 +60,8 @@
   --color-on-tab-bar: #fdfcf7;
   --color-tab-focus-ring: #fdba74;
   --color-sheet-grabber: #8a877c;
+  --color-sheet-close: color-mix(in srgb, var(--color-text) 10%, var(--color-surface));
+  --color-on-sheet-close: var(--color-text);
 
   --font-serif: Georgia, 'Times New Roman', serif;
   --font-sans: system-ui, 'Segoe UI', Roboto, Arial, sans-serif;
@@ -205,6 +207,9 @@
   --sheet-max-width: 640px;
   --sheet-grabber-width: 40px;
   --sheet-grabber-height: 4px;
+  --sheet-close-size: var(--back-button-size);
+  --sheet-close-inset: var(--space-4);
+  --sheet-top-gap: var(--space-2);
   --tab-bar-height: 60px;
   --tab-bar-gap: 15px;
   --tab-bar-gap-browser: 15px;

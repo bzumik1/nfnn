@@ -129,6 +129,8 @@
   --color-on-tab-bar: #ffffff;
   --color-tab-focus-ring: #ffffff;
   --color-sheet-grabber: var(--color-border-rule);
+  --color-sheet-close: color-mix(in srgb, var(--color-text) 10%, var(--color-surface));
+  --color-on-sheet-close: var(--color-text);
 
   --font-serif: 'Playfair Display', serif;
   --font-sans: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
@@ -274,6 +276,9 @@
   --sheet-max-width: 600px;
   --sheet-grabber-width: 36px;
   --sheet-grabber-height: 5px;
+  --sheet-close-size: var(--back-button-size);
+  --sheet-close-inset: var(--space-4);
+  --sheet-top-gap: var(--space-2);
   --tab-bar-height: 62px;
   --tab-bar-gap: 20px;
   --tab-bar-gap-browser: 16px;
