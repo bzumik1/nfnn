@@ -1,132 +1,160 @@
-<table [attr.aria-labelledby]="labelledBy()">
-  <thead>
-    <tr>
-      <th i18n="@@donor.dashboard.payments.col.date">Datum</th>
-      <th class="amount" i18n="@@donor.dashboard.payments.col.amount">Částka</th>
-      <th i18n="@@donor.dashboard.payments.col.purpose">Účel</th>
-      <th i18n="@@donor.dashboard.payments.col.status">Stav</th>
-      @if (withReceipts()) {
-        <th i18n="@@donor.dashboard.payments.col.receipt">Potvrzení</th>
-      }
-    </tr>
-  </thead>
-  <tbody>
+@if (rows()) {
+  <ul class="ui-list donation-rows" [attr.aria-labelledby]="labelledBy()">
     @for (item of items(); track item.id) {
-      <tr [class.is-verification]="item.accountVerification">
-        <td class="date" data-label="Datum" i18n-data-label="@@donor.dashboard.payments.col.date">
-          {{ formatDate(item.receivedAt) }}
-        </td>
-        <td
-          data-label="Částka"
-          i18n-data-label="@@donor.dashboard.payments.col.amount"
-          class="amount"
-        >
-          {{ crowns(item.amountMinor) }}&nbsp;Kč
-        </td>
-        <td data-label="Účel" i18n-data-label="@@donor.dashboard.payments.col.purpose">
-          {{ item.purpose }}
-          @if (item.pairedBy === 'SENDER_ACCOUNT' && item.senderAccount) {
-            <span class="pairing-tag">
-              <span aria-hidden="true" i18n="@@donor.dashboard.payments.withoutSymbol"
-                >bez symbolu · účet {{ senderAccountEnd(item.senderAccount) }}</span
-              >
-              <span class="visually-hidden" i18n="@@donor.dashboard.payments.pairedByAccount"
-                >Přiřazeno podle účtu {{ item.senderAccount }}, platba přišla bez variabilního
-                symbolu</span
-              >
+      <li [class.is-verification]="item.accountVerification">
+        <div class="ui-list__row">
+          <span class="ui-list__title">{{ formatDate(item.receivedAt) }}</span>
+          <span class="ui-list__meta">
+            {{ item.purpose }}
+            <ng-container *ngTemplateOutlet="pairingPart; context: { $implicit: item }" />
+          </span>
+          <span class="ui-list__value donation-amount">{{ crowns(item.amountMinor) }}&nbsp;Kč</span>
+          @if (item.status === 'REFUNDED') {
+            <span class="ui-list__state">
+              <span class="status-pill status-pill--refunded">{{ statusLabel(item.status) }}</span>
             </span>
           }
-          @if (item.pairedBy === 'CONFIRMED_SYMBOL' && item.senderAccount && item.confirmedSymbol) {
-            <span class="pairing-tag">
-              <span aria-hidden="true" i18n="@@donor.dashboard.payments.symbolPrefix"
-                >symbol {{ item.confirmedSymbol }} · účet
-                {{ senderAccountEnd(item.senderAccount) }}</span
-              >
-              <span
-                class="visually-hidden"
-                i18n="@@donor.dashboard.payments.pairedByConfirmedSymbol"
-                >Přiřazeno podle účtu {{ item.senderAccount }} a variabilního symbolu
-                {{ item.confirmedSymbol }}, který jste u účtu potvrdili jako svůj</span
-              >
-            </span>
+          @if (
+            withReceipts() &&
+            (item.receiptAvailable || missingReceipt(item) || donations.singleError(item))
+          ) {
+            <div class="ui-list__extra donation-receipt">
+              <ng-container *ngTemplateOutlet="receiptPart; context: { $implicit: item }" />
+            </div>
           }
-        </td>
-        <td data-label="Stav" i18n-data-label="@@donor.dashboard.payments.col.status">
-          <span class="status-pill" [class.status-pill--refunded]="item.status === 'REFUNDED'">{{
-            statusLabel(item.status)
-          }}</span>
-        </td>
+        </div>
+      </li>
+    }
+  </ul>
+} @else {
+  <table [attr.aria-labelledby]="labelledBy()">
+    <thead>
+      <tr>
+        <th i18n="@@donor.dashboard.payments.col.date">Datum</th>
+        <th class="amount" i18n="@@donor.dashboard.payments.col.amount">Částka</th>
+        <th i18n="@@donor.dashboard.payments.col.purpose">Účel</th>
+        <th i18n="@@donor.dashboard.payments.col.status">Stav</th>
         @if (withReceipts()) {
-          <td
-            class="receipt"
-            [class.is-empty]="
-              !item.receiptAvailable && !missingReceipt(item) && !donations.singleError(item)
-            "
-            data-label="Potvrzení"
-            i18n-data-label="@@donor.dashboard.payments.col.receipt"
-          >
-            @if (item.receiptAvailable) {
-              <button
-                type="button"
-                class="download-btn"
-                [attr.data-receipt-download]="donations.singleTarget(item)"
-                [attr.aria-disabled]="donations.singleDownloading(item) ? 'true' : null"
-                [attr.aria-busy]="donations.singleDownloading(item)"
-                (click)="donations.downloadSingleReceipt(item)"
-              >
-                @if (donations.singleDownloading(item)) {
-                  <span i18n="@@donor.dashboard.receipt.preparing">Připravujeme PDF…</span>
-                } @else if (donations.singleReady(item)) {
-                  <span i18n="@@donor.dashboard.payments.open">Otevřít PDF</span>
-                  <span class="visually-hidden" i18n="@@donor.dashboard.payments.openOf"
-                    >, dar z {{ formatDate(item.receivedAt) }},
-                    {{ crowns(item.amountMinor) }}&nbsp;Kč</span
-                  >
-                } @else {
-                  <span i18n="@@donor.dashboard.payments.download">Stáhnout PDF</span>
-                  <span class="visually-hidden" i18n="@@donor.dashboard.payments.downloadOf"
-                    >, dar z {{ formatDate(item.receivedAt) }},
-                    {{ crowns(item.amountMinor) }}&nbsp;Kč</span
-                  >
-                }
-              </button>
-              <app-download-progress
-                class="receipt-saved"
-                [progress]="donations.singleProgress(item)"
-                [compact]="true"
-                (cancelled)="donations.cancelSingleReceipt(item)"
-              />
-            } @else {
-              @switch (missingReceipt(item)) {
-                @case ('refunded') {
-                  <span class="receipt-note" i18n="@@donor.dashboard.payments.noReceipt.refunded"
-                    >Vrácený dar potvrzení nemá</span
-                  >
-                }
-                @case ('verification') {
-                  <span
-                    class="receipt-note"
-                    i18n="@@donor.dashboard.payments.noReceipt.verification"
-                    >Započítá se do ročního potvrzení</span
-                  >
-                }
-                @case ('before-first-year') {
-                  <span
-                    class="receipt-note"
-                    i18n="@@donor.dashboard.payments.noReceipt.beforeFirstYear"
-                    >Potvrzení vystavujeme od roku {{ donations.receiptsFrom() }}</span
-                  >
-                }
-              }
-            }
-            @if (errorsAtRows() && donations.singleError(item); as message) {
-              <p class="ui-callout ui-callout--danger row-receipt-error" role="alert">
-                {{ message }}
-              </p>
-            }
-          </td>
+          <th i18n="@@donor.dashboard.payments.col.receipt">Potvrzení</th>
         }
       </tr>
+    </thead>
+    <tbody>
+      @for (item of items(); track item.id) {
+        <tr [class.is-verification]="item.accountVerification">
+          <td class="date" data-label="Datum" i18n-data-label="@@donor.dashboard.payments.col.date">
+            {{ formatDate(item.receivedAt) }}
+          </td>
+          <td
+            data-label="Částka"
+            i18n-data-label="@@donor.dashboard.payments.col.amount"
+            class="amount"
+          >
+            {{ crowns(item.amountMinor) }}&nbsp;Kč
+          </td>
+          <td data-label="Účel" i18n-data-label="@@donor.dashboard.payments.col.purpose">
+            {{ item.purpose }}
+            <ng-container *ngTemplateOutlet="pairingPart; context: { $implicit: item }" />
+          </td>
+          <td data-label="Stav" i18n-data-label="@@donor.dashboard.payments.col.status">
+            <span class="status-pill" [class.status-pill--refunded]="item.status === 'REFUNDED'">{{
+              statusLabel(item.status)
+            }}</span>
+          </td>
+          @if (withReceipts()) {
+            <td
+              class="receipt"
+              [class.is-empty]="
+                !item.receiptAvailable && !missingReceipt(item) && !donations.singleError(item)
+              "
+              data-label="Potvrzení"
+              i18n-data-label="@@donor.dashboard.payments.col.receipt"
+            >
+              <ng-container *ngTemplateOutlet="receiptPart; context: { $implicit: item }" />
+            </td>
+          }
+        </tr>
+      }
+    </tbody>
+  </table>
+}
+
+<ng-template #pairingPart let-item>
+  @if (item.pairedBy === 'SENDER_ACCOUNT' && item.senderAccount) {
+    <span class="pairing-tag">
+      <span aria-hidden="true" i18n="@@donor.dashboard.payments.withoutSymbol"
+        >bez symbolu · účet {{ senderAccountEnd(item.senderAccount) }}</span
+      >
+      <span class="visually-hidden" i18n="@@donor.dashboard.payments.pairedByAccount"
+        >Přiřazeno podle účtu {{ item.senderAccount }}, platba přišla bez variabilního symbolu</span
+      >
+    </span>
+  }
+  @if (item.pairedBy === 'CONFIRMED_SYMBOL' && item.senderAccount && item.confirmedSymbol) {
+    <span class="pairing-tag">
+      <span aria-hidden="true" i18n="@@donor.dashboard.payments.symbolPrefix"
+        >symbol {{ item.confirmedSymbol }} · účet {{ senderAccountEnd(item.senderAccount) }}</span
+      >
+      <span class="visually-hidden" i18n="@@donor.dashboard.payments.pairedByConfirmedSymbol"
+        >Přiřazeno podle účtu {{ item.senderAccount }} a variabilního symbolu
+        {{ item.confirmedSymbol }}, který jste u účtu potvrdili jako svůj</span
+      >
+    </span>
+  }
+</ng-template>
+
+<ng-template #receiptPart let-item>
+  @if (item.receiptAvailable) {
+    <button
+      type="button"
+      class="download-btn"
+      [attr.data-receipt-download]="donations.singleTarget(item)"
+      [attr.aria-disabled]="donations.singleDownloading(item) ? 'true' : null"
+      [attr.aria-busy]="donations.singleDownloading(item)"
+      (click)="donations.downloadSingleReceipt(item)"
+    >
+      @if (donations.singleDownloading(item)) {
+        <span i18n="@@donor.dashboard.receipt.preparing">Připravujeme PDF…</span>
+      } @else if (donations.singleReady(item)) {
+        <span i18n="@@donor.dashboard.payments.open">Otevřít PDF</span>
+        <span class="visually-hidden" i18n="@@donor.dashboard.payments.openOf"
+          >, dar z {{ formatDate(item.receivedAt) }}, {{ crowns(item.amountMinor) }}&nbsp;Kč</span
+        >
+      } @else {
+        <span i18n="@@donor.dashboard.payments.download">Stáhnout PDF</span>
+        <span class="visually-hidden" i18n="@@donor.dashboard.payments.downloadOf"
+          >, dar z {{ formatDate(item.receivedAt) }}, {{ crowns(item.amountMinor) }}&nbsp;Kč</span
+        >
+      }
+    </button>
+    <app-download-progress
+      class="receipt-saved"
+      [progress]="donations.singleProgress(item)"
+      [compact]="true"
+      (cancelled)="donations.cancelSingleReceipt(item)"
+    />
+  } @else {
+    @switch (missingReceipt(item)) {
+      @case ('refunded') {
+        <span class="receipt-note" i18n="@@donor.dashboard.payments.noReceipt.refunded"
+          >Vrácený dar potvrzení nemá</span
+        >
+      }
+      @case ('verification') {
+        <span class="receipt-note" i18n="@@donor.dashboard.payments.noReceipt.verification"
+          >Započítá se do ročního potvrzení</span
+        >
+      }
+      @case ('before-first-year') {
+        <span class="receipt-note" i18n="@@donor.dashboard.payments.noReceipt.beforeFirstYear"
+          >Potvrzení vystavujeme od roku {{ donations.receiptsFrom() }}</span
+        >
+      }
     }
-  </tbody>
-</table>
+  }
+  @if (errorsAtRows() && donations.singleError(item); as message) {
+    <p class="ui-callout ui-callout--danger row-receipt-error" role="alert">
+      {{ message }}
+    </p>
+  }
+</ng-template>

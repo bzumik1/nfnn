@@ -2,6 +2,12 @@ import AxeBuilder from '@axe-core/playwright';
 import { routeLogsApi } from './admin-logs-api';
 import { Locator, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
+import {
+  donorWithDonations,
+  mockAdministration,
+  PETR_DETAIL_PATH,
+  rememberedSession,
+} from './baseline/screen-mocks';
 import { fakeCameraShowing, pdfWithLink, pngDataUrl, qrCodePng } from './receipt-code-files';
 import {
   administrator,
@@ -1377,6 +1383,57 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await expect(page.getByRole('dialog', { name: 'Mezitím se to změnilo' })).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
+  });
+
+  test('when an administrator on a phone opens the payments, a paired payment, the history, the donors and a donor card part by part, then the rows, the sheet and the parts break no rule', async ({
+    page,
+  }) => {
+    await mockDonorApi(page, donorWithDonations);
+    await mockAdministration(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await rememberedSession(page);
+
+    await page.goto('/sprava/platby?stav=prirazene');
+    const row = page.locator('button.payment-row').first();
+    await expect(row).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+
+    await row.click();
+    const sheet = page.getByRole('dialog', { name: 'Přiřazená platba' });
+    await expect(sheet).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+    await page.keyboard.press('Escape');
+    await expect(sheet).toHaveCount(0);
+    await expect(row).toBeFocused();
+
+    await page.goto('/sprava/historie');
+    await expect(page.locator('.action-rows > li').first()).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+
+    await page.goto('/sprava/darci');
+    await page.getByRole('searchbox', { name: 'Jméno, e-mail nebo variabilní symbol' }).fill('Svo');
+    await expect(page.locator('.donor-rows a.ui-list__row').first()).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+
+    await page.goto(PETR_DETAIL_PATH);
+    const parts = page.getByRole('navigation', { name: 'Části karty dárce' });
+    await expect(parts.getByRole('link', { name: /^Dary/ })).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+
+    await parts.getByRole('link', { name: /^Dary/ }).click();
+    await expect(page).toHaveURL(new RegExp(`${PETR_DETAIL_PATH}/dary$`));
+    await expect(page.getByRole('heading', { level: 2, name: 'Dary' })).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+
+    await page.getByRole('banner').getByRole('button', { name: 'Zpět' }).click();
+    await expect(page).toHaveURL(new RegExp(`${PETR_DETAIL_PATH}$`));
+    await expect(parts).toBeVisible();
+
+    await page.goto(`${PETR_DETAIL_PATH}/potvrzeni`);
+    await expect(page.getByRole('heading', { level: 2, name: 'Potvrzení' })).toBeVisible();
+    await page.getByRole('banner').getByRole('button', { name: 'Zpět' }).click();
+    await expect(page).toHaveURL(new RegExp(`${PETR_DETAIL_PATH}$`));
+    await expect(parts).toBeVisible();
   });
 
   test('when an administrator manages the administrators, then the page, its form and the confirmations break no rule', async ({

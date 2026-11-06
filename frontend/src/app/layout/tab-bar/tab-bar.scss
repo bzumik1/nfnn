@@ -95,6 +95,14 @@
   }
 }
 
+@media (forced-colors: none) {
+  .tab:active {
+    background-color: var(--color-tab-pill);
+    background-image: none;
+    border-color: var(--color-tab-pill-rim);
+  }
+}
+
 @media (forced-colors: active) {
   .tab-bar {
     border-color: CanvasText;

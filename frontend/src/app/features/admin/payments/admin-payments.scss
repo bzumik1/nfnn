@@ -173,8 +173,10 @@
   color: var(--color-accent);
   text-decoration: none;
 
-  &:hover {
-    text-decoration: underline;
+  @media (hover: hover) {
+    &:hover {
+      text-decoration: underline;
+    }
   }
 }
 
@@ -392,13 +394,51 @@
   cursor: pointer;
 }
 
-@include bp.down(tablet) {
+@mixin stacked-filter {
   .payments-filter {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
 
   .payments-field--text {
     grid-column: 1 / -1;
+  }
+}
+
+@include bp.down(tablet) {
+  @include stacked-filter;
+}
+
+.payments-page--rows {
+  @include stacked-filter;
+}
+
+.payments-card--rows {
+  overflow: clip;
+}
+
+.payments-month + .payments-month {
+  border-top: 1px solid var(--color-divider);
+}
+
+.payment-row .ui-list__value {
+  font-family: var(--font-serif);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+}
+
+.sheet-actions {
+  margin-top: var(--space-2);
+
+  .confirm {
+    display: grid;
+    justify-items: start;
+    max-width: none;
+  }
+
+  .confirm-question {
+    margin: 0;
+    font-size: var(--text-md);
+    line-height: var(--leading-normal);
   }
 }
 
@@ -457,4 +497,8 @@
 
 .payments-empty p {
   margin-bottom: var(--space-3);
+}
+
+.pair-payment .held-note {
+  max-width: none;
 }

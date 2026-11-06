@@ -122,8 +122,10 @@ app-form-field {
 .form-submit {
   transition: transform var(--duration-base);
 
-  &:hover {
-    transform: translateY(-1px);
+  @media (hover: hover) {
+    &:hover {
+      transform: translateY(-1px);
+    }
   }
 
   &:disabled {

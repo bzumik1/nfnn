@@ -64,9 +64,11 @@
     background var(--duration-fast),
     color var(--duration-fast);
 
-  &:hover {
-    background: var(--color-accent-bg);
-    color: var(--color-accent);
+  @media (hover: hover) {
+    &:hover {
+      background: var(--color-accent-bg);
+      color: var(--color-accent);
+    }
   }
 
   &:focus-visible {

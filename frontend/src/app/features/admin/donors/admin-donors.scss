@@ -56,8 +56,10 @@
   font-weight: var(--weight-semibold);
   text-decoration: none;
 
-  &:hover {
-    text-decoration: underline;
+  @media (hover: hover) {
+    &:hover {
+      text-decoration: underline;
+    }
   }
 
   &:focus-visible {
@@ -109,4 +111,12 @@
 .tag--warn {
   background: var(--color-warning-bg);
   color: var(--color-warning);
+}
+
+.donor-rows {
+  border-top: 1px solid var(--color-divider);
+
+  .tags {
+    margin-top: var(--space-1);
+  }
 }
