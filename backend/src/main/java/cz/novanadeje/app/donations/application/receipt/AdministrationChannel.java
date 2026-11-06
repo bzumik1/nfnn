@@ -12,4 +12,8 @@ public enum AdministrationChannel {
     public boolean mayWithdrawReceipts() {
         return this == BROWSER;
     }
+
+    public boolean mayChangeReportRecipients() {
+        return this == BROWSER;
+    }
 }

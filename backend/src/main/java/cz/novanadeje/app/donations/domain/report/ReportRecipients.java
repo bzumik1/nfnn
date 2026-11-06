@@ -3,6 +3,7 @@ package cz.novanadeje.app.donations.domain.report;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 
 import java.util.List;
+import java.util.Set;
 
 public record ReportRecipients(List<EmailAddress> addresses) {
 
@@ -37,6 +38,10 @@ public record ReportRecipients(List<EmailAddress> addresses) {
 
     public List<String> values() {
         return addresses.stream().map(EmailAddress::value).toList();
+    }
+
+    public boolean sameAddressesAs(ReportRecipients other) {
+        return Set.copyOf(addresses).equals(Set.copyOf(other.addresses));
     }
 
     public int count() {

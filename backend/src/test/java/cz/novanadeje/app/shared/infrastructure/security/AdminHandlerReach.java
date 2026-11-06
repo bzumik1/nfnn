@@ -14,6 +14,7 @@ enum AdminHandlerReach {
     CONNECTOR_REPLACEMENTS_IN_BROWSER_ONLY,
     CONNECTOR_WITHDRAWALS_IN_BROWSER_ONLY,
     CONNECTOR_SIGNATORY_PORTRAIT_IN_BROWSER_ONLY,
+    CONNECTOR_REPORT_RECIPIENTS_IN_BROWSER_ONLY,
     BROWSER_ONLY;
 
     static final Map<String, AdminHandlerReach> CLASSIFIED = classified();
@@ -98,7 +99,7 @@ enum AdminHandlerReach {
         table.put("POST /api/admin/donations/receipts/yearly", CONNECTOR_REPLACEMENTS_IN_BROWSER_ONLY);
         table.put("GET /api/admin/donations/report", CONNECTOR);
         table.put("POST /api/admin/donations/report/send", CONNECTOR);
-        table.put("PUT /api/admin/donations/report/settings", CONNECTOR);
+        table.put("PUT /api/admin/donations/report/settings", CONNECTOR_REPORT_RECIPIENTS_IN_BROWSER_ONLY);
         table.put("GET /api/admin/donations/symbol-claims", CONNECTOR);
         table.put("DELETE /api/admin/donations/symbol-claims/{id}", BROWSER_ONLY);
         table.put("GET /api/admin/donations/sync", BROWSER_ONLY);
