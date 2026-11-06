@@ -60,8 +60,18 @@
               >
             }
           </p>
+          @if (draft.offer(); as offer) {
+            <app-draft-offer
+              [headingLevel]="3"
+              [savedAt]="draftSavedAt(offer.savedAt)"
+              [stale]="offer.stale"
+              (resumed)="resumeDraft()"
+              (discarded)="discardDraft()"
+            />
+          }
           <form
             #settingsForm="ngForm"
+            [inert]="draft.offer() !== null"
             class="settings-form"
             appFocusFirstInvalid
             (ngSubmit)="save(settingsForm)"
@@ -293,6 +303,7 @@
   <app-changed-meanwhile-dialog
     subject="content"
     [keepsDraft]="true"
+    [fromDraft]="changed.fromDraft"
     [savedAt]="changed.savedAt"
     [busy]="saving()"
     (overwriteChosen)="overwriteAfterChange()"

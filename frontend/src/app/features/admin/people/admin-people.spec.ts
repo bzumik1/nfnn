@@ -1,5 +1,6 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { Provider } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { authInterceptor } from '../../../core/auth/auth-interceptor';
@@ -21,6 +22,12 @@ import {
   SIGNATURE_IMAGE,
   vectorReceiptSignature,
 } from '../testing/admin-fixtures';
+import {
+  draftWorkOf,
+  MemoryDraftShelf,
+  memoryDraftShelfProviders,
+  valuesBase,
+} from '../../../core/drafts/testing/memory-draft-shelf';
 import { AdminPeople } from './admin-people';
 
 const PEOPLE_URL = '/api/admin/content/people';
@@ -42,6 +49,7 @@ function problem(status: number, type: string, title: string, detail: string) {
 async function setUp(
   signatory: ReceiptSignatoryResponse | 'pending' = noReceiptSignatory(),
   previews: 'none' | 'pending' = 'none',
+  providers: Provider[] = [],
 ): Promise<{
   fixture: ComponentFixture<AdminPeople>;
   http: HttpTestingController;
@@ -53,6 +61,7 @@ async function setUp(
       provideHttpClient(withInterceptors([authInterceptor])),
       provideHttpClientTesting(),
       provideRouter([]),
+      ...providers,
     ],
   }).compileComponents();
   const http = TestBed.inject(HttpTestingController);
@@ -944,6 +953,217 @@ describe('Given an administrator and people of the foundation with signatures', 
     await settle(fixture);
     expect(previews()[0].querySelector('.person-signature--receipt img')?.getAttribute('src')).toBe(
       SIGNATURE_IMAGE,
+    );
+  });
+});
+
+describe('Given an administrator writing the texts of the people page on a device that keeps drafts', () => {
+  let shelf: MemoryDraftShelf;
+  let fixture: ComponentFixture<AdminPeople>;
+  let http: HttpTestingController;
+
+  async function drafted(): Promise<void> {
+    for (let round = 0; round < 3; round++) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await draftWorkOf(fixture.componentInstance);
+      await settle(fixture);
+    }
+  }
+
+  async function open(note = 'Děkujeme.', footnote: string | null = null): Promise<void> {
+    ({ fixture, http } = await setUp(
+      noReceiptSignatory(),
+      'none',
+      memoryDraftShelfProviders(shelf),
+    ));
+    http.expectOne(PEOPLE_URL).flush({ members: [], note, footnote });
+    await drafted();
+  }
+
+  async function keptNote(text: string, startedFrom: string): Promise<void> {
+    shelf.seed('administration', {
+      key: 'people/note',
+      base: await valuesBase({ text: startedFrom }),
+      values: { text },
+      savedAt: '2026-11-06T09:00:00.000Z',
+    });
+  }
+
+  async function keptFootnote(text: string, startedFrom: string): Promise<void> {
+    shelf.seed('administration', {
+      key: 'people/footnote',
+      base: await valuesBase({ text: startedFrom }),
+      values: { text },
+      savedAt: '2026-11-06T09:00:00.000Z',
+    });
+  }
+
+  beforeEach(() => {
+    shelf = new MemoryDraftShelf();
+  });
+
+  afterEach(() => http.verify());
+
+  it('when they write the founders note and save it, then it is kept on the device until the save', async () => {
+    await open();
+
+    await type(fixture, '#founders-note', 'Děkujeme všem dárcům.');
+    await drafted();
+    expect(shelf.draftOf('administration', 'people/note')?.values).toEqual({
+      text: 'Děkujeme všem dárcům.',
+    });
+    expect(shelf.draftOf('administration', 'people/footnote')).toBeNull();
+
+    await submit(fixture, 'form:has(#founders-note)');
+    http.expectOne(`${PEOPLE_URL}/note`).flush({ text: 'Děkujeme všem dárcům.' });
+    await drafted();
+    expect(shelf.draftOf('administration', 'people/note')).toBeNull();
+  });
+
+  describe('when the device kept a note started from the saved text', () => {
+    beforeEach(async () => {
+      await keptNote('Děkujeme všem dárcům.', 'Děkujeme.');
+      await open();
+    });
+
+    it('and they continue it, then the note takes it and saves it without asking', async () => {
+      expect(text(fixture, 'form:has(#founders-note) app-draft-offer')).toContain(
+        'Máte tu rozepsané úpravy',
+      );
+      expect(element<HTMLTextAreaElement>(fixture, '#founders-note').value).toBe('Děkujeme.');
+
+      button(fixture, 'Pokračovat v rozepsaném').click();
+      await drafted();
+      expect(element<HTMLTextAreaElement>(fixture, '#founders-note').value).toBe(
+        'Děkujeme všem dárcům.',
+      );
+
+      await submit(fixture, 'form:has(#founders-note)');
+      const save = http.expectOne(`${PEOPLE_URL}/note`);
+      expect(save.request.body).toEqual({ text: 'Děkujeme všem dárcům.' });
+      save.flush({ text: 'Děkujeme všem dárcům.' });
+      await drafted();
+      expect(shelf.draftOf('administration', 'people/note')).toBeNull();
+    });
+
+    it('and they discard it, then it leaves the device and the saved note stays', async () => {
+      button(fixture, 'Zahodit').click();
+      await drafted();
+
+      expect(shelf.draftOf('administration', 'people/note')).toBeNull();
+      expect(element<HTMLTextAreaElement>(fixture, '#founders-note').value).toBe('Děkujeme.');
+      expect(text(fixture, 'form:has(#founders-note) [role="status"]:not(:empty)')).toBe(
+        'Rozepsané úpravy jsme z tohoto zařízení zahodili.',
+      );
+    });
+  });
+
+  describe('when the device kept a note started from a text saved before another change', () => {
+    beforeEach(async () => {
+      await keptNote('Děkujeme všem dárcům.', 'Děkujeme.');
+      await open('Děkujeme moc.');
+      button(fixture, 'Pokračovat v rozepsaném').click();
+      await drafted();
+    });
+
+    it('then the offer said so, and saving asks first instead of overwriting silently', async () => {
+      await submit(fixture, 'form:has(#founders-note)');
+      http.expectNone(`${PEOPLE_URL}/note`);
+      expect(element(fixture, 'app-changed-meanwhile-dialog dialog').textContent).toContain(
+        'Od chvíle, kdy jste na tomto zařízení začali s úpravami',
+      );
+
+      button(fixture, 'Uložit svou verzi místo novější').click();
+      await settle(fixture);
+      http.expectOne(`${PEOPLE_URL}/note`).flush({ text: 'Děkujeme všem dárcům.' });
+      await drafted();
+      expect(shelf.draftOf('administration', 'people/note')).toBeNull();
+    });
+
+    it('and they discard their edits, then the saved note is read again and the draft leaves the device', async () => {
+      await submit(fixture, 'form:has(#founders-note)');
+      button(fixture, 'Zahodit své úpravy a načíst novější verzi').click();
+      await settle(fixture);
+      http.expectOne(PEOPLE_URL).flush({ members: [], note: 'Děkujeme moc.', footnote: null });
+      await drafted();
+
+      expect(shelf.draftOf('administration', 'people/note')).toBeNull();
+      expect(element<HTMLTextAreaElement>(fixture, '#founders-note').value).toBe('Děkujeme moc.');
+    });
+  });
+
+  it('when the device kept a note of an older saved text, then the offer says the saved version changed', async () => {
+    await keptNote('Děkujeme všem dárcům.', 'Děkujeme.');
+    await open('Děkujeme moc.');
+
+    expect(text(fixture, 'form:has(#founders-note) app-draft-offer')).toContain(
+      'Uložená verze se od té doby změnila',
+    );
+  });
+
+  it('when they write the line under the board and save it, then it is kept on the device until the save', async () => {
+    await open();
+
+    await type(fixture, '#people-footnote', 'Web zajišťuje Petr Vzor.');
+    await drafted();
+    expect(shelf.draftOf('administration', 'people/footnote')?.values).toEqual({
+      text: 'Web zajišťuje Petr Vzor.',
+    });
+    expect(shelf.draftOf('administration', 'people/note')).toBeNull();
+
+    await submit(fixture, 'form:has(#people-footnote)');
+    http.expectOne(`${PEOPLE_URL}/footnote`).flush({ text: 'Web zajišťuje Petr Vzor.' });
+    await drafted();
+    expect(shelf.draftOf('administration', 'people/footnote')).toBeNull();
+  });
+
+  describe('when the device kept a line under the board started from the saved text', () => {
+    beforeEach(async () => {
+      await keptFootnote('Web zajišťuje Petr Vzor.', '');
+      await open();
+    });
+
+    it('and they continue it, then the line takes it, the focus is on it and it saves without asking', async () => {
+      expect(element<HTMLTextAreaElement>(fixture, '#people-footnote').value).toBe('');
+
+      button(fixture, 'Pokračovat v rozepsaném').click();
+      await drafted();
+      expect(element<HTMLTextAreaElement>(fixture, '#people-footnote').value).toBe(
+        'Web zajišťuje Petr Vzor.',
+      );
+      expect(document.activeElement).toBe(element(fixture, '#people-footnote'));
+
+      await submit(fixture, 'form:has(#people-footnote)');
+      const save = http.expectOne(`${PEOPLE_URL}/footnote`);
+      expect(save.request.body).toEqual({ text: 'Web zajišťuje Petr Vzor.' });
+      save.flush({ text: 'Web zajišťuje Petr Vzor.' });
+      await drafted();
+      expect(shelf.draftOf('administration', 'people/footnote')).toBeNull();
+    });
+
+    it('and they discard it, then it leaves the device and the line stays empty', async () => {
+      button(fixture, 'Zahodit').click();
+      await drafted();
+
+      expect(shelf.draftOf('administration', 'people/footnote')).toBeNull();
+      expect(element<HTMLTextAreaElement>(fixture, '#people-footnote').value).toBe('');
+    });
+  });
+
+  it('when the device kept a line under the board started from a text saved differently since, then saving asks first', async () => {
+    await keptFootnote('Web zajišťuje Petr Vzor.', '');
+    await open('Děkujeme.', 'Web spravuje fond.');
+    expect(text(fixture, 'form:has(#people-footnote) app-draft-offer')).toContain(
+      'Uložená verze se od té doby změnila',
+    );
+    button(fixture, 'Pokračovat v rozepsaném').click();
+    await drafted();
+
+    await submit(fixture, 'form:has(#people-footnote)');
+
+    http.expectNone(`${PEOPLE_URL}/footnote`);
+    expect(element(fixture, 'app-changed-meanwhile-dialog dialog').textContent).toContain(
+      'Od chvíle, kdy jste na tomto zařízení začali s úpravami',
     );
   });
 });

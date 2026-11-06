@@ -1,0 +1,9 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/core/device/store/device-storage.spec.ts > Given the IndexedDB device storage > when it opens, then the database is named nfnn.device and holds the four stores",
+    "reason": "Slice 2.20e (plan v3): the device database gains the object store drafts in version 2, so it holds five stores",
+    "replacement": "src/app/core/device/store/device-storage.spec.ts > Given the IndexedDB device storage > when it opens, then the database is named nfnn.device and holds the five stores"
+  }
+]

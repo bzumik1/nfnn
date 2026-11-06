@@ -3,7 +3,7 @@ import { IDBFactory } from 'fake-indexeddb';
 import { openDB } from 'idb';
 import { generateSessionKey, OpenCopy, openWithSessionKey } from '../crypto/copy-keys';
 import { base64UrlToBytes, bytesToBase64Url } from '../crypto/device-bytes';
-import { AccountStore, type CopyContents } from './account-store';
+import { AccountStore, type CopyContents, type StoredDraft } from './account-store';
 import type { DeviceStorage } from './device-storage';
 import { openIdbDeviceStorage } from './idb-device-storage';
 import { leaks, rawIndexedDbDump } from './testing/raw-scan';
@@ -253,6 +253,146 @@ describe('Given an account store over IndexedDB', () => {
 
     expect(store.contents()).toBeNull();
     await expect(store.replace(contents())).rejects.toMatchObject({ reason: 'closed' });
+  });
+});
+
+describe('Given an account store over IndexedDB whose copy the registry holds', () => {
+  const CANARY_STREET = 'Kanárkova 1234';
+  const PROFILE: StoredDraft = {
+    key: 'donor-profile',
+    base: 'base-1',
+    values: { name: CANARY_NAME, street: CANARY_STREET },
+    savedAt: '2026-11-06T09:00:00.000Z',
+  };
+  let storage: DeviceStorage;
+  let copy: OpenCopy;
+  let store: AccountStore;
+
+  beforeEach(async () => {
+    globalThis.indexedDB = new IDBFactory();
+    storage = await openIdbDeviceStorage();
+    copy = await OpenCopy.create();
+    await storage.write({
+      putEntries: [
+        {
+          copyId: copy.copyId,
+          kind: 'donor',
+          lookupTag: 'tag',
+          userHandleTag: 'handle',
+          wraps: [{ kind: 'session', iv: 'aXY', sealed: 'c2VhbGVk' }],
+        },
+      ],
+    });
+    store = new AccountStore(copy, storage, 'donor');
+  });
+
+  afterEach(async () => {
+    store.close();
+    await storage.destroy();
+  });
+
+  it('when nothing was kept, then it holds no drafts', async () => {
+    expect(await store.drafts()).toEqual([]);
+  });
+
+  it('when a draft is kept, then a new store of the same copy reads it back', async () => {
+    await store.keepDraft(PROFILE);
+
+    const reopened = new AccountStore(await sameCopy(copy), storage, 'donor');
+
+    expect(await reopened.drafts()).toEqual([PROFILE]);
+  });
+
+  it('when a draft of the same form is kept again, then only the newer one remains', async () => {
+    await store.keepDraft(PROFILE);
+
+    await store.keepDraft({
+      ...PROFILE,
+      values: { name: 'Jana' },
+      savedAt: '2026-11-06T09:01:00.000Z',
+    });
+    await store.keepDraft({ ...PROFILE, key: 'news/new', values: { title: 'Ples' } });
+
+    expect(await store.drafts()).toEqual([
+      { ...PROFILE, values: { name: 'Jana' }, savedAt: '2026-11-06T09:01:00.000Z' },
+      { ...PROFILE, key: 'news/new', values: { title: 'Ples' } },
+    ]);
+    expect(await storage.drafts(copy.copyId)).toHaveLength(2);
+  });
+
+  it('when a draft is dropped, then the drafts of other forms stay', async () => {
+    await store.keepDraft(PROFILE);
+    await store.keepDraft({ ...PROFILE, key: 'news/new' });
+
+    await store.dropDraft('donor-profile');
+
+    expect((await store.drafts()).map((draft) => draft.key)).toEqual(['news/new']);
+  });
+
+  it('when a draft is kept, then the raw database holds neither its text, its form nor its field names, and the copy records stay as they were', async () => {
+    await store.replace(contents());
+
+    await store.keepDraft(PROFILE);
+
+    const dump = await rawIndexedDbDump();
+    for (const canary of [CANARY_NAME, CANARY_STREET, 'donor-profile', 'street', 'base-1']) {
+      expect(leaks(dump, canary), canary).toBe(false);
+    }
+    expect(await store.load()).toBe('loaded');
+    expect(await storage.records(copy.copyId)).toHaveLength(3);
+  });
+
+  it('when the copy contents are replaced, then the kept drafts stay', async () => {
+    await store.keepDraft(PROFILE);
+
+    await store.replace(contents());
+
+    expect(await store.drafts()).toEqual([PROFILE]);
+  });
+
+  it('when a kept draft cannot be opened, then it is left out and the next draft kept removes it', async () => {
+    await store.keepDraft(PROFILE);
+    const [stored] = await storage.drafts(copy.copyId);
+    const bytes = base64UrlToBytes(stored.sealed);
+    bytes[3] ^= 0x01;
+    await storage.write({ putDrafts: [{ ...stored, sealed: bytesToBase64Url(bytes) }] });
+
+    expect(await store.drafts()).toEqual([]);
+
+    await store.keepDraft({ ...PROFILE, key: 'news/new' });
+    expect(await storage.drafts(copy.copyId)).toHaveLength(1);
+  });
+
+  it('when a draft is read as a copy record of the same id, then it does not open', async () => {
+    await store.keepDraft(PROFILE);
+    const [stored] = await storage.drafts(copy.copyId);
+    await storage.write({ replaceRecords: { copyId: copy.copyId, records: [stored] } });
+
+    expect(await store.load()).toBe('damaged');
+  });
+
+  it('when drafts of different lengths are kept, then every sealed draft has the length of a size bucket of at least 1 KiB', async () => {
+    await store.keepDraft({ ...PROFILE, values: { body: 'x' } });
+    await store.keepDraft({ ...PROFILE, key: 'news/new', values: { body: 'x'.repeat(3000) } });
+
+    const lengths = (await storage.drafts(copy.copyId))
+      .map((draft) => base64UrlToBytes(draft.sealed).length - AES_GCM_TAG_BYTES)
+      .sort((first, second) => first - second);
+
+    expect(lengths).toEqual([1024, 4096]);
+  });
+
+  it('when the copy is gone from the registry, then keeping a draft writes nothing', async () => {
+    await storage.write({ deleteCopies: [copy.copyId] });
+
+    await expect(store.keepDraft(PROFILE)).rejects.toBeInstanceOf(RangeError);
+    expect(await storage.drafts(copy.copyId)).toEqual([]);
+  });
+
+  it('when it is closed, then it keeps no draft', async () => {
+    store.close();
+
+    await expect(store.keepDraft(PROFILE)).rejects.toMatchObject({ reason: 'closed' });
   });
 });
 

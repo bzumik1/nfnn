@@ -674,7 +674,16 @@
           (ngSubmit)="saveNote(noteForm)"
           novalidate
         >
-          <div class="fields">
+          @if (noteDraft.offer(); as offer) {
+            <app-draft-offer
+              [headingLevel]="3"
+              [savedAt]="draftSavedAt(offer.savedAt)"
+              [stale]="offer.stale"
+              (resumed)="resumeText('note')"
+              (discarded)="discardText('note')"
+            />
+          }
+          <div class="fields" [inert]="noteDraft.offer() !== null">
             <app-form-field
               label="Text pod kartami (nepovinné)"
               i18n-label="@@admin.people.note.label"
@@ -692,7 +701,7 @@
               ></textarea>
             </app-form-field>
           </div>
-          <div class="form-actions">
+          <div class="form-actions" [inert]="noteDraft.offer() !== null">
             <button
               appNeedsConnection
               type="submit"
@@ -723,7 +732,16 @@
           (ngSubmit)="saveFootnote(footnoteForm)"
           novalidate
         >
-          <div class="fields">
+          @if (footnoteDraft.offer(); as offer) {
+            <app-draft-offer
+              [headingLevel]="3"
+              [savedAt]="draftSavedAt(offer.savedAt)"
+              [stale]="offer.stale"
+              (resumed)="resumeText('footnote')"
+              (discarded)="discardText('footnote')"
+            />
+          }
+          <div class="fields" [inert]="footnoteDraft.offer() !== null">
             <app-form-field
               label="Text řádku (nepovinné)"
               i18n-label="@@admin.people.footnote.label"
@@ -741,7 +759,7 @@
               ></textarea>
             </app-form-field>
           </div>
-          <div class="form-actions">
+          <div class="form-actions" [inert]="footnoteDraft.offer() !== null">
             <button
               appNeedsConnection
               type="submit"
@@ -761,3 +779,14 @@
     }
   }
 </div>
+@if (staleText()) {
+  <app-changed-meanwhile-dialog
+    subject="content"
+    [keepsDraft]="true"
+    [fromDraft]="true"
+    [busy]="savingNote() || savingFootnote()"
+    (overwriteChosen)="overwriteStaleText()"
+    (reloadChosen)="reloadStaleText()"
+    (dismissed)="staleText.set(null)"
+  />
+}
