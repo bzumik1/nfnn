@@ -38,8 +38,12 @@ html:has(app-tab-bar) {
   scroll-padding-bottom: var(--tab-bar-clearance);
 }
 
-html:has(app-landing) {
+html:has(app-landing),
+html:has(app-landing) body {
   background: var(--color-image-shade);
+}
+
+html:has(app-landing) {
   overscroll-behavior: none;
 }
 
@@ -109,10 +113,6 @@ body {
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-html:has(app-landing) body {
-  background: var(--color-image-shade);
 }
 
 @keyframes fadeInUp {
