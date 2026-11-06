@@ -193,6 +193,21 @@ test.describe('Given a signed-in donor on a phone who opens a section from the a
     expect(box && Math.round(box.y + box.height)).toBe(page.viewportSize()?.height);
   });
 
+  test('when they drag the tall sheet down by its grabber, then it closes', async ({ page }) => {
+    await page.getByRole('banner').getByRole('button', { name: 'Účet' }).click();
+    await settledPanel(page);
+    const box = (await page.locator('.dialog-grabber').boundingBox())!;
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x, y + 400, { steps: 20 });
+    await page.mouse.up();
+
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+  });
+
   test('when the sheet has opened, then its close button is as large as Zpět and on one row with the name', async ({
     page,
   }) => {
