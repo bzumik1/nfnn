@@ -1,6 +1,7 @@
-import { expect, Locator, Page } from '@playwright/test';
+import { expect, Page } from '@playwright/test';
 import { FOUNDATION_PAYMENT_DETAILS } from './qr-matrices';
 import { mockReceiptIssuing, ReceiptIssuing } from './receipt-issuing';
+import { BREAKPOINTS } from '../src/app/core/layout/breakpoints';
 import { noSignature, signatory } from './signature-image';
 import type { RouteTarget } from './fixtures';
 
@@ -87,7 +88,25 @@ export interface DonorApiMock {
   summary: unknown;
   list: unknown;
   receipts?: ReceiptIssuing;
+  sync?: DonorSyncMock;
 }
+
+export interface DonorSyncChunk {
+  readonly id: string;
+  readonly rowsSha256: string;
+  readonly count: number;
+  readonly rows: readonly unknown[];
+}
+
+export interface DonorSyncMock {
+  readonly summary: unknown;
+  readonly chunks: readonly DonorSyncChunk[];
+}
+
+export const emptyDonorSync: DonorSyncMock = {
+  summary: { totalAmountMinor: 0, count: 0 },
+  chunks: [],
+};
 
 export const noDonations: DonorApiMock = {
   summary: {
@@ -227,6 +246,35 @@ export async function mockDonorApi(
     (url) => url.pathname === '/api/donors/me/devices',
     (route) => route.fulfill({ json: { items: signedInDevices } }),
   );
+  await mockDonorSync(page, donations.sync ?? emptyDonorSync);
+}
+
+export async function mockDonorSync(page: RouteTarget, sync: DonorSyncMock): Promise<void> {
+  await page.route(
+    (url) => url.pathname === '/api/donations/me/sync',
+    (route) =>
+      route.fulfill({
+        json: {
+          subject: donor.id,
+          summary: sync.summary,
+          chunks: sync.chunks.map(({ id, rowsSha256, count }) => ({ id, rowsSha256, count })),
+        },
+      }),
+  );
+  await page.route(
+    (url) => url.pathname === '/api/donations/me/sync/chunks',
+    (route) => {
+      const asked = (new URL(route.request().url()).searchParams.get('ids') ?? '').split(',');
+      route.fulfill({
+        json: {
+          subject: donor.id,
+          summary: sync.summary,
+          chunks: sync.chunks.filter((chunk) => asked.includes(chunk.id)),
+          missing: asked.filter((id) => !sync.chunks.some((chunk) => chunk.id === id)),
+        },
+      });
+    },
+  );
 }
 
 export const signedInDevices = [
@@ -270,21 +318,9 @@ export async function mockConnectApi(page: Page): Promise<void> {
   );
 }
 
-async function headerEntry(page: Page): Promise<Locator> {
-  const header = page.locator('.nav-login');
-  await expect(
-    header.or(page.locator('.mobile-menu-btn')).filter({ visible: true }).first(),
-  ).toBeVisible();
-  if (await header.isVisible()) {
-    return header;
-  }
-  await page.locator('.mobile-menu-btn').click();
-  return page.locator('.mobile-login');
-}
-
 export async function openSignInDialog(page: Page): Promise<void> {
   await page.goto('/');
-  await (await headerEntry(page)).click();
+  await page.getByRole('banner').getByRole('button', { name: 'Přihlásit se' }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
 }
 
@@ -295,8 +331,9 @@ export async function signIn(page: Page, user: typeof donor = donor): Promise<vo
   await page.locator('#login-password').fill('correct horse battery');
   await page.getByRole('dialog').locator('.ui-button--block').click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  await (await headerEntry(page)).filter({ hasText: 'Můj přehled' }).click();
+  await openAccountItem(page, 'Můj přehled');
   await expect(page).toHaveURL(/\/darce\/prehled$/);
+  await expect(page.getByRole('heading', { level: 1, name: 'Můj přehled' })).toBeVisible();
 }
 
 function adminSetting(
@@ -332,6 +369,7 @@ export const adminSettings = {
     adminSetting('FIO_HISTORY_FROM', 'BANK', null),
     adminSetting('PAIRING_EXCLUDED_ACCOUNTS', 'BANK', null),
     adminSetting('RECEIPT_FIRST_YEAR', 'RECEIPTS', '2026'),
+    adminSetting('SESSION_REMEMBER_DAYS', 'SITE', '14'),
   ],
   secretsCanBeStored: true,
 };
@@ -340,18 +378,29 @@ function sectionName(name: string): RegExp {
   return new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}( |$)`);
 }
 
+export async function openAccountItem(page: Page, name: string): Promise<void> {
+  await page.getByRole('banner').getByRole('button', { name: 'Účet' }).click();
+  const sheet = page.getByRole('dialog');
+  await expect(sheet).toBeVisible();
+  await sheet.getByRole('link', { name: sectionName(name) }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.locator('app-public-shell')).toHaveCount(0);
+}
+
 export async function openDonorSection(page: Page, name: string): Promise<void> {
-  const nav = page.getByRole('navigation', { name: 'Můj účet', includeHidden: true });
-  const link = nav.getByRole('link', { name: sectionName(name), includeHidden: true });
-  const menu = page.getByRole('button', { name: /^Menu účtu/ });
-  await expect(nav.or(menu).filter({ visible: true }).first()).toBeVisible();
-  if (await menu.isVisible()) {
-    await menu.click();
-    await expect(menu).toHaveAttribute('aria-expanded', 'true');
+  if ((page.viewportSize()?.width ?? 0) > BREAKPOINTS.nav) {
+    const nav = page.getByRole('navigation', { name: 'Můj účet' });
+    const link = nav.getByRole('link', { name: sectionName(name) });
+    await link.click();
+    await expect(link).toHaveAttribute('aria-current', 'page');
+    return;
   }
-  await link.click();
-  await expect(link).toHaveAttribute('aria-current', 'page');
-  if (await menu.isVisible()) {
-    await expect(menu).toHaveAttribute('aria-expanded', 'false');
-  }
+  await openAccountItem(page, name);
+}
+
+export async function openSection(page: Page, name: string): Promise<void> {
+  const tabs = page.getByRole('navigation', { name: 'Hlavní sekce' });
+  const tab = tabs.getByRole('link', { name, exact: true });
+  await tab.click();
+  await expect(tab).toHaveAttribute('aria-current', /^(page|true)$/);
 }

@@ -1,6 +1,6 @@
 {
   "source": "edited",
-  "logic": "The administration's donations sync manifest and chunks that GET /api/admin/donations/sync and GET /api/admin/donations/sync/chunks?ids= answer an administrator, joined: whether the subject holds the administration, and each chunk of the manifest with its id, rowsSha256 and count and the rows the chunks endpoint answers for it. Only the chunks of the case rows are specified here: payments:<yyyy-mm> (every bank payment, paired or not, by the month it was booked, newest booking first, then the higher bank transaction id; a payment of a gift of an erased donor without the payer's account, name and message), donations:<yyyy-mm> (every donation by the month it was received, newest first: receivedAt, then the later record, then the higher id) and donor-records:<yyyy-mm> (every donor record, an erased one as erasure leaves it: the placeholder name and address, by the month of its registration in Prague, the earlier registration first, then the lower id); links:<yyyy-mm>, symbol-claims, receipts:<year>, import-state, report-settings and the per-year summary come from features and the admin-overview cases. A month without rows has no chunk; chunks are listed by id. rowsSha256 is the SHA-256 (lowercase hex) of the UTF-8 bytes of the rows array written as RFC 8785 canonical JSON, so each side computes it from the rows of the case itself. Ids are the aliases of the case's rows (donor:<alias>, payment:<alias>, donation:<n> for the n-th donation of input.donations, administrator for the account that asks); a runner replaces the real ids of its answer by them and computes rowsSha256 over the rows as aliased, after checking that the answer's own rowsSha256 is that SHA-256 of the rows it answered. The rows hold only the columns the computation reads: a runner fills every other column with the values of CaseRows (each donor's name Dárce <alias>, address Dlouhá 12, Ústí nad Labem, 400 01, an erased donor's the placeholders Vymazaný dárce and Vymazáno, Vymazáno, 00000, variable symbol 4000000000 plus its position among the rows, each payment's bank transaction 26000000000 plus its position, sender account 2900233333/2010, imported and recorded at noon UTC of its day); a donation with a payment is paired by its variable symbol, one without is recorded by hand.",
+  "logic": "The administration's donations sync manifest and chunks that GET /api/admin/donations/sync and GET /api/admin/donations/sync/chunks?ids= answer an administrator, joined: whether the subject holds the administration, and each chunk of the manifest with its id, rowsSha256 and count and the rows the chunks endpoint answers for it. Only the chunks of the case rows are specified here: payments:<yyyy-mm> (every bank payment, paired or not, by the month it was booked, newest booking first, then the higher bank transaction id; a payment of a gift of an erased donor without the payer's account, name and message; each payment row carries its version, the first 16 lowercase hex characters of the SHA-256 of the canonical JSON of the pair [the payment row with its real ids and without the version, the row of its gift or null], so a pairing or unpairing changes it, which the administration sends back as If-Match when it pairs or unpairs the payment; it is opaque to the browser, so a runner compares it but never recomputes it), donations:<yyyy-mm> (every donation by the month it was received, newest first: receivedAt, then the later record, then the higher id) and donor-records:<yyyy-mm> (every donor record, an erased one as erasure leaves it: the placeholder name and address, by the month of its registration in Prague, the earlier registration first, then the lower id); links:<yyyy-mm>, symbol-claims, receipts:<year>, import-state, report-settings and the per-year summary come from features and the admin-overview cases. A month without rows has no chunk; chunks are listed by id. rowsSha256 is the SHA-256 (lowercase hex) of the UTF-8 bytes of the rows array written as RFC 8785 canonical JSON, so each side computes it from the rows of the case itself. Ids are the aliases of the case's rows (donor:<alias>, payment:<alias>, donation:<n> for the n-th donation of input.donations, administrator for the account that asks); a runner replaces the real ids of its answer by them and computes rowsSha256 over the rows as aliased, after checking that the answer's own rowsSha256 is that SHA-256 of the rows it answered. The rows hold only the columns the computation reads: a runner fills every other column with the values of CaseRows (each donor's name Dárce <alias>, address Dlouhá 12, Ústí nad Labem, 400 01, an erased donor's the placeholders Vymazaný dárce and Vymazáno, Vymazáno, 00000, variable symbol 4000000000 plus its position among the rows, each payment's bank transaction 26000000000 plus its position, sender account 2900233333/2010, imported and recorded at noon UTC of its day); a donation with a payment is paired by its variable symbol, one without is recorded by hand.",
   "cases": [
     {
       "name": "an administration without any rows",
@@ -197,7 +197,7 @@
           },
           {
             "id": "payments:2026-03",
-            "rowsSha256": "4ae3c5048f68b819c8071ca65853a4f28ecea34d1fa61bdebacb113679a201c0",
+            "rowsSha256": "a585d66850daadb7011374b522711146b672159bbfdb6d677e557254ffd3550a",
             "count": 3,
             "rows": [
               {
@@ -212,7 +212,8 @@
                 "messageForRecipient": null,
                 "importedAt": "2026-03-31T12:00:00Z",
                 "unpairedByAdminAt": "2026-04-02T08:00:00Z",
-                "accountVerification": false
+                "accountVerification": false,
+                "version": "3512c4787b8bc72a"
               },
               {
                 "id": "payment:p2",
@@ -226,7 +227,8 @@
                 "messageForRecipient": null,
                 "importedAt": "2026-03-20T12:00:00Z",
                 "unpairedByAdminAt": null,
-                "accountVerification": false
+                "accountVerification": false,
+                "version": "e4fd7f845cfb67d3"
               },
               {
                 "id": "payment:p1",
@@ -240,13 +242,14 @@
                 "messageForRecipient": null,
                 "importedAt": "2026-03-10T12:00:00Z",
                 "unpairedByAdminAt": null,
-                "accountVerification": false
+                "accountVerification": false,
+                "version": "2b3c9fdf5c493b46"
               }
             ]
           },
           {
             "id": "payments:2026-04",
-            "rowsSha256": "ec56753dd84356396ffcf591f11864ccaf0b9b52c6feb891de4a3a4a2473e397",
+            "rowsSha256": "da24996c2adff441b06ac5ba55a1b5a0f0ff203f22ec36df267b68c66ad99eb0",
             "count": 1,
             "rows": [
               {
@@ -261,7 +264,8 @@
                 "messageForRecipient": null,
                 "importedAt": "2026-04-05T12:00:00Z",
                 "unpairedByAdminAt": null,
-                "accountVerification": false
+                "accountVerification": false,
+                "version": "799093b559ad1ba5"
               }
             ]
           }
@@ -399,7 +403,7 @@
           },
           {
             "id": "payments:2026-06",
-            "rowsSha256": "afb166140ea8b7e8bcc84dfdea6544c38636f597f548f0576f4a447ad440d79d",
+            "rowsSha256": "0128a48ff426f95bea3d31090f8cadf50ab0f65d7fe96c6919c64718a21af33e",
             "count": 2,
             "rows": [
               {
@@ -414,7 +418,8 @@
                 "messageForRecipient": null,
                 "importedAt": "2026-06-01T12:00:00Z",
                 "unpairedByAdminAt": null,
-                "accountVerification": false
+                "accountVerification": false,
+                "version": "5422b3e183b2ecaf"
               },
               {
                 "id": "payment:p1",
@@ -428,7 +433,8 @@
                 "messageForRecipient": null,
                 "importedAt": "2026-06-01T12:00:00Z",
                 "unpairedByAdminAt": null,
-                "accountVerification": false
+                "accountVerification": false,
+                "version": "59a301bfa81bae1f"
               }
             ]
           }

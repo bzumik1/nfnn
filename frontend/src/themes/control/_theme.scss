@@ -134,7 +134,6 @@
   --duration-sheet: 0.2s;
 
   --radius-xs: 0;
-  --radius-scrollbar: 0;
   --radius-sm: 2px;
   --radius-md: 2px;
   --radius-lg: 3px;
@@ -174,7 +173,6 @@
   --header-height: 68px;
   --side-nav-layout-max: 1280px;
   --side-nav-width: 230px;
-  --top-bar-height: 62px;
   --floating-notice-height: 0rem;
   --dialog-max-width: 420px;
   --dialog-max-width-wide: 520px;
@@ -189,6 +187,14 @@
   --tab-bar-gap: 15px;
   --tab-bar-gap-browser: 15px;
   --tab-pill-inset: 5px;
+  --tab-bar-max-width: 400px;
+  --tab-bar-home-indicator-overlap: 15px;
+  --tab-icon-size: 20px;
+  --tab-bar-rendered-height: var(--tab-bar-height);
+  --tab-bar-clearance: calc(
+    var(--tab-bar-rendered-height) + 2 * var(--tab-bar-gap-browser) + env(safe-area-inset-bottom)
+  );
+  --back-button-size: 45px;
   --list-row-min-height: 55px;
   --list-group-title-top: 0rem;
 

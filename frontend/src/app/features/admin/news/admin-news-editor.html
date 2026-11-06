@@ -1,7 +1,9 @@
 <div class="ui-page container">
-  <p class="ui-crumbs">
-    <a routerLink="/sprava/aktuality" i18n="@@admin.newsEditor.backToNews">← Aktuality</a>
-  </p>
+  @if (!compact()) {
+    <p class="ui-crumbs">
+      <a routerLink="/sprava/aktuality" i18n="@@admin.newsEditor.backToNews">← Aktuality</a>
+    </p>
+  }
   <h1 #title class="ui-page-title" tabindex="-1">
     @if (isNew()) {
       <ng-container i18n="@@admin.newsEditor.heading.new">Nová aktualita</ng-container>
@@ -468,5 +470,17 @@
     (stayed)="stay()"
     (saveChosen)="stayAndSave()"
     (leaveChosen)="leaveWithoutSaving()"
+  />
+}
+@if (changedMeanwhile(); as changed) {
+  <app-changed-meanwhile-dialog
+    subject="content"
+    [keepsDraft]="changed.draft"
+    [canOverwrite]="changed.overwrite && changed.version !== null"
+    [savedAt]="changed.savedAt"
+    [busy]="busy()"
+    (overwriteChosen)="overwriteAfterChange()"
+    (reloadChosen)="reloadAfterChange()"
+    (dismissed)="changed.draft ? keepDraftAfterChange() : reloadAfterChange()"
   />
 }

@@ -1,0 +1,16 @@
+@use 'breakpoints' as bp;
+
+.changed-meanwhile-actions {
+  .ui-button {
+    white-space: normal;
+    text-align: center;
+  }
+
+  @include bp.down(phone) {
+    flex-direction: column;
+
+    .ui-button {
+      width: 100%;
+    }
+  }
+}

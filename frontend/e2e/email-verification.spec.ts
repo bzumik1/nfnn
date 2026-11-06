@@ -12,7 +12,7 @@ test.describe('Given a visitor on the donate section without an account', () => 
     });
     await mockDonorApi(page);
 
-    await page.goto('/#prispet');
+    await page.goto('/prispet');
     await page.locator('#prispet').getByRole('button', { name: 'Založit účet' }).click();
     await page.locator('#register-name').fill('Jana Nováková');
     await page.locator('#register-street').fill('Dlouhá 12');
@@ -46,12 +46,14 @@ test.describe('Given a visitor who registered and received the confirmation e-ma
     await expect(page).toHaveURL(/\/potvrzeni-emailu$/);
     expect(page.url()).not.toContain('token');
     await expect(page).toHaveTitle('Potvrzení e-mailu | Nová naděje – nadační fond');
-    expect(posted).toEqual([{ token: 'abc' }]);
+    expect(posted).toEqual([{ token: 'abc', session: 'BROWSER' }]);
 
     await page.getByRole('button', { name: 'Přejít do přehledu' }).click();
 
     await expect(page).toHaveURL(/\/darce\/prehled$/);
-    await expect(page.locator('.topbar-donor')).toContainText('Jana Nováková');
+    await expect(page.getByRole('banner').getByRole('button', { name: 'Účet' })).toContainText(
+      'JN',
+    );
     await expect(page.locator('.send-gift .bank-value').nth(2)).toHaveText('1234567890');
   });
 
@@ -69,7 +71,7 @@ test.describe('Given a visitor who registered and received the confirmation e-ma
     expect(page.url()).not.toContain('prispet');
     await page.getByRole('button', { name: 'Pokračovat k příspěvku' }).click();
 
-    await expect(page).toHaveURL(/\/#prispet$/);
+    await expect(page).toHaveURL(/\/prispet$/);
     await expect(page.locator('#prispet .bank')).toContainText('1234567890');
   });
 

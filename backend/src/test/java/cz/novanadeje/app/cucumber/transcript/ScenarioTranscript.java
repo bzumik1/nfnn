@@ -135,7 +135,7 @@ public final class ScenarioTranscript {
         new TreeMap<>(exchange.requestHeaders()).forEach((name, value) -> {
             if (REQUEST_HEADERS.contains(name.toLowerCase(Locale.ROOT))) {
                 requestHeaders.put(name, "cookie".equalsIgnoreCase(name) ? normaliser.text(REQUEST_COOKIE_VALUE.matcher(value).replaceAll("$1=" + TranscriptNormaliser.SECRET))
-                        : normaliser.text(value));
+                        : "if-match".equalsIgnoreCase(name) ? normaliser.ifMatch(normaliser.text(value)) : normaliser.text(value));
             }
         });
         if (!requestHeaders.isEmpty()) {

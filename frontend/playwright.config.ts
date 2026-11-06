@@ -12,8 +12,8 @@ import {
 const theme = process.env.E2E_THEME;
 const builtApp = theme ? `dist/${theme}-theme/browser` : 'dist/frontend/browser';
 const build = theme
-  ? `npx ng build --configuration=production,${theme}-theme --output-path=dist/${theme}-theme`
-  : 'npx ng build';
+  ? `npm run build -- --configuration=production,${theme}-theme --output-path=dist/${theme}-theme`
+  : 'npm run build';
 const served = process.env.E2E_DIST ?? builtApp;
 const askedProjects = process.argv.filter((argument) => argument.startsWith('--project='));
 const onlyWebApp =
@@ -56,7 +56,7 @@ export default defineConfig<DeviceOptions, { safariPose?: SafariPose }>({
         {
           name: 'iphone',
           testMatch:
-            /(receipt-pdf|verify-receipt|donate-qr|second-factor|dialog-back|security-headers)\.spec\.ts$/,
+            /(receipt-pdf|verify-receipt|donate-qr|second-factor|dialog-back|security-headers|device-copy|app-shell)\.spec\.ts$/,
           testIgnore: /pwa\//,
           use: { ...devices['iPhone 15'] },
         },

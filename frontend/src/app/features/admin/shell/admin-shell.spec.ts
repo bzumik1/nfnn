@@ -1,23 +1,45 @@
 import { provideHttpClient } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { Component } from '@angular/core';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+  TestRequest,
+} from '@angular/common/http/testing';
+import { Component, inject, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
+import { CompactLayout } from '../../../core/layout/compact-layout';
+import { DIALOG_PRESENTATION } from '../../../shared/ui/dialog/dialog-presentation';
 import { AdminShell } from './admin-shell';
+import { ADMINISTRATION_LOCK } from './administration-lock';
 
-@Component({ template: '<h1>Stránka</h1>' })
-class Page {}
+@Component({ template: '<h1>Stránka</h1><p class="look">{{ look }}</p>' })
+class Page {
+  protected readonly look = inject(DIALOG_PRESENTATION);
+}
+
+@Component({ template: '<p class="lock-panel">Správa je zamčená</p>' })
+class LockPanel {}
 
 describe('Given an administrator anywhere in the administration', () => {
+  const compact = signal(false);
+  const locked = signal(false);
   let fixture: ComponentFixture<AdminShell>;
   let router: Router;
+  let pushSettings: TestRequest[];
 
   beforeEach(async () => {
+    compact.set(false);
+    locked.set(false);
     await TestBed.configureTestingModule({
       imports: [AdminShell],
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
+        { provide: CompactLayout, useValue: { isCompact: compact.asReadonly() } },
+        {
+          provide: ADMINISTRATION_LOCK,
+          useValue: { locked: locked.asReadonly(), panel: signal(LockPanel).asReadonly() },
+        },
         provideRouter([
           { path: 'sprava', component: Page },
           { path: 'sprava/darci', component: Page },
@@ -30,6 +52,18 @@ describe('Given an administrator anywhere in the administration', () => {
     fixture = TestBed.createComponent(AdminShell);
     await router.navigateByUrl('/sprava');
     await settle();
+    pushSettings = TestBed.inject(HttpTestingController).match('/api/admin/operations/push');
+    for (const request of pushSettings) {
+      request.flush({ publicKey: 'B', subscriptions: [], openAlerts: [] });
+    }
+  });
+
+  it('when the administration opens, then it reads the push settings once for the badge of the app icon', async () => {
+    await router.navigateByUrl('/sprava/darci');
+    await settle();
+
+    expect(pushSettings).toHaveLength(1);
+    TestBed.inject(HttpTestingController).expectNone('/api/admin/operations/push');
   });
 
   afterEach(() => TestBed.inject(HttpTestingController).verify());
@@ -43,8 +77,8 @@ describe('Given an administrator anywhere in the administration', () => {
     return fixture.nativeElement.querySelector('nav.side-nav-panel');
   }
 
-  function toggle(): HTMLButtonElement {
-    return fixture.nativeElement.querySelector('button.side-nav-toggle');
+  function element(selector: string): HTMLElement | null {
+    return fixture.nativeElement.querySelector(selector);
   }
 
   function clean(value: string | null | undefined): string {
@@ -92,6 +126,7 @@ describe('Given an administrator anywhere in the administration', () => {
           ['Správci', '/sprava/spravci'],
           ['Měsíční e-mail', '/sprava/prehledy'],
           ['Zálohy', '/sprava/zalohy'],
+          ['Upozornění na telefon', '/sprava/upozorneni'],
           ['Historie změn', '/sprava/historie'],
         ],
       },
@@ -117,9 +152,62 @@ describe('Given an administrator anywhere in the administration', () => {
     expect(currentLinks()).toEqual(['Dárci']);
   });
 
-  it('when the menu button is shown, then it names the administration and controls the panel', () => {
-    expect(clean(toggle().textContent)).toBe('Menu správy');
-    expect(toggle().getAttribute('aria-controls')).toBe('admin-nav');
-    expect(nav().id).toBe('admin-nav');
+  it('when it opens, then the app header offers the account and the site tabs stay at the bottom, as everywhere in the app', () => {
+    expect(element('header.app-header a.brand')?.getAttribute('href')).toBe('/');
+    const tabs = element('nav[aria-label="Hlavní sekce"]');
+    expect(
+      Array.from(tabs?.querySelectorAll('a') ?? []).map((link) => clean(link.textContent)),
+    ).toEqual(['O nás', 'Aktuality', 'Pomáháme', 'Přispět']);
+    expect(element('app-dashboard-top-bar')).toBeNull();
+  });
+
+  it('when the page is shown, then it stands in the main landmark of the skip link', () => {
+    expect(element('main#obsah h1')?.textContent).toBe('Stránka');
+  });
+
+  it('when a page of the administration opens a dialog, then the dialog comes up as a sheet from the bottom', () => {
+    expect(clean(element('main#obsah .look')?.textContent)).toBe('sheet');
+  });
+
+  describe('when the window narrows to a phone or a tablet', () => {
+    beforeEach(async () => {
+      compact.set(true);
+      await settle();
+    });
+
+    it('then no side panel is drawn and the same page stays in the main landmark', () => {
+      expect(element('#admin-nav')).toBeNull();
+      expect(element('main#obsah h1')?.textContent).toBe('Stránka');
+    });
+
+    it('then no menu button stands above the page, since the overview lists the sections', () => {
+      expect(fixture.nativeElement.querySelector('main#obsah')?.previousElementSibling).toBeNull();
+      expect(element('button.side-nav-toggle')).toBeNull();
+    });
+  });
+
+  describe('when the administration is locked', () => {
+    beforeEach(async () => {
+      locked.set(true);
+      await settle();
+    });
+
+    it('then the lock panel stands in the main landmark instead of the page', () => {
+      expect(clean(element('main#obsah .lock-panel')?.textContent)).toBe('Správa je zamčená');
+      expect(element('main#obsah h1')).toBeNull();
+    });
+
+    it('then the header and the tabs stay, so the administrator can still leave', () => {
+      expect(element('header.app-header')).not.toBeNull();
+      expect(element('nav[aria-label="Hlavní sekce"]')).not.toBeNull();
+    });
+
+    it('and it is unlocked again, then the page comes back', async () => {
+      locked.set(false);
+      await settle();
+
+      expect(element('main#obsah h1')?.textContent).toBe('Stránka');
+      expect(element('.lock-panel')).toBeNull();
+    });
   });
 });

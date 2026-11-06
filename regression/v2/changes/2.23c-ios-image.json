@@ -1,0 +1,26 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/payment-panel/payment-panel.spec.ts > Given the payment panel on a phone or a tablet > when the visitor taps Otevřít v aplikaci banky, then the phone is offered platba.spayd holding the payment of the chosen amount and nothing more is said",
+    "reason": "Follow-up of 2.23c (Jakub's iPhone test, 2026-11-05): no iOS bank app takes platba.spayd from the share sheet, so on a device that shares payment files the primary Otevřít v aplikaci banky shares the QR image and platba.spayd moves to the second button Poslat jako soubor platby",
+    "replacement": "src/app/features/donations/payment-panel/payment-panel.spec.ts > Given the payment panel on a phone or a tablet > when the visitor taps Poslat jako soubor platby, then the phone is offered platba.spayd holding the payment of the chosen amount and nothing more is said",
+    "contract": "docs/frontend-overview.md, features/donations payment-panel"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/donate-qr.spec.ts > Given a visitor on the Přispět page > on a phone > on a phone that shares files > when the visitor taps Otevřít v aplikaci banky and closes the offer, then the phone was offered platba.spayd and the page says how to pay without the bank app",
+    "reason": "Follow-up of 2.23c (Jakub's iPhone test, 2026-11-05): no iOS bank app takes platba.spayd from the share sheet, so on a device that shares payment files the primary Otevřít v aplikaci banky shares the QR image and platba.spayd moves to the second button Poslat jako soubor platby",
+    "replacement": "e2e/donate-qr.spec.ts > Given a visitor on the Přispět page > on a phone > on a phone that shares files > when the visitor taps Otevřít v aplikaci banky and closes the offer, then the phone was offered the PNG of the QR and the page says how to save it for the bank app",
+    "contract": "docs/frontend-overview.md, features/donations payment-panel"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/donate-qr.spec.ts > Given a visitor on the Přispět page > on a phone > on a phone that shares files > when the visitor taps Otevřít v aplikaci banky and closes the offer, then the phone was offered platba.spayd and the page says how to pay without the bank app #2",
+    "reason": "Follow-up of 2.23c (Jakub's iPhone test, 2026-11-05): no iOS bank app takes platba.spayd from the share sheet, so on a device that shares payment files the primary Otevřít v aplikaci banky shares the QR image and platba.spayd moves to the second button Poslat jako soubor platby; the second copy is the WebKit iphone project, which runs the same test",
+    "replacement": "e2e/donate-qr.spec.ts > Given a visitor on the Přispět page > on a phone > on a phone that shares files > when the visitor taps Otevřít v aplikaci banky and closes the offer, then the phone was offered the PNG of the QR and the page says how to save it for the bank app #2",
+    "contract": "docs/frontend-overview.md, features/donations payment-panel"
+  }
+]

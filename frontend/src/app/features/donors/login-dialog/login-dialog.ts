@@ -26,6 +26,7 @@ import {
 } from '../../../core/auth/api-problem';
 import { AuthApi } from '../../../core/auth/auth-api';
 import { AuthStore } from '../../../core/auth/auth-store';
+import { BrowserSessionKind } from '../../../core/auth/session-jar';
 import {
   DonorLocale,
   DonorType,
@@ -147,6 +148,8 @@ export class LoginDialog {
   protected readonly signInMethod = signal<'password' | 'passkey'>(
     this.passkeysSupported ? (this.draft?.signInMethod ?? 'password') : 'password',
   );
+  protected readonly installed = this.auth.installed;
+  protected readonly publicComputer = signal(false);
   protected readonly loading = signal(false);
   protected readonly resetSent = signal(false);
   protected readonly resetResent = signal(false);
@@ -189,6 +192,7 @@ export class LoginDialog {
 
   protected email = this.mode() === 'login' ? this.dialog.initialEmail() : '';
   protected password = '';
+  protected remember = false;
   protected code = '';
   protected registration: RegistrationFields = registrationOf(
     this.draft,
@@ -285,6 +289,17 @@ export class LoginDialog {
     });
   }
 
+  choosePublicComputer(): void {
+    this.remember = false;
+    this.publicComputer.set(true);
+    this.focusStep('.session-check input');
+  }
+
+  leavePublicComputer(): void {
+    this.publicComputer.set(false);
+    this.focusStep('.session-check input');
+  }
+
   submitLogin(form: NgForm): void {
     if (!this.readyToSend(form)) {
       return;
@@ -292,7 +307,7 @@ export class LoginDialog {
     this.passkeyError.set('');
     this.emailNotVerified.set(false);
     this.verificationResent.set(false);
-    this.auth.login(this.email.trim(), this.password).subscribe({
+    this.auth.login(this.email.trim(), this.password, this.chosenSession()).subscribe({
       next: () => this.enterPortal(),
       error: (failure: unknown) => {
         if (problemTypeEndsWith(failure, SECOND_FACTOR_REQUIRED)) {
@@ -315,7 +330,7 @@ export class LoginDialog {
     this.passkeyError.set('');
     this.emailNotVerified.set(false);
     this.verificationResent.set(false);
-    this.auth.signInWithPasskey().subscribe({
+    this.auth.signInWithPasskey(this.chosenSession()).subscribe({
       next: () => this.enterPortal(),
       error: (failure: unknown) => {
         this.loading.set(false);
@@ -333,15 +348,18 @@ export class LoginDialog {
     if (challenge === null || !this.readyToSend(form)) {
       return;
     }
-    this.auth.completeSecondFactor(challenge, this.code.trim()).subscribe({
-      next: () => this.enterPortal(),
-      error: (failure: unknown) => {
-        if (problemTypeEndsWith(failure, INVALID_SECOND_FACTOR_CHALLENGE)) {
-          this.leaveCodeStep();
-        }
-        this.failUnlessThrottled(failure, this.tooManyAttempts);
-      },
-    });
+    const password = this.password === '' ? undefined : this.password;
+    this.auth
+      .completeSecondFactor(challenge, this.code.trim(), password, this.chosenSession())
+      .subscribe({
+        next: () => this.enterPortal(),
+        error: (failure: unknown) => {
+          if (problemTypeEndsWith(failure, INVALID_SECOND_FACTOR_CHALLENGE)) {
+            this.leaveCodeStep();
+          }
+          this.failUnlessThrottled(failure, this.tooManyAttempts);
+        },
+      });
   }
 
   recoverByPayment(): void {
@@ -535,6 +553,13 @@ export class LoginDialog {
     return true;
   }
 
+  private chosenSession(): BrowserSessionKind {
+    if (this.publicComputer()) {
+      return 'PUBLIC';
+    }
+    return this.remember ? 'REMEMBERED' : 'BROWSER';
+  }
+
   private askForCode(challenge: string): void {
     this.loading.set(false);
     this.error.set('');
@@ -641,6 +666,7 @@ export class LoginDialog {
 
   private enterPortal(): void {
     this.loading.set(false);
+    this.password = '';
     this.registration = emptyRegistration();
     this.dialog.signedIn();
   }

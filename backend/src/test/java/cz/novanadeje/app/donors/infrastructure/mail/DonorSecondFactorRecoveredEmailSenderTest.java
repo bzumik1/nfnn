@@ -13,6 +13,7 @@ import cz.novanadeje.app.shared.infrastructure.mail.BrandedEmails;
 import cz.novanadeje.app.shared.infrastructure.mail.MailSenderProperties;
 import cz.novanadeje.app.support.MailContents;
 import cz.novanadeje.app.support.MailPreviews;
+import cz.novanadeje.app.support.ObservedMailSenders;
 import cz.novanadeje.app.support.RecordingMailSender;
 import jakarta.mail.Message;
 import jakarta.mail.Session;
@@ -183,6 +184,6 @@ class DonorSecondFactorRecoveredEmailSenderTest {
         MailSenderProperties sender = new MailSenderProperties(SENDER);
         PublicUrlProperties publicUrl = new PublicUrlProperties("http://localhost:4200/");
         BrandedEmails emails = new BrandedEmails(mailSender, context.getBean(ITemplateEngine.class), context.getBean(MessageSource.class), sender, publicUrl);
-        return new DonorSecondFactorRecoveredEmailSender(mailSender, emails, context.getBean(MessageSource.class), sender);
+        return new DonorSecondFactorRecoveredEmailSender(ObservedMailSenders.of(mailSender), emails, context.getBean(MessageSource.class), sender);
     }
 }

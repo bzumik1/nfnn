@@ -487,7 +487,7 @@
       <p class="pair-alert" role="alert">{{ error }}</p>
     }
 
-    <div class="pair-actions">
+    <div class="ui-dialog__actions pair-actions">
       <button
         type="button"
         class="pair-submit"
@@ -511,4 +511,11 @@
       </button>
     </div>
   </app-dialog>
+}
+@if (changedMeanwhile()) {
+  <app-changed-meanwhile-dialog
+    subject="payment"
+    (reloadChosen)="reloadAfterChange()"
+    (dismissed)="reloadAfterChange()"
+  />
 }

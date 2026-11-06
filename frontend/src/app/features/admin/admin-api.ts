@@ -1,4 +1,5 @@
 import { BackupKeyWordCheck } from '../operations/backup-key/backup-key-word-check';
+import { ifMatch } from '../../core/version/row-version';
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
@@ -38,6 +39,46 @@ export interface ImportStateResponse {
   reportedOutage: ImportFailureKind | null;
 }
 
+export type PushAlertArea = 'bankImport' | 'backups' | 'mail';
+
+export type PushAlertSwitches = Record<PushAlertArea, boolean>;
+
+export type PushService = 'google' | 'apple' | 'mozilla' | 'microsoft';
+
+export interface PushSubscriptionResponse {
+  id: string;
+  service: PushService;
+  alerts: PushAlertSwitches;
+  createdAt: string;
+  lastDeliveredAt: string | null;
+  failuresInARow: number;
+  current: boolean;
+}
+
+export interface OpenAlertResponse {
+  area: PushAlertArea;
+  since: string;
+}
+
+export interface AdminPushResponse {
+  publicKey: string;
+  deviceSession?: boolean;
+  subscriptions: PushSubscriptionResponse[];
+  openAlerts?: OpenAlertResponse[];
+}
+
+export interface PushSubscriptionRequest {
+  endpoint: string;
+  keys: { p256dh: string; auth: string };
+  alerts?: PushAlertSwitches;
+}
+
+export interface PushTestResponse {
+  delivered: number;
+  failed: number;
+  removed: number;
+}
+
 export type PairingFilter = 'unpaired' | 'paired';
 
 export type PairingMethod = 'VARIABLE_SYMBOL' | 'SENDER_ACCOUNT' | 'CONFIRMED_SYMBOL' | 'MANUAL';
@@ -54,6 +95,7 @@ export interface PairedDonationResponse {
 
 export interface AdminPaymentResponse {
   id: string;
+  version: string;
   bankTransactionId: number;
   bookedOn: string;
   amountMinor: number;
@@ -120,6 +162,7 @@ export type SymbolClaimAnswer = 'CONFIRMED' | 'DECLINED';
 
 export interface SymbolClaimResponse {
   id: string;
+  version: string;
   donorId: string;
   donorName: string | null;
   account: string;
@@ -212,9 +255,13 @@ export interface AdminReceiptResponse {
   keyId: string;
 }
 
+export interface AdminBankAccountItem extends BankAccountItem {
+  version: string;
+}
+
 export interface AdminDonorDetailResponse {
   donor: AdminDonorRecordResponse;
-  bankAccounts: BankAccountItem[];
+  bankAccounts: AdminBankAccountItem[];
   donations: DonationListResponse;
   receipts: AdminReceiptResponse[];
   yearlyReceiptsAvailableThrough: number;
@@ -310,6 +357,7 @@ export interface ReportSettingsResponse {
   sendHour: number;
   sections: ReportSectionsResponse;
   changedAt: string | null;
+  version: string;
 }
 
 export interface ReportSettingsRequest {
@@ -710,17 +758,23 @@ export class AdminApi {
     });
   }
 
-  pairPayment(paymentId: string, donorId: string): Observable<PairPaymentResponse> {
+  pairPayment(
+    paymentId: string,
+    donorId: string,
+    version: string,
+  ): Observable<PairPaymentResponse> {
     return this.http.post<PairPaymentResponse>(
       `/api/admin/donations/payments/${encodeURIComponent(paymentId)}/pair`,
       { donorId },
+      ifMatch(version),
     );
   }
 
-  unpairPayment(paymentId: string): Observable<UnpairPaymentResponse> {
+  unpairPayment(paymentId: string, version: string): Observable<UnpairPaymentResponse> {
     return this.http.post<UnpairPaymentResponse>(
       `/api/admin/donations/payments/${encodeURIComponent(paymentId)}/unpair`,
       null,
+      ifMatch(version),
     );
   }
 
@@ -753,16 +807,18 @@ export class AdminApi {
     return this.http.get<SymbolClaimListResponse>('/api/admin/donations/symbol-claims');
   }
 
-  reverseSymbolClaim(claimId: string): Observable<void> {
+  reverseSymbolClaim(claimId: string, version: string): Observable<void> {
     return this.http.post<void>(
       `/api/admin/donations/symbol-claims/${encodeURIComponent(claimId)}/reverse`,
       null,
+      ifMatch(version),
     );
   }
 
-  deleteSymbolClaim(claimId: string): Observable<void> {
+  deleteSymbolClaim(claimId: string, version: string): Observable<void> {
     return this.http.delete<void>(
       `/api/admin/donations/symbol-claims/${encodeURIComponent(claimId)}`,
+      ifMatch(version),
     );
   }
 
@@ -792,8 +848,15 @@ export class AdminApi {
     return this.http.get<AdminReportResponse>('/api/admin/donations/report');
   }
 
-  changeReportSettings(request: ReportSettingsRequest): Observable<ReportSettingsResponse> {
-    return this.http.put<ReportSettingsResponse>('/api/admin/donations/report/settings', request);
+  changeReportSettings(
+    request: ReportSettingsRequest,
+    version: string,
+  ): Observable<ReportSettingsResponse> {
+    return this.http.put<ReportSettingsResponse>(
+      '/api/admin/donations/report/settings',
+      request,
+      ifMatch(version),
+    );
   }
 
   sendReport(month: string): Observable<SendReportResponse> {
@@ -846,16 +909,24 @@ export class AdminApi {
     return this.http.post<YearlyReceiptsIssueResponse>(YEARLY_RECEIPTS, { year, donorIds });
   }
 
-  disconnectDonorAccount(donorId: string, linkId: string): Observable<void> {
-    return this.http.post<void>(`${donorAccountUrl(donorId, linkId)}/disconnect`, null);
+  disconnectDonorAccount(donorId: string, linkId: string, version: string): Observable<void> {
+    return this.http.post<void>(
+      `${donorAccountUrl(donorId, linkId)}/disconnect`,
+      null,
+      ifMatch(version),
+    );
   }
 
-  reconnectDonorAccount(donorId: string, linkId: string): Observable<void> {
-    return this.http.post<void>(`${donorAccountUrl(donorId, linkId)}/reconnect`, null);
+  reconnectDonorAccount(donorId: string, linkId: string, version: string): Observable<void> {
+    return this.http.post<void>(
+      `${donorAccountUrl(donorId, linkId)}/reconnect`,
+      null,
+      ifMatch(version),
+    );
   }
 
-  removeDonorAccount(donorId: string, linkId: string): Observable<void> {
-    return this.http.delete<void>(donorAccountUrl(donorId, linkId));
+  removeDonorAccount(donorId: string, linkId: string, version: string): Observable<void> {
+    return this.http.delete<void>(donorAccountUrl(donorId, linkId), ifMatch(version));
   }
 
   backups(): Observable<AdminBackupsResponse> {
@@ -992,6 +1063,29 @@ export class AdminApi {
     return this.http.delete<void>(`${LOGGERS_URL}/${encodeURIComponent(logger)}`);
   }
 
+  push(): Observable<AdminPushResponse> {
+    return this.http.get<AdminPushResponse>(PUSH_URL);
+  }
+
+  subscribePush(request: PushSubscriptionRequest): Observable<PushSubscriptionResponse> {
+    return this.http.post<PushSubscriptionResponse>(`${PUSH_URL}/subscriptions`, request);
+  }
+
+  changePushAlerts(id: string, alerts: PushAlertSwitches): Observable<PushSubscriptionResponse> {
+    return this.http.put<PushSubscriptionResponse>(
+      `${PUSH_URL}/subscriptions/${encodeURIComponent(id)}/alerts`,
+      alerts,
+    );
+  }
+
+  removePushSubscription(id: string): Observable<void> {
+    return this.http.delete<void>(`${PUSH_URL}/subscriptions/${encodeURIComponent(id)}`);
+  }
+
+  testPush(): Observable<PushTestResponse> {
+    return this.http.post<PushTestResponse>(`${PUSH_URL}/test`, null);
+  }
+
   diagnostics(): Observable<DiagnosticsResponse> {
     return this.http.get<DiagnosticsResponse>(DIAGNOSTICS_URL);
   }
@@ -1002,6 +1096,7 @@ export class AdminApi {
 }
 
 const LOGS_URL = '/api/admin/operations/logs';
+const PUSH_URL = '/api/admin/operations/push';
 const RECEIPT_SIGNATORY_URL = '/api/admin/donations/receipt-signatory';
 
 function receiptSignatureUrl(personId: string): string {

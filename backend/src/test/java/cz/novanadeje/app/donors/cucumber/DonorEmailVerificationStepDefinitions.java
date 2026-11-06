@@ -62,6 +62,11 @@ public class DonorEmailVerificationStepDefinitions {
         registrations.confirm(DonorRegistrations.tokenOf(lastEmail()));
     }
 
+    @When("the donor confirms the e-mail with the link from the e-mail for this browser session")
+    public void theDonorConfirmsTheEmailForThisBrowserSession() {
+        registrations.confirm(DonorRegistrations.tokenOf(lastEmail()), "BROWSER");
+    }
+
     @When("the donor confirms the e-mail with the link from e-mail {int}")
     public void theDonorConfirmsWithTheLinkFromEmail(int position) {
         await().atMost(MAIL_WAIT).untilAsserted(() -> assertThat(mailSender.sent()).hasSizeGreaterThanOrEqualTo(position));

@@ -1,5 +1,6 @@
 import { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
+import { openSection } from './donor-session';
 import {
   FOUNDATION_PAYMENT_DETAILS,
   PAYMENT_QR_1000,
@@ -35,14 +36,14 @@ async function servePaymentDetails(page: Page, asked: string[]): Promise<void> {
   );
 }
 
-test.describe('Given a visitor on the home page', () => {
+test.describe('Given a visitor on the Přispět page', () => {
   test('when they choose 1 000 Kč and back 500 Kč, then the browser draws each QR payment from one answer of payment details and never asks for a server QR', async ({
     page,
   }) => {
     const asked: string[] = [];
     await servePaymentDetails(page, asked);
 
-    await page.goto('/');
+    await page.goto('/prispet');
     await showQr(page);
     const qrCode = page.getByRole('img', { name: QR_NAME });
     await expect(qrCode).toBeVisible();
@@ -63,7 +64,7 @@ test.describe('Given a visitor on the home page', () => {
   }) => {
     const asked: string[] = [];
     await servePaymentDetails(page, asked);
-    await page.goto('/');
+    await page.goto('/prispet');
     await showQr(page);
     const qrCode = page.getByRole('img', { name: QR_NAME });
     await expect.poll(() => drawnModulesMatch(qrCode, PAYMENT_QR_500)).toBe(true);
@@ -81,7 +82,7 @@ test.describe('Given a visitor on the home page', () => {
 
   test('when they save the QR code, then a PNG image of it downloads', async ({ page }) => {
     await servePaymentDetails(page, []);
-    await page.goto('/');
+    await page.goto('/prispet');
     await showQr(page);
     await expect(page.getByRole('img', { name: QR_NAME })).toBeVisible();
 
@@ -105,7 +106,7 @@ test.describe('Given a visitor on the home page', () => {
     page,
   }) => {
     await servePaymentDetails(page, []);
-    await page.goto('/');
+    await page.goto('/prispet');
     await expect(page.locator('#prispet .bank')).toContainText('5544332217/2010');
     await page.getByRole('button', { name: 'Jiná částka' }).focus();
 
@@ -151,17 +152,18 @@ test.describe('Given a visitor on the home page', () => {
     page,
   }) => {
     await servePaymentDetails(page, []);
-    await page.goto('/');
+    await page.goto('/prispet');
     await page.getByRole('button', { name: 'Jiná částka' }).click();
     await page.getByLabel('Vlastní částka v korunách').fill('300');
     await expect(page.locator('#prispet .bank')).toContainText('300 Kč');
 
+    await openSection(page, 'O nás');
     await page
       .locator('footer')
       .getByRole('link', { name: 'Zásady ochrany osobních údajů' })
       .click();
     await expect(page).toHaveURL(/zasady-ochrany-osobnich-udaju/);
-    await page.locator('footer').getByRole('link', { name: 'Přispět' }).click();
+    await openSection(page, 'Přispět');
 
     await expect(page.getByRole('button', { name: 'Jiná částka' })).toHaveAttribute(
       'aria-pressed',
@@ -178,7 +180,7 @@ test.describe('Given a visitor on the home page', () => {
       page,
     }) => {
       await servePaymentDetails(page, []);
-      await page.goto('/');
+      await page.goto('/prispet');
       const bank = page.locator('#prispet .bank');
       await expect(bank).toContainText('5544332217/2010');
       const otherDevice = page.getByRole('button', { name: /Platíte z jiného zařízení\?/ });
@@ -210,7 +212,7 @@ test.describe('Given a visitor on the home page', () => {
             : route.fulfill({ json: FOUNDATION_PAYMENT_DETAILS }));
         },
       );
-      await page.goto('/');
+      await page.goto('/prispet');
       const retry = page.locator('#prispet').getByRole('button', { name: 'Zkusit znovu' });
 
       await retry.click();
@@ -225,7 +227,7 @@ test.describe('Given a visitor on the home page', () => {
         Object.defineProperty(navigator, 'canShare', { value: () => false, configurable: true });
       });
       await servePaymentDetails(page, []);
-      await page.goto('/');
+      await page.goto('/prispet');
       await page.getByRole('button', { name: '1 000 Kč' }).click();
 
       const download = page.waitForEvent('download');
@@ -270,11 +272,11 @@ test.describe('Given a visitor on the home page', () => {
         });
       });
 
-      test('when the visitor taps Otevřít v aplikaci banky and closes the offer, then the phone was offered platba.spayd and the page says how to pay without the bank app', async ({
+      test('when the visitor taps Otevřít v aplikaci banky and closes the offer, then the phone was offered the PNG of the QR and the page says how to save it for the bank app', async ({
         page,
       }) => {
         await servePaymentDetails(page, []);
-        await page.goto('/');
+        await page.goto('/prispet');
         await expect(page.locator('#prispet .bank')).toContainText('5544332217/2010');
 
         await page.getByRole('button', { name: 'Otevřít v aplikaci banky' }).click();
@@ -282,7 +284,28 @@ test.describe('Given a visitor on the home page', () => {
         await expect(
           page.locator('#prispet .bank-app').getByRole('status').filter({ hasText: /\S/ }),
         ).toHaveText(
-          'Neotevřela se vám banka? Zkopírujte údaje výše do bankovní aplikace, nebo pošlete QR jako obrázek a v bance zvolte platbu z obrázku.',
+          'Nenašli jste v nabídce svou banku? Klepněte znovu, zvolte Uložit obrázek a v bankovní aplikaci načtěte QR platbu z Fotek. Nebo zkopírujte údaje výše do bankovní aplikace.',
+        );
+        expect(
+          await page.evaluate(() => (window as unknown as { offeredFiles: unknown }).offeredFiles),
+        ).toEqual([
+          { name: 'qr-platba-nova-nadeje.png', type: 'image/png', text: '', title: 'QR platba' },
+        ]);
+      });
+
+      test('when the visitor taps Poslat jako soubor platby and closes the offer, then the phone was offered platba.spayd and the page points to the QR image', async ({
+        page,
+      }) => {
+        await servePaymentDetails(page, []);
+        await page.goto('/prispet');
+        await expect(page.locator('#prispet .bank')).toContainText('5544332217/2010');
+
+        await page.getByRole('button', { name: 'Poslat jako soubor platby' }).click();
+
+        await expect(
+          page.locator('#prispet .bank-app').getByRole('status').filter({ hasText: /\S/ }),
+        ).toHaveText(
+          'Neotevřela se vám banka? Zkuste Otevřít v aplikaci banky, které pošle QR jako obrázek, nebo zkopírujte údaje výše do bankovní aplikace.',
         );
         expect(
           await page.evaluate(() => (window as unknown as { offeredFiles: unknown }).offeredFiles),
@@ -299,8 +322,16 @@ test.describe('Given a visitor on the home page', () => {
       test('when the visitor taps Poslat QR jako obrázek, then the phone is offered the PNG of the QR', async ({
         page,
       }) => {
+        await page.addInitScript(() => {
+          Object.defineProperty(navigator, 'canShare', {
+            value: (data: ShareData) =>
+              (data.files ?? []).length > 0 &&
+              (data.files ?? []).every((file) => file.type.startsWith('image/')),
+            configurable: true,
+          });
+        });
         await servePaymentDetails(page, []);
-        await page.goto('/');
+        await page.goto('/prispet');
         await expect(page.locator('#prispet .bank')).toContainText('5544332217/2010');
 
         await page.getByRole('button', { name: 'Poslat QR jako obrázek' }).click();
@@ -331,7 +362,7 @@ test.describe('Given a visitor on the home page', () => {
         page,
       }) => {
         await servePaymentDetails(page, []);
-        await page.goto('/');
+        await page.goto('/prispet');
         const bank = page.locator('#prispet .bank');
         await expect(bank).toContainText('5544332217/2010');
 

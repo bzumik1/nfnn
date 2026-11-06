@@ -30,14 +30,16 @@ public class AdminReportStepDefinitions {
     private final ScenarioDonors scenarioDonors;
     private final RecordingMailSender mailSender;
     private final JdbcClient jdbc;
+    private final DonationRowVersions versions;
 
     public AdminReportStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors scenarioDonors, RecordingMailSender mailSender,
-                                      JdbcClient jdbc) {
+                                      JdbcClient jdbc, DonationRowVersions versions) {
         this.api = api;
         this.sessions = sessions;
         this.scenarioDonors = scenarioDonors;
         this.mailSender = mailSender;
         this.jdbc = jdbc;
+        this.versions = versions;
     }
 
     @When("{string} asks for the monthly report settings")
@@ -68,7 +70,7 @@ public class AdminReportStepDefinitions {
                 "donations", sections.contains("donations"),
                 "unpairedPayments", sections.contains("unpairedPayments"),
                 "bankImport", sections.contains("bankImport")));
-        api.put(REPORT + "/settings", body);
+        api.put(REPORT + "/settings", body, ApiClient.ifMatch(versions.ofReportSettings()));
     }
 
     @When("{string} sends the monthly report for {string} again")

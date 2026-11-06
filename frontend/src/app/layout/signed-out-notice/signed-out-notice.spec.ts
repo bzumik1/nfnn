@@ -58,6 +58,26 @@ describe('Given the notice shown after signing out', () => {
     expect(document.documentElement.classList).not.toContain('has-floating-notice');
   });
 
+  it('when the donor deleted the data on this device and was signed out, then the notice confirms the deletion', async () => {
+    state.show('device-data-deleted');
+    await settle();
+
+    expect(status().textContent?.replace(/\s+/g, ' ').trim()).toContain(
+      'Data z tohoto zařízení jsme smazali a odhlásili jsme vás.',
+    );
+    expect(status().textContent).not.toContain('Odhlásili jste se.');
+  });
+
+  it('when a plain sign-out follows a deletion notice, then the notice says only that the donor signed out', async () => {
+    state.show('device-data-deleted');
+    state.dismiss();
+    state.show();
+    await settle();
+
+    expect(status().textContent).toContain('Odhlásili jste se.');
+    expect(status().textContent).not.toContain('smazali');
+  });
+
   describe('when the donor has signed out', () => {
     beforeEach(async () => {
       state.show();

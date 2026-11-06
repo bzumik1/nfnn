@@ -51,6 +51,20 @@ class TranscriptNormaliserTest {
     }
 
     @Test
+    @DisplayName("Given row versions over rows with random ids, in bodies and in If-Match, when they are normalised, then each becomes a number by first appearance and keeps it, and a number or a longer hex string named version stays")
+    void should_number_row_versions_by_first_appearance_when_normalised_given_versions_in_bodies_and_if_match() {
+        TranscriptNormaliser normaliser = new TranscriptNormaliser(Map.of());
+
+        JsonNode list = normaliser.json(json.readTree("{\"items\":[{\"version\":\"0123456789abcdef\"},{\"version\":\"fedcba9876543210\"}],"
+                + "\"qr\":{\"version\":4},\"other\":{\"version\":\"0123456789abcdef0\"}}"));
+        String ifMatch = normaliser.ifMatch("\"fedcba9876543210\"");
+
+        assertThat(list.toString()).isEqualTo("{\"items\":[{\"version\":\"<version:1>\"},{\"version\":\"<version:2>\"}],"
+                + "\"qr\":{\"version\":4},\"other\":{\"version\":\"0123456789abcdef0\"}}");
+        assertThat(ifMatch).isEqualTo("\"<version:2>\"");
+    }
+
+    @Test
     @DisplayName("Given an id seen in a path, when it appears later in a body, then it keeps its number")
     void should_keep_the_number_of_an_id_when_it_appears_later_in_a_body_given_it_was_seen_in_a_path() {
         TranscriptNormaliser normaliser = new TranscriptNormaliser(Map.of());

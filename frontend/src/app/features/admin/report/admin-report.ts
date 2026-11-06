@@ -37,6 +37,13 @@ import {
 } from './email-list';
 import { followingMonth, formatReportMonth, previousMonths } from './report-month';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
+import {
+  isChangedMeanwhile,
+  savedAtInRefusal,
+  versionInRefusal,
+} from '../../../core/version/row-version';
+import { DialogAnnouncer } from '../../../shared/ui/dialog/dialog-announcer';
+import { ChangedMeanwhileDialog } from '../changed-meanwhile/changed-meanwhile-dialog';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -62,6 +69,7 @@ const SEND_HOURS = Array.from({ length: 24 }, (_, index) => index);
     FormControlDirective,
     FocusFirstInvalid,
     EmailListValidator,
+    ChangedMeanwhileDialog,
   ],
   templateUrl: './admin-report.html',
   styleUrl: './admin-report.scss',
@@ -77,6 +85,8 @@ export class AdminReport {
   private readonly title = viewChild.required<ElementRef<HTMLHeadingElement>>('title');
   private readonly sendButton = viewChild<ElementRef<HTMLButtonElement>>('sendButton');
   private readonly sendCancel = viewChild<ElementRef<HTMLButtonElement>>('sendCancel');
+  private readonly settingsForm = viewChild<NgForm>('settingsForm');
+  private readonly announcer = inject(DialogAnnouncer);
 
   protected readonly state = signal<LoadState>('loading');
   protected readonly report = signal<AdminReportResponse | null>(null);
@@ -87,6 +97,9 @@ export class AdminReport {
   protected readonly sending = signal(false);
   protected readonly settingsError = signal<string | null>(null);
   protected readonly confirmingSend = signal(false);
+  protected readonly changedMeanwhile = signal<{ version: string; savedAt: string | null } | null>(
+    null,
+  );
   protected readonly sendDays = SEND_DAYS;
   protected readonly sendHours = SEND_HOURS;
 
@@ -163,7 +176,7 @@ export class AdminReport {
     this.fetch();
   }
 
-  private fetch(): void {
+  private fetch(loaded?: () => void): void {
     this.api
       .report()
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -176,6 +189,7 @@ export class AdminReport {
           this.sections = { ...report.settings.sections };
           this.month = report.lastEndedMonth;
           this.state.set('ready');
+          loaded?.();
         },
         error: (failure: unknown) => {
           if (problemTypeEndsWith(failure, UNAUTHENTICATED)) {
@@ -218,25 +232,77 @@ export class AdminReport {
       );
       return;
     }
+    const report = this.report();
+    if (report !== null) {
+      this.submitSettings(report.settings.version);
+    }
+  }
+
+  protected overwriteAfterChange(): void {
+    const changed = this.changedMeanwhile();
+    if (changed !== null) {
+      this.submitSettings(changed.version);
+    }
+  }
+
+  protected reloadAfterChange(): void {
+    this.changedMeanwhile.set(null);
+    this.settingsError.set(null);
+    this.fetch(() => {
+      this.markSettingsSaved();
+      this.settingsStatus.set(
+        $localize`:@@admin.report.settings.reloaded:Načetli jsme nastavení, které uložil někdo jiný.`,
+      );
+    });
+  }
+
+  protected keepDraftAfterChange(): void {
+    this.changedMeanwhile.set(null);
+  }
+
+  private markSettingsSaved(): void {
+    afterNextRender(() => this.settingsForm()?.form.markAsPristine(), {
+      injector: this.injector,
+    });
+  }
+
+  private submitSettings(version: string): void {
     this.saving.set(true);
     this.api
-      .changeReportSettings({
-        recipients: parseEmailList(this.recipients()),
-        sendDay: Number(this.sendDay),
-        sendHour: Number(this.sendHour),
-        sections: { ...this.sections },
-      })
+      .changeReportSettings(
+        {
+          recipients: parseEmailList(this.recipients()),
+          sendDay: Number(this.sendDay),
+          sendHour: Number(this.sendHour),
+          sections: { ...this.sections },
+        },
+        version,
+      )
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
           this.saving.set(false);
+          this.changedMeanwhile.set(null);
           this.settingsStatus.set(
             $localize`:@@admin.report.settings.saved:Nastavení jsme uložili. Příští přehled odejde podle něj.`,
           );
-          this.fetch();
+          this.fetch(() => this.markSettingsSaved());
         },
         error: (failure: unknown) => {
           this.saving.set(false);
+          if (isChangedMeanwhile(failure)) {
+            const current = versionInRefusal(failure);
+            if (current !== null) {
+              if (this.changedMeanwhile() !== null) {
+                this.announcer.announce(
+                  $localize`:@@admin.report.settings.changedAgain:Nastavení mezitím změnil ještě někdo další. Vyberte prosím znovu, co s vašimi úpravami.`,
+                );
+              }
+              this.changedMeanwhile.set({ version: current, savedAt: savedAtInRefusal(failure) });
+              return;
+            }
+          }
+          this.changedMeanwhile.set(null);
           this.settingsError.set(
             describeProblem(
               failure,

@@ -1,5 +1,6 @@
 package cz.novanadeje.app.operations.application.push;
 
+import cz.novanadeje.app.operations.application.alerts.OperationalAlertService;
 import cz.novanadeje.app.operations.domain.push.PushAlerts;
 import cz.novanadeje.app.operations.domain.push.PushClientKeys;
 import cz.novanadeje.app.operations.domain.push.PushEndpoint;
@@ -31,22 +32,25 @@ public class PushSubscriptionService {
     private final PushSubscriptionRepository subscriptions;
     private final PushKeyService keys;
     private final PushSender sender;
+    private final OperationalAlertService alerts;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public PushSubscriptionService(PushSubscriptionRepository subscriptions, PushKeyService keys, PushSender sender,
-                                   ApplicationEventPublisher events, Clock clock) {
+                                   OperationalAlertService alerts, ApplicationEventPublisher events, Clock clock) {
         this.subscriptions = subscriptions;
         this.keys = keys;
         this.sender = sender;
+        this.alerts = alerts;
         this.events = events;
         this.clock = clock;
     }
 
     @Transactional
-    public PushView view(UUID administratorId) {
-        return new PushView(keys.current().publicKey(),
-                subscriptions.findAllOf(administratorId).stream().map(PushSubscriptionView::of).toList());
+    public PushView view(UUID administratorId, Optional<UUID> deviceId) {
+        return new PushView(keys.current().publicKey(), deviceId.isPresent(), subscriptions.findAllOf(administratorId).stream()
+                .map(subscription -> PushSubscriptionView.of(subscription, deviceId.filter(subscription.deviceId()::equals).isPresent())).toList(),
+                alerts.open());
     }
 
     @Transactional
@@ -77,7 +81,7 @@ public class PushSubscriptionService {
     }
 
     @Transactional
-    public PushSubscriptionView changeAlerts(UUID administratorId, PushSubscriptionId id, PushAlerts alerts) {
+    public PushSubscriptionView changeAlerts(UUID administratorId, PushSubscriptionId id, PushAlerts alerts, Optional<UUID> deviceId) {
         PushSubscription changed = ownedBy(administratorId, id).withAlerts(alerts);
         if (!subscriptions.changeAlerts(id, administratorId, alerts)) {
             throw new PushSubscriptionNotFound();
@@ -85,11 +89,11 @@ public class PushSubscriptionService {
         events.publishEvent(new AdminActionPerformed(administratorId, CHANGE_ALERTS_ACTION, Optional.of(id.value()),
                 "Upozornění přes push na zařízení (" + PushServiceNames.of(changed.endpoint().service()) + "): " + PushAlertNames.describe(alerts),
                 clock.instant()));
-        return PushSubscriptionView.of(changed);
+        return PushSubscriptionView.of(changed, deviceId.filter(changed.deviceId()::equals).isPresent());
     }
 
     public PushDeliveryReport sendTest(UUID administratorId) {
-        return sender.send(subscriptions.findAllOf(administratorId), new PushMessage(PushMessageKind.TEST, 0));
+        return sender.send(subscriptions.findAllOf(administratorId), new PushMessage(PushMessageKind.TEST, Math.min(alerts.open().size(), PushMessage.MAX_COUNT)));
     }
 
     private PushSubscription ownedBy(UUID administratorId, PushSubscriptionId id) {

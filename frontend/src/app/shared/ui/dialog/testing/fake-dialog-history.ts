@@ -7,13 +7,17 @@ export class FakeDialogHistory {
   closed = 0;
   released = 0;
   opened = 0;
+  ownsEntry = true;
 
   open(listener: DialogHistoryListener): void {
     this.opened++;
     this.listener = listener;
   }
 
-  showStep(depth: number): void {
+  showStep(depth: number, listener?: DialogHistoryListener): void {
+    if (listener !== undefined && listener !== this.listener) {
+      return;
+    }
     if (this.steps.at(-1) !== depth) {
       this.steps.push(depth);
     }
@@ -27,9 +31,10 @@ export class FakeDialogHistory {
     this.closed++;
   }
 
-  handOver(url: string): void {
+  handOver(url: string): boolean {
     this.listener = null;
     this.handedOver.push(url);
+    return this.ownsEntry;
   }
 
   release(): void {

@@ -114,7 +114,7 @@ export class OpenCopy implements CopyIdentity {
     password: string,
     derivation: PasswordKeyDerivation,
   ): Promise<PasswordWrap> {
-    const root = this.openRoot();
+    this.openRoot();
     const salt = randomBytes(PASSWORD_SALT_LENGTH);
     const measured = await deriveWithMeasuredParameters(derivation, password, salt);
     const keyEncryptionKey = await passwordKeyEncryptionKey(this.copyId, measured.key);
@@ -122,29 +122,27 @@ export class OpenCopy implements CopyIdentity {
       kind: 'password',
       salt: bytesToBase64Url(salt),
       parameters: measured.parameters,
-      ...(await seal(
+      ...(await this.sealRoot(
         keyEncryptionKey,
         passwordWrapAad(this.copyId, salt, measured.parameters),
-        root,
       )),
     };
   }
 
   async wrapWithPrf(credentialId: string, prfOutput: Uint8Array<ArrayBuffer>): Promise<PrfWrap> {
-    const root = this.openRoot();
+    this.openRoot();
     const keyEncryptionKey = await prfKeyEncryptionKey(this.copyId, credentialId, prfOutput);
     return {
       kind: 'prf',
       credentialId,
-      ...(await seal(keyEncryptionKey, wrapAad(this.copyId, 'prf', credentialId), root)),
+      ...(await this.sealRoot(keyEncryptionKey, wrapAad(this.copyId, 'prf', credentialId))),
     };
   }
 
   async wrapWithSessionKey(sessionKey: CryptoKey): Promise<SessionWrap> {
-    const root = this.openRoot();
     return {
       kind: 'session',
-      ...(await seal(sessionKey, wrapAad(this.copyId, 'session', ''), root)),
+      ...(await this.sealRoot(sessionKey, wrapAad(this.copyId, 'session', ''))),
     };
   }
 
@@ -159,6 +157,18 @@ export class OpenCopy implements CopyIdentity {
     this.root?.fill(0);
     this.root = null;
     this.dataKey = null;
+  }
+
+  private async sealRoot(
+    keyEncryptionKey: CryptoKey,
+    aad: Uint8Array<ArrayBuffer>,
+  ): Promise<SealedRecord> {
+    const root = this.openRoot().slice();
+    try {
+      return await seal(keyEncryptionKey, aad, root);
+    } finally {
+      root.fill(0);
+    }
   }
 
   private openRoot(): Uint8Array<ArrayBuffer> {

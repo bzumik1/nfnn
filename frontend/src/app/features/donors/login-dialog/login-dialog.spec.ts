@@ -11,6 +11,12 @@ import {
 } from '../../../core/auth/login-dialog.service';
 import { PasskeyAuthenticator } from '../../../core/auth/passkey-authenticator';
 import {
+  NO_SESSION_DEVICE,
+  SESSION_DEVICE,
+  type SessionDevice,
+  type SignInSecret,
+} from '../../../core/auth/session-device';
+import {
   authResponse,
   FakePasskeyAuthenticator,
   passkeySignInOptions,
@@ -30,8 +36,14 @@ describe('Given the sign-in dialog', () => {
   let navigate: ReturnType<typeof vi.spyOn>;
   let passkeys: FakePasskeyAuthenticator;
   let history: FakeDialogHistory;
+  let secrets: SignInSecret[];
 
   beforeEach(async () => {
+    secrets = [];
+    const device: SessionDevice = {
+      ...NO_SESSION_DEVICE,
+      signedIn: async (_account, secret) => void secrets.push(secret),
+    };
     localStorage.clear();
     passkeys = new FakePasskeyAuthenticator();
     history = new FakeDialogHistory();
@@ -43,6 +55,7 @@ describe('Given the sign-in dialog', () => {
         provideRouter([]),
         { provide: PasskeyAuthenticator, useValue: passkeys },
         { provide: DialogHistory, useValue: history },
+        { provide: SESSION_DEVICE, useValue: device },
       ],
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);
@@ -165,6 +178,7 @@ describe('Given the sign-in dialog', () => {
       expect(request.request.body).toEqual({
         email: 'jana@example.cz',
         password: 'correct horse battery',
+        session: 'BROWSER',
       });
       request.flush(authResponse('token-1'));
       await settle();
@@ -286,13 +300,28 @@ describe('Given the sign-in dialog', () => {
 
         await submit('.code-form');
         const request = http.expectOne('/api/donors/auth/login/second-factor');
-        expect(request.request.body).toEqual({ challenge: SAMPLE_CHALLENGE, code: '287082' });
+        expect(request.request.body).toEqual({
+          challenge: SAMPLE_CHALLENGE,
+          code: '287082',
+          session: 'BROWSER',
+        });
         request.flush(authResponse('token-1'));
         await settle();
 
         expect(TestBed.inject(AuthStore).donor()?.name).toBe('Jana Nováková');
         expect(dialog.isOpen()).toBe(false);
         expect(navigate).not.toHaveBeenCalled();
+      });
+
+      it('and the right code is sent, then the password typed before the code goes to this device to lock its copy', async () => {
+        await fillIn('#login-code', '287082');
+
+        await submit('.code-form');
+        http.expectOne('/api/donors/auth/login/second-factor').flush(authResponse('token-1'));
+        await settle();
+        await vi.waitFor(() => expect(secrets.length).toBe(1));
+
+        expect(secrets).toEqual([{ kind: 'password', password: 'correct horse battery' }]);
       });
 
       it('and a five-digit code is sent, then nothing goes out and the field says the code has six digits', async () => {
@@ -650,6 +679,104 @@ describe('Given the sign-in dialog', () => {
       expect(element('#login-password-error').textContent).toContain('Vyplňte prosím heslo.');
       expect(element('#login-email-error')).toBeNull();
       expect(element('.ui-field-error')).toBeNull();
+    });
+  });
+
+  describe('when a donor chooses how long to stay signed in', () => {
+    beforeEach(() => render());
+
+    async function signIn(): Promise<Record<string, unknown>> {
+      await fillIn('#login-email', 'jana@example.cz');
+      await fillIn('#login-password', 'correct horse battery');
+      await submit('.login-form');
+      const request = http.expectOne('/api/donors/auth/login');
+      const body = request.request.body as Record<string, unknown>;
+      request.flush(authResponse('token-1'));
+      await settle();
+      return body;
+    }
+
+    it('then one unticked "Zapamatovat si mě" box and a "Cizí počítač?" button stand above the sign-in buttons', () => {
+      const remember = element<HTMLInputElement>('.session-check input');
+      expect(remember.type).toBe('checkbox');
+      expect(remember.checked).toBe(false);
+      expect(element('.session-check').textContent).toContain('Zapamatovat si mě');
+      expect(element('.session-switch').textContent).toContain('Cizí počítač?');
+      expect(fixture.nativeElement.querySelectorAll('.session-check input')).toHaveLength(1);
+    });
+
+    it('and ticks "Zapamatovat si mě", then the sign-in asks to be remembered', async () => {
+      element<HTMLInputElement>('.session-check input').click();
+      await settle();
+
+      expect((await signIn())['session']).toBe('REMEMBERED');
+    });
+
+    it('and leaves it unticked, then the sign-in lasts for this browser session', async () => {
+      expect((await signIn())['session']).toBe('BROWSER');
+    });
+
+    it('and presses "Cizí počítač?", then the row says nothing is kept, takes focus and the sign-in is for a public computer', async () => {
+      await click('.session-switch');
+      await vi.waitFor(() => expect(document.activeElement).toBe(element('.session-check input')));
+
+      const box = element<HTMLInputElement>('.session-check input');
+      expect(box.checked).toBe(true);
+      expect(element('.session-check').textContent).toContain('Cizí počítač, nic neukládat');
+      expect(element('#session-public-hint').textContent).toContain(
+        'Po zavření prohlížeče tu nic nezůstane.',
+      );
+      expect(box.getAttribute('aria-describedby')).toBe('session-public-hint');
+      expect((await signIn())['session']).toBe('PUBLIC');
+    });
+
+    it('and goes back from "Cizí počítač", then the row offers "Zapamatovat si mě" unticked again', async () => {
+      element<HTMLInputElement>('.session-check input').click();
+      await settle();
+      await click('.session-switch');
+      await click('.session-switch');
+
+      expect(element('.session-check').textContent).toContain('Zapamatovat si mě');
+      expect(element<HTMLInputElement>('.session-check input').checked).toBe(false);
+      expect((await signIn())['session']).toBe('BROWSER');
+    });
+
+    it('and unticks "Cizí počítač, nic neukládat", then the row goes back too', async () => {
+      await click('.session-switch');
+      element<HTMLInputElement>('.session-check input').click();
+      await settle();
+
+      expect(element('.session-check').textContent).toContain('Zapamatovat si mě');
+    });
+
+    it('and signs in on a public computer with the second factor on, then the code step keeps the public computer', async () => {
+      await click('.session-switch');
+      await fillIn('#login-email', 'jana@example.cz');
+      await fillIn('#login-password', 'correct horse battery');
+      await submit('.login-form');
+      http
+        .expectOne('/api/donors/auth/login')
+        .flush(secondFactorRequired(), { status: 401, statusText: 'Unauthorized' });
+      await settle();
+      await fillIn('#login-code', '287082');
+      await submit('.code-form');
+      const request = http.expectOne('/api/donors/auth/login/second-factor');
+
+      expect(request.request.body.session).toBe('PUBLIC');
+      request.flush(authResponse('token-1'));
+      await settle();
+    });
+
+    it('and signs in with a passkey on a public computer, then the passkey sign-in is for a public computer', async () => {
+      await click('.session-switch');
+      await click('.passkey-btn');
+      http.expectOne('/api/donors/auth/passkey/options').flush(passkeySignInOptions());
+      await vi.waitFor(() => expect(passkeys.requested).toHaveLength(1));
+      const request = http.expectOne('/api/donors/auth/passkey');
+
+      expect(request.request.body.session).toBe('PUBLIC');
+      request.flush(authResponse('token-1'));
+      await settle();
     });
   });
 

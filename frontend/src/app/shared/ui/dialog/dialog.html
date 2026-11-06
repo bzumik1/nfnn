@@ -6,17 +6,35 @@
   [class.dialog--viewer]="look() === 'viewer'"
   [attr.data-presentation]="look()"
   [attr.aria-labelledby]="labelledBy()"
-  (close)="dismiss()"
+  [attr.aria-describedby]="describedBy()"
+  (cancel)="onCancel($event)"
+  (close)="onClose()"
   (pointerdown)="onPointerDown($event)"
   (click)="onClick($event)"
 >
-  <div class="dialog-panel" [class.dialog-panel--wide]="wide()">
-    @if (look() === 'sheet') {
-      <span class="dialog-grabber" aria-hidden="true"></span>
+  <div
+    #panel
+    class="dialog-panel"
+    [class.dialog-panel--wide]="wide()"
+    [class.dialog-panel--dragging]="dragging()"
+    [style.translate]="dragTranslate()"
+    (focusin)="keepFocusAboveActions($event)"
+  >
+    @if (look() === 'sheet' && dismissible()) {
+      <span
+        class="dialog-grabber"
+        aria-hidden="true"
+        (pointerdown)="startDrag($event)"
+        (pointermove)="followDrag($event)"
+        (pointerup)="endDrag($event)"
+        (pointercancel)="cancelDrag($event)"
+        (lostpointercapture)="cancelDrag($event)"
+      ></span>
     }
     <button
       type="button"
       class="dialog-close"
+      [disabled]="!dismissible()"
       (click)="dismiss()"
       aria-label="Zavřít"
       i18n-aria-label="@@ui.dialog.close"

@@ -6,14 +6,16 @@ const HELD =
 const NOT_STORED = { 'Cache-Control': 'no-store' };
 
 test.describe('Given a visitor whose page was opened before the server changed its API', () => {
-  test('when the home page loads, then every API call names the app revision', async ({ page }) => {
+  test('when the About page loads, then every API call names the app revision', async ({
+    page,
+  }) => {
     const named: (string | null)[] = [];
     await page.route('**/api/content/home', async (route) => {
       named.push(await route.request().headerValue('Nfnn-App'));
       await route.fulfill({ json: { news: [], projects: [] } });
     });
 
-    await page.goto('/');
+    await page.goto('/o-nas');
 
     await expect.poll(() => named.length).toBeGreaterThan(0);
     expect(named.every((value) => value !== null && /^(?:[0-9a-f]{7,40}|dev)$/.test(value))).toBe(
@@ -37,7 +39,7 @@ test.describe('Given a visitor whose page was opened before the server changed i
       await route.fulfill({ status: 202 });
     });
 
-    await page.goto('/');
+    await page.goto('/o-nas');
     const notice = page.locator('[aria-live="polite"]').filter({ hasText: NOTICE });
     await expect(notice.getByText(NOTICE)).toBeVisible();
     await expect(page.getByRole('status').filter({ hasText: NOTICE })).toHaveCount(0);
@@ -84,7 +86,7 @@ test.describe('Given a visitor whose page was opened before the server changed i
       });
     });
 
-    await page.goto('/');
+    await page.goto('/o-nas');
     await page.locator('#contact-name').fill('Jana Nováková');
     await page.locator('#contact-email').fill('jana@example.cz');
     await page.locator('#contact-message').fill('Mám dotaz k projektu.');

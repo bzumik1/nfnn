@@ -56,6 +56,11 @@ public class DonorRegistrations {
         return api.post(CONFIRM_PATH, Map.of("token", token));
     }
 
+    public ResponseEntity<String> confirm(String token, String session) {
+        api.forgetCredentials();
+        return api.post(CONFIRM_PATH, Map.of("token", token, "session", session));
+    }
+
     private MimeMessage awaitEmail(int sentBefore) {
         await().atMost(MAIL_WAIT).untilAsserted(() -> assertThat(mailSender.sent()).hasSizeGreaterThan(sentBefore));
         return mailSender.sent().get(sentBefore);

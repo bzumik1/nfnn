@@ -119,6 +119,110 @@ describe('Given the history entries of an open dialog', () => {
     expect(location.path()).toBe('');
   });
 
+  describe('when a second dialog opens over the first', () => {
+    let upper: { stepBack: ReturnType<typeof vi.fn>; close: ReturnType<typeof vi.fn> };
+
+    beforeEach(async () => {
+      await open();
+      upper = { stepBack: vi.fn(), close: vi.fn() };
+      history.open(upper as DialogHistoryListener);
+      await settled();
+    });
+
+    it('then each has an entry of its own, Back closes only the upper one and the next Back the first', async () => {
+      expect(depth()).toBe(2);
+
+      await back();
+
+      expect(upper.close).toHaveBeenCalledTimes(1);
+      expect(listener.close).not.toHaveBeenCalled();
+      expect(depth()).toBe(1);
+      await back();
+      expect(listener.close).toHaveBeenCalledTimes(1);
+      expect(depth()).toBeUndefined();
+      expect(location.path()).toBe('/stranka');
+      expect(routerEvents).toEqual([]);
+    });
+
+    it('and the first closes by itself, then the upper one keeps its entry and Back closes it', async () => {
+      history.close(listener as DialogHistoryListener);
+      await settled();
+
+      expect(depth()).toBe(1);
+      await back();
+      expect(upper.close).toHaveBeenCalledTimes(1);
+      expect(listener.close).not.toHaveBeenCalled();
+      expect(location.path()).toBe('/stranka');
+    });
+
+    it('and the upper one moves on to a further step, then Back returns to its step before and leaves the first open', async () => {
+      history.showStep(1);
+      await settled();
+      expect(depth()).toBe(3);
+
+      await back();
+
+      expect(upper.stepBack).toHaveBeenCalledTimes(1);
+      expect(upper.close).not.toHaveBeenCalled();
+      expect(depth()).toBe(2);
+    });
+
+    it('and the visitor goes back past both at once, then both are told to close, the upper one first', async () => {
+      const order: string[] = [];
+      upper.close.mockImplementation(() => order.push('upper'));
+      listener.close.mockImplementation(() => order.push('first'));
+
+      await back(2);
+
+      expect(order).toEqual(['upper', 'first']);
+      expect(location.path()).toBe('/stranka');
+    });
+
+    it('and the visitor goes back past both while each takes its own entry back on closing, then no entry is added again', async () => {
+      upper.close.mockImplementation(() => history.close(upper as DialogHistoryListener));
+      listener.close.mockImplementation(() => history.close(listener as DialogHistoryListener));
+      const length = window.history.length;
+
+      await back(2);
+
+      expect(upper.close).toHaveBeenCalledTimes(1);
+      expect(listener.close).toHaveBeenCalledTimes(1);
+      expect(window.history.length).toBe(length);
+      expect(depth()).toBeUndefined();
+      expect(location.path()).toBe('/stranka');
+    });
+
+    it('and the first moves on to a further step under the upper one, then Back still closes the upper one first', async () => {
+      history.showStep(1, listener as DialogHistoryListener);
+      await settled();
+      expect(depth()).toBe(3);
+
+      await back();
+
+      expect(upper.close).toHaveBeenCalledTimes(1);
+      expect(listener.stepBack).not.toHaveBeenCalled();
+      await back();
+      expect(listener.stepBack).toHaveBeenCalledTimes(1);
+      expect(listener.close).not.toHaveBeenCalled();
+    });
+  });
+
+  it('when one dialog closes and another opens in the same moment, then Back closes only the new one and stays on the page', async () => {
+    await open();
+    const sheet = { stepBack: vi.fn(), close: vi.fn() };
+
+    history.close(listener as DialogHistoryListener);
+    history.open(sheet);
+    await settled();
+
+    expect(depth()).toBe(1);
+    await back();
+    expect(sheet.close).toHaveBeenCalledTimes(1);
+    expect(listener.close).not.toHaveBeenCalled();
+    expect(location.path()).toBe('/stranka');
+    expect(routerEvents).toEqual([]);
+  });
+
   it('when the dialog closes before it ever added an entry, then history is left alone', async () => {
     const before = window.history.length;
 

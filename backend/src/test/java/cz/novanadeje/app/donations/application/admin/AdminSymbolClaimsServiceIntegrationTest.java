@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donations.application.admin;
 
+import cz.novanadeje.app.shared.application.version.ExpectedVersion;
 import cz.novanadeje.app.IntegrationTest;
 import cz.novanadeje.app.donations.application.bankaccount.DonorBankAccountsService;
 import cz.novanadeje.app.donations.application.bankaccount.SymbolClaimConfirmation;
@@ -92,7 +93,7 @@ class AdminSymbolClaimsServiceIntegrationTest {
         assertThat(confirmation.changedYearlyReceipts()).containsExactly(YEAR_2025);
         SymbolClaimId claim = claimOf(jana);
 
-        adminClaims.reverse(ADMIN, claim);
+        adminClaims.reverse(ADMIN, claim, ExpectedVersion.none());
 
         assertThat(donationsPairedBy(claim)).isZero();
         assertThat(answerOf(claim)).isEqualTo("DECLINED");
@@ -118,7 +119,7 @@ class AdminSymbolClaimsServiceIntegrationTest {
         receipts.issueForDonation(jana, new DonationId(jdbc.sql("select id from donation where symbol_claim_id = ? order by received_on desc limit 1")
                 .param(claim.value()).query(UUID.class).single()));
 
-        assertThatThrownBy(() -> adminClaims.reverse(ADMIN, claim)).isInstanceOf(SymbolClaimHasReceipt.class);
+        assertThatThrownBy(() -> adminClaims.reverse(ADMIN, claim, ExpectedVersion.none())).isInstanceOf(SymbolClaimHasReceipt.class);
 
         assertThat(donationsPairedBy(claim)).isEqualTo(3);
         assertThat(answerOf(claim)).isEqualTo("CONFIRMED");
@@ -133,7 +134,7 @@ class AdminSymbolClaimsServiceIntegrationTest {
         SymbolClaimId claim = claimOf(jana);
         receipts.issueForYear(jana, YEAR_2025);
 
-        assertThatThrownBy(() -> adminClaims.reverse(ADMIN, claim)).isInstanceOf(SymbolClaimHasReceipt.class);
+        assertThatThrownBy(() -> adminClaims.reverse(ADMIN, claim, ExpectedVersion.none())).isInstanceOf(SymbolClaimHasReceipt.class);
 
         assertThat(donationsPairedBy(claim)).isEqualTo(3);
         assertThat(answerOf(claim)).isEqualTo("CONFIRMED");
@@ -146,7 +147,7 @@ class AdminSymbolClaimsServiceIntegrationTest {
         symbolClaims.decline(jana, linkOf(jana), OLD_SYMBOL);
         SymbolClaimId claim = claimOf(jana);
 
-        assertThatThrownBy(() -> adminClaims.reverse(ADMIN, claim)).isInstanceOf(SymbolClaimNotConfirmed.class);
+        assertThatThrownBy(() -> adminClaims.reverse(ADMIN, claim, ExpectedVersion.none())).isInstanceOf(SymbolClaimNotConfirmed.class);
 
         assertThat(answerOf(claim)).isEqualTo("DECLINED");
     }
@@ -158,7 +159,7 @@ class AdminSymbolClaimsServiceIntegrationTest {
         symbolClaims.decline(jana, linkOf(jana), OLD_SYMBOL);
         SymbolClaimId claim = claimOf(jana);
 
-        adminClaims.reset(ADMIN, claim);
+        adminClaims.reset(ADMIN, claim, ExpectedVersion.none());
 
         assertThat(jdbc.sql("select count(*) from donor_symbol_claim").query(Long.class).single()).isZero();
         assertThat(bankAccounts.listBankAccounts(jana)).singleElement().satisfies(row -> assertThat(row.symbolOffer())
@@ -179,7 +180,7 @@ class AdminSymbolClaimsServiceIntegrationTest {
         confirmOldSymbol(jana);
         SymbolClaimId claim = claimOf(jana);
 
-        assertThatThrownBy(() -> adminClaims.reset(ADMIN, claim)).isInstanceOf(SymbolClaimStillConfirmed.class);
+        assertThatThrownBy(() -> adminClaims.reset(ADMIN, claim, ExpectedVersion.none())).isInstanceOf(SymbolClaimStillConfirmed.class);
 
         assertThat(answerOf(claim)).isEqualTo("CONFIRMED");
         assertThat(donationsPairedBy(claim)).isEqualTo(3);

@@ -6,6 +6,7 @@ import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.support.Emails;
 import cz.novanadeje.app.support.MailContents;
 import cz.novanadeje.app.support.MailPreviews;
+import cz.novanadeje.app.support.ObservedMailSenders;
 import jakarta.mail.Message;
 import jakarta.mail.Session;
 import jakarta.mail.internet.InternetAddress;
@@ -29,7 +30,7 @@ class ContactMessageEmailForwarderTest {
     private static final Instant RECEIVED_AT = Instant.parse("2026-10-17T10:00:00Z");
 
     private final JavaMailSender mailSender = mock(JavaMailSender.class);
-    private final ContactMessageEmailForwarder forwarder = new ContactMessageEmailForwarder(mailSender,
+    private final ContactMessageEmailForwarder forwarder = new ContactMessageEmailForwarder(ObservedMailSenders.of(mailSender),
             Emails.branded(mailSender, "info@nfnn.cz", "https://nfnn.cz"), Emails.messages(), new ContactMailProperties("info@nfnn.cz"));
 
     @BeforeEach

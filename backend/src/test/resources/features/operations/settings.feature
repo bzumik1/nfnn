@@ -43,6 +43,20 @@ Feature: An administrator changes the settings of the site in the administration
     And the problem names the settings "PAIRING_EXCLUDED_ACCOUNTS"
     And the backend does not restart
 
+  Scenario: A remembered sign-in lasts 1 to 30 days, and a connected application may change its length
+    When "Jana" changes the settings:
+      | name                  | value |
+      | SESSION_REMEMBER_DAYS | 31    |
+    Then the response status is 400
+    And the problem names the settings "SESSION_REMEMBER_DAYS"
+    And the problem's error for field "SESSION_REMEMBER_DAYS" says "Zadejte počet dní od 1 do 30."
+    And the backend does not restart
+    Given "Jana" connected the application "https://claude.ai/.well-known/oauth-client" with scope "admin:read admin:write"
+    When the connector exchanges the connector token for an API token
+    And the exchanged API token changes the setting "SESSION_REMEMBER_DAYS" to "30"
+    Then the response status is 202
+    And the stored "SESSION_REMEMBER_DAYS" is "30"
+
   Scenario: A setting of the first setup only and a setting the site does not know are refused by name or as unknown
     When "Jana" changes the settings:
       | name         | value          |

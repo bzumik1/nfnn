@@ -1,4 +1,4 @@
-import { handOver, imageFile, spaydFile } from './bank-handoff';
+import { handOver, imageFile, sharesImages, sharesPaymentFiles, spaydFile } from './bank-handoff';
 
 const SPAYD =
   'SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE';
@@ -81,6 +81,23 @@ describe('Given a payment handed to a bank app', () => {
       });
     });
 
+    it('when asked what it shares, then it takes both the payment file and the QR image', () => {
+      expect(sharesPaymentFiles()).toBe(true);
+      expect(sharesImages()).toBe(true);
+    });
+
+    it('when the site could also open the payment itself, then the phone still offers the file and the site is not asked', async () => {
+      const opened: string[] = [];
+
+      const outcome = await handOver(spaydFile(SPAYD), 'QR platba', () => {
+        opened.push('asked');
+        return Promise.resolve('opened');
+      });
+
+      expect(outcome).toBe('shared');
+      expect(opened).toEqual([]);
+    });
+
     it('when the file is handed over, then the phone offers it under its title and nothing downloads', async () => {
       const downloads = recordDownloads();
       const file = spaydFile(SPAYD);
@@ -116,6 +133,11 @@ describe('Given a payment handed to a bank app', () => {
       });
     });
 
+    it('when asked what it shares, then it takes neither the payment file nor the QR image', () => {
+      expect(sharesPaymentFiles()).toBe(false);
+      expect(sharesImages()).toBe(false);
+    });
+
     it('when the file is handed over, then it downloads under its own name', async () => {
       const downloads = recordDownloads();
       const file = spaydFile(SPAYD);
@@ -126,11 +148,46 @@ describe('Given a payment handed to a bank app', () => {
       expect(downloads).toEqual([{ name: 'platba.spayd', href: 'blob:nfnn/1' }]);
       expect(createdUrls).toEqual([file]);
     });
+
+    it('when the site opens the payment itself, then it is opened there and nothing downloads', async () => {
+      const downloads = recordDownloads();
+
+      const outcome = await handOver(spaydFile(SPAYD), 'QR platba', () =>
+        Promise.resolve('opened'),
+      );
+
+      expect(outcome).toBe('opened');
+      expect(downloads).toEqual([]);
+    });
+
+    it('when the site cannot open the payment itself, then the file downloads as before', async () => {
+      const downloads = recordDownloads();
+
+      const outcome = await handOver(spaydFile(SPAYD), 'QR platba', () => Promise.resolve(null));
+
+      expect(outcome).toBe('downloaded');
+      expect(downloads.map((download) => download.name)).toEqual(['platba.spayd']);
+    });
+
+    it('when the visitor moved on while the site was getting ready, then neither the payment opens nor the file downloads', async () => {
+      const downloads = recordDownloads();
+
+      const outcome = await handOver(spaydFile(SPAYD), 'QR platba', () =>
+        Promise.resolve('dismissed'),
+      );
+
+      expect(outcome).toBe('dismissed');
+      expect(downloads).toEqual([]);
+    });
   });
 
   describe('Given a browser without Web Share', () => {
     beforeEach(() => {
       vi.stubGlobal('navigator', { ...navigator, share: undefined, canShare: undefined });
+    });
+
+    it('when asked what it shares, then it shares no payment file', () => {
+      expect(sharesPaymentFiles()).toBe(false);
     });
 
     it('when the file is handed over, then it downloads under its own name', async () => {

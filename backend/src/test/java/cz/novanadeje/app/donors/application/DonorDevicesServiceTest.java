@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.SessionKind;
 import cz.novanadeje.app.donors.domain.DeviceBrowser;
 import cz.novanadeje.app.donors.domain.DeviceDescription;
 import cz.novanadeje.app.donors.domain.DeviceId;
@@ -20,6 +21,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -44,7 +46,7 @@ class DonorDevicesServiceTest {
     }
 
     private static DonorDevice usedAt(Instant lastUse) {
-        DonorDevice device = DonorDevice.signIn(JANA, IPHONE_SAFARI, SIGNED_IN);
+        DonorDevice device = DonorDevice.signIn(JANA, IPHONE_SAFARI, SessionKind.REMEMBERED, SIGNED_IN);
         device.recordUse(lastUse);
         return device;
     }
@@ -62,6 +64,24 @@ class DonorDevicesServiceTest {
         assertThat(listed).extracting(DeviceView::id).containsExactly(current.id(), newer.id(), older.id());
         assertThat(listed).extracting(DeviceView::current).containsExactly(true, false, false);
         assertThat(listed.getFirst()).isEqualTo(new DeviceView(current.id(), IPHONE_SAFARI, SIGNED_IN, SIGNED_IN.plusSeconds(60), true));
+    }
+
+    @Test
+    @DisplayName("Given two other devices signed in and last used at the same instant, when they are listed, then they follow by platform and browser whatever their ids")
+    void should_order_by_platform_and_browser_when_listed_given_devices_used_at_the_same_instant() {
+        DeviceId lowerId = new DeviceId(UUID.fromString("019a5a00-0000-7000-8000-000000000001"));
+        DeviceId higherId = new DeviceId(UUID.fromString("019a5a00-0000-7000-8000-000000000002"));
+        DeviceId highestId = new DeviceId(UUID.fromString("019a5a00-0000-7000-8000-000000000003"));
+        DonorDevice unknown = DonorDevice.reconstitute(lowerId, JANA, DeviceDescription.UNKNOWN, SessionKind.REMEMBERED, SIGNED_IN, SIGNED_IN, null, null);
+        DonorDevice iphoneChrome = DonorDevice.reconstitute(higherId, JANA,
+                new DeviceDescription(DevicePlatform.IPHONE, DeviceBrowser.CHROME), SessionKind.REMEMBERED, SIGNED_IN, SIGNED_IN, null, null);
+        DonorDevice iphoneSafari = DonorDevice.reconstitute(highestId, JANA, IPHONE_SAFARI, SessionKind.REMEMBERED, SIGNED_IN, SIGNED_IN, null, null);
+        when(devices.findSignedInOf(JANA, NOW)).thenReturn(List.of(unknown, iphoneChrome, iphoneSafari));
+
+        List<DeviceView> listed = service().list(JANA, Optional.empty());
+
+        assertThat(listed).extracting(DeviceView::description)
+                .containsExactly(IPHONE_SAFARI, new DeviceDescription(DevicePlatform.IPHONE, DeviceBrowser.CHROME), DeviceDescription.UNKNOWN);
     }
 
     @Test

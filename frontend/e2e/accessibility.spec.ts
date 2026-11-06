@@ -28,11 +28,12 @@ import {
 import {
   chunkLoadNotice,
   chunkLoadPageHeading,
-  openHomeThenLoseNewChunks,
+  openAboutThenLoseNewChunks,
   openPolicyFromFooter,
   withoutSessionStorage,
 } from './lost-chunks';
 import { serveNewerApiGeneration, updateNotice } from './app-update';
+import { fakePushDevice } from './push-device';
 import {
   CHANGED_AMOUNT,
   forgetKeyList,
@@ -123,6 +124,13 @@ async function violations(page: Page): Promise<string[]> {
   );
 }
 
+const FEED_SIGNER = {
+  id: 'signer',
+  name: 'Petr Vzorový',
+  role: 'Předseda správní rady',
+  portrait: null,
+};
+
 test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
   test.beforeEach(async ({ page }) => {
     await mockDonorApi(page);
@@ -130,6 +138,23 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
   test('when they open the home page, then nothing on it breaks the rules', async ({ page }) => {
     await page.goto('/');
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when they open the About and Přispět tabs, then nothing on them breaks the rules', async ({
+    page,
+  }) => {
+    await page.goto('/o-nas');
+    await expect(page.getByRole('heading', { level: 1, name: 'Vznik a poslání' })).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+
+    await page
+      .getByRole('navigation', { name: 'Hlavní sekce' })
+      .getByRole('link', { name: 'Přispět' })
+      .click();
     await expect(page.locator('.qr-code svg')).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
@@ -139,7 +164,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto('/');
+    await page.goto('/prispet');
     await expect(page.getByRole('button', { name: 'Otevřít v aplikaci banky' })).toBeEnabled();
 
     expect(await violations(page)).toEqual([]);
@@ -161,14 +186,35 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
       });
     });
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto('/');
+    await page.goto('/prispet');
     await page.getByRole('button', { name: 'Otevřít v aplikaci banky' }).click();
-    await expect(page.locator('#prispet .bank-app-hint')).toContainText('Neotevřela se vám banka?');
+    await expect(page.locator('#prispet .bank-app-hint')).toContainText(
+      'Nenašli jste v nabídce svou banku?',
+    );
 
     expect(await violations(page)).toEqual([]);
   });
 
-  test('when the home page shows published news and projects and they open both pages, then nothing breaks the rules', async ({
+  test('when a signed-in donor opens the account sheet on a phone, then the sheet breaks no rule and Esc returns the focus to the account button', async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    const account = page.getByRole('banner').getByRole('button', { name: 'Účet' });
+
+    await account.click();
+
+    const sheet = page.getByRole('dialog', { name: 'Jana Nováková' });
+    await expect(sheet).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+
+    await page.keyboard.press('Escape');
+
+    await expect(sheet).toHaveCount(0);
+    await expect(account).toBeFocused();
+  });
+
+  test('when published news and projects are listed and they open both pages, then nothing breaks the rules', async ({
     page,
   }) => {
     const imageId = '0199f3e0-0000-7000-8000-00000000a001';
@@ -215,12 +261,69 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
         }),
     );
 
-    await page.goto('/');
-    await expect(page.locator('#aktuality .news-card')).toHaveCount(1);
-    await expect(page.locator('.qr-code svg')).toBeVisible();
+    await page.route(
+      (url) => url.pathname === '/api/content/news',
+      (route) =>
+        route.fulfill({
+          json: {
+            items: [
+              { ...article, signer: FEED_SIGNER },
+              {
+                ...article,
+                id: 'older',
+                slug: 'starsi',
+                title: 'Starší zpráva',
+                signer: FEED_SIGNER,
+              },
+            ],
+            page: 0,
+            size: 10,
+            total: 2,
+            hasMore: false,
+          },
+        }),
+      { times: 1 },
+    );
+    await page.route(
+      (url) => url.pathname === '/api/content/projects',
+      (route) =>
+        route.fulfill({ json: { items: [project], page: 0, size: 10, total: 1, hasMore: false } }),
+      { times: 2 },
+    );
+
+    await page.goto('/aktuality');
+    await expect(page.locator('.featured')).toHaveCount(1);
+    await expect(page.locator('.news-card')).toHaveCount(1);
+    await expect(page.locator('.story')).toHaveCount(1);
+
+    expect(await violations(page)).toEqual([]);
+    await expect(page.locator('.featured .signer-name')).toHaveText('Petr Vzorový');
+
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+    const featured = page.locator('.featured');
+    await featured.getByRole('button', { name: /^Kopírovat odkaz/ }).click();
+    await expect(featured.getByRole('button', { name: 'Zkopírováno' })).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
 
+    await page.route(
+      (url) => url.pathname === '/api/content/news',
+      (route) => route.fulfill({ status: 503, body: '' }),
+      { times: 1 },
+    );
+    await page.goto('/aktuality?strana=2');
+    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toHaveText(
+      'Aktuality se nepodařilo načíst.',
+    );
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.goto('/projekty');
+    await expect(page.locator('app-project-card')).toHaveCount(1);
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.goto('/prispet');
     await page.getByRole('button', { name: /^Zvětšit: QR platba/ }).click();
     await expect(page.getByRole('dialog', { name: 'Zvětšený QR kód' })).toBeVisible();
 
@@ -253,7 +356,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
         route.fulfill({ json: { items: [], page: 0, size: 10, total: 0, hasMore: false } }),
     );
     await page.goto('/aktuality?strana=2');
-    await expect(page.getByRole('heading', { level: 1, name: 'Aktuality' })).toBeFocused();
+    await expect(page.getByRole('heading', { level: 1, name: 'Co je u nás nového' })).toBeFocused();
     await expect(page.getByText('Strana 2 z 3')).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
@@ -318,7 +421,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     page,
   }) => {
     await withoutSessionStorage(page);
-    await openHomeThenLoseNewChunks(page);
+    await openAboutThenLoseNewChunks(page);
     await openPolicyFromFooter(page);
     await expect(chunkLoadNotice(page)).toBeVisible();
 
@@ -329,7 +432,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     page,
   }) => {
     await serveNewerApiGeneration(page);
-    await page.goto('/');
+    await page.goto('/o-nas');
     await expect(updateNotice(page)).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
@@ -338,7 +441,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
   test('when the first page cannot be loaded and its own page offers a reload, then nothing breaks the rules', async ({
     page,
   }) => {
-    await openHomeThenLoseNewChunks(page);
+    await openAboutThenLoseNewChunks(page);
     await openPolicyFromFooter(page);
     await expect(page.getByRole('heading', chunkLoadPageHeading)).toBeVisible();
 
@@ -606,6 +709,13 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
 
     const dialog = page.getByRole('dialog');
+    await dialog.getByRole('button', { name: 'Cizí počítač?' }).click();
+    await expect(
+      dialog.getByRole('checkbox', { name: 'Cizí počítač, nic neukládat' }),
+    ).toBeFocused();
+    expect(await violations(page)).toEqual([]);
+    await dialog.getByRole('button', { name: 'Zpět', exact: true }).click();
+
     await dialog.getByRole('button', { name: 'Registrace' }).click();
     await dialog.getByRole('radio', { name: 'Firma' }).click();
 
@@ -671,7 +781,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
   test('when they send the contact form empty, then its error messages break no rule either', async ({
     page,
   }) => {
-    await page.goto('/');
+    await page.goto('/o-nas');
     await page.getByRole('button', { name: 'Odeslat zprávu' }).click();
     await expect(page.locator('#contact-name')).toHaveAttribute('aria-invalid', 'true');
 
@@ -1010,7 +1120,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
-  test('when an administrator opens the administration menu on a phone, then the open side panel breaks no rule', async ({
+  test('when an administrator opens the administration on a phone, then its overview with the section rows and the page of further sections break no rule', async ({
     page,
   }) => {
     await page.route(
@@ -1071,11 +1181,14 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
       page.getByRole('region', { name: 'Co potřebuje vaši pozornost' }).getByRole('alert'),
     ).toHaveCount(2);
     expect(await violations(page)).toEqual([]);
-    await page.getByRole('button', { name: 'Menu správy' }).click();
+    await page
+      .getByRole('navigation', { name: 'Sekce správy' })
+      .getByRole('link', { name: /Lidé fondu, správci, zálohy/ })
+      .click();
     await expect(
       page
-        .getByRole('navigation', { name: 'Správa' })
-        .getByRole('link', { name: 'Přehled', exact: true }),
+        .getByRole('navigation', { name: 'Další sekce správy' })
+        .getByRole('link', { name: 'Zálohy' }),
     ).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
@@ -1100,6 +1213,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
                 bankImport: true,
               },
               changedAt: '2026-10-05T07:00:00Z',
+              version: '0d7e5b2c84a1f936',
             },
             sentReports: [{ month: '2026-09', sentAt: '2026-10-05T05:00:00Z' }],
             nextReport: { month: '2026-10', dueOn: '2026-11-05' },
@@ -1120,6 +1234,33 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await expect(page.getByLabel('Příjemci')).toHaveAttribute('aria-invalid', 'true');
     await page.getByRole('button', { name: 'Poslat přehled', exact: true }).click();
     await expect(page.getByRole('group', { name: 'Poslat přehled?' })).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.route(
+      (url) => url.pathname === '/api/admin/donations/report/settings',
+      (route) =>
+        route.fulfill({
+          status: 409,
+          contentType: 'application/problem+json',
+          json: {
+            type: 'https://nfnn.cz/problems/donations/changed-meanwhile',
+            title: 'Mezitím se to změnilo',
+            detail: 'Nastavení mezitím změnil někdo jiný.',
+            status: 409,
+            version: '9e4b2d7c1a0f6358',
+            current: { recipients: ['eva@example.cz'], changedAt: '2026-11-05T15:21:00Z' },
+          },
+        }),
+    );
+    await page.getByLabel('Příjemci').fill('pavel@example.cz');
+    await page.getByRole('button', { name: 'Uložit nastavení' }).click();
+    const sheet = page.getByRole('dialog', { name: 'Mezitím se to změnilo' });
+    await expect(sheet).toBeVisible();
+    await expect(
+      sheet.getByRole('button', { name: 'Uložit svou verzi místo novější' }),
+    ).toBeVisible();
+    await expect(sheet.getByRole('button', { name: 'Zavřít' })).toBeFocused();
 
     expect(await violations(page)).toEqual([]);
   });
@@ -1148,6 +1289,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
                 importedAt: '2026-10-17T10:00:00Z',
                 unpairedByAdminAt: '2026-10-18T10:00:00Z',
                 donation: null,
+                version: '3f2a9c4e1b7d6085',
               },
             ],
           },
@@ -1186,6 +1328,34 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await expect(
       page.getByRole('dialog').getByRole('radio', { name: /Jana Nováková/ }),
     ).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.route(
+      (url) => url.pathname.endsWith('/pair'),
+      (route) =>
+        route.fulfill({
+          status: 409,
+          contentType: 'application/problem+json',
+          json: {
+            type: 'https://nfnn.cz/problems/donations/changed-meanwhile',
+            title: 'Mezitím se to změnilo',
+            detail: 'Platbu mezitím změnil někdo jiný.',
+            status: 409,
+            version: '1b2c3d4e5f607182',
+            current: { id: '019a1c00-0000-7000-8000-000000001001' },
+          },
+        }),
+    );
+    await page
+      .getByRole('dialog')
+      .getByRole('radio', { name: /Jana Nováková/ })
+      .check();
+    await page
+      .getByRole('dialog')
+      .getByRole('button', { name: /^Přiřadit dárci Jana/ })
+      .click();
+    await expect(page.getByRole('dialog', { name: 'Mezitím se to změnilo' })).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
   });
@@ -1634,6 +1804,58 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
+  test('when an administrator manages the alerts of their devices, then the page with this device subscribed and another listed breaks no rule', async ({
+    page,
+  }) => {
+    await fakePushDevice(page, { subscribedWith: `B${'E'.repeat(86)}` });
+    await mockDonorApi(page);
+    const device = {
+      service: 'google',
+      alerts: { bankImport: true, backups: true, mail: true },
+      createdAt: '2026-11-01T09:00:00Z',
+      lastDeliveredAt: '2026-11-03T09:05:00Z',
+      failuresInARow: 0,
+    };
+    await page.route(
+      (url) => url.pathname === '/api/admin/operations/push',
+      (route) =>
+        route.fulfill({
+          json: {
+            publicKey: `B${'E'.repeat(86)}`,
+            deviceSession: true,
+            subscriptions: [
+              { ...device, id: 'push-phone', service: 'apple', current: false, failuresInARow: 2 },
+              { ...device, id: 'push-this-device', current: true },
+            ],
+            openAlerts: [{ area: 'backups', since: '2026-11-04T05:15:00Z' }],
+          },
+        }),
+    );
+    await page.route(
+      (url) => url.pathname === '/api/admin/operations/push/test',
+      (route) => route.fulfill({ json: { delivered: 2, failed: 0, removed: 0 } }),
+    );
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.goto('/');
+    await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
+    await page.goto('/sprava/upozorneni');
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Upozornění na telefon' }),
+    ).toBeFocused();
+    await expect(page.getByRole('checkbox')).toHaveCount(6);
+    expect(await violations(page)).toEqual([]);
+
+    await page
+      .getByRole('button', { name: 'Poslat zkušební upozornění na všechna moje zařízení' })
+      .click();
+    await expect(page.getByRole('status').filter({ hasText: /\S/ })).toHaveText(
+      /^Zkušební upozornění jsme předali k doručení na 2 zařízení\./,
+    );
+    expect(await violations(page)).toEqual([]);
+  });
+
   test('when the site is set up for the first time, then the code step and the form with its errors break no rule', async ({
     page,
   }) => {
@@ -2024,7 +2246,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
-  test('when an administrator sets the About photo and the home page shows it, then the page, its removal confirmation and the section break no rule', async ({
+  test('when an administrator sets the About photo and the About page shows it, then the page, its removal confirmation and the section break no rule', async ({
     page,
   }) => {
     const photoId = '0199f3e0-0000-7000-8000-00000000b001';
@@ -2055,7 +2277,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.route('**/api/donors/auth/refresh', (route) =>
       route.fulfill(session(200, administrator)),
     );
-    await page.goto('/');
+    await page.goto('/o-nas');
     await page.locator('#o-nas figcaption').scrollIntoViewIfNeeded();
     await expect(page.locator('#o-nas figcaption')).toHaveText('Kde to všechno začalo');
 
@@ -2078,7 +2300,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
-  test('when an administrator keeps the people of the foundation and the home page shows them, then the section, the page, the editor and the removal confirmation break no rule', async ({
+  test('when an administrator keeps the people of the foundation and the About page shows them, then the section, the page, the editor and the removal confirmation break no rule', async ({
     page,
   }) => {
     const personId = '0199f3e0-0000-7000-8000-00000000c001';
@@ -2151,7 +2373,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.route('**/api/donors/auth/refresh', (route) =>
       route.fulfill(session(200, administrator)),
     );
-    await page.goto('/');
+    await page.goto('/o-nas');
     await page.locator('#o-nas .signatures').scrollIntoViewIfNeeded();
     await expect(page.locator('#o-nas .signature-name')).toHaveText('Eva Vzorová');
 
@@ -2414,6 +2636,25 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
+  test('when a signed-in donor reads the data on this device, loads them again and opens the deletion, then the card and its dialog break no rule', async ({
+    page,
+  }) => {
+    await signIn(page);
+    await openDonorSection(page, 'Údaje a zabezpečení');
+    await expect(page.getByText(/Uloženo v zařízení · aktualizováno /)).toBeVisible();
+    await page.getByRole('button', { name: 'Načíst data znovu' }).click();
+    await expect(
+      page.getByRole('status').filter({ hasText: 'Data jsou načtená znovu.' }),
+    ).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.getByRole('button', { name: 'Smazat data z tohoto zařízení' }).click();
+    await expect(page.getByRole('dialog').getByRole('button', { name: 'Zrušit' })).toBeFocused();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
   test('when a signed-in donor opens the e-mail and password forms, then neither breaks a rule, with errors shown either', async ({
     page,
   }) => {
@@ -2628,8 +2869,8 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
   test('when they open the sign-in dialog from the keyboard, then the focus stays in it and comes back after Esc', async ({
     page,
   }) => {
-    await page.goto('/');
-    const signInButton = page.locator('.nav-login');
+    await page.goto('/o-nas');
+    const signInButton = page.getByRole('banner').getByRole('button', { name: 'Přihlásit se' });
     await signInButton.focus();
     await page.keyboard.press('Enter');
 
@@ -2656,27 +2897,6 @@ test.describe('Given a visitor on a phone who relies on WCAG 2.2 AA', () => {
 
   test.beforeEach(async ({ page }) => {
     await mockDonorApi(page);
-  });
-
-  test('when they open the menu, then its button says so, nothing breaks the rules and Esc closes it', async ({
-    page,
-  }) => {
-    await page.goto('/');
-    const menuButton = page.getByRole('button', { name: 'Otevřít menu' });
-    await expect(menuButton).toHaveAttribute('aria-expanded', 'false');
-
-    await menuButton.click();
-
-    const closeButton = page.getByRole('button', { name: 'Zavřít menu' });
-    await expect(closeButton).toHaveAttribute('aria-expanded', 'true');
-    await expect(page.locator('#mobile-menu')).toBeVisible();
-    expect(await violations(page)).toEqual([]);
-
-    await page.locator('#mobile-menu a').first().focus();
-    await page.keyboard.press('Escape');
-
-    await expect(page.locator('#mobile-menu')).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Otevřít menu' })).toBeFocused();
   });
 
   test('when a signed-in donor opens how payments are paired on a 360 px phone, then it fits the screen, breaks no rule and Esc closes it', async ({
@@ -2720,9 +2940,9 @@ test.describe('Given a visitor on a phone who relies on WCAG 2.2 AA', () => {
     const question = page.getByRole('group', { name: /Z tohoto účtu k nám chodí/ });
     await expect(question).toBeVisible();
 
-    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
-      360,
-    );
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.scrollWidth))
+      .toBeLessThanOrEqual(360);
     for (const name of ['Ano, jsou moje', 'Ne, nejsou moje']) {
       const size = await question.getByRole('button', { name }).boundingBox();
       expect(size?.width).toBeGreaterThanOrEqual(24);
@@ -2735,8 +2955,7 @@ test.describe('Given a visitor on a phone who relies on WCAG 2.2 AA', () => {
     page,
   }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: 'Otevřít menu' }).click();
-    await page.locator('#mobile-menu .mobile-login').click();
+    await page.getByRole('banner').getByRole('button', { name: 'Přihlásit se' }).click();
 
     const panel = page.locator('.dialog-panel');
     await expect(panel).toBeVisible();

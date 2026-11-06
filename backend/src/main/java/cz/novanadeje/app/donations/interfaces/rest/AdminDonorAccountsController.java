@@ -5,6 +5,7 @@ import cz.novanadeje.app.donations.application.receipt.AdminReceiptsService;
 import cz.novanadeje.app.donations.domain.donation.DonationPurpose;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkId;
+import cz.novanadeje.app.shared.application.version.ExpectedVersion;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.HttpStatus;
@@ -43,20 +44,20 @@ class AdminDonorAccountsController {
 
     @PostMapping("/bank-accounts/{linkId}/disconnect")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    void disconnect(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID donorId, @PathVariable UUID linkId) {
-        donorAccounts.disconnect(admin(jwt), new DonorReference(donorId), new SenderAccountLinkId(linkId));
+    void disconnect(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID donorId, @PathVariable UUID linkId, ExpectedVersion expected) {
+        donorAccounts.disconnect(admin(jwt), new DonorReference(donorId), new SenderAccountLinkId(linkId), expected);
     }
 
     @PostMapping("/bank-accounts/{linkId}/reconnect")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    void reconnect(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID donorId, @PathVariable UUID linkId) {
-        donorAccounts.reconnect(admin(jwt), new DonorReference(donorId), new SenderAccountLinkId(linkId));
+    void reconnect(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID donorId, @PathVariable UUID linkId, ExpectedVersion expected) {
+        donorAccounts.reconnect(admin(jwt), new DonorReference(donorId), new SenderAccountLinkId(linkId), expected);
     }
 
     @DeleteMapping("/bank-accounts/{linkId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    void remove(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID donorId, @PathVariable UUID linkId) {
-        donorAccounts.remove(admin(jwt), new DonorReference(donorId), new SenderAccountLinkId(linkId));
+    void remove(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID donorId, @PathVariable UUID linkId, ExpectedVersion expected) {
+        donorAccounts.remove(admin(jwt), new DonorReference(donorId), new SenderAccountLinkId(linkId), expected);
     }
 
     private String purposeText(DonationPurpose purpose) {

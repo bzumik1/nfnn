@@ -32,6 +32,10 @@ html.follows-system-text-size {
   font-family: var(--font-sans);
 }
 
+html:has(app-tab-bar) {
+  scroll-padding-bottom: var(--tab-bar-clearance);
+}
+
 :focus-visible {
   outline: 3px solid var(--color-focus-ring);
   outline-offset: 2px;
@@ -87,31 +91,6 @@ body {
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-::-webkit-scrollbar {
-  width: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--color-accent-bg);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--color-accent);
-  border-radius: var(--radius-scrollbar);
-}
-
-@keyframes scrollDot {
-  0%,
-  100% {
-    transform: translateY(0);
-    opacity: 1;
-  }
-  50% {
-    transform: translateY(10px);
-    opacity: 0.4;
-  }
 }
 
 @keyframes fadeInUp {

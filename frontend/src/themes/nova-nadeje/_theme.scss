@@ -203,7 +203,6 @@
   --duration-sheet: var(--duration-slow);
 
   --radius-xs: 2px;
-  --radius-scrollbar: 3px;
   --radius-sm: 8px;
   --radius-md: 10px;
   --radius-lg: 12px;
@@ -243,7 +242,6 @@
   --header-height: 72px;
   --side-nav-layout-max: 1320px;
   --side-nav-width: 240px;
-  --top-bar-height: 65px;
   --floating-notice-height: 0rem;
   --dialog-max-width: 420px;
   --dialog-max-width-wide: 520px;
@@ -258,6 +256,14 @@
   --tab-bar-gap: 20px;
   --tab-bar-gap-browser: 16px;
   --tab-pill-inset: 5px;
+  --tab-bar-max-width: 420px;
+  --tab-bar-home-indicator-overlap: 13px;
+  --tab-icon-size: 22px;
+  --tab-bar-rendered-height: var(--tab-bar-height);
+  --tab-bar-clearance: calc(
+    var(--tab-bar-rendered-height) + 2 * var(--tab-bar-gap-browser) + env(safe-area-inset-bottom)
+  );
+  --back-button-size: 44px;
   --list-row-min-height: 56px;
   --list-group-title-top: 0rem;
 

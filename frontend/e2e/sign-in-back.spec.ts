@@ -8,8 +8,7 @@ test.describe('Given a visitor on a phone with the sign-in dialog open', () => {
     await mockDonorApi(page);
     await page.goto('/zasady-ochrany-osobnich-udaju');
     await page.goto('/');
-    await page.getByRole('button', { name: 'Otevřít menu' }).click();
-    await page.locator('button.mobile-login').click();
+    await page.getByRole('banner').getByRole('button', { name: 'Přihlásit se' }).click();
     await expect(page.getByRole('dialog')).toBeVisible();
   });
 
