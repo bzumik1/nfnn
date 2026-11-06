@@ -5,7 +5,7 @@
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
         https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
 
-    <changeSet id="014-keep-former-slugs-apart-by-kind" author="nfnn">
+    <changeSet id="016-keep-former-slugs-apart-by-kind" author="nfnn">
         <addColumn tableName="content_former_slug">
             <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
                 <constraints nullable="false"/>
