@@ -16,6 +16,7 @@ export type SpaydOutcome =
 
 const HEADER = 'SPD*1.0';
 const SEPARATOR = '*';
+const INSTANT_PAYMENT = 'PT:IP';
 const SMALLEST_AMOUNT_MINOR = 1;
 const LARGEST_AMOUNT_MINOR = 999_999_999;
 const MINOR_PER_MAJOR = 100;
@@ -51,6 +52,7 @@ export function spayd(details: PaymentDetails, payment: SpaydPayment): SpaydOutc
     `ACC:${details.account.iban}`,
     `AM:${amountText(payment.amountMinor)}`,
     `CC:${details.currency}`,
+    INSTANT_PAYMENT,
   ];
   if (variableSymbol !== null) {
     fields.push(`X-VS:${variableSymbol}`);

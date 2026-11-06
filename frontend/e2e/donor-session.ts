@@ -56,7 +56,7 @@ export const secondFactorRecovery = {
   currency: 'CZK',
   usableFrom: '2026-10-27',
   spayd:
-    'SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*RN:NADACNI FOND NOVA NADEJE*MSG:OBNOVA K7MP4RXA',
+    'SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*PT:IP*RN:NADACNI FOND NOVA NADEJE*MSG:OBNOVA K7MP4RXA',
 };
 
 export const secondFactorEnrolment = {
