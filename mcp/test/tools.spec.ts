@@ -1701,6 +1701,26 @@ describe('Given an administrator connected with the writing permission', () => {
     expect(textOf(refused)).toContain('RECEIPT_FIRST_YEAR: Rok musí být mezi 2000 a 2100.');
   });
 
+  it('when a mail setting or the contact recipient is to be changed, then the tool refuses it and the administration gets nothing', async () => {
+    for (const name of [
+      'MAIL_HOST',
+      'MAIL_PORT',
+      'MAIL_USERNAME',
+      'MAIL_AUTH',
+      'MAIL_STARTTLS',
+      'MAIL_FROM',
+      'CONTACT_RECIPIENT',
+    ]) {
+      const refused = await client.callTool({
+        name: 'nfnn_change_settings',
+        arguments: { changes: [{ name, value: 'smtp.attacker.example' }] },
+      });
+
+      expect(refused.isError).toBe(true);
+    }
+    expect(stack.backend.requests.filter((request) => request.method === 'PUT')).toEqual([]);
+  });
+
   it('when the remembered sign-in length is changed, then the administration gets it', async () => {
     const changed = await client.callTool({
       name: 'nfnn_change_settings',
