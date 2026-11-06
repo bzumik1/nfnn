@@ -29,6 +29,13 @@ class AdvisoryLockTest {
         assertThat(keys).containsEntry(AdvisoryLock.PAIRING, 20261022L)
                 .containsEntry(AdvisoryLock.PUSH_SUBSCRIPTION_WRITES, 20261105L)
                 .containsEntry(AdvisoryLock.REPORT_SETTINGS_CHANGES, 20261106L)
-                .containsEntry(AdvisoryLock.OPERATIONAL_ALERT_CHANGES, 20261107L);
+                .containsEntry(AdvisoryLock.OPERATIONAL_ALERT_CHANGES, 20261107L)
+                .containsEntry(AdvisoryLock.DONOR_EMAIL_ADDRESSES, 20261108L);
+    }
+
+    @Test
+    @DisplayName("Given every advisory lock, when its key is read, then it fits the first half of PostgreSQL's two-part key, which a lock per subject takes")
+    void should_fit_an_integer_when_read_given_every_advisory_lock() {
+        assertThat(AdvisoryLock.values()).allSatisfy(lock -> assertThat(lock.key()).as(lock.name()).isBetween(1L, (long) Integer.MAX_VALUE));
     }
 }

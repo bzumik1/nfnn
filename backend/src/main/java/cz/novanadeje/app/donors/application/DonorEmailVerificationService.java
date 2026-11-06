@@ -80,6 +80,7 @@ public class DonorEmailVerificationService {
         Instant now = clock.instant();
         EmailVerificationToken found = usableLink(token, now, candidate -> candidate.newEmail().isPresent());
         EmailAddress newEmail = found.newEmail().orElseThrow(InvalidEmailVerificationToken::new);
+        donors.lockEmail(newEmail);
         Donor donor = spend(found, now)
                 .filter(Donor::isEmailVerified)
                 .filter(candidate -> !donors.existsByEmail(newEmail))

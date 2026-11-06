@@ -22,6 +22,8 @@ public interface DonorRepository {
 
     Optional<Donor> findByEmailForUpdate(EmailAddress email);
 
+    void lockEmail(EmailAddress email);
+
     boolean existsByEmail(EmailAddress email);
 
     boolean existsByVariableSymbol(VariableSymbol variableSymbol);
