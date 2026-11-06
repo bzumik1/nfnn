@@ -95,10 +95,6 @@
   justify-content: flex-end;
 }
 
-.brand--after-back {
-  margin-inline-start: calc(var(--back-button-size) + var(--space-1));
-}
-
 .back-button {
   position: fixed;
   top: calc(env(safe-area-inset-top) + (var(--header-height) - var(--back-button-size)) / 2);

@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter, Router } from '@angular/router';
 import { Markdown } from './markdown';
 
 describe('Given a Markdown body', () => {
@@ -11,7 +12,10 @@ describe('Given a Markdown body', () => {
   }
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({ imports: [Markdown] }).compileComponents();
+    await TestBed.configureTestingModule({
+      imports: [Markdown],
+      providers: [provideRouter([])],
+    }).compileComponents();
     fixture = TestBed.createComponent(Markdown);
   });
 
@@ -54,5 +58,64 @@ describe('Given a Markdown body', () => {
     expect(element.querySelector('p')?.textContent).toBe(
       '<img src=x onerror="alert(1)"> <script>alert(1)</script>',
     );
+  });
+
+  describe('when a link in it is clicked', () => {
+    let navigate: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    });
+
+    function click(link: Element, init: MouseEventInit = {}): MouseEvent {
+      const event = new MouseEvent('click', { bubbles: true, cancelable: true, ...init });
+      link.dispatchEvent(event);
+      return event;
+    }
+
+    it('and it leads to a page of the site, then the app opens it without loading the site again', async () => {
+      const element = await render('Viz [projekty](/projekty?rok=2026#hotove).');
+
+      const event = click(element.querySelector('a') as Element);
+
+      expect(event.defaultPrevented).toBe(true);
+      expect(navigate).toHaveBeenCalledExactlyOnceWith('/projekty?rok=2026#hotove');
+    });
+
+    it('and it leads to the site by its full address, then the app opens that page too', async () => {
+      const element = await render(`Viz [projekty](${window.location.origin}/projekty).`);
+
+      const event = click(element.querySelector('a') as Element);
+
+      expect(event.defaultPrevented).toBe(true);
+      expect(navigate).toHaveBeenCalledExactlyOnceWith('/projekty');
+    });
+
+    it('and it leads to another site, then the browser follows it', async () => {
+      const element = await render('Viz [jinde](https://example.org/stranka).');
+
+      const event = click(element.querySelector('a') as Element);
+
+      expect(event.defaultPrevented).toBe(false);
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it('and it leads to a file the server serves, as a photo, then the browser follows it', async () => {
+      const element = await render('[Foto](/api/content/media/1) a [logo](/images/logo.svg)');
+
+      const events = [...element.querySelectorAll('a')].map((link) => click(link));
+
+      expect(events.map((event) => event.defaultPrevented)).toEqual([false, false]);
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it('and it is clicked with a modifier key to open elsewhere, then the browser follows it', async () => {
+      const element = await render('Viz [projekty](/projekty).');
+
+      const event = click(element.querySelector('a') as Element, { metaKey: true });
+
+      expect(event.defaultPrevented).toBe(false);
+      expect(navigate).not.toHaveBeenCalled();
+    });
   });
 });

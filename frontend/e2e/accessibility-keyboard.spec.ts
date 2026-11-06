@@ -277,7 +277,7 @@ for (const width of [320, 390]) {
       );
     });
 
-    test('when they open an article signed out, then the back button, the logo and Přihlásit se stay on screen side by side', async ({
+    test('when they open an article signed out, then the back button and Přihlásit se stay on screen side by side, with no logo between them', async ({
       page,
     }) => {
       await page.goto('/aktuality/zahrada-pro-deti');
@@ -286,17 +286,16 @@ for (const width of [320, 390]) {
       const boxes = await Promise.all(
         [
           banner.getByRole('button', { name: 'Zpět' }),
-          banner.getByRole('link').first(),
           banner.getByRole('button', { name: 'Přihlásit se' }),
         ].map(async (control) => (await control.boundingBox())!),
       );
 
+      await expect(banner.getByRole('link', { name: 'Nová naděje – nadační fond' })).toHaveCount(0);
       for (const box of boxes) {
         expect(box.x).toBeGreaterThanOrEqual(0);
         expect(box.x + box.width).toBeLessThanOrEqual(width);
       }
       expect(boxes[0].x + boxes[0].width).toBeLessThanOrEqual(boxes[1].x);
-      expect(boxes[1].x + boxes[1].width).toBeLessThanOrEqual(boxes[2].x);
       expect(await widerThanScreen(page)).toBe(0);
     });
 
