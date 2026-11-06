@@ -2,8 +2,8 @@
   "shots": [
     {
       "state": "home",
-      "since": "#225, #228, #245, #248, #263, #267, #205, #227, #230, #232, #242, #255",
-      "reason": "the home page since v2: the site header and footer since v2: the traced logo (#228), Založit účet beside Přihlásit se (#225), the projects named Kde pomáháme in the menus (#263, #267) and the strip that tints the iPhone status bar (#245, #248), plus the usability fixes of #205, who runs the foundation with the details accountants need (#227, #230, #255), the About photo (#232) and the figures counting up (#242)"
+      "since": "#225, #228, #245, #248, #263, #267, #205, #227, #230, #232, #242, #255, #530",
+      "reason": "the home page since v2: the site header and footer since v2: the traced logo (#228), Založit účet beside Přihlásit se (#225), the projects named Kde pomáháme in the menus (#263, #267) and the strip that tints the iPhone status bar (#245, #248), plus the usability fixes of #205, who runs the foundation with the details accountants need (#227, #230, #255), the About photo (#232) and the figures counting up (#242); and the payment QR asks for an instant payment (PT:IP, Jakub 2026-11-06, #530)"
     },
     {
       "state": "news",
@@ -84,6 +84,26 @@
       "state": "sign-in-second-factor",
       "since": "#225, #228, #245, #248, #263, #267, #205, #226",
       "reason": "the dialog over the home page: the site header and footer since v2: the traced logo (#228), Založit účet beside Přihlásit se (#225), the projects named Kde pomáháme in the menus (#263, #267) and the strip that tints the iPhone status bar (#245, #248), plus the sign-in fixes of the usability rounds (#205, #226)"
+    },
+    {
+      "state": "home-donate-1000",
+      "since": "#530",
+      "reason": "the payment QR asks the payer's bank for an instant payment (PT:IP, Jakub 2026-11-06), so its symbol changes"
+    },
+    {
+      "state": "home-donate-own-amount",
+      "since": "#530",
+      "reason": "the payment QR asks the payer's bank for an instant payment (PT:IP, Jakub 2026-11-06), so its symbol changes"
+    },
+    {
+      "state": "home-donate-signed-in",
+      "since": "#530",
+      "reason": "the payment QR asks the payer's bank for an instant payment (PT:IP, Jakub 2026-11-06), so its symbol changes"
+    },
+    {
+      "state": "sign-in-recovery-payment",
+      "since": "#530",
+      "reason": "the payment QR asks the payer's bank for an instant payment (PT:IP, Jakub 2026-11-06), so its symbol changes"
     }
   ]
 }
