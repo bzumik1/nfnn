@@ -148,6 +148,7 @@
   --text-article-title: clamp(2.125rem, 5vw, 3.5rem);
   --text-page-title: clamp(2.25rem, 5.5vw, 3.75rem);
   --text-hero: clamp(3.25rem, 8vw, 6.25rem);
+  --text-hero-short: max(2.25rem, min(6vw, 13svh));
 
   --weight-regular: 400;
   --weight-medium: 500;
