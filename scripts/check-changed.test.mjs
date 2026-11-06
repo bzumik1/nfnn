@@ -11,8 +11,8 @@ import {
   changedFiles,
   commandsFor,
   droppedEnvNames,
-  filteredEnv,
   main,
+  missingInstalls,
   parseChangedFiles,
   quote,
   readRules,
@@ -28,8 +28,15 @@ const BASE = '675e0ced';
 const OPTIONS = { scratch: SCRATCH, lock: 'flock', dropped: [], base: BASE };
 const commandLines = (areas, options = OPTIONS) =>
   commandsFor(new Set(areas), options).map(({ cwd, command }) => `${cwd}: ${command}`);
+const suiteLine = (options) =>
+  commandLines(['backend'], options).find((line) => line.startsWith('backend: '));
 const areas = (files) => [...areasOf(files, RULES).areas].sort();
 const folders = [];
+const scratchRoot = () => {
+  const folder = mkdtempSync(join(tmpdir(), 'check-changed-scratch-'));
+  folders.push(folder);
+  return folder;
+};
 after(() => folders.forEach((folder) => rmSync(folder, { recursive: true, force: true })));
 
 describe('Given the rules the backend tests carry', () => {
@@ -38,6 +45,10 @@ describe('Given the rules the backend tests carry', () => {
     assert.ok(RULES.backendInputs.folders.includes('regression/'));
     assert.ok(RULES.backendInputs.files.includes('frontend/ngsw-config.json'));
     assert.ok(RULES.backendInputs.files.includes('deploy/backup/revoke-restored-credentials.sql'));
+  });
+
+  it('when the settings enum is read, then its secrets are the ones recording refuses', () => {
+    assert.deepEqual(RULES.settingSecrets, ['MAIL_PASSWORD', 'FIO_TOKEN']);
   });
 
   it('when SharedCaseFilesTest is read, then its searched folders are the ones it walks', () => {
@@ -129,6 +140,30 @@ describe('Given the files a branch changed', () => {
     assert.deepEqual(areas(['docs/roadmap.md', 'docker-compose.yml']), ['shared-case copies']);
   });
 
+  it('when a file this script reads its rules from changed, then the scripts are affected too, whose check-changed test reads it', () => {
+    for (const path of [
+      'backend/build.gradle.kts',
+      'backend/src/test/java/cz/novanadeje/app/sharedcases/SharedCaseFilesTest.java',
+      'backend/src/main/java/cz/novanadeje/app/operations/domain/settings/Setting.java',
+    ]) {
+      assert.deepEqual(areas([path]), ['backend', 'scripts'], path);
+    }
+  });
+
+  it('when only CLAUDE.md changed, then the change is docs-only and only the check-changed test runs', () => {
+    const result = areasOf(['CLAUDE.md', 'docs/a.md'], RULES);
+    assert.equal(result.docsOnly, true);
+    assert.deepEqual([...result.areas], ['check-changed tests']);
+  });
+
+  it('when CLAUDE.md changed beside code, then the scripts are affected', () => {
+    assert.deepEqual(areas(['CLAUDE.md', 'frontend/src/app/app.ts']), [
+      'frontend',
+      'scripts',
+      'shared-case copies',
+    ]);
+  });
+
   it('when a Markdown file sits under backend/, then it counts as docs, as CI counts it', () => {
     assert.deepEqual(areas(['backend/HELP.md']), []);
   });
@@ -139,7 +174,7 @@ describe('Given the output of git', () => {
     assert.deepEqual(parseChangedFiles('M\0backend/a.java\0D\0frontend/old.ts\0', 'mcp/new.ts\0'), [
       { status: 'M', path: 'backend/a.java' },
       { status: 'D', path: 'frontend/old.ts' },
-      { status: 'A', path: 'mcp/new.ts' },
+      { status: 'A', path: 'mcp/new.ts', untracked: true },
     ]);
   });
 });
@@ -148,10 +183,24 @@ function repository() {
   const folder = mkdtempSync(join(tmpdir(), 'check-changed-test-'));
   folders.push(folder);
   const git = (...args) =>
-    execFileSync('git', ['-c', 'user.name=Test', '-c', 'user.email=test@example.com', ...args], {
-      cwd: folder,
-      stdio: 'pipe',
-    });
+    execFileSync(
+      'git',
+      [
+        '-c',
+        'user.name=Test',
+        '-c',
+        'user.email=test@example.com',
+        '-c',
+        'commit.gpgsign=false',
+        '-c',
+        'core.hooksPath=/dev/null',
+        ...args,
+      ],
+      {
+        cwd: folder,
+        stdio: 'pipe',
+      },
+    );
   const write = (path, text = 'x\n') => {
     mkdirSync(join(folder, path, '..'), { recursive: true });
     writeFileSync(join(folder, path), text);
@@ -175,11 +224,13 @@ describe('Given a git repository with a branch off its base', () => {
   git('rm', '-q', 'frontend/old.ts');
   git('mv', 'mcp/moved.ts', 'mcp/renamed.ts');
   write('shared-cases/new.json');
+  write('regression/v2/changes/new.json');
 
   it('when the changes are read from a subdirectory, then committed, staged, deleted, renamed and untracked files are listed from the root', () => {
     const { files } = changedFiles(join(folder, 'backend'), 'base');
     assert.deepEqual(files.map(({ status, path }) => `${status} ${path}`).sort(), [
       'A mcp/renamed.ts',
+      'A regression/v2/changes/new.json',
       'A shared-cases/new.json',
       'D frontend/old.ts',
       'D mcp/moved.ts',
@@ -195,6 +246,7 @@ describe('Given a git repository with a branch off its base', () => {
         directory: folder,
         baseRef: 'origin/main',
         rules: RULES,
+        scratchRoot: scratchRoot(),
         log: (line) => lines.push(line),
       }),
       2,
@@ -208,6 +260,7 @@ describe('Given a git repository with a branch off its base', () => {
       directory: folder,
       baseRef: 'base',
       rules: RULES,
+      scratchRoot: scratchRoot(),
       env: {},
       lock: 'none',
       log: (line) => lines.push(line),
@@ -216,9 +269,14 @@ describe('Given a git repository with a branch off its base', () => {
     const output = lines.join('\n');
     assert.match(
       output,
-      /Areas in run order: scripts, mcp, frontend, backend, v2 baseline, inventory, v2 comparison\./,
+      /Areas in run order: scripts, mcp, frontend, v2 baseline, backend, inventory, v2 comparison\./,
     );
     assert.match(output, /Neither flock nor shlock is installed/);
+    assert.match(
+      output,
+      /regression\/v2\/changes\/new\.json is untracked: commit or `git add -N` it so the baseline guard sees it/,
+    );
+    assert.match(output, /Run npm ci in frontend\/ and mcp\/ first/);
     assert.match(output, /Run them in order with: node scripts\/check-changed\.mjs --run/);
   });
 });
@@ -238,6 +296,7 @@ describe('Given a repository with only a docs change', () => {
         directory: folder,
         baseRef: 'base',
         rules: RULES,
+        scratchRoot: scratchRoot(),
         log: (line) => lines.push(line),
       }),
       0,
@@ -246,12 +305,82 @@ describe('Given a repository with only a docs change', () => {
   });
 });
 
+function branchRepository(path) {
+  const repo = repository();
+  repo.write(path);
+  repo.git('add', '.');
+  repo.git('commit', '-q', '-m', 'base');
+  repo.git('branch', 'base');
+  repo.write(path, 'changed\n');
+  return repo;
+}
+
+function mainOutput(folder, args = []) {
+  const lines = [];
+  const code = main(args, {
+    directory: folder,
+    baseRef: 'base',
+    rules: RULES,
+    scratchRoot: scratchRoot(),
+    log: (line) => lines.push(line),
+  });
+  return { code, output: lines.join('\n') };
+}
+
+describe('Given a repository where only CLAUDE.md changed', () => {
+  const { folder } = branchRepository('CLAUDE.md');
+
+  it('when main lists the commands, then CI runs only its gate and the check-changed test is still asked for', () => {
+    const { code, output } = mainOutput(folder);
+    assert.equal(code, 0);
+    assert.match(output, /CI runs only its gate/);
+    assert.match(output, /1\. \.: node --test scripts\/check-changed\.test\.mjs/);
+  });
+});
+
+describe('Given a repository where only the frontend changed', () => {
+  const { folder } = branchRepository('frontend/src/app.ts');
+
+  it('when main lists the commands, then it says a renamed or removed test needs a retired entry for CI', () => {
+    const { output } = mainOutput(folder);
+    assert.match(output, /inventory comparisons run only in CI/);
+    assert.match(
+      output,
+      /A renamed or removed test needs a `retired` entry in regression\/v2\/changes\/<PR>\.json, or CI's inventory comparison fails\./,
+    );
+  });
+
+  it('when the dependencies are missing and the checks should run, then main stops before running anything', () => {
+    const { code, output } = mainOutput(folder, ['--run']);
+    assert.equal(code, 2);
+    assert.match(output, /Run npm ci in frontend\/ first/);
+    assert.doesNotMatch(output, /Summary:/);
+  });
+});
+
+describe('Given the installed dependencies', () => {
+  const { folder, write } = repository();
+  write('frontend/node_modules/.package-lock.json');
+
+  it('when the backend runs, then both the frontend and the connector need theirs', () => {
+    assert.deepEqual(missingInstalls(folder, new Set(['backend'])), ['mcp']);
+  });
+
+  it('when only the scripts run, then nothing is needed', () => {
+    assert.deepEqual(missingInstalls(folder, new Set(['scripts', 'shared-case copies'])), []);
+  });
+
+  it('when the connector runs, then its own is needed', () => {
+    assert.deepEqual(missingInstalls(folder, new Set(['mcp', 'frontend'])), ['mcp']);
+  });
+});
+
 describe('Given the affected areas', () => {
-  it('when the backend is affected, then the full suite records under the lock, the baseline guard and the connector shapes check the recording, then the inventory is collected into the scratch folder and the v2 comparison reads both', () => {
+  it('when the backend is affected, then the baseline guard runs first, the full suite records again under the lock even when Gradle finds it up to date, the connector shapes check the recording, then the inventory is collected into the scratch folder and the v2 comparison reads both', () => {
     const at = (name) => quote(`${SCRATCH}/${name}`);
     assert.deepEqual(commandLines(['backend']), [
-      `backend: flock -n ${BACKEND_SUITE_LOCK} true || echo "Waiting for the backend suite lock"; flock ${BACKEND_SUITE_LOCK} env API_TRANSCRIPTS=record ./gradlew test`,
       `.: node scripts/compare-v2-baseline.mjs --base=${BASE}`,
+      `backend: flock -n ${BACKEND_SUITE_LOCK} true || echo "Waiting for the backend suite lock"; flock ${BACKEND_SUITE_LOCK} env API_TRANSCRIPTS=record ./gradlew test --rerun acceptanceTest --rerun`,
       'mcp: API_TRANSCRIPTS_DIR=backend/build/api-transcripts npx --no vitest run test/backend-shapes.spec.ts',
       `frontend: npx --no ng test --watch=false --reporters=default --reporters=json --output-file=${at('frontend-vitest.json')}`,
       `frontend: npx --no playwright test --list --project='*' --reporter=json > ${at('frontend-playwright.json')}`,
@@ -269,36 +398,36 @@ describe('Given the affected areas', () => {
 
   it('when only shlock is installed, then the suite waits for the lock in a loop, removes it at the end and keeps Gradle exit code', () => {
     assert.equal(
-      commandLines(['backend'], { ...OPTIONS, lock: 'shlock' })[0],
-      `backend: until shlock -f ${BACKEND_SUITE_LOCK} -p $$; do echo "Waiting for the backend suite lock"; sleep 30; done; trap 'rm -f ${BACKEND_SUITE_LOCK}' EXIT; env API_TRANSCRIPTS=record ./gradlew test`,
+      suiteLine({ ...OPTIONS, lock: 'shlock' }),
+      `backend: until shlock -f ${BACKEND_SUITE_LOCK} -p $$; do echo "Waiting for the backend suite lock"; sleep 30; done; trap 'rm -f ${BACKEND_SUITE_LOCK}' EXIT; env API_TRANSCRIPTS=record ./gradlew test --rerun acceptanceTest --rerun`,
     );
   });
 
   it('when the lock has another path, then the suite takes that one', () => {
     assert.ok(
-      commandLines(['backend'], {
+      suiteLine({
         ...OPTIONS,
         lock: 'shlock',
         lockPath: '/tmp/other.lock',
-      })[0].includes("trap 'rm -f /tmp/other.lock' EXIT"),
+      }).includes("trap 'rm -f /tmp/other.lock' EXIT"),
     );
   });
 
   it('when no lock tool is installed, then the suite runs unlocked', () => {
     assert.equal(
-      commandLines(['backend'], { ...OPTIONS, lock: 'none' })[0],
-      'backend: env API_TRANSCRIPTS=record ./gradlew test',
+      suiteLine({ ...OPTIONS, lock: 'none' }),
+      'backend: env API_TRANSCRIPTS=record ./gradlew test --rerun acceptanceTest --rerun',
     );
   });
 
   it('when secrets are in the environment, then the printed suite unsets them', () => {
     assert.equal(
-      commandLines(['backend'], {
+      suiteLine({
         ...OPTIONS,
         lock: 'none',
         dropped: ['FIO_TOKEN', 'MAIL_HOST'],
-      })[0],
-      'backend: env -u FIO_TOKEN -u MAIL_HOST API_TRANSCRIPTS=record ./gradlew test',
+      }),
+      'backend: env -u FIO_TOKEN -u MAIL_HOST API_TRANSCRIPTS=record ./gradlew test --rerun acceptanceTest --rerun',
     );
   });
 
@@ -322,6 +451,12 @@ describe('Given the affected areas', () => {
     assert.deepEqual(commandLines(['scripts']), ['.: node --test scripts/*.test.mjs']);
   });
 
+  it('when only the check-changed test is affected, then only it runs', () => {
+    assert.deepEqual(commandLines(['check-changed tests']), [
+      '.: node --test scripts/check-changed.test.mjs',
+    ]);
+  });
+
   it('when only the shared-case copies are checked, then SharedCaseFilesTest runs again on its own', () => {
     assert.deepEqual(commandLines(['shared-case copies']), [
       'backend: ./gradlew test --tests "*SharedCaseFilesTest" -PnoCucumber --rerun',
@@ -340,8 +475,8 @@ describe('Given the affected areas', () => {
         'mcp',
         'frontend',
         'shared-case copies',
-        'backend',
         'v2 baseline',
+        'backend',
         'inventory',
         'v2 comparison',
       ],
@@ -371,7 +506,7 @@ describe('Given an environment with settings recording refuses', () => {
   };
 
   it('when the names to drop are read, then every refused one is listed and the others stay', () => {
-    assert.deepEqual(droppedEnvNames(env), [
+    assert.deepEqual(droppedEnvNames(env, RULES.settingSecrets), [
       'APP_SITE_PUBLIC_URL',
       'BACKUP_KEY',
       'DB_PASSWORD',
@@ -383,10 +518,12 @@ describe('Given an environment with settings recording refuses', () => {
       'SPRING_APPLICATION_JSON',
       'SPRING_DATASOURCE_PASSWORD',
     ]);
-    assert.deepEqual(Object.keys(filteredEnv(env)).sort(), [
-      'HOME',
-      'PATH',
-      'SPRING_PROFILES_ACTIVE',
+  });
+
+  it('when a secret setting is not named by the settings enum, then only the patterns drop it', () => {
+    assert.deepEqual(droppedEnvNames({ FIO_TOKEN: 't', PATH: '/bin' }, []), []);
+    assert.deepEqual(droppedEnvNames({ FIO_TOKEN: 't', PATH: '/bin' }, ['FIO_TOKEN']), [
+      'FIO_TOKEN',
     ]);
   });
 });
@@ -400,11 +537,16 @@ describe('Given steps to run', () => {
       return;
     }
     const lockPath = join(folder, 'suite.lock');
-    const [suite] = commandsFor(new Set(['backend']), { ...OPTIONS, lock: 'shlock', lockPath });
+    const suite = commandsFor(new Set(['backend']), { ...OPTIONS, lock: 'shlock', lockPath }).find(
+      ({ area }) => area === 'backend',
+    );
     const step = {
       ...suite,
       cwd: '.',
-      command: suite.command.replace('./gradlew test', "sh -c 'exit 3'"),
+      command: suite.command.replace(
+        './gradlew test --rerun acceptanceTest --rerun',
+        "sh -c 'exit 3'",
+      ),
     };
     const [result] = run([step], { root: folder, log: () => {} });
     assert.equal(result.outcome, 'FAIL');
@@ -420,7 +562,7 @@ describe('Given steps to run', () => {
           area: 'a',
           cwd: '.',
           command: node('process.exit(process.env.MAIL_HOST ? 1 : 0)'),
-          filtersEnv: true,
+          unset: ['MAIL_HOST'],
         },
         { area: 'a', cwd: '.', command: node('process.exit(process.env.MAIL_HOST ? 3 : 0)') },
         { area: 'a', cwd: '.', command: node('process.exit(0)') },
@@ -452,7 +594,7 @@ describe('Given CLAUDE.md "Done means"', () => {
 
   it('when the backend command is read, then it runs the suite CLAUDE.md requires', () => {
     assert.ok(doneMeans.includes('backend: `./gradlew test`'));
-    assert.ok(chain('backend').endsWith('./gradlew test'));
+    assert.ok(chain('backend').endsWith('./gradlew test --rerun acceptanceTest --rerun'));
   });
 
   it('when the section is read, then it points to this script and leaves the comparison with main to CI', () => {

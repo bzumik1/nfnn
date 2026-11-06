@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -11,11 +11,31 @@ export const BACKEND_SUITE_LOCK = '/tmp/nfnn-full-suite.lock';
 const BASE_REF = 'origin/main';
 const DOCS = /^(docs\/|\.claude\/)|\.md$/;
 const AREA_FOLDERS = ['backend', 'frontend', 'mcp', 'scripts'];
-const ORDER = ['scripts', 'mcp', 'frontend', 'shared-case copies', 'backend'];
+const ORDER = [
+  'check-changed tests',
+  'scripts',
+  'mcp',
+  'frontend',
+  'shared-case copies',
+  'backend',
+];
+const BACKEND_BUILD = 'backend/build.gradle.kts';
 const SHARED_CASE_FILES_TEST =
   'backend/src/test/java/cz/novanadeje/app/sharedcases/SharedCaseFilesTest.java';
+const SETTINGS = 'backend/src/main/java/cz/novanadeje/app/operations/domain/settings/Setting.java';
+const SERVER_GENERATED_SECRETS = [
+  'JWT_SECRET',
+  'SETTINGS_KEY',
+  'BACKUP_KEY',
+  'RECEIPT_SIGNING_KEY',
+  'DB_PASSWORD',
+];
 
 export const CROSS_FOLDER_READS = [
+  { path: BACKEND_BUILD, area: 'scripts', reader: 'check-changed.test.mjs reads its inputs' },
+  { path: SHARED_CASE_FILES_TEST, area: 'scripts', reader: 'check-changed.test.mjs' },
+  { path: SETTINGS, area: 'scripts', reader: 'check-changed.test.mjs reads Setting.secrets()' },
+  { path: 'CLAUDE.md', area: 'scripts', reader: 'check-changed.test.mjs reads "Done means"' },
   { path: 'test-cases/', area: 'backend', reader: 'BaselineHygieneTest and others read it' },
   { path: 'test-cases/', area: 'frontend', reader: 'backup-key-words.spec.ts' },
   {
@@ -64,12 +84,11 @@ const FRONTEND = [
 ];
 const CONNECTOR = ['npm run check', 'npm run build'];
 
-const DROPPED_ENV = [
+const DROPPED_ENV_PATTERNS = [
   /^MAIL_/,
   /^APP_/,
   /^SPRING_APPLICATION_JSON$/,
   /^SPRING_.*(PASSWORD|TOKEN|SECRET|KEY)/,
-  /^(JWT_SECRET|SETTINGS_KEY|BACKUP_KEY|DB_PASSWORD|RECEIPT_SIGNING_KEY|FIO_TOKEN)$/,
 ];
 
 export const quote = (text) => `'${text.replaceAll("'", `'\\''`)}'`;
@@ -90,11 +109,27 @@ export function sharedCaseFoldersOf(javaSource) {
   return [...list[1].matchAll(/"([^"]+)"/g)].map(([, folder]) => `${folder}/`);
 }
 
+export function settingSecretsOf(javaSource) {
+  const parameters = javaSource.match(/Kind\(([^)]*boolean secret[^)]*)\)\s*\{/);
+  if (!parameters) throw new Error(`No Kind constructor with a secret flag in ${SETTINGS}`);
+  const secretIndex = parameters[1]
+    .split(',')
+    .findIndex((name) => name.trim() === 'boolean secret');
+  const kinds = javaSource.slice(javaSource.indexOf('enum Kind'));
+  const secretKinds = [...kinds.matchAll(/^\s*([A-Z_]+)\(([^)]*)\)[,;]/gm)]
+    .filter(([, , flags]) => flags.split(',')[secretIndex]?.trim() === 'true')
+    .map(([, kind]) => kind);
+  return [...javaSource.matchAll(/^\s*([A-Z_]+)\(.*Kind\.([A-Z_]+)\)[,;]/gm)]
+    .filter(([, , kind]) => secretKinds.includes(kind))
+    .map(([, name]) => name);
+}
+
 export function readRules(root = scriptRoot) {
   const read = (path) => readFileSync(join(root, path), 'utf8');
   return {
-    backendInputs: backendInputsOf(read('backend/build.gradle.kts')),
+    backendInputs: backendInputsOf(read(BACKEND_BUILD)),
     sharedCaseFolders: sharedCaseFoldersOf(read(SHARED_CASE_FILES_TEST)),
+    settingSecrets: settingSecretsOf(read(SETTINGS)),
   };
 }
 
@@ -106,10 +141,13 @@ function areasOfFile(path, { backendInputs }) {
   ) {
     areas.push('backend');
   }
-  for (const { path: prefix, area } of CROSS_FOLDER_READS) {
-    if (path.startsWith(prefix)) areas.push(area);
-  }
-  return areas;
+  return [...areas, ...crossReadsOf(path)];
+}
+
+function crossReadsOf(path) {
+  return CROSS_FOLDER_READS.filter(({ path: prefix }) => path.startsWith(prefix)).map(
+    ({ area }) => area,
+  );
 }
 
 export function areasOf(paths, rules) {
@@ -122,6 +160,9 @@ export function areasOf(paths, rules) {
     found.forEach((area) => areas.add(area));
   }
   const docsOnly = paths.length > 0 && code.length === 0;
+  const docsReads = paths.filter((path) => DOCS.test(path)).flatMap(crossReadsOf);
+  if (docsOnly && docsReads.length > 0) areas.add('check-changed tests');
+  if (!docsOnly) docsReads.forEach((area) => areas.add(area));
   const searchedOutsideBackend = paths.some(
     (path) =>
       !path.startsWith('backend/') &&
@@ -133,20 +174,29 @@ export function areasOf(paths, rules) {
   return { areas, ciOnly, docsOnly };
 }
 
-export function droppedEnvNames(env) {
+export function droppedEnvNames(env, settingSecrets) {
+  const exact = new Set([...SERVER_GENERATED_SECRETS, ...settingSecrets]);
   return Object.keys(env)
-    .filter((name) => DROPPED_ENV.some((pattern) => pattern.test(name)))
+    .filter((name) => exact.has(name) || DROPPED_ENV_PATTERNS.some((pattern) => pattern.test(name)))
     .sort();
 }
 
-export function filteredEnv(env) {
-  const dropped = new Set(droppedEnvNames(env));
-  return Object.fromEntries(Object.entries(env).filter(([name]) => !dropped.has(name)));
+const without = (env, names = []) =>
+  Object.fromEntries(Object.entries(env).filter(([name]) => !names.includes(name)));
+
+export function missingInstalls(root, areas) {
+  const needs = {
+    frontend: areas.has('frontend') || areas.has('backend'),
+    mcp: areas.has('mcp') || areas.has('backend'),
+  };
+  return Object.keys(needs).filter(
+    (folder) => needs[folder] && !existsSync(join(root, folder, 'node_modules')),
+  );
 }
 
 function backendSuite(lock, lockPath, dropped) {
   const unset = dropped.map((name) => `-u ${name} `).join('');
-  const gradle = `env ${unset}API_TRANSCRIPTS=record ./gradlew test`;
+  const gradle = `env ${unset}API_TRANSCRIPTS=record ./gradlew test --rerun acceptanceTest --rerun`;
   const waiting = 'echo "Waiting for the backend suite lock"';
   if (lock === 'flock') {
     return `flock -n ${lockPath} true || ${waiting}; flock ${lockPath} ${gradle}`;
@@ -163,6 +213,13 @@ export function commandsFor(
 ) {
   const at = (name) => quote(join(scratch, name));
   const byArea = {
+    'check-changed tests': [
+      {
+        area: 'check-changed tests',
+        cwd: '.',
+        command: 'node --test scripts/check-changed.test.mjs',
+      },
+    ],
     scripts: [{ area: 'scripts', cwd: '.', command: 'node --test scripts/*.test.mjs' }],
     mcp: CONNECTOR.map((command) => ({ area: 'mcp', cwd: 'mcp', command })),
     frontend: FRONTEND.map((command) => ({ area: 'frontend', cwd: 'frontend', command })),
@@ -175,15 +232,15 @@ export function commandsFor(
     ],
     backend: [
       {
-        area: 'backend',
-        cwd: 'backend',
-        command: backendSuite(lock, lockPath, dropped),
-        filtersEnv: true,
-      },
-      {
         area: 'v2 baseline',
         cwd: '.',
         command: `node scripts/compare-v2-baseline.mjs --base=${base}`,
+      },
+      {
+        area: 'backend',
+        cwd: 'backend',
+        command: backendSuite(lock, lockPath, dropped),
+        unset: dropped,
       },
       {
         area: 'v2 baseline',
@@ -230,7 +287,7 @@ export function parseChangedFiles(nameStatus, untracked) {
   const added = untracked
     .split('\0')
     .filter(Boolean)
-    .map((path) => ({ status: 'A', path }));
+    .map((path) => ({ status: 'A', path, untracked: true }));
   return [...changed, ...added];
 }
 
@@ -284,7 +341,7 @@ export function run(commands, { root, env = process.env, log = console.log }) {
     const started = performance.now();
     const { status } = spawnSync(step.command, {
       cwd: join(root, step.cwd),
-      env: step.filtersEnv ? filteredEnv(env) : env,
+      env: without(env, step.unset),
       shell: true,
       stdio: 'inherit',
     });
@@ -302,6 +359,7 @@ export function main(
     rules = readRules(),
     env = process.env,
     lock = availableLock(),
+    scratchRoot = tmpdir(),
     log = console.log,
   } = {},
 ) {
@@ -321,11 +379,16 @@ export function main(
   const { areas, ciOnly, docsOnly } = areasOf(paths, rules);
   log(`${paths.length} changed files against ${baseRef} (merge base ${base.slice(0, 8)}).`);
   if (paths.length === 0) return 0;
-  if (docsOnly) {
+  if (docsOnly && areas.size === 0) {
     log(
       'Only docs/, .claude/ or Markdown changed: CI runs only its gate, and nothing local is needed.',
     );
     return 0;
+  }
+  if (docsOnly) {
+    log(
+      'Only docs/, .claude/ or Markdown changed: CI runs only its gate, but CLAUDE.md feeds the check-changed test, which runs here.',
+    );
   }
   if (ciOnly.length > 0) {
     log(
@@ -333,12 +396,12 @@ export function main(
     );
     ciOnly.forEach((path) => log(`  ${path}`));
   }
-  const scratch = mkdtempSync(join(tmpdir(), 'nfnn-check-changed-'));
+  const scratch = mkdtempSync(join(scratchRoot, 'nfnn-check-changed-'));
   writeFileSync(
     join(scratch, 'changed-files.txt'),
     files.map(({ status, path }) => `${status}\t${path}\n`).join(''),
   );
-  const dropped = droppedEnvNames(env);
+  const dropped = droppedEnvNames(env, rules.settingSecrets);
   const commands = commandsFor(areas, { scratch, base, lock, dropped });
   if (commands.length === 0) return 0;
   const order = [...new Set(commands.map(({ area }) => area))];
@@ -354,10 +417,25 @@ export function main(
       log(`\nThe backend suite records, so it runs without ${dropped.join(', ')}.`);
     }
     log('The comparison with the recording of main runs only in CI (job compare-v2).');
-  } else {
+  } else if (!docsOnly) {
     log(
       '\nNo backend recording, so the v2 and inventory comparisons run only in CI (job compare-v2).',
     );
+  }
+  if (!areas.has('backend') && (areas.has('frontend') || areas.has('mcp'))) {
+    log(
+      "A renamed or removed test needs a `retired` entry in regression/v2/changes/<PR>.json, or CI's inventory comparison fails.",
+    );
+  }
+  files
+    .filter(({ path, untracked }) => untracked && path.startsWith('regression/'))
+    .forEach(({ path }) =>
+      log(`\n${path} is untracked: commit or \`git add -N\` it so the baseline guard sees it.`),
+    );
+  const missing = missingInstalls(root, areas);
+  if (missing.length > 0) {
+    log(`\nRun npm ci in ${missing.map((folder) => `${folder}/`).join(' and ')} first.`);
+    if (args.includes('--run')) return 2;
   }
   if (!args.includes('--run')) {
     log('\nRun them in order with: node scripts/check-changed.mjs --run');
