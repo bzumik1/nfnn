@@ -34,14 +34,15 @@ describe('Given the device copies of the app, loaded only when a session first n
     copies = TestBed.inject(DeviceCopies);
   });
 
-  it('when a donor signs in, then the vault receives the sign-in and the download of the copy is started once', async () => {
-    await copies.signedIn(JANA, { kind: 'password', password: 'heslo' });
+  it('when a donor signs in, then the vault receives the sign-in with its device secret and the download of the copy is started once', async () => {
+    await copies.signedIn(JANA, { kind: 'password', password: 'heslo' }, false, 'd'.repeat(43));
     await copies.signedOut(JANA);
 
     expect(vault['signedIn']).toHaveBeenCalledWith(
       JANA,
       { kind: 'password', password: 'heslo' },
       false,
+      'd'.repeat(43),
     );
     expect(vault['signedOut']).toHaveBeenCalledWith(JANA);
     expect(downloads).toBe(1);
@@ -59,7 +60,7 @@ describe('Given the device copies of the app, loaded only when a session first n
     await copies.signedIn(JANA, { kind: 'none' }, true);
     await copies.restored(JANA, true);
 
-    expect(vault['signedIn']).toHaveBeenCalledWith(JANA, { kind: 'none' }, true);
+    expect(vault['signedIn']).toHaveBeenCalledWith(JANA, { kind: 'none' }, true, undefined);
     expect(vault['restored']).toHaveBeenCalledWith(JANA, true);
   });
 

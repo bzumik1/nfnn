@@ -75,6 +75,7 @@ final class BaselineHygiene {
     static final Set<String> TEST_PUSH_PRIVATE_KEYS = Set.of("q1dXpw3UpT5VOmu_cf_v6ih07Aems3njxI-JWgLcM94",
             "yfWPiYE-n46HLnH0KqZOF1fJJU3MYrct3AELtAQ-oRw", "0123456789abcdefghijABCDEFGHIJklmnopqrstuvw");
     private static final Set<String> PUSH_SUBSCRIPTION_KEY_FIELDS = Set.of("p256dh", "auth");
+    private static final String DEVICE_SECRET_FIELD = "deviceSecret";
     private static final Pattern SIGNING_SEED_FIELD = Pattern.compile("(?i)[a-z]*(?:seed|signingkey|privatekey)(?:hex|base64|base64url)?");
     static final Path BASELINE_COMMIT = Path.of("v2", "BASELINE_COMMIT");
     private static final Path REGRESSION_FOLDER = Path.of("regression");
@@ -163,6 +164,7 @@ final class BaselineHygiene {
                 unmaskedSecretSettings(json, findings, file);
                 unmaskedSigningKeyFields(json, findings, file);
                 unmaskedPushSubscriptionKeyFields(json, findings, file);
+                unmaskedDeviceSecretFields(json, findings, file);
                 unmaskedBackupKeyWords(json, allowedBackupKeyWords(fixtures), fixtures, findings, file);
             } catch (RuntimeException unparsable) {
                 findings.add(file + ": not valid JSON, so the secret-setting rule cannot run");
@@ -308,6 +310,20 @@ final class BaselineHygiene {
             }
         } else if (node.isArray()) {
             node.values().forEach(child -> unmaskedPushSubscriptionKeyFields(child, findings, file));
+        }
+    }
+
+    private static void unmaskedDeviceSecretFields(JsonNode node, List<String> findings, String file) {
+        if (node.isObject()) {
+            for (var field : node.properties()) {
+                JsonNode value = field.getValue();
+                if (DEVICE_SECRET_FIELD.equals(field.getKey()) && value.isString() && !MASKED.equals(value.asString())) {
+                    findings.add(file + ": an unmasked device secret field " + field.getKey());
+                }
+                unmaskedDeviceSecretFields(value, findings, file);
+            }
+        } else if (node.isArray()) {
+            node.values().forEach(child -> unmaskedDeviceSecretFields(child, findings, file));
         }
     }
 
