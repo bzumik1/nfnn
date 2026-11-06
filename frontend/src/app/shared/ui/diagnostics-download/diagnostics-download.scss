@@ -1,7 +1,5 @@
 :host {
-  display: grid;
-  justify-items: start;
-  gap: var(--space-2);
+  display: block;
   margin-block-start: var(--space-3);
   font-size: var(--text-md);
   line-height: var(--leading-relaxed);
@@ -10,6 +8,11 @@
 
 p {
   margin: 0;
+}
+
+.diagnostics-download-shared,
+.diagnostics-download-button {
+  margin-block-start: var(--space-2);
 }
 
 a {

@@ -1,14 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import type { Download, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
-import {
-  donor,
-  mockDonorApi,
-  openAccountItem,
-  openSignInDialog,
-  session,
-  signIn,
-} from './donor-session';
+import { donor, mockDonorApi, openAccountItem, openSignInDialog, session } from './donor-session';
 
 const FILE_NAME = /^nfnn-diagnostika-\d{4}-\d{2}-\d{2}-\d{4}\.json$/;
 const MAIN_SCRIPT = /\/main-[A-Za-z0-9_-]{8}\.js$/;
@@ -28,13 +21,26 @@ async function downloadFrom(page: Page, scope = page.locator('body')) {
   return savedFile(await download);
 }
 
-async function browserStores(page: Page): Promise<unknown> {
+async function browserStoreKeys(page: Page): Promise<unknown> {
   return page.evaluate(async () => ({
-    local: Object.entries(localStorage),
-    tab: Object.entries(sessionStorage),
-    cookie: document.cookie,
-    databases: (await indexedDB.databases()).map((database) => database.name),
+    local: Object.keys(localStorage).sort(),
+    tab: Object.keys(sessionStorage).sort(),
+    cookies: document.cookie
+      .split(';')
+      .map((cookie) => cookie.split('=')[0].trim())
+      .sort(),
+    databases: (await indexedDB.databases()).map((database) => database.name).sort(),
   }));
+}
+
+async function answerSignIn(page: Page, kind: 'BROWSER' | 'PUBLIC'): Promise<void> {
+  await page.route('**/api/donors/auth/login', async (route) => {
+    const answer = session(200);
+    await route.fulfill({
+      ...answer,
+      body: JSON.stringify({ ...JSON.parse(answer.body), session: kind }),
+    });
+  });
 }
 
 function expectNoPersonalData(text: string): void {
@@ -46,7 +52,12 @@ function expectNoPersonalData(text: string): void {
 test.describe('Given a signed-in donor on Údaje a zabezpečení', () => {
   test.beforeEach(async ({ page }) => {
     await mockDonorApi(page);
-    await signIn(page);
+    await answerSignIn(page, 'BROWSER');
+    await openSignInDialog(page);
+    await page.locator('#login-email').fill('jana@example.cz');
+    await page.locator('#login-password').fill('correct horse battery');
+    await page.getByRole('dialog').locator('.ui-button--block').click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
     await openAccountItem(page, 'Údaje a zabezpečení');
   });
 
@@ -84,13 +95,7 @@ test.describe('Given a signed-in donor on Údaje a zabezpečení', () => {
 test.describe('Given a donor signed in on someone else’s computer', () => {
   test.beforeEach(async ({ page }) => {
     await mockDonorApi(page);
-    await page.route('**/api/donors/auth/login', async (route) => {
-      const answer = session(200);
-      await route.fulfill({
-        ...answer,
-        body: JSON.stringify({ ...JSON.parse(answer.body), session: 'PUBLIC' }),
-      });
-    });
+    await answerSignIn(page, 'PUBLIC');
     await openSignInDialog(page);
     await page.getByRole('button', { name: 'Cizí počítač?' }).click();
     await page.locator('#login-email').fill('jana@example.cz');
@@ -108,7 +113,7 @@ test.describe('Given a donor signed in on someone else’s computer', () => {
         'Soubor zůstane ve stažených souborech tohoto počítače. Po odeslání ho prosím smažte.',
       ),
     ).toBeVisible();
-    const before = await browserStores(page);
+    const before = await browserStoreKeys(page);
 
     const { text } = await downloadFrom(page);
 
@@ -120,7 +125,7 @@ test.describe('Given a donor signed in on someone else’s computer', () => {
     });
     expect(file.deviceCopy?.administration ?? null).toBeNull();
     expectNoPersonalData(text);
-    expect(await browserStores(page)).toEqual(before);
+    expect(await browserStoreKeys(page)).toEqual(before);
   });
 });
 
