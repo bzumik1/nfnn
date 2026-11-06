@@ -91,6 +91,11 @@ class JpaDonationReceiptRepository implements DonationReceiptRepository {
     }
 
     @Override
+    public long countReplacementsIssuedSince(DonorReference donor, Instant since) {
+        return jpa.countByDonorIdAndSupersedesIdIsNotNullAndIssuedAtGreaterThanEqual(donor.value(), since);
+    }
+
+    @Override
     public Set<DonationId> findDonationsWithReceipt(Collection<DonationId> donations) {
         if (donations.isEmpty()) {
             return Set.of();
