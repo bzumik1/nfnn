@@ -2,6 +2,7 @@ import {
   afterNextRender,
   ChangeDetectionStrategy,
   Component,
+  computed,
   DestroyRef,
   ElementRef,
   inject,
@@ -25,10 +26,21 @@ import { problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { CompactLayout } from '../../../core/layout/compact-layout';
+import { Avatar } from '../../../shared/ui/avatar/avatar';
+import { PeopleApi, PersonResponse } from '../../content/people-api';
+import { formatMinorUnits } from '../../donations/donation-amount';
 import { formatDonationDate, pragueDay } from '../../donations/donation-date';
 import { AdminApi, DonorAccountResponse } from '../admin-api';
+import { AdministrationCopy } from '../device-copy/administration-copy';
+import { portraitsByEmail } from '../people/portraits-by-email';
+import { type CopiedGift, type LastGift, recentDonors } from './recent-donors';
 
 type SearchState = 'idle' | 'searching' | 'ready' | 'error';
+
+interface ListedDonor {
+  account: DonorAccountResponse;
+  lastGift: LastGift | null;
+}
 
 interface Outcome {
   state: SearchState;
@@ -40,16 +52,19 @@ const UNAUTHENTICATED = 'auth/unauthenticated';
 const FORBIDDEN = 'auth/forbidden';
 const SEARCH_DEBOUNCE_MS = 300;
 const QUERY_PARAM = 'q';
+const RECENT_DONORS_SHOWN = 10;
 
 @Component({
   selector: 'app-admin-donors',
-  imports: [RouterLink],
+  imports: [RouterLink, Avatar],
   templateUrl: './admin-donors.html',
   styleUrl: './admin-donors.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminDonors {
   private readonly api = inject(AdminApi);
+  private readonly people = inject(PeopleApi);
+  private readonly copy = inject(AdministrationCopy);
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -65,8 +80,34 @@ export class AdminDonors {
   protected readonly results = signal<DonorAccountResponse[]>([]);
   protected readonly hasMore = signal(false);
   private readonly retries = new Subject<string>();
+  private readonly members = signal<PersonResponse[]>([]);
+  private readonly portraits = computed(() => portraitsByEmail(this.members()));
+  private readonly copiedGifts = this.copy.rows<CopiedGift>('donations', 'donations');
+  private readonly copiedAccounts = this.copy.rows<DonorAccountResponse>('donors', 'accounts');
+
+  protected readonly recent = computed<ListedDonor[]>(() => {
+    const gifts = this.copiedGifts();
+    const accounts = this.copiedAccounts();
+    if (gifts === null || accounts === null) {
+      return [];
+    }
+    return recentDonors(gifts, accounts, RECENT_DONORS_SHOWN);
+  });
+  protected readonly listsRecent = computed(
+    () => this.state() === 'idle' && this.recent().length > 0,
+  );
+  protected readonly listed = computed<ListedDonor[]>(() => {
+    if (this.listsRecent()) {
+      return this.recent();
+    }
+    if (this.state() === 'ready') {
+      return this.results().map((account) => ({ account, lastGift: null }));
+    }
+    return [];
+  });
 
   constructor() {
+    this.loadPortraits();
     afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
     this.queries
       .pipe(
@@ -102,10 +143,32 @@ export class AdminDonors {
     return formatDonationDate(pragueDay(item.registeredAt));
   }
 
+  protected portraitOf(item: DonorAccountResponse): string | null {
+    return item.erasedAt ? null : (this.portraits().get(item.email) ?? null);
+  }
+
+  protected giftAmount(gift: LastGift): string {
+    return formatMinorUnits(gift.amountMinor);
+  }
+
+  protected giftDay(gift: LastGift): string {
+    return formatDonationDate(gift.receivedAt);
+  }
+
   protected typeLabel(item: DonorAccountResponse): string {
     return item.type === 'COMPANY'
       ? $localize`:@@admin.donors.type.company:Firma`
       : $localize`:@@admin.donors.type.person:Osoba`;
+  }
+
+  private loadPortraits(): void {
+    this.people
+      .load()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (people) => this.members.set(people.members),
+        error: () => this.members.set([]),
+      });
   }
 
   private lookUp(query: string) {

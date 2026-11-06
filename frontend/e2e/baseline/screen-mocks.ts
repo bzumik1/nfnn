@@ -4,12 +4,14 @@ import { join } from 'node:path';
 import { routeLogsApi } from '../admin-logs-api';
 import {
   adminSettings,
+  administrationCopyGift,
   administrator,
   bankAccountItem,
   donationItem,
   DonorApiMock,
   noDonations,
   problem,
+  serveAdministrationCopy,
   session,
 } from '../donor-session';
 import type { RouteTarget } from '../fixtures';
@@ -456,6 +458,8 @@ const adminAnswers: Record<string, unknown> = {
   [`/api/admin/content/projects/${project.id}`]: project,
 };
 
+const JANA_PORTRAIT_ID = '019a1c00-0000-7000-8000-00000000c101';
+
 export const PETR_DETAIL_PATH = `/sprava/darci/${PETR_ID}`;
 
 interface PaymentDetailsCase {
@@ -550,6 +554,59 @@ export async function mockAdministration(page: RouteTarget): Promise<void> {
         },
       });
     },
+  );
+}
+
+export async function serveRecentDonors(page: RouteTarget): Promise<void> {
+  await serveAdministrationCopy(page, {
+    donations: {
+      'donations:2026-10': [
+        administrationCopyGift(
+          '0192f0f1-0000-7000-8000-000000000012',
+          PETR_ID,
+          '2026-10-24',
+          125050,
+        ),
+        administrationCopyGift(
+          '0192f0f1-0000-7000-8000-000000000011',
+          administrator.id,
+          '2026-10-08',
+          50000,
+        ),
+      ],
+    },
+    donors: { 'accounts:2026-10': [janaAccount, petrAccount] },
+  });
+  await page.route(
+    (url) => url.pathname === '/api/admin/content/people',
+    (route) =>
+      route.fulfill({
+        json: {
+          members: [
+            {
+              id: '019a1c00-0000-7000-8000-00000000c001',
+              name: 'Jana Nováková',
+              role: 'Zakladatelka',
+              position: 0,
+              onBoard: true,
+              boardNote: null,
+              featured: true,
+              portrait: {
+                id: JANA_PORTRAIT_ID,
+                url: `/api/content/media/${JANA_PORTRAIT_ID}`,
+                width: 640,
+                height: 640,
+              },
+              webSignature: null,
+              personalEmail: janaAccount.email,
+              fundEmail: null,
+              linkedToAccount: true,
+            },
+          ],
+          note: null,
+          footnote: null,
+        },
+      }),
   );
 }
 

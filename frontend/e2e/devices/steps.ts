@@ -6,6 +6,7 @@ import {
   PETR_DETAIL_PATH,
   project,
   servePaymentDetails,
+  serveRecentDonors,
 } from '../baseline/screen-mocks';
 import { administrator, donor, mockDonorApi, session } from '../donor-session';
 import { ADMINISTRATION_UNLOCK_PATH } from '../fixtures';
@@ -283,6 +284,15 @@ export const STEPS: Step[] = [
     id: 'admin-donors',
     title: 'the donors in the administration',
     open: (ui) => adminPage(ui, '/sprava/darci'),
+  },
+  {
+    id: 'admin-donors-recent',
+    title: 'the donors who gave last in the administration',
+    open: async (ui) => {
+      await serveRecentDonors(ui.routes);
+      await adminPage(ui, '/sprava/darci');
+      await ui.waitVisible({ css: '.recent-title' });
+    },
   },
   {
     id: 'admin-donor-detail',

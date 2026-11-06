@@ -26,6 +26,7 @@ import {
   project,
   rememberedSession,
   servePaymentDetails,
+  serveRecentDonors,
 } from './screen-mocks';
 
 interface ElementShot {
@@ -452,6 +453,16 @@ const SCREENS_SINCE_V2: Screen[] = [
       await unfoldPaymentQr(page, '.send-gift');
     },
     ready: (page) => paymentDrawn(page, [SEND_GIFT_QR, SEND_GIFT_BANK]),
+  },
+  {
+    name: 'admin-donors-recent',
+    open: async (page, width) => {
+      await serveRecentDonors(page);
+      await adminPage('admin-donors', '/sprava/darci').open(page, width);
+      await expect(
+        page.getByRole('heading', { level: 3, name: 'Naposledy přispěli' }),
+      ).toBeVisible();
+    },
   },
 ];
 
