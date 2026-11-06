@@ -6,6 +6,7 @@ import { AuthStore } from '../../../../core/auth/auth-store';
 import { Donor } from '../../../../core/auth/donor';
 import { authResponse, problem, sampleDonor } from '../../../../core/auth/testing/donor-fixtures';
 import {
+  draftWorkOf,
   MemoryDraftShelf,
   memoryDraftShelfProviders,
   valuesBase,
@@ -312,6 +313,7 @@ describe('Given the donor data card on a device that keeps drafts', () => {
   async function settle(): Promise<void> {
     for (let round = 0; round < 3; round++) {
       await new Promise((resolve) => setTimeout(resolve, 0));
+      await draftWorkOf(fixture.componentInstance);
       fixture.detectChanges();
       await fixture.whenStable();
       fixture.detectChanges();
@@ -392,6 +394,7 @@ describe('Given the donor data card on a device that keeps drafts', () => {
     button('Upravit údaje').click();
     await settle();
     await fillIn('#profile-street', 'Krátká 3');
+    expect(shelf.draftOf('donor', 'profile')).not.toBeNull();
 
     button('Zrušit').click();
     await settle();
@@ -415,7 +418,7 @@ describe('Given the donor data card on a device that keeps drafts', () => {
       await settle();
       expect(input('#profile-street').value).toBe('Krátká 3');
       expect(root().querySelector('[role="status"]:not(:empty)')?.textContent?.trim()).toBe(
-        'Pokračujete v rozepsaných úpravách. Zatím jsou jen na tomto zařízení a platit začnou, až je uložíte.',
+        'Pokračujete v rozepsaných úpravách. Zůstanou jen na tomto zařízení, dokud je neuložíte.',
       );
 
       root().querySelector('form')!.dispatchEvent(new Event('submit'));

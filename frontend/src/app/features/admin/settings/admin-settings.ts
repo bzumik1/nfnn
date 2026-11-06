@@ -237,7 +237,7 @@ export class AdminSettings {
   protected readonly secretsCanBeStored = signal(true);
   protected readonly notice = signal<Notice | null>(null);
   protected readonly saveError = signal('');
-  private focusTitleOnLoad = false;
+  private reloadingAfterStaleDraft = false;
   protected readonly fieldErrors = signal<string[]>([]);
   protected readonly confirmation = signal<Confirmation | null>(null);
   protected readonly saveStatus = signal<string | null>(null);
@@ -292,8 +292,9 @@ export class AdminSettings {
           }
           this.state.set('ready');
           this.draft.ready();
-          if (this.focusTitleOnLoad) {
-            this.focusTitleOnLoad = false;
+          if (this.reloadingAfterStaleDraft) {
+            this.reloadingAfterStaleDraft = false;
+            this.notice.set({ kind: 'status', text: SETTINGS_RELOADED_TEXT });
             this.focusTitle();
           } else {
             this.focusFragment();
@@ -364,8 +365,8 @@ export class AdminSettings {
   protected reloadAfterStaleDraft(): void {
     this.staleDraft.set(false);
     this.draft.discard();
-    this.notice.set({ kind: 'status', text: SETTINGS_RELOADED_TEXT });
-    this.focusTitleOnLoad = true;
+    this.notice.set(null);
+    this.reloadingAfterStaleDraft = true;
     this.load();
   }
 

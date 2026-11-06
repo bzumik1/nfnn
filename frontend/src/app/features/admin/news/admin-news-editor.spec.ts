@@ -17,6 +17,7 @@ import {
 import { OTHER_PERSON_ID, person, PERSON_ID } from '../../content/testing/people-fixtures';
 import { PersonResponse } from '../../content/people-api';
 import {
+  draftWorkOf,
   MemoryDraftShelf,
   memoryDraftShelfProviders,
 } from '../../../core/drafts/testing/memory-draft-shelf';
@@ -31,6 +32,7 @@ const EVA = person({ id: OTHER_PERSON_ID, name: 'Eva Vzorová', role: null, port
 interface Signers {
   members?: PersonResponse[] | 'fails';
   own?: PersonResponse | null;
+  later?: boolean;
 }
 
 function problem(status: number, type: string, title: string, detail: string) {
@@ -73,6 +75,10 @@ async function setUp(
     .flush(authResponse('token-1', sampleDonor({ roles: ['DONOR', 'ADMIN'] })));
   const fixture = TestBed.createComponent(AdminNewsEditor);
   fixture.detectChanges();
+  if (signers.later) {
+    await fixture.whenStable();
+    return { fixture, http };
+  }
   const members = signers.members ?? [PAVEL, EVA];
   const people = http.expectOne(PEOPLE_URL);
   if (members === 'fails') {
@@ -1256,6 +1262,7 @@ describe('Given an administrator editing a published news article on a device th
   async function drafted(): Promise<void> {
     for (let round = 0; round < 3; round++) {
       await new Promise((resolve) => setTimeout(resolve, 0));
+      await draftWorkOf(fixture.componentInstance);
       await settle(fixture);
     }
   }
@@ -1365,6 +1372,37 @@ describe('Given an administrator editing a published news article on a device th
     expect(element<HTMLInputElement>(fixture, '#news-image-alt').value).toBe('');
   });
 
+  it('when they only choose another photo, then nothing is kept, because drafts keep no photos', async () => {
+    await open();
+
+    await chooseFile(fixture, new File(['png'], 'zahrada.png', { type: 'image/png' }));
+    http
+      .expectOne(MEDIA_URL)
+      .flush(uploadedImage({ id: 'another-photo', url: '/api/content/media/another-photo' }));
+    await drafted();
+
+    expect(shelf.draftOf('administration', key)).toBeNull();
+  });
+
+  it('when they choose another photo, describe it and edit the title, then the draft keeps the title and not the new description', async () => {
+    await open();
+
+    await chooseFile(fixture, new File(['png'], 'zahrada.png', { type: 'image/png' }));
+    http
+      .expectOne(MEDIA_URL)
+      .flush(uploadedImage({ id: 'another-photo', url: '/api/content/media/another-photo' }));
+    await settle(fixture);
+    await type(fixture, '#news-image-alt', 'Děti sázejí rajčata.');
+    await type(fixture, '#news-title', 'Zahrada pro všechny děti');
+    await drafted();
+
+    expect(shelf.draftOf('administration', key)?.values).toMatchObject({
+      title: 'Zahrada pro všechny děti',
+      coverImageAlt: '',
+      coverImageId: IMAGE_ID,
+    });
+  });
+
   it('when the device kept the description of the saved photo, then it comes back', async () => {
     keptDraft('Zahrada pro všechny děti', `version:${newsArticle().version}`, {
       id: IMAGE_ID,
@@ -1402,7 +1440,7 @@ describe('Given an administrator editing a published news article on a device th
         'Zahrada pro všechny děti',
       );
       expect(text(fixture, '[role="status"]:not(:empty)')).toBe(
-        'Pokračujete v rozepsaných úpravách. Zatím jsou jen na tomto zařízení a platit začnou, až je uložíte.',
+        'Pokračujete v rozepsaných úpravách. Zůstanou jen na tomto zařízení, dokud je neuložíte.',
       );
       expect(document.activeElement?.tagName).toBe('H1');
       expect(fixture.componentInstance.canLeave()).not.toBe(true);
@@ -1465,7 +1503,9 @@ describe('Given an administrator editing a published news article on a device th
       await settle(fixture);
 
       const sheet = element(fixture, 'app-changed-meanwhile-dialog dialog');
-      expect(sheet.textContent).toContain('Od chvíle, kdy jste text na tomto zařízení rozepsali');
+      expect(sheet.textContent).toContain(
+        'Od chvíle, kdy jste na tomto zařízení začali s úpravami',
+      );
       expect(element<HTMLInputElement>(fixture, '#news-title').value).toBe(
         'Zahrada pro všechny děti',
       );
@@ -1517,6 +1557,7 @@ describe('Given an administrator writing a new news article on a device that kee
   async function drafted(): Promise<void> {
     for (let round = 0; round < 3; round++) {
       await new Promise((resolve) => setTimeout(resolve, 0));
+      await draftWorkOf(fixture.componentInstance);
       await settle(fixture);
     }
   }
@@ -1548,6 +1589,27 @@ describe('Given an administrator writing a new news article on a device that kee
   });
 });
 
+describe('Given an administrator who starts a new news article before the people of the foundation arrive', () => {
+  it('when they type and the people arrive, then the draft keeps what they typed', async () => {
+    const shelf = new MemoryDraftShelf();
+    const { fixture, http } = await setUp(null, { later: true }, memoryDraftShelfProviders(shelf));
+    await type(fixture, '#news-title', 'Benefiční koncert');
+
+    http.expectOne(PEOPLE_URL).flush({ members: [PAVEL, EVA], note: null, footnote: null });
+    http.expectOne(`${PEOPLE_URL}/me`).flush({ member: null });
+    for (let round = 0; round < 3; round++) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await draftWorkOf(fixture.componentInstance);
+      await settle(fixture);
+    }
+
+    expect(shelf.draftOf('administration', 'news/new')?.values).toMatchObject({
+      title: 'Benefiční koncert',
+    });
+    http.verify();
+  });
+});
+
 describe('Given an administrator opening a new news article with a draft whose publish date has passed', () => {
   let fixture: ComponentFixture<AdminNewsEditor>;
   let http: HttpTestingController;
@@ -1573,6 +1635,7 @@ describe('Given an administrator opening a new news article with a draft whose p
     ({ fixture, http } = await setUp(null, {}, memoryDraftShelfProviders(shelf)));
     for (let round = 0; round < 3; round++) {
       await new Promise((resolve) => setTimeout(resolve, 0));
+      await draftWorkOf(fixture.componentInstance);
       await settle(fixture);
     }
   });
@@ -1584,6 +1647,9 @@ describe('Given an administrator opening a new news article with a draft whose p
     await settle(fixture);
 
     expect(element<HTMLInputElement>(fixture, '#news-title').value).toBe('Benefiční koncert');
+    const date = element<HTMLInputElement>(fixture, '#news-publish-date').value;
+    expect(date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(date > '2020-01-15').toBe(true);
     expect(text(fixture, '[role="status"]:not(:empty)')).toContain(
       'Datum zveřejnění z rozepsaných úprav už minulo, proto jsme ho posunuli na dnešek.',
     );

@@ -1,16 +1,16 @@
 <section class="ui-callout ui-callout--warning draft-offer" [attr.aria-labelledby]="titleId">
   @if (headingLevel() === 3) {
-    <h3 class="draft-offer__title" [id]="titleId" i18n="@@ui.draftOffer.title">
+    <h3 class="draft-offer__title" tabindex="-1" [id]="titleId" i18n="@@ui.draftOffer.title">
       Máte tu rozepsané úpravy
     </h3>
   } @else {
-    <h2 class="draft-offer__title" [id]="titleId" i18n="@@ui.draftOffer.title">
+    <h2 class="draft-offer__title" tabindex="-1" [id]="titleId" i18n="@@ui.draftOffer.title">
       Máte tu rozepsané úpravy
     </h2>
   }
   <p class="draft-offer__text" i18n="@@ui.draftOffer.lead">
     Na tomto zařízení zůstaly neuložené úpravy z {{ savedAt() }}. Než budete upravovat dál, vyberte,
-    co s nimi.
+    jestli v nich chcete pokračovat, nebo je zahodit.
   </p>
   @if (stale()) {
     <p class="draft-offer__text" i18n="@@ui.draftOffer.stale">
@@ -20,7 +20,8 @@
   }
   @if (photo()) {
     <p class="draft-offer__text" i18n="@@ui.draftOffer.photo">
-      Rozepsané úpravy neuchovávají fotky. Pokud jste nahráli novou, vyberte ji prosím znovu.
+      Rozepsané úpravy neuchovávají fotky. Pokud jste nahráli novou, vyberte ji prosím znovu a
+      napište k ní popis.
     </p>
   }
   @if (secrets()) {

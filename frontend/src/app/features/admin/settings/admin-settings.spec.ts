@@ -8,6 +8,7 @@ import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixt
 import { RESTART_POLL_MS } from '../../operations/setup/setup-api';
 import { settingsView } from '../testing/admin-fixtures';
 import {
+  draftWorkOf,
   MemoryDraftShelf,
   memoryDraftShelfProviders,
   valuesBase,
@@ -455,6 +456,7 @@ describe('Given an administrator changing the settings on a device that keeps dr
   async function settle(): Promise<void> {
     for (let round = 0; round < 3; round++) {
       await new Promise((resolve) => setTimeout(resolve, 0));
+      await draftWorkOf(fixture.componentInstance);
       await fixture.whenStable();
       fixture.detectChanges();
     }
@@ -577,7 +579,7 @@ describe('Given an administrator changing the settings on a device that keeps dr
     element<HTMLFormElement>('form.settings-form').dispatchEvent(new Event('submit'));
     await settle();
     expect(element('app-changed-meanwhile-dialog dialog').textContent).toContain(
-      'Od chvíle, kdy jste text na tomto zařízení rozepsali',
+      'Od chvíle, kdy jste na tomto zařízení začali s úpravami',
     );
 
     button('Zahodit své úpravy a načíst novější verzi').click();

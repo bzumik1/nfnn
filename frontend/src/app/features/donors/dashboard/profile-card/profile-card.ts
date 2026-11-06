@@ -153,7 +153,10 @@ export class ProfileCard {
   protected discardDraft(): void {
     this.draft.discard();
     this.draftStatus.set(DRAFT_DISCARDED_TEXT);
-    afterNextRender(() => this.editButton()?.nativeElement.focus(), { injector: this.injector });
+    afterNextRender(
+      () => (this.editing() ? this.nameInput() : this.editButton())?.nativeElement.focus(),
+      { injector: this.injector },
+    );
   }
 
   protected keepEdits(form: NgForm): void {

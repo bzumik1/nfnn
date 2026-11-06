@@ -5,7 +5,9 @@
 
 .draft-offer__title {
   margin: 0 0 var(--space-1);
+  font-size: var(--text-md);
   font-weight: var(--weight-semibold);
+  line-height: var(--leading-snug);
 }
 
 .draft-offer__text {

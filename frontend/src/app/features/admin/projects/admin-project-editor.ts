@@ -233,8 +233,10 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
       tag: this.tag,
       perex: this.perex,
       body: this.body,
-      coverImageAlt: this.coverImageAlt,
-      coverImageId: this.coverImage()?.id ?? null,
+      coverImageAlt: this.coverUnsaved()
+        ? (this.project()?.coverImage?.alt ?? '')
+        : this.coverImageAlt,
+      coverImageId: this.project()?.coverImage?.id ?? null,
       publishDate: this.publishDate,
     }),
     apply: (values) => this.applyDraft(values),

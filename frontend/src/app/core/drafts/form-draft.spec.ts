@@ -205,6 +205,29 @@ describe('Given an editor that keeps its unsaved text as a draft', () => {
       });
     });
 
+    it('and the visitor had typed before the offer showed and discards it, then what they typed is kept instead', async () => {
+      editor.body = 'Něco jiného.';
+
+      editor.draft.discard();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await editor.draft.settled();
+
+      expect(shelf.draftOf('administration', 'news/1')?.values).toEqual({
+        title: 'Ples',
+        body: 'Něco jiného.',
+      });
+    });
+
+    it('and the visitor leaves without answering, then the offered draft stays for the next visit', async () => {
+      editor.draft.left();
+      await settle();
+
+      expect(shelf.draftOf('administration', 'news/1')?.values).toEqual({
+        title: 'Ples 2026',
+        body: 'Zveme vás.',
+      });
+    });
+
     it('and the visitor discards it, then it is dropped and the form keeps the saved text', async () => {
       editor.draft.discard();
       await settle();
@@ -305,12 +328,12 @@ describe('Given an editor that keeps its unsaved text as a draft', () => {
       editor.title = 'Ples 2026';
       editor.draft.changed();
 
-      await settle();
-      await settle();
-
-      expect(shelf.draftOf('administration', 'news/1')).toMatchObject({
-        base: expect.stringMatching(/^values:[0-9a-f]{64}$/),
-        values: { title: 'Ples 2026', body: 'Zveme vás.' },
+      await vi.waitFor(async () => {
+        await editor.draft.settled();
+        expect(shelf.draftOf('administration', 'news/1')).toMatchObject({
+          base: expect.stringMatching(/^values:[0-9a-f]{64}$/),
+          values: { title: 'Ples 2026', body: 'Zveme vás.' },
+        });
       });
     });
   });
@@ -351,6 +374,51 @@ describe('Given an editor that keeps its unsaved text as a draft', () => {
       expect(shelf.kept.at(-1)?.values).toEqual({ title: 'Ples 2026', body: 'Zveme vás.' });
       expect(editor.draft.offer()).toBeNull();
     });
+
+    it('and the form is discarded or saved after the switch, then the draft the other account keeps of the same form stays', async () => {
+      await create();
+      await ready('v1');
+      await type('title', 'Ples 2026');
+      shelf.switchAccount('administration', 'another-administration-copy');
+      await settle();
+      const theirs = {
+        key: 'news/1',
+        base: 'version:v1',
+        values: { title: 'Jejich ples', body: 'Zveme vás.' },
+        savedAt: '2026-11-06T09:00:00.000Z',
+      };
+      shelf.seed('administration', theirs);
+
+      editor.draft.discard();
+      editor.draft.saved('v2');
+      await settle();
+
+      expect(shelf.draftOf('administration', 'news/1')).toEqual(theirs);
+      expect(editor.draft.offer()).toBeNull();
+    });
+  });
+
+  describe('when the visitor types while the copy is still closed', () => {
+    it('then the edit is kept as soon as the copy opens, without another keystroke', async () => {
+      shelf.setOpen('administration', false);
+      await create();
+      await ready('v1');
+      editor.title = 'Ples 2026';
+      editor.draft.changed();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await editor.draft.settled();
+      expect(shelf.draftOf('administration', 'news/1')).toBeNull();
+
+      shelf.setOpen('administration', true);
+      await fixture.whenStable();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await editor.draft.settled();
+
+      expect(shelf.draftOf('administration', 'news/1')?.values).toEqual({
+        title: 'Ples 2026',
+        body: 'Zveme vás.',
+      });
+    });
   });
 
   describe('when the visitor types before the copy opens and it holds an older draft', () => {
@@ -385,14 +453,14 @@ describe('Given an editor that keeps its unsaved text as a draft', () => {
     });
 
     afterEach(() => {
-      Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
+      Reflect.deleteProperty(document, 'visibilityState');
     });
 
     async function firstEditKept(): Promise<void> {
       editor.title = 'Ples 2026';
       editor.draft.changed();
       await new Promise((resolve) => setTimeout(resolve, 0));
-      await editor.draft.flush();
+      await editor.draft.settled();
     }
 
     it('then the first edit is kept at once and the next one waits', async () => {
@@ -418,7 +486,7 @@ describe('Given an editor that keeps its unsaved text as a draft', () => {
 
       Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true });
       document.dispatchEvent(new Event('visibilitychange'));
-      await editor.draft.flush();
+      await editor.draft.settled();
 
       expect(shelf.draftOf('administration', 'news/1')?.values).toEqual({
         title: 'Ples 2026',
@@ -432,7 +500,7 @@ describe('Given an editor that keeps its unsaved text as a draft', () => {
       editor.draft.changed();
 
       window.dispatchEvent(new Event('pagehide'));
-      await editor.draft.flush();
+      await editor.draft.settled();
 
       expect(shelf.draftOf('administration', 'news/1')?.values).toMatchObject({
         body: 'Zveme vás všechny.',

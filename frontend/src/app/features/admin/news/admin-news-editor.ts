@@ -221,8 +221,10 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
       tag: this.tag,
       perex: this.perex,
       body: this.body,
-      coverImageAlt: this.coverImageAlt,
-      coverImageId: this.coverImage()?.id ?? null,
+      coverImageAlt: this.coverUnsaved()
+        ? (this.article()?.coverImage?.alt ?? '')
+        : this.coverImageAlt,
+      coverImageId: this.article()?.coverImage?.id ?? null,
       signerId: this.signerId,
       publishDate: this.publishDate,
     }),
@@ -331,6 +333,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     const id = this.route.snapshot.paramMap.get('id');
     if (id === null) {
       this.state.set('ready');
+      this.draft.ready(NEW_ARTICLE_BASE);
     } else {
       this.load(id);
     }
@@ -400,7 +403,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
   }
 
   private newArticleReady(isNew: boolean): void {
-    if (isNew && this.article() === null) {
+    if (isNew && this.article() === null && !this.edited()) {
       this.draft.ready(NEW_ARTICLE_BASE);
     }
   }

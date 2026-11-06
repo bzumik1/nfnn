@@ -16,7 +16,7 @@ import {
 import { openIdbDeviceStorage } from '../device/store/idb-device-storage';
 import { ChannelBus, NamedLocks } from '../device/store/testing/fake-device';
 import { ErrorReporter } from '../errors/error-reporter';
-import { DRAFT_KEEP_DELAY_MS, VaultDraftShelf } from './draft-shelf';
+import { DRAFT_KEEP_DELAY_MS, DRAFT_SHELF, VaultDraftShelf } from './draft-shelf';
 import { type FormDraft, formDraft } from './form-draft';
 
 const JANA: DeviceAccount = {
@@ -37,6 +37,7 @@ interface Address {
 describe('Given the drafts of a donor form kept in the device copy of the signed-in donor', () => {
   let vault: DeviceVault;
   let shelf: VaultDraftShelf;
+  let session: DeviceAccount | null;
   let values: Address;
   let draft: FormDraft<Address>;
 
@@ -47,30 +48,20 @@ describe('Given the drafts of a donor form kept in the device copy of the signed
     await draft.flush();
   }
 
-  async function draftsOf(account: DeviceAccount): Promise<readonly unknown[]> {
-    const holder = shelf.holder('donor');
-    expect(vault.opened()?.account.userHandle).toBe(account.userHandle);
-    return holder === null ? [] : (await shelf.list('donor', holder)).map((kept) => kept.values);
+  function anotherDevice(): DeviceVault {
+    return createEnvironmentInjector([DeviceVault], TestBed.inject(EnvironmentInjector)).get(
+      DeviceVault,
+    );
   }
 
-  beforeEach(async () => {
-    globalThis.indexedDB = new IDBFactory();
-    localStorage.clear();
-    TestBed.configureTestingModule({
-      providers: [
-        { provide: DEVICE_STORAGE_OPENER, useValue: () => openIdbDeviceStorage() },
-        { provide: PASSWORD_KEY_DERIVATION, useValue: new SmallArgon2Derivation() },
-        { provide: COPY_CHANNELS, useValue: new ChannelBus().factory },
-        { provide: STORAGE_PERSISTENCE, useValue: () => undefined },
-        { provide: TAB_LOCKS, useValue: new NamedLocks() },
-        { provide: ErrorReporter, useValue: { report: vi.fn() } },
-        { provide: DRAFT_KEEP_DELAY_MS, useValue: 0 },
-      ],
-    });
-    TestBed.inject(AdministrationAccess);
-    vault = TestBed.inject(DeviceVault);
-    shelf = new VaultDraftShelf(vault);
-    await vault.signedIn(JANA, { kind: 'password', password: 'Janino heslo 2026' });
+  async function draftsOf(account: DeviceAccount, on = vault): Promise<readonly unknown[]> {
+    expect(on.opened()?.account.userHandle).toBe(account.userHandle);
+    const store = on.opened()!.store;
+    return (await on.drafts(store)).map((kept) => kept.values);
+  }
+
+  async function startForm(): Promise<void> {
+    shelf = new VaultDraftShelf(vault, () => (session === null ? null : session.userHandle));
     values = { street: 'Dlouhá 12' };
     draft = TestBed.runInInjectionContext(() =>
       formDraft<Address>({
@@ -83,29 +74,113 @@ describe('Given the drafts of a donor form kept in the device copy of the signed
     draft.ready('v1');
     TestBed.tick();
     await draft.flush();
+  }
+
+  beforeEach(() => {
+    globalThis.indexedDB = new IDBFactory();
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: DEVICE_STORAGE_OPENER, useValue: () => openIdbDeviceStorage() },
+        { provide: PASSWORD_KEY_DERIVATION, useValue: new SmallArgon2Derivation() },
+        { provide: COPY_CHANNELS, useValue: new ChannelBus().factory },
+        { provide: STORAGE_PERSISTENCE, useValue: () => undefined },
+        { provide: TAB_LOCKS, useValue: new NamedLocks() },
+        { provide: ErrorReporter, useValue: { report: vi.fn() } },
+        { provide: DRAFT_KEEP_DELAY_MS, useValue: 0 },
+        {
+          provide: DRAFT_SHELF,
+          useFactory: () => shelf,
+        },
+      ],
+    });
+    TestBed.inject(AdministrationAccess);
+    vault = TestBed.inject(DeviceVault);
   });
 
   afterEach(() => TestBed.resetTestingModule());
 
-  it('when Jana types, then her edit is kept in her own copy', async () => {
-    await edit('Janina nová adresa 7');
+  describe('when Jana starts the form with her copy open', () => {
+    beforeEach(async () => {
+      session = JANA;
+      await vault.signedIn(JANA, { kind: 'password', password: 'Janino heslo 2026' });
+      await startForm();
+    });
 
-    expect(await draftsOf(JANA)).toEqual([{ street: 'Janina nová adresa 7' }]);
+    it('and she types, then her edit is kept in her own copy', async () => {
+      await edit('Janina nová adresa 7');
+
+      expect(await draftsOf(JANA)).toEqual([{ street: 'Janina nová adresa 7' }]);
+    });
+
+    it('and the tab turns to Petr while her form is open, then her later edits never reach his copy', async () => {
+      await edit('Janina nová adresa 7');
+      await anotherDevice().signedIn(PETR, { kind: 'password', password: 'Petrovo heslo 2026' });
+
+      session = PETR;
+      await vault.restored(PETR);
+      TestBed.tick();
+      await edit('Janina nová adresa 7b');
+
+      expect(await draftsOf(PETR)).toEqual([]);
+      expect(draft.offer()).toBeNull();
+    });
+
+    it('and Petr signs in in the tab, then the shelf refuses to keep anything under her copy', async () => {
+      const hers = shelf.holder('donor', JANA.userHandle)!;
+      await anotherDevice().signedIn(PETR, { kind: 'password', password: 'Petrovo heslo 2026' });
+
+      session = PETR;
+      await vault.restored(PETR);
+      const kept = await shelf.keep('donor', hers, {
+        key: 'profile',
+        base: 'version:v1',
+        values: { street: 'Janina nová adresa 7b' },
+        savedAt: '2026-11-06T09:00:00.000Z',
+      });
+
+      expect(kept).toBe(false);
+      expect(shelf.holder('donor', JANA.userHandle)).toBeNull();
+      expect(await draftsOf(PETR)).toEqual([]);
+    });
   });
 
-  it('when the tab turns to Petr while her form is open, then her later edits never reach his copy', async () => {
-    await edit('Janina nová adresa 7');
-    const petrsDevice = createEnvironmentInjector(
-      [DeviceVault],
-      TestBed.inject(EnvironmentInjector),
-    ).get(DeviceVault);
-    await petrsDevice.signedIn(PETR, { kind: 'password', password: 'Petrovo heslo 2026' });
+  describe('when Jana starts the form while no copy of hers is open', () => {
+    beforeEach(() => {
+      session = JANA;
+    });
 
-    await vault.restored(PETR);
-    TestBed.tick();
-    await edit('Janina nová adresa 7b');
+    it('and her own copy opens, then her edit is kept there', async () => {
+      await startForm();
 
-    expect(await draftsOf(PETR)).toEqual([]);
-    expect(draft.offer()).toBeNull();
+      await vault.signedIn(JANA, { kind: 'password', password: 'Janino heslo 2026' });
+      TestBed.tick();
+      await edit('Janina nová adresa 7');
+
+      expect(await draftsOf(JANA)).toEqual([{ street: 'Janina nová adresa 7' }]);
+    });
+
+    it('and Petr signs in and his copy opens in the tab, then her edits never reach his copy', async () => {
+      await startForm();
+
+      await vault.signedIn(PETR, { kind: 'password', password: 'Petrovo heslo 2026' });
+      TestBed.tick();
+      await edit('Janina nová adresa 7b');
+
+      expect(await draftsOf(PETR)).toEqual([]);
+    });
+
+    it('and her own copy is kept but not opened when Petr signs in, then her edits never reach his copy', async () => {
+      await vault.signedIn(JANA, { kind: 'password', password: 'Janino heslo 2026' });
+      const restarted = anotherDevice();
+      vault = restarted;
+      await startForm();
+
+      await restarted.signedIn(PETR, { kind: 'password', password: 'Petrovo heslo 2026' });
+      TestBed.tick();
+      await edit('Janina nová adresa 7b');
+
+      expect(await draftsOf(PETR, restarted)).toEqual([]);
+    });
   });
 });
