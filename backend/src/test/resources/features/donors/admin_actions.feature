@@ -58,6 +58,28 @@ Feature: An administrator reads what administrators changed and when
       | GRANT_ADMINISTRATION | Petr    |
     And the admin actions have no more pages
 
+  Scenario: Changes made at one moment are read page by page after the last one listed, none skipped
+    Given "Jana" recorded these changes at one moment an hour ago, newest first:
+      | action         | details             |
+      | REQUEST_BACKUP | Třetí ruční záloha  |
+      | REQUEST_BACKUP | Druhá ruční záloha  |
+      | REQUEST_BACKUP | První ruční záloha  |
+    When "Jana" asks for the 2 newest admin actions
+    Then the admin actions are:
+      | details            |
+      | Třetí ruční záloha |
+      | Druhá ruční záloha |
+    And the admin actions have more pages
+    When "Jana" asks for the 2 admin actions after the last one listed
+    Then the response status is 200
+    And the admin actions are:
+      | details            |
+      | První ruční záloha |
+    And the admin actions have no more pages
+    When "Jana" asks for the admin actions after an action without naming its time
+    Then the response status is 400
+    And the problem type ends with "validation"
+
   Scenario: A change made by an administrator who is no longer one still names the administrator
     Given "Petr" enables the second factor
     And "Eva" enables the second factor

@@ -357,24 +357,40 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
           .describe(
             'Only actions before this instant (ISO 8601), as the previous answer names it for the next page.',
           ),
+        beforeId: z
+          .string()
+          .uuid()
+          .optional()
+          .describe(
+            'With before: only actions listed after the action of this id, as the previous answer names it for the next page, so actions of one moment are not skipped.',
+          ),
         limit: z.number().int().min(1).max(200).default(50),
       }),
       annotations: READ_ONLY,
     },
-    async ({ before, limit }, ctx) =>
+    async ({ before, beforeId, limit }, ctx) =>
       answer(deps, ctx, 'nfnn_admin_actions', async ({ apiToken }) => {
         const query = new URLSearchParams({ limit: String(limit) });
         if (before !== undefined) {
           query.set('before', before);
+          if (beforeId !== undefined) {
+            query.set('beforeId', beforeId);
+          }
         }
         const page = asRecord(await backend.get(`/api/admin/donors/actions?${query}`, apiToken));
         const items = Array.isArray(page['items']) ? page['items'] : [];
-        const oldest = asRecord(items[items.length - 1])['performedAt'];
+        const lastListed = asRecord(items[items.length - 1]);
+        const oldest = lastListed['performedAt'];
+        const oldestId = lastListed['id'];
         const result = text(page);
-        if (page['hasMore'] === true && typeof oldest === 'string') {
+        if (
+          page['hasMore'] === true &&
+          typeof oldest === 'string' &&
+          typeof oldestId === 'string'
+        ) {
           result.content.push({
             type: 'text',
-            text: `Older actions: call nfnn_admin_actions again with before "${oldest}".`,
+            text: `Older actions: call nfnn_admin_actions again with before "${oldest}" and beforeId "${oldestId}".`,
           });
         }
         return result;

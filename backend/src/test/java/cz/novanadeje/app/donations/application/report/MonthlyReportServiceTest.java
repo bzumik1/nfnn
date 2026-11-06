@@ -197,7 +197,7 @@ class MonthlyReportServiceTest {
         assertThat(audited.getValue().adminId()).isEqualTo(ADMIN);
         assertThat(audited.getValue().action()).isEqualTo("SEND_MONTHLY_REPORT");
         assertThat(audited.getValue().subjectId()).isEmpty();
-        assertThat(audited.getValue().details()).isEqualTo("Měsíční přehled za 2026-09 ručně odeslán na pavel@example.cz, jakub@example.cz");
+        assertThat(audited.getValue().details()).isEqualTo("Měsíční přehled za 2026-09 ručně odeslán, počet příjemců 2");
         assertThat(audited.getValue().performedAt()).isEqualTo(FIRST_OF_OCTOBER_AT_SEVEN);
     }
 

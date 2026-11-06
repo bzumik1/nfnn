@@ -325,8 +325,16 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
         200,
         {
           items: [
-            { action: 'SEND_MONTHLY_REPORT', performedAt: '2026-10-23T07:30:00.123456Z' },
-            { action: 'PAIR_PAYMENT', performedAt: '2026-10-23T06:00:00.654321Z' },
+            {
+              id: '019a1c00-0000-7000-8000-00000000e001',
+              action: 'SEND_MONTHLY_REPORT',
+              performedAt: '2026-10-23T07:30:00.123456Z',
+            },
+            {
+              id: '019a1c00-0000-7000-8000-00000000e002',
+              action: 'PAIR_PAYMENT',
+              performedAt: '2026-10-23T06:00:00.654321Z',
+            },
           ],
           hasMore: true,
         },

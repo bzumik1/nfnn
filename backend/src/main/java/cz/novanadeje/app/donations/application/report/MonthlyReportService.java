@@ -82,7 +82,7 @@ public class MonthlyReportService {
         reportLog.recordSending(month, now);
         sender.send(compile(month), current);
         events.publishEvent(new AdminActionPerformed(adminId, SEND_ACTION, Optional.empty(),
-                "Měsíční přehled za " + month + " ručně odeslán na " + String.join(", ", current.recipients().values()), now));
+                "Měsíční přehled za " + month + " ručně odeslán, počet příjemců " + current.recipients().count(), now));
         log.info("Admin {} sent the monthly report for {} by hand to {} recipient(s)", adminId, month, current.recipients().count());
         return new ManualReportDelivery(month, current.recipients(), now);
     }
