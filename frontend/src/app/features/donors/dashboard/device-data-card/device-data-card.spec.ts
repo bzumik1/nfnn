@@ -13,10 +13,7 @@ import {
   type VaultMode,
 } from '../../../../core/device/store/device-vault';
 import { Connectivity } from '../../../../core/connectivity/connectivity';
-import {
-  DonorCopyDownload,
-  type DownloadOutcome,
-} from '../../../donations/device-copy/donor-copy-download';
+import { DonorCopySync, type SyncOutcome } from '../../../donations/device-copy/donor-copy-sync';
 import { DeviceDataCard } from './device-data-card';
 
 const DONOR = sampleDonor();
@@ -42,10 +39,10 @@ describe('Given the card "Data v tomto zařízení"', () => {
     forget: ReturnType<typeof vi.fn>;
   };
   let download: {
-    downloading: ReturnType<typeof signal<boolean>>;
+    syncing: ReturnType<typeof signal<boolean>>;
     reload: ReturnType<typeof vi.fn>;
   };
-  let reload: (outcome: DownloadOutcome) => void;
+  let reload: (outcome: SyncOutcome) => void;
   let logout: ReturnType<typeof vi.fn>;
   let offline: WritableSignal<boolean>;
 
@@ -82,8 +79,8 @@ describe('Given the card "Data v tomto zařízení"', () => {
       forget: vi.fn(async () => undefined),
     };
     download = {
-      downloading: signal(false),
-      reload: vi.fn(() => new Promise<DownloadOutcome>((resolve) => (reload = resolve))),
+      syncing: signal(false),
+      reload: vi.fn(() => new Promise<SyncOutcome>((resolve) => (reload = resolve))),
     };
     logout = vi.fn(() => of(undefined));
     TestBed.configureTestingModule({
@@ -91,7 +88,7 @@ describe('Given the card "Data v tomto zařízení"', () => {
       providers: [
         provideRouter([]),
         { provide: DeviceVault, useValue: vault },
-        { provide: DonorCopyDownload, useValue: download },
+        { provide: DonorCopySync, useValue: download },
         { provide: AuthStore, useValue: { donor: signal(DONOR), logout } },
         { provide: Connectivity, useValue: { offline } },
       ],
@@ -133,7 +130,7 @@ describe('Given the card "Data v tomto zařízení"', () => {
 
   it('when the first download is still running, then the card says the data are being saved', async () => {
     vault.opened.set(openedWith(null));
-    download.downloading.set(true);
+    download.syncing.set(true);
     await settle();
 
     expect(state()).toBe('Data se ukládají do zařízení…');
@@ -187,16 +184,23 @@ describe('Given the card "Data v tomto zařízení"', () => {
       );
     });
 
-    for (const outcome of ['mismatch', 'no-copy'] as const) {
-      it(`and the download ends as ${outcome}, then the alert does not blame the connection`, async () => {
-        reload(outcome);
-        await settle();
+    it('and the copy is closed meanwhile, then the alert does not blame the connection', async () => {
+      reload('no-copy');
+      await settle();
 
-        expect(normalized(root().querySelector('[role="alert"]:not(:empty)')?.textContent)).toBe(
-          'Data se nepodařilo načíst. Zkuste to prosím za chvíli znovu, a když to nepůjde, napište nám na info@nfnn.cz.',
-        );
-      });
-    }
+      expect(normalized(root().querySelector('[role="alert"]:not(:empty)')?.textContent)).toBe(
+        'Data se nepodařilo načíst. Zkuste to prosím za chvíli znovu, a když to nepůjde, napište nám na info@nfnn.cz.',
+      );
+    });
+
+    it('and the data do not match the server’s summary, then the alert says they could not be checked, which a stored time beside it does not contradict', async () => {
+      reload('mismatch');
+      await settle();
+
+      expect(normalized(root().querySelector('[role="alert"]:not(:empty)')?.textContent)).toBe(
+        'Data ze serveru se nepodařilo ověřit. Zkuste je prosím za chvíli načíst znovu, a když to nepůjde, napište nám na info@nfnn.cz.',
+      );
+    });
   });
 
   it('when the device is offline and the donor asks to load the data again, then the button says it needs a connection and nothing is asked', async () => {

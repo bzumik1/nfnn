@@ -62,6 +62,31 @@ describe('Given an account store over IndexedDB', () => {
     });
   });
 
+  it('when contents with receipt images are stored, then a new store of the same copy loads the images back by digest and the raw database holds none of their bytes', async () => {
+    const signature = btoa(`signature of ${CANARY_NAME}`);
+    const portrait = btoa(`portrait of ${CANARY_NAME}`);
+    await store.replace({
+      ...contents(),
+      images: [
+        { sha256: 'f'.repeat(64), mediaType: 'image/png', base64: signature },
+        { sha256: 'e'.repeat(64), mediaType: 'image/jpeg', base64: portrait },
+      ],
+    });
+
+    const reopened = new AccountStore(await sameCopy(copy), storage, 'donor');
+
+    expect(await reopened.load()).toBe('loaded');
+    expect(reopened.contents()?.images).toEqual([
+      { sha256: 'e'.repeat(64), mediaType: 'image/jpeg', base64: portrait },
+      { sha256: 'f'.repeat(64), mediaType: 'image/png', base64: signature },
+    ]);
+    const dump = await rawIndexedDbDump();
+    expect(leaks(dump, signature)).toBe(false);
+    expect(leaks(dump, portrait)).toBe(false);
+    expect(leaks(dump, CANARY_NAME)).toBe(false);
+    expect(leaks(dump, 'f'.repeat(64))).toBe(false);
+  });
+
   it('when contents are stored, then they are shown at once and a later change to the given object does not reach them', async () => {
     const given = contents();
 

@@ -1,0 +1,18 @@
+<div aria-live="polite" aria-atomic="true">
+  @switch (shown()) {
+    @case ('saving') {
+      <div #bar class="ui-notice ui-notice--floating first-sync first-sync--saving">
+        <p class="ui-notice__text" i18n="@@donor.dashboard.firstSync.saving">
+          Ukládáme přehled vašich darů do tohoto zařízení…
+        </p>
+      </div>
+    }
+    @case ('stored') {
+      <div #bar class="ui-notice ui-notice--status ui-notice--floating first-sync">
+        <p class="ui-notice__text" i18n="@@donor.dashboard.firstSync.stored">
+          Přehled vašich darů je uložený v tomto zařízení.
+        </p>
+      </div>
+    }
+  }
+</div>
