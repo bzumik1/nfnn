@@ -13,4 +13,10 @@ public interface SecondFactorRecoveryRepository {
     Optional<SecondFactorRecovery> findOpenOf(DonorId donorId, Instant at);
 
     boolean markUsed(UUID recoveryId, Instant at);
+
+    int forgetCodesClosedAt(Instant now);
+
+    int deleteExpiredBefore(Instant cutoff);
+
+    void deleteAllOfWithoutWaiting(DonorId donorId);
 }

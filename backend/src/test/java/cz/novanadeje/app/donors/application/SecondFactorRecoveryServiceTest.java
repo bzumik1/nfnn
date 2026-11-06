@@ -102,7 +102,7 @@ class SecondFactorRecoveryServiceTest {
     @DisplayName("Given a sign-in waiting for the code of a donor with a verified account, when the recovery starts, then a new code replaces the open one and the instructions name the payment")
     void should_open_a_recovery_and_describe_the_payment_when_started_given_a_waiting_sign_in() {
         LinkSecret challenge = waitingSignIn(JANA);
-        when(donors.findById(JANA)).thenReturn(Optional.of(donor(JANA, "Jana Nováková", "jana@example.cz", false)));
+        when(donors.findByIdForUpdate(JANA)).thenReturn(Optional.of(donor(JANA, "Jana Nováková", "jana@example.cz", false)));
         when(secondFactors.findByDonor(JANA)).thenReturn(Optional.of(enabledFactor(JANA)));
         when(targets.targetFor(JANA.value())).thenReturn(Optional.of(TARGET));
         when(recoveries.findOpenOf(JANA, NOW)).thenReturn(Optional.empty());
@@ -134,7 +134,7 @@ class SecondFactorRecoveryServiceTest {
     @DisplayName("Given an account verified long enough ago, when the recovery starts, then the instructions name no later date")
     void should_name_no_date_when_started_given_an_account_usable_today() {
         LinkSecret challenge = waitingSignIn(JANA);
-        when(donors.findById(JANA)).thenReturn(Optional.of(donor(JANA, "Jana Nováková", "jana@example.cz", false)));
+        when(donors.findByIdForUpdate(JANA)).thenReturn(Optional.of(donor(JANA, "Jana Nováková", "jana@example.cz", false)));
         when(secondFactors.findByDonor(JANA)).thenReturn(Optional.of(enabledFactor(JANA)));
         when(targets.targetFor(JANA.value())).thenReturn(Optional.of(new SecondFactorRecoveryTarget(TARGET.accountNumber(), TARGET.iban(),
                 TARGET.amount(), LocalDate.of(2026, 10, 24))));
@@ -150,7 +150,7 @@ class SecondFactorRecoveryServiceTest {
     @DisplayName("Given an open recovery of the donor, when the donor starts the recovery again, then the same code, start and expiry come back as resumed and nothing new opens")
     void should_return_the_open_recovery_when_started_again_given_it_is_still_open() {
         LinkSecret challenge = waitingSignIn(JANA);
-        when(donors.findById(JANA)).thenReturn(Optional.of(donor(JANA, "Jana Nováková", "jana@example.cz", false)));
+        when(donors.findByIdForUpdate(JANA)).thenReturn(Optional.of(donor(JANA, "Jana Nováková", "jana@example.cz", false)));
         when(secondFactors.findByDonor(JANA)).thenReturn(Optional.of(enabledFactor(JANA)));
         when(targets.targetFor(JANA.value())).thenReturn(Optional.of(TARGET));
         Instant startedAt = NOW.minus(Duration.ofDays(3));
@@ -171,7 +171,7 @@ class SecondFactorRecoveryServiceTest {
     @DisplayName("Given an open recovery stored without its code, when the donor starts the recovery again, then a new code replaces it")
     void should_open_a_new_recovery_when_started_again_given_the_open_one_kept_no_code() {
         LinkSecret challenge = waitingSignIn(JANA);
-        when(donors.findById(JANA)).thenReturn(Optional.of(donor(JANA, "Jana Nováková", "jana@example.cz", false)));
+        when(donors.findByIdForUpdate(JANA)).thenReturn(Optional.of(donor(JANA, "Jana Nováková", "jana@example.cz", false)));
         when(secondFactors.findByDonor(JANA)).thenReturn(Optional.of(enabledFactor(JANA)));
         when(targets.targetFor(JANA.value())).thenReturn(Optional.of(TARGET));
         SecondFactorRecovery withoutCode = SecondFactorRecovery.reconstitute(UuidV7.generate(NOW.minusSeconds(60)), JANA, CODE.hash(), null,
@@ -204,7 +204,7 @@ class SecondFactorRecoveryServiceTest {
     @DisplayName("Given a donor without an account verified for the recovery, when the recovery starts, then it is unavailable and nothing opens")
     void should_be_unavailable_when_started_given_no_verified_account() {
         LinkSecret challenge = waitingSignIn(JANA);
-        when(donors.findById(JANA)).thenReturn(Optional.of(donor(JANA, "Jana Nováková", "jana@example.cz", false)));
+        when(donors.findByIdForUpdate(JANA)).thenReturn(Optional.of(donor(JANA, "Jana Nováková", "jana@example.cz", false)));
         when(secondFactors.findByDonor(JANA)).thenReturn(Optional.of(enabledFactor(JANA)));
         when(targets.targetFor(JANA.value())).thenReturn(Optional.empty());
 
