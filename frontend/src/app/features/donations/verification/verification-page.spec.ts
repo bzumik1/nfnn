@@ -640,6 +640,23 @@ describe('Given the verification page in another context, as the administration 
     expect(root.querySelector('a[href^="mailto:"]')).toBeNull();
   });
 
+  it.each(['no-answer', 'unanswered'] as const)(
+    'when the fund did not answer (%s), then the verdict points to the register line under it and to trying again',
+    async (status) => {
+      const root = await open(`/sprava/overit#${FRAGMENT}`, {
+        state: 'signed',
+        receipt: YEARLY,
+        status,
+      });
+
+      expect(root.querySelector('.verify-lead')?.textContent?.replace(/\s+/g, ' ')).toContain(
+        'Jak ho vedou údaje správy v tomto zařízení, uvádíme hned pod tím; odpověď fondu dostanete, když to za chvíli zkusíte znovu.',
+      );
+      expect(root.querySelector('.verify-lead')?.textContent).not.toContain('nevíte');
+      expect(root.querySelector('.test-register')?.textContent).toBe(`2027-000007 ${status}`);
+    },
+  );
+
   it('when the fund could not be asked, then the status line points to the register line under it', async () => {
     const root = await open(`/sprava/overit#${FRAGMENT}`, {
       state: 'signed',

@@ -23,11 +23,19 @@
       >
         Podpis sedí, ale fond teď neodpověděl, zda potvrzení vede
       </h1>
-      <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.signedNoAnswer.text">
-        Údaje v tomto kódu podepsal fond Nová naděje ke dni vystavení, fond ale teď neodpověděl, zda
-        potvrzení vede jako platné. Dokud neodpoví, nevíte, zda ho nenahradil novějším nebo
-        nezrušil. Zkuste to za chvíli znovu.
-      </p>
+      @if (administration) {
+        <p class="ui-panel__lead verify-lead" i18n="@@admin.verify.result.signedNoAnswer">
+          Údaje v tomto kódu podepsal fond Nová naděje ke dni vystavení, fond ale teď neodpověděl,
+          zda potvrzení vede jako platné. Jak ho vedou údaje správy v tomto zařízení, uvádíme hned
+          pod tím; odpověď fondu dostanete, když to za chvíli zkusíte znovu.
+        </p>
+      } @else {
+        <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.signedNoAnswer.text">
+          Údaje v tomto kódu podepsal fond Nová naděje ke dni vystavení, fond ale teď neodpověděl,
+          zda potvrzení vede jako platné. Dokud neodpoví, nevíte, zda ho nenahradil novějším nebo
+          nezrušil. Zkuste to za chvíli znovu.
+        </p>
+      }
     }
     @case ('replaced') {
       <h1

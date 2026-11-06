@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { formatBankTime, formatDonationDate, pragueDay } from '../../donations/donation-date';
+import { formatDonationDate, formatPragueClock, pragueDay } from '../../donations/donation-date';
 import type { SignedReceipt } from '../../donations/verification/receipt-proof';
 import type { SignedStatus } from '../../donations/verification/receipt-verifier';
 import { AdministrationCopy } from '../device-copy/administration-copy';
@@ -33,6 +33,6 @@ export class RegisterLine {
   });
   protected readonly storedTime = computed(() => {
     const storedAt = this.copy.storedAt();
-    return storedAt === null ? null : formatBankTime(storedAt).slice(-5);
+    return storedAt === null ? null : formatPragueClock(storedAt);
   });
 }

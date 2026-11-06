@@ -36,7 +36,7 @@ describe('Given the register line under a verified receipt', () => {
 
   function stateText(element: HTMLElement): string {
     return Array.from(element.querySelectorAll('[role="status"] p'), (part) =>
-      (part.textContent ?? '').replace(/\s+/g, ' ').trim(),
+      (part.textContent ?? '').replace(/[ \t\n\r]+/g, ' ').trim(),
     ).join(' ');
   }
 
@@ -90,7 +90,7 @@ describe('Given the register line under a verified receipt', () => {
       const element = await render();
 
       expect(stateText(element)).toBe(
-        'Nahrazené Fond ho 01. 02. 2027 nahradil potvrzením č. 2026-000020. Platí to novější; najdete ho na kartě dárce.',
+        'Nahrazené Fond ho 01. 02. 2027 nahradil potvrzením č.\u00a02026-000020. Platí to novější; najdete ho na kartě dárce.',
       );
     });
 
@@ -140,7 +140,7 @@ describe('Given the register line under a verified receipt', () => {
       expect(element.querySelector('a')).not.toBeNull();
     });
 
-    it('and the copy does not hold its number, then it says not found, to verify again online, and links no donor', async () => {
+    it('and the copy does not hold its number, then it says not found, to verify again once the fund answers, and links no donor', async () => {
       rows.set([]);
 
       const element = await render();
@@ -148,7 +148,7 @@ describe('Given the register line under a verified receipt', () => {
       expect(stateText(element)).toContain(
         'Nenalezeno Údaje správy v tomto zařízení potvrzení s tímto číslem nemají.',
       );
-      expect(stateText(element)).toContain('Po připojení k internetu ho ověřte znovu.');
+      expect(stateText(element)).toContain('Ověřte ho znovu, až fond odpoví.');
       expect(element.querySelector('a')).toBeNull();
     });
   });
@@ -171,7 +171,7 @@ describe('Given the register line under a verified receipt', () => {
       const element = await render('replaced');
 
       expect(stateText(element)).toBe(
-        'Nahrazené Fond ho 01. 02. 2027 nahradil potvrzením č. 2026-000020.',
+        'Nahrazené Fond ho 01. 02. 2027 nahradil potvrzením č.\u00a02026-000020.',
       );
     });
 
@@ -187,13 +187,40 @@ describe('Given the register line under a verified receipt', () => {
       expect(element.querySelector('a')?.getAttribute('href')).toBe('/sprava/darci/donor-1');
     });
 
-    it('active while the copy does not hold its number, then it says the copy is behind and links no donor', async () => {
+    it('active while the copy does not hold its number, then it says the copy misses it, why, and that the answer counts, and links no donor', async () => {
       rows.set([]);
 
       const element = await render('active');
 
-      expect(stateText(element)).toContain('Starší údaje');
+      expect(stateText(element)).toBe(
+        'Nenalezeno Údaje správy v tomto zařízení ho nemají: nejspíš vzniklo až po jejich posledním stažení, nebo patří vymazanému dárci. Platí odpověď fondu.',
+      );
       expect(element.querySelector('a')).toBeNull();
+    });
+
+    it('replaced while the copy holds its number with other data, then it says they disagree in red and to tell the technician', async () => {
+      rows.set([receiptRow({ giftCount: 3 })]);
+
+      const element = await render('replaced');
+
+      expect(stateText(element)).toBe(
+        'Nesouhlasí Fond potvrzení vede tak, jak uvádí odpověď výše, údaje správy v tomto zařízení ho ale mají s jinými údaji. Platí odpověď fondu; dejte prosím vědět technikovi.',
+      );
+      expect(element.querySelector('.ui-badge--danger')).not.toBeNull();
+    });
+
+    it('as the copy holds it, outdated, then it adds only the day and repeats no next step', async () => {
+      rows.set([
+        receiptRow({
+          status: 'WITHDRAWN',
+          withdrawalReason: 'DONATIONS_CHANGED',
+          withdrawnAt: '2027-02-02T08:00:00Z',
+        }),
+      ]);
+
+      const element = await render('outdated');
+
+      expect(stateText(element)).toBe('Zastaralé Fond ho 02. 02. 2027 zrušil.');
     });
 
     it('that it does not know the receipt the copy holds with these data, then it says they disagree and never valid', async () => {

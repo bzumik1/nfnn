@@ -205,9 +205,9 @@ describe('Given a receipt whose signature the page verified and the answer of th
     });
   });
 
-  it('when the fund answered active but the copy does not hold the number, then the view says the copy is behind the fund', () => {
+  it('when the fund answered active but the copy does not hold the number, then the view says the copy misses it', () => {
     expect(registerView(SIGNED_YEARLY, [], 'active')).toEqual({
-      state: 'stale',
+      state: 'missing',
       confirmed: false,
       donorId: null,
       on: null,
@@ -224,6 +224,16 @@ describe('Given a receipt whose signature the page verified and the answer of th
       }),
     ];
     expect(registerView(SIGNED_YEARLY, outdated, 'withdrawn').state).toBe('stale');
+  });
+
+  it('when the fund answered replaced but the copy holds its number with other data, then the view is a mismatch of the copy, not its age', () => {
+    expect(registerView(SIGNED_YEARLY, [receiptRow({ giftCount: 3 })], 'replaced')).toEqual({
+      state: 'mismatch',
+      confirmed: false,
+      donorId: 'donor-1',
+      on: null,
+      by: null,
+    });
   });
 
   it('when the fund does not know the receipt but the copy holds it with the same data, then the view is a conflict and never active', () => {

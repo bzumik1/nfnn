@@ -44,6 +44,8 @@ export type RegisterState =
   | 'differs'
   | 'not-held'
   | 'conflict'
+  | 'mismatch'
+  | 'missing'
   | 'stale';
 
 export interface RegisterView {
@@ -74,9 +76,12 @@ export function registerView(
       : { state: 'conflict', confirmed: false, donorId, on: null, by: null };
   }
   if (KEPT.includes(status)) {
-    return entry.state === status
-      ? { state: entry.state, confirmed: true, donorId, on, by }
-      : { state: 'stale', confirmed: false, donorId, on: null, by: null };
+    if (entry.state === status) {
+      return { state: entry.state, confirmed: true, donorId, on, by };
+    }
+    const state =
+      entry.state === 'differs' ? 'mismatch' : entry.state === 'not-held' ? 'missing' : 'stale';
+    return { state, confirmed: false, donorId, on: null, by: null };
   }
   return { state: entry.state, confirmed: false, donorId, on, by };
 }

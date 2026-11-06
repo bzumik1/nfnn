@@ -126,7 +126,7 @@ test.describe('Given an administrator whose device holds the administration copy
     await expect(register(page)).not.toContainText('Platné');
   });
 
-  test('when the fund keeps the receipt as valid but the copy holds no receipt of that number, then the copy is shown as older and links no donor', async ({
+  test('when the fund keeps the receipt as valid but the copy holds no receipt of that number, then the copy says it misses it, the answer counts, and links no donor', async ({
     page,
   }) => {
     await administratorOn(page, []);
@@ -136,7 +136,8 @@ test.describe('Given an administrator whose device holds the administration copy
     await scanFragment(page, YEARLY_RECEIPT.fragment);
 
     await expect(page.getByText('Fond toto potvrzení vede jako platné.')).toBeVisible();
-    await expect(register(page)).toContainText('Starší údaje');
+    await expect(register(page)).toContainText('Nenalezeno');
+    await expect(register(page)).toContainText('Platí odpověď fondu.');
     await expect(register(page).getByRole('link')).toHaveCount(0);
   });
 });

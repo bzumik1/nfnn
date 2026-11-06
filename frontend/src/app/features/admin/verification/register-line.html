@@ -27,7 +27,7 @@
           @if (day(); as day) {
             @if (current.by; as number) {
               <ng-container i18n="@@admin.verify.register.replaced.onBy"
-                >Fond ho {{ day }} nahradil potvrzením č. {{ number }}.</ng-container
+                >Fond ho {{ day }} nahradil potvrzením č.&nbsp;{{ number }}.</ng-container
               >
             } @else {
               <ng-container i18n="@@admin.verify.register.replaced.on"
@@ -37,7 +37,7 @@
           } @else {
             @if (current.by; as number) {
               <ng-container i18n="@@admin.verify.register.replaced.by"
-                >Fond ho nahradil potvrzením č. {{ number }}.</ng-container
+                >Fond ho nahradil potvrzením č.&nbsp;{{ number }}.</ng-container
               >
             } @else {
               <ng-container i18n="@@admin.verify.register.replaced.text"
@@ -58,20 +58,28 @@
             >Zastaralé</span
           >
         </p>
-        <p class="register__text">
+        @if (current.confirmed) {
           @if (day(); as day) {
-            <ng-container i18n="@@admin.verify.register.outdated.on"
-              >Od vystavení se dary dárce změnily, proto ho fond {{ day }} zrušil.</ng-container
-            >
-          } @else {
-            <ng-container i18n="@@admin.verify.register.outdated.text"
-              >Od vystavení se dary dárce změnily, proto ho fond zrušil.</ng-container
-            >
+            <p class="register__text" i18n="@@admin.verify.register.withdrawn.on">
+              Fond ho {{ day }} zrušil.
+            </p>
           }
-        </p>
-        <p class="register__text" i18n="@@admin.verify.register.outdated.next">
-          Na kartě dárce uvidíte, zda už má nové.
-        </p>
+        } @else {
+          <p class="register__text">
+            @if (day(); as day) {
+              <ng-container i18n="@@admin.verify.register.outdated.on"
+                >Od vystavení se dary dárce změnily, proto ho fond {{ day }} zrušil.</ng-container
+              >
+            } @else {
+              <ng-container i18n="@@admin.verify.register.outdated.text"
+                >Od vystavení se dary dárce změnily, proto ho fond zrušil.</ng-container
+              >
+            }
+          </p>
+          <p class="register__text" i18n="@@admin.verify.register.outdated.next">
+            Na kartě dárce uvidíte, zda už má nové.
+          </p>
+        }
       }
       @case ('withdrawn') {
         <p>
@@ -133,9 +141,31 @@
           <p class="register__text" i18n="@@admin.verify.register.notHeld.text">
             Údaje správy v tomto zařízení potvrzení s tímto číslem nemají. Mohlo vzniknout až po
             jejich posledním stažení, nebo patří vymazanému dárci, jehož potvrzení se do zařízení
-            neukládají. Po připojení k internetu ho ověřte znovu.
+            neukládají. Ověřte ho znovu, až fond odpoví.
           </p>
         }
+      }
+      @case ('mismatch') {
+        <p>
+          <span class="ui-badge ui-badge--danger" i18n="@@admin.verify.register.differs.badge"
+            >Nesouhlasí</span
+          >
+        </p>
+        <p class="register__text" i18n="@@admin.verify.register.mismatch.text">
+          Fond potvrzení vede tak, jak uvádí odpověď výše, údaje správy v tomto zařízení ho ale mají
+          s jinými údaji. Platí odpověď fondu; dejte prosím vědět technikovi.
+        </p>
+      }
+      @case ('missing') {
+        <p>
+          <span class="ui-badge ui-badge--warning" i18n="@@admin.verify.register.notHeld.badge"
+            >Nenalezeno</span
+          >
+        </p>
+        <p class="register__text" i18n="@@admin.verify.register.missing.text">
+          Údaje správy v tomto zařízení ho nemají: nejspíš vzniklo až po jejich posledním stažení,
+          nebo patří vymazanému dárci. Platí odpověď fondu.
+        </p>
       }
       @case ('stale') {
         <p>
