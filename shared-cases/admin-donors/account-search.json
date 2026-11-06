@@ -178,7 +178,8 @@
           { "query": "a", "page": 0, "limit": 3 },
           { "query": "zzz" },
           { "query": " " },
-          { "query": "novak " }
+          { "query": "novak " },
+          { "query": "  novak  " }
         ]
       },
       "expected": {
@@ -718,7 +719,60 @@
           },
           { "items": [], "hasMore": false },
           { "items": [], "hasMore": false },
-          { "items": [], "hasMore": false }
+          { "items": [], "hasMore": false },
+          {
+            "items": [
+              {
+                "donorId": "donor:jana2",
+                "type": "PERSON",
+                "name": "Jana Nováková",
+                "companyIdentifier": null,
+                "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+                "email": "a.novakova@example.cz",
+                "variableSymbol": "7700001006",
+                "preferredLocale": "cs",
+                "registeredAt": "2026-05-01T10:00:00Z",
+                "emailVerified": true,
+                "administrator": false,
+                "secondFactorEnabled": false,
+                "passkeys": 0,
+                "erasedAt": null
+              },
+              {
+                "donorId": "donor:jana",
+                "type": "PERSON",
+                "name": "Jana Nováková",
+                "companyIdentifier": null,
+                "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+                "email": "jana.novakova@example.cz",
+                "variableSymbol": "7700001001",
+                "preferredLocale": "cs",
+                "registeredAt": "2026-01-15T10:00:00Z",
+                "emailVerified": true,
+                "administrator": false,
+                "secondFactorEnabled": false,
+                "passkeys": 0,
+                "erasedAt": null
+              },
+              {
+                "donorId": "donor:firma",
+                "type": "COMPANY",
+                "name": "Pekárna U Nováků s.r.o.",
+                "companyIdentifier": "25596641",
+                "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+                "email": "pekarna@example.cz",
+                "variableSymbol": "7700001003",
+                "preferredLocale": "cs",
+                "registeredAt": "2026-03-10T09:30:00Z",
+                "emailVerified": true,
+                "administrator": false,
+                "secondFactorEnabled": false,
+                "passkeys": 0,
+                "erasedAt": null
+              }
+            ],
+            "hasMore": false
+          }
         ]
       }
     },

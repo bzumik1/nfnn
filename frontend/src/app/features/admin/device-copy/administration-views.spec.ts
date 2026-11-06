@@ -220,6 +220,42 @@ describe('Given receipts of a donor in the copy', () => {
     ]);
   });
 
+  it('when two receipts were issued at the same instant, then the higher number comes first, as the server orders them', () => {
+    const card = donorCard(
+      {
+        ...rows,
+        receipts: [
+          receipt({
+            id: 'lower',
+            number: '2026-000008',
+            status: 'REPLACED',
+            issuedAt: '2026-03-08T10:00:00.120Z',
+          }),
+          receipt({
+            id: 'higher',
+            number: '2026-000009',
+            status: 'ACTIVE',
+            issuedAt: '2026-03-08T10:00:00.120000Z',
+          }),
+          receipt({
+            id: 'later',
+            number: '2026-000010',
+            status: 'REPLACED',
+            issuedAt: '2026-03-08T10:00:00.120500Z',
+          }),
+        ],
+      },
+      'jana',
+      { today: '2026-10-20', receiptsAvailableFrom: 2026 },
+    );
+
+    expect(card?.receipts.map((item) => item.number)).toEqual([
+      '2026-000010',
+      '2026-000009',
+      '2026-000008',
+    ]);
+  });
+
   it("when the donor also has a yearly receipt, then it is listed without a gift and never becomes the gift's receipt number", () => {
     const card = donorCard(
       {
@@ -252,6 +288,25 @@ describe('Given receipts of a donor in the copy', () => {
     const paired = paymentList(withPayment(rows), 'paired', {});
 
     expect(paired.items[0].donation?.receiptIssued).toBe(true);
+  });
+
+  it("when the gift's only receipt was withdrawn, then the paired payment still says a receipt was issued and the card names no receipt number", () => {
+    const withdrawnOnly = withPayment({
+      ...rows,
+      receipts: [{ ...rows.receipts[1], status: 'WITHDRAWN', withdrawnAt: '2026-03-06T10:00:00Z' }],
+    });
+
+    const paired = paymentList(withdrawnOnly, 'paired', {});
+    const card = donorCard(withdrawnOnly, 'jana', {
+      today: '2026-10-20',
+      receiptsAvailableFrom: 2026,
+    });
+
+    expect(paired.items[0].donation?.receiptIssued).toBe(true);
+    expect(card?.donations.items[0].receiptNumber).toBeNull();
+    expect(card?.receipts.map((item) => [item.number, item.active])).toEqual([
+      ['2026-000002', false],
+    ]);
   });
 
   it("when the gift's only receipt was replaced, then the paired payment still says a receipt was issued and the card names no receipt number", () => {

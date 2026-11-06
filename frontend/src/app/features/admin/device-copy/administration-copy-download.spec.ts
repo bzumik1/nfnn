@@ -300,7 +300,32 @@ describe('Given the download of the administration into its copy on this device'
       ]);
     });
 
-    it('and only the summary changed, such as the day or the first receipt year, then no chunk is downloaded and the copy is stored with the new summary', async () => {
+    it('and the payments are as the copy holds them after all, then nothing is downloaded and the copy is stored only without the chunk the server no longer lists', async () => {
+      await manifests();
+
+      expect(http.match(() => true)).toHaveLength(0);
+      expect(vault.stored.map((stored) => stored.chunks.map((chunk) => chunk.id))).toEqual([
+        ['donations/payments:2026-11', 'donors/accounts:2026-11'],
+      ]);
+    });
+  });
+
+  describe('when a copy already stored opens again and only the summary changed since, such as the day or the first receipt year', () => {
+    it('then no chunk is downloaded and the copy is stored with the new summary', async () => {
+      vault.open('unlocked', {
+        chunks: [
+          {
+            id: 'donations/payments:2026-11',
+            rowsSha256: await rowsSha256(PAYMENTS),
+            rows: PAYMENTS,
+          },
+          { id: 'donors/accounts:2026-11', rowsSha256: await rowsSha256(ACCOUNTS), rows: ACCOUNTS },
+        ],
+        summary: { donations: SUMMARY },
+        storedAt: '2026-11-05T08:00:00.000Z',
+      });
+      await flush();
+      const outcome = download.refresh();
       const newer = { today: '2027-01-01', receiptsAvailableFrom: 2026, byYear: [] };
       await answer('/api/admin/donations/sync', {
         subject: ADMIN_ID,
@@ -314,17 +339,9 @@ describe('Given the download of the administration into its copy on this device'
         chunks: [{ id: 'accounts:2026-11', rowsSha256: await rowsSha256(ACCOUNTS), count: 1 }],
       });
 
+      expect(await outcome).toBe('stored');
       expect(http.match(() => true)).toHaveLength(0);
       expect(vault.stored.map((stored) => stored.summary)).toEqual([{ donations: newer }]);
-    });
-
-    it('and the payments are as the copy holds them after all, then nothing is downloaded and the copy is stored only without the chunk the server no longer lists', async () => {
-      await manifests();
-
-      expect(http.match(() => true)).toHaveLength(0);
-      expect(vault.stored.map((stored) => stored.chunks.map((chunk) => chunk.id))).toEqual([
-        ['donations/payments:2026-11', 'donors/accounts:2026-11'],
-      ]);
     });
   });
 
@@ -381,6 +398,15 @@ describe('Given the download of the administration into its copy on this device'
 
       expect(await afterChange).toBe('unchanged');
       expect(await alsoAfterChange).toBe('unchanged');
+      expect(http.match(() => true)).toHaveLength(0);
+
+      const running = download.refresh();
+      const afterLaterChange = download.refresh(true);
+      await manifests();
+      await manifests();
+
+      expect(await running).toBe('unchanged');
+      expect(await afterLaterChange).toBe('unchanged');
       expect(http.match(() => true)).toHaveLength(0);
     });
   });

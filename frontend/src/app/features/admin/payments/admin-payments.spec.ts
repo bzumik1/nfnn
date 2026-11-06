@@ -1279,5 +1279,30 @@ describe('Given an administrator on the bank payments page with the administrati
 
       expect(refresh.mock.calls.at(-1)).toEqual([true]);
     });
+
+    it('and someone else changed the payment meanwhile, then reloading reads the list from a refresh that starts after the refusal', async () => {
+      button('Přiřadit dárci').click();
+      await settle();
+      const dialog = document.querySelector('dialog[open]') as HTMLDialogElement;
+      (dialog.querySelector('input[type="radio"]') as HTMLInputElement).click();
+      await settle();
+      button('Přiřadit dárci Jana Nováková').click();
+      const refused = problem(
+        409,
+        'donations/changed-meanwhile',
+        'Mezitím se to změnilo',
+        'Platbu mezitím změnil někdo jiný.',
+      );
+      http
+        .expectOne((request) => request.url.endsWith('/pair'))
+        .flush({ ...refused.body, version: '1b2c3d4e5f607182' }, refused.options);
+      await settle();
+      const callsBefore = refresh.mock.calls.length;
+
+      button('Načíst aktuální stav').click();
+      await settle();
+
+      expect(refresh.mock.calls.slice(callsBefore)).toEqual([[true]]);
+    });
   });
 });

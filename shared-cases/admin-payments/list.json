@@ -394,7 +394,8 @@
           { "from": "2026-03-04" },
           { "query": " " },
           { "query": "svoboda " },
-          { "query": " " }
+          { "query": " " },
+          { "query": "  svoboda  " }
         ]
       },
       "expected": {
@@ -1259,7 +1260,46 @@
             "total": 3
           },
           { "year": null, "availableYears": [], "items": [], "total": 0 },
-          { "year": null, "availableYears": [], "items": [], "total": 0 }
+          { "year": null, "availableYears": [], "items": [], "total": 0 },
+          {
+            "year": null,
+            "availableYears": [],
+            "items": [
+              {
+                "id": "payment:p3",
+                "bankTransactionId": 26000000006,
+                "bookedOn": "2026-03-03",
+                "amountMinor": 100,
+                "currency": "CZK",
+                "variableSymbol": null,
+                "counterpartyAccount": "2000145399/0800",
+                "counterpartyName": "SVOBODA PETR",
+                "messageForRecipient": "Ověření účtu",
+                "importedAt": "2026-03-03T12:00:00Z",
+                "unpairedByAdminAt": null,
+                "accountVerification": true,
+                "donation": null,
+                "version": "eb9b2c00d6729ce6"
+              },
+              {
+                "id": "payment:p2",
+                "bankTransactionId": 26000000005,
+                "bookedOn": "2026-03-03",
+                "amountMinor": 7000,
+                "currency": "CZK",
+                "variableSymbol": null,
+                "counterpartyAccount": "2000145399/0800",
+                "counterpartyName": "SVOBODA PETR",
+                "messageForRecipient": "Na projekty",
+                "importedAt": "2026-03-03T12:00:00Z",
+                "unpairedByAdminAt": "2026-03-03T13:00:00Z",
+                "accountVerification": false,
+                "donation": null,
+                "version": "47a630d40d3a3550"
+              }
+            ],
+            "total": 2
+          }
         ]
       }
     },

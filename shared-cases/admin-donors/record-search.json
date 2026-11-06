@@ -91,7 +91,8 @@
           { "query": "_" },
           { "query": " " },
           { "query": "nov " },
-          { "query": " " }
+          { "query": " " },
+          { "query": "  nov  " }
         ]
       },
       "expected": {
@@ -154,7 +155,19 @@
           { "items": [] },
           { "items": [] },
           { "items": [] },
-          { "items": [] }
+          { "items": [] },
+          {
+            "items": [
+              { "donorId": "donor:jana", "name": "Jana Nováková", "type": "PERSON", "variableSymbol": "7700001001", "companyIdentifier": null },
+              {
+                "donorId": "donor:firma",
+                "name": "Pekárna U Nováků s.r.o.",
+                "type": "COMPANY",
+                "variableSymbol": "7700001003",
+                "companyIdentifier": "25596641"
+              }
+            ]
+          }
         ]
       }
     },

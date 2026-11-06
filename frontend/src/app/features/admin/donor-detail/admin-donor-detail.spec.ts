@@ -1795,6 +1795,7 @@ describe('Given an administrator on a donor card with the administration copy on
   let fixture: ComponentFixture<AdminDonorDetail>;
   let http: HttpTestingController;
   let offline: ReturnType<typeof signal<boolean>>;
+  let refresh: ReturnType<typeof vi.fn<(startingNow?: boolean) => Promise<string>>>;
   const account = donorAccount();
   const record = {
     donorId: DONOR_ID,
@@ -1811,6 +1812,7 @@ describe('Given an administrator on a donor card with the administration copy on
   async function open(deviceOffline: boolean): Promise<void> {
     localStorage.clear();
     offline = signal(deviceOffline);
+    refresh = vi.fn<(startingNow?: boolean) => Promise<string>>().mockResolvedValue('unchanged');
     const contents: CopyContents = {
       chunks: [
         { id: 'donations/donor-records:2026-10', rowsSha256: 'a', rows: [record] },
@@ -1845,10 +1847,7 @@ describe('Given an administrator on a donor card with the administration copy on
         },
         {
           provide: AdministrationCopyDownload,
-          useValue: {
-            refresh: vi.fn().mockResolvedValue('unchanged'),
-            checkedAt: signal<string | null>(null).asReadonly(),
-          },
+          useValue: { refresh, checkedAt: signal<string | null>(null).asReadonly() },
         },
       ],
     }).compileComponents();
@@ -1938,6 +1937,32 @@ describe('Given an administrator on a donor card with the administration copy on
       fixture.nativeElement.querySelector('[aria-labelledby="accounts-title"] [role="status"]')
         ?.textContent,
     ).toContain('Bankovní účty dárce jsme načetli.');
+  });
+
+  it('when a receipt was replaced since the card was read, then the card is read again from a refresh that starts after it', async () => {
+    vi.spyOn(PdfDelivery.prototype, 'save').mockImplementation(() => undefined);
+    const receiptId = '019a1c00-0000-7000-8000-00000000f001';
+    await open(false);
+    await vi.waitFor(() =>
+      http
+        .expectOne(DETAIL_URL)
+        .flush(donorDetail({ receipts: [adminReceipt({ id: receiptId, number: '2027-000001' })] })),
+    );
+    await settle();
+    const callsBefore = refresh.mock.calls.length;
+
+    (fixture.nativeElement.querySelector('button.receipt-pdf') as HTMLButtonElement).click();
+    await settle();
+    http.expectOne(`/api/admin/donations/receipts/${receiptId}`).flush({
+      ...issuedReceipt({ id: receiptId, number: '2027-000001' }),
+      receipt: frozenCase(SINGLE_PERSON_CS),
+      status: 'REPLACED',
+    });
+    await settle();
+    await vi.waitFor(() => http.expectOne(DETAIL_URL).flush(donorDetail()));
+    await settle();
+
+    expect(refresh.mock.calls.slice(callsBefore)).toEqual([[true]]);
   });
 
   it('when the server is unreachable while the device is online, then the card says so as an alert, and Zkusit znovu asks the server again', async () => {
