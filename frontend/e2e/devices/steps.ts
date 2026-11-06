@@ -290,6 +290,40 @@ export const STEPS: Step[] = [
     open: (ui) => adminPage(ui, PETR_DETAIL_PATH),
   },
   {
+    id: 'admin-paired-payment',
+    title: 'a paired payment opened from its row in the administration',
+    open: async (ui) => {
+      await adminPage(ui, '/sprava/platby?stav=prirazene');
+      await ui.waitVisible({ css: '.payments-card [data-payment-row]' });
+      const row = { css: 'button.payment-row' };
+      if (!(await ui.isVisible(row))) {
+        return NOT_ON_THIS_DEVICE;
+      }
+      await ui.click(row);
+      await ui.waitVisible(DIALOG);
+    },
+  },
+  {
+    id: 'admin-donor-accounts',
+    title: "the bank accounts part of a donor's card in the administration",
+    open: (ui) => adminPage(ui, `${PETR_DETAIL_PATH}/bankovni-ucty`),
+  },
+  {
+    id: 'admin-donor-donations',
+    title: "the gifts part of a donor's card in the administration",
+    open: (ui) => adminPage(ui, `${PETR_DETAIL_PATH}/dary`),
+  },
+  {
+    id: 'admin-donor-receipts',
+    title: "the receipts part of a donor's card in the administration",
+    open: (ui) => adminPage(ui, `${PETR_DETAIL_PATH}/potvrzeni`),
+  },
+  {
+    id: 'admin-actions',
+    title: 'the history of changes in the administration',
+    open: (ui) => adminPage(ui, '/sprava/historie'),
+  },
+  {
     id: 'admin-alerts',
     title: 'the push alerts in the administration',
     open: (ui) => adminPage(ui, '/sprava/upozorneni'),

@@ -57,6 +57,10 @@ describe('Given the pages of the administration', () => {
     ]);
   });
 
+  it('when a part of a donor card opens on its own page, then the back button leads to that card', () => {
+    expect(parentOf('darci/:id/:section')).toBe('/sprava/darci/:id');
+  });
+
   it('when any other page opens, then it names the page to go back to', () => {
     expect(
       pages.filter((page) => page.path !== '' && parentOf(page.path ?? '') === undefined),
