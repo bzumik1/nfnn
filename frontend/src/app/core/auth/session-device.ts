@@ -25,6 +25,7 @@ export interface SessionDevice {
   signedOut(account: DeviceAccount): Promise<void>;
   signedOutElsewhere(): void;
   sessionLost(): Promise<void>;
+  connectionReturned?(): Promise<void>;
   passwordChanged(account: DeviceAccount, password: string): Promise<void>;
   passwordRemoved(account: DeviceAccount): Promise<void>;
   passkeyAdded(account: DeviceAccount, reading: PrfReading): Promise<void>;

@@ -30,6 +30,7 @@ describe('Given the device copies of the app, loaded only when a session first n
         storedAge: 'under-1h',
         administrationCopy: 'none',
       })),
+      connectionReturned: vi.fn(async () => undefined),
     };
     TestBed.configureTestingModule({
       providers: [
@@ -172,5 +173,20 @@ describe('Given the device copies of the app, loaded only when a session first n
     await copies.sessionLost();
 
     expect(vault['sessionLost']).toHaveBeenCalledTimes(1);
+  });
+
+  it('when the connection returns before this tab needed a copy, then nothing is loaded', async () => {
+    await copies.connectionReturned();
+
+    expect(vault['connectionReturned']).not.toHaveBeenCalled();
+    expect(downloads).toBe(0);
+  });
+
+  it('when the connection returns after this tab loaded the vault, then the vault asks again what it could not ask', async () => {
+    await copies.restored(JANA);
+
+    await copies.connectionReturned();
+
+    expect(vault['connectionReturned']).toHaveBeenCalledTimes(1);
   });
 });
