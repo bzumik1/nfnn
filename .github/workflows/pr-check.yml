@@ -878,11 +878,11 @@ jobs:
             [ "$(sudo stat -c '%a %U' "$secrets/$file")" = '600 root' ] || { echo "::error::secrets/$file must exist, owned by root with mode 600"; sudo ls -la "$secrets"; exit 1; }
           done
           [ "$(sudo cat "$secrets/receipt-signing-key" | base64 -d | wc -c)" = 32 ] || { echo "::error::secrets/receipt-signing-key must hold a 32-byte Ed25519 seed in base64"; exit 1; }
-          grep -qE 'Receipt signing key [0-9a-f]{8} registered and published' "$RUNNER_TEMP/nfnn/logs/backend.log" || { echo "::error::the backend did not register its receipt signing key at its first start"; exit 1; }
+          scripts/backend-log.sh "$RUNNER_TEMP/nfnn/logs" | grep -E 'Receipt signing key [0-9a-f]{8} registered and published' > /dev/null || { echo "::error::the backend did not register its receipt signing key at its first start"; exit 1; }
           seed=$(sudo cat "$secrets/receipt-signing-key" | tr -d '\n')
           seed_spellings="$RUNNER_TEMP/receipt-seed-spellings"
           { echo "$seed"; echo "${seed%%=*}"; echo "${seed%%=*}" | tr '+/' '-_'; echo "$seed" | base64 -d | od -An -tx1 | tr -d ' \n'; } > "$seed_spellings"
-          if grep -qiF -f "$seed_spellings" "$RUNNER_TEMP/nfnn/logs/backend.log"; then
+          if scripts/backend-log.sh "$RUNNER_TEMP/nfnn/logs" | grep -iF -f "$seed_spellings" > /dev/null; then
             echo "::error::the receipt signing seed must never reach backend.log (Base64, unpadded, Base64url or hex)"
             exit 1
           fi
@@ -895,7 +895,7 @@ jobs:
           [ "$wrong" = 403 ] || { echo "::error::a wrong code must answer 403 (got $wrong)"; exit 1; }
           code=$(docker logs nfnn-backend 2>&1 | grep -oE '^ +[2-9A-Z]{4}-[2-9A-Z]{4}-[2-9A-Z]{4} *$' | tail -n 1 | tr -d ' ')
           [ -n "$code" ] || { echo "::error::the backend printed no setup code into the container log"; exit 1; }
-          if grep -q -- "$code" "$RUNNER_TEMP/nfnn/logs/backend.log"; then
+          if scripts/backend-log.sh "$RUNNER_TEMP/nfnn/logs" | grep -- "$code" > /dev/null; then
             echo "::error::the setup code must not reach backend.log, which administrators and the connector read"
             exit 1
           fi
@@ -940,7 +940,7 @@ jobs:
           [ "$(docker inspect -f '{{.State.Health.Status}}' nfnn-backend)" = healthy ] && [ "$(docker inspect -f '{{.RestartCount}}' nfnn-backend)" -gt "$restarts" ] || { echo "::error::the backend did not come back after the setup"; exit 1; }
           done_status=$(curl -fsS --max-time 10 http://localhost:8089/api/operations/setup)
           [ "$(echo "$done_status" | jq -r '.required')" = false ] || { echo "::error::the setup still asks after the restart"; exit 1; }
-          grep -q 'Loaded 7 stored settings' "$RUNNER_TEMP/nfnn/logs/backend.log" || { echo "::error::the backend did not load the stored settings"; exit 1; }
+          scripts/backend-log.sh "$RUNNER_TEMP/nfnn/logs" | grep 'Loaded 7 stored settings' > /dev/null || { echo "::error::the backend did not load the stored settings"; exit 1; }
           if sudo grep -rqF "$backup_key" "$RUNNER_TEMP/nfnn/logs"; then
             echo "::error::the backup key must reach no log file"
             exit 1
@@ -1027,7 +1027,7 @@ jobs:
           fi
           echo "The backend and the backup service write their logs into the logs folder"
           logs="$RUNNER_TEMP/nfnn/logs"
-          grep -q 'Backend revision dev is ready' "$logs/backend.log" || { echo "::error::the backend did not write its log file"; ls -la "$logs"; exit 1; }
+          [ "$(scripts/backend-log.sh "$logs" | grep -c 'Backend revision dev is ready')" -ge 1 ] || { echo "::error::the backend did not write its log file"; ls -la "$logs"; exit 1; }
           grep -q 'backup written' "$logs/backup.log" || { echo "::error::the backup service did not write its log file"; ls -la "$logs"; exit 1; }
           echo "The MCP connector answers through the frontend: a challenge without a token, the resource metadata and the authorization server metadata"
           [ -z "$(docker port nfnn-mcp)" ] || { echo "::error::the MCP connector must publish no port"; exit 1; }
@@ -1300,7 +1300,7 @@ jobs:
           done
           echo "The connector's nfnn_status reads the signatory through a real connection: the backend reads Claude Code's client metadata document from claude.ai"
           node scripts/stack-journey.mjs receipts --state "$RUNNER_TEMP/journey.json"
-          if grep -nE 'UnsatisfiedLinkError|A stored portrait cannot be decoded' "$RUNNER_TEMP/nfnn/logs/backend.log"; then
+          if scripts/backend-log.sh "$RUNNER_TEMP/nfnn/logs" | grep -nE 'UnsatisfiedLinkError|A stored portrait cannot be decoded'; then
             echo "::error::the read-only backend could not decode the portrait it prints on the receipts"
             exit 1
           fi
@@ -1326,7 +1326,7 @@ jobs:
             [ "$type" = image/webp ] && [ "$(head -c 4 "$variant")" = RIFF ] && [ "$(dd if="$variant" bs=1 skip=8 count=4 2> /dev/null)" = WEBP ] || { echo "::error::the photo uploaded from $file is not served as WebP (got $type)"; exit 1; }
             echo "$file was stored and is served as WebP at $url"
           done
-          if grep -n 'UnsatisfiedLinkError' "$RUNNER_TEMP/nfnn/logs/backend.log"; then
+          if scripts/backend-log.sh "$RUNNER_TEMP/nfnn/logs" | grep -n 'UnsatisfiedLinkError'; then
             echo "::error::the backend could not load the WebP codec's native library"
             exit 1
           fi
@@ -1362,7 +1362,7 @@ jobs:
           [ "$renewed_seed" != "$withdrawn_seed" ] || { echo "::error::the receipt signing seed was not replaced after the withdrawal"; exit 1; }
           [ "$(echo "$renewed_seed" | base64 -d | wc -c)" = 32 ] || { echo "::error::the new receipt signing seed must be a 32-byte Ed25519 seed in base64"; exit 1; }
           docker logs nfnn-backend 2>&1 | grep -q "the receipt signing key $withdrawn_key was withdrawn in the administration" || { echo "::error::the entrypoint did not say that it replaced the withdrawn seed"; exit 1; }
-          renewed_key=$(grep -oE 'Receipt signing key [0-9a-f]{8} registered and published' "$RUNNER_TEMP/nfnn/logs/backend.log" | tail -n 1 | cut -d' ' -f4)
+          renewed_key=$(scripts/backend-log.sh "$RUNNER_TEMP/nfnn/logs" | grep -oE 'Receipt signing key [0-9a-f]{8} registered and published' | tail -n 1 | cut -d' ' -f4)
           [ -n "$renewed_key" ] && [ "$renewed_key" != "$withdrawn_key" ] || { echo "::error::the backend did not register a new receipt signing key after the seed was replaced"; exit 1; }
           docker exec --privileged nfnn-backend sh -c 'tr "\0" "\n" < /proc/1/environ' | grep -qxE "RECEIPT_SIGNING_KEYS_WITHDRAWN=([0-9a-f]{8},)*$withdrawn_key(,[0-9a-f]{8})*" || { echo "::error::the entrypoint did not pass the withdrawn key $withdrawn_key to Java as RECEIPT_SIGNING_KEYS_WITHDRAWN"; exit 1; }
           listed=$(curl -fsS --max-time 10 http://localhost:8089/api/donations/receipt-keys | jq -r '.keys[] | .keyId + " " + .status' | sort)
@@ -1371,7 +1371,7 @@ jobs:
           for seed in "$withdrawn_seed" "$renewed_seed"; do
             echo "$seed"; echo "${seed%%=*}"; echo "${seed%%=*}" | tr '+/' '-_'; echo "$seed" | base64 -d | od -An -tx1 | tr -d ' \n'; echo
           done > "$seed_spellings"
-          if grep -qiF -f "$seed_spellings" "$RUNNER_TEMP/nfnn/logs/backend.log" || docker logs nfnn-backend 2>&1 | grep -qiF -f "$seed_spellings"; then
+          if scripts/backend-log.sh "$RUNNER_TEMP/nfnn/logs" | grep -iF -f "$seed_spellings" > /dev/null || docker logs nfnn-backend 2>&1 | grep -qiF -f "$seed_spellings"; then
             echo "::error::neither the withdrawn nor the new receipt signing seed may reach backend.log or the container log (Base64, unpadded, Base64url or hex)"
             exit 1
           fi
