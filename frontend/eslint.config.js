@@ -9,7 +9,16 @@ const { confinedImports } = require('./eslint-confinement');
 const DEVICE_CRYPTO_STORES_NOTHING =
   'The device crypto core keeps everything in memory and stores nothing ("Cizí počítač"); its caller stores the sealed records and wraps (frontend.md, Device copies).';
 
+const NO_FIXED_WAIT = {
+  selector: ":matches(Identifier[name='waitForTimeout'], Literal[value='waitForTimeout'])",
+  message:
+    'waitForTimeout is a fixed wait: wait on observable state (expect, expect.poll, toPass, e2e/settled.ts); only a test that proves nothing happens waits a fixed time, through waitWhileNothingMayHappen of e2e/fixed-waits.ts (testing.md, Frontend e2e).',
+};
+
 module.exports = defineConfig([
+  {
+    linterOptions: { noInlineConfig: true },
+  },
   {
     files: ['**/*.ts', '**/*.mts'],
     extends: [
@@ -138,6 +147,13 @@ module.exports = defineConfig([
     },
   },
   {
+    files: ['e2e/**/*.ts'],
+    ignores: ['e2e/fixed-waits.ts'],
+    rules: {
+      'no-restricted-syntax': ['error', NO_FIXED_WAIT],
+    },
+  },
+  {
     files: ['e2e/pwa/**/*.spec.ts'],
     rules: {
       'no-restricted-imports': [
@@ -161,6 +177,7 @@ module.exports = defineConfig([
       ],
       'no-restricted-syntax': [
         'error',
+        NO_FIXED_WAIT,
         {
           selector:
             "CallExpression[callee.object.name='page'][callee.property.name=/^(route|unroute|routeFromHAR)$/]",
