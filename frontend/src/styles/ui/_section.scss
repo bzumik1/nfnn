@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'pressed';
 
 .ui-container {
   max-width: var(--content-max);
@@ -87,8 +88,14 @@
   box-shadow: var(--shadow-cta-hero);
   transition: transform var(--duration-base);
 
-  &:hover {
-    transform: translateY(-2px);
+  @media (hover: hover) {
+    &:hover {
+      transform: translateY(-2px);
+    }
+  }
+
+  @include pressed.when-pressed {
+    @include pressed.darkens;
   }
 }
 
@@ -100,9 +107,16 @@
   box-shadow: none;
   transition: background var(--duration-base);
 
-  &:hover {
-    background: var(--color-surface-alt);
-    transform: none;
+  @media (hover: hover) {
+    &:hover {
+      background: var(--color-surface-alt);
+      transform: none;
+    }
+  }
+
+  @include pressed.when-pressed {
+    @include pressed.tints;
+    filter: none;
   }
 }
 
@@ -110,8 +124,10 @@
   color: var(--color-on-inverse);
   border-color: color-mix(in srgb, var(--color-on-inverse) 35%, transparent);
 
-  &:hover {
-    background: color-mix(in srgb, var(--color-on-inverse) 12%, transparent);
+  @media (hover: hover) {
+    &:hover {
+      background: color-mix(in srgb, var(--color-on-inverse) 12%, transparent);
+    }
   }
 }
 
@@ -121,8 +137,10 @@
   color: var(--color-on-image);
   border-color: color-mix(in srgb, var(--color-on-image) 35%, transparent);
 
-  &:hover {
-    background: color-mix(in srgb, var(--color-on-image) 22%, transparent);
+  @media (hover: hover) {
+    &:hover {
+      background: color-mix(in srgb, var(--color-on-image) 22%, transparent);
+    }
   }
 }
 

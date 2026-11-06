@@ -1,5 +1,6 @@
 @use 'theme';
 @use 'styles/form-controls';
+@use 'styles/controls';
 @use 'styles/ui/page';
 @use 'styles/ui/card';
 @use 'styles/ui/notice';
@@ -38,6 +39,7 @@ html:has(app-tab-bar) {
 
 html:has(app-landing) {
   background: var(--color-image-shade);
+  overscroll-behavior: none;
 }
 
 :focus-visible {
