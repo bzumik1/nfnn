@@ -25,6 +25,7 @@
 <!-- The two lines below are read by CI, each only as a whole line of its own. Replace each comment, keeping the word before the colon: -->
 <!-- roadmap: write "beze změny" after the colon when docs/roadmap.md does not change; when it changes, delete the line. Left as it is, roadmap-check fails. -->
 <!-- look: write "beze změny" after the colon, or rewrite the line as "Vzhled se mění: /sprava/platby, /darce/*, sign-in-dialog" (routes or states of the screens spec). Left as it is, nothing may differ on the screens. -->
+<!-- pr-check has no trigger on an edited description: after editing the look line, push again or use "Re-run all jobs" (re-running only the failed job keeps the old reading). -->
 
 Roadmapa: <!-- beze změny -->
 Vzhled: <!-- beze změny -->
