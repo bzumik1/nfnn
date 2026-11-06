@@ -84,9 +84,9 @@ export class DeviceCopies implements SessionDevice {
     if (this.loading === null) {
       const loading = Promise.all([
         import('./core/device/store/device-vault'),
-        import('./features/donations/device-copy/donor-copy-download'),
-      ]).then(([vault, download]) => {
-        this.injector.get(download.DonorCopyDownload);
+        import('./features/donations/device-copy/donor-copy-sync'),
+      ]).then(([vault, sync]) => {
+        this.injector.get(sync.DonorCopySync);
         return this.injector.get(vault.DeviceVault);
       });
       this.loading = loading;
