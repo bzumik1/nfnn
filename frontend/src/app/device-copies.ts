@@ -7,6 +7,10 @@ export class DeviceCopies implements SessionDevice {
   private readonly injector = inject(EnvironmentInjector);
   private loading: Promise<SessionDevice> | null = null;
 
+  prepare(): void {
+    void this.vault().catch(() => undefined);
+  }
+
   prfInput(): Promise<Uint8Array<ArrayBuffer> | null> {
     const input = this.vault()
       .then((vault) => vault.prfInput())
@@ -19,6 +23,9 @@ export class DeviceCopies implements SessionDevice {
   }
 
   signedIn(account: DeviceAccount, secret: SignInSecret, storeNothing = false): Promise<void> {
+    if (account.administrator === true) {
+      this.watchAdministration();
+    }
     return this.vault().then(
       (vault) => vault.signedIn(account, secret, storeNothing),
       (failure: unknown) => {
@@ -65,6 +72,12 @@ export class DeviceCopies implements SessionDevice {
         throw failure;
       },
     );
+  }
+
+  private watchAdministration(): void {
+    void import('./features/admin/device-copy/administration-copy-download')
+      .then((download) => this.injector.get(download.AdministrationCopyDownload))
+      .catch(() => undefined);
   }
 
   private vault(): Promise<SessionDevice> {

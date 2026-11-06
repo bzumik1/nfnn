@@ -40,6 +40,7 @@ import {
   unpublishedKeysSentence,
 } from '../settings/receipt-signing-key/unpublished-keys';
 import { signingKeyWarnings } from '../settings/receipt-signing-key/key-warnings';
+import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { ADMIN_DAILY, ADMIN_MORE_PATH, ADMIN_PAYMENTS_PATH } from '../shell/admin-sections';
 import {
@@ -116,7 +117,7 @@ const FAILURE_LABELS: Record<ImportFailureKind, string> = {
 
 @Component({
   selector: 'app-admin-home',
-  imports: [RouterLink, CopyButton, AdminSectionRows],
+  imports: [NeedsConnection, RouterLink, CopyButton, AdminSectionRows],
   templateUrl: './admin-home.html',
   styleUrl: './admin-home.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

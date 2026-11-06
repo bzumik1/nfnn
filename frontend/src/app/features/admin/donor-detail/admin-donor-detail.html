@@ -132,6 +132,7 @@
           <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
             <p i18n="@@admin.donorDetail.account.error.text">Účet se nepodařilo načíst.</p>
             <button
+              appNeedsConnection
               type="button"
               class="ui-button ui-button--small"
               (click)="loadAccount()"
@@ -279,6 +280,7 @@
                     skončí.</span
                   >
                   <button
+                    appNeedsConnection
                     type="button"
                     class="ui-button ui-button--small ui-button--danger"
                     [disabled]="busy()"
@@ -332,6 +334,7 @@
                     >Dárce se jimi pak nepřihlásí a všechna jeho přihlášení skončí. Odebrat?</span
                   >
                   <button
+                    appNeedsConnection
                     type="button"
                     class="ui-button ui-button--small ui-button--danger"
                     [disabled]="busy()"
@@ -413,6 +416,7 @@
               Účty, dary a potvrzení se nepodařilo načíst.
             </p>
             <button
+              appNeedsConnection
               type="button"
               class="ui-button ui-button--small"
               (click)="loadDonations()"
@@ -532,6 +536,7 @@
                               nepřiřadíme. Vypnout?</span
                             >
                             <button
+                              appNeedsConnection
                               type="button"
                               class="ui-button ui-button--small ui-button--danger"
                               [disabled]="busy()"
@@ -571,6 +576,7 @@
                               dárce. Zapnout?</span
                             >
                             <button
+                              appNeedsConnection
                               type="button"
                               class="ui-button ui-button--small"
                               [disabled]="busy()"
@@ -611,6 +617,7 @@
                               Odebrat?</span
                             >
                             <button
+                              appNeedsConnection
                               type="button"
                               class="ui-button ui-button--small ui-button--danger"
                               [disabled]="busy()"
@@ -821,6 +828,7 @@
                   </select>
                 </app-form-field>
                 <button
+                  appNeedsConnection
                   #issueSubmit
                   type="submit"
                   class="ui-button ui-button--primary"
@@ -1055,6 +1063,7 @@
     }
     <div class="ui-dialog__actions erase-actions">
       <button
+        appNeedsConnection
         #eraseSubmit
         type="button"
         class="ui-button ui-button--danger"

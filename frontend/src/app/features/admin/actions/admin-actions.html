@@ -19,6 +19,7 @@
         <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
           <p i18n="@@admin.actions.error.text">Historii se nepodařilo načíst.</p>
           <button
+            appNeedsConnection
             type="button"
             class="ui-button ui-button--small"
             (click)="load()"
@@ -102,6 +103,7 @@
           @if (hasMore()) {
             <div class="admin-more">
               <button
+                appNeedsConnection
                 type="button"
                 class="ui-button ui-button--small"
                 [disabled]="loadingMore()"

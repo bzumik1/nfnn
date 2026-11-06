@@ -12,12 +12,13 @@ import { DirtyForms } from '../../../core/updates/dirty-forms';
 import { PROJECT_ORDERS, ProjectOrder, ProjectsApi } from '../../content/projects-api';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 import { projectOrderDescription, projectOrderLabel } from './project-order';
+import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
 @Component({
   selector: 'app-project-order-card',
-  imports: [LiveNotice],
+  imports: [LiveNotice, NeedsConnection],
   templateUrl: './project-order-card.html',
   styleUrl: './project-order-card.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

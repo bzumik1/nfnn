@@ -31,6 +31,7 @@ import {
   FreshSecondFactorRequest,
   ReceiptSigningKeyWithdrawalResponse,
 } from '../../admin-api';
+import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
 
 const CODE_MESSAGES: FieldMessages = {
   required: $localize`:@@donor.form.code.required:Opište prosím kód z aplikace.`,
@@ -41,7 +42,14 @@ const WITHDRAWAL_FAILED = $localize`:@@admin.signingKey.withdraw.failed:Klíč s
 
 @Component({
   selector: 'app-key-withdrawal-dialog',
-  imports: [Dialog, FormsModule, FormField, FormControlDirective, FocusFirstInvalid],
+  imports: [
+    Dialog,
+    FormsModule,
+    FormField,
+    FormControlDirective,
+    FocusFirstInvalid,
+    NeedsConnection,
+  ],
   templateUrl: './key-withdrawal-dialog.html',
   styleUrl: './key-withdrawal-dialog.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

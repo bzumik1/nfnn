@@ -47,6 +47,14 @@ describe('Given the device copies of the app, loaded only when a session first n
     expect(downloads).toBe(1);
   });
 
+  it('when the sign-in dialog prepares the device, then the vault is loaded before any session starts, so a passkey ceremony gets its PRF input in time', async () => {
+    copies.prepare();
+
+    await vi.waitFor(() => expect(downloads).toBe(1));
+    expect(await copies.prfInput()).toEqual(new Uint8Array(32));
+    expect(downloads).toBe(1);
+  });
+
   it('when a donor signs in or comes back on a public computer, then the vault is told to store nothing', async () => {
     await copies.signedIn(JANA, { kind: 'none' }, true);
     await copies.restored(JANA, true);

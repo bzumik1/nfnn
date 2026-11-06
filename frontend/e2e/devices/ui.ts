@@ -15,6 +15,7 @@ export interface Ui {
   isVisible(target: Target): Promise<boolean>;
   waitVisible(target: Target): Promise<void>;
   click(target: Target): Promise<void>;
+  fill(target: Target, text: string): Promise<void>;
   waitAttribute(target: Target, name: string, value: string): Promise<void>;
   scrollToTop(target: Target): Promise<void>;
 }
@@ -37,6 +38,7 @@ export function playwrightUi(page: Page): Ui {
     isVisible: (target) => shown(target).isVisible(),
     waitVisible: (target) => expect(shown(target)).toBeVisible(),
     click: (target) => shown(target).click(),
+    fill: (target, text) => shown(target).fill(text),
     waitAttribute: (target, name, value) => expect(shown(target)).toHaveAttribute(name, value),
     scrollToTop: (target) =>
       shown(target).evaluate((element) => element.scrollIntoView({ behavior: 'instant' })),

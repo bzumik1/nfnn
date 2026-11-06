@@ -30,6 +30,7 @@ import { FormControlDirective } from '../../../shared/ui/form-field/form-control
 import { FormField } from '../../../shared/ui/form-field/form-field';
 import { PasswordReveal } from '../../../shared/ui/password-reveal/password-reveal';
 import { RadioGroup } from '../../../shared/ui/radio-group/radio-group';
+import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 
 type Panel = 'missing-link' | 'form' | 'success' | 'passkey-success' | 'invalid';
 type Method = 'password' | 'passkey';
@@ -48,6 +49,7 @@ const PASSKEY_NAME_MAX_LENGTH = 64;
     FocusFirstInvalid,
     PasswordReveal,
     RadioGroup,
+    NeedsConnection,
   ],
   templateUrl: './password-reset.html',
   styleUrl: './password-reset.scss',

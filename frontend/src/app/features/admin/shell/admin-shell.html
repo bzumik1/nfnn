@@ -2,12 +2,41 @@
 
 <app-side-nav navId="admin-nav" [groups]="groups" [label]="navLabel" [panel]="!compact()">
   <div class="admin-content">
+    <div class="admin-first-download" aria-live="polite">
+      @if (!lock.locked() && lock.firstDownload(); as progress) {
+        <div class="ui-notice ui-notice--status first-download">
+          <p class="first-download__title" i18n="@@admin.lock.firstDownload.title">
+            Ukládáme správu do zařízení
+          </p>
+          @if (progress.total > 0) {
+            <p class="first-download__count" i18n="@@admin.lock.firstDownload.count">
+              {{ progress.done }} z {{ progress.total }}
+            </p>
+            <progress
+              class="first-download__bar"
+              [value]="progress.done"
+              [max]="progress.total"
+              aria-hidden="true"
+            ></progress>
+          }
+        </div>
+      }
+    </div>
     @if (lock.locked()) {
       @if (lock.panel(); as panel) {
         <ng-container *ngComponentOutlet="panel" />
       }
-    } @else {
-      <router-outlet />
+    }
+    @if (!lock.locked() || lock.keepsPage()) {
+      <div
+        #page
+        class="admin-page"
+        [hidden]="lock.locked()"
+        [attr.inert]="lock.locked() ? '' : null"
+        [appSuspendsDialogs]="lock.locked()"
+      >
+        <router-outlet />
+      </div>
     }
   </div>
 </app-side-nav>

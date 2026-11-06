@@ -37,6 +37,7 @@ import {
   PushSubscriptionResponse,
   PushTestResponse,
 } from '../admin-api';
+import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 
 type LoadState = 'loading' | 'ready' | 'error' | 'unavailable';
 
@@ -77,7 +78,7 @@ const SERVICE_NAMES: Record<PushService, string> = {
 
 @Component({
   selector: 'app-admin-alerts',
-  imports: [LiveNotice, RouterLink],
+  imports: [LiveNotice, NeedsConnection, RouterLink],
   templateUrl: './admin-alerts.html',
   styleUrl: './admin-alerts.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

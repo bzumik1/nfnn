@@ -18,6 +18,7 @@ import { AuthApi } from '../../../../core/auth/auth-api';
 import { AuthStore } from '../../../../core/auth/auth-store';
 import { SignedInDevice } from '../../../../core/auth/donor';
 import { formatBankTime, formatDonationDate, pragueDay } from '../../../donations/donation-date';
+import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
 import { deviceName } from './device-labels';
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
@@ -26,6 +27,7 @@ const ALL_OTHERS = 'others';
 
 @Component({
   selector: 'app-devices-card',
+  imports: [NeedsConnection],
   templateUrl: './devices-card.html',
   styleUrl: './devices-card.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

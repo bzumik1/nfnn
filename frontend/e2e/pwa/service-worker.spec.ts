@@ -7,6 +7,8 @@ const APP_API_UNREACHABLE =
   /^Failed to load resource: the server responded with a status of 504 \(Gateway Timeout\) \(http:\/\/localhost:\d+\/api\//;
 const APP_API_OFFLINE =
   /^Failed to load resource: (?:the server responded with a status of 504 \(Gateway Timeout\)|net::ERR_INTERNET_DISCONNECTED) \(http:\/\/localhost:\d+\/api\//;
+const CONNECTIVITY_PROBE_WHILE_OFFLINE =
+  /^Failed to load resource: net::ERR_INTERNET_DISCONNECTED \(http:\/\/localhost:\d+\/api\/operations\/setup\)$/;
 const ANSWER_TIMEOUT_MS = 10_000;
 const SETTLE_MS = 1_000;
 const CANARY = 'Zxqv Kanárek 7781,77 Kč';
@@ -214,26 +216,30 @@ test.describe('Given the app registered its own service worker', () => {
     expect(askedByWorker).toHaveLength(1);
   });
 
-  test('when the browser comes back online, then the worker reaches the network again', async ({
-    page,
-    context,
-    goOffline,
-    goOnline,
-  }) => {
-    await goOffline();
-    await goOnline();
-    const askedByWorker: Request[] = [];
-    await context.route('**/api/content/news?*', (route) => {
-      if (route.request().serviceWorker() !== null) {
-        askedByWorker.push(route.request());
-      }
-      return route.fulfill({ json: { back: true } });
-    });
+  test.describe(() => {
+    test.use({ allowedConsoleErrors: [CONNECTIVITY_PROBE_WHILE_OFFLINE] });
 
-    expect(
-      await page.evaluate(async () => (await fetch('/api/content/news?page=0&size=6')).json()),
-    ).toEqual({ back: true });
-    expect(askedByWorker).toHaveLength(1);
+    test('when the browser comes back online, then the worker reaches the network again', async ({
+      page,
+      context,
+      goOffline,
+      goOnline,
+    }) => {
+      await goOffline();
+      await goOnline();
+      const askedByWorker: Request[] = [];
+      await context.route('**/api/content/news?*', (route) => {
+        if (route.request().serviceWorker() !== null) {
+          askedByWorker.push(route.request());
+        }
+        return route.fulfill({ json: { back: true } });
+      });
+
+      expect(
+        await page.evaluate(async () => (await fetch('/api/content/news?page=0&size=6')).json()),
+      ).toEqual({ back: true });
+      expect(askedByWorker).toHaveLength(1);
+    });
   });
 
   test.describe('when the browser goes offline', () => {

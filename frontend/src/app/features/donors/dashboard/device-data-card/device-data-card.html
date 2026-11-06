@@ -43,6 +43,7 @@
         class="ui-button device-data-reload"
         [disabled]="reloading() || deleting()"
         (click)="reload()"
+        appNeedsConnection
       >
         @if (reloading()) {
           <span i18n="@@donor.deviceData.reloading">Načítáme data…</span>

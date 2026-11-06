@@ -22,6 +22,7 @@
           type="button"
           class="ui-button"
           (click)="reload()"
+          appNeedsConnection
           i18n="@@admin.yearlyReceipts.error.retry"
         >
           Zkusit znovu
@@ -120,6 +121,7 @@
                 [class.ui-button--primary]="file() === null"
                 [attr.aria-disabled]="busy() ? 'true' : null"
                 [attr.aria-busy]="busy()"
+                appNeedsConnection
               >
                 @if (busy()) {
                   <span>{{ busyLabel() }}</span>
@@ -148,6 +150,7 @@
               type="button"
               class="ui-button ui-button--small"
               (click)="retry()"
+              appNeedsConnection
               i18n="@@admin.yearlyReceipts.retry"
             >
               Zkusit znovu

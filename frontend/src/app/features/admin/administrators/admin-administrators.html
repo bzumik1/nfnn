@@ -26,6 +26,7 @@
         <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
           <p i18n="@@admin.administrators.error.text">Správce se nepodařilo načíst.</p>
           <button
+            appNeedsConnection
             type="button"
             class="ui-button ui-button--small"
             (click)="load()"
@@ -94,6 +95,7 @@
                   >
                     <span class="confirm-question">{{ revokeQuestion(item) }}</span>
                     <button
+                      appNeedsConnection
                       type="button"
                       class="ui-button ui-button--small ui-button--danger"
                       [disabled]="busy()"
@@ -135,6 +137,7 @@
                       skončí.</span
                     >
                     <button
+                      appNeedsConnection
                       type="button"
                       class="ui-button ui-button--small ui-button--danger"
                       [disabled]="busy()"
@@ -231,7 +234,12 @@
         <p class="form-error" role="alert">{{ grantError() }}</p>
       }
 
-      <button type="submit" class="ui-button ui-button--primary grant-submit" [disabled]="busy()">
+      <button
+        appNeedsConnection
+        type="submit"
+        class="ui-button ui-button--primary grant-submit"
+        [disabled]="busy()"
+      >
         @if (busy()) {
           <span i18n="@@admin.administrators.grant.busy">Přidáváme…</span>
         } @else {

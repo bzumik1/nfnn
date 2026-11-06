@@ -20,6 +20,7 @@ import {
   ReceiptSignatureResponse,
 } from '../../admin-api';
 import { SignatureArtwork } from '../../receipt-signature/signature-artwork';
+import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -33,7 +34,7 @@ const PORTRAIT_WIDTH = 240;
 
 @Component({
   selector: 'app-receipt-signatory',
-  imports: [RouterLink, SignatureArtwork],
+  imports: [NeedsConnection, RouterLink, SignatureArtwork],
   templateUrl: './receipt-signatory.html',
   styleUrl: './receipt-signatory.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

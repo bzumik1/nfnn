@@ -15,6 +15,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { map, Observable } from 'rxjs';
 import { ProjectCard } from '../home/sections/projects/project-card';
 import { ProjectResponse, ProjectsApi } from '../projects-api';
+import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 
 export const PAGE_SIZE = 10;
 
@@ -27,7 +28,7 @@ interface ListPage {
 
 @Component({
   selector: 'app-content-list',
-  imports: [RouterLink, ProjectCard],
+  imports: [NeedsConnection, RouterLink, ProjectCard],
   templateUrl: './content-list.html',
   styleUrl: './content-list.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

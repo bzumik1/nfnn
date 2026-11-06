@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 
-import { Connectivity } from '../navigation/connectivity';
+import { Connectivity } from '../connectivity/connectivity';
 import { ErrorReporter } from './error-reporter';
 import { ERROR_NAMES } from './error-vocabulary';
 
@@ -22,7 +22,7 @@ describe('Given the browser error reporter', () => {
     vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(IPHONE_SAFARI);
     offline = false;
     TestBed.configureTestingModule({
-      providers: [{ provide: Connectivity, useValue: { isOffline: () => offline } }],
+      providers: [{ provide: Connectivity, useValue: { browserSaysOffline: () => offline } }],
     });
     reporter = TestBed.inject(ErrorReporter);
   });
