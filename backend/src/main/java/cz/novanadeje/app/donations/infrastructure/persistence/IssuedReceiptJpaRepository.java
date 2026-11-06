@@ -23,6 +23,8 @@ interface IssuedReceiptJpaRepository extends JpaRepository<IssuedReceiptJpaEntit
 
     Optional<IssuedReceiptJpaEntity> findByDonationIdAndStatus(UUID donationId, ReceiptStatus status);
 
+    List<IssuedReceiptJpaEntity> findByDonationIdInAndStatus(Collection<UUID> donationIds, ReceiptStatus status);
+
     boolean existsByDonationId(UUID donationId);
 
     boolean existsByDonorIdAndKindAndReceiptYearAndIssuedAtGreaterThanEqual(UUID donorId, ReceiptKind kind, Integer receiptYear, Instant issuedAt);

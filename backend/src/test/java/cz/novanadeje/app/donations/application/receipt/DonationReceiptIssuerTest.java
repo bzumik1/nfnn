@@ -14,6 +14,7 @@ import cz.novanadeje.app.donations.domain.receipt.ContentDigest;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptId;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
+import cz.novanadeje.app.donations.domain.receipt.DonationOnYearlyReceipt;
 import cz.novanadeje.app.donations.domain.receipt.FirstReceiptYear;
 import cz.novanadeje.app.donations.domain.receipt.FrozenReceipt;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptDocument;
@@ -305,6 +306,71 @@ class DonationReceiptIssuerTest {
         assertThat(replacement.isActive()).isTrue();
         assertThat(frozenDocument().replaces()).contains(new ReplacedReceipt(active.number(), EARLIER));
         assertThat(frozenDocument().lines()).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("Given active single receipts of two of the year's gifts, when the yearly receipt is newly issued, then it lists every gift of the year, both single receipts are replaced at its issue time after the lock, and it names no replaced receipt")
+    void should_replace_active_single_receipts_of_its_gifts_when_yearly_receipt_issued_given_single_receipts() {
+        givenDonationsOfJana(jana(), JUNE, MARCH);
+        DonationReceipt marchSingle = singleReceipt(MARCH, "2027-000001");
+        DonationReceipt juneSingle = singleReceipt(JUNE, "2027-000002");
+        when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.empty());
+        when(receipts.findActiveSinglesFor(any())).thenReturn(List.of(marchSingle, juneSingle));
+        when(receipts.nextSerial()).thenReturn(3L);
+        givenFreezer();
+
+        DonationReceipt issued = issuer.issueForYear(JANA, YEAR_2026, TODAY);
+
+        InOrder order = inOrder(receipts);
+        order.verify(receipts).lockDonor(JANA);
+        order.verify(receipts).findActiveSinglesFor(List.of(MARCH.id(), JUNE.id()));
+        ArgumentCaptor<DonationReceipt> saved = ArgumentCaptor.forClass(DonationReceipt.class);
+        verify(receipts, times(3)).save(saved.capture());
+        assertThat(saved.getAllValues()).containsExactly(marchSingle, juneSingle, issued);
+        assertThat(List.of(marchSingle, juneSingle)).allSatisfy(single -> {
+            assertThat(single.status()).isEqualTo(ReceiptStatus.REPLACED);
+            assertThat(single.supersededAt()).contains(NOW);
+        });
+        assertThat(issued.isActive()).isTrue();
+        assertThat(issued.supersedes()).isEmpty();
+        assertThat(frozenDocument().replaces()).isEmpty();
+        assertThat(frozenDocument().lines()).extracting(line -> line.donationId()).containsExactly(MARCH.id(), JUNE.id());
+    }
+
+    @Test
+    @DisplayName("Given an active yearly receipt listing a donation, when the donor issues that donation's single receipt, then it is refused under the lock as on the yearly receipt, and nothing is numbered, frozen or saved")
+    void should_refuse_single_receipt_under_lock_when_issued_given_active_yearly_receipt_listing_the_donation() {
+        givenDonationsOfJana(jana(), MARCH);
+        when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.of(yearlyReceipt(
+                ReceiptDocumentFactory.fingerprintForYear(jana(), YEAR_2026, List.of(MARCH)), LocaleCode.CS)));
+
+        assertThatThrownBy(() -> issuer.issueForDonation(JANA, MARCH.id(), TODAY))
+                .isInstanceOf(DonationOnYearlyReceipt.class)
+                .hasFieldOrPropertyWithValue("code", "donations/donation-on-yearly-receipt")
+                .hasMessageContaining("2027-000001");
+
+        InOrder order = inOrder(receipts, donations);
+        order.verify(receipts).lockDonor(JANA);
+        order.verify(donations).findByIdForDonor(MARCH.id(), JANA);
+        order.verify(receipts).findActiveForYear(JANA, YEAR_2026);
+        verify(receipts, never()).nextSerial();
+        verify(receipts, never()).save(any());
+        verifyNoInteractions(freezer);
+    }
+
+    @Test
+    @DisplayName("Given an active yearly receipt that does not list a donation of its year, when that donation's single receipt is issued, then it is issued")
+    void should_issue_single_receipt_when_issued_given_active_yearly_receipt_without_the_donation() {
+        givenDonationsOfJana(jana(), JUNE, MARCH);
+        when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.of(yearlyReceipt(
+                ReceiptDocumentFactory.fingerprintForYear(jana(), YEAR_2026, List.of(MARCH)), LocaleCode.CS)));
+        when(receipts.nextSerial()).thenReturn(2L);
+        givenFreezer();
+
+        DonationReceipt issued = issuer.issueForDonation(JANA, JUNE.id(), TODAY);
+
+        assertThat(issued.donation()).contains(JUNE.id());
+        assertThat(savedReceipt()).isSameAs(issued);
     }
 
     @Test
@@ -815,24 +881,95 @@ class DonationReceiptIssuerTest {
         }
 
         @Test
+        @DisplayName("when a connected application asks for a yearly receipt that would replace active single receipts of its gifts, then it is refused as a replacement and nothing is numbered, saved or audited")
+        void should_refuse_yearly_receipt_replacing_single_receipts_when_issued_by_connected_application() {
+            givenDonationsOfJana(jana(), JUNE, MARCH);
+            DonationReceipt marchSingle = singleReceipt(MARCH, "2027-000001");
+            when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.empty());
+            when(receipts.findActiveSinglesFor(any())).thenReturn(List.of(marchSingle));
+
+            assertThatThrownBy(() -> issuer.issueForYearByAdministrator(petr, CONNECTED_APPLICATION, JANA, YEAR_2026, TODAY))
+                    .isInstanceOf(ReceiptReplacementInBrowserOnly.class)
+                    .hasMessageContaining("2027-000001");
+
+            verify(receipts, never()).nextSerial();
+            verify(receipts, never()).save(any());
+            assertThat(marchSingle.isActive()).isTrue();
+            verifyNoInteractions(events, freezer);
+        }
+
+        @Test
+        @DisplayName("when the administration in a browser issues a yearly receipt over active single receipts of its gifts, then they are replaced and the audit names the yearly receipt as newly issued")
+        void should_replace_single_receipts_and_audit_new_yearly_receipt_when_issued_in_browser() {
+            givenDonationsOfJana(jana(), JUNE, MARCH);
+            DonationReceipt marchSingle = singleReceipt(MARCH, "2027-000001");
+            when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.empty());
+            when(receipts.findActiveSinglesFor(any())).thenReturn(List.of(marchSingle));
+            when(receipts.nextSerial()).thenReturn(2L);
+            givenFreezer();
+
+            AdministratorIssue issue = issuer.issueForYearInBulk(petr, BROWSER, JANA, YEAR_2026, TODAY);
+
+            assertThat(marchSingle.status()).isEqualTo(ReceiptStatus.REPLACED);
+            assertThat(issue.tookNewNumber()).isTrue();
+            assertThat(issue.replacedActive()).isEmpty();
+            verify(events).publishEvent(new AdminActionPerformed(petr, "ISSUE_RECEIPT", Optional.of(issue.receipt().id().value()),
+                    "Potvrzení 2027-000002 za rok 2026 vystaveno dárci " + JANA.value(), NOW));
+        }
+
+        @Test
+        @DisplayName("when a connected application asks for the yearly receipt that still certifies the same data, then it comes back without any single receipt being looked up or replaced")
+        void should_return_unchanged_yearly_receipt_without_looking_up_singles_when_issued_by_connected_application() {
+            DonationReceipt active = yearlyReceipt(ReceiptDocumentFactory.fingerprintForYear(jana(), YEAR_2026, List.of(MARCH, JUNE)), LocaleCode.CS);
+            givenDonationsOfJana(jana(), JUNE, MARCH);
+            when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.of(active));
+
+            assertThat(issuer.issueForYearByAdministrator(petr, CONNECTED_APPLICATION, JANA, YEAR_2026, TODAY)).isSameAs(active);
+
+            verify(receipts, never()).findActiveSinglesFor(any());
+            verify(receipts, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("when the administration issues the single receipt of a donation an active yearly receipt lists, then it is refused under the lock and nothing is numbered or audited")
+        void should_refuse_single_receipt_when_issued_by_administrator_given_active_yearly_receipt_listing_the_donation() {
+            givenDonationsOfJana(jana(), MARCH);
+            when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.of(yearlyReceipt(
+                    ReceiptDocumentFactory.fingerprintForYear(jana(), YEAR_2026, List.of(MARCH)), LocaleCode.CS)));
+
+            assertThatThrownBy(() -> issuer.issueForDonationByAdministrator(petr, BROWSER, JANA, MARCH.id(), TODAY))
+                    .isInstanceOf(DonationOnYearlyReceipt.class);
+
+            verify(receipts, never()).nextSerial();
+            verifyNoInteractions(events, freezer);
+        }
+
+        @Test
         @DisplayName("when a connected application asks for a first receipt or for unchanged data, then the first is issued and audited and the active one comes back")
         void should_issue_first_and_return_active_when_issued_by_connected_application() {
             DonationReceipt active = yearlyReceipt(ReceiptDocumentFactory.fingerprintForYear(jana(), YEAR_2026, List.of(MARCH, JUNE)), LocaleCode.CS);
             givenDonationsOfJana(jana(), JUNE, MARCH);
             when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.of(active));
-            when(receipts.findActiveForDonation(MARCH.id())).thenReturn(Optional.empty());
+            when(receipts.findActiveForDonation(JUNE.id())).thenReturn(Optional.empty());
             when(receipts.nextSerial()).thenReturn(2L);
             givenFreezer();
 
             assertThat(issuer.issueForYearByAdministrator(petr, CONNECTED_APPLICATION, JANA, YEAR_2026, TODAY)).isSameAs(active);
-            DonationReceipt first = issuer.issueForDonationByAdministrator(petr, CONNECTED_APPLICATION, JANA, MARCH.id(), TODAY);
+            DonationReceipt first = issuer.issueForDonationByAdministrator(petr, CONNECTED_APPLICATION, JANA, JUNE.id(), TODAY);
 
             assertThat(first.number()).isEqualTo(new ReceiptNumber("2027-000002"));
             assertThat(first.supersedes()).isEmpty();
             verify(receipts, times(1)).save(any());
             verify(events).publishEvent(new AdminActionPerformed(petr, "ISSUE_RECEIPT", Optional.of(first.id().value()),
-                    "Potvrzení 2027-000002 za dar " + MARCH.id().value() + " vystaveno dárci " + JANA.value(), NOW));
+                    "Potvrzení 2027-000002 za dar " + JUNE.id().value() + " vystaveno dárci " + JANA.value(), NOW));
         }
+    }
+
+    private DonationReceipt singleReceipt(Donation donation, String number) {
+        ReceiptDocument document = ReceiptDocumentFactory.forDonation(jana(), donation, FOUNDATION, SIGNATORY, new ReceiptNumber(number), EARLIER,
+                LocaleCode.CS, Optional.empty());
+        return DonationReceipt.issue(DonationReceiptId.newId(EARLIER_AT), JANA, EARLIER_AT, ReceiptDocumentFactory.fingerprintForDonation(jana(), donation),
+                Receipts.frozen(document), Optional.empty());
     }
 
     private DonationReceipt yearlyReceipt(ReceiptFingerprint fingerprint, LocaleCode locale) {

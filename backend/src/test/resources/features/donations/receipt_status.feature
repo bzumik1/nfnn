@@ -35,6 +35,20 @@ Feature: Anyone holding a receipt's proof asks whether the foundation keeps the 
     Then the response status is 200
     And the receipt status is "active"
 
+  Scenario: A single receipt whose gift a later yearly receipt lists is replaced, and the yearly receipt is active
+    Given the bank account has these movements:
+      | id   | date       | amount | account    | bankCode | name          | variableSymbol |
+      | 2004 | 2026-12-30 | 300.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
+    And the hourly import runs
+    And "Jana" issues the receipt of her donation received on 2026-12-30
+    And "Jana" issues her yearly receipt for 2026
+    When a visitor asks the status of receipt "2027-000002"
+    Then the response status is 200
+    And the receipt status is "replaced"
+    When a visitor asks the status of receipt "2027-000003"
+    Then the response status is 200
+    And the receipt status is "active"
+
   Scenario: A receipt the foundation withdrew is withdrawn
     Given receipt "2027-000001" was withdrawn
     When a visitor asks the status of receipt "2027-000001"

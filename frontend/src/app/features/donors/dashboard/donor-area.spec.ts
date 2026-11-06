@@ -2036,6 +2036,32 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(savedFiles).toEqual([]);
     });
 
+    it('then a gift refused because the yearly receipt of its year lists it shows that problem in its row, says it is on the yearly receipt instead of offering its download and loads the payments again', async () => {
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      await click(thirdRowButton);
+      receiptRequest({ donationId: 'd-2' }).flush(
+        {
+          ...problemBody('donations/donation-on-yearly-receipt', 'Dar je na ročním potvrzení', 409),
+          detail: 'Stáhněte si roční potvrzení.',
+        },
+        { status: 409, statusText: 'Conflict' },
+      );
+      await settleBlobFailure();
+      await respond(twoYearSummary(), twoYearDonations());
+
+      expect(text(`${yearSection(2025)} tbody tr:nth-child(1) [role="alert"]`)).toBe(
+        'Dar je na ročním potvrzení. Stáhněte si roční potvrzení.',
+      );
+      expect(element(thirdRowButton)).toBeNull();
+      expect(text(`${yearSection(2025)} tbody tr:nth-child(1) .receipt-note`)).toBe(
+        'Je na ročním potvrzení za rok 2025',
+      );
+      expect(element(secondRowButton)).not.toBeNull();
+      expect(savedFiles).toEqual([]);
+    });
+
     it('then a download failing for any other reason asks to try again in its row without moving the page, and a successful retry clears it', async () => {
       const scrolled: Element[] = [];
       Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
@@ -3149,6 +3175,44 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(rows()).toBe(twoYearDonations().items.length);
       expect(texts('.gift-year-sum')).toEqual(['2 dary · 1 500 Kč', '1 dar · 250 Kč']);
       expect(copy.catchUp).toHaveBeenCalledTimes(1);
+      copy.finish('stored');
+    });
+
+    it('then a gift that the active yearly receipt of the copy lists says it is on that receipt instead of offering a download of its own, and the other gifts keep theirs', async () => {
+      const yearly2025 = issued({
+        ...frozenCase(YEARLY_ONE),
+        year: 2025,
+        number: '2026-000001',
+        gifts: [{ receivedOn: '2025-11-05', amountMinor: 25000, source: 'BANK_TRANSFER' }],
+      });
+      copy.shown.set(copyViewOf(twoYearSummary(), twoYearDonations(), [yearly2025]));
+
+      await open('/darce/dary');
+
+      expect(element(thirdRowButton)).toBeNull();
+      expect(text(`${yearSection(2025)} tbody tr:nth-child(1) .receipt-note`)).toBe(
+        'Je na ročním potvrzení za rok 2025',
+      );
+      expect(element(secondRowButton)).not.toBeNull();
+      copy.finish('stored');
+    });
+
+    it('then a gift of a year whose yearly receipt the copy holds only as replaced keeps its own download', async () => {
+      const replaced: IssuedReceipt = {
+        ...issued({
+          ...frozenCase(YEARLY_ONE),
+          year: 2025,
+          number: '2026-000001',
+          gifts: [{ receivedOn: '2025-11-05', amountMinor: 25000, source: 'BANK_TRANSFER' }],
+        }),
+        status: 'REPLACED',
+        supersededAt: '2026-02-01T09:30:00Z',
+      };
+      copy.shown.set(copyViewOf(twoYearSummary(), twoYearDonations(), [replaced]));
+
+      await open('/darce/dary');
+
+      expect(element(thirdRowButton)).not.toBeNull();
       copy.finish('stored');
     });
 
