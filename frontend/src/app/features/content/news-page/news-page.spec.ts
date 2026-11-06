@@ -145,7 +145,7 @@ describe('Given a visitor opening Aktuality', () => {
       expect(link(featured, 'Číst celé Ohlédnutí za rokem 2025')?.getAttribute('href')).toBe(
         '/aktuality/ohlednuti-za-rokem-2025',
       );
-      expect(text(featured, '.featured-meta')).toBe('Výroční ohlédnutí 15. 02. 2026');
+      expect(text(featured, '.featured-meta')).toBe('Výroční ohlédnutí 15. 2. 2026');
       expect(text(featured, '.featured-perex')).toBe(
         'I v roce 2025 jsme díky vám mohli přinášet naději.',
       );

@@ -597,7 +597,7 @@ describe('Given the donate section', () => {
     await settle();
 
     expect(drawnMatrixIs(QR_OF_500)).toBe(true);
-    expect(squashed('.bank [role="note"]')).toBe('Údaje účtu z 03. 11. 2026 · nemusí být aktuální');
+    expect(squashed('.bank [role="note"]')).toBe('Údaje účtu z 3. 11. 2026 · nemusí být aktuální');
     expect(element('.qr-error')).toBeNull();
   });
 
@@ -636,7 +636,7 @@ describe('Given the donate section', () => {
     await settle(OFFLINE_AFTER_MS);
 
     expect(drawnMatrixIs(QR_OF_500)).toBe(true);
-    expect(squashed('.bank [role="note"]')).toBe('Údaje účtu z 04. 11. 2026 · nemusí být aktuální');
+    expect(squashed('.bank [role="note"]')).toBe('Údaje účtu z 4. 11. 2026 · nemusí být aktuální');
   });
 
   it('when the payment details come from the server, then no note about their age is shown', async () => {

@@ -251,7 +251,7 @@ test.describe('Given an administrator', () => {
     await expect(page).toHaveURL(/\/sprava$/);
     await expect(page).toHaveTitle('Správa | Nová naděje – nadační fond');
     await expect(page.getByRole('heading', { level: 1, name: 'Správa' })).toBeFocused();
-    await expect(value(page, 'Stažené období')).toHaveText('20. 07. 2026 – 17. 10. 2026');
+    await expect(value(page, 'Stažené období')).toHaveText('20. 7. 2026 – 17. 10. 2026');
     await expect(value(page, 'Poslední úspěšné stažení')).toHaveText('18. 10. 2026 10:05');
     await expect(value(page, 'Poslední chyba')).toHaveText('žádná');
     expect(authorization).toEqual(['Bearer token-1']);
@@ -270,7 +270,7 @@ test.describe('Given an administrator', () => {
       '/sprava/lide-fondu',
     );
     const backupsCard = page.getByRole('region', { name: 'Zálohy databáze' });
-    await expect(backupsCard).toContainText('23. 10. 2026 03:00 (2 kB)');
+    await expect(backupsCard).toContainText('23. 10. 2026 3:00 (2 kB)');
     await expect(backupsCard.getByRole('link', { name: 'Otevřít zálohy' })).toHaveAttribute(
       'href',
       '/sprava/zalohy',

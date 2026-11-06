@@ -48,7 +48,7 @@ import static org.mockito.Mockito.when;
 
 class BackupKeyRevealedEmailSenderTest {
 
-    private static final Instant REVEALED_AT = Instant.parse("2026-10-29T19:05:00Z");
+    private static final Instant REVEALED_AT = Instant.parse("2026-03-05T07:05:00Z");
     private static final DonorId JANA = DonorId.newId(REVEALED_AT.minusSeconds(3000));
     private static final DonorId PETR = DonorId.newId(REVEALED_AT.minusSeconds(2000));
     private static final AdministratorContact JANA_CONTACT = new AdministratorContact(JANA, new EmailAddress("jana@example.cz"), LocaleCode.CS);
@@ -91,7 +91,7 @@ class BackupKeyRevealedEmailSenderTest {
             assertThat(MailContents.plainText(czech).replace("\r\n", "\n")).isEqualTo("""
                     Dobrý den,
 
-                    správce jana@example.cz si 29. 10. 2026 v 20:05 zobrazil ve správě webu Nová naděje klíč k zálohám. Kdo má klíč a zálohu, přečte všechna data webu, proto o každém zobrazení dáváme vědět všem správcům.
+                    správce jana@example.cz si 5. 3. 2026 v 8:05 zobrazil ve správě webu Nová naděje klíč k zálohám. Kdo má klíč a zálohu, přečte všechna data webu, proto o každém zobrazení dáváme vědět všem správcům.
 
                     Pokud o tom víte, nemusíte nic dělat.
 
@@ -104,14 +104,14 @@ class BackupKeyRevealedEmailSenderTest {
             assertThat(MailContents.html(czech))
                     .contains("lang=\"cs\"")
                     .contains(">Klíč k zálohám byl zobrazen</h1>")
-                    .contains("správce jana@example.cz si 29. 10. 2026 v 20:05 zobrazil")
+                    .contains("správce jana@example.cz si 5. 3. 2026 v 8:05 zobrazil")
                     .doesNotContain("AGE-SECRET-KEY");
             MimeMessage english = MailContents.asReceived(recording.sent().get(1));
             assertThat(english.getRecipients(Message.RecipientType.TO)).extracting(Object::toString).containsExactly("petr@example.cz");
             assertThat(english.getSubject()).isEqualTo("The backup key was shown – Nová naděje");
             assertThat(MailContents.plainText(english))
                     .startsWith("Hello,")
-                    .contains("the administrator jana@example.cz viewed the backup key in the administration of the Nová naděje site on 29 Oct 2026 at 20:05");
+                    .contains("the administrator jana@example.cz viewed the backup key in the administration of the Nová naděje site on 5 Mar 2026 at 08:05");
             assertThat(MailContents.html(english)).contains("lang=\"en\"");
             assertThat(logged.list).noneMatch(line -> line.getLevel() == Level.ERROR);
             MailPreviews.save("backup-key-revealed", czech);

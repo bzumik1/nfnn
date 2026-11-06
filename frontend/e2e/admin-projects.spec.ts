@@ -99,7 +99,7 @@ test.describe('Given an administrator managing the projects', () => {
       'Děti',
       'Projekt',
       'Na webu od 20. 10. 2026',
-      '20. 10. 2026 09:30',
+      '20. 10. 2026 9:30',
     ]);
 
     await page.getByRole('link', { name: 'Zahrada pro děti' }).click();

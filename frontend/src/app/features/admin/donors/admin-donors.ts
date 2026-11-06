@@ -25,7 +25,7 @@ import { problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { CompactLayout } from '../../../core/layout/compact-layout';
-import { formatBankTime } from '../../donations/donation-date';
+import { formatDonationDate, pragueDay } from '../../donations/donation-date';
 import { AdminApi, DonorAccountResponse } from '../admin-api';
 
 type SearchState = 'idle' | 'searching' | 'ready' | 'error';
@@ -40,7 +40,6 @@ const UNAUTHENTICATED = 'auth/unauthenticated';
 const FORBIDDEN = 'auth/forbidden';
 const SEARCH_DEBOUNCE_MS = 300;
 const QUERY_PARAM = 'q';
-const PRAGUE_DATE_LENGTH = '17. 10. 2026'.length;
 
 @Component({
   selector: 'app-admin-donors',
@@ -100,7 +99,7 @@ export class AdminDonors {
   }
 
   protected registeredOn(item: DonorAccountResponse): string {
-    return formatBankTime(item.registeredAt).slice(0, PRAGUE_DATE_LENGTH);
+    return formatDonationDate(pragueDay(item.registeredAt));
   }
 
   protected typeLabel(item: DonorAccountResponse): string {

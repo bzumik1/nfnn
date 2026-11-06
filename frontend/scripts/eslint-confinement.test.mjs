@@ -227,6 +227,7 @@ describe('Given the libraries only tests may use', () => {
       'sharedCaseLoader',
       'sharedCaseSetup',
       'receiptAssetsSetup',
+      'serverRoutesSetup',
     ]);
   });
 });
@@ -243,6 +244,7 @@ describe('Given the QR reader of the verification page', () => {
       'sharedCaseLoader',
       'sharedCaseSetup',
       'receiptAssetsSetup',
+      'serverRoutesSetup',
     ]);
   });
 
@@ -254,6 +256,7 @@ describe('Given the QR reader of the verification page', () => {
       'sharedCaseLoader',
       'sharedCaseSetup',
       'receiptAssetsSetup',
+      'serverRoutesSetup',
     ]);
   });
 
@@ -325,6 +328,7 @@ describe('Given pdfkit, which draws the receipts', () => {
       'sharedCaseLoader',
       'sharedCaseSetup',
       'receiptAssetsSetup',
+      'serverRoutesSetup',
     ]);
     assert.deepEqual(SCOPES.receiptWorker.files, [
       'src/app/features/donations/receipt-pdf/receipt-pdf.worker.ts',
@@ -343,6 +347,7 @@ describe('Given idb, which reaches IndexedDB for the device copies', () => {
       'sharedCaseLoader',
       'sharedCaseSetup',
       'receiptAssetsSetup',
+      'serverRoutesSetup',
     ]);
     assert.deepEqual(SCOPES.idbStorage.files, ['src/app/core/device/store/idb-device-storage.ts']);
   });
