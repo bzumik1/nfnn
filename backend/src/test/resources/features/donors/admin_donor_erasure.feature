@@ -20,7 +20,9 @@ Feature: An administrator erases a donor's personal data
     And both parts of the last e-mail contain "Na serveru zůstává i záznam o tom, co správci webu udělali, včetně tohoto výmazu."
     And both parts of the last e-mail contain "Databázi webu každý den zálohujeme na náš server a zálohy na serveru mažeme přibližně po měsíci; vymazané údaje proto ze záloh zmizí nejpozději po této době."
     And neither part of the last e-mail contains "nejsou už ale spojené s vaším jménem"
-    And neither part of the last e-mail contains "zařízení"
+    And both parts of the last e-mail contain "Kopii vašich údajů, kterou si dárcovský portál uložil do zařízení, kde jste byli přihlášení, zařízení smaže, jakmile se příště spojí s naším serverem"
+    And both parts of the last e-mail contain "potvrzení, která jste si sami stáhli, zůstávají u vás"
+    And both parts of the last e-mail contain "Z kopií správy v zařízeních správců vaše údaje zmizí při jejich příští synchronizaci."
     When "Jana" opens the donor "Petr"
     Then the response status is 200
     And the donor card says the donor was erased on 2026-10-17

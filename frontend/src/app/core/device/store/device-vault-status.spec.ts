@@ -525,4 +525,55 @@ describe('Given the device vault that asks the server how its sign-ins stand', (
 
     expect(await storedEntries()).toHaveLength(2);
   });
+
+  describe('when the server could not be reached when Jana signed out here', () => {
+    beforeEach(async () => {
+      await vault.signedIn(JANA, { kind: 'password', password: PASSWORD }, false, IPHONE);
+      answers.set(IPHONE, null);
+      await vault.signedOut(JANA);
+      source.mockClear();
+    });
+
+    it('and the connection returns while she was erased, then the device asks again and deletes her copy', async () => {
+      answer(IPHONE, 'wipe-all');
+
+      await vault.connectionReturned();
+
+      expect(source.mock.calls).toEqual([[IPHONE]]);
+      expect(await databaseNames()).not.toContain(DEVICE_DATABASE);
+    });
+
+    it('and the connection returns once the answer came, then a further return asks nothing', async () => {
+      answer(IPHONE, 'signed-out');
+      await vault.connectionReturned();
+      source.mockClear();
+
+      await vault.connectionReturned();
+
+      expect(source).not.toHaveBeenCalled();
+      expect(await storedEntries()).toHaveLength(1);
+    });
+
+    it('and the question fails again when the connection returns, then the next return asks once more', async () => {
+      source.mockRejectedValueOnce(new Error('offline'));
+      await vault.connectionReturned();
+      answer(IPHONE, 'wipe-all');
+
+      await vault.connectionReturned();
+
+      expect(source).toHaveBeenCalledTimes(2);
+      expect(await databaseNames()).not.toContain(DEVICE_DATABASE);
+    });
+  });
+
+  it('when every question was answered, then a returning connection asks nothing', async () => {
+    await vault.signedIn(JANA, { kind: 'password', password: PASSWORD }, false, IPHONE);
+    answer(IPHONE, 'signed-out');
+    await vault.signedOut(JANA);
+    source.mockClear();
+
+    await vault.connectionReturned();
+
+    expect(source).not.toHaveBeenCalled();
+  });
 });

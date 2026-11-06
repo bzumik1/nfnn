@@ -231,6 +231,10 @@ export class DeviceVault implements SessionDevice {
     }).then(() => this.checkStatus(true));
   }
 
+  connectionReturned(): Promise<void> {
+    return Promise.resolve();
+  }
+
   signedOutElsewhere(): void {
     this.sessionGeneration++;
     void this.run(async () => this.closeOpen());
