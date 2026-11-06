@@ -81,7 +81,7 @@ public class ProjectAdminService {
         ProjectContent content = checked(command.toContent(), id);
         Project article = Project.create(id, content, now);
         projects.save(article);
-        formerSlugs.forget(content.slug());
+        formerSlugs.forgetProject(content.slug());
         audit(adminId, CREATE_ACTION, article, "Projekt " + id + " „" + content.slug() + "“ napsán", now);
         return versioned(article, today(now));
     }
@@ -125,7 +125,7 @@ public class ProjectAdminService {
     }
 
     private void rememberFormerSlug(Project before, Project after, Instant now) {
-        formerSlugs.forget(after.slug());
+        formerSlugs.forgetProject(after.slug());
         if (!before.slug().equals(after.slug())) {
             formerSlugs.rememberProject(before.slug(), after.id(), now);
         }

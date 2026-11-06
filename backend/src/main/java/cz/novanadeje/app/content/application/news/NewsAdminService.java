@@ -78,7 +78,7 @@ public class NewsAdminService {
         NewsContent content = checked(command.toContent(), id);
         NewsArticle article = NewsArticle.create(id, content, now);
         news.save(article);
-        formerSlugs.forget(content.slug());
+        formerSlugs.forgetNews(content.slug());
         audit(adminId, CREATE_ACTION, article, "Aktualita " + id + " „" + content.slug() + "“ napsána", now);
         return versioned(article, today(now));
     }
@@ -122,7 +122,7 @@ public class NewsAdminService {
     }
 
     private void rememberFormerSlug(NewsArticle before, NewsArticle after, Instant now) {
-        formerSlugs.forget(after.slug());
+        formerSlugs.forgetNews(after.slug());
         if (!before.slug().equals(after.slug())) {
             formerSlugs.rememberNews(before.slug(), after.id(), now);
         }

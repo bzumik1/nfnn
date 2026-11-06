@@ -8,6 +8,9 @@ values ('0190a000-0000-7000-8000-000000000003', 'letni-tabor', 'Letní tábor', 
 insert into content_project (id, slug, title, year, tag, perex, body, cover_media_id, published_on, created_at, updated_at)
 values ('0190a000-0000-7000-8000-000000000004', 'nova-strecha', 'Nová střecha', 2025, 'Stavba', 'Perex', 'Text projektu',
         '0190a000-0000-7000-8000-000000000001', '2026-01-12', '2026-01-10T10:00:00Z', '2026-01-10T10:00:00Z');
+insert into content_former_slug (slug, news_id, project_id, replaced_at)
+values ('tabor', '0190a000-0000-7000-8000-000000000003', null, '2026-01-11T10:00:00Z'),
+       ('strecha', null, '0190a000-0000-7000-8000-000000000004', '2026-01-12T10:00:00Z');
 
 insert into donor (id, type, name, company_identifier, street, city, postal_code, email, password_hash, variable_symbol,
                    preferred_locale, registered_at, email_verified_at, erased_at)
