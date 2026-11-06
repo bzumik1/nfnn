@@ -29,6 +29,7 @@ export const routes: Routes = [
     children: [
       {
         path: 'obnova-hesla',
+        data: { darkThroughout: true } satisfies RouteChromeData,
         title: $localize`:@@donor.passwordReset.pageTitle:Nové heslo | Nová naděje – nadační fond`,
         loadComponent: () =>
           import('./features/donors/password-reset/password-reset').then((m) => m.PasswordReset),
@@ -49,6 +50,7 @@ export const routes: Routes = [
       },
       {
         path: 'potvrzeni-emailu',
+        data: { darkThroughout: true } satisfies RouteChromeData,
         title: $localize`:@@donor.emailVerification.pageTitle:Potvrzení e-mailu | Nová naděje – nadační fond`,
         loadComponent: () =>
           import('./features/donors/email-verification/email-verification').then(
@@ -57,7 +59,7 @@ export const routes: Routes = [
       },
       {
         path: 'overit',
-        data: { parent: '/' } satisfies RouteChromeData,
+        data: { parent: '/', darkThroughout: true } satisfies RouteChromeData,
         title: $localize`:@@donor.verify.pageTitle:Ověření potvrzení o daru | Nová naděje – nadační fond`,
         loadComponent: () =>
           import('./features/donations/verification/verification-page').then(

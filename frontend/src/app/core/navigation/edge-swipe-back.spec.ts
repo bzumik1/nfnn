@@ -42,6 +42,7 @@ function chromeWith(parent: string | null): Chrome {
     tabBar: true,
     landing: false,
     backOnWide: true,
+    darkThroughout: false,
   };
 }
 

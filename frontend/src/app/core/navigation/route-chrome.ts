@@ -9,6 +9,7 @@ export interface RouteChromeData {
   readonly tabBar?: boolean;
   readonly landing?: boolean;
   readonly backOnWide?: boolean;
+  readonly darkThroughout?: boolean;
 }
 
 export interface Chrome {
@@ -17,6 +18,7 @@ export interface Chrome {
   readonly tabBar: boolean;
   readonly landing: boolean;
   readonly backOnWide: boolean;
+  readonly darkThroughout: boolean;
 }
 
 const PLAIN: Chrome = {
@@ -25,6 +27,7 @@ const PLAIN: Chrome = {
   tabBar: true,
   landing: false,
   backOnWide: true,
+  darkThroughout: false,
 };
 
 @Injectable({ providedIn: 'root' })
@@ -58,6 +61,7 @@ export function chromeOf(root: ActivatedRouteSnapshot): Chrome {
       tabBar: data.tabBar ?? chrome.tabBar,
       landing: data.landing ?? false,
       backOnWide: data.backOnWide ?? chrome.backOnWide,
+      darkThroughout: data.darkThroughout ?? chrome.darkThroughout,
     };
   }
   return chrome;

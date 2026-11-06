@@ -14,7 +14,17 @@ describe('Given the chrome a route asks for', () => {
     TestBed.configureTestingModule({
       providers: [
         provideRouter([
-          { path: '', pathMatch: 'full', component: Blank, data: { landing: true, head: 'photo' } },
+          {
+            path: '',
+            pathMatch: 'full',
+            component: Blank,
+            data: { landing: true, head: 'photo', darkThroughout: true },
+          },
+          {
+            path: 'overit',
+            data: { darkThroughout: true },
+            children: [{ path: 'detail', component: Blank, data: { parent: '/overit' } }],
+          },
           {
             path: 'darce',
             data: { head: 'light', parent: '/', backOnWide: false },
@@ -39,6 +49,7 @@ describe('Given the chrome a route asks for', () => {
       tabBar: true,
       landing: false,
       backOnWide: true,
+      darkThroughout: false,
     });
   });
 
@@ -70,5 +81,16 @@ describe('Given the chrome a route asks for', () => {
     await router.navigateByUrl('/');
 
     expect(chrome.current()).toEqual(expect.objectContaining({ head: 'photo', landing: true }));
+  });
+
+  it('when a page is dark all the way down, then its pages say so, and the landing page too', async () => {
+    await router.navigateByUrl('/overit/detail');
+    expect(chrome.current().darkThroughout).toBe(true);
+
+    await router.navigateByUrl('/');
+    expect(chrome.current().darkThroughout).toBe(true);
+
+    await router.navigateByUrl('/aktuality/clanek');
+    expect(chrome.current().darkThroughout).toBe(false);
   });
 });
