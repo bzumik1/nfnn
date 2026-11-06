@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 import {
+  appearanceProblems,
   barContrastProblems,
   manifestProblems,
   receiptTokensOutsideRoot,
@@ -191,6 +193,117 @@ describe('Given the colours of the tab bar over the page', () => {
     assert.deepEqual(barContrastProblems('solid', solid), [
       'theme solid under @media (prefers-reduced-transparency: reduce): solid --color-tab-pill on --color-tab-bar is 1.08:1, below 3:1',
     ]);
+  });
+});
+
+function themeSource(name) {
+  return readFileSync(new URL(`../src/themes/${name}/_theme.scss`, import.meta.url), 'utf8');
+}
+
+const NOVA_NADEJE = themeSource('nova-nadeje');
+
+describe('Given the colours a theme sets for the light and the dark appearance', () => {
+  it('when the themes of the site are checked, then every text, control and focus ring stays readable in each appearance', () => {
+    assert.deepEqual(appearanceProblems('nova-nadeje', NOVA_NADEJE), []);
+    assert.deepEqual(appearanceProblems('control', themeSource('control')), []);
+  });
+
+  it('when a theme sets no colours for the dark appearance, then it is reported, because the site would stay light on a dark device', () => {
+    const lightOnly = NOVA_NADEJE.replaceAll(
+      '(prefers-color-scheme: dark)',
+      '(prefers-color-scheme: light)',
+    );
+
+    assert.deepEqual(appearanceProblems('light-only', lightOnly), [
+      'theme light-only sets no colours under @media (prefers-color-scheme: dark), so it ignores the dark appearance of the device',
+    ]);
+  });
+
+  it('when the dark text is hardly lighter than the dark page, then its contrast in the dark appearance is reported', () => {
+    const dim = NOVA_NADEJE.replace('    --color-text: #e6e8ee;', '    --color-text: #3a4050;');
+
+    assert.match(
+      appearanceProblems('dim', dim).join('\n'),
+      /^theme dim in the dark appearance: --color-text on --color-surface is [0-9.]+:1, below 4.5:1$/m,
+    );
+  });
+
+  it('when the block for more contrast comes after the dark block, then its dark text is reported over the dark page, because a later block wins in the dark too', () => {
+    const contrastStart = NOVA_NADEJE.indexOf('@media (prefers-contrast: more)');
+    const contrastBlock = NOVA_NADEJE.slice(
+      contrastStart,
+      NOVA_NADEJE.indexOf('@media (prefers-reduced-transparency', contrastStart),
+    );
+    const darkContrastStart = NOVA_NADEJE.indexOf(
+      '@media (prefers-color-scheme: dark) and (prefers-contrast: more)',
+    );
+    const darkContrastEnd = NOVA_NADEJE.indexOf('@media (inverted-colors: inverted)');
+    const reordered = `${NOVA_NADEJE.slice(0, darkContrastStart)}${NOVA_NADEJE.slice(darkContrastEnd)}\n${contrastBlock}`;
+
+    assert.match(
+      appearanceProblems('reordered', reordered).join('\n'),
+      /^theme reordered in the dark appearance with more contrast: --color-text-secondary on --color-surface is [0-9.]+:1, below 4.5:1$/m,
+    );
+    assert.deepEqual(
+      appearanceProblems('reordered', reordered).filter((problem) =>
+        problem.includes('in the light'),
+      ),
+      [],
+    );
+  });
+
+  it('when a ground is a translucent mix, then it is laid over the page before the text on it is measured', () => {
+    const translucent = NOVA_NADEJE.replace(
+      '    --color-accent-soft: #162a4d;',
+      '    --color-accent-soft: color-mix(in srgb, #e6e8ee 90%, transparent);',
+    );
+
+    assert.match(
+      appearanceProblems('translucent', translucent).join('\n'),
+      /^theme translucent in the dark appearance: --color-text on --color-accent-soft is [0-9.]+:1, below 4.5:1$/m,
+    );
+  });
+
+  it('when a colour names another token, then the colour of that token is measured', () => {
+    const named = NOVA_NADEJE.replace(
+      '    --color-focus-ring: #6ea8ff;',
+      '    --color-focus-ring: var(--color-surface-alt);',
+    );
+
+    assert.match(
+      appearanceProblems('named', named).join('\n'),
+      /^theme named in the dark appearance: --color-focus-ring on --color-surface is [0-9.]+:1, below 3:1$/m,
+    );
+  });
+
+  it('when a checked colour is neither a literal colour, a mix of one with transparent nor another token, then it is reported, because its contrast cannot be measured', () => {
+    const computed = NOVA_NADEJE.replace(
+      '    --color-text: #e6e8ee;',
+      '    --color-text: light-dark(#1a1a2e, #e6e8ee);',
+    );
+
+    assert.ok(
+      appearanceProblems('computed', computed).includes(
+        'theme computed in the dark appearance: --color-text is light-dark(#1a1a2e, #e6e8ee), not a colour whose contrast can be measured',
+      ),
+    );
+  });
+
+  it('when the field border is as soft in the dark as in the default look, then only the dark appearance reports it, because Jakub kept the soft border of the light default', () => {
+    const soft = NOVA_NADEJE.replace(
+      '    --color-border-field: #6b7588;',
+      '    --color-border-field: #2a3243;',
+    );
+
+    const problems = appearanceProblems('soft', soft);
+
+    assert.deepEqual(
+      problems.filter((problem) => problem.includes('--color-border-field')),
+      [
+        'theme soft in the dark appearance: --color-border-field on --color-surface is 1.43:1, below 3:1',
+        'theme soft in the dark appearance: --color-border-field on --color-surface-alt is 1.53:1, below 3:1',
+      ],
+    );
   });
 });
 

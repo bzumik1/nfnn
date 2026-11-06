@@ -67,8 +67,8 @@
   }
 
   &.active {
-    background: var(--color-accent);
-    border-color: var(--color-accent);
+    background: var(--color-accent-fill);
+    border-color: var(--color-accent-fill);
     color: var(--color-on-accent);
     box-shadow: var(--shadow-cta);
   }
