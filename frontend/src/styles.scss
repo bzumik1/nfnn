@@ -38,6 +38,7 @@ html:has(app-tab-bar) {
 
 html:has(app-landing) {
   background: var(--color-image-shade);
+  overscroll-behavior: none;
 }
 
 :focus-visible {
