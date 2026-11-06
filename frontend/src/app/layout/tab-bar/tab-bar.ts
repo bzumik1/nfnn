@@ -38,7 +38,7 @@ export class TabBar {
   protected readonly tabs = APP_TABS;
   protected readonly current = computed(() => this.memory.currentTab()?.id ?? null);
   private readonly chrome = inject(RouteChrome).current;
-  protected readonly onDark = computed(() => this.chrome().head !== 'light');
+  protected readonly onDark = computed(() => this.chrome().darkThroughout);
   protected readonly label = $localize`:@@layout.tabs.label:Hlavní sekce`;
   private readonly backTarget = inject(BackTarget);
 

@@ -72,6 +72,23 @@ describe('Given a visitor and the app routes', () => {
 
     expect(chrome.current().parent).toBe('/');
   });
+
+  it('when a page is dark or a photo all the way down, then it says so for the tab bar, and a story under a dark head does not', async () => {
+    const router = TestBed.inject(Router);
+    const chrome = TestBed.inject(RouteChrome);
+    const darkThroughout = async (url: string) => {
+      await router.navigateByUrl(url);
+      return chrome.current().darkThroughout;
+    };
+
+    expect(await darkThroughout('/')).toBe(true);
+    expect(await darkThroughout('/overit')).toBe(true);
+    expect(await darkThroughout('/neexistuje')).toBe(true);
+    expect(await darkThroughout('/obnova-hesla')).toBe(true);
+    expect(await darkThroughout('/potvrzeni-emailu')).toBe(true);
+    expect(await darkThroughout('/aktuality/zahrada-pro-deti')).toBe(false);
+    expect(await darkThroughout('/o-nas')).toBe(false);
+  });
 });
 
 describe('Given the app routes and the addresses nginx answers with the app', () => {
