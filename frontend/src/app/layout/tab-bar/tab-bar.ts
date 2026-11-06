@@ -12,6 +12,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { Router } from '@angular/router';
+import { SoftKeyboard } from '../../core/layout/soft-keyboard';
 import { APP_TABS, AppTab } from '../../core/navigation/app-tabs';
 import { TabMemory } from '../../core/navigation/tab-memory';
 import { keepRoomForTabBar } from './tab-bar-room';
@@ -25,6 +26,7 @@ import { keepRoomForTabBar } from './tab-bar-room';
 export class TabBar {
   private readonly router = inject(Router);
   protected readonly memory = inject(TabMemory);
+  protected readonly keyboard = inject(SoftKeyboard);
   private readonly document = inject(DOCUMENT);
   private readonly window = this.document.defaultView;
   private readonly bar = viewChild.required<ElementRef<HTMLElement>>('bar');

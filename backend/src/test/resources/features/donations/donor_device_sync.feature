@@ -149,6 +149,27 @@ Feature: A donor's device keeps a copy of the donor's data by downloading only t
     And the device holds the chunk "receipts:2026" with 3 rows
     And the device's chunk "receipts:2026" holds every receipt "Jana" lists for 2026
 
+  Scenario: A yearly receipt that an unpairing withdrew stays in its chunk as withdrawn, so the device no longer offers it
+    Given today is 2026-12-20
+    And a person "Jana" is registered
+    And a person "Andrea" is registered
+    And "Andrea" is an administrator
+    And the bank account has these movements:
+      | id   | date       | amount | account    | bankCode | name          | variableSymbol |
+      | 3001 | 2026-10-10 | 500.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
+      | 3002 | 2026-10-12 | 200.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
+    And the application starts the import
+    And today is 2027-01-15
+    And "Jana" issues her yearly receipt for 2026
+    And a device of "Jana" syncs
+    Then the device's chunk "receipts:2026" holds receipts with the statuses "ACTIVE"
+    When "Andrea" unpairs payment 3002
+    And a device of "Jana" syncs
+    Then the device holds the chunk "receipts:2026" with 1 row
+    And the device's chunk "receipts:2026" holds receipts with the statuses "WITHDRAWN"
+    And the device's chunk "receipts:2026" holds every receipt "Jana" lists for 2026
+    And the device's chunks of donations hold every donation "Jana" lists and no other
+
   Scenario: The device of an erased donor is signed out, so its token gets neither the manifest nor a chunk
     Given today is 2026-10-20
     And a person "Jana" is registered

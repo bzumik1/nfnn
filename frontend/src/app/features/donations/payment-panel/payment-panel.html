@@ -33,15 +33,18 @@
         >Vlastní částka v korunách</label
       >
       <input
+        #customAmountField
         [id]="customAmountId()"
         type="text"
         inputmode="numeric"
+        enterkeyhint="done"
         autocomplete="off"
         [value]="customText()"
         [attr.aria-invalid]="showAmountHint()"
         [attr.aria-describedby]="customAmountDescription()"
         (input)="enterCustomAmount($event)"
         (blur)="leaveCustomAmount()"
+        (keydown.enter)="finishCustomAmount()"
       />
       <span class="custom-amount-currency" aria-hidden="true" i18n="@@home.donate.amount.currency"
         >Kč</span
