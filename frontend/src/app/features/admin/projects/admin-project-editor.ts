@@ -282,6 +282,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
 
   constructor() {
     this.destroyRef.onDestroy(inject(DirtyForms).register(() => !this.discarded && this.unsaved()));
+    this.destroyRef.onDestroy(() => this.answerLeave?.(false));
     const id = this.route.snapshot.paramMap.get('id');
     if (id === null) {
       this.state.set('ready');

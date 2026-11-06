@@ -1,0 +1,49 @@
+:host {
+  display: block;
+  padding-inline: var(--space-4);
+}
+
+.lock-panel {
+  display: grid;
+  gap: var(--space-4);
+  max-width: var(--dialog-max-width);
+  margin: var(--space-6) auto;
+  text-align: center;
+}
+
+.lock-icon {
+  width: var(--space-12);
+  height: var(--space-12);
+  justify-self: center;
+  color: var(--color-accent);
+}
+
+.lock-panel h1 {
+  margin: 0;
+  outline: none;
+}
+
+.lock-lead,
+.lock-note {
+  margin: 0;
+}
+
+.lock-note {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.lock-actions,
+.lock-form {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.lock-form {
+  text-align: start;
+}
+
+.lock-back,
+.lock-sign-out {
+  justify-self: center;
+}

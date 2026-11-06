@@ -5,6 +5,7 @@ import {
   Component,
   computed,
   DOCUMENT,
+  effect,
   ElementRef,
   Injector,
   OnDestroy,
@@ -12,12 +13,14 @@ import {
   input,
   output,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 
 import { DialogAnnouncer } from './dialog-announcer';
 import { DialogHistory, DialogHistoryListener } from './dialog-history';
 import { DIALOG_PRESENTATION, DialogPresentation } from './dialog-presentation';
+import { DIALOG_SUSPENSION } from './dialog-suspension';
 import { SheetDrag } from './sheet-drag';
 
 const ROOM_ABOVE_STICKY_ACTIONS_PX = 16;
@@ -61,12 +64,27 @@ export class Dialog implements AfterViewInit, OnDestroy {
     stepBack: () => undefined,
     close: () => this.closedByBack(),
   };
+  private readonly suspension = inject(DIALOG_SUSPENSION);
   private dragPointer: number | null = null;
   private pressStartedOnBackdrop = false;
   private destroyed = false;
+  private viewReady = false;
+  private steppedAside = false;
+
+  constructor() {
+    effect(() => {
+      const suspended = this.suspension();
+      untracked(() => this.follow(suspended));
+    });
+  }
 
   ngAfterViewInit(): void {
-    this.element().nativeElement.showModal();
+    this.viewReady = true;
+    if (this.suspension()) {
+      this.steppedAside = true;
+    } else {
+      this.element().nativeElement.showModal();
+    }
     if (this.pushesHistory()) {
       this.history.open(this.historyEntry);
     }
@@ -95,6 +113,9 @@ export class Dialog implements AfterViewInit, OnDestroy {
   }
 
   protected onClose(): void {
+    if (this.steppedAside) {
+      return;
+    }
     if (this.dismissible()) {
       this.dismissed.emit();
     } else if (!this.destroyed) {
@@ -172,6 +193,24 @@ export class Dialog implements AfterViewInit, OnDestroy {
     }
   }
 
+  private follow(suspended: boolean): void {
+    if (!this.viewReady || this.destroyed) {
+      return;
+    }
+    const dialog = this.element().nativeElement;
+    if (suspended && !this.steppedAside) {
+      this.steppedAside = true;
+      if (dialog.open) {
+        dialog.close();
+      }
+    } else if (!suspended && this.steppedAside) {
+      this.steppedAside = false;
+      if (!dialog.open) {
+        dialog.showModal();
+      }
+    }
+  }
+
   private stopDrag(): void {
     this.dragPointer = null;
     this.dragging.set(false);
@@ -179,7 +218,9 @@ export class Dialog implements AfterViewInit, OnDestroy {
   }
 
   private closedByBack(): void {
-    this.dismiss();
+    if (!this.steppedAside) {
+      this.dismiss();
+    }
     afterNextRender(
       () => {
         if (!this.destroyed) {

@@ -59,6 +59,8 @@ class AdminActionSummaries {
             case "month" -> DateTimeFormatter.ofPattern(text("format.month", locale), locale).format(YearMonth.parse(value));
             case "bytes" -> size(Long.parseLong(value), locale);
             case "method" -> text("method." + value, locale);
+            case "platform" -> text("platform." + value, locale);
+            case "browser" -> text("browser." + value, locale);
             case "sections" -> labels("section.", value, locale);
             case "settings" -> labels("setting.", value, locale);
             case "previous" -> messages.getMessage(PREFIX + "level." + value, null, value, locale);

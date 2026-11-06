@@ -1,0 +1,173 @@
+<section class="ui-card ui-card--padded lock-panel" aria-labelledby="zamek-spravy-titulek">
+  <svg
+    class="lock-icon"
+    aria-hidden="true"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.9"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <rect x="4.5" y="10.5" width="15" height="10" rx="2.5" />
+    <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" />
+  </svg>
+  @if (view() === 'locked') {
+    <h1
+      #heading
+      id="zamek-spravy-titulek"
+      class="ui-card__title ui-card__title--large"
+      tabindex="-1"
+    >
+      <ng-container i18n="@@admin.lock.title">Správa je zamčená</ng-container>
+    </h1>
+    @if (online()) {
+      <p class="lock-lead" i18n="@@admin.lock.lead">
+        Údaje správy jsou v tomto zařízení zašifrované. Zamykají se po 5 minutách mimo aplikaci a
+        při každém spuštění.
+      </p>
+    } @else if (passkeyUnlocks()) {
+      <p class="lock-lead" i18n="@@admin.lock.offline">
+        Jste offline. Heslem a kódem odemknete správu, až budete připojeni. Přístupový klíč funguje
+        i bez připojení.
+      </p>
+    } @else {
+      <p class="lock-lead" i18n="@@admin.lock.offlineWithoutPasskey">
+        Jste offline. Heslem a kódem odemknete správu, až budete připojeni.
+      </p>
+    }
+    <div class="lock-actions">
+      @if (passkeyUnlocks()) {
+        <button
+          type="button"
+          class="ui-button ui-button--primary ui-button--block lock-passkey"
+          [disabled]="busy()"
+          (click)="withPasskey()"
+        >
+          @if (busy()) {
+            <ng-container i18n="@@admin.lock.passkey.busy">Čekáme na přístupový klíč…</ng-container>
+          } @else {
+            <ng-container i18n="@@admin.lock.passkey">Odemknout přístupovým klíčem</ng-container>
+          }
+        </button>
+      }
+      @if (passwordUnlocks()) {
+        <button
+          type="button"
+          class="ui-button ui-button--block lock-use-password"
+          [class.ui-button--primary]="!passkeyUnlocks()"
+          [disabled]="busy() || !online()"
+          (click)="usePassword()"
+          i18n="@@admin.lock.usePassword"
+        >
+          Použít heslo
+        </button>
+      }
+    </div>
+    @if (passkeyUnlocks()) {
+      <p class="lock-note" i18n="@@admin.lock.passkeyNote">
+        Face ID, otisk prstu nebo zámek obrazovky.
+      </p>
+    }
+    @if (nothingUnlocks()) {
+      <p class="lock-note" i18n="@@admin.lock.nothing">
+        Na tomto zařízení správu odemknout nejde. Odhlaste se a přihlaste se znovu.
+      </p>
+    }
+  } @else {
+    <h1
+      #heading
+      id="zamek-spravy-titulek"
+      class="ui-card__title ui-card__title--large"
+      tabindex="-1"
+    >
+      <ng-container i18n="@@admin.lock.password.title">Odemknout heslem</ng-container>
+    </h1>
+    <form
+      #unlockForm="ngForm"
+      class="lock-form"
+      appFocusFirstInvalid
+      (ngSubmit)="submit(unlockForm)"
+      novalidate
+    >
+      <app-account-username [email]="email()" />
+      <app-form-field
+        label="Heslo"
+        i18n-label="@@admin.lock.password"
+        [messages]="passwordMessages"
+      >
+        <app-password-reveal>
+          <input
+            #passwordField
+            appFormControl
+            id="zamek-heslo"
+            name="password"
+            type="password"
+            autocomplete="current-password"
+            [(ngModel)]="password"
+            required
+            maxlength="128"
+          />
+        </app-password-reveal>
+      </app-form-field>
+      <app-form-field
+        label="Kód z aplikace"
+        i18n-label="@@admin.lock.code"
+        hint="Šest číslic z aplikace pro ověření"
+        i18n-hint="@@admin.lock.codeHint"
+        [messages]="codeMessages"
+      >
+        <input
+          appFormControl
+          id="zamek-kod"
+          name="code"
+          type="text"
+          inputmode="numeric"
+          autocomplete="one-time-code"
+          placeholder="123456"
+          [(ngModel)]="code"
+          required
+          pattern="\s*\d{6}\s*"
+          maxlength="8"
+        />
+      </app-form-field>
+      @if (!online()) {
+        <p class="lock-note" i18n="@@admin.lock.password.offline">
+          Heslo a kód ověří server, takže je zadáte, až budete připojeni.
+        </p>
+      }
+      <button
+        type="submit"
+        class="ui-button ui-button--primary ui-button--block lock-unlock"
+        [disabled]="busy() || !online()"
+      >
+        @if (busy()) {
+          <ng-container i18n="@@admin.lock.password.busy">Odemykáme…</ng-container>
+        } @else {
+          <ng-container i18n="@@admin.lock.password.submit">Odemknout</ng-container>
+        }
+      </button>
+      <button
+        type="button"
+        class="ui-link-button lock-back"
+        [disabled]="busy()"
+        (click)="back()"
+        i18n="@@admin.lock.password.back"
+      >
+        Zpět
+      </button>
+    </form>
+  }
+  @if (error()) {
+    <p class="ui-field-error" role="alert">{{ error() }}</p>
+  }
+  <button
+    type="button"
+    class="ui-link-button lock-sign-out"
+    [disabled]="busy()"
+    (click)="signOut()"
+    i18n="@@admin.lock.signOut"
+  >
+    Odhlásit se z tohoto zařízení
+  </button>
+</section>

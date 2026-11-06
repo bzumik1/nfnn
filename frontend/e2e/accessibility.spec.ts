@@ -2990,3 +2990,29 @@ test.describe('Given a visitor on a phone who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 });
+
+test.describe('Given an administrator whose administration is locked on this device', () => {
+  test.use({ unlocksAdministration: false });
+
+  test('when the lock panel and its password view are shown, at 390 and 1280 px, then they break no rule', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.goto('/');
+    await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
+    for (const width of [390, 1280]) {
+      await page.setViewportSize({ width, height: 844 });
+      await page.goto('/sprava');
+      await expect(
+        page.getByRole('heading', { level: 1, name: 'Správa je zamčená' }),
+      ).toBeVisible();
+      expect(await violations(page)).toEqual([]);
+      await page.getByRole('button', { name: 'Použít heslo' }).click();
+      await expect(page.getByRole('heading', { level: 1, name: 'Odemknout heslem' })).toBeVisible();
+      expect(await violations(page)).toEqual([]);
+    }
+  });
+});

@@ -4,5 +4,5 @@ export interface GuardsUnsavedChanges {
   canLeave(): boolean | Promise<boolean>;
 }
 
-export const unsavedChangesGuard: CanDeactivateFn<GuardsUnsavedChanges> = (component) =>
-  component.canLeave();
+export const unsavedChangesGuard: CanDeactivateFn<GuardsUnsavedChanges | null> = (component) =>
+  component === null ? true : component.canLeave();
