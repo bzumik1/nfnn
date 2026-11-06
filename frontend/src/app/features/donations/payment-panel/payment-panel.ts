@@ -27,7 +27,7 @@ import { QrMatrix } from '../../../shared/ui/qr-code/qr-matrix';
 import { ZoomQr } from '../../../shared/ui/zoom-viewer/zoom-content';
 import { Zoomable } from '../../../shared/ui/zoom-viewer/zoomable';
 import { formatCrowns } from '../donation-amount';
-import { formatIban } from '../iban-format';
+import { ibanHalves } from '../iban-format';
 import { PaymentAccount, PaymentDetails } from '../payment-details-api';
 import { PaymentDetailsStore } from '../payment-details-store';
 import { saveBlob } from '../file-download';
@@ -237,9 +237,9 @@ export class PaymentPanel {
     return { day: age.writtenAt === null ? null : formatDataDay(age.writtenAt) };
   });
 
-  protected readonly ibanInGroups = computed(() => {
+  protected readonly ibanLines = computed(() => {
     const account = this.bankAccount();
-    return account ? formatIban(account.iban) : '';
+    return account ? ibanHalves(account.iban) : ['', ''];
   });
 
   protected readonly amountLabelId = computed(() => `${this.idPrefix()}-amount-label`);
