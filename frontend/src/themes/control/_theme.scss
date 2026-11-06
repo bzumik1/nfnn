@@ -60,6 +60,15 @@
   --color-on-tab-bar: #fdfcf7;
   --color-tab-focus-ring: #fdba74;
   --color-sheet-grabber: #8a877c;
+  --color-sheet-close: color-mix(in srgb, var(--color-text) 10%, var(--color-surface));
+  --color-on-sheet-close: var(--color-text);
+  --color-sheet-grouped: var(--color-surface-muted);
+  --color-sheet-group: var(--color-surface);
+  --color-sheet-text: var(--color-text);
+  --color-sheet-secondary: var(--color-text-muted);
+  --color-sheet-separator: var(--color-border);
+  --color-sheet-chevron: var(--color-text-subtle);
+  --shadow-sheet-close: none;
 
   --font-serif: Georgia, 'Times New Roman', serif;
   --font-sans: system-ui, 'Segoe UI', Roboto, Arial, sans-serif;
@@ -158,6 +167,7 @@
   --radius-media: 4px;
   --radius-dialog: 6px;
   --radius-sheet: var(--radius-dialog);
+  --radius-sheet-group: var(--radius-media);
   --radius-pill: 4px;
   --radius-round: 50%;
 
@@ -206,6 +216,22 @@
   --sheet-max-width: 640px;
   --sheet-grabber-width: 40px;
   --sheet-grabber-height: 4px;
+  --sheet-close-size: var(--back-button-size);
+  --sheet-close-inset: var(--space-4);
+  --sheet-top-gap: var(--space-2);
+  --sheet-group-gap: var(--space-6);
+  --font-sheet: var(--font-sans);
+  --sheet-inset-inline: var(--space-3);
+  --sheet-header-gap: var(--space-6);
+  --sheet-row-height: 3rem;
+  --sheet-row-padding-inline: var(--space-3);
+  --sheet-profile-padding: var(--space-3);
+  --sheet-avatar-size: var(--back-button-size);
+  --sheet-logo-height: 32px;
+  --sheet-chevron-size: 16px;
+  --text-sheet-body: 1rem;
+  --text-sheet-subtitle: var(--text-sm);
+  --text-sheet-footnote: var(--text-xs);
   --tab-bar-height: 60px;
   --tab-bar-gap: 15px;
   --tab-bar-gap-browser: 15px;
@@ -267,6 +293,7 @@
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
+    --color-sheet-grouped: var(--color-surface-alt);
     --color-accent: #5eead4;
     --color-accent-soft: #133a35;
     --color-accent-bg: #10302b;

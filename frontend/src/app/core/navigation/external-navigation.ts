@@ -17,10 +17,10 @@ export class ExternalNavigation {
     const current = new URL(view.location.href);
     const target = new URL(url, current);
     if (target.pathname !== current.pathname || target.search !== current.search) {
-      view.location.assign(url);
-      return;
+      view.history.pushState(null, '', url);
+    } else {
+      view.history.replaceState(null, '', url);
     }
-    view.history.replaceState(null, '', url);
     view.location.reload();
   }
 }

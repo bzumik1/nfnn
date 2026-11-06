@@ -71,6 +71,33 @@ insert into donation (id, donor_id, bank_payment_id, received_on, amount_minor, 
 values ('0190a000-0000-7000-8000-000000000023', '0190a000-0000-7000-8000-000000000010',
         '0190a000-0000-7000-8000-000000000020', '2026-01-07', 50000, 'CZK', 'BANK_TRANSFER', 'RECEIVED',
         'VARIABLE_SYMBOL', '2026-01-07T10:00:00Z', null, 'GENERAL', null);
+insert into donor_record (donor_id, type, name, company_identifier, street, city, postal_code, variable_symbol,
+                          preferred_locale, registered_at, updated_at, erased_at)
+values ('0190a000-0000-7000-8000-000000000050', 'COMPANY', 'Testovací Firma s.r.o.', '12345678', 'Ulice 2', 'Město', '110 00',
+        '1000000002', 'en', '2026-01-02T09:00:00Z', '2026-01-02T09:00:00Z', null),
+       ('0190a000-0000-7000-8000-000000000051', 'COMPANY', 'Vymazaný dárce', null, 'Vymazáno', 'Vymazáno', '00000',
+        '1000000003', 'cs', '2026-01-02T09:00:00Z', '2026-01-05T09:00:00Z', '2026-01-05T09:00:00Z');
+insert into bank_payment (id, bank_transaction_id, booked_on, amount_minor, currency, sender_account_number, sender_bank_code,
+                          counterparty_account, counterparty_bank_code, counterparty_name, variable_symbol,
+                          matching_variable_symbol, constant_symbol, specific_symbol, message_for_recipient,
+                          transaction_type, imported_at, unpaired_by_admin_at)
+values ('0190a000-0000-7000-8000-000000000052', 26000000002, '2026-01-08', 100, 'CZK', '123456789', '0100',
+        '123456789', '0100', 'Testovací Dárce', '0777', '777', null, null, null, 'Bezhotovostní příjem',
+        '2026-01-08T10:00:00Z', null),
+       ('0190a000-0000-7000-8000-000000000053', 26000000003, '2026-01-08', 20000, 'CZK', null, null,
+        'DE89370400440532013000', null, 'Ausländischer Spender', null, null, null, null, null, 'Bezhotovostní příjem',
+        '2026-01-08T10:00:00Z', null);
+insert into donation (id, donor_id, bank_payment_id, received_on, amount_minor, currency, source, status, paired_by,
+                      recorded_at, sender_account_id, purpose, symbol_claim_id)
+values ('0190a000-0000-7000-8000-000000000054', '0190a000-0000-7000-8000-000000000010',
+        '0190a000-0000-7000-8000-000000000052', '2026-01-08', 100, 'CZK', 'BANK_TRANSFER', 'RECEIVED',
+        'CONFIRMED_SYMBOL', '2026-01-08T10:00:00Z', '0190a000-0000-7000-8000-000000000021', 'GENERAL',
+        '0190a000-0000-7000-8000-000000000022'),
+       ('0190a000-0000-7000-8000-000000000055', '0190a000-0000-7000-8000-000000000050',
+        '0190a000-0000-7000-8000-000000000053', '2026-01-08', 20000, 'CZK', 'BANK_TRANSFER', 'REFUNDED',
+        'MANUAL', '2026-01-08T10:00:00Z', null, 'GENERAL', null),
+       ('0190a000-0000-7000-8000-000000000056', '0190a000-0000-7000-8000-000000000051', null, '2025-12-24', 30000, 'CZK',
+        'MANUAL', 'RECEIVED', null, '2026-01-02T10:00:00Z', null, 'GENERAL', null);
 insert into receipt_image (sha256, media_type, content, first_used_at)
 values (repeat('2', 64), 'image/png', '\x89504e47', '2026-01-09T10:00:00Z');
 insert into donation_receipt_signature (id, image_sha256, width, height, uploaded_at)

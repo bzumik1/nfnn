@@ -25,7 +25,7 @@
       </button>
     }
     @if (showsLogo()) {
-      <a class="brand" [class.brand--after-back]="parent()" routerLink="/">
+      <a class="brand" routerLink="/">
         <picture>
           @if (!onDark()) {
             <source media="(prefers-color-scheme: dark)" srcset="/images/logo-on-dark.svg" />

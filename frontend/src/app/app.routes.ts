@@ -2,13 +2,14 @@ import { Routes } from '@angular/router';
 import { adminGuard } from './core/auth/admin-guard';
 import { APP_ENTRY_PATH, appEntryGuard } from './core/auth/app-entry-guard';
 import { donorGuard } from './core/auth/donor-guard';
+import { RouteChromeData } from './core/navigation/route-chrome';
 import { LOADED_AHEAD } from './core/navigation/tab-preloading';
 
 export const routes: Routes = [
   {
     path: 'darce',
     canActivate: [donorGuard],
-    data: { head: 'light', parent: '/', backOnWide: false, logoBesideBack: false },
+    data: { head: 'light', parent: '/', backOnWide: false },
     loadComponent: () => import('./layout/donor-shell/donor-shell').then((m) => m.DonorShell),
     loadChildren: () => import('./features/donors/donors.routes').then((m) => m.donorsRoutes),
   },
@@ -17,7 +18,7 @@ export const routes: Routes = [
   {
     path: 'sprava',
     canActivate: [adminGuard],
-    data: { head: 'light', parent: '/', backOnWide: false, logoBesideBack: false },
+    data: { head: 'light', parent: '/', backOnWide: false },
     loadComponent: () => import('./layout/donor-shell/donor-shell').then((m) => m.DonorShell),
     loadChildren: () => import('./features/admin/admin.routes').then((m) => m.adminRoutes),
   },
@@ -56,6 +57,7 @@ export const routes: Routes = [
       },
       {
         path: 'overit',
+        data: { parent: '/' } satisfies RouteChromeData,
         title: $localize`:@@donor.verify.pageTitle:Ověření potvrzení o daru | Nová naděje – nadační fond`,
         loadComponent: () =>
           import('./features/donations/verification/verification-page').then(
