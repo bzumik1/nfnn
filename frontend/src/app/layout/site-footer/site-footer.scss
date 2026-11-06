@@ -21,6 +21,13 @@
   );
 }
 
+:host-context(.is-offline) .footer {
+  padding-bottom: calc(
+    var(--space-7) + var(--floating-notice-height) + var(--offline-pill-height) + var(--space-8) +
+      var(--space-4) + max(env(safe-area-inset-bottom), var(--footer-tab-room))
+  );
+}
+
 .footer-top {
   display: flex;
   justify-content: space-between;

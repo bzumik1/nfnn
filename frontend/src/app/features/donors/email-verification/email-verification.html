@@ -71,6 +71,7 @@
                   <p class="ui-field-error" role="alert">{{ error() }}</p>
                 }
                 <button
+                  appNeedsConnection
                   type="button"
                   class="ui-button ui-button--primary ui-button--block"
                   [disabled]="loading()"
@@ -166,6 +167,7 @@
           </h1>
           <p class="ui-panel__lead" role="alert">{{ error() }}</p>
           <button
+            appNeedsConnection
             type="button"
             class="ui-button ui-button--primary ui-button--block"
             (click)="retry()"
@@ -268,6 +270,7 @@
           }
 
           <button
+            appNeedsConnection
             type="submit"
             class="ui-button ui-button--primary ui-button--block"
             [disabled]="loading()"

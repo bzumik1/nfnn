@@ -15,7 +15,13 @@
     @case ('error') {
       <div class="ui-load-state ui-load-state--error" role="alert">
         <p>{{ loadError() }}</p>
-        <button type="button" class="ui-button" (click)="load()" i18n="@@admin.alerts.error.retry">
+        <button
+          appNeedsConnection
+          type="button"
+          class="ui-button"
+          (click)="load()"
+          i18n="@@admin.alerts.error.retry"
+        >
           Zkusit znovu
         </button>
       </div>
@@ -107,6 +113,7 @@
               </p>
               <div class="actions again">
                 <button
+                  appNeedsConnection
                   type="button"
                   class="ui-button ui-button--primary"
                   [disabled]="subscribing()"
@@ -152,6 +159,7 @@
           </fieldset>
           <div class="actions">
             <button
+              appNeedsConnection
               type="button"
               class="ui-button ui-button--danger-outline"
               [disabled]="turningOff()"
@@ -178,6 +186,7 @@
               </p>
               <div class="actions">
                 <button
+                  appNeedsConnection
                   type="button"
                   class="ui-button ui-button--primary"
                   [disabled]="subscribing()"
@@ -274,6 +283,7 @@
                   }
                 </fieldset>
                 <button
+                  appNeedsConnection
                   type="button"
                   class="ui-button ui-button--small ui-button--danger-soft"
                   [disabled]="removing() !== null"
@@ -304,6 +314,7 @@
           </p>
           <div class="actions">
             <button
+              appNeedsConnection
               type="button"
               class="ui-button ui-button--primary"
               [disabled]="testing()"

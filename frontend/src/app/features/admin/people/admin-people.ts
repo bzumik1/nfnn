@@ -49,6 +49,7 @@ import {
   PersonResponse,
 } from '../../content/people-api';
 import { Avatar } from '../../../shared/ui/avatar/avatar';
+import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 
 type LoadState = 'loading' | 'ready' | 'error';
 type Direction = 'up' | 'down';
@@ -91,6 +92,7 @@ const NEW_PERSON = 'new';
     FileButton,
     LiveNotice,
     ReceiptSignature,
+    NeedsConnection,
   ],
   templateUrl: './admin-people.html',
   styleUrl: './admin-people.scss',

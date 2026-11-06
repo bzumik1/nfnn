@@ -8,7 +8,7 @@ export const routes: Routes = [
   {
     path: 'darce',
     canActivate: [donorGuard],
-    data: { head: 'light', parent: '/', backOnWide: false },
+    data: { head: 'light', parent: '/', backOnWide: false, logoBesideBack: false },
     loadComponent: () => import('./layout/donor-shell/donor-shell').then((m) => m.DonorShell),
     loadChildren: () => import('./features/donors/donors.routes').then((m) => m.donorsRoutes),
   },
@@ -17,7 +17,7 @@ export const routes: Routes = [
   {
     path: 'sprava',
     canActivate: [adminGuard],
-    data: { head: 'light', parent: '/', backOnWide: false },
+    data: { head: 'light', parent: '/', backOnWide: false, logoBesideBack: false },
     loadComponent: () => import('./layout/donor-shell/donor-shell').then((m) => m.DonorShell),
     loadChildren: () => import('./features/admin/admin.routes').then((m) => m.adminRoutes),
   },

@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import {
   afterNextRender,
   ChangeDetectionStrategy,
@@ -14,12 +15,12 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { EMPTY, expand, map, Observable, reduce, Subscription, timeout } from 'rxjs';
-import { Connectivity } from '../../../core/navigation/connectivity';
 import { FeaturedNews } from '../featured-news/featured-news';
 import { NewsApi, NewsArticleResponse } from '../news-api';
 import { NewsCard } from '../news-card/news-card';
 import { ProjectResponse, ProjectsApi } from '../projects-api';
 import { StoriesOfYear, storiesOfNewestYear, YearStories } from '../year-stories/year-stories';
+import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 
 export const PAGE_SIZE = 10;
 export const PROJECTS_PAGE_SIZE = 50;
@@ -37,7 +38,7 @@ type StoriesState = { kind: 'loading' } | { kind: 'settled'; stories: StoriesOfY
 
 @Component({
   selector: 'app-news-page',
-  imports: [RouterLink, NewsCard, FeaturedNews, YearStories],
+  imports: [NeedsConnection, RouterLink, NewsCard, FeaturedNews, YearStories],
   templateUrl: './news-page.html',
   styleUrl: './news-page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -46,7 +47,6 @@ export class NewsPage {
   private readonly route = inject(ActivatedRoute);
   private readonly newsApi = inject(NewsApi);
   private readonly projectsApi = inject(ProjectsApi);
-  private readonly connectivity = inject(Connectivity);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
   private readonly heading = viewChild<ElementRef<HTMLHeadingElement>>('heading');
@@ -128,8 +128,8 @@ export class NewsPage {
         this.list.set({ items: page.items, total: page.total });
         this.newsState.set('ready');
       },
-      error: () => {
-        this.offline.set(this.connectivity.isOffline());
+      error: (failure: unknown) => {
+        this.offline.set(failure instanceof HttpErrorResponse && failure.status === 0);
         this.newsState.set('error');
       },
     });

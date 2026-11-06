@@ -20,6 +20,11 @@ export interface PaymentDetails {
   readonly accountVerificationAmountMinor: number;
 }
 
+export interface WrittenPaymentDetails {
+  readonly details: PaymentDetails;
+  readonly writtenAt: number | null;
+}
+
 const PAST_BROWSER_CACHE = new HttpHeaders({ 'Cache-Control': 'no-cache' });
 const NO_HEADERS = new HttpHeaders();
 
@@ -27,18 +32,27 @@ const NO_HEADERS = new HttpHeaders();
 export class PaymentDetailsApi {
   private readonly http = inject(HttpClient);
 
-  details({ pastBrowserCache = false } = {}): Observable<PaymentDetails> {
+  details({ pastBrowserCache = false } = {}): Observable<WrittenPaymentDetails> {
     return this.http
       .get<unknown>('/api/donations/payment-details', {
         context: new HttpContext().set(WITHOUT_ACCESS_TOKEN, true),
         headers: pastBrowserCache ? PAST_BROWSER_CACHE : NO_HEADERS,
         cache: pastBrowserCache ? 'no-cache' : 'default',
+        observe: 'response',
       })
-      .pipe(map(paymentDetailsOf));
+      .pipe(
+        map((response) => {
+          const written = Date.parse(response.headers.get('Date') ?? '');
+          return {
+            details: paymentDetailsOf(response.body),
+            writtenAt: Number.isFinite(written) ? written : null,
+          };
+        }),
+      );
   }
 }
 
-function paymentDetailsOf(answer: unknown): PaymentDetails {
+export function paymentDetailsOf(answer: unknown): PaymentDetails {
   if (!isPaymentDetails(answer)) {
     throw new Error('The payment details answer does not have the shape of payment details');
   }

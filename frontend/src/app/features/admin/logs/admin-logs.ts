@@ -35,6 +35,7 @@ import {
 import { formatSize } from '../backups/backup-format';
 import { CopyButton } from '../../../shared/ui/copy-button/copy-button';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
+import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 
 type LoadState = 'loading' | 'ready' | 'error';
 type RequestState = 'idle' | 'loading' | 'error';
@@ -58,6 +59,7 @@ const LOGGER_NAME = /^(ROOT|[A-Za-z0-9_$][A-Za-z0-9_$.]*)$/;
     FormControlDirective,
     FocusFirstInvalid,
     CopyButton,
+    NeedsConnection,
   ],
   templateUrl: './admin-logs.html',
   styleUrl: './admin-logs.scss',

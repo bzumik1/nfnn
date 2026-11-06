@@ -16,6 +16,7 @@ import { FormControlDirective } from '../../../shared/ui/form-field/form-control
 import { FieldMessages, FormField } from '../../../shared/ui/form-field/form-field';
 import { AdminApi, BackupScheduleResponse } from '../admin-api';
 import { BACKUP_DAYS, describePlan, samePlan } from './backup-plan';
+import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 
 const TIME_MESSAGES: FieldMessages = {
   required: $localize`:@@admin.backups.schedule.time.required:Zadejte prosím čas, například 3:00.`,
@@ -23,7 +24,7 @@ const TIME_MESSAGES: FieldMessages = {
 
 @Component({
   selector: 'app-backup-schedule-card',
-  imports: [FormsModule, FormField, FormControlDirective, FocusFirstInvalid],
+  imports: [FormsModule, FormField, FormControlDirective, FocusFirstInvalid, NeedsConnection],
   templateUrl: './backup-schedule-card.html',
   styleUrl: './backup-schedule-card.scss',
 })

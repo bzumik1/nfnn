@@ -274,6 +274,19 @@ describe('Given the contact form', () => {
     expect(element<HTMLButtonElement>('.form-submit').disabled).toBe(false);
   });
 
+  it('when the message reaches no server, then the form keeps the text and says to send it again once connected', async () => {
+    await fillInValidMessage();
+
+    await submit();
+    http.expectOne('/api/contact/messages').flush(null, { status: 0, statusText: 'Unknown Error' });
+    fixture.detectChanges();
+
+    expect(element('.form-error').textContent?.replace(/\s+/g, ' ').trim()).toBe(
+      'Bez připojení se zprávu nepodařilo odeslat. Zpráva vám zůstala; až se připojíte, odešlete ji znovu.',
+    );
+    expect(element<HTMLTextAreaElement>('#contact-message').value).not.toBe('');
+  });
+
   it('when a bot fills the hidden website field, then the value travels with the message', async () => {
     await fillInValidMessage();
     await fillIn('#contact-website', 'https://spam.example');

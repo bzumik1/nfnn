@@ -4,9 +4,14 @@ import { TestBed } from '@angular/core/testing';
 import { authInterceptor } from '../../core/auth/auth-interceptor';
 import { AuthStore } from '../../core/auth/auth-store';
 import { authResponse } from '../../core/auth/testing/donor-fixtures';
-import { PaymentDetailsStore } from './payment-details-store';
+import { sharedCases } from '../../../testing/shared-cases';
+import { KEPT_PAYMENT_DETAILS, PaymentDetailsStore } from './payment-details-store';
 import { PaymentDetails } from './payment-details-api';
-import { foundationPaymentDetails } from './testing/payment-details-fixtures';
+import { spayd } from './spayd';
+import {
+  FOUNDATION_DETAILS_CASE,
+  foundationPaymentDetails,
+} from './testing/payment-details-fixtures';
 
 const PAYMENT_DETAILS_URL = '/api/donations/payment-details';
 const FIVE_MINUTES_MS = 5 * 60 * 1000;
@@ -233,4 +238,149 @@ describe('Given the payment details store', () => {
 
     expect(store.state()).toEqual({ kind: 'failed' });
   });
+
+  describe('when the details arrive with the time the server wrote them', () => {
+    const written = new Date('2026-10-12T08:00:00Z');
+
+    beforeEach(() => {
+      store.load();
+      http
+        .expectOne(PAYMENT_DETAILS_URL)
+        .flush(foundationPaymentDetails(), { headers: { Date: written.toUTCString() } });
+    });
+
+    it('then it says how old they are and that they came from the server', () => {
+      expect(store.age()).toEqual({ writtenAt: written.getTime(), kept: false });
+    });
+
+    it('then it keeps them on the device with that time, for a visit without a connection', () => {
+      expect(JSON.parse(localStorage.getItem(KEPT_PAYMENT_DETAILS)!)).toEqual({
+        details: foundationPaymentDetails(),
+        writtenAt: written.getTime(),
+      });
+    });
+  });
+
+  it('when the browser refuses to keep the details, then the details from the server are still shown', () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('full', 'QuotaExceededError');
+    });
+
+    store.load();
+    http.expectOne(PAYMENT_DETAILS_URL).flush(foundationPaymentDetails());
+
+    expect(store.state()).toEqual({ kind: 'ready', details: foundationPaymentDetails() });
+  });
+
+  describe('Given details kept from an earlier visit', () => {
+    const written = Date.parse('2026-10-12T08:00:00Z');
+
+    beforeEach(() => {
+      localStorage.setItem(
+        KEPT_PAYMENT_DETAILS,
+        JSON.stringify({ details: foundationPaymentDetails(), writtenAt: written }),
+      );
+    });
+
+    it('when the server answers, then its answer wins and nothing kept is shown', () => {
+      store.load();
+      http.expectOne(PAYMENT_DETAILS_URL).flush(movedAccount());
+
+      expect(store.state()).toEqual({ kind: 'ready', details: movedAccount() });
+      expect(store.age()).toEqual({ writtenAt: null, kept: false });
+    });
+
+    it('when nothing answers, then the kept details are shown and said to be kept, with the time they were written', () => {
+      store.load();
+      http.expectOne(PAYMENT_DETAILS_URL).error(new ProgressEvent('error'), { status: 0 });
+
+      expect(store.state()).toEqual({ kind: 'ready', details: foundationPaymentDetails() });
+      expect(store.age()).toEqual({ writtenAt: written, kept: true });
+    });
+
+    it('when the server answers with details that fail the check or with a problem, then nothing kept is shown, so a changed account never shows the old one', () => {
+      store.load();
+      http.expectOne(PAYMENT_DETAILS_URL).flush(movedAccountWithForeignIban());
+      expect(store.state()).toEqual({ kind: 'failed' });
+
+      store.load();
+      http.expectOne(PAYMENT_DETAILS_URL).flush(
+        { type: 'https://nfnn.cz/problems/rate-limited', title: 'Too many', status: 429 },
+        {
+          status: 429,
+          statusText: 'Too Many Requests',
+          headers: { 'Content-Type': 'application/problem+json' },
+        },
+      );
+      expect(store.state()).toEqual({ kind: 'failed' });
+    });
+
+    it('when the server is down behind the edge, then the kept details are shown', () => {
+      store.load();
+      http.expectOne(PAYMENT_DETAILS_URL).flush('origin down', {
+        status: 522,
+        statusText: '',
+        headers: { 'Content-Type': 'text/html' },
+      });
+
+      expect(store.state()).toEqual({ kind: 'ready', details: foundationPaymentDetails() });
+      expect(store.age()).toEqual({ writtenAt: written, kept: true });
+    });
+
+    it('when the kept text is not payment details or names an IBAN of another account, then nothing is shown from it', () => {
+      for (const kept of [
+        { details: { ...foundationPaymentDetails(), currency: 1 }, writtenAt: written },
+        { details: movedAccountWithForeignIban(), writtenAt: written },
+        'not json',
+      ]) {
+        localStorage.setItem(
+          KEPT_PAYMENT_DETAILS,
+          typeof kept === 'string' ? kept : JSON.stringify(kept),
+        );
+        store.load();
+        http.expectOne(PAYMENT_DETAILS_URL).error(new ProgressEvent('error'), { status: 0 });
+
+        expect(store.state()).toEqual({ kind: 'failed' });
+      }
+    });
+
+    it('when the browser refuses its storage, then the state is failed as before', () => {
+      vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+        throw new DOMException('denied', 'SecurityError');
+      });
+      store.load();
+      http.expectOne(PAYMENT_DETAILS_URL).error(new ProgressEvent('error'), { status: 0 });
+
+      expect(store.state()).toEqual({ kind: 'failed' });
+    });
+
+    for (const paymentCase of sharedCases('payment/spayd.json').filter(
+      (candidate) =>
+        candidate.input.details === FOUNDATION_DETAILS_CASE && 'spayd' in candidate.expected,
+    )) {
+      it(`when the payment of the shared case ${paymentCase.name} is composed from the kept details, then it gives the case's SPAYD text`, () => {
+        store.load();
+        http.expectOne(PAYMENT_DETAILS_URL).error(new ProgressEvent('error'), { status: 0 });
+        const state = store.state();
+        if (state.kind !== 'ready') {
+          throw new Error('The kept details were not shown');
+        }
+
+        expect(
+          spayd(state.details, {
+            amountMinor: paymentCase.input.amountMinor,
+            variableSymbol: paymentCase.input.variableSymbol,
+            purpose: paymentCase.input.purpose,
+          }),
+        ).toEqual(paymentCase.expected);
+      });
+    }
+  });
+
+  function movedAccountWithForeignIban(): PaymentDetails {
+    return {
+      ...movedAccount(),
+      account: { ...movedAccount().account, iban: 'CZ2620100000005544332217' },
+    };
+  }
 });

@@ -17,7 +17,7 @@ describe('Given the chrome a route asks for', () => {
           { path: '', pathMatch: 'full', component: Blank, data: { landing: true, head: 'photo' } },
           {
             path: 'darce',
-            data: { head: 'light', parent: '/', backOnWide: false },
+            data: { head: 'light', parent: '/', backOnWide: false, logoBesideBack: false },
             children: [{ path: 'prehled', component: Blank }],
           },
           { path: 'aktuality/:slug', component: Blank, data: { parent: '/aktuality' } },
@@ -39,6 +39,7 @@ describe('Given the chrome a route asks for', () => {
       landing: false,
       phoneFooter: false,
       backOnWide: true,
+      logoBesideBack: true,
     });
   });
 
@@ -52,7 +53,12 @@ describe('Given the chrome a route asks for', () => {
     await router.navigateByUrl('/darce/prehled');
 
     expect(chrome.current()).toEqual(
-      expect.objectContaining({ head: 'light', parent: '/', backOnWide: false }),
+      expect.objectContaining({
+        head: 'light',
+        parent: '/',
+        backOnWide: false,
+        logoBesideBack: false,
+      }),
     );
   });
 
