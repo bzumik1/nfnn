@@ -1,6 +1,10 @@
 import { Component, viewChild } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormsModule, NgForm } from '@angular/forms';
+import {
+  FakeSoftKeyboard,
+  provideFakeSoftKeyboard,
+} from '../../../core/layout/testing/fake-soft-keyboard';
 import { FocusFirstInvalid } from './focus-first-invalid';
 import { FormControlDirective } from './form-control';
 import { FormField } from './form-field';
@@ -11,7 +15,14 @@ import { placeServerErrors } from './server-errors';
   template: `
     <form #form="ngForm" appFocusFirstInvalid (ngSubmit)="submits = submits + 1" novalidate>
       <app-form-field label="Jméno" [messages]="{ required: 'Vyplňte prosím jméno.' }">
-        <input appFormControl id="name" name="name" [(ngModel)]="name" required />
+        <input
+          appFormControl
+          id="name"
+          name="name"
+          enterkeyhint="next"
+          [(ngModel)]="name"
+          required
+        />
       </app-form-field>
       <app-form-field label="E-mail" hint="Pošleme na něj potvrzení." [messages]="emailMessages">
         <input
@@ -19,6 +30,7 @@ import { placeServerErrors } from './server-errors';
           id="email"
           name="email"
           type="email"
+          enterkeyhint="go"
           [(ngModel)]="email"
           required
           email
@@ -41,6 +53,7 @@ class TwoFieldForm {
 
 describe('Given a form built from form fields', () => {
   let fixture: ComponentFixture<TwoFieldForm>;
+  let keyboard: FakeSoftKeyboard;
 
   const host = () => fixture.nativeElement as HTMLElement;
   const input = (id: string) => host().querySelector<HTMLInputElement>(`#${id}`)!;
@@ -63,7 +76,11 @@ describe('Given a form built from form fields', () => {
   }
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({ imports: [TwoFieldForm] }).compileComponents();
+    keyboard = new FakeSoftKeyboard();
+    await TestBed.configureTestingModule({
+      imports: [TwoFieldForm],
+      providers: [provideFakeSoftKeyboard(keyboard)],
+    }).compileComponents();
     fixture = TestBed.createComponent(TwoFieldForm);
     document.body.appendChild(fixture.nativeElement);
     await fixture.whenStable();
@@ -96,6 +113,99 @@ describe('Given a form built from form fields', () => {
     expect(input('email').getAttribute('aria-invalid')).toBe('true');
     expect(input('email').getAttribute('aria-describedby')).toBe('email-hint email-error');
     expect(errorOf('name')).toBeNull();
+  });
+
+  describe('when the visitor passes through an empty field without typing into it', () => {
+    beforeEach(async () => {
+      input('name').focus();
+      input('email').focus();
+      await fixture.whenStable();
+    });
+
+    it('then the field says nothing yet, so the form does not move under the finger', () => {
+      expect(errorOf('name')).toBeNull();
+      expect(input('name').getAttribute('aria-invalid')).toBeNull();
+    });
+
+    it('and sends the form, then the field says what is missing', async () => {
+      await submit();
+
+      expect(errorOf('name')?.textContent?.trim()).toBe('Vyplňte prosím jméno.');
+    });
+
+    it('and the app itself marks the field, then its message shows', async () => {
+      fixture.componentInstance.form().controls['name'].markAsTouched();
+      await fixture.whenStable();
+
+      expect(errorOf('name')?.textContent?.trim()).toBe('Vyplňte prosím jméno.');
+    });
+  });
+
+  it('when the visitor types into a field, deletes it all and leaves it, then the field says what is missing', async () => {
+    await type('name', 'J');
+    await type('name', '');
+    await leave('name');
+
+    expect(errorOf('name')?.textContent?.trim()).toBe('Vyplňte prosím jméno.');
+  });
+
+  function pressReturn(id: string): KeyboardEvent {
+    const key = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+    input(id).dispatchEvent(key);
+    return key;
+  }
+
+  describe('when the on-screen keyboard is open and the visitor presses its Next key', () => {
+    beforeEach(() => {
+      keyboard.show();
+      input('name').focus();
+    });
+
+    it('then the next field takes the focus and the form is not sent yet', async () => {
+      await type('name', 'Jan');
+
+      const key = pressReturn('name');
+
+      expect(key.defaultPrevented).toBe(true);
+      expect(document.activeElement).toBe(input('email'));
+      expect(errorOf('email')).toBeNull();
+    });
+
+    it('and the whole form is already filled in, as by the password manager, then the form is sent as usual', async () => {
+      await type('name', 'Jan');
+      await type('email', 'jan@example.cz');
+
+      expect(pressReturn('name').defaultPrevented).toBe(false);
+    });
+
+    it('while the text is still being composed, then the key belongs to the composition', () => {
+      const key = new KeyboardEvent('keydown', {
+        key: 'Enter',
+        bubbles: true,
+        cancelable: true,
+        isComposing: true,
+      });
+      input('name').dispatchEvent(key);
+
+      expect(key.defaultPrevented).toBe(false);
+      expect(document.activeElement).toBe(input('name'));
+    });
+  });
+
+  it('when the on-screen keyboard is open and the visitor presses Go on the last field, then the form is sent as usual', () => {
+    keyboard.show();
+    input('email').focus();
+
+    expect(pressReturn('email').defaultPrevented).toBe(false);
+  });
+
+  it('when a hardware keyboard is used and the visitor presses Enter in a field, then the form is sent as on any web page', () => {
+    input('name').focus();
+
+    const key = pressReturn('name');
+
+    expect(key.defaultPrevented).toBe(false);
+    expect(document.activeElement).toBe(input('name'));
   });
 
   it('when the visitor fixes the field, then the message goes away', async () => {
