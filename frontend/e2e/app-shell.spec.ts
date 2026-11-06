@@ -27,6 +27,15 @@ async function publishedArticle(page: Page): Promise<void> {
   );
 }
 
+async function settledPanel(page: Page) {
+  const panel = page.getByRole('dialog').locator('.dialog-panel');
+  await expect(panel).toBeVisible();
+  await panel.evaluate((element) =>
+    Promise.all(element.getAnimations().map((animation) => animation.finished)),
+  );
+  return panel;
+}
+
 function tabs(page: Page) {
   return page.getByRole('navigation', { name: 'Hlavní sekce' });
 }
@@ -170,6 +179,50 @@ test.describe('Given a signed-in donor on a phone who opens a section from the a
     await page.keyboard.press('Enter');
 
     await expect(page.getByRole('dialog').getByRole('button', { name: 'Zavřít' })).toBeFocused();
+  });
+
+  test('when the sheet has opened, then it rises almost to the top of the screen even though its list is short', async ({
+    page,
+  }) => {
+    await page.getByRole('banner').getByRole('button', { name: 'Účet' }).click();
+    const panel = await settledPanel(page);
+
+    const box = await panel.boundingBox();
+
+    expect(box?.y).toBeLessThanOrEqual(16);
+    expect(box && Math.round(box.y + box.height)).toBe(page.viewportSize()?.height);
+  });
+
+  test('when they drag the tall sheet down by its grabber, then it closes', async ({ page }) => {
+    await page.getByRole('banner').getByRole('button', { name: 'Účet' }).click();
+    await settledPanel(page);
+    const box = (await page.locator('.dialog-grabber').boundingBox())!;
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x, y + 400, { steps: 20 });
+    await page.mouse.up();
+
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+  });
+
+  test('when the sheet has opened, then its round close button stands on one row with the logo', async ({
+    page,
+  }) => {
+    await page.getByRole('banner').getByRole('button', { name: 'Účet' }).click();
+    const sheet = page.getByRole('dialog');
+    await settledPanel(page);
+
+    const close = await sheet.getByRole('button', { name: 'Zavřít' }).boundingBox();
+    const name = await sheet.getByRole('heading', { level: 2 }).boundingBox();
+
+    expect(close?.width).toBe(40);
+    expect(close?.height).toBe(40);
+    expect(close && name && close.y < name.y + name.height && name.y < close.y + close.height).toBe(
+      true,
+    );
   });
 });
 

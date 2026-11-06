@@ -211,7 +211,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
     await account.click();
 
-    const sheet = page.getByRole('dialog', { name: 'Jana Nováková' });
+    const sheet = page.getByRole('dialog', { name: 'Účet' });
     await expect(sheet).toBeVisible();
     expect(await violations(page)).toEqual([]);
 

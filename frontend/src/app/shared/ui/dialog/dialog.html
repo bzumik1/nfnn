@@ -20,6 +20,8 @@
     #panel
     class="dialog-panel"
     [class.dialog-panel--wide]="wide()"
+    [class.dialog-panel--tall]="tall()"
+    [class.dialog-panel--grouped]="grouped()"
     [class.dialog-panel--dragging]="dragging()"
     [style.translate]="dragTranslate()"
     [inert]="leaving()"
@@ -48,7 +50,22 @@
       aria-label="Zavřít"
       i18n-aria-label="@@ui.dialog.close"
     >
-      <span aria-hidden="true">×</span>
+      @if (look() === 'sheet') {
+        <svg
+          class="dialog-close-icon"
+          aria-hidden="true"
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.4"
+          stroke-linecap="round"
+        >
+          <path d="M4.5 4.5l15 15M19.5 4.5l-15 15" />
+        </svg>
+      }
+      <span class="dialog-close-glyph" aria-hidden="true">×</span>
     </button>
     <ng-content />
     <p class="visually-hidden" role="status">

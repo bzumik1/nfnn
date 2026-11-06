@@ -82,9 +82,10 @@ export class AccountSheet {
   protected readonly presentation = computed(() => (this.compact() ? 'sheet' : 'centered'));
   protected readonly donor = this.auth.donor;
   protected readonly initials = computed(() => initialsOf(this.donor()?.name ?? ''));
-  protected readonly items = computed(() =>
-    this.auth.isAdmin() ? [...ACCOUNT_ITEMS, ADMINISTRATION_ITEM] : ACCOUNT_ITEMS,
-  );
+  protected readonly sections = ACCOUNT_ITEMS.filter((item) => item.icon !== 'details');
+  protected readonly detailsItem = ACCOUNT_ITEMS.find((item) => item.icon === 'details')!;
+  protected readonly administrationItem = ADMINISTRATION_ITEM;
+  protected readonly isAdmin = this.auth.isAdmin;
   protected readonly badges = inject(AccountBadges);
   protected readonly signingOut = signal(false);
   protected readonly adminNote = $localize`:@@layout.account.adminNote:jen správci`;
