@@ -72,7 +72,7 @@ test.describe('Given a signed-in donor', () => {
 
     await expect(
       page.locator('.last-gift').locator('.last-gift-amount, .last-gift-date, .last-gift-status'),
-    ).toHaveText(['500 Kč', '15. 03. 2026', 'Přijato']);
+    ).toHaveText(['500 Kč', '15. 3. 2026', 'Přijato']);
     await expect(page.locator('.stat-value')).toHaveText(['1 750 Kč', '3', '1 500 Kč']);
     await expect(page.locator('.recent-card tbody tr')).toHaveCount(4);
 
@@ -80,11 +80,11 @@ test.describe('Given a signed-in donor', () => {
 
     await expect(page.locator('.payments-card tbody tr')).toHaveCount(4);
     await expect(page.locator('.payments-card tbody tr').first().locator('td')).toHaveText([
-      '15. 03. 2026',
+      '15. 3. 2026',
       '500 Kč',
       'Obecný příspěvek',
       'Přijato',
-      'Stáhnout PDF, dar z 15. 03. 2026, 500 Kč',
+      'Stáhnout PDF, dar z 15. 3. 2026, 500 Kč',
     ]);
     await expect(page.locator('.payments-card tbody tr').last()).toContainText('Vráceno');
     await expect(page.locator('.gift-year-title')).toHaveText(['2026', '2025']);

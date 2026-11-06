@@ -434,7 +434,7 @@ describe('Given an administrator on the logs page', () => {
     ]);
     const values = texts('.run dd');
     expect(values[0]).toBe('25.0.1+8');
-    expect(values[1]).toBe('23. 10. 2026 08:00');
+    expect(values[1]).toBe('23. 10. 2026 8:00');
     expect(values[2]).toBe('172,0 MB z 768,0 MB, mimo heap 115,0 MB');
     expect(values[3]).toBe('42 (nejvíc 48, z toho 30 na pozadí)');
     expect(values[4]).toBe('120× za 950 ms celkem');

@@ -183,7 +183,7 @@ describe('Given an administrator on the alerts page', () => {
 
       expect(rows).toEqual([
         ['Import plateb z banky', undefined, '/sprava'],
-        ['Zálohy', 'Nefunguje od 04. 11. 2026 06:15', '/sprava/zalohy'],
+        ['Zálohy', 'Nefunguje od 4. 11. 2026 6:15', '/sprava/zalohy'],
         ['Odesílání e-mailů', undefined, '/sprava/nastaveni'],
       ]);
     });
@@ -275,7 +275,7 @@ describe('Given an administrator on the alerts page', () => {
     await open(
       adminPush({ subscriptions: [pushSubscription({ id: 'push-old-session', current: false })] }),
     );
-    expect(sectionText('Další zařízení')).toContain('Google, zapnuto 01. 11. 2026');
+    expect(sectionText('Další zařízení')).toContain('Google, zapnuto 1. 11. 2026');
 
     button('Zapnout upozornění na tomto zařízení').click();
     await settle();
@@ -381,7 +381,7 @@ describe('Given an administrator on the alerts page', () => {
     });
 
     it('then this device shows its last delivery too', () => {
-      expect(sectionText('Toto zařízení')).toContain('Naposledy doručeno 03. 11. 2026 10:05.');
+      expect(sectionText('Toto zařízení')).toContain('Naposledy doručeno 3. 11. 2026 10:05.');
     });
 
     it('then the test alert stands on its own and names every device', () => {
