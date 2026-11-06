@@ -49,6 +49,7 @@ class AdminPaymentsController {
 
     @GetMapping("/payments")
     AdminPaymentListResponse payments(
+            @AuthenticationPrincipal Jwt jwt,
             @RequestParam(defaultValue = UNPAIRED) @Pattern(regexp = UNPAIRED + "|" + PAIRED) String pairing,
             @RequestParam(required = false) @Min(FIRST_FOUR_DIGIT_YEAR) @Max(LAST_FOUR_DIGIT_YEAR) Integer year,
             @RequestParam(required = false) @Size(max = PaymentFilter.MAX_TEXT_LENGTH) String query,
@@ -60,7 +61,7 @@ class AdminPaymentsController {
     ) {
         PaymentFilter filter = new PaymentFilter(query, from, to, donorId == null ? null : new DonorReference(donorId), offset, limit);
         if (PAIRED.equals(pairing)) {
-            return AdminPaymentListResponse.from(adminPayments.listPaired(Optional.ofNullable(year).map(Year::of), filter));
+            return AdminPaymentListResponse.from(adminPayments.listPaired(Optional.ofNullable(year).map(Year::of), filter, channelOf(jwt)));
         }
         return AdminPaymentListResponse.from(adminPayments.listUnpaired(filter));
     }
