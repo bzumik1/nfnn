@@ -77,7 +77,7 @@ public class AdministratorService {
 
     @Transactional
     public AdministratorView grant(DonorId adminId, EmailAddress email) {
-        Donor donor = donors.findByEmail(email).orElseThrow(EmailNotRegistered::new);
+        Donor donor = donors.findByEmailForUpdate(email).orElseThrow(EmailNotRegistered::new);
         donor.grantAdministration();
         if (!holdings.holdsAny(donor.id())) {
             throw new AdministratorWithoutSecondFactor(donor.id());
@@ -94,7 +94,7 @@ public class AdministratorService {
         if (adminId.equals(donorId)) {
             throw new OwnAdministrationRevoked();
         }
-        Donor donor = donors.findById(donorId).orElseThrow(() -> new DonorNotFound(donorId));
+        Donor donor = donors.findByIdForUpdate(donorId).orElseThrow(() -> new DonorNotFound(donorId));
         donor.revokeAdministration();
         donors.save(donor);
         Instant now = clock.instant();
@@ -123,7 +123,7 @@ public class AdministratorService {
 
     @Transactional
     public void removePasskeys(DonorId adminId, DonorId donorId) {
-        Donor donor = donors.findById(donorId).orElseThrow(() -> new DonorNotFound(donorId));
+        Donor donor = donors.findByIdForUpdate(donorId).orElseThrow(() -> new DonorNotFound(donorId));
         int removed = passkeys.deleteAllOf(donorId);
         if (removed == 0) {
             throw new NoPasskeys();
@@ -138,7 +138,7 @@ public class AdministratorService {
 
     @Transactional
     public StartupGrant grantAtStartup(EmailAddress email) {
-        Optional<Donor> found = donors.findByEmail(email);
+        Optional<Donor> found = donors.findByEmailForUpdate(email);
         if (found.isEmpty()) {
             return StartupGrant.NOT_REGISTERED;
         }

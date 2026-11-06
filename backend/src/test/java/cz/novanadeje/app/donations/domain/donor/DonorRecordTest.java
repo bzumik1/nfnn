@@ -478,6 +478,20 @@ class DonorRecordTest {
     }
 
     @Test
+    @DisplayName("Given an erased record, when the profile changes, then it is refused and the placeholders and the erasure time stay")
+    void should_refuse_when_profile_changed_given_erased_record() {
+        DonorRecord record = person();
+        record.erase(LATER);
+
+        assertThatThrownBy(() -> record.changeProfile("Jana Nováková", ADDRESS, LocaleCode.EN, LATER.plusSeconds(1)))
+                .isInstanceOf(IllegalStateException.class);
+        assertThat(record.name()).isEqualTo(ErasedPersonalData.NAME);
+        assertThat(record.address()).isEqualTo(ErasedPersonalData.ADDRESS);
+        assertThat(record.preferredLocale()).isEqualTo(LocaleCode.CS);
+        assertThat(record.updatedAt()).isEqualTo(LATER);
+    }
+
+    @Test
     @DisplayName("Given a stored erased company row without identifier, when reconstituted, then it is accepted as erased and claims nothing")
     void should_accept_missing_identifier_when_reconstituted_given_erased_company() {
         DonorRecord record = DonorRecord.reconstitute(DONOR, DonorType.COMPANY, ErasedPersonalData.NAME, null, ErasedPersonalData.ADDRESS, SYMBOL,

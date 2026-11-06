@@ -117,6 +117,26 @@ class JpaDonorRepositoryTest {
     }
 
     @Test
+    @DisplayName("Given a verified administrator and another donor, when the administrator is read for an update by id and by e-mail, then the whole donor comes with the role, and an unknown id or address finds nothing")
+    void should_find_whole_donor_when_read_for_update_given_saved_administrator() {
+        Donor jana = donor("jana@example.cz", "4821937580");
+        jana.verifyEmail(NOW);
+        jana.grantAdministration();
+        donors.save(jana);
+        donors.save(donor("petr@example.cz", "4821937581"));
+        flushAndClear();
+
+        Donor byId = donors.findByIdForUpdate(jana.id()).orElseThrow();
+        assertThat(byId.email()).isEqualTo(new EmailAddress("jana@example.cz"));
+        assertThat(byId.isAdministrator()).isTrue();
+        assertThat(byId.emailVerifiedAt()).contains(NOW);
+        flushAndClear();
+        assertThat(donors.findByEmailForUpdate(new EmailAddress("jana@example.cz"))).map(Donor::id).contains(jana.id());
+        assertThat(donors.findByIdForUpdate(DonorId.newId(NOW))).isEmpty();
+        assertThat(donors.findByEmailForUpdate(new EmailAddress("nobody@example.cz"))).isEmpty();
+    }
+
+    @Test
     @DisplayName("Given two administrators and a plain donor, when the administrators are listed, then only they come, ordered by name")
     void should_list_administrators_by_name_when_asked_given_mixed_donors() {
         Donor zdena = donor("zdena@example.cz", "4821937570");

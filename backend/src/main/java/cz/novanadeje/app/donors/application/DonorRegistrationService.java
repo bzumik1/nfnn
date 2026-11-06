@@ -58,7 +58,7 @@ public class DonorRegistrationService {
                 LocaleCode.fromTag(command.preferredLocale()),
                 now
         );
-        Donor existing = donors.findByEmail(email).orElse(null);
+        Donor existing = donors.findByEmailForUpdate(email).orElse(null);
         if (existing != null && existing.isEmailVerified()) {
             events.publishEvent(new DonorRegistrationRepeated(existing.id().value(), existing.email(), existing.preferredLocale()));
             log.info("Registration repeated for verified donor {}", existing.id());

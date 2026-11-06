@@ -46,11 +46,11 @@ class DonorDeviceJpaEntity {
     @Column(name = "last_used_at", nullable = false)
     private Instant lastUsedAt;
 
-    @Column(name = "ended_at")
+    @Column(name = "ended_at", updatable = false)
     private Instant endedAt;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "end_reason", length = 30)
+    @Column(name = "end_reason", length = 30, updatable = false)
     private DeviceSignOutReason endReason;
 
     protected DonorDeviceJpaEntity() {

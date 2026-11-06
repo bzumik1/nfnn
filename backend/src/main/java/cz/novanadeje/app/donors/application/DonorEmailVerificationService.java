@@ -70,7 +70,8 @@ public class DonorEmailVerificationService {
     public AuthenticatedDonor confirm(String token, DeviceDescription device, SessionKind kind) {
         Instant now = clock.instant();
         EmailVerificationToken found = usableLink(token, now, candidate -> candidate.newEmail().isEmpty());
-        Donor donor = verifyRegistration(found, now);
+        Donor donor = verifyRegistration(spend(found, now).filter(candidate -> !candidate.isEmailVerified())
+                .orElseThrow(InvalidEmailVerificationToken::new), now);
         return views.authenticated(donor, sessions.signIn(donor, false, device, kind));
     }
 
@@ -78,25 +79,31 @@ public class DonorEmailVerificationService {
     public void confirmChange(String token) {
         Instant now = clock.instant();
         EmailVerificationToken found = usableLink(token, now, candidate -> candidate.newEmail().isPresent());
-        changeEmail(found, found.newEmail().orElseThrow(InvalidEmailVerificationToken::new), now);
+        EmailAddress newEmail = found.newEmail().orElseThrow(InvalidEmailVerificationToken::new);
+        Donor donor = spend(found, now)
+                .filter(Donor::isEmailVerified)
+                .filter(candidate -> !donors.existsByEmail(newEmail))
+                .orElseThrow(InvalidEmailVerificationToken::new);
+        changeEmail(donor, newEmail, now);
     }
 
     private EmailVerificationToken usableLink(String token, Instant now, Predicate<EmailVerificationToken> purpose) {
         LinkSecret secret = new LinkSecret(token);
-        EmailVerificationToken found = tokens.findBySecretHash(secret.hash())
+        return tokens.findBySecretHash(secret.hash())
                 .filter(candidate -> candidate.isUsableAt(now))
                 .filter(purpose)
                 .orElseThrow(InvalidEmailVerificationToken::new);
+    }
+
+    private Optional<Donor> spend(EmailVerificationToken found, Instant now) {
+        Optional<Donor> owner = donors.findByIdForUpdate(found.donorId());
         if (!tokens.markUsed(found.id(), now)) {
             throw new InvalidEmailVerificationToken();
         }
-        return found;
+        return owner;
     }
 
-    private Donor verifyRegistration(EmailVerificationToken found, Instant now) {
-        Donor donor = donors.findById(found.donorId())
-                .filter(candidate -> !candidate.isEmailVerified())
-                .orElseThrow(InvalidEmailVerificationToken::new);
+    private Donor verifyRegistration(Donor donor, Instant now) {
         donor.verifyEmail(now);
         donors.save(donor);
         tokens.deleteAllOf(donor.id());
@@ -108,11 +115,7 @@ public class DonorEmailVerificationService {
         return donor;
     }
 
-    private void changeEmail(EmailVerificationToken found, EmailAddress newEmail, Instant now) {
-        Donor donor = donors.findById(found.donorId())
-                .filter(Donor::isEmailVerified)
-                .filter(candidate -> !donors.existsByEmail(newEmail))
-                .orElseThrow(InvalidEmailVerificationToken::new);
+    private void changeEmail(Donor donor, EmailAddress newEmail, Instant now) {
         EmailAddress previousEmail = donor.email();
         donor.changeEmail(newEmail);
         donors.save(donor);

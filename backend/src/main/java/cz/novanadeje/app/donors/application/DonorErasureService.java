@@ -55,7 +55,7 @@ public class DonorErasureService {
 
     @Transactional
     public void erase(DonorId adminId, DonorId donorId) {
-        Donor donor = donors.findById(donorId).orElseThrow(() -> new DonorNotFound(donorId));
+        Donor donor = donors.findByIdForUpdate(donorId).orElseThrow(() -> new DonorNotFound(donorId));
         EmailAddress formerEmail = donor.email();
         LocaleCode locale = donor.preferredLocale();
         Instant now = clock.instant();

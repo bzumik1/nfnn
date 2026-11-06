@@ -83,10 +83,10 @@ public class DonorPasswordResetService {
         PasswordResetToken found = tokens.findBySecretHash(secret.hash())
                 .filter(candidate -> candidate.isUsableAt(now))
                 .orElseThrow(InvalidPasswordResetToken::new);
+        Donor donor = donors.findByIdForUpdate(found.donorId()).orElseThrow(InvalidPasswordResetToken::new);
         if (!tokens.markUsed(found.id(), now)) {
             throw new InvalidPasswordResetToken();
         }
-        Donor donor = donors.findById(found.donorId()).orElseThrow(InvalidPasswordResetToken::new);
         if (isAdministratorWithoutSecondFactor(donor)) {
             throw new InvalidPasswordResetToken();
         }

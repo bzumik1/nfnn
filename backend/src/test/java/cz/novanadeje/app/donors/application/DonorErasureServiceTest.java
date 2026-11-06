@@ -85,7 +85,7 @@ class DonorErasureServiceTest {
     @DisplayName("Given a plain English donor, when an administrator erases the donor, then the anonymized donor is saved, the factor and tokens go, every session ends, and the three events carry the former address and the audit text")
     void should_anonymize_and_publish_events_when_erased_given_plain_donor() {
         Donor petr = donor(PETR, Set.of(Role.DONOR), LocaleCode.EN);
-        when(donors.findById(PETR)).thenReturn(Optional.of(petr));
+        when(donors.findByIdForUpdate(PETR)).thenReturn(Optional.of(petr));
 
         service.erase(JANA, PETR);
 
@@ -120,7 +120,7 @@ class DonorErasureServiceTest {
     @Test
     @DisplayName("Given an unknown donor, when erased, then it is not found and nothing else happens")
     void should_fail_as_not_found_when_erased_given_unknown_donor() {
-        when(donors.findById(PETR)).thenReturn(Optional.empty());
+        when(donors.findByIdForUpdate(PETR)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.erase(JANA, PETR)).isInstanceOf(DonorNotFound.class);
 
@@ -131,7 +131,7 @@ class DonorErasureServiceTest {
     @Test
     @DisplayName("Given an administrator, when erased, then it is refused as not erasable and nothing is written or published")
     void should_refuse_when_erased_given_administrator() {
-        when(donors.findById(PETR)).thenReturn(Optional.of(donor(PETR, Set.of(Role.DONOR, Role.ADMIN), LocaleCode.CS)));
+        when(donors.findByIdForUpdate(PETR)).thenReturn(Optional.of(donor(PETR, Set.of(Role.DONOR, Role.ADMIN), LocaleCode.CS)));
 
         assertThatThrownBy(() -> service.erase(JANA, PETR)).isInstanceOf(AdministratorNotErasable.class);
 
@@ -144,7 +144,7 @@ class DonorErasureServiceTest {
     void should_refuse_when_erased_given_erased_donor() {
         Donor petr = donor(PETR, Set.of(Role.DONOR), LocaleCode.CS);
         petr.erase(NOW.minusSeconds(60));
-        when(donors.findById(PETR)).thenReturn(Optional.of(petr));
+        when(donors.findByIdForUpdate(PETR)).thenReturn(Optional.of(petr));
 
         assertThatThrownBy(() -> service.erase(JANA, PETR)).isInstanceOf(DonorAlreadyErased.class);
 

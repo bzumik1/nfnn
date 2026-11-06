@@ -43,6 +43,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -183,7 +184,8 @@ class DonorPasskeyRecoveryServiceTest {
         LinkSecret link = LinkSecret.generate();
         when(tokens.findBySecretHash(link.hash()))
                 .thenReturn(Optional.of(PasswordResetToken.issue(link, DONOR, NOW.minusSeconds(60), Duration.ofHours(1))));
-        when(donors.findById(DONOR)).thenReturn(Optional.of(donor));
+        lenient().when(donors.findById(DONOR)).thenReturn(Optional.of(donor));
+        lenient().when(donors.findByIdForUpdate(DONOR)).thenReturn(Optional.of(donor));
         return link;
     }
 
