@@ -79,6 +79,8 @@ The PR description starts from `.github/pull_request_template.md` (`gh pr create
    - frontend: `npm run format:check && npm run lint && npm run lint:styles && npm test -- --watch=false && npm run build && npm run e2e && npm run e2e:pwa` (the last needs Docker; CI's `pwa` job runs it);
    - connector: `npm run check && npm run build`;
    - `Srovnání s v2` green, against v2 and against the recording of `main`; a difference is declared in `regression/v2/changes/<PR>.json`, which alone explains a difference from `main`.
+
+   `node scripts/check-changed.mjs --run` runs these for the changed areas; the comparison with `main` stays CI's.
 2. Docs the change touches are updated (contract, overviews, requirements for a client decision, `deploy/README.md` for operations), and `docs/roadmap.md` moves the feature the PR ships or decides; a PR that changes nothing on it (a fix, a dependency, a refactor) says `Roadmapa: beze změny` in its description.
 3. A visible UI change has before/after screenshots at 390 and 1280 px attached (skill `visual-check`), and the description says `Vzhled se mění: <routes or states>` or `Vzhled: beze změny` for the `visual` job.
 4. The PR body names anything that reaches the server only by hand (a changed `deploy/compose.yml` needs uninstall + Custom Install, a new setting to enter, Nginx Proxy Manager, Cloudflare, Fio).
