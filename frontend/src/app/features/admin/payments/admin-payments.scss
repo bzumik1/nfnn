@@ -37,7 +37,7 @@
   cursor: pointer;
 
   &.is-active {
-    background: var(--color-accent);
+    background: var(--color-accent-fill);
     color: var(--color-on-accent);
   }
 }
@@ -366,7 +366,7 @@
 }
 
 .pair-submit {
-  background: var(--color-accent);
+  background: var(--color-accent-fill);
   color: var(--color-on-accent);
   border: none;
   padding: var(--space-2-5) var(--space-5-5);

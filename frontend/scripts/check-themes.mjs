@@ -207,6 +207,154 @@ export function barContrastProblems(theme, source) {
   return problems;
 }
 
+const DARK_SCHEME = /^@media \(prefers-color-scheme: dark\)/;
+const APPEARANCES = [
+  {
+    name: 'light appearance',
+    media: { 'prefers-color-scheme': 'light', 'prefers-contrast': 'no-preference' },
+  },
+  {
+    name: 'light appearance with more contrast',
+    media: { 'prefers-color-scheme': 'light', 'prefers-contrast': 'more' },
+  },
+  {
+    name: 'dark appearance',
+    media: { 'prefers-color-scheme': 'dark', 'prefers-contrast': 'no-preference' },
+  },
+  {
+    name: 'dark appearance with more contrast',
+    media: { 'prefers-color-scheme': 'dark', 'prefers-contrast': 'more' },
+  },
+];
+const TINTED_GROUNDS = [
+  '--color-surface',
+  '--color-surface-alt',
+  '--color-surface-muted',
+  '--color-surface-accent',
+  '--color-accent-soft',
+  '--color-accent-bg',
+];
+const INVERSE_GROUNDS = ['--color-surface-inverse', '--color-surface-inverse-strong'];
+const READABLE_PAIRS = [
+  {
+    texts: ['--color-text', '--color-text-secondary', '--color-text-muted', '--color-accent'],
+    grounds: TINTED_GROUNDS,
+    minimum: 4.5,
+  },
+  {
+    texts: ['--color-text-soft', '--color-text-subtle', '--color-danger'],
+    grounds: ['--color-surface', '--color-surface-alt'],
+    minimum: 4.5,
+  },
+  { texts: ['--color-on-accent'], grounds: ['--color-accent-fill'], minimum: 4.5 },
+  { texts: ['--color-on-danger'], grounds: ['--color-danger-fill'], minimum: 4.5 },
+  {
+    texts: ['--color-on-inverse', '--color-accent-on-inverse'],
+    grounds: INVERSE_GROUNDS,
+    minimum: 4.5,
+  },
+  { texts: ['--color-on-inverse'], grounds: ['--color-surface-quote'], minimum: 4.5 },
+  { texts: ['--color-danger'], grounds: ['--color-danger-bg'], minimum: 4.5 },
+  { texts: ['--color-warning'], grounds: ['--color-warning-bg'], minimum: 4.5 },
+  { texts: ['--color-success'], grounds: ['--color-success-bg'], minimum: 4.5 },
+  {
+    texts: ['--color-focus-ring'],
+    grounds: ['--color-surface', '--color-surface-alt', '--color-surface-inverse'],
+    minimum: 3,
+  },
+  {
+    texts: ['--color-border-field'],
+    grounds: ['--color-surface', '--color-surface-alt'],
+    minimum: 3,
+    softInTheDefaultLook: true,
+  },
+];
+
+function mediaMatches(query, media) {
+  const conditions = query.replace(/^@media\s+/, '').split(/\s+and\s+/);
+  return conditions.every((condition) => {
+    const feature = /^\(\s*([a-z-]+)\s*:\s*([a-z-]+)\s*\)$/.exec(condition.trim());
+    return feature !== null && media[feature[1]] === feature[2];
+  });
+}
+
+function tokensIn(declarations, media) {
+  const tokens = new Map();
+  for (const { chain, name, value } of declarations) {
+    const atRoot = chain.length === 1 && chain[0] === ':root';
+    const inMedia =
+      chain.length === 2 &&
+      chain[1] === ':root' &&
+      chain[0].startsWith('@media') &&
+      mediaMatches(chain[0], media);
+    if (atRoot || inMedia) {
+      tokens.set(name, value);
+    }
+  }
+  return tokens;
+}
+
+function resolvedColour(tokens, name, seen = new Set()) {
+  const value = tokens.get(name);
+  const reference = /^var\((--[a-z0-9-]+)\)$/.exec(value ?? '');
+  if (reference !== null && !seen.has(reference[1])) {
+    return resolvedColour(tokens, reference[1], seen.add(name));
+  }
+  return { written: value, colour: value === undefined ? null : colourOf(value) };
+}
+
+export function appearanceProblems(theme, source) {
+  const declarations = declarationsByBlock(source);
+  const darkBlock = declarations.some(
+    ({ chain }) => chain.length === 2 && DARK_SCHEME.test(chain[0]) && chain[1] === ':root',
+  );
+  if (!darkBlock) {
+    return [
+      `theme ${theme} sets no colours under @media (prefers-color-scheme: dark), so it ignores the dark appearance of the device`,
+    ];
+  }
+  const problems = [];
+  for (const appearance of APPEARANCES) {
+    const tokens = tokensIn(declarations, appearance.media);
+    const label = `theme ${theme} in the ${appearance.name}`;
+    const measurable = (name) => {
+      const { written, colour } = resolvedColour(tokens, name);
+      if (colour === null) {
+        problems.push(
+          `${label}: ${name} is ${written}, not a colour whose contrast can be measured`,
+        );
+      }
+      return colour;
+    };
+    const page = measurable('--color-surface');
+    if (page === null) {
+      continue;
+    }
+    for (const pair of READABLE_PAIRS) {
+      if (pair.softInTheDefaultLook && appearance.name === 'light appearance') {
+        continue;
+      }
+      for (const ground of pair.grounds) {
+        const groundColour = measurable(ground);
+        for (const text of pair.texts) {
+          const textColour = measurable(text);
+          if (groundColour === null || textColour === null) {
+            continue;
+          }
+          const under = over(groundColour, page.rgb);
+          const ratio = contrast(over(textColour, under), under);
+          if (ratio < pair.minimum) {
+            problems.push(
+              `${label}: ${text} on ${ground} is ${ratio.toFixed(2)}:1, below ${pair.minimum}:1`,
+            );
+          }
+        }
+      }
+    }
+  }
+  return [...new Set(problems)];
+}
+
 function assetInputs(assets) {
   return (assets ?? []).map((asset) => (typeof asset === 'string' ? asset : asset.input));
 }
@@ -491,6 +639,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const homeScreenTitle = homeScreenTitleOf(readFileSync(join(root, 'src/index.html'), 'utf8'));
   for (const [theme, source] of sources) {
     problems.push(...barContrastProblems(theme, source));
+    problems.push(...appearanceProblems(theme, source));
     const assetsDir = join(themesDir, theme, 'assets');
     problems.push(
       ...manifestProblems({
@@ -539,6 +688,6 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     process.exit(1);
   }
   console.log(
-    `${themes.size} themes set all ${needed.size} tokens the styles and the receipt use, and carry content-named receipt fonts, literal receipt colours and readable receipt text, set only in their top-level :root, keep the tab bar readable over a white and a black page, its solid pill apart from the bar, serve the same theme files and a web app manifest in their colours with the icons it names and the home screen name of src/index.html.`,
+    `${themes.size} themes set all ${needed.size} tokens the styles and the receipt use, and carry content-named receipt fonts, literal receipt colours and readable receipt text, set only in their top-level :root, keep text, controls and focus rings readable in the light and the dark appearance, with and without more contrast, keep the tab bar readable over a white and a black page, its solid pill apart from the bar, serve the same theme files and a web app manifest in their colours with the icons it names and the home screen name of src/index.html.`,
   );
 }

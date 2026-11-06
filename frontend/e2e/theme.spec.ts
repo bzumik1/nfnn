@@ -153,6 +153,32 @@ test.describe('Given the site built with another theme', () => {
     });
   }
 
+  test.describe('on a device that shows the dark appearance', () => {
+    test.use({ colorScheme: 'dark' });
+
+    for (const width of [390, 1280]) {
+      test(`when a visitor opens the public pages ${width} px wide, then none of them shows a colour or font of the default theme in either appearance`, async ({
+        page,
+      }) => {
+        await page.setViewportSize({ width, height: 900 });
+        for (const path of PUBLIC_PAGES) {
+          await page.goto(path);
+          await expect(page.locator('h1').first()).toBeVisible();
+
+          expect(await lookOfTheReferenceTheme(page), path).toEqual([]);
+        }
+      });
+    }
+
+    test('when a visitor opens the sign-in dialog, then it shows no colour or font of the default theme in either appearance', async ({
+      page,
+    }) => {
+      await openSignInDialog(page);
+
+      expect(await lookOfTheReferenceTheme(page)).toEqual([]);
+    });
+  });
+
   for (const width of [390, 1280]) {
     test(`when a visitor verifies a signed, a doubtful and a changed receipt code ${width} px wide, then none of the results shows a colour or font of the default theme`, async ({
       page,

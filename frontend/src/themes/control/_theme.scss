@@ -1,5 +1,6 @@
 :root {
   --color-accent: #0f766e;
+  --color-accent-fill: #0f766e;
   --color-accent-soft: #e6f4f1;
   --color-accent-bg: #ecfdf8;
   --color-accent-on-inverse: #5eead4;
@@ -21,6 +22,7 @@
   --color-surface-inverse: #1c2b25;
   --color-surface-inverse-strong: #111a16;
   --color-on-inverse: #fdfcf7;
+  --color-surface-quote: #202020;
 
   --color-on-image: #fdfcf7;
   --color-image-shade: #14201b;
@@ -31,9 +33,10 @@
   --color-border-soft: #e8e6dd;
   --color-border-accent: #99d5c9;
   --color-divider: #ebe9e1;
-  --color-focus-ring: #c2410c;
+  --color-focus-ring: #ea580c;
 
   --color-danger: #a1121a;
+  --color-danger-fill: #a1121a;
   --color-danger-bg: #fdf0ef;
   --color-danger-border: #f2b8b5;
   --color-on-danger: #ffffff;
@@ -45,6 +48,8 @@
   --color-qr-module: #202020;
   --color-qr-mark: #0f766e;
   --color-qr-ground: #ffffff;
+  --color-paper: #ffffff;
+  --color-paper-muted: #ecebe4;
   --color-logo: #0f766e;
   --color-logo-fill: #fdfcf7;
   --color-tab-bar: color-mix(in srgb, #1c2b25 72%, transparent);
@@ -191,6 +196,8 @@
   --text-dialog-close: min(var(--text-4xl), var(--dialog-close-size));
   --blur-backdrop: 6px;
   --blur-bar: 12px;
+  --filter-ink: none;
+  --blend-ink: normal;
   --sheet-max-width: 640px;
   --sheet-grabber-width: 40px;
   --sheet-grabber-height: 4px;
@@ -245,5 +252,51 @@
     --color-tab-bar: #5c6662;
     --color-tab-pill: #0b110e;
     --blur-bar: 0px;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --color-accent: #5eead4;
+    --color-accent-soft: #133a35;
+    --color-accent-bg: #10302b;
+    --color-accent-2: #fbbf77;
+    --color-accent-3: #c4b5fd;
+
+    --color-text: #ecebe4;
+    --color-text-secondary: #d6d3c8;
+    --color-text-muted: #c2beb1;
+    --color-text-soft: #a8a493;
+    --color-text-subtle: #a8a494;
+
+    --color-surface: #161a18;
+    --color-surface-alt: #0e1110;
+    --color-surface-muted: #222826;
+    --color-border-rule: #6b706a;
+    --color-surface-accent: #12302b;
+    --color-surface-inverse: #1f3a31;
+    --color-surface-inverse-strong: #0a0d0c;
+    --color-surface-quote: #1f3a31;
+
+    --color-backdrop: color-mix(in srgb, #0a0d0c 72%, transparent);
+
+    --color-border: #34403b;
+    --color-border-field: #78827c;
+    --color-border-soft: #26302c;
+    --color-border-accent: #2c5c53;
+    --color-divider: #232b28;
+    --color-focus-ring: #fdba74;
+
+    --color-danger: #fca5a5;
+    --color-danger-bg: #3a1214;
+    --color-danger-border: #b4474a;
+    --color-warning: #fcd34d;
+    --color-warning-bg: #2e2208;
+    --color-success: #86efac;
+    --color-success-bg: #0f2b1a;
+
+    --filter-ink: invert(1) hue-rotate(180deg);
+    --blend-ink: screen;
   }
 }

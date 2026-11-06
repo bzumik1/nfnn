@@ -62,8 +62,8 @@
   line-height: var(--leading-none);
 
   [aria-expanded='true'] > & {
-    background: var(--color-accent);
-    border-color: var(--color-accent);
+    background: var(--color-accent-fill);
+    border-color: var(--color-accent-fill);
     color: var(--color-on-accent);
   }
 }

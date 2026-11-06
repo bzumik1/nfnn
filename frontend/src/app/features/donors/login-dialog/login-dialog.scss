@@ -90,7 +90,7 @@
     @include touch-target.reaches-finger-size;
 
     &.is-active {
-      background: var(--color-accent);
+      background: var(--color-accent-fill);
       color: var(--color-on-accent);
       box-shadow: var(--shadow-tab);
     }

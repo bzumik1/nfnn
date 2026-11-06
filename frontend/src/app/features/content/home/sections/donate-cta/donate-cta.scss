@@ -31,7 +31,7 @@
   position: absolute;
   bottom: 28px;
   right: -20px;
-  background: var(--color-text);
+  background: var(--color-surface-quote);
   color: var(--color-on-inverse);
   border-radius: var(--radius-media);
   padding: var(--space-4-5) var(--space-6);
@@ -139,7 +139,7 @@
   font-size: var(--text-lg);
   font-weight: var(--weight-bold);
   color: var(--color-on-accent);
-  background: var(--color-accent);
+  background: var(--color-accent-fill);
   border: none;
   border-radius: var(--radius-pill);
   padding: var(--space-3) var(--space-7);
