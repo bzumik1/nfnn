@@ -25,6 +25,22 @@ async function linesOf(control: Locator): Promise<number> {
   });
 }
 
+async function wordsSplitAcrossLines(element: Locator): Promise<string[]> {
+  return element.evaluate((heading) => {
+    const text = heading.firstChild!;
+    return Array.from((text.textContent ?? '').matchAll(/\S+/g))
+      .filter((word) => {
+        const range = document.createRange();
+        range.setStart(text, word.index);
+        range.setEnd(text, word.index + word[0].length);
+        return (
+          new Set(Array.from(range.getClientRects()).map((rect) => Math.round(rect.top))).size > 1
+        );
+      })
+      .map((word) => word[0]);
+  });
+}
+
 async function headingsOffScreen(page: Page): Promise<string[]> {
   return page.evaluate(() =>
     Array.from(document.querySelectorAll<HTMLElement>('main h1, main h2'))
@@ -87,6 +103,18 @@ for (const { width, height } of [
         expect(button.x + button.width).toBeLessThanOrEqual(width);
       });
     }
+
+    test('when they open the home page, then the hero headline keeps each of its words whole', async ({
+      page,
+    }) => {
+      await page.goto('/');
+      const title = page.getByRole('heading', { level: 1, name: 'Nová naděje' });
+      await expect(title).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+
+      expect(await wordsSplitAcrossLines(title)).toEqual([]);
+      expect(await headingsOffScreen(page)).toEqual([]);
+    });
 
     for (const path of PAGES_WITH_A_TITLE) {
       test(`when they open ${path}, then the header leaves the page title free`, async ({
