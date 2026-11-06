@@ -28,6 +28,7 @@ import { BackTarget } from './core/navigation/back-target';
 import { TabMemory } from './core/navigation/tab-memory';
 import { CanonicalLink } from './core/seo/canonical-link';
 import { Connectivity } from './core/connectivity/connectivity';
+import { DeviceStatusRetry } from './core/device/status/device-status-retry';
 import { UnseenPhotos } from './core/connectivity/unseen-photos';
 import { connectivityInterceptor } from './core/connectivity/connectivity-interceptor';
 import { AppInstall } from './core/install/app-install';
@@ -77,6 +78,7 @@ export const deviceCopies: Provider = { provide: SESSION_DEVICE, useExisting: De
 export const connectivityAtStart: EnvironmentProviders = provideAppInitializer(() => {
   inject(Connectivity);
   inject(UnseenPhotos);
+  inject(DeviceStatusRetry).start();
 });
 
 export const navigationAtStart: EnvironmentProviders = provideAppInitializer(() => {
