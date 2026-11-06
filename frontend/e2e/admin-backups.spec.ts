@@ -303,7 +303,9 @@ test.describe('Given an administrator on the backups page', () => {
     await expect(
       dialog.getByRole('heading', { name: 'Obnovit databázi ze zálohy?' }),
     ).toBeVisible();
-    await expect(dialog.getByRole('button', { name: 'Zrušit' })).toBeFocused();
+    await expect(
+      dialog.getByRole('heading', { name: 'Obnovit databázi ze zálohy?' }),
+    ).toBeFocused();
     await dialog.getByRole('button', { name: 'Obnovit a restartovat web' }).click();
 
     await expect(page.getByRole('heading', { name: 'Obnova ze zálohy' })).toBeVisible();

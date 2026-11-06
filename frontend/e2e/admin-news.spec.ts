@@ -417,7 +417,7 @@ test.describe('Given an administrator managing the news', () => {
 
     const question = page.getByRole('dialog', { name: 'Máte neuložené změny' });
     await expect(question).toBeVisible();
-    await expect(question.getByRole('button', { name: 'Zůstat a uložit' })).toBeFocused();
+    await expect(question.getByRole('heading', { name: 'Máte neuložené změny' })).toBeFocused();
     await page.keyboard.press('Escape');
     await expect(question).toBeHidden();
     await expect(page).toHaveURL(`/sprava/aktuality/${ARTICLE_ID}`);

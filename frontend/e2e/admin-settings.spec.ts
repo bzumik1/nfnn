@@ -327,7 +327,7 @@ test.describe('Given an administrator whose receipt signing key may have leaked'
     await card.getByRole('button', { name: 'Zneplatnit klíč serveru…' }).click();
     const dialog = page.getByRole('dialog', { name: 'Zneplatnit klíč 21fe31df?' });
     await expect(dialog).toContainText('Web se hned restartuje');
-    await expect(dialog.getByLabel('Kód z aplikace')).toBeFocused();
+    await expect(dialog.getByRole('heading', { name: 'Zneplatnit klíč 21fe31df?' })).toBeFocused();
     await dialog.getByLabel('Kód z aplikace').fill('123456');
     await dialog.getByRole('button', { name: 'Zneplatnit klíč', exact: true }).click();
 
@@ -360,7 +360,7 @@ test.describe('Given an administrator whose receipt signing key may have leaked'
     const opener = page.getByRole('button', { name: 'Zneplatnit klíč serveru…' });
     await opener.click();
     const dialog = page.getByRole('dialog', { name: 'Zneplatnit klíč 21fe31df?' });
-    await expect(dialog.getByLabel('Kód z aplikace')).toBeFocused();
+    await expect(dialog.getByRole('heading', { name: 'Zneplatnit klíč 21fe31df?' })).toBeFocused();
     await page.keyboard.press('Escape');
 
     await expect(dialog).toHaveCount(0);
