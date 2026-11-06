@@ -568,13 +568,15 @@ describe('Given the device vault that asks the server how its sign-ins stand', (
       source.mockClear();
     });
 
-    it('and the connection returns while she was erased, then the device asks again and deletes her copy', async () => {
+    it('and the connection returns while she was erased, then the device asks again, deletes her copy and says so', async () => {
       answer(IPHONE, 'wipe-all');
 
       await vault.connectionReturned();
 
       expect(source.mock.calls).toEqual([[IPHONE]]);
       expect(await databaseNames()).not.toContain(DEVICE_DATABASE);
+      expect(notice.shown()).toBe(true);
+      expect(notice.reason()).toBe('device-data-deleted');
     });
 
     it('and the connection returns once the answer came, then a further return asks nothing', async () => {
@@ -591,6 +593,7 @@ describe('Given the device vault that asks the server how its sign-ins stand', (
     it('and the question fails again when the connection returns, then the next return asks once more', async () => {
       source.mockRejectedValueOnce(new Error('offline'));
       await vault.connectionReturned();
+      expect(await storedEntries()).toHaveLength(1);
       answer(IPHONE, 'wipe-all');
 
       await vault.connectionReturned();
@@ -598,6 +601,26 @@ describe('Given the device vault that asks the server how its sign-ins stand', (
       expect(source).toHaveBeenCalledTimes(2);
       expect(await databaseNames()).not.toContain(DEVICE_DATABASE);
     });
+  });
+
+  it('when the connection returns while the question at the sign-out still waits, then the device asks again at once and the later answer counts', async () => {
+    await vault.signedIn(JANA, { kind: 'password', password: PASSWORD }, false, IPHONE);
+    let answerFirst: (answer: DeviceStatusResponse | null) => void = () => undefined;
+    source.mockReturnValueOnce(
+      new Promise((resolve) => {
+        answerFirst = resolve;
+      }),
+    );
+    const signingOut = vault.signedOut(JANA);
+    await vi.waitFor(() => expect(source).toHaveBeenCalledTimes(1));
+    answer(IPHONE, 'wipe-all');
+
+    await vault.connectionReturned();
+    answerFirst(null);
+    await signingOut;
+
+    expect(source).toHaveBeenCalledTimes(2);
+    expect(await databaseNames()).not.toContain(DEVICE_DATABASE);
   });
 
   it('when every question was answered, then a returning connection asks nothing', async () => {

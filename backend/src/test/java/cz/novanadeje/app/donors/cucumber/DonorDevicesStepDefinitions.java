@@ -73,6 +73,11 @@ public class DonorDevicesStepDefinitions {
         signsInOnTheWithTheSession(alias, device, "REMEMBERED");
     }
 
+    @Given("{string} signs in on the {string} in a browser that forgets her")
+    public void signsInOnTheInABrowserThatForgetsHer(String alias, String device) {
+        signIn(alias, device, Map.of("session", "BROWSER"));
+    }
+
     @Given("{string} signs in on the {string} in the installed app")
     public void signsInOnTheInTheInstalledApp(String alias, String device) {
         signsInOnTheWithTheSession(alias, device, "APP");
@@ -84,6 +89,11 @@ public class DonorDevicesStepDefinitions {
             clock.advance(Duration.ofDays(1));
             cleanup.cleanUp();
         }
+    }
+
+    @When("another day passes with the nightly clean-up")
+    public void anotherDayPassesWithTheNightlyCleanUp() {
+        daysPassWithTheNightlyCleanUp(1);
     }
 
     @Then("the devices answer:")

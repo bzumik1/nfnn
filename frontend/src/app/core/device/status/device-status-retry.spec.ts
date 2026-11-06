@@ -59,6 +59,17 @@ describe('Given the retry of the device status questions when the connection ret
     expect(connectionReturned).toHaveBeenCalledTimes(2);
   });
 
+  it('when it is started a second time, then a returning connection still retries only once', () => {
+    start(true);
+    TestBed.inject(DeviceStatusRetry).start();
+    TestBed.tick();
+
+    offline.set(false);
+    TestBed.tick();
+
+    expect(connectionReturned).toHaveBeenCalledTimes(1);
+  });
+
   it('when the session device cannot retry, then a returning connection does nothing', () => {
     offline = signal(true);
     TestBed.configureTestingModule({

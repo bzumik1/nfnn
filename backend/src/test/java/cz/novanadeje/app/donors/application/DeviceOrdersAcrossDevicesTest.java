@@ -17,6 +17,7 @@ import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
+import cz.novanadeje.app.support.AsyncTaskTracker;
 import cz.novanadeje.app.support.DatabaseCleaner;
 import cz.novanadeje.app.support.MutableClock;
 import org.junit.jupiter.api.AfterEach;
@@ -31,6 +32,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,6 +45,7 @@ import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 @DonationRowsContext
 class DeviceOrdersAcrossDevicesTest {
@@ -53,8 +56,34 @@ class DeviceOrdersAcrossDevicesTest {
     private static final Instant START = Instant.parse("2026-11-06T08:00:00Z");
     private static final Duration REPLAY_AFTER = Duration.ofSeconds(61);
     private static final Duration REPLAY_WITHIN = Duration.ofDays(1);
-    private static final Duration ENDED_DEVICE_RETENTION = DonorSessionCleanupService.ENDED_DEVICE_RETENTION;
+    private static final Duration ENDED_DEVICE_RETENTION = Duration.ofDays(400);
+    private static final Duration BROWSER_IDLE = Duration.ofHours(12);
+    private static final Duration REMEMBERED = Duration.ofDays(14);
+    private static final Duration APP = Duration.ofDays(400);
     private static final Set<DeviceStatus> WIPES = EnumSet.of(DeviceStatus.WIPE_ADMINISTRATION, DeviceStatus.WIPE_ALL);
+    private static final Set<Transition> PROMISED_TRANSITIONS = Set.of(
+            new Transition(DeviceStatus.SIGNED_IN, StepKind.SIGN_OUT_HERE, DeviceStatus.SIGNED_OUT),
+            new Transition(DeviceStatus.SIGNED_IN, StepKind.REPLAY, DeviceStatus.SIGNED_OUT),
+            new Transition(DeviceStatus.SIGNED_IN, StepKind.TIME_PASSES, DeviceStatus.SIGNED_OUT),
+            new Transition(DeviceStatus.SIGNED_IN, StepKind.TIME_PASSES, DeviceStatus.SIGNED_IN),
+            new Transition(DeviceStatus.SIGNED_IN, StepKind.SIGN_OUT_ELSEWHERE, DeviceStatus.WIPE_ALL),
+            new Transition(DeviceStatus.SIGNED_IN, StepKind.SIGN_OUT_EVERY_OTHER, DeviceStatus.WIPE_ALL),
+            new Transition(DeviceStatus.SIGNED_IN, StepKind.REMOVE_ROLE, DeviceStatus.WIPE_ADMINISTRATION),
+            new Transition(DeviceStatus.SIGNED_OUT, StepKind.REMOVE_ROLE, DeviceStatus.WIPE_ADMINISTRATION),
+            new Transition(DeviceStatus.SIGNED_IN, StepKind.ERASE, DeviceStatus.WIPE_ALL),
+            new Transition(DeviceStatus.SIGNED_OUT, StepKind.ERASE, DeviceStatus.WIPE_ALL),
+            new Transition(DeviceStatus.WIPE_ADMINISTRATION, StepKind.ERASE, DeviceStatus.WIPE_ALL),
+            new Transition(DeviceStatus.WIPE_ADMINISTRATION, StepKind.GRANT_ROLE, DeviceStatus.WIPE_ADMINISTRATION),
+            new Transition(DeviceStatus.WIPE_ADMINISTRATION, StepKind.SIGN_IN, DeviceStatus.WIPE_ADMINISTRATION),
+            new Transition(DeviceStatus.WIPE_ALL, StepKind.SIGN_IN, DeviceStatus.WIPE_ALL),
+            new Transition(DeviceStatus.WIPE_ALL, StepKind.PRESENT_ENDED_TOKEN, DeviceStatus.WIPE_ALL),
+            new Transition(DeviceStatus.WIPE_ADMINISTRATION, StepKind.PRESENT_ENDED_TOKEN, DeviceStatus.WIPE_ADMINISTRATION),
+            new Transition(DeviceStatus.SIGNED_OUT, StepKind.PRESENT_ENDED_TOKEN, DeviceStatus.SIGNED_OUT),
+            new Transition(DeviceStatus.WIPE_ALL, StepKind.TIME_PASSES, DeviceStatus.WIPE_ALL),
+            new Transition(DeviceStatus.WIPE_ADMINISTRATION, StepKind.TIME_PASSES, DeviceStatus.WIPE_ADMINISTRATION),
+            new Transition(DeviceStatus.SIGNED_OUT, StepKind.TIME_PASSES, DeviceStatus.UNKNOWN),
+            new Transition(DeviceStatus.WIPE_ALL, StepKind.TIME_PASSES, DeviceStatus.UNKNOWN),
+            new Transition(DeviceStatus.WIPE_ADMINISTRATION, StepKind.TIME_PASSES, DeviceStatus.UNKNOWN));
     private static final List<SessionKind> KINDS_THAT_KEEP_A_COPY = List.of(SessionKind.BROWSER, SessionKind.REMEMBERED, SessionKind.APP);
 
     @Autowired
@@ -70,7 +99,7 @@ class DeviceOrdersAcrossDevicesTest {
     @Autowired
     private DonorSessionCleanupService cleanup;
     @Autowired
-    private DonorSessionProperties sessionProperties;
+    private AsyncTaskTracker asyncTasks;
     @Autowired
     private DonorRepository donors;
     @Autowired
@@ -90,6 +119,7 @@ class DeviceOrdersAcrossDevicesTest {
 
     @AfterEach
     void emptyTablesAndPutTheClockBack() {
+        asyncTasks.awaitIdleAfter("the device orders across devices");
         new DatabaseCleaner(jdbc).emptyAllTables();
         clock.set(clockBefore);
     }
@@ -100,14 +130,20 @@ class DeviceOrdersAcrossDevicesTest {
         int seeds = Optional.ofNullable(System.getenv(SEEDS_VARIABLE)).map(Integer::parseInt).orElse(DEFAULT_SEEDS);
         Set<StepKind> taken = EnumSet.noneOf(StepKind.class);
         Set<DeviceStatus> answered = EnumSet.noneOf(DeviceStatus.class);
+        Set<Transition> seen = new HashSet<>();
         Stream<DynamicTest> runs = IntStream.rangeClosed(1, seeds).mapToObj(seed -> DynamicTest.dynamicTest(
                 "Given seed " + seed + ", when every device asks its status after each random step, then the answers keep the invariants",
-                () -> new Run(new Random(seed), taken, answered).play()));
-        DynamicTest coverage = DynamicTest.dynamicTest(
-                "Given every seed has run, when the steps and answers are counted, then every kind of step ran and every status was answered",
                 () -> {
+                    new Run(new Random(seed), taken, answered, seen).play();
+                    asyncTasks.awaitIdleAfter("seed " + seed + " of the device orders");
+                }));
+        DynamicTest coverage = DynamicTest.dynamicTest(
+                "Given every seed has run, when the steps and answers are counted, then every kind of step ran, every status was answered and every transition the slice promises was seen",
+                () -> {
+                    assumeTrue(seeds >= DEFAULT_SEEDS, "fewer seeds than the default cannot be expected to reach every transition");
                     assertThat(taken).as("the kinds of step the seeds took").containsExactlyInAnyOrder(StepKind.values());
                     assertThat(answered).as("the statuses the devices were answered").containsExactlyInAnyOrder(DeviceStatus.values());
+                    assertThat(seen).as("the transitions of a device's answer the seeds went through").containsAll(PROMISED_TRANSITIONS);
                 });
         return Stream.concat(runs, Stream.of(coverage));
     }
@@ -117,6 +153,7 @@ class DeviceOrdersAcrossDevicesTest {
         private final Random random;
         private final Set<StepKind> taken;
         private final Set<DeviceStatus> answered;
+        private final Set<Transition> seen;
         private final List<String> trail = new ArrayList<>();
         private final Account jana;
         private final Account petr;
@@ -124,10 +161,11 @@ class DeviceOrdersAcrossDevicesTest {
         private final List<ModelDevice> held = new ArrayList<>();
         private Map<ModelDevice, Answer> lastAnswers = new LinkedHashMap<>();
 
-        Run(Random random, Set<StepKind> taken, Set<DeviceStatus> answered) {
+        Run(Random random, Set<StepKind> taken, Set<DeviceStatus> answered, Set<Transition> seen) {
             this.random = random;
             this.taken = taken;
             this.answered = answered;
+            this.seen = seen;
             new DatabaseCleaner(jdbc).emptyAllTables();
             clock.set(START.plusSeconds(random.nextInt(86_400)));
             this.jana = new Account(register("Jana Nováková", "jana@example.cz", "4821937561"));
@@ -144,6 +182,8 @@ class DeviceOrdersAcrossDevicesTest {
                 checkTransitions(step, answers);
                 taken.add(step.kind());
                 answers.values().forEach(answer -> answered.add(answer.status()));
+                answers.forEach((device, answer) -> Optional.ofNullable(lastAnswers.get(device))
+                        .ifPresent(before -> seen.add(new Transition(before.status(), step.kind(), answer.status()))));
                 lastAnswers = answers;
             }
         }
@@ -161,6 +201,7 @@ class DeviceOrdersAcrossDevicesTest {
                     possible.add(account.administrator ? removeRole(account) : grantRole(account));
                 }
             }
+            held.stream().filter(device -> !device.active && !device.deleted).forEach(device -> possible.add(presentEndedToken(device)));
             if (!jana.erased && !jana.administrator) {
                 possible.add(erase(jana));
             }
@@ -213,7 +254,7 @@ class DeviceOrdersAcrossDevicesTest {
         }
 
         private Step signOutEveryOther(ModelDevice kept) {
-            return new Step(StepKind.SIGN_OUT_ELSEWHERE, kept.account, "every other device signed out from " + kept, run -> kept.active, () -> {
+            return new Step(StepKind.SIGN_OUT_EVERY_OTHER, kept.account, "every other device signed out from " + kept, run -> kept.active, () -> {
                 deviceList.signOutOthers(donor(kept.account).id(), Optional.of(deviceIdOf(kept)));
                 Instant now = clock.instant();
                 active(kept.account).filter(device -> device != kept).toList().forEach(device -> device.ended(now, Order.ALL));
@@ -227,6 +268,13 @@ class DeviceOrdersAcrossDevicesTest {
                 Instant now = clock.instant();
                 active(device.account).toList().forEach(each -> each.ended(now, Order.NONE));
             });
+        }
+
+        private Step presentEndedToken(ModelDevice device) {
+            return new Step(StepKind.PRESENT_ENDED_TOKEN, device.account, "the last refresh token of the ended " + device + " presented again",
+                    run -> !device.active && !device.deleted, () -> assertThatThrownBy(
+                            () -> sessions.refresh(device.refreshToken, SessionCookie.of(device.kind), DeviceDescription.UNKNOWN))
+                            .isInstanceOf(InvalidRefreshToken.class));
         }
 
         private Step grantRole(Account account) {
@@ -332,7 +380,7 @@ class DeviceOrdersAcrossDevicesTest {
                         || before.status() == DeviceStatus.WIPE_ADMINISTRATION && answer.status() == DeviceStatus.WIPE_ALL;
                 if (newOrder) {
                     assertThat(taken.kind()).as("only a remote sign-out, a role removal or an erasure orders a delete: " + context)
-                            .isIn(StepKind.SIGN_OUT_ELSEWHERE, StepKind.REMOVE_ROLE, StepKind.ERASE);
+                            .isIn(StepKind.SIGN_OUT_ELSEWHERE, StepKind.SIGN_OUT_EVERY_OTHER, StepKind.REMOVE_ROLE, StepKind.ERASE);
                 }
                 if (taken.kind() == StepKind.REMOVE_ROLE && answer.status() == DeviceStatus.WIPE_ALL && before.status() != DeviceStatus.WIPE_ALL) {
                     throw new AssertionError("a role removal never orders the donor's own copy deleted: " + context);
@@ -373,7 +421,12 @@ class DeviceOrdersAcrossDevicesTest {
         }
 
         private Instant expiryOf(SessionKind kind, Instant signedInAt, Instant issuedAt) {
-            return sessionProperties.lengths().expiresAt(kind, signedInAt, issuedAt);
+            return issuedAt.plus(switch (kind) {
+                case BROWSER -> BROWSER_IDLE;
+                case REMEMBERED -> REMEMBERED;
+                case APP -> APP;
+                case PUBLIC -> throw new IllegalArgumentException("a public sign-in keeps no copy and gets no device secret");
+            });
         }
 
         private DonorId register(String name, String email, String symbol) {
@@ -387,7 +440,7 @@ class DeviceOrdersAcrossDevicesTest {
     }
 
     private enum StepKind {
-        SIGN_IN, REFRESH, SIGN_OUT_HERE, SIGN_OUT_ELSEWHERE, REPLAY, GRANT_ROLE, REMOVE_ROLE, ERASE, TIME_PASSES
+        SIGN_IN, REFRESH, SIGN_OUT_HERE, SIGN_OUT_ELSEWHERE, SIGN_OUT_EVERY_OTHER, REPLAY, PRESENT_ENDED_TOKEN, GRANT_ROLE, REMOVE_ROLE, ERASE, TIME_PASSES
     }
 
     private enum Order {
@@ -398,6 +451,9 @@ class DeviceOrdersAcrossDevicesTest {
     }
 
     private record Answer(DeviceStatus status, boolean administrator) {
+    }
+
+    private record Transition(DeviceStatus before, StepKind step, DeviceStatus after) {
     }
 
     private static final class Account {

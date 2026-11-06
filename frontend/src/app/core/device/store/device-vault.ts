@@ -146,7 +146,8 @@ export class DeviceVault implements SessionDevice {
   private administrationStorage: DeviceStorage | null = null;
   private administrationChannel: CopyChannel | null = null;
   private lockedCopyId: string | null = null;
-  private unanswered = false;
+  private unanswered: { readonly signedOut: boolean } | null = null;
+  private statusChecks = 0;
   private sharedStorage: Promise<DeviceStorage> | null = null;
   private memoryOnly: MemoryDeviceStorage | null = null;
   private activeStorage: DeviceStorage | null = null;
@@ -253,7 +254,9 @@ export class DeviceVault implements SessionDevice {
   }
 
   connectionReturned(): Promise<void> {
-    return this.unanswered ? this.checkStatus(false) : Promise.resolve();
+    return this.unanswered === null
+      ? Promise.resolve()
+      : this.checkStatus(this.unanswered.signedOut);
   }
 
   signedOutElsewhere(): void {
@@ -579,6 +582,8 @@ export class DeviceVault implements SessionDevice {
   }
 
   private async checkStatus(signedOut: boolean): Promise<void> {
+    const check = ++this.statusChecks;
+    this.unanswered = { signedOut };
     const secrets = await this.run(() => this.secretsHeld()).catch(() => []);
     let unanswered = false;
     for (const deviceSecret of secrets) {
@@ -593,7 +598,9 @@ export class DeviceVault implements SessionDevice {
         unanswered = true;
       }
     }
-    this.unanswered = unanswered;
+    if (check === this.statusChecks) {
+      this.unanswered = unanswered ? { signedOut } : null;
+    }
   }
 
   private async secretsHeld(): Promise<readonly string[]> {

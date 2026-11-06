@@ -402,10 +402,11 @@ describe('Given the privacy policy page', () => {
       'Na serveru zůstane i záznam o tom, co správci webu udělali, včetně vašeho výmazu; může uvádět i číslo vašeho bankovního účtu.',
     );
     expect(erasure).toContain(
-      'Kopii vašich údajů, kterou si dárcovský portál uložil do zařízení, kde jste byli přihlášení, zařízení smaže, jakmile se příště spojí se serverem; potvrzení, která jste si sami stáhli, zůstávají u vás.',
+      'Kopii vašich údajů, kterou si dárcovský portál uložil do zařízení, kde jste byli přihlášení, zařízení zpravidla smaže, až se příště spojí se serverem; zařízení, které se už nepřipojí, ji dál drží zašifrovanou.',
     );
+    expect(erasure).toContain('Potvrzení, která jste si sami stáhli, zůstávají u vás.');
     expect(erasure).toContain(
-      'Z kopií správy v zařízeních správců vaše údaje zmizí při jejich příští synchronizaci.',
+      'Do kopií správy v zařízeních správců se výmaz promítne při jejich příští synchronizaci; historie změn správy v nich zůstává stejně jako na serveru.',
     );
   });
 
