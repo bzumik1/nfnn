@@ -102,7 +102,7 @@ class JpaDonorRecordRepository implements DonorRecordRepository {
                 .map(DonorSenderAccountJpaEntity::donorId)
                 .distinct()
                 .toList();
-        return jpa.findAllById(owners).stream().map(this::withAccounts).toList();
+        return withAccounts(jpa.findAllById(owners));
     }
 
     @Override
@@ -118,13 +118,13 @@ class JpaDonorRecordRepository implements DonorRecordRepository {
         if (ids.isEmpty()) {
             return List.of();
         }
-        return jpa.findAllById(ids.stream().map(DonorReference::value).collect(Collectors.toSet())).stream().map(this::withAccounts).toList();
+        return withAccounts(jpa.findAllById(ids.stream().map(DonorReference::value).collect(Collectors.toSet())));
     }
 
     @Override
     public List<DonorRecord> searchByNameOrSymbol(String query, int limit) {
         String escaped = AccentFolding.fold(query).replace("!", "!!").replace("%", "!%").replace("_", "!_");
-        return jpa.searchByNameOrSymbol(escaped, PageRequest.of(0, limit)).stream().map(this::withAccounts).toList();
+        return withAccounts(jpa.searchByNameOrSymbol(escaped, PageRequest.of(0, limit)));
     }
 
     @Override
@@ -135,6 +135,17 @@ class JpaDonorRecordRepository implements DonorRecordRepository {
     @Override
     public long countRegisteredSince(Instant from) {
         return jpa.countByRegisteredAtGreaterThanEqual(from);
+    }
+
+    private List<DonorRecord> withAccounts(List<DonorRecordJpaEntity> entities) {
+        if (entities.isEmpty()) {
+            return List.of();
+        }
+        Map<UUID, List<SenderAccountLink>> links = accounts.findByDonorIdInOrderByCreatedAtAscIdAsc(
+                        entities.stream().map(DonorRecordJpaEntity::donorId).collect(Collectors.toSet())).stream()
+                .collect(Collectors.groupingBy(DonorSenderAccountJpaEntity::donorId,
+                        Collectors.mapping(DonorSenderAccountJpaEntity::toDomain, Collectors.toList())));
+        return entities.stream().map(entity -> entity.toDomain(links.getOrDefault(entity.donorId(), List.of()))).toList();
     }
 
     private DonorRecord withAccounts(DonorRecordJpaEntity entity) {

@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -17,6 +18,9 @@ interface PasskeyJpaRepository extends JpaRepository<PasskeyJpaEntity, UUID> {
 
     @Query("select passkey.donorId, count(passkey) from PasskeyJpaEntity passkey group by passkey.donorId")
     List<Object[]> countPerDonor();
+
+    @Query("select passkey.donorId, count(passkey) from PasskeyJpaEntity passkey where passkey.donorId in :donorIds group by passkey.donorId")
+    List<Object[]> countPerDonorAmong(@Param("donorIds") Collection<UUID> donorIds);
 
     int countByDonorId(UUID donorId);
 

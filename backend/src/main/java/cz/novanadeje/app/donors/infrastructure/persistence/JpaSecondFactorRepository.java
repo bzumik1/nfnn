@@ -5,6 +5,7 @@ import cz.novanadeje.app.donors.domain.SecondFactor;
 import cz.novanadeje.app.donors.domain.SecondFactorRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -37,6 +38,16 @@ class JpaSecondFactorRepository implements SecondFactorRepository {
     @Override
     public Set<DonorId> findDonorsWithEnabledFactor() {
         return jpa.findDonorIdsWithConfirmedFactor().stream().map(DonorId::new).collect(Collectors.toUnmodifiableSet());
+    }
+
+    @Override
+    public Set<DonorId> findDonorsWithEnabledFactorAmong(Collection<DonorId> donorIds) {
+        if (donorIds.isEmpty()) {
+            return Set.of();
+        }
+        return jpa.findDonorIdsWithConfirmedFactorAmong(donorIds.stream().map(DonorId::value).collect(Collectors.toSet())).stream()
+                .map(DonorId::new)
+                .collect(Collectors.toUnmodifiableSet());
     }
 
     @Override

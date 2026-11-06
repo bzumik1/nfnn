@@ -79,7 +79,7 @@ class AdminDonorsSyncTest {
             Thread meanwhile = Thread.ofPlatform().start(() -> insertAction(UUID.randomUUID(), NOW));
             meanwhile.join();
             return call.callRealMethod();
-        }).when(spy).findAllNewestFirst();
+        }).when(spy).findAllSummariesNewestFirst();
 
         JsonNode manifest = answer();
 

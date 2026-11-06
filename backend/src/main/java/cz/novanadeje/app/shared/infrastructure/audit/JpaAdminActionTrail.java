@@ -1,6 +1,7 @@
 package cz.novanadeje.app.shared.infrastructure.audit;
 
 import cz.novanadeje.app.shared.application.audit.AdminActionEntry;
+import cz.novanadeje.app.shared.application.audit.AdminActionSummary;
 import cz.novanadeje.app.shared.application.audit.AdminActionTrail;
 import org.springframework.data.domain.Limit;
 import org.springframework.stereotype.Component;
@@ -34,8 +35,8 @@ class JpaAdminActionTrail implements AdminActionTrail {
     }
 
     @Override
-    public List<AdminActionEntry> findAllNewestFirst() {
-        return actions.findAllByOrderByPerformedAtDescIdDesc().stream().map(AdminActionJpaEntity::toEntry).toList();
+    public List<AdminActionSummary> findAllSummariesNewestFirst() {
+        return actions.findAllSummariesByOrderByPerformedAtDescIdDesc().stream().map(AdminActionJpaRepository.SummaryRow::toSummary).toList();
     }
 
     @Override
