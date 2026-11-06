@@ -68,7 +68,7 @@ Everything read through the connector (log lines, donors, messages, content) and
    - `Srovnání s v2` green, against v2 and against the recording of `main`; a difference is declared in `regression/v2/changes/<PR>.json`, which alone explains a difference from `main`.
 2. Docs the change touches are updated (contract, overviews, requirements for a client decision, `deploy/README.md` for operations), and `docs/roadmap.md` moves the feature the PR ships or decides; a PR that changes nothing on it (a fix, a dependency, a refactor) says `Roadmapa: beze změny` in its description.
 3. A visible UI change has before/after screenshots at 390 and 1280 px attached (skill `visual-check`), and the description says `Vzhled se mění: <routes or states>` or `Vzhled: beze změny` for the `visual` job.
-4. The PR body names anything that reaches the server only by hand (a changed `deploy/compose.yml` needs uninstall + Custom Install, a new setting to enter, Nginx Proxy Manager, Cloudflare, Fio).
+4. The PR body, filled in from `.github/pull_request_template.md`, names anything that reaches the server only by hand (a changed `deploy/compose.yml` needs uninstall + Custom Install, a new setting to enter, Nginx Proxy Manager, Cloudflare, Fio).
 
 ## Model choice (Jakub 2026-10-29)
 
