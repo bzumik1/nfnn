@@ -42,6 +42,7 @@ export default defineConfig<DeviceOptions, { safariPose?: SafariPose }>({
   failOnFlakyTests: !!process.env.CI,
   retries: process.env.CI && !safari ? 2 : 0,
   maxFailures: safari ? SAFARI_MAX_FAILURES : undefined,
+  globalSetup: safari ? './e2e/devices/safari-warm-up.ts' : undefined,
   workers: safari ? 1 : process.env.CI ? 3 : undefined,
   reporter: [[process.env.CI && !safari ? 'github' : 'list'], ['./e2e/devices/device-report.ts']],
   use: {
