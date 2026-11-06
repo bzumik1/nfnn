@@ -15,4 +15,4 @@ npm run e2e:devices          # jen telefony a tablety (e2e/devices/): kontroly r
 E2E_THEME=control npx playwright test e2e/theme.spec.ts   # kontrolní motiv přebarví každou stránku
 ```
 
-Co kde je: [docs/frontend-overview.md](../docs/frontend-overview.md). Pravidla: `.claude/rules/frontend.md` a `testing.md`.
+Co kde je: [docs/frontend-overview.md](../docs/frontend-overview.md). Pravidla: `.claude/rules/frontend.md`, `testing.md` a `testing-frontend.md`.

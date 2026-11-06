@@ -6,7 +6,7 @@ paths:
   - "backend/src/test/**"
   - "backend/build.gradle.kts"
   - "frontend/e2e/**"
-  - "mcp/test/**"
+  - "mcp/**"
   - ".github/**"
 ---
 # Testing rules: regression against v2

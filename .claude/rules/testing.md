@@ -3,7 +3,7 @@
 Write the test first, watch it fail for the right reason, make it pass with the smallest change, refactor green. Every behaviour has a test at the lowest level that can prove it.
 
 The rest of the testing rules load only with the files of their area; a reference to `testing.md` and one of these sections means the file beside it:
-- Frontend (Vitest, Playwright, phones and tablets, Safari, web as an app, receipt PDF): `testing-frontend.md`.
+- Frontend (Vitest, Playwright, CSP violations, phones and tablets, Safari, web as an app, receipt PDF): `testing-frontend.md`.
 - Logic on both sides (shared cases): `testing-shared-cases.md`.
 - Regression against v2 (recording, transcripts, golden cases, data sets and screens, hygiene, comparison, CI): `testing-regression.md`.
 - Nightly: `testing-nightly.md`.
