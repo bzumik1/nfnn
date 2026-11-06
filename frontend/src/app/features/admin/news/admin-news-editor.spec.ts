@@ -658,7 +658,7 @@ describe('Given an administrator editing a published news article', () => {
       'Aktualita je na webu, změny se ukážou hned. Web řadí aktuality podle data zveřejnění.',
     );
     expect(element<HTMLInputElement>(fixture, '#news-publish-date').value).toBe('2026-10-20');
-    expect(text(fixture, '.updated-at')).toBe('Naposledy uloženo 20. 10. 2026 09:30.');
+    expect(text(fixture, '.updated-at')).toBe('Naposledy uloženo 20. 10. 2026 9:30.');
   });
 
   async function tapPhoto(clientX: number, clientY: number): Promise<void> {
@@ -919,7 +919,7 @@ describe('Given an administrator editing a published news article', () => {
 
     const sheet = element<HTMLDialogElement>(fixture, 'app-changed-meanwhile-dialog dialog');
     expect(sheet.textContent).toContain('vaše úpravy zůstávají ve formuláři');
-    expect(sheet.textContent).toContain('Novější verze je z 05. 11. 2026 16:20.');
+    expect(sheet.textContent).toContain('Novější verze je z 5. 11. 2026 16:20.');
     expect(sheet.textContent).not.toContain('Uložit svou verzi místo novější');
     button(fixture, 'Nechat úpravy ve formuláři').click();
     await settle(fixture);
@@ -960,7 +960,7 @@ describe('Given an administrator editing a published news article', () => {
     await settle(fixture);
 
     expect(text(fixture, '.ui-action-bar [role="status"]')).toBe(
-      'Aktualita je na webu s datem 01. 10. 2026.',
+      'Aktualita je na webu s datem 1. 10. 2026.',
     );
   });
 
@@ -1013,7 +1013,7 @@ describe('Given an administrator editing a published news article', () => {
     await settle(fixture);
 
     expect(text(fixture, '.ui-action-bar [role="status"]')).toBe(
-      'Aktualita je na webu s datem 01. 10. 2026.',
+      'Aktualita je na webu s datem 1. 10. 2026.',
     );
     expect(button(fixture, 'Uložit a ukázat na webu').disabled).toBe(false);
     expect(fixture.componentInstance.canLeave()).toBe(true);

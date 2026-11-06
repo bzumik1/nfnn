@@ -91,7 +91,7 @@ test.describe('Given an administrator managing the news', () => {
       'Zahrada pro děti',
       'Projekt',
       'Na webu od 20. 10. 2026',
-      '20. 10. 2026 09:30',
+      '20. 10. 2026 9:30',
     ]);
 
     await page.getByRole('link', { name: 'Zahrada pro děti' }).click();
@@ -473,10 +473,10 @@ test.describe('Given an administrator managing the news', () => {
     );
 
     await page.goto('/sprava/aktuality');
-    await expect(page.locator('tbody tr td').nth(2)).toHaveText('Zveřejní se 01. 12. 2026');
+    await expect(page.locator('tbody tr td').nth(2)).toHaveText('Zveřejní se 1. 12. 2026');
 
     await page.getByRole('link', { name: 'Zahrada pro děti' }).click();
-    await expect(page.locator('.publish-state .ui-badge')).toHaveText('Zveřejní se 01. 12. 2026');
+    await expect(page.locator('.publish-state .ui-badge')).toHaveText('Zveřejní se 1. 12. 2026');
     await expect(page.getByRole('button', { name: 'Uložit změny' })).toBeVisible();
     await expect(page.getByRole('link', { name: /Otevřít na webu/ })).toHaveCount(0);
   });

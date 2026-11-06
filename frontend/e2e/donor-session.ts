@@ -1,5 +1,6 @@
 import { expect, Page } from '@playwright/test';
 import { FOUNDATION_PAYMENT_DETAILS } from './qr-matrices';
+import { rowsSha256 } from '../src/app/features/donations/sync/canonical-rows';
 import { mockReceiptIssuing, ReceiptIssuing } from './receipt-issuing';
 import { BREAKPOINTS } from '../src/app/core/layout/breakpoints';
 import { noSignature, signatory } from './signature-image';
@@ -275,6 +276,50 @@ export async function mockDonorSync(page: RouteTarget, sync: DonorSyncMock): Pro
       });
     },
   );
+}
+
+export interface DonorSyncRows {
+  readonly gifts: readonly ReturnType<typeof donationItem>[];
+  readonly receipts?: readonly { readonly year: number | null; readonly issuedAt: string }[];
+}
+
+export async function donorSyncOf(summary: object, rows: DonorSyncRows): Promise<DonorSyncMock> {
+  const chunks = new Map<string, unknown[]>();
+  for (const gift of rows.gifts) {
+    const id = `donations:${gift.receivedAt.slice(0, 4)}`;
+    chunks.set(id, [
+      ...(chunks.get(id) ?? []),
+      {
+        id: gift.id,
+        receivedAt: gift.receivedAt,
+        amountMinor: gift.amountMinor,
+        currency: gift.currency,
+        status: gift.status,
+        source: gift.source,
+        purpose: gift.accountVerification ? 'ACCOUNT_VERIFICATION' : 'GENERAL',
+        pairedBy: gift.pairedBy,
+        bankAccountId: null,
+        symbolClaimId: null,
+      },
+    ]);
+  }
+  for (const receipt of rows.receipts ?? []) {
+    const id = `receipts:${receipt.year ?? receipt.issuedAt.slice(0, 4)}`;
+    chunks.set(id, [...(chunks.get(id) ?? []), receipt]);
+  }
+  return {
+    summary: { ...summary, bankDataAsOf: '2026-10-18T08:05:30Z' },
+    chunks: await Promise.all(
+      [...chunks.entries()]
+        .sort(([first], [second]) => first.localeCompare(second))
+        .map(async ([id, chunkRows]) => ({
+          id,
+          rowsSha256: await rowsSha256(chunkRows),
+          count: chunkRows.length,
+          rows: chunkRows,
+        })),
+    ),
+  };
 }
 
 export const signedInDevices = [

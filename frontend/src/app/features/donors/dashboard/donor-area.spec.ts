@@ -15,6 +15,7 @@ import { AdminAccessRefusal } from '../../../core/auth/admin-access-refusal';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
+import { userHandleOf } from '../../../core/auth/session-device';
 import { DonationListResponse, DonationSummaryResponse } from '../../donations/donations-api';
 import { foundationPaymentDetails } from '../../donations/testing/payment-details-fixtures';
 import { spayd } from '../../donations/spayd';
@@ -41,6 +42,8 @@ import {
   YEARLY_120,
   YEARLY_ONE,
 } from '../../donations/receipt-pdf/testing/receipt-fixtures';
+import { DonorCopyLink } from '../../donations/device-copy/donor-copy';
+import { copyViewOf, FakeDonorCopy } from '../../donations/device-copy/testing/fake-donor-copy';
 import { donorsRoutes } from '../donors.routes';
 import { LiveUpdates } from '../../../core/live/live-updates';
 import { FakeLiveUpdates } from '../../../core/live/testing/live-fixtures';
@@ -1021,7 +1024,7 @@ describe('Given a signed-in donor in the donor area', () => {
 
       expect(text('.last-gift h2')).toBe('Poslední dar');
       expect(text('.last-gift-amount')).toBe('500 Kč');
-      expect(text('.last-gift-date')).toBe('15. 03. 2026');
+      expect(text('.last-gift-date')).toBe('15. 3. 2026');
       expect(text('.last-gift-status')).toBe('Přijato');
       expect(blockOrder()).toEqual([
         'receipt-ready',
@@ -1039,7 +1042,7 @@ describe('Given a signed-in donor in the donor area', () => {
       await respond(twoYearSummary(), list);
 
       expect(text('.last-gift-amount')).toBe('500 Kč');
-      expect(text('.last-gift-date')).toBe('15. 03. 2026');
+      expect(text('.last-gift-date')).toBe('15. 3. 2026');
       expect(texts('.recent-card tbody tr td:nth-child(3)')[0]).toBe('Ověření účtu');
     });
 
@@ -1256,10 +1259,10 @@ describe('Given a signed-in donor in the donor area', () => {
           .map((cell) => normalized(cell.textContent ?? '')),
       );
       expect(rows).toEqual([
-        ['15. 03. 2026', '500 Kč', 'Obecný příspěvek', 'Přijato'],
-        ['10. 01. 2026', '1 000 Kč', 'Obecný příspěvek', 'Přijato'],
-        ['05. 11. 2025', '250 Kč', 'Obecný příspěvek', 'Přijato'],
-        ['20. 08. 2025', '2 000 Kč', 'Obecný příspěvek', 'Vráceno'],
+        ['15. 3. 2026', '500 Kč', 'Obecný příspěvek', 'Přijato'],
+        ['10. 1. 2026', '1 000 Kč', 'Obecný příspěvek', 'Přijato'],
+        ['5. 11. 2025', '250 Kč', 'Obecný příspěvek', 'Přijato'],
+        ['20. 8. 2025', '2 000 Kč', 'Obecný příspěvek', 'Vráceno'],
       ]);
     });
 
@@ -1424,7 +1427,7 @@ describe('Given a signed-in donor in the donor area', () => {
       await settle();
       await new Promise((resolve) => setTimeout(resolve, 0));
 
-      expect(text(secondRowButton)).toBe('Otevřít PDF, dar z 10. 01. 2026, 1 000 Kč');
+      expect(text(secondRowButton)).toBe('Otevřít PDF, dar z 10. 1. 2026, 1 000 Kč');
       expect(text(`${yearSection(2026)} tbody tr:nth-child(2) .receipt-saved`)).toBe(
         'Potvrzení potvrzeni-o-daru-2026-000017.pdf je připravené. Otevřete ho tlačítkem Otevřít PDF.',
       );
@@ -1434,7 +1437,7 @@ describe('Given a signed-in donor in the donor area', () => {
 
       http.expectNone({ method: 'POST', url: RECEIPTS_URL });
       expect(share).toHaveBeenCalledTimes(1);
-      expect(text(secondRowButton)).toBe('Stáhnout PDF, dar z 10. 01. 2026, 1 000 Kč');
+      expect(text(secondRowButton)).toBe('Stáhnout PDF, dar z 10. 1. 2026, 1 000 Kč');
     });
 
     it('then a yearly receipt the server refuses shows the reason at that year, not above the years', async () => {
@@ -1498,12 +1501,12 @@ describe('Given a signed-in donor in the donor area', () => {
               .filter((part) => part !== ''),
         );
       expect(rowsOf(2026).map((row) => row.slice(0, 3))).toEqual([
-        ['15. 03. 2026', 'Obecný příspěvek', '500 Kč'],
-        ['10. 01. 2026', 'Obecný příspěvek', '1 000 Kč'],
+        ['15. 3. 2026', 'Obecný příspěvek', '500 Kč'],
+        ['10. 1. 2026', 'Obecný příspěvek', '1 000 Kč'],
       ]);
       expect(rowsOf(2026)[0][3]).toContain('Stáhnout PDF');
       expect(rowsOf(2025)[1].slice(0, 4)).toEqual([
-        '20. 08. 2025',
+        '20. 8. 2025',
         'Obecný příspěvek',
         '2 000 Kč',
         'Vráceno',
@@ -1925,7 +1928,7 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(
         [...first.querySelectorAll('td')].map((cell) => normalized(cell.textContent ?? '')),
       ).toEqual([
-        '20. 03. 2026',
+        '20. 3. 2026',
         '1 Kč',
         'Ověření účtu',
         'Přijato',
@@ -1944,13 +1947,13 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(button(secondRowButton).getAttribute('aria-disabled')).toBe('true');
       expect(text(secondRowButton)).toBe('Připravujeme PDF…');
       expect(text('.payments-card tbody tr:first-child .download-btn')).toBe(
-        'Stáhnout PDF, dar z 15. 03. 2026, 500 Kč',
+        'Stáhnout PDF, dar z 15. 3. 2026, 500 Kč',
       );
 
       receiptRequest({ donationId: 'd-3' }).flush(issuedSingle('2026-000017'));
       await settle();
       expect(button(secondRowButton).getAttribute('aria-disabled')).toBeNull();
-      expect(text(secondRowButton)).toBe('Stáhnout PDF, dar z 10. 01. 2026, 1 000 Kč');
+      expect(text(secondRowButton)).toBe('Stáhnout PDF, dar z 10. 1. 2026, 1 000 Kč');
     });
 
     it('then a receipt no longer available shows the problem title in its row and loads the payments again', async () => {
@@ -2903,14 +2906,14 @@ describe('Given a signed-in donor in the donor area', () => {
 
       const rows = [...root().querySelectorAll<HTMLElement>('.single-card tbody tr')];
       expect(rows.map((row) => normalized(row.querySelector('.date')?.textContent ?? ''))).toEqual([
-        '15. 03. 2026',
-        '10. 01. 2026',
+        '15. 3. 2026',
+        '10. 1. 2026',
       ]);
       expect(
         rows.map((row) => normalized(row.querySelector('.download-btn')?.textContent ?? '')),
       ).toEqual([
-        'Stáhnout PDF, dar z 15. 03. 2026, 500 Kč',
-        'Stáhnout PDF, dar z 10. 01. 2026, 1 000 Kč',
+        'Stáhnout PDF, dar z 15. 3. 2026, 500 Kč',
+        'Stáhnout PDF, dar z 10. 1. 2026, 1 000 Kč',
       ]);
       expect(text('.single-card .yearly-sub')).toBe(
         'Potvrzení k letošním darům stáhnete tady hned po jejich připsání, ke starším darům v části Moje dary.',
@@ -3115,6 +3118,351 @@ describe('Given a signed-in donor in the donor area', () => {
         'mailto:info@nfnn.cz?subject=Sma%C5%BE%C3%A1n%C3%AD%20%C3%BA%C4%8Dtu',
       );
       expect(normalized(mail.textContent ?? '')).toBe('info@nfnn.cz');
+    });
+  });
+  describe('when the donor’s copy is open on this device', () => {
+    let copy: FakeDonorCopy;
+    const newGift = donationItem({ id: 'd-5', receivedAt: '2026-04-02', amountMinor: 30000 });
+
+    function withNewGift(): DonationListResponse {
+      const list = twoYearDonations();
+      return { ...list, items: [newGift, ...list.items], count: list.count + 1 };
+    }
+
+    function rows(): number {
+      return texts('.payments-card tbody tr').length;
+    }
+
+    beforeEach(() => {
+      copy = new FakeDonorCopy();
+      copy.owned.set(userHandleOf(sampleDonor().id));
+      TestBed.inject(DonorCopyLink).copy.set(copy);
+    });
+
+    it('then Moje dary shows the gifts of the copy at once, asks the server for none of them and catches the copy up', async () => {
+      copy.shown.set(copyViewOf(twoYearSummary(), twoYearDonations()));
+
+      await open('/darce/dary');
+
+      http.expectNone('/api/donations/me/summary');
+      http.expectNone('/api/donations/me');
+      expect(rows()).toBe(twoYearDonations().items.length);
+      expect(texts('.gift-year-sum')).toEqual(['2 dary · 1 500 Kč', '1 dar · 250 Kč']);
+      expect(copy.catchUp).toHaveBeenCalledTimes(1);
+      copy.finish('stored');
+    });
+
+    it('then Přehled shows the totals of the copy at once and asks the server for none of them', async () => {
+      copy.shown.set(copyViewOf(twoYearSummary(), twoYearDonations()));
+
+      await open('/darce/prehled');
+
+      http.expectNone('/api/donations/me/summary');
+      http.expectNone('/api/donations/me');
+      expect(texts('.stat-value')).toEqual(['1 750 Kč', '3', '1 500 Kč']);
+      copy.finish('stored');
+    });
+
+    it('then a copy that opens for another donor in its place replaces the list at once instead of offering its gifts as new ones', async () => {
+      copy.shown.set(copyViewOf(twoYearSummary(), twoYearDonations()));
+      await open('/darce/dary');
+      copy.finish('stored');
+      await settle();
+
+      const other = donationItem({ id: 'petr-1', receivedAt: '2026-05-05', amountMinor: 70000 });
+      copy.owned.set('petr');
+      copy.shown.set(
+        copyViewOf(twoYearSummary(), { ...twoYearDonations(), items: [other], count: 1 }),
+      );
+      await settle();
+
+      expect(rows()).toBe(1);
+      expect(text('.bank-check-incoming')).toBe('');
+    });
+
+    it('then a copy that opens for another donor after the server answered replaces the list at once instead of offering its gifts as new ones', async () => {
+      copy.opened.set(false);
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+      expect(rows()).toBe(twoYearDonations().items.length);
+
+      const other = donationItem({ id: 'petr-1', receivedAt: '2026-05-05', amountMinor: 70000 });
+      copy.owned.set('petr');
+      copy.shown.set(
+        copyViewOf(twoYearSummary(), { ...twoYearDonations(), items: [other], count: 1 }),
+      );
+      copy.opened.set(true);
+      await settle();
+
+      expect(rows()).toBe(1);
+      expect(text('.bank-check-incoming')).toBe('');
+    });
+
+    it('then a gift the catch-up brings after the copy was shown waits behind the button that names it, also once the bank check has ended', async () => {
+      copy.shown.set(copyViewOf(twoYearSummary(), twoYearDonations()));
+      await open('/darce/dary');
+
+      copy.finish('stored', copyViewOf(twoYearSummary(), withNewGift()));
+      await settle();
+
+      expect(rows()).toBe(twoYearDonations().items.length);
+      bankCheck.flush(
+        { bankDataAsOf: LATER, checking: false },
+        { status: 202, statusText: 'Accepted' },
+      );
+      await settle();
+      copy.finish('stored');
+      await settle();
+
+      expect(rows()).toBe(twoYearDonations().items.length);
+      expect(text('.bank-check-incoming')).toBe('Zobrazit 1 nový dar');
+      await click('.bank-check-incoming');
+      await settle();
+      expect(rows()).toBe(twoYearDonations().items.length + 1);
+    });
+
+    it('then a bank check that ends before the catch-up keeps the gift it brings behind the button that names it', async () => {
+      copy.shown.set(copyViewOf(twoYearSummary(), twoYearDonations()));
+      await open('/darce/dary');
+
+      bankCheck.flush(
+        { bankDataAsOf: LATER, checking: false },
+        { status: 202, statusText: 'Accepted' },
+      );
+      await settle();
+      copy.finish('stored', copyViewOf(twoYearSummary(), withNewGift()));
+      await settle();
+
+      http.expectNone('/api/donations/me');
+      expect(rows()).toBe(twoYearDonations().items.length);
+      expect(text('.bank-check-incoming')).toBe('Zobrazit 1 nový dar');
+    });
+
+    it('then a copy whose gifts disagree with its summary is not shown and the gifts come from the server', async () => {
+      copy.shown.set({ ...copyViewOf(twoYearSummary(), twoYearDonations()), agrees: false });
+
+      await open('/darce/dary');
+      await respond(twoYearSummary(), withNewGift());
+
+      expect(rows()).toBe(twoYearDonations().items.length + 1);
+      copy.finish('mismatch');
+      await settle();
+      expect(rows()).toBe(twoYearDonations().items.length + 1);
+    });
+
+    it('then while a copy is still empty, the gifts come from the server and the copy only catches up', async () => {
+      await open('/darce/dary');
+
+      expect(copy.catchUp).toHaveBeenCalledTimes(1);
+      expect(copy.sync).not.toHaveBeenCalled();
+      await respond(twoYearSummary(), twoYearDonations());
+      expect(rows()).toBe(twoYearDonations().items.length);
+
+      copy.finish('stored', copyViewOf(twoYearSummary(), twoYearDonations()));
+      await settle();
+
+      expect(rows()).toBe(twoYearDonations().items.length);
+      http.expectNone('/api/donations/me');
+    });
+
+    it('then a copy that opens only after the server failed to answer is shown', async () => {
+      copy.opened.set(false);
+      await open('/darce/dary');
+      http.expectOne('/api/donations/me');
+      http
+        .expectOne('/api/donations/me/summary')
+        .flush(null, { status: 503, statusText: 'Service Unavailable' });
+      await settle();
+
+      copy.shown.set(copyViewOf(twoYearSummary(), twoYearDonations()));
+      copy.opened.set(true);
+      await settle();
+
+      expect(rows()).toBe(twoYearDonations().items.length);
+    });
+
+    it('then a live hint syncs the copy and a new gift waits behind the button that names it', async () => {
+      const live = TestBed.inject(LiveUpdates) as unknown as FakeLiveUpdates;
+      copy.shown.set(copyViewOf(twoYearSummary(), twoYearDonations()));
+      await open('/darce/dary');
+      copy.finish('stored');
+      bankCheck.flush(
+        { bankDataAsOf: EARLIER, checking: false },
+        { status: 202, statusText: 'Accepted' },
+      );
+      await settle();
+      copy.finish('stored');
+      await settle();
+
+      live.hint('donations');
+      await settle();
+      expect(copy.sync).toHaveBeenCalledTimes(2);
+      copy.finish('stored', copyViewOf(twoYearSummary(), withNewGift()));
+      await settle();
+
+      expect(rows()).toBe(twoYearDonations().items.length);
+      expect(text('.bank-check-incoming')).toBe('Zobrazit 1 nový dar');
+    });
+
+    it('then a gift that the copy brings after the bank check waits behind the button that names it', async () => {
+      copy.shown.set(copyViewOf(twoYearSummary(), twoYearDonations()));
+      await open('/darce/dary');
+      copy.finish('stored');
+      await settle();
+
+      bankCheck.flush(
+        { bankDataAsOf: LATER, checking: false },
+        { status: 202, statusText: 'Accepted' },
+      );
+      await settle();
+      expect(copy.sync).toHaveBeenCalledTimes(1);
+      copy.finish('stored', copyViewOf(twoYearSummary(), withNewGift()));
+      await settle();
+
+      http.expectNone('/api/donations/me');
+      expect(rows()).toBe(twoYearDonations().items.length);
+      expect(text('.bank-check-incoming')).toBe('Zobrazit 1 nový dar');
+    });
+
+    describe('and the donor presses Zkontrolovat nové platby while the copy is shown', () => {
+      async function pressWithCopy(): Promise<void> {
+        copy.shown.set(copyViewOf(twoYearSummary(), twoYearDonations()));
+        await open('/darce/dary');
+        copy.finish('stored');
+        bankCheck.flush(
+          { bankDataAsOf: EARLIER, checking: false },
+          { status: 202, statusText: 'Accepted' },
+        );
+        await settle();
+        copy.finish('stored');
+        await settle();
+        await click('.bank-check-btn');
+        http
+          .expectOne({ method: 'POST', url: BANK_CHECK_URL })
+          .flush({ bankDataAsOf: LATER, checking: false });
+        await settle();
+      }
+
+      it('and the sync fails, then the server is asked and its new gift is named', async () => {
+        await pressWithCopy();
+        copy.finish('failed');
+        await settle();
+        await respond(twoYearSummary(), withNewGift());
+
+        expect(text('.bank-check-status')).toBe(
+          'Přibyl 1 nový dar. Údaje z banky k 18. 10. 2026 10:07',
+        );
+        expect(rows()).toBe(twoYearDonations().items.length + 1);
+      });
+
+      it('and neither the sync nor the server answers, then the check says it failed and the copy stays shown', async () => {
+        await pressWithCopy();
+        copy.finish('failed');
+        await settle();
+        http.expectOne('/api/donations/me');
+        http
+          .expectOne('/api/donations/me/summary')
+          .flush(null, { status: 503, statusText: 'Service Unavailable' });
+        await settle();
+
+        expect(text('.bank-check-status')).not.toContain('Žádný nový dar');
+        expect(text('[role="alert"]:not(:empty)')).toBe(
+          'Nové platby se nepodařilo zkontrolovat. Zkuste to prosím za chvíli znovu.',
+        );
+        expect(rows()).toBe(twoYearDonations().items.length);
+      });
+    });
+
+    it('then a session lost during a sync sends the donor home to sign in', async () => {
+      copy.shown.set(copyViewOf(twoYearSummary(), twoYearDonations()));
+      await open('/darce/dary');
+      copy.finish('stored');
+      await settle();
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+      store.refresh().subscribe({ error: () => undefined });
+      http.expectOne('/api/donors/auth/refresh').flush(
+        {
+          type: 'https://nfnn.cz/problems/auth/invalid-refresh-token',
+          title: 'Přihlaste se znovu',
+          status: 401,
+        },
+        { status: 401, statusText: 'Unauthorized' },
+      );
+      bankCheck.flush(
+        { bankDataAsOf: LATER, checking: false },
+        { status: 202, statusText: 'Accepted' },
+      );
+      await settle();
+      copy.finish('failed');
+      await settle();
+      for (const request of http.match(() => true)) {
+        if (!request.cancelled) {
+          request.flush(null, { status: 401, statusText: 'Unauthorized' });
+        }
+      }
+      await settle();
+
+      expect(store.signedIn()).toBe(false);
+      expect(TestBed.inject(LoginDialogService).isOpen()).toBe(true);
+      expect(navigate).toHaveBeenCalledWith('/');
+    });
+
+    it('then a copy stored before the server answered does not replace that answer', async () => {
+      copy.opened.set(false);
+      await open('/darce/dary');
+      await respond(twoYearSummary(), withNewGift());
+
+      copy.shown.set(copyViewOf(twoYearSummary(), twoYearDonations(), [], '2020-01-01T00:00:00Z'));
+      copy.opened.set(true);
+      await settle();
+
+      expect(rows()).toBe(twoYearDonations().items.length + 1);
+      expect(text('.bank-check-incoming')).toBe('');
+    });
+
+    it('then a copy shown while the server was still asked stays shown when that request fails', async () => {
+      copy.opened.set(false);
+      await open('/darce/dary');
+      copy.shown.set(copyViewOf(twoYearSummary(), twoYearDonations()));
+      copy.opened.set(true);
+      await settle();
+
+      http.expectOne('/api/donations/me');
+      http
+        .expectOne('/api/donations/me/summary')
+        .flush(null, { status: 503, statusText: 'Service Unavailable' });
+      await settle();
+
+      expect(rows()).toBe(twoYearDonations().items.length);
+      expect(element('[role="alert"]:not(:empty)')).toBeNull();
+    });
+
+    it('then an address naming a download after a reload starts it from the gifts of the copy and drops it from the address', async () => {
+      sessionStorage.setItem('nfnn.receipt-restart', 'rok-2025');
+      copy.shown.set(copyViewOf(twoYearSummary(), twoYearDonations()));
+      await open('/darce/potvrzeni?stahnout=rok-2025');
+
+      receiptRequest({ year: 2025 }).flush(issuedYearly(2025));
+      await settleBlobFailure();
+      await settle();
+      copy.finish('stored');
+      await settle();
+
+      expect(savedFiles).toEqual([{ fileName: 'potvrzeni-o-darech-2025.pdf', href: OBJECT_URL }]);
+      expect(TestBed.inject(Router).url).toBe('/darce/potvrzeni');
+    });
+
+    it('then a yearly receipt the copy holds is drawn again when the server cannot be reached', async () => {
+      copy.shown.set(copyViewOf(twoYearSummary(), twoYearDonations(), [issuedYearly(2025)]));
+      await open('/darce/potvrzeni');
+      copy.finish('stored');
+      await settle();
+
+      await downloadYear(2025);
+      receiptRequest({ year: 2025 }).error(new ProgressEvent('error'));
+      await settle();
+
+      expect(savedFiles).toEqual([{ fileName: 'potvrzeni-o-darech-2025.pdf', href: OBJECT_URL }]);
     });
   });
 });

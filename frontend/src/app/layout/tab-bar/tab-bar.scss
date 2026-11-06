@@ -20,6 +20,10 @@
   box-shadow: var(--shadow-tab-bar);
 }
 
+.tab-bar--under-keyboard {
+  visibility: hidden;
+}
+
 @media (display-mode: standalone) {
   .tab-bar {
     bottom: max(
@@ -92,6 +96,14 @@
 
   .tab-icon {
     stroke-width: 2.5;
+  }
+}
+
+@media (forced-colors: none) {
+  .tab:active {
+    background-color: var(--color-tab-pill);
+    background-image: none;
+    border-color: var(--color-tab-pill-rim);
   }
 }
 

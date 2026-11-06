@@ -1,0 +1,35 @@
+@use 'pressed';
+
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:where(a[href], button, summary, [role='button'], [role='tab']) {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-user-drag: none;
+
+  &:active:active:not(:disabled, [aria-disabled='true']) {
+    @include pressed.look {
+      @include pressed.tints;
+    }
+  }
+}
+
+:where(a[href], button, summary, [role='button'], [role='tab']) :where(img),
+:where(img[alt='']) {
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+}
+
+:where(a:is([href^='http:'], [href^='https:'], [href^='mailto:'], [href^='tel:'])) {
+  -webkit-touch-callout: default;
+}
+
+:where(p:not(.crumbs, .ui-crumbs), dd, address, app-markdown) :where(a[href]:not([class])) {
+  -webkit-touch-callout: default;
+  -webkit-user-select: auto;
+  user-select: auto;
+  -webkit-user-drag: auto;
+}

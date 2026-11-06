@@ -49,3 +49,33 @@
     background: var(--color-surface);
   }
 }
+
+:root {
+  --keyboard-covered-height: 0px;
+}
+
+html.keyboard-open .dialog[open] {
+  padding-bottom: calc(var(--space-5) + var(--keyboard-covered-height));
+}
+
+@include bp.down(phone) {
+  html.keyboard-open .dialog[open] {
+    padding-bottom: var(--keyboard-covered-height);
+    background: var(--color-surface);
+  }
+}
+
+@include bp.down(nav) {
+  html.keyboard-open .dialog--full[open] {
+    padding-bottom: var(--keyboard-covered-height);
+    background: var(--color-surface);
+  }
+
+  html.keyboard-open .dialog--sheet[open] {
+    padding-bottom: var(--keyboard-covered-height);
+  }
+
+  html.keyboard-open .dialog--sheet[open] .dialog-panel {
+    max-height: calc(100% - var(--space-12));
+  }
+}

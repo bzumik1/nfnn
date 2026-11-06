@@ -139,6 +139,11 @@ describe('Given the sign-in dialog', () => {
       expect(prepared).toBe(1);
     });
 
+    it('then the keyboard’s return key moves from the e-mail on to the password and signs in from there', () => {
+      expect(element('#login-email').getAttribute('enterkeyhint')).toBe('next');
+      expect(element('#login-password').getAttribute('enterkeyhint')).toBe('go');
+    });
+
     it('and the browser closes it on Esc, then the dialog is closed', () => {
       element<HTMLDialogElement>('dialog').close();
 
@@ -950,6 +955,35 @@ describe('Given the sign-in dialog', () => {
       expect(withPlaceholder).toEqual([]);
     });
 
+    function returnKeys(): Record<string, string | null> {
+      return Object.fromEntries(
+        [
+          ...fixture.nativeElement.querySelectorAll('.register-form input:not([type="checkbox"])'),
+        ].map((input) => [
+          (input as HTMLInputElement).id,
+          (input as HTMLInputElement).getAttribute('enterkeyhint'),
+        ]),
+      );
+    }
+
+    it('as a person, then the keyboard’s return key leads from field to field and creates the account from the password', () => {
+      expect(returnKeys()).toEqual({
+        'register-name': 'next',
+        'register-street': 'next',
+        'register-postal-code': 'next',
+        'register-city': 'next',
+        'register-email': 'next',
+        'register-password': 'go',
+      });
+    });
+
+    it('as a company, then the return key leads from the company identifier on as well', async () => {
+      await click('.type-switch button:nth-child(2)');
+
+      expect(returnKeys()['register-company-identifier']).toBe('next');
+      expect(returnKeys()['register-name']).toBe('next');
+    });
+
     it('as a company, then no field shows an example value that could pass for a filled-in one', async () => {
       await click('.type-switch button:nth-child(2)');
 
@@ -1159,6 +1193,12 @@ describe('Given the sign-in dialog', () => {
         expect(element<HTMLInputElement>('#register-email').value).toBe('ucetni@stavby.example.cz');
         expect(element<HTMLInputElement>('#register-password').value).toBe('');
       });
+    });
+
+    it('with a passkey instead of a password, then the e-mail is the last field and its return key creates the account', async () => {
+      await click('.type-switch[aria-labelledby="register-method-label"] button:nth-child(2)');
+
+      expect(element('#register-email').getAttribute('enterkeyhint')).toBe('go');
     });
 
     it('with a passkey instead of a password, then no password is asked for and none is sent', async () => {
@@ -1487,6 +1527,10 @@ describe('Given the sign-in dialog', () => {
     it('opened on the reset tab, then the reset form is shown straight away', () => {
       expect(element('.reset-title').textContent).toContain('Obnovení hesla');
       expect(element('#reset-email')).not.toBeNull();
+    });
+
+    it('then the keyboard’s return key sends the link', () => {
+      expect(element('#reset-email').getAttribute('enterkeyhint')).toBe('send');
     });
 
     it('from the sign-in tab, then the link switches to the reset form with the e-mail already filled in and focused', async () => {

@@ -15,6 +15,7 @@ const TEST_SUPPORT = [
 const SHARED_CASE_LOADER = 'src/testing/shared-cases.ts';
 const SHARED_CASE_SETUP = 'src/testing/shared-cases-setup.ts';
 const RECEIPT_ASSETS_SETUP = 'src/testing/receipt-assets-setup.ts';
+const SERVER_ROUTES_SETUP = 'src/testing/server-routes-setup.ts';
 const ED25519_FALLBACK = 'src/app/features/donations/verification/noble-ed25519.ts';
 const RECEIPT_LAYOUT = 'src/app/features/donations/receipt-pdf/receipt-layout.ts';
 const RECEIPT_WORKER = 'src/app/features/donations/receipt-pdf/receipt-pdf.worker.ts';
@@ -33,6 +34,7 @@ const SCOPES = {
   sharedCaseLoader: { files: [SHARED_CASE_LOADER], within: 'testSupport' },
   sharedCaseSetup: { files: [SHARED_CASE_SETUP], within: 'testSupport' },
   receiptAssetsSetup: { files: [RECEIPT_ASSETS_SETUP], within: 'testSupport' },
+  serverRoutesSetup: { files: [SERVER_ROUTES_SETUP], within: 'testSupport' },
   ed25519Fallback: { files: [ED25519_FALLBACK], within: 'app' },
   receiptLayout: { files: [RECEIPT_LAYOUT], within: 'app' },
   receiptWorker: { files: [RECEIPT_WORKER], within: 'app' },
@@ -44,7 +46,7 @@ const SCOPES = {
   idbStorage: { files: [IDB_STORAGE], within: 'app' },
 };
 
-const NODE_SETUPS = ['sharedCaseSetup', 'receiptAssetsSetup'];
+const NODE_SETUPS = ['sharedCaseSetup', 'receiptAssetsSetup', 'serverRoutesSetup'];
 const TEST_SCOPES = ['testSupport', 'sharedCaseLoader', ...NODE_SETUPS];
 
 const CONFINED_IMPORTS = [
@@ -112,7 +114,7 @@ const CONFINED_IMPORTS = [
     allowedIn: NODE_SETUPS,
     examples: ['node:fs', 'path'],
     message:
-      'Only the Vitest global setups src/testing/shared-cases-setup.ts and receipt-assets-setup.ts run in Node; specs get their data from them and the app never imports Node.',
+      'Only the Vitest global setups src/testing/shared-cases-setup.ts, receipt-assets-setup.ts and server-routes-setup.ts run in Node; specs get their data from them and the app never imports Node.',
   },
   {
     patterns: ['**/testing', '**/testing/**'],

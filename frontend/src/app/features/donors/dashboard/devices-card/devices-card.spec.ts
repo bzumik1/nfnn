@@ -114,7 +114,7 @@ describe("Given a donor's signed-in devices card", () => {
         'Neznámé zařízení',
       ]);
       expect(text(rows()[1].querySelector('.device-dates'))).toBe(
-        'přihlášeno 30. 10. 2026 · naposledy použito 04. 11. 2026 20:05',
+        'přihlášeno 30. 10. 2026 · naposledy použito 4. 11. 2026 20:05',
       );
     });
 

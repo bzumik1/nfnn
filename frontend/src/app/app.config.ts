@@ -34,6 +34,7 @@ import { connectivityInterceptor } from './core/connectivity/connectivity-interc
 import { AppInstall } from './core/install/app-install';
 import { AlertNotificationClicks } from './core/push/alert-notification-clicks';
 import { AppBadge } from './core/push/app-badge';
+import { pressedOnTouchAtStart } from './core/touch/pressed-on-touch';
 import { AppUpdates } from './core/updates/app-updates';
 import { provideAppServiceWorker } from './core/updates/angular-service-worker';
 import { serviceWorkerBypassInterceptor } from './core/updates/service-worker-bypass';
@@ -107,6 +108,7 @@ export const appConfig: ApplicationConfig = {
     dialogHistoryAtStart,
     connectivityAtStart,
     pagePinchLockAtStart,
+    pressedOnTouchAtStart,
     systemTextSizeAtStart,
     navigationAtStart,
     edgeSwipeBackAtStart,

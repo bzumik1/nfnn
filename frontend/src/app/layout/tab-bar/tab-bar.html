@@ -1,4 +1,9 @@
-<nav #bar class="tab-bar" [attr.aria-label]="label">
+<nav
+  #bar
+  class="tab-bar"
+  [class.tab-bar--under-keyboard]="keyboard.isOpen()"
+  [attr.aria-label]="label"
+>
   <ul class="tab-bar-list">
     @for (tab of tabs; track tab.id) {
       <li class="tab-bar-item">

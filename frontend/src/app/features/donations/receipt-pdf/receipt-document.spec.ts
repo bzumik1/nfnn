@@ -16,10 +16,10 @@ const ISSUED_AT = '2027-01-15T09:30:00Z';
 describe('Given the frozen single receipt of a person in Czech', () => {
   const document = receiptDocument(frozenCase(SINGLE_PERSON_CS), ISSUED_AT, TEST_CAPTIONS);
 
-  it('when it is mapped, then the header names the title, number and issue day with two-digit day and month', () => {
+  it('when it is mapped, then the header names the title, number and issue day without leading zeros in day and month', () => {
     expect(document.title).toEqual({ cs: 'Potvrzení o přijetí daru', en: null });
     expect(document.numberLine.cs).toBe('Číslo potvrzení: 2027-000001');
-    expect(document.issuedOnLine.cs).toBe('Datum vystavení: 15. 01. 2027');
+    expect(document.issuedOnLine.cs).toBe('Datum vystavení: 15. 1. 2027');
     expect(document.bilingual).toBe(false);
     expect(document.replaces).toBeNull();
   });
@@ -44,14 +44,14 @@ describe('Given the frozen single receipt of a person in Czech', () => {
     expect(document.giftTable).toBeNull();
     expect(document.singleGift?.map((line) => line.cs)).toEqual([
       'Forma daru: peněžitý dar, bankovní převod',
-      'Datum připsání na účet: 15. 03. 2026',
+      'Datum připsání na účet: 15. 3. 2026',
       'Částka: 500\u00a0Kč',
       'Účet příjemce: 5544332217/2010',
     ]);
     expect(document.declaration.cs).toContain(
-      'přijal dne 15. 03. 2026 peněžitý dar ve výši 500\u00a0Kč',
+      'přijal dne 15. 3. 2026 peněžitý dar ve výši 500\u00a0Kč',
     );
-    expect(document.signature.issuedAt.cs).toBe('V Novém Boru, dne 15. 01. 2027');
+    expect(document.signature.issuedAt.cs).toBe('V Novém Boru, dne 15. 1. 2027');
     expect(document.signature.forFoundation.cs).toBe('Za Nová naděje - nadační fond:');
     expect(document.signature.name).toBe('Petr Vzorový');
     expect(document.signature.role).toBe('předseda správní rady');
@@ -117,7 +117,7 @@ describe('Given the frozen receipt of a company that replaces an earlier one', (
 
   it('when it is mapped, then the replacement line and the company lines appear', () => {
     expect(document.replaces?.cs).toMatch(
-      /^Toto potvrzení nahrazuje potvrzení č\. \d{4}-\d{6} ze dne \d{2}\. \d{2}\. \d{4}, které tímto pozbývá platnosti\.$/,
+      /^Toto potvrzení nahrazuje potvrzení č\. \d{4}-\d{6} ze dne \d{1,2}\. \d{1,2}\. \d{4}, které tímto pozbývá platnosti\.$/,
     );
     expect(document.donor.lines.map((line) => line.cs.split(':')[0])).toEqual([
       'Název',
@@ -135,7 +135,7 @@ describe('Given the frozen yearly receipt with 120 gifts', () => {
   it('when it is mapped, then every gift is a row in the frozen order and the totals follow', () => {
     expect(document.giftTable?.rows).toHaveLength(120);
     expect(document.giftTable?.rows[0]).toEqual({
-      receivedOn: { cs: '01. 01. 2026', en: null },
+      receivedOn: { cs: '1. 1. 2026', en: null },
       amount: { cs: '100\u00a0Kč', en: null },
     });
     expect(document.giftTable?.count.cs).toBe('Počet darů: 120');
@@ -256,7 +256,7 @@ describe('Given a frozen receipt whose issue text is changed to the typographer 
       TEST_CAPTIONS,
     );
 
-    expect(document.signature.issuedAt.cs).toBe('V Novém Boru dne 15. 01. 2027');
+    expect(document.signature.issuedAt.cs).toBe('V Novém Boru dne 15. 1. 2027');
   });
 });
 

@@ -147,7 +147,7 @@ describe('Given an administrator on the administration home', () => {
     );
 
     expect(dataRows()).toEqual({
-      'Stažené období': '20. 07. 2026 – 17. 10. 2026',
+      'Stažené období': '20. 7. 2026 – 17. 10. 2026',
       'Poslední úspěšné stažení': '18. 10. 2026 10:05',
       'Poslední pokus': '18. 10. 2026 10:05',
       'Poslední chyba': 'žádná',
@@ -243,7 +243,7 @@ describe('Given an administrator on the administration home', () => {
     await respond(importState());
 
     expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeNull();
-    expect(dataRows()['Stažené období']).toBe('20. 07. 2026 – 17. 10. 2026');
+    expect(dataRows()['Stažené období']).toBe('20. 7. 2026 – 17. 10. 2026');
   });
 
   it('when the role was taken away meanwhile, then the administrator is sent to their own overview', async () => {
@@ -433,7 +433,7 @@ describe('Given an administrator on the administration home', () => {
       );
 
       expect(text(`${SINCE_CARD} .since-lead`)).toBe(
-        'Poslední přihlášení 29. 10. 2026 00:30. Od té doby přišla 1 platba za 500 Kč.',
+        'Poslední přihlášení 29. 10. 2026 0:30. Od té doby přišla 1 platba za 500 Kč.',
       );
       expect(dataRows('admin-since-title')).toEqual({
         'Přiřazené dárcům': '1 platba za 500 Kč',
@@ -540,8 +540,8 @@ describe('Given an administrator on the administration home', () => {
         'Zálohování je v pořádku.',
       );
       expect(dataRows('admin-backups-title')).toEqual({
-        'Poslední záloha': '23. 10. 2026 03:00 (2 kB)',
-        'Zkušební obnova': '18. 10. 2026 04:00, 37 tabulek',
+        'Poslední záloha': '23. 10. 2026 3:00 (2 kB)',
+        'Zkušební obnova': '18. 10. 2026 4:00, 37 tabulek',
       });
       expect(backupsCard().querySelector('a')?.getAttribute('href')).toBe('/sprava/zalohy');
     });
@@ -566,7 +566,7 @@ describe('Given an administrator on the administration home', () => {
       ]);
       expect(backupsCard().querySelector('.healthy')).toBeNull();
       expect(dataRows('admin-backups-title')).toEqual({
-        'Poslední záloha': 'selhala 23. 10. 2026 03:00',
+        'Poslední záloha': 'selhala 23. 10. 2026 3:00',
         'Zkušební obnova': 'zatím žádná',
       });
     });
@@ -582,7 +582,7 @@ describe('Given an administrator on the administration home', () => {
       await respondOverview(BACKUPS_URL, backupsView());
 
       expect(backupsCard().querySelector('[role="alert"]')).toBeNull();
-      expect(dataRows('admin-backups-title')['Poslední záloha']).toBe('23. 10. 2026 03:00 (2 kB)');
+      expect(dataRows('admin-backups-title')['Poslední záloha']).toBe('23. 10. 2026 3:00 (2 kB)');
     });
   });
 
@@ -621,7 +621,7 @@ describe('Given an administrator on the administration home', () => {
       await sources();
 
       expect(text('.attention .healthy')).toBe(
-        'Vše je v pořádku. Platby z banky naposledy stažené 18. 10. 2026 10:05, poslední záloha 23. 10. 2026 03:00.',
+        'Vše je v pořádku. Platby z banky naposledy stažené 18. 10. 2026 10:05, poslední záloha 23. 10. 2026 3:00.',
       );
       expect(attention().querySelector('.attention-list')).toBeNull();
     });

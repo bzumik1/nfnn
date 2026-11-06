@@ -17,6 +17,7 @@ import { AppHeader } from '../../../layout/app-header/app-header';
 import { TabBar } from '../../../layout/tab-bar/tab-bar';
 import { SideNav, SideNavBadge, SideNavGroup } from '../../../shared/ui/side-nav/side-nav';
 import { DonorDonations } from './donor-donations';
+import { FirstSyncNotice } from './first-sync-notice/first-sync-notice';
 
 const BANK_ACCOUNTS_PATH = '/darce/ucty';
 
@@ -42,7 +43,7 @@ export const DONOR_ADMINISTRATION: SideNavGroup = {
 
 @Component({
   selector: 'app-donor-area',
-  imports: [RouterOutlet, AppHeader, SideNav, TabBar],
+  imports: [RouterOutlet, AppHeader, SideNav, TabBar, FirstSyncNotice],
   providers: [DonorDonations],
   templateUrl: './donor-area.html',
   styleUrl: './donor-area.scss',

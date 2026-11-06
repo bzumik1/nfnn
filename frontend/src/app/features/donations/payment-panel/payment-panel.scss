@@ -59,9 +59,11 @@
     color var(--duration-base),
     transform var(--duration-base);
 
-  &:hover {
-    border-color: var(--color-accent);
-    transform: translateY(-1px);
+  @media (hover: hover) {
+    &:hover {
+      border-color: var(--color-accent);
+      transform: translateY(-1px);
+    }
   }
 
   &.active {

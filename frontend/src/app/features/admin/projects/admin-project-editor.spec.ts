@@ -653,7 +653,7 @@ describe('Given an administrator editing a draft project', () => {
     it('then the sheet keeps the edits in the form and names when the other version was saved', () => {
       const sheet = element<HTMLDialogElement>(fixture, 'app-changed-meanwhile-dialog dialog');
       expect(sheet.textContent).toContain('zůstávají ve formuláři');
-      expect(sheet.textContent).toContain('Novější verze je z 05. 11. 2026 16:20.');
+      expect(sheet.textContent).toContain('Novější verze je z 5. 11. 2026 16:20.');
       expect(element<HTMLTextAreaElement>(fixture, '#projects-body').value).toBe(
         'Opravený text o koncertu.',
       );
@@ -744,7 +744,7 @@ describe('Given an administrator editing a published project', () => {
       'Projekt je na webu, změny se ukážou hned. Projekty na stejném místě řazení ukazuje web od naposledy zveřejněného.',
     );
     expect(element<HTMLInputElement>(fixture, '#projects-publish-date').value).toBe('2026-10-20');
-    expect(text(fixture, '.updated-at')).toBe('Naposledy uloženo 20. 10. 2026 09:30.');
+    expect(text(fixture, '.updated-at')).toBe('Naposledy uloženo 20. 10. 2026 9:30.');
   });
 
   async function tapPhoto(clientX: number, clientY: number): Promise<void> {
@@ -924,7 +924,7 @@ describe('Given an administrator editing a published project', () => {
     await settle(fixture);
 
     expect(text(fixture, '.ui-action-bar [role="status"]')).toBe(
-      'Projekt je na webu s datem 01. 10. 2026.',
+      'Projekt je na webu s datem 1. 10. 2026.',
     );
   });
 
@@ -977,7 +977,7 @@ describe('Given an administrator editing a published project', () => {
     await settle(fixture);
 
     expect(text(fixture, '.ui-action-bar [role="status"]')).toBe(
-      'Projekt je na webu s datem 01. 10. 2026.',
+      'Projekt je na webu s datem 1. 10. 2026.',
     );
     expect(button(fixture, 'Uložit a ukázat na webu').disabled).toBe(false);
     expect(fixture.componentInstance.canLeave()).toBe(true);
