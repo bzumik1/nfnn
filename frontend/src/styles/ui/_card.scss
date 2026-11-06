@@ -7,6 +7,10 @@
   margin-bottom: var(--space-5);
 }
 
+.ui-grouped {
+  --color-surface-alt: var(--color-surface-muted);
+}
+
 .ui-grouped .ui-card:not(dialog .ui-card) {
   border-radius: var(--radius-group);
   box-shadow: var(--shadow-group);

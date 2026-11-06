@@ -250,6 +250,7 @@ const READABLE_PAIRS = [
     grounds: [
       '--color-surface',
       '--color-surface-alt',
+      '--color-surface-muted',
       '--color-surface-grouped',
       '--color-surface-elevated',
     ],

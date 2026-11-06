@@ -320,6 +320,18 @@ describe('Given the colours a theme sets for the light and the dark appearance',
     );
   });
 
+  it('when the soft text is too light for the muted ground that stands for the quiet ground inside the cells of the app areas, then its contrast there is reported', () => {
+    const pale = NOVA_NADEJE.replace(
+      '  --color-surface-muted: #f1f3f5;',
+      '  --color-surface-muted: #d5d9df;',
+    );
+
+    assert.match(
+      appearanceProblems('pale', pale).join('\n'),
+      /^theme pale in the light appearance: --color-text-soft on --color-surface-muted is [0-9.]+:1, below 4.5:1$/m,
+    );
+  });
+
   it('when the text of the filled warning badge is too light for it, then its contrast is reported', () => {
     const pale = NOVA_NADEJE.replace(
       '  --color-badge-warning: #b45309;',
