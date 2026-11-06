@@ -20,9 +20,10 @@
 }
 
 .panel-label {
-  font-size: var(--text-md);
-  font-weight: var(--weight-regular);
-  color: var(--color-text-muted);
+  font-family: var(--font-title);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
   margin-bottom: var(--space-3-5);
 
   &:focus {
