@@ -1,7 +1,14 @@
 import { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { browserEntries, stepBack } from './app-history';
-import { mockDonorApi, openAccountItem, signIn } from './donor-session';
+import {
+  administrator,
+  donor,
+  mockDonorApi,
+  openAccountItem,
+  session,
+  signIn,
+} from './donor-session';
 
 const article = {
   id: '0199f3e0-0000-7000-8000-00000000c001',
@@ -123,7 +130,7 @@ test.describe('Given a signed-in donor on a phone who opens a section from the a
     await expect(page).toHaveURL('/o-nas');
   });
 
-  test('when the app steps back, as its swipe does, then the page the sheet was opened on returns', async ({
+  test('when the app steps back, as its swipe does, then the account sheet opens again over the page it was opened on', async ({
     page,
   }) => {
     await openAccountItem(page, 'Moje dary');
@@ -132,7 +139,10 @@ test.describe('Given a signed-in donor on a phone who opens a section from the a
     await stepBack(page);
 
     await expect(page).toHaveURL('/o-nas');
+    await expect(page.getByRole('dialog', { name: 'Účet' })).toBeVisible();
+    await stepBack(page);
     await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(page).toHaveURL('/o-nas');
   });
 
   test('when they open a section from the sheet, then the browser gains no entry, so its Back would leave the site', async ({
@@ -146,13 +156,53 @@ test.describe('Given a signed-in donor on a phone who opens a section from the a
     expect(await browserEntries(page)).toBe(entries);
   });
 
-  test('when they press Zpět, then the page the sheet was opened on returns', async ({ page }) => {
+  for (const section of [
+    'Můj přehled',
+    'Moje dary',
+    'Potvrzení o daru',
+    'Bankovní účty',
+    'Údaje a zabezpečení',
+  ]) {
+    test(`when they press Zpět on ${section}, then the account sheet opens again as they left it`, async ({
+      page,
+    }) => {
+      await openAccountItem(page, section);
+
+      await back(page).click();
+
+      await expect(page).toHaveURL('/o-nas');
+      const sheet = page.getByRole('dialog', { name: 'Účet' });
+      await expect(sheet).toBeVisible();
+      await expect(sheet.getByRole('link', { name: 'Moje dary' })).toBeVisible();
+    });
+  }
+
+  test('when they close the sheet they came back to, then the page under it stays and the next step back leaves it', async ({
+    page,
+  }) => {
     await openAccountItem(page, 'Moje dary');
-    await expect(page).toHaveURL('/darce/dary');
+    await back(page).click();
+    const sheet = page.getByRole('dialog', { name: 'Účet' });
+    await expect(sheet).toBeVisible();
+
+    await sheet.getByRole('button', { name: 'Zavřít' }).click();
+
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(page).toHaveURL('/o-nas');
+  });
+
+  test('when they reload a section opened from the sheet, then Zpět still opens the sheet again over the page under it', async ({
+    page,
+  }) => {
+    await page.route('**/api/donors/auth/refresh', (route) => route.fulfill(session(200, donor)));
+    await openAccountItem(page, 'Moje dary');
+    await page.reload();
+    await expect(page.getByRole('heading', { level: 1, name: 'Moje dary' })).toBeVisible();
 
     await back(page).click();
 
     await expect(page).toHaveURL('/o-nas');
+    await expect(page.getByRole('dialog', { name: 'Účet' })).toBeVisible();
   });
 
   test('when they choose the section already open, then the sheet closes and one step back leaves it', async ({
@@ -235,6 +285,27 @@ test.describe('Given a signed-in donor on a phone who opens a section from the a
     expect(close && name && close.y < name.y + name.height && name.y < close.y + close.height).toBe(
       true,
     );
+  });
+});
+
+test.describe('Given a signed-in administrator on a phone who opens Správa from the account sheet', () => {
+  test('when they press Zpět in Správa, then the account sheet opens again over the page it was opened on', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto('/o-nas');
+    await signIn(page, administrator);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await tabs(page).getByRole('link', { name: 'O nás' }).click();
+    await expect(page).toHaveURL('/o-nas');
+    await openAccountItem(page, 'Správa');
+    await expect(page).toHaveURL(/\/sprava/);
+
+    await back(page).click();
+
+    await expect(page).toHaveURL('/o-nas');
+    await expect(page.getByRole('dialog', { name: 'Účet' })).toBeVisible();
   });
 });
 

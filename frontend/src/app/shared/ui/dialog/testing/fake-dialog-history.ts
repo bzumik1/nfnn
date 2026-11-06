@@ -4,6 +4,7 @@ export class FakeDialogHistory {
   listener: DialogHistoryListener | null = null;
   steps: number[] = [];
   handedOver: string[] = [];
+  kept: string[] = [];
   closed = 0;
   released = 0;
   opened = 0;
@@ -35,6 +36,11 @@ export class FakeDialogHistory {
     this.listener = null;
     this.handedOver.push(url);
     return this.ownsEntry;
+  }
+
+  keepStep(mark: string): void {
+    this.listener = null;
+    this.kept.push(mark);
   }
 
   release(): void {

@@ -90,6 +90,14 @@ export class DialogHistory {
     return owned > 0;
   }
 
+  keepStep(mark: string): void {
+    const history = this.window?.history;
+    if (history !== undefined && this.owned > 0) {
+      history.replaceState({ ...stateOf(history.state), [mark]: true }, '');
+    }
+    this.release();
+  }
+
   release(): void {
     this.dialogs = [];
     this.owned = 0;

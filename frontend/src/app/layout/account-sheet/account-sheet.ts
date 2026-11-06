@@ -22,6 +22,7 @@ import { Dialog } from '../../shared/ui/dialog/dialog';
 import { DialogHistory } from '../../shared/ui/dialog/dialog-history';
 import { AccountBadges } from '../../core/layout/account-badges';
 import { AppInstall } from '../../core/install/app-install';
+import { ACCOUNT_SHEET_STEP } from './account-sheet-return';
 
 export type AccountIcon = 'overview' | 'gifts' | 'receipts' | 'accounts' | 'details' | 'admin';
 
@@ -113,7 +114,7 @@ export class AccountSheet {
       return;
     }
     event.preventDefault();
-    this.leaveFor(url);
+    this.openFromSheet(url);
   }
 
   protected addToHomeScreen(): void {
@@ -138,6 +139,16 @@ export class AccountSheet {
 
   protected close(): void {
     this.closed.emit();
+  }
+
+  private openFromSheet(url: string): void {
+    if (this.router.url === url) {
+      this.closed.emit();
+      return;
+    }
+    this.history.keepStep(ACCOUNT_SHEET_STEP);
+    this.closed.emit();
+    void this.router.navigateByUrl(url);
   }
 
   private leaveFor(url: string): void {

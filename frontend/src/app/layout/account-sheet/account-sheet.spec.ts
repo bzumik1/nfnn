@@ -7,12 +7,12 @@ import { Donor } from '../../core/auth/donor';
 import { sampleDonor } from '../../core/auth/testing/donor-fixtures';
 import { SignedOutNotice } from '../../core/auth/signed-out-notice';
 import { CompactLayout } from '../../core/layout/compact-layout';
-import { APP_DEPTH_KEY } from '../../core/navigation/back-target';
 import { DialogHistory } from '../../shared/ui/dialog/dialog-history';
 import { FakeDialogHistory } from '../../shared/ui/dialog/testing/fake-dialog-history';
 import { AccountBadges } from '../../core/layout/account-badges';
 import { AppInstall, InstallWay } from '../../core/install/app-install';
 import { AccountSheet } from './account-sheet';
+import { ACCOUNT_SHEET_STEP } from './account-sheet-return';
 
 describe('Given the account sheet of a signed-in donor', () => {
   const donor = signal<Donor | null>(null);
@@ -201,7 +201,7 @@ describe('Given the account sheet of a signed-in donor', () => {
     );
   });
 
-  it('when a section is chosen, then the sheet hands its history entry to that page, one level deeper, and closes', async () => {
+  it('when a section is chosen, then the sheet keeps its step for coming back, closes and opens that page after it', async () => {
     const router = TestBed.inject(Router);
     const navigate = vi.spyOn(router, 'navigateByUrl');
     const sheet = open();
@@ -211,12 +211,10 @@ describe('Given the account sheet of a signed-in donor', () => {
       .dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
     await fixture.whenStable();
 
-    expect(history.handedOver).toEqual(['/darce/potvrzeni']);
+    expect(history.kept).toEqual([ACCOUNT_SHEET_STEP]);
+    expect(history.handedOver).toEqual([]);
     expect(closed).toBe(1);
-    expect(navigate).toHaveBeenCalledWith('/darce/potvrzeni', {
-      replaceUrl: true,
-      state: { [APP_DEPTH_KEY]: 1 },
-    });
+    expect(navigate).toHaveBeenCalledWith('/darce/potvrzeni');
   });
 
   it('when the section already open is chosen, then the sheet only closes and the row says it is the current page', async () => {
@@ -234,19 +232,6 @@ describe('Given the account sheet of a signed-in donor', () => {
     expect(history.handedOver).toEqual([]);
     expect(navigate).not.toHaveBeenCalled();
     expect(closed).toBe(1);
-  });
-
-  it('when the sheet kept no history entry of its own, then a chosen section opens as a new entry over the page under it', async () => {
-    history.ownsEntry = false;
-    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl');
-    const sheet = open();
-
-    sheet
-      .querySelector<HTMLAnchorElement>('a[href="/darce/potvrzeni"]')!
-      .dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-    await fixture.whenStable();
-
-    expect(navigate).toHaveBeenCalledWith('/darce/potvrzeni');
   });
 
   it('when it opens, then under the sign-out it names how to reach the foundation, its register entry and the privacy policy', async () => {
@@ -272,10 +257,7 @@ describe('Given the account sheet of a signed-in donor', () => {
     await fixture.whenStable();
 
     expect(closed).toBe(1);
-    expect(navigate).toHaveBeenCalledWith('/zasady-ochrany-osobnich-udaju', {
-      replaceUrl: true,
-      state: { [APP_DEPTH_KEY]: 1 },
-    });
+    expect(navigate).toHaveBeenCalledWith('/zasady-ochrany-osobnich-udaju');
   });
 
   it('when the donor signs out on the home page, then the session ends and the sheet only closes over it', async () => {

@@ -294,6 +294,46 @@ describe('Given the history entries of an open dialog', () => {
     expect(listener.close).not.toHaveBeenCalled();
   });
 
+  it('when the dialog keeps its step for the page it leads to, then the page opens after that marked step and Back returns to it without telling the dialog', async () => {
+    await open();
+    const length = window.history.length;
+
+    history.keepStep('nfnnKept');
+    await router.navigateByUrl('/jinam');
+    await settled();
+
+    expect(window.history.length).toBe(length + 1);
+    await back();
+    expect(location.path()).toBe('/stranka');
+    expect(depth()).toBe(1);
+    expect((window.history.state as Record<string, unknown>)['nfnnKept']).toBe(true);
+    expect(listener.close).not.toHaveBeenCalled();
+  });
+
+  it('when a dialog opens again on the kept step, then it takes that step over and its closing takes it back', async () => {
+    await open();
+    history.keepStep('nfnnKept');
+    await router.navigateByUrl('/jinam');
+    await settled();
+    await back();
+    const length = window.history.length;
+
+    history.open(listener as DialogHistoryListener);
+    await settled();
+    expect(window.history.length).toBe(length);
+    history.close(listener as DialogHistoryListener);
+    await settled();
+
+    expect(location.path()).toBe('/stranka');
+    expect(depth()).toBeUndefined();
+  });
+
+  it('when the dialog keeps its step before it ever added one, then nothing is marked', () => {
+    history.keepStep('nfnnKept');
+
+    expect((window.history.state as Record<string, unknown> | null)?.['nfnnKept']).toBeUndefined();
+  });
+
   it('when the dialog hands over before it ever added an entry, then the page under it keeps its entry', () => {
     history.handOver('/jinam');
 

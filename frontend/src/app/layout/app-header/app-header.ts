@@ -28,6 +28,7 @@ import { initialsOf } from '../../core/auth/initials';
 import { AccountBadges } from '../../core/layout/account-badges';
 import { AccountPortrait } from '../account-sheet/account-portrait';
 import { AccountSheet } from '../account-sheet/account-sheet';
+import { AccountSheetReturn } from '../account-sheet/account-sheet-return';
 
 @Component({
   selector: 'app-header',
@@ -78,6 +79,17 @@ export class AppHeader {
       releaseScrollEdge = followScrollEdge(document, this.header().nativeElement);
     });
     inject(DestroyRef).onDestroy(() => releaseScrollEdge?.());
+    const sheetReturn = inject(AccountSheetReturn);
+    effect(() => {
+      if (sheetReturn.wanted()) {
+        untracked(() => {
+          sheetReturn.taken();
+          if (this.auth.signedIn()) {
+            this.accountOpen.set(true);
+          }
+        });
+      }
+    });
     effect(() => {
       if (this.auth.donor() !== null && this.auth.isAdmin()) {
         untracked(() => this.portraits.ask());
