@@ -65,16 +65,18 @@ trap_signals() {
 }
 
 if ! claim; then
-  find "$markers" -maxdepth 1 -name setup-claim -type d -mmin +1 -exec rmdir {} + 2>/dev/null
-  mkdir "$takeover" 2>/dev/null || refuse
+  [ -n "$(find "$takeover" -maxdepth 0 -mmin +1 2>/dev/null)" ] \
+    && ! kill -0 "$(cat "$takeover/pid" 2>/dev/null)" 2>/dev/null \
+    && rm -rf "$takeover"
+  mkdir "$takeover" 2>/dev/null && echo $$ > "$takeover/pid" || refuse
   if held_by_setup; then
-    rmdir "$takeover"
+    rm -rf "$takeover"
     refuse
   fi
   rm -f "$running"
   claim
   claimed=$?
-  rmdir "$takeover"
+  rm -rf "$takeover"
   [ "$claimed" -eq 0 ] || refuse
 fi
 trap finish EXIT

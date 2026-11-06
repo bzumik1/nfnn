@@ -312,6 +312,7 @@ describe('Given a worktree with the frontend and the connector', () => {
     fakeNpm(bin, npmLog);
     const gonePid = spawnSync('bash', ['-c', 'echo $$']).stdout.toString().trim();
     mkdirSync(join(root, '.t3', 'setup-claim'), { recursive: true });
+    writeFileSync(join(root, '.t3', 'setup-claim', 'pid'), `${gonePid}\n`);
     const old = Date.now() / 1000 - 120;
     utimesSync(join(root, '.t3', 'setup-claim'), old, old);
     writeFileSync(join(root, '.t3', 'setup-running'), `${gonePid}\n`);
@@ -321,6 +322,22 @@ describe('Given a worktree with the frontend and the connector', () => {
     assert.equal(result.status, 0, result.stderr);
     assert.equal(calls().length, 2);
     assert.ok(!existsSync(join(root, '.t3', 'setup-claim')));
+  });
+
+  test('when a takeover lock over a minute old belongs to a live process, as a stalled takeover, then the setup refuses and keeps it', () => {
+    fakeNpm(bin, npmLog);
+    const gonePid = spawnSync('bash', ['-c', 'echo $$']).stdout.toString().trim();
+    mkdirSync(join(root, '.t3', 'setup-claim'), { recursive: true });
+    writeFileSync(join(root, '.t3', 'setup-claim', 'pid'), `${process.pid}\n`);
+    const old = Date.now() / 1000 - 120;
+    utimesSync(join(root, '.t3', 'setup-claim'), old, old);
+    writeFileSync(join(root, '.t3', 'setup-running'), `${gonePid}\n`);
+
+    const result = run(SETUP, root, bin);
+
+    assert.notEqual(result.status, 0);
+    assert.deepEqual(calls(), []);
+    assert.equal(readFileSync(join(root, '.t3', 'setup-claim', 'pid'), 'utf8').trim(), String(process.pid));
   });
 
   test('when a fresh takeover lock is held, then the setup over a stale marker refuses', () => {
