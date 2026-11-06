@@ -674,6 +674,15 @@
           (ngSubmit)="saveNote(noteForm)"
           novalidate
         >
+          @if (noteDraft.offer(); as offer) {
+            <app-draft-offer
+              [headingLevel]="3"
+              [savedAt]="draftSavedAt(offer.savedAt)"
+              [stale]="offer.stale"
+              (resumed)="resumeText('note')"
+              (discarded)="discardText('note')"
+            />
+          }
           <div class="fields">
             <app-form-field
               label="Text pod kartami (nepovinné)"
@@ -723,6 +732,15 @@
           (ngSubmit)="saveFootnote(footnoteForm)"
           novalidate
         >
+          @if (footnoteDraft.offer(); as offer) {
+            <app-draft-offer
+              [headingLevel]="3"
+              [savedAt]="draftSavedAt(offer.savedAt)"
+              [stale]="offer.stale"
+              (resumed)="resumeText('footnote')"
+              (discarded)="discardText('footnote')"
+            />
+          }
           <div class="fields">
             <app-form-field
               label="Text řádku (nepovinné)"
@@ -761,3 +779,14 @@
     }
   }
 </div>
+@if (staleText()) {
+  <app-changed-meanwhile-dialog
+    subject="content"
+    [keepsDraft]="true"
+    [fromDraft]="true"
+    [busy]="savingNote() || savingFootnote()"
+    (overwriteChosen)="overwriteStaleText()"
+    (reloadChosen)="reloadStaleText()"
+    (dismissed)="staleText.set(null)"
+  />
+}

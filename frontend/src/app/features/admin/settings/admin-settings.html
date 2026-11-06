@@ -81,6 +81,14 @@
           fungovat.
         </p>
       }
+      @if (draft.offer(); as offer) {
+        <app-draft-offer
+          [savedAt]="draftSavedAt(offer.savedAt)"
+          [stale]="offer.stale"
+          (resumed)="resumeDraft()"
+          (discarded)="discardDraft()"
+        />
+      }
       <form class="settings-form" appTrackedForm (ngSubmit)="askSave()" novalidate>
         <ng-template #settingField let-field>
           @switch (field.input) {
@@ -361,3 +369,13 @@
     }
   }
 </div>
+@if (staleDraft()) {
+  <app-changed-meanwhile-dialog
+    subject="content"
+    [keepsDraft]="true"
+    [fromDraft]="true"
+    (overwriteChosen)="overwriteStaleDraft()"
+    (reloadChosen)="reloadAfterStaleDraft()"
+    (dismissed)="keepStaleDraft()"
+  />
+}

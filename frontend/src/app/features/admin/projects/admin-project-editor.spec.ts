@@ -1,6 +1,7 @@
 import { Location } from '@angular/common';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { Provider } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Title } from '@angular/platform-browser';
 import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
@@ -13,6 +14,10 @@ import {
   project,
   uploadedImage,
 } from '../../content/testing/project-fixtures';
+import {
+  MemoryDraftShelf,
+  memoryDraftShelfProviders,
+} from '../../../core/drafts/testing/memory-draft-shelf';
 import { AdminProjectEditor } from './admin-project-editor';
 
 const PROJECTS_URL = '/api/admin/content/projects';
@@ -29,7 +34,10 @@ function problem(status: number, type: string, title: string, detail: string) {
   };
 }
 
-async function setUp(id: string | null): Promise<{
+async function setUp(
+  id: string | null,
+  providers: Provider[] = [],
+): Promise<{
   fixture: ComponentFixture<AdminProjectEditor>;
   http: HttpTestingController;
 }> {
@@ -44,6 +52,7 @@ async function setUp(id: string | null): Promise<{
         provide: ActivatedRoute,
         useValue: { snapshot: { paramMap: convertToParamMap(id === null ? {} : { id }) } },
       },
+      ...providers,
     ],
   }).compileComponents();
   const http = TestBed.inject(HttpTestingController);
@@ -1114,5 +1123,143 @@ describe('Given an administrator editing a published project', () => {
     await settle(fixture);
 
     expect(navigated).toHaveBeenCalledWith('/sprava/projekty');
+  });
+});
+
+describe('Given an administrator editing a published project on a device that keeps drafts', () => {
+  const key = `projects/${project().id}`;
+  let shelf: MemoryDraftShelf;
+  let fixture: ComponentFixture<AdminProjectEditor>;
+  let http: HttpTestingController;
+
+  async function open(): Promise<void> {
+    ({ fixture, http } = await setUp(project().id, memoryDraftShelfProviders(shelf)));
+    http.expectOne(`${PROJECTS_URL}/${project().id}`).flush(project());
+    await drafted();
+  }
+
+  async function drafted(): Promise<void> {
+    for (let round = 0; round < 3; round++) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await settle(fixture);
+    }
+  }
+
+  function keptDraft(title: string, base = `version:${project().version}`) {
+    shelf.seed('administration', {
+      key,
+      base,
+      values: {
+        title,
+        year: 2024,
+        category: 'CHILDREN',
+        slug: 'zahrada-pro-deti',
+        tag: 'Projekt',
+        perex: project().perex,
+        body: project().body,
+        coverImageAlt: '',
+        publishDate: '2026-10-20',
+      },
+      savedAt: '2026-11-06T09:00:00.000Z',
+    });
+  }
+
+  beforeEach(() => {
+    shelf = new MemoryDraftShelf();
+  });
+
+  afterEach(() => http.verify());
+
+  it('when they type into the text and save, then the draft is kept until the save and leaves the device with it', async () => {
+    await open();
+
+    await type(fixture, '#projects-body', 'Rozepsaný odstavec.');
+    await drafted();
+    expect(shelf.draftOf('administration', key)).toMatchObject({
+      base: `version:${project().version}`,
+      values: { title: 'Zahrada pro děti', body: 'Rozepsaný odstavec.', year: 2024 },
+    });
+
+    await submit(fixture);
+    http
+      .expectOne(`${PROJECTS_URL}/${project().id}`)
+      .flush(project({ body: 'Rozepsaný odstavec.', version: '1111111111111111' }));
+    await drafted();
+    expect(shelf.draftOf('administration', key)).toBeNull();
+  });
+
+  describe('when the device kept a draft of the version they open', () => {
+    beforeEach(async () => {
+      keptDraft('Zahrada pro všechny děti');
+      await open();
+    });
+
+    it('and they continue it, then the form takes it and saves it under the version read', async () => {
+      expect(text(fixture, 'app-draft-offer')).toContain('Máte tu rozepsaný text');
+      expect(element<HTMLInputElement>(fixture, '#projects-title').value).toBe('Zahrada pro děti');
+
+      button(fixture, 'Pokračovat v rozepsaném').click();
+      await drafted();
+      expect(element<HTMLInputElement>(fixture, '#projects-title').value).toBe(
+        'Zahrada pro všechny děti',
+      );
+      expect(text(fixture, '[role="status"]:not(:empty)')).toBe(
+        'Pokračujete v rozepsaném textu. Uloží se, až ho uložíte.',
+      );
+
+      await submit(fixture);
+      const request = http.expectOne(`${PROJECTS_URL}/${project().id}`);
+      expect(request.request.headers.get('If-Match')).toBe(`"${project().version}"`);
+      expect(request.request.body.title).toBe('Zahrada pro všechny děti');
+      request.flush(project({ title: 'Zahrada pro všechny děti', version: '2222222222222222' }));
+      await drafted();
+      expect(shelf.draftOf('administration', key)).toBeNull();
+    });
+
+    it('and they discard it, then it leaves the device and the form keeps the saved text', async () => {
+      button(fixture, 'Zahodit').click();
+      await drafted();
+
+      expect(shelf.draftOf('administration', key)).toBeNull();
+      expect(element<HTMLInputElement>(fixture, '#projects-title').value).toBe('Zahrada pro děti');
+      expect(text(fixture, '[role="status"]:not(:empty)')).toBe(
+        'Rozepsaný text jsme z tohoto zařízení zahodili.',
+      );
+    });
+  });
+
+  it('when the device kept a draft of an older version and they continue it, then the save names that version and is refused as overtaken', async () => {
+    const older = '0000000000000001';
+    keptDraft('Zahrada pro všechny děti', `version:${older}`);
+    await open();
+    expect(text(fixture, 'app-draft-offer')).toContain('Uložená verze se od té doby změnila');
+
+    button(fixture, 'Pokračovat v rozepsaném').click();
+    await drafted();
+    await submit(fixture);
+    const request = http.expectOne(`${PROJECTS_URL}/${project().id}`);
+    expect(request.request.headers.get('If-Match')).toBe(`"${older}"`);
+    request.flush(
+      {
+        type: 'https://nfnn.cz/problems/content/changed-meanwhile',
+        title: 'Mezitím se to změnilo',
+        status: 409,
+        version: project().version,
+        current: { id: project().id },
+      },
+      { status: 409, statusText: 'Conflict' },
+    );
+    await settle(fixture);
+
+    expect(element(fixture, 'app-changed-meanwhile-dialog dialog').textContent).toContain(
+      'Od chvíle, kdy jste text na tomto zařízení rozepsali',
+    );
+    button(fixture, 'Uložit svou verzi místo novější').click();
+    await settle(fixture);
+    const overwrite = http.expectOne(`${PROJECTS_URL}/${project().id}`);
+    expect(overwrite.request.headers.get('If-Match')).toBe(`"${project().version}"`);
+    overwrite.flush(project({ title: 'Zahrada pro všechny děti', version: '3333333333333333' }));
+    await drafted();
+    expect(shelf.draftOf('administration', key)).toBeNull();
   });
 });

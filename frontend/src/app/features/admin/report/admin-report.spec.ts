@@ -8,6 +8,10 @@ import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
 import { reportView } from '../testing/admin-fixtures';
+import {
+  MemoryDraftShelf,
+  memoryDraftShelfProviders,
+} from '../../../core/drafts/testing/memory-draft-shelf';
 import { AdminReport } from './admin-report';
 
 const REPORT_URL = '/api/admin/donations/report';
@@ -554,5 +558,170 @@ describe('Given an administrator on the monthly report page', () => {
     TestBed.inject(LoginDialogService).signedIn();
 
     expect(navigate).toHaveBeenLastCalledWith('/sprava/prehledy');
+  });
+});
+
+describe('Given an administrator changing the monthly report on a device that keeps drafts', () => {
+  const version = reportView().settings.version;
+  let shelf: MemoryDraftShelf;
+  let fixture: ComponentFixture<AdminReport>;
+  let http: HttpTestingController;
+
+  async function settle(): Promise<void> {
+    for (let round = 0; round < 3; round++) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await fixture.whenStable();
+      fixture.detectChanges();
+    }
+  }
+
+  function element<T extends HTMLElement>(selector: string): T {
+    const found = fixture.nativeElement.querySelector(selector) as T | null;
+    if (found === null) {
+      throw new Error(`No element matches ${selector}`);
+    }
+    return found;
+  }
+
+  function button(name: string): HTMLButtonElement {
+    const found = Array.from(
+      fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
+    ).find((candidate) => candidate.textContent?.replace(/\s+/g, ' ').trim() === name);
+    if (found === undefined) {
+      throw new Error(`No button ${name}`);
+    }
+    return found;
+  }
+
+  async function open(): Promise<void> {
+    localStorage.clear();
+    await TestBed.configureTestingModule({
+      imports: [AdminReport],
+      providers: [
+        provideHttpClient(withInterceptors([authInterceptor])),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        ...memoryDraftShelfProviders(shelf),
+      ],
+    }).compileComponents();
+    http = TestBed.inject(HttpTestingController);
+    TestBed.inject(AuthStore).login('jana@example.cz', 'correct horse battery').subscribe();
+    http
+      .expectOne('/api/donors/auth/login')
+      .flush(authResponse('token-1', sampleDonor({ roles: ['DONOR', 'ADMIN'] })));
+    fixture = TestBed.createComponent(AdminReport);
+    fixture.detectChanges();
+    http.expectOne(REPORT_URL).flush(reportView());
+    await settle();
+  }
+
+  async function submit(): Promise<void> {
+    element<HTMLFormElement>('form.settings-form').dispatchEvent(new Event('submit'));
+    await settle();
+  }
+
+  function keptDraft(base: string): void {
+    shelf.seed('administration', {
+      key: 'report-settings',
+      base,
+      values: {
+        recipients: 'info@nfnn.cz\npavel@example.cz',
+        sendDay: 3,
+        sendHour: 8,
+        sections: { donors: true, donations: true, unpairedPayments: false, bankImport: true },
+      },
+      savedAt: '2026-11-06T09:00:00.000Z',
+    });
+  }
+
+  beforeEach(() => {
+    shelf = new MemoryDraftShelf();
+  });
+
+  afterEach(() => http.verify());
+
+  it('when they add a recipient and save, then the settings are kept on the device until the save', async () => {
+    await open();
+    const recipients = element<HTMLTextAreaElement>('#report-recipients');
+    recipients.value = 'info@nfnn.cz\npavel@example.cz';
+    recipients.dispatchEvent(new Event('input'));
+    await settle();
+
+    expect(shelf.draftOf('administration', 'report-settings')).toMatchObject({
+      base: `version:${version}`,
+      values: { recipients: 'info@nfnn.cz\npavel@example.cz', sendDay: 1, sendHour: 7 },
+    });
+
+    await submit();
+    http.expectOne(SETTINGS_URL).flush({});
+    await settle();
+    http.expectOne(REPORT_URL).flush(reportView());
+    await settle();
+    expect(shelf.draftOf('administration', 'report-settings')).toBeNull();
+  });
+
+  it('when the device kept settings of the version they open and they continue them, then the form takes them and saves under that version', async () => {
+    keptDraft(`version:${version}`);
+    await open();
+    expect(element('app-draft-offer').textContent).toContain('Máte tu rozepsaný text');
+
+    button('Pokračovat v rozepsaném').click();
+    await settle();
+    expect(element<HTMLTextAreaElement>('#report-recipients').value).toBe(
+      'info@nfnn.cz\npavel@example.cz',
+    );
+
+    await submit();
+    const save = http.expectOne(SETTINGS_URL);
+    expect(save.request.headers.get('If-Match')).toBe(`"${version}"`);
+    expect(save.request.body).toMatchObject({ sendDay: 3, sendHour: 8 });
+    save.flush({});
+    await settle();
+    http.expectOne(REPORT_URL).flush(reportView());
+    await settle();
+  });
+
+  it('when the device kept settings of an older version and they continue them, then the save names that version and the refusal says the draft was overtaken', async () => {
+    keptDraft('version:0000000000000001');
+    await open();
+    expect(element('app-draft-offer').textContent).toContain('Uložená verze se od té doby změnila');
+
+    button('Pokračovat v rozepsaném').click();
+    await settle();
+    await submit();
+    const save = http.expectOne(SETTINGS_URL);
+    expect(save.request.headers.get('If-Match')).toBe('"0000000000000001"');
+    save.flush(
+      {
+        type: 'https://nfnn.cz/problems/donations/changed-meanwhile',
+        title: 'Mezitím se to změnilo',
+        status: 409,
+        version,
+        current: { updatedAt: '2026-11-05T08:00:00Z' },
+      },
+      { status: 409, statusText: 'Conflict' },
+    );
+    await settle();
+    expect(element('app-changed-meanwhile-dialog dialog').textContent).toContain(
+      'Od chvíle, kdy jste text na tomto zařízení rozepsali',
+    );
+
+    button('Zahodit své úpravy a načíst novější verzi').click();
+    await settle();
+    http.expectOne(REPORT_URL).flush(reportView());
+    await settle();
+    expect(shelf.draftOf('administration', 'report-settings')).toBeNull();
+    expect(element<HTMLTextAreaElement>('#report-recipients').value).toBe('info@nfnn.cz');
+  });
+
+  it('when they discard the kept settings, then they leave the device', async () => {
+    keptDraft(`version:${version}`);
+    await open();
+
+    button('Zahodit').click();
+    await settle();
+
+    expect(shelf.draftOf('administration', 'report-settings')).toBeNull();
+    expect(element<HTMLTextAreaElement>('#report-recipients').value).toBe('info@nfnn.cz');
   });
 });
