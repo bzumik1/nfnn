@@ -19,6 +19,8 @@ public interface MediaImageRepository {
 
     boolean exists(MediaId id);
 
+    void lockForUse(MediaId id);
+
     boolean placeFocalPoint(MediaId id, Optional<FocalPoint> point);
 
     Map<MediaId, FocalPoint> findFocalPoints(Collection<MediaId> ids);

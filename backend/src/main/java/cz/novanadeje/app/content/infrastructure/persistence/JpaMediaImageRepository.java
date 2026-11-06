@@ -62,6 +62,11 @@ class JpaMediaImageRepository implements MediaImageRepository {
     }
 
     @Override
+    public void lockForUse(MediaId id) {
+        jpa.lockForKeyShare(id.value());
+    }
+
+    @Override
     public boolean placeFocalPoint(MediaId id, Optional<FocalPoint> point) {
         Short x = point.map(placed -> (short) placed.x()).orElse(null);
         Short y = point.map(placed -> (short) placed.y()).orElse(null);

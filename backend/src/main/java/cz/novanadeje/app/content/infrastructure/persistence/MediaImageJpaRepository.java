@@ -46,6 +46,9 @@ interface MediaImageJpaRepository extends JpaRepository<MediaImageJpaEntity, UUI
         short getY();
     }
 
+    @Query(value = "select m.id from content_media m where m.id = :id for key share", nativeQuery = true)
+    List<UUID> lockForKeyShare(UUID id);
+
     @Query(value = "select m.id from content_media m where m.id = :id and " + UNUSED + " for update skip locked", nativeQuery = true)
     List<UUID> lockIfUnused(UUID id);
 

@@ -135,6 +135,7 @@ public class ProjectAdminService {
         if (projects.isSlugTakenByAnother(content.slug(), id)) {
             throw new SlugTaken(content.slug());
         }
+        content.coverImage().ifPresent(media::lockForUse);
         content.coverImage().filter(image -> !media.exists(image)).ifPresent(image -> {
             throw new MediaNotFound(image);
         });
