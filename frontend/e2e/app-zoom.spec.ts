@@ -1,6 +1,6 @@
 import { CDPSession, devices, Locator, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
-import { stepBack } from './app-history';
+import { siteSteps, stepBack } from './app-history';
 import { mockDonorApi } from './donor-session';
 
 const IMAGE_ID = '0199f3e0-0000-7000-8000-00000000a001';
@@ -170,7 +170,7 @@ test.describe('Given a visitor on a phone, where the site behaves like an app', 
     await expect.poll(() => width(photo)).toBeCloseTo(fitted, 0);
   });
 
-  test('when they swipe the photo in the viewer down with a finger, then the photo follows it, the viewer closes as its close button does and one Back leaves the article', async ({
+  test('when they swipe the photo in the viewer down with a finger, then the photo follows it, the viewer closes as its close button does and leaves no step of its own behind', async ({
     page,
   }) => {
     await publishedArticle(page);
@@ -201,8 +201,8 @@ test.describe('Given a visitor on a phone, where the site behaves like an app', 
     await expect(
       page.getByRole('button', { name: 'Zvětšit fotku: Děti sázejí stromek' }),
     ).toBeFocused();
-    await page.goBack();
-    await expect(page).not.toHaveURL(`/aktuality/${article.slug}`);
+    await expect.poll(() => siteSteps(page)).toBe(1);
+    await expect(page).toHaveURL(`/aktuality/${article.slug}`);
   });
 
   test('when they swipe the zoomed photo down with a finger, then it moves inside the viewer, which stays open', async ({

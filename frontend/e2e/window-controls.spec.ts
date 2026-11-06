@@ -84,7 +84,7 @@ test.describe('Given the app opened from the home screen of an iPad, in a window
     });
   });
 
-  test('when a page deeper in a tab opens, then its back button and logo stand clear of the window controls', async ({
+  test('when a page deeper in a tab opens, then its back button stands alone, without the logo, clear of the window controls', async ({
     page,
   }) => {
     await articleServed(page);
@@ -93,7 +93,7 @@ test.describe('Given the app opened from the home screen of an iPad, in a window
     const back = page.getByRole('button', { name: 'Zpět' });
     await expect(back).toBeVisible();
     expect(await liesUnderWindowControls(back)).toBe(false);
-    expect(await liesUnderWindowControls(logo(page))).toBe(false);
+    await expect(logo(page)).toHaveCount(0);
   });
 
   test('when the keyboard reaches the skip link, then it shows clear of the window controls', async ({
