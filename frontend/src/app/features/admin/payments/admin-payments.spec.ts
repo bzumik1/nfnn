@@ -1005,7 +1005,7 @@ describe('Given an administrator on the bank payments page where lists show as r
     expect(paymentRows().map((row) => text(row))).toEqual([
       'Nováková Jana 12. 10. 2026 · VS 1111111111 500 Kč jen ručně',
       'Bez jména odesílatele 10. 10. 2026 · bez VS 500 Kč',
-      'Nováková Jana 30. 09. 2026 · VS 1111111111 250,50 Kč Ověření účtu',
+      'Nováková Jana 30. 9. 2026 · VS 1111111111 250,50 Kč Ověření účtu',
     ]);
     expect(paymentRows()[0].getAttribute('aria-haspopup')).toBe('dialog');
   });

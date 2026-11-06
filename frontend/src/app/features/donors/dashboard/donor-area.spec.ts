@@ -1498,12 +1498,12 @@ describe('Given a signed-in donor in the donor area', () => {
               .filter((part) => part !== ''),
         );
       expect(rowsOf(2026).map((row) => row.slice(0, 3))).toEqual([
-        ['15. 03. 2026', 'Obecný příspěvek', '500 Kč'],
-        ['10. 01. 2026', 'Obecný příspěvek', '1 000 Kč'],
+        ['15. 3. 2026', 'Obecný příspěvek', '500 Kč'],
+        ['10. 1. 2026', 'Obecný příspěvek', '1 000 Kč'],
       ]);
       expect(rowsOf(2026)[0][3]).toContain('Stáhnout PDF');
       expect(rowsOf(2025)[1].slice(0, 4)).toEqual([
-        '20. 08. 2025',
+        '20. 8. 2025',
         'Obecný příspěvek',
         '2 000 Kč',
         'Vráceno',
