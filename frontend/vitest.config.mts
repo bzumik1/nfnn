@@ -8,6 +8,10 @@ export default defineConfig({
     },
   },
   test: {
-    globalSetup: ['src/testing/shared-cases-setup.ts', 'src/testing/receipt-assets-setup.ts'],
+    globalSetup: [
+      'src/testing/shared-cases-setup.ts',
+      'src/testing/receipt-assets-setup.ts',
+      'src/testing/server-routes-setup.ts',
+    ],
   },
 });
