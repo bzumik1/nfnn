@@ -7,4 +7,4 @@ RUN chmod 0755 /usr/local/bin/nfnn-postgres /docker-entrypoint-initdb.d/nfnn-app
     && chmod 0644 /usr/local/share/nfnn/app-role.sql /usr/local/share/nfnn/own-by-app-role.sql
 
 ENTRYPOINT ["/usr/local/bin/nfnn-postgres"]
-CMD ["postgres"]
+CMD ["postgres", "-c", "log_error_verbosity=terse", "-c", "log_min_error_statement=panic"]
