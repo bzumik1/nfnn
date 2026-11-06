@@ -8,7 +8,9 @@
             {{ item.purpose }}
             <ng-container *ngTemplateOutlet="pairingPart; context: { $implicit: item }" />
           </span>
-          <span class="ui-list__value donation-amount">{{ crowns(item.amountMinor) }}&nbsp;Kč</span>
+          <span class="ui-list__value donation-amount ui-figures"
+            >{{ crowns(item.amountMinor) }}&nbsp;Kč</span
+          >
           @if (item.status === 'REFUNDED') {
             <span class="ui-list__state">
               <span class="status-pill status-pill--refunded">{{ statusLabel(item.status) }}</span>
@@ -48,7 +50,7 @@
           <td
             data-label="Částka"
             i18n-data-label="@@donor.dashboard.payments.col.amount"
-            class="amount"
+            class="amount ui-figures"
           >
             {{ crowns(item.amountMinor) }}&nbsp;Kč
           </td>

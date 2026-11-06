@@ -33,7 +33,7 @@
             <span class="year-count"
               ><app-gift-count [gifts]="row.gifts" [verifications]="row.verifications"
             /></span>
-            <span class="year-total">{{ crowns(row.totalAmountMinor) }}&nbsp;Kč</span>
+            <span class="year-total ui-figures">{{ crowns(row.totalAmountMinor) }}&nbsp;Kč</span>
             <span class="year-action">
               @switch (row.receipt) {
                 @case ('available') {

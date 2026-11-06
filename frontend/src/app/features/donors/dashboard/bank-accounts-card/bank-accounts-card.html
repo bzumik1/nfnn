@@ -69,7 +69,7 @@
             <li class="account" [class.account--disconnected]="account.status === 'DISCONNECTED'">
               <div class="account-main">
                 <div class="account-line">
-                  <span class="account-number">{{ account.accountNumber }}</span>
+                  <span class="account-number ui-figures">{{ account.accountNumber }}</span>
                   <span class="account-status" [class]="labelModifier(account)">{{
                     label(account)
                   }}</span>
@@ -95,7 +95,7 @@
                             other {{{ account.donationCount }} darů bez symbolu}
                           }
                         </li>
-                        <li class="account-total">
+                        <li class="account-total ui-figures">
                           {{ crowns(account.totalAmountMinor) }}&nbsp;Kč
                         </li>
                       }
@@ -114,8 +114,9 @@
                 }
                 @for (symbol of account.confirmedSymbols; track symbol) {
                   <p class="account-hint" i18n="@@donor.bankAccounts.claim.confirmed">
-                    Platby se symbolem <strong>{{ symbol }}</strong> z tohoto účtu jste potvrdili
-                    jako své a přiřazujeme vám je stejně jako platby bez symbolu.
+                    Platby se symbolem <strong class="ui-figures">{{ symbol }}</strong> z tohoto
+                    účtu jste potvrdili jako své a přiřazujeme vám je stejně jako platby bez
+                    symbolu.
                   </p>
                 }
                 @if (account.symbolOffer; as offer) {
@@ -228,7 +229,7 @@
         @if (variableSymbol(); as symbol) {
           <p class="accounts-nudge" i18n="@@donor.bankAccounts.nudge.empty">
             Posíláte trvalým příkazem s jiným symbolem? Nejjednodušší je změnit v příkazu variabilní
-            symbol na <strong>{{ symbol }}</strong
+            symbol na <strong class="ui-figures">{{ symbol }}</strong
             >. Jinak pošlete 1&nbsp;Kč přes „Přidat účet“.
           </p>
         } @else {
@@ -304,7 +305,8 @@
               tabindex="-1"
               i18n="@@donor.bankAccounts.addDialog.paymentArrived"
             >
-              Platba z účtu <span class="watch-account">{{ account.accountNumber }}</span> dorazila
+              Platba z účtu
+              <span class="watch-account ui-figures">{{ account.accountNumber }}</span> dorazila
             </p>
           } @else {
             <p
@@ -313,7 +315,8 @@
               tabindex="-1"
               i18n="@@donor.bankAccounts.addDialog.verified"
             >
-              Účet <span class="watch-account">{{ account.accountNumber }}</span> je ověřený
+              Účet <span class="watch-account ui-figures">{{ account.accountNumber }}</span> je
+              ověřený
             </p>
           }
           @if (account.symbolOffer === null) {
@@ -442,7 +445,7 @@
             <div class="add-account-row">
               <dt i18n="@@home.donate.bank.account">Číslo účtu</dt>
               <dd>
-                <span class="bank-value">{{ response.account.number }}</span>
+                <span class="bank-value ui-figures">{{ response.account.number }}</span>
                 <app-copy-button
                   [value]="response.account.number"
                   what="číslo účtu"
@@ -453,7 +456,7 @@
             <div class="add-account-row">
               <dt i18n="@@home.donate.bank.amount">Částka</dt>
               <dd>
-                <span class="bank-value"
+                <span class="bank-value ui-figures"
                   >{{ amountOf(response.amountMinor) }}&nbsp;<ng-container
                     i18n="@@home.donate.amount.currency"
                     >Kč</ng-container
@@ -464,7 +467,7 @@
             <div class="add-account-row">
               <dt i18n="@@donor.bankAccounts.addDialog.message">Zpráva pro příjemce</dt>
               <dd>
-                <span class="bank-value">{{ verificationMessage }}</span>
+                <span class="bank-value ui-mono">{{ verificationMessage }}</span>
                 <app-copy-button
                   [value]="verificationMessage"
                   what="zprávu pro příjemce"
@@ -476,7 +479,7 @@
               <div class="add-account-row">
                 <dt i18n="@@home.donate.bank.vs">Variabilní symbol</dt>
                 <dd>
-                  <span class="bank-value">{{ symbol }}</span>
+                  <span class="bank-value ui-figures">{{ symbol }}</span>
                   <app-copy-button
                     [value]="symbol"
                     what="variabilní symbol"

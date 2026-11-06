@@ -63,8 +63,12 @@
 
   --font-serif: Georgia, 'Times New Roman', serif;
   --font-sans: system-ui, 'Segoe UI', Roboto, Arial, sans-serif;
+  --font-display: var(--font-serif);
+  --font-title: var(--font-serif);
+  --font-figures: var(--font-mono);
   --font-mono: ui-monospace, 'Courier New', monospace;
   --numeric-figures: tabular-nums;
+  --figure-features: normal;
 
   --text-2xs: 0.75rem;
   --text-xs: 0.8125rem;

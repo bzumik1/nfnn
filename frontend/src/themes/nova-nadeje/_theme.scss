@@ -131,9 +131,13 @@
   --color-sheet-grabber: var(--color-border-rule);
 
   --font-serif: 'Playfair Display', serif;
-  --font-sans: 'Inter', sans-serif;
-  --font-mono: monospace;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+  --font-display: var(--font-serif);
+  --font-title: var(--font-sans);
+  --font-figures: var(--font-sans);
+  --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
   --numeric-figures: lining-nums tabular-nums;
+  --figure-features: 'tnum' 1;
 
   --text-2xs: 0.6875rem;
   --text-xs: 0.75rem;
