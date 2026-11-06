@@ -166,7 +166,7 @@
   cursor: pointer;
 }
 
-@include bp.down(tablet) {
+@mixin one-column {
   .donate {
     padding: var(--space-16) 0;
   }
@@ -179,4 +179,12 @@
   .donate-img-wrap {
     display: none;
   }
+}
+
+@include bp.down(tablet) {
+  @include one-column;
+}
+
+@include bp.height-down(short) {
+  @include one-column;
 }
