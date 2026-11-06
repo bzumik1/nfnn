@@ -136,6 +136,29 @@ describe('Given the stats bar', () => {
       expect(FakeIntersectionObserver.latest?.disconnected).toBe(false);
     });
 
+    it('and the figures counted up once, when the bar is shown again in the same visit, then they stand at their values at once', async () => {
+      await scrollIntoView(fixture);
+      await wait(fixture, 2000);
+      fixture.destroy();
+
+      const again = TestBed.createComponent(StatsBar);
+      again.detectChanges();
+      await again.whenStable();
+
+      expect(shown(again)).toEqual(['21', '200+', '100%', '2005']);
+      expect(stats(again).every((stat) => !stat.classList.contains('is-waiting'))).toBe(true);
+    });
+
+    it('and the page is left before the bar came into view, then it still counts up the next time', async () => {
+      fixture.destroy();
+
+      const again = TestBed.createComponent(StatsBar);
+      again.detectChanges();
+      await again.whenStable();
+
+      expect(shown(again)).toEqual(['0', '0+', '0%', '2005']);
+    });
+
     it('and the page is left, then the watch on the viewport stops', () => {
       fixture.destroy();
 
