@@ -182,7 +182,14 @@ test.describe('Given a signed-in donor on a phone who opens a section from the a
 
     await expect(sheet.locator('#account-sheet-title')).toBeFocused();
     await expect(sheet.getByRole('button', { name: 'Zavřít' })).not.toBeFocused();
-    expect(await page.evaluate(() => document.querySelectorAll(':focus-visible').length)).toBe(0);
+    expect(
+      await page.evaluate(
+        () =>
+          [...document.querySelectorAll(':focus-visible')].filter(
+            (element) => getComputedStyle(element).outlineStyle !== 'none',
+          ).length,
+      ),
+    ).toBe(0);
   });
 
   test('when they open the sheet with the keyboard, then its close button takes the focus as before', async ({

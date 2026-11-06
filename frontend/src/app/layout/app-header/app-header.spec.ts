@@ -240,11 +240,16 @@ describe('Given the header of the app', () => {
       heading.getBoundingClientRect = () => ({ top: -120, bottom: -80, height: 40 }) as DOMRect;
       main.append(heading);
       document.body.append(main);
+      Object.defineProperty(document, 'elementsFromPoint', {
+        configurable: true,
+        value: () => [document.body],
+      });
     });
 
     afterEach(() => {
       main.remove();
       delete (window as { scrollY?: number }).scrollY;
+      delete (document as { elementsFromPoint?: unknown }).elementsFromPoint;
     });
 
     async function scrolledPast(header: HTMLElement): Promise<void> {

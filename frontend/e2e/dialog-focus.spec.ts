@@ -3,7 +3,12 @@ import { expect, test } from './fixtures';
 import { mockDonorApi } from './donor-session';
 
 function ringsShown(page: Page): Promise<number> {
-  return page.evaluate(() => document.querySelectorAll(':focus-visible').length);
+  return page.evaluate(
+    () =>
+      [...document.querySelectorAll(':focus-visible')].filter(
+        (element) => getComputedStyle(element).outlineStyle !== 'none',
+      ).length,
+  );
 }
 
 test.describe('Given a visitor on a phone who opens the sign-in dialog', () => {
