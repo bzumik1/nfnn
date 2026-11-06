@@ -257,6 +257,7 @@
   --dialog-max-width-wide: 520px;
   --dialog-close-inset: 14px;
   --dialog-close-size: 32px;
+  --text-dialog-close: min(var(--text-4xl), var(--dialog-close-size));
   --blur-backdrop: 6px;
   --blur-bar: 22px;
   --sheet-max-width: 600px;

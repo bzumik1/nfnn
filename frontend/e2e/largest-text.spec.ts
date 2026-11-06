@@ -113,7 +113,7 @@ for (const { width, height } of [
       });
     }
 
-    test('when they open the sign-in dialog, then Přihlášení and Registrace stay whole on screen and the dialog never pans sideways', async ({
+    test('when they open the sign-in dialog, then Přihlášení, Registrace and the close button stay whole on screen and the dialog never pans sideways', async ({
       page,
     }) => {
       await page.goto('/');
@@ -126,6 +126,11 @@ for (const { width, height } of [
         expect(box.x).toBeGreaterThanOrEqual(0);
         expect(box.x + box.width).toBeLessThanOrEqual(width);
       }
+      const close = dialog.getByRole('button', { name: 'Zavřít' });
+      const button = (await close.boundingBox())!;
+      const glyph = (await close.locator('span').boundingBox())!;
+      expect(glyph.x).toBeGreaterThanOrEqual(button.x - 1);
+      expect(glyph.x + glyph.width).toBeLessThanOrEqual(button.x + button.width + 1);
       expect(await contentPastTheSides(dialog)).toEqual([]);
     });
   });
