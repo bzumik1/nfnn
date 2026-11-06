@@ -7,11 +7,11 @@ import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.infrastructure.mail.BrandedEmails;
 import cz.novanadeje.app.shared.infrastructure.mail.EmailDraft;
 import cz.novanadeje.app.shared.infrastructure.mail.MailSenderProperties;
+import cz.novanadeje.app.shared.infrastructure.mail.ObservedMailSender;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.MessageSource;
 import org.springframework.mail.MailException;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
@@ -33,12 +33,12 @@ class DonorPasskeyEmailSender {
     private static final String REMOVED_BY_DONOR_KEYS = "donors.passkeyRemoved.email.";
     private static final String REMOVED_BY_DONOR_TEMPLATE = "email/donors/passkey-removed";
 
-    private final JavaMailSender mailSender;
+    private final ObservedMailSender mailSender;
     private final BrandedEmails emails;
     private final MessageSource messages;
     private final MailSenderProperties sender;
 
-    DonorPasskeyEmailSender(JavaMailSender mailSender, BrandedEmails emails, MessageSource messages, MailSenderProperties sender) {
+    DonorPasskeyEmailSender(ObservedMailSender mailSender, BrandedEmails emails, MessageSource messages, MailSenderProperties sender) {
         this.mailSender = mailSender;
         this.emails = emails;
         this.messages = messages;

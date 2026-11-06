@@ -31,6 +31,8 @@ import { Connectivity } from './core/connectivity/connectivity';
 import { UnseenPhotos } from './core/connectivity/unseen-photos';
 import { connectivityInterceptor } from './core/connectivity/connectivity-interceptor';
 import { AppInstall } from './core/install/app-install';
+import { AlertNotificationClicks } from './core/push/alert-notification-clicks';
+import { AppBadge } from './core/push/app-badge';
 import { AppUpdates } from './core/updates/app-updates';
 import { provideAppServiceWorker } from './core/updates/angular-service-worker';
 import { serviceWorkerBypassInterceptor } from './core/updates/service-worker-bypass';
@@ -93,6 +95,10 @@ export const appConfig: ApplicationConfig = {
     provideAppInitializer(() => {
       inject(AppUpdates).start();
       inject(AppInstall).start();
+    }),
+    provideAppInitializer(() => {
+      inject(AppBadge).start();
+      inject(AlertNotificationClicks).start();
     }),
     provideAppInitializer(() => inject(AuthStore).restore()),
     provideAppInitializer(() => inject(PublicSessionIdle).start()),

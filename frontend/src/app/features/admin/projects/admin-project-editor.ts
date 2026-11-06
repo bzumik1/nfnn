@@ -240,6 +240,10 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
       label: $localize`:@@admin.projectEditor.focalPoint.card:Karta v Projektech`,
     },
     {
+      shape: 'storyTile',
+      label: $localize`:@@admin.projectEditor.focalPoint.story:Příběh roku v Aktualitách`,
+    },
+    {
       shape: 'articleTop',
       label: $localize`:@@admin.projectEditor.focalPoint.top:Nahoře v článku`,
     },

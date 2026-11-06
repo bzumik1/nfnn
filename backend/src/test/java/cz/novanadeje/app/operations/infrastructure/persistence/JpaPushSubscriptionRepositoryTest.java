@@ -1,5 +1,6 @@
 package cz.novanadeje.app.operations.infrastructure.persistence;
 
+import cz.novanadeje.app.operations.domain.alerts.MonitoredArea;
 import cz.novanadeje.app.operations.domain.push.PushAlerts;
 import cz.novanadeje.app.operations.domain.push.PushClientKeys;
 import cz.novanadeje.app.operations.domain.push.PushEndpoint;
@@ -121,6 +122,20 @@ class JpaPushSubscriptionRepositoryTest {
         assertThat(subscriptions.deleteAllOf(JANA)).isEqualTo(1);
         assertThat(subscriptions.deleteAll()).isEqualTo(1);
         assertThat(subscriptions.findAllOf(PETR)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given devices with different switches, when the devices of each alert are read, then each lists only the devices with that alert on, oldest first")
+    void should_list_only_devices_with_the_alert_on_when_read_given_different_switches() {
+        PushSubscription everything = stored(JANA, "everything", NOW);
+        PushSubscription bankOnly = stored(PETR, "bank-only", NOW.plusSeconds(1));
+        subscriptions.changeAlerts(bankOnly.id(), PETR, new PushAlerts(true, false, false));
+        PushSubscription mailOnly = stored(JANA, "mail-only", NOW.plusSeconds(2));
+        subscriptions.changeAlerts(mailOnly.id(), JANA, new PushAlerts(false, false, true));
+
+        assertThat(subscriptions.findAllWithAlert(MonitoredArea.BANK_IMPORT)).extracting(PushSubscription::id).containsExactly(everything.id(), bankOnly.id());
+        assertThat(subscriptions.findAllWithAlert(MonitoredArea.BACKUPS)).extracting(PushSubscription::id).containsExactly(everything.id());
+        assertThat(subscriptions.findAllWithAlert(MonitoredArea.MAIL)).extracting(PushSubscription::id).containsExactly(everything.id(), mailOnly.id());
     }
 
     @Test

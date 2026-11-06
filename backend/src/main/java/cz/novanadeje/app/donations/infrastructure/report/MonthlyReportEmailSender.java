@@ -9,9 +9,9 @@ import cz.novanadeje.app.donations.domain.report.ReportSettings;
 import cz.novanadeje.app.donations.domain.report.Tally;
 import cz.novanadeje.app.shared.infrastructure.mail.BrandedEmails;
 import cz.novanadeje.app.shared.infrastructure.mail.EmailDraft;
+import cz.novanadeje.app.shared.infrastructure.mail.ObservedMailSender;
 import org.springframework.context.MessageSource;
 import org.springframework.mail.MailException;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -27,11 +27,11 @@ class MonthlyReportEmailSender implements MonthlyReportSender {
     private static final String KEYS = "donations.monthlyReport.email.";
     private static final String TEMPLATE = "email/donations/monthly-report";
 
-    private final JavaMailSender mailSender;
+    private final ObservedMailSender mailSender;
     private final BrandedEmails emails;
     private final MessageSource messages;
 
-    MonthlyReportEmailSender(JavaMailSender mailSender, BrandedEmails emails, MessageSource messages) {
+    MonthlyReportEmailSender(ObservedMailSender mailSender, BrandedEmails emails, MessageSource messages) {
         this.mailSender = mailSender;
         this.emails = emails;
         this.messages = messages;
