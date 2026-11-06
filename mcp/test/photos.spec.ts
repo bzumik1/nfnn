@@ -26,9 +26,16 @@ describe('Given the addresses a photo may come from', () => {
         'fe80::1',
         '::ffff:127.0.0.1',
         '64:ff9b::a00:1',
+        '64:ff9b:1::a00:1',
+        '2002:a00:1::1',
+        '2001:0:4136:e378:8000:63bf:f5ff:fffe',
+        '2001:2::1',
+        'fec0::1',
+        '100:0:0:1::1',
+        '192.88.99.1',
         'localhost',
       ].map(isPublicAddress),
-    ).toEqual(Array.from({ length: 15 }, () => false));
+    ).toEqual(Array.from({ length: 22 }, () => false));
   });
 });
 

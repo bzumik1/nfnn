@@ -79,7 +79,7 @@ export function createApp(deps: AppDependencies): App {
         return health(deps);
       }
       if (url.pathname === PHOTO_UPLOAD_PATH) {
-        return receivePhoto(request, tools);
+        return forVisitor(request, () => receivePhoto(request, tools));
       }
       const server = await discovered(deps);
       if (!server) {
@@ -98,7 +98,9 @@ export function createApp(deps: AppDependencies): App {
       const methods = await methodsOf(request);
       const auth = await forVisitor(request, () => authenticate(request, deps.verifier, server));
       const response =
-        auth instanceof Response ? auth : await handler.fetch(request, { authInfo: auth });
+        auth instanceof Response
+          ? auth
+          : await forVisitor(request, () => handler.fetch(request, { authInfo: auth }));
       const donor =
         auth instanceof Response ? 'unauthenticated' : `donor ${String(auth.extra?.['donorId'])}`;
       deps.logger.info(
