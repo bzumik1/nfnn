@@ -41,6 +41,7 @@ import {
 import { signingKeyWarnings } from '../settings/receipt-signing-key/key-warnings';
 import { HistoryImport } from './history-import/history-import';
 import { IMPORT_FAILURE_LABELS, IMPORT_NEXT_STEPS } from './import-failure-labels';
+import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { ADMIN_DAILY, ADMIN_MORE_PATH, ADMIN_PAYMENTS_PATH } from '../shell/admin-sections';
 import {
@@ -74,7 +75,7 @@ interface SinceFigure {
 
 @Component({
   selector: 'app-admin-home',
-  imports: [RouterLink, CopyButton, HistoryImport, AdminSectionRows],
+  imports: [NeedsConnection, RouterLink, CopyButton, HistoryImport, AdminSectionRows],
   templateUrl: './admin-home.html',
   styleUrl: './admin-home.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

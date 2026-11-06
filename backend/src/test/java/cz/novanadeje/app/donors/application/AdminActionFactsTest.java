@@ -213,6 +213,8 @@ class AdminActionFactsTest {
                         "Plán záloh změněn z „denní záloha 03:00, zkušební obnova v neděli 04:00“ na „denní záloha 02:30, zkušební obnova v sobotu 05:00“",
                         "CHANGE_BACKUP_SCHEDULE", Map.of("from", "denní záloha 03:00, zkušební obnova v neděli 04:00",
                                 "to", "denní záloha 02:30, zkušební obnova v sobotu 05:00")),
+                arguments("STORE_ADMINISTRATION_COPY", "Kopie správy uložena do zařízení MAC CHROME (zařízení " + OTHER + ")", "STORE_ADMINISTRATION_COPY",
+                        Map.of("platform", "MAC", "browser", "CHROME")),
                 arguments("VIEW_BACKUP_KEY", "Zobrazen klíč k zálohám (ověřeno druhým faktorem)", "VIEW_BACKUP_KEY", Map.of()),
                 arguments("VIEW_BACKUP_KEY_REFUSED", "Klíč k zálohám se nezobrazil: druhý faktor nesouhlasil", "VIEW_BACKUP_KEY_REFUSED", Map.of()),
                 arguments("REQUEST_BACKUP", "Záloha databáze vyžádána (požadavek " + OTHER + ")", "REQUEST_BACKUP", Map.of()),

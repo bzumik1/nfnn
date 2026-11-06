@@ -25,6 +25,7 @@ import { FocusFirstInvalid } from '../../../shared/ui/form-field/focus-first-inv
 import { FormControlDirective } from '../../../shared/ui/form-field/form-control';
 import { FormField } from '../../../shared/ui/form-field/form-field';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
+import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 import { formatMinorUnits } from '../../donations/donation-amount';
 import { DownloadedFile } from '../../donations/donations-api';
 import { PdfDelivery } from '../../donations/receipt-pdf/pdf-delivery';
@@ -85,6 +86,7 @@ interface SkippedLine {
     FormField,
     FormsModule,
     LiveNotice,
+    NeedsConnection,
     RouterLink,
   ],
   templateUrl: './admin-yearly-receipts.html',

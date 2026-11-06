@@ -1,4 +1,4 @@
-import { signal } from '@angular/core';
+import { signal, type WritableSignal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { of } from 'rxjs';
@@ -12,7 +12,7 @@ import {
   type OpenedCopy,
   type VaultMode,
 } from '../../../../core/device/store/device-vault';
-import { Connectivity } from '../../../../core/navigation/connectivity';
+import { Connectivity } from '../../../../core/connectivity/connectivity';
 import {
   DonorCopyDownload,
   type DownloadOutcome,
@@ -47,7 +47,7 @@ describe('Given the card "Data v tomto zařízení"', () => {
   };
   let reload: (outcome: DownloadOutcome) => void;
   let logout: ReturnType<typeof vi.fn>;
-  let offline: boolean;
+  let offline: WritableSignal<boolean>;
 
   function root(): HTMLElement {
     return fixture.nativeElement as HTMLElement;
@@ -74,7 +74,7 @@ describe('Given the card "Data v tomto zařízení"', () => {
   }
 
   beforeEach(async () => {
-    offline = false;
+    offline = signal(false);
     vault = {
       mode: signal<VaultMode | null>('stored'),
       opened: signal<OpenedCopy | null>(null),
@@ -93,7 +93,7 @@ describe('Given the card "Data v tomto zařízení"', () => {
         { provide: DeviceVault, useValue: vault },
         { provide: DonorCopyDownload, useValue: download },
         { provide: AuthStore, useValue: { donor: signal(DONOR), logout } },
-        { provide: Connectivity, useValue: { isOffline: () => offline } },
+        { provide: Connectivity, useValue: { offline } },
       ],
     });
     fixture = TestBed.createComponent(DeviceDataCard);
@@ -199,16 +199,18 @@ describe('Given the card "Data v tomto zařízení"', () => {
     }
   });
 
-  it('when the device is offline and the donor asks to load the data again, then an alert says it needs a connection and nothing is asked', async () => {
-    offline = true;
+  it('when the device is offline and the donor asks to load the data again, then the button says it needs a connection and nothing is asked', async () => {
+    offline.set(true);
+    await settle();
 
-    button('Načíst data znovu').click();
+    const reloadButton = button('Načíst data znovu');
+    reloadButton.click();
     await settle();
 
     expect(download.reload).not.toHaveBeenCalled();
-    expect(normalized(root().querySelector('[role="alert"]:not(:empty)')?.textContent)).toBe(
-      'Bez připojení k internetu data načíst nejde. Připojte se a zkuste to znovu.',
-    );
+    expect(reloadButton.getAttribute('aria-disabled')).toBe('true');
+    const hint = document.getElementById(reloadButton.getAttribute('aria-describedby') ?? '');
+    expect(normalized(hint?.textContent)).toBe('Potřebuje připojení');
   });
 
   describe('when the donor asks to delete the data on this device', () => {

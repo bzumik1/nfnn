@@ -18,7 +18,13 @@
       @case ('error') {
         <div class="signatory-error" role="alert">
           <p i18n="@@admin.signatory.loadFailed">Nepodařilo se načíst, kdo potvrzení podepisuje.</p>
-          <button type="button" class="ui-button" (click)="retry()" i18n="@@admin.signatory.retry">
+          <button
+            appNeedsConnection
+            type="button"
+            class="ui-button"
+            (click)="retry()"
+            i18n="@@admin.signatory.retry"
+          >
             Zkusit znovu
           </button>
         </div>

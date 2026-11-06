@@ -59,6 +59,7 @@ import { encodeText } from '../../../../shared/ui/qr-code/qr-encoder';
 import { QrMatrix } from '../../../../shared/ui/qr-code/qr-matrix';
 import { PairingHelp } from './pairing-help/pairing-help';
 import { SymbolClaim, SymbolClaimAnswer } from './symbol-claim/symbol-claim';
+import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
 
 type ListState = 'loading' | 'ready' | 'error';
 
@@ -119,7 +120,15 @@ const PAYMENT_WATCH_CHECKS = 20;
 
 @Component({
   selector: 'app-bank-accounts-card',
-  imports: [Dialog, CopyButton, NgTemplateOutlet, PairingHelp, QrCode, SymbolClaim],
+  imports: [
+    Dialog,
+    CopyButton,
+    NgTemplateOutlet,
+    PairingHelp,
+    QrCode,
+    SymbolClaim,
+    NeedsConnection,
+  ],
   templateUrl: './bank-accounts-card.html',
   styleUrl: './bank-accounts-card.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

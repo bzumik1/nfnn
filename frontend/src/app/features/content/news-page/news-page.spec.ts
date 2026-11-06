@@ -3,7 +3,6 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, ParamMap, provideRouter } from '@angular/router';
 import { BehaviorSubject, Observable, of } from 'rxjs';
-import { Connectivity } from '../../../core/navigation/connectivity';
 import { ProjectResponse } from '../projects-api';
 import { newsArticle } from '../testing/news-fixtures';
 import { project } from '../testing/project-fixtures';
@@ -14,7 +13,6 @@ const PROJECTS = (page: number) => `/api/content/projects?page=${page}&size=50`;
 
 async function setUp(
   query: Record<string, string> | Observable<ParamMap> = {},
-  offline = false,
 ): Promise<{ fixture: ComponentFixture<NewsPage>; http: HttpTestingController }> {
   await TestBed.configureTestingModule({
     imports: [NewsPage],
@@ -28,7 +26,6 @@ async function setUp(
           queryParamMap: query instanceof Observable ? query : of(convertToParamMap(query)),
         },
       },
-      { provide: Connectivity, useValue: { isOffline: () => offline } },
     ],
   }).compileComponents();
   const fixture = TestBed.createComponent(NewsPage);
@@ -479,7 +476,7 @@ describe('Given a visitor opening Aktuality', () => {
   });
 
   it('when the news fail while the device is offline, then the alert says the connection is missing', async () => {
-    ({ fixture, http } = await setUp({}, true));
+    ({ fixture, http } = await setUp());
     root = fixture.nativeElement;
     http.expectOne(NEWS(0)).flush(null, { status: 0, statusText: 'Unknown Error' });
     http.expectOne(PROJECTS(0)).flush(null, { status: 0, statusText: 'Unknown Error' });

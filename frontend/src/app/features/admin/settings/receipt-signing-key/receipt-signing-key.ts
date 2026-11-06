@@ -31,6 +31,7 @@ import {
   withdrawnCurrentKeySentence,
 } from './key-warnings';
 import { unpublishedKeyIds, unpublishedKeysSentence } from './unpublished-keys';
+import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -49,7 +50,7 @@ interface WithdrawalOffer {
 
 @Component({
   selector: 'app-receipt-signing-key',
-  imports: [KeyWithdrawalDialog, LiveNotice],
+  imports: [NeedsConnection, KeyWithdrawalDialog, LiveNotice],
   templateUrl: './receipt-signing-key.html',
   styleUrl: './receipt-signing-key.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

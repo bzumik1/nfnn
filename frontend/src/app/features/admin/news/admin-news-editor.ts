@@ -52,6 +52,7 @@ import { FocalPointPicker, PreviewShape } from '../focal-point-picker/focal-poin
 import { ContentPreview, PreviewContent } from '../content-preview/content-preview';
 import { GuardsUnsavedChanges } from '../unsaved-changes/unsaved-changes-guard';
 import { UnsavedChangesDialog } from '../unsaved-changes/unsaved-changes-dialog';
+import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 import {
   isChangedMeanwhile,
   savedAtInRefusal,
@@ -91,6 +92,7 @@ const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
     ContentPreview,
     ActionBar,
     FocalPointPicker,
+    NeedsConnection,
   ],
   templateUrl: './admin-news-editor.html',
   styleUrl: './admin-news-editor.scss',
@@ -285,6 +287,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
 
   constructor() {
     this.destroyRef.onDestroy(inject(DirtyForms).register(() => !this.discarded && this.unsaved()));
+    this.destroyRef.onDestroy(() => this.answerLeave?.(false));
     const id = this.route.snapshot.paramMap.get('id');
     if (id === null) {
       this.state.set('ready');

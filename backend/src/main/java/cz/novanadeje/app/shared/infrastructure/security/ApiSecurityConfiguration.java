@@ -34,6 +34,8 @@ class ApiSecurityConfiguration {
     private static final String[] BROWSER_ONLY_POSTS = {
             "/api/admin/donors/administrators",
             "/api/admin/donors/*/second-factor/reset",
+            "/api/admin/donors/devices/current/unlock",
+            "/api/admin/donors/devices/current/administration-copy",
             "/api/admin/donations/symbol-claims/*/reverse",
             "/api/admin/donations/receipt-signatures/*",
             "/api/admin/donations/receipt-signing-keys/*/withdrawal",
