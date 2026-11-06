@@ -38,6 +38,8 @@ public interface DonorRepository {
 
     List<Donor> findAll();
 
+    List<Donor> findErased();
+
     List<Donor> search(String query, int offset, int limit);
 
     void recordSignIn(DonorId id, Instant at);

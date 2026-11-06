@@ -76,6 +76,17 @@ Feature: The database is restored from a backup in the browser: by an administra
       | action          | summary                                                                                                                                     |
       | BACKUP_RESTORED | Databáze obnovena ze zálohy nfnn-2026-11-05_0300.dump.age (tabulek: 37); ukončená přihlášení: 2, zneplatněné jednorázové odkazy a kódy: 3. |
 
+  Scenario: A finished restore names in the administration history what it kept from after the backup and how far it moved the receipt numbers
+    Given a person "Jana" is registered
+    And "Jana" is an administrator
+    And the backup container restored "nfnn-2026-11-06_0300.dump.age" for "Jana" under the request "019a1b2c-0000-7000-8000-000000000004", ending 2 sessions and spending 3 one-time secrets, keeping 1 erasure, 2 credentials, 1 role and 4 history entries and skipping 1000 receipt numbers
+    When the backend has started
+    Then the admin action "BACKUP_RESTORED" by "Jana" is recorded with details containing "; zachováno z doby po záloze: vymazaní dárci 1, přihlašovací údaje 2, role 1, záznamy historie 4; čísla potvrzení posunuta o 1000"
+    When "Jana" asks for the admin actions
+    Then the admin actions are:
+      | action          | summary                                                                                                                                                                                                                                                         |
+      | BACKUP_RESTORED | Databáze obnovena ze zálohy nfnn-2026-11-06_0300.dump.age (tabulek: 37); ukončená přihlášení: 2, zneplatněné jednorázové odkazy a kódy: 3; zachováno z doby po záloze: vymazaní dárci 1, přihlašovací údaje 2, role 1, záznamy historie 4; čísla potvrzení posunuta o 1000. |
+
   Scenario: A failed restore is recorded in the administration history with its error
     Given a person "Jana" is registered
     And "Jana" is an administrator

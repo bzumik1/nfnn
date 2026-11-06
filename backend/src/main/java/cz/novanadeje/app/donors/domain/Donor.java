@@ -79,6 +79,22 @@ public final class Donor {
             throw new AdministratorNotErasable(id);
         }
         this.erasedAt = checkedAt;
+        replacePersonalData();
+    }
+
+    public boolean erasureIncomplete() {
+        return erasedAt != null && (!name.equals(ErasedPersonalData.NAME) || companyIdentifier != null || !address.equals(ErasedPersonalData.ADDRESS)
+                || !email.equals(ErasedPersonalData.emailFor(id.value())) || passwordHash != null || !roles.isEmpty() || emailVerifiedAt != null);
+    }
+
+    public void completeErasure() {
+        if (erasedAt == null) {
+            throw new IllegalStateException("Donor " + id + " was never erased, so there is no erasure to complete");
+        }
+        replacePersonalData();
+    }
+
+    private void replacePersonalData() {
         this.name = ErasedPersonalData.NAME;
         this.companyIdentifier = null;
         this.address = ErasedPersonalData.ADDRESS;

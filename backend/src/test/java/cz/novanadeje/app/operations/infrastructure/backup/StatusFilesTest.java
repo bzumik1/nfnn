@@ -1,6 +1,7 @@
 package cz.novanadeje.app.operations.infrastructure.backup;
 
 import cz.novanadeje.app.operations.domain.backup.BackupRun;
+import cz.novanadeje.app.operations.domain.backup.RestoreCarryForward;
 import cz.novanadeje.app.operations.domain.backup.RestoreRevocations;
 import cz.novanadeje.app.operations.domain.backup.RunOutcome;
 import org.junit.jupiter.api.DisplayName;
@@ -27,7 +28,7 @@ class StatusFilesTest {
                 """);
 
         assertThat(run).contains(new BackupRun(RunOutcome.OK, Instant.parse("2026-10-23T04:36:41Z"), Instant.parse("2026-10-23T04:36:43Z"),
-                Optional.of("nfnn-2026-10-23_0636-rucni.dump.age"), Optional.of(1590L), Optional.empty(), Optional.of("req-1"), Optional.empty(), Optional.empty(), Optional.empty()));
+                Optional.of("nfnn-2026-10-23_0636-rucni.dump.age"), Optional.of(1590L), Optional.empty(), Optional.of("req-1"), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty()));
     }
 
     @Test
@@ -85,6 +86,42 @@ class StatusFilesTest {
                 """);
 
         assertThat(run).hasValueSatisfying(parsed -> assertThat(parsed.revocations()).contains(new RestoreRevocations(2, 3)));
+    }
+
+    @Test
+    @DisplayName("Given the status file of a restore that carried erasures, credentials, roles and audit entries forward and moved the receipt numbers, when parsed, then every count is read")
+    void should_read_what_was_carried_forward_when_parsed_given_a_restore_that_carried_it() {
+        Optional<BackupRun> run = StatusFiles.parse("""
+                outcome=ok
+                started_at=2026-11-06T17:20:12Z
+                finished_at=2026-11-06T17:20:13Z
+                file=nfnn-2026-11-06_0300.dump.age
+                tables=58
+                sessions_ended=2
+                one_time_secrets_spent=3
+                erasures_carried=1
+                credentials_carried=2
+                roles_carried=0
+                admin_actions_carried=5
+                receipt_numbers_skipped=1000
+                request=019a1b2c-0000-7000-8000-000000000001
+                admin=019a1b2c-0000-7000-8000-00000000000a
+                """);
+
+        assertThat(run).hasValueSatisfying(parsed -> assertThat(parsed.carriedForward()).contains(new RestoreCarryForward(1, 2, 0, 5, 1000)));
+    }
+
+    @Test
+    @DisplayName("Given a restore status file that misses one of the carried counts or holds one that is no number, when parsed, then the restore is read without what was carried forward")
+    void should_read_nothing_carried_forward_when_parsed_given_a_missing_or_unreadable_count() {
+        String restored = "outcome=ok\nstarted_at=2026-11-06T17:20:12Z\nfinished_at=2026-11-06T17:20:13Z\ntables=58\n";
+        String carried = "erasures_carried=1\ncredentials_carried=2\nroles_carried=0\nadmin_actions_carried=5\n";
+
+        assertThat(StatusFiles.parse(restored + carried)).hasValueSatisfying(parsed -> assertThat(parsed.carriedForward()).isEmpty());
+        assertThat(StatusFiles.parse(restored + carried + "receipt_numbers_skipped=x\n"))
+                .hasValueSatisfying(parsed -> assertThat(parsed.carriedForward()).isEmpty());
+        assertThat(StatusFiles.parse(restored + carried.replace("roles_carried=0", "roles_carried=-1") + "receipt_numbers_skipped=0\n"))
+                .hasValueSatisfying(parsed -> assertThat(parsed.carriedForward()).isEmpty());
     }
 
     @Test

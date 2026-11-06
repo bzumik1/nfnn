@@ -203,6 +203,10 @@ public record AdminActionFacts(String summaryKey, Map<String, String> values) {
                 full("Vyžádána obnova ze zálohy (?<file>\\S+) \\(požadavek " + ID + "\\); .*"),
                 full("A restore of (?<file>\\S+) was requested \\(request " + ID + "\\); .*")));
         shapes.put("BACKUP_RESTORED", List.of(
+                variant("withCarriedForward", "Databáze obnovena ze zálohy (?<file>\\S+) \\(požadavek " + ID + "\\), tabulek: (?<tables>\\d+)"
+                        + "; ukončená přihlášení: (?<sessions>\\d+), zneplatněné jednorázové odkazy a kódy: (?<secrets>\\d+)"
+                        + "; zachováno z doby po záloze: vymazaní dárci (?<erasures>\\d+), přihlašovací údaje (?<credentials>\\d+), role (?<roles>\\d+)"
+                        + ", záznamy historie (?<adminActions>\\d+); čísla potvrzení posunuta o (?<receiptNumbersSkipped>\\d+)"),
                 variant("withRevocations", "Databáze obnovena ze zálohy (?<file>\\S+) \\(požadavek " + ID + "\\), tabulek: (?<tables>\\d+)"
                         + "; ukončená přihlášení: (?<sessions>\\d+), zneplatněné jednorázové odkazy a kódy: (?<secrets>\\d+)"),
                 variant("withTables", "Databáze obnovena ze zálohy (?<file>\\S+) \\(požadavek " + ID + "\\), tabulek: (?<tables>\\d+)"),
