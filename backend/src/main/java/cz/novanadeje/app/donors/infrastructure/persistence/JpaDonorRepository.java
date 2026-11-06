@@ -68,6 +68,12 @@ class JpaDonorRepository implements DonorRepository {
     }
 
     @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void lockAdministrators() {
+        AdvisoryLock.ADMINISTRATORS.acquireFor(entityManager);
+    }
+
+    @Override
     public boolean existsByEmail(EmailAddress email) {
         return jpa.existsByEmail(email.value());
     }

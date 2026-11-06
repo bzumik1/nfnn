@@ -9,6 +9,7 @@ import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorNotFound;
 import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.EmailNotRegistered;
+import cz.novanadeje.app.donors.domain.LastAdministratorRevoked;
 import cz.novanadeje.app.donors.domain.NotAdministrator;
 import cz.novanadeje.app.donors.domain.OwnAdministrationRevoked;
 import cz.novanadeje.app.donors.domain.PasswordHash;
@@ -33,6 +34,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
@@ -47,6 +49,7 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -200,7 +203,9 @@ class AdministratorServiceTest {
     @Test
     @DisplayName("Given another administrator, when the role is revoked, then the donor keeps only DONOR, every session ends, the revocation is announced and the action is recorded")
     void should_revoke_role_end_sessions_and_record_action_when_revoked_given_other_administrator() {
-        when(donors.findByIdForUpdate(PETR)).thenReturn(Optional.of(administrator(PETR, "Petr Svoboda", PETR_EMAIL.value())));
+        Donor petr = administrator(PETR, "Petr Svoboda", PETR_EMAIL.value());
+        when(donors.findByIdForUpdate(PETR)).thenReturn(Optional.of(petr));
+        when(donors.findAdministrators()).thenReturn(List.of(administrator(JANA, "Jana Nováková", "jana@example.cz"), petr));
 
         service.revoke(JANA, PETR);
 
@@ -216,6 +221,22 @@ class AdministratorServiceTest {
         assertThat(action.adminId()).isEqualTo(JANA.value());
         assertThat(action.action()).isEqualTo("REVOKE_ADMINISTRATION");
         assertThat(action.subjectId()).contains(PETR.value());
+    }
+
+    @Test
+    @DisplayName("Given an administrator whose own role was taken meanwhile, when they take the role from the last administrator, then the set of administrators is locked first and the revoke is refused, so the site keeps an administrator")
+    void should_refuse_after_locking_the_administrators_when_revoked_given_the_last_administrator() {
+        Donor petr = administrator(PETR, "Petr Svoboda", PETR_EMAIL.value());
+        when(donors.findByIdForUpdate(PETR)).thenReturn(Optional.of(petr));
+        when(donors.findAdministrators()).thenReturn(List.of(petr));
+
+        assertThatThrownBy(() -> service.revoke(JANA, PETR)).isInstanceOf(LastAdministratorRevoked.class);
+
+        InOrder order = inOrder(donors);
+        order.verify(donors).lockAdministrators();
+        order.verify(donors).findByIdForUpdate(PETR);
+        verify(donors, never()).save(any());
+        verifyNoInteractions(signOuts, events);
     }
 
     @Test

@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class ErasedDonorTabStepDefinitions {
 
     private static final String PROFILE_PATH = "/api/donors/me";
+    private static final String ADMINISTRATORS_PATH = "/api/admin/donors/administrators";
 
     private final ApiClient api;
     private final DonorSessions sessions;
@@ -56,10 +57,20 @@ public class ErasedDonorTabStepDefinitions {
 
     @When("{string} saves the profile with the name {string} with the token that names no session")
     public void savesTheProfileWithTheTokenThatNamesNoSession(String alias, String name) {
+        actWithTheTokenThatNamesNoSession(alias);
+        api.patch(PROFILE_PATH, Map.of("name", name));
+    }
+
+    @When("{string} removes {string} from the administrators with the token that names no session")
+    public void removesFromTheAdministratorsWithTheTokenThatNamesNoSession(String alias, String administrator) {
+        actWithTheTokenThatNamesNoSession(alias);
+        api.delete(ADMINISTRATORS_PATH + "/" + scenarioDonors.idOf(administrator));
+    }
+
+    private void actWithTheTokenThatNamesNoSession(String alias) {
         String token = tokensWithoutSession.get(alias);
         assertThat(token).withFailMessage("%s keeps no access token without a session in this scenario", alias).isNotNull();
         api.forgetCredentials();
         api.authorize(token);
-        api.patch(PROFILE_PATH, Map.of("name", name));
     }
 }

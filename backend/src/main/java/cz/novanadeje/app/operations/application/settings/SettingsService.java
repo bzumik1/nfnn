@@ -16,8 +16,10 @@ import org.springframework.transaction.support.TransactionOperations;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -76,6 +78,9 @@ public class SettingsService {
         if (!foreign.isEmpty()) {
             throw new SettingsRejected(foreign);
         }
+        Map<Setting, String> checked = writer.storedValues();
+        writer.lockForChange();
+        requireTheMailServerUnchangedSince(checked, changes);
         requirePasswordForAnotherMailServer(changes);
         Instant now = clock.instant();
         List<Setting> changed = writer.apply(changes, List.of(), now);
@@ -104,6 +109,21 @@ public class SettingsService {
                 new AdminActionPerformed(adminId, TEST_EMAIL_ACTION, Optional.empty(), details, clock.instant())));
         log.info("Admin {} sent a test e-mail: {}", adminId, outcome);
         return new TestEmailResult(outcome, recipient);
+    }
+
+    private void requireTheMailServerUnchangedSince(Map<Setting, String> checked, List<SettingChange> changes) {
+        boolean namesTheMailServer = changes.stream().anyMatch(change -> decidesWhereMailGoes(change.setting()));
+        Map<Setting, String> stored = writer.storedValues();
+        boolean changedMeanwhile = Arrays.stream(Setting.values())
+                .filter(SettingsService::decidesWhereMailGoes)
+                .anyMatch(setting -> !Objects.equals(checked.get(setting), stored.get(setting)));
+        if (namesTheMailServer && changedMeanwhile) {
+            throw new SettingsRejected(List.of(SettingError.of(Setting.MAIL_PASSWORD, SettingProblem.MAIL_SERVER_CHANGED_MEANWHILE)));
+        }
+    }
+
+    private static boolean decidesWhereMailGoes(Setting setting) {
+        return setting == Setting.MAIL_PASSWORD || setting.decidesWhereMailPasswordGoes();
     }
 
     private void requirePasswordForAnotherMailServer(List<SettingChange> changes) {
