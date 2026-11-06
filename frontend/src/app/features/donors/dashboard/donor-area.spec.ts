@@ -2490,6 +2490,19 @@ describe('Given a signed-in donor in the donor area', () => {
         expect(button('.yearly-pdf').disabled).toBe(false);
       });
 
+      it('then a drawing that fails offers the diagnostic file under its line', async () => {
+        await downloadYear(2025);
+        receiptRequest({ year: 2025 }).flush(issuedYearly(2025));
+        await settle();
+        receiptEnvironment.last().say({ kind: 'ready' });
+        receiptEnvironment.last().say({ kind: 'failed', reason: 'drawing', name: 'Other' });
+        await settle();
+
+        expect(text('.yearly-card app-diagnostics-download button')).toBe(
+          'Stáhnout diagnostický soubor',
+        );
+      });
+
       it('then a theme whose receipt colours would not show stops the drawing with a line that says whom to tell', async () => {
         vi.spyOn(receiptEnvironment, 'style').mockImplementation(() => {
           throw new ReceiptStyleRefused('--receipt-color-text has too little contrast');
@@ -2836,6 +2849,7 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(text('.yearly-card [role="alert"]')).toBe(
         'Potvrzení s těmito údaji nejde vytisknout. Napište nám prosím na info@nfnn.cz.',
       );
+      expect(element('app-diagnostics-download')).toBeNull();
       expect(savedFiles).toEqual([]);
     });
 
@@ -3209,6 +3223,7 @@ describe('Given a signed-in donor in the donor area', () => {
         'Přihlášení a zabezpečení',
         'Přihlášená zařízení',
         'Data v tomto zařízení',
+        'Když web nefunguje',
         'Smazání účtu',
       ]);
       expect(texts('app-account-card .account-row dt')).toEqual([
@@ -3219,6 +3234,20 @@ describe('Given a signed-in donor in the donor area', () => {
       ]);
       expect(element('app-connected-apps-card')).toBeNull();
       http.expectNone('/api/donors/me/connections');
+    });
+
+    it('then a section offers the diagnostic file of this device for a message about trouble with the site', async () => {
+      await open('/darce/udaje');
+      http.expectOne(PASSKEYS_URL).flush({ items: [] });
+      http.expectOne(DEVICES_URL).flush({ items: [] });
+      await respond(twoYearSummary(), twoYearDonations());
+
+      expect(element('.diagnostics-card')?.getAttribute('aria-labelledby')).toBe(
+        'diagnostics-title',
+      );
+      expect(text('.diagnostics-card app-diagnostics-download button')).toBe(
+        'Stáhnout diagnostický soubor',
+      );
     });
 
     it('then a last section says how to ask for deleting the account, what goes and what stays', async () => {

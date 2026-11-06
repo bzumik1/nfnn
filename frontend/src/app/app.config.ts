@@ -47,6 +47,7 @@ import { versionInterceptor } from './core/version/version-interceptor';
 import { pagePinchLockAtStart } from './core/zoom/page-pinch-lock';
 import { systemTextSizeAtStart } from './core/zoom/system-text-size';
 import { windowControlsAtStart } from './core/layout/window-controls';
+import { DEVICE_COPY_DIAGNOSTICS } from './core/diagnostics/device-copy-diagnostics';
 import { DeviceCopies } from './device-copies';
 import { DialogHistory } from './shared/ui/dialog/dialog-history';
 
@@ -84,7 +85,16 @@ export const dialogHistoryAtStart: EnvironmentProviders = provideAppInitializer(
   () => void inject(DialogHistory),
 );
 
-export const deviceCopies: Provider = { provide: SESSION_DEVICE, useExisting: DeviceCopies };
+export const deviceCopies: Provider[] = [
+  { provide: SESSION_DEVICE, useExisting: DeviceCopies },
+  {
+    provide: DEVICE_COPY_DIAGNOSTICS,
+    useFactory: () => {
+      const copies = inject(DeviceCopies);
+      return () => copies.diagnostics();
+    },
+  },
+];
 
 export const connectivityAtStart: EnvironmentProviders = provideAppInitializer(() => {
   inject(Connectivity);

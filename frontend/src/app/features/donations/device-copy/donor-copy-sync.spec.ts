@@ -9,6 +9,7 @@ import { TestBed } from '@angular/core/testing';
 import { deviceAccountOf } from '../../../core/auth/session-device';
 import type { AccountStore, CopyContents } from '../../../core/device/store/account-store';
 import { DeviceVault, type OpenedCopy } from '../../../core/device/store/device-vault';
+import { DiagnosticEvents } from '../../../core/diagnostics/diagnostic-events';
 import { ErrorReporter } from '../../../core/errors/error-reporter';
 import { sharedCases } from '../../../../testing/shared-cases';
 import { rowsSha256 } from '../sync/canonical-rows';
@@ -429,6 +430,27 @@ describe('Given the sync of the donor copy', () => {
 
     expect(vault.stored).toEqual([]);
     expect(reporter.report).toHaveBeenCalledWith('device-copy-mismatch', 'global');
+  });
+
+  it('when a sync stores the copy and a later one cannot verify it, then the diagnostic file lists both outcomes and nothing of the data', async () => {
+    open('empty');
+    await vi.waitFor(() => answerManifest([gifts2026]));
+    await answerChunks(['donations:2026'], [gifts2026]);
+    await settled();
+
+    const reloading = sync.reload();
+    await vi.waitFor(() => answerManifest([gifts2026]));
+    await answerChunks(['donations:2026'], [], { summary: summaryOf([gifts2026]) });
+    await vi.waitFor(() => answerManifest([gifts2026]));
+    await answerChunks(['donations:2026'], [], { summary: summaryOf([gifts2026]) });
+    await reloading;
+
+    const listed = TestBed.inject(DiagnosticEvents).listed();
+    expect(listed.map(({ kind, detail }) => [kind, detail])).toEqual([
+      ['copy-sync', 'stored'],
+      ['copy-sync', 'mismatch'],
+    ]);
+    expect(JSON.stringify(listed)).not.toMatch(/gift-2|donations:2026|100000/);
   });
 
   it('when the manifest names another donor than the copy, then nothing is stored, and since the session changed rather than the data, nothing is reported', async () => {

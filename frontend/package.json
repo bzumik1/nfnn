@@ -19,7 +19,8 @@
     "lint": "ng lint && tsc -p tsconfig.node.json && node --test scripts/*.test.mjs",
     "screens:compare": "node ../scripts/compare-screens.mjs",
     "errors:vocabulary": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/export-error-vocabulary.mjs",
-    "edge:fallback": "node scripts/build-fallback-worker.mjs"
+    "edge:fallback": "node scripts/build-fallback-worker.mjs",
+    "diagnostics:read": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/read-diagnostics.mjs"
   },
   "private": true,
   "packageManager": "npm@11.11.1",

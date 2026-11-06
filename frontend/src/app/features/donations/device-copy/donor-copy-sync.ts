@@ -9,6 +9,7 @@ import type {
   StoredImage,
 } from '../../../core/device/store/account-store';
 import { DeviceVault, type OpenedCopy } from '../../../core/device/store/device-vault';
+import { DiagnosticEvents } from '../../../core/diagnostics/diagnostic-events';
 import { ErrorReporter } from '../../../core/errors/error-reporter';
 import { ReceiptsApi } from '../receipt-pdf/receipts-api';
 import { canonicalRows, rowsSha256 } from '../sync/canonical-rows';
@@ -36,6 +37,7 @@ export class DonorCopySync implements DonorCopy {
   private readonly api = inject(DonorSyncApi);
   private readonly receipts = inject(ReceiptsApi);
   private readonly reporter = inject(ErrorReporter);
+  private readonly diagnostics = inject(DiagnosticEvents);
   private readonly running = signal(0);
   private queued: QueuedSync | null = null;
   private active: Promise<SyncOutcome> | null = null;
@@ -99,7 +101,7 @@ export class DonorCopySync implements DonorCopy {
           this.queued = null;
         }
         this.active = entry.promise;
-        return this.runOnOpenCopy(entry.full).finally(() => {
+        return this.recorded(this.runOnOpenCopy(entry.full)).finally(() => {
           if (this.active === entry.promise) {
             this.active = null;
           }
@@ -109,6 +111,12 @@ export class DonorCopySync implements DonorCopy {
     this.queued = entry;
     this.tail = entry.promise.catch(() => undefined);
     return entry.promise;
+  }
+
+  private async recorded(outcome: Promise<SyncOutcome>): Promise<SyncOutcome> {
+    const detail = await outcome;
+    this.diagnostics.record({ kind: 'copy-sync', place: null, name: null, detail });
+    return detail;
   }
 
   private async runOnOpenCopy(full: boolean): Promise<SyncOutcome> {

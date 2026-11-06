@@ -101,8 +101,22 @@ describe('Given the privacy policy page', () => {
       'Evidence darů a potvrzení o daru',
       'Kontaktní formulář',
       'Hlášení chyb z prohlížeče',
+      'Diagnostický soubor',
       'IP adresa a záznamy serveru',
     ]);
+  });
+
+  it('when it renders, then it says the diagnostic file is made in the browser, sent only by the visitor, holds no personal data and is deleted once the trouble is solved', () => {
+    const purpose = purposeText('Diagnostický soubor');
+
+    expect(purpose).toContain('Prohlížeč ho vytvoří ve vašem zařízení a sám ho nikam neodešle.');
+    expect(purpose).toContain(
+      'Soubor nikdy neobsahuje vaše jméno, e‑mail, adresu, částky, čísla potvrzení, hesla, přihlašovací údaje, adresu stránky kromě jejího názvu ani nic z kopie dat v zařízení.',
+    );
+    expect(purpose).toContain('po vyřešení potíže ho smažeme z e‑mailové schránky');
+    expect(texts('#uchovavani li')).toContain(
+      'diagnostický soubor, který nám pošlete, do vyřešení potíže, kvůli které jste ho poslali,',
+    );
   });
 
   it('when it renders, then the introduction covers visitors who only open the site', () => {

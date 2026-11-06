@@ -22,6 +22,9 @@
     @if (donations.receiptError(); as error) {
       @if (error.scope === 'yearly') {
         <p class="ui-callout ui-callout--danger receipt-error" role="alert">{{ error.message }}</p>
+        @if (donations.offersDiagnostics()) {
+          <app-diagnostics-download class="receipt-diagnostics" source="receipt-pdf" />
+        }
       }
     }
 
@@ -136,6 +139,9 @@
           <p class="ui-callout ui-callout--danger receipt-error" role="alert">
             {{ error.message }}
           </p>
+          @if (donations.offersDiagnostics()) {
+            <app-diagnostics-download class="receipt-diagnostics" source="receipt-pdf" />
+          }
         }
       }
       <div class="single-gifts">

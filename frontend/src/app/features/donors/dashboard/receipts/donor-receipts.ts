@@ -10,6 +10,7 @@ import { DownloadProgress } from '../../../../shared/ui/download-progress/downlo
 import { GiftCount, receivedVerifications } from '../gift-count/gift-count';
 import { PageTitle } from '../page-title/page-title';
 import { YearReceipt, yearReceipt } from '../yearly-receipt';
+import { DiagnosticsDownload } from '../../../../shared/ui/diagnostics-download/diagnostics-download';
 
 interface YearRow {
   readonly year: number;
@@ -22,6 +23,7 @@ interface YearRow {
 @Component({
   selector: 'app-donor-receipts',
   imports: [
+    DiagnosticsDownload,
     DownloadProgress,
     RouterLink,
     PageTitle,

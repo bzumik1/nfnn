@@ -24,6 +24,9 @@
         <p #receiptAlert class="ui-callout ui-callout--danger receipt-error" role="alert">
           {{ message }}
         </p>
+        @if (donations.offersDiagnostics()) {
+          <app-diagnostics-download class="receipt-diagnostics" source="receipt-pdf" />
+        }
       }
     </div>
     @if (donations.items().length > 0) {
@@ -79,6 +82,9 @@
               <p class="ui-callout ui-callout--danger year-receipt-error" role="alert">
                 {{ message }}
               </p>
+              @if (donations.offersDiagnostics()) {
+                <app-diagnostics-download class="receipt-diagnostics" source="receipt-pdf" />
+              }
             }
           </div>
           <app-donations-table

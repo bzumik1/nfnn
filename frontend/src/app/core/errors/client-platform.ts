@@ -1,4 +1,4 @@
-import { Browser, DisplayMode, OperatingSystem } from './error-vocabulary';
+import type { Browser, DisplayMode, OperatingSystem } from './error-vocabulary';
 
 export interface ClientPlatform {
   readonly browser: Browser;
@@ -35,6 +35,25 @@ export function detectPlatform(agent: UserAgentSource, standalone: boolean): Cli
     os: systemOf(agent),
     display: standalone ? 'standalone' : 'browser',
   };
+}
+
+export function platformOf(view: Window | null): ClientPlatform {
+  const navigator = view?.navigator;
+  return detectPlatform(
+    { userAgent: navigator?.userAgent ?? '', maxTouchPoints: navigator?.maxTouchPoints ?? 0 },
+    runsStandalone(view),
+  );
+}
+
+function runsStandalone(view: Window | null): boolean {
+  if (view === null) {
+    return false;
+  }
+  const installed = (view.navigator as Navigator & { readonly standalone?: boolean }).standalone;
+  return (
+    installed === true ||
+    (typeof view.matchMedia === 'function' && view.matchMedia('(display-mode: standalone)').matches)
+  );
 }
 
 function browserOf(userAgent: string): readonly [Browser, number | null] {
