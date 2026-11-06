@@ -1,5 +1,7 @@
 FROM postgres:17-alpine
 
+ENV POSTGRES_INITDB_ARGS="--data-checksums"
+
 COPY nfnn-postgres.sh /usr/local/bin/nfnn-postgres
 COPY app-role.sql own-by-app-role.sql /usr/local/share/nfnn/
 COPY nfnn-app-role.sh /docker-entrypoint-initdb.d/nfnn-app-role.sh

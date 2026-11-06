@@ -48,7 +48,7 @@ sudo docker inspect nfnn-postgres nfnn-backup nfnn-backend nfnn-mcp nfnn-fronten
 
 Má vypsat `nfnn-edge` u všech pěti; `bridge` u žádného. Síť `nfnn-internal` z dřívější instalace už nic nepoužívá a jde smazat: `sudo docker network rm nfnn-internal`.
 
-Kontejnery běží se systémem souborů jen pro čtení (zapisují jen do složek v `/DATA/AppData/nfnn/` a do dočasné paměti `tmpfs`) a bez oprávnění Linuxu, která nepotřebují (`cap_drop: ALL`, každý si přidá jen svých pár). Backend se k databázi přihlašuje jako běžná role `novanadeje_app` bez práv správce databáze: kdyby se v něm našla díra, útočník se přes databázi nedostane k serveru. Roli vytvoří a databázi jí předá kontejner `nfnn-postgres` sám při každém startu. Ověření po instalaci (u každého kontejneru `true ALL`, pak `novanadeje_app f`):
+Kontejnery běží se systémem souborů jen pro čtení (zapisují jen do složek v `/DATA/AppData/nfnn/` a do dočasné paměti `tmpfs`) a bez oprávnění Linuxu, která nepotřebují (`cap_drop: ALL`, každý si přidá jen svých pár). Backend se k databázi přihlašuje jako běžná role `novanadeje_app` bez práv správce databáze: kdyby se v něm našla díra, útočník se přes databázi nedostane k serveru. Roli vytvoří a předá jí schéma `public` se všemi tabulkami kontejner `nfnn-postgres` sám při každém startu; databáze sama patří správci databáze, takže si v ní role nezaloží jiné schéma (viz [Databáze](#databáze)). Ověření po instalaci (u každého kontejneru `true ALL`, pak `novanadeje_app f`):
 
 ```bash
 sudo docker inspect nfnn-postgres nfnn-backup nfnn-backend nfnn-mcp nfnn-frontend --format '{{.Name}} {{.HostConfig.ReadonlyRootfs}} {{.HostConfig.CapDrop}}'
@@ -156,7 +156,46 @@ Přihlášení po návratu na verzi starší než 2.10 (druhy přihlášení): n
 
 Podpis na potvrzení: od kroku 1.16 (`68627d7`) se podpis nahrává u osoby v Lidech fondu (tabulka `donation_person_receipt_signature`). Verze starší než 1.16 čte jen dřívější jediný podpis z tabulky `donation_receipt_signature`, do které 1.16 už nic nezapisuje, takže po návratu na ni vystavuje nová potvrzení s podpisem nahraným ještě před 1.16 (nebo bez podpisu); nahrát ve správě nové verze sken místo SVG na tom nic nezmění. Co se návratem rozbije, jsou potvrzení vystavená novější verzí s podpisem SVG: verze starší než ta, která přinesla podpis SVG, je nenakreslí. Na takovou verzi se proto po vystavení prvního potvrzení s podpisem SVG nevracej.
 
-Staré adresy aktualit a projektů: od změny databáze `content/016` si web pamatuje staré adresy aktualit a projektů odděleně, takže tatáž stará adresa může vést zároveň na aktualitu (`/aktuality/x`) i na projekt (`/projekty/x`). Starší verze s novou databází běží dál a staré adresy jí fungují, jen adresa, kterou si web pamatuje pro aktualitu i projekt zároveň, jí nejde: obě staré adresy hlásí chybu serveru a aktualitu ani projekt s touto adresou neuloží. Vznikne jen tehdy, když z jedné adresy odešla aktualita i projekt, takže je vzácná. Po takovém návratu ji najdeš dotazem `sudo docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select slug from content_former_slug group by slug having count(*) > 1"`; buď počkej na novou verzi, nebo nech jen odkaz aktuality: `sudo docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "delete from content_former_slug where slug = '<adresa>' and project_id is not null"`.
+Staré adresy aktualit a projektů: od změny databáze `content/016` si web pamatuje staré adresy aktualit a projektů odděleně, takže tatáž stará adresa může vést zároveň na aktualitu (`/aktuality/x`) i na projekt (`/projekty/x`). Starší verze s novou databází běží dál a staré adresy jí fungují, jen adresa, kterou si web pamatuje pro aktualitu i projekt zároveň, jí nejde: obě staré adresy hlásí chybu serveru a aktualitu ani projekt s touto adresou neuloží. Vznikne jen tehdy, když z jedné adresy odešla aktualita i projekt, takže je vzácná. Po takovém návratu ji najdeš dotazem `sudo docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -tA -c "select slug from content_former_slug group by slug having count(*) > 1"`; buď počkej na novou verzi, nebo nech jen odkaz aktuality: `sudo docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -c "delete from content_former_slug where slug = '<adresa>' and project_id is not null"`.
+
+## Databáze
+
+Databázi (`nfnn-postgres`, PostgreSQL 17) nastaví kontejner sám při každém startu, takže se všechno níže dostane na server běžnou aktualizací (Uložit v ZimaOS); ručně se dělají jen dva volitelné kroky popsané dál.
+
+**Dotazy na data webu pouštěj jako `novanadeje_app`** (bezpečnostní audit, issue #460), ne jako správce databáze `novanadeje`:
+
+```bash
+sudo docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -tA -c "select count(*) from donor"
+```
+
+Role `novanadeje_app` vlastní schéma `public` se všemi tabulkami (potřebuje ho Liquibase i každá obnova), ale databáze sama patří správci, takže v ní role nezaloží jiné schéma ani nezmění její nastavení. Správce databáze má cestu hledání (`search_path`) jen `pg_catalog`: dřív by `psql -U novanadeje … "select … from donor"` našel i pohled nebo funkci, kterou by do schématu pojmenovaného po správci nebo do `public` podstrčil útočník s právy backendu, a spustil ji s právy správce. Teď takový dotaz správce skončí chybou `relation "donor" does not exist`; tak to má být. Kdo dotaz jako správce opravdu potřebuje, píše jména celá (`public.donor`), ale data čte vždy raději jako `novanadeje_app`.
+
+**Historie správy jen přibývá.** Tabulka `admin_action` (historie správy, ze které čte i kontrola klíčů k QR a pauzy po odmítnutém druhém ověření) v databázi odmítne každou změnu i smazání řádku (`admin_action is append-only`), i od backendu; projde jen změna databáze, kterou při startu pouští Liquibase. Obnova zálohy ji nahraje celou jako dřív.
+
+**Zaseknutý zámek Liquibase se uvolní sám.** Když backend spadne uprostřed změny databáze, zůstane v tabulce `databasechangeloglock` nastavený zámek. Dřív na něj každý další start čekal pět minut a skončil chybou, takže se backend restartoval pořád dokola. Teď backend při startu pozná, že zámek nedrží žádný běžící backend (drží ho jen spojení, které právě mění databázi, a to s pádem zmizí), zámek uvolní (v logu `Released a database changelog lock left by a migration that no longer runs`) a databázi doplní. Kdyby se to přesto někdy zaseklo (třeba se starší verzí backendu, která to ještě neumí), uvolní ho ručně: `sudo docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -c "update databasechangeloglock set locked = false, lockgranted = null, lockedby = null"` a backend restartuj (`sudo docker restart nfnn-backend`), jen když opravdu žádný backend neběží uprostřed změny.
+
+### Kontrolní součty stránek (volitelné)
+
+Nová databáze vzniká s kontrolními součty datových stránek (`--data-checksums`), takže PostgreSQL pozná stránku, kterou poškodil disk, místo aby ji tiše četl a přenesl do záloh. Databáze založená dřív je nemá a běží dál stejně jako dosud (zjistíš `sudo docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "show data_checksums"`: `off`). Zapnout je jde jen u zastavené databáze, a jen ručně; na velikosti dnešních dat to trvá pár sekund:
+
+1. Na `/sprava/zalohy` **Zálohovat teď** a počkej, až se záloha objeví v seznamu.
+2. V ZimaOS aplikaci „Nová naděje“ **zastav** (všechny kontejnery, ať se backend nepřipojuje).
+3. `sudo docker run --rm --user 70:70 -v /DATA/AppData/nfnn/postgres:/var/lib/postgresql/data ghcr.io/bzumik1/nfnn-postgres:latest pg_checksums --enable --progress -D /var/lib/postgresql/data` (vypíše `Checksums enabled in cluster`).
+4. Aplikaci zase spusť; `show data_checksums` teď ukáže `on`.
+
+Když krok 3 skončí chybou, databáze zůstane, jak byla (bez součtů), a aplikace normálně nastartuje.
+
+### Nová hlavní verze PostgreSQL
+
+Dependabot nové hlavní verze PostgreSQL (18 a další) nenabízí: `postgres:18` datovou složku verze 17 nepřečte (a jinak ji i ukládá), takže přechod je samostatný PR, ve kterém se v `deploy/postgres/Dockerfile` i `deploy/backup/Dockerfile` změní `FROM postgres:17-alpine` (a případně cesta k datům v `deploy/compose.yml`, pak je potřeba přeinstalace). Data se přenesou zálohou a obnovou, kterou už web umí:
+
+1. Na `/sprava/zalohy` **Zálohovat teď**; zálohu si i stáhni a ověř, že máš klíč k zálohám.
+2. V ZimaOS aplikaci zastav a starou datovou složku jen odsuň: `sudo mv /DATA/AppData/nfnn/postgres /DATA/AppData/nfnn/postgres-17`.
+3. Zálohu z kroku 1 zkopíruj do složky obnovy: `sudo cp /DATA/AppData/nfnn/backups/nfnn-<datum>_<čas>-rucni.dump.age /DATA/AppData/nfnn/restore/`.
+4. Nasaď novou verzi (Uložit, nebo přeinstalace, měnil-li se `compose.yml`). Nová databáze vznikne prázdná (s kontrolními součty), kontejner záloh do ní zálohu ze složky `restore/` obnoví (soubor dostane příponu `.done`) a backend na to počká; složka `secrets/` zůstala, takže klíč k zálohám i hesla platí dál a průvodce prvním nastavením se neukáže.
+5. Ověř web, přihlášení a stránku **Zálohy**; obnova ukončila všechna přihlášení jako každá obnova.
+
+Když se něco nepovede: aplikaci zastav, vrať složku (`sudo mv /DATA/AppData/nfnn/postgres /DATA/AppData/nfnn/postgres-18-nepovedena && sudo mv /DATA/AppData/nfnn/postgres-17 /DATA/AppData/nfnn/postgres`) a v nastavení aplikace vrať u databáze a zálohování tag předchozí verze (viz [Návrat na předchozí verzi](#návrat-na-předchozí-verzi)). Složku `postgres-17` smaž až po pár dnech provozu na nové verzi.
 
 ## Logy
 

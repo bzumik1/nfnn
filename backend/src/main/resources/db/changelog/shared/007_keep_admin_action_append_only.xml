@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="007-keep-admin-action-append-only" author="nfnn">
+        <sql splitStatements="false"><![CDATA[
+create function admin_action_append_only() returns trigger
+language plpgsql
+set search_path = pg_catalog
+as $$
+begin
+  if exists (select from pg_locks
+             where locktype = 'advisory' and pid = pg_backend_pid() and granted
+               and classid = 0 and objid = 20261110 and objsubid = 1) then
+    if tg_op = 'DELETE' then
+      return old;
+    end if;
+    return new;
+  end if;
+  raise exception 'admin_action is append-only: % refused', tg_op;
+end
+$$
+        ]]></sql>
+        <sql>create trigger admin_action_keeps_its_rows before update or delete on admin_action for each row execute function admin_action_append_only()</sql>
+        <sql>create trigger admin_action_keeps_its_table before truncate on admin_action for each statement execute function admin_action_append_only()</sql>
+    </changeSet>
+
+</databaseChangeLog>

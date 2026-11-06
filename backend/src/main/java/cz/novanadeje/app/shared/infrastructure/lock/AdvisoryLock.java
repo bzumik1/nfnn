@@ -9,7 +9,8 @@ public enum AdvisoryLock {
     REPORT_SETTINGS_CHANGES(20261106L),
     OPERATIONAL_ALERT_CHANGES(20261107L),
     DONOR_EMAIL_ADDRESSES(20261108L),
-    DONOR_SESSIONS(20261109L);
+    DONOR_SESSIONS(20261109L),
+    SCHEMA_MIGRATION(20261110L);
 
     private final long key;
 
@@ -19,6 +20,14 @@ public enum AdvisoryLock {
 
     public long key() {
         return key;
+    }
+
+    public String sessionLockAttempt() {
+        return "select pg_try_advisory_lock(" + key + ")";
+    }
+
+    public String sessionLockRelease() {
+        return "select pg_advisory_unlock(" + key + ")";
     }
 
     public void acquireFor(EntityManager entityManager) {
