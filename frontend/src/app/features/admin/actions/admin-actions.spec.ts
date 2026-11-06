@@ -1,5 +1,6 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { authInterceptor } from '../../../core/auth/auth-interceptor';
@@ -7,6 +8,7 @@ import { AuthStore } from '../../../core/auth/auth-store';
 import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
 import { adminAction } from '../testing/admin-fixtures';
 import { AdminActions } from './admin-actions';
+import { CompactLayout } from '../../../core/layout/compact-layout';
 
 const LIST_URL = '/api/admin/donors/actions';
 
@@ -375,5 +377,93 @@ describe('Given an administrator on the history page', () => {
     fixture.detectChanges();
 
     expect(navigate).toHaveBeenCalledWith('/darce/prehled');
+  });
+});
+
+describe('Given an administrator on the history page where lists show as rows', () => {
+  let fixture: ComponentFixture<AdminActions>;
+  let http: HttpTestingController;
+
+  beforeEach(async () => {
+    localStorage.clear();
+    await TestBed.configureTestingModule({
+      imports: [AdminActions],
+      providers: [
+        provideHttpClient(withInterceptors([authInterceptor])),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        {
+          provide: CompactLayout,
+          useValue: {
+            isCompact: signal(true).asReadonly(),
+            listsAsRows: signal(true).asReadonly(),
+          },
+        },
+      ],
+    }).compileComponents();
+    http = TestBed.inject(HttpTestingController);
+    TestBed.inject(AuthStore).login('jana@example.cz', 'correct horse battery').subscribe();
+    http
+      .expectOne('/api/donors/auth/login')
+      .flush(authResponse('token-1', sampleDonor({ roles: ['DONOR', 'ADMIN'] })));
+    fixture = TestBed.createComponent(AdminActions);
+    fixture.detectChanges();
+  });
+
+  afterEach(() => http.verify());
+
+  function spaced(node: Node): string {
+    if (node.nodeType === Node.TEXT_NODE) {
+      return node.textContent ?? '';
+    }
+    return Array.from(node.childNodes).map(spaced).join(' ');
+  }
+
+  function textOf(node: Element | null): string {
+    return (node === null ? '' : spaced(node)).replace(/\s+/g, ' ').trim();
+  }
+
+  it('when the first page arrives, then every change is a row with what, when and who, the sentence of the server, the donor card and the details collapsed', () => {
+    http
+      .expectOne((candidate) => candidate.url === LIST_URL)
+      .flush({
+        items: [
+          adminAction({ client: 'Claude' }),
+          adminAction({
+            id: '019a1c00-0000-7000-8000-00000000e003',
+            adminId: '019a1c00-0000-7000-8000-00000000a009',
+            adminName: null,
+            adminEmail: null,
+            donorId: null,
+          }),
+        ],
+        hasMore: false,
+      });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('table')).toBeNull();
+    const [first, second] = Array.from(
+      fixture.nativeElement.querySelectorAll('.action-rows > li') as NodeListOf<HTMLElement>,
+    );
+    expect(textOf(first.querySelector('.ui-list__title'))).toBe('Přiřazení platby dárci');
+    expect(textOf(first.querySelector('.ui-list__meta'))).toBe(
+      '22. 10. 2026 12:00 · Jana Nováková · přes aplikaci Claude',
+    );
+    expect(textOf(first.querySelector('.summary'))).toBe(
+      'Platba 500 Kč ze dne 10. 10. 2026 ručně přiřazena dárci Jana Nováková.',
+    );
+    expect(first.querySelector('.donor-link')?.getAttribute('href')).toBe(
+      '/sprava/darci/01a18e56-bdb0-775a-bd0a-a60756831369',
+    );
+    const details = first.querySelector('details') as HTMLDetailsElement;
+    expect(details.open).toBe(false);
+    expect(textOf(details)).toContain('jana@example.cz');
+    expect(textOf(second.querySelector('.ui-list__meta'))).toBe(
+      '22. 10. 2026 12:00 · správce bez účtu',
+    );
+    expect(second.querySelector('.donor-link')).toBeNull();
+    expect(textOf(second.querySelector('details'))).toContain(
+      'Správce: 019a1c00-0000-7000-8000-00000000a009',
+    );
   });
 });

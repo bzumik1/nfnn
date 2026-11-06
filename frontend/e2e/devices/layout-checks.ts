@@ -18,6 +18,7 @@ export interface Findings {
   viewportWidth: number;
   wideElements: string[];
   cutOff: string[];
+  clippedControls: string[];
   stacked: string[];
   covered: string[];
   focusCovered: string[];
@@ -133,6 +134,38 @@ export function collectFindings(limits: { minimumTarget: number; stackedShare: n
       return sideways || vertically;
     })
     .map(describe);
+
+  const clippedBy = (element: Element): boolean => {
+    const box = element.getBoundingClientRect();
+    let position = getComputedStyle(element).position;
+    for (
+      let node = element.parentElement;
+      node && node !== document.body && position !== 'fixed';
+      node = node.parentElement
+    ) {
+      const style = getComputedStyle(node);
+      const containsAbsolute = style.position !== 'static' || style.transform !== 'none';
+      if (position === 'absolute' && !containsAbsolute) {
+        continue;
+      }
+      if (style.position !== 'static') {
+        position = style.position;
+      }
+      if (style.overflowX === 'auto' || style.overflowX === 'scroll') {
+        return false;
+      }
+      if (style.overflowX === 'hidden' || style.overflowX === 'clip') {
+        const bounds = node.getBoundingClientRect();
+        const hidingBox = bounds.width <= 1;
+        if (!hidingBox && (box.left < bounds.left - 1 || box.right > bounds.right + 1)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+
+  const clippedControls = controls.filter(clippedBy).map(describe);
 
   const textField = (element: Element): boolean =>
     element.tagName === 'TEXTAREA' ||
@@ -298,6 +331,7 @@ export function collectFindings(limits: { minimumTarget: number; stackedShare: n
     viewportWidth,
     wideElements,
     cutOff,
+    clippedControls,
     stacked,
     covered,
     focusCovered,
@@ -333,6 +367,11 @@ export function checksFrom(found: Findings, pageErrors: string[]): Check[] {
       name: 'no control cut off by the screen edge',
       pass: found.cutOff.length === 0,
       detail: list(found.cutOff),
+    },
+    {
+      name: 'no control cut off by a box that hides its overflow',
+      pass: found.clippedControls.length === 0,
+      detail: list(found.clippedControls),
     },
     {
       name: 'no controls stacked on each other',
