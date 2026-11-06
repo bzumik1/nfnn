@@ -6,7 +6,7 @@
   align-items: center;
   justify-content: center;
   margin-bottom: calc(-1 * var(--tab-bar-clearance));
-  padding: calc(var(--safe-area-top) + var(--header-height) + var(--space-12)) var(--space-5)
+  padding: calc(var(--page-top) + var(--space-8)) var(--space-5)
     calc(var(--space-20) + var(--tab-bar-clearance));
   background:
     radial-gradient(

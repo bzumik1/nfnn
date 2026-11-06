@@ -1,6 +1,11 @@
-import { followScrollEdge, SCROLL_EDGE_TONE, SCROLLED_CLASS } from './scroll-edge';
+import {
+  followScrollEdge,
+  SCROLL_EDGE_DARK,
+  SCROLL_EDGE_TONE,
+  SCROLLED_CLASS,
+} from './scroll-edge';
 
-describe('Given the edge at the top of a page one level deeper than its tab', () => {
+describe('Given the edge at the top of a page', () => {
   let header: HTMLElement;
   let content: HTMLElement;
   let underEdge: Element[];
@@ -72,6 +77,10 @@ describe('Given the edge at the top of a page one level deeper than its tab', ()
       expect(header.style.getPropertyValue(SCROLL_EDGE_TONE)).toBe('rgb(15, 23, 42)');
     });
 
+    it('then the edge knows its colour is dark, so a title in it is written in light ink', () => {
+      expect(header.classList).toContain(SCROLL_EDGE_DARK);
+    });
+
     it('and lighter content comes up under it, then the edge takes that colour', async () => {
       const body = fullWidth(document.createElement('div'));
       body.style.backgroundColor = 'rgb(255, 255, 255)';
@@ -81,6 +90,21 @@ describe('Given the edge at the top of a page one level deeper than its tab', ()
       await nextFrame();
 
       expect(header.style.getPropertyValue(SCROLL_EDGE_TONE)).toBe('rgb(255, 255, 255)');
+      expect(header.classList).not.toContain(SCROLL_EDGE_DARK);
+    });
+
+    it('and translucent dark content comes up under it, then the edge still knows it is dark', async () => {
+      const glass = document.createElement('div');
+      const style = vi
+        .spyOn(window, 'getComputedStyle')
+        .mockReturnValue({ backgroundColor: 'color(srgb 0.05 0.07 0.12)', height: '' } as never);
+      underEdge = [glass, document.body];
+
+      scrollTo(900);
+      await nextFrame();
+      style.mockRestore();
+
+      expect(header.classList).toContain(SCROLL_EDGE_DARK);
     });
 
     it('and a card narrower than the page comes up under it, then the edge takes the ground around the card, so it never stands out as a band of the card', async () => {
