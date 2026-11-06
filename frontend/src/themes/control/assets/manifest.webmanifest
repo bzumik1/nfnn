@@ -8,7 +8,7 @@
   "start_url": "/aplikace",
   "scope": "/",
   "display": "standalone",
-  "theme_color": "#0f766e",
+  "theme_color": "#0e7068",
   "background_color": "#ffffff",
   "icons": [
     {

@@ -2,7 +2,7 @@
   display: block;
   min-height: 100vh;
   padding-top: calc(var(--header-height) + env(safe-area-inset-top));
-  background: var(--color-surface-alt);
+  background: var(--color-surface-grouped);
 }
 
 .container {
