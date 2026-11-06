@@ -98,20 +98,43 @@ function isPublic(path) {
 }
 
 describe('Given the service worker configuration', () => {
-  it('when its data groups are read, then only the public content, the payment details for at most a day and the photos are kept, the photos at most 300', async () => {
+  it('when its data groups are read, then the public content is shown from its copy and refreshed behind it, the payment details wait a second for the network and are kept for at most a day, and the photos are kept, at most 300', async () => {
     const manifest = await generatedManifest();
 
     assert.deepEqual(
-      manifest.dataGroups.map(({ name, strategy, maxSize, maxAge }) => ({
+      manifest.dataGroups.map(({ name, strategy, maxSize, maxAge, timeoutMs, refreshAheadMs }) => ({
         name,
         strategy,
         maxSize,
         maxAge,
+        timeoutMs,
+        refreshAheadMs,
       })),
       [
-        { name: 'public-content', strategy: 'freshness', maxSize: 100, maxAge: 30 * DAY },
-        { name: 'payment-details', strategy: 'freshness', maxSize: 1, maxAge: DAY },
-        { name: 'public-photos', strategy: 'performance', maxSize: 300, maxAge: 365 * DAY },
+        {
+          name: 'public-content',
+          strategy: 'performance',
+          maxSize: 100,
+          maxAge: 30 * DAY,
+          timeoutMs: 5_000,
+          refreshAheadMs: 0,
+        },
+        {
+          name: 'payment-details',
+          strategy: 'freshness',
+          maxSize: 1,
+          maxAge: DAY,
+          timeoutMs: 1_000,
+          refreshAheadMs: undefined,
+        },
+        {
+          name: 'public-photos',
+          strategy: 'performance',
+          maxSize: 300,
+          maxAge: 365 * DAY,
+          timeoutMs: undefined,
+          refreshAheadMs: undefined,
+        },
       ],
     );
   });

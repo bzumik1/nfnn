@@ -1,5 +1,5 @@
 import { DestroyRef, DOCUMENT, inject, Injectable, signal } from '@angular/core';
-import { isUnreachable } from '../../core/connectivity/connectivity';
+import { Connectivity, isUnreachable } from '../../core/connectivity/connectivity';
 import {
   PaymentDetails,
   PaymentDetailsApi,
@@ -25,6 +25,7 @@ const KEPT_FOR_MS = 5 * 60 * 1000;
 export class PaymentDetailsStore {
   private readonly api = inject(PaymentDetailsApi);
   private readonly document = inject(DOCUMENT);
+  private readonly connectivity = inject(Connectivity);
   private readonly current = signal<PaymentDetailsState>({ kind: 'loading' });
   private readonly currentAge = signal<PaymentDetailsAge | null>(null);
   private requested = false;
@@ -77,7 +78,12 @@ export class PaymentDetailsStore {
 
   private fetch(pastBrowserCache: boolean): void {
     this.requested = true;
-    this.current.set({ kind: 'loading' });
+    const kept = this.connectivity.offline() ? this.kept() : null;
+    if (kept === null) {
+      this.current.set({ kind: 'loading' });
+    } else {
+      this.showKept(kept);
+    }
     this.api.details({ pastBrowserCache }).subscribe({
       next: (written) => this.hold(written),
       error: (failure: unknown) => this.fallBack(failure),
@@ -98,6 +104,10 @@ export class PaymentDetailsStore {
       this.current.set({ kind: 'failed' });
       return;
     }
+    this.showKept(kept);
+  }
+
+  private showKept(kept: WrittenPaymentDetails): void {
     this.show(kept.details);
     this.currentAge.set({ writtenAt: kept.writtenAt, kept: true });
   }

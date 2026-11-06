@@ -311,7 +311,9 @@ test.describe('Given an administrator whose administration locks on this device'
 
     await context.setOffline(true);
 
-    await expect(page.getByText('Jste offline.', { exact: false })).toBeVisible();
+    await expect(
+      page.getByText('Jste offline. Heslem a kódem odemknete správu', { exact: false }),
+    ).toBeVisible();
     await expect(page.getByRole('button', { name: 'Použít heslo' })).toBeDisabled();
     await context.setOffline(false);
   });

@@ -10,12 +10,17 @@ import {
   Observable,
   of,
   share,
+  ignoreElements,
+  merge,
   switchMap,
+  takeUntil,
+  timer,
   tap,
   throwError,
   timeout,
   TimeoutError,
 } from 'rxjs';
+import { Connectivity } from '../connectivity/connectivity';
 import { AuthApi } from './auth-api';
 import { PasskeyAuthenticator } from './passkey-authenticator';
 import { AdministrationAccess } from './administration-access';
@@ -56,6 +61,7 @@ import {
 export type AuthStatus = 'unknown' | 'anonymous' | 'signed-in';
 
 export const SESSION_HINT_KEY = BROWSER_JAR.hintKey;
+export const CONNECTION_CHECK_AFTER_MS = 1_000;
 
 export const EMAIL_CONFIRMATION_SESSION: BrowserSessionKind = 'BROWSER';
 
@@ -68,6 +74,7 @@ export class AuthStore {
   private readonly channel = inject(SESSION_CHANNEL)();
   private readonly device = inject(SESSION_DEVICE);
   private readonly administrationAccess = inject(AdministrationAccess);
+  private readonly connectivity = inject(Connectivity);
   private readonly currentDonor = signal<Donor | null>(null);
   private readonly currentStatus = signal<AuthStatus>('unknown');
   private readonly currentSession = signal<SessionKind | null>(null);
@@ -192,14 +199,27 @@ export class AuthStore {
   }
 
   restore(): Promise<void> {
-    if (this.restoring === null) {
-      this.restoring = hasSessionHint(this.jar)
-        ? firstValueFrom(this.refresh()).then(
-            () => undefined,
-            (failure: unknown) => this.restoreLater(failure),
-          )
-        : Promise.resolve(this.forgetWithoutSession());
+    if (this.restoring !== null) {
+      return this.restoring;
     }
+    if (!hasSessionHint(this.jar)) {
+      this.restoring = Promise.resolve(this.forgetWithoutSession());
+      return this.restoring;
+    }
+    if (this.connectivity.offline()) {
+      this.waitSignedOut();
+      return Promise.resolve();
+    }
+    const connectionChecked = timer(CONNECTION_CHECK_AFTER_MS).pipe(
+      switchMap(() => this.connectivity.tryAgain()),
+      ignoreElements(),
+    );
+    this.restoring = firstValueFrom(
+      merge(this.refresh(), connectionChecked).pipe(takeUntil(this.connectivity.wentOffline)),
+    ).then(
+      () => undefined,
+      (failure: unknown) => this.restoreLater(failure),
+    );
     return this.restoring;
   }
 
@@ -349,13 +369,17 @@ export class AuthStore {
     if (isRefusal(failure)) {
       return;
     }
-    if (this.currentStatus() === 'unknown') {
-      this.currentStatus.set('anonymous');
-    }
+    this.waitSignedOut();
     if (isSlow(failure)) {
       setTimeout(() => (this.restoring = null), SLOW_RESTORE_PAUSE_MS);
     } else {
       this.restoring = null;
+    }
+  }
+
+  private waitSignedOut(): void {
+    if (this.currentStatus() === 'unknown') {
+      this.currentStatus.set('anonymous');
     }
   }
 
