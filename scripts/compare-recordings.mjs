@@ -46,7 +46,7 @@ for (const label of after.keys()) {
 }
 for (const problem of problems) {
   console.log(
-    `::error::${problem}: the scenario is not deterministic, so fix it at its source (testing.md, "Regression against v2")`,
+    `::error::${problem}: the scenario is not deterministic, so fix it at its source (testing-regression.md, "Regression against v2")`,
   );
 }
 console.log(
