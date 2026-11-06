@@ -3,6 +3,7 @@ import { createEnvironmentInjector, EnvironmentInjector } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { IDBFactory } from 'fake-indexeddb';
 import { type DeviceAccount, userHandleOf } from '../../auth/session-device';
+import { AdministrationAccess } from '../../auth/administration-access';
 import { TAB_LOCKS } from '../../auth/session-tabs';
 import { SignedOutNotice } from '../../auth/signed-out-notice';
 import { ErrorReporter } from '../../errors/error-reporter';
@@ -30,6 +31,7 @@ const PETR: DeviceAccount = {
   email: 'petr@example.cz',
   userHandle: userHandleOf('0190c3a2-7b1e-7cc1-8a52-000000000002'),
 };
+const JANA_ADMINISTRATOR: DeviceAccount = { ...JANA, administrator: true };
 const PASSWORD = 'Kanárek 2026';
 const IPHONE = 'aVBob25lLWRldmljZS1zZWNyZXQtb2YtamFuYS0wMDE';
 const LATER = 'bGF0ZXItZGV2aWNlLXNlY3JldC1vZi1qYW5hLTAwMDI';
@@ -256,6 +258,78 @@ describe('Given the device vault that asks the server how its sign-ins stand', (
 
       expect(source.mock.calls).toEqual([[IPHONE]]);
       expect(tab.opened()).not.toBeNull();
+    });
+  });
+
+  describe('when Jana, an administrator, signs in with the device secret the server gave this sign-in', () => {
+    beforeEach(async () => {
+      TestBed.inject(AdministrationAccess).signedIn();
+      await vault.signedIn(
+        JANA_ADMINISTRATOR,
+        { kind: 'password', password: PASSWORD },
+        false,
+        IPHONE,
+      );
+    });
+
+    it('then her administration copy holds the same secret as her own copy', async () => {
+      const entries = await storedEntries();
+
+      expect(vault.administration()).not.toBeNull();
+      expect(entries.map((entry) => [entry.kind, entry.deviceSecret]).sort()).toEqual([
+        ['administration', IPHONE],
+        ['donor', IPHONE],
+      ]);
+    });
+
+    it('and she unlocks the administration at the next start, then the copy keeps the secret', async () => {
+      const tab = anotherTab();
+      await tab.restored(JANA_ADMINISTRATOR);
+
+      await tab.unlockAdministrationWithPassword(JANA_ADMINISTRATOR, PASSWORD, false);
+
+      expect(tab.administration()).not.toBeNull();
+      const administration = (await storedEntries()).find(
+        (entry) => entry.kind === 'administration',
+      );
+      expect(administration?.deviceSecret).toBe(IPHONE);
+    });
+
+    it('and she signs out after the role was taken from her, then only the administration copy is deleted', async () => {
+      answer(IPHONE, 'wipe-admin');
+
+      await vault.signedOut(JANA_ADMINISTRATOR);
+
+      const entries = await storedEntries();
+      expect(entries.map((entry) => [entry.kind, entry.deviceSecret])).toEqual([['donor', IPHONE]]);
+      expect(notice.shown()).toBe(false);
+    });
+
+    it('and she signs in again by a link, then the locked administration copy holds the new secret', async () => {
+      await vault.signedOut(JANA_ADMINISTRATOR);
+
+      await vault.signedIn(JANA_ADMINISTRATOR, { kind: 'none' }, false, LATER);
+
+      expect(vault.administration()).toBeNull();
+      expect(
+        (await storedEntries()).map((entry) => [entry.kind, entry.deviceSecret]).sort(),
+      ).toEqual([
+        ['administration', LATER],
+        ['donor', LATER],
+      ]);
+    });
+
+    it('and another tab has the administration open, then a directive to delete it closes it there', async () => {
+      const tab = anotherTab();
+      await tab.restored(JANA_ADMINISTRATOR);
+      await tab.unlockAdministrationWithPassword(JANA_ADMINISTRATOR, PASSWORD, false);
+      expect(tab.administration()).not.toBeNull();
+      answer(IPHONE, 'wipe-admin');
+
+      await vault.signedOut(JANA_ADMINISTRATOR);
+
+      await vi.waitFor(() => expect(tab.administration()).toBeNull());
+      expect((await storedEntries()).map((entry) => entry.kind)).toEqual(['donor']);
     });
   });
 

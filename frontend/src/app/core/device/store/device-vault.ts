@@ -116,6 +116,7 @@ interface CopyMessage {
 interface AdministrationOpening {
   readonly replacesRefused: boolean;
   readonly reason: OpenReason;
+  readonly deviceSecret?: string;
 }
 
 interface Opening {
@@ -197,7 +198,7 @@ export class DeviceVault implements SessionDevice {
           this.openAtSignIn(account, secret, storeNothing, deviceSecret),
         );
         if (account.administrator === true) {
-          await this.openAdministrationAtSignIn(account, secret, storeNothing);
+          await this.openAdministrationAtSignIn(account, secret, storeNothing, deviceSecret);
         }
       } finally {
         zeroed(secret);
@@ -625,11 +626,9 @@ export class DeviceVault implements SessionDevice {
     account: DeviceAccount,
     secret: SignInSecret,
     storeNothing: boolean,
+    deviceSecret: string | undefined,
   ): Promise<void> {
     this.closeAdministration();
-    if (secret.kind === 'none') {
-      return;
-    }
     const storage = storeNothing
       ? this.memoryOnly
       : (this.activeStorage ?? (await this.storageFor(false)));
@@ -637,13 +636,32 @@ export class DeviceVault implements SessionDevice {
       return;
     }
     try {
-      await this.openAdministration(storage, account, secret, {
-        replacesRefused: true,
-        reason: 'sign-in',
-      });
+      const opening =
+        secret.kind === 'none'
+          ? 'locked'
+          : await this.openAdministration(storage, account, secret, {
+              replacesRefused: true,
+              reason: 'sign-in',
+              deviceSecret,
+            });
+      if (opening === 'locked' && deviceSecret !== undefined) {
+        await this.holdAdministration(storage, account, deviceSecret);
+      }
     } catch (failure: unknown) {
       this.closeAdministration();
       this.reporter.report('device-store-open', 'global', failure);
+    }
+  }
+
+  private async holdAdministration(
+    storage: DeviceStorage,
+    account: DeviceAccount,
+    deviceSecret: string,
+  ): Promise<void> {
+    const tags = await this.tagsIn(storage, account);
+    const entry = tags === null ? null : administrationEntryFor(await storage.entries(), tags);
+    if (entry !== null && entry.deviceSecret !== deviceSecret) {
+      await this.committed(storage, { putEntries: [heldBy(entry, deviceSecret)] });
     }
   }
 
@@ -690,7 +708,12 @@ export class DeviceVault implements SessionDevice {
       }
       await this.committed(storage, {
         deleteCopies: entry !== null && opening === null ? [entry.copyId] : [],
-        putEntries: [{ copyId: copy.copyId, kind: ADMINISTRATION_KIND, ...tags, wraps }],
+        putEntries: [
+          heldBy(
+            { copyId: copy.copyId, kind: ADMINISTRATION_KIND, ...tags, wraps },
+            how.deviceSecret ?? entry?.deviceSecret,
+          ),
+        ],
       });
     } catch (failure: unknown) {
       copy.close();
