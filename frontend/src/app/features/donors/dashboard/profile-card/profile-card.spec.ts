@@ -358,7 +358,7 @@ describe('Given the donor data card on a device that keeps drafts', () => {
     shelf.seed('donor', {
       key: 'profile',
       base: await valuesBase(startedFrom),
-      values: { ...saved, street: 'Krátká 3' },
+      values: { street: 'Krátká 3' },
       savedAt: '2026-11-06T09:00:00.000Z',
     });
   }
@@ -375,7 +375,7 @@ describe('Given the donor data card on a device that keeps drafts', () => {
     await settle();
 
     await fillIn('#profile-street', 'Krátká 3');
-    expect(shelf.draftOf('donor', 'profile')?.values).toEqual({ ...saved, street: 'Krátká 3' });
+    expect(shelf.draftOf('donor', 'profile')?.values).toEqual({ street: 'Krátká 3' });
     expect(shelf.draftOf('administration', 'profile')).toBeNull();
 
     root().querySelector('form')!.dispatchEvent(new Event('submit'));
@@ -409,12 +409,13 @@ describe('Given the donor data card on a device that keeps drafts', () => {
       expect(root().querySelector('app-draft-offer')?.textContent).not.toContain(
         'Uložená verze se od té doby změnila',
       );
+      expect(root().querySelector('.profile-edit')).toBeNull();
 
       button('Pokračovat v rozepsaném').click();
       await settle();
       expect(input('#profile-street').value).toBe('Krátká 3');
       expect(root().querySelector('[role="status"]:not(:empty)')?.textContent?.trim()).toBe(
-        'Pokračujete v rozepsaném textu. Uloží se, až ho uložíte.',
+        'Pokračujete v rozepsaných úpravách. Zatím jsou jen na tomto zařízení a platit začnou, až je uložíte.',
       );
 
       root().querySelector('form')!.dispatchEvent(new Event('submit'));
@@ -430,6 +431,7 @@ describe('Given the donor data card on a device that keeps drafts', () => {
       button('Zahodit').click();
       await settle();
 
+      expect(document.activeElement).toBe(button('Upravit údaje'));
       expect(shelf.draftOf('donor', 'profile')).toBeNull();
       expect(root().textContent).toContain('Dlouhá 12');
       expect(root().querySelector('app-draft-offer')).toBeNull();
@@ -444,6 +446,12 @@ describe('Given the donor data card on a device that keeps drafts', () => {
       await settle();
       root().querySelector('form')!.dispatchEvent(new Event('submit'));
       await settle();
+    });
+
+    it('then only the field the draft changed comes back and the newer saved data stay in the others', () => {
+      expect(input('#profile-street').value).toBe('Krátká 3');
+      expect(input('#profile-city').value).toBe('Ústí nad Labem');
+      http.expectNone('/api/donors/me');
     });
 
     it('then saving asks first instead of overwriting silently, and keeping the edits saves them', async () => {

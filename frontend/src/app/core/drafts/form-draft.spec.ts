@@ -3,7 +3,11 @@ import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
 import { DRAFT_KEEP_DELAY_MS } from './draft-shelf';
 import { formDraft, stableJson } from './form-draft';
-import { MemoryDraftShelf, memoryDraftShelfProviders } from './testing/memory-draft-shelf';
+import {
+  MemoryDraftShelf,
+  memoryDraftShelfProviders,
+  valuesBase,
+} from './testing/memory-draft-shelf';
 
 interface NoteValues {
   readonly title: string;
@@ -110,6 +114,19 @@ describe('Given an editor that keeps its unsaved text as a draft', () => {
 
       await type('body', 'Zveme vás všechny.');
       expect(shelf.draftOf('administration', 'news/1')?.base).toBe('version:v2');
+    });
+
+    it('and the record moves to v2 by another change of its own while the edit stays unsaved, then the draft is kept under v2', async () => {
+      await type('title', 'Ples 2026');
+
+      editor.draft.rebased('v2');
+      await settle();
+
+      expect(shelf.draftOf('administration', 'news/1')).toMatchObject({
+        base: 'version:v2',
+        values: { title: 'Ples 2026' },
+      });
+      expect(editor.draft.offer()).toBeNull();
     });
 
     it('and the visitor leaves without saving, then the draft is dropped and nothing more is kept', async () => {
@@ -281,6 +298,23 @@ describe('Given an editor that keeps its unsaved text as a draft', () => {
     });
   });
 
+  describe('when the form shows a record without a version and the visitor types at once', () => {
+    it('then the edit is kept once the saved text is digested', async () => {
+      await create();
+      editor.draft.ready();
+      editor.title = 'Ples 2026';
+      editor.draft.changed();
+
+      await settle();
+      await settle();
+
+      expect(shelf.draftOf('administration', 'news/1')).toMatchObject({
+        base: expect.stringMatching(/^values:[0-9a-f]{64}$/),
+        values: { title: 'Ples 2026', body: 'Zveme vás.' },
+      });
+    });
+  });
+
   describe('when the copy is not open yet as the form shows its record', () => {
     it('then the draft is offered once the copy opens', async () => {
       shelf.seed('administration', {
@@ -302,24 +336,209 @@ describe('Given an editor that keeps its unsaved text as a draft', () => {
     });
   });
 
-  describe('when edits wait a while before they are kept', () => {
-    it('and the page is hidden, then the edit is kept at once', async () => {
-      await create(60_000);
+  describe('when another account takes over the copy while the form is open', () => {
+    it('then later edits are kept in no copy and nothing is offered to the other account', async () => {
+      await create();
       await ready('v1');
-      editor.title = 'Ples 2026';
-      editor.draft.changed();
+      await type('title', 'Ples 2026');
+      expect(shelf.draftOf('administration', 'news/1')).not.toBeNull();
+
+      shelf.switchAccount('administration', 'another-administration-copy');
+      await settle();
+      await type('body', 'Zveme vás všechny.');
+
       expect(shelf.draftOf('administration', 'news/1')).toBeNull();
+      expect(shelf.kept.at(-1)?.values).toEqual({ title: 'Ples 2026', body: 'Zveme vás.' });
+      expect(editor.draft.offer()).toBeNull();
+    });
+  });
 
-      Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true });
-      document.dispatchEvent(new Event('visibilitychange'));
-      await editor.draft.flush();
-      Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
+  describe('when the visitor types before the copy opens and it holds an older draft', () => {
+    it('then the older draft is offered once the copy opens', async () => {
+      shelf.seed('administration', {
+        key: 'news/1',
+        base: 'version:v1',
+        values: { title: 'Ples 2026', body: 'Zveme vás.' },
+        savedAt: '2026-11-06T09:00:00.000Z',
+      });
+      shelf.setOpen('administration', false);
+      await create();
+      await ready('v1');
 
+      await type('body', 'Něco jiného.');
+      shelf.setOpen('administration', true);
+      await settle();
+      await settle();
+
+      expect(editor.draft.offer()?.savedAt).toBe('2026-11-06T09:00:00.000Z');
       expect(shelf.draftOf('administration', 'news/1')?.values).toEqual({
         title: 'Ples 2026',
         body: 'Zveme vás.',
       });
     });
+  });
+
+  describe('when later edits wait a while before they are kept', () => {
+    beforeEach(async () => {
+      await create(60_000);
+      await ready('v1');
+    });
+
+    afterEach(() => {
+      Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
+    });
+
+    async function firstEditKept(): Promise<void> {
+      editor.title = 'Ples 2026';
+      editor.draft.changed();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await editor.draft.flush();
+    }
+
+    it('then the first edit is kept at once and the next one waits', async () => {
+      await firstEditKept();
+      expect(shelf.draftOf('administration', 'news/1')?.values).toEqual({
+        title: 'Ples 2026',
+        body: 'Zveme vás.',
+      });
+
+      editor.body = 'Zveme vás všechny.';
+      editor.draft.changed();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(shelf.draftOf('administration', 'news/1')?.values).toMatchObject({
+        body: 'Zveme vás.',
+      });
+    });
+
+    it('and the page is hidden, then the waiting edit is kept at once', async () => {
+      await firstEditKept();
+      editor.body = 'Zveme vás všechny.';
+      editor.draft.changed();
+
+      Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true });
+      document.dispatchEvent(new Event('visibilitychange'));
+      await editor.draft.flush();
+
+      expect(shelf.draftOf('administration', 'news/1')?.values).toEqual({
+        title: 'Ples 2026',
+        body: 'Zveme vás všechny.',
+      });
+    });
+
+    it('and the page is left, then the waiting edit is kept at once', async () => {
+      await firstEditKept();
+      editor.body = 'Zveme vás všechny.';
+      editor.draft.changed();
+
+      window.dispatchEvent(new Event('pagehide'));
+      await editor.draft.flush();
+
+      expect(shelf.draftOf('administration', 'news/1')?.values).toMatchObject({
+        body: 'Zveme vás všechny.',
+      });
+    });
+  });
+});
+
+@Component({
+  imports: [FormsModule],
+  template: `<form>
+    <input name="title" [(ngModel)]="title" />
+    <textarea name="body" [(ngModel)]="body"></textarea>
+  </form>`,
+})
+class SettingsEditor {
+  title = 'Ples';
+  body = 'Zveme vás.';
+  readonly draft = formDraft<NoteValues>({
+    copy: 'administration',
+    key: () => 'settings',
+    values: () => ({ title: this.title, body: this.body }),
+    apply: (values) => {
+      this.title = values.title;
+      this.body = values.body;
+    },
+    changedFieldsOnly: true,
+  });
+}
+
+describe('Given an editor that keeps only the fields the visitor changed', () => {
+  let shelf: MemoryDraftShelf;
+  let fixture: ComponentFixture<SettingsEditor>;
+  let editor: SettingsEditor;
+
+  async function create(): Promise<void> {
+    TestBed.configureTestingModule({
+      providers: [
+        ...memoryDraftShelfProviders(shelf),
+        { provide: DRAFT_KEEP_DELAY_MS, useValue: 0 },
+      ],
+    });
+    fixture = TestBed.createComponent(SettingsEditor);
+    editor = fixture.componentInstance;
+    await fixture.whenStable();
+  }
+
+  async function settle(): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await editor.draft.flush();
+    await fixture.whenStable();
+  }
+
+  beforeEach(() => {
+    shelf = new MemoryDraftShelf();
+  });
+
+  it('when the title is typed into, then only the title is kept', async () => {
+    await create();
+    editor.draft.ready();
+    await settle();
+    await settle();
+
+    editor.title = 'Ples 2026';
+    editor.draft.changed();
+    await settle();
+
+    expect(shelf.draftOf('administration', 'settings')?.values).toEqual({ title: 'Ples 2026' });
+  });
+
+  it('when a stale draft of the title is resumed after someone else changed the body, then the newer body stays', async () => {
+    shelf.seed('administration', {
+      key: 'settings',
+      base: await valuesBase({ title: 'Ples', body: 'Zveme vás.' }),
+      values: { title: 'Ples 2026' },
+      savedAt: '2026-11-06T09:00:00.000Z',
+    });
+    await create();
+    editor.body = 'Zveme vás všechny.';
+    editor.draft.ready();
+    await settle();
+    await settle();
+    expect(editor.draft.offer()?.stale).toBe(true);
+
+    editor.draft.resume();
+
+    expect(editor.title).toBe('Ples 2026');
+    expect(editor.body).toBe('Zveme vás všechny.');
+    expect(editor.draft.resumedStale()).toBe(true);
+  });
+
+  it('when the kept field already holds the saved value, then nothing is offered and the draft is dropped', async () => {
+    shelf.seed('administration', {
+      key: 'settings',
+      base: await valuesBase({ title: 'Ples', body: 'Zveme vás.' }),
+      values: { title: 'Ples 2026' },
+      savedAt: '2026-11-06T09:00:00.000Z',
+    });
+    await create();
+    editor.title = 'Ples 2026';
+    editor.draft.ready();
+    await settle();
+    await settle();
+
+    expect(editor.draft.offer()).toBeNull();
+    expect(shelf.draftOf('administration', 'settings')).toBeNull();
   });
 });
 

@@ -90,9 +90,12 @@ interface NewsDraftValues {
   readonly perex: string;
   readonly body: string;
   readonly coverImageAlt: string;
+  readonly coverImageId: string | null;
   readonly signerId: string;
   readonly publishDate: string;
 }
+
+const PUBLISH_DATE_MOVED_TEXT = $localize`:@@admin.newsEditor.draft.dateMoved:Datum zveřejnění z rozepsaných úprav už minulo, proto jsme ho posunuli na dnešek.`;
 
 @Component({
   selector: 'app-admin-news-editor',
@@ -207,6 +210,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
   protected signerId = '';
   protected publishDate = todayIso();
   private slugEdited = false;
+  private publishDateMoved = false;
   private readonly routeId = inject(ActivatedRoute).snapshot.paramMap.get('id');
   protected readonly draft = formDraft<NewsDraftValues>({
     copy: 'administration',
@@ -218,6 +222,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
       perex: this.perex,
       body: this.body,
       coverImageAlt: this.coverImageAlt,
+      coverImageId: this.coverImage()?.id ?? null,
       signerId: this.signerId,
       publishDate: this.publishDate,
     }),
@@ -410,7 +415,12 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     if (stale !== null) {
       this.article.update((saved) => (saved ? { ...saved, version: stale } : saved));
     }
-    this.notice.set({ kind: 'status', text: DRAFT_RESUMED_TEXT });
+    this.notice.set({
+      kind: 'status',
+      text: this.publishDateMoved
+        ? `${DRAFT_RESUMED_TEXT} ${PUBLISH_DATE_MOVED_TEXT}`
+        : DRAFT_RESUMED_TEXT,
+    });
     afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
   }
 
@@ -428,11 +438,13 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     this.tag = values.tag;
     this.perex = values.perex;
     this.body = values.body;
-    this.coverImageAlt = values.coverImageAlt;
+    if (values.coverImageId === (this.coverImage()?.id ?? null)) {
+      this.coverImageAlt = values.coverImageAlt;
+    }
     this.signerId = values.signerId;
     const today = todayIso();
-    this.publishDate =
-      this.isPublished() || values.publishDate >= today ? values.publishDate : today;
+    this.publishDateMoved = !this.isPublished() && values.publishDate < today;
+    this.publishDate = this.publishDateMoved ? today : values.publishDate;
     this.articleForm()?.form.markAsDirty();
     this.edited.set(true);
   }
@@ -707,7 +719,9 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
           this.unpublishing.set(false);
           this.article.set(article);
           this.publishDate = todayIso();
-          if (!this.unsaved()) {
+          if (this.unsaved()) {
+            this.draft.rebased(article.version);
+          } else {
             this.draft.saved(article.version);
           }
           this.notice.set({

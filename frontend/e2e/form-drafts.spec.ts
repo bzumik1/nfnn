@@ -46,7 +46,7 @@ test.describe('Given a donor who edits the data on the receipt on a device that 
     await page.reload();
 
     const offer = page.locator('app-draft-offer');
-    await expect(offer).toContainText('Máte tu rozepsaný text');
+    await expect(offer).toContainText('Máte tu rozepsané úpravy');
     await expect(page.locator('.profile-data')).toContainText('Dlouhá 12');
     await offer.getByRole('button', { name: 'Pokračovat v rozepsaném' }).click();
     await expect(page.getByLabel('Ulice a číslo')).toHaveValue(CANARY_STREET);

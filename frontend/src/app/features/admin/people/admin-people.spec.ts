@@ -968,19 +968,28 @@ describe('Given an administrator writing the texts of the people page on a devic
     }
   }
 
-  async function open(note = 'Děkujeme.'): Promise<void> {
+  async function open(note = 'Děkujeme.', footnote: string | null = null): Promise<void> {
     ({ fixture, http } = await setUp(
       noReceiptSignatory(),
       'none',
       memoryDraftShelfProviders(shelf),
     ));
-    http.expectOne(PEOPLE_URL).flush({ members: [], note, footnote: null });
+    http.expectOne(PEOPLE_URL).flush({ members: [], note, footnote });
     await drafted();
   }
 
   async function keptNote(text: string, startedFrom: string): Promise<void> {
     shelf.seed('administration', {
       key: 'people/note',
+      base: await valuesBase({ text: startedFrom }),
+      values: { text },
+      savedAt: '2026-11-06T09:00:00.000Z',
+    });
+  }
+
+  async function keptFootnote(text: string, startedFrom: string): Promise<void> {
+    shelf.seed('administration', {
+      key: 'people/footnote',
       base: await valuesBase({ text: startedFrom }),
       values: { text },
       savedAt: '2026-11-06T09:00:00.000Z',
@@ -1017,7 +1026,7 @@ describe('Given an administrator writing the texts of the people page on a devic
 
     it('and they continue it, then the note takes it and saves it without asking', async () => {
       expect(text(fixture, 'form:has(#founders-note) app-draft-offer')).toContain(
-        'Máte tu rozepsaný text',
+        'Máte tu rozepsané úpravy',
       );
       expect(element<HTMLTextAreaElement>(fixture, '#founders-note').value).toBe('Děkujeme.');
 
@@ -1042,7 +1051,7 @@ describe('Given an administrator writing the texts of the people page on a devic
       expect(shelf.draftOf('administration', 'people/note')).toBeNull();
       expect(element<HTMLTextAreaElement>(fixture, '#founders-note').value).toBe('Děkujeme.');
       expect(text(fixture, 'form:has(#founders-note) [role="status"]:not(:empty)')).toBe(
-        'Rozepsaný text jsme z tohoto zařízení zahodili.',
+        'Rozepsané úpravy jsme z tohoto zařízení zahodili.',
       );
     });
   });
@@ -1087,6 +1096,72 @@ describe('Given an administrator writing the texts of the people page on a devic
 
     expect(text(fixture, 'form:has(#founders-note) app-draft-offer')).toContain(
       'Uložená verze se od té doby změnila',
+    );
+  });
+
+  it('when they write the line under the board and save it, then it is kept on the device until the save', async () => {
+    await open();
+
+    await type(fixture, '#people-footnote', 'Web zajišťuje Petr Vzor.');
+    await drafted();
+    expect(shelf.draftOf('administration', 'people/footnote')?.values).toEqual({
+      text: 'Web zajišťuje Petr Vzor.',
+    });
+    expect(shelf.draftOf('administration', 'people/note')).toBeNull();
+
+    await submit(fixture, 'form:has(#people-footnote)');
+    http.expectOne(`${PEOPLE_URL}/footnote`).flush({ text: 'Web zajišťuje Petr Vzor.' });
+    await drafted();
+    expect(shelf.draftOf('administration', 'people/footnote')).toBeNull();
+  });
+
+  describe('when the device kept a line under the board started from the saved text', () => {
+    beforeEach(async () => {
+      await keptFootnote('Web zajišťuje Petr Vzor.', '');
+      await open();
+    });
+
+    it('and they continue it, then the line takes it, the focus is on it and it saves without asking', async () => {
+      expect(element<HTMLTextAreaElement>(fixture, '#people-footnote').value).toBe('');
+
+      button(fixture, 'Pokračovat v rozepsaném').click();
+      await drafted();
+      expect(element<HTMLTextAreaElement>(fixture, '#people-footnote').value).toBe(
+        'Web zajišťuje Petr Vzor.',
+      );
+      expect(document.activeElement).toBe(element(fixture, '#people-footnote'));
+
+      await submit(fixture, 'form:has(#people-footnote)');
+      const save = http.expectOne(`${PEOPLE_URL}/footnote`);
+      expect(save.request.body).toEqual({ text: 'Web zajišťuje Petr Vzor.' });
+      save.flush({ text: 'Web zajišťuje Petr Vzor.' });
+      await drafted();
+      expect(shelf.draftOf('administration', 'people/footnote')).toBeNull();
+    });
+
+    it('and they discard it, then it leaves the device and the line stays empty', async () => {
+      button(fixture, 'Zahodit').click();
+      await drafted();
+
+      expect(shelf.draftOf('administration', 'people/footnote')).toBeNull();
+      expect(element<HTMLTextAreaElement>(fixture, '#people-footnote').value).toBe('');
+    });
+  });
+
+  it('when the device kept a line under the board started from a text saved differently since, then saving asks first', async () => {
+    await keptFootnote('Web zajišťuje Petr Vzor.', '');
+    await open('Děkujeme.', 'Web spravuje fond.');
+    expect(text(fixture, 'form:has(#people-footnote) app-draft-offer')).toContain(
+      'Uložená verze se od té doby změnila',
+    );
+    button(fixture, 'Pokračovat v rozepsaném').click();
+    await drafted();
+
+    await submit(fixture, 'form:has(#people-footnote)');
+
+    http.expectNone(`${PEOPLE_URL}/footnote`);
+    expect(element(fixture, 'app-changed-meanwhile-dialog dialog').textContent).toContain(
+      'Od chvíle, kdy jste text na tomto zařízení rozepsali',
     );
   });
 });

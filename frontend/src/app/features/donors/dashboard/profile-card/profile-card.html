@@ -3,7 +3,7 @@
     <h2 id="profile-title" class="ui-card__title" i18n="@@donor.profile.title">
       Údaje na potvrzení o daru
     </h2>
-    @if (!editing()) {
+    @if (!editing() && draft.offer() === null) {
       <button
         #editButton
         type="button"
@@ -30,6 +30,7 @@
     <form
       #profile="ngForm"
       class="profile-form"
+      [inert]="draft.offer() !== null"
       appFocusFirstInvalid
       (ngSubmit)="save(profile)"
       novalidate

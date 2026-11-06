@@ -1260,7 +1260,11 @@ describe('Given an administrator editing a published news article on a device th
     }
   }
 
-  function keptDraft(title: string, base = `version:${newsArticle().version}`) {
+  function keptDraft(
+    title: string,
+    base = `version:${newsArticle().version}`,
+    cover: { readonly id: string | null; readonly alt: string } = { id: IMAGE_ID, alt: '' },
+  ) {
     shelf.seed('administration', {
       key,
       base,
@@ -1270,7 +1274,8 @@ describe('Given an administrator editing a published news article on a device th
         tag: 'Projekt',
         perex: newsArticle().perex,
         body: newsArticle().body,
-        coverImageAlt: '',
+        coverImageAlt: cover.alt,
+        coverImageId: cover.id,
         signerId: '',
         publishDate: '2026-10-20',
       },
@@ -1300,6 +1305,7 @@ describe('Given an administrator editing a published news article on a device th
     await open();
     await type(fixture, '#news-body', 'Rozepsaný odstavec.');
     await drafted();
+    expect(shelf.draftOf('administration', key)).not.toBeNull();
 
     await submit(fixture);
     http
@@ -1314,6 +1320,7 @@ describe('Given an administrator editing a published news article on a device th
     await open();
     await type(fixture, '#news-body', 'Rozepsaný odstavec.');
     await drafted();
+    expect(shelf.draftOf('administration', key)).not.toBeNull();
 
     const answer = fixture.componentInstance.canLeave();
     await settle(fixture);
@@ -1324,6 +1331,55 @@ describe('Given an administrator editing a published news article on a device th
     expect(shelf.draftOf('administration', key)).toBeNull();
   });
 
+  it('when they take the article off the site with edits still unsaved, then the draft stays and is kept under the new version', async () => {
+    await open();
+    await type(fixture, '#news-body', 'Rozepsaný odstavec.');
+    await drafted();
+
+    button(fixture, 'Stáhnout z webu').click();
+    await settle(fixture);
+    http
+      .expectOne(`${NEWS_URL}/${newsArticle().id}/unpublish`)
+      .flush(newsArticle({ publishedOn: null, live: false, version: '5555555555555555' }));
+    await drafted();
+
+    expect(shelf.draftOf('administration', key)).toMatchObject({
+      base: 'version:5555555555555555',
+      values: { body: 'Rozepsaný odstavec.' },
+    });
+  });
+
+  it('when the device kept the description of a photo they have not saved, then the description does not come back onto the saved photo', async () => {
+    keptDraft('Zahrada pro všechny děti', `version:${newsArticle().version}`, {
+      id: 'another-photo',
+      alt: 'Děti sázejí rajčata.',
+    });
+    await open();
+
+    button(fixture, 'Pokračovat v rozepsaném').click();
+    await drafted();
+
+    expect(element<HTMLInputElement>(fixture, '#news-title').value).toBe(
+      'Zahrada pro všechny děti',
+    );
+    expect(element<HTMLInputElement>(fixture, '#news-image-alt').value).toBe('');
+  });
+
+  it('when the device kept the description of the saved photo, then it comes back', async () => {
+    keptDraft('Zahrada pro všechny děti', `version:${newsArticle().version}`, {
+      id: IMAGE_ID,
+      alt: 'Děti sázejí rajčata.',
+    });
+    await open();
+
+    button(fixture, 'Pokračovat v rozepsaném').click();
+    await drafted();
+
+    expect(element<HTMLInputElement>(fixture, '#news-image-alt').value).toBe(
+      'Děti sázejí rajčata.',
+    );
+  });
+
   describe('when the device kept a draft of the version they open', () => {
     beforeEach(async () => {
       keptDraft('Zahrada pro všechny děti');
@@ -1331,7 +1387,7 @@ describe('Given an administrator editing a published news article on a device th
     });
 
     it('then the page offers it above the form, which still shows the saved text', () => {
-      expect(text(fixture, 'app-draft-offer')).toContain('Máte tu rozepsaný text');
+      expect(text(fixture, 'app-draft-offer')).toContain('Máte tu rozepsané úpravy');
       expect(text(fixture, 'app-draft-offer')).toContain('z 06. 11. 2026 10:00');
       expect(text(fixture, 'app-draft-offer')).not.toContain('Uložená verze se od té doby změnila');
       expect(element<HTMLInputElement>(fixture, '#news-title').value).toBe('Zahrada pro děti');
@@ -1346,7 +1402,7 @@ describe('Given an administrator editing a published news article on a device th
         'Zahrada pro všechny děti',
       );
       expect(text(fixture, '[role="status"]:not(:empty)')).toBe(
-        'Pokračujete v rozepsaném textu. Uloží se, až ho uložíte.',
+        'Pokračujete v rozepsaných úpravách. Zatím jsou jen na tomto zařízení a platit začnou, až je uložíte.',
       );
       expect(document.activeElement?.tagName).toBe('H1');
       expect(fixture.componentInstance.canLeave()).not.toBe(true);
@@ -1372,7 +1428,7 @@ describe('Given an administrator editing a published news article on a device th
       expect(shelf.draftOf('administration', key)).toBeNull();
       expect(element<HTMLInputElement>(fixture, '#news-title').value).toBe('Zahrada pro děti');
       expect(text(fixture, '[role="status"]:not(:empty)')).toBe(
-        'Rozepsaný text jsme z tohoto zařízení zahodili.',
+        'Rozepsané úpravy jsme z tohoto zařízení zahodili.',
       );
     });
   });
@@ -1489,5 +1545,47 @@ describe('Given an administrator writing a new news article on a device that kee
 
     expect(shelf.draftOf('administration', 'news/new')).toBeNull();
     expect(shelf.draftOf('administration', `news/${draftArticle().id}`)).toBeNull();
+  });
+});
+
+describe('Given an administrator opening a new news article with a draft whose publish date has passed', () => {
+  let fixture: ComponentFixture<AdminNewsEditor>;
+  let http: HttpTestingController;
+
+  beforeEach(async () => {
+    const shelf = new MemoryDraftShelf();
+    shelf.seed('administration', {
+      key: 'news/new',
+      base: 'new',
+      values: {
+        title: 'Benefiční koncert',
+        slug: '',
+        tag: '',
+        perex: '',
+        body: '',
+        coverImageAlt: '',
+        coverImageId: null,
+        signerId: '',
+        publishDate: '2020-01-15',
+      },
+      savedAt: '2026-11-06T09:00:00.000Z',
+    });
+    ({ fixture, http } = await setUp(null, {}, memoryDraftShelfProviders(shelf)));
+    for (let round = 0; round < 3; round++) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await settle(fixture);
+    }
+  });
+
+  afterEach(() => http.verify());
+
+  it('when they continue it, then the date moves to today and the status says so', async () => {
+    button(fixture, 'Pokračovat v rozepsaném').click();
+    await settle(fixture);
+
+    expect(element<HTMLInputElement>(fixture, '#news-title').value).toBe('Benefiční koncert');
+    expect(text(fixture, '[role="status"]:not(:empty)')).toContain(
+      'Datum zveřejnění z rozepsaných úprav už minulo, proto jsme ho posunuli na dnešek.',
+    );
   });
 });

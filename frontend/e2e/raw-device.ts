@@ -24,11 +24,22 @@ export function rawDevice(page: Page): Promise<RawDevice> {
         drafts: 0,
       };
     }
-    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+    const database = await new Promise<IDBDatabase | null>((resolve) => {
       const request = indexedDB.open(name);
+      request.onupgradeneeded = () => request.transaction?.abort();
       request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
+      request.onerror = () => resolve(null);
     });
+    if (database === null) {
+      return {
+        databases: listed.filter((listedName) => listedName !== name),
+        text: '',
+        wraps: [],
+        copyIds: [],
+        marker: localStorage.getItem('nfnn.device-copy'),
+        drafts: 0,
+      };
+    }
     const values: unknown[] = [];
     for (const store of Array.from(database.objectStoreNames)) {
       const read = (method: 'getAll' | 'getAllKeys') =>

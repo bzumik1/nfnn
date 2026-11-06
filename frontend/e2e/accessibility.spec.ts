@@ -8,6 +8,7 @@ import {
   PETR_DETAIL_PATH,
   rememberedSession,
 } from './baseline/screen-mocks';
+import { rawDevice } from './raw-device';
 import { fakeCameraShowing, pdfWithLink, pngDataUrl, qrCodePng } from './receipt-code-files';
 import {
   administrator,
@@ -19,6 +20,7 @@ import {
   donor,
   mockConnectApi,
   mockDonorApi,
+  noDonations,
   openDonorSection,
   openSignInDialog,
   problem,
@@ -3071,5 +3073,44 @@ test.describe('Given an administrator whose administration is locked on this dev
       await expect(page.getByRole('heading', { level: 1, name: 'Odemknout heslem' })).toBeVisible();
       expect(await violations(page)).toEqual([]);
     }
+  });
+});
+
+test.describe('Given a donor whose unsaved edit of the data on the receipt is kept on this device', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page, noDonations);
+    await page.route('**/api/donors/auth/refresh', (route) => route.fulfill(session(200)));
+    await signIn(page);
+    await openDonorSection(page, 'Údaje a zabezpečení');
+    await page.getByRole('button', { name: 'Upravit údaje' }).click();
+    await page.getByLabel('Ulice a číslo').fill('Krátká 3');
+    await expect.poll(async () => (await rawDevice(page)).drafts).toBe(1);
+  });
+
+  test('when the page is loaded again and the edit is offered back, then the offer has no violations', async ({
+    page,
+  }) => {
+    await page.reload();
+
+    await expect(page.locator('app-draft-offer')).toContainText('Máte tu rozepsané úpravy');
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when the data were saved differently since and she saves the edit she continued, then the warning in the form has no violations', async ({
+    page,
+  }) => {
+    await page.unroute('**/api/donors/auth/refresh');
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, { ...donor, address: { ...donor.address, city: 'Děčín' } })),
+    );
+    await page.reload();
+    const offer = page.locator('app-draft-offer');
+    await expect(offer).toContainText('Uložená verze se od té doby změnila');
+    await offer.getByRole('button', { name: 'Pokračovat v rozepsaném' }).click();
+
+    await page.getByRole('button', { name: 'Uložit údaje' }).click();
+
+    await expect(page.locator('.profile-stale')).toBeVisible();
+    expect(await violations(page)).toEqual([]);
   });
 });

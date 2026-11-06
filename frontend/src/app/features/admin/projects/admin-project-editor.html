@@ -69,6 +69,7 @@
       </div>
 
       <form
+        [inert]="draft.offer() !== null"
         #projectForm="ngForm"
         #projectFormElement
         class="project-form"

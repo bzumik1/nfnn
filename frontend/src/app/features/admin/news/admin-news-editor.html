@@ -70,6 +70,7 @@
 
       <form
         #articleForm="ngForm"
+        [inert]="draft.offer() !== null"
         #articleFormElement
         class="article-form"
         appFocusFirstInvalid

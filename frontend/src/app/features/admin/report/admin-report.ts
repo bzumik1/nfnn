@@ -211,12 +211,19 @@ export class AdminReport {
     this.fetch();
   }
 
-  private fetch(loaded?: () => void): void {
+  private fetch(loaded?: () => void, keepsEdits = false): void {
     this.api
       .report()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (report) => {
+          const previous = this.report();
+          if (keepsEdits && previous !== null && this.settingsForm()?.dirty === true) {
+            this.report.set({ ...report, settings: previous.settings });
+            this.month = report.lastEndedMonth;
+            loaded?.();
+            return;
+          }
           this.report.set(report);
           this.recipients.set(report.settings.recipients.join('\n'));
           this.sendDay = report.settings.sendDay;
@@ -282,11 +289,19 @@ export class AdminReport {
     this.draft.resume();
     this.settingsError.set(null);
     this.settingsStatus.set(DRAFT_RESUMED_TEXT);
+    this.focusRecipients();
   }
 
   protected discardDraft(): void {
     this.draft.discard();
     this.settingsStatus.set(DRAFT_DISCARDED_TEXT);
+    this.focusRecipients();
+  }
+
+  private focusRecipients(): void {
+    afterNextRender(() => document.getElementById('report-recipients')?.focus(), {
+      injector: this.injector,
+    });
   }
 
   protected overwriteAfterChange(): void {
@@ -400,7 +415,7 @@ export class AdminReport {
             text: $localize`:@@admin.report.send.done:Přehled za ${formatReportMonth(sent.month)}:month: jsme poslali na ${sent.recipients.join(', ')}:recipients:.`,
           });
           this.focusSendButton();
-          this.fetch();
+          this.fetch(undefined, true);
         },
         error: (failure: unknown) => {
           this.sending.set(false);

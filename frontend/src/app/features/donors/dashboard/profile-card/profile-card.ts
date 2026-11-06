@@ -119,6 +119,7 @@ export class ProfileCard {
         { injector: this.injector },
       );
     },
+    changedFieldsOnly: true,
   });
 
   constructor() {
