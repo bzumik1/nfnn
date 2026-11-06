@@ -248,3 +248,27 @@ test.describe('Given a visitor on a phone with the tab bar at the bottom', () =>
     );
   });
 });
+
+test.describe('Given a visitor on the landing page, which is one full-screen photo', () => {
+  const rootOverscroll = (page: Page) =>
+    page.evaluate(() => getComputedStyle(document.documentElement).overscrollBehaviorY);
+
+  test('when they pull the page past its top or bottom, then the page does not stretch away from the photo', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await expect(page.getByRole('heading', { level: 1, name: 'Nová naděje' })).toBeVisible();
+
+    expect(await rootOverscroll(page)).toBe('none');
+  });
+
+  test('when they move on to another tab, then that page stretches at its ends as before', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await tabs(page).getByRole('link', { name: 'O nás' }).click();
+    await expect(page).toHaveURL(/\/o-nas$/);
+
+    expect(await rootOverscroll(page)).toBe('auto');
+  });
+});
