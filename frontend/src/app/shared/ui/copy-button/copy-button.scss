@@ -5,7 +5,6 @@
 }
 
 .ui-pill-button {
-  position: relative;
   @include touch-target.reaches-finger-size;
 }
 

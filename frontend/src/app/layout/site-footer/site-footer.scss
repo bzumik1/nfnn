@@ -140,6 +140,5 @@
 
 .footer-links a,
 .footer-link {
-  position: relative;
   @include touch-target.reaches-finger-size;
 }

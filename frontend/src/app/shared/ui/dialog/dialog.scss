@@ -218,5 +218,5 @@
 }
 
 .dialog-close {
-  @include touch-target.reaches-finger-size;
+  @include touch-target.reaches-finger-size($positioned: true);
 }
