@@ -116,7 +116,7 @@ describe('Given the privacy policy page', () => {
     expect(sectionText('Účinnost')).toContain('účinné od 5. listopadu 2026');
   });
 
-  it('when it renders, then the cookies section gives the encrypted copy of the donor data a paragraph of its own: what it holds, when sign-out keeps it, when a remote sign-out or an erasure deletes it, how to delete it and that the server is unaffected', () => {
+  it('when it renders, then the cookies section gives the encrypted copy of the donor data a paragraph of its own: what it holds, when sign-out keeps it, how to delete it and that the server is unaffected', () => {
     expect(texts('#cookies .device-copy')).toEqual([
       'Po přihlášení si portál do vašeho prohlížeče uloží zašifrovanou kopii údajů o vašich darech, potvrzeních a bankovních účtech. Klíč k ní zná jen vaše zařízení. Když jste se přihlásili heslem, zůstane kopie po odhlášení zamčená tímto heslem; po přihlášení přístupovým klíčem zůstane jen tehdy, když to klíč umí, jinak se odhlášením smaže. Smazat ji můžete kdykoli v dárcovském portálu v části Údaje a zabezpečení tlačítkem „Smazat data z tohoto zařízení“; údaje na serveru tím nezměníte. Když zařízení odhlásíte na dálku z jiného zařízení nebo vaše údaje vymažeme, zařízení kopii zpravidla smaže, jakmile se na něm web příště spojí se serverem; zařízení, které se už nepřipojí, ji dál drží zašifrovanou.',
     ]);
