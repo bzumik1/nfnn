@@ -378,6 +378,39 @@ function run(command, args, options) {
   return result.status ?? 1;
 }
 
+function runLabelled(label, command, args, options, { relayed = true } = {}) {
+  return new Promise((done) => {
+    const output = [];
+    const child = spawn(command, args, { ...options, stdio: ['ignore', 'pipe', 'pipe'] });
+    const relay = (stream, target) => {
+      let pending = '';
+      stream.on('data', (data) => {
+        output.push(data);
+        if (!relayed) {
+          return;
+        }
+        const lines = (pending + data.toString('utf8')).split('\n');
+        pending = lines.pop();
+        for (const line of lines) {
+          target.write(`[${label}] ${line}\n`);
+        }
+      });
+      stream.on('end', () => {
+        if (relayed && pending) {
+          target.write(`[${label}] ${pending}\n`);
+        }
+      });
+    };
+    relay(child.stdout, process.stdout);
+    relay(child.stderr, process.stderr);
+    child.on('error', (error) => {
+      output.push(Buffer.from(String(error)));
+      done({ status: 1, output: Buffer.concat(output) });
+    });
+    child.on('close', (code) => done({ status: code ?? 1, output: Buffer.concat(output) }));
+  });
+}
+
 function freePort() {
   return new Promise((done, fail) => {
     const server = createServer();
@@ -448,18 +481,22 @@ async function shoot(root, checkout, side, out, screens) {
   const routes = join(out, `${side}-routes`);
   const log = join(out, `${side}.log`);
   console.log(`== ${side}: production build of ${checkout}`);
-  const built = spawnSync('npx', ['ng', 'build', `--output-path=${dist}`], {
-    cwd: join(checkout, 'frontend'),
-    encoding: 'utf8',
-  });
+  const built = await runLabelled(
+    `${side} build`,
+    'npx',
+    ['ng', 'build', `--output-path=${dist}`],
+    { cwd: join(checkout, 'frontend') },
+    { relayed: false },
+  );
   if (built.status !== 0) {
-    writeFileSync(log, `${built.stdout}\n${built.stderr}`);
+    writeFileSync(log, built.output);
     throw new Error(`the ${side} build failed (log: ${log})`);
   }
   const server = await serve(root, join(dist, 'browser'), log);
   try {
     console.log(`== ${side}: screens from ${server.url} into ${shots}`);
-    const status = run(
+    const { status } = await runLabelled(
+      side,
       'npx',
       [
         'playwright',
@@ -485,6 +522,15 @@ async function shoot(root, checkout, side, out, screens) {
   } finally {
     server.stop();
   }
+}
+
+export async function bothSides(...runs) {
+  const settled = await Promise.allSettled(runs);
+  const refused = settled.find((outcome) => outcome.status === 'rejected');
+  if (refused) {
+    throw refused.reason;
+  }
+  return settled.map((outcome) => outcome.value);
 }
 
 export function readRoutes(...folders) {
@@ -639,12 +685,15 @@ async function main() {
     patch: given.patch,
   });
   try {
-    const baseRun = await shoot(root, tree, 'base', out, screens);
     if (given['base-only']) {
+      const baseRun = await shoot(root, tree, 'base', out, screens);
       console.log(`base shots in ${baseRun.shots}`);
       return baseRun.status === 0 ? 0 : 1;
     }
-    const headRun = await shoot(root, root, 'head', out, screens);
+    const [baseRun, headRun] = await bothSides(
+      shoot(root, tree, 'base', out, screens),
+      shoot(root, root, 'head', out, screens),
+    );
     const routes = readRoutes(headRun.routes, baseRun.routes);
     const everything = compareFolders(baseRun.shots, headRun.shots, out);
     const compared = given['public-only'] ? onlyPublic(everything, routes) : everything;
