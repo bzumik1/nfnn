@@ -13,6 +13,7 @@ import {
   navigationAtStart,
 } from './app.config';
 import { Connectivity } from './core/connectivity/connectivity';
+import { DeviceStatusRetry } from './core/device/status/device-status-retry';
 import { UnseenPhotos } from './core/connectivity/unseen-photos';
 import { BackTarget } from './core/navigation/back-target';
 import { TabMemory } from './core/navigation/tab-memory';
@@ -61,23 +62,35 @@ describe('Given the history entries of dialogs', () => {
 });
 
 describe('Given the connectivity of the app', () => {
-  it('when the app starts, then it listens to the browser from the first moment, so a start without a network is noticed before any page asks the server, and a photo it cannot load is marked from the first page', () => {
+  function startApp() {
     const started = vi.fn();
     const watchingPhotos = vi.fn();
+    const retrying = vi.fn();
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
         connectivityAtStart,
         { provide: Connectivity, useFactory: () => started() ?? {} },
         { provide: UnseenPhotos, useFactory: () => watchingPhotos() ?? {} },
+        { provide: DeviceStatusRetry, useValue: { start: retrying } },
       ],
     });
-
     TestBed.inject(Router);
+    return { started, watchingPhotos, retrying };
+  }
+
+  it('when the app starts, then it listens to the browser from the first moment, so a start without a network is noticed before any page asks the server, and a photo it cannot load is marked from the first page', () => {
+    const { started, watchingPhotos } = startApp();
 
     expect(started).toHaveBeenCalledTimes(1);
     expect(watchingPhotos).toHaveBeenCalledTimes(1);
     expect(appConfig.providers).toContain(connectivityAtStart);
+  });
+
+  it('when the app starts, then a device asks its status again when the connection returns', () => {
+    const { retrying } = startApp();
+
+    expect(retrying).toHaveBeenCalledTimes(1);
   });
 });
 

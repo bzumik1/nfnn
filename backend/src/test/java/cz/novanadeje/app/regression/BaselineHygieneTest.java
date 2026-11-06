@@ -257,6 +257,18 @@ class BaselineHygieneTest {
     }
 
     @Test
+    @DisplayName("Given a field deviceSecret of a sign-in answer or a status question, when a JSON file is checked, then a value other than <secret> is reported")
+    void should_report_unmasked_device_secrets_when_a_json_file_is_checked() {
+        String text = """
+                {"answer":{"deviceSecret":"planted"}, "question":{"deviceSecret":"<secret>"}}
+                """;
+
+        List<String> findings = BaselineHygiene.findings("status.json", text, NO_FIXTURES);
+
+        assertThat(findings).containsExactly("status.json: an unmasked device secret field deviceSecret");
+    }
+
+    @Test
     @DisplayName("Given proof hex labelled payloadHex, signatureHex or publicKeyHex and a proof text with a stray letter, when a verification case file is checked, then they are not reported, and the same hex unlabelled or in another folder is")
     void should_allow_labelled_proof_hex_only_in_verification_cases_when_text_is_checked() {
         String hex = "3f2a9c41d07be65f8a1c29e0b4d7f3a6";

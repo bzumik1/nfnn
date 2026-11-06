@@ -1,6 +1,5 @@
 package cz.novanadeje.app.donors.application;
 
-import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.application.event.DonorAccountErased;
 import cz.novanadeje.app.donors.domain.AdministratorNotErasable;
 import cz.novanadeje.app.donors.domain.Donor;
@@ -94,7 +93,7 @@ class DonorErasureServiceTest {
         order.verify(donors).save(saved.capture());
         order.verify(secondFactors).delete(PETR);
         order.verify(passkeys).deleteAllOf(PETR);
-        order.verify(signOuts).endAllOf(PETR, DeviceSignOutReason.ERASED, NOW);
+        order.verify(signOuts).endForErasure(PETR, NOW);
         order.verify(passwordResetTokens).deleteAllOf(PETR);
         order.verify(emailVerificationTokens).deleteAllOf(PETR);
         assertThat(saved.getValue()).isSameAs(petr);

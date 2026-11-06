@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
@@ -41,7 +42,7 @@ class DonorDeviceTest {
     @DisplayName("Given a time ending a device without its reason, when it is reconstituted, then it is refused")
     void should_refuse_when_reconstituted_given_end_without_reason() {
         assertThatIllegalArgumentException().isThrownBy(() -> DonorDevice.reconstitute(DeviceId.newId(NOW), JANA, IPHONE_SAFARI, SessionKind.REMEMBERED, NOW, NOW,
-                NOW, null));
+                NOW, null, null, null));
     }
 
     @Nested
@@ -99,5 +100,61 @@ class DonorDeviceTest {
 
             assertThat(device.lastUsedAt()).isEqualTo(NOW);
         }
+    }
+
+    @Test
+    @DisplayName("Given a sign-in with a device secret, when the device is created, then it keeps only the secret's SHA-256 and is signed in")
+    void should_keep_only_secret_hash_and_be_signed_in_when_created_given_secret() {
+        DeviceStatusSecret secret = DeviceStatusSecret.generate();
+
+        DonorDevice device = DonorDevice.signIn(JANA, IPHONE_SAFARI, SessionKind.APP, NOW, secret);
+
+        assertThat(device.statusSecretHash()).contains(secret.hash());
+        assertThat(device.statusSecretHash().orElseThrow()).hasSize(64).doesNotContain(secret.value());
+        assertThat(device.wipe()).isEmpty();
+        assertThat(device.status()).isEqualTo(DeviceStatus.SIGNED_IN);
+    }
+
+    @Test
+    @DisplayName("Given a device that ended without an order to delete, when its status is read, then it is signed out")
+    void should_be_signed_out_when_status_read_given_ended_without_wipe() {
+        DonorDevice device = DonorDevice.signIn(JANA, IPHONE_SAFARI, SessionKind.REMEMBERED, NOW);
+        device.end(DeviceSignOutReason.REPLAY, NOW.plusSeconds(60));
+
+        assertThat(device.status()).isEqualTo(DeviceStatus.SIGNED_OUT);
+    }
+
+    @Test
+    @DisplayName("Given devices told to delete the administration's copy or everything, when their status is read, then the order is the status")
+    void should_name_the_order_when_status_read_given_wipe() {
+        DonorDevice administration = DonorDevice.reconstitute(DeviceId.newId(NOW), JANA, IPHONE_SAFARI, SessionKind.APP, NOW, NOW, NOW,
+                DeviceSignOutReason.ADMINISTRATION_CHANGED, "a".repeat(64), DeviceWipe.ADMINISTRATION);
+        DonorDevice all = DonorDevice.reconstitute(DeviceId.newId(NOW), JANA, IPHONE_SAFARI, SessionKind.APP, NOW, NOW, NOW,
+                DeviceSignOutReason.REMOTE_SIGN_OUT, "b".repeat(64), DeviceWipe.ALL);
+
+        assertThat(administration.status()).isEqualTo(DeviceStatus.WIPE_ADMINISTRATION);
+        assertThat(all.status()).isEqualTo(DeviceStatus.WIPE_ALL);
+    }
+
+    @Test
+    @DisplayName("Given each reason a device ends for, when its order to delete is asked, then only a remote sign-out and an erasure delete, everything")
+    void should_wipe_only_for_remote_sign_out_and_erasure_when_asked_given_each_reason() {
+        for (DeviceSignOutReason reason : DeviceSignOutReason.values()) {
+            boolean wipes = reason == DeviceSignOutReason.REMOTE_SIGN_OUT || reason == DeviceSignOutReason.ERASED;
+            assertThat(reason.wipe()).as(reason.name()).isEqualTo(wipes ? Optional.of(DeviceWipe.ALL) : Optional.empty());
+        }
+    }
+
+    @Test
+    @DisplayName("Given secrets of the wrong shape, when a device secret is made of them, then each is refused, and a generated one is 43 characters of base64url")
+    void should_refuse_wrong_shapes_and_generate_base64url_when_made_given_secrets() {
+        for (String wrong : new String[] {"", "A".repeat(42), "A".repeat(44), "A".repeat(42) + "+", "A".repeat(42) + "="}) {
+            assertThatIllegalArgumentException().as(wrong).isThrownBy(() -> new DeviceStatusSecret(wrong));
+        }
+        assertThatIllegalArgumentException().isThrownBy(() -> new DeviceStatusSecret(null));
+        DeviceStatusSecret generated = DeviceStatusSecret.generate();
+        assertThat(generated.value()).matches("[A-Za-z0-9_-]{43}");
+        assertThat(generated.toString()).doesNotContain(generated.value());
+        assertThat(DeviceStatusSecret.generate()).isNotEqualTo(generated);
     }
 }

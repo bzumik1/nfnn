@@ -137,7 +137,7 @@ class VersionHeadersTest {
         @Test
         @DisplayName("when it refreshes or ends the session or asks for a receipt's status, then the server does not refuse it as needing an update")
         void should_not_refuse_when_keeping_the_session_or_asking_a_status_given_another_generation() throws Exception {
-            for (String path : new String[] {"/api/donors/auth/refresh", "/api/donors/auth/logout", "/api/donations/receipts/status"}) {
+            for (String path : new String[] {"/api/donors/auth/refresh", "/api/donors/auth/logout", "/api/donors/devices/status", "/api/donations/receipts/status"}) {
                 MockHttpServletResponse response = mockMvc.perform(post(path)
                                 .header("X-Forwarded-For", "203.0.113.26")
                                 .header("Nfnn-App-Api", otherGeneration))

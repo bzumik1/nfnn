@@ -387,7 +387,12 @@ export class AuthStore {
   private adoptSignIn(response: AuthResponse, secret: SignInSecret): Donor {
     const donor = this.adopt(response);
     this.administrationAccess.signedIn();
-    void this.device.signedIn(deviceAccountOf(donor), secret, this.storesNothing());
+    void this.device.signedIn(
+      deviceAccountOf(donor),
+      secret,
+      this.storesNothing(),
+      response.deviceSecret,
+    );
     return donor;
   }
 

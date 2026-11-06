@@ -3,6 +3,7 @@ package cz.novanadeje.app.donors.application;
 import cz.novanadeje.app.donors.domain.SessionKind;
 import cz.novanadeje.app.donors.domain.DeviceDescription;
 import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
+import cz.novanadeje.app.donors.domain.DeviceWipe;
 import cz.novanadeje.app.donors.domain.DonorDevice;
 import cz.novanadeje.app.donors.domain.DonorDeviceRepository;
 import cz.novanadeje.app.donors.domain.DonorId;
@@ -178,5 +179,80 @@ class DeviceSignOutsTest {
         verify(refreshTokens, never()).revokeAllOfDevice(any(), any());
         verify(devices, never()).endIfActive(any(), any(), any());
         verify(events, never()).publishEvent(any(Object.class));
+    }
+
+    @Test
+    @DisplayName("Given a signed-in device, when it is signed out remotely, then it ends first and is then told to delete everything it keeps")
+    void should_end_then_order_full_wipe_when_signed_out_remotely_given_active_device() {
+        DonorDevice phone = device();
+        when(devices.findById(phone.id())).thenReturn(Optional.of(phone));
+        when(devices.endIfActive(phone.id(), DeviceSignOutReason.REMOTE_SIGN_OUT, NOW)).thenReturn(true);
+
+        signOuts().end(JANA, phone.id(), DeviceSignOutReason.REMOTE_SIGN_OUT, NOW);
+
+        InOrder order = inOrder(devices);
+        order.verify(devices).endIfActive(phone.id(), DeviceSignOutReason.REMOTE_SIGN_OUT, NOW);
+        order.verify(devices).directWipe(phone.id(), DeviceWipe.ALL);
+    }
+
+    @Test
+    @DisplayName("Given a device another sign-out ended after it was read, when it is signed out remotely, then it is not told to delete")
+    void should_order_no_wipe_when_signed_out_remotely_given_device_ended_meanwhile() {
+        DonorDevice phone = device();
+        when(devices.findById(phone.id())).thenReturn(Optional.of(phone));
+        when(devices.endIfActive(phone.id(), DeviceSignOutReason.REMOTE_SIGN_OUT, NOW)).thenReturn(false);
+
+        signOuts().end(JANA, phone.id(), DeviceSignOutReason.REMOTE_SIGN_OUT, NOW);
+
+        verify(devices, never()).directWipe(any(), any());
+    }
+
+    @Test
+    @DisplayName("Given two signed-in devices, when every session ends after a replayed token, then both end and neither is told to delete")
+    void should_order_no_wipe_when_all_end_after_replay_given_two_devices() {
+        DonorDevice phone = device();
+        DonorDevice laptop = device();
+        when(devices.findActiveOf(JANA)).thenReturn(List.of(phone, laptop));
+        when(devices.endIfActive(phone.id(), DeviceSignOutReason.REPLAY, NOW)).thenReturn(true);
+        when(devices.endIfActive(laptop.id(), DeviceSignOutReason.REPLAY, NOW)).thenReturn(true);
+
+        signOuts().endAllOf(JANA, DeviceSignOutReason.REPLAY, NOW);
+
+        verify(devices, never()).directWipe(any(), any());
+        verify(devices, never()).directWipeOfDonor(any(), any());
+    }
+
+    @Test
+    @DisplayName("Given a signed-in device, when the administrator role is removed, then every session ends without a wipe of its own and every device of the donor is then told to delete the administration's copy")
+    void should_end_all_then_order_administration_wipe_when_role_removed_given_device() {
+        DonorDevice phone = device();
+        when(devices.findActiveOf(JANA)).thenReturn(List.of(phone));
+        when(devices.endIfActive(phone.id(), DeviceSignOutReason.ADMINISTRATION_CHANGED, NOW)).thenReturn(true);
+
+        signOuts().endForRoleRemoval(JANA, NOW);
+
+        InOrder order = inOrder(refreshTokens, devices, events);
+        order.verify(refreshTokens).revokeAllOf(JANA, NOW);
+        order.verify(devices).endIfActive(phone.id(), DeviceSignOutReason.ADMINISTRATION_CHANGED, NOW);
+        order.verify(events).publishEvent(new DeviceSignedOut(JANA.value(), phone.id().value(), NOW));
+        order.verify(devices).directWipeOfDonor(JANA, DeviceWipe.ADMINISTRATION);
+        verify(devices, never()).directWipe(any(), any());
+    }
+
+    @Test
+    @DisplayName("Given a signed-in device, when the donor is erased, then every session ends, each ended device is told to delete everything and every device of the donor is then reduced")
+    void should_end_all_order_full_wipe_and_reduce_when_erased_given_device() {
+        DonorDevice phone = device();
+        when(devices.findActiveOf(JANA)).thenReturn(List.of(phone));
+        when(devices.endIfActive(phone.id(), DeviceSignOutReason.ERASED, NOW)).thenReturn(true);
+
+        signOuts().endForErasure(JANA, NOW);
+
+        InOrder order = inOrder(refreshTokens, devices, events);
+        order.verify(refreshTokens).revokeAllOf(JANA, NOW);
+        order.verify(devices).endIfActive(phone.id(), DeviceSignOutReason.ERASED, NOW);
+        order.verify(devices).directWipe(phone.id(), DeviceWipe.ALL);
+        order.verify(events).publishEvent(new DeviceSignedOut(JANA.value(), phone.id().value(), NOW));
+        order.verify(devices).reduceErasedOf(JANA, NOW);
     }
 }

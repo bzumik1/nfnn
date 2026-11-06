@@ -22,12 +22,17 @@ export class DeviceCopies implements SessionDevice {
     return Promise.race([input, late]).finally(() => clearTimeout(timer));
   }
 
-  signedIn(account: DeviceAccount, secret: SignInSecret, storeNothing = false): Promise<void> {
+  signedIn(
+    account: DeviceAccount,
+    secret: SignInSecret,
+    storeNothing = false,
+    deviceSecret?: string,
+  ): Promise<void> {
     if (account.administrator === true) {
       this.watchAdministration();
     }
     return this.vault().then(
-      (vault) => vault.signedIn(account, secret, storeNothing),
+      (vault) => vault.signedIn(account, secret, storeNothing, deviceSecret),
       (failure: unknown) => {
         if (secret.kind === 'prf') {
           secret.reading.output.fill(0);
@@ -54,6 +59,12 @@ export class DeviceCopies implements SessionDevice {
       return Promise.resolve();
     }
     return this.vault().then((vault) => vault.sessionLost());
+  }
+
+  connectionReturned(): Promise<void> {
+    return this.loading === null
+      ? Promise.resolve()
+      : this.loading.then((vault) => vault.connectionReturned?.()).catch(() => undefined);
   }
 
   passwordChanged(account: DeviceAccount, password: string): Promise<void> {

@@ -1,0 +1,72 @@
+[
+  {
+    "scenario": "donations/admin_device_sync: *",
+    "kind": "mails",
+    "subject": "Vaše osobní údaje jsme vymazali – Nová naděje",
+    "reason": "Plan v3 slice 2.21: donors.erased.email.kept gains the sentences on device copies that 1.11 left out because Phase 1 kept none: the copy the donor portal kept on the donor's devices is deleted by each device when it next reaches the server (the wipe-all order of 2.11), receipts the donor downloaded stay with them, and the data leave the administrators' copies at their next synchronisation (2.17); nothing else in the e-mail changes",
+    "contract": "docs/api-contract.md, Donors (DELETE /api/admin/donors/{donorId}); docs/security-overview.md, Device status"
+  },
+  {
+    "scenario": "donations/admin_donor_erasure: *",
+    "kind": "mails",
+    "subject": "Vaše osobní údaje jsme vymazali – Nová naděje",
+    "reason": "Plan v3 slice 2.21: donors.erased.email.kept gains the sentences on device copies that 1.11 left out because Phase 1 kept none: the copy the donor portal kept on the donor's devices is deleted by each device when it next reaches the server (the wipe-all order of 2.11), receipts the donor downloaded stay with them, and the data leave the administrators' copies at their next synchronisation (2.17); nothing else in the e-mail changes",
+    "contract": "docs/api-contract.md, Donors (DELETE /api/admin/donors/{donorId}); docs/security-overview.md, Device status"
+  },
+  {
+    "scenario": "donations/admin_receipts: *",
+    "kind": "mails",
+    "subject": "Vaše osobní údaje jsme vymazali – Nová naděje",
+    "reason": "Plan v3 slice 2.21: donors.erased.email.kept gains the sentences on device copies that 1.11 left out because Phase 1 kept none: the copy the donor portal kept on the donor's devices is deleted by each device when it next reaches the server (the wipe-all order of 2.11), receipts the donor downloaded stay with them, and the data leave the administrators' copies at their next synchronisation (2.17); nothing else in the e-mail changes",
+    "contract": "docs/api-contract.md, Donors (DELETE /api/admin/donors/{donorId}); docs/security-overview.md, Device status"
+  },
+  {
+    "scenario": "donations/admin_yearly_receipts: *",
+    "kind": "mails",
+    "subject": "Vaše osobní údaje jsme vymazali – Nová naděje",
+    "reason": "Plan v3 slice 2.21: donors.erased.email.kept gains the sentences on device copies that 1.11 left out because Phase 1 kept none: the copy the donor portal kept on the donor's devices is deleted by each device when it next reaches the server (the wipe-all order of 2.11), receipts the donor downloaded stay with them, and the data leave the administrators' copies at their next synchronisation (2.17); nothing else in the e-mail changes",
+    "contract": "docs/api-contract.md, Donors (DELETE /api/admin/donors/{donorId}); docs/security-overview.md, Device status"
+  },
+  {
+    "scenario": "donations/donation_receipts_frozen: *",
+    "kind": "mails",
+    "subject": "Vaše osobní údaje jsme vymazali – Nová naděje",
+    "reason": "Plan v3 slice 2.21: donors.erased.email.kept gains the sentences on device copies that 1.11 left out because Phase 1 kept none: the copy the donor portal kept on the donor's devices is deleted by each device when it next reaches the server (the wipe-all order of 2.11), receipts the donor downloaded stay with them, and the data leave the administrators' copies at their next synchronisation (2.17); nothing else in the e-mail changes",
+    "contract": "docs/api-contract.md, Donors (DELETE /api/admin/donors/{donorId}); docs/security-overview.md, Device status"
+  },
+  {
+    "scenario": "donations/donor_device_sync: *",
+    "kind": "mails",
+    "subject": "Vaše osobní údaje jsme vymazali – Nová naděje",
+    "reason": "Plan v3 slice 2.21: donors.erased.email.kept gains the sentences on device copies that 1.11 left out because Phase 1 kept none: the copy the donor portal kept on the donor's devices is deleted by each device when it next reaches the server (the wipe-all order of 2.11), receipts the donor downloaded stay with them, and the data leave the administrators' copies at their next synchronisation (2.17); nothing else in the e-mail changes",
+    "contract": "docs/api-contract.md, Donors (DELETE /api/admin/donors/{donorId}); docs/security-overview.md, Device status"
+  },
+  {
+    "scenario": "donors/admin_device_sync: *",
+    "kind": "mails",
+    "subject": "Vaše osobní údaje jsme vymazali – Nová naděje",
+    "reason": "Plan v3 slice 2.21: donors.erased.email.kept gains the sentences on device copies that 1.11 left out because Phase 1 kept none: the copy the donor portal kept on the donor's devices is deleted by each device when it next reaches the server (the wipe-all order of 2.11), receipts the donor downloaded stay with them, and the data leave the administrators' copies at their next synchronisation (2.17); nothing else in the e-mail changes",
+    "contract": "docs/api-contract.md, Donors (DELETE /api/admin/donors/{donorId}); docs/security-overview.md, Device status"
+  },
+  {
+    "scenario": "donors/admin_donor_erasure: *",
+    "kind": "mails",
+    "subject": "Vaše osobní údaje jsme vymazali – Nová naděje",
+    "reason": "Plan v3 slice 2.21: donors.erased.email.kept gains the sentences on device copies that 1.11 left out because Phase 1 kept none: the copy the donor portal kept on the donor's devices is deleted by each device when it next reaches the server (the wipe-all order of 2.11), receipts the donor downloaded stay with them, and the data leave the administrators' copies at their next synchronisation (2.17); nothing else in the e-mail changes",
+    "contract": "docs/api-contract.md, Donors (DELETE /api/admin/donors/{donorId}); docs/security-overview.md, Device status"
+  },
+  {
+    "scenario": "donors/donor_passkeys: *",
+    "kind": "mails",
+    "subject": "Vaše osobní údaje jsme vymazali – Nová naděje",
+    "reason": "Plan v3 slice 2.21: donors.erased.email.kept gains the sentences on device copies that 1.11 left out because Phase 1 kept none: the copy the donor portal kept on the donor's devices is deleted by each device when it next reaches the server (the wipe-all order of 2.11), receipts the donor downloaded stay with them, and the data leave the administrators' copies at their next synchronisation (2.17); nothing else in the e-mail changes",
+    "contract": "docs/api-contract.md, Donors (DELETE /api/admin/donors/{donorId}); docs/security-overview.md, Device status"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/privacy-policy/privacy-policy.spec.ts > Given the privacy policy page > when it renders, then it says an erasure keeps the issued receipts on the server unchanged, with the name and address on them, and the history of the administrators",
+    "reason": "2.21: the privacy policy now also says that an erasure deletes the copies on the donor's devices and the administrators' copies",
+    "replacement": "src/app/features/content/privacy-policy/privacy-policy.spec.ts > Given the privacy policy page > when it renders, then it says an erasure keeps the issued receipts on the server unchanged, with the name and address on them, and the history of the administrators, and deletes the copies on the devices"
+  }
+]

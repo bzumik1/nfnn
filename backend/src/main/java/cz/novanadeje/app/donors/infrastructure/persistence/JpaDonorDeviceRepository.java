@@ -2,6 +2,7 @@ package cz.novanadeje.app.donors.infrastructure.persistence;
 
 import cz.novanadeje.app.donors.domain.DeviceId;
 import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
+import cz.novanadeje.app.donors.domain.DeviceWipe;
 import cz.novanadeje.app.donors.domain.DonorDevice;
 import cz.novanadeje.app.donors.domain.DonorDeviceRepository;
 import cz.novanadeje.app.donors.domain.DonorId;
@@ -28,6 +29,26 @@ class JpaDonorDeviceRepository implements DonorDeviceRepository {
     @Override
     public Optional<DonorDevice> findById(DeviceId id) {
         return jpa.findById(id.value()).map(DonorDeviceJpaEntity::toDomain);
+    }
+
+    @Override
+    public Optional<DonorDevice> findByStatusSecretHash(String statusSecretHash) {
+        return jpa.findByStatusSecretHash(statusSecretHash).map(DonorDeviceJpaEntity::toDomain);
+    }
+
+    @Override
+    public void directWipe(DeviceId id, DeviceWipe wipe) {
+        jpa.directWipe(id.value(), wipe);
+    }
+
+    @Override
+    public void directWipeOfDonor(DonorId donorId, DeviceWipe wipe) {
+        jpa.directWipeOfDonor(donorId.value(), wipe);
+    }
+
+    @Override
+    public void reduceErasedOf(DonorId donorId, Instant at) {
+        jpa.reduceErasedOf(donorId.value(), at);
     }
 
     @Override

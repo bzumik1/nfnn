@@ -15,11 +15,17 @@ export type SignInSecret =
 export interface SessionDevice {
   prepare?(): void;
   prfInput(): Promise<Uint8Array<ArrayBuffer> | null>;
-  signedIn(account: DeviceAccount, secret: SignInSecret, storeNothing?: boolean): Promise<void>;
+  signedIn(
+    account: DeviceAccount,
+    secret: SignInSecret,
+    storeNothing?: boolean,
+    deviceSecret?: string,
+  ): Promise<void>;
   restored(account: DeviceAccount, storeNothing?: boolean): Promise<void>;
   signedOut(account: DeviceAccount): Promise<void>;
   signedOutElsewhere(): void;
   sessionLost(): Promise<void>;
+  connectionReturned?(): Promise<void>;
   passwordChanged(account: DeviceAccount, password: string): Promise<void>;
   passwordRemoved(account: DeviceAccount): Promise<void>;
   passkeyAdded(account: DeviceAccount, reading: PrfReading): Promise<void>;

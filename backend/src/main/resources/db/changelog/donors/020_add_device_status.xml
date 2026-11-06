@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="020-add-device-status" author="nfnn">
+        <addColumn tableName="donor_device">
+            <column name="status_secret_hash" type="varchar(64)"/>
+            <column name="wipe" type="varchar(20)"/>
+        </addColumn>
+        <createIndex tableName="donor_device" indexName="uq_donor_device_status_secret_hash" unique="true">
+            <column name="status_secret_hash"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

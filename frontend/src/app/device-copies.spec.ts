@@ -24,6 +24,7 @@ describe('Given the device copies of the app, loaded only when a session first n
       passwordChanged: vi.fn(async () => undefined),
       passwordRemoved: vi.fn(async () => undefined),
       passkeyAdded: vi.fn(async () => undefined),
+      connectionReturned: vi.fn(async () => undefined),
     };
     TestBed.configureTestingModule({
       providers: [
@@ -34,14 +35,15 @@ describe('Given the device copies of the app, loaded only when a session first n
     copies = TestBed.inject(DeviceCopies);
   });
 
-  it('when a donor signs in, then the vault receives the sign-in and the download of the copy is started once', async () => {
-    await copies.signedIn(JANA, { kind: 'password', password: 'heslo' });
+  it('when a donor signs in, then the vault receives the sign-in with its device secret and the download of the copy is started once', async () => {
+    await copies.signedIn(JANA, { kind: 'password', password: 'heslo' }, false, 'd'.repeat(43));
     await copies.signedOut(JANA);
 
     expect(vault['signedIn']).toHaveBeenCalledWith(
       JANA,
       { kind: 'password', password: 'heslo' },
       false,
+      'd'.repeat(43),
     );
     expect(vault['signedOut']).toHaveBeenCalledWith(JANA);
     expect(downloads).toBe(1);
@@ -59,7 +61,7 @@ describe('Given the device copies of the app, loaded only when a session first n
     await copies.signedIn(JANA, { kind: 'none' }, true);
     await copies.restored(JANA, true);
 
-    expect(vault['signedIn']).toHaveBeenCalledWith(JANA, { kind: 'none' }, true);
+    expect(vault['signedIn']).toHaveBeenCalledWith(JANA, { kind: 'none' }, true, undefined);
     expect(vault['restored']).toHaveBeenCalledWith(JANA, true);
   });
 
@@ -149,5 +151,20 @@ describe('Given the device copies of the app, loaded only when a session first n
     await copies.sessionLost();
 
     expect(vault['sessionLost']).toHaveBeenCalledTimes(1);
+  });
+
+  it('when the connection returns before this tab needed a copy, then nothing is loaded', async () => {
+    await copies.connectionReturned();
+
+    expect(vault['connectionReturned']).not.toHaveBeenCalled();
+    expect(downloads).toBe(0);
+  });
+
+  it('when the connection returns after this tab loaded the vault, then the vault asks again what it could not ask', async () => {
+    await copies.restored(JANA);
+
+    await copies.connectionReturned();
+
+    expect(vault['connectionReturned']).toHaveBeenCalledTimes(1);
   });
 });
