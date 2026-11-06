@@ -22,6 +22,7 @@ import { AccountUsername } from '../../../shared/ui/account-username/account-use
 import { FocusFirstInvalid } from '../../../shared/ui/form-field/focus-first-invalid';
 import { FormControlDirective } from '../../../shared/ui/form-field/form-control';
 import { FieldMessages, FormField } from '../../../shared/ui/form-field/form-field';
+import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 import { PasswordReveal } from '../../../shared/ui/password-reveal/password-reveal';
 import { AdministrationLockService } from './administration-lock-service';
 
@@ -46,6 +47,7 @@ type View = 'locked' | 'password';
     FormControlDirective,
     FormField,
     FormsModule,
+    NeedsConnection,
     PasswordReveal,
   ],
   templateUrl: './administration-lock-panel.html',
