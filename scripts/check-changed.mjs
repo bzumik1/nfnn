@@ -17,10 +17,27 @@ const SHARED_CASE_FILES_TEST =
 
 export const CROSS_FOLDER_READS = [
   { path: 'test-cases/', area: 'backend', reader: 'BaselineHygieneTest and others read it' },
+  { path: 'test-cases/', area: 'frontend', reader: 'backup-key-words.spec.ts' },
   {
     path: 'frontend/e2e/baseline/',
     area: 'backend',
     reader: 'BaselineDataSetsTest reads screens.spec.ts',
+  },
+  { path: 'frontend/e2e/baseline/', area: 'scripts', reader: 'compare-screens.test.mjs' },
+  {
+    path: 'regression/',
+    area: 'frontend',
+    reader: 'receipt-assets-setup.ts reads the v2 receipts',
+  },
+  {
+    path: 'regression/',
+    area: 'scripts',
+    reader: 'compare-screens, screens-manifest and compare-v2 tests',
+  },
+  {
+    path: 'backend/src/main/resources/application.yml',
+    area: 'frontend',
+    reader: 'build-fallback-worker.test.mjs in npm run lint',
   },
   {
     path: 'regression/',
@@ -127,20 +144,23 @@ export function filteredEnv(env) {
   return Object.fromEntries(Object.entries(env).filter(([name]) => !dropped.has(name)));
 }
 
-function backendSuite(lock, dropped) {
+function backendSuite(lock, lockPath, dropped) {
   const unset = dropped.map((name) => `-u ${name} `).join('');
   const gradle = `env ${unset}API_TRANSCRIPTS=record ./gradlew test`;
   const waiting = 'echo "Waiting for the backend suite lock"';
   if (lock === 'flock') {
-    return `flock -n ${BACKEND_SUITE_LOCK} true || ${waiting}; flock ${BACKEND_SUITE_LOCK} ${gradle}`;
+    return `flock -n ${lockPath} true || ${waiting}; flock ${lockPath} ${gradle}`;
   }
   if (lock === 'shlock') {
-    return `until shlock -f ${BACKEND_SUITE_LOCK} -p $$; do ${waiting}; sleep 30; done; trap 'rm -f ${BACKEND_SUITE_LOCK}' EXIT; ${gradle}`;
+    return `until shlock -f ${lockPath} -p $$; do ${waiting}; sleep 30; done; trap 'rm -f ${lockPath}' EXIT; ${gradle}`;
   }
   return gradle;
 }
 
-export function commandsFor(areas, { scratch, lock, dropped = [] }) {
+export function commandsFor(
+  areas,
+  { scratch, base, lock, lockPath = BACKEND_SUITE_LOCK, dropped = [] },
+) {
   const at = (name) => quote(join(scratch, name));
   const byArea = {
     scripts: [{ area: 'scripts', cwd: '.', command: 'node --test scripts/*.test.mjs' }],
@@ -154,21 +174,37 @@ export function commandsFor(areas, { scratch, lock, dropped = [] }) {
       },
     ],
     backend: [
-      { area: 'backend', cwd: 'backend', command: backendSuite(lock, dropped), filtersEnv: true },
       {
-        area: 'inventory',
-        cwd: 'frontend',
-        command: `npx ng test --watch=false --reporters=default --reporters=json --output-file=${at('frontend-vitest.json')}`,
+        area: 'backend',
+        cwd: 'backend',
+        command: backendSuite(lock, lockPath, dropped),
+        filtersEnv: true,
+      },
+      {
+        area: 'v2 baseline',
+        cwd: '.',
+        command: `node scripts/compare-v2-baseline.mjs --base=${base}`,
+      },
+      {
+        area: 'v2 baseline',
+        cwd: 'mcp',
+        command:
+          'API_TRANSCRIPTS_DIR=backend/build/api-transcripts npx --no vitest run test/backend-shapes.spec.ts',
       },
       {
         area: 'inventory',
         cwd: 'frontend',
-        command: `npx playwright test --list --project='*' --reporter=json > ${at('frontend-playwright.json')}`,
+        command: `npx --no ng test --watch=false --reporters=default --reporters=json --output-file=${at('frontend-vitest.json')}`,
+      },
+      {
+        area: 'inventory',
+        cwd: 'frontend',
+        command: `npx --no playwright test --list --project='*' --reporter=json > ${at('frontend-playwright.json')}`,
       },
       {
         area: 'inventory',
         cwd: 'mcp',
-        command: `npx vitest run --reporter=json --outputFile=${at('mcp-vitest.json')}`,
+        command: `npx --no vitest run --reporter=json --outputFile=${at('mcp-vitest.json')}`,
       },
       {
         area: 'inventory',
@@ -253,7 +289,7 @@ export function run(commands, { root, env = process.env, log = console.log }) {
       stdio: 'inherit',
     });
     const seconds = (performance.now() - started) / 1000;
-    results.push({ ...step, outcome: status === 0 ? 'pass' : 'FAIL', seconds });
+    results.push({ ...step, outcome: status === 0 ? 'pass' : 'FAIL', status, seconds });
   }
   return results;
 }
@@ -303,7 +339,7 @@ export function main(
     files.map(({ status, path }) => `${status}\t${path}\n`).join(''),
   );
   const dropped = droppedEnvNames(env);
-  const commands = commandsFor(areas, { scratch, lock, dropped });
+  const commands = commandsFor(areas, { scratch, base, lock, dropped });
   if (commands.length === 0) return 0;
   const order = [...new Set(commands.map(({ area }) => area))];
   log(`\nAreas in run order: ${order.join(', ')}. CLAUDE.md "Done means" asks for:`);
