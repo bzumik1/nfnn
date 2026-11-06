@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
+import javax.imageio.ImageTypeSpecifier;
 import javax.imageio.ImageWriteParam;
 import javax.imageio.ImageWriter;
 import javax.imageio.stream.ImageInputStream;
@@ -22,21 +23,35 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.concurrent.Semaphore;
 
 @Component
 class ImageIoImageProcessor implements ImageProcessor {
 
     static final int MAX_SIDE = 8000;
+    static final long MAX_PIXELS = 48_000_000L;
+    private static final int MAX_BITS_PER_SAMPLE = 8;
+    private static final Semaphore ONE_AT_A_TIME = new Semaphore(1, true);
     private static final float QUALITY = 0.82f;
     private static final String WEBP = "webp";
     private static final Set<String> ACCEPTED_FORMATS = Set.of("jpeg", "jpg", "png", "webp");
 
     @Override
     public ProcessedImage process(byte[] upload) {
+        ONE_AT_A_TIME.acquireUninterruptibly();
+        try {
+            return processAlone(upload);
+        } finally {
+            ONE_AT_A_TIME.release();
+        }
+    }
+
+    private static ProcessedImage processAlone(byte[] upload) {
         BufferedImage decoded = decode(upload);
         BufferedImage upright = Orientation.apply(decoded, ExifOrientation.of(upload));
         List<MediaVariant> variants = new ArrayList<>();
@@ -71,6 +86,12 @@ class ImageIoImageProcessor implements ImageProcessor {
                 if (reader.getWidth(0) > MAX_SIDE || reader.getHeight(0) > MAX_SIDE) {
                     throw new UnsupportedImage("it is larger than " + MAX_SIDE + " pixels on a side");
                 }
+                if ((long) reader.getWidth(0) * reader.getHeight(0) > MAX_PIXELS) {
+                    throw new UnsupportedImage("it has more than 48 million pixels");
+                }
+                if (bitsPerSample(reader) > MAX_BITS_PER_SAMPLE) {
+                    throw new UnsupportedImage("it has more than 8 bits per sample");
+                }
                 return reader.read(0);
             } finally {
                 reader.dispose();
@@ -80,6 +101,15 @@ class ImageIoImageProcessor implements ImageProcessor {
         } catch (IOException | RuntimeException unreadable) {
             throw new UnsupportedImage("it could not be decoded");
         }
+    }
+
+    private static int bitsPerSample(ImageReader reader) throws IOException {
+        ImageTypeSpecifier raw = reader.getRawImageType(0);
+        if (raw == null) {
+            Iterator<ImageTypeSpecifier> types = reader.getImageTypes(0);
+            raw = types.hasNext() ? types.next() : null;
+        }
+        return raw == null ? 0 : Arrays.stream(raw.getSampleModel().getSampleSize()).max().orElse(0);
     }
 
     private static BufferedImage scaleToWidth(BufferedImage source, int width) {
