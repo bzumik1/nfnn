@@ -87,6 +87,18 @@ async function mockAdministration(context: BrowserContext, unlocks: string[]): P
     (url) => url.pathname === REPORT,
     (route) => route.fulfill({ json: reportView }),
   );
+  await context.route(
+    (url) => url.pathname === '/api/admin/operations/push',
+    (route) =>
+      route.fulfill({
+        json: {
+          publicKey: `B${'E'.repeat(86)}`,
+          deviceSession: true,
+          subscriptions: [],
+          openAlerts: [],
+        },
+      }),
+  );
 }
 
 async function createAdministratorPasskey(page: Page): Promise<void> {
