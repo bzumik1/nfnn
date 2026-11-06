@@ -22,6 +22,14 @@ public enum AdvisoryLock {
         return key;
     }
 
+    public String sessionLockAttempt() {
+        return "select pg_try_advisory_lock(" + key + ")";
+    }
+
+    public String sessionLockRelease() {
+        return "select pg_advisory_unlock(" + key + ")";
+    }
+
     public void acquireFor(EntityManager entityManager) {
         entityManager.createNativeQuery("select 1 from pg_advisory_xact_lock(:key)").setParameter("key", key).getSingleResult();
     }

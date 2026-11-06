@@ -34,7 +34,7 @@ public class MigrationLockService extends StandardLockService {
         }
         try {
             if (!holdsSessionLock) {
-                if (!sessionLockTaken("select pg_try_advisory_lock(?)")) {
+                if (!sessionLockTaken(AdvisoryLock.SCHEMA_MIGRATION.sessionLockAttempt())) {
                     return false;
                 }
                 holdsSessionLock = true;
@@ -88,13 +88,13 @@ public class MigrationLockService extends StandardLockService {
     private void releaseSessionLock() throws DatabaseException {
         if (holdsSessionLock) {
             holdsSessionLock = false;
-            sessionLockTaken("select pg_advisory_unlock(?)");
+            sessionLockTaken(AdvisoryLock.SCHEMA_MIGRATION.sessionLockRelease());
             database.rollback();
         }
     }
 
     private boolean sessionLockTaken(String query) throws DatabaseException {
         return Boolean.TRUE.equals(Scope.getCurrentScope().getSingleton(ExecutorService.class).getExecutor("jdbc", database)
-                .queryForObject(new RawParameterizedSqlStatement(query, AdvisoryLock.SCHEMA_MIGRATION.key()), Boolean.class));
+                .queryForObject(new RawParameterizedSqlStatement(query), Boolean.class));
     }
 }
