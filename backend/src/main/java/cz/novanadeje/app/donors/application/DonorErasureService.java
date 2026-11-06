@@ -72,6 +72,32 @@ public class DonorErasureService {
         Instant now = clock.instant();
         donor.erase(now);
         donors.save(donor);
+        removeAccessOf(donorId, now);
+        events.publishEvent(new DonorErased(donorId.value(), now));
+        events.publishEvent(new AdminActionPerformed(adminId.value(), ERASE_ACTION, Optional.of(donorId.value()),
+                "Osobní údaje dárce " + donorId + " vymazány: účet anonymizován, všechna přihlášení ukončena, bankovní účty a odpovědi o starších symbolech"
+                        + " smazány; dary a potvrzení zůstávají", now));
+        events.publishEvent(new DonorAccountErased(donorId.value(), formerEmail, locale));
+        log.info("Administrator {} erased the personal data of donor {}", adminId, donorId);
+    }
+
+    @Transactional
+    public boolean completeRestoredErasure(DonorId donorId) {
+        Optional<Donor> found = donors.findByIdForUpdate(donorId).filter(Donor::erasureIncomplete);
+        if (found.isEmpty()) {
+            return false;
+        }
+        Donor donor = found.get();
+        Instant erasedAt = donor.erasedAt().orElseThrow();
+        donor.completeErasure();
+        donors.save(donor);
+        removeAccessOf(donorId, clock.instant());
+        events.publishEvent(new DonorErased(donorId.value(), erasedAt));
+        log.info("The erasure of donor {} that a restore brought back is complete again", donorId);
+        return true;
+    }
+
+    private void removeAccessOf(DonorId donorId, Instant now) {
         secondFactors.delete(donorId);
         passkeys.deleteAllOf(donorId);
         signOuts.endAllOf(donorId, DeviceSignOutReason.ERASED, now);
@@ -80,11 +106,5 @@ public class DonorErasureService {
         challenges.deleteAllOfWithoutWaiting(donorId);
         recoveries.deleteAllOfWithoutWaiting(donorId);
         authorizationCodes.deleteAllOfWithoutWaiting(donorId);
-        events.publishEvent(new DonorErased(donorId.value(), now));
-        events.publishEvent(new AdminActionPerformed(adminId.value(), ERASE_ACTION, Optional.of(donorId.value()),
-                "Osobní údaje dárce " + donorId + " vymazány: účet anonymizován, všechna přihlášení ukončena, bankovní účty a odpovědi o starších symbolech"
-                        + " smazány; dary a potvrzení zůstávají", now));
-        events.publishEvent(new DonorAccountErased(donorId.value(), formerEmail, locale));
-        log.info("Administrator {} erased the personal data of donor {}", adminId, donorId);
     }
 }

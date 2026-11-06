@@ -91,6 +91,15 @@ public class RestoreStepDefinitions {
                 + sessions + "\none_time_secrets_spent=" + secrets + "\nrequest=" + requestId + "\nadmin=" + donors.idOf(alias) + "\n");
     }
 
+    @Given("the backup container restored {string} for {string} under the request {string}, ending {int} sessions and spending {int} one-time secrets, keeping {int} erasure(s), {int} credential(s), {int} role(s) and {int} history entries and skipping {int} receipt numbers")
+    public void theBackupContainerRestoredAndCarriedForward(String fileName, String alias, String requestId, int sessions, int secrets, int erasures, int credentials,
+                                                            int roles, int adminActions, int receiptNumbersSkipped) {
+        writeRestoreStatus("outcome=ok\nstarted_at=2026-11-06T08:00:00Z\nfinished_at=2026-11-06T08:00:05Z\nfile=" + fileName + "\nsize=1000\ntables=37\nsessions_ended="
+                + sessions + "\none_time_secrets_spent=" + secrets + "\nerasures_carried=" + erasures + "\ncredentials_carried=" + credentials + "\nroles_carried=" + roles
+                + "\nadmin_actions_carried=" + adminActions + "\nreceipt_numbers_skipped=" + receiptNumbersSkipped + "\nrequest=" + requestId + "\nadmin="
+                + donors.idOf(alias) + "\n");
+    }
+
     @Given("the backup container failed to restore {string} for {string} under the request {string} with {string}")
     public void theBackupContainerFailedToRestore(String fileName, String alias, String requestId, String error) {
         String admin = "nobody".equals(alias) ? "" : donors.idOf(alias).toString();

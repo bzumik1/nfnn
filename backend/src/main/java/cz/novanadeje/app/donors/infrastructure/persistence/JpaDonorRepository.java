@@ -99,6 +99,11 @@ class JpaDonorRepository implements DonorRepository {
     }
 
     @Override
+    public List<Donor> findErased() {
+        return jpa.findErased().stream().map(DonorJpaEntity::toDomain).toList();
+    }
+
+    @Override
     public List<Donor> findByIds(Collection<DonorId> ids) {
         if (ids.isEmpty()) {
             return List.of();

@@ -409,6 +409,26 @@ class JpaDonorRepositoryTest {
         return rows;
     }
 
+    @Test
+    @DisplayName("Given an erased donor, a donor a restore marked erased with personal data left and an active donor, when the erased donors are listed, then both erased ones come by id with their state and the active one does not")
+    void should_list_only_erased_donors_when_erased_listed_given_erased_marked_and_active_donors() {
+        Donor erased = donor("erased@example.cz", "4821937601");
+        erased.erase(NOW);
+        Donor marked = Donor.reconstitute(DonorId.newId(NOW), DonorType.PERSON, "Eva Dvořáková", null, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
+                new EmailAddress("eva@example.cz"), null, new VariableSymbol("4821937602"), LocaleCode.CS, java.util.Set.of(), NOW, NOW, NOW.plusSeconds(60));
+        Donor active = donor("active@example.cz", "4821937603");
+        donors.save(erased);
+        donors.save(marked);
+        donors.save(active);
+        flushAndClear();
+
+        List<Donor> found = donors.findErased();
+
+        assertThat(found).extracting(Donor::id).containsExactlyElementsOf(java.util.stream.Stream.of(erased, marked).map(Donor::id)
+                .sorted(java.util.Comparator.comparing(DonorId::value)).toList());
+        assertThat(found).filteredOn(Donor::erasureIncomplete).extracting(Donor::id).containsExactly(marked.id());
+    }
+
     private static Donor donor(String email, String variableSymbol) {
         return Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null,
                 new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new EmailAddress(email), new PasswordHash("$hash"),

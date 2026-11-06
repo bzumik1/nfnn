@@ -54,6 +54,7 @@ What a change to the schema, a query, a lock, a transaction or the datasource mu
 ## Data that comes and goes
 - Text from outside is normalised before it is stored: PostgreSQL refuses U+0000 in `varchar` and `text` (`BankTexts`, #464).
 - A table of one-time secrets or sessions gets, in the same PR, a cleanup of spent and expired rows (#454), a delete in the erasure (`DonorErasureService`) and its line in `deploy/backup/revoke-restored-credentials.sql` or its reasoned exception (`RestoreRevocationSqlTest`).
+- A restore never takes back a decision made for security or GDPR after the dump (#459): a new table or column that holds a sign-in credential, a role, or something the erasure removes joins the facts of `deploy/backup/carry-forward.sql` (newest state wins, `RestoreCarryForwardSqlTest`), or the PR names why a restore may bring it back; the erasure itself is finished by `RestoredErasures` at the next start, so a new step of `DonorErasureService.erase` goes into its shared part, `removeAccessOf`, or into `completeRestoredErasure` too. `admin_action` is carried whole, so it stays append-only.
 - Constraint violations keep their values out of every log: `logServerErrorDetail: false` on every connection (`ConstraintViolationLogTest`), and the database's own log is terse (`deploy/postgres/Dockerfile`, `deploy-ci.md`). `admin_action.details` is kept for good: counts and ids, never an e-mail address (#458).
 
 ## Operating the database
