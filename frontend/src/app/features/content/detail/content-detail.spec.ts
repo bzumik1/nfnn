@@ -1,4 +1,4 @@
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Title } from '@angular/platform-browser';
@@ -7,6 +7,10 @@ import { IMAGE_ID, newsArticle } from '../testing/news-fixtures';
 import { project } from '../testing/project-fixtures';
 import { ContentDetail } from './content-detail';
 import { ContentKind } from './content-page';
+import { PROBE_PATH } from '../../../core/connectivity/connectivity';
+import { connectivityInterceptor } from '../../../core/connectivity/connectivity-interceptor';
+import { keptAnswerRefreshInterceptor } from '../../../core/connectivity/kept-answer-refresh';
+import { serviceWorkerBypassInterceptor } from '../../../core/updates/service-worker-bypass';
 
 function problem(status: number, type: string) {
   return {
@@ -202,5 +206,62 @@ describe('Given a visitor opening a project', () => {
 
     expect(fixture.nativeElement.querySelector('app-not-found')).not.toBeNull();
     expect(text(fixture, 'app-not-found a')).toBe('Kde všude pomáháme');
+  });
+});
+
+describe('Given a visitor opening a news article the service worker kept from an earlier visit', () => {
+  const ARTICLE = '/api/content/news/zahrada-pro-deti';
+  let fixture: ComponentFixture<ContentDetail>;
+  let http: HttpTestingController;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [ContentDetail],
+      providers: [
+        provideHttpClient(
+          withInterceptors([
+            keptAnswerRefreshInterceptor,
+            serviceWorkerBypassInterceptor,
+            connectivityInterceptor,
+          ]),
+        ),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: {
+              paramMap: convertToParamMap({ slug: 'zahrada-pro-deti' }),
+              data: { kind: 'news' },
+            },
+          },
+        },
+      ],
+    }).compileComponents();
+    fixture = TestBed.createComponent(ContentDetail);
+    fixture.detectChanges();
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    http.match(PROBE_PATH).forEach((probe) => probe.flush({}));
+    http.verify();
+  });
+
+  it('when the kept copy and then the server answer arrive, then the page shows the copy at once and then what the server says', async () => {
+    http
+      .expectOne((request) => request.url === ARTICLE && !request.headers.has('ngsw-bypass'))
+      .flush(newsArticle(), { headers: { Date: new Date(Date.now() - 600_000).toUTCString() } });
+    await settle(fixture);
+    expect(text(fixture, 'h1')).toBe('Zahrada pro děti');
+
+    http
+      .expectOne((request) => request.url === ARTICLE && request.headers.has('ngsw-bypass'))
+      .flush(newsArticle({ title: 'Zahrada pro děti je hotová' }), {
+        headers: { Date: new Date().toUTCString() },
+      });
+    await settle(fixture);
+
+    expect(text(fixture, 'h1')).toBe('Zahrada pro děti je hotová');
   });
 });

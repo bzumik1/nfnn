@@ -14,7 +14,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { EMPTY, expand, map, Observable, reduce, Subscription, timeout } from 'rxjs';
+import { EMPTY, expand, map, Observable, reduce, Subscription, take, timeout } from 'rxjs';
 import { FeaturedNews } from '../featured-news/featured-news';
 import { NewsApi, NewsArticleResponse } from '../news-api';
 import { NewsCard } from '../news-card/news-card';
@@ -155,10 +155,10 @@ export class NewsPage {
   }
 
   private publishedProjects(): Observable<ProjectResponse[]> {
-    return this.projectsApi.published(0, PROJECTS_PAGE_SIZE).pipe(
+    return this.projectsPage(0).pipe(
       expand((page) =>
         page.hasMore && page.page + 1 < MAX_PROJECT_PAGES
-          ? this.projectsApi.published(page.page + 1, PROJECTS_PAGE_SIZE)
+          ? this.projectsPage(page.page + 1)
           : EMPTY,
       ),
       reduce((all, page) => {
@@ -169,6 +169,10 @@ export class NewsPage {
       }, new Map<string, ProjectResponse>()),
       map((all) => [...all.values()]),
     );
+  }
+
+  private projectsPage(index: number) {
+    return this.projectsApi.published(index, PROJECTS_PAGE_SIZE).pipe(take(1));
   }
 }
 
