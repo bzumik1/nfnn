@@ -18,11 +18,17 @@ interface DeviceSchema extends DBSchema {
   copies: { key: string; value: RegistryEntry };
   'session-keys': { key: string; value: StoredSessionKey };
   records: { key: [string, string]; value: StoredRecord; indexes: { copyId: string } };
+  drafts: { key: [string, string]; value: StoredRecord; indexes: { copyId: string } };
 }
 
 type DeviceDatabase = IDBPDatabase<DeviceSchema>;
-type StoreNames = ('meta' | 'copies' | 'session-keys' | 'records')[];
-type RecordStore = IDBPObjectStore<DeviceSchema, StoreNames, 'records', 'readwrite'>;
+type StoreNames = ('meta' | 'copies' | 'session-keys' | 'records' | 'drafts')[];
+type RecordStore<Name extends 'records' | 'drafts'> = IDBPObjectStore<
+  DeviceSchema,
+  StoreNames,
+  Name,
+  'readwrite'
+>;
 
 export interface IdbDeviceStorageOptions {
   readonly openTimeoutMs?: number;
@@ -82,10 +88,14 @@ export class IdbDeviceStorage implements DeviceStorage {
     return (await this.opened()).getAllFromIndex('records', 'copyId', copyId);
   }
 
+  async drafts(copyId: string): Promise<readonly StoredRecord[]> {
+    return (await this.opened()).getAllFromIndex('drafts', 'copyId', copyId);
+  }
+
   async write(change: StorageChange): Promise<void> {
     const database = await this.opened();
     const transaction = database.transaction(
-      ['meta', 'copies', 'session-keys', 'records'],
+      ['meta', 'copies', 'session-keys', 'records', 'drafts'],
       'readwrite',
     );
     const done = transaction.done;
@@ -95,6 +105,7 @@ export class IdbDeviceStorage implements DeviceStorage {
       const copies = transaction.objectStore('copies');
       const sessionKeys = transaction.objectStore('session-keys');
       const records = transaction.objectStore('records');
+      const drafts = transaction.objectStore('drafts');
       if (change.deviceSalt === null) {
         writes.push(meta.delete(DEVICE_SALT));
       } else if (change.deviceSalt !== undefined) {
@@ -102,7 +113,7 @@ export class IdbDeviceStorage implements DeviceStorage {
       }
       for (const copyId of change.deleteCopies ?? []) {
         writes.push(copies.delete(copyId), sessionKeys.delete(copyId));
-        writes.push(deleteRecordsOf(records, copyId));
+        writes.push(deleteRecordsOf(records, copyId), deleteRecordsOf(drafts, copyId));
       }
       for (const entry of change.putEntries ?? []) {
         writes.push(copies.put(entry));
@@ -122,6 +133,20 @@ export class IdbDeviceStorage implements DeviceStorage {
           }
           writes.push(records.put(record));
         }
+      }
+      for (const { copyId, recordId } of change.deleteDrafts ?? []) {
+        writes.push(drafts.delete([copyId, recordId]));
+      }
+      const deleted = new Set(change.deleteCopies ?? []);
+      const added = new Set((change.putEntries ?? []).map((entry) => entry.copyId));
+      for (const draft of change.putDrafts ?? []) {
+        if (
+          deleted.has(draft.copyId) ||
+          (!added.has(draft.copyId) && !(await copies.get(draft.copyId)))
+        ) {
+          throw new RangeError('A draft belongs to a copy the registry holds');
+        }
+        writes.push(drafts.put(draft));
       }
       await Promise.all(writes);
     } catch (failure: unknown) {
@@ -146,13 +171,20 @@ export class IdbDeviceStorage implements DeviceStorage {
   private opened(): Promise<DeviceDatabase> {
     if (this.database === null) {
       const raw = openDB<DeviceSchema>(DEVICE_DATABASE, DEVICE_DATABASE_VERSION, {
-        upgrade: (database) => {
-          database.createObjectStore('meta');
-          database.createObjectStore('copies', { keyPath: 'copyId' });
-          database.createObjectStore('session-keys', { keyPath: 'copyId' });
-          database
-            .createObjectStore('records', { keyPath: ['copyId', 'recordId'] })
-            .createIndex('copyId', 'copyId');
+        upgrade: (database, oldVersion) => {
+          if (oldVersion < 1) {
+            database.createObjectStore('meta');
+            database.createObjectStore('copies', { keyPath: 'copyId' });
+            database.createObjectStore('session-keys', { keyPath: 'copyId' });
+            database
+              .createObjectStore('records', { keyPath: ['copyId', 'recordId'] })
+              .createIndex('copyId', 'copyId');
+          }
+          if (oldVersion < 2) {
+            database
+              .createObjectStore('drafts', { keyPath: ['copyId', 'recordId'] })
+              .createIndex('copyId', 'copyId');
+          }
         },
         blocking: () => this.close(),
         terminated: () => {
@@ -175,9 +207,13 @@ export class IdbDeviceStorage implements DeviceStorage {
   }
 }
 
-async function deleteRecordsOf(records: RecordStore, copyId: string): Promise<void> {
-  const keys = await records.index('copyId').getAllKeys(copyId);
-  await Promise.all(keys.map((key) => records.delete(key)));
+async function deleteRecordsOf(
+  records: RecordStore<'records'> | RecordStore<'drafts'>,
+  copyId: string,
+): Promise<void> {
+  const index = (records as RecordStore<'records'>).index('copyId');
+  const keys = await index.getAllKeys(copyId);
+  await Promise.all(keys.map((key) => (records as RecordStore<'records'>).delete(key)));
 }
 
 function abortQuietly(transaction: { abort(): void }): void {
