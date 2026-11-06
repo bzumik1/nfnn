@@ -79,6 +79,25 @@ Feature: An administrator sets up the monthly report, sends it again and reads t
       | nextReport.dueOn    | 2026-12-01 |
       | lastEndedMonth      | 2026-10    |
 
+  Scenario: Sending by hand is limited to five reports an hour for each administrator, from any address, counted before anything is sent
+    Given a person "Andrea" is registered
+    And "Andrea" is an administrator
+    And "Jana" sent the monthly report for "2026-09" again 5 times
+    When the following requests come from another client address
+    And "Jana" sends the monthly report for "2026-09" again
+    Then the response status is 429
+    And the problem type ends with "donations/rate-limited"
+    And 5 monthly report e-mails are sent to "info@nfnn.cz"
+    And 5 admin actions "SEND_MONTHLY_REPORT" by "Jana" are recorded
+    When "Andrea" sends the monthly report for "2026-09" again
+    Then the response status is 200
+    When 59 minutes pass
+    And "Jana" sends the monthly report for "2026-09" again
+    Then the response status is 429
+    When 1 minute passes
+    And "Jana" sends the monthly report for "2026-09" again
+    Then the response status is 200
+
   Scenario: A month the morning check never sent is recorded when an administrator sends it
     When "Jana" sends the monthly report for "2026-08" again
     Then the response status is 200

@@ -191,7 +191,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Odeslat měsíční přehled',
       description:
-        'Sends the monthly report of an ended month (YYYY-MM) to the current recipients again; audited as SEND_MONTHLY_REPORT.',
+        'Sends the monthly report of an ended month (YYYY-MM) to the current recipients again; audited as SEND_MONTHLY_REPORT. At most 5 sendings an hour per administrator (the browser and every connection together), then 429 donations/rate-limited.',
       inputSchema: z.object({ month: MONTH }),
       annotations: WRITING,
     },
