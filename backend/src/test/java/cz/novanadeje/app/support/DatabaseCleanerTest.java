@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -39,6 +40,20 @@ class DatabaseCleanerTest {
 
         assertThat(rowCounts()).isNotEmpty().allSatisfy((table, rows) -> assertThat(rows).as("rows of %s", table).isZero());
         assertThat(jdbc.sql("select nextval('donation_receipt_number_seq')").query(Long.class).single()).isEqualTo(1L);
+    }
+
+    @Test
+    @DisplayName("Given an administrator's action, which the database keeps append-only, when every table is emptied, then the trail is empty too and keeps refusing a delete afterwards")
+    void should_empty_the_append_only_trail_and_keep_it_append_only_when_emptied_given_an_administrators_action() {
+        jdbc.sql("insert into admin_action (id, admin_id, action, details, performed_at) "
+                + "values ('0190a000-0000-7000-8000-000000000004', '0190a000-0000-7000-8000-000000000005', 'PAIR_PAYMENT', 'Spárováno', '2026-01-10T10:00:00Z')").update();
+
+        new DatabaseCleaner(jdbc).emptyAllTables();
+
+        assertThat(jdbc.sql("select count(*) from admin_action").query(Long.class).single()).isZero();
+        jdbc.sql("insert into admin_action (id, admin_id, action, details, performed_at) "
+                + "values ('0190a000-0000-7000-8000-000000000006', '0190a000-0000-7000-8000-000000000005', 'PAIR_PAYMENT', 'Spárováno', '2026-01-10T10:00:00Z')").update();
+        assertThatThrownBy(() -> jdbc.sql("delete from admin_action").update()).hasMessageContaining("admin_action is append-only");
     }
 
     private Map<String, Long> rowCounts() {

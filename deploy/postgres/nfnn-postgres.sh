@@ -6,10 +6,14 @@
 # the database. A new database gets the role from /docker-entrypoint-initdb.d/nfnn-app-role.sh.
 # An existing one (or one with another password, the old db.env) is brought in line before the
 # real server starts, by a private instance listening only on a temporary socket: it sets both
-# passwords to the files', creates the role if missing and hands it the database, its schema and
-# every table, view and sequence (own-by-app-role.sql, with search_path set to pg_catalog, because it
-# runs as the superuser over a schema the role can fill with operators and functions; a restored
-# database is the role's already, since the backup restores it as that role).
+# passwords to the files', creates the role if missing and hands it the public schema and every
+# table, view and sequence, while the database itself stays the superuser's, so the role can create
+# no other schema (own-by-app-role.sql, with search_path set to pg_catalog, because it runs as the
+# superuser over a schema the role can fill with operators and functions; a restored database is the
+# role's already, since the backup restores it as that role). The same script pins the superuser's
+# own search_path to pg_catalog, so an operator's psql as the superuser never resolves a name to
+# something the role planted. A new database is initialised with data checksums (the Dockerfile's
+# POSTGRES_INITDB_ARGS); an older one keeps what it was created with (deploy/README.md).
 # $SECRETS_DIR/db-password.ready tells the backend and the backup that the roles accept the
 # passwords; it is removed at every start and written once they hold.
 set -eu
@@ -61,9 +65,9 @@ if [ -s "$PGDATA/PG_VERSION" ]; then
           | sync_psql -d postgres -v password="$POSTGRES_PASSWORD" \
         && sync_psql -d postgres -v app_password="$(cat "$APP_PASSWORD_FILE")" -f "$SQL_DIR/app-role.sql"; then
       if sync_psql -d "${POSTGRES_DB:-${POSTGRES_USER:-postgres}}" -f "$SQL_DIR/own-by-app-role.sql"; then
-        log "the database belongs to the application role novanadeje_app"
+        log "the public schema and its tables belong to the application role novanadeje_app"
       else
-        log "could not hand the database to the application role novanadeje_app; the backend cannot change its tables"
+        log "could not hand the public schema and its tables to the application role novanadeje_app; the backend cannot change its tables"
       fi
       touch "$READY_FILE"
       log "the database roles use the passwords from $PASSWORD_FILE and $APP_PASSWORD_FILE"

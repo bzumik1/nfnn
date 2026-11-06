@@ -7,8 +7,10 @@
 # the dump is released. Whatever a dump or the site's data can run (its SQL, a trigger, a check, an
 # index expression, a function in a view) runs as the application role novanadeje_app and never as
 # the superuser: every restore and every query of the site's databases connects as that role, and a
-# database a restore fills is created for it to own, so pg_restore --no-owner --no-privileges makes
-# it the owner of everything, as the backend needs. The superuser only dumps (pg_dump reads every
+# database a restore fills is created with its public schema owned by that role, so pg_restore
+# --no-owner --no-privileges makes it the owner of everything, as the backend needs; the database
+# itself is handed to the superuser before anything is restored, so neither the dump nor the role can
+# create another schema in it or change its settings. The superuser only dumps (pg_dump reads every
 # object whatever its owner and runs no function of the data: since PostgreSQL 17 it reads only
 # tables, restrict_nonsystem_relation_kind) and creates, renames and drops databases and ends their
 # sessions, connected to the maintenance database postgres, where the application role can create
@@ -112,7 +114,10 @@ as_app() {
 }
 
 create_app_database() {
-  createdb --maintenance-db=postgres --owner="$APP_ROLE" --template=template0 "$1"
+  createdb --maintenance-db=postgres --owner="$APP_ROLE" --template=template0 "$1" \
+    && as_app psql --dbname="$1" --quiet --no-align --tuples-only -v ON_ERROR_STOP=1 \
+      --command="alter schema public owner to \"$APP_ROLE\"" > /dev/null \
+    && server_psql --command="alter database \"$1\" owner to current_user" > /dev/null
 }
 
 valid_key() {

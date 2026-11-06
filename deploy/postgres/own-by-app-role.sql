@@ -1,4 +1,5 @@
 SET search_path = pg_catalog;
+ALTER ROLE CURRENT_USER SET search_path = pg_catalog;
 DO $$
 DECLARE
   relation record;
@@ -6,7 +7,8 @@ BEGIN
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'novanadeje_app') THEN
     RAISE EXCEPTION 'the role novanadeje_app does not exist';
   END IF;
-  EXECUTE format('ALTER DATABASE %I OWNER TO novanadeje_app', current_database());
+  EXECUTE format('ALTER DATABASE %I OWNER TO CURRENT_USER', current_database());
+  EXECUTE format('REVOKE CREATE ON DATABASE %I FROM novanadeje_app', current_database());
   ALTER SCHEMA public OWNER TO novanadeje_app;
   FOR relation IN
     SELECT c.oid::regclass::text AS name, c.relkind

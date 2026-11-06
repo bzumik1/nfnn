@@ -953,8 +953,8 @@ jobs:
             echo "::error::the backup key must reach no log file"
             exit 1
           fi
-          [ "$(docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select count(*) from operations_backup_key_confirmation where confirmed_by is null")" = 1 ] || { echo "::error::the setup did not record the backup key as saved"; exit 1; }
-          stored=$(docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select value from operations_setting where name = 'MAIL_PASSWORD'")
+          [ "$(docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -tA -c "select count(*) from operations_backup_key_confirmation where confirmed_by is null")" = 1 ] || { echo "::error::the setup did not record the backup key as saved"; exit 1; }
+          stored=$(docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -tA -c "select value from operations_setting where name = 'MAIL_PASSWORD'")
           case "$stored" in
             v1:*) ;;
             *) echo "::error::the SMTP password must be stored encrypted"; exit 1 ;;
@@ -963,7 +963,7 @@ jobs:
             echo "::error::the stored SMTP password is readable in the database"
             exit 1
           fi
-          carried=$(docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select wrapped from operations_carried_settings_key")
+          carried=$(docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -tA -c "select wrapped from operations_carried_settings_key")
           case "$carried" in
             v1:*) ;;
             *) echo "::error::the backend must carry its settings key, wrapped under the backup key, into the database for the backups"; exit 1 ;;
@@ -984,7 +984,15 @@ jobs:
           [ "$(sql "select count(*) from pg_auth_members where member = 'novanadeje_app'::regrole")" = 0 ] || { echo "::error::the application role must belong to no other role (pg_read_server_files, pg_execute_server_program and the like)"; exit 1; }
           [ "$(sql "select string_agg(distinct usename, ',') from pg_stat_activity where datname = 'novanadeje' and usename <> 'novanadeje'")" = novanadeje_app ] || { echo "::error::the backend must log in as novanadeje_app"; sql "select usename, application_name from pg_stat_activity where datname = 'novanadeje'"; exit 1; }
           [ "$(sql "select count(*) from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'public' and c.relowner <> 'novanadeje_app'::regrole")" = 0 ] || { echo "::error::every table, index and sequence of the site belongs to novanadeje_app"; exit 1; }
-          [ "$(sql "select pg_get_userbyid(datdba) from pg_database where datname = 'novanadeje'")" = novanadeje_app ] || { echo "::error::the site's database belongs to novanadeje_app"; exit 1; }
+          [ "$(sql "select pg_get_userbyid(nspowner) from pg_namespace where nspname = 'public'")" = novanadeje_app ] || { echo "::error::the public schema of the site belongs to novanadeje_app, which Liquibase and every restore need"; exit 1; }
+          [ "$(sql "select pg_get_userbyid(datdba) from pg_database where datname = 'novanadeje'")" = novanadeje ] || { echo "::error::the site's database itself belongs to the superuser, so the application role cannot create a schema the superuser's search path would find"; exit 1; }
+          [ "$(sql "select has_database_privilege('novanadeje_app', 'novanadeje', 'CREATE')")" = f ] || { echo "::error::the application role may create no schema in the site's database"; exit 1; }
+          [ "$(sql "show search_path")" = pg_catalog ] || { echo "::error::the superuser's search_path must be pg_catalog, so an operator's psql as the superuser never resolves a name to an object the application role planted"; exit 1; }
+          [ "$(sql "show data_checksums")" = on ] || { echo "::error::a new database is initialised with data checksums (POSTGRES_INITDB_ARGS in deploy/postgres/Dockerfile)"; exit 1; }
+          if docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -v ON_ERROR_STOP=1 -c "truncate admin_action" > /dev/null 2>&1; then
+            echo "::error::the administration history is append-only: the database must refuse to empty it outside a migration"
+            exit 1
+          fi
           if docker exec -u app nfnn-backend cat /secrets/db-password > /dev/null 2>&1 || docker exec -u app nfnn-backend cat /secrets/db-app-password > /dev/null 2>&1; then
             echo "::error::the backend's Java process must read no database password from the secrets folder"
             exit 1
@@ -993,7 +1001,7 @@ jobs:
       - name: A refused row leaves its values out of the database log
         run: |
           canary="ci-log-canary-$RANDOM$RANDOM"
-          if docker exec nfnn-postgres psql -U novanadeje -d novanadeje -v ON_ERROR_STOP=1 -c "insert into donor (id, type, name) values (gen_random_uuid(), 'PERSON', '$canary')" > /dev/null 2>&1; then
+          if docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -v ON_ERROR_STOP=1 -c "insert into donor (id, type, name) values (gen_random_uuid(), 'PERSON', '$canary')" > /dev/null 2>&1; then
             echo "::error::the database accepted a donor row without its required columns"
             exit 1
           fi
@@ -1011,9 +1019,9 @@ jobs:
             exit 1
           fi
 
-      - name: The database takes the generated passwords and hands an older database to the application role
+      - name: The database takes the generated passwords, hands an older database's tables to the application role and the database itself to the superuser
         run: |
-          docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "alter role novanadeje password 'an-old-password'" -c "alter role novanadeje_app password 'an-old-password'" -c "alter table admin_action owner to novanadeje" -c "alter database novanadeje owner to novanadeje"
+          docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "alter role novanadeje password 'an-old-password'" -c "alter role novanadeje_app password 'an-old-password'" -c "alter table public.admin_action owner to novanadeje" -c "alter database novanadeje owner to novanadeje_app" -c "alter role novanadeje reset search_path"
           docker compose restart postgres
           synced=false
           for _ in $(seq 30); do
@@ -1024,8 +1032,9 @@ jobs:
             sleep 2
           done
           [ "$synced" = true ] || { echo "::error::nfnn-postgres did not set the roles' passwords to the generated ones"; exit 1; }
-          [ "$(docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select pg_get_userbyid(relowner) from pg_class where oid = 'public.admin_action'::regclass")" = novanadeje_app ] || { echo "::error::nfnn-postgres did not hand a table of an older database to novanadeje_app"; exit 1; }
-          [ "$(docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select pg_get_userbyid(datdba) from pg_database where datname = 'novanadeje'")" = novanadeje_app ] || { echo "::error::nfnn-postgres did not hand an older database to novanadeje_app"; exit 1; }
+          [ "$(docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -tA -c "select pg_get_userbyid(relowner) from pg_class where oid = 'public.admin_action'::regclass")" = novanadeje_app ] || { echo "::error::nfnn-postgres did not hand a table of an older database to novanadeje_app"; exit 1; }
+          [ "$(docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select pg_get_userbyid(datdba) from pg_database where datname = 'novanadeje'")" = novanadeje ] || { echo "::error::nfnn-postgres did not take an older database, which the application role owned, back for the superuser"; exit 1; }
+          [ "$(docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "show search_path")" = pg_catalog ] || { echo "::error::nfnn-postgres did not set the superuser's search_path to pg_catalog on an older database"; exit 1; }
           docker compose up -d --wait --wait-timeout 300 backend
 
       - name: Verify
@@ -1181,40 +1190,40 @@ jobs:
           echo "A dump in the restore folder is restored into the emptied database before the backend starts"
           restore="$RUNNER_TEMP/nfnn/restore"
           docker compose stop backend backup
-          docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "insert into admin_action (id, admin_id, action, details, performed_at) values ('019a0000-0000-7000-8000-000000000001', '019a0000-0000-7000-8000-000000000002', 'CI_MARKER', 'to be undone by the restore', now())"
+          docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -c "insert into admin_action (id, admin_id, action, details, performed_at) values ('019a0000-0000-7000-8000-000000000001', '019a0000-0000-7000-8000-000000000002', 'CI_MARKER', 'to be undone by the restore', now())"
           sudo cp "$full_dump" "$restore/ci.force.dump.age"
           docker compose up -d --wait --wait-timeout 300 postgres backup backend frontend
           wait_for "[ -f $restore/ci.force.dump.age.done ]" 30 "the restore folder dump was not restored"
           grep -q '^outcome=ok$' "$backups/status/restore" || { echo "::error::the restore status file does not say ok"; cat "$backups/status/restore"; exit 1; }
           ls "$backups"/nfnn-*-pred-obnovou.dump.age > /dev/null || { echo "::error::no safety dump was taken before the forced restore"; exit 1; }
-          marker=$(docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select count(*) from admin_action where action = 'CI_MARKER'")
+          marker=$(docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -tA -c "select count(*) from admin_action where action = 'CI_MARKER'")
           [ "$marker" = 0 ] || { echo "::error::the forced restore kept a row written after the dump"; exit 1; }
           curl -fsS --max-time 10 http://localhost:8089/ | grep -q '<app-root'
 
           echo "A restore asked for in the administration runs while the restarted backend waits, replaces the data, releases a Liquibase lock caught in the dump, keeps the receipt numbers ahead and is recorded once"
           count_rows() {
-            docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select count(*) from admin_action where $1"
+            docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -tA -c "select count(*) from admin_action where $1"
           }
           live_sessions() {
-            docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select (select count(*) from donor_refresh_token where revoked_at is null and used_at is null and expires_at > now()) + (select count(*) from donor_device where ended_at is null)"
+            docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -tA -c "select (select count(*) from donor_refresh_token where revoked_at is null and used_at is null and expires_at > now()) + (select count(*) from donor_device where ended_at is null)"
           }
-          docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "insert into donor (id, type, name, street, city, postal_code, email, variable_symbol, preferred_locale, registered_at, email_verified_at) values ('019a0000-0000-7000-8000-000000000007', 'PERSON', 'Zkušební Dárce', 'Ulice 1', 'Město', '110 00', 'ci-session@example.cz', '9900000007', 'cs', now(), now())"
-          docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "insert into donor_device (id, donor_id, platform, browser, session_kind, signed_in_at, last_used_at) values ('019a0000-0000-7000-8000-000000000005', '019a0000-0000-7000-8000-000000000007', 'IPHONE', 'SAFARI', 'APP', now(), now())"
-          docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "insert into donor_refresh_token (id, donor_id, secret_hash, issued_at, granted_at, expires_at, device_id) select '019a0000-0000-7000-8000-000000000006', donor_id, 'ci-session-in-the-dump', now(), now(), now() + interval '400 days', id from donor_device where id = '019a0000-0000-7000-8000-000000000005'"
+          docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -c "insert into donor (id, type, name, street, city, postal_code, email, variable_symbol, preferred_locale, registered_at, email_verified_at) values ('019a0000-0000-7000-8000-000000000007', 'PERSON', 'Zkušební Dárce', 'Ulice 1', 'Město', '110 00', 'ci-session@example.cz', '9900000007', 'cs', now(), now())"
+          docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -c "insert into donor_device (id, donor_id, platform, browser, session_kind, signed_in_at, last_used_at) values ('019a0000-0000-7000-8000-000000000005', '019a0000-0000-7000-8000-000000000007', 'IPHONE', 'SAFARI', 'APP', now(), now())"
+          docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -c "insert into donor_refresh_token (id, donor_id, secret_hash, issued_at, granted_at, expires_at, device_id) select '019a0000-0000-7000-8000-000000000006', donor_id, 'ci-session-in-the-dump', now(), now(), now() + interval '400 days', id from donor_device where id = '019a0000-0000-7000-8000-000000000005'"
           [ "$(live_sessions)" -ge 2 ] || { echo "::error::the dump to restore holds no signed-in device, so the restore cannot show that it ends them"; exit 1; }
           usable_links() {
-            docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select (select count(*) from donor_password_reset_token where used_at is null and expires_at > now()) + (select count(*) from donor_email_verification_token where used_at is null and expires_at > now())"
+            docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -tA -c "select (select count(*) from donor_password_reset_token where used_at is null and expires_at > now()) + (select count(*) from donor_email_verification_token where used_at is null and expires_at > now())"
           }
-          docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "insert into donor_password_reset_token (id, donor_id, secret_hash, issued_at, expires_at) select '019a0000-0000-7000-8000-000000000007', id, repeat('7', 64), now(), now() + interval '1 day' from donor order by id limit 1"
-          docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "insert into donor_email_verification_token (id, donor_id, secret_hash, issued_at, expires_at) select '019a0000-0000-7000-8000-000000000008', id, repeat('8', 64), now(), now() + interval '1 day' from donor order by id limit 1"
+          docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -c "insert into donor_password_reset_token (id, donor_id, secret_hash, issued_at, expires_at) select '019a0000-0000-7000-8000-000000000007', id, repeat('7', 64), now(), now() + interval '1 day' from donor order by id limit 1"
+          docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -c "insert into donor_email_verification_token (id, donor_id, secret_hash, issued_at, expires_at) select '019a0000-0000-7000-8000-000000000008', id, repeat('8', 64), now(), now() + interval '1 day' from donor order by id limit 1"
           [ "$(usable_links)" -ge 2 ] || { echo "::error::the dump to restore holds no usable reset or verification link, so the restore cannot show that it spends them"; exit 1; }
-          docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "update databasechangeloglock set locked = true, lockgranted = now(), lockedby = 'ci, as a dump taken while Liquibase runs'"
+          docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -c "update databasechangeloglock set locked = true, lockgranted = now(), lockedby = 'ci, as a dump taken while Liquibase runs'"
           docker exec nfnn-backend sh -c 'touch /backups/requests/ci-lock.backup'
           wait_for "grep -q '^request=ci-lock$' $backups/status/backup" 60 "the backup with the Liquibase lock held did not run"
           locked_dump=$(sed -n 's/^file=//p' "$backups/status/backup")
-          docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "update databasechangeloglock set locked = false, lockgranted = null, lockedby = null"
-          docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "insert into admin_action (id, admin_id, action, details, performed_at) values ('019a0000-0000-7000-8000-000000000003', '019a0000-0000-7000-8000-000000000002', 'CI_MARKER', 'to be undone by the requested restore', now())"
-          docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select setval('donation_receipt_number_seq', 41)"
+          docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -c "update databasechangeloglock set locked = false, lockgranted = null, lockedby = null"
+          docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -c "insert into admin_action (id, admin_id, action, details, performed_at) values ('019a0000-0000-7000-8000-000000000003', '019a0000-0000-7000-8000-000000000002', 'CI_MARKER', 'to be undone by the requested restore', now())"
+          docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -tA -c "select setval('donation_receipt_number_seq', 41)"
           docker exec nfnn-backend sh -c "printf 'source=backup\nfile=%s\nadmin=019a0000-0000-7000-8000-000000000002\n' '$locked_dump' > /backups/requests/ci-3.restore"
           docker restart nfnn-backend
           wait_for "grep -q '^request=ci-3$' $backups/status/restore" 60 "the requested restore did not run"
@@ -1222,23 +1231,25 @@ jobs:
           docker compose up -d --wait --wait-timeout 300 backend
           [ ! -e "$backups/status/restore.running" ] || { echo "::error::the restore left its running marker"; exit 1; }
           [ "$(count_rows "action = 'CI_MARKER'")" = 0 ] || { echo "::error::the requested restore kept a row written after the dump"; exit 1; }
-          [ "$(docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select count(*) from databasechangeloglock where locked")" = 0 ] || { echo "::error::the restore kept the Liquibase lock caught in the dump"; exit 1; }
-          receipt_number=$(docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select last_value from donation_receipt_number_seq")
+          [ "$(docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -tA -c "select count(*) from databasechangeloglock where locked")" = 0 ] || { echo "::error::the restore kept the Liquibase lock caught in the dump"; exit 1; }
+          receipt_number=$(docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -tA -c "select last_value from donation_receipt_number_seq")
           [ "$receipt_number" = 41 ] || { echo "::error::the restore rewound the receipt numbers to $receipt_number, so numbers issued after the backup would be issued again"; exit 1; }
           [ "$(count_rows "action = 'BACKUP_RESTORED' and admin_id = '019a0000-0000-7000-8000-000000000002'")" = 1 ] || { echo "::error::the finished restore is not recorded in the administration history"; exit 1; }
           [ "$(live_sessions)" = 0 ] || { echo "::error::the restore kept a refresh token or a signed-in device of the backup, so a cookie from before the restore would still sign in"; exit 1; }
-          [ "$(docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select end_reason from donor_device where id = '019a0000-0000-7000-8000-000000000005'")" = EXPIRED ] || { echo "::error::the restore did not end the device of the backup as expired"; exit 1; }
+          [ "$(docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -tA -c "select end_reason from donor_device where id = '019a0000-0000-7000-8000-000000000005'")" = EXPIRED ] || { echo "::error::the restore did not end the device of the backup as expired"; exit 1; }
           [ "$(usable_links)" = 0 ] || { echo "::error::the restore kept a reset or verification link of the backup usable, so a link used after the backup would work again"; exit 1; }
           sessions_ended=$(sed -n 's/^sessions_ended=//p' "$backups/status/restore")
           secrets_spent=$(sed -n 's/^one_time_secrets_spent=//p' "$backups/status/restore")
           [ "${sessions_ended:-0}" -ge 1 ] && [ "${secrets_spent:-0}" -ge 2 ] || { echo "::error::the restore status does not count the sessions it ended and the one-time secrets it spent"; cat "$backups/status/restore"; exit 1; }
           [ "$(count_rows "action = 'BACKUP_RESTORED' and details like '%; ukončená přihlášení: $sessions_ended, zneplatněné jednorázové odkazy a kódy: $secrets_spent'")" = 1 ] || { echo "::error::the administration history does not name what the restore revoked"; exit 1; }
           docker exec nfnn-postgres psql -U novanadeje -d postgres -tA -c "select datname from pg_database" | grep -q nfnn_restore && { echo "::error::a staging or retired database was left behind"; exit 1; }
-          [ "$(docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select count(*) from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'public' and c.relowner <> 'novanadeje_app'::regrole")" = 0 ] || { echo "::error::the restored database must belong to novanadeje_app, or the backend cannot migrate it"; exit 1; }
-          [ "$(docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select pg_get_userbyid(datdba) from pg_database where datname = 'novanadeje'")" = novanadeje_app ] || { echo "::error::the restored database must belong to novanadeje_app"; exit 1; }
+          [ "$(docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -tA -c "select count(*) from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'public' and c.relowner <> 'novanadeje_app'::regrole")" = 0 ] || { echo "::error::the restored database must belong to novanadeje_app, or the backend cannot migrate it"; exit 1; }
+          [ "$(docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -tA -c "select pg_get_userbyid(nspowner) from pg_namespace where nspname = 'public'")" = novanadeje_app ] || { echo "::error::the public schema of the restored database must belong to novanadeje_app"; exit 1; }
+          [ "$(docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -tA -c "select pg_get_userbyid(datdba) from pg_database where datname = 'novanadeje'")" = novanadeje ] || { echo "::error::the restored database itself must belong to the superuser, so the application role creates no schema in it"; exit 1; }
+          [ "$(docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -tA -c "select count(*) from pg_trigger where tgrelid = 'public.admin_action'::regclass and not tgisinternal")" = 2 ] || { echo "::error::the restore lost the triggers that keep the administration history append-only"; exit 1; }
 
           echo "A restore that fails leaves the data as they were, removes the upload and lets the backend start"
-          docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "insert into admin_action (id, admin_id, action, details, performed_at) values ('019a0000-0000-7000-8000-000000000004', '019a0000-0000-7000-8000-000000000002', 'CI_MARKER', 'kept by the failed restore', now())"
+          docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -c "insert into admin_action (id, admin_id, action, details, performed_at) values ('019a0000-0000-7000-8000-000000000004', '019a0000-0000-7000-8000-000000000002', 'CI_MARKER', 'kept by the failed restore', now())"
           docker exec -u app nfnn-backend sh -c "printf 'PGDMP but not a dump' > /restore/ci-4.upload && printf 'source=upload\nfile=ci-4.upload\nadmin=\n' > /backups/requests/ci-4.restore"
           docker restart nfnn-backend
           wait_for "grep -q '^request=ci-4$' $backups/status/restore" 60 "the failing restore did not run"
@@ -1267,19 +1278,19 @@ jobs:
           full_dump=$(ls "$backups"/nfnn-*-rucni.dump.age | head -n 1)
           restore="$RUNNER_TEMP/nfnn/restore"
           count_rows() {
-            docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select count(*) from admin_action where $1"
+            docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -tA -c "select count(*) from admin_action where $1"
           }
           echo "As after the restores part: a receipt number given out since the switch (41) and one row the failed restore kept"
-          docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select setval('donation_receipt_number_seq', 41)"
-          docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "insert into admin_action (id, admin_id, action, details, performed_at) values ('019a0000-0000-7000-8000-000000000004', '019a0000-0000-7000-8000-000000000002', 'CI_MARKER', 'kept by the failed restore', now())"
+          docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -tA -c "select setval('donation_receipt_number_seq', 41)"
+          docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -c "insert into admin_action (id, admin_id, action, details, performed_at) values ('019a0000-0000-7000-8000-000000000004', '019a0000-0000-7000-8000-000000000002', 'CI_MARKER', 'kept by the failed restore', now())"
           echo "A backup taken before receipts moved to the browser is refused once this server has given out a receipt number, so the numbering never starts at 1 again below numbers already issued"
           switch_changeset="024-delete-test-receipts-and-drop-the-server-drawing"
-          docker exec nfnn-postgres psql -U novanadeje -d novanadeje -v ON_ERROR_STOP=1 -c "create table ci_switch_row as select * from databasechangelog where id = '$switch_changeset'" -c "delete from databasechangelog where id = '$switch_changeset'"
+          docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -v ON_ERROR_STOP=1 -c "create table ci_switch_row as select * from databasechangelog where id = '$switch_changeset'" -c "delete from databasechangelog where id = '$switch_changeset'"
           docker exec nfnn-backend sh -c 'touch /backups/requests/ci-pre-switch.backup'
           wait_for "grep -q '^request=ci-pre-switch$' $backups/status/backup" 60 "the backup without the switch changeset did not run"
           pre_switch_dump=$(sed -n 's/^file=//p' "$backups/status/backup")
-          docker exec nfnn-postgres psql -U novanadeje -d novanadeje -v ON_ERROR_STOP=1 -c "insert into databasechangelog select * from ci_switch_row" -c "drop table ci_switch_row"
-          [ "$(docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select is_called from donation_receipt_number_seq")" = t ] || { echo "::error::the probe needs a receipt number given out since the switch"; exit 1; }
+          docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -v ON_ERROR_STOP=1 -c "insert into databasechangelog select * from ci_switch_row" -c "drop table ci_switch_row"
+          [ "$(docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -tA -c "select is_called from donation_receipt_number_seq")" = t ] || { echo "::error::the probe needs a receipt number given out since the switch"; exit 1; }
           docker exec nfnn-backend sh -c "printf 'source=backup\nfile=%s\nadmin=019a0000-0000-7000-8000-000000000002\n' '$pre_switch_dump' > /backups/requests/ci-pre-switch.restore"
           docker restart nfnn-backend
           wait_for "grep -q '^request=ci-pre-switch$' $backups/status/restore" 60 "the restore of the backup from before the switch did not run"
@@ -1287,8 +1298,8 @@ jobs:
           grep -q 'taken before receipts moved to the browser' "$backups/status/restore" || { echo "::error::the refusal does not say why"; cat "$backups/status/restore"; exit 1; }
           docker compose up -d --wait --wait-timeout 300 backend
           [ "$(count_rows "action = 'CI_MARKER'")" = 1 ] || { echo "::error::the refused restore changed the data"; exit 1; }
-          [ "$(docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select last_value from donation_receipt_number_seq")" = 41 ] || { echo "::error::the refused restore moved the receipt numbers"; exit 1; }
-          [ "$(docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select count(*) from databasechangelog where id = '$switch_changeset'")" = 1 ] || { echo "::error::the switch changeset is no longer recorded"; exit 1; }
+          [ "$(docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -tA -c "select last_value from donation_receipt_number_seq")" = 41 ] || { echo "::error::the refused restore moved the receipt numbers"; exit 1; }
+          [ "$(docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -tA -c "select count(*) from databasechangelog where id = '$switch_changeset'")" = 1 ] || { echo "::error::the switch changeset is no longer recorded"; exit 1; }
 
           echo "A key planted in the restore folder is not adopted, and a backup uploaded with its own key is restored and its key becomes the server's"
           secrets="$RUNNER_TEMP/nfnn/secrets"
@@ -1337,7 +1348,7 @@ jobs:
             docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -v ON_ERROR_STOP=1 -tA "$@"
           }
           count_rows() {
-            docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select count(*) from admin_action where $1"
+            docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -tA -c "select count(*) from admin_action where $1"
           }
           nothing_ran() {
             if docker exec nfnn-postgres test -e /tmp/nfnn-pwned; then
@@ -1355,7 +1366,7 @@ jobs:
           wait_for "ls $backups/nfnn-*.dump.age > /dev/null 2>&1" 30 "the backup service wrote no encrypted dump"
           first_key=$(server_key)
           adopted_record=$(sudo cat "$backups/status/adopted-key" 2> /dev/null || true)
-          docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "insert into admin_action (id, admin_id, action, details, performed_at) values ('019a0000-0000-7000-8000-000000000009', '019a0000-0000-7000-8000-000000000002', 'CI_HOSTILE', 'kept by every hostile restore', now())"
+          docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -c "insert into admin_action (id, admin_id, action, details, performed_at) values ('019a0000-0000-7000-8000-000000000009', '019a0000-0000-7000-8000-000000000002', 'CI_HOSTILE', 'kept by every hostile restore', now())"
 
           echo "An upload whose dump checks its rows with a function that runs a program, brought with its own key, is refused and its key is not adopted"
           docker exec nfnn-postgres createdb -U novanadeje ci_hostile
@@ -1391,7 +1402,7 @@ jobs:
           wait_for "grep -q '^request=ci-trap-trigger$' $backups/status/backup" 60 "the backup with the planted trigger did not run"
           trap_dump=$(sed -n 's/^file=//p' "$backups/status/backup")
           as_app -c "drop trigger ci_trap on donor_refresh_token" -c "drop function public.ci_trap_trigger()" -c "drop function public.ci_trap()"
-          docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "insert into admin_action (id, admin_id, action, details, performed_at) values ('019a0000-0000-7000-8000-00000000000a', '019a0000-0000-7000-8000-000000000002', 'CI_HOSTILE', 'kept by the refused restore', now())"
+          docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -c "insert into admin_action (id, admin_id, action, details, performed_at) values ('019a0000-0000-7000-8000-00000000000a', '019a0000-0000-7000-8000-000000000002', 'CI_HOSTILE', 'kept by the refused restore', now())"
           docker exec nfnn-backend sh -c "printf 'source=backup\nfile=%s\nadmin=019a0000-0000-7000-8000-000000000002\n' '$trap_dump' > /backups/requests/ci-trap-trigger.restore"
           wait_for "grep -q '^request=ci-trap-trigger$' $backups/status/restore" 60 "the restore of the backup with the planted trigger did not run"
           grep -q '^outcome=failed$' "$backups/status/restore" || { echo "::error::the backup with the planted trigger was restored"; cat "$backups/status/restore"; exit 1; }
@@ -1401,7 +1412,10 @@ jobs:
           [ "$(count_rows "action = 'CI_HOSTILE'")" = 2 ] || { echo "::error::a refused hostile restore changed the live data"; exit 1; }
           [ "$(server_key)" = "$first_key" ] || { echo "::error::a hostile restore changed the server's backup key"; exit 1; }
           docker exec nfnn-postgres psql -U novanadeje -d postgres -tA -c "select datname from pg_database" | grep -qE 'nfnn_restore|ci_hostile' && { echo "::error::a staging, test or probe database was left behind"; exit 1; }
-          docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "delete from admin_action where action = 'CI_HOSTILE'"
+          if as_app -c "delete from admin_action where action = 'CI_HOSTILE'" > /dev/null 2>&1; then
+            echo "::error::the administration history is append-only: the database must refuse to delete its rows outside a migration"
+            exit 1
+          fi
           docker exec nfnn-backend sh -c 'touch /backups/requests/ci-clean.backup && touch /backups/requests/ci-clean.test-restore'
           wait_for "grep -q '^request=ci-clean$' $backups/status/test-restore" 60 "the test restore after the hostile probes did not run"
           grep -q '^outcome=ok$' "$backups/status/test-restore" || { echo "::error::a backup without the planted objects does not restore in a test database"; cat "$backups/status/test-restore"; exit 1; }
@@ -1527,7 +1541,7 @@ jobs:
           echo "A donor of the stack signs in, so the probe can show that the cacheable answers are the same for a signed-in donor"
           probe_donor='{"type":"PERSON","name":"Sonda Mezipaměti","address":{"street":"Zkušební 1","city":"Tišnov","postalCode":"666 01"},"email":"sonda-mezipameti@example.cz","password":"a probe of the stack only","preferredLocale":"cs"}'
           curl -fsS --max-time 30 -o /dev/null -H 'X-Forwarded-For: 203.0.113.41' -H 'Content-Type: application/json' --data "$probe_donor" http://localhost:8089/api/donors/auth/register || { echo "::error::the probe donor's registration was refused"; exit 1; }
-          docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "update donor set email_verified_at = now() where email = 'sonda-mezipameti@example.cz'" | grep -qx 'UPDATE 1' || { echo "::error::the probe donor was not registered"; exit 1; }
+          docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -c "update donor set email_verified_at = now() where email = 'sonda-mezipameti@example.cz'" | grep -qx 'UPDATE 1' || { echo "::error::the probe donor was not registered"; exit 1; }
           token=$(curl -fsS --max-time 30 -H 'X-Forwarded-For: 203.0.113.41' -H 'Content-Type: application/json' --data '{"email":"sonda-mezipameti@example.cz","password":"a probe of the stack only"}' http://localhost:8089/api/donors/auth/login | jq -r '.accessToken')
           [ -n "$token" ] && [ "$token" != null ] || { echo "::error::the probe donor could not sign in"; exit 1; }
           echo "::add-mask::$token"
