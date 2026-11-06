@@ -276,3 +276,72 @@ Feature: An administrator writes projects, the stories of the children the found
       | year | 2025          |
     When someone without a token asks for the news article "dominik-7-let"
     Then the response status is 404
+
+  Scenario: A new project at an article's old address leaves that address leading to the article
+    Given "Jana" creates a news article:
+      | title | Letní tábor                 |
+      | perex | Jak jsme jeli na tábor.     |
+      | body  | Text o táboře.              |
+    And "Jana" publishes the news article "letni-tabor" on 2026-10-20
+    And "Jana" changes the news article "letni-tabor":
+      | title | Letní tábor 2026            |
+      | slug  | letni-tabor-2026            |
+      | perex | Jak jsme jeli na tábor.     |
+      | body  | Text o táboře.              |
+    When "Jana" creates a project:
+      | title | Letní tábor                 |
+      | year  | 2026                        |
+      | perex | Tábor pro děti z fondu.     |
+      | body  | Text o projektu tábora.     |
+    Then the response status is 201
+    When someone without a token asks for the news article "letni-tabor"
+    Then the response status is 200
+    And the news article says:
+      | slug  | letni-tabor-2026 |
+      | title | Letní tábor 2026 |
+
+  Scenario: An article and a project that shared an address both keep leading from it after each moves
+    Given "Jana" creates a news article:
+      | title | Letní tábor                 |
+      | perex | Jak jsme jeli na tábor.     |
+      | body  | Text o táboře.              |
+    And "Jana" publishes the news article "letni-tabor" on 2026-10-20
+    And "Jana" creates a project:
+      | title | Letní tábor                 |
+      | year  | 2026                        |
+      | perex | Tábor pro děti z fondu.     |
+      | body  | Text o projektu tábora.     |
+    And "Jana" publishes the project "letni-tabor" on 2026-10-20
+    When "Jana" changes the news article "letni-tabor":
+      | title | Letní tábor 2026            |
+      | slug  | letni-tabor-2026            |
+      | perex | Jak jsme jeli na tábor.     |
+      | body  | Text o táboře.              |
+    And "Jana" changes the project "letni-tabor":
+      | title | Letní tábor pro děti        |
+      | slug  | letni-tabor-pro-deti        |
+      | year  | 2026                        |
+      | perex | Tábor pro děti z fondu.     |
+      | body  | Text o projektu tábora.     |
+    Then the response status is 200
+    When someone without a token asks for the news article "letni-tabor"
+    Then the response status is 200
+    And the news article says:
+      | slug  | letni-tabor-2026 |
+      | title | Letní tábor 2026 |
+    When someone without a token asks for the project "letni-tabor"
+    Then the response status is 200
+    And the project says:
+      | slug  | letni-tabor-pro-deti |
+      | title | Letní tábor pro děti |
+    When "Jana" changes the project "letni-tabor-pro-deti":
+      | title | Letní tábor              |
+      | slug  | letni-tabor              |
+      | year  | 2026                     |
+      | perex | Tábor pro děti z fondu.  |
+      | body  | Text o projektu tábora.  |
+    Then the response status is 200
+    When someone without a token asks for the news article "letni-tabor"
+    Then the response status is 200
+    And the news article says:
+      | slug | letni-tabor-2026 |

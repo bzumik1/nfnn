@@ -152,7 +152,7 @@ class ProjectAdminServiceTest {
         ProjectView view = service().update(ADMIN, project.id(), ExpectedVersion.none(), command("Dominik", Optional.of("dominik-7-let"), Optional.empty())).view();
 
         assertThat(view.slug()).isEqualTo("dominik-7-let");
-        verify(formerSlugs).forget(new Slug("dominik-7-let"));
+        verify(formerSlugs).forgetProject(new Slug("dominik-7-let"));
         verify(formerSlugs).rememberProject(new Slug("dominik"), project.id(), NOW);
     }
 
@@ -175,7 +175,17 @@ class ProjectAdminServiceTest {
 
         service().create(ADMIN, command("Dominik", Optional.of("dominik"), Optional.empty()));
 
-        verify(formerSlugs).forget(new Slug("dominik"));
+        verify(formerSlugs).forgetProject(new Slug("dominik"));
+    }
+
+    @Test
+    @DisplayName("Given an address an article had before, when a project is created there, then the article's redirect is kept")
+    void should_keep_the_other_kinds_former_slug_when_created_given_its_address() {
+        when(projects.isSlugTakenByAnother(any(), any())).thenReturn(false);
+
+        service().create(ADMIN, command("Dominik", Optional.of("dominik"), Optional.empty()));
+
+        verify(formerSlugs, never()).forgetNews(any());
     }
 
     @Test

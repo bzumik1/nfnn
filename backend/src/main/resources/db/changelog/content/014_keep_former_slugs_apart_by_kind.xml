@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="014-keep-former-slugs-apart-by-kind" author="nfnn">
+        <addColumn tableName="content_former_slug">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <dropPrimaryKey tableName="content_former_slug" constraintName="pk_content_former_slug"/>
+        <addPrimaryKey tableName="content_former_slug" columnNames="id" constraintName="pk_content_former_slug"/>
+        <sql>create unique index uq_content_former_slug_news on content_former_slug (slug) where news_id is not null</sql>
+        <sql>create unique index uq_content_former_slug_project on content_former_slug (slug) where project_id is not null</sql>
+    </changeSet>
+</databaseChangeLog>
