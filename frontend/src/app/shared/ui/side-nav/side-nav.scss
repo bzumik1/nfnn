@@ -17,8 +17,10 @@
 
 .side-nav {
   position: sticky;
-  top: env(safe-area-inset-top);
-  max-height: calc(100vh - env(safe-area-inset-top));
+  top: max(env(safe-area-inset-top), var(--window-controls-inset-block) - var(--space-8));
+  max-height: calc(
+    100vh - max(env(safe-area-inset-top), var(--window-controls-inset-block) - var(--space-8))
+  );
   overflow-y: auto;
   padding: var(--space-8) 0 var(--space-8) var(--space-6);
 }

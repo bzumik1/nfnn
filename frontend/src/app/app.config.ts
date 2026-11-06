@@ -41,6 +41,7 @@ import { serviceWorkerBypassInterceptor } from './core/updates/service-worker-by
 import { versionInterceptor } from './core/version/version-interceptor';
 import { pagePinchLockAtStart } from './core/zoom/page-pinch-lock';
 import { systemTextSizeAtStart } from './core/zoom/system-text-size';
+import { windowControlsAtStart } from './core/layout/window-controls';
 import { DeviceCopies } from './device-copies';
 import { DialogHistory } from './shared/ui/dialog/dialog-history';
 
@@ -110,6 +111,7 @@ export const appConfig: ApplicationConfig = {
     pagePinchLockAtStart,
     pressedOnTouchAtStart,
     systemTextSizeAtStart,
+    windowControlsAtStart,
     navigationAtStart,
     edgeSwipeBackAtStart,
   ],

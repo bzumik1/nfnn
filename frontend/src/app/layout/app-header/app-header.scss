@@ -58,7 +58,7 @@
   max-width: var(--content-max);
   margin: 0 auto;
   padding: 0 max(var(--space-8), env(safe-area-inset-right)) 0
-    max(var(--space-8), env(safe-area-inset-left));
+    max(var(--space-8), env(safe-area-inset-left), var(--window-controls-inset-inline));
   display: flex;
   align-items: center;
   gap: var(--space-3);
@@ -93,7 +93,7 @@
   position: fixed;
   top: calc(env(safe-area-inset-top) + (var(--header-height) - var(--back-button-size)) / 2);
   left: max(
-    max(var(--space-8), env(safe-area-inset-left)),
+    max(var(--space-8), env(safe-area-inset-left), var(--window-controls-inset-inline)),
     calc((100% - var(--content-max)) / 2 + var(--space-8))
   );
   z-index: 110;
@@ -184,10 +184,10 @@
 @include bp.down(tablet) {
   .app-header-inner {
     padding: 0 max(var(--space-5), env(safe-area-inset-right)) 0
-      max(var(--space-5), env(safe-area-inset-left));
+      max(var(--space-5), env(safe-area-inset-left), var(--window-controls-inset-inline));
   }
 
   .back-button {
-    left: max(var(--space-5), env(safe-area-inset-left));
+    left: max(var(--space-5), env(safe-area-inset-left), var(--window-controls-inset-inline));
   }
 }
