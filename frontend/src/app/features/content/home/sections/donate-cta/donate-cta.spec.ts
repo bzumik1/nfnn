@@ -468,6 +468,50 @@ describe('Given the donate section', () => {
     expect(button('Jiná částka').getAttribute('aria-pressed')).toBe('true');
   });
 
+  describe('when the visitor taps Jiná částka', () => {
+    beforeEach(async () => {
+      document.body.appendChild(fixture.nativeElement);
+      await openWithQr();
+    });
+
+    afterEach(() => fixture.nativeElement.remove());
+
+    it('then the amount field takes the focus within the tap itself, so the phone opens its number pad', () => {
+      button('Jiná částka').click();
+
+      expect(document.activeElement?.id).toBe('donate-custom-amount');
+    });
+
+    it('then the field asks for digits and its return key says it is done', () => {
+      button('Jiná částka').click();
+
+      const field = element<HTMLInputElement>('#donate-custom-amount');
+      expect(field.getAttribute('inputmode')).toBe('numeric');
+      expect(field.getAttribute('enterkeyhint')).toBe('done');
+    });
+
+    it('and taps it again with the field left, then the field takes the focus again', async () => {
+      button('Jiná částka').click();
+      element<HTMLInputElement>('#donate-custom-amount').blur();
+      await settle();
+
+      button('Jiná částka').click();
+
+      expect(document.activeElement?.id).toBe('donate-custom-amount');
+    });
+
+    it('and presses return in the field, then the field lets go of the focus and the keyboard closes', async () => {
+      button('Jiná částka').click();
+      await type('300');
+
+      element('#donate-custom-amount').dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }),
+      );
+
+      expect(document.activeElement?.id).not.toBe('donate-custom-amount');
+    });
+  });
+
   it('when nobody is signed in, then it offers to create an account and opens the registration that leads back here after the e-mail', async () => {
     await openWithQr();
 

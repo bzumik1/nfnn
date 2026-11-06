@@ -129,6 +129,12 @@ describe('Given the contact form', () => {
     expect(element('#contact-email').hasAttribute('placeholder')).toBe(false);
   });
 
+  it('when it is shown, then the keyboard’s return key leads from the name and the e-mail on to the message, where it starts a new line', () => {
+    expect(element('#contact-name').getAttribute('enterkeyhint')).toBe('next');
+    expect(element('#contact-email').getAttribute('enterkeyhint')).toBe('next');
+    expect(element('#contact-message').hasAttribute('enterkeyhint')).toBe(false);
+  });
+
   it('when the message is on its way, then the button says the foundation is sending it', async () => {
     await fillInValidMessage();
 
