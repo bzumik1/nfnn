@@ -19,10 +19,10 @@ The rules are in `.claude/rules/testing-regression.md`; how each piece works is 
 
 ## Regenerate the data sets, receipts and screens (baseline commit only)
 - QR cases: `GOLDEN_FILES=write ./gradlew test --tests "*QrGoldenCasesTest" -PnoCucumber`.
-- Everything else in one step: `env -u FIO_TOKEN scripts/record-baseline-data.sh` (Docker, Node 24, Playwright's Chromium, `npm ci` in `frontend/` and `mcp/`). It stops before changing a file anywhere but on that checkout, shoots the screens twice and fails unless both runs agree, and keeps its temporary folder on a failure.
+- Everything else in one step: `env -u FIO_TOKEN scripts/record-baseline-data.sh` (no `MAIL_*`, `FIO_TOKEN`, `JWT_SECRET` or `SETTINGS_KEY` in the environment, as for recording; Docker, Node 24, Playwright's Chromium, `npm ci` in `frontend/` and `mcp/`). It stops before changing a file anywhere but on that checkout, shoots the screens twice and fails unless both runs agree, and keeps its temporary folder on a failure.
 
 ## Add a screen state to the baseline
-1. Make the spec change on a checkout of `BASELINE_COMMIT` and keep it as `regression/v2/additions/<slice>.patch` (`git diff $(cat regression/v2/BASELINE_COMMIT) -- frontend/e2e/baseline`); it must apply to that commit and never changes once committed.
+1. On the PR's checkout, keep the slice's additions to `frontend/e2e/baseline` as `regression/v2/additions/<slice>.patch`: `git diff $(cat regression/v2/BASELINE_COMMIT) -- frontend/e2e/baseline > regression/v2/additions/<slice>.patch`. It must apply to the baseline commit and never changes once committed.
 2. From the root of the PR's checkout: `out=$(mktemp -d) && for run in 1 2; do node scripts/compare-screens.mjs --base=<BASELINE_COMMIT> --patch=regression/v2/additions/<slice>.patch --v2-only --base-only --out=$out/$run || exit 1; done && node scripts/screens-manifest.mjs --add $out/1/base-shots $out/2/base-shots <slice>`.
 3. Copy the new PNGs from `$out/1/base-shots` into the store `/mnt/project-files/nfnn-ux/snimky/v2-baseline/`, never over a file there; `node scripts/screens-manifest.mjs --check <store>` must pass.
 4. Declare it in the PR's changes file: `{"kind": "baseline-addition", "file": "regression/v2/screens/manifest.json", "recordedFrom": "<BASELINE_COMMIT>", "patch": "regression/v2/additions/<slice>.patch", "record": "<the commands of step 2>", "reason": …}` (example: `regression/v2/changes/0.6c.json`).
@@ -30,7 +30,7 @@ The rules are in `.claude/rules/testing-regression.md`; how each piece works is 
 A new receipt sample is added the same way, as a new file `regression/v2/receipts/<sample>.json`.
 
 ## Compare screens
-- With the merge base (what a slice proves): in `frontend/`, `npm run screens:compare` (`--head-spec` also compares the states the slice adds; `--base=<commit>`, `--out=<folder>`, `--keep`). Its `report.md` summary goes into the PR under "Srovnání s v2", a visible change named with its crop.
+- With the merge base (what a slice proves): in `frontend/`, `npm run screens:compare` (`--head-spec` also compares the states the slice adds; `--base=<commit>`, `--out=<folder>`; `--patch`, `--v2-only`, `--base-only` and `--keep` are for recording additions). Its `report.md` summary goes into the PR under "Srovnání s v2", a visible change named with its crop.
 - With the v2 store: `node scripts/screens-manifest.mjs --check <folder>` checks digests; for pixels, copy the store to a temporary folder, serve this checkout's build with `node scripts/serve-dist.mjs dist/frontend/browser <port>`, and run `E2E_BASE_URL=http://localhost:<port> BASELINE_SCREENS=1 BASELINE_SCREENS_DIR=<copy> npx playwright test e2e/baseline/screens.spec.ts --project=baseline --update-snapshots=none`. A digest that differs means comparing pixels, never recording again.
 
 ## When CI's `main-recording` finds no recording of `main`

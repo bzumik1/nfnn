@@ -11,7 +11,7 @@ Since slice 1.10 the server draws no receipt. A receipt is frozen data: `POST /a
 1. Change the key in `backend/src/main/resources/i18n/messages.properties`, `messages_cs.properties` and `messages_en.properties` (an `en` receipt is bilingual, so every key has both languages).
 2. `cd backend && ./gradlew test --tests "*ReceiptTextsHistoryTest*" --tests "*BundleReceiptTextSourceTest*" -PnoCucumber` (no Docker needed; in a cloud session see skill `cloud-session`). `ReceiptTextsHistoryTest` fails and writes the new set to `backend/build/receipt-texts/<sha256>.json`.
 3. Read the candidate: wording, placeholders `{0}`…, both languages. Copy it into `backend/src/test/resources/receipts/texts/` and commit it with the change. Never edit or delete a recorded set: receipts were frozen with it.
-4. A receipt already issued keeps its texts; only receipts issued after the deploy say the new words. The shared cases (`shared-cases/receipts/v1/frozen.json`) keep the set they name; a text change records a new set and leaves the cases as they are (`testing-shared-cases.md`, the `receipts/v1/frozen.json` row).
+4. A receipt already issued keeps its texts; only receipts issued after the deploy say the new words. The shared cases (`shared-cases/receipts/v1/frozen.json`) keep the set they name; a text change records a new set and leaves the cases as they are (`testing-shared-cases.md`, `receipts/v1/frozen.json`).
 5. A new key that the browser prints is read in `receipt-document.ts` from the frozen texts. Decide what a receipt frozen without the key shows (today's captions fall back to `receipt-captions.ts`), and test both in `receipt-document.spec.ts`.
 
 ## The look (layout, theme, fonts)
