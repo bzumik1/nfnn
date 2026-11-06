@@ -22,15 +22,15 @@ Domain words follow `docs/glossary.md` (Czech UI word, English name in code, wor
 
 `rules/testing.md`, `security.md` and `reliability.md` load with this file. Every other rule loads only when a file tool opens a file matching its `paths:`, never through a diff or `git show`, and never in a claude.ai project thread. So a thread that plans or reviews work in an area reads that area's rule files first, even before it opens a file there, and so does every claude.ai project thread before it works in the area. A project thread also loads no hooks, settings, skills or agents: there "skill `x`" means read `.claude/skills/x/SKILL.md`, and nothing but you keeps a push off `main`.
 
-| Area | Read first | Loads by itself with |
-|---|---|---|
-| Backend | `backend.md`, `testing-backend.md`, `testing-shared-cases.md`, `testing-regression.md`; `database.md` for schema, persistence or locks | `backend/` and `frontend/src/app/core/version/`; the tests; the database's files (changelogs, persistence adapters and repositories, locks, `application*.yml`, `deploy/postgres/`, `deploy/backup/`) |
-| Frontend | `frontend.md`, `testing-frontend.md`; `testing-shared-cases.md` when a shared computation changes; `testing-regression.md` for `e2e/baseline` or a visible change | `frontend/` |
-| Shared cases | `testing-shared-cases.md` | `shared-cases/`, backend tests, frontend specs and e2e, `regression/v2/changes/` |
-| Regression against v2 | `testing-regression.md`; skill `regression-baseline` to record | `regression/`, `shared-cases/`, `scripts/`, Cucumber, `e2e/baseline/`, `mcp/`, `.github/` |
-| Connector | `testing-regression.md` (Connector shapes), `backend.md` (API versions) | `mcp/` |
-| CI, deploy, backups | `deploy-ci.md` before touching `deploy/`, `.github/`, a Dockerfile, an entrypoint or nginx config; `testing-regression.md`, `testing-nightly.md` | those files; nightly also `regression/`, `scripts/`, e2e and backend tests |
-| API contract (`docs/api-contract.md`) | `backend.md` | |
+| Area | Read first |
+|---|---|
+| Backend | `backend.md`, `testing-backend.md`, `testing-shared-cases.md`, `testing-regression.md`; `database.md` before touching a changelog, a persistence adapter or repository, SQL, a lock or the datasource settings |
+| Frontend | `frontend.md`, `testing-frontend.md`; `testing-shared-cases.md` when a shared computation changes; `testing-regression.md` for `e2e/baseline` or a visible change |
+| Connector | `testing-regression.md` (Connector shapes), `backend.md` (API versions) |
+| CI, deploy, backups | `deploy-ci.md` before touching `deploy/`, `.github/`, a Dockerfile, an entrypoint or nginx config; `database.md` before touching `deploy/postgres/` or `deploy/backup/`; `testing-regression.md`, `testing-nightly.md` |
+| API contract (`docs/api-contract.md`) | `backend.md` |
+
+Each file's `paths:` frontmatter names when it loads by itself: `backend.md` with `backend/` and `frontend/src/app/core/version/`; `testing-backend.md` with the backend's tests and `build.gradle.kts`; `database.md` with changelogs, persistence, locks, the audit log, repositories, `application*.yml`, the schema, concurrency and migration tests, `deploy/postgres/` and `deploy/backup/`; `frontend.md` and `testing-frontend.md` with `frontend/`; `testing-shared-cases.md` with `shared-cases/`, the backend's tests, frontend specs and e2e and `regression/v2/changes/`; `testing-regression.md` with `regression/`, `shared-cases/`, `scripts/`, the Cucumber glue and features, the regression tests, `build.gradle.kts`, `e2e/baseline/`, `mcp/` and `.github/` (its commands: skill `regression-baseline`); `testing-nightly.md` with `.github/`, `regression/`, `scripts/`, e2e and the backend's tests; `deploy-ci.md` with `deploy/`, `.github/`, the compose files, `.env.example`, Dockerfiles, entrypoints and nginx config.
 
 ## Commands
 
