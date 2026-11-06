@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'pressed';
 @use 'touch-target';
 
 :host {
@@ -72,6 +73,11 @@
   min-width: 0;
   margin-inline-end: auto;
   border-radius: var(--radius-sm);
+  transition: opacity var(--duration-base);
+
+  @include pressed.when-pressed {
+    @include pressed.fades;
+  }
 
   picture {
     display: contents;
