@@ -25,7 +25,9 @@ import { problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { formatBankTime } from '../../donations/donation-date';
-import { AdminApi, DonorAccountResponse } from '../admin-api';
+import { DonorAccountResponse } from '../admin-api';
+import { AdministrationReads } from '../device-copy/administration-reads';
+import { CopyAge } from '../device-copy/copy-age';
 
 type SearchState = 'idle' | 'searching' | 'ready' | 'error';
 
@@ -43,13 +45,13 @@ const PRAGUE_DATE_LENGTH = '17. 10. 2026'.length;
 
 @Component({
   selector: 'app-admin-donors',
-  imports: [RouterLink],
+  imports: [RouterLink, CopyAge],
   templateUrl: './admin-donors.html',
   styleUrl: './admin-donors.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminDonors {
-  private readonly api = inject(AdminApi);
+  private readonly reads = inject(AdministrationReads);
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -113,7 +115,7 @@ export class AdminDonors {
       return of<Outcome>({ state: 'idle', items: [], hasMore: false });
     }
     this.state.set('searching');
-    return this.api.donors(query).pipe(
+    return this.reads.accountList(query).pipe(
       map((response): Outcome => ({
         state: 'ready',
         items: response.items,

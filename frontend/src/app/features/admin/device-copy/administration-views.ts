@@ -96,7 +96,7 @@ const PURPOSE_TEXTS: Readonly<Record<CopyDonationRow['purpose'], string>> = {
 };
 const ACCENTED = 'áäčďéěëíĺľňóôöŕřšťúůüýžÁÄČĎÉĚËÍĹĽŇÓÔÖŔŘŠŤÚŮÜÝŽ';
 const PLAIN = 'aacdeeeillnooorrstuuuyzaacdeeeillnooorrstuuuyz';
-const AMOUNT_SPACES = /[ \t\n\v\f\r  ]+/g;
+const AMOUNT_SPACES = /[ \t\n\v\f\r\u00a0\u202f]+/g;
 const CROWNS = /^(\d{1,12})(?:[.,](\d{1,2}))?(?:kc|czk)?$/;
 const HELLERS_PER_CROWN = 100;
 const NAMES = new Intl.Collator('cs');

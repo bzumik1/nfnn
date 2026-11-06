@@ -1,5 +1,6 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
@@ -16,6 +17,10 @@ import {
 import { AdminPayments } from './admin-payments';
 import { LiveUpdates } from '../../../core/live/live-updates';
 import { FakeLiveUpdates } from '../../../core/live/testing/live-fixtures';
+import { Connectivity } from '../../../core/connectivity/connectivity';
+import type { AccountStore, CopyContents } from '../../../core/device/store/account-store';
+import { DeviceVault, type OpenedCopy } from '../../../core/device/store/device-vault';
+import { AdministrationCopyDownload } from '../device-copy/administration-copy-download';
 
 const PAYMENTS_URL = '/api/admin/donations/payments';
 const DONORS_URL = '/api/admin/donations/donors';
@@ -894,5 +899,109 @@ describe('Given an administrator on the bank payments page', () => {
 
       expect(url()).toBe('/sprava/platby');
     });
+  });
+});
+
+describe('Given an administrator on the bank payments page with the administration copy on an offline device', () => {
+  let fixture: ComponentFixture<unknown>;
+  let http: HttpTestingController;
+  const payment = unpairedPayment();
+  const record = {
+    donorId: '01a18e56-bdb0-775a-bd0a-a60756831369',
+    name: 'Jana Nováková',
+    type: 'PERSON',
+    variableSymbol: '4821937560',
+    companyIdentifier: null,
+    address: { street: 'Dlouhá 12', city: 'Ústí nad Labem', postalCode: '400 01' },
+    preferredLocale: 'cs',
+    registeredAt: '2026-01-15T10:00:00Z',
+    erasedAt: null,
+  };
+  const paymentRow = Object.fromEntries(
+    Object.entries(payment).filter(([field]) => field !== 'donation'),
+  );
+
+  beforeEach(async () => {
+    localStorage.clear();
+    const contents: CopyContents = {
+      chunks: [
+        { id: 'donations/payments:2026-10', rowsSha256: 'a', rows: [paymentRow] },
+        { id: 'donations/donor-records:2026-01', rowsSha256: 'b', rows: [record] },
+      ],
+      summary: { donations: { today: '2026-10-20', byYear: [], receiptsAvailableFrom: 2026 } },
+      storedAt: '2026-10-20T10:30:00.000Z',
+    };
+    const opened: OpenedCopy = {
+      store: {
+        copyId: 'copy-1',
+        contents: signal(contents).asReadonly(),
+      } as unknown as AccountStore,
+      reason: 'unlocked',
+      account: { email: 'admin@example.cz', userHandle: 'h', administrator: true },
+    };
+    await TestBed.configureTestingModule({
+      imports: [AdminPayments],
+      providers: [
+        provideHttpClient(withInterceptors([authInterceptor])),
+        provideHttpClientTesting(),
+        provideRouter([{ path: 'sprava/platby', component: AdminPayments }]),
+        { provide: DeviceVault, useValue: { administration: signal(opened).asReadonly() } },
+        { provide: Connectivity, useValue: { offline: signal(true).asReadonly() } },
+        {
+          provide: AdministrationCopyDownload,
+          useValue: { refresh: vi.fn(), checkedAt: signal<string | null>(null).asReadonly() },
+        },
+      ],
+    }).compileComponents();
+    http = TestBed.inject(HttpTestingController);
+    const store = TestBed.inject(AuthStore);
+    store.login('admin@example.cz', 'correct horse battery').subscribe();
+    http
+      .expectOne('/api/donors/auth/login')
+      .flush(authResponse('token-1', sampleDonor({ roles: ['DONOR', 'ADMIN'] })));
+    const harness = await RouterTestingHarness.create('/sprava/platby');
+    fixture = harness.fixture;
+    await fixture.whenStable();
+    fixture.detectChanges();
+  });
+
+  afterEach(() => http.verify());
+
+  function text(selector: string): string {
+    return (fixture.nativeElement.querySelector(selector)?.textContent ?? '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function button(name: string): HTMLButtonElement {
+    const found = Array.from(document.querySelectorAll('button')).find(
+      (candidate) => candidate.textContent?.trim() === name,
+    );
+    if (!found) {
+      throw new Error(`No button "${name}"`);
+    }
+    return found;
+  }
+
+  it('when the page opens, then it lists the payments of the copy without asking the server and says how old they are', () => {
+    expect(text('tbody tr')).toContain('500 Kč');
+    expect(text('tbody tr')).toContain('Nováková Jana');
+    expect(text('app-copy-age')).toBe('Offline · údaje z 20. 10. 2026 12:30 · nemusí být aktuální');
+  });
+
+  it('when a payment is to be paired, then the donor is found in the copy and pairing needs a connection', async () => {
+    button('Přiřadit dárci').click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const dialog = document.querySelector('dialog[open]') as HTMLDialogElement;
+    expect(dialog.querySelector('.pair-result')?.textContent).toContain('Jana Nováková');
+    (dialog.querySelector('input[type="radio"]') as HTMLInputElement).click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const pair = button('Přiřadit dárci Jana Nováková');
+    expect(pair.getAttribute('aria-disabled')).toBe('true');
+    pair.click();
+    http.expectNone((request) => request.url.endsWith('/pair'));
   });
 });

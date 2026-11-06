@@ -36,8 +36,12 @@ class FakeVault {
     this.revoked.push(account);
   };
 
-  open(reason: OpenedCopy['reason']): void {
-    this.opened.set({ store: { copyId: 'copy-1' } as AccountStore, reason, account: JANA });
+  open(reason: OpenedCopy['reason'], held: CopyContents | null = null): void {
+    const store = {
+      copyId: 'copy-1',
+      contents: signal(held).asReadonly(),
+    } as unknown as AccountStore;
+    this.opened.set({ store, reason, account: JANA });
   }
 }
 
@@ -231,6 +235,115 @@ describe('Given the download of the administration into its copy on this device'
       await manifests();
       await chunks();
       expect(vault.stored).toHaveLength(1);
+    });
+  });
+
+  describe('when a copy already stored opens again and only the payments changed since', () => {
+    const NEWER_PAYMENTS = [...PAYMENTS, { id: 'payment-2', counterpartyName: 'Jana Nováková' }];
+
+    beforeEach(async () => {
+      vault.open('unlocked', {
+        chunks: [
+          {
+            id: 'donations/payments:2026-11',
+            rowsSha256: await rowsSha256(PAYMENTS),
+            rows: PAYMENTS,
+          },
+          { id: 'donations/payments:2026-10', rowsSha256: await rowsSha256([]), rows: [] },
+          { id: 'donors/accounts:2026-11', rowsSha256: await rowsSha256(ACCOUNTS), rows: ACCOUNTS },
+        ],
+        summary: { donations: SUMMARY },
+        storedAt: '2026-11-05T08:00:00.000Z',
+      });
+      await flush();
+    });
+
+    it('then only the changed chunk is downloaded, the unchanged ones are kept and a chunk the server no longer lists is dropped', async () => {
+      await answer('/api/admin/donations/sync', {
+        subject: ADMIN_ID,
+        administrator: true,
+        summary: SUMMARY,
+        chunks: [
+          { id: 'payments:2026-11', rowsSha256: await rowsSha256(NEWER_PAYMENTS), count: 2 },
+        ],
+      });
+      await answer('/api/admin/donors/sync', {
+        subject: ADMIN_ID,
+        administrator: true,
+        chunks: [{ id: 'accounts:2026-11', rowsSha256: await rowsSha256(ACCOUNTS), count: 1 }],
+      });
+      const asked = await vi.waitFor(() =>
+        http.expectOne((request) => request.url === '/api/admin/donations/sync/chunks'),
+      );
+      expect(asked.request.params.get('ids')).toBe('payments:2026-11');
+      asked.flush({
+        subject: ADMIN_ID,
+        administrator: true,
+        summary: SUMMARY,
+        chunks: [
+          {
+            id: 'payments:2026-11',
+            rowsSha256: await rowsSha256(NEWER_PAYMENTS),
+            count: 2,
+            rows: NEWER_PAYMENTS,
+          },
+        ],
+        missing: [],
+      });
+      await flush();
+
+      expect(http.match('/api/admin/donors/sync/chunks')).toHaveLength(0);
+      expect(vault.stored).toHaveLength(1);
+      expect(vault.stored[0].chunks.map((chunk) => [chunk.id, chunk.rows.length])).toEqual([
+        ['donations/payments:2026-11', 2],
+        ['donors/accounts:2026-11', 1],
+      ]);
+    });
+
+    it('and the payments are as the copy holds them after all, then nothing is downloaded and the copy is stored only without the chunk the server no longer lists', async () => {
+      await manifests();
+
+      expect(http.match(() => true)).toHaveLength(0);
+      expect(vault.stored.map((stored) => stored.chunks.map((chunk) => chunk.id))).toEqual([
+        ['donations/payments:2026-11', 'donors/accounts:2026-11'],
+      ]);
+    });
+  });
+
+  describe('when the opened copy is asked to refresh twice while the first refresh runs', () => {
+    it('then one refresh runs, and both callers learn its outcome', async () => {
+      vault.open('unlocked', {
+        chunks: [
+          {
+            id: 'donations/payments:2026-11',
+            rowsSha256: await rowsSha256(PAYMENTS),
+            rows: PAYMENTS,
+          },
+          { id: 'donors/accounts:2026-11', rowsSha256: await rowsSha256(ACCOUNTS), rows: ACCOUNTS },
+        ],
+        summary: { donations: SUMMARY },
+        storedAt: '2026-11-05T08:00:00.000Z',
+      });
+      await flush();
+      await manifests();
+
+      const first = download.refresh();
+      const second = download.refresh();
+      await flush();
+      await manifests();
+
+      expect(await first).toBe('unchanged');
+      expect(await second).toBe('unchanged');
+      expect(http.match(() => true)).toHaveLength(0);
+      expect(vault.stored).toEqual([]);
+      expect(download.checkedAt()).not.toBeNull();
+    });
+  });
+
+  describe('when no copy is open and a refresh is asked for', () => {
+    it('then nothing is asked of the server', async () => {
+      expect(await download.refresh()).toBe('no-copy');
+      expect(http.match(() => true)).toHaveLength(0);
     });
   });
 });

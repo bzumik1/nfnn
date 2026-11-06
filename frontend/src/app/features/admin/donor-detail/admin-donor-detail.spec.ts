@@ -1,6 +1,7 @@
 import type { MockInstance } from 'vitest';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
@@ -24,6 +25,10 @@ import {
   OTHER_KEY,
   TEST_KEY,
 } from '../../donations/verification/testing/verification-fixtures';
+import { Connectivity } from '../../../core/connectivity/connectivity';
+import type { AccountStore, CopyContents } from '../../../core/device/store/account-store';
+import { DeviceVault, type OpenedCopy } from '../../../core/device/store/device-vault';
+import { AdministrationCopyDownload } from '../device-copy/administration-copy-download';
 import { AdminDonorDetail } from './admin-donor-detail';
 
 const DONOR_ID = '01a18e56-bdb0-775a-bd0a-a60756831369';
@@ -1471,5 +1476,121 @@ describe('Given an administrator on a donor card', () => {
     expect(
       buttonNames(section('Vydaná potvrzení')).some((name) => name.startsWith('Stáhnout PDF')),
     ).toBe(true);
+  });
+});
+
+describe('Given an administrator on a donor card with the administration copy on the device', () => {
+  let fixture: ComponentFixture<AdminDonorDetail>;
+  let http: HttpTestingController;
+  let offline: ReturnType<typeof signal<boolean>>;
+  const account = donorAccount();
+  const record = {
+    donorId: DONOR_ID,
+    name: account.name,
+    type: account.type,
+    variableSymbol: account.variableSymbol,
+    companyIdentifier: null,
+    address: account.address,
+    preferredLocale: 'cs',
+    registeredAt: account.registeredAt,
+    erasedAt: null,
+  };
+
+  async function open(deviceOffline: boolean): Promise<void> {
+    localStorage.clear();
+    offline = signal(deviceOffline);
+    const contents: CopyContents = {
+      chunks: [
+        { id: 'donations/donor-records:2026-10', rowsSha256: 'a', rows: [record] },
+        { id: 'donors/accounts:2026-10', rowsSha256: 'b', rows: [account] },
+      ],
+      summary: { donations: { today: '2026-10-20', byYear: [], receiptsAvailableFrom: 2026 } },
+      storedAt: '2026-10-20T10:30:00.000Z',
+    };
+    const opened: OpenedCopy = {
+      store: {
+        copyId: 'copy-1',
+        contents: signal(contents).asReadonly(),
+      } as unknown as AccountStore,
+      reason: 'unlocked',
+      account: { email: 'admin@example.cz', userHandle: 'h', administrator: true },
+    };
+    await TestBed.configureTestingModule({
+      imports: [AdminDonorDetail],
+      providers: [
+        provideHttpClient(withInterceptors([authInterceptor])),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: convertToParamMap({ id: DONOR_ID }) } },
+        },
+        { provide: RECEIPT_PDF_ENVIRONMENT, useValue: new FakeReceiptPdfEnvironment() },
+        { provide: DeviceVault, useValue: { administration: signal(opened).asReadonly() } },
+        { provide: Connectivity, useValue: { offline: offline.asReadonly() } },
+        {
+          provide: AdministrationCopyDownload,
+          useValue: {
+            refresh: vi.fn().mockResolvedValue('unchanged'),
+            checkedAt: signal<string | null>(null).asReadonly(),
+          },
+        },
+      ],
+    }).compileComponents();
+    http = TestBed.inject(HttpTestingController);
+    const store = TestBed.inject(AuthStore);
+    store.login('jana@example.cz', 'correct horse battery').subscribe();
+    http
+      .expectOne('/api/donors/auth/login')
+      .flush(authResponse('token-1', sampleDonor({ roles: ['DONOR', 'ADMIN'] })));
+    fixture = TestBed.createComponent(AdminDonorDetail);
+    fixture.detectChanges();
+    await settle();
+  }
+
+  async function settle(): Promise<void> {
+    await fixture.whenStable();
+    fixture.detectChanges();
+  }
+
+  afterEach(() => {
+    http.match(KEYS_URL).forEach((request) => request.flush(keyListWith([TEST_KEY])));
+    http.verify();
+  });
+
+  function accountsCard(): string {
+    return (
+      fixture.nativeElement.querySelector('[aria-labelledby="accounts-title"]')?.textContent ?? ''
+    )
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  it('when the device is online, then the card shows the copy at once and the bank accounts once the server gives them', async () => {
+    await open(false);
+    await vi.waitFor(() => {
+      fixture.detectChanges();
+      expect(accountsCard()).toContain('Načítáme bankovní účty…');
+    });
+
+    expect(fixture.nativeElement.querySelector('h1')?.textContent).toContain('Jana Nováková');
+    await vi.waitFor(() =>
+      http.expectOne(DETAIL_URL).flush(donorDetail({ bankAccounts: [adminBankAccount()] })),
+    );
+    await settle();
+
+    expect(accountsCard()).toContain('2900233333/2010');
+  });
+
+  it('when the device is offline, then the card comes from the copy, says how old it is and that the bank accounts wait for a connection', async () => {
+    await open(true);
+
+    expect(fixture.nativeElement.querySelector('h1')?.textContent).toContain('Jana Nováková');
+    expect(fixture.nativeElement.querySelector('app-copy-age')?.textContent).toContain(
+      'Offline · údaje z 20. 10. 2026 12:30',
+    );
+    expect(accountsCard()).toContain(
+      'Bankovní účty dárce ukážeme, až se zařízení spojí se serverem.',
+    );
   });
 });

@@ -11,6 +11,7 @@
       <ng-container i18n="@@admin.donorDetail.heading">Dárce</ng-container>
     }
   </h1>
+  <app-copy-age />
   @if (erasedAt(); as erasedAt) {
     <p class="admin-erased" role="note" i18n="@@admin.donorDetail.erased">
       Osobní údaje tohoto dárce jsme vymazali {{ time(erasedAt) }}. Účet už nejde použít. Dary a
@@ -430,6 +431,15 @@
           @if (erasedAt()) {
             <p class="ui-card__empty" i18n="@@admin.donorDetail.accounts.erased">
               Bankovní účty jsme s osobními údaji dárce smazali; další platby se mu už nepřiřadí.
+            </p>
+          } @else if (bankAccountsSource() === 'pending') {
+            <p class="ui-load-state" i18n="@@admin.donorDetail.accounts.pending">
+              Načítáme bankovní účty…
+            </p>
+          } @else if (bankAccountsSource() === 'unavailable') {
+            <p class="ui-card__empty" i18n="@@admin.donorDetail.accounts.unavailable">
+              Bankovní účty dárce ukážeme, až se zařízení spojí se serverem. V zařízení je
+              neukládáme, protože o jejich párování rozhoduje nastavení serveru.
             </p>
           } @else if (bankAccounts().length === 0) {
             <p class="ui-card__empty" i18n="@@admin.donorDetail.accounts.empty">
