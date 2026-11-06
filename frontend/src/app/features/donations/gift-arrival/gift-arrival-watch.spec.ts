@@ -331,6 +331,15 @@ describe('Given the watch for an arriving gift', () => {
       expect(feed.following).toBe(1);
     });
 
+    it('then the QR code in view for 5 s while it already watches does not restart the schedule', async () => {
+      watch.intent();
+      FakeIntersectionObserver.show(qr, true);
+
+      await advance(GIFT_CHECK_OFFSETS_MS[0]);
+
+      expect(feed.asks).toBe(1);
+    });
+
     it('then the QR code leaving the view earlier does not count', async () => {
       FakeIntersectionObserver.show(qr, true);
       await advance(QR_DWELL_MS - 1);

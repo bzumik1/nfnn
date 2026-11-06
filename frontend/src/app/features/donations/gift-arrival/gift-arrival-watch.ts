@@ -109,7 +109,13 @@ export class GiftArrivalWatch {
   private qrSeen(inView: boolean): void {
     clearTimeout(this.dwell);
     if (inView && this.visible()) {
-      this.dwell = setTimeout(() => this.intent(), QR_DWELL_MS);
+      this.dwell = setTimeout(() => this.startWatching(), QR_DWELL_MS);
+    }
+  }
+
+  private startWatching(): void {
+    if (this.watching === null) {
+      this.intent();
     }
   }
 
