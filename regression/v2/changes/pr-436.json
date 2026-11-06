@@ -1,5 +1,80 @@
 [
   {
+    "path": "POST /api/donors/auth/email-verification/confirm",
+    "scenario": "donors/donor_credentials: *",
+    "kind": "removed",
+    "reason": "#436 (security audit 2026-11-06): confirming an e-mail change link opens no session any more and ends every session of the donor; the change link is confirmed at POST /api/donors/auth/email-change/confirm, so the scenarios no longer post it to the registration confirmation, and the session held before the change cannot be refreshed after it (401)",
+    "contract": "docs/api-contract.md, E-mail verification; docs/security-overview.md, Changes while signed in"
+  },
+  {
+    "path": "POST /api/donors/auth/refresh",
+    "scenario": "donors/donor_credentials: Changing the e-mail sends a link to the new address, confirming it switches the account, tells the old address and ends other sessions*",
+    "kind": "request",
+    "reason": "#436 (security audit 2026-11-06): confirming an e-mail change link opens no session any more and ends every session of the donor; the change link is confirmed at POST /api/donors/auth/email-change/confirm, so the scenarios no longer post it to the registration confirmation, and the session held before the change cannot be refreshed after it (401)",
+    "contract": "docs/api-contract.md, E-mail verification; docs/security-overview.md, Changes while signed in"
+  },
+  {
+    "path": "POST /api/donors/auth/refresh",
+    "scenario": "donors/donor_credentials: Changing the e-mail sends a link to the new address, confirming it switches the account, tells the old address and ends other sessions*",
+    "kind": "status",
+    "reason": "#436 (security audit 2026-11-06): confirming an e-mail change link opens no session any more and ends every session of the donor; the change link is confirmed at POST /api/donors/auth/email-change/confirm, so the scenarios no longer post it to the registration confirmation, and the session held before the change cannot be refreshed after it (401)",
+    "contract": "docs/api-contract.md, E-mail verification; docs/security-overview.md, Changes while signed in"
+  },
+  {
+    "path": "POST /api/donors/auth/refresh",
+    "scenario": "donors/donor_credentials: Changing the e-mail sends a link to the new address, confirming it switches the account, tells the old address and ends other sessions*",
+    "kind": "headers",
+    "reason": "#436 (security audit 2026-11-06): confirming an e-mail change link opens no session any more and ends every session of the donor; the change link is confirmed at POST /api/donors/auth/email-change/confirm, so the scenarios no longer post it to the registration confirmation, and the session held before the change cannot be refreshed after it (401)",
+    "contract": "docs/api-contract.md, E-mail verification; docs/security-overview.md, Changes while signed in"
+  },
+  {
+    "path": "POST /api/donors/auth/refresh",
+    "scenario": "donors/donor_credentials: Changing the e-mail sends a link to the new address, confirming it switches the account, tells the old address and ends other sessions*",
+    "kind": "body",
+    "reason": "#436 (security audit 2026-11-06): confirming an e-mail change link opens no session any more and ends every session of the donor; the change link is confirmed at POST /api/donors/auth/email-change/confirm, so the scenarios no longer post it to the registration confirmation, and the session held before the change cannot be refreshed after it (401)",
+    "contract": "docs/api-contract.md, E-mail verification; docs/security-overview.md, Changes while signed in"
+  },
+  {
+    "path": "POST /api/donors/auth/refresh",
+    "scenario": "donors/donor_credentials: Changing the e-mail sends a link to the new address, confirming it switches the account, tells the old address and ends other sessions*",
+    "kind": "added",
+    "field": "$.detail",
+    "reason": "#436 (security audit 2026-11-06): confirming an e-mail change link opens no session any more and ends every session of the donor; the change link is confirmed at POST /api/donors/auth/email-change/confirm, so the scenarios no longer post it to the registration confirmation, and the session held before the change cannot be refreshed after it (401)",
+    "contract": "docs/api-contract.md, E-mail verification; docs/security-overview.md, Changes while signed in"
+  },
+  {
+    "path": "POST /api/donors/auth/refresh",
+    "scenario": "donors/donor_credentials: Changing the e-mail sends a link to the new address, confirming it switches the account, tells the old address and ends other sessions*",
+    "kind": "added",
+    "field": "$.instance",
+    "reason": "#436 (security audit 2026-11-06): confirming an e-mail change link opens no session any more and ends every session of the donor; the change link is confirmed at POST /api/donors/auth/email-change/confirm, so the scenarios no longer post it to the registration confirmation, and the session held before the change cannot be refreshed after it (401)",
+    "contract": "docs/api-contract.md, E-mail verification; docs/security-overview.md, Changes while signed in"
+  },
+  {
+    "path": "POST /api/donors/auth/refresh",
+    "scenario": "donors/donor_credentials: Changing the e-mail sends a link to the new address, confirming it switches the account, tells the old address and ends other sessions*",
+    "kind": "added",
+    "field": "$.status",
+    "reason": "#436 (security audit 2026-11-06): confirming an e-mail change link opens no session any more and ends every session of the donor; the change link is confirmed at POST /api/donors/auth/email-change/confirm, so the scenarios no longer post it to the registration confirmation, and the session held before the change cannot be refreshed after it (401)",
+    "contract": "docs/api-contract.md, E-mail verification; docs/security-overview.md, Changes while signed in"
+  },
+  {
+    "path": "POST /api/donors/auth/refresh",
+    "scenario": "donors/donor_credentials: Changing the e-mail sends a link to the new address, confirming it switches the account, tells the old address and ends other sessions*",
+    "kind": "added",
+    "field": "$.title",
+    "reason": "#436 (security audit 2026-11-06): confirming an e-mail change link opens no session any more and ends every session of the donor; the change link is confirmed at POST /api/donors/auth/email-change/confirm, so the scenarios no longer post it to the registration confirmation, and the session held before the change cannot be refreshed after it (401)",
+    "contract": "docs/api-contract.md, E-mail verification; docs/security-overview.md, Changes while signed in"
+  },
+  {
+    "path": "POST /api/donors/auth/refresh",
+    "scenario": "donors/donor_credentials: Changing the e-mail sends a link to the new address, confirming it switches the account, tells the old address and ends other sessions*",
+    "kind": "added",
+    "field": "$.type",
+    "reason": "#436 (security audit 2026-11-06): confirming an e-mail change link opens no session any more and ends every session of the donor; the change link is confirmed at POST /api/donors/auth/email-change/confirm, so the scenarios no longer post it to the registration confirmation, and the session held before the change cannot be refreshed after it (401)",
+    "contract": "docs/api-contract.md, E-mail verification; docs/security-overview.md, Changes while signed in"
+  },
+  {
     "path": "DELETE /api/admin/*",
     "scenario": "content/clean_up_unused_photos: *",
     "kind": "headers",
