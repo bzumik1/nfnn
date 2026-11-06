@@ -41,7 +41,7 @@ describe('Given the header of the app', () => {
           {
             path: 'darce/prehled',
             component: Blank,
-            data: { head: 'light', parent: '/', backOnWide: false },
+            data: { head: 'light', parent: '/', backOnWide: false, logoBesideBack: false },
           },
           { path: 'darce/ucty', component: Blank, data: { head: 'light', parent: '/' } },
         ]),
@@ -187,6 +187,31 @@ describe('Given the header of the app', () => {
     const header = await openAt('/darce/prehled');
 
     expect(header.querySelector('button.back-button')).not.toBeNull();
+  });
+
+  it('when a page of the account is open on a phone, then the back button stands alone without the logo', async () => {
+    donor.set(sampleDonor());
+
+    const header = await openAt('/darce/prehled');
+
+    expect(header.querySelector('a.brand')).toBeNull();
+    expect(header.querySelector('a.account-button')).not.toBeNull();
+  });
+
+  it('when a page of the account is open on a computer, then the logo shows without a back button', async () => {
+    donor.set(sampleDonor());
+    compact.set(false);
+
+    const header = await openAt('/darce/prehled');
+
+    expect(header.querySelector('a.brand')?.getAttribute('href')).toBe('/');
+  });
+
+  it('when an article is open, then the logo stays beside the back button', async () => {
+    const header = await openAt('/aktuality/clanek');
+
+    expect(header.querySelector('button.back-button')).not.toBeNull();
+    expect(header.querySelector('a.brand')?.getAttribute('href')).toBe('/');
   });
 
   it('when an administrator linked to a person of the foundation with a portrait is signed in, then the account link shows that portrait', async () => {

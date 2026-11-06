@@ -44,6 +44,10 @@
   }
 }
 
+.app-header-inner--without-logo {
+  justify-content: flex-end;
+}
+
 .brand--after-back {
   margin-inline-start: calc(var(--back-button-size) + var(--space-1));
 }

@@ -44,6 +44,9 @@ export class AppHeader {
     const chrome = this.chrome();
     return this.compact() || chrome.backOnWide ? chrome.parent : null;
   });
+  protected readonly showsLogo = computed(
+    () => this.parent() === null || this.chrome().logoBesideBack,
+  );
   protected readonly onDark = computed(() => this.chrome().head !== 'light');
   protected readonly onPhoto = computed(() => this.chrome().head === 'photo');
   protected readonly initials = computed(() => initialsOf(this.auth.donor()?.name ?? ''));
