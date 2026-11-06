@@ -74,9 +74,15 @@
                     label(account)
                   }}</span>
                 </div>
-                @if (account.verifiedOn || account.disconnectedOn || account.donationCount > 0) {
+                @let bank = bankName(account);
+                @if (
+                  bank || account.verifiedOn || account.disconnectedOn || account.donationCount > 0
+                ) {
                   <div class="account-meta-wrap">
                     <ul class="account-meta">
+                      @if (bank) {
+                        <li class="account-bank">{{ bank }}</li>
+                      }
                       @if (account.verifiedOn; as verifiedOn) {
                         <li i18n="@@donor.bankAccounts.verifiedOn">
                           ověřeno {{ formatDate(verifiedOn) }}

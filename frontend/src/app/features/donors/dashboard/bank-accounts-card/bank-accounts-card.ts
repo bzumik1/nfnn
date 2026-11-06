@@ -48,6 +48,7 @@ import {
   SymbolClaimConfirmation,
   SymbolOffer,
 } from '../../../donations/bank-accounts-api';
+import { bankNameOf } from '../../../donations/czech-banks';
 import { formatMinorUnits } from '../../../donations/donation-amount';
 import { formatDonationDate } from '../../../donations/donation-date';
 import { BankCheckResponse, DonationsApi } from '../../../donations/donations-api';
@@ -346,6 +347,10 @@ export class BankAccountsCard {
 
   protected labelModifier(account: BankAccountItem): string {
     return `account-status--${labelOf(account)}`;
+  }
+
+  protected bankName(account: BankAccountItem): string | null {
+    return bankNameOf(account.accountNumber);
   }
 
   protected formatDate(isoDate: string): string {
