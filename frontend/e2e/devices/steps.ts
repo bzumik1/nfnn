@@ -9,7 +9,7 @@ import {
 } from '../baseline/screen-mocks';
 import { mockAdministrationCopy } from '../administration-copy';
 import { administrator, donor, mockDonorApi, session } from '../donor-session';
-import { ADMINISTRATION_UNLOCK_PATH } from '../fixtures';
+import { ADMINISTRATION_COPY_RECORD_PATH, ADMINISTRATION_UNLOCK_PATH } from '../fixtures';
 import {
   serveReceiptKeys,
   serveReceiptStatus,
@@ -350,6 +350,10 @@ export const STEPS: Step[] = [
       await mockAdministrationCopy(ui.routes, {
         donations: [{ id: 'receipts:2026', rows: [SINGLE_RECEIPT_ROW] }],
       });
+      await ui.routes.route(
+        (url) => url.pathname === ADMINISTRATION_COPY_RECORD_PATH,
+        (route) => route.fulfill({ status: 204 }),
+      );
       await serveReceiptKeys(ui.routes);
       await serveReceiptStatus(ui.routes, 'active');
       await adminPage(ui, `/sprava/overit#${SINGLE_RECEIPT.fragment}`);
