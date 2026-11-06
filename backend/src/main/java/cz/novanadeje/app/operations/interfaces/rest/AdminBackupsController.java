@@ -44,14 +44,16 @@ class AdminBackupsController {
     private final BackupScheduleService schedules;
     private final BackupKeyService keys;
     private final BackupKeyRateLimiter keyRateLimiter;
+    private final BackupRequestRateLimiter requestRateLimiter;
 
     AdminBackupsController(BackupAdministrationService backups, BackupRestoreService restores, BackupScheduleService schedules, BackupKeyService keys,
-                           BackupKeyRateLimiter keyRateLimiter) {
+                           BackupKeyRateLimiter keyRateLimiter, BackupRequestRateLimiter requestRateLimiter) {
         this.backups = backups;
         this.restores = restores;
         this.schedules = schedules;
         this.keys = keys;
         this.keyRateLimiter = keyRateLimiter;
+        this.requestRateLimiter = requestRateLimiter;
     }
 
     @GetMapping
@@ -82,6 +84,7 @@ class AdminBackupsController {
     @PostMapping("/requests")
     @ResponseStatus(HttpStatus.ACCEPTED)
     BackupRequestResponse request(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody BackupRequestRequest request) {
+        requestRateLimiter.check(jwt.getSubject());
         return BackupRequestResponse.from(backups.request(admin(jwt), request.kind()));
     }
 

@@ -206,7 +206,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Vyžádat zálohu',
       description:
-        'Asks the backup container for a database backup now (BACKUP) or for a test restore of the newest dump (TEST_RESTORE); it runs within about ten seconds and nfnn_backups shows the outcome. Audited.',
+        'Asks the backup container for a database backup now (BACKUP) or for a test restore of the newest dump (TEST_RESTORE); it runs within about ten seconds and nfnn_backups shows the outcome. Audited. Refused (409 operations/backup-request-pending) while another request still waits for the container, and after 10 requests a day per administrator (429).',
       inputSchema: z.object({ kind: z.enum(['BACKUP', 'TEST_RESTORE']) }),
       annotations: WRITING,
     },
