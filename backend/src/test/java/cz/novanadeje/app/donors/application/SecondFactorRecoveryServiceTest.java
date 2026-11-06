@@ -73,7 +73,7 @@ class SecondFactorRecoveryServiceTest {
     private static final SecondFactorRecoveryTarget TARGET = new SecondFactorRecoveryTarget("5544332217/2010", "CZ2620100000005544332217",
             Money.czk(100), LocalDate.of(2026, 10, 27));
     private static final SecondFactorRecoveryPaymentText PAYMENT_TEXT = new SecondFactorRecoveryPaymentText(
-            "SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*MSG:OBNOVA ABCD2345");
+            "SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*PT:IP*MSG:OBNOVA ABCD2345");
 
     @Mock
     private DonorRepository donors;
