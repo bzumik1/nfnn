@@ -35,7 +35,7 @@ Before building, read the sections you touch (grep them: `api-contract.md` is to
 | `./gradlew acceptanceTest` | Cucumber suites only; `CUCUMBER_FILTER_TAGS=@tag` narrows them (tags in `testing.md`) |
 | `./gradlew bootTestRun` | app with Testcontainers PostgreSQL; `bootRun` uses an external Postgres (`dev` profile) |
 | **Frontend, in `frontend/`** (Node ^22.22.3, ^24.15 or ≥ 26; CI and the images use 26) | |
-| `npm ci`, `npm start` | dependencies; dev server :4200 with `/api` proxied to :8080 |
+| `npm ci`, `npm start` | dependencies; dev server :4200 (`NFNN_DEV_PORT` another port) with `/api` proxied to :8080; passkeys and the connector's sign-in need the origin the backend's `PUBLIC_URL` names, so keep 4200 against the dev backend |
 | `npm run format`, `npm run format:check` | Prettier over `src/`, `e2e/` and the config files |
 | `npm run lint` | ESLint (angular-eslint): TypeScript, templates and their accessibility, and `tsc` over the Vitest setup |
 | `npm run lint:styles` | Stylelint: component styles use theme tokens only |

@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve",
+    "start": "ng serve --port ${NFNN_DEV_PORT:-4200}",
     "build": "ng build",
     "postbuild": "node scripts/wrap-service-worker.mjs && node scripts/make-startup-images.mjs",
     "watch": "ng build --watch --configuration development",
