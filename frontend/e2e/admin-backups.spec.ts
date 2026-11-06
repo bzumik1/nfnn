@@ -1,6 +1,6 @@
 import { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
-import { administrator, mockDonorApi, session } from './donor-session';
+import { administrator, mockDonorApi, openAdministrationPage, session } from './donor-session';
 
 const BACKUPS = '/api/admin/operations/backups';
 const REQUESTS = '/api/admin/operations/backups/requests';
@@ -222,11 +222,11 @@ test.describe('Given an administrator on the backups page', () => {
       },
     );
 
-    await page.goto('/sprava/zalohy');
+    await openAdministrationPage(page, '/sprava/zalohy', 'Zálohy');
     await page.getByRole('button', { name: 'Zálohovat teď' }).click();
 
     await expect(page.getByRole('button', { name: 'Zálohujeme…' })).toBeDisabled();
-    await expect(page.locator('.ui-notice--status')).toHaveText(
+    await expect(page.getByRole('status').filter({ hasText: 'Záloha nfnn-' })).toHaveText(
       'Záloha nfnn-2026-10-23_1000-rucni.dump.age je hotová (2 kB).',
       { timeout: 10_000 },
     );
@@ -289,7 +289,7 @@ test.describe('Given an administrator on the backups page', () => {
     };
     await page.clock.install();
 
-    await page.goto('/sprava/zalohy');
+    await openAdministrationPage(page, '/sprava/zalohy', 'Zálohy');
     await page
       .getByRole('button', { name: 'Obnovit databázi ze zálohy nfnn-2026-10-22_0300.dump.age' })
       .click();
@@ -304,7 +304,7 @@ test.describe('Given an administrator on the backups page', () => {
     await expect(page.getByRole('heading', { name: 'Obnova ze zálohy' })).toBeVisible();
     expect(await restartPoll()).toBe(502);
     expect(await restartPoll()).toBe(200);
-    await expect(page.locator('.ui-notice--status')).toHaveText(
+    await expect(page.getByRole('status').filter({ hasText: 'Databáze je obnovená' })).toHaveText(
       'Databáze je obnovená ze zálohy nfnn-2026-10-22_0300.dump.age. Stav před obnovou je uložený jako záloha „Před obnovou“.',
     );
     expect(posted).toEqual(['POST']);

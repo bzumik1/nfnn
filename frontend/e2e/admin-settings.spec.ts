@@ -4,6 +4,7 @@ import {
   administrator,
   adminSettings,
   mockDonorApi,
+  openAdministrationPage,
   receiptSigningKeys,
   session,
 } from './donor-session';
@@ -72,7 +73,7 @@ test.describe('Given an administrator on the settings page', () => {
       },
     );
 
-    await page.goto('/sprava/nastaveni');
+    await openAdministrationPage(page, '/sprava/nastaveni', 'Nastavení');
     await expect(page.getByRole('heading', { level: 1, name: 'Nastavení' })).toBeFocused();
     await expect(page.locator('.secret-state').first()).toHaveText(
       'Heslo nebo klíč SMTP: Nastaveno',
@@ -87,7 +88,7 @@ test.describe('Given an administrator on the settings page', () => {
     );
     await page.getByRole('button', { name: 'Uložit a restartovat' }).click();
 
-    await expect(page.locator('.ui-notice--status')).toHaveText(
+    await expect(page.getByRole('status').filter({ hasText: 'Nastavení je uložené' })).toHaveText(
       'Nastavení je uložené a web po restartu běží s ním.',
       { timeout: 15_000 },
     );
