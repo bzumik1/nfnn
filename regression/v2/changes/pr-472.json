@@ -1,0 +1,26 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.DonorEmailVerificationServiceTest > Given a concurrent confirm that won the token, when the e-mail is confirmed, then it is invalid and nothing changes",
+    "replacement": "donors.application.DonorEmailVerificationServiceTest > Given a concurrent confirm that won the token, when the e-mail is confirmed, then the donor is locked before the token is spent, it is invalid and nothing changes",
+    "reason": "#447: the confirmation now locks the donor row before it spends the link (the erasure and the replacing registration delete links while they hold the donor), so the lost race does read the donor; the same test now also proves that order and that nothing is saved",
+    "contract": "docs/system-overview.md, donors (Writes to the donor row)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.DonorPasswordResetServiceTest > Given a concurrent confirm that won the token, when a reset is confirmed, then it is invalid and no password changes",
+    "replacement": "donors.application.DonorPasswordResetServiceTest > Given a concurrent confirm that won the token, when a reset is confirmed, then the donor is locked before the token is spent, it is invalid and no password changes",
+    "reason": "#447: the reset now locks the donor row before it spends the link, so the lost race does read the donor; the same test now also proves that order and that no password is hashed or saved",
+    "contract": "docs/system-overview.md, donors (Writes to the donor row)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.DonorPasswordResetServiceTest > Given a won token whose donor is gone, when a reset is confirmed, then it is invalid",
+    "replacement": "donors.application.DonorPasswordResetServiceTest > Given a live token whose donor is gone, when a reset is confirmed, then it is invalid",
+    "reason": "#447: the donor is now read (under its row lock) before the link is spent, so a missing donor is found before the token is won; the same behaviour, invalid and nothing changed, is tested from a live token",
+    "contract": "docs/system-overview.md, donors (Writes to the donor row)"
+  }
+]

@@ -50,7 +50,8 @@ public class DonorPasskeyRecoveryService {
     @Transactional(noRollbackFor = {SecondFactorCodeRejected.class, SecondFactorCodesPaused.class})
     public PasskeyCreationOptions options(String token, String code) {
         Instant now = clock.instant();
-        Donor donor = recoverableDonor(usableToken(token, now));
+        PasswordResetToken found = usableToken(token, now);
+        Donor donor = recoverableDonor(donors.findById(found.donorId()).orElseThrow(InvalidPasswordResetToken::new));
         Optional<SecondFactor> factor = secondFactors.findByDonor(donor.id()).filter(SecondFactor::isEnabled);
         if (factor.isPresent()) {
             if (code == null || code.isBlank()) {
@@ -66,7 +67,7 @@ public class DonorPasskeyRecoveryService {
     public PasskeyView recover(String token, String challenge, String name, PasskeyAttestation attestation) {
         Instant now = clock.instant();
         PasswordResetToken found = usableToken(token, now);
-        Donor donor = recoverableDonor(found);
+        Donor donor = recoverableDonor(donors.findByIdForUpdate(found.donorId()).orElseThrow(InvalidPasswordResetToken::new));
         if (!tokens.markUsed(found.id(), now)) {
             throw new InvalidPasswordResetToken();
         }
@@ -84,10 +85,10 @@ public class DonorPasskeyRecoveryService {
                 .orElseThrow(InvalidPasswordResetToken::new);
     }
 
-    private Donor recoverableDonor(PasswordResetToken found) {
-        Donor donor = donors.findById(found.donorId())
-                .filter(candidate -> !candidate.isErased() && candidate.isEmailVerified())
-                .orElseThrow(InvalidPasswordResetToken::new);
+    private Donor recoverableDonor(Donor donor) {
+        if (donor.isErased() || !donor.isEmailVerified()) {
+            throw new InvalidPasswordResetToken();
+        }
         if (donor.isAdministrator()) {
             log.warn("Passkey recovery by e-mail refused for administrator {}", donor.id());
             throw new AdministratorRecoveryRefused(donor.id());

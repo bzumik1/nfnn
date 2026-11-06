@@ -47,6 +47,19 @@ Feature: An administrator erases a donor's personal data
     Then the response status is 202
     And 1 e-mail is sent to "petr@example.cz" with the subject "Vaše osobní údaje jsme vymazali – Nová naděje"
 
+  Scenario: A tab the donor left open cannot put the personal data back after the erasure
+    Given "Petr" keeps an access token that names no session
+    And "Jana" erased the donor "Petr"
+    When "Petr" saves the profile with the name "Petr Svoboda"
+    Then the response status is 401
+    And the problem type ends with "auth/session-ended"
+    When "Petr" saves the profile with the name "Petr Svoboda" with the token that names no session
+    Then the response status is 409
+    And the problem type ends with "donors/already-erased"
+    When "Jana" opens the donor "Petr"
+    Then the response status is 200
+    And the donor card carries no personal data of "Petr"
+
   Scenario: The former e-mail address can register again after the erasure
     Given "Jana" erased the donor "Petr"
     When a person registers with email "petr@example.cz" and password "correct horse battery"

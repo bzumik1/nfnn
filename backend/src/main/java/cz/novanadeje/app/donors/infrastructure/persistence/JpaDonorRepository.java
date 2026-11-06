@@ -46,6 +46,16 @@ class JpaDonorRepository implements DonorRepository {
     }
 
     @Override
+    public Optional<Donor> findByIdForUpdate(DonorId id) {
+        return jpa.findByIdForUpdate(id.value()).map(DonorJpaEntity::toDomain);
+    }
+
+    @Override
+    public Optional<Donor> findByEmailForUpdate(EmailAddress email) {
+        return jpa.findByEmailForUpdate(email.value()).map(DonorJpaEntity::toDomain);
+    }
+
+    @Override
     public boolean existsByEmail(EmailAddress email) {
         return jpa.existsByEmail(email.value());
     }

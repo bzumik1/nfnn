@@ -224,27 +224,31 @@ class DonorPasswordResetServiceTest {
     }
 
     @Test
-    @DisplayName("Given a concurrent confirm that won the token, when a reset is confirmed, then it is invalid and no password changes")
+    @DisplayName("Given a concurrent confirm that won the token, when a reset is confirmed, then the donor is locked before the token is spent, it is invalid and no password changes")
     void should_be_invalid_and_change_nothing_when_confirmed_given_lost_race() {
         LinkSecret secret = LinkSecret.generate();
         PasswordResetToken token = PasswordResetToken.issue(secret, DONOR, NOW.minusSeconds(60), TTL);
         when(tokens.findBySecretHash(secret.hash())).thenReturn(Optional.of(token));
+        when(donors.findByIdForUpdate(DONOR)).thenReturn(Optional.of(donor(LocaleCode.CS)));
         when(tokens.markUsed(token.id(), NOW)).thenReturn(false);
 
         assertThatThrownBy(() -> service.confirmReset(secret.value(), NEW_PASSWORD)).isInstanceOf(InvalidPasswordResetToken.class);
 
+        InOrder order = inOrder(donors, tokens);
+        order.verify(donors).findByIdForUpdate(DONOR);
+        order.verify(tokens).markUsed(token.id(), NOW);
         verify(tokens, never()).deleteOthersOf(any(), any());
-        verifyNoInteractions(donors, signOuts, passwordHasher);
+        verify(donors, never()).save(any());
+        verifyNoInteractions(signOuts, passwordHasher);
     }
 
     @Test
-    @DisplayName("Given a won token whose donor is gone, when a reset is confirmed, then it is invalid")
+    @DisplayName("Given a live token whose donor is gone, when a reset is confirmed, then it is invalid")
     void should_be_invalid_when_confirmed_given_missing_donor() {
         LinkSecret secret = LinkSecret.generate();
         PasswordResetToken token = PasswordResetToken.issue(secret, DONOR, NOW.minusSeconds(60), TTL);
         when(tokens.findBySecretHash(secret.hash())).thenReturn(Optional.of(token));
-        when(tokens.markUsed(token.id(), NOW)).thenReturn(true);
-        when(donors.findById(DONOR)).thenReturn(Optional.empty());
+        when(donors.findByIdForUpdate(DONOR)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.confirmReset(secret.value(), NEW_PASSWORD)).isInstanceOf(InvalidPasswordResetToken.class);
 
@@ -258,7 +262,7 @@ class DonorPasswordResetServiceTest {
         PasswordResetToken token = PasswordResetToken.issue(secret, DONOR, NOW.minusSeconds(60), TTL);
         when(tokens.findBySecretHash(secret.hash())).thenReturn(Optional.of(token));
         when(tokens.markUsed(token.id(), NOW)).thenReturn(true);
-        when(donors.findById(DONOR)).thenReturn(Optional.of(administrator()));
+        when(donors.findByIdForUpdate(DONOR)).thenReturn(Optional.of(administrator()));
         when(secondFactors.findByDonor(DONOR)).thenReturn(Optional.empty());
         when(passkeys.countByDonor(DONOR)).thenReturn(0);
 
@@ -275,8 +279,8 @@ class DonorPasswordResetServiceTest {
         PasswordResetToken token = PasswordResetToken.issue(secret, DONOR, NOW.minusSeconds(60), TTL);
         Donor donor = donor(LocaleCode.CS);
         when(tokens.findBySecretHash(secret.hash())).thenReturn(Optional.of(token));
+        when(donors.findByIdForUpdate(DONOR)).thenReturn(Optional.of(donor));
         when(tokens.markUsed(token.id(), NOW)).thenReturn(true);
-        when(donors.findById(DONOR)).thenReturn(Optional.of(donor));
         when(passwordHasher.hash(new RawPassword(NEW_PASSWORD))).thenReturn(NEW_HASH);
 
         service.confirmReset(secret.value(), NEW_PASSWORD);

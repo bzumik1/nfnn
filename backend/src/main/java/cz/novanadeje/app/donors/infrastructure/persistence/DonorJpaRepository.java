@@ -2,8 +2,10 @@ package cz.novanadeje.app.donors.infrastructure.persistence;
 
 import cz.novanadeje.app.donors.domain.Role;
 import cz.novanadeje.app.shared.infrastructure.search.AccentFolding;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -16,6 +18,14 @@ import java.util.UUID;
 interface DonorJpaRepository extends JpaRepository<DonorJpaEntity, UUID> {
 
     Optional<DonorJpaEntity> findByEmail(String email);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select d from DonorJpaEntity d where d.id = :id")
+    Optional<DonorJpaEntity> findByIdForUpdate(@Param("id") UUID id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select d from DonorJpaEntity d where d.email = :email")
+    Optional<DonorJpaEntity> findByEmailForUpdate(@Param("email") String email);
 
     boolean existsByEmail(String email);
 

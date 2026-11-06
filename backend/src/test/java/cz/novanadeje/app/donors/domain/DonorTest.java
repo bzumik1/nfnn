@@ -7,6 +7,7 @@ import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -306,5 +307,52 @@ class DonorTest {
         assertThat(donor.erasedAt()).contains(NOW.plusSeconds(5));
         assertThat(donor.roles()).isEmpty();
         assertThat(donor.isAdministrator()).isFalse();
+    }
+
+    @Nested
+    @DisplayName("Given an erased donor")
+    class GivenErasedDonor {
+
+        private final DonorId id = DonorId.newId(NOW);
+        private final Donor donor = erased();
+
+        private Donor erased() {
+            Donor registered = Donor.register(id, DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+            registered.verifyEmail(NOW);
+            registered.erase(NOW.plusSeconds(10));
+            return registered;
+        }
+
+        @Test
+        @DisplayName("when the profile is updated, then it is refused as already erased and the placeholders stay")
+        void should_refuse_when_profile_updated() {
+            assertThatThrownBy(() -> donor.updateProfile("Jana Nováková", ADDRESS, LocaleCode.EN))
+                    .isInstanceOf(DonorAlreadyErased.class)
+                    .hasFieldOrPropertyWithValue("code", "donors/already-erased");
+            assertThat(donor.name()).isEqualTo(ErasedPersonalData.NAME);
+            assertThat(donor.address()).isEqualTo(ErasedPersonalData.ADDRESS);
+            assertThat(donor.preferredLocale()).isEqualTo(LocaleCode.CS);
+        }
+
+        @Test
+        @DisplayName("when a password is set, then it is refused as already erased and the account keeps no password")
+        void should_refuse_when_password_changed() {
+            assertThatThrownBy(() -> donor.changePassword(HASH)).isInstanceOf(DonorAlreadyErased.class);
+            assertThat(donor.hasPassword()).isFalse();
+        }
+
+        @Test
+        @DisplayName("when the e-mail is changed, then it is refused as already erased and the placeholder address stays")
+        void should_refuse_when_email_changed() {
+            assertThatThrownBy(() -> donor.changeEmail(EMAIL)).isInstanceOf(DonorAlreadyErased.class);
+            assertThat(donor.email()).isEqualTo(ErasedPersonalData.emailFor(id.value()));
+        }
+
+        @Test
+        @DisplayName("when the e-mail is verified, then it is refused as already erased and stays unverified")
+        void should_refuse_when_email_verified() {
+            assertThatThrownBy(() -> donor.verifyEmail(NOW.plusSeconds(20))).isInstanceOf(DonorAlreadyErased.class);
+            assertThat(donor.isEmailVerified()).isFalse();
+        }
     }
 }
