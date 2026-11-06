@@ -1,31 +1,7 @@
 [
   {
-    "path": "POST /api/donors/auth/password-reset/request",
-    "scenario": "donors/donor_password_reset: A malformed address is refused with a field error*",
-    "kind": "body",
-    "field": "$.errors[*].message",
-    "reason": "Security audit 2026-11-06 (#422): the e-mail shape pattern opens with a length guard (?=[\\s\\S]{3,254}$) so a long string cannot make it backtrack; Hibernate Validator's default @Pattern message names the expression",
-    "contract": "docs/security-overview.md, Abuse limits"
-  },
-  {
-    "path": "POST /api/donors/me/email-change",
-    "scenario": "donors/donor_credentials: The current address, a wrong password and a malformed address are refused without sending anything*",
-    "kind": "body",
-    "field": "$.errors[*].message",
-    "reason": "Security audit 2026-11-06 (#422): the e-mail shape pattern opens with a length guard (?=[\\s\\S]{3,254}$) so a long string cannot make it backtrack; Hibernate Validator's default @Pattern message names the expression",
-    "contract": "docs/security-overview.md, Abuse limits"
-  },
-  {
-    "path": "POST /api/admin/donors/administrators",
-    "scenario": "donors/admin_administrators: A blank e-mail is refused before any lookup*",
-    "kind": "body",
-    "field": "$.errors[*].message",
-    "reason": "Security audit 2026-11-06 (#422): the e-mail shape pattern opens with a length guard (?=[\\s\\S]{3,254}$) so a long string cannot make it backtrack; Hibernate Validator's default @Pattern message names the expression",
-    "contract": "docs/security-overview.md, Abuse limits"
-  },
-  {
-    "path": "POST /api/donors/auth/email-verification/request",
-    "scenario": "donors/donor_email_verification: A confirmed account, an unknown address and a malformed address get no new link*",
+    "path": "POST /api/admin/content/people",
+    "scenario": "content/manage_people: Missing or too long texts, unknown images and too many people are refused*",
     "kind": "body",
     "field": "$.errors[*].message",
     "reason": "Security audit 2026-11-06 (#422): the e-mail shape pattern opens with a length guard (?=[\\s\\S]{3,254}$) so a long string cannot make it backtrack; Hibernate Validator's default @Pattern message names the expression",
