@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # SessionStart hook: a cloud session starts from a fresh clone. Puts Node 26
 # first on PATH when the image's Node is too old for Angular 22, then installs
-# the frontend's and the connector's dependencies. Playwright's browser build
-# is not installed here: run npx playwright install --only-shell chromium once (skill
+# the frontend's and the connector's dependencies through
+# scripts/install-node-modules.sh. Playwright's browser build is not installed
+# here: run npx playwright install --only-shell chromium once (skill
 # cloud-session). Does nothing on a local machine; a claude.ai project thread
 # runs no hooks, so there the skill's steps are done by hand.
 [ "$CLAUDE_CODE_REMOTE" = "true" ] || exit 0
@@ -21,11 +22,5 @@ if ! node -e 'const [a,b,c]=process.versions.node.split(".").map(Number);process
   fi
 fi
 
-for dir in frontend mcp; do
-  cd "$root/$dir" || continue
-  if [ ! -f node_modules/.package-lock.json ] || [ package-lock.json -nt node_modules/.package-lock.json ]; then
-    npm ci --no-audit --no-fund --loglevel=error >/dev/null 2>&1 \
-      || echo "npm ci failed in $dir/; run it before npm start, npm test or npm run check"
-  fi
-done
+bash "$root/scripts/install-node-modules.sh" "$root" 2>/dev/null
 exit 0

@@ -51,6 +51,8 @@ Before building, read the sections you touch (grep them: `api-contract.md` is to
 
 Cloud sessions (skill `cloud-session`): Gradle needs a Maven Central mirror, `LC_ALL=C.UTF-8` and, for Testcontainers, `dockerd`; the preinstalled Node 22.22.0 is too old for `ng` (install Node 26 first); the preinstalled Chromium is older than Playwright's pin (`npx playwright install --only-shell chromium` once).
 
+T3 Code worktrees (`t3.json`): a new worktree runs `scripts/setup-worktree.sh` (`npm ci` in `frontend/` and `mcp/` when `node_modules` is older than the lock file) before the agent starts; wait for `.t3/setup-done` while `.t3/setup-running` exists, read `.t3/setup-failed` on a failure, and run the script yourself when no marker exists. A settled thread's build output goes with `scripts/clean-worktree.sh`.
+
 ## Production logs
 
 The server writes `backend.log` (Spring Boot, rotated), `backup.log`, `nginx-access.log` (every request: method, path, status, timing; no address or query) and `mcp.log` (the connector; both rotated daily, `.gz`, 14 days) into `/DATA/AppData/nfnn/logs/`. With the NFNN connector in the session, `nfnn_status` names the running revision, and `nfnn_log_files`, `nfnn_log` (paged windows, the tail by default), `nfnn_log_search`, `nfnn_log_levels`, `nfnn_diagnostics` and `nfnn_thread_dump` read them through `/api/admin/operations/...`, and `nfnn_set_log_level` raises a logger for a while (audited, resets by itself; only `cz.novanadeje.app…` loggers, `security.md` Logs). They all go through the backend: when it is down, ask Jakub for `sudo docker logs nfnn-backend` (`deploy/README.md`, "Logy").

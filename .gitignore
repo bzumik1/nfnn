@@ -22,3 +22,5 @@ frontend/test-results/
 frontend/.vitest/
 
 mcp/test-results/
+
+.t3/
