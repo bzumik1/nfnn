@@ -3,7 +3,11 @@ package cz.novanadeje.app.operations.infrastructure.persistence;
 import cz.novanadeje.app.operations.domain.settings.Setting;
 import cz.novanadeje.app.operations.domain.settings.SettingsRepository;
 import cz.novanadeje.app.operations.domain.settings.StoredSetting;
+import cz.novanadeje.app.shared.infrastructure.lock.AdvisoryLock;
+import jakarta.persistence.EntityManager;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -12,14 +16,22 @@ import java.util.Optional;
 class JpaSettingsRepository implements SettingsRepository {
 
     private final SettingJpaRepository jpa;
+    private final EntityManager entityManager;
 
-    JpaSettingsRepository(SettingJpaRepository jpa) {
+    JpaSettingsRepository(SettingJpaRepository jpa, EntityManager entityManager) {
         this.jpa = jpa;
+        this.entityManager = entityManager;
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void lockForChange() {
+        AdvisoryLock.SETTINGS_CHANGES.acquireFor(entityManager);
     }
 
     @Override
     public List<StoredSetting> findAll() {
-        return jpa.findAll().stream().map(SettingJpaEntity::toDomain).flatMap(Optional::stream).toList();
+        return jpa.findAllRows().stream().map(SettingRow::toDomain).flatMap(Optional::stream).toList();
     }
 
     @Override

@@ -53,8 +53,8 @@ public class BankStatementRecorder {
     public ImportCounts record(BankStatement statement, ImportPlan plan, Instant now) {
         List<BankPayment> fresh = freshPayments(statement.incoming(), now);
         payments.saveAll(fresh);
-        PairingOutcome outcome = pairing.pairUnpaired(now);
         recoveries.inspect(fresh, now);
+        PairingOutcome outcome = pairing.pairUnpaired(now);
         extendCoverage(statement, plan, now);
         return new ImportCounts(statement.movementsReceived(), fresh.size(), statement.incoming().size() - fresh.size(),
                 outcome.pairedBySymbol(), outcome.pairedByAccount(), outcome.pairedByConfirmedSymbol(), outcome.accountsLearned(),

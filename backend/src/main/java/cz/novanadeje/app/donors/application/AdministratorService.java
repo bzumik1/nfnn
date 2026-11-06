@@ -6,6 +6,7 @@ import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorNotFound;
 import cz.novanadeje.app.donors.domain.DonorRepository;
+import cz.novanadeje.app.donors.domain.LastAdministratorRevoked;
 import cz.novanadeje.app.donors.domain.EmailNotRegistered;
 import cz.novanadeje.app.donors.domain.NoPasskeys;
 import cz.novanadeje.app.donors.domain.OwnAdministrationRevoked;
@@ -94,8 +95,12 @@ public class AdministratorService {
         if (adminId.equals(donorId)) {
             throw new OwnAdministrationRevoked();
         }
+        donors.lockAdministrators();
         Donor donor = donors.findByIdForUpdate(donorId).orElseThrow(() -> new DonorNotFound(donorId));
         donor.revokeAdministration();
+        if (donors.findAdministrators().stream().noneMatch(other -> !other.id().equals(donorId))) {
+            throw new LastAdministratorRevoked();
+        }
         donors.save(donor);
         Instant now = clock.instant();
         signOuts.endAllOf(donorId, DeviceSignOutReason.ADMINISTRATION_CHANGED, now);

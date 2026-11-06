@@ -62,8 +62,8 @@ class MonthlyReportServiceTest {
     private final MonthlyReportSender sender = mock(MonthlyReportSender.class);
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
     private final MutableClock clock = new MutableClock(FIRST_OF_OCTOBER_AT_SEVEN, ZoneId.of("Europe/Prague"));
-    private final MonthlyReportService service = new MonthlyReportService(donors, donations, payments, importStates, reportLog, settings, sender,
-            events, clock);
+    private final MonthlyReportService service = new MonthlyReportService(new MonthlyReportFigures(donors, donations, payments, importStates),
+            reportLog, settings, sender, events, clock);
 
     @BeforeEach
     void stubFacts() {

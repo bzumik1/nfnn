@@ -24,6 +24,8 @@ public interface DonorRepository {
 
     void lockEmail(EmailAddress email);
 
+    void lockAdministrators();
+
     boolean existsByEmail(EmailAddress email);
 
     boolean existsByVariableSymbol(VariableSymbol variableSymbol);
