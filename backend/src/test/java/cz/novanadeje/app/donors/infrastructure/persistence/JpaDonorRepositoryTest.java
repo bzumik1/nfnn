@@ -249,6 +249,27 @@ class JpaDonorRepositoryTest {
     }
 
     @Test
+    @DisplayName("Given donors and administrators with Czech names, when searched and the administrators listed, then they come in Czech alphabetical order, ch after h and lower case beside upper case")
+    void should_list_in_czech_order_when_searched_or_administrators_listed_given_czech_names() {
+        List<String> czechOrder = List.of("ambrož", "Cibulka", "Čermák", "Dvořák", "Hrubý", "Chalupa", "Novák", "Řezníček", "Říha",
+                "Svoboda", "Šťastný", "Zelený", "Žák");
+        List<String> stored = List.of("Chalupa", "Cibulka", "Dvořák", "Hrubý", "Novák", "Svoboda", "Zelený", "ambrož", "Čermák",
+                "Řezníček", "Říha", "Šťastný", "Žák");
+        for (int index = 0; index < stored.size(); index++) {
+            Donor donor = donor("darce" + index + "@example.cz", Long.toString(4_800_000_000L + index));
+            donor.updateProfile(stored.get(index), donor.address(), donor.preferredLocale());
+            donor.verifyEmail(NOW);
+            donor.grantAdministration();
+            donors.save(donor);
+        }
+        flushAndClear();
+
+        assertThat(donors.search("48", 0, 20)).extracting(Donor::name).containsExactlyElementsOf(czechOrder);
+        assertThat(donors.search("48", 5, 3)).extracting(Donor::name).containsExactlyElementsOf(czechOrder.subList(5, 8));
+        assertThat(donors.findAdministrators()).extracting(Donor::name).containsExactlyElementsOf(czechOrder);
+    }
+
+    @Test
     @DisplayName("Given a saved donor, when erased and saved again, then the placeholders, the empty roles and the time survive a reload, the former address is free and the search finds the donor by symbol, not by the former name")
     void should_keep_erasure_when_saved_given_erased_donor() {
         Donor donor = donor("jana@example.cz", "4821937560");

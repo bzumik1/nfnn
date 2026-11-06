@@ -989,6 +989,8 @@ jobs:
           [ "$(sql "select has_database_privilege('novanadeje_app', 'novanadeje', 'CREATE')")" = f ] || { echo "::error::the application role may create no schema in the site's database"; exit 1; }
           [ "$(sql "show search_path")" = pg_catalog ] || { echo "::error::the superuser's search_path must be pg_catalog, so an operator's psql as the superuser never resolves a name to an object the application role planted"; exit 1; }
           [ "$(sql "show data_checksums")" = on ] || { echo "::error::a new database is initialised with data checksums (POSTGRES_INITDB_ARGS in deploy/postgres/Dockerfile)"; exit 1; }
+          [ "$(sql "select datlocprovider::text || ' ' || datlocale from pg_database where datname = 'novanadeje'")" = "b C.UTF-8" ] || { echo "::error::a new database takes PostgreSQL's built-in C.UTF-8 locale, not the C library's (POSTGRES_INITDB_ARGS in deploy/postgres/Dockerfile)"; exit 1; }
+          [ "$(sql "select count(*) from pg_collation where collname = 'cs-x-icu'")" = 1 ] || { echo "::error::the database offers no Czech ICU collation cs-x-icu, which the backend sorts people's names by"; exit 1; }
           if docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -v ON_ERROR_STOP=1 -c "truncate admin_action" > /dev/null 2>&1; then
             echo "::error::the administration history is append-only: the database must refuse to empty it outside a migration"
             exit 1
@@ -1231,6 +1233,7 @@ jobs:
           docker compose up -d --wait --wait-timeout 300 backend
           [ ! -e "$backups/status/restore.running" ] || { echo "::error::the restore left its running marker"; exit 1; }
           [ "$(count_rows "action = 'CI_MARKER'")" = 0 ] || { echo "::error::the requested restore kept a row written after the dump"; exit 1; }
+          [ "$(docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -tA -c "select datlocprovider::text || ' ' || datlocale from pg_database where datname = current_database()")" = "b C.UTF-8" ] || { echo "::error::a restored database takes PostgreSQL's built-in C.UTF-8 locale (create_app_database in deploy/backup/backup.sh)"; exit 1; }
           [ "$(docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -tA -c "select count(*) from databasechangeloglock where locked")" = 0 ] || { echo "::error::the restore kept the Liquibase lock caught in the dump"; exit 1; }
           receipt_number=$(docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -tA -c "select last_value from donation_receipt_number_seq")
           [ "$receipt_number" = 41 ] || { echo "::error::the restore rewound the receipt numbers to $receipt_number, so numbers issued after the backup would be issued again"; exit 1; }

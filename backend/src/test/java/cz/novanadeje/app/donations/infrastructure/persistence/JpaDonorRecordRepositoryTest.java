@@ -280,6 +280,22 @@ class JpaDonorRecordRepositoryTest {
     }
 
     @Test
+    @DisplayName("Given records with Czech names, when searched, then they come in Czech alphabetical order, ch after h and lower case beside upper case, and the limit cuts on that order")
+    void should_find_in_czech_order_when_searched_given_czech_names() {
+        List<String> czechOrder = List.of("ambrož", "Cibulka", "Čermák", "Dvořák", "Hrubý", "Chalupa", "Novák", "Řezníček", "Říha",
+                "Svoboda", "Šťastný", "Zelený", "Žák");
+        List<String> stored = List.of("Chalupa", "Cibulka", "Dvořák", "Hrubý", "Novák", "Svoboda", "Zelený", "ambrož", "Čermák",
+                "Řezníček", "Říha", "Šťastný", "Žák");
+        for (int index = 0; index < stored.size(); index++) {
+            donorRecords.save(person(stored.get(index), Long.toString(4_800_000_000L + index)));
+        }
+        flushAndClear();
+
+        assertThat(donorRecords.searchByNameOrSymbol("48", 20)).extracting(DonorRecord::name).containsExactlyElementsOf(czechOrder);
+        assertThat(donorRecords.searchByNameOrSymbol("48", 6)).extracting(DonorRecord::name).containsExactlyElementsOf(czechOrder.subList(0, 6));
+    }
+
+    @Test
     @DisplayName("Given records with Czech letters, when searched with or without the accents and in any case, then the same records match")
     void should_ignore_accents_and_case_when_searched_given_czech_names() {
         donorRecords.save(person("Jana Nováková", "4821937560"));

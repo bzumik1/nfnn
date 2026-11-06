@@ -2,6 +2,7 @@ package cz.novanadeje.app.donors.infrastructure.persistence;
 
 import cz.novanadeje.app.donors.domain.Role;
 import cz.novanadeje.app.shared.infrastructure.search.AccentFolding;
+import cz.novanadeje.app.shared.infrastructure.search.CzechCollation;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -17,6 +18,8 @@ import java.util.UUID;
 
 interface DonorJpaRepository extends JpaRepository<DonorJpaEntity, UUID> {
 
+    String IN_CZECH_ORDER = " order by collate(d.name as `" + CzechCollation.NAME + "`), d.email";
+
     Optional<DonorJpaEntity> findByEmail(String email);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
@@ -31,7 +34,7 @@ interface DonorJpaRepository extends JpaRepository<DonorJpaEntity, UUID> {
 
     boolean existsByVariableSymbol(String variableSymbol);
 
-    @Query("select d from DonorJpaEntity d where :role member of d.roles order by d.name, d.email")
+    @Query("select d from DonorJpaEntity d where :role member of d.roles" + IN_CZECH_ORDER)
     List<DonorJpaEntity> findByRole(Role role);
 
     @Query("select d from DonorJpaEntity d left join fetch d.roles order by d.id")
@@ -40,7 +43,7 @@ interface DonorJpaRepository extends JpaRepository<DonorJpaEntity, UUID> {
     @Query("select d from DonorJpaEntity d where lower(function('translate', d.name, '" + AccentFolding.ACCENTED + "', '" + AccentFolding.PLAIN + "'))"
             + " like concat('%', :query, '%') escape '!'"
             + " or lower(function('translate', d.email, '" + AccentFolding.ACCENTED + "', '" + AccentFolding.PLAIN + "')) like concat('%', :query, '%') escape '!'"
-            + " or d.variableSymbol like concat(:query, '%') escape '!' order by d.name, d.email")
+            + " or d.variableSymbol like concat(:query, '%') escape '!'" + IN_CZECH_ORDER)
     List<DonorJpaEntity> search(@Param("query") String query, Pageable page);
 
     @Modifying(flushAutomatically = true)

@@ -10,11 +10,13 @@
 # database a restore fills is created with its public schema owned by that role, so pg_restore
 # --no-owner --no-privileges makes it the owner of everything, as the backend needs; the database
 # itself is handed to the superuser before anything is restored, so neither the dump nor the role can
-# create another schema in it or change its settings. The superuser only dumps (pg_dump reads every
-# object whatever its owner and runs no function of the data: since PostgreSQL 17 it reads only
-# tables, restrict_nonsystem_relation_kind) and creates, renames and drops databases and ends their
-# sessions, connected to the maintenance database postgres, where the application role can create
-# nothing.
+# create another schema in it or change its settings. A database a restore fills takes PostgreSQL's
+# built-in C.UTF-8 locale, as a new cluster of nfnn-postgres does, so a restore also moves an older
+# cluster's database off the C library's locale (pg_restore builds every index again). The superuser
+# only dumps (pg_dump reads every object whatever its owner and runs no function of the data: since
+# PostgreSQL 17 it reads only tables, restrict_nonsystem_relation_kind) and creates, renames and
+# drops databases and ends their sessions, connected to the maintenance database postgres, where the
+# application role can create nothing.
 # $BACKUPS/status/restore.running exists while one runs and the backend waits
 # for it to go. Everything is reported in the container log, in $LOGS/backup.log and in key=value
 # files under $BACKUPS/status, which the backend reads for the administration page.
@@ -114,7 +116,7 @@ as_app() {
 }
 
 create_app_database() {
-  createdb --maintenance-db=postgres --owner="$APP_ROLE" --template=template0 "$1" \
+  createdb --maintenance-db=postgres --owner="$APP_ROLE" --template=template0 --locale-provider=builtin --builtin-locale=C.UTF-8 "$1" \
     && as_app psql --dbname="$1" --quiet --no-align --tuples-only -v ON_ERROR_STOP=1 \
       --command="alter schema public owner to \"$APP_ROLE\"" > /dev/null \
     && server_psql --command="alter database \"$1\" owner to current_user" > /dev/null
