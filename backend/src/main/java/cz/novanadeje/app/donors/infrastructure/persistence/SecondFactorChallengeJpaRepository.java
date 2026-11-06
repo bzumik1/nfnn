@@ -21,4 +21,13 @@ interface SecondFactorChallengeJpaRepository extends JpaRepository<SecondFactorC
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("update SecondFactorChallengeJpaEntity c set c.usedAt = :at where c.id = :id and c.usedAt is null")
     int markUsed(@Param("id") UUID id, @Param("at") Instant at);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("delete from SecondFactorChallengeJpaEntity c where c.expiresAt < :cutoff")
+    int deleteExpiredBefore(@Param("cutoff") Instant cutoff);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(nativeQuery = true, value = "delete from donor_second_factor_challenge where id in"
+            + " (select id from donor_second_factor_challenge where donor_id = :donorId for update skip locked)")
+    int deleteUnlockedOf(@Param("donorId") UUID donorId);
 }

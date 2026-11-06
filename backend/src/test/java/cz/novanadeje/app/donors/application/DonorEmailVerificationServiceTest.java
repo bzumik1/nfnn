@@ -263,17 +263,22 @@ class DonorEmailVerificationServiceTest {
     }
 
     @Test
-    @DisplayName("Given a concurrent confirm that won the token, when the e-mail is confirmed, then it is invalid and nothing changes")
+    @DisplayName("Given a concurrent confirm that won the token, when the e-mail is confirmed, then the donor is locked before the token is spent, it is invalid and nothing changes")
     void should_be_invalid_and_change_nothing_when_confirmed_given_lost_race() {
         LinkSecret secret = LinkSecret.generate();
         EmailVerificationToken token = EmailVerificationToken.issue(secret, DONOR, NOW.minusSeconds(60), TTL);
         when(tokens.findBySecretHash(secret.hash())).thenReturn(Optional.of(token));
+        when(donors.findByIdForUpdate(DONOR)).thenReturn(Optional.of(unverifiedDonor(LocaleCode.CS)));
         when(tokens.markUsed(token.id(), NOW)).thenReturn(false);
 
         assertThatThrownBy(() -> service.confirm(secret.value(), DeviceDescription.UNKNOWN, SessionKind.REMEMBERED)).isInstanceOf(InvalidEmailVerificationToken.class);
 
+        InOrder order = inOrder(donors, tokens);
+        order.verify(donors).findByIdForUpdate(DONOR);
+        order.verify(tokens).markUsed(token.id(), NOW);
         verify(tokens, never()).deleteAllOf(any());
-        verifyNoInteractions(donors, sessions, events);
+        verify(donors, never()).save(any());
+        verifyNoInteractions(sessions, events);
     }
 
     @Test
@@ -283,7 +288,7 @@ class DonorEmailVerificationServiceTest {
         EmailVerificationToken token = EmailVerificationToken.issue(secret, DONOR, NOW.minusSeconds(60), TTL);
         when(tokens.findBySecretHash(secret.hash())).thenReturn(Optional.of(token));
         when(tokens.markUsed(token.id(), NOW)).thenReturn(true);
-        when(donors.findById(DONOR)).thenReturn(Optional.empty(), Optional.of(verifiedDonor()));
+        when(donors.findByIdForUpdate(DONOR)).thenReturn(Optional.empty(), Optional.of(verifiedDonor()));
 
         assertThatThrownBy(() -> service.confirm(secret.value(), DeviceDescription.UNKNOWN, SessionKind.REMEMBERED)).isInstanceOf(InvalidEmailVerificationToken.class);
         assertThatThrownBy(() -> service.confirm(secret.value(), DeviceDescription.UNKNOWN, SessionKind.REMEMBERED)).isInstanceOf(InvalidEmailVerificationToken.class);
@@ -300,7 +305,7 @@ class DonorEmailVerificationServiceTest {
         Donor donor = unverifiedDonor(LocaleCode.CS);
         when(tokens.findBySecretHash(secret.hash())).thenReturn(Optional.of(token));
         when(tokens.markUsed(token.id(), NOW)).thenReturn(true);
-        when(donors.findById(DONOR)).thenReturn(Optional.of(donor));
+        when(donors.findByIdForUpdate(DONOR)).thenReturn(Optional.of(donor));
         when(sessions.signIn(donor, false, DeviceDescription.UNKNOWN, SessionKind.REMEMBERED)).thenReturn(TOKENS);
 
         AuthenticatedDonor result = service.confirm(secret.value(), DeviceDescription.UNKNOWN, SessionKind.REMEMBERED);
@@ -433,7 +438,7 @@ class DonorEmailVerificationServiceTest {
         Donor donor = verifiedDonor();
         when(tokens.findBySecretHash(secret.hash())).thenReturn(Optional.of(token));
         when(tokens.markUsed(token.id(), NOW)).thenReturn(true);
-        when(donors.findById(DONOR)).thenReturn(Optional.of(donor));
+        when(donors.findByIdForUpdate(DONOR)).thenReturn(Optional.of(donor));
         when(donors.existsByEmail(NEW_EMAIL)).thenReturn(false);
 
         service.confirmChange(secret.value());
@@ -455,7 +460,7 @@ class DonorEmailVerificationServiceTest {
         EmailVerificationToken token = EmailVerificationToken.issueForChange(secret, DONOR, NEW_EMAIL, NOW.minusSeconds(60), TTL);
         when(tokens.findBySecretHash(secret.hash())).thenReturn(Optional.of(token));
         when(tokens.markUsed(token.id(), NOW)).thenReturn(true);
-        when(donors.findById(DONOR)).thenReturn(Optional.of(verifiedDonor()), Optional.of(unverifiedDonor(LocaleCode.CS)));
+        when(donors.findByIdForUpdate(DONOR)).thenReturn(Optional.of(verifiedDonor()), Optional.of(unverifiedDonor(LocaleCode.CS)));
         when(donors.existsByEmail(NEW_EMAIL)).thenReturn(true);
 
         assertThatThrownBy(() -> service.confirmChange(secret.value())).isInstanceOf(InvalidEmailVerificationToken.class);

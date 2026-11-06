@@ -34,7 +34,7 @@ public class DonorProfileService {
 
     @Transactional
     public DonorView updateProfile(DonorId donorId, Set<Role> sessionRoles, UpdateDonorProfileCommand command) {
-        Donor donor = load(donorId);
+        Donor donor = donors.findByIdForUpdate(donorId).orElseThrow(() -> new DonorNotFound(donorId));
         String name = command.name() == null ? donor.name() : command.name();
         PostalAddress address = command.street() == null && command.city() == null && command.postalCode() == null
                 ? donor.address()

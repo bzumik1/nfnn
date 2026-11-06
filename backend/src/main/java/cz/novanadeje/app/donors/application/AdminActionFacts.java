@@ -23,6 +23,7 @@ public record AdminActionFacts(String summaryKey, Map<String, String> values) {
     private static final String WITHOUT_VARIANT = "";
     private static final String WITH_TITLE = "withTitle";
     private static final String INHERITED = "INHERITED";
+    private static final String RECIPIENT_COUNT = "recipientCount";
 
     private static final Map<String, String> SECTION_CODES = Map.of(
             "dárci", "DONORS", "donors", "DONORS",
@@ -109,11 +110,17 @@ public record AdminActionFacts(String summaryKey, Map<String, String> values) {
                 full("Osobní údaje dárce " + DONOR_ID + " vymazány: .*"),
                 full("Personal data of donor " + DONOR_ID + " erased: .*")));
         shapes.put("CHANGE_REPORT_SETTINGS", List.of(
+                variant(RECIPIENT_COUNT, "Nastavení měsíčního přehledu změněno: počet příjemců (?<recipientCount>\\d+); odesílá se (?<day>\\d+)\\. den v měsíci"
+                        + " v (?<hour>\\d+):00; části (?<sections>.+)"),
+                variant("withoutHourRecipientCount", "Monthly report settings changed: (?<recipientCount>\\d+) recipient\\(s\\); sent on day (?<day>\\d+)"
+                        + " of the month; sections (?<sections>.+)"),
                 full("Nastavení měsíčního přehledu změněno: příjemci (?<recipients>.+); odesílá se (?<day>\\d+)\\. den v měsíci v (?<hour>\\d+):00; části"
                         + " (?<sections>.+)"),
                 variant("withoutHour", "Monthly report settings changed: recipients (?<recipients>.+); sent on day (?<day>\\d+) of the month; sections"
                         + " (?<sections>.+)")));
         shapes.put("SEND_MONTHLY_REPORT", List.of(
+                variant(RECIPIENT_COUNT, "Měsíční přehled za (?<month>\\d{4}-\\d{2}) ručně odeslán, počet příjemců (?<recipientCount>\\d+)"),
+                variant(RECIPIENT_COUNT, "Monthly report for (?<month>\\d{4}-\\d{2}) sent by hand to (?<recipientCount>\\d+) recipient\\(s\\)"),
                 full("Měsíční přehled za (?<month>\\d{4}-\\d{2}) ručně odeslán na (?<recipients>.+)"),
                 full("Monthly report for (?<month>\\d{4}-\\d{2}) sent by hand to (?<recipients>.+)")));
         shapes.put("CHANGE_RECEIPT_SIGNATURE", List.of(

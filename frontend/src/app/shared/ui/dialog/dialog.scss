@@ -111,7 +111,7 @@
   .dialog--sheet[open] {
     padding: 0;
     align-items: flex-end;
-    overflow: hidden;
+    overflow: clip;
     background: color-mix(
       in srgb,
       var(--color-backdrop) calc((1 - var(--dialog-pull)) * 100%),

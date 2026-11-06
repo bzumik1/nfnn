@@ -990,6 +990,27 @@ jobs:
             exit 1
           fi
 
+      - name: A refused row leaves its values out of the database log
+        run: |
+          canary="ci-log-canary-$RANDOM$RANDOM"
+          if docker exec nfnn-postgres psql -U novanadeje -d novanadeje -v ON_ERROR_STOP=1 -c "insert into donor (id, type, name) values (gen_random_uuid(), 'PERSON', '$canary')" > /dev/null 2>&1; then
+            echo "::error::the database accepted a donor row without its required columns"
+            exit 1
+          fi
+          logged=false
+          for _ in $(seq 10); do
+            if docker logs nfnn-postgres 2>&1 | grep -q 'violates not-null constraint'; then
+              logged=true
+              break
+            fi
+            sleep 1
+          done
+          [ "$logged" = true ] || { echo "::error::the database did not log the refused row, so this probe proves nothing"; exit 1; }
+          if docker logs nfnn-postgres 2>&1 | grep -qF "$canary"; then
+            echo "::error::the database log carries a value of a refused row (DETAIL or STATEMENT): nfnn-postgres must run with log_error_verbosity=terse and log_min_error_statement=panic"
+            exit 1
+          fi
+
       - name: The database takes the generated passwords and hands an older database to the application role
         run: |
           docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "alter role novanadeje password 'an-old-password'" -c "alter role novanadeje_app password 'an-old-password'" -c "alter table admin_action owner to novanadeje" -c "alter database novanadeje owner to novanadeje"

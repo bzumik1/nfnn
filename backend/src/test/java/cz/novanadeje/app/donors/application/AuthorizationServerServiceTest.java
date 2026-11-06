@@ -318,6 +318,20 @@ class AuthorizationServerServiceTest {
         }
 
         @Test
+        @DisplayName("when the same token is presented twice at once, then the donor's sessions are locked before the token is used up, so the replay never holds a token while it waits for them")
+        void should_lock_sessions_before_using_up_when_refreshed_given_token_used_concurrently() {
+            when(donors.findById(DONOR)).thenReturn(Optional.of(administrator()));
+            when(refreshTokens.markUsed(token.id(), NOW)).thenReturn(false);
+
+            assertThatThrownBy(() -> service.refresh(secret.value(), CLAUDE.value())).isInstanceOf(InvalidGrant.class);
+
+            InOrder order = inOrder(refreshTokens, signOuts);
+            order.verify(refreshTokens).lockSessionsOf(DONOR);
+            order.verify(refreshTokens).markUsed(token.id(), NOW);
+            order.verify(signOuts).endAllOf(DONOR, DeviceSignOutReason.REPLAY, NOW);
+        }
+
+        @Test
         @DisplayName("when another client presents the token, then the grant is invalid")
         void should_refuse_when_refreshed_given_other_client() {
             assertThatThrownBy(() -> service.refresh(secret.value(), "https://claude.ai/oauth/claude-code-client-metadata"))
@@ -387,6 +401,16 @@ class AuthorizationServerServiceTest {
                     NOW.plusSeconds(300), null));
 
             assertThatThrownBy(() -> service.exchangeToken("browser", API)).isInstanceOf(InvalidGrant.class);
+        }
+
+        @Test
+        @DisplayName("when a connector token without any scope is presented, then the grant is invalid and no API token is issued, so it can never pass for a browser session")
+        void should_refuse_when_exchanged_given_connector_token_without_scope() {
+            when(verifier.verify("scopeless")).thenReturn(new VerifiedAccessToken(DONOR, Set.of(Role.DONOR, Role.ADMIN), Set.of(MCP), Set.of(),
+                    NOW.plusSeconds(300), "claude.ai"));
+
+            assertThatThrownBy(() -> service.exchangeToken("scopeless", API)).isInstanceOf(InvalidGrant.class);
+            verify(accessTokens, never()).issue(any());
         }
 
         @Test

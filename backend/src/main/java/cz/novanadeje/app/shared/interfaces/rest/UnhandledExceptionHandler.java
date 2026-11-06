@@ -66,11 +66,11 @@ class UnhandledExceptionHandler {
         return simpleName.isEmpty() ? ex.getClass().getName() : simpleName;
     }
 
-    private static String method(HttpServletRequest request) {
+    static String method(HttpServletRequest request) {
         return STANDARD_METHODS.contains(request.getMethod()) ? request.getMethod() : OTHER_METHOD;
     }
 
-    private static String pattern(HttpServletRequest request) {
+    static String pattern(HttpServletRequest request) {
         return request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE) instanceof String pattern ? pattern : UNMATCHED_PATTERN;
     }
 }

@@ -53,12 +53,14 @@ class FreshSecondFactorCheckTest {
     private SecondFactorRepository secondFactors;
     @Mock
     private DonorConfirmations confirmations;
+    @Mock
+    private WrongSecondFactorCodeCount wrongCodes;
 
     private FreshSecondFactorCheck check;
 
     @BeforeEach
     void setUp() {
-        check = new FreshSecondFactorCheck(donors, secondFactors, confirmations, Clock.fixed(NOW, ZoneOffset.UTC));
+        check = new FreshSecondFactorCheck(donors, secondFactors, confirmations, new SecondFactorCodes(secondFactors, wrongCodes), Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
     @Test

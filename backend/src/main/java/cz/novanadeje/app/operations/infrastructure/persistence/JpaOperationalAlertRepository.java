@@ -3,6 +3,7 @@ package cz.novanadeje.app.operations.infrastructure.persistence;
 import cz.novanadeje.app.operations.domain.alerts.MonitoredArea;
 import cz.novanadeje.app.operations.domain.alerts.OperationalAlert;
 import cz.novanadeje.app.operations.domain.alerts.OperationalAlertRepository;
+import cz.novanadeje.app.shared.infrastructure.lock.AdvisoryLock;
 import jakarta.persistence.EntityManager;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Propagation;
@@ -18,8 +19,6 @@ import java.util.stream.Collectors;
 @Repository
 class JpaOperationalAlertRepository implements OperationalAlertRepository {
 
-    static final long CHANGE_LOCK_KEY = 20261106L;
-
     private final OperationalAlertJpaRepository jpa;
     private final EntityManager entityManager;
 
@@ -31,7 +30,7 @@ class JpaOperationalAlertRepository implements OperationalAlertRepository {
     @Override
     @Transactional(propagation = Propagation.MANDATORY)
     public void lockChanges() {
-        entityManager.createNativeQuery("select 1 from pg_advisory_xact_lock(:key)").setParameter("key", CHANGE_LOCK_KEY).getSingleResult();
+        AdvisoryLock.OPERATIONAL_ALERT_CHANGES.acquireFor(entityManager);
     }
 
     @Override

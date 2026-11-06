@@ -197,6 +197,44 @@ async function rememberedSession(page: Page, user: typeof donor): Promise<void> 
   await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
 }
 
+interface RowCentring {
+  title: string;
+  lines: number;
+  offCentre: string[];
+}
+
+function offCentreParts(page: Page, rowSelector: string): Promise<RowCentring[]> {
+  return page.evaluate((selector) => {
+    return Array.from(document.querySelectorAll<HTMLElement>(selector)).map((row) => {
+      const box = row.getBoundingClientRect();
+      const style = getComputedStyle(row);
+      const middle =
+        (box.top + parseFloat(style.paddingTop) + box.bottom - parseFloat(style.paddingBottom)) / 2;
+      const title = row.querySelector<HTMLElement>('.ui-list__title');
+      const range = document.createRange();
+      if (title) range.selectNodeContents(title);
+      const lines = new Set(Array.from(range.getClientRects(), (rect) => Math.round(rect.top)))
+        .size;
+      const offCentre = [
+        '.ui-list__lead',
+        '.ui-list__title',
+        '.ui-list__value',
+        '.ui-list__chevron',
+      ]
+        .map(
+          (part) => [part, row.querySelector(`:scope > ${part}`)?.getBoundingClientRect()] as const,
+        )
+        .filter(([, part]) => part && Math.abs((part.top + part.bottom) / 2 - middle) > 1)
+        .map(([part]) => `${title?.textContent?.trim()}: ${part}`);
+      return {
+        title: title?.textContent?.trim() ?? '',
+        lines,
+        offCentre,
+      };
+    });
+  }, rowSelector);
+}
+
 function value(page: Page, label: string) {
   return page
     .getByRole('region', { name: 'Stav stahování plateb z banky' })
@@ -512,6 +550,29 @@ test.describe('Given an administrator', () => {
     await expect(page).toHaveURL(/\/sprava\/vice$/);
     await back.click();
     await expect(page).toHaveURL(/\/sprava$/);
+  });
+
+  test('when they use a phone, then the icon and the arrow of every section row stand in the middle of its height, a row of two lines too', async ({
+    page,
+  }) => {
+    await mockImportState(page, quietImport);
+    await rememberedSession(page, administrator);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/sprava');
+
+    const sections = page.getByRole('navigation', { name: 'Sekce správy' });
+    await expect(sections.getByRole('link', { name: /Lidé fondu, správci, zálohy/ })).toBeVisible();
+    const home = await offCentreParts(page, 'nav[aria-label="Sekce správy"] .ui-list__row');
+    expect(home.find((row) => row.title.startsWith('Lidé fondu'))?.lines).toBe(2);
+    expect(home.flatMap((row) => row.offCentre)).toEqual([]);
+
+    await page.goto('/sprava/vice');
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Občas a pro technika' }),
+    ).toBeVisible();
+    const more = await offCentreParts(page, 'nav[aria-label="Další sekce správy"] .ui-list__row');
+    expect(more.length).toBeGreaterThan(0);
+    expect(more.flatMap((row) => row.offCentre)).toEqual([]);
   });
 
   test('when they come back later with a remembered session, then the administration opens straight away', async ({

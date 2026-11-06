@@ -45,7 +45,7 @@
       <dt i18n="@@home.contact.accounting.account">Číslo účtu</dt>
       <dd>
         @if (account(); as known) {
-          <span class="accounting-value">{{ known.number }}</span>
+          <span class="accounting-value ui-figures">{{ known.number }}</span>
           <app-copy-button
             [value]="known.number"
             what="číslo účtu"
@@ -65,7 +65,14 @@
       <div class="accounting-item">
         <dt i18n="@@home.contact.accounting.iban">IBAN</dt>
         <dd>
-          <span class="accounting-value">{{ iban() }}</span>
+          <span class="accounting-value ui-figures ui-figures--groups">
+            @for (group of ibanGroups(); track $index) {
+              @if (!$first) {
+                &ngsp;
+              }
+              <span>{{ group }}</span>
+            }
+          </span>
           <app-copy-button
             [value]="known.iban"
             what="IBAN"

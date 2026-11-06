@@ -55,7 +55,7 @@ class DonorProfileServiceTest {
     @Test
     @DisplayName("Given a registered donor, when the profile is updated, then DonorProfileChanged carries the donor id, the new name, address and preferred locale")
     void should_publish_profile_changed_when_profile_updated_given_registered_donor() {
-        when(donors.findById(DONOR)).thenReturn(Optional.of(donor()));
+        when(donors.findByIdForUpdate(DONOR)).thenReturn(Optional.of(donor()));
 
         service.updateProfile(DONOR, Set.of(Role.DONOR), new UpdateDonorProfileCommand("Jana Malá", "Krátká 3", "Praha", "110 00", "en"));
 

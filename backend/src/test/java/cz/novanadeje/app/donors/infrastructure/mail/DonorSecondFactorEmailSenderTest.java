@@ -4,6 +4,7 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import cz.novanadeje.app.donors.application.event.DonorSecondFactorCodesPaused;
 import cz.novanadeje.app.donors.application.event.DonorSecondFactorDisabled;
 import cz.novanadeje.app.donors.application.event.DonorSecondFactorEnabled;
 import cz.novanadeje.app.shared.domain.EmailAddress;
@@ -176,7 +177,58 @@ class DonorSecondFactorEmailSenderTest {
     }
 
     @Test
-    @DisplayName("Given a mail server that refuses, when either notice is sent, then one ERROR line each names the donor and the exception class, never the address")
+    @DisplayName("Given a Czech donor whose codes were paused, when the paused notice is sent, then it says that someone entered wrong codes and that the donor should change the password")
+    void should_tell_donor_in_czech_when_paused_notice_sent_given_czech_donor() {
+        RecordingMailSender recording = new RecordingMailSender();
+        contexts.withBean(JavaMailSender.class, () -> recording).run(context -> {
+            sender(context).sendCodesPausedNotice(new DonorSecondFactorCodesPaused(DONOR_ID, EMAIL, LocaleCode.CS));
+
+            assertThat(recording.sent()).hasSize(1);
+            MimeMessage email = MailContents.asReceived(recording.sent().getFirst());
+            assertThat(email.getRecipients(Message.RecipientType.TO)).extracting(Object::toString).containsExactly("jana@example.cz");
+            assertThat(email.getSubject()).isEqualTo("Někdo zkouší kódy k vašemu účtu – Nová naděje");
+            assertThat(MailContents.plainText(email).replace("\r\n", "\n")).isEqualTo("""
+                    Dobrý den,
+
+                    k vašemu dárcovskému účtu Nová naděje přišlo během čtvrt hodiny deset nesprávných kódů z ověřovací aplikace. Proto teď hodinu nepřijmeme žádný kód z aplikace, ani správný.
+
+                    Přihlásit se mezitím můžete přístupovým klíčem, pokud ho máte; za hodinu bude kód z aplikace zase fungovat.
+
+                    Pokud jste kódy nezadávali vy, zná někdo vaše heslo nebo odkaz z vaší e-mailové schránky. Změňte si prosím hned heslo (tím se ukončí všechna ostatní přihlášení) a napište nám na info@nfnn.cz.
+
+                    Nová naděje – nadační fond
+
+                    Máte-li dotaz, napište nám na info@nfnn.cz.
+                    """);
+            assertThat(MailContents.html(email))
+                    .contains("lang=\"cs\"")
+                    .contains(">Kódy z aplikace jsme na hodinu zastavili</h1>")
+                    .contains("deset nesprávných kódů z ověřovací aplikace")
+                    .contains("Změňte si prosím hned heslo (tím se ukončí všechna ostatní přihlášení) a napište nám na info@nfnn.cz.");
+            assertThat(logged.list).noneMatch(line -> line.getLevel() == Level.ERROR);
+            MailPreviews.save("second-factor-codes-paused", email);
+        });
+    }
+
+    @Test
+    @DisplayName("Given an English donor whose codes were paused, when the paused notice is sent, then subject and texts are English")
+    void should_write_english_when_paused_notice_sent_given_english_donor() {
+        RecordingMailSender recording = new RecordingMailSender();
+        contexts.withBean(JavaMailSender.class, () -> recording).run(context -> {
+            sender(context).sendCodesPausedNotice(new DonorSecondFactorCodesPaused(DONOR_ID, EMAIL, LocaleCode.EN));
+
+            MimeMessage email = MailContents.asReceived(recording.sent().getFirst());
+            assertThat(email.getSubject()).isEqualTo("Someone is trying codes for your account – Nová naděje");
+            assertThat(MailContents.plainText(email))
+                    .startsWith("Hello,")
+                    .contains("ten wrong codes from the authenticator app within a quarter of an hour")
+                    .contains("Please change your password at once (this ends every other sign-in) and write to us at info@nfnn.cz");
+            assertThat(MailContents.html(email)).contains("lang=\"en\"").contains(">Codes from the app paused for an hour</h1>");
+        });
+    }
+
+    @Test
+    @DisplayName("Given a mail server that refuses, when any notice is sent, then one ERROR line each names the donor and the exception class, never the address")
     void should_log_donor_and_exception_class_only_when_sent_given_failing_mail_server() {
         JavaMailSender failing = mock(JavaMailSender.class);
         when(failing.createMimeMessage()).thenAnswer(invocation -> new MimeMessage(Session.getInstance(new Properties())));
@@ -185,8 +237,9 @@ class DonorSecondFactorEmailSenderTest {
         contexts.withBean(JavaMailSender.class, () -> failing).run(context -> {
             sender(context).sendEnabledNotice(new DonorSecondFactorEnabled(DONOR_ID, EMAIL, LocaleCode.CS));
             sender(context).sendDisabledNotice(new DonorSecondFactorDisabled(DONOR_ID, EMAIL, LocaleCode.CS));
+            sender(context).sendCodesPausedNotice(new DonorSecondFactorCodesPaused(DONOR_ID, EMAIL, LocaleCode.CS));
 
-            assertThat(logged.list).hasSize(2).allSatisfy(line -> {
+            assertThat(logged.list).hasSize(3).allSatisfy(line -> {
                 assertThat(line.getLevel()).isEqualTo(Level.ERROR);
                 assertThat(line.getFormattedMessage())
                         .contains(DONOR_ID.toString())

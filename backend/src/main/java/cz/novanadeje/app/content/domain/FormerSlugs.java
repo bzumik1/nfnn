@@ -12,7 +12,9 @@ public interface FormerSlugs {
 
     void rememberProject(Slug slug, ProjectId project, Instant replacedAt);
 
-    void forget(Slug slug);
+    void forgetNews(Slug slug);
+
+    void forgetProject(Slug slug);
 
     Optional<NewsArticleId> newsArticle(Slug slug);
 

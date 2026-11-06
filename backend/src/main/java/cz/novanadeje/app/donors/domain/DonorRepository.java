@@ -18,6 +18,12 @@ public interface DonorRepository {
 
     Optional<Donor> findByEmail(EmailAddress email);
 
+    Optional<Donor> findByIdForUpdate(DonorId id);
+
+    Optional<Donor> findByEmailForUpdate(EmailAddress email);
+
+    void lockEmail(EmailAddress email);
+
     boolean existsByEmail(EmailAddress email);
 
     boolean existsByVariableSymbol(VariableSymbol variableSymbol);

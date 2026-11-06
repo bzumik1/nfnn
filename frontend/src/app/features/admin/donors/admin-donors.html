@@ -114,7 +114,7 @@
                   }
                 </span>
                 @if (item.lastGift; as gift) {
-                  <span class="ui-list__value">{{ giftAmount(gift) }}&nbsp;Kč</span>
+                  <span class="ui-list__value ui-figures">{{ giftAmount(gift) }}&nbsp;Kč</span>
                   <span class="ui-list__state">{{ giftDay(gift) }}</span>
                 }
                 @if (
@@ -217,11 +217,11 @@
                   }
                 </td>
                 <td data-label="Variabilní symbol" i18n-data-label="@@admin.donors.col.symbol">
-                  <span class="ui-mono">{{ item.account.variableSymbol }}</span>
+                  <span class="ui-figures">{{ item.account.variableSymbol }}</span>
                 </td>
                 @if (item.lastGift; as gift) {
                   <td data-label="Poslední dar" i18n-data-label="@@admin.donors.col.lastGift">
-                    <span class="gift-amount">{{ giftAmount(gift) }}&nbsp;Kč</span>
+                    <span class="ui-figures gift-amount">{{ giftAmount(gift) }}&nbsp;Kč</span>
                     <span class="muted">{{ giftDay(gift) }}</span>
                   </td>
                 } @else {

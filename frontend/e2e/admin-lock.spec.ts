@@ -113,6 +113,38 @@ test.describe('Given an administrator whose administration locks on this device'
     ]);
   });
 
+  test('when the account has a passkey that this device has not wrapped the copy with, then the passkey is offered first and the password stays beside it', async ({
+    page,
+  }) => {
+    await page.route(
+      (url) => url.pathname === '/api/donors/me/passkeys',
+      (route) =>
+        route.fulfill({
+          json: {
+            items: [
+              {
+                id: '0190c3a2-7b1e-7cc1-8a52-0000000000aa',
+                name: 'iPhone',
+                createdAt: '2026-11-01T08:00:00Z',
+                lastUsedAt: null,
+              },
+            ],
+          },
+        }),
+    );
+    await rememberedSession(page);
+
+    await page.goto('/sprava/prehledy');
+
+    await expect(
+      page.getByRole('heading', { level: 1, name: ADMINISTRATION_LOCKED }),
+    ).toBeVisible();
+    await expect(page.locator('.lock-actions').getByRole('button')).toHaveText([
+      'Odemknout přístupovým klíčem',
+      'Použít heslo',
+    ]);
+  });
+
   test('when the administrator has just signed in, then the administration opens without asking again', async ({
     page,
   }) => {

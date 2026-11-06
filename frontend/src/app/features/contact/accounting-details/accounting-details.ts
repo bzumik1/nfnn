@@ -3,7 +3,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CopyButton } from '../../../shared/ui/copy-button/copy-button';
-import { formatIban } from '../../donations/iban-format';
+import { ibanGroups } from '../../donations/iban-format';
 import { PaymentDetailsStore } from '../../donations/payment-details-store';
 
 @Component({
@@ -21,9 +21,9 @@ export class AccountingDetails {
     const state = this.paymentDetails.state();
     return state.kind === 'ready' ? state.details.account : null;
   });
-  protected readonly iban = computed(() => {
+  protected readonly ibanGroups = computed(() => {
     const account = this.account();
-    return account ? formatIban(account.iban) : '';
+    return account ? ibanGroups(account.iban) : [];
   });
 
   constructor() {

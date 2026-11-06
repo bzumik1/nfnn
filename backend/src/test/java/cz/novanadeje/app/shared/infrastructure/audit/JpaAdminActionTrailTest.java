@@ -11,10 +11,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -47,7 +50,7 @@ class JpaAdminActionTrailTest {
     @Test
     @DisplayName("Given three stored actions, when the trail before a later time is read, then they come newest first with every column")
     void should_list_newest_first_when_read_given_stored_actions() {
-        var entries = trail.findPerformedBefore(AT.plusSeconds(121), 10).stream().filter(entry -> entry.adminId().equals(admin)).toList();
+        var entries = trail.findPerformedBefore(AT.plusSeconds(121), 200).stream().filter(entry -> entry.adminId().equals(admin)).toList();
 
         assertThat(entries).extracting(AdminActionEntry::details).containsExactly("third", "second", "first");
         AdminActionEntry first = entries.getLast();
@@ -64,6 +67,25 @@ class JpaAdminActionTrailTest {
         var entries = trail.findPerformedBefore(AT.plusSeconds(120), 1).stream().filter(entry -> entry.adminId().equals(admin)).toList();
 
         assertThat(entries).extracting(AdminActionEntry::details).containsExactly("second");
+    }
+
+    @Test
+    @DisplayName("Given three actions stored at one moment, when they are read two at a time after the last one listed, then every one of them comes once")
+    void should_list_every_action_of_one_moment_when_paged_after_the_last_one_listed_given_actions_sharing_their_time() {
+        Instant moment = AT.plus(Duration.ofDays(400));
+        transactions.executeWithoutResult(status -> {
+            for (String details : List.of("one", "two", "three")) {
+                events.publishEvent(new AdminActionPerformed(admin, "PAIR_PAYMENT", Optional.empty(), details, moment));
+            }
+        });
+
+        List<AdminActionEntry> firstPage = trail.findPerformedBefore(moment.plusSeconds(1), 2);
+        AdminActionEntry lastListed = firstPage.getLast();
+        List<AdminActionEntry> secondPage = trail.findPerformedBefore(lastListed.performedAt(), lastListed.id(), 2);
+
+        assertThat(firstPage).extracting(AdminActionEntry::performedAt).containsOnly(moment);
+        assertThat(Stream.concat(firstPage.stream(), secondPage.stream()).filter(entry -> entry.adminId().equals(admin)))
+                .extracting(AdminActionEntry::details).containsExactlyInAnyOrder("one", "two", "three");
     }
 
     @Test

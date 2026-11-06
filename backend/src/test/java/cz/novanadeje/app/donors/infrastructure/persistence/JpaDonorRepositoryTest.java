@@ -13,6 +13,7 @@ import cz.novanadeje.app.shared.domain.ErasedPersonalData;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
+import cz.novanadeje.app.shared.infrastructure.lock.AdvisoryLock;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -20,12 +21,21 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.Import;
+import org.springframework.transaction.IllegalTransactionStateException;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -40,6 +50,8 @@ class JpaDonorRepositoryTest {
     private EmailVerificationTokenRepository tokens;
     @Autowired
     private EntityManager entityManager;
+    @Autowired
+    private DataSource dataSource;
 
     @Test
     @DisplayName("Given a saved donor, when the e-mail is verified and saved again, then the verification time survives a reload")
@@ -114,6 +126,26 @@ class JpaDonorRepositoryTest {
         assertThat(donors.findById(donor.id())).isEmpty();
         assertThat(tokens.findBySecretHash(secret.hash())).isEmpty();
         assertThat(donors.findByEmail(new EmailAddress("jana@example.cz")).orElseThrow().variableSymbol()).isEqualTo(new VariableSymbol("4821937561"));
+    }
+
+    @Test
+    @DisplayName("Given a verified administrator and another donor, when the administrator is read for an update by id and by e-mail, then the whole donor comes with the role, and an unknown id or address finds nothing")
+    void should_find_whole_donor_when_read_for_update_given_saved_administrator() {
+        Donor jana = donor("jana@example.cz", "4821937580");
+        jana.verifyEmail(NOW);
+        jana.grantAdministration();
+        donors.save(jana);
+        donors.save(donor("petr@example.cz", "4821937581"));
+        flushAndClear();
+
+        Donor byId = donors.findByIdForUpdate(jana.id()).orElseThrow();
+        assertThat(byId.email()).isEqualTo(new EmailAddress("jana@example.cz"));
+        assertThat(byId.isAdministrator()).isTrue();
+        assertThat(byId.emailVerifiedAt()).contains(NOW);
+        flushAndClear();
+        assertThat(donors.findByEmailForUpdate(new EmailAddress("jana@example.cz"))).map(Donor::id).contains(jana.id());
+        assertThat(donors.findByIdForUpdate(DonorId.newId(NOW))).isEmpty();
+        assertThat(donors.findByEmailForUpdate(new EmailAddress("nobody@example.cz"))).isEmpty();
     }
 
     @Test
@@ -240,6 +272,35 @@ class JpaDonorRepositoryTest {
         assertThat(donors.findByEmail(new EmailAddress("jana@example.cz")).orElseThrow().variableSymbol()).isEqualTo(new VariableSymbol("4821937561"));
         assertThat(donors.search("4821937560", 0, 20)).extracting(Donor::id).containsExactly(donor.id());
         assertThat(donors.search("nováková", 0, 20)).extracting(Donor::id).doesNotContain(donor.id());
+    }
+
+    @Test
+    @DisplayName("Given an address locked in a transaction, when another connection tries the same address and another one, then the same address is held until the transaction ends and the other is free")
+    void should_hold_address_until_transaction_ends_when_locked_given_open_transaction() throws SQLException {
+        donors.lockEmail(new EmailAddress("Jana@Example.cz"));
+
+        try (Connection other = dataSource.getConnection()) {
+            assertThat(triesAddressLock(other, "jana@example.cz")).isFalse();
+            assertThat(triesAddressLock(other, "petr@example.cz")).isTrue();
+        }
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @DisplayName("Given no transaction, when an address is locked, then it is refused, because the lock would end with the statement")
+    void should_refuse_when_locked_given_no_transaction() {
+        assertThatThrownBy(() -> donors.lockEmail(new EmailAddress("jana@example.cz"))).isInstanceOf(IllegalTransactionStateException.class);
+    }
+
+    private static boolean triesAddressLock(Connection connection, String email) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("select pg_try_advisory_xact_lock(?, ?)")) {
+            statement.setInt(1, Math.toIntExact(AdvisoryLock.DONOR_EMAIL_ADDRESSES.key()));
+            statement.setInt(2, email.hashCode());
+            try (ResultSet result = statement.executeQuery()) {
+                result.next();
+                return result.getBoolean(1);
+            }
+        }
     }
 
     private static Donor donor(String email, String variableSymbol) {

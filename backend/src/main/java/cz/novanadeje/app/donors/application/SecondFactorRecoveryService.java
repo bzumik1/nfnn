@@ -70,7 +70,7 @@ public class SecondFactorRecoveryService {
     public SecondFactorRecoveryInstructions start(String challenge) {
         Instant now = clock.instant();
         SecondFactorChallenge waiting = waitingSignIn(challenge, now);
-        Donor donor = donors.findById(waiting.donorId()).orElseThrow(InvalidSecondFactorChallenge::new);
+        Donor donor = donors.findByIdForUpdate(waiting.donorId()).orElseThrow(InvalidSecondFactorChallenge::new);
         secondFactors.findByDonor(donor.id()).filter(SecondFactor::isEnabled).orElseThrow(InvalidSecondFactorChallenge::new);
         SecondFactorRecoveryTarget target = targets.targetFor(donor.id().value()).orElseThrow(SecondFactorRecoveryUnavailable::new);
         Optional<SecondFactorRecovery> open = recoveries.findOpenOf(donor.id(), now).filter(found -> found.code().isPresent());

@@ -4,7 +4,7 @@ import cz.novanadeje.app.cucumber.ApiClient;
 import cz.novanadeje.app.cucumber.ConcurrentWrites;
 import cz.novanadeje.app.cucumber.DonorSessions;
 import cz.novanadeje.app.cucumber.ScenarioDonors;
-import cz.novanadeje.app.donations.infrastructure.persistence.DonationLocks;
+import cz.novanadeje.app.shared.infrastructure.lock.AdvisoryLock;
 import io.cucumber.datatable.DataTable;
 import io.cucumber.java.en.When;
 import org.springframework.http.HttpHeaders;
@@ -56,17 +56,17 @@ public class StaleAdminWritesStepDefinitions {
 
     @When("these writes start one after another from the versions read before them, while the pairing lock is held:")
     public void theseWritesStartWhileThePairingLockIsHeld(DataTable table) {
-        sendWhileHeld(DonationLocks.PAIRING, table);
+        sendWhileHeld(AdvisoryLock.PAIRING, table);
     }
 
     @When("these writes start one after another from the versions read before them, while the report settings lock is held:")
     public void theseWritesStartWhileTheReportSettingsLockIsHeld(DataTable table) {
-        sendWhileHeld(DonationLocks.REPORT_SETTINGS, table);
+        sendWhileHeld(AdvisoryLock.REPORT_SETTINGS_CHANGES, table);
     }
 
-    private void sendWhileHeld(long lockKey, DataTable table) {
+    private void sendWhileHeld(AdvisoryLock lock, DataTable table) {
         List<ConcurrentWrites.Write> writes = table.asMaps().stream().map(row -> write(row.get("who"), row.get("write"))).toList();
-        concurrentWrites.sendWhileHeld(ADVISORY_LOCK, lockKey, writes);
+        concurrentWrites.sendWhileHeld(ADVISORY_LOCK, lock.key(), writes);
     }
 
     @When("{string} reads payment {long}")

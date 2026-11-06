@@ -32,6 +32,7 @@ public class AdminReportStepDefinitions {
     private final RecordingMailSender mailSender;
     private final JdbcClient jdbc;
     private final DonationRowVersions versions;
+    private String exchangedApiToken;
 
     public AdminReportStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors scenarioDonors, RecordingMailSender mailSender,
                                       JdbcClient jdbc, DonationRowVersions versions) {
@@ -58,6 +59,22 @@ public class AdminReportStepDefinitions {
     @When("{string} changes the monthly report settings:")
     public void changesTheMonthlyReportSettings(String alias, Map<String, String> settings) {
         sessions.actAs(alias);
+        api.put(REPORT + "/settings", reportSettingsBody(settings), ApiClient.ifMatch(versions.ofReportSettings()));
+    }
+
+    @When("the exchanged API token changes the monthly report settings:")
+    public void theExchangedApiTokenChangesTheMonthlyReportSettings(Map<String, String> settings) {
+        JsonNode last = api.lastResponseJson();
+        if (last != null && last.has("access_token")) {
+            exchangedApiToken = last.get("access_token").asString();
+        }
+        String version = versions.ofReportSettings();
+        api.forgetCredentials();
+        api.authorize(exchangedApiToken);
+        api.put(REPORT + "/settings", reportSettingsBody(settings), ApiClient.ifMatch(version));
+    }
+
+    private static Map<String, Object> reportSettingsBody(Map<String, String> settings) {
         List<String> sections = list(settings.getOrDefault("sections", ""));
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("recipients", list(settings.get("recipients")));
@@ -71,7 +88,7 @@ public class AdminReportStepDefinitions {
                 "donations", sections.contains("donations"),
                 "unpairedPayments", sections.contains("unpairedPayments"),
                 "bankImport", sections.contains("bankImport")));
-        api.put(REPORT + "/settings", body, ApiClient.ifMatch(versions.ofReportSettings()));
+        return body;
     }
 
     @When("{string} sends the monthly report for {string} again")

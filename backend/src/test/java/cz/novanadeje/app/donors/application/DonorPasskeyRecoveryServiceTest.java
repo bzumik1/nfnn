@@ -43,6 +43,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -72,6 +73,8 @@ class DonorPasskeyRecoveryServiceTest {
     private PasswordHasher passwordHasher;
     @Mock
     private ApplicationEventPublisher events;
+    @Mock
+    private WrongSecondFactorCodeCount wrongCodes;
 
     private DonorPasskeyRecoveryService service;
 
@@ -82,7 +85,7 @@ class DonorPasskeyRecoveryServiceTest {
                 new DonorConfirmations(passwordHasher, passkeys, challenges, ceremonies, clock), ceremonies,
                 new PasskeyProperties(Duration.ofMinutes(5), 10, "Nová naděje"), new SecondFactorSessionGuard(secondFactors, passkeys), events,
                 clock);
-        service = new DonorPasskeyRecoveryService(tokens, donors, secondFactors, passkeyService, clock, signOuts);
+        service = new DonorPasskeyRecoveryService(tokens, donors, secondFactors, passkeyService, clock, signOuts, new SecondFactorCodes(secondFactors, wrongCodes));
     }
 
     @Test
@@ -112,6 +115,38 @@ class DonorPasskeyRecoveryServiceTest {
         assertThatThrownBy(() -> service.options(link.value(), " ")).isInstanceOf(SecondFactorCodeRequired.class);
         assertThatThrownBy(() -> service.options(link.value(), wrongCode())).isInstanceOf(SecondFactorCodeRejected.class);
 
+        verifyNoInteractions(challenges);
+    }
+
+    @Test
+    @DisplayName("Given the code from the app is on, when a new passkey is asked for with the current code, then the code is spent atomically and a registration challenge is issued")
+    void should_spend_the_code_and_issue_a_challenge_when_new_passkey_asked_for_given_the_current_code() {
+        LinkSecret link = liveLinkOf(donor());
+        SecondFactor factor = SecondFactor.reconstitute(DONOR, SECRET, NOW.minusSeconds(600), NOW.minusSeconds(540), Totp.stepAt(NOW) - 2);
+        when(secondFactors.findByDonor(DONOR)).thenReturn(Optional.of(factor));
+        when(secondFactors.recordUse(factor)).thenReturn(true);
+        when(passkeys.findByDonor(DONOR)).thenReturn(List.of());
+        when(ceremonies.relyingPartyId()).thenReturn("nfnn.cz");
+        when(ceremonies.algorithms()).thenReturn(List.of(-7));
+
+        service.options(link.value(), Totp.codeAt(SECRET, Totp.stepAt(NOW)));
+
+        verify(secondFactors).recordUse(factor);
+        verify(secondFactors, never()).save(any());
+        verify(challenges).save(any(PasskeyChallenge.class));
+    }
+
+    @Test
+    @DisplayName("Given the code from the app is on and another request spent the same code at the same moment, when a new passkey is asked for with it, then it is refused and no challenge is issued")
+    void should_refuse_when_new_passkey_asked_for_given_a_code_spent_by_another_request() {
+        LinkSecret link = liveLinkOf(donor());
+        SecondFactor factor = SecondFactor.reconstitute(DONOR, SECRET, NOW.minusSeconds(600), NOW.minusSeconds(540), Totp.stepAt(NOW) - 2);
+        when(secondFactors.findByDonor(DONOR)).thenReturn(Optional.of(factor));
+        when(secondFactors.recordUse(factor)).thenReturn(false);
+
+        assertThatThrownBy(() -> service.options(link.value(), Totp.codeAt(SECRET, Totp.stepAt(NOW)))).isInstanceOf(SecondFactorCodeRejected.class);
+
+        verify(secondFactors, never()).save(any());
         verifyNoInteractions(challenges);
     }
 
@@ -149,7 +184,8 @@ class DonorPasskeyRecoveryServiceTest {
         LinkSecret link = LinkSecret.generate();
         when(tokens.findBySecretHash(link.hash()))
                 .thenReturn(Optional.of(PasswordResetToken.issue(link, DONOR, NOW.minusSeconds(60), Duration.ofHours(1))));
-        when(donors.findById(DONOR)).thenReturn(Optional.of(donor));
+        lenient().when(donors.findById(DONOR)).thenReturn(Optional.of(donor));
+        lenient().when(donors.findByIdForUpdate(DONOR)).thenReturn(Optional.of(donor));
         return link;
     }
 

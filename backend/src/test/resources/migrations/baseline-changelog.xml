@@ -8,6 +8,8 @@
     <include file="db/changelog/content/001_create_media.xml" relativeToChangelogFile="false"/>
     <include file="db/changelog/content/002_create_news.xml" relativeToChangelogFile="false"/>
     <include file="db/changelog/content/003_create_project.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/content/004_describe_cover_images.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/content/005_remember_former_slugs.xml" relativeToChangelogFile="false"/>
     <include file="db/changelog/donors/001_create_donor.xml" relativeToChangelogFile="false"/>
     <include file="db/changelog/donors/002_create_donor_refresh_token.xml" relativeToChangelogFile="false"/>
     <include file="db/changelog/donors/003_create_donor_password_reset_token.xml" relativeToChangelogFile="false"/>

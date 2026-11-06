@@ -1294,7 +1294,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await expect(
       sheet.getByRole('button', { name: 'Uložit svou verzi místo novější' }),
     ).toBeVisible();
-    await expect(sheet.getByRole('button', { name: 'Zavřít' })).toBeFocused();
+    await expect(sheet).toBeFocused();
 
     expect(await violations(page)).toEqual([]);
   });

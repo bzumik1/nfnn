@@ -23,6 +23,7 @@ import { DialogHistory, DialogHistoryListener } from './dialog-history';
 import { DIALOG_PRESENTATION, DialogPresentation } from './dialog-presentation';
 import { DIALOG_SUSPENSION } from './dialog-suspension';
 import { canPullSheetFrom, PullIntent, pullIntent, SheetDrag, TouchOrigin } from './sheet-drag';
+import { InputModality } from '../../../core/input/input-modality';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 
 const ROOM_ABOVE_STICKY_ACTIONS_PX = 16;
@@ -79,6 +80,7 @@ export class Dialog implements AfterViewInit, OnDestroy {
   };
   private readonly suspension = inject(DIALOG_SUSPENSION);
   private readonly layout = inject(CompactLayout);
+  private readonly modality = inject(InputModality);
   private dragPointer: number | null = null;
   private touchOrigin: TouchOrigin | null = null;
   private touchIntent: PullIntent = 'content';
@@ -99,7 +101,7 @@ export class Dialog implements AfterViewInit, OnDestroy {
     if (this.suspension()) {
       this.steppedAside = true;
     } else {
-      this.element().nativeElement.showModal();
+      this.showModal();
     }
     if (this.pushesHistory()) {
       this.history.open(this.historyEntry);
@@ -280,6 +282,14 @@ export class Dialog implements AfterViewInit, OnDestroy {
     }
   }
 
+  private showModal(): void {
+    const dialog = this.element().nativeElement;
+    dialog.showModal();
+    if (this.modality.lastPressByPointer() && dialog.querySelector('[autofocus]') === null) {
+      dialog.focus({ preventScroll: true });
+    }
+  }
+
   private follow(suspended: boolean): void {
     if (!this.viewReady || this.destroyed) {
       return;
@@ -293,7 +303,7 @@ export class Dialog implements AfterViewInit, OnDestroy {
     } else if (!suspended && this.steppedAside) {
       this.steppedAside = false;
       if (!dialog.open) {
-        dialog.showModal();
+        this.showModal();
       }
     }
   }

@@ -20,12 +20,11 @@
 }
 
 .panel-label {
-  font-size: var(--text-2xs);
-  font-weight: var(--weight-bold);
-  color: var(--color-accent);
+  font-family: var(--font-title);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
   margin-bottom: var(--space-3-5);
-  letter-spacing: var(--tracking-wide);
-  text-transform: uppercase;
 
   &:focus {
     outline: none;
@@ -137,12 +136,7 @@
 .bank-value {
   font-weight: var(--weight-bold);
   color: var(--color-text);
-  font-family: var(--font-mono);
   font-size: var(--text-md);
-}
-
-.iban-half {
-  display: inline-block;
 }
 
 .qr {
@@ -276,13 +270,11 @@
   }
 
   .bank-value-wrap {
-    flex-wrap: nowrap;
     justify-content: space-between;
   }
 
   .bank-value {
-    min-width: 0;
-    overflow-wrap: anywhere;
+    flex: 1 1 0;
   }
 
   app-copy-button {

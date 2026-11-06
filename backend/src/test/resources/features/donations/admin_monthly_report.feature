@@ -29,7 +29,7 @@ Feature: An administrator sets up the monthly report, sends it again and reads t
       | sendHour   | 9                                  |
       | sections   | donations, bankImport              |
     Then the response status is 200
-    And the admin action "CHANGE_REPORT_SETTINGS" by "Jana" is recorded with details containing "pavel@example.cz, jakub@example.cz; odesílá se 5. den v měsíci v 9:00; části dary, stahování z banky"
+    And the admin action "CHANGE_REPORT_SETTINGS" by "Jana" is recorded with details containing "počet příjemců 2; odesílá se 5. den v měsíci v 9:00; části dary, stahování z banky"
     When "Jana" asks for the monthly report settings
     Then the monthly report settings say:
       | settings.recipients.1       | jakub@example.cz |
@@ -71,7 +71,7 @@ Feature: An administrator sets up the monthly report, sends it again and reads t
       | recipients.0 | info@nfnn.cz |
     And 2 monthly report e-mails are sent to "info@nfnn.cz"
     And monthly report e-mail 2 has the subject "Měsíční přehled Nová naděje – říjen 2026"
-    And the admin action "SEND_MONTHLY_REPORT" by "Jana" is recorded with details containing "Měsíční přehled za 2026-10 ručně odeslán na info@nfnn.cz"
+    And the admin action "SEND_MONTHLY_REPORT" by "Jana" is recorded with details containing "Měsíční přehled za 2026-10 ručně odeslán, počet příjemců 1"
     When "Jana" asks for the monthly report settings
     Then the monthly report settings say:
       | sentReports.0.month | 2026-10    |
@@ -117,6 +117,41 @@ Feature: An administrator sets up the monthly report, sends it again and reads t
     And the problem type ends with "donations/report-not-delivered"
     And the report for "2026-09" is not recorded
     And no admin action "SEND_MONTHLY_REPORT" is recorded
+
+  Scenario: A connected application changes the day, the hour and the sections, but never who receives the report
+    Given "Jana" connected the application "https://claude.ai/.well-known/oauth-client" with scope "admin:read admin:write"
+    When the connector exchanges the connector token for an API token
+    And the exchanged API token changes the monthly report settings:
+      | recipients | info@nfnn.cz, x@evil.example |
+      | sendDay    | 1                            |
+      | sections   | donors                       |
+    Then the response status is 403
+    And the problem type ends with "donations/report-recipients-in-browser-only"
+    When the connector exchanges the connector token for an API token
+    And the exchanged API token changes the monthly report settings:
+      | recipients | x@evil.example |
+      | sendDay    | 1              |
+      | sections   | donors         |
+    Then the response status is 403
+    And the problem type ends with "donations/report-recipients-in-browser-only"
+    And no admin action "CHANGE_REPORT_SETTINGS" is recorded
+    When "Jana" asks for the monthly report settings
+    Then the monthly report settings say:
+      | settings.recipients.0 | info@nfnn.cz |
+      | settings.sendDay      | 1            |
+    When the connector exchanges the connector token for an API token
+    And the exchanged API token changes the monthly report settings:
+      | recipients | INFO@nfnn.cz          |
+      | sendDay    | 5                     |
+      | sendHour   | 9                     |
+      | sections   | donations, bankImport |
+    Then the response status is 200
+    When "Jana" asks for the monthly report settings
+    Then the monthly report settings say:
+      | settings.recipients.0 | info@nfnn.cz |
+      | settings.sendDay      | 5            |
+      | settings.sendHour     | 9            |
+    And the admin action "CHANGE_REPORT_SETTINGS" by "Jana" is recorded with details containing "odesílá se 5. den v měsíci v 9:00; části dary, stahování z banky"
 
   Scenario: Settings with a malformed address, a day outside every month, an hour outside the day or no section are refused
     When "Jana" changes the monthly report settings:

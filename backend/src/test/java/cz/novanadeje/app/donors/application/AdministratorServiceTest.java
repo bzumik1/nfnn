@@ -3,6 +3,7 @@ package cz.novanadeje.app.donors.application;
 import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.domain.AdministratorEmailNotConfirmed;
 import cz.novanadeje.app.donors.domain.AlreadyAdministrator;
+import cz.novanadeje.app.donors.domain.AdministratorWithoutSecondFactor;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorNotFound;
@@ -77,7 +78,8 @@ class AdministratorServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new AdministratorService(donors, secondFactors, passkeys, events, Clock.fixed(NOW, ZoneOffset.UTC), signOuts);
+        service = new AdministratorService(donors, secondFactors, passkeys, new SecondFactorHoldings(secondFactors, passkeys), events,
+                Clock.fixed(NOW, ZoneOffset.UTC), signOuts);
     }
 
     @Test
@@ -112,15 +114,15 @@ class AdministratorServiceTest {
     }
 
     @Test
-    @DisplayName("Given a registered plain donor, when an administrator grants the role by e-mail, then the donor is saved as an administrator and the action is recorded")
-    void should_grant_role_and_record_action_when_granted_given_registered_donor() {
+    @DisplayName("Given a registered plain donor with the authenticator app on, when an administrator grants the role by e-mail, then the donor is saved as an administrator and the action is recorded")
+    void should_grant_role_and_record_action_when_granted_given_registered_donor_with_second_factor() {
         Donor petr = plainDonor(PETR, "Petr Svoboda", PETR_EMAIL.value());
-        when(donors.findByEmail(PETR_EMAIL)).thenReturn(Optional.of(petr));
-        when(secondFactors.findByDonor(PETR)).thenReturn(Optional.empty());
+        when(donors.findByEmailForUpdate(PETR_EMAIL)).thenReturn(Optional.of(petr));
+        when(secondFactors.findByDonor(PETR)).thenReturn(Optional.of(enabledSecondFactor(PETR)));
 
         AdministratorView view = service.grant(JANA, PETR_EMAIL);
 
-        assertThat(view).isEqualTo(new AdministratorView(PETR, "Petr Svoboda", PETR_EMAIL, false));
+        assertThat(view).isEqualTo(new AdministratorView(PETR, "Petr Svoboda", PETR_EMAIL, true));
         ArgumentCaptor<Donor> saved = ArgumentCaptor.forClass(Donor.class);
         verify(donors).save(saved.capture());
         assertThat(saved.getValue().roles()).containsExactlyInAnyOrder(Role.DONOR, Role.ADMIN);
@@ -135,9 +137,37 @@ class AdministratorServiceTest {
     }
 
     @Test
+    @DisplayName("Given a registered plain donor with a passkey and no authenticator app, when the role is granted, then the donor is saved as an administrator")
+    void should_grant_role_when_granted_given_registered_donor_with_passkey_only() {
+        when(donors.findByEmailForUpdate(PETR_EMAIL)).thenReturn(Optional.of(plainDonor(PETR, "Petr Svoboda", PETR_EMAIL.value())));
+        when(secondFactors.findByDonor(PETR)).thenReturn(Optional.empty());
+        when(passkeys.countByDonor(PETR)).thenReturn(1);
+
+        AdministratorView view = service.grant(JANA, PETR_EMAIL);
+
+        assertThat(view).isEqualTo(new AdministratorView(PETR, "Petr Svoboda", PETR_EMAIL, false));
+        verify(donors).save(any());
+    }
+
+    @Test
+    @DisplayName("Given a registered plain donor whose authenticator app is set up but not confirmed and who has no passkey, when the role is granted, then the request conflicts and nothing is saved or recorded")
+    void should_refuse_when_granted_given_donor_without_any_second_factor() {
+        when(donors.findByEmailForUpdate(PETR_EMAIL)).thenReturn(Optional.of(plainDonor(PETR, "Petr Svoboda", PETR_EMAIL.value())));
+        when(secondFactors.findByDonor(PETR)).thenReturn(Optional.of(SecondFactor.enrol(PETR, SECRET, NOW.minusSeconds(10))));
+        when(passkeys.countByDonor(PETR)).thenReturn(0);
+
+        assertThatThrownBy(() -> service.grant(JANA, PETR_EMAIL))
+                .isInstanceOfSatisfying(AdministratorWithoutSecondFactor.class,
+                        refused -> assertThat(refused.code()).isEqualTo("donors/administrator-without-second-factor"));
+
+        verify(donors, never()).save(any());
+        verifyNoInteractions(signOuts, events);
+    }
+
+    @Test
     @DisplayName("Given no donor with the e-mail, when the role is granted, then the request fails as not registered and nothing is saved")
     void should_refuse_when_granted_given_unknown_email() {
-        when(donors.findByEmail(PETR_EMAIL)).thenReturn(Optional.empty());
+        when(donors.findByEmailForUpdate(PETR_EMAIL)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.grant(JANA, PETR_EMAIL)).isInstanceOf(EmailNotRegistered.class);
 
@@ -148,7 +178,7 @@ class AdministratorServiceTest {
     @Test
     @DisplayName("Given a donor who has not confirmed the e-mail, when the role is granted, then the request conflicts and nothing is saved")
     void should_refuse_when_granted_given_unconfirmed_donor() {
-        when(donors.findByEmail(PETR_EMAIL)).thenReturn(Optional.of(unconfirmedDonor(PETR, "Petr Svoboda", PETR_EMAIL.value())));
+        when(donors.findByEmailForUpdate(PETR_EMAIL)).thenReturn(Optional.of(unconfirmedDonor(PETR, "Petr Svoboda", PETR_EMAIL.value())));
 
         assertThatThrownBy(() -> service.grant(JANA, PETR_EMAIL)).isInstanceOf(AdministratorEmailNotConfirmed.class);
 
@@ -159,7 +189,7 @@ class AdministratorServiceTest {
     @Test
     @DisplayName("Given a donor who already is an administrator, when the role is granted, then the request conflicts and nothing is saved")
     void should_refuse_when_granted_given_administrator() {
-        when(donors.findByEmail(PETR_EMAIL)).thenReturn(Optional.of(administrator(PETR, "Petr Svoboda", PETR_EMAIL.value())));
+        when(donors.findByEmailForUpdate(PETR_EMAIL)).thenReturn(Optional.of(administrator(PETR, "Petr Svoboda", PETR_EMAIL.value())));
 
         assertThatThrownBy(() -> service.grant(JANA, PETR_EMAIL)).isInstanceOf(AlreadyAdministrator.class);
 
@@ -170,7 +200,7 @@ class AdministratorServiceTest {
     @Test
     @DisplayName("Given another administrator, when the role is revoked, then the donor keeps only DONOR, every session ends, the revocation is announced and the action is recorded")
     void should_revoke_role_end_sessions_and_record_action_when_revoked_given_other_administrator() {
-        when(donors.findById(PETR)).thenReturn(Optional.of(administrator(PETR, "Petr Svoboda", PETR_EMAIL.value())));
+        when(donors.findByIdForUpdate(PETR)).thenReturn(Optional.of(administrator(PETR, "Petr Svoboda", PETR_EMAIL.value())));
 
         service.revoke(JANA, PETR);
 
@@ -207,7 +237,7 @@ class AdministratorServiceTest {
     @Test
     @DisplayName("Given no donor with the id, when the role is revoked, then the donor is not found")
     void should_fail_when_revoked_given_unknown_donor() {
-        when(donors.findById(PETR)).thenReturn(Optional.empty());
+        when(donors.findByIdForUpdate(PETR)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.revoke(JANA, PETR)).isInstanceOf(DonorNotFound.class);
 
@@ -217,7 +247,7 @@ class AdministratorServiceTest {
     @Test
     @DisplayName("Given a plain donor, when the role is revoked, then the request conflicts and no session ends")
     void should_refuse_when_revoked_given_plain_donor() {
-        when(donors.findById(PETR)).thenReturn(Optional.of(plainDonor(PETR, "Petr Svoboda", PETR_EMAIL.value())));
+        when(donors.findByIdForUpdate(PETR)).thenReturn(Optional.of(plainDonor(PETR, "Petr Svoboda", PETR_EMAIL.value())));
 
         assertThatThrownBy(() -> service.revoke(JANA, PETR)).isInstanceOf(NotAdministrator.class);
 
@@ -228,7 +258,7 @@ class AdministratorServiceTest {
     @Test
     @DisplayName("Given a registered plain donor, when the role is granted at startup, then the donor is saved as an administrator without an audit record")
     void should_grant_silently_when_granted_at_startup_given_plain_donor() {
-        when(donors.findByEmail(PETR_EMAIL)).thenReturn(Optional.of(plainDonor(PETR, "Petr Svoboda", PETR_EMAIL.value())));
+        when(donors.findByEmailForUpdate(PETR_EMAIL)).thenReturn(Optional.of(plainDonor(PETR, "Petr Svoboda", PETR_EMAIL.value())));
 
         StartupGrant outcome = service.grantAtStartup(PETR_EMAIL);
 
@@ -242,7 +272,7 @@ class AdministratorServiceTest {
     @Test
     @DisplayName("Given an administrator, when the role is granted at startup again, then nothing changes")
     void should_change_nothing_when_granted_at_startup_given_administrator() {
-        when(donors.findByEmail(PETR_EMAIL)).thenReturn(Optional.of(administrator(PETR, "Petr Svoboda", PETR_EMAIL.value())));
+        when(donors.findByEmailForUpdate(PETR_EMAIL)).thenReturn(Optional.of(administrator(PETR, "Petr Svoboda", PETR_EMAIL.value())));
 
         assertThat(service.grantAtStartup(PETR_EMAIL)).isEqualTo(StartupGrant.ALREADY_ADMINISTRATOR);
 
@@ -252,7 +282,7 @@ class AdministratorServiceTest {
     @Test
     @DisplayName("Given the site already has an administrator, when the role is granted at startup to a plain donor, then nothing is saved")
     void should_grant_nothing_when_granted_at_startup_given_site_with_administrator() {
-        when(donors.findByEmail(PETR_EMAIL)).thenReturn(Optional.of(plainDonor(PETR, "Petr Svoboda", PETR_EMAIL.value())));
+        when(donors.findByEmailForUpdate(PETR_EMAIL)).thenReturn(Optional.of(plainDonor(PETR, "Petr Svoboda", PETR_EMAIL.value())));
         when(donors.findAdministrators()).thenReturn(List.of(administrator(JANA, "Jana Nováková", "jana@example.cz")));
 
         assertThat(service.grantAtStartup(PETR_EMAIL)).isEqualTo(StartupGrant.SITE_HAS_ADMINISTRATOR);
@@ -263,7 +293,7 @@ class AdministratorServiceTest {
     @Test
     @DisplayName("Given a donor who has not confirmed the e-mail, when the role is granted at startup, then the outcome says so and nothing is saved")
     void should_report_not_confirmed_when_granted_at_startup_given_unconfirmed_donor() {
-        when(donors.findByEmail(PETR_EMAIL)).thenReturn(Optional.of(unconfirmedDonor(PETR, "Petr Svoboda", PETR_EMAIL.value())));
+        when(donors.findByEmailForUpdate(PETR_EMAIL)).thenReturn(Optional.of(unconfirmedDonor(PETR, "Petr Svoboda", PETR_EMAIL.value())));
 
         assertThat(service.grantAtStartup(PETR_EMAIL)).isEqualTo(StartupGrant.NOT_CONFIRMED);
 
@@ -273,7 +303,7 @@ class AdministratorServiceTest {
     @Test
     @DisplayName("Given no donor with the e-mail, when the role is granted at startup, then the outcome says so and nothing is saved")
     void should_report_not_registered_when_granted_at_startup_given_unknown_email() {
-        when(donors.findByEmail(PETR_EMAIL)).thenReturn(Optional.empty());
+        when(donors.findByEmailForUpdate(PETR_EMAIL)).thenReturn(Optional.empty());
 
         assertThat(service.grantAtStartup(PETR_EMAIL)).isEqualTo(StartupGrant.NOT_REGISTERED);
 
@@ -325,7 +355,7 @@ class AdministratorServiceTest {
     @Test
     @DisplayName("Given a donor with two passkeys, when an administrator removes them, then they are deleted, every session ends, the action is recorded and the donor is told")
     void should_delete_passkeys_end_sessions_record_and_notify_when_removed_given_passkeys() {
-        when(donors.findById(PETR)).thenReturn(Optional.of(plainDonor(PETR, "Petr Svoboda", PETR_EMAIL.value())));
+        when(donors.findByIdForUpdate(PETR)).thenReturn(Optional.of(plainDonor(PETR, "Petr Svoboda", PETR_EMAIL.value())));
         when(passkeys.deleteAllOf(PETR)).thenReturn(2);
 
         service.removePasskeys(JANA, PETR);
@@ -344,12 +374,16 @@ class AdministratorServiceTest {
     @Test
     @DisplayName("Given a donor without passkeys, when an administrator removes them, then the request is refused and no session ends")
     void should_refuse_when_removed_given_no_passkeys() {
-        when(donors.findById(PETR)).thenReturn(Optional.of(plainDonor(PETR, "Petr Svoboda", PETR_EMAIL.value())));
+        when(donors.findByIdForUpdate(PETR)).thenReturn(Optional.of(plainDonor(PETR, "Petr Svoboda", PETR_EMAIL.value())));
         when(passkeys.deleteAllOf(PETR)).thenReturn(0);
 
         assertThatThrownBy(() -> service.removePasskeys(JANA, PETR)).isInstanceOf(NoPasskeys.class);
 
         verifyNoInteractions(signOuts, events);
+    }
+
+    private static SecondFactor enabledSecondFactor(DonorId donor) {
+        return SecondFactor.reconstitute(donor, SECRET, NOW.minusSeconds(100), NOW.minusSeconds(50), 1L);
     }
 
     private static Donor plainDonor(DonorId id, String name, String email) {

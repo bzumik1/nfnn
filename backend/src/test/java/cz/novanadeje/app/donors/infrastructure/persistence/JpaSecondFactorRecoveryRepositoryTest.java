@@ -140,6 +140,76 @@ class JpaSecondFactorRecoveryRepositoryTest {
         assertThat(recoveries.findByCodeHash(FIRST.hash()).orElseThrow().usedAt()).contains(NOW.plusSeconds(10));
     }
 
+    @Test
+    @DisplayName("Given an open recovery, when it is marked used, then its readable code is forgotten and its hash still finds it")
+    void should_forget_the_code_when_marked_used_given_open_recovery() {
+        SecondFactorRecovery recovery = SecondFactorRecovery.open(jana, FIRST, NOW, TTL);
+        recoveries.replaceOpenOf(jana, recovery);
+        flushAndClear();
+
+        recoveries.markUsed(recovery.id(), NOW.plusSeconds(10));
+
+        assertThat(recoveries.findByCodeHash(FIRST.hash()).orElseThrow().code()).isEmpty();
+        assertThat(jdbc.sql("select count(*) from donor_second_factor_recovery where code is not null").query(Long.class).single()).isZero();
+    }
+
+    @Test
+    @DisplayName("Given a used recovery that still holds its code, an expired one and an open one, when the codes of closed recoveries are forgotten, then only the open one keeps its code")
+    void should_keep_only_the_open_code_when_closed_codes_forgotten() {
+        insert(jana, new SecondFactorRecoveryCode("QRST2345"), NOW.minus(TTL), NOW.plusSeconds(60), NOW.minusSeconds(60));
+        insert(jana, new SecondFactorRecoveryCode("MNPQ2345"), NOW.minus(TTL), NOW, null);
+        recoveries.replaceOpenOf(petr, SecondFactorRecovery.open(petr, SECOND, NOW.minusSeconds(60), TTL));
+        flushAndClear();
+
+        int forgotten = recoveries.forgetCodesClosedAt(NOW);
+
+        assertThat(forgotten).isEqualTo(2);
+        assertThat(recoveries.findByCodeHash(new SecondFactorRecoveryCode("QRST2345").hash()).orElseThrow().code()).isEmpty();
+        assertThat(recoveries.findByCodeHash(new SecondFactorRecoveryCode("MNPQ2345").hash()).orElseThrow().code()).isEmpty();
+        assertThat(recoveries.findOpenOf(petr, NOW).orElseThrow().code()).contains(SECOND);
+    }
+
+    @Test
+    @DisplayName("Given a used and an unused recovery that expired before the cutoff and one that expires after it, when those expired before the cutoff are deleted, then only the later one stays")
+    void should_delete_only_recoveries_expired_before_cutoff_when_deleted() {
+        Instant cutoff = NOW.minus(Duration.ofDays(30));
+        insert(jana, new SecondFactorRecoveryCode("QRST2345"), cutoff.minus(TTL), cutoff.minusSeconds(1), cutoff.minus(TTL).plusSeconds(60));
+        insert(jana, new SecondFactorRecoveryCode("MNPQ2345"), cutoff.minus(TTL), cutoff.minusSeconds(1), null);
+        insert(jana, FIRST, cutoff.minus(TTL), cutoff, null);
+        flushAndClear();
+
+        int deleted = recoveries.deleteExpiredBefore(cutoff);
+
+        assertThat(deleted).isEqualTo(2);
+        assertThat(recoveries.findByCodeHash(new SecondFactorRecoveryCode("QRST2345").hash())).isEmpty();
+        assertThat(recoveries.findByCodeHash(new SecondFactorRecoveryCode("MNPQ2345").hash())).isEmpty();
+        assertThat(recoveries.findByCodeHash(FIRST.hash())).isPresent();
+    }
+
+    @Test
+    @DisplayName("Given an open and a used recovery of a donor and one of another donor, when the donor's are deleted, then only the other donor's stays")
+    void should_delete_only_the_donors_recoveries_when_deleted_given_two_donors() {
+        SecondFactorRecovery used = SecondFactorRecovery.open(jana, new SecondFactorRecoveryCode("QRST2345"), NOW, TTL);
+        recoveries.replaceOpenOf(jana, used);
+        recoveries.markUsed(used.id(), NOW.plusSeconds(10));
+        recoveries.replaceOpenOf(jana, SecondFactorRecovery.open(jana, FIRST, NOW.plusSeconds(20), TTL));
+        recoveries.replaceOpenOf(petr, SecondFactorRecovery.open(petr, SECOND, NOW, TTL));
+        flushAndClear();
+
+        recoveries.deleteAllOfWithoutWaiting(jana);
+
+        assertThat(recoveries.findByCodeHash(new SecondFactorRecoveryCode("QRST2345").hash())).isEmpty();
+        assertThat(recoveries.findByCodeHash(FIRST.hash())).isEmpty();
+        assertThat(recoveries.findByCodeHash(SECOND.hash())).isPresent();
+    }
+
+    private void insert(DonorId donor, SecondFactorRecoveryCode code, Instant createdAt, Instant expiresAt, Instant usedAt) {
+        jdbc.sql("insert into donor_second_factor_recovery (id, donor_id, code_hash, code, created_at, expires_at, used_at) values (?, ?, ?, ?, ?, ?, ?)")
+                .params(UuidV7.generate(createdAt), donor.value(), code.hash(), code.value(), Timestamp.from(createdAt), Timestamp.from(expiresAt),
+                        usedAt == null ? null : Timestamp.from(usedAt))
+                .update();
+    }
+
     private DonorId donor(String email, String variableSymbol) {
         Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null,
                 new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new EmailAddress(email), new PasswordHash("$hash"),
