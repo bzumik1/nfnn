@@ -1,4 +1,6 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
+import { CompactLayout } from '../../../../core/layout/compact-layout';
 import { formatMinorUnits } from '../../../donations/donation-amount';
 import { formatDonationDate } from '../../../donations/donation-date';
 import { DonationItem, DonationStatus } from '../../../donations/donations-api';
@@ -18,13 +20,14 @@ export function donationStatusLabel(status: DonationStatus): string {
 
 @Component({
   selector: 'app-donations-table',
-  imports: [DownloadProgress],
+  imports: [DownloadProgress, NgTemplateOutlet],
   templateUrl: './donations-table.html',
   styleUrl: './donations-table.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DonationsTable {
   protected readonly donations = inject(DonorDonations);
+  protected readonly rows = inject(CompactLayout).listsAsRows;
 
   readonly items = input.required<readonly DonationItem[]>();
   readonly withReceipts = input(true);

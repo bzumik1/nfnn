@@ -395,6 +395,81 @@ test.describe('Given an administrator with many paired payments', () => {
   });
 });
 
+test.describe('Given an administrator with paired payments on a phone', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+    await page.route(
+      (url) => url.pathname === PAYMENTS,
+      (route) => {
+        const pairedOnly = new URL(route.request().url()).searchParams.get('pairing') === 'paired';
+        return route.fulfill({
+          json: {
+            year: null,
+            availableYears: pairedOnly ? [2026] : [],
+            items: pairedOnly ? [paired] : [],
+            total: pairedOnly ? 1 : 0,
+          },
+        });
+      },
+    );
+    await page.setViewportSize({ width: 390, height: 844 });
+    await rememberedSession(page);
+  });
+
+  test("when they open a paired payment's sheet and follow its donor, then one Back returns to the payments with the sheet closed", async ({
+    page,
+  }) => {
+    await page.goto('/sprava/platby?stav=prirazene');
+    const row = page.locator('button[data-payment-row]');
+    await expect(row).toHaveCount(1);
+    await expect(page.locator('table')).toHaveCount(0);
+    const entriesBefore = await page.evaluate(() => history.length);
+
+    await row.click();
+    const sheet = page.getByRole('dialog', { name: 'Přiřazená platba' });
+    await expect(sheet).toBeVisible();
+    await sheet.getByRole('link', { name: 'Jana Nováková' }).click();
+
+    await expect(page).toHaveURL(new RegExp(`/sprava/darci/${administrator.id}$`));
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    expect(await page.evaluate(() => history.length)).toBe(entriesBefore + 1);
+    await page.goBack();
+
+    await expect(page).toHaveURL(/\/sprava\/platby\?stav=prirazene$/);
+    await expect(page.locator('button[data-payment-row]')).toHaveCount(1);
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+  });
+});
+
+test.describe('Given an administrator on the payments page on a wide screen', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+    await page.route(
+      (url) => url.pathname === PAYMENTS,
+      (route) =>
+        route.fulfill({ json: { year: null, availableYears: [], items: [unpaired], total: 1 } }),
+    );
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await rememberedSession(page);
+  });
+
+  test('when they enlarge the text to twice its size and back, then the table becomes rows and then a table again', async ({
+    page,
+  }) => {
+    await page.goto('/sprava/platby');
+    await expect(page.locator('table tbody tr')).toHaveCount(1);
+
+    await page.evaluate(() => (document.documentElement.style.fontSize = '200%'));
+
+    await expect(page.locator('button[data-payment-row]')).toHaveCount(1);
+    await expect(page.locator('table')).toHaveCount(0);
+
+    await page.evaluate(() => (document.documentElement.style.fontSize = ''));
+
+    await expect(page.locator('table tbody tr')).toHaveCount(1);
+  });
+});
+
 test.describe('Given an administrator with a 1 Kč account verification waiting for a donor', () => {
   test('when they open the payments and the pairing dialog, then both say it is an account verification', async ({
     page,
