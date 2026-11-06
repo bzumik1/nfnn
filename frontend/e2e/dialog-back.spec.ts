@@ -1,4 +1,4 @@
-import { Page, Route } from '@playwright/test';
+import { Locator, Page, Route } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { administrator, mockDonorApi, session } from './donor-session';
 
@@ -64,6 +64,36 @@ async function entryTakenBack(page: Page): Promise<void> {
 
 async function back(page: Page): Promise<void> {
   await page.evaluate(() => history.back());
+}
+
+async function sheetSettled(page: Page): Promise<void> {
+  await expect
+    .poll(() =>
+      page.locator('.dialog-panel').evaluate(
+        (element) =>
+          element
+            .getAnimations()
+            .filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity)
+            .filter((animation) => animation.playState === 'running').length,
+      ),
+    )
+    .toBe(0);
+}
+
+async function fingerTo(
+  target: Locator,
+  type: 'touchstart' | 'touchmove' | 'touchend',
+  x: number,
+  y: number,
+  touching = true,
+): Promise<void> {
+  const finger = { identifier: 1, clientX: x, clientY: y };
+  await target.dispatchEvent(type, {
+    touches: touching ? [finger] : [],
+    changedTouches: [finger],
+    bubbles: true,
+    cancelable: true,
+  });
 }
 
 async function openPairing(page: Page): Promise<void> {
@@ -269,6 +299,57 @@ test.describe('Given an administrator with the pairing dialog of a payment open'
     await page.mouse.move(x, y + 30, { steps: 10 });
     await page.waitForTimeout(300);
     await page.mouse.up();
+
+    await expect.poll(async () => (await panel.boundingBox())!.y).toBeCloseTo(opened, 0);
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await back(page);
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(page).toHaveURL(/\/sprava\/platby$/);
+  });
+
+  test('when a finger pulls the content of the sheet down from its top on a phone, then the sheet follows it, slides away and takes its entry back', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    const panel = page.locator('.dialog-panel');
+    const content = page.getByRole('dialog').getByRole('heading', { level: 2 }).first();
+    await sheetSettled(page);
+    const opened = (await panel.boundingBox())!.y;
+    const box = (await content.boundingBox())!;
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+
+    await fingerTo(content, 'touchstart', x, y);
+    await fingerTo(content, 'touchmove', x, y + 20);
+    await fingerTo(content, 'touchmove', x, y + 80);
+    await expect.poll(async () => (await panel.boundingBox())!.y).toBeGreaterThan(opened + 60);
+    await fingerTo(content, 'touchmove', x, y + 400);
+    await page.waitForTimeout(150);
+    await fingerTo(content, 'touchend', x, y + 400, false);
+
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(page).toHaveURL(/\/sprava\/platby$/);
+    await entryTakenBack(page);
+    await back(page);
+    await expect(page).toHaveURL(/\/$/);
+  });
+
+  test('when a finger pulls the content of the sheet only a little on a phone, then it returns and Back still closes it', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    const panel = page.locator('.dialog-panel');
+    const content = page.getByRole('dialog').getByRole('heading', { level: 2 }).first();
+    await sheetSettled(page);
+    const opened = (await panel.boundingBox())!.y;
+    const box = (await content.boundingBox())!;
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+
+    await fingerTo(content, 'touchstart', x, y);
+    await fingerTo(content, 'touchmove', x, y + 20);
+    await page.waitForTimeout(150);
+    await fingerTo(content, 'touchend', x, y + 20, false);
 
     await expect.poll(async () => (await panel.boundingBox())!.y).toBeCloseTo(opened, 0);
     await expect(page.getByRole('dialog')).toBeVisible();

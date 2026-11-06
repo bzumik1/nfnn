@@ -22,9 +22,12 @@ import { DialogAnnouncer } from './dialog-announcer';
 import { DialogHistory, DialogHistoryListener } from './dialog-history';
 import { DIALOG_PRESENTATION, DialogPresentation } from './dialog-presentation';
 import { DIALOG_SUSPENSION } from './dialog-suspension';
-import { SheetDrag } from './sheet-drag';
+import { canPullSheetFrom, PullIntent, pullIntent, SheetDrag, TouchOrigin } from './sheet-drag';
+import { CompactLayout } from '../../../core/layout/compact-layout';
 
 const ROOM_ABOVE_STICKY_ACTIONS_PX = 16;
+
+let nextDialog = 0;
 
 @Component({
   selector: 'app-dialog',
@@ -40,6 +43,9 @@ export class Dialog implements AfterViewInit, OnDestroy {
   readonly presentation = input<DialogPresentation>('auto');
   readonly pushesHistory = input(true);
   readonly dismissible = input(true);
+  readonly unsavedInput = input(false);
+  readonly alert = input(false);
+  readonly pulledAway = input(0);
   readonly dismissed = output<void>();
   protected readonly announcer = inject(DialogAnnouncer);
 
@@ -54,7 +60,12 @@ export class Dialog implements AfterViewInit, OnDestroy {
   private readonly panel = viewChild.required<ElementRef<HTMLElement>>('panel');
   private readonly drag = new SheetDrag();
   private readonly dragOffset = signal(0);
+  private readonly sheetPull = signal(0);
   protected readonly dragging = signal(false);
+  protected readonly leaving = signal(false);
+  protected readonly askingToDiscard = signal(false);
+  protected readonly discardTitleId = `dialog-discard-title-${++nextDialog}`;
+  protected readonly pull = computed(() => Math.max(this.pulledAway(), this.sheetPull()));
   protected readonly dragTranslate = computed(() => {
     const offset = this.dragOffset();
     return offset > 0 ? `0 ${offset}px` : null;
@@ -67,7 +78,10 @@ export class Dialog implements AfterViewInit, OnDestroy {
     close: () => this.closedByBack(),
   };
   private readonly suspension = inject(DIALOG_SUSPENSION);
+  private readonly layout = inject(CompactLayout);
   private dragPointer: number | null = null;
+  private touchOrigin: TouchOrigin | null = null;
+  private touchIntent: PullIntent = 'content';
   private pressStartedOnBackdrop = false;
   private destroyed = false;
   private viewReady = false;
@@ -143,19 +157,18 @@ export class Dialog implements AfterViewInit, OnDestroy {
   }
 
   protected startDrag(event: PointerEvent): void {
-    if (!this.dismissible() || !event.isPrimary || event.button !== 0) {
+    if (!event.isPrimary || event.button !== 0 || this.leaving()) {
       return;
     }
     event.preventDefault();
     (event.target as Element).setPointerCapture?.(event.pointerId);
     this.dragPointer = event.pointerId;
-    this.drag.start(event.clientY, event.timeStamp);
-    this.dragging.set(true);
+    this.beginPull(event.clientY, event.timeStamp);
   }
 
   protected followDrag(event: PointerEvent): void {
     if (this.dragging() && event.pointerId === this.dragPointer) {
-      this.dragOffset.set(this.drag.move(event.clientY, event.timeStamp));
+      this.pullTo(event.clientY, event.timeStamp);
     }
   }
 
@@ -163,12 +176,7 @@ export class Dialog implements AfterViewInit, OnDestroy {
     if (!this.dragging() || event.pointerId !== this.dragPointer) {
       return;
     }
-    const height = this.panel().nativeElement.getBoundingClientRect().height;
-    const release = this.drag.end(height, event.timeStamp);
-    this.stopDrag();
-    if (release === 'dismiss') {
-      this.dismiss();
-    }
+    this.letGo(event.timeStamp);
   }
 
   protected cancelDrag(event: PointerEvent): void {
@@ -177,6 +185,83 @@ export class Dialog implements AfterViewInit, OnDestroy {
     }
     this.drag.cancel();
     this.stopDrag();
+  }
+
+  protected touchStarted(event: TouchEvent): void {
+    if (event.touches.length !== 1) {
+      this.abandonTouch();
+      return;
+    }
+    const target = event.target as Element;
+    const panel = this.panel().nativeElement;
+    const pullable =
+      this.look() === 'sheet' &&
+      this.layout.isCompact() &&
+      !this.leaving() &&
+      target.closest('.dialog-grabber') === null &&
+      target.closest('.dialog-panel') === panel &&
+      canPullSheetFrom(target, panel);
+    if (!pullable) {
+      this.abandonTouch();
+      return;
+    }
+    const finger = event.touches[0];
+    this.touchOrigin = { x: finger.clientX, y: finger.clientY, time: event.timeStamp };
+    this.touchIntent = 'undecided';
+  }
+
+  protected touchMoved(event: TouchEvent): void {
+    const origin = this.touchOrigin;
+    if (origin === null || this.touchIntent === 'content' || event.touches.length !== 1) {
+      return;
+    }
+    const finger = event.touches[0];
+    if (this.touchIntent === 'undecided') {
+      const intent = pullIntent(origin, finger.clientX, finger.clientY, event.timeStamp);
+      if (intent === 'undecided') {
+        if (finger.clientY >= origin.y) {
+          event.preventDefault();
+        }
+        return;
+      }
+      this.touchIntent = intent;
+      if (intent === 'content') {
+        return;
+      }
+      this.beginPull(origin.y, origin.time);
+    }
+    event.preventDefault();
+    this.pullTo(finger.clientY, event.timeStamp);
+  }
+
+  protected touchEnded(event: TouchEvent): void {
+    if (event.touches.length > 0) {
+      return;
+    }
+    const pulled = this.touchIntent === 'sheet' && this.dragging();
+    this.touchOrigin = null;
+    this.touchIntent = 'content';
+    if (pulled) {
+      this.letGo(event.timeStamp);
+    }
+  }
+
+  protected abandonTouch(): void {
+    if (this.touchIntent === 'sheet') {
+      this.drag.cancel();
+      this.stopDrag();
+    }
+    this.touchOrigin = null;
+    this.touchIntent = 'content';
+  }
+
+  protected keepWriting(): void {
+    this.askingToDiscard.set(false);
+  }
+
+  protected discard(): void {
+    this.askingToDiscard.set(false);
+    this.dismiss();
   }
 
   protected keepFocusAboveActions(event: FocusEvent): void {
@@ -213,10 +298,66 @@ export class Dialog implements AfterViewInit, OnDestroy {
     }
   }
 
+  private beginPull(y: number, time: number): void {
+    this.drag.start(y, time, !this.dismissible() || this.unsavedInput());
+    this.dragging.set(true);
+  }
+
+  private pullTo(y: number, time: number): void {
+    const offset = this.drag.move(y, time);
+    this.dragOffset.set(offset);
+    this.sheetPull.set(Math.min(1, offset / Math.max(1, this.panelHeight())));
+  }
+
+  private letGo(time: number): void {
+    const height = this.panelHeight();
+    const release = this.drag.end(height, time);
+    this.stopDrag();
+    if (release !== 'dismiss' || !this.dismissible()) {
+      return;
+    }
+    if (this.unsavedInput()) {
+      this.askingToDiscard.set(true);
+    } else {
+      this.slideAway(height);
+    }
+  }
+
+  private slideAway(height: number): void {
+    this.leaving.set(true);
+    this.dragOffset.set(height);
+    this.sheetPull.set(1);
+    const panel = this.panel().nativeElement;
+    setTimeout(
+      () => {
+        if (this.destroyed) {
+          return;
+        }
+        this.dismiss();
+        afterNextRender(
+          () => {
+            if (!this.destroyed) {
+              this.leaving.set(false);
+              this.dragOffset.set(0);
+              this.sheetPull.set(0);
+            }
+          },
+          { injector: this.injector },
+        );
+      },
+      longestTransitionMs(getComputedStyle(panel).transitionDuration),
+    );
+  }
+
+  private panelHeight(): number {
+    return this.panel().nativeElement.getBoundingClientRect().height;
+  }
+
   private stopDrag(): void {
     this.dragPointer = null;
     this.dragging.set(false);
     this.dragOffset.set(0);
+    this.sheetPull.set(0);
   }
 
   private closedByBack(): void {
@@ -232,4 +373,18 @@ export class Dialog implements AfterViewInit, OnDestroy {
       { injector: this.injector },
     );
   }
+}
+
+function longestTransitionMs(durations: string): number {
+  return Math.max(
+    0,
+    ...durations
+      .split(',')
+      .map((duration) => duration.trim())
+      .filter((duration) => duration !== '')
+      .map((duration) =>
+        duration.endsWith('ms') ? parseFloat(duration) : parseFloat(duration) * 1000,
+      )
+      .filter((milliseconds) => Number.isFinite(milliseconds)),
+  );
 }
