@@ -1,5 +1,5 @@
 :root {
-  --color-accent: #0f766e;
+  --color-accent: #0e7068;
   --color-accent-fill: #0f766e;
   --color-accent-soft: #e6f4f1;
   --color-accent-bg: #ecfdf8;
@@ -15,6 +15,8 @@
   --color-text-subtle: #5c5c5c;
 
   --color-surface: #ffffff;
+  --color-surface-grouped: #efeee8;
+  --color-surface-elevated: #fdfcf7;
   --color-surface-alt: #f6f5f0;
   --color-surface-muted: #ecebe4;
   --color-border-rule: #a39f8c;
@@ -33,6 +35,9 @@
   --color-border-soft: #e8e6dd;
   --color-border-accent: #99d5c9;
   --color-divider: #ebe9e1;
+  --color-separator: color-mix(in srgb, #202020 14%, transparent);
+  --color-fill: color-mix(in srgb, #8a877c 20%, transparent);
+  --color-media-rim: transparent;
   --color-focus-ring: #ea580c;
 
   --color-danger: #a1121a;
@@ -45,6 +50,13 @@
   --color-warning-border: #c98a12;
   --color-success: #166534;
   --color-success-bg: #e3f6e8;
+  --color-badge-warning: #9a4a00;
+  --color-on-badge-warning: #ffffff;
+  --color-tile-accent: var(--color-accent-fill);
+  --color-tile-success: #166534;
+  --color-tile-warning: #b45309;
+  --color-tile-neutral: #5c5c5c;
+  --color-on-tile: #fdfcf7;
   --color-qr-module: #202020;
   --color-qr-mark: #0f766e;
   --color-qr-ground: #ffffff;
@@ -164,6 +176,7 @@
   --radius-field: 2px;
   --radius-xl: 3px;
   --radius-card: 4px;
+  --radius-group: 0;
   --radius-media: 4px;
   --radius-dialog: 6px;
   --radius-sheet: var(--radius-dialog);
@@ -172,6 +185,7 @@
   --radius-round: 50%;
 
   --shadow-card: 0 1px 0 var(--color-border);
+  --shadow-group: 0 0 0 1px var(--color-border);
   --shadow-card-quiet: 0 1px 0 var(--color-border);
   --shadow-card-hover: 0 3px 0 var(--color-border-field);
   --shadow-panel: 0 1px 0 var(--color-border);
@@ -307,6 +321,8 @@
     --color-text-subtle: #a8a494;
 
     --color-surface: #161a18;
+    --color-surface-grouped: #0a0d0c;
+    --color-surface-elevated: #1d2321;
     --color-surface-alt: #0e1110;
     --color-surface-muted: #222826;
     --color-border-rule: #6b706a;
@@ -322,6 +338,9 @@
     --color-border-soft: #26302c;
     --color-border-accent: #2c5c53;
     --color-divider: #232b28;
+    --color-separator: color-mix(in srgb, #ecebe4 10%, transparent);
+    --color-fill: color-mix(in srgb, #8a877c 30%, transparent);
+    --color-media-rim: color-mix(in srgb, #fdfcf7 14%, transparent);
     --color-focus-ring: #fdba74;
 
     --color-danger: #fca5a5;
@@ -331,6 +350,8 @@
     --color-warning-bg: #2e2208;
     --color-success: #86efac;
     --color-success-bg: #0f2b1a;
+    --color-badge-warning: #fcd34d;
+    --color-on-badge-warning: #202020;
 
     --filter-ink: invert(1) hue-rotate(180deg);
     --blend-ink: screen;

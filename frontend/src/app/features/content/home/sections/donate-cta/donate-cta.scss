@@ -21,6 +21,8 @@
   border-radius: var(--radius-media);
   height: 460px;
   overflow: hidden;
+  outline: 1px solid var(--color-media-rim);
+  outline-offset: -1px;
 
   img {
     object-position: center 15%;

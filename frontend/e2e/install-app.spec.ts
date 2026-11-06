@@ -124,7 +124,7 @@ test.describe('Given the app starting before its code has run', () => {
     const icon = page.locator('.launch-screen__icon');
     await expect(icon).toBeVisible();
     await expect(icon).toHaveAttribute('src', 'launch-icon.svg');
-    await expect(page.locator('.launch-screen')).toHaveCSS('background-color', 'rgb(16, 20, 31)');
+    await expect(page.locator('.launch-screen')).toHaveCSS('background-color', 'rgb(18, 24, 38)');
     const alphas = await icon.evaluate(async (image: HTMLImageElement) => {
       await image.decode();
       const canvas = document.createElement('canvas');

@@ -231,6 +231,8 @@ const APPEARANCES = [
 const TINTED_GROUNDS = [
   '--color-surface',
   '--color-surface-alt',
+  '--color-surface-grouped',
+  '--color-surface-elevated',
   '--color-surface-muted',
   '--color-surface-accent',
   '--color-accent-soft',
@@ -245,10 +247,32 @@ const READABLE_PAIRS = [
   },
   {
     texts: ['--color-text-soft', '--color-text-subtle', '--color-danger'],
-    grounds: ['--color-surface', '--color-surface-alt'],
+    grounds: [
+      '--color-surface',
+      '--color-surface-alt',
+      '--color-surface-muted',
+      '--color-surface-grouped',
+      '--color-surface-elevated',
+    ],
+    minimum: 4.5,
+  },
+  {
+    texts: ['--color-accent'],
+    grounds: [{ tintOf: '--color-accent', percent: 14 }],
     minimum: 4.5,
   },
   { texts: ['--color-on-accent'], grounds: ['--color-accent-fill'], minimum: 4.5 },
+  { texts: ['--color-on-badge-warning'], grounds: ['--color-badge-warning'], minimum: 4.5 },
+  {
+    texts: ['--color-on-tile'],
+    grounds: [
+      '--color-tile-accent',
+      '--color-tile-success',
+      '--color-tile-warning',
+      '--color-tile-neutral',
+    ],
+    minimum: 3,
+  },
   { texts: ['--color-on-danger'], grounds: ['--color-danger-fill'], minimum: 4.5 },
   {
     texts: ['--color-on-inverse', '--color-accent-on-inverse'],
@@ -261,7 +285,12 @@ const READABLE_PAIRS = [
   { texts: ['--color-success'], grounds: ['--color-success-bg'], minimum: 4.5 },
   {
     texts: ['--color-focus-ring'],
-    grounds: ['--color-surface', '--color-surface-alt', '--color-surface-inverse'],
+    grounds: [
+      '--color-surface',
+      '--color-surface-alt',
+      '--color-surface-grouped',
+      '--color-surface-inverse',
+    ],
     minimum: 3,
   },
   {
@@ -305,6 +334,18 @@ function resolvedColour(tokens, name, seen = new Set()) {
   return { written: value, colour: value === undefined ? null : colourOf(value) };
 }
 
+function groundOf(ground, measurable) {
+  if (typeof ground === 'string') {
+    return measurable(ground);
+  }
+  const tinted = measurable(ground.tintOf);
+  return tinted === null ? null : { rgb: tinted.rgb, alpha: (tinted.alpha * ground.percent) / 100 };
+}
+
+function groundName(ground) {
+  return typeof ground === 'string' ? ground : `the ${ground.percent} % tint of ${ground.tintOf}`;
+}
+
 export function appearanceProblems(theme, source) {
   const declarations = declarationsByBlock(source);
   const darkBlock = declarations.some(
@@ -337,7 +378,7 @@ export function appearanceProblems(theme, source) {
         continue;
       }
       for (const ground of pair.grounds) {
-        const groundColour = measurable(ground);
+        const groundColour = groundOf(ground, measurable);
         for (const text of pair.texts) {
           const textColour = measurable(text);
           if (groundColour === null || textColour === null) {
@@ -347,7 +388,7 @@ export function appearanceProblems(theme, source) {
           const ratio = contrast(over(textColour, under), under);
           if (ratio < pair.minimum) {
             problems.push(
-              `${label}: ${text} on ${ground} is ${ratio.toFixed(2)}:1, below ${pair.minimum}:1`,
+              `${label}: ${text} on ${groundName(ground)} is ${ratio.toFixed(2)}:1, below ${pair.minimum}:1`,
             );
           }
         }
@@ -729,6 +770,6 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     process.exit(1);
   }
   console.log(
-    `${themes.size} themes set all ${needed.size} tokens the styles and the receipt use, and carry content-named receipt fonts, literal receipt colours and readable receipt text, set only in their top-level :root, keep text, controls and focus rings readable in the light and the dark appearance, with and without more contrast, keep the tab bar readable over a white and a black page, its solid pill apart from the bar, serve the same theme files and a web app manifest in their colours with the icons it names and the home screen name of src/index.html, and a launch icon the launch images can draw, with no tile behind the star.`,
+    `${themes.size} themes set all ${needed.size} tokens the styles and the receipt use, and carry content-named receipt fonts, literal receipt colours and readable receipt text, set only in their top-level :root, keep text, controls and focus rings readable on their pages, grouped pages, sheets, tints, badges and icon tiles in the light and the dark appearance, with and without more contrast, keep the tab bar readable over a white and a black page, its solid pill apart from the bar, serve the same theme files and a web app manifest in their colours with the icons it names and the home screen name of src/index.html, and a launch icon the launch images can draw, with no tile behind the star.`,
   );
 }

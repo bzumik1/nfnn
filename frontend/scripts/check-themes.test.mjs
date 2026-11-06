@@ -290,6 +290,72 @@ describe('Given the colours a theme sets for the light and the dark appearance',
     );
   });
 
+  it('when the light accent is too light for the grouped page of the app areas, then its contrast there is reported', () => {
+    const pale = NOVA_NADEJE.replace('  --color-accent: #1d5fc9;', '  --color-accent: #4f86e8;');
+
+    assert.match(
+      appearanceProblems('pale', pale).join('\n'),
+      /^theme pale in the light appearance: --color-accent on --color-surface-grouped is [0-9.]+:1, below 4.5:1$/m,
+    );
+  });
+
+  it('when the accent is too light for its own 14 % tint, then its contrast on the tint is reported, because tinted buttons and the selected pill carry accent text', () => {
+    const pale = NOVA_NADEJE.replace('  --color-accent: #1d5fc9;', '  --color-accent: #3b74e0;');
+
+    assert.match(
+      appearanceProblems('pale', pale).join('\n'),
+      /^theme pale in the light appearance: --color-accent on the 14 % tint of --color-accent is [0-9.]+:1, below 4.5:1$/m,
+    );
+  });
+
+  it('when the soft text is too light for a sheet in the dark, then its contrast on the elevated surface is reported', () => {
+    const dim = NOVA_NADEJE.replace(
+      '    --color-text-soft: #9aa3b2;',
+      '    --color-text-soft: #5d6575;',
+    );
+
+    assert.match(
+      appearanceProblems('dim', dim).join('\n'),
+      /^theme dim in the dark appearance: --color-text-soft on --color-surface-elevated is [0-9.]+:1, below 4.5:1$/m,
+    );
+  });
+
+  it('when the soft text is too light for the muted ground that stands for the quiet ground inside the cells of the app areas, then its contrast there is reported', () => {
+    const pale = NOVA_NADEJE.replace(
+      '  --color-surface-muted: #f1f3f5;',
+      '  --color-surface-muted: #d5d9df;',
+    );
+
+    assert.match(
+      appearanceProblems('pale', pale).join('\n'),
+      /^theme pale in the light appearance: --color-text-soft on --color-surface-muted is [0-9.]+:1, below 4.5:1$/m,
+    );
+  });
+
+  it('when the text of the filled warning badge is too light for it, then its contrast is reported', () => {
+    const pale = NOVA_NADEJE.replace(
+      '  --color-badge-warning: #b45309;',
+      '  --color-badge-warning: #f59e0b;',
+    );
+
+    assert.match(
+      appearanceProblems('pale', pale).join('\n'),
+      /^theme pale in the light appearance: --color-on-badge-warning on --color-badge-warning is [0-9.]+:1, below 4.5:1$/m,
+    );
+  });
+
+  it('when an icon tile is too light for its white glyph, then its contrast is reported against the 3:1 of a graphic', () => {
+    const pale = NOVA_NADEJE.replace(
+      '  --color-tile-warning: #d97706;',
+      '  --color-tile-warning: #fbbf24;',
+    );
+
+    assert.match(
+      appearanceProblems('pale', pale).join('\n'),
+      /^theme pale in the light appearance: --color-on-tile on --color-tile-warning is [0-9.]+:1, below 3:1$/m,
+    );
+  });
+
   it('when the field border is as soft in the dark as in the default look, then only the dark appearance reports it, because Jakub kept the soft border of the light default', () => {
     const soft = NOVA_NADEJE.replace(
       '    --color-border-field: #6b7588;',
@@ -301,7 +367,7 @@ describe('Given the colours a theme sets for the light and the dark appearance',
     assert.deepEqual(
       problems.filter((problem) => problem.includes('--color-border-field')),
       [
-        'theme soft in the dark appearance: --color-border-field on --color-surface is 1.43:1, below 3:1',
+        'theme soft in the dark appearance: --color-border-field on --color-surface is 1.38:1, below 3:1',
         'theme soft in the dark appearance: --color-border-field on --color-surface-alt is 1.53:1, below 3:1',
       ],
     );

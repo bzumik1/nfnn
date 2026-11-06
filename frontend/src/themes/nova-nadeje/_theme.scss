@@ -68,10 +68,10 @@
 }
 
 :root {
-  --color-accent: #2563eb;
+  --color-accent: #1d5fc9;
   --color-accent-fill: #2563eb;
-  --color-accent-soft: #eff6ff;
-  --color-accent-bg: #f0f4ff;
+  --color-accent-soft: #edf2fb;
+  --color-accent-bg: #f1f5fc;
   --color-accent-on-inverse: #93c5fd;
   --color-accent-2: #6366f1;
   --color-accent-3: #0ea5e9;
@@ -80,14 +80,16 @@
   --color-text: #1a1a2e;
   --color-text-secondary: #374151;
   --color-text-muted: #4b5563;
-  --color-text-soft: #6b7280;
-  --color-text-subtle: #6b7280;
+  --color-text-soft: #676f7d;
+  --color-text-subtle: #676f7d;
 
   --color-surface: #ffffff;
+  --color-surface-grouped: #f2f3f7;
+  --color-surface-elevated: #ffffff;
   --color-surface-alt: #f8faff;
   --color-surface-muted: #f1f3f5;
   --color-border-rule: #b8bec6;
-  --color-surface-accent: #f0f6ff;
+  --color-surface-accent: #f1f5fc;
   --color-surface-inverse: #0f172a;
   --color-surface-inverse-strong: #060d1f;
   --color-on-inverse: #ffffff;
@@ -100,8 +102,11 @@
   --color-border: #e5e7eb;
   --color-border-field: #e5e7eb;
   --color-border-soft: #eef2ff;
-  --color-border-accent: #bfdbfe;
+  --color-border-accent: #c0d2f0;
   --color-divider: #f0f4ff;
+  --color-separator: color-mix(in srgb, #0f172a 10%, transparent);
+  --color-fill: color-mix(in srgb, #767680 12%, transparent);
+  --color-media-rim: transparent;
   --color-focus-ring: #2563eb;
 
   --color-danger: #b91c1c;
@@ -114,6 +119,13 @@
   --color-warning-border: #d97706;
   --color-success: #15803d;
   --color-success-bg: #dcfce7;
+  --color-badge-warning: #b45309;
+  --color-on-badge-warning: #ffffff;
+  --color-tile-accent: var(--color-accent-fill);
+  --color-tile-success: #16a34a;
+  --color-tile-warning: #d97706;
+  --color-tile-neutral: #64748b;
+  --color-on-tile: #ffffff;
   --color-qr-module: #1a1a2e;
   --color-qr-mark: #2563eb;
   --color-qr-ground: #ffffff;
@@ -233,6 +245,7 @@
   --radius-field: 12px;
   --radius-xl: 14px;
   --radius-card: 16px;
+  --radius-group: 22px;
   --radius-media: 20px;
   --radius-dialog: 24px;
   --radius-sheet: 34px;
@@ -240,7 +253,8 @@
   --radius-pill: 50px;
   --radius-round: 50%;
 
-  --shadow-card: 0 2px 16px rgb(0 0 0 / 0.07);
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 4px 16px rgb(15 23 42 / 0.05);
+  --shadow-group: none;
   --shadow-card-quiet: 0 2px 16px rgb(0 0 0 / 0.06);
   --shadow-card-hover: 0 16px 48px rgb(0 0 0 / 0.12);
   --shadow-panel: 0 2px 12px rgb(0 0 0 / 0.06);
@@ -392,7 +406,9 @@
     --color-text-soft: #9aa3b2;
     --color-text-subtle: #9aa3b2;
 
-    --color-surface: #10141f;
+    --color-surface: #121826;
+    --color-surface-grouped: #05070c;
+    --color-surface-elevated: #1a2232;
     --color-surface-alt: #080b12;
     --color-surface-muted: #1b2130;
     --color-border-rule: #5d677a;
@@ -408,6 +424,9 @@
     --color-border-soft: #1f2638;
     --color-border-accent: #2c4a80;
     --color-divider: #1c2232;
+    --color-separator: color-mix(in srgb, #ffffff 8%, transparent);
+    --color-fill: color-mix(in srgb, #767680 24%, transparent);
+    --color-media-rim: color-mix(in srgb, #ffffff 10%, transparent);
     --color-focus-ring: #6ea8ff;
 
     --color-danger: #f87171;
@@ -417,6 +436,10 @@
     --color-warning-bg: #2a1f08;
     --color-success: #4ade80;
     --color-success-bg: #0e2a19;
+    --color-badge-warning: #fbbf24;
+    --color-on-badge-warning: #1a1a2e;
+    --color-tile-accent: #3b82f6;
+    --color-tile-neutral: #6b7a90;
 
     --filter-ink: invert(1) hue-rotate(180deg);
     --blend-ink: screen;

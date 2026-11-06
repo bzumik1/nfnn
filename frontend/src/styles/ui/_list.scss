@@ -151,6 +151,11 @@ div.ui-list__row {
   overflow: clip;
 }
 
+.ui-grouped .ui-list--inset:not(dialog .ui-list--inset) {
+  border-radius: var(--radius-group);
+  box-shadow: var(--shadow-group);
+}
+
 .ui-list--inset .ui-list__row:focus-visible {
   outline-offset: -3px;
 }
