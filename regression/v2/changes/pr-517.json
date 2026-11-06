@@ -1,0 +1,9 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "shared.infrastructure.schema.RestoreRevocationSqlTest > Given the migrated schema, when the tables with an expiry or a hashed secret beside a use are read, then the restore spends each one or keeps it usable for a stated reason, so a new kind of link, challenge or code is not revived by a backup",
+    "replacement": "shared.infrastructure.schema.RestoreRevocationSqlTest > Given the migrated schema, when its tables are read, then each one is classified once, as a session the restore ends, a one-time secret it spends or keeps usable for a stated reason, or a table that holds neither, and none with an expiry or a hashed secret beside a use holds neither, so a new kind of session, link, challenge or code is not revived by a backup",
+    "reason": "#462: the restore's tables are no longer found by their column names alone; every table of the schema is classified once, and the column check stays inside the classification as a tripwire"
+  }
+]
