@@ -272,6 +272,10 @@
     justify-content: space-between;
   }
 
+  .bank-value {
+    flex: 1 1 0;
+  }
+
   app-copy-button {
     flex-shrink: 0;
   }
