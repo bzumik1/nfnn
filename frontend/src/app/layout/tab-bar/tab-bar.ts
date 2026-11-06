@@ -16,6 +16,7 @@ import { SoftKeyboard } from '../../core/layout/soft-keyboard';
 import { APP_TABS, AppTab } from '../../core/navigation/app-tabs';
 import { BackTarget } from '../../core/navigation/back-target';
 import { TabMemory } from '../../core/navigation/tab-memory';
+import { FOUNDATION_STAR } from '../../shared/ui/foundation-star/foundation-star';
 import { keepRoomForTabBar } from './tab-bar-room';
 
 @Component({
@@ -25,6 +26,7 @@ import { keepRoomForTabBar } from './tab-bar-room';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TabBar {
+  protected readonly star = FOUNDATION_STAR;
   private readonly router = inject(Router);
   protected readonly memory = inject(TabMemory);
   protected readonly keyboard = inject(SoftKeyboard);
