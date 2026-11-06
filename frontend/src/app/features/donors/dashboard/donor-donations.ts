@@ -255,10 +255,8 @@ export class DonorDonations implements GiftFeed {
     this.followLiveChanges();
   }
 
-  requestGifts(): void {
-    if (this.state() === 'error') {
-      this.load();
-    }
+  requestGifts(): Observable<readonly DonationItem[]> {
+    return this.repository.fresh('sync').pipe(map((read) => read.items));
   }
 
   follow(): Observable<unknown> {
@@ -585,7 +583,9 @@ export class DonorDonations implements GiftFeed {
       return;
     }
     this.checkingBank.set(true);
-    this.bankCheckOutcome.set(null);
+    if (byDonor) {
+      this.bankCheckOutcome.set(null);
+    }
     const known = new Set(this.items().map((item) => item.id));
     let asOfBefore: string | null | undefined;
     this.donations

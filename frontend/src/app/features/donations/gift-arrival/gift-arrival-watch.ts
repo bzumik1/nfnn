@@ -9,7 +9,7 @@ import {
   signal,
   untracked,
 } from '@angular/core';
-import { Subscription } from 'rxjs';
+import { Subscription, take } from 'rxjs';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { Connectivity } from '../../../core/connectivity/connectivity';
 import { DonationItem } from '../donations-api';
@@ -32,6 +32,7 @@ interface Watching {
   readonly donorId: string;
   readonly feed: GiftFeed;
   baseline: ReadonlySet<string> | null;
+  baselineRead: Subscription | null;
   checks: number;
   following: Subscription | null;
   effects: readonly EffectRef[];
@@ -75,9 +76,16 @@ export class GiftArrivalWatch {
   }
 
   intent(): void {
-    if (this.arm()) {
-      this.kick(false);
+    const armedBefore = this.watching;
+    const watching = this.arm();
+    if (watching === null) {
+      return;
     }
+    const baselineMissing = watching.baseline === null && (watching.baselineRead?.closed ?? true);
+    if (watching === armedBefore && baselineMissing) {
+      this.readBaseline(watching);
+    }
+    this.kick(false);
   }
 
   dismiss(): void {
@@ -123,7 +131,7 @@ export class GiftArrivalWatch {
     if (!this.visible()) {
       clearTimeout(this.dwell);
       this.clearSchedule();
-      if (this.panelInView) {
+      if (this.panelInView && this.shown() === null) {
         this.arm();
       }
       return;
@@ -133,34 +141,46 @@ export class GiftArrivalWatch {
     }
   }
 
-  private arm(): boolean {
+  private arm(): Watching | null {
     if (this.watching !== null) {
-      return true;
+      return this.watching;
     }
     const donor = untracked(this.auth.donor);
     if (!this.enabled || donor === null) {
-      return false;
+      return null;
     }
     const feed = this.provided ?? this.injector.get(RepositoryGiftFeed);
-    const known = untracked(feed.gifts);
     const watching: Watching = {
       donorId: donor.id,
       feed,
-      baseline: known === null ? null : idsOf(known),
+      baseline: null,
+      baselineRead: null,
       checks: 0,
       following: null,
       effects: [],
     };
     this.watching = watching;
+    this.readBaseline(watching);
     watching.following = feed.follow().subscribe({ error: () => undefined });
     watching.effects = [
       effect(() => this.giftsChanged(watching, feed.gifts()), { injector: this.injector }),
       this.followConditions(watching),
     ];
-    if (known === null) {
-      feed.requestGifts();
-    }
-    return true;
+    return watching;
+  }
+
+  private readBaseline(watching: Watching): void {
+    watching.baselineRead = watching.feed
+      .requestGifts()
+      .pipe(take(1))
+      .subscribe({
+        next: (gifts) => {
+          if (this.watching === watching) {
+            watching.baseline = idsOf(gifts);
+          }
+        },
+        error: () => undefined,
+      });
   }
 
   private followConditions(watching: Watching): EffectRef {
@@ -186,12 +206,13 @@ export class GiftArrivalWatch {
 
   private giftsChanged(watching: Watching, gifts: readonly DonationItem[] | null): void {
     untracked(() => {
-      if (this.watching !== watching || gifts === null) {
-        return;
-      }
       const baseline = watching.baseline;
-      if (baseline === null) {
-        watching.baseline = idsOf(gifts);
+      if (
+        this.watching !== watching ||
+        gifts === null ||
+        baseline === null ||
+        this.auth.donor()?.id !== watching.donorId
+      ) {
         return;
       }
       const arrived = gifts.filter((gift) => !baseline.has(gift.id) && countsAsGift(gift));
@@ -260,6 +281,7 @@ export class GiftArrivalWatch {
       return;
     }
     this.watching = null;
+    watching.baselineRead?.unsubscribe();
     watching.following?.unsubscribe();
     watching.effects.forEach((ref) => ref.destroy());
   }

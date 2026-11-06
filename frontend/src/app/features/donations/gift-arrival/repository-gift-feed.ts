@@ -1,6 +1,6 @@
-import { DestroyRef, inject, Injectable, signal, untracked } from '@angular/core';
+import { DestroyRef, inject, Injectable, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { catchError, EMPTY, finalize, last, Observable, switchMap, tap } from 'rxjs';
+import { catchError, EMPTY, finalize, last, map, Observable, switchMap, tap } from 'rxjs';
 import { LiveUpdates } from '../../../core/live/live-updates';
 import { DonorDonationsRepository } from '../device-copy/donor-donations-repository';
 import { DonationItem, DonationsApi } from '../donations-api';
@@ -19,13 +19,8 @@ export class RepositoryGiftFeed implements GiftFeed {
   readonly asking = this.checking.asReadonly();
   readonly listedHere = false;
 
-  requestGifts(): void {
-    const held = untracked(this.repository.held);
-    if (held !== null) {
-      this.latest.set(held.items);
-      return;
-    }
-    this.read().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
+  requestGifts(): Observable<readonly DonationItem[]> {
+    return this.read();
   }
 
   follow(): Observable<unknown> {
@@ -49,9 +44,10 @@ export class RepositoryGiftFeed implements GiftFeed {
       .subscribe();
   }
 
-  private read(): Observable<unknown> {
+  private read(): Observable<readonly DonationItem[]> {
     return this.repository.fresh('sync').pipe(
-      tap((read) => this.latest.set(read.items)),
+      map((read) => read.items),
+      tap((items) => this.latest.set(items)),
       catchError(() => EMPTY),
     );
   }

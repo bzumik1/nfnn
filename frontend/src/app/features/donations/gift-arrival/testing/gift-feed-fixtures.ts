@@ -1,5 +1,5 @@
 import { signal } from '@angular/core';
-import { Observable } from 'rxjs';
+import { NEVER, Observable, of, Subject, take, throwError } from 'rxjs';
 import { DonationItem } from '../../donations-api';
 import { GiftFeed } from '../gift-feed';
 
@@ -12,8 +12,23 @@ export class FakeGiftFeed implements GiftFeed {
 
   constructor(readonly listedHere = false) {}
 
-  requestGifts(): void {
+  freshGifts: readonly DonationItem[] | 'pending' | 'failing' | null = null;
+  private readonly answers = new Subject<readonly DonationItem[]>();
+
+  requestGifts(): Observable<readonly DonationItem[]> {
     this.loads++;
+    const fresh = this.freshGifts ?? this.gifts();
+    if (fresh === 'pending') {
+      return this.answers.pipe(take(1));
+    }
+    if (fresh === 'failing') {
+      return throwError(() => new Error('read failed'));
+    }
+    return fresh === null ? NEVER : of(fresh);
+  }
+
+  answerRead(gifts: readonly DonationItem[]): void {
+    this.answers.next(gifts);
   }
 
   follow(): Observable<unknown> {

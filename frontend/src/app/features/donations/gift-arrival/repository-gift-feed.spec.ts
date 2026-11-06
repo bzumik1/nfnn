@@ -79,27 +79,24 @@ describe('Given the gifts read for the payment panel outside the donor area', ()
     expect(feed.listedHere).toBe(false);
   });
 
-  it('when the device copy holds the gifts, then loading takes them without a request', () => {
-    held.set(readOf([gift('kept')]));
+  it('when the gifts are requested, then they are read fresh, never from a copy that may be stale', () => {
+    held.set(readOf([gift('kept-yesterday')]));
+    let answered: readonly string[] = [];
 
-    feed.requestGifts();
+    feed.requestGifts().subscribe((items) => (answered = items.map((item) => item.id)));
 
-    expect(feed.gifts()?.map((item) => item.id)).toEqual(['kept']);
-    expect(reads).toBe(0);
-  });
-
-  it('when the device holds no copy, then loading reads the gifts', () => {
-    feed.requestGifts();
-
-    expect(feed.gifts()?.map((item) => item.id)).toEqual(['earlier']);
     expect(reads).toBe(1);
+    expect(answered).toEqual(['earlier']);
+    expect(feed.gifts()?.map((item) => item.id)).toEqual(['earlier']);
   });
 
-  it('when the read fails, then the gifts stay unknown', () => {
+  it('when the read fails, then the request answers nothing and the gifts stay unknown', () => {
     failing = true;
+    let answers = 0;
 
-    feed.requestGifts();
+    feed.requestGifts().subscribe(() => answers++);
 
+    expect(answers).toBe(0);
     expect(feed.gifts()).toBeNull();
   });
 

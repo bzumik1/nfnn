@@ -291,24 +291,61 @@ describe('Given the watch for an arriving gift', () => {
     });
   });
 
-  describe('when the donor’s gifts are not known yet', () => {
+  describe('when the fresh read of the gifts has not come yet', () => {
     beforeEach(() => {
-      feed.gifts.set(null);
+      feed.freshGifts = 'pending';
       watch.intent();
       TestBed.tick();
     });
 
-    it('then it loads them and takes the first list as what was there before', () => {
+    it('then nothing counts as arrived until the read names what was there before', () => {
       expect(feed.loads).toBe(1);
-
-      feed.gifts.set([EARLIER]);
+      feed.gifts.set([EARLIER, gift('shown-meanwhile')]);
       TestBed.tick();
       expect(watch.arrival()).toBeNull();
-      feed.gifts.set([EARLIER, gift('new')]);
+
+      feed.answerRead([EARLIER, gift('shown-meanwhile')]);
+      feed.gifts.set([EARLIER, gift('shown-meanwhile'), gift('new')]);
       TestBed.tick();
 
       expect(watch.arrival()).toEqual({ count: 1, totalMinor: 50_000 });
     });
+  });
+
+  it('when the device copy is stale and its sync brings a gift from yesterday, then that gift is no arrival', () => {
+    const yesterday = gift('yesterday');
+    feed.freshGifts = [EARLIER, yesterday];
+
+    watch.intent();
+    feed.gifts.set([EARLIER, yesterday]);
+    TestBed.tick();
+
+    expect(watch.arrival()).toBeNull();
+  });
+
+  it('when the read of the gifts fails, then the next intent reads them again', () => {
+    feed.freshGifts = 'failing';
+    watch.intent();
+    feed.freshGifts = [EARLIER];
+
+    watch.intent();
+    feed.gifts.set([EARLIER, gift('new')]);
+    TestBed.tick();
+
+    expect(feed.loads).toBe(2);
+    expect(watch.arrival()).toEqual({ count: 1, totalMinor: 50_000 });
+  });
+
+  it('when another donor signs in while the gifts change in the same moment, then no gift of the other donor is thanked for', () => {
+    watch.intent();
+    TestBed.tick();
+
+    donor.set({ id: 'petr' });
+    feed.gifts.set([gift('petr-1'), gift('petr-2')]);
+    TestBed.tick();
+
+    expect(watch.arrival()).toBeNull();
+    expect(feed.following).toBe(0);
   });
 
   describe('when the panel is observed', () => {
@@ -361,6 +398,18 @@ describe('Given the watch for an arriving gift', () => {
       await advance(0);
 
       expect(feed.asks).toBe(1);
+    });
+
+    it('then leaving the tab after the thanks does not start another watch', () => {
+      FakeIntersectionObserver.show(panel, true);
+      watch.intent();
+      feed.gifts.set([EARLIER, gift('new')]);
+      TestBed.tick();
+
+      setVisibility('hidden');
+
+      expect(watch.arrival()).not.toBeNull();
+      expect(feed.following).toBe(0);
     });
 
     it('then leaving the tab with the panel scrolled away does not count', async () => {

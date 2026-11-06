@@ -6,7 +6,7 @@ export interface GiftFeed {
   readonly gifts: Signal<readonly DonationItem[] | null>;
   readonly asking: Signal<boolean>;
   readonly listedHere: boolean;
-  requestGifts(): void;
+  requestGifts(): Observable<readonly DonationItem[]>;
   follow(): Observable<unknown>;
   askBank(): void;
 }

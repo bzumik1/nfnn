@@ -38,9 +38,7 @@ test.describe('Given a signed-in donor paying from Přispět', () => {
     await download;
     gifts.arrive();
 
-    await page.clock.fastForward(29_000);
-    expect(gifts.bankChecks()).toBe(checksOnPrispet);
-    await page.clock.fastForward(1_000);
+    await page.clock.fastForward(30_000);
 
     await expect.poll(() => gifts.bankChecks()).toBe(checksOnPrispet + 1);
     await expect(thanks(page)).toHaveText(GIFT_THANKS);

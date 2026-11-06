@@ -856,7 +856,7 @@ describe('Given a signed-in donor in the donor area', () => {
   });
 
   describe('when the overview opens', () => {
-    it('then the card Poslat dar thanks for a gift the live stream brings after the donor copies a bank detail, reading the gifts only through the overview and offering no link to it', async () => {
+    it('then the card Poslat dar reads the gifts once when the donor copies a bank detail, thanks for a gift the live stream brings through the reading of the overview and offers no link to it', async () => {
       Object.defineProperty(navigator, 'clipboard', {
         configurable: true,
         value: { writeText: () => Promise.resolve() },
@@ -873,6 +873,7 @@ describe('Given a signed-in donor in the donor area', () => {
 
       element('.send-gift .bank-row app-copy-button button')?.click();
       await settle();
+      await respond(twoYearSummary(), twoYearDonations());
       live.hint('donations');
       const list = twoYearDonations();
       const newGift = donationItem({ id: 'd-5', receivedAt: '2026-04-02', amountMinor: 30000 });
@@ -1202,6 +1203,35 @@ describe('Given a signed-in donor in the donor area', () => {
 
       await click('.first-gift .bank-check-btn');
       expect(text('.first-gift .bank-check-status')).toBe('Kontrolujeme nové platby v bance…');
+      http
+        .expectOne({ method: 'POST', url: BANK_CHECK_URL })
+        .flush({ bankDataAsOf: EARLIER, checking: false });
+      await respond(emptySummary(), emptyDonations());
+
+      expect(text('.first-gift .bank-check-status')).toBe(
+        'Žádný nový dar zatím nepřišel. Banky se ptáme nejvýš jednou za 30 sekund, zkuste to proto za chvíli znovu. Údaje z banky k 18. 10. 2026 10:05',
+      );
+    });
+
+    it('then a check the watch for an arriving gift asks for keeps the outcome of the check the donor asked for', async () => {
+      await open('/darce/prehled');
+      await respond(emptySummary(), emptyDonations());
+      bankCheck.flush(
+        { bankDataAsOf: EARLIER, checking: false },
+        { status: 202, statusText: 'Accepted' },
+      );
+      await respond(emptySummary(), emptyDonations());
+      await click('.first-gift .bank-check-btn');
+      http
+        .expectOne({ method: 'POST', url: BANK_CHECK_URL })
+        .flush({ bankDataAsOf: EARLIER, checking: false });
+      await respond(emptySummary(), emptyDonations());
+
+      harness.fixture.debugElement
+        .query(By.directive(DonorArea))
+        .injector.get(DonorDonations)
+        .askBank();
+      await settle();
       http
         .expectOne({ method: 'POST', url: BANK_CHECK_URL })
         .flush({ bankDataAsOf: EARLIER, checking: false });
