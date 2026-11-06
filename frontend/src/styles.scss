@@ -111,6 +111,10 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+html:has(app-landing) body {
+  background: var(--color-image-shade);
+}
+
 @keyframes fadeInUp {
   from {
     opacity: 0;

@@ -11,11 +11,23 @@ $widths: (
   nav: 899px,
 );
 
+$heights: (
+  short: 500px,
+  hero-lead: 680px,
+);
+
 @function width($name) {
   @if not map.has-key($widths, $name) {
     @error 'Unknown breakpoint #{$name}; use one of #{map.keys($widths)}.';
   }
   @return map.get($widths, $name);
+}
+
+@function height($name) {
+  @if not map.has-key($heights, $name) {
+    @error 'Unknown height #{$name}; use one of #{map.keys($heights)}.';
+  }
+  @return map.get($heights, $name);
 }
 
 @mixin down($name) {
@@ -26,6 +38,12 @@ $widths: (
 
 @mixin up($name) {
   @media (min-width: width($name) + 1px) {
+    @content;
+  }
+}
+
+@mixin height-down($name) {
+  @media (max-height: height($name)) {
     @content;
   }
 }
