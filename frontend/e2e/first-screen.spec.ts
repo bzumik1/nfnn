@@ -165,6 +165,31 @@ test.describe('Given a page that opens with a band under the header', () => {
   }
 });
 
+test.describe('Given the page of a missing address', () => {
+  for (const screen of SCREENS.filter(({ width, height }) => width < 768 && height > 500)) {
+    test.describe(`when it opens on ${screen.name} (${screen.width} × ${screen.height})`, () => {
+      test.use({ viewport: { width: screen.width, height: screen.height } });
+
+      test('then both of its buttons show above the tab bar', async ({ page }) => {
+        await page.goto('/neexistuje');
+        await expect(page.getByRole('link', { name: 'Napište nám' })).toBeVisible();
+        await page.evaluate(() => document.fonts.ready);
+
+        const { lowestButton, tabBarTop } = await page.evaluate(() => ({
+          lowestButton: Math.max(
+            ...[...document.querySelectorAll('main .ui-cta')].map(
+              (button) => button.getBoundingClientRect().bottom,
+            ),
+          ),
+          tabBarTop: document.querySelector('app-tab-bar nav')!.getBoundingClientRect().top,
+        }));
+
+        expect(lowestButton).toBeLessThanOrEqual(tabBarTop - 8);
+      });
+    });
+  }
+});
+
 test.describe('Given Přispět on a phone on its side', () => {
   for (const screen of SHORT_SCREENS.filter(({ width }) => width > 768)) {
     test.describe(`when it opens on ${screen.name} (${screen.width} × ${screen.height})`, () => {
