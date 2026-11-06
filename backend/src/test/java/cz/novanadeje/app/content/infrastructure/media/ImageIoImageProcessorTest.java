@@ -91,6 +91,25 @@ class ImageIoImageProcessorTest {
                 .hasMessageContaining("8000");
     }
 
+    @Test
+    @DisplayName("Given a PNG whose header claims 7000 by 7000 pixels, within 8000 on a side but over 48 million pixels, when it is processed, then it is refused from the header")
+    void should_refuse_from_header_when_processing_given_more_than_48_million_pixels() {
+        assertThatThrownBy(() -> processor.process(TestImages.pngHeaderOnly(7000, 7000)))
+                .isInstanceOf(UnsupportedImage.class)
+                .hasMessageContaining("48 million pixels");
+    }
+
+    @Test
+    @DisplayName("Given a PNG of 16 bits per sample, when it is processed, then it is refused before its pixels are decoded")
+    void should_refuse_when_processing_given_sixteen_bits_per_sample() throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ImageIO.write(new BufferedImage(20, 20, BufferedImage.TYPE_USHORT_GRAY), "png", out);
+
+        assertThatThrownBy(() -> processor.process(out.toByteArray()))
+                .isInstanceOf(UnsupportedImage.class)
+                .hasMessageContaining("8 bits per sample");
+    }
+
     static final class TestImages {
 
         private TestImages() {
