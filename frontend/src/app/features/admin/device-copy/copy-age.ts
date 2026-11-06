@@ -5,6 +5,7 @@ import { AdministrationReads } from './administration-reads';
 @Component({
   selector: 'app-copy-age',
   templateUrl: './copy-age.html',
+  styleUrl: './copy-age.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CopyAge {

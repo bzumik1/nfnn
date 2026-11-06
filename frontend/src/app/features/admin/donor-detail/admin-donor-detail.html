@@ -433,7 +433,7 @@
               Bankovní účty jsme s osobními údaji dárce smazali; další platby se mu už nepřiřadí.
             </p>
           } @else if (bankAccountsSource() === 'pending') {
-            <p class="ui-load-state" i18n="@@admin.donorDetail.accounts.pending">
+            <p class="ui-card__empty" i18n="@@admin.donorDetail.accounts.pending">
               Načítáme bankovní účty…
             </p>
           } @else if (bankAccountsSource() === 'unavailable') {
