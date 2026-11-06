@@ -1,0 +1,24 @@
+[
+  {
+    "path": "POST /api/donors/auth/login/second-factor*",
+    "scenario": "donors/donor_second_factor: The eleventh code within 15 minutes from one address is refused before it is checked*",
+    "kind": "body",
+    "reason": "Security audit 2026-11-06 (#441): wrong codes now also count per donor, so ten wrong codes from one address followed by the right one from another would be paused; the scenario sends nine wrong codes and the right one (which counts none) from one address, then a wrong eleventh refused 429 unchecked, and the right code from another address signs in, which it could not if the refused eleventh had been checked",
+    "contract": "docs/api-contract.md, Second factor (Wrong codes per donor); docs/security-overview.md, Second factor (TOTP)"
+  },
+  {
+    "path": "POST /api/donors/auth/login/second-factor*",
+    "scenario": "donors/donor_second_factor: The eleventh code within 15 minutes from one address is refused before it is checked*",
+    "kind": "status",
+    "reason": "Security audit 2026-11-06 (#441): the same rewritten scenario; its tenth request from the first address is now the right code and answers 200",
+    "contract": "docs/api-contract.md, Second factor (Wrong codes per donor)"
+  },
+  {
+    "path": "POST /api/donors/auth/login/second-factor*",
+    "scenario": "donors/donor_second_factor: The eleventh code within 15 minutes from one address is refused before it is checked*",
+    "kind": "headers",
+    "field": "content-type",
+    "reason": "Security audit 2026-11-06 (#441): the same rewritten scenario; the request that now signs in answers JSON instead of a problem",
+    "contract": "docs/api-contract.md, Second factor (Wrong codes per donor)"
+  }
+]
