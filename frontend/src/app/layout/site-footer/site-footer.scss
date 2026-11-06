@@ -61,12 +61,14 @@
     font-size: var(--text-md);
     transition: color var(--duration-base);
 
-    &:hover,
-    &.is-current {
-      color: var(--color-on-inverse);
+    @media (hover: hover) {
+      &:hover {
+        color: var(--color-on-inverse);
+      }
     }
 
     &.is-current {
+      color: var(--color-on-inverse);
       text-decoration: underline;
       text-decoration-thickness: 2px;
       text-underline-offset: 6px;
@@ -97,7 +99,12 @@
   text-decoration: none;
   transition: color var(--duration-base);
 
-  &:hover,
+  @media (hover: hover) {
+    &:hover {
+      color: var(--color-on-inverse);
+    }
+  }
+
   &.is-active {
     color: var(--color-on-inverse);
   }

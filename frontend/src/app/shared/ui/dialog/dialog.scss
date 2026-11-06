@@ -65,9 +65,11 @@
     background var(--duration-base),
     color var(--duration-base);
 
-  &:hover {
-    background: var(--color-accent-bg);
-    color: var(--color-accent);
+  @media (hover: hover) {
+    &:hover {
+      background: var(--color-accent-bg);
+      color: var(--color-accent);
+    }
   }
 }
 
@@ -187,9 +189,11 @@
     background: color-mix(in srgb, var(--color-surface-inverse) 60%, transparent);
     color: var(--color-on-inverse);
 
-    &:hover {
-      background: color-mix(in srgb, var(--color-on-inverse) 18%, transparent);
-      color: var(--color-on-inverse);
+    @media (hover: hover) {
+      &:hover {
+        background: color-mix(in srgb, var(--color-on-inverse) 18%, transparent);
+        color: var(--color-on-inverse);
+      }
     }
   }
 }

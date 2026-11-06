@@ -1,5 +1,6 @@
 {
   "customSyntax": "postcss-scss",
+  "plugins": ["./scripts/stylelint-hover-media.mjs"],
   "rules": {
     "color-no-hex": true,
     "color-named": "never",
@@ -29,7 +30,8 @@
       ],
       "/^transition(-duration)?$/": ["/(^|[\\s,])\\d*\\.?\\d+m?s\\b/"]
     },
-    "media-feature-name-disallowed-list": ["/width$/"]
+    "media-feature-name-disallowed-list": ["/width$/"],
+    "nfnn/hover-only-with-hover": true
   },
   "overrides": [
     {

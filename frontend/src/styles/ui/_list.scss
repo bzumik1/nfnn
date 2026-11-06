@@ -1,3 +1,5 @@
+@use 'pressed';
+
 .ui-list {
   list-style: none;
   padding: 0;
@@ -121,7 +123,14 @@ div.ui-list__row {
   outline-offset: -3px;
 }
 
-@media (forced-colors: active) {
+a.ui-list__row,
+button.ui-list__row {
+  @include pressed.when-pressed {
+    @include pressed.tints;
+  }
+}
+
+@media (hover: hover) and (forced-colors: active) {
   a.ui-list__row:hover,
   button.ui-list__row:hover {
     outline: 1px solid CanvasText;
