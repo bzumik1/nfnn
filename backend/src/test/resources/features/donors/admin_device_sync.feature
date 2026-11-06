@@ -36,7 +36,6 @@ Feature: An administrator's device keeps a copy of the accounts and the administ
   Scenario: A changed profile changes only the chunk of the donor's registration month, a new action only its month of the trail
     Given today is 2026-09-20
     And a person "Jana" is registered
-    And "Jana" enables the second factor
     And today is 2026-10-17
     And a person "Andrea" is registered
     And "Andrea" is an administrator
@@ -48,7 +47,8 @@ Feature: An administrator's device keeps a copy of the accounts and the administ
     And an administration device of "Andrea" syncs the donors
     Then the administration device downloaded the chunks "accounts:2026-09"
     And the administration device removed no chunk
-    When "Andrea" makes "Jana" an administrator
+    When "Jana" enables the second factor
+    And "Andrea" makes "Jana" an administrator
     And an administration device of "Andrea" syncs the donors
     Then the administration device downloaded the chunks "accounts:2026-09, audit:2026-10"
     And the administration device's chunks of accounts hold every account as the administration reads it

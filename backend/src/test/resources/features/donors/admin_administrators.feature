@@ -13,7 +13,7 @@ Feature: An administrator manages who administers the site
     And the administrators are Jana
     And administrator "Jana" has two-factor authentication on
 
-  Scenario: An administrator makes a registered donor who uses the authenticator app an administrator by e-mail
+  Scenario: An administrator makes a registered donor an administrator by e-mail
     Given "Petr" enables the second factor
     When "Jana" makes "Petr" an administrator
     Then the response status is 201

@@ -59,7 +59,6 @@ public class DonorPasswordResetService {
             return;
         }
         if (isAdministratorWithoutSecondFactor(donor)) {
-            log.debug("Password reset for administrator {} not sent: the administrator holds no second factor", donor.id());
             return;
         }
         Instant now = clock.instant();
