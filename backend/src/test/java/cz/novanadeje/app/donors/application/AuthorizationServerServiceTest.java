@@ -390,6 +390,16 @@ class AuthorizationServerServiceTest {
         }
 
         @Test
+        @DisplayName("when a connector token without any scope is presented, then the grant is invalid and no API token is issued, so it can never pass for a browser session")
+        void should_refuse_when_exchanged_given_connector_token_without_scope() {
+            when(verifier.verify("scopeless")).thenReturn(new VerifiedAccessToken(DONOR, Set.of(Role.DONOR, Role.ADMIN), Set.of(MCP), Set.of(),
+                    NOW.plusSeconds(300), "claude.ai"));
+
+            assertThatThrownBy(() -> service.exchangeToken("scopeless", API)).isInstanceOf(InvalidGrant.class);
+            verify(accessTokens, never()).issue(any());
+        }
+
+        @Test
         @DisplayName("when another resource is asked for, then the target is invalid before the token is looked at")
         void should_refuse_when_exchanged_given_other_resource() {
             assertThatThrownBy(() -> service.exchangeToken("connector", "https://elsewhere.example/api")).isInstanceOf(InvalidTarget.class);
