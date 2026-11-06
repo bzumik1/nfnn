@@ -41,6 +41,28 @@ async function newsAnsweredOnceThenHeld(page: Page): Promise<HeldNews> {
   return { release: () => release(), asked: () => asked };
 }
 
+const SCRIPTS_QUIET_MS = 1_000;
+
+async function scriptsStopArriving(page: Page, inFlight: () => number): Promise<void> {
+  let lastCount = -1;
+  await expect
+    .poll(
+      async () => {
+        await settled(page, inFlight, 10_000);
+        const count = await page.evaluate(
+          () =>
+            performance.getEntriesByType('resource').filter((entry) => entry.name.endsWith('.js'))
+              .length,
+        );
+        const unchanged = count === lastCount;
+        lastCount = count;
+        return unchanged;
+      },
+      { intervals: [SCRIPTS_QUIET_MS], timeout: 20_000 },
+    )
+    .toBe(true);
+}
+
 function tab(page: Page, name: string) {
   return page.getByRole('navigation', { name: 'Hlavní sekce' }).getByRole('link', { name });
 }
@@ -68,7 +90,7 @@ test.describe('Given a visitor switching between the tabs', () => {
   }) => {
     const inFlight = requestsInFlight(page);
     await page.goto('/o-nas');
-    await settled(page, inFlight, 10_000);
+    await scriptsStopArriving(page, inFlight);
 
     const scripts: Request[] = [];
     page.on('request', (request) => {
