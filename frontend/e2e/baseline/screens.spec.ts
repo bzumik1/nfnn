@@ -50,7 +50,7 @@ const SEARCH_PAUSE_MS = 5_000;
 const PAGE_TOLERANCE = { maxDiffPixelRatio: 0.002 };
 const ELEMENT_TOLERANCE = { maxDiffPixels: 0 };
 const FIXED_BARS_HIDDEN =
-  '.skip-link, app-header, app-header *, app-tab-bar, app-tab-bar * { visibility: hidden !important; }';
+  '.skip-link, app-header, app-header *, app-header *::before, app-header *::after, app-tab-bar, app-tab-bar *, app-tab-bar *::before, app-tab-bar *::after { visibility: hidden !important; }';
 const DONATE_QR = '#prispet .qr-code';
 const DONATE_BANK = '#prispet .bank';
 const SEND_GIFT_QR = '.send-gift .qr-code';
