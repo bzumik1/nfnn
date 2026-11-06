@@ -18,5 +18,13 @@
     "field": "$.spayd",
     "reason": "Jakub 2026-11-06 (#530): the recovery payment's SPAYD text asks for an instant payment as every payment QR does, PT:IP right after CC, so the 1 Kč reaches the account within seconds",
     "contract": "docs/api-contract.md, Recovery by payment"
+  },
+  {
+    "path": "POST /api/donors/auth/login/second-factor/recovery",
+    "scenario": "donors/admin_device_sync: *",
+    "kind": "body",
+    "field": "$.spayd",
+    "reason": "Jakub 2026-11-06 (#530): the recovery payment's SPAYD text asks for an instant payment as every payment QR does, PT:IP right after CC; this feature starts a recovery to show that the administration's device copy keeps no stored secret",
+    "contract": "docs/api-contract.md, Recovery by payment"
   }
 ]
