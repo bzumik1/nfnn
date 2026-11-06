@@ -100,20 +100,20 @@ test.describe('Given a visitor whose browser keeps no session storage', () => {
   test('when the first page they open has an address with a fragment and its chunk is gone, then the reload loads that address', async ({
     page,
   }) => {
-    const chunks = await LostChunks.watch(page);
-    await chunks.open(policyPath);
-    chunks.loseEveryChunkNotLoadedYet();
+    const chunks = await openAboutThenLoseNewChunks(page);
 
-    await page.goto('/o-nas#kontakt');
+    await page.goto(`${policyPath}#kontakt`);
     await expect(page.getByRole('heading', chunkLoadPageHeading)).toBeVisible();
-    expect(chunks.documents).toEqual(['/o-nas']);
+    expect(chunks.documents).toEqual([policyPath]);
 
     chunks.bringBack();
     await page.getByRole('button', { name: 'Načíst znovu' }).click();
 
-    await expect(page.getByRole('heading', { level: 2, name: 'Kontaktujte nás' })).toBeVisible();
-    await expect(page).toHaveURL(/\/o-nas#kontakt$/);
-    expect(chunks.documents).toEqual(['/o-nas', '/o-nas']);
+    await expect(
+      page.getByRole('heading', { level: 2, name: 'Kontakt', exact: true }),
+    ).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`${policyPath}#kontakt$`));
+    expect(chunks.documents).toEqual([policyPath, policyPath]);
   });
 });
 
