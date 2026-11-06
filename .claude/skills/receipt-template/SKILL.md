@@ -26,6 +26,6 @@ Any visible change to the receipt goes to Jakub as a look sheet before the merge
 - every v2 sample of `regression/v2/receipts/` (single: person cs and en, company, replacement, diacritics, foreign address, manual gift, signature; yearly: person cs and en, one gift, large amounts, leap year, 40, 120 and 366 gifts) drawn by the same code the browser runs, page by page beside the previous look (`<sample>-strana-N.png`) and as PDFs;
 - dates as `15. 3. 2026`, the 120-gift receipt with its large QR code;
 - the signature and portrait only as synthetic images (a wave, a silhouette), never a real signature or photo: the repository and the sheet's folder are shared;
-- what changed, in Czech, and each question as one decision card.
+- what changed, in Czech, and each question asked as skill `thread-workflow` "Decisions with Jakub" says.
 
 Put the sheet under `/mnt/project-files/nfnn-plan/v3/revize/<slice>/`, never in the repository. In the PR say what changed on the receipt and link the sheet.
