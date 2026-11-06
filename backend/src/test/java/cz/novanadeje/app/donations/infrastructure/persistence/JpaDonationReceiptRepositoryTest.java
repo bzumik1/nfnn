@@ -675,6 +675,35 @@ class JpaDonationReceiptRepositoryTest {
     }
 
     @Test
+    @DisplayName("Given a donor's first issue and replacements issued an hour ago and now, and another donor's replacement, when the donor's replacements issued since a time are counted, then replacements issued at that time or later count")
+    void should_count_replacements_issued_since_a_time_when_counted_given_first_issue_and_replacements() {
+        DonorReference jana = storedDonor("4821937560");
+        DonorReference petr = storedDonor("7310945528");
+        DonationReceipt firstIssue = issued(jana, NOW.minusSeconds(7200), yearlyDocument(YEAR_2025, "2026-000001", Optional.empty()), Optional.empty());
+        receipts.save(firstIssue);
+        firstIssue.markSuperseded(NOW.minusSeconds(3600));
+        receipts.save(firstIssue);
+        DonationReceipt anHourAgo = issued(jana, NOW.minusSeconds(3600), yearlyDocument(YEAR_2025, "2026-000002", Optional.empty()), Optional.of(firstIssue.id()));
+        receipts.save(anHourAgo);
+        anHourAgo.markSuperseded(NOW);
+        receipts.save(anHourAgo);
+        receipts.save(issued(jana, NOW, yearlyDocument(YEAR_2025, "2026-000003", Optional.empty()), Optional.of(anHourAgo.id())));
+        DonationReceipt petrFirst = issued(petr, NOW.minusSeconds(3600), yearlyDocument(YEAR_2025, "2026-000004", Optional.empty()), Optional.empty());
+        receipts.save(petrFirst);
+        petrFirst.markSuperseded(NOW);
+        receipts.save(petrFirst);
+        receipts.save(issued(petr, NOW, yearlyDocument(YEAR_2025, "2026-000005", Optional.empty()), Optional.of(petrFirst.id())));
+        flushAndClear();
+
+        assertThat(receipts.countReplacementsIssuedSince(jana, NOW.minusSeconds(7200))).isEqualTo(2);
+        assertThat(receipts.countReplacementsIssuedSince(jana, NOW.minusSeconds(3600))).isEqualTo(2);
+        assertThat(receipts.countReplacementsIssuedSince(jana, NOW.minusSeconds(3599))).isEqualTo(1);
+        assertThat(receipts.countReplacementsIssuedSince(jana, NOW)).isEqualTo(1);
+        assertThat(receipts.countReplacementsIssuedSince(jana, NOW.plusSeconds(1))).isZero();
+        assertThat(receipts.countReplacementsIssuedSince(petr, NOW.minusSeconds(7200))).isEqualTo(1);
+    }
+
+    @Test
     @DisplayName("Given single, yearly, replaced and other donors' receipts, when the donor's receipts are listed, then all of the donor's come, newest issue first")
     void should_list_all_donor_receipts_newest_first_when_listed_given_mixed_receipts() {
         DonorReference jana = storedDonor("4821937560");

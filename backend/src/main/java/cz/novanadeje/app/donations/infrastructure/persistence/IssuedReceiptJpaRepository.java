@@ -29,6 +29,8 @@ interface IssuedReceiptJpaRepository extends JpaRepository<IssuedReceiptJpaEntit
 
     long countByDonorIdAndSupersedesIdIsNotNullAndIssuedAtAfter(UUID donorId, Instant issuedAt);
 
+    long countByDonorIdAndSupersedesIdIsNotNullAndIssuedAtGreaterThanEqual(UUID donorId, Instant issuedAt);
+
     @Query("select distinct r.donationId from IssuedReceiptJpaEntity r where r.donationId in :donationIds")
     Set<UUID> findDonationIdsWithReceipt(@Param("donationIds") Collection<UUID> donationIds);
 

@@ -3,6 +3,7 @@ package cz.novanadeje.app.donations.application.receipt;
 import cz.novanadeje.app.donations.application.signing.CurrentKeyForIssuing;
 import cz.novanadeje.app.donations.application.signing.ReceiptSigningKeys;
 import cz.novanadeje.app.donations.domain.donation.DonationId;
+import cz.novanadeje.app.donations.domain.FoundationCalendar;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptId;
@@ -41,6 +42,7 @@ public class DonationReceiptIssuer {
     private static final Logger LOG = LoggerFactory.getLogger(DonationReceiptIssuer.class);
     private static final long SERIAL_WORTH_A_WARNING = (ReceiptNumber.LAST_SERIAL + 1) / 10 * 9;
     static final int REPLACEMENTS_PER_DONOR_A_DAY = 20;
+    static final int REPLACEMENTS_PER_DONOR_A_YEAR = 60;
     private static final Duration ISSUE_LIMIT_WINDOW = Duration.ofHours(24);
     static final String ISSUE_ACTION = "ISSUE_RECEIPT";
 
@@ -157,8 +159,8 @@ public class DonationReceiptIssuer {
         Instant issuedAt = clock.instant();
         SignatoryAtIssue signatory = signatories.resolve(issuedAt);
         ReceiptUnprintable.refuseUnlessPrintable(request.record(), foundation, signatory.signatory());
-        if (replaced.isPresent() && receipts.countReplacementsIssuedAfter(request.donor(), issuedAt.minus(ISSUE_LIMIT_WINDOW)) >= REPLACEMENTS_PER_DONOR_A_DAY) {
-            throw new ReceiptIssueLimitReached(request.donor(), REPLACEMENTS_PER_DONOR_A_DAY);
+        if (replaced.isPresent()) {
+            refuseBeyondReplacementCaps(request.donor(), issuedAt);
         }
         long serial = receipts.nextSerial();
         ReceiptNumber number = ReceiptNumber.of(Year.from(request.today()), serial);
@@ -179,6 +181,16 @@ public class DonationReceiptIssuer {
         String replacing = replaced.map(old -> " replacing " + old.number()).orElse("");
         AfterCommit.run(() -> LOG.info("Issued receipt {} ({}) for donor {}{}", number, issued.kind(), request.donor(), replacing));
         return issued;
+    }
+
+    private void refuseBeyondReplacementCaps(DonorReference donor, Instant issuedAt) {
+        if (receipts.countReplacementsIssuedAfter(donor, issuedAt.minus(ISSUE_LIMIT_WINDOW)) >= REPLACEMENTS_PER_DONOR_A_DAY) {
+            throw ReceiptIssueLimitReached.inADay(donor, REPLACEMENTS_PER_DONOR_A_DAY);
+        }
+        Instant yearStart = Year.from(issuedAt.atZone(FoundationCalendar.ZONE)).atDay(1).atStartOfDay(FoundationCalendar.ZONE).toInstant();
+        if (receipts.countReplacementsIssuedSince(donor, yearStart) >= REPLACEMENTS_PER_DONOR_A_YEAR) {
+            throw ReceiptIssueLimitReached.inAYear(donor, REPLACEMENTS_PER_DONOR_A_YEAR);
+        }
     }
 
     private Optional<DonationReceipt> outdatedReceipt(ReceiptRequest request) {

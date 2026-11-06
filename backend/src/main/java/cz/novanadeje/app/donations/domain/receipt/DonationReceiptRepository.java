@@ -29,6 +29,8 @@ public interface DonationReceiptRepository {
 
     long countReplacementsIssuedAfter(DonorReference donor, Instant after);
 
+    long countReplacementsIssuedSince(DonorReference donor, Instant since);
+
     Set<DonationId> findDonationsWithReceipt(Collection<DonationId> donations);
 
     Map<DonationId, ReceiptNumber> findActiveSingleNumbersFor(DonorReference donor);
