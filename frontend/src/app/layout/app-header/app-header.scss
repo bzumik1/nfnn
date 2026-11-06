@@ -12,7 +12,7 @@
   left: 0;
   right: 0;
   z-index: 100;
-  padding-top: env(safe-area-inset-top);
+  padding-top: var(--safe-area-top);
 
   &:focus {
     outline: none;
@@ -27,7 +27,7 @@
     position: fixed;
     inset: 0 0 auto;
     z-index: -1;
-    height: calc(env(safe-area-inset-top) + var(--header-height) + var(--scroll-edge-fade));
+    height: calc(var(--safe-area-top) + var(--header-height) + var(--scroll-edge-fade));
     background: linear-gradient(
       to bottom,
       var(--scroll-edge-tone) calc(100% - var(--scroll-edge-fade)),
@@ -48,7 +48,7 @@
 
   @media (prefers-contrast: more) {
     &::before {
-      height: calc(env(safe-area-inset-top) + var(--header-height));
+      height: calc(var(--safe-area-top) + var(--header-height));
       background: var(--scroll-edge-tone);
       border-bottom: 1px solid var(--color-border);
     }
@@ -97,7 +97,7 @@
 
 .back-button {
   position: fixed;
-  top: calc(env(safe-area-inset-top) + (var(--header-height) - var(--back-button-size)) / 2);
+  top: calc(var(--safe-area-top) + (var(--header-height) - var(--back-button-size)) / 2);
   left: max(
     max(var(--space-8), env(safe-area-inset-left), var(--window-controls-inset-inline)),
     calc((100% - var(--content-max)) / 2 + var(--space-8))
