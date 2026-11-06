@@ -1,3 +1,5 @@
+@use 'touch-target';
+
 .ui-field-error {
   color: var(--color-danger);
   font-size: var(--text-sm);
@@ -10,6 +12,7 @@
   gap: var(--space-2);
 
   button {
+    position: relative;
     flex: 1;
     padding: var(--space-2-5);
     border-radius: var(--radius-lg);
@@ -21,6 +24,7 @@
     font-weight: var(--weight-semibold);
     font-size: var(--text-md);
     transition: all var(--duration-base);
+    @include touch-target.reaches-finger-size;
 
     &.is-active {
       border-color: var(--color-accent);

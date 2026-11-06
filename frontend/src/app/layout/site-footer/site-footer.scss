@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'touch-target';
 
 :host {
   display: block;
@@ -135,4 +136,10 @@
       margin-inline-end: 0;
     }
   }
+}
+
+.footer-links a,
+.footer-link {
+  position: relative;
+  @include touch-target.reaches-finger-size;
 }

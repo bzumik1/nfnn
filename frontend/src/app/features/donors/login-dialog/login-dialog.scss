@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'touch-target';
 
 .type-switch {
   margin-bottom: var(--space-4);
@@ -71,6 +72,7 @@
   margin-bottom: var(--space-2);
 
   button {
+    position: relative;
     flex: 1;
     padding: var(--space-2-5);
     border-radius: var(--radius-pill);
@@ -82,6 +84,7 @@
     transition: all var(--duration-base);
     background: transparent;
     color: var(--color-text-muted);
+    @include touch-target.reaches-finger-size;
 
     &.is-active {
       background: var(--color-accent);
@@ -200,6 +203,7 @@
 }
 
 .link-btn {
+  position: relative;
   background: none;
   border: none;
   color: var(--color-accent);
@@ -208,6 +212,7 @@
   cursor: pointer;
   padding: 0 0 0 var(--space-1);
   font-family: var(--font-sans);
+  @include touch-target.reaches-finger-size;
 }
 
 .step-back {

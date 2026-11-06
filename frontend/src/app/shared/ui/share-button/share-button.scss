@@ -1,3 +1,5 @@
+@use 'touch-target';
+
 :host {
   display: flex;
   flex-wrap: wrap;
@@ -6,9 +8,11 @@
 }
 
 .share-button {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: var(--space-1-5);
+  @include touch-target.reaches-finger-size;
 }
 
 .share-icon {

@@ -14,6 +14,7 @@ import {
 import { Router } from '@angular/router';
 import { SoftKeyboard } from '../../core/layout/soft-keyboard';
 import { APP_TABS, AppTab } from '../../core/navigation/app-tabs';
+import { BackTarget } from '../../core/navigation/back-target';
 import { TabMemory } from '../../core/navigation/tab-memory';
 import { keepRoomForTabBar } from './tab-bar-room';
 
@@ -34,6 +35,7 @@ export class TabBar {
   protected readonly tabs = APP_TABS;
   protected readonly current = computed(() => this.memory.currentTab()?.id ?? null);
   protected readonly label = $localize`:@@layout.tabs.label:Hlavní sekce`;
+  private readonly backTarget = inject(BackTarget);
 
   constructor() {
     let release: (() => void) | null = null;
@@ -54,6 +56,10 @@ export class TabBar {
     event.preventDefault();
     if (this.memory.isAtRoot(tab)) {
       this.scrollToTop();
+      return;
+    }
+    if (this.memory.currentTab()?.id === tab.id) {
+      this.backTarget.toTabRoot(tab.path);
       return;
     }
     void this.router.navigateByUrl(this.memory.urlFor(tab));

@@ -1,0 +1,9 @@
+@mixin reaches-finger-size {
+  @media (pointer: coarse) {
+    &::before {
+      content: '';
+      position: absolute;
+      inset: min(0px, (100% - var(--touch-target-size)) / 2);
+    }
+  }
+}
