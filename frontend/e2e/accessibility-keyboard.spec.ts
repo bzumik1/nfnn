@@ -44,16 +44,19 @@ async function settledOverlapWithBar(page: Page): Promise<number> {
       const focused = document.activeElement!.getBoundingClientRect();
       return Math.round(Math.min(focused.bottom, bar.bottom) - Math.max(focused.top, bar.top));
     });
-  let previous = await overlap();
-  for (let check = 0; check < 30; check += 1) {
-    await page.waitForTimeout(100);
-    const current = await overlap();
-    if (current === previous) {
-      return current;
-    }
-    previous = current;
-  }
-  return previous;
+  let previous: number | undefined;
+  await expect
+    .poll(
+      async () => {
+        const current = await overlap();
+        const unchanged = current === previous;
+        previous = current;
+        return unchanged;
+      },
+      { intervals: [100] },
+    )
+    .toBe(true);
+  return previous!;
 }
 
 async function widerThanScreen(page: Page): Promise<number> {

@@ -4,6 +4,7 @@ import { browserEntries, stepBack } from './app-history';
 import { administrator, mockDonorApi, openAccountItem, session } from './donor-session';
 
 const PAYMENTS = '/api/admin/donations/payments';
+const SHEET_FLICK_REST_MS = 100;
 const PAYMENT_ID = '019a1c00-0000-7000-8000-000000001001';
 
 const unpaired = {
@@ -80,6 +81,13 @@ async function sheetSettled(page: Page): Promise<void> {
       ),
     )
     .toBe(0);
+}
+
+async function restLongerThanAFlick(page: Page): Promise<void> {
+  const restStartedAt = await page.evaluate(() => performance.now());
+  await expect
+    .poll(() => page.evaluate(() => performance.now()))
+    .toBeGreaterThan(restStartedAt + SHEET_FLICK_REST_MS);
 }
 
 async function fingerTo(
@@ -299,7 +307,7 @@ test.describe('Given an administrator with the pairing dialog of a payment open'
     await page.mouse.move(x, y);
     await page.mouse.down();
     await page.mouse.move(x, y + 30, { steps: 10 });
-    await page.waitForTimeout(300);
+    await restLongerThanAFlick(page);
     await page.mouse.up();
 
     await expect.poll(async () => (await panel.boundingBox())!.y).toBeCloseTo(opened, 0);
@@ -326,7 +334,7 @@ test.describe('Given an administrator with the pairing dialog of a payment open'
     await fingerTo(content, 'touchmove', x, y + 80);
     await expect.poll(async () => (await panel.boundingBox())!.y).toBeGreaterThan(opened + 60);
     await fingerTo(content, 'touchmove', x, y + 400);
-    await page.waitForTimeout(150);
+    await expect.poll(async () => (await panel.boundingBox())!.y).toBeGreaterThan(opened + 300);
     await fingerTo(content, 'touchend', x, y + 400, false);
 
     await expect(page.getByRole('dialog')).toHaveCount(0);
@@ -350,7 +358,7 @@ test.describe('Given an administrator with the pairing dialog of a payment open'
 
     await fingerTo(content, 'touchstart', x, y);
     await fingerTo(content, 'touchmove', x, y + 20);
-    await page.waitForTimeout(150);
+    await expect.poll(async () => (await panel.boundingBox())!.y).toBeGreaterThan(opened + 10);
     await fingerTo(content, 'touchend', x, y + 20, false);
 
     await expect.poll(async () => (await panel.boundingBox())!.y).toBeCloseTo(opened, 0);

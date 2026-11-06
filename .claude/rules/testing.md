@@ -16,6 +16,9 @@ The rest of the testing rules load only with the files of their area; a referenc
 ## What a new backend feature covers
 Happy path and each rule as scenarios; validation and problem types; 401 without token and 404 for another donor's resource; rate limits; time boundaries with `MutableClock`; scheduler on and off; a repository test for every derived or hand-written query; a rendering test per new template; `cs` and `en` texts for every new key.
 
+## Frontend e2e
+- No fixed waits: a Playwright test waits on state the page exposes (`expect`, `expect.poll`, `toPass`, `e2e/settled.ts`); a wait for time itself waits on the page's clock (`performance.now()`), as `dialog-back.spec.ts` rests a finger past the flick window. Lint refuses `waitForTimeout` in `e2e/` (`no-restricted-syntax`, `scripts/eslint-fixed-waits.test.mjs`) except in `e2e/fixed-waits.ts`, whose `waitWhileNothingMayHappen(page, ms)` is the one way to wait a fixed time, only in a test that proves nothing happens (a page that does not reload); no `eslint-disable` directive, which is a comment (ESLint runs with `noInlineConfig`). A `setTimeout` in e2e only bounds a wait, delays a mock's answer, flushes a task or paces a poll of observable state, never stands in for one.
+
 ## Connector (`mcp/`)
 - Vitest specs in `mcp/test/*.spec.ts`, same naming (`describe('Given …')` → `it('when …, then …')`); the backend is `test/fake-backend.ts`, never a real one.
 
