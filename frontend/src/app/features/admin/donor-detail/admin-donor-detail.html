@@ -581,9 +581,20 @@
               </p>
             } @else if (bankAccountsSource() === 'offline') {
               @if (serverAway()) {
-                <p class="ui-card__empty" i18n="@@admin.donorDetail.accounts.serverAway">
-                  Bankovní účty dárce ukážeme, až server zase odpoví.
-                </p>
+                <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
+                  <p i18n="@@admin.donorDetail.accounts.serverAway">
+                    Bankovní účty dárce ukážeme, až server zase odpoví.
+                  </p>
+                  <button
+                    appNeedsConnection
+                    type="button"
+                    class="ui-button ui-button--small"
+                    (click)="reloadBankAccounts()"
+                    i18n="@@admin.donorDetail.accounts.serverAway.retry"
+                  >
+                    Zkusit znovu
+                  </button>
+                </div>
               } @else {
                 <p class="ui-card__empty" i18n="@@admin.donorDetail.accounts.offline">
                   Bankovní účty dárce ukážeme, až budete online.

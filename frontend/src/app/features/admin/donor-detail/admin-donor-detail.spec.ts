@@ -1940,13 +1940,24 @@ describe('Given an administrator on a donor card with the administration copy on
     ).toContain('Bankovní účty dárce jsme načetli.');
   });
 
-  it('when the server is unreachable while the device is online, then the card says the accounts come once the server answers again', async () => {
+  it('when the server is unreachable while the device is online, then the card says so as an alert, and Zkusit znovu asks the server again', async () => {
     await open(false);
     await vi.waitFor(() =>
       http.expectOne(DETAIL_URL).flush(null, { status: 503, statusText: 'Unavailable' }),
     );
     await settle();
 
-    expect(accountsCard()).toContain('Bankovní účty dárce ukážeme, až server zase odpoví.');
+    const alert = fixture.nativeElement.querySelector(
+      '[aria-labelledby="accounts-title"] .ui-load-state[role="alert"]',
+    ) as HTMLElement;
+    expect(alert.textContent).toContain('Bankovní účty dárce ukážeme, až server zase odpoví.');
+    (alert.querySelector('button') as HTMLButtonElement).click();
+    await settle();
+    await vi.waitFor(() =>
+      http.expectOne(DETAIL_URL).flush(donorDetail({ bankAccounts: [adminBankAccount()] })),
+    );
+    await settle();
+
+    expect(accountsCard()).toContain('2900233333/2010');
   });
 });
