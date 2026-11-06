@@ -83,6 +83,13 @@ describe('Given the marker path a checkout answers', () => {
     assert.match(checkoutMarkerPath(ROOT), /^\/__nfnn-checkout\/[0-9a-f]{64}$/);
   });
 
+  it('when the root is written with a trailing slash, then its marker is the same as without', () => {
+    const root = mkdtempSync(join(tmpdir(), 'nfnn-marker-'));
+
+    assert.equal(checkoutMarkerPath(`${root}/`), checkoutMarkerPath(root));
+    assert.equal(checkoutMarkerPath(`${ROOT}/`), checkoutMarkerPath(ROOT));
+  });
+
   it('when another checkout derives its marker, then the two differ', () => {
     assert.notEqual(
       checkoutMarkerPath(ROOT),

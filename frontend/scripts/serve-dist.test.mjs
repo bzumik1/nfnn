@@ -7,6 +7,7 @@ import { join } from 'node:path';
 import { after, before, describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { checkoutMarkerPath } from './dev-port.mjs';
+import { readSecurityHeaders } from './security-headers.mjs';
 
 const SCRIPT = fileURLToPath(new URL('./serve-dist.mjs', import.meta.url));
 const CHECKOUT_ROOT = fileURLToPath(new URL('../..', import.meta.url));
@@ -57,6 +58,16 @@ describe('Given the e2e server serving a build of this checkout', () => {
     const answer = await fetch(origin + checkoutMarkerPath(CHECKOUT_ROOT));
 
     assert.equal(answer.status, 200);
+  });
+
+  it("when the checkout's own marker is answered, then it carries the security headers of every answer and names no path", async () => {
+    const answer = await fetch(origin + checkoutMarkerPath(CHECKOUT_ROOT));
+
+    for (const [name, value] of Object.entries(readSecurityHeaders())) {
+      assert.equal(answer.headers.get(name), value, name);
+    }
+    assert.equal(answer.headers.get('cache-control'), 'no-store');
+    assert.equal(await answer.text(), 'ok');
   });
 
   it("when another checkout's marker is asked for, then it answers 404, so Playwright never reuses it", async () => {

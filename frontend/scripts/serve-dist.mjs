@@ -82,8 +82,12 @@ createServer((request, response) => {
   }
   if (pathname === ownMarker) {
     response
-      .writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' })
-      .end(repositoryRoot);
+      .writeHead(200, {
+        ...securityHeaders,
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-store',
+      })
+      .end('ok');
     return;
   }
   const served = fileFor(pathname);
