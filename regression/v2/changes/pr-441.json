@@ -20,5 +20,52 @@
     "field": "content-type",
     "reason": "Security audit 2026-11-06 (#441): the same rewritten scenario; the request that now signs in answers JSON instead of a problem",
     "contract": "docs/api-contract.md, Second factor (Wrong codes per donor)"
+  },
+  {
+    "path": "POST /api/donors/auth/login/second-factor*",
+    "scenario": "donors/donor_second_factor: The eleventh code within 15 minutes from one address is refused before it is checked*",
+    "kind": "added",
+    "field": "$.accessToken",
+    "reason": "Security audit 2026-11-06 (#441): the rewritten per-address scenario sends the right code as the tenth request from the first address, so it signs in and its answer carries the session the sign-in answer always carries",
+    "contract": "docs/api-contract.md, Second factor (Wrong codes per donor)"
+  },
+  {
+    "path": "POST /api/donors/auth/login/second-factor*",
+    "scenario": "donors/donor_second_factor: The eleventh code within 15 minutes from one address is refused before it is checked*",
+    "kind": "added",
+    "field": "$.accessTokenExpiresAt",
+    "reason": "Security audit 2026-11-06 (#441): the rewritten per-address scenario sends the right code as the tenth request from the first address, so it signs in and its answer carries the session the sign-in answer always carries",
+    "contract": "docs/api-contract.md, Second factor (Wrong codes per donor)"
+  },
+  {
+    "path": "POST /api/donors/auth/login/second-factor*",
+    "scenario": "donors/donor_second_factor: The eleventh code within 15 minutes from one address is refused before it is checked*",
+    "kind": "added",
+    "field": "$.session",
+    "reason": "Security audit 2026-11-06 (#441): the rewritten per-address scenario sends the right code as the tenth request from the first address, so it signs in and its answer carries the session the sign-in answer always carries",
+    "contract": "docs/api-contract.md, Second factor (Wrong codes per donor)"
+  },
+  {
+    "path": "POST /api/donors/auth/login/second-factor*",
+    "scenario": "donors/donor_second_factor: The eleventh code within 15 minutes from one address is refused before it is checked*",
+    "kind": "added",
+    "field": "$.user",
+    "reason": "Security audit 2026-11-06 (#441): the rewritten per-address scenario sends the right code as the tenth request from the first address, so it signs in and its answer carries the session the sign-in answer always carries",
+    "contract": "docs/api-contract.md, Second factor (Wrong codes per donor)"
+  },
+  {
+    "path": "POST /api/donors/auth/login/second-factor*",
+    "scenario": "donors/donor_second_factor: The eleventh code within 15 minutes from one address is refused before it is checked*",
+    "kind": "added",
+    "field": "set-cookie",
+    "reason": "Security audit 2026-11-06 (#441): the rewritten per-address scenario sends the right code as the tenth request from the first address, so it signs in and its answer carries the session the sign-in answer always carries and its refresh cookie",
+    "contract": "docs/api-contract.md, Second factor (Wrong codes per donor)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.infrastructure.mail.DonorSecondFactorEmailSenderTest > Given a mail server that refuses, when either notice is sent, then one ERROR line each names the donor and the exception class, never the address",
+    "reason": "Security audit 2026-11-06 (#441): the sender has a third notice (the codes paused after ten wrong codes), so the refused-send test covers all three and says any instead of either",
+    "replacement": "donors.infrastructure.mail.DonorSecondFactorEmailSenderTest > Given a mail server that refuses, when any notice is sent, then one ERROR line each names the donor and the exception class, never the address"
   }
 ]
