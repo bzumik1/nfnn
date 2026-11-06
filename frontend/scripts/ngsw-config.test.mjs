@@ -193,6 +193,7 @@ describe('Given the service worker configuration', () => {
       '/boot-guard.js',
       '/manifest.webmanifest',
       '/favicon.svg',
+      '/icon-512.png',
       '/images/logo.svg',
       '/images/logo-on-dark.svg',
       '/main-ABCDEFGH.js',
@@ -205,13 +206,13 @@ describe('Given the service worker configuration', () => {
       '/worker-ABCDEFGH.js',
       '/receipt-fonts/body.0123456789abcdef.ttf',
       '/images/hero-1024.webp',
-      '/icon-512.png',
+      '/icon-192.png',
       '/apple-touch-icon.png',
       '/favicon.ico',
       '/robots.txt',
       '/sitemap.xml',
     ];
-    const never = ['/ngsw-worker.js', '/safety-worker.js', '/ngsw.json'];
+    const never = ['/ngsw-worker.js', '/safety-worker.js', '/ngsw.json', '/startup/750x1334.png'];
     const listed = {
       list: async () => [...shell, ...later, ...never],
       read: async () => '',
