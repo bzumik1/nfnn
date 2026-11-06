@@ -23,9 +23,7 @@ export class DiagnosticEvents {
   listed(): DiagnosticEvent[] {
     const now = Date.now();
     return this.held
-      .map(({ at, event: { kind, place, name, detail } }) =>
-        sanitizedEvent({ secondsAgo: Math.floor((now - at) / 1000), kind, place, name, detail }),
-      )
+      .map(({ at, event }) => sanitizedEvent(event, Math.floor((now - at) / 1000)))
       .filter((event): event is DiagnosticEvent => event !== null);
   }
 

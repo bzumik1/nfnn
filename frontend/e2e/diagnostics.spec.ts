@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import type { Download, Page } from '@playwright/test';
+import type { Download, Locator, Page, TestInfo } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { donor, mockDonorApi, openAccountItem, openSignInDialog, session } from './donor-session';
 
@@ -15,22 +15,83 @@ async function savedFile(download: Download): Promise<{ name: string; text: stri
   };
 }
 
-async function downloadFrom(page: Page, scope = page.locator('body')) {
-  const download = page.waitForEvent('download');
-  await scope.getByRole('button', { name: 'Stáhnout diagnostický soubor' }).click();
-  return savedFile(await download);
+interface SharedFile {
+  readonly name: string;
+  readonly type: string;
+  readonly text: string;
 }
 
-async function browserStoreKeys(page: Page): Promise<unknown> {
-  return page.evaluate(async () => ({
-    local: Object.keys(localStorage).sort(),
-    tab: Object.keys(sessionStorage).sort(),
-    cookies: document.cookie
-      .split(';')
-      .map((cookie) => cookie.split('=')[0].trim())
-      .sort(),
-    databases: (await indexedDB.databases()).map((database) => database.name).sort(),
-  }));
+function sharesFiles(testInfo: TestInfo): boolean {
+  return testInfo.project.name === 'iphone';
+}
+
+async function shareSheetOfAnIphone(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const shared: unknown[] = [];
+    Object.assign(window, { nfnnSharedFiles: shared });
+    Object.defineProperty(navigator, 'canShare', {
+      configurable: true,
+      value: (data: ShareData) => (data.files?.length ?? 0) > 0,
+    });
+    Object.defineProperty(navigator, 'share', {
+      configurable: true,
+      value: async (data: ShareData) => {
+        for (const file of data.files ?? []) {
+          shared.push({ name: file.name, type: file.type, text: await file.text() });
+        }
+      },
+    });
+  });
+}
+
+async function sharedFiles(page: Page): Promise<SharedFile[]> {
+  return page.evaluate(
+    () => (window as unknown as { nfnnSharedFiles: SharedFile[] }).nfnnSharedFiles,
+  );
+}
+
+async function delivered(
+  page: Page,
+  scope: Locator,
+  testInfo: TestInfo,
+  { secondTap }: { secondTap: boolean },
+): Promise<{ name: string; text: string }> {
+  const press = scope.getByRole('button', { name: 'Stáhnout diagnostický soubor' });
+  if (!sharesFiles(testInfo)) {
+    const download = page.waitForEvent('download');
+    await press.click();
+    return savedFile(await download);
+  }
+  await press.click();
+  if (secondTap) {
+    await scope.getByRole('button', { name: 'Sdílet diagnostický soubor' }).click();
+  }
+  await expect.poll(async () => (await sharedFiles(page)).length).toBe(1);
+  const [file] = await sharedFiles(page);
+  expect(file.type).toBe('application/json');
+  return file;
+}
+
+test.beforeEach(async ({ page }, testInfo) => {
+  if (sharesFiles(testInfo)) {
+    await shareSheetOfAnIphone(page);
+  }
+});
+
+const TOUCHED_BY_EVERY_PRESS = 'nfnn.public-activity';
+
+async function browserStores(page: Page): Promise<unknown> {
+  return page.evaluate(
+    async (touched) => ({
+      local: Object.entries(localStorage).sort(),
+      tab: Object.entries(sessionStorage)
+        .filter(([key]) => key !== touched)
+        .sort(),
+      cookie: document.cookie,
+      databases: (await indexedDB.databases()).map((database) => database.name).sort(),
+    }),
+    TOUCHED_BY_EVERY_PRESS,
+  );
 }
 
 async function answerSignIn(page: Page, kind: 'BROWSER' | 'PUBLIC'): Promise<void> {
@@ -61,20 +122,16 @@ test.describe('Given a signed-in donor on Údaje a zabezpečení', () => {
     await openAccountItem(page, 'Údaje a zabezpečení');
   });
 
-  test('when they download the diagnostic file, then a JSON file of closed values is saved and nothing is sent', async ({
+  test('when they download the diagnostic file, then a JSON file of closed values is saved, or shared on an iPhone, and nothing is sent', async ({
     page,
-  }) => {
+  }, testInfo) => {
     const card = page.locator('section', {
       has: page.getByRole('heading', { name: 'Když web nefunguje' }),
     });
-    await expect(card.getByRole('link', { name: 'info@nfnn.cz' })).toHaveAttribute(
-      'href',
-      'mailto:info@nfnn.cz?subject=Diagnostick%C3%BD%20soubor',
-    );
     const sent: string[] = [];
     page.on('request', (request) => sent.push(new URL(request.url()).pathname));
 
-    const { name, text } = await downloadFrom(page, card);
+    const { name, text } = await delivered(page, card, testInfo, { secondTap: true });
 
     expect(name).toMatch(FILE_NAME);
     const file = JSON.parse(text);
@@ -105,17 +162,12 @@ test.describe('Given a donor signed in on someone else’s computer', () => {
     await openAccountItem(page, 'Údaje a zabezpečení');
   });
 
-  test('when they download the diagnostic file, then it names no role, asks to delete it after sending and stores nothing in the browser', async ({
+  test('when they download the diagnostic file, then it names no role and stores nothing in the browser', async ({
     page,
-  }) => {
-    await expect(
-      page.getByText(
-        'Soubor zůstane ve stažených souborech tohoto počítače. Po odeslání ho prosím smažte.',
-      ),
-    ).toBeVisible();
-    const before = await browserStoreKeys(page);
+  }, testInfo) => {
+    const before = await browserStores(page);
 
-    const { text } = await downloadFrom(page);
+    const { text } = await delivered(page, page.locator('body'), testInfo, { secondTap: true });
 
     const file = JSON.parse(text);
     expect(file.session).toEqual({
@@ -125,14 +177,15 @@ test.describe('Given a donor signed in on someone else’s computer', () => {
     });
     expect(file.deviceCopy?.administration ?? null).toBeNull();
     expectNoPersonalData(text);
-    expect(await browserStoreKeys(page)).toEqual(before);
+    expect(await browserStores(page)).toEqual(before);
+    expect((before as { databases: string[] }).databases).toEqual([]);
   });
 });
 
 test.describe('Given the app script of the site never arrives', () => {
   test('when the watchdog shows its panel, then the diagnostic file it offers names the start and the bundle, and nothing else of the page', async ({
     page,
-  }) => {
+  }, testInfo) => {
     await page.route(MAIN_SCRIPT, (route) => route.abort());
     await page.clock.install();
     await page.goto('/obnova-hesla#token=kanarek-7781-tajemstvi');
@@ -143,7 +196,7 @@ test.describe('Given the app script of the site never arrives', () => {
     const panel = page.getByRole('alert');
     await expect(panel.getByRole('heading', { name: 'Web se nenačetl' })).toBeVisible();
 
-    const { name, text } = await downloadFrom(page, panel);
+    const { name, text } = await delivered(page, panel, testInfo, { secondTap: false });
 
     expect(name).toMatch(FILE_NAME);
     expect(text).not.toContain('kanarek');

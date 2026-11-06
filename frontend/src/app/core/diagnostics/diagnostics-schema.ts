@@ -257,9 +257,9 @@ function bootAttempt(part: Reading | null): BootAttempt | null {
   return { panelShown, codeArrived, waitedSeconds, secondsAgo };
 }
 
-export function sanitizedEvent(value: unknown): DiagnosticEvent | null {
+export function sanitizedEvent(value: unknown, age?: number): DiagnosticEvent | null {
   const part = record(value);
-  const secondsAgo = whole(field(part, 'secondsAgo'), MAX_SECONDS_AGO);
+  const secondsAgo = whole(age ?? field(part, 'secondsAgo'), MAX_SECONDS_AGO);
   const kind = oneOf<DiagnosticEventKind>(
     [...ERROR_KINDS, ...DIAGNOSTIC_ONLY_KINDS],
     field(part, 'kind'),
@@ -286,7 +286,7 @@ function events(value: unknown): DiagnosticEvent[] {
   }
   return value
     .slice(-MAX_EVENTS)
-    .map(sanitizedEvent)
+    .map((event) => sanitizedEvent(event))
     .filter((event): event is DiagnosticEvent => event !== null);
 }
 

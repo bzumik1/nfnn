@@ -11,12 +11,14 @@
 }
 <button
   type="button"
-  class="ui-button ui-button--small diagnostics-download-button"
-  [disabled]="preparing()"
-  (click)="download()"
+  class="ui-button diagnostics-download-button"
+  [attr.aria-disabled]="busy() || null"
+  (click)="press()"
 >
   @if (preparing()) {
     <span i18n="@@ui.diagnostics.preparing">Připravujeme soubor…</span>
+  } @else if (readyToShare()) {
+    <span i18n="@@ui.diagnostics.share">Sdílet diagnostický soubor</span>
   } @else {
     <span i18n="@@ui.diagnostics.download">Stáhnout diagnostický soubor</span>
   }

@@ -1,11 +1,12 @@
 import { DOCUMENT } from '@angular/common';
-import { inject, Injectable } from '@angular/core';
+import { inject, Injectable, InjectionToken } from '@angular/core';
 
 import { AdministrationAccess } from '../auth/administration-access';
 import { AuthStore } from '../auth/auth-store';
 import { Connectivity } from '../connectivity/connectivity';
 import { APP_REVISION } from '../errors/app-revision';
 import { platformOf } from '../errors/client-platform';
+import { errorNameOf } from '../errors/error-vocabulary';
 import { SESSION_STORAGE } from '../reload/reload-guard';
 import {
   BOOT_LAST_ATTEMPT_KEY,
@@ -30,6 +31,28 @@ export const BROWSER_ANSWER_WAIT_MS = 2_000;
 export const NEARLY_FULL_FREE_BYTES = 50 * 1024 * 1024;
 export const NEARLY_FULL_SHARE = 0.9;
 const LONGEST_KEPT_VALUE = 512;
+const APPLE_TOUCH_DEVICE = /iPad|iPhone|iPod/;
+const DESKTOP_SAFARI_ON_IPAD = /Macintosh/;
+const JSON_TYPE = 'application/json';
+
+export interface PreparedDiagnostics {
+  readonly blob: Blob;
+  readonly fileName: string;
+}
+
+export type DiagnosticsShareOutcome = 'shared' | 'dismissed' | 'failed';
+
+export interface SharingNavigator {
+  readonly userAgent: string;
+  readonly maxTouchPoints: number;
+  canShare?(data: ShareData): boolean;
+  share?(data: ShareData): Promise<void>;
+}
+
+export const DIAGNOSTICS_NAVIGATOR = new InjectionToken<SharingNavigator>(
+  'navigator for delivering the diagnostic file',
+  { providedIn: 'root', factory: () => navigator },
+);
 
 interface WorkerCounts {
   readonly registrations: number;
@@ -69,6 +92,7 @@ export class Diagnostics {
   private readonly events = inject(DiagnosticEvents);
   private readonly sessionStorage = inject(SESSION_STORAGE);
   private readonly deviceCopy = inject(DEVICE_COPY_DIAGNOSTICS);
+  private readonly sharing = inject(DIAGNOSTICS_NAVIGATOR);
 
   async file(source: DiagnosticSource): Promise<DiagnosticsFile> {
     const view = this.document.defaultView;
@@ -121,18 +145,56 @@ export class Diagnostics {
     });
   }
 
-  async download(source: DiagnosticSource): Promise<void> {
+  async prepare(source: DiagnosticSource): Promise<PreparedDiagnostics> {
     const file = await this.file(source);
-    const blob = new Blob([`${JSON.stringify(file, null, 2)}\n`], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
+    return {
+      blob: new Blob([`${JSON.stringify(file, null, 2)}\n`], { type: JSON_TYPE }),
+      fileName: diagnosticsFileName(new Date()),
+    };
+  }
+
+  save(prepared: PreparedDiagnostics): void {
+    const url = URL.createObjectURL(prepared.blob);
     const link = this.document.createElement('a');
     link.setAttribute('href', url);
-    link.download = diagnosticsFileName(new Date());
+    link.download = prepared.fileName;
     link.hidden = true;
     this.document.body.appendChild(link);
     link.click();
     link.remove();
     setTimeout(() => URL.revokeObjectURL(url), 0);
+  }
+
+  needsSecondTap(prepared: PreparedDiagnostics): boolean {
+    const agent = this.sharing.userAgent;
+    const appleTouch =
+      APPLE_TOUCH_DEVICE.test(agent) ||
+      (DESKTOP_SAFARI_ON_IPAD.test(agent) && this.sharing.maxTouchPoints > 1);
+    return appleTouch && this.canShare(prepared);
+  }
+
+  async share(prepared: PreparedDiagnostics): Promise<DiagnosticsShareOutcome> {
+    if (this.sharing.share === undefined) {
+      return 'failed';
+    }
+    try {
+      await this.sharing.share({ files: [this.asFile(prepared)] });
+      return 'shared';
+    } catch (failure: unknown) {
+      return errorNameOf(failure) === 'AbortError' ? 'dismissed' : 'failed';
+    }
+  }
+
+  private canShare(prepared: PreparedDiagnostics): boolean {
+    try {
+      return this.sharing.canShare?.({ files: [this.asFile(prepared)] }) ?? false;
+    } catch {
+      return false;
+    }
+  }
+
+  private asFile(prepared: PreparedDiagnostics): File {
+    return new File([prepared.blob], prepared.fileName, { type: JSON_TYPE });
   }
 
   private async nearlyFull(navigator: Navigator | null): Promise<boolean | null> {

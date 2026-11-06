@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { AuthStore } from '../../../core/auth/auth-store';
-import { Diagnostics } from '../../../core/diagnostics/diagnostics';
+import { Diagnostics, PreparedDiagnostics } from '../../../core/diagnostics/diagnostics';
 import { DiagnosticsDownload } from './diagnostics-download';
 
 @Component({
@@ -12,17 +12,32 @@ import { DiagnosticsDownload } from './diagnostics-download';
 })
 class Host {}
 
+const PREPARED: PreparedDiagnostics = {
+  blob: new Blob(['{}'], { type: 'application/json' }),
+  fileName: 'nfnn-diagnostika-2026-11-06-1403.json',
+};
+
 describe('Given the offer of a diagnostic file', () => {
   let fixture: ComponentFixture<Host>;
-  let download: ReturnType<typeof vi.fn>;
+  let diagnostics: {
+    prepare: ReturnType<typeof vi.fn>;
+    save: ReturnType<typeof vi.fn>;
+    needsSecondTap: ReturnType<typeof vi.fn>;
+    share: ReturnType<typeof vi.fn>;
+  };
   let storesNothing: ReturnType<typeof signal<boolean>>;
 
   beforeEach(async () => {
-    download = vi.fn(() => Promise.resolve());
+    diagnostics = {
+      prepare: vi.fn(() => Promise.resolve(PREPARED)),
+      save: vi.fn(),
+      needsSecondTap: vi.fn(() => false),
+      share: vi.fn(() => Promise.resolve('shared')),
+    };
     storesNothing = signal(false);
     TestBed.configureTestingModule({
       providers: [
-        { provide: Diagnostics, useValue: { download } },
+        { provide: Diagnostics, useValue: diagnostics },
         { provide: AuthStore, useValue: { storesNothing } },
       ],
     });
@@ -36,6 +51,10 @@ describe('Given the offer of a diagnostic file', () => {
 
   function button(): HTMLButtonElement {
     return fixture.nativeElement.querySelector('button');
+  }
+
+  function region(role: 'status' | 'alert'): string {
+    return fixture.nativeElement.querySelector(`[role="${role}"]`)?.textContent?.trim() ?? '';
   }
 
   it('when it is shown, then it says what the file holds, that nothing is sent by itself and where to send it', () => {
@@ -55,27 +74,92 @@ describe('Given the offer of a diagnostic file', () => {
     );
   });
 
-  it('when the button is pressed, then the file of its place is downloaded and the button waits meanwhile', async () => {
-    let finish: () => void = () => undefined;
-    download.mockReturnValue(new Promise<void>((resolve) => (finish = resolve)));
+  it('when the button is pressed, then the file of its place is prepared while the focused button stays and waits', async () => {
+    let finish: (prepared: PreparedDiagnostics) => void = () => undefined;
+    diagnostics.prepare.mockReturnValue(new Promise((resolve) => (finish = resolve)));
+    button().focus();
 
     button().click();
     await fixture.whenStable();
 
-    expect(download).toHaveBeenCalledWith('receipt-pdf');
-    expect(button().disabled).toBe(true);
+    expect(diagnostics.prepare).toHaveBeenCalledWith('receipt-pdf');
+    expect(button().disabled).toBe(false);
+    expect(button().getAttribute('aria-disabled')).toBe('true');
     expect(button().textContent?.trim()).toBe('Připravujeme soubor…');
-    finish();
-    await vi.waitFor(() => expect(button().disabled).toBe(false));
+    expect(document.activeElement).toBe(button());
+    button().click();
+    expect(diagnostics.prepare).toHaveBeenCalledTimes(1);
+    finish(PREPARED);
+    await vi.waitFor(() => expect(button().getAttribute('aria-disabled')).toBeNull());
+  });
+
+  it('when the file is saved, then a status line names it and says to attach it to an e-mail', async () => {
+    button().click();
+
+    await vi.waitFor(() =>
+      expect(region('status')).toBe(
+        'Soubor nfnn-diagnostika-2026-11-06-1403.json je ve stažených souborech. Přiložte ho prosím k e‑mailu na info@nfnn.cz.',
+      ),
+    );
+    expect(diagnostics.save).toHaveBeenCalledWith(PREPARED);
+    expect(button().textContent?.trim()).toBe('Stáhnout diagnostický soubor');
+  });
+
+  describe('when the device shares files instead of saving them, as an iPhone does', () => {
+    beforeEach(async () => {
+      diagnostics.needsSecondTap.mockReturnValue(true);
+      button().focus();
+      button().click();
+      await vi.waitFor(() =>
+        expect(button().textContent?.trim()).toBe('Sdílet diagnostický soubor'),
+      );
+    });
+
+    it('then the same focused button asks for a second tap and says what it is for', () => {
+      expect(document.activeElement).toBe(button());
+      expect(region('status')).toBe(
+        'Soubor je připravený. Klepnutím na Sdílet diagnostický soubor ho pošlete e‑mailem na info@nfnn.cz.',
+      );
+      expect(diagnostics.save).not.toHaveBeenCalled();
+    });
+
+    it('and the second tap shares it, then the button starts over', async () => {
+      button().click();
+
+      await vi.waitFor(() =>
+        expect(button().textContent?.trim()).toBe('Stáhnout diagnostický soubor'),
+      );
+      expect(diagnostics.share).toHaveBeenCalledWith(PREPARED);
+      expect(region('status')).toBe('');
+    });
+
+    it('and the share sheet is closed, then the file stays ready for another tap', async () => {
+      diagnostics.share.mockResolvedValue('dismissed');
+
+      button().click();
+      await fixture.whenStable();
+      await Promise.resolve();
+
+      expect(button().textContent?.trim()).toBe('Sdílet diagnostický soubor');
+    });
+
+    it('and sharing fails, then the file is saved instead and the status line says where', async () => {
+      diagnostics.share.mockResolvedValue('failed');
+
+      button().click();
+
+      await vi.waitFor(() => expect(diagnostics.save).toHaveBeenCalledWith(PREPARED));
+      await vi.waitFor(() => expect(region('status')).toContain('je ve stažených souborech'));
+    });
   });
 
   it('when the file cannot be made, then an alert says so and what to do instead', async () => {
-    download.mockRejectedValue(new Error('Blob refused'));
+    diagnostics.prepare.mockRejectedValue(new Error('Blob refused'));
 
     button().click();
 
     await vi.waitFor(() =>
-      expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent?.trim()).toBe(
+      expect(region('alert')).toBe(
         'Soubor se nepodařilo připravit. Napište nám prosím i bez něj, v jakém prohlížeči a na které stránce potíže máte.',
       ),
     );

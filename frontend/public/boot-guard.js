@@ -365,21 +365,26 @@
     return file;
   }
 
-  function saveFile(file) {
-    var now = new Date(Date.now());
-    var minute = now.toISOString().slice(0, 16);
+  function prepareFile(file) {
+    var minute = new Date(Date.now()).toISOString().slice(0, 16);
     file.createdAt = minute + 'Z';
-    var text = JSON.stringify(file, null, 2) + '\n';
-    var url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+    return {
+      blob: new Blob([JSON.stringify(file, null, 2) + '\n'], { type: 'application/json' }),
+      name:
+        'nfnn-diagnostika-' +
+        minute.slice(0, 10) +
+        '-' +
+        minute.slice(11, 13) +
+        minute.slice(14, 16) +
+        '.json',
+    };
+  }
+
+  function saveFile(prepared) {
+    var url = URL.createObjectURL(prepared.blob);
     var link = document.createElement('a');
     link.href = url;
-    link.download =
-      'nfnn-diagnostika-' +
-      minute.slice(0, 10) +
-      '-' +
-      minute.slice(11, 13) +
-      minute.slice(14, 16) +
-      '.json';
+    link.download = prepared.name;
     link.hidden = true;
     document.body.appendChild(link);
     link.click();
@@ -387,6 +392,22 @@
     window.setTimeout(function () {
       URL.revokeObjectURL(url);
     }, 0);
+  }
+
+  function sharedFile(prepared) {
+    var agent = String(navigator.userAgent || '');
+    var appleTouch =
+      /iPad|iPhone|iPod/.test(agent) ||
+      (/Macintosh/.test(agent) && (navigator.maxTouchPoints || 0) > 1);
+    if (!appleTouch || typeof navigator.share !== 'function' || typeof window.File !== 'function') {
+      return null;
+    }
+    try {
+      var shared = new window.File([prepared.blob], prepared.name, { type: 'application/json' });
+      return navigator.canShare && navigator.canShare({ files: [shared] }) ? shared : null;
+    } catch (refused) {
+      return null;
+    }
   }
 
   function clearAndReload() {
@@ -509,7 +530,7 @@
     var download = element('button', 'Stáhnout diagnostický soubor', {
       'align-self': 'center',
       'min-height': '2.75rem',
-      margin: '0 0 auto',
+      margin: '0',
       padding: '0.5rem 1.25rem',
       border: '1px solid currentColor',
       'border-radius': '0.75rem',
@@ -521,12 +542,57 @@
     });
     download.type = 'button';
     download.className = 'nfnn-boot-diagnostics';
+    var outcome = element('p', '', {
+      margin: '0 auto auto',
+      'max-width': '32rem',
+      color: 'var(--color-text-muted, #475569)',
+    });
+    outcome.setAttribute('role', 'status');
+    var refusal = null;
+    function failed() {
+      outcome.textContent = '';
+      if (refusal === null) {
+        refusal = element(
+          'p',
+          'Soubor se nepodařilo připravit. Napište nám prosím i bez něj, v jakém prohlížeči a na které stránce potíže máte.',
+          { margin: '0 auto', 'max-width': '32rem' },
+        );
+        refusal.setAttribute('role', 'alert');
+        panel.insertBefore(refusal, outcome);
+      }
+    }
+    function saved(prepared) {
+      saveFile(prepared);
+      outcome.textContent =
+        'Soubor ' +
+        prepared.name +
+        ' je ve stažených souborech. Přiložte ho prosím k e‑mailu na info@nfnn.cz.';
+    }
     var file = gather(Date.now());
     download.addEventListener('click', function () {
       try {
-        saveFile(file);
+        var prepared = prepareFile(file);
+        var shared = sharedFile(prepared);
+        if (shared === null) {
+          saved(prepared);
+          return;
+        }
+        navigator.share({ files: [shared] }).then(
+          function () {
+            outcome.textContent = '';
+          },
+          function (failure) {
+            if (!failure || failure.name !== 'AbortError') {
+              try {
+                saved(prepared);
+              } catch (refused) {
+                failed();
+              }
+            }
+          },
+        );
       } catch (refused) {
-        download.textContent = 'Soubor se nepodařilo připravit';
+        failed();
       }
     });
     panel.appendChild(title);
@@ -534,6 +600,7 @@
     panel.appendChild(button);
     panel.appendChild(help);
     panel.appendChild(download);
+    panel.appendChild(outcome);
     document.body.appendChild(panel);
     if (window.MutationObserver) {
       var observer = new window.MutationObserver(function () {

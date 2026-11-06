@@ -5,7 +5,7 @@ import { runInNewContext } from 'node:vm';
 import { JSDOM } from 'jsdom';
 import { importTs } from './ts-import.mjs';
 
-const { sanitizedDiagnostics } = await importTs(
+const { DIAGNOSTIC_PAGES, sanitizedDiagnostics } = await importTs(
   '../src/app/core/diagnostics/diagnostics-schema.ts',
 );
 const { detectPlatform } = await importTs('../src/app/core/errors/client-platform.ts');
@@ -47,13 +47,22 @@ function loadGuard({
   workers = null,
   cacheNames = ['ngsw:/:db:control', 'ngsw:/:1:assets:app:cache'],
   estimate = { usage: 10 * 1024 * 1024, quota: 2 * 1024 * 1024 * 1024 },
+  share = null,
+  objectUrlRefused = false,
 } = {}) {
   const address = new URL(path, ORIGIN);
   const dom = new JSDOM(`<!doctype html><html lang="cs"><body>${html}</body></html>`, {
     url: address.href,
   });
   const timers = [];
-  const calls = { reloads: 0, unregistered: 0, cachesDeleted: [], indexedDb: 0, saved: [] };
+  const calls = {
+    reloads: 0,
+    unregistered: 0,
+    cachesDeleted: [],
+    indexedDb: 0,
+    saved: [],
+    shared: [],
+  };
   const registrations = workers ?? [
     { unregister: () => Promise.resolve(++calls.unregistered > 0) },
   ];
@@ -84,11 +93,21 @@ function loadGuard({
       return {};
     },
     MutationObserver: dom.window.MutationObserver,
+    File,
   };
   const navigator = {
     onLine: online,
     userAgent,
     maxTouchPoints,
+    ...(share === null
+      ? {}
+      : {
+          canShare: ({ files }) => files.every((file) => file instanceof File),
+          share: (data) => {
+            calls.shared.push(data);
+            return share();
+          },
+        }),
     storage: {
       persisted: () => Promise.resolve(true),
       estimate: () => Promise.resolve(estimate),
@@ -104,6 +123,9 @@ function loadGuard({
   DateAtClock.now = () => clock.now;
   const savingUrl = {
     createObjectURL: (blob) => {
+      if (objectUrlRefused) {
+        throw new Error('refused');
+      }
       calls.saved.push({ blob });
       return `blob:${ORIGIN}/${calls.saved.length}`;
     },
@@ -149,6 +171,9 @@ function loadGuard({
     },
     panel() {
       return dom.window.document.getElementById('nfnn-boot-panel');
+    },
+    pressDownload() {
+      dom.window.document.querySelector('.nfnn-boot-diagnostics').click();
     },
     async savedFile() {
       const button = dom.window.document.querySelector('.nfnn-boot-diagnostics');
@@ -555,6 +580,117 @@ describe('Given the boot watchdog showing its panel', () => {
 
     assert.equal(file.serviceWorker.registrations, 1);
     assert.equal(file.serviceWorker.caches, 2);
+  });
+
+  it('when the file is saved, then a status line on the panel names it and says to attach it to an e-mail', async () => {
+    const guard = await shownPanel();
+
+    const saved = await guard.savedFile();
+
+    assert.equal(
+      guard.panel().querySelector('[role="status"]').textContent,
+      `Soubor ${saved.name} je ve stažených souborech. Přiložte ho prosím k e‑mailu na info@nfnn.cz.`,
+    );
+    assert.equal(guard.panel().querySelector('p[role="alert"]'), null);
+  });
+
+  it('when the browser refuses to make the file, then an alert says what to do instead and the button keeps its name', async () => {
+    const guard = await shownPanel({ objectUrlRefused: true });
+
+    guard.pressDownload();
+
+    const download = guard.panel().querySelector('.nfnn-boot-diagnostics');
+    assert.equal(download.textContent, 'Stáhnout diagnostický soubor');
+    assert.equal(
+      guard.panel().querySelector('p[role="alert"]').textContent,
+      'Soubor se nepodařilo připravit. Napište nám prosím i bez něj, v jakém prohlížeči a na které stránce potíže máte.',
+    );
+    assert.equal(guard.panel().querySelector('[role="status"]').textContent, '');
+  });
+
+  it('when the device is an iPhone that shares files, then the press opens the share sheet with the JSON file and saves nothing', async () => {
+    const guard = await shownPanel({ share: () => Promise.resolve() });
+
+    guard.pressDownload();
+    await settle();
+
+    assert.equal(guard.calls.saved.length, 0);
+    assert.equal(guard.calls.shared.length, 1);
+    const [shared] = guard.calls.shared[0].files;
+    assert.match(shared.name, /^nfnn-diagnostika-\d{4}-\d{2}-\d{2}-\d{4}\.json$/);
+    assert.equal(shared.type, 'application/json');
+    const file = JSON.parse(await shared.text());
+    assert.deepEqual(sanitizedDiagnostics(file), file);
+  });
+
+  it('when the iPhone closes the share sheet, then nothing is saved; when sharing fails, then the file is saved instead', async () => {
+    const closed = await shownPanel({
+      share: () => Promise.reject(new DOMException('closed', 'AbortError')),
+    });
+    closed.pressDownload();
+    await settle();
+    assert.equal(closed.calls.saved.length, 0);
+
+    const failing = await shownPanel({
+      share: () => Promise.reject(new DOMException('no', 'NotAllowedError')),
+    });
+    failing.pressDownload();
+    await settle();
+    assert.equal(failing.calls.saved.length, 1);
+  });
+
+  for (const [label, attempt, reload] of [
+    [
+      'a start from the future',
+      { panelShown: false, codeArrived: false, waitedSeconds: 15, at: START + 60_000 },
+      String(START + 60_000),
+    ],
+    [
+      'a fractional wait',
+      { panelShown: false, codeArrived: false, waitedSeconds: 1.5, at: START - 1_000 },
+      'abc',
+    ],
+    [
+      'an oversized wait',
+      { panelShown: false, codeArrived: false, waitedSeconds: 601, at: START - 1_000 },
+      '-5',
+    ],
+    [
+      'a wait that is not a number',
+      { panelShown: false, codeArrived: false, waitedSeconds: 'NaN', at: START - 1_000 },
+      'NaN',
+    ],
+    [
+      'a start older than a day',
+      { panelShown: false, codeArrived: false, waitedSeconds: 15, at: START - 86_401_000 },
+      String(START - 86_401_000),
+    ],
+  ]) {
+    it(`when the tab keeps ${label}, then the file names no previous start and no reload`, async () => {
+      const storage = new MemoryStorage();
+      storage.setItem('nfnn.boot.last', JSON.stringify(attempt));
+      storage.setItem('nfnn.reload.update', reload);
+      const guard = await shownPanel({ storage });
+
+      const file = JSON.parse((await guard.savedFile()).text);
+
+      assert.equal(file.boot.previous, null);
+      assert.equal(file.reloads.update, null);
+    });
+  }
+
+  it('when the first path segments the watchdog knows are compared with the routes of the app, then each is a route of its own', () => {
+    const block = SOURCE.match(/var PAGES = \[([^\]]*)\]/)?.[1];
+    assert.ok(block);
+    const segments = [...block.matchAll(/'([^']+)'/g)].map((found) => found[1]);
+    const firstSegments = new Set(
+      DIAGNOSTIC_PAGES.filter((page) => page !== '/').map((page) => page.split('/')[1]),
+    );
+
+    assert.deepEqual([...segments].sort(), [...firstSegments].sort());
+    for (const segment of segments) {
+      assert.ok(DIAGNOSTIC_PAGES.includes(`/${segment}`), segment);
+    }
   });
 
   it('when the watchdog key the app reads is compared, then it is the same in both', () => {

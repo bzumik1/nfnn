@@ -98,6 +98,11 @@ tr.is-verification td.amount {
   font-size: var(--text-sm);
 }
 
+.receipt-diagnostics {
+  max-width: 16rem;
+  font-size: var(--text-sm);
+}
+
 .receipt-note {
   font-size: var(--text-xs);
   color: var(--color-text-muted);
@@ -191,7 +196,8 @@ tr.is-verification td.amount {
   }
 
   .receipt-saved,
-  .row-receipt-error {
+  .row-receipt-error,
+  .receipt-diagnostics {
     max-width: none;
   }
 }
@@ -235,7 +241,8 @@ tr.is-verification td.amount {
   }
 
   .receipt-saved,
-  .row-receipt-error {
+  .row-receipt-error,
+  .receipt-diagnostics {
     max-width: none;
   }
 }

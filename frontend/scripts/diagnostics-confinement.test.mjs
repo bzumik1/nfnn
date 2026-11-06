@@ -37,6 +37,13 @@ const READS = {
   'a write to the session storage': "sessionStorage.setItem('k', 'v');\nexport {};\n",
   'a removal from the session storage': "sessionStorage.removeItem('k');\nexport {};\n",
   'a spread of another object': 'export const copied = (state: object) => ({ ...state });\n',
+  "the donor's e-mail by destructuring":
+    'export const shown = ({ email }: { email: string }) => email;\n',
+  'local storage by brackets': "export const shown = window['localStorage'];\n",
+  "the donor's name by brackets":
+    "export const shown = (account: { name: string }) => account['name'];\n",
+  'an assignment to the session storage': "sessionStorage['k'] = 'v';\nexport {};\n",
+  'emptying the session storage': 'sessionStorage.clear();\nexport {};\n',
 };
 
 describe('Given the diagnostic file, built only from closed values', () => {

@@ -163,6 +163,23 @@ module.exports = defineConfig([
           selector: `MemberExpression[property.name=/^(${DIAGNOSTICS_REFUSED_PROPERTIES.join('|')})$/]`,
           message: DIAGNOSTICS_CLOSED_VALUES,
         },
+        {
+          selector: `MemberExpression[computed=true][property.value=/^(${DIAGNOSTICS_REFUSED_PROPERTIES.join('|')})$/]`,
+          message: DIAGNOSTICS_CLOSED_VALUES,
+        },
+        {
+          selector: `ObjectPattern > Property[key.name=/^(${DIAGNOSTICS_REFUSED_PROPERTIES.join('|')})$/]`,
+          message: DIAGNOSTICS_CLOSED_VALUES,
+        },
+        {
+          selector:
+            "AssignmentExpression[left.type='MemberExpression'][left.object.name='sessionStorage']",
+          message: DIAGNOSTICS_CLOSED_VALUES,
+        },
+        {
+          selector: "CallExpression[callee.property.name='clear']",
+          message: DIAGNOSTICS_CLOSED_VALUES,
+        },
         { selector: "Identifier[name='localStorage']", message: DIAGNOSTICS_CLOSED_VALUES },
         { selector: 'ObjectExpression > SpreadElement', message: DIAGNOSTICS_CLOSED_VALUES },
       ],

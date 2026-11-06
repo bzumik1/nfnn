@@ -20,7 +20,7 @@ import {
   STARTED_ATTRIBUTE,
 } from '../updates/boot-report';
 import { DEVICE_COPY_DIAGNOSTICS, DeviceCopyDiagnostics } from './device-copy-diagnostics';
-import { Diagnostics } from './diagnostics';
+import { Diagnostics, DIAGNOSTICS_NAVIGATOR } from './diagnostics';
 import { DiagnosticsFile, sanitizedDiagnostics } from './diagnostics-schema';
 
 const CHROME_WITH_CANARY =
@@ -383,7 +383,7 @@ describe('Given the diagnostic file of this browser', () => {
     delete (navigator as { storage?: unknown }).storage;
   });
 
-  it('when it is downloaded, then a JSON file named by the minute is saved through a revoked blob address', async () => {
+  it('when it is prepared and saved, then a JSON file named by the minute is saved through a revoked blob address', async () => {
     const created = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:nfnn/1');
     const revoked = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
     const clicks: HTMLAnchorElement[] = [];
@@ -394,15 +394,88 @@ describe('Given the diagnostic file of this browser', () => {
     });
     vi.useRealTimers();
 
-    await diagnostics.download('account-page');
+    const prepared = await diagnostics.prepare('account-page');
+    diagnostics.save(prepared);
     await new Promise((resolve) => setTimeout(resolve, 0));
 
+    expect(prepared.fileName).toMatch(/^nfnn-diagnostika-\d{4}-\d{2}-\d{2}-\d{4}\.json$/);
     expect(clicks).toHaveLength(1);
-    expect(clicks[0].download).toMatch(/^nfnn-diagnostika-\d{4}-\d{2}-\d{2}-\d{4}\.json$/);
+    expect(clicks[0].download).toBe(prepared.fileName);
     expect(clicks[0].isConnected).toBe(false);
     const blob = created.mock.calls[0][0] as Blob;
     expect(blob.type).toBe('application/json');
     expect(JSON.parse(await blob.text())).toMatchObject({ format: 'nfnn-diagnostics' });
     expect(revoked).toHaveBeenCalledWith('blob:nfnn/1');
+  });
+});
+
+describe('Given the diagnostic file on an iPhone, an iPad or a computer', () => {
+  const IPHONE =
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1';
+  const MAC =
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Safari/605.1.15';
+  const file = {
+    blob: new Blob(['{}'], { type: 'application/json' }),
+    fileName: 'nfnn-diagnostika-2026-11-06-1403.json',
+  };
+  let shared: ShareData[];
+  let shareAnswer: () => Promise<void>;
+
+  function delivery(userAgent: string, maxTouchPoints: number, canShare = true): Diagnostics {
+    shared = [];
+    shareAnswer = () => Promise.resolve();
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        {
+          provide: DIAGNOSTICS_NAVIGATOR,
+          useValue: {
+            userAgent,
+            maxTouchPoints,
+            canShare: () => canShare,
+            share: (data: ShareData) => {
+              shared.push(data);
+              return shareAnswer();
+            },
+          },
+        },
+      ],
+    });
+    return TestBed.inject(Diagnostics);
+  }
+
+  it.each([
+    ['an iPhone that can share files', IPHONE, 0, true, true],
+    ['an iPad that says Macintosh', MAC, 5, true, true],
+    ['a Mac', MAC, 0, true, false],
+    ['an iPhone that cannot share files', IPHONE, 0, false, false],
+  ])(
+    'when it is %s, then a second tap that shares the file is %s',
+    (_label, agent, touches, canShare, needed) => {
+      expect(delivery(agent, touches, canShare).needsSecondTap(file)).toBe(needed);
+    },
+  );
+
+  it('when it is shared, then the share sheet gets the JSON file under its name', async () => {
+    const outcome = await delivery(IPHONE, 0).share(file);
+
+    expect(outcome).toBe('shared');
+    expect(shared).toHaveLength(1);
+    const sharedFile = shared[0].files![0];
+    expect(sharedFile.name).toBe(file.fileName);
+    expect(sharedFile.type).toBe('application/json');
+    expect(shared[0].text).toBeUndefined();
+    expect(shared[0].url).toBeUndefined();
+  });
+
+  it.each([
+    ['the visitor closes the share sheet', 'AbortError', 'dismissed'],
+    ['the share fails', 'NotAllowedError', 'failed'],
+  ])('when %s, then the outcome says so', async (_label, name, outcome) => {
+    const diagnostics = delivery(IPHONE, 0);
+    shareAnswer = () => Promise.reject(new DOMException('no', name));
+
+    expect(await diagnostics.share(file)).toBe(outcome);
   });
 });
