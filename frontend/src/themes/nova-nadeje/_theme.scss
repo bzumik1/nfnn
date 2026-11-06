@@ -202,6 +202,9 @@
   --duration-slow: 0.3s;
   --duration-entrance: 0.9s;
   --duration-sheet: var(--duration-slow);
+  --color-pressed: color-mix(in srgb, currentColor 8%, transparent);
+  --pressed-brightness: 0.92;
+  --pressed-scale: 0.97;
 
   --radius-xs: 2px;
   --radius-sm: 8px;

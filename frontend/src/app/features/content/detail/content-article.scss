@@ -13,9 +13,11 @@
     font-weight: var(--weight-semibold);
     text-decoration: none;
 
-    &:hover {
-      color: var(--color-on-inverse);
-      text-decoration: underline;
+    @media (hover: hover) {
+      &:hover {
+        color: var(--color-on-inverse);
+        text-decoration: underline;
+      }
     }
   }
 }
