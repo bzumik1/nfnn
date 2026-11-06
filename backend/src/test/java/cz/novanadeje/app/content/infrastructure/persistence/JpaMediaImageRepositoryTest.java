@@ -24,6 +24,8 @@ import cz.novanadeje.app.content.domain.project.ProjectContent;
 import cz.novanadeje.app.content.domain.project.ProjectId;
 import cz.novanadeje.app.content.domain.project.ProjectRepository;
 import jakarta.persistence.EntityManager;
+import org.hibernate.SessionFactory;
+import org.hibernate.stat.Statistics;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -78,10 +80,53 @@ class JpaMediaImageRepositoryTest {
         assertThat(found.get().width()).isEqualTo(2000);
         assertThat(found.get().variants()).extracting(MediaVariant::width).containsExactly(480, 960, 1440);
         assertThat(found.get().variants().getFirst().webp()).isEqualTo(bytes(480));
-        assertThat(found.get().variantFor(Optional.of(700)).width()).isEqualTo(960);
-        assertThat(found.get().variantFor(Optional.of(5000)).width()).isEqualTo(1440);
-        assertThat(found.get().variantFor(Optional.empty()).width()).isEqualTo(1440);
         assertThat(media.exists(image.id())).isTrue();
+    }
+
+    @Test
+    @DisplayName("Given an image with three variants and an unknown id, when a variant is read for a wanted width or the largest one, then the narrowest at least that wide comes back with its bytes, else the widest, and the unknown id nothing")
+    void should_read_the_chosen_variant_when_asked_given_three_variants() {
+        MediaImage image = image(2000, 1200, 480, 960, 1440);
+        media.save(image);
+        flushAndClear();
+
+        assertThat(media.findVariantAtLeast(image.id(), 1)).hasValueSatisfying(variant -> {
+            assertThat(variant.width()).isEqualTo(480);
+            assertThat(variant.height()).isEqualTo(288);
+            assertThat(variant.webp()).isEqualTo(bytes(480));
+        });
+        assertThat(media.findVariantAtLeast(image.id(), 700)).map(MediaVariant::width).contains(960);
+        assertThat(media.findVariantAtLeast(image.id(), 960)).map(MediaVariant::webp).contains(bytes(960));
+        assertThat(media.findVariantAtLeast(image.id(), 5000)).map(MediaVariant::width).contains(1440);
+        assertThat(media.findLargestVariant(image.id())).hasValueSatisfying(variant -> {
+            assertThat(variant.width()).isEqualTo(1440);
+            assertThat(variant.webp()).isEqualTo(bytes(1440));
+        });
+        assertThat(media.findVariantAtLeast(MediaId.newId(NOW), 480)).isEmpty();
+        assertThat(media.findLargestVariant(MediaId.newId(NOW))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given an image with three variants, when one variant is read, then only that variant's bytes are fetched and neither the image nor a variant is loaded whole")
+    void should_fetch_one_variant_only_when_read_given_three_variants() {
+        MediaImage image = image(2000, 1200, 480, 960, 1440);
+        media.save(image);
+        flushAndClear();
+        Statistics statistics = entityManager.getEntityManagerFactory().unwrap(SessionFactory.class).getStatistics();
+        statistics.clear();
+        statistics.setStatisticsEnabled(true);
+        try {
+            assertThat(media.findVariantAtLeast(image.id(), 700)).map(MediaVariant::width).contains(960);
+
+            assertThat(statistics.getEntityLoadCount()).isZero();
+            assertThat(statistics.getEntityFetchCount()).isZero();
+            assertThat(statistics.getCollectionFetchCount()).isZero();
+            assertThat(statistics.getQueries()).filteredOn(query -> query.contains(".data")).singleElement()
+                    .satisfies(query -> assertThat(statistics.getQueryStatistics(query).getExecutionRowCount()).isEqualTo(1));
+        } finally {
+            statistics.setStatisticsEnabled(false);
+            statistics.clear();
+        }
     }
 
     @Test

@@ -5,12 +5,16 @@ import cz.novanadeje.app.content.domain.media.MediaId;
 import cz.novanadeje.app.content.domain.media.MediaImage;
 import cz.novanadeje.app.content.domain.media.MediaImageRepository;
 import cz.novanadeje.app.content.domain.media.MediaSize;
+import cz.novanadeje.app.content.domain.media.MediaVariant;
+import cz.novanadeje.app.content.domain.media.MediaVariantWidths;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Repository
@@ -30,6 +34,21 @@ class JpaMediaImageRepository implements MediaImageRepository {
     @Override
     public Optional<MediaImage> findById(MediaId id) {
         return jpa.findById(id.value()).map(MediaImageJpaEntity::toDomain);
+    }
+
+    @Override
+    public Optional<MediaVariant> findVariantAtLeast(MediaId id, int wantedWidth) {
+        return variantWidths(id).flatMap(widths -> jpa.findVariant(id.value(), widths.atLeast(wantedWidth)));
+    }
+
+    @Override
+    public Optional<MediaVariant> findLargestVariant(MediaId id) {
+        return variantWidths(id).flatMap(widths -> jpa.findVariant(id.value(), widths.largest()));
+    }
+
+    private Optional<MediaVariantWidths> variantWidths(MediaId id) {
+        List<Integer> widths = jpa.findVariantWidths(id.value());
+        return widths.isEmpty() ? Optional.empty() : Optional.of(new MediaVariantWidths(widths));
     }
 
     @Override
@@ -65,11 +84,17 @@ class JpaMediaImageRepository implements MediaImageRepository {
 
     @Override
     public boolean deleteIfUnused(MediaId id) {
-        return jpa.deleteIfUnused(id.value()) > 0;
+        jpa.flush();
+        return deleteUnusedAmong(jpa.lockIfUnused(id.value())) > 0;
     }
 
     @Override
     public int deleteUnusedUploadedBefore(Instant moment) {
-        return jpa.deleteUnusedUploadedBefore(moment);
+        jpa.flush();
+        return deleteUnusedAmong(jpa.lockUnusedUploadedBefore(moment));
+    }
+
+    private int deleteUnusedAmong(List<UUID> locked) {
+        return locked.isEmpty() ? 0 : jpa.deleteUnusedAmong(locked);
     }
 }

@@ -11,6 +11,10 @@ public interface MediaImageRepository {
 
     Optional<MediaImage> findById(MediaId id);
 
+    Optional<MediaVariant> findVariantAtLeast(MediaId id, int wantedWidth);
+
+    Optional<MediaVariant> findLargestVariant(MediaId id);
+
     Optional<MediaSize> findSize(MediaId id);
 
     boolean exists(MediaId id);
