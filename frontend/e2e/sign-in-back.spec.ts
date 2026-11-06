@@ -9,10 +9,10 @@ test.describe('Given a visitor on a phone with the sign-in dialog open', () => {
     await mockDonorApi(page);
     await page.goto('/zasady-ochrany-osobnich-udaju');
     await page
-      .getByRole('banner')
-      .getByRole('link', { name: 'Nová naděje – nadační fond' })
+      .getByRole('navigation', { name: 'Hlavní sekce' })
+      .getByRole('link', { name: 'Aktuality' })
       .click();
-    await expect(page).toHaveURL(/\/$/);
+    await expect(page).toHaveURL(/\/aktuality$/);
     await page.getByRole('banner').getByRole('button', { name: 'Přihlásit se' }).click();
     await expect(page.getByRole('dialog')).toBeVisible();
   });

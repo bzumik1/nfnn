@@ -37,11 +37,12 @@ describe('Given the header of the app', () => {
         provideRouter([
           { path: '', pathMatch: 'full', component: Blank, data: { head: 'photo', landing: true } },
           { path: 'o-nas', component: Blank, data: { head: 'light' } },
+          { path: 'aktuality', component: Blank },
           { path: 'aktuality/:slug', component: Blank, data: { parent: '/aktuality' } },
           {
             path: 'darce/prehled',
             component: Blank,
-            data: { head: 'light', parent: '/', backOnWide: false, logoBesideBack: false },
+            data: { head: 'light', parent: '/', backOnWide: false },
           },
           { path: 'darce/ucty', component: Blank, data: { head: 'light', parent: '/' } },
         ]),
@@ -143,7 +144,7 @@ describe('Given the header of the app', () => {
     fixture.destroy();
     expect(logo(await openAt('/'))).toBe('/images/logo-on-dark.svg');
     fixture.destroy();
-    expect(logo(await openAt('/aktuality/clanek'))).toBe('/images/logo-on-dark.svg');
+    expect(logo(await openAt('/aktuality'))).toBe('/images/logo-on-dark.svg');
   });
 
   it('when a donor is signed in, then the initials of their name stand for a button named Účet that opens their account sheet', async () => {
@@ -221,11 +222,20 @@ describe('Given the header of the app', () => {
     expect(header.querySelector('a.brand')?.getAttribute('href')).toBe('/');
   });
 
-  it('when an article is open, then the logo stays beside the back button', async () => {
+  it('when an article is open, then the back button stands alone without the logo, so the two never clash', async () => {
     const header = await openAt('/aktuality/clanek');
 
     expect(header.querySelector('button.back-button')).not.toBeNull();
-    expect(header.querySelector('a.brand')?.getAttribute('href')).toBe('/');
+    expect(header.querySelector('a.brand')).toBeNull();
+  });
+
+  it('when an article is open on a computer, then the back button stands alone there too', async () => {
+    compact.set(false);
+
+    const header = await openAt('/aktuality/clanek');
+
+    expect(header.querySelector('button.back-button')).not.toBeNull();
+    expect(header.querySelector('a.brand')).toBeNull();
   });
 
   it('when an administrator linked to a person of the foundation with a portrait is signed in, then the account button shows that portrait', async () => {

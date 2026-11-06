@@ -35,7 +35,6 @@ function chromeWith(parent: string | null): Chrome {
     landing: false,
     phoneFooter: false,
     backOnWide: true,
-    logoBesideBack: true,
   };
 }
 
