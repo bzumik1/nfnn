@@ -47,6 +47,7 @@ import {
   DownloadedFile,
 } from '../../donations/donations-api';
 import { ReceiptSubject } from '../../donations/receipt-pdf/frozen-receipt';
+import { giftsOnActiveYearlyReceipts } from './yearly-receipt';
 import { PdfDelivery } from '../../donations/receipt-pdf/pdf-delivery';
 import {
   ReceiptPdf,
@@ -95,6 +96,7 @@ const RECEIPT_TOOLS_STILL_MISSING = $localize`:@@donor.dashboard.receipt.toolsSt
 const RECEIPT_UNPRINTABLE = $localize`:@@donor.dashboard.receipt.unprintable:Údaje potvrzení obsahují znak, který v PDF neumíme vytisknout, a tak jsme PDF nevytvořili. Napište nám prosím na info@nfnn.cz.`;
 const RECEIPT_STYLE_FAILED = $localize`:@@donor.dashboard.receipt.styleFailed:PDF teď kvůli chybě na webu nejde vytvořit. Napište nám prosím na info@nfnn.cz, opravíme ji.`;
 const RECEIPT_CANCELLED = $localize`:@@donor.dashboard.receipt.cancelled:Přípravu potvrzení jste zrušili.`;
+const RECEIPT_ON_YEARLY = $localize`:@@donor.dashboard.receipt.onYearly:Tento dar uvádí roční potvrzení za jeho rok, a tak k němu samostatné potvrzení nevystavujeme. Stáhněte si roční potvrzení.`;
 const DRAWING_FAILURE_TEXTS: Readonly<Record<ReceiptPdfFailureReason, string>> = {
   'tools-missing': RECEIPT_TOOLS_MISSING,
   fonts: RECEIPT_DRAWING_FAILED,
@@ -111,6 +113,7 @@ const RECEIPT_BEFORE_FIRST_YEAR = 'donations/receipt-before-first-year';
 const RECEIPT_UNPRINTABLE_PROBLEM = 'donations/receipt-unprintable';
 const RECEIPT_SIGNING_PAUSED_PROBLEM = 'donations/receipt-signing-paused';
 const RECEIPT_SIGNING_KEY_UNPUBLISHED_PROBLEM = 'donations/receipt-signing-key-unpublished';
+const DONATION_ON_YEARLY_RECEIPT = 'donations/donation-on-yearly-receipt';
 const PROBLEMS_SHOWN_WITH_DETAIL: Readonly<Record<string, string>> = {
   [RECEIPT_UNPRINTABLE_PROBLEM]: RECEIPT_UNPRINTABLE,
   [RECEIPT_SIGNING_PAUSED_PROBLEM]: RECEIPT_FAILED,
@@ -175,6 +178,16 @@ export class DonorDonations {
   );
 
   readonly receiptError = signal<ReceiptError | null>(null);
+  private readonly refusedAsOnYearlyReceipt = signal<ReadonlySet<string>>(new Set());
+  private readonly onYearlyReceipts = computed(() => {
+    const onReceipt = new Set(
+      giftsOnActiveYearlyReceipts(this.items(), this.repository.view()?.receipts ?? []),
+    );
+    for (const id of this.refusedAsOnYearlyReceipt()) {
+      onReceipt.add(id);
+    }
+    return onReceipt;
+  });
   private readonly downloads = signal<ReadonlySet<string>>(new Set());
   private readonly receiptTasks = signal<ReadonlyMap<string, ReceiptTask>>(new Map());
   private readonly running = new Map<string, Subscription>();
@@ -506,8 +519,12 @@ export class DonorDonations {
     this.download(yearlyKey(year), 'yearly', { year });
   }
 
+  onYearlyReceipt(item: DonationItem): boolean {
+    return item.receiptAvailable && this.onYearlyReceipts().has(item.id);
+  }
+
   downloadSingleReceipt(item: DonationItem): void {
-    if (!item.receiptAvailable) {
+    if (!item.receiptAvailable || this.onYearlyReceipt(item)) {
       return;
     }
     this.download(singleKey(item.id), 'single', { donationId: item.id });
@@ -732,6 +749,16 @@ export class DonorDonations {
       });
       return;
     }
+    if (scope === 'single' && problemTypeEndsWith(failure, DONATION_ON_YEARLY_RECEIPT)) {
+      this.receiptError.set({
+        scope,
+        key,
+        message: describeProblemWithoutFields(failure, RECEIPT_ON_YEARLY),
+      });
+      this.refusedAsOnYearlyReceipt.update((ids) => new Set(ids).add(donationIdOf(key)));
+      this.fetchDonations();
+      return;
+    }
     if (
       scope === 'yearly' &&
       YEARLY_PROBLEMS_SHOWN_AS_TITLE.some((type) => problemTypeEndsWith(failure, type))
@@ -779,4 +806,8 @@ function yearlyKey(year: number): string {
 
 function singleKey(donationId: string): string {
   return `single:${donationId}`;
+}
+
+function donationIdOf(key: string): string {
+  return key.replace(/^single:/, '');
 }

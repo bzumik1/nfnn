@@ -159,36 +159,41 @@ Feature: An administrator or a connected application issues a donor's receipt an
     Then the response status is 409
     And the problem type ends with "donations/receipt-issue-limit"
     And 21 receipts are stored
-    When "Petr" issues in the administration the receipt of the donation of "Jana" received on 2026-10-01
+    Given the bank account has these movements:
+      | id   | date       | amount | account    | bankCode | name          | variableSymbol |
+      | 2003 | 2027-01-10 | 300.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
+    And the hourly import runs
+    When "Petr" issues in the administration the receipt of the donation of "Jana" received on 2027-01-10
     Then the response status is 200
     And the issued receipt has number "2027-000022"
     And 22 receipts are stored
 
-  Scenario: The administration lists the issued receipts newest first, a page at a time, by donor and by the year of issue, and reads one with its image
+  Scenario: The administration lists the issued receipts newest first, replaced ones too, a page at a time, by donor and by the year of issue, and reads one with its image
     Given "Petr" has uploaded a 600 by 200 pixel JPEG scan as the receipt signature of the person who signs the receipts
     And "Jana" issues the receipt of her donation received on 2026-10-01
     And "Jana" issues her yearly receipt for 2026
     And today is 2028-01-10
-    And "Jana" issues the receipt of her donation received on 2026-11-15
+    And "Jana" changes her address to street "Nová 7", postal code "405 02" and city "Děčín"
+    And "Jana" issues her yearly receipt for 2026
     When "Petr" lists the issued receipts in the administration
     Then the response status is 200
     And the answer is JSON that must not be cached
     And the administration's receipt list counts 3 of 3 receipts:
-      | number      | status | kind   | donor |
-      | 2028-000003 | ACTIVE | SINGLE | Jana  |
-      | 2027-000002 | ACTIVE | YEARLY | Jana  |
-      | 2027-000001 | ACTIVE | SINGLE | Jana  |
+      | number      | status   | kind   | donor |
+      | 2028-000003 | ACTIVE   | YEARLY | Jana  |
+      | 2027-000002 | REPLACED | YEARLY | Jana  |
+      | 2027-000001 | REPLACED | SINGLE | Jana  |
     When "Petr" lists the issued receipts of "Petr" in the administration
     Then the administration's receipt list counts 0 of 0 receipts:
       | number | status | kind | donor |
     When "Petr" lists the issued receipts of "Jana" in the administration issued in 2027, 1 on page 1
     Then the administration's receipt list counts 1 of 2 receipts:
-      | number      | status | kind   | donor |
-      | 2027-000001 | ACTIVE | SINGLE | Jana  |
+      | number      | status   | kind   | donor |
+      | 2027-000001 | REPLACED | SINGLE | Jana  |
     When "Petr" lists the issued receipts in the administration issued in 2028
     Then the administration's receipt list counts 1 of 1 receipts:
       | number      | status | kind   | donor |
-      | 2028-000003 | ACTIVE | SINGLE | Jana  |
+      | 2028-000003 | ACTIVE | YEARLY | Jana  |
     When "Petr" lists the issued receipts in the administration issued in 2029
     Then the administration's receipt list counts 0 of 0 receipts:
       | number | status | kind | donor |
@@ -224,7 +229,7 @@ Feature: An administrator or a connected application issues a donor's receipt an
     Then the response status is 200
     And the image is a 600 pixel square JPEG portrait, stored by no cache and never sniffed as another type
 
-  Scenario: A connected application with the writing permission issues a receipt, which the audit trail names it for
+  Scenario: A connected application with the writing permission issues a yearly receipt, which the audit trail names it for beside the replacement a browser issued
     Given "Petr" connected the application "https://claude.ai/.well-known/oauth-client" with scope "admin:read admin:write"
     When the connector exchanges the connector token for an API token
     And the exchanged API token issues the yearly receipt of "Jana" for 2026
@@ -233,7 +238,8 @@ Feature: An administrator or a connected application issues a donor's receipt an
     When the exchanged API token issues the yearly receipt of "Jana" for 2026
     Then the response status is 200
     And the issued receipt has number "2027-000001"
-    When "Petr" issues in the administration the receipt of the donation of "Jana" received on 2026-10-01
+    When "Jana" changes her address to street "Nová 7", postal code "405 02" and city "Děčín"
+    And "Petr" issues in the administration the yearly receipt of "Jana" for 2026
     Then the response status is 200
     When "Petr" asks for the admin actions
     Then the admin actions came through these applications:

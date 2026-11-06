@@ -50,7 +50,10 @@ export class DonationsTable {
 
   protected missingReceipt(
     item: DonationItem,
-  ): 'refunded' | 'verification' | 'before-first-year' | null {
+  ): 'on-yearly-receipt' | 'refunded' | 'verification' | 'before-first-year' | null {
+    if (this.donations.onYearlyReceipt(item)) {
+      return 'on-yearly-receipt';
+    }
     if (item.receiptAvailable) {
       return null;
     }
@@ -64,6 +67,10 @@ export class DonationsTable {
     return firstYear !== null && Number(item.receivedAt.slice(0, 4)) < firstYear
       ? 'before-first-year'
       : null;
+  }
+
+  protected yearOf(item: DonationItem): string {
+    return item.receivedAt.slice(0, 4);
   }
 
   protected statusLabel(status: DonationStatus): string {

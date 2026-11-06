@@ -256,7 +256,7 @@ Feature: A donor issues receipts of their donations as frozen, signed data
       | field    | value |
       | replaces | null  |
 
-  Scenario: A changed address brings replacements of the yearly and the single receipt
+  Scenario: A changed address brings a replacement of the single receipt, and later of the yearly receipt that replaced it
     Given today is 2026-12-20
     And a person "Jana" is registered
     And the bank account has these movements:
@@ -264,30 +264,109 @@ Feature: A donor issues receipts of their donations as frozen, signed data
       | 2001 | 2026-10-01 | 1000.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
       | 2002 | 2026-11-15 | 2500.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
     And the application starts the import
-    And today is 2027-01-15
-    And "Jana" issues her yearly receipt for 2026
     And "Jana" issues the receipt of her donation received on 2026-10-01
     When "Jana" changes her address to street "Nová 7", postal code "405 02" and city "Děčín"
-    And "Jana" issues her yearly receipt for 2026
+    And "Jana" issues the receipt of her donation received on 2026-10-01
     Then the response status is 200
-    And the issued receipt has number "2027-000003"
+    And the issued receipt has number "2026-000002"
     And the frozen receipt holds:
-      | field                    | value       |
-      | replaces.number          | 2027-000001 |
-      | donor.address.street     | Nová 7      |
-      | donor.address.postalCode | 405 02      |
-      | donor.address.city       | Děčín       |
-    When "Jana" issues the receipt of her donation received on 2026-10-01
+      | field                | value       |
+      | replaces.number      | 2026-000001 |
+      | donor.address.street | Nová 7      |
+    Given today is 2027-01-15
+    And "Jana" issues her yearly receipt for 2026
+    When "Jana" changes her address to street "Krátká 3", postal code "405 01" and city "Děčín"
+    And "Jana" issues her yearly receipt for 2026
     Then the response status is 200
     And the issued receipt has number "2027-000004"
     And the frozen receipt holds:
-      | field                | value       |
-      | replaces.number      | 2027-000002 |
-      | donor.address.street | Nová 7      |
+      | field                    | value       |
+      | replaces.number          | 2027-000003 |
+      | donor.address.street     | Krátká 3    |
+      | donor.address.postalCode | 405 01      |
+      | donor.address.city       | Děčín       |
     And 4 receipts are stored
-    And 2 receipts are active
+    And 1 receipt is active
+    And receipt "2026-000001" is superseded
+    And receipt "2026-000002" is superseded
+    And receipt "2027-000003" is superseded
+
+  Scenario: A yearly receipt lists every gift of the year and replaces the single receipts of its gifts, naming none of them
+    Given today is 2026-12-20
+    And a person "Jana" is registered
+    And the bank account has these movements:
+      | id   | date       | amount  | account    | bankCode | name          | variableSymbol |
+      | 2001 | 2026-10-01 | 1000.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
+      | 2002 | 2026-11-15 | 2500.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
+    And the application starts the import
+    And "Jana" issues the receipt of her donation received on 2026-10-01
+    And today is 2027-01-15
+    When "Jana" issues her yearly receipt for 2026
+    Then the response status is 200
+    And the issued receipt has number "2027-000002"
+    And the issued receipt is active
+    And the frozen receipt holds:
+      | field    | value |
+      | replaces | null  |
+    And the frozen receipt lists the gifts:
+      | receivedOn | amountMinor |
+      | 2026-10-01 | 100000      |
+      | 2026-11-15 | 250000      |
+    And 2 receipts are stored
+    And 1 receipt is active
+    And receipt "2026-000001" is superseded
+    When "Jana" asks for her donations
+    Then the response status is 200
+    And the donation received on 2026-10-01 is listed without a receipt number and with status "RECEIVED"
+    When "Jana" lists her receipts
+    Then the response status is 200
+    And the receipt list shows:
+      | number      | status   | kind   |
+      | 2027-000002 | ACTIVE   | YEARLY |
+      | 2026-000001 | REPLACED | SINGLE |
+    When "Jana" issues her yearly receipt for 2026
+    Then the response status is 200
+    And the issued receipt is the one issued before
+    And 2 receipts are stored
+
+  Scenario: A gift an active yearly receipt lists gets no single receipt, and a gift of the year that came after it does until the next yearly receipt
+    Given today is 2026-12-20
+    And a person "Jana" is registered
+    And the bank account has these movements:
+      | id   | date       | amount  | account    | bankCode | name          | variableSymbol |
+      | 2001 | 2026-10-01 | 1000.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
+    And the application starts the import
+    And today is 2027-01-15
+    And "Jana" issues her yearly receipt for 2026
+    When "Jana" issues the receipt of her donation received on 2026-10-01
+    Then the response status is 409
+    And the problem type ends with "donations/donation-on-yearly-receipt"
+    And the problem has the title "Dar je na ročním potvrzení"
+    And 1 receipt is stored
+    Given the bank account has these movements:
+      | id   | date       | amount | account    | bankCode | name          | variableSymbol |
+      | 2004 | 2026-12-30 | 300.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
+    And the hourly import runs
+    When "Jana" issues the receipt of her donation received on 2026-12-30
+    Then the response status is 200
+    And the issued receipt has number "2027-000002"
+    When "Jana" issues her yearly receipt for 2026
+    Then the response status is 200
+    And the issued receipt has number "2027-000003"
+    And the frozen receipt holds:
+      | field           | value       |
+      | replaces.number | 2027-000001 |
+    And the frozen receipt lists the gifts:
+      | receivedOn | amountMinor |
+      | 2026-10-01 | 100000      |
+      | 2026-12-30 | 30000       |
+    And 3 receipts are stored
+    And 1 receipt is active
     And receipt "2027-000001" is superseded
     And receipt "2027-000002" is superseded
+    When "Jana" issues the receipt of her donation received on 2026-12-30
+    Then the response status is 409
+    And the problem type ends with "donations/donation-on-yearly-receipt"
 
   Scenario: The receipt of one donation carries its own number, which the donation list then shows
     Given today is 2026-12-20
@@ -568,7 +647,11 @@ Feature: A donor issues receipts of their donations as frozen, signed data
       | field  | value |
       | locale | en    |
     And the frozen receipt carries the Czech and the English texts
-    When "Jana" issues the receipt of her donation received on 2026-10-01
+    Given the bank account has these movements:
+      | id   | date       | amount | account    | bankCode | name          | variableSymbol |
+      | 2002 | 2027-01-10 | 300.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
+    And the hourly import runs
+    When "Jana" issues the receipt of her donation received on 2027-01-10
     Then the response status is 200
     And the issued receipt has number "2027-000002"
     And the frozen receipt carries the Czech and the English texts
