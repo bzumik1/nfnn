@@ -331,7 +331,7 @@ function plainQuery(text: string | undefined): string | null {
   return plain(javaTrim(text));
 }
 
-function javaBlank(text: string): boolean {
+export function javaBlank(text: string): boolean {
   return [...text].every((letter) => JAVA_WHITESPACE.has(letter.codePointAt(0) ?? 0));
 }
 

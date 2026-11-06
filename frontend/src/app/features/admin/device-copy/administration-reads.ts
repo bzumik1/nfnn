@@ -28,6 +28,7 @@ import {
   type CopySymbolClaimRow,
   donorCard,
   donorRecordSearch,
+  javaBlank,
   type DonationsCopyRows,
   paymentList,
 } from './administration-views';
@@ -243,7 +244,7 @@ export class AdministrationReads {
       return false;
     }
     const searched =
-      query.text === undefined || query.text.trim() === ''
+      query.text === undefined || javaBlank(query.text)
         ? answer.items
         : paymentList(rows, 'paired', {
             ...query,

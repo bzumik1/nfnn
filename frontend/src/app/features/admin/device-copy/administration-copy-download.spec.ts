@@ -385,6 +385,63 @@ describe('Given the download of the administration into its copy on this device'
     });
   });
 
+  describe('when a refresh asked after a change still waits and another copy opens before it starts', () => {
+    it('then a refresh asked after a change in the new copy waits for that copy, and reads the manifests once more after its download', async () => {
+      const held: CopyContents = {
+        chunks: [
+          {
+            id: 'donations/payments:2026-11',
+            rowsSha256: await rowsSha256(PAYMENTS),
+            rows: PAYMENTS,
+          },
+          { id: 'donors/accounts:2026-11', rowsSha256: await rowsSha256(ACCOUNTS), rows: ACCOUNTS },
+        ],
+        summary: { donations: SUMMARY },
+        storedAt: '2026-11-05T08:00:00.000Z',
+      };
+      vault.open('unlocked', held);
+      await flush();
+      const forFirst = download.refresh(true);
+      vault.open('unlocked', held);
+      await flush();
+      const forSecond = download.refresh(true);
+
+      let manifestReads = 0;
+      for (let round = 0; round < 10; round++) {
+        const asked = http.match((request) => request.url.endsWith('/sync'));
+        if (asked.length === 0) {
+          break;
+        }
+        for (const request of asked) {
+          if (request.request.url === '/api/admin/donations/sync') {
+            manifestReads += 1;
+            request.flush({
+              subject: ADMIN_ID,
+              administrator: true,
+              summary: SUMMARY,
+              chunks: [
+                { id: 'payments:2026-11', rowsSha256: await rowsSha256(PAYMENTS), count: 1 },
+              ],
+            });
+          } else {
+            request.flush({
+              subject: ADMIN_ID,
+              administrator: true,
+              chunks: [
+                { id: 'accounts:2026-11', rowsSha256: await rowsSha256(ACCOUNTS), count: 1 },
+              ],
+            });
+          }
+        }
+        await flush();
+      }
+
+      expect(await forFirst).toBe('unchanged');
+      expect(await forSecond).toBe('unchanged');
+      expect(manifestReads).toBe(3);
+    });
+  });
+
   describe('when no copy is open and a refresh is asked for', () => {
     it('then nothing is asked of the server', async () => {
       expect(await download.refresh()).toBe('no-copy');

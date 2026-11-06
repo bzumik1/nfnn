@@ -437,6 +437,17 @@ describe('Given the administration pages reading through the copy on this device
       expect(await searchedEverywhere).toEqual(SERVER_LIST);
     });
 
+    it('then online a text the server does not count as blank, such as a no-break space, asks the server, as it searches every payment the other filters keep', async () => {
+      const searched = firstValueFrom(reads.paymentList('paired', { text: '\u00a0' }));
+      await vi.waitFor(() =>
+        http
+          .expectOne((request) => request.url === '/api/admin/donations/payments')
+          .flush(SERVER_LIST),
+      );
+
+      expect(await searched).toEqual(SERVER_LIST);
+    });
+
     it('and the device is offline, then the paired payments come from the copy as it holds them, the erased donor gift without its payer and without a receipt', async () => {
       offline.set(true);
 
