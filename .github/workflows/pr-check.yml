@@ -826,10 +826,18 @@ jobs:
             exit 1
           fi
 
-      - name: The database and the backup hand the database to the application role with the same script
+      - name: The backup reaches the site's databases only as the application role, and the superuser's script reads only the catalogue
         run: |
-          if ! cmp deploy/postgres/own-by-app-role.sql deploy/backup/own-by-app-role.sql; then
-            echo "::error::deploy/postgres/own-by-app-role.sql and deploy/backup/own-by-app-role.sql are one script copied into two build contexts; change both"
+          if grep -nE '\b(psql|pg_restore)\b' deploy/backup/backup.sh | grep -vE '^[0-9]+: *#|as_app (psql|pg_restore)|^[0-9]+:  psql --dbname=postgres |pg_restore --data-only --file=-'; then
+            echo "::error::deploy/backup/backup.sh runs psql or pg_restore against a database of the site as the superuser: a dump, a trigger or a function of the site's data would run with its rights; go through as_app (only server_psql, on the maintenance database postgres, and pg_restore --file=-, which connects nowhere, run otherwise)"
+            exit 1
+          fi
+          if grep -n 'as_app pg_restore' deploy/backup/backup.sh | grep -v -- '--no-owner --no-privileges'; then
+            echo "::error::the application role restores with --no-owner --no-privileges, so it owns what it restores and a dump's ALTER OWNER or GRANT never stops the restore"
+            exit 1
+          fi
+          if [ "$(head -n 1 deploy/postgres/own-by-app-role.sql)" != 'SET search_path = pg_catalog;' ]; then
+            echo "::error::deploy/postgres/own-by-app-role.sql runs as the superuser in the site's database, where the application role can create operators and functions, so it must start with SET search_path = pg_catalog;"
             exit 1
           fi
 
@@ -1287,6 +1295,95 @@ jobs:
           [ "$(sudo sh -c "grep -h -m 1 '^AGE-SECRET-KEY-' '$secrets'/backup-key.replaced-*")" = "$first_key" ] || { echo "::error::the replaced backup key was not kept"; exit 1; }
           [ -z "$(sudo find "$restore" -maxdepth 1 \( -name '*.key' -o -name '*.adopt' -o -name '*.upload' \))" ] || { echo "::error::the restore left the upload or a key in the restore folder"; exit 1; }
           [ -z "$(sudo find "$backups" \( -name '*.dump' -o -name work \))" ] || { echo "::error::a backup, a restore or a test restore left an unencrypted copy in the backups folder"; sudo find "$backups"; exit 1; }
+          curl -fsS --max-time 10 http://localhost:8089/ | grep -q '<app-root'
+
+      - name: A dump or site data that would run a program as the database's superuser runs as the application role instead, so the restore or test restore fails and changes nothing
+        if: matrix.part == 'keys'
+        run: |
+          echo "Whatever a dump or the site's data runs during a restore or a test restore runs as novanadeje_app, which may not run programs on the database server (security audit 2026-11-06)"
+          backups="$RUNNER_TEMP/nfnn/backups"
+          restore="$RUNNER_TEMP/nfnn/restore"
+          secrets="$RUNNER_TEMP/nfnn/secrets"
+          wait_for() {
+            for _ in $(seq "$2"); do
+              if eval "$1"; then return 0; fi
+              sleep 2
+            done
+            echo "::error::$3"
+            return 1
+          }
+          as_app() {
+            docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -v ON_ERROR_STOP=1 -tA "$@"
+          }
+          count_rows() {
+            docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select count(*) from admin_action where $1"
+          }
+          nothing_ran() {
+            if docker exec nfnn-postgres test -e /tmp/nfnn-pwned; then
+              echo "::error::$1 ran a program on the database server with the superuser's rights"
+              exit 1
+            fi
+          }
+          refused_program() {
+            sudo grep -q 'permission denied to COPY to or from an external program' "$backups/status/$1.err" || { echo "::error::$2 did not fail because the application role may not run a program"; sudo cat "$backups/status/$1.err"; exit 1; }
+          }
+          server_key() {
+            sudo grep -m 1 '^AGE-SECRET-KEY-' "$secrets/backup-key"
+          }
+          payload="create function public.ci_trap() returns boolean language plpgsql as \$\$ begin if current_database() like 'nfnn_restore%' then copy (select 1) to program 'touch /tmp/nfnn-pwned'; end if; return true; end \$\$"
+          wait_for "ls $backups/nfnn-*.dump.age > /dev/null 2>&1" 30 "the backup service wrote no encrypted dump"
+          first_key=$(server_key)
+          adopted_record=$(sudo cat "$backups/status/adopted-key" 2> /dev/null || true)
+          docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "insert into admin_action (id, admin_id, action, details, performed_at) values ('019a0000-0000-7000-8000-000000000009', '019a0000-0000-7000-8000-000000000002', 'CI_HOSTILE', 'kept by every hostile restore', now())"
+
+          echo "An upload whose dump checks its rows with a function that runs a program, brought with its own key, is refused and its key is not adopted"
+          docker exec nfnn-postgres createdb -U novanadeje ci_hostile
+          docker exec nfnn-postgres psql -U novanadeje -d ci_hostile -v ON_ERROR_STOP=1 -c "$payload" -c "create table public.ci_rows (id int check (public.ci_trap()))" -c "insert into public.ci_rows values (1)"
+          hostile_key=$(docker exec nfnn-backup age-keygen 2> /dev/null | grep '^AGE-SECRET-KEY-')
+          hostile_recipient=$(printf '%s\n' "$hostile_key" | docker exec -i nfnn-backup age-keygen -y)
+          docker exec nfnn-postgres pg_dump -U novanadeje --format=custom ci_hostile | docker exec -i nfnn-backup age --recipient "$hostile_recipient" | docker exec -i -u app nfnn-backend sh -c 'cat > /restore/ci-hostile.upload'
+          docker exec nfnn-postgres dropdb -U novanadeje ci_hostile
+          printf '%s\n' "$hostile_key" | docker exec -i -u app nfnn-backend sh -c 'cat > /restore/ci-hostile.key'
+          docker exec -u app nfnn-backend sh -c "printf 'source=upload\nfile=ci-hostile.upload\nadmin=\n' > /backups/requests/ci-hostile.restore"
+          wait_for "grep -q '^request=ci-hostile$' $backups/status/restore" 60 "the restore of the hostile upload did not run"
+          grep -q '^outcome=failed$' "$backups/status/restore" || { echo "::error::the hostile upload was restored"; cat "$backups/status/restore"; exit 1; }
+          nothing_ran "the restore of the hostile upload"
+          refused_program restore "the restore of the hostile upload"
+          [ "$(sudo cat "$backups/status/adopted-key" 2> /dev/null || true)" = "$adopted_record" ] && [ ! -e "$restore/backup-key.adopt" ] || { echo "::error::the key brought with the hostile upload was offered for adoption"; exit 1; }
+          [ -z "$(sudo find "$restore" -maxdepth 1 \( -name 'ci-hostile.*' \))" ] || { echo "::error::the hostile upload or its key was left in the restore folder"; exit 1; }
+
+          echo "A check that runs a program, planted in the live data by the application role, makes the test restore of the next backup fail instead of running it"
+          as_app -c "$payload" -c "alter table admin_action add constraint ci_trap check (public.ci_trap())"
+          docker exec nfnn-backend sh -c 'touch /backups/requests/ci-trap-check.backup'
+          wait_for "grep -q '^request=ci-trap-check$' $backups/status/backup" 60 "the backup with the planted check did not run"
+          grep -q '^outcome=ok$' "$backups/status/backup" || { echo "::error::the backup with the planted check failed"; cat "$backups/status/backup"; exit 1; }
+          as_app -c "alter table admin_action drop constraint ci_trap" -c "drop function public.ci_trap()"
+          docker exec nfnn-backend sh -c 'touch /backups/requests/ci-trap-check.test-restore'
+          wait_for "grep -q '^request=ci-trap-check$' $backups/status/test-restore" 60 "the test restore of the backup with the planted check did not run"
+          grep -q '^outcome=failed$' "$backups/status/test-restore" || { echo "::error::the test restore of the backup with the planted check passed"; cat "$backups/status/test-restore"; exit 1; }
+          nothing_ran "the test restore of the backup with the planted check"
+          refused_program test-restore "the test restore of the backup with the planted check"
+
+          echo "A trigger that runs a program, planted in the live data by the application role, makes the restore of a backup that holds it fail when the restore ends the backup's sessions"
+          as_app -c "$payload" -c "create function public.ci_trap_trigger() returns trigger language plpgsql as \$\$ begin perform public.ci_trap(); return null; end \$\$" -c "create trigger ci_trap after update on donor_refresh_token for each statement execute function public.ci_trap_trigger()"
+          docker exec nfnn-backend sh -c 'touch /backups/requests/ci-trap-trigger.backup'
+          wait_for "grep -q '^request=ci-trap-trigger$' $backups/status/backup" 60 "the backup with the planted trigger did not run"
+          trap_dump=$(sed -n 's/^file=//p' "$backups/status/backup")
+          as_app -c "drop trigger ci_trap on donor_refresh_token" -c "drop function public.ci_trap_trigger()" -c "drop function public.ci_trap()"
+          docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "insert into admin_action (id, admin_id, action, details, performed_at) values ('019a0000-0000-7000-8000-00000000000a', '019a0000-0000-7000-8000-000000000002', 'CI_HOSTILE', 'kept by the refused restore', now())"
+          docker exec nfnn-backend sh -c "printf 'source=backup\nfile=%s\nadmin=019a0000-0000-7000-8000-000000000002\n' '$trap_dump' > /backups/requests/ci-trap-trigger.restore"
+          wait_for "grep -q '^request=ci-trap-trigger$' $backups/status/restore" 60 "the restore of the backup with the planted trigger did not run"
+          grep -q '^outcome=failed$' "$backups/status/restore" || { echo "::error::the backup with the planted trigger was restored"; cat "$backups/status/restore"; exit 1; }
+          nothing_ran "the restore of the backup with the planted trigger"
+          refused_program restore "the restore of the backup with the planted trigger"
+
+          [ "$(count_rows "action = 'CI_HOSTILE'")" = 2 ] || { echo "::error::a refused hostile restore changed the live data"; exit 1; }
+          [ "$(server_key)" = "$first_key" ] || { echo "::error::a hostile restore changed the server's backup key"; exit 1; }
+          docker exec nfnn-postgres psql -U novanadeje -d postgres -tA -c "select datname from pg_database" | grep -qE 'nfnn_restore|ci_hostile' && { echo "::error::a staging, test or probe database was left behind"; exit 1; }
+          docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "delete from admin_action where action = 'CI_HOSTILE'"
+          docker exec nfnn-backend sh -c 'touch /backups/requests/ci-clean.backup && touch /backups/requests/ci-clean.test-restore'
+          wait_for "grep -q '^request=ci-clean$' $backups/status/test-restore" 60 "the test restore after the hostile probes did not run"
+          grep -q '^outcome=ok$' "$backups/status/test-restore" || { echo "::error::a backup without the planted objects does not restore in a test database"; cat "$backups/status/test-restore"; exit 1; }
           curl -fsS --max-time 10 http://localhost:8089/ | grep -q '<app-root'
 
       - name: An administrator with the second factor chooses who signs the receipts, with their receipt role, an SVG signature and a portrait, issues a receipt from the donor card, and the donor issues and reads theirs, active and then replaced after moving, while nfnn_status follows the signatory

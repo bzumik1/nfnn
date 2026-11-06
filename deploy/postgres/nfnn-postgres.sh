@@ -7,7 +7,9 @@
 # An existing one (or one with another password, the old db.env) is brought in line before the
 # real server starts, by a private instance listening only on a temporary socket: it sets both
 # passwords to the files', creates the role if missing and hands it the database, its schema and
-# every table, view and sequence (own-by-app-role.sql; the backup does the same after a restore).
+# every table, view and sequence (own-by-app-role.sql, with search_path set to pg_catalog, because it
+# runs as the superuser over a schema the role can fill with operators and functions; a restored
+# database is the role's already, since the backup restores it as that role).
 # $SECRETS_DIR/db-password.ready tells the backend and the backup that the roles accept the
 # passwords; it is removed at every start and written once they hold.
 set -eu
