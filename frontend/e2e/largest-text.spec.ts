@@ -38,6 +38,28 @@ async function headingsOffScreen(page: Page): Promise<string[]> {
   );
 }
 
+async function contentPastTheSides(dialog: Locator): Promise<string[]> {
+  await dialog.evaluate(() => document.fonts.ready);
+  return dialog.evaluate((element) => {
+    const frame = element.getBoundingClientRect();
+    const left = frame.left + element.clientLeft;
+    const right = left + element.clientWidth;
+    return Array.from(element.querySelectorAll<HTMLElement>('*'))
+      .filter((part) => part.getClientRects().length > 0 && !part.closest('.visually-hidden'))
+      .filter((part) => {
+        const box = part.getBoundingClientRect();
+        return box.width > 0 && (box.left < left - 1 || box.right > right + 1);
+      })
+      .map((part) => {
+        const box = part.getBoundingClientRect();
+        const name = (part.getAttribute('aria-label') ?? part.textContent ?? '')
+          .trim()
+          .slice(0, 30);
+        return `${part.tagName.toLowerCase()}.${part.className} "${name}" ${Math.round(box.left)}..${Math.round(box.right)} in ${Math.round(left)}..${Math.round(right)}`;
+      });
+  });
+}
+
 for (const { width, height } of [
   { width: 320, height: 568 },
   { width: 375, height: 667 },
@@ -104,9 +126,7 @@ for (const { width, height } of [
         expect(box.x).toBeGreaterThanOrEqual(0);
         expect(box.x + box.width).toBeLessThanOrEqual(width);
       }
-      expect(
-        await dialog.evaluate((element) => element.scrollWidth - element.clientWidth),
-      ).toBeLessThanOrEqual(0);
+      expect(await contentPastTheSides(dialog)).toEqual([]);
     });
   });
 }
