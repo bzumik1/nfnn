@@ -26,6 +26,7 @@ import { AdminApi, ReceiptSignatureResponse } from '../admin-api';
 import { Notice } from '../../../shared/ui/live-notice/live-notice';
 import { FileButton } from '../../../shared/ui/file-button/file-button';
 import { SignatureArtwork } from './signature-artwork';
+import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -38,7 +39,7 @@ const PIXELS = new Intl.NumberFormat('cs-CZ');
 
 @Component({
   selector: 'app-receipt-signature',
-  imports: [FileButton, SignatureArtwork],
+  imports: [FileButton, SignatureArtwork, NeedsConnection],
   templateUrl: './receipt-signature.html',
   styleUrl: './receipt-signature.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

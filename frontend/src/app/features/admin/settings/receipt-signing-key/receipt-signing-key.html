@@ -24,7 +24,13 @@
       @case ('error') {
         <div class="signing-key-error" role="alert">
           <p i18n="@@admin.signingKey.loadFailed">Klíč se nepodařilo načíst.</p>
-          <button type="button" class="ui-button" (click)="load()" i18n="@@admin.signingKey.retry">
+          <button
+            appNeedsConnection
+            type="button"
+            class="ui-button"
+            (click)="load()"
+            i18n="@@admin.signingKey.retry"
+          >
             Zkusit znovu
           </button>
         </div>
@@ -75,6 +81,7 @@
           <div class="signing-key-actions">
             @for (offer of offers(); track offer.keyId) {
               <button
+                appNeedsConnection
                 type="button"
                 class="ui-button ui-button--danger-outline ui-button--small"
                 [attr.aria-disabled]="opening() ? 'true' : null"
@@ -100,6 +107,7 @@
               </p>
             }
             <button
+              appNeedsConnection
               type="button"
               class="ui-button"
               (click)="watchRestart()"

@@ -45,6 +45,7 @@ export class Dialog implements AfterViewInit, OnDestroy {
   });
 
   private readonly element = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
+  private readonly document = inject(DOCUMENT);
   private readonly panel = viewChild.required<ElementRef<HTMLElement>>('panel');
   private readonly drag = new SheetDrag();
   private readonly dragOffset = signal(0);
@@ -53,7 +54,7 @@ export class Dialog implements AfterViewInit, OnDestroy {
     const offset = this.dragOffset();
     return offset > 0 ? `0 ${offset}px` : null;
   });
-  private readonly opener = inject(DOCUMENT).activeElement;
+  private readonly opener = this.document.activeElement;
   private readonly history = inject(DialogHistory);
   private readonly injector = inject(Injector);
   private readonly historyEntry: DialogHistoryListener = {
@@ -82,6 +83,8 @@ export class Dialog implements AfterViewInit, OnDestroy {
     }
     if (this.opener instanceof HTMLElement && this.opener.isConnected) {
       this.opener.focus();
+    } else {
+      this.document.querySelector<HTMLElement>('main#obsah')?.focus({ preventScroll: true });
     }
   }
 

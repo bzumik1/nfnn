@@ -8,6 +8,7 @@ import { authResponse, problem, sampleDonor } from '../auth/testing/donor-fixtur
 import { APP_REVISION } from '../errors/app-revision';
 import { API_GENERATION } from './api-generation';
 import { ServerVersion } from './server-version';
+import { Connectivity, OFFLINE_AFTER_MS, PROBE_PATH } from '../connectivity/connectivity';
 
 describe("Given the app's HTTP client", () => {
   let client: HttpClient;
@@ -74,5 +75,25 @@ describe("Given the app's HTTP client", () => {
     const news = http.expectOne('/api/content/news?page=0&size=6');
     expect(news.request.headers.has('ngsw-bypass')).toBe(false);
     news.flush({ items: [], page: 0, size: 6, total: 0 });
+  });
+
+  it('when a call reaches nothing, then the app asks the server past the service worker and without the token, and is offline once that fails too', () => {
+    vi.useFakeTimers();
+    try {
+      const connectivity = TestBed.inject(Connectivity);
+      client.get('/api/donors/me').subscribe({ error: () => undefined });
+      http
+        .expectOne('/api/donors/me')
+        .error(new ProgressEvent('error'), { status: 0, statusText: '' });
+      const probe = http.expectOne(PROBE_PATH);
+      expect(probe.request.headers.get('ngsw-bypass')).toBe('true');
+      expect(probe.request.headers.has('Authorization')).toBe(false);
+      probe.error(new ProgressEvent('error'), { status: 0, statusText: '' });
+
+      vi.advanceTimersByTime(OFFLINE_AFTER_MS);
+      expect(connectivity.offline()).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

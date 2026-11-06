@@ -34,6 +34,7 @@ import { FormControlDirective } from '../../../../shared/ui/form-field/form-cont
 import { FormField } from '../../../../shared/ui/form-field/form-field';
 import { AccountUsername } from '../../../../shared/ui/account-username/account-username';
 import { PasswordReveal } from '../../../../shared/ui/password-reveal/password-reveal';
+import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const PASSKEY_NAME_MAX_LENGTH = 64;
@@ -47,6 +48,7 @@ const PASSKEY_NAME_MAX_LENGTH = 64;
     FocusFirstInvalid,
     PasswordReveal,
     AccountUsername,
+    NeedsConnection,
   ],
   templateUrl: './passkeys-panel.html',
   styleUrl: './passkeys-panel.scss',

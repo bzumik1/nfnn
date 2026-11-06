@@ -40,6 +40,7 @@ import { needsTechnician, technicianMessage } from './backup-message';
 import { CopyButton } from '../../../shared/ui/copy-button/copy-button';
 import { RestoreDialog } from './restore-dialog';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
+import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -79,6 +80,7 @@ function failedAt(at: string): string {
 @Component({
   selector: 'app-admin-backups',
   imports: [
+    NeedsConnection,
     LiveNotice,
     RestoreDialog,
     BackupKeyCard,

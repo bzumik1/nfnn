@@ -22,7 +22,13 @@
     @case ('error') {
       <div class="ui-load-state ui-load-state--error" role="alert">
         <p i18n="@@admin.news.error.text">Aktuality se nepodařilo načíst.</p>
-        <button type="button" class="ui-button" (click)="load()" i18n="@@admin.news.error.retry">
+        <button
+          appNeedsConnection
+          type="button"
+          class="ui-button"
+          (click)="load()"
+          i18n="@@admin.news.error.retry"
+        >
           Zkusit znovu
         </button>
       </div>

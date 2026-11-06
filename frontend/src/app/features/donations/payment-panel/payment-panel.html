@@ -119,6 +119,17 @@
         </span>
       </div>
     </div>
+    @if (detailsAge(); as age) {
+      @if (age.day; as day) {
+        <p class="bank-note" role="note" i18n="@@home.donate.bank.keptNote">
+          Údaje účtu z {{ day }} · nemusí být aktuální
+        </p>
+      } @else {
+        <p class="bank-note" role="note" i18n="@@home.donate.bank.keptNoteUndated">
+          Údaje účtu nemusí být aktuální
+        </p>
+      }
+    }
   </div>
 }
 

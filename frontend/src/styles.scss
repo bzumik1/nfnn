@@ -45,6 +45,10 @@ html:has(app-tab-bar) {
   outline: none;
 }
 
+img.is-unavailable {
+  opacity: 0;
+}
+
 @media (forced-colors: active) {
   :focus-visible {
     outline-color: Highlight;

@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { NavigationError, provideRouter, Router } from '@angular/router';
 
 import { ErrorReporter } from '../errors/error-reporter';
-import { Connectivity } from '../navigation/connectivity';
+import { Connectivity } from '../connectivity/connectivity';
 import { ExternalNavigation } from '../navigation/external-navigation';
 import { ChunkLoadRecovery, isChunkLoadError } from './chunk-load-recovery';
 import { ChunkProbe } from './chunk-probe';
@@ -51,7 +51,7 @@ describe('Given errors thrown while a page loads', () => {
 describe('Given the chunk-load recovery', () => {
   let claim: ReturnType<typeof vi.fn>;
   let loadFromServer: ReturnType<typeof vi.fn>;
-  let isOffline: ReturnType<typeof vi.fn>;
+  let browserSaysOffline: ReturnType<typeof vi.fn>;
   let reloadWouldLand: ReturnType<typeof vi.fn>;
   let report: ReturnType<typeof vi.fn>;
   let recovery: ChunkLoadRecovery;
@@ -59,7 +59,7 @@ describe('Given the chunk-load recovery', () => {
   beforeEach(() => {
     claim = vi.fn(() => true);
     loadFromServer = vi.fn();
-    isOffline = vi.fn(() => false);
+    browserSaysOffline = vi.fn(() => false);
     reloadWouldLand = vi.fn(() => Promise.resolve(true));
     report = vi.fn();
     TestBed.configureTestingModule({
@@ -70,7 +70,7 @@ describe('Given the chunk-load recovery', () => {
         ]),
         { provide: ReloadGuard, useValue: { claim } },
         { provide: ExternalNavigation, useValue: { loadFromServer } },
-        { provide: Connectivity, useValue: { isOffline } },
+        { provide: Connectivity, useValue: { browserSaysOffline } },
         { provide: ChunkProbe, useValue: { reloadWouldLand } },
         { provide: ErrorReporter, useValue: { report } },
       ],
@@ -193,7 +193,7 @@ describe('Given the chunk-load recovery', () => {
   describe('when a lazy page fails to load while the browser is offline', () => {
     beforeEach(async () => {
       await showPage();
-      isOffline.mockReturnValue(true);
+      browserSaysOffline.mockReturnValue(true);
       await recovery.handleNavigationError(failure(CHROME));
     });
 

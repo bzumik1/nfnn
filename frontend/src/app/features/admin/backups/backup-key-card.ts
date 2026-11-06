@@ -38,6 +38,7 @@ import {
   backupKeyWordLabel,
 } from '../../operations/backup-key/backup-key-word-check';
 import { AdminApi, BackupKeyRevealRequest, BackupKeyStatus } from '../admin-api';
+import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 
 const CODE_MESSAGES: FieldMessages = {
   required: $localize`:@@donor.form.code.required:Opište prosím kód z aplikace.`,
@@ -58,6 +59,7 @@ const REVEAL_FAILED = $localize`:@@admin.backups.key.reveal.failed:Klíč se nep
     LiveNotice,
     BackupKeyPanel,
     BackupKeyWordValidator,
+    NeedsConnection,
   ],
   templateUrl: './backup-key-card.html',
   styleUrl: './backup-key-card.scss',
