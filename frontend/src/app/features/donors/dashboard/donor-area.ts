@@ -22,10 +22,11 @@ import {
 } from './donor-sections';
 import { DonorSignOut } from './sign-out/donor-sign-out';
 import { InstallRow } from './install-row/install-row';
+import { FirstSyncNotice } from './first-sync-notice/first-sync-notice';
 
 @Component({
   selector: 'app-donor-area',
-  imports: [RouterOutlet, AppHeader, SideNav, TabBar, DonorSignOut, InstallRow],
+  imports: [RouterOutlet, AppHeader, SideNav, TabBar, DonorSignOut, InstallRow, FirstSyncNotice],
   providers: [DonorDonations],
   templateUrl: './donor-area.html',
   styleUrl: './donor-area.scss',

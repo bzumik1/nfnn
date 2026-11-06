@@ -286,6 +286,10 @@ export type CanonicalRowsExpected =
 
 export interface SharedCaseTopics {
   readonly 'admin-overview/year-overview.json': SharedCase<RowsInput, Answer>;
+  readonly 'donor-donations/list.json': SharedCase<
+    RowsInput,
+    { readonly items: readonly Answer[] }
+  >;
   readonly 'donor-summary/summary.json': SharedCase<RowsInput, Answer>;
   readonly 'monthly-report/formatting.json': SharedCase<Answer, { readonly text: string }>;
   readonly 'monthly-report/report.json': SharedCase<RowsInput, Answer>;
@@ -318,6 +322,7 @@ export type SharedCaseTopic = keyof SharedCaseTopics;
 
 const REGISTERED_TOPICS: Readonly<Record<SharedCaseTopic, true>> = {
   'admin-overview/year-overview.json': true,
+  'donor-donations/list.json': true,
   'donor-summary/summary.json': true,
   'monthly-report/formatting.json': true,
   'monthly-report/report.json': true,

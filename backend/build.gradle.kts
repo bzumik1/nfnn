@@ -18,7 +18,7 @@ repositories {
 	mavenCentral()
 }
 
-extra["cucumberVersion"] = "7.34.9"
+extra["cucumberVersion"] = "8.0.4"
 extra["archunitVersion"] = "1.5.1"
 extra["fioApiVersion"] = "1.0.0"
 extra["webpImageioVersion"] = "0.3.3"

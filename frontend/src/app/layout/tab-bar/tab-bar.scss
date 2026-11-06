@@ -20,6 +20,10 @@
   box-shadow: var(--shadow-tab-bar);
 }
 
+.tab-bar--under-keyboard {
+  visibility: hidden;
+}
+
 @media (display-mode: standalone) {
   .tab-bar {
     bottom: max(

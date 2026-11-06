@@ -36,7 +36,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.UUID;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -64,6 +66,9 @@ class DonorDeviceSyncTest {
     private static final List<List<String>> ACCOUNTS = List.of(List.of("2900233333", "2010"), List.of("2900244444", "0800"),
             List.of("1234567", "0800"), List.of("7654321", "0800"));
     private static final List<String> SYMBOLS = List.of("6123456789", "7012345678", "8123456780");
+    private static final List<String> EXERCISED = List.of("a bank gift", "a gift recorded by hand", "a bank import", "time passing", "a linked account",
+            "a symbol answer", "an unpairing", "a refund", "a corrected amount", "a gift from a linked account", "a disconnected account",
+            "a reset symbol answer", "a reversed symbol answer", "meanwhile", "chunk donations", "chunk bank-accounts", "chunk symbol-claims");
     private static final Runnable NOTHING_MEANWHILE = () -> {
     };
 
@@ -89,8 +94,12 @@ class DonorDeviceSyncTest {
     @DisplayName("Given seeded random changes to the gifts, bank accounts and symbol answers of two donors, when three devices of one donor sync at random moments, some while a change lands between the manifest and the chunks, then each device ends with what a fresh download gives")
     Stream<DynamicTest> should_hold_what_a_fresh_download_gives_when_three_devices_sync_at_random_moments_given_seeded_random_changes() {
         int seeds = Optional.ofNullable(System.getenv(SEEDS_VARIABLE)).map(Integer::parseInt).orElse(DEFAULT_SEEDS);
-        return IntStream.rangeClosed(1, seeds).mapToObj(seed -> DynamicTest.dynamicTest(
-                "Given seed " + seed + ", when three devices sync between random changes, then each device ends with a fresh download", () -> converge(seed)));
+        Set<String> exercised = new TreeSet<>();
+        Stream<DynamicTest> runs = IntStream.rangeClosed(1, seeds).mapToObj(seed -> DynamicTest.dynamicTest(
+                "Given seed " + seed + ", when three devices sync between random changes, then each device ends with a fresh download", () -> converge(seed, exercised)));
+        return Stream.concat(runs, Stream.of(DynamicTest.dynamicTest(
+                "Given every seed run, when their changes and chunks are counted, then every kind of change and of chunk was exercised, also between the manifest and the chunks",
+                () -> assertThat(exercised).containsAll(EXERCISED))));
     }
 
     @Test
@@ -193,7 +202,7 @@ class DonorDeviceSyncTest {
                 .isLessThan(MANIFEST_BUDGET_MILLIS);
     }
 
-    private void converge(int seed) throws Exception {
+    private void converge(int seed, Set<String> exercised) throws Exception {
         new DatabaseCleaner(jdbc).emptyAllTables();
         CaseRows rows = CaseRows.fromJson(json.readTree(TWO_DONORS));
         rows.write(jdbc, clock);
@@ -220,6 +229,8 @@ class DonorDeviceSyncTest {
             device.sync();
             assertThat(device.copy()).as("a device after seed %d and %s", seed, operations).isEqualTo(fresh.copy());
         }
+        operations.forEach(operation -> exercised.add(operation.startsWith("meanwhile ") ? "meanwhile" : operation));
+        digests(fresh.manifest).keySet().forEach(id -> exercised.add("chunk " + id.split(":")[0]));
     }
 
     private String change(Random random, UUID jana, UUID petr) {

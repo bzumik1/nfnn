@@ -64,7 +64,10 @@ export interface ReceiptIssuing {
   readonly withArt?: boolean;
 }
 
-function issuedReceipt(subject: { year?: number; donationId?: string }, issuing: ReceiptIssuing) {
+export function issuedReceipt(
+  subject: { year?: number; donationId?: string },
+  issuing: ReceiptIssuing,
+) {
   const yearly = subject.year !== undefined;
   const base = frozenCase(yearly ? (issuing.yearlyCase ?? YEARLY_ONE) : SINGLE_PERSON_CS);
   const number = yearly ? `${(subject.year ?? 0) + 1}-000001` : issuing.singleNumber;

@@ -1,8 +1,14 @@
 import type { Page } from '@playwright/test';
 import { rowsSha256 } from '../src/app/features/donations/sync/canonical-rows';
+import { donations as twoGifts, ISSUING } from './receipt-donations';
+import { issuedReceipt } from './receipt-issuing';
 import {
+  donationItem,
   donor,
+  donorSyncOf,
+  type DonorSyncMock,
   mockDonorApi,
+  mockDonorSync,
   noDonations,
   openDonorSection,
   session,
@@ -136,7 +142,7 @@ test.describe('Given a donor who signs in with a password on a device that keeps
     }
   });
 
-  test('when she loads the page again, then the same copy opens with its session key, without her password and without downloading again', async ({
+  test('when she loads the page again, then the same copy opens with its session key, without her password, and only its manifest is asked for to catch it up', async ({
     page,
   }) => {
     await signIn(page);
@@ -155,7 +161,10 @@ test.describe('Given a donor who signs in with a password on a device that keeps
     await expect(page.getByText(/Uloženo v zařízení · aktualizováno /)).toBeVisible();
     expect((await rawDevice(page)).copyIds).toEqual(before.copyIds);
     expect(before.copyIds).toHaveLength(1);
-    expect(syncs).toEqual([]);
+    await expect.poll(() => syncs.length).toBeGreaterThan(0);
+    expect(new Set(syncs.map((url) => new URL(url).pathname))).toEqual(
+      new Set(['/api/donations/me/sync']),
+    );
   });
 
   test('when she asks to load the data again, then a status line says they are loaded', async ({
@@ -208,5 +217,91 @@ test.describe('Given a donor who signs in with a password on a device that keeps
     ).toBeVisible();
     await expect.poll(async () => (await rawDevice(page)).databases).not.toContain(DEVICE_DATABASE);
     expect((await rawDevice(page)).marker).toBeNull();
+  });
+});
+
+test.describe('Given a donor whose copy on this device holds her gifts and her yearly receipt', () => {
+  const yearly = issuedReceipt({ year: 2025 }, { ...ISSUING, withArt: true });
+  const newGift = donationItem({
+    id: '0192f0f1-0000-7000-8000-000000000003',
+    receivedAt: '2026-04-02',
+    amountMinor: 30000,
+  });
+
+  const gifts = (page: Page) =>
+    page.locator('.payments-card tbody tr, .payments-card .donation-rows > li');
+
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page, {
+      ...twoGifts,
+      receipts: { ...ISSUING, withArt: true },
+      sync: await donorSyncOf(twoGifts.summary, {
+        gifts: twoGifts.list.items,
+        receipts: [yearly],
+      }),
+    });
+    await page.route('**/api/donors/auth/refresh', (route) => route.fulfill(session(200)));
+    await signIn(page);
+    await openDeviceData(page);
+    await expect(page.getByText(/Uloženo v zařízení · aktualizováno /)).toBeVisible();
+  });
+
+  test('when she opens Moje dary again while the server answers nothing about her gifts, then they show from the copy, and a new gift comes in when the copy catches up, behind Zobrazit 1 nový dar', async ({
+    page,
+  }) => {
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => (release = resolve));
+    await page.route(
+      (url) => url.pathname === '/api/donations/me' || url.pathname === '/api/donations/me/summary',
+      (route) => route.fulfill({ status: 503, body: '' }),
+    );
+    await mockDonorSync(
+      page,
+      await donorSyncOf(
+        {
+          ...twoGifts.summary,
+          count: 3,
+          totalAmountMinor: 105000,
+          lastReceivedAt: '2026-04-02',
+          byYear: [{ year: 2026, count: 2, totalAmountMinor: 80000 }, twoGifts.summary.byYear[1]],
+        },
+        { gifts: [newGift, ...twoGifts.list.items], receipts: [yearly] },
+      ),
+    );
+    await page.route(
+      (url) => url.pathname === '/api/donations/me/sync',
+      async (route) => {
+        await held;
+        await route.fallback();
+      },
+    );
+
+    await page.goto('/darce/dary');
+
+    await expect(gifts(page)).toHaveCount(2);
+    release();
+    const pill = page.locator('.bank-check-incoming').filter({ hasText: 'Zobrazit 1 nový dar' });
+    await expect(pill).toBeVisible();
+    await expect(gifts(page)).toHaveCount(2);
+    await pill.click();
+    await expect(gifts(page)).toHaveCount(3);
+    await expect(gifts(page).first()).toContainText('300 Kč');
+  });
+
+  test('when the server cannot be reached for her yearly receipt, then it is drawn again from the copy with the signature kept in it', async ({
+    page,
+  }) => {
+    await openDonorSection(page, 'Potvrzení o daru');
+    await page.route(
+      (url) =>
+        url.pathname === '/api/donations/me/receipts' ||
+        url.pathname.startsWith('/api/donations/me/receipt-images/'),
+      (route) => route.abort('internetdisconnected'),
+    );
+
+    const download = page.waitForEvent('download');
+    await page.locator('.yearly-pdf').first().click();
+
+    expect((await download).suggestedFilename()).toBe('potvrzeni-o-darech-2025.pdf');
   });
 });
