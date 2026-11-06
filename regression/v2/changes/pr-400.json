@@ -18,5 +18,285 @@
     "field": "$.items[*].summary",
     "reason": "Jakub 2026-11-06 (#388): the Czech sentence of the audit trail writes a day as d. M. yyyy and a Prague time as d. M. yyyy H:mm (admin.action.format.day and .time), so the payment booked on 2026-12-01 reads 1. 12. 2026",
     "contract": "docs/api-contract.md, Audit trail"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/donation-date.spec.ts > Given a date the donations API sends > when it is formatted, then it reads as day, month and year with leading zeros",
+    "replacement": "src/app/features/donations/donation-date.spec.ts > Given a date the donations API sends > when it is formatted, then it reads as day, month and year without leading zeros",
+    "reason": "Jakub 2026-11-06 (#388) reverts plan v3 D11: Czech dates are written without leading zeros, so the test that named the padded format is renamed to say what it checks now"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/donation-date.spec.ts > Given the time the bank data was last updated > when it is formatted, then it reads as the Prague date and time with leading zeros",
+    "replacement": "src/app/features/donations/donation-date.spec.ts > Given the time the bank data was last updated > when it is formatted, then it reads as the Prague date and time without leading zeros but with two-digit minutes",
+    "reason": "Jakub 2026-11-06 (#388) reverts plan v3 D11: Czech dates are written without leading zeros, so the test that named the padded format is renamed to say what it checks now"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/receipt-format.spec.ts > Given a receipt date > when it is formatted, then it has two-digit day and month as everywhere on the site (plan v3 D11)",
+    "replacement": "src/app/features/donations/receipt-format.spec.ts > Given a receipt date > when it is formatted, then it has day and month without leading zeros as everywhere on the site",
+    "reason": "Jakub 2026-11-06 (#388) reverts plan v3 D11: Czech dates are written without leading zeros, so the test that named the padded format is renamed to say what it checks now"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/receipt-format.spec.ts > Given the shared receipt formatting cases of Czech dates > when 2026-01-01 in Czech is formatted, then it reads with a two-digit day and month as the receipt prints it",
+    "replacement": "src/app/features/donations/receipt-format.spec.ts > Given the shared receipt formatting cases of Czech dates > when 2026-01-01 in Czech is formatted, then it reads without leading zeros in day and month as the receipt prints it",
+    "reason": "Jakub 2026-11-06 (#388) reverts plan v3 D11: Czech dates are written without leading zeros, so the test that named the padded format is renamed to say what it checks now"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/receipt-format.spec.ts > Given the shared receipt formatting cases of Czech dates > when 2026-03-15 in Czech is formatted, then it reads with a two-digit day and month as the receipt prints it",
+    "replacement": "src/app/features/donations/receipt-format.spec.ts > Given the shared receipt formatting cases of Czech dates > when 2026-03-15 in Czech is formatted, then it reads without leading zeros in day and month as the receipt prints it",
+    "reason": "Jakub 2026-11-06 (#388) reverts plan v3 D11: Czech dates are written without leading zeros, so the test that named the padded format is renamed to say what it checks now"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/receipt-format.spec.ts > Given the shared receipt formatting cases of Czech dates > when 2026-10-05 in Czech is formatted, then it reads with a two-digit day and month as the receipt prints it",
+    "replacement": "src/app/features/donations/receipt-format.spec.ts > Given the shared receipt formatting cases of Czech dates > when 2026-10-05 in Czech is formatted, then it reads without leading zeros in day and month as the receipt prints it",
+    "reason": "Jakub 2026-11-06 (#388) reverts plan v3 D11: Czech dates are written without leading zeros, so the test that named the padded format is renamed to say what it checks now"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/receipt-format.spec.ts > Given the shared receipt formatting cases of Czech dates > when 2026-12-31 in Czech is formatted, then it reads with a two-digit day and month as the receipt prints it",
+    "replacement": "src/app/features/donations/receipt-format.spec.ts > Given the shared receipt formatting cases of Czech dates > when 2026-12-31 in Czech is formatted, then it reads without leading zeros in day and month as the receipt prints it",
+    "reason": "Jakub 2026-11-06 (#388) reverts plan v3 D11: Czech dates are written without leading zeros, so the test that named the padded format is renamed to say what it checks now"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/receipt-format.spec.ts > Given the shared receipt formatting cases of Czech dates > when 2027-11-30 in Czech is formatted, then it reads with a two-digit day and month as the receipt prints it",
+    "replacement": "src/app/features/donations/receipt-format.spec.ts > Given the shared receipt formatting cases of Czech dates > when 2027-11-30 in Czech is formatted, then it reads without leading zeros in day and month as the receipt prints it",
+    "reason": "Jakub 2026-11-06 (#388) reverts plan v3 D11: Czech dates are written without leading zeros, so the test that named the padded format is renamed to say what it checks now"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/receipt-format.spec.ts > Given the shared receipt formatting cases of Czech dates > when 2028-02-29 in Czech is formatted, then it reads with a two-digit day and month as the receipt prints it",
+    "replacement": "src/app/features/donations/receipt-format.spec.ts > Given the shared receipt formatting cases of Czech dates > when 2028-02-29 in Czech is formatted, then it reads without leading zeros in day and month as the receipt prints it",
+    "reason": "Jakub 2026-11-06 (#388) reverts plan v3 D11: Czech dates are written without leading zeros, so the test that named the padded format is renamed to say what it checks now"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/receipt-pdf/receipt-document.spec.ts > Given the frozen single receipt of a person in Czech > when it is mapped, then the header names the title, number and issue day with two-digit day and month",
+    "replacement": "src/app/features/donations/receipt-pdf/receipt-document.spec.ts > Given the frozen single receipt of a person in Czech > when it is mapped, then the header names the title, number and issue day without leading zeros in day and month",
+    "reason": "Jakub 2026-11-06 (#388) reverts plan v3 D11: Czech dates are written without leading zeros, so the test that named the padded format is renamed to say what it checks now"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case A company's year with the largest single amount, hellers and a total over a million, Czech, drawn in the control theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, with the D11 dates and only the listed additions",
+    "replacement": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case A company's year with the largest single amount, hellers and a total over a million, Czech, drawn in the control theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, its dates without leading zeros, with only the listed additions",
+    "reason": "Jakub 2026-11-06 (#388) reverts plan v3 D11: Czech dates are written without leading zeros, so the test that named the padded format is renamed to say what it checks now"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case A company's year with the largest single amount, hellers and a total over a million, Czech, drawn in the nova-nadeje theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, with the D11 dates and only the listed additions",
+    "replacement": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case A company's year with the largest single amount, hellers and a total over a million, Czech, drawn in the nova-nadeje theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, its dates without leading zeros, with only the listed additions",
+    "reason": "Jakub 2026-11-06 (#388) reverts plan v3 D11: Czech dates are written without leading zeros, so the test that named the padded format is renamed to say what it checks now"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case A person's leap year 2028 with one gift on each of its 366 days, English, drawn in the control theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, with the D11 dates and only the listed additions",
+    "replacement": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case A person's leap year 2028 with one gift on each of its 366 days, English, drawn in the control theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, its dates without leading zeros, with only the listed additions",
+    "reason": "Jakub 2026-11-06 (#388) reverts plan v3 D11: Czech dates are written without leading zeros, so the test that named the padded format is renamed to say what it checks now"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case A person's leap year 2028 with one gift on each of its 366 days, English, drawn in the nova-nadeje theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, with the D11 dates and only the listed additions",
+    "replacement": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case A person's leap year 2028 with one gift on each of its 366 days, English, drawn in the nova-nadeje theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, its dates without leading zeros, with only the listed additions",
+    "reason": "Jakub 2026-11-06 (#388) reverts plan v3 D11: Czech dates are written without leading zeros, so the test that named the padded format is renamed to say what it checks now"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case A person's leap year with gifts on 1 January, 29 February and 31 December, English, drawn in the control theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, with the D11 dates and only the listed additions",
+    "replacement": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case A person's leap year with gifts on 1 January, 29 February and 31 December, English, drawn in the control theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, its dates without leading zeros, with only the listed additions",
+    "reason": "Jakub 2026-11-06 (#388) reverts plan v3 D11: Czech dates are written without leading zeros, so the test that named the padded format is renamed to say what it checks now"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case A person's leap year with gifts on 1 January, 29 February and 31 December, English, drawn in the nova-nadeje theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, with the D11 dates and only the listed additions",
+    "replacement": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case A person's leap year with gifts on 1 January, 29 February and 31 December, English, drawn in the nova-nadeje theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, its dates without leading zeros, with only the listed additions",
+    "reason": "Jakub 2026-11-06 (#388) reverts plan v3 D11: Czech dates are written without leading zeros, so the test that named the padded format is renamed to say what it checks now"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case A person's year with 40 gifts, Czech. Three are received on 5 May and given in this order: 5,000.00 CZK recorded at 12:00, 100.00 CZK recorded at 8:00 with the higher id and 200.00 CZK recorded at 8:00 with the lower id; v2 lists gifts by the day received, then the time recorded, then the id, drawn in the control theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, with the D11 dates and only the listed additions",
+    "replacement": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case A person's year with 40 gifts, Czech. Three are received on 5 May and given in this order: 5,000.00 CZK recorded at 12:00, 100.00 CZK recorded at 8:00 with the higher id and 200.00 CZK recorded at 8:00 with the lower id; v2 lists gifts by the day received, then the time recorded, then the id, drawn in the control theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, its dates without leading zeros, with only the listed additions",
+    "reason": "Jakub 2026-11-06 (#388) reverts plan v3 D11: Czech dates are written without leading zeros, so the test that named the padded format is renamed to say what it checks now"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case A person's year with 40 gifts, Czech. Three are received on 5 May and given in this order: 5,000.00 CZK recorded at 12:00, 100.00 CZK recorded at 8:00 with the higher id and 200.00 CZK recorded at 8:00 with the lower id; v2 lists gifts by the day received, then the time recorded, then the id, drawn in the nova-nadeje theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, with the D11 dates and only the listed additions",
+    "replacement": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case A person's year with 40 gifts, Czech. Three are received on 5 May and given in this order: 5,000.00 CZK recorded at 12:00, 100.00 CZK recorded at 8:00 with the higher id and 200.00 CZK recorded at 8:00 with the lower id; v2 lists gifts by the day received, then the time recorded, then the id, drawn in the nova-nadeje theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, its dates without leading zeros, with only the listed additions",
+    "reason": "Jakub 2026-11-06 (#388) reverts plan v3 D11: Czech dates are written without leading zeros, so the test that named the padded format is renamed to say what it checks now"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case A person's year with exactly one gift, Czech, drawn in the control theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, with the D11 dates and only the listed additions",
+    "replacement": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case A person's year with exactly one gift, Czech, drawn in the control theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, its dates without leading zeros, with only the listed additions",
+    "reason": "Jakub 2026-11-06 (#388) reverts plan v3 D11: Czech dates are written without leading zeros, so the test that named the padded format is renamed to say what it checks now"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case A person's year with exactly one gift, Czech, drawn in the nova-nadeje theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, with the D11 dates and only the listed additions",
+    "replacement": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case A person's year with exactly one gift, Czech, drawn in the nova-nadeje theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, its dates without leading zeros, with only the listed additions",
+    "reason": "Jakub 2026-11-06 (#388) reverts plan v3 D11: Czech dates are written without leading zeros, so the test that named the padded format is renamed to say what it checks now"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case Every Czech letter with a diacritic, lower and upper case, in a long name and address, drawn in the control theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, with the D11 dates and only the listed additions",
+    "replacement": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case Every Czech letter with a diacritic, lower and upper case, in a long name and address, drawn in the control theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, its dates without leading zeros, with only the listed additions",
+    "reason": "Jakub 2026-11-06 (#388) reverts plan v3 D11: Czech dates are written without leading zeros, so the test that named the padded format is renamed to say what it checks now"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case Every Czech letter with a diacritic, lower and upper case, in a long name and address, drawn in the nova-nadeje theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, with the D11 dates and only the listed additions",
+    "replacement": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case Every Czech letter with a diacritic, lower and upper case, in a long name and address, drawn in the nova-nadeje theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, its dates without leading zeros, with only the listed additions",
+    "reason": "Jakub 2026-11-06 (#388) reverts plan v3 D11: Czech dates are written without leading zeros, so the test that named the padded format is renamed to say what it checks now"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case History sample: a person's year with 120 gifts over several pages, Czech, drawn in the control theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, with the D11 dates and only the listed additions",
+    "replacement": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case History sample: a person's year with 120 gifts over several pages, Czech, drawn in the control theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, its dates without leading zeros, with only the listed additions",
+    "reason": "Jakub 2026-11-06 (#388) reverts plan v3 D11: Czech dates are written without leading zeros, so the test that named the padded format is renamed to say what it checks now"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case History sample: a person's year with 120 gifts over several pages, Czech, drawn in the nova-nadeje theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, with the D11 dates and only the listed additions",
+    "replacement": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case History sample: a person's year with 120 gifts over several pages, Czech, drawn in the nova-nadeje theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, its dates without leading zeros, with only the listed additions",
+    "reason": "Jakub 2026-11-06 (#388) reverts plan v3 D11: Czech dates are written without leading zeros, so the test that named the padded format is renamed to say what it checks now"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case History sample: a person's year with two gifts, English and so bilingual, drawn in the control theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, with the D11 dates and only the listed additions",
+    "replacement": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case History sample: a person's year with two gifts, English and so bilingual, drawn in the control theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, its dates without leading zeros, with only the listed additions",
+    "reason": "Jakub 2026-11-06 (#388) reverts plan v3 D11: Czech dates are written without leading zeros, so the test that named the padded format is renamed to say what it checks now"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case History sample: a person's year with two gifts, English and so bilingual, drawn in the nova-nadeje theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, with the D11 dates and only the listed additions",
+    "replacement": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case History sample: a person's year with two gifts, English and so bilingual, drawn in the nova-nadeje theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, its dates without leading zeros, with only the listed additions",
+    "reason": "Jakub 2026-11-06 (#388) reverts plan v3 D11: Czech dates are written without leading zeros, so the test that named the padded format is renamed to say what it checks now"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case History sample: one gift of a company, replacing an earlier receipt, Czech, drawn in the control theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, with the D11 dates and only the listed additions",
+    "replacement": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case History sample: one gift of a company, replacing an earlier receipt, Czech, drawn in the control theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, its dates without leading zeros, with only the listed additions",
+    "reason": "Jakub 2026-11-06 (#388) reverts plan v3 D11: Czech dates are written without leading zeros, so the test that named the padded format is renamed to say what it checks now"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case History sample: one gift of a company, replacing an earlier receipt, Czech, drawn in the nova-nadeje theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, with the D11 dates and only the listed additions",
+    "replacement": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case History sample: one gift of a company, replacing an earlier receipt, Czech, drawn in the nova-nadeje theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, its dates without leading zeros, with only the listed additions",
+    "reason": "Jakub 2026-11-06 (#388) reverts plan v3 D11: Czech dates are written without leading zeros, so the test that named the padded format is renamed to say what it checks now"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case History sample: one gift of a person, Czech, drawn in the control theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, with the D11 dates and only the listed additions",
+    "replacement": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case History sample: one gift of a person, Czech, drawn in the control theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, its dates without leading zeros, with only the listed additions",
+    "reason": "Jakub 2026-11-06 (#388) reverts plan v3 D11: Czech dates are written without leading zeros, so the test that named the padded format is renamed to say what it checks now"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case History sample: one gift of a person, Czech, drawn in the nova-nadeje theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, with the D11 dates and only the listed additions",
+    "replacement": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case History sample: one gift of a person, Czech, drawn in the nova-nadeje theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, its dates without leading zeros, with only the listed additions",
+    "reason": "Jakub 2026-11-06 (#388) reverts plan v3 D11: Czech dates are written without leading zeros, so the test that named the padded format is renamed to say what it checks now"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case One gift of a company with its identifier, no replacement, Czech, drawn in the control theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, with the D11 dates and only the listed additions",
+    "replacement": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case One gift of a company with its identifier, no replacement, Czech, drawn in the control theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, its dates without leading zeros, with only the listed additions",
+    "reason": "Jakub 2026-11-06 (#388) reverts plan v3 D11: Czech dates are written without leading zeros, so the test that named the padded format is renamed to say what it checks now"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case One gift of a company with its identifier, no replacement, Czech, drawn in the nova-nadeje theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, with the D11 dates and only the listed additions",
+    "replacement": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case One gift of a company with its identifier, no replacement, Czech, drawn in the nova-nadeje theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, its dates without leading zeros, with only the listed additions",
+    "reason": "Jakub 2026-11-06 (#388) reverts plan v3 D11: Czech dates are written without leading zeros, so the test that named the padded format is renamed to say what it checks now"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case One gift of a person living abroad: the country is written into the city, as v2 has no country field, drawn in the control theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, with the D11 dates and only the listed additions",
+    "replacement": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case One gift of a person living abroad: the country is written into the city, as v2 has no country field, drawn in the control theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, its dates without leading zeros, with only the listed additions",
+    "reason": "Jakub 2026-11-06 (#388) reverts plan v3 D11: Czech dates are written without leading zeros, so the test that named the padded format is renamed to say what it checks now"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case One gift of a person living abroad: the country is written into the city, as v2 has no country field, drawn in the nova-nadeje theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, with the D11 dates and only the listed additions",
+    "replacement": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case One gift of a person living abroad: the country is written into the city, as v2 has no country field, drawn in the nova-nadeje theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, its dates without leading zeros, with only the listed additions",
+    "reason": "Jakub 2026-11-06 (#388) reverts plan v3 D11: Czech dates are written without leading zeros, so the test that named the padded format is renamed to say what it checks now"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case One gift of a person on a receipt that carries the signature image, drawn in the control theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, with the D11 dates and only the listed additions",
+    "replacement": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case One gift of a person on a receipt that carries the signature image, drawn in the control theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, its dates without leading zeros, with only the listed additions",
+    "reason": "Jakub 2026-11-06 (#388) reverts plan v3 D11: Czech dates are written without leading zeros, so the test that named the padded format is renamed to say what it checks now"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case One gift of a person on a receipt that carries the signature image, drawn in the nova-nadeje theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, with the D11 dates and only the listed additions",
+    "replacement": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case One gift of a person on a receipt that carries the signature image, drawn in the nova-nadeje theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, its dates without leading zeros, with only the listed additions",
+    "reason": "Jakub 2026-11-06 (#388) reverts plan v3 D11: Czech dates are written without leading zeros, so the test that named the padded format is renamed to say what it checks now"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case One gift of a person who prefers English, so a bilingual single receipt, drawn in the control theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, with the D11 dates and only the listed additions",
+    "replacement": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case One gift of a person who prefers English, so a bilingual single receipt, drawn in the control theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, its dates without leading zeros, with only the listed additions",
+    "reason": "Jakub 2026-11-06 (#388) reverts plan v3 D11: Czech dates are written without leading zeros, so the test that named the padded format is renamed to say what it checks now"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case One gift of a person who prefers English, so a bilingual single receipt, drawn in the nova-nadeje theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, with the D11 dates and only the listed additions",
+    "replacement": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case One gift of a person who prefers English, so a bilingual single receipt, drawn in the nova-nadeje theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, its dates without leading zeros, with only the listed additions",
+    "reason": "Jakub 2026-11-06 (#388) reverts plan v3 D11: Czech dates are written without leading zeros, so the test that named the padded format is renamed to say what it checks now"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case One gift recorded by hand, not by bank transfer, Czech, drawn in the control theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, with the D11 dates and only the listed additions",
+    "replacement": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case One gift recorded by hand, not by bank transfer, Czech, drawn in the control theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, its dates without leading zeros, with only the listed additions",
+    "reason": "Jakub 2026-11-06 (#388) reverts plan v3 D11: Czech dates are written without leading zeros, so the test that named the padded format is renamed to say what it checks now"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case One gift recorded by hand, not by bank transfer, Czech, drawn in the nova-nadeje theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, with the D11 dates and only the listed additions",
+    "replacement": "src/app/features/donations/receipt-pdf/receipt-layout.spec.ts > Given every frozen receipt case and the text v2 printed for it > Given the shared case One gift recorded by hand, not by bank transfer, Czech, drawn in the nova-nadeje theme with the captions the site prints > when it is drawn, then the text outside the page artifacts is v2 text word for word, its dates without leading zeros, with only the listed additions",
+    "reason": "Jakub 2026-11-06 (#388) reverts plan v3 D11: Czech dates are written without leading zeros, so the test that named the padded format is renamed to say what it checks now"
   }
 ]
