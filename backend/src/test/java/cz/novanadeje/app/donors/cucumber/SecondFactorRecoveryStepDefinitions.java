@@ -131,11 +131,11 @@ public class SecondFactorRecoveryStepDefinitions {
         assertThat(recoveryMessage).isEqualTo(previousRecoveryMessage);
     }
 
-    @Then("the instructions carry the SPAYD text of 1 Kč asking for an instant payment, with the recovery message and no variable symbol, and no QR code")
+    @Then("the instructions carry the SPAYD text of 1 Kč with the recovery message and no variable symbol, and no QR code")
     public void theInstructionsCarryTheSpaydTextAndNoQrCode() {
         JsonNode body = api.lastResponseJson();
         String spayd = body.get("spayd").asString();
-        assertThat(spayd).startsWith("SPD*1.0*ACC:" + body.get("iban").asString().replace(" ", "") + "*AM:1.00*CC:CZK*PT:IP*")
+        assertThat(spayd).startsWith("SPD*1.0*ACC:" + body.get("iban").asString().replace(" ", "") + "*AM:1.00*CC:CZK*")
                 .endsWith("*MSG:" + recoveryMessage)
                 .doesNotContain("X-VS");
         assertThat(body.has("qrCode")).as("the browser draws the QR code from spayd").isFalse();

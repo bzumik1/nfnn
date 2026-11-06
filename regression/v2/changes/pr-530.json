@@ -18,19 +18,5 @@
     "field": "$.spayd",
     "reason": "Jakub 2026-11-06 (#530): the recovery payment's SPAYD text asks for an instant payment as every payment QR does, PT:IP right after CC, so the 1 Kč reaches the account within seconds",
     "contract": "docs/api-contract.md, Recovery by payment"
-  },
-  {
-    "kind": "retired",
-    "suite": "backend-junit",
-    "test": "donations.domain.payment.PaymentDetailsTest > Given the payment details, when a SPAYD text without a variable symbol is written, then it carries the IBAN, the amount, CZK, the recipient and the message",
-    "replacement": "donations.domain.payment.PaymentDetailsTest > Given the payment details, when a SPAYD text without a variable symbol is written, then it carries the IBAN, the amount, CZK, the request for an instant payment, the recipient and the message",
-    "reason": "Jakub 2026-11-06 (#530): the SPAYD text asks for an instant payment (PT:IP), so the test is renamed for what it now checks"
-  },
-  {
-    "kind": "retired",
-    "suite": "backend-junit",
-    "test": "donations.application.recovery.SecondFactorRecoveryPaymentsTest > Given a recovery code, when the payment text is asked for, then it is the SPAYD text of 1 Kč to the foundation's account with the recovery message and no variable symbol",
-    "replacement": "donations.application.recovery.SecondFactorRecoveryPaymentsTest > Given a recovery code, when the payment text is asked for, then it is the SPAYD text of 1 Kč to the foundation's account, asking for an instant payment, with the recovery message and no variable symbol",
-    "reason": "Jakub 2026-11-06 (#530): the recovery payment's SPAYD text asks for an instant payment (PT:IP), so the test is renamed for what it now checks"
   }
 ]

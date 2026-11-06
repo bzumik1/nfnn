@@ -96,7 +96,7 @@ class SecondFactorRecoveryPaymentsTest {
     }
 
     @Test
-    @DisplayName("Given a recovery code, when the payment text is asked for, then it is the SPAYD text of 1 Kč to the foundation's account, asking for an instant payment, with the recovery message and no variable symbol")
+    @DisplayName("Given a recovery code, when the payment text is asked for, then it is the SPAYD text of 1 Kč to the foundation's account with the recovery message and no variable symbol")
     void should_give_the_spayd_text_of_the_recovery_payment_when_asked_for_given_a_code() {
         assertThat(recoveries.spaydFor(new SecondFactorRecoveryCode("ABCD2345"))).isEqualTo(
                 "SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*PT:IP*RN:NADACNI FOND NOVA NADEJE*MSG:OBNOVA ABCD2345");

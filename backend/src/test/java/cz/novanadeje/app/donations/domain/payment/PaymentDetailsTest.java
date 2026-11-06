@@ -37,7 +37,7 @@ class PaymentDetailsTest {
     }
 
     @Test
-    @DisplayName("Given the payment details, when a SPAYD text without a variable symbol is written, then it carries the IBAN, the amount, CZK, the request for an instant payment, the recipient and the message")
+    @DisplayName("Given the payment details, when a SPAYD text without a variable symbol is written, then it carries the IBAN, the amount, CZK, the recipient and the message")
     void should_write_the_spayd_text_when_written_without_a_variable_symbol() {
         assertThat(details.spaydWithoutVariableSymbol(Money.czk(100), SpaydText.message("Obnova ABCD2345"))).isEqualTo(
                 "SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*PT:IP*RN:NADACNI FOND NOVA NADEJE*MSG:OBNOVA ABCD2345");
