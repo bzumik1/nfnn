@@ -245,7 +245,7 @@ describe('Given the receipt signing key section of the receipt settings', () => 
     );
 
     expect(text('.signing-key-earlier')).toBe(
-      'Zveřejněné jsou i dřívější klíče: 39f713d0 (zaregistrovaný 01. 11. 2026 08:00).',
+      'Zveřejněné jsou i dřívější klíče: 39f713d0 (zaregistrovaný 1. 11. 2026 8:00).',
     );
   });
 
@@ -282,7 +282,7 @@ describe('Given the receipt signing key section of the receipt settings', () => 
 
     expect(rows()['Stav']).toBe('Zneplatněný');
     expect(text('.signing-key-earlier')).toBe(
-      'Zveřejněné jsou i dřívější klíče: 39f713d0 (zaregistrovaný 01. 11. 2026 08:00, zneplatněný).',
+      'Zveřejněné jsou i dřívější klíče: 39f713d0 (zaregistrovaný 1. 11. 2026 8:00, zneplatněný).',
     );
     expect(buttons()).toEqual([]);
     expect(text('[role="alert"]')).toBe(

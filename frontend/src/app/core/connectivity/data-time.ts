@@ -12,11 +12,11 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 export function formatDataTime(at: number, now: number): string {
   const shown = partsOf(at);
-  const time = `${shown['hour']}:${shown['minute']}`;
+  const time = `${Number(shown['hour'])}:${shown['minute']}`;
   if (dayOf(shown) === dayOf(partsOf(now))) {
     return time;
   }
-  const dayAndMonth = `${shown['day']}. ${shown['month']}.`;
+  const dayAndMonth = `${Number(shown['day'])}. ${Number(shown['month'])}.`;
   if (dayOf(shown) === dayOf(partsOf(now - DAY_MS))) {
     return `${dayAndMonth} ${time}`;
   }
@@ -25,7 +25,7 @@ export function formatDataTime(at: number, now: number): string {
 
 export function formatDataDay(at: number): string {
   const shown = partsOf(at);
-  return `${shown['day']}. ${shown['month']}. ${shown['year']}`;
+  return `${Number(shown['day'])}. ${Number(shown['month'])}. ${shown['year']}`;
 }
 
 function partsOf(instant: number): Record<string, string> {

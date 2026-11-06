@@ -788,7 +788,7 @@ describe('Given an administrator on a donor card', () => {
 
     expect(optionLabels()).toEqual([
       'Roční potvrzení za rok 2026',
-      'Dar z 05. 01. 2027, 700 Kč',
+      'Dar z 5. 1. 2027, 700 Kč',
       'Dar z 12. 10. 2026, 300 Kč',
     ]);
   });

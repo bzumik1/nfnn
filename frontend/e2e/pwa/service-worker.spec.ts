@@ -9,6 +9,8 @@ const APP_API_OFFLINE =
   /^Failed to load resource: (?:the server responded with a status of 504 \(Gateway Timeout\)|net::ERR_INTERNET_DISCONNECTED) \(http:\/\/localhost:\d+\/api\//;
 const CONNECTIVITY_PROBE_WHILE_OFFLINE =
   /^Failed to load resource: net::ERR_INTERNET_DISCONNECTED \(http:\/\/localhost:\d+\/api\/operations\/setup\)$/;
+const UNKNOWN_ADDRESS_NOT_FOUND =
+  /^console error: Failed to load resource: the server responded with a status of 404 \(Not Found\) \(http:\/\/localhost:\d+\/neexistuje\)$/;
 const ANSWER_TIMEOUT_MS = 10_000;
 const SETTLE_MS = 1_000;
 const CANARY = 'Zxqv Kanárek 7781,77 Kč';
@@ -140,6 +142,50 @@ test.describe('Given the production build served by the real nginx', () => {
 
     expect((await page.request.get(chunk)).status()).toBe(404);
   });
+
+  test('when an address the site does not know is opened, then nginx answers 404 with the app under the production headers and the app shows its not-found page', async ({
+    page,
+    browserProblems,
+  }) => {
+    browserProblems.expectOne(UNKNOWN_ADDRESS_NOT_FOUND);
+    const response = await page.goto('/neexistuje');
+
+    expect(response?.status()).toBe(404);
+    expect(response?.headers()['content-type']).toBe('text/html; charset=utf-8');
+    expect(response?.headers()['cache-control']).toBe('no-cache');
+    expect(response?.headers()['cloudflare-cdn-cache-control']).toBe('no-store');
+    expect(response?.headers()['content-security-policy']).toContain("script-src 'self'");
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Tuhle stránku jsme nenašli' }),
+    ).toBeVisible();
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex');
+  });
+
+  test('when the web app manifest and the other text files are asked for, then nginx names UTF-8 for each, so the Czech names read right', async ({
+    request,
+  }) => {
+    const manifest = await request.get('/manifest.webmanifest');
+    expect(manifest.headers()['content-type']).toBe('application/manifest+json; charset=utf-8');
+    expect(await manifest.json()).toMatchObject({ name: 'Nová naděje – nadační fond' });
+
+    const shell = await request.get('/');
+    const styles = /href="(\/?styles-[A-Za-z0-9_-]{8}\.css)"/.exec(await shell.text())?.[1] ?? '';
+    expect(styles).not.toBe('');
+    for (const path of [
+      '/',
+      `/${styles.replace(/^\//, '')}`,
+      SERVICE_WORKER,
+      SERVICE_WORKER_MANIFEST,
+      '/boot-guard.js',
+      '/favicon.svg',
+      '/robots.txt',
+      '/sitemap.xml',
+    ]) {
+      const answer = await request.get(path);
+      expect(answer.status(), path).toBe(200);
+      expect(answer.headers()['content-type'], path).toMatch(/; charset=utf-8$/);
+    }
+  });
 });
 
 test.describe('Given the app registered its own service worker', () => {
@@ -155,6 +201,19 @@ test.describe('Given the app registered its own service worker', () => {
       scriptURL: expect.stringMatching(/\/ngsw-worker\.js$/),
       state: 'activated',
     });
+  });
+
+  test('when an address the site does not know is opened, then the worker answers with the app, keeps no copy of the address and the not-found page shows', async ({
+    page,
+    cacheDump,
+  }) => {
+    const response = await page.goto('/neexistuje');
+
+    expect(response?.fromServiceWorker()).toBe(true);
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Tuhle stránku jsme nenašli' }),
+    ).toBeVisible();
+    expect((await cacheDump()).map((entry) => entry.url)).not.toContain('/neexistuje');
   });
 
   test('when the page reads public news and a donor reads their own gifts, then the worker asks the network itself and Cache Storage keeps only the public answers', async ({

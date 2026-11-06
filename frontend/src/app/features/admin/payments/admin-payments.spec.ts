@@ -259,7 +259,7 @@ describe('Given an administrator on the bank payments page', () => {
       expect(
         fixture.nativeElement.querySelector('tbody tr .donor-name a')?.getAttribute('href'),
       ).toBe('/sprava/darci/01a18e56-bdb0-775a-bd0a-a60756831369');
-      expect(rows()[1]).toContain('01. 09. 2025');
+      expect(rows()[1]).toContain('1. 9. 2025');
       expect(rows()[1]).toContain('dárce bez záznamu ručně správcem vráceno');
       expect(rows()[1]).toContain('Zrušit přiřazení');
     });
@@ -1010,7 +1010,7 @@ describe('Given an administrator on the bank payments page where lists show as r
     expect(paymentRows().map((row) => text(row))).toEqual([
       'Nováková Jana 12. 10. 2026 · VS 1111111111 500 Kč jen ručně',
       'Bez jména odesílatele 10. 10. 2026 · bez VS 500 Kč',
-      'Nováková Jana 30. 09. 2026 · VS 1111111111 250,50 Kč Ověření účtu',
+      'Nováková Jana 30. 9. 2026 · VS 1111111111 250,50 Kč Ověření účtu',
     ]);
     expect(paymentRows()[0].getAttribute('aria-haspopup')).toBe('dialog');
   });

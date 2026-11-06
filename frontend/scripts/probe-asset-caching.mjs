@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { appRoutePatterns } from './app-routes.mjs';
 import { immutableLocations } from './immutable-locations.mjs';
 import { readSecurityHeaders } from './security-headers.mjs';
 
@@ -51,7 +52,23 @@ const UNCACHED_ERROR = new Set(['no-store', 'no-cache']);
 const SERVICE_WORKER_FILES = new Set(['ngsw.json', 'ngsw-worker.js']);
 const WORKER_SCRIPTS = new Set(['ngsw-worker.js', 'safety-worker.js']);
 const JAVASCRIPT = /^(?:text|application)\/javascript(?:;|$)/;
-const APP_ROUTES = ['/', '/overit', '/darce/prehled', '/sprava', '/aktuality/nejaka-zprava'];
+const TEXT_FILE = /\.(?:css|html|js|json|svg|txt|webmanifest|xml)$/;
+const UTF_8 = '; charset=utf-8';
+const UNKNOWN_PATHS = [
+  '/neexistuje',
+  '/o-nass',
+  '/o-nas/',
+  '/darce/neexistuje',
+  '/sprava/neexistuje',
+  '/aplikace/neexistuje',
+  '/aktuality/nejaka-zprava/navic',
+  '/images',
+];
+
+const nginxConfText = readFileSync(nginxConf, 'utf8');
+const APP_ROUTES = appRoutePatterns(nginxConfText).map((pattern) =>
+  pattern.replaceAll(':param', 'nejaka-adresa'),
+);
 
 const failures = [];
 const fail = (message) => failures.push(message);
@@ -86,7 +103,7 @@ function expectedEdgeCacheControl(file) {
 
 function expectedContentType(file) {
   if (file.endsWith('.webmanifest')) {
-    return 'application/manifest+json';
+    return `application/manifest+json${UTF_8}`;
   }
   return file.endsWith('.ttf') ? 'font/ttf' : null;
 }
@@ -113,9 +130,7 @@ if (hashed.length === 0) {
   fail(`no hashed bundle found in ${distDir}`);
 }
 
-const { bundles: patterns, receiptFonts: fontPatterns } = immutableLocations(
-  readFileSync(nginxConf, 'utf8'),
-);
+const { bundles: patterns, receiptFonts: fontPatterns } = immutableLocations(nginxConfText);
 const receiptFonts = built.filter(
   (file) => file.startsWith('receipt-fonts/') && file.endsWith('.ttf'),
 );
@@ -187,6 +202,9 @@ for (const file of built) {
       `/${file} has Content-Type "${answer.contentType}", so a browser would refuse it as a service worker`,
     );
   }
+  if (TEXT_FILE.test(file) && !answer.contentType.endsWith(UTF_8)) {
+    fail(`/${file} has Content-Type "${answer.contentType}" without "${UTF_8}"`);
+  }
   if (contentType !== null && answer.contentEncoding !== 'gzip') {
     fail(`/${file} is sent without gzip ("${answer.contentEncoding}")`);
   }
@@ -245,6 +263,35 @@ for (const path of APP_ROUTES) {
   }
 }
 
+for (const path of UNKNOWN_PATHS) {
+  const answer = await request(path);
+  if (answer.status !== 404 || !answer.body.includes('<app-root')) {
+    fail(`the unknown address ${path} answered ${answer.status}, expected 404 with the app`);
+  }
+  if (answer.contentType !== `text/html${UTF_8}`) {
+    fail(`the unknown address ${path} has Content-Type "${answer.contentType}"`);
+  }
+  if (answer.cacheControl !== 'no-cache') {
+    fail(
+      `the unknown address ${path} has Cache-Control "${answer.cacheControl}", expected "no-cache"`,
+    );
+  }
+  if (answer.edge !== 'no-store') {
+    fail(
+      `the unknown address ${path} has Cloudflare-CDN-Cache-Control "${answer.edge}", so Cloudflare could keep its 404`,
+    );
+  }
+  if (answer.csp !== CONTENT_SECURITY_POLICY) {
+    fail(
+      `the unknown address ${path} carries the Content-Security-Policy "${answer.csp}", not the snippet's`,
+    );
+  }
+  const again = await request(path, { 'if-none-match': answer.validator || '*' });
+  if (again.status !== 404) {
+    fail(`the unknown address ${path} answered ${again.status} to If-None-Match, expected 404`);
+  }
+}
+
 const revalidated = ['/', `/${built.find((file) => file.startsWith('images/'))}`];
 for (const path of revalidated) {
   const first = await request(path, { 'accept-encoding': 'gzip' });
@@ -275,5 +322,5 @@ if (failures.length > 0) {
   process.exit(1);
 }
 console.log(
-  `asset caching: ${hashed.length} hashed bundles and ${receiptFonts.length} receipt fonts immutable, ${built.length} built files checked, the app shell and the hourly files served stale by Cloudflare during an outage, missing files answer 404`,
+  `asset caching: ${hashed.length} hashed bundles and ${receiptFonts.length} receipt fonts immutable, ${built.length} built files checked, the app shell and the hourly files served stale by Cloudflare during an outage, missing files answer 404, ${APP_ROUTES.length} app routes the app and ${UNKNOWN_PATHS.length} unknown addresses the app with 404`,
 );
