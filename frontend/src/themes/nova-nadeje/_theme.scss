@@ -119,6 +119,7 @@
   --color-tab-bar: color-mix(in srgb, #0f172a 66%, transparent);
   --color-tab-bar-rim: color-mix(in srgb, #ffffff 35%, transparent);
   --color-tab-pill: color-mix(in srgb, #0f172a 88%, transparent);
+  --color-tab-pill-rim: transparent;
   --color-tab-active: #93c5fd;
   --color-on-tab-bar: #ffffff;
   --color-tab-focus-ring: #ffffff;
@@ -255,7 +256,7 @@
   --tab-bar-height: 62px;
   --tab-bar-gap: 20px;
   --tab-bar-gap-browser: 16px;
-  --tab-pill-inset: 5px;
+  --tab-pill-inset: 2px;
   --tab-bar-max-width: 420px;
   --tab-bar-home-indicator-overlap: 13px;
   --tab-icon-size: 22px;
