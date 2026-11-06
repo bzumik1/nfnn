@@ -16,6 +16,7 @@
       <div class="ui-load-state ui-load-state--error" role="alert">
         <p i18n="@@admin.donateBand.error.text">Fotku se nepodařilo načíst.</p>
         <button
+          appNeedsConnection
           type="button"
           class="ui-button"
           (click)="load()"
@@ -107,7 +108,12 @@
               </app-form-field>
             </div>
             <div class="form-actions">
-              <button type="submit" class="ui-button ui-button--primary" [disabled]="busy()">
+              <button
+                appNeedsConnection
+                type="submit"
+                class="ui-button ui-button--primary"
+                [disabled]="busy()"
+              >
                 @if (saving()) {
                   <ng-container i18n="@@admin.donateBand.saving">Ukládáme…</ng-container>
                 } @else {
@@ -150,6 +156,7 @@
                   >Opravdu fotku odebrat z webu a smazat?</span
                 >
                 <button
+                  appNeedsConnection
                   type="button"
                   class="ui-button ui-button--danger"
                   [disabled]="removing()"

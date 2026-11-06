@@ -139,6 +139,8 @@ Feature: An administrator connects an application such as Claude to the administ
       | DELETE | /api/admin/donors/administrators/{id}                               |
       | POST   | /api/admin/donors/{id}/second-factor/reset                          |
       | DELETE | /api/admin/donors/{id}/passkeys                                     |
+      | POST   | /api/admin/donors/devices/current/unlock                            |
+      | POST   | /api/admin/donors/devices/current/administration-copy               |
       | DELETE | /api/admin/content/news/{id}                                        |
       | DELETE | /api/admin/content/projects/{id}                                    |
       | DELETE | /api/admin/donations/donors/{id}/bank-accounts/{id}                 |

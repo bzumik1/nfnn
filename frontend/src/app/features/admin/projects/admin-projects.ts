@@ -19,6 +19,7 @@ import { projectCategoryLabel } from '../../content/project-category';
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 import { ProjectOrderCard } from './project-order-card';
+import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -27,7 +28,7 @@ const FORBIDDEN = 'auth/forbidden';
 
 @Component({
   selector: 'app-admin-projects',
-  imports: [RouterLink, LiveNotice, ProjectOrderCard],
+  imports: [NeedsConnection, RouterLink, LiveNotice, ProjectOrderCard],
   templateUrl: './admin-projects.html',
   styleUrl: './admin-projects.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

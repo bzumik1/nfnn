@@ -19,6 +19,7 @@ import { NOT_FOUND_TITLE, NotFound } from '../not-found/not-found';
 import { ProjectsApi } from '../projects-api';
 import { ContentArticle } from './content-article';
 import { ContentKind, ContentPage, newsPage, projectPage } from './content-page';
+import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 
 type LoadState = 'loading' | 'ready' | 'missing' | 'error';
 
@@ -26,7 +27,7 @@ const SITE_NAME = $localize`:@@content.detail.siteName:Nová naděje – nadačn
 
 @Component({
   selector: 'app-content-detail',
-  imports: [NotFound, ContentArticle],
+  imports: [NeedsConnection, NotFound, ContentArticle],
   templateUrl: './content-detail.html',
   styleUrl: './content-detail.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -154,6 +154,16 @@
                 text, načtěte stránku znovu a odešlete ji ještě jednou.
               </p>
             }
+            @case ('offline') {
+              <p
+                class="ui-callout ui-callout--danger form-error"
+                role="alert"
+                i18n="@@home.contact.form.error.offline"
+              >
+                Bez připojení se zprávu nepodařilo odeslat. Zpráva vám zůstala; až se připojíte,
+                odešlete ji znovu.
+              </p>
+            }
             @case ('generic') {
               <p
                 class="ui-callout ui-callout--danger form-error"
@@ -167,6 +177,7 @@
           }
 
           <button
+            appNeedsConnection
             type="submit"
             class="ui-button ui-button--primary ui-button--block form-submit"
             [disabled]="sending()"

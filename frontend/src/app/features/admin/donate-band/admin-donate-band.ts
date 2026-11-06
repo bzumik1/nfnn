@@ -35,6 +35,7 @@ import {
 } from '../../content/donate-band-api';
 import { PreviewShape } from '../focal-point-picker/focal-point-picker';
 import { MAX_IMAGE_BYTES, NewsApi } from '../../content/news-api';
+import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -61,6 +62,7 @@ const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
     FileButton,
     LiveNotice,
     FocalPointPicker,
+    NeedsConnection,
   ],
   templateUrl: './admin-donate-band.html',
   styleUrl: './admin-donate-band.scss',

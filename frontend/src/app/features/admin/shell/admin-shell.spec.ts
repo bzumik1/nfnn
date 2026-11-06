@@ -9,20 +9,29 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { DIALOG_PRESENTATION } from '../../../shared/ui/dialog/dialog-presentation';
+import { DIALOG_SUSPENSION } from '../../../shared/ui/dialog/dialog-suspension';
 import { AdminShell } from './admin-shell';
 import { ADMINISTRATION_LOCK } from './administration-lock';
 
-@Component({ template: '<h1>Stránka</h1><p class="look">{{ look }}</p>' })
+@Component({
+  template: `<h1>Stránka</h1>
+    <p class="look">{{ look }}</p>
+    <input id="pole" />
+    <p class="suspended">{{ suspended() }}</p>`,
+})
 class Page {
   protected readonly look = inject(DIALOG_PRESENTATION);
+  protected readonly suspended = inject(DIALOG_SUSPENSION);
 }
 
-@Component({ template: '<p class="lock-panel">Správa je zamčená</p>' })
+@Component({ template: '<p class="lock-panel" tabindex="-1">Správa je zamčená</p>' })
 class LockPanel {}
 
 describe('Given an administrator anywhere in the administration', () => {
   const compact = signal(false);
   const locked = signal(false);
+  const keepsPage = signal(false);
+  const firstDownload = signal<{ done: number; total: number } | null>(null);
   let fixture: ComponentFixture<AdminShell>;
   let router: Router;
   let pushSettings: TestRequest[];
@@ -30,6 +39,8 @@ describe('Given an administrator anywhere in the administration', () => {
   beforeEach(async () => {
     compact.set(false);
     locked.set(false);
+    keepsPage.set(false);
+    firstDownload.set(null);
     await TestBed.configureTestingModule({
       imports: [AdminShell],
       providers: [
@@ -38,7 +49,12 @@ describe('Given an administrator anywhere in the administration', () => {
         { provide: CompactLayout, useValue: { isCompact: compact.asReadonly() } },
         {
           provide: ADMINISTRATION_LOCK,
-          useValue: { locked: locked.asReadonly(), panel: signal(LockPanel).asReadonly() },
+          useValue: {
+            locked: locked.asReadonly(),
+            panel: signal(LockPanel).asReadonly(),
+            keepsPage: keepsPage.asReadonly(),
+            firstDownload: firstDownload.asReadonly(),
+          },
         },
         provideRouter([
           { path: 'sprava', component: Page },
@@ -209,6 +225,95 @@ describe('Given an administrator anywhere in the administration', () => {
 
       expect(element('main#obsah h1')?.textContent).toBe('Stránka');
       expect(element('.lock-panel')).toBeNull();
+    });
+
+    it('and it is unlocked again, then the focus moves to the heading of the page that comes back', async () => {
+      document.body.appendChild(fixture.nativeElement);
+      locked.set(false);
+      await settle();
+      await settle();
+
+      expect(document.activeElement).toBe(element('main#obsah h1'));
+      fixture.nativeElement.remove();
+    });
+
+    it('then no download bar stands above the panel, even while the copy downloads', async () => {
+      firstDownload.set({ done: 3, total: 40 });
+      await settle();
+
+      expect(clean(element('.admin-first-download')?.textContent)).toBe('');
+    });
+  });
+
+  describe('when the administration locks while a form of the page is half-typed', () => {
+    let page: HTMLElement;
+
+    beforeEach(async () => {
+      document.body.appendChild(fixture.nativeElement);
+      page = element('main#obsah h1')!;
+      (element('#pole') as HTMLInputElement).focus();
+      keepsPage.set(true);
+      locked.set(true);
+      await settle();
+      element('.lock-panel')!.focus();
+    });
+
+    afterEach(() => fixture.nativeElement.remove());
+
+    it('then a dialog the page holds open steps aside, so nothing hidden blocks the panel', () => {
+      expect(element('.suspended')?.textContent).toBe('true');
+    });
+
+    it('and it is unlocked again, then the dialogs of the page come back and the focus returns to the field it left', async () => {
+      keepsPage.set(false);
+      locked.set(false);
+      await settle();
+      await settle();
+
+      expect(element('.suspended')?.textContent).toBe('false');
+      expect(document.activeElement).toBe(element('#pole'));
+    });
+
+    it('then the page stays alive under the panel, hidden and out of reach', () => {
+      const kept = element('main#obsah .admin-page')!;
+
+      expect(clean(element('main#obsah .lock-panel')?.textContent)).toBe('Správa je zamčená');
+      expect(kept.hidden).toBe(true);
+      expect(kept.hasAttribute('inert')).toBe(true);
+      expect(kept.contains(page)).toBe(true);
+    });
+
+    it('and it is unlocked again, then the same page comes back as it was', async () => {
+      keepsPage.set(false);
+      locked.set(false);
+      await settle();
+
+      const shown = element('main#obsah .admin-page')!;
+      expect(shown.hidden).toBe(false);
+      expect(shown.hasAttribute('inert')).toBe(false);
+      expect(element('main#obsah h1')).toBe(page);
+      expect(element('.lock-panel')).toBeNull();
+    });
+  });
+
+  describe('when the administration is first stored on this device after unlocking', () => {
+    it('then a bar above the page says how much of it is stored', async () => {
+      firstDownload.set({ done: 18, total: 40 });
+      await settle();
+
+      expect(clean(element('main#obsah .admin-first-download')?.textContent)).toBe(
+        'Ukládáme správu do zařízení 18 z 40',
+      );
+      expect(element('main#obsah .admin-first-download')?.getAttribute('aria-live')).toBe('polite');
+    });
+
+    it('and it is stored, then the bar goes', async () => {
+      firstDownload.set({ done: 40, total: 40 });
+      await settle();
+      firstDownload.set(null);
+      await settle();
+
+      expect(clean(element('.admin-first-download')?.textContent)).toBe('');
     });
   });
 });

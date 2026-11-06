@@ -2,7 +2,7 @@ import { DestroyRef, inject, Injectable, signal } from '@angular/core';
 import { NavigationEnd, NavigationError, NavigationStart, Router } from '@angular/router';
 
 import { ErrorReporter } from '../errors/error-reporter';
-import { Connectivity } from '../navigation/connectivity';
+import { Connectivity } from '../connectivity/connectivity';
 import { AppUpdates } from '../updates/app-updates';
 import { ChunkProbe } from './chunk-probe';
 import { ReloadGuard } from './reload-guard';
@@ -56,7 +56,7 @@ export class ChunkLoadRecovery {
     }
     this.reporter.report('chunk-load', 'navigation', error.error);
     this.failed.set({ url: error.url, initial: !this.router.navigated });
-    if (this.connectivity.isOffline()) {
+    if (this.connectivity.browserSaysOffline()) {
       return;
     }
     const navigation = this.navigationsStarted;

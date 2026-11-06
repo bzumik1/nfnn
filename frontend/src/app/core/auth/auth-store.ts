@@ -18,6 +18,7 @@ import {
 } from 'rxjs';
 import { AuthApi } from './auth-api';
 import { PasskeyAuthenticator } from './passkey-authenticator';
+import { AdministrationAccess } from './administration-access';
 import { deviceAccountOf, SESSION_DEVICE, type SignInSecret } from './session-device';
 import {
   BROWSER_JAR,
@@ -66,6 +67,7 @@ export class AuthStore {
   private readonly locks = inject(TAB_LOCKS);
   private readonly channel = inject(SESSION_CHANNEL)();
   private readonly device = inject(SESSION_DEVICE);
+  private readonly administrationAccess = inject(AdministrationAccess);
   private readonly currentDonor = signal<Donor | null>(null);
   private readonly currentStatus = signal<AuthStatus>('unknown');
   private readonly currentSession = signal<SessionKind | null>(null);
@@ -384,6 +386,7 @@ export class AuthStore {
 
   private adoptSignIn(response: AuthResponse, secret: SignInSecret): Donor {
     const donor = this.adopt(response);
+    this.administrationAccess.signedIn();
     void this.device.signedIn(deviceAccountOf(donor), secret, this.storesNothing());
     return donor;
   }
@@ -420,6 +423,7 @@ export class AuthStore {
   }
 
   private forget(): void {
+    this.administrationAccess.ended();
     this.accessToken = null;
     this.currentDonor.set(null);
     this.currentStatus.set('anonymous');

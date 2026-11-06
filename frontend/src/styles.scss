@@ -36,6 +36,10 @@ html:has(app-tab-bar) {
   scroll-padding-bottom: var(--tab-bar-clearance);
 }
 
+html:has(app-landing) {
+  background: var(--color-image-shade);
+}
+
 :focus-visible {
   outline: 3px solid var(--color-focus-ring);
   outline-offset: 2px;
@@ -43,6 +47,10 @@ html:has(app-tab-bar) {
 
 [tabindex='-1']:focus {
   outline: none;
+}
+
+img.is-unavailable {
+  opacity: 0;
 }
 
 @media (forced-colors: active) {
@@ -91,19 +99,6 @@ body {
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-::-webkit-scrollbar {
-  width: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--color-accent-bg);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--color-accent);
-  border-radius: var(--radius-scrollbar);
 }
 
 @keyframes fadeInUp {

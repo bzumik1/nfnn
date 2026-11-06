@@ -1,14 +1,21 @@
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { CompactLayout } from '../../../../../core/layout/compact-layout';
 import { Hero } from './hero';
 
 describe('Given the hero', () => {
   let fixture: ComponentFixture<Hero>;
+  const compact = signal(false);
 
   beforeEach(async () => {
+    compact.set(false);
     await TestBed.configureTestingModule({
       imports: [Hero],
-      providers: [provideRouter([])],
+      providers: [
+        provideRouter([]),
+        { provide: CompactLayout, useValue: { isCompact: compact.asReadonly() } },
+      ],
     }).compileComponents();
     fixture = TestBed.createComponent(Hero);
     fixture.detectChanges();
@@ -38,5 +45,14 @@ describe('Given the hero', () => {
 
     expect(action.textContent?.trim()).toBe('Kde pomáháme');
     expect(action.getAttribute('href')).toBe('/projekty');
+  });
+
+  it('when the layout is compact, then it shows no actions, because the tab bar under it offers Přispět and Pomáháme', async () => {
+    compact.set(true);
+    await fixture.whenStable();
+    const host = fixture.nativeElement as HTMLElement;
+
+    expect(host.querySelectorAll('a')).toHaveLength(0);
+    expect(host.querySelector('h1')?.textContent?.trim()).toBe('Nová naděje');
   });
 });

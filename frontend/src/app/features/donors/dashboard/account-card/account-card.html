@@ -37,6 +37,7 @@
             >
             <span class="account-pending-actions">
               <button
+                appNeedsConnection
                 #resendButton
                 type="button"
                 class="ui-button account-resend"
@@ -52,6 +53,7 @@
                 }
               </button>
               <button
+                appNeedsConnection
                 type="button"
                 class="ui-button ui-button--quiet account-cancel-change"
                 [disabled]="pendingAction() !== null"
@@ -157,6 +159,7 @@
 
             <div class="account-form-actions">
               <button
+                appNeedsConnection
                 type="submit"
                 class="ui-button ui-button--primary account-save"
                 [disabled]="saving()"
@@ -327,6 +330,7 @@
 
             <div class="account-form-actions">
               <button
+                appNeedsConnection
                 type="submit"
                 class="ui-button ui-button--primary account-save"
                 [disabled]="saving()"
@@ -401,6 +405,7 @@
 
             <div class="account-form-actions">
               <button
+                appNeedsConnection
                 type="submit"
                 class="ui-button ui-button--primary account-save"
                 [disabled]="saving()"
@@ -556,6 +561,7 @@
 
             <div class="account-form-actions">
               <button
+                appNeedsConnection
                 type="submit"
                 class="ui-button ui-button--primary account-save"
                 [disabled]="saving()"
@@ -660,6 +666,7 @@
 
             <div class="account-form-actions">
               <button
+                appNeedsConnection
                 type="submit"
                 class="ui-button ui-button--primary account-save"
                 [disabled]="saving()"
@@ -762,6 +769,7 @@
 
             <div class="account-form-actions">
               <button
+                appNeedsConnection
                 type="submit"
                 class="ui-button ui-button--primary account-save"
                 [disabled]="saving()"

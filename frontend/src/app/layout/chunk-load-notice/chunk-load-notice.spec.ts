@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NavigationError, provideRouter, Router } from '@angular/router';
 
-import { Connectivity } from '../../core/navigation/connectivity';
+import { Connectivity } from '../../core/connectivity/connectivity';
 import { ExternalNavigation } from '../../core/navigation/external-navigation';
 import { ChunkLoadRecovery } from '../../core/reload/chunk-load-recovery';
 import { ChunkProbe } from '../../core/reload/chunk-probe';
@@ -31,7 +31,7 @@ describe('Given the chunk-load notice', () => {
         ]),
         { provide: ReloadGuard, useValue: { claim: () => false } },
         { provide: ExternalNavigation, useValue: { loadFromServer } },
-        { provide: Connectivity, useValue: { isOffline: () => false } },
+        { provide: Connectivity, useValue: { browserSaysOffline: () => false } },
         { provide: ChunkProbe, useValue: { reloadWouldLand: () => Promise.resolve(true) } },
       ],
     }).compileComponents();

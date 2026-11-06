@@ -112,6 +112,8 @@ enum AdminHandlerReach {
         table.put("GET /api/admin/donors/administrators", CONNECTOR);
         table.put("POST /api/admin/donors/administrators", BROWSER_ONLY);
         table.put("DELETE /api/admin/donors/administrators/{donorId}", BROWSER_ONLY);
+        table.put("POST /api/admin/donors/devices/current/administration-copy", BROWSER_ONLY);
+        table.put("POST /api/admin/donors/devices/current/unlock", BROWSER_ONLY);
         table.put("GET /api/admin/donors/me/previous-sign-in", CONNECTOR);
         table.put("GET /api/admin/donors/sync", BROWSER_ONLY);
         table.put("GET /api/admin/donors/sync/chunks", BROWSER_ONLY);

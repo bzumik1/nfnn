@@ -29,6 +29,7 @@ import {
 import { FocusFirstInvalid } from '../../../shared/ui/form-field/focus-first-invalid';
 import { FormControlDirective } from '../../../shared/ui/form-field/form-control';
 import { FormField } from '../../../shared/ui/form-field/form-field';
+import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 
 type Panel = 'missing-link' | 'confirming' | 'confirmed' | 'invalid' | 'failed' | 'link-requested';
 
@@ -40,7 +41,14 @@ const TOO_MANY_REQUESTS = 429;
 
 @Component({
   selector: 'app-email-verification',
-  imports: [FormsModule, RouterLink, FormField, FormControlDirective, FocusFirstInvalid],
+  imports: [
+    FormsModule,
+    RouterLink,
+    FormField,
+    FormControlDirective,
+    FocusFirstInvalid,
+    NeedsConnection,
+  ],
   templateUrl: './email-verification.html',
   styleUrl: './email-verification.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -14,6 +14,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { map } from 'rxjs';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { pluralCategory } from '../../../core/i18n/plural-category';
+import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 import { DonateBand } from '../donate-band/donate-band';
 import { HomeApi } from '../home-api';
 import { DonateBandPhotoResponse } from '../donate-band-api';
@@ -45,7 +46,7 @@ interface YearChip {
 
 @Component({
   selector: 'app-projects-page',
-  imports: [RouterLink, StoryTile, DonateBand],
+  imports: [NeedsConnection, RouterLink, StoryTile, DonateBand],
   templateUrl: './projects-page.html',
   styleUrl: './projects-page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

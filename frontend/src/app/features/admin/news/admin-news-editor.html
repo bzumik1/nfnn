@@ -22,6 +22,7 @@
       <div class="ui-load-state ui-load-state--error" role="alert">
         <p i18n="@@admin.newsEditor.error.text">Aktualitu se nepodařilo načíst.</p>
         <button
+          appNeedsConnection
           type="button"
           class="ui-button"
           (click)="retry()"
@@ -351,6 +352,7 @@
             <div class="bar-actions">
               @if (isPublished()) {
                 <button
+                  appNeedsConnection
                   #saveButton
                   type="submit"
                   class="ui-button ui-button--primary"
@@ -365,6 +367,7 @@
                   }
                 </button>
                 <button
+                  appNeedsConnection
                   type="button"
                   class="ui-button ui-button--quiet"
                   [disabled]="busy()"
@@ -392,6 +395,7 @@
                 }
               } @else {
                 <button
+                  appNeedsConnection
                   #saveButton
                   type="submit"
                   class="ui-button"
@@ -404,6 +408,7 @@
                   }
                 </button>
                 <button
+                  appNeedsConnection
                   type="submit"
                   class="ui-button ui-button--primary"
                   [disabled]="busy() || uploading()"
@@ -443,6 +448,7 @@
                   >Opravdu smazat aktualitu „{{ articleTitle }}“?</span
                 >
                 <button
+                  appNeedsConnection
                   type="button"
                   class="ui-button ui-button--danger"
                   [disabled]="deleting()"

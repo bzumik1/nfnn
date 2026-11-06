@@ -13,6 +13,12 @@
   border: 1px solid var(--color-border-accent);
 }
 
+.bank-note {
+  margin-top: var(--space-3-5);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
 .panel-label {
   font-size: var(--text-2xs);
   font-weight: var(--weight-bold);

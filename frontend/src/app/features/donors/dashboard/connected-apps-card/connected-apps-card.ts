@@ -7,11 +7,13 @@ import { AuthStore } from '../../../../core/auth/auth-store';
 import { ConnectedApp } from '../../../../core/auth/donor';
 import { formatDonationDate } from '../../../donations/donation-date';
 import { describeScopes } from '../../connect-app/oauth-scopes';
+import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 
 @Component({
   selector: 'app-connected-apps-card',
+  imports: [NeedsConnection],
   templateUrl: './connected-apps-card.html',
   styleUrl: './connected-apps-card.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

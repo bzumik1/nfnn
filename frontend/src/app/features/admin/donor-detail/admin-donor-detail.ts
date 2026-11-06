@@ -46,6 +46,7 @@ import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 import { isChangedMeanwhile } from '../../../core/version/row-version';
 import { ChangedMeanwhileDialog } from '../changed-meanwhile/changed-meanwhile-dialog';
 import { AdminReceiptDownloads } from './admin-receipt-downloads';
+import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 
 type LoadState = 'loading' | 'ready' | 'missing' | 'error';
@@ -108,6 +109,7 @@ const PAIRING_LABELS: Record<NonNullable<DonationItem['pairedBy']>, string> = {
     LiveNotice,
     RouterLink,
     TrackedForm,
+    NeedsConnection,
   ],
   providers: [AdminReceiptDownloads],
   templateUrl: './admin-donor-detail.html',
