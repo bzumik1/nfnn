@@ -42,6 +42,11 @@ class JpaDonorRepository implements DonorRepository {
     }
 
     @Override
+    public int deleteUnconfirmedRegisteredBefore(Instant cutoff) {
+        return jpa.deleteUnconfirmedRegisteredBefore(cutoff);
+    }
+
+    @Override
     public Optional<Donor> findById(DonorId id) {
         return jpa.findById(id.value()).map(DonorJpaEntity::toDomain);
     }

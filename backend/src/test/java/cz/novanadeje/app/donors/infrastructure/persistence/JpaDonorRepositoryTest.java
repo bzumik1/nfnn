@@ -7,6 +7,7 @@ import cz.novanadeje.app.donors.domain.EmailVerificationToken;
 import cz.novanadeje.app.donors.domain.EmailVerificationTokenRepository;
 import cz.novanadeje.app.donors.domain.LinkSecret;
 import cz.novanadeje.app.donors.domain.PasswordHash;
+import cz.novanadeje.app.donors.domain.RegistrationReminders;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.ErasedPersonalData;
@@ -48,6 +49,8 @@ class JpaDonorRepositoryTest {
     private DonorRepository donors;
     @Autowired
     private EmailVerificationTokenRepository tokens;
+    @Autowired
+    private RegistrationReminders reminders;
     @Autowired
     private EntityManager entityManager;
     @Autowired
@@ -126,6 +129,64 @@ class JpaDonorRepositoryTest {
         assertThat(donors.findById(donor.id())).isEmpty();
         assertThat(tokens.findBySecretHash(secret.hash())).isEmpty();
         assertThat(donors.findByEmail(new EmailAddress("jana@example.cz")).orElseThrow().variableSymbol()).isEqualTo(new VariableSymbol("4821937561"));
+    }
+
+    @Test
+    @DisplayName("Given unconfirmed registrations made a second before, at and a second after the cutoff, when the unconfirmed ones before the cutoff are deleted, then only the one before it goes and its address and symbol are free")
+    void should_delete_only_registration_before_cutoff_when_unconfirmed_deleted_given_registrations_around_cutoff() {
+        Instant cutoff = NOW.minus(Duration.ofDays(30));
+        Donor before = registeredAt("pred@example.cz", "4821937570", cutoff.minusSeconds(1));
+        Donor at = registeredAt("presne@example.cz", "4821937571", cutoff);
+        Donor after = registeredAt("po@example.cz", "4821937572", cutoff.plusSeconds(1));
+        flushAndClear();
+
+        int deleted = donors.deleteUnconfirmedRegisteredBefore(cutoff);
+        flushAndClear();
+
+        assertThat(deleted).isEqualTo(1);
+        assertThat(donors.findById(before.id())).isEmpty();
+        assertThat(donors.findById(at.id())).isPresent();
+        assertThat(donors.findById(after.id())).isPresent();
+        assertThat(donors.existsByEmail(new EmailAddress("pred@example.cz"))).isFalse();
+        assertThat(donors.existsByVariableSymbol(new VariableSymbol("4821937570"))).isFalse();
+    }
+
+    @Test
+    @DisplayName("Given a confirmed and an erased account registered long before the cutoff, when the unconfirmed ones before the cutoff are deleted, then both stay")
+    void should_keep_confirmed_and_erased_accounts_when_unconfirmed_deleted_given_both_old() {
+        Instant longAgo = NOW.minus(Duration.ofDays(400));
+        Donor confirmed = registeredAt("jana@example.cz", "4821937573", longAgo);
+        confirmed.verifyEmail(longAgo.plusSeconds(60));
+        donors.save(confirmed);
+        Donor erased = registeredAt("petr@example.cz", "4821937574", longAgo);
+        erased.verifyEmail(longAgo.plusSeconds(60));
+        erased.erase(longAgo.plus(Duration.ofDays(1)));
+        donors.save(erased);
+        flushAndClear();
+
+        int deleted = donors.deleteUnconfirmedRegisteredBefore(NOW.minus(Duration.ofDays(30)));
+        flushAndClear();
+
+        assertThat(deleted).isZero();
+        assertThat(donors.findById(confirmed.id())).isPresent();
+        assertThat(donors.findById(erased.id())).isPresent();
+    }
+
+    @Test
+    @DisplayName("Given an old unconfirmed registration with its verification link and reminder, when it is deleted, then every table that refers to the donor cascades and holds no row of it")
+    void should_leave_no_row_of_donor_in_any_child_table_when_unconfirmed_deleted_given_link_and_reminder() {
+        Donor donor = registeredAt("jana@example.cz", "4821937575", NOW.minus(Duration.ofDays(40)));
+        tokens.save(EmailVerificationToken.issue(LinkSecret.generate(), donor.id(), NOW.minus(Duration.ofDays(40)), Duration.ofHours(24)));
+        reminders.recordSent(donor.id(), NOW.minus(Duration.ofDays(39)));
+        flushAndClear();
+        List<Object[]> childTables = childTablesOfDonor();
+        assertThat(childTables).isNotEmpty().allSatisfy(child -> assertThat(child[2]).as("on delete of %s", child[0]).isEqualTo("c"));
+        assertThat(rowsOf(donor, childTables)).isPositive();
+
+        donors.deleteUnconfirmedRegisteredBefore(NOW.minus(Duration.ofDays(30)));
+        flushAndClear();
+
+        assertThat(rowsOf(donor, childTables)).isZero();
     }
 
     @Test
@@ -301,6 +362,30 @@ class JpaDonorRepositoryTest {
                 return result.getBoolean(1);
             }
         }
+    }
+
+    private Donor registeredAt(String email, String variableSymbol, Instant registeredAt) {
+        Donor donor = Donor.register(DonorId.newId(registeredAt), DonorType.PERSON, "Jana Nováková", null,
+                new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new EmailAddress(email), new PasswordHash("$hash"),
+                new VariableSymbol(variableSymbol), LocaleCode.CS, registeredAt);
+        donors.save(donor);
+        return donor;
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Object[]> childTablesOfDonor() {
+        return entityManager.createNativeQuery("select c.conrelid::regclass::text, a.attname::text, c.confdeltype::text from pg_constraint c"
+                + " join pg_attribute a on a.attrelid = c.conrelid and a.attnum = c.conkey[1]"
+                + " where c.contype = 'f' and c.confrelid = 'donor'::regclass order by 1").getResultList();
+    }
+
+    private long rowsOf(Donor donor, List<Object[]> childTables) {
+        long rows = 0;
+        for (Object[] child : childTables) {
+            rows += ((Number) entityManager.createNativeQuery("select count(*) from " + child[0] + " where " + child[1] + " = :donorId")
+                    .setParameter("donorId", donor.id().value()).getSingleResult()).longValue();
+        }
+        return rows;
     }
 
     private static Donor donor(String email, String variableSymbol) {

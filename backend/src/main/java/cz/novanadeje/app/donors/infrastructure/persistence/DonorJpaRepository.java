@@ -43,6 +43,12 @@ interface DonorJpaRepository extends JpaRepository<DonorJpaEntity, UUID> {
             + " or d.variableSymbol like concat(:query, '%') escape '!' order by d.name, d.email")
     List<DonorJpaEntity> search(@Param("query") String query, Pageable page);
 
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(nativeQuery = true, value = "delete from donor where id in (select id from donor"
+            + " where email_verified_at is null and erased_at is null and registered_at < :cutoff"
+            + " order by id for update skip locked)")
+    int deleteUnconfirmedRegisteredBefore(@Param("cutoff") Instant cutoff);
+
     @Modifying(flushAutomatically = true)
     @Query(nativeQuery = true, value = "update donor set previous_signed_in_at = last_signed_in_at, last_signed_in_at = :at where id = :id")
     void recordSignIn(@Param("id") UUID id, @Param("at") Instant at);

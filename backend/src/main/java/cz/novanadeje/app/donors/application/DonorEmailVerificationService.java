@@ -173,7 +173,7 @@ public class DonorEmailVerificationService {
     }
 
     private Optional<Donor> awaitingVerification(EmailAddress email) {
-        Donor donor = donors.findByEmail(email).orElse(null);
+        Donor donor = donors.findByEmailForUpdate(email).orElse(null);
         if (donor == null) {
             log.debug("E-mail verification requested for an address without a donor");
             return Optional.empty();

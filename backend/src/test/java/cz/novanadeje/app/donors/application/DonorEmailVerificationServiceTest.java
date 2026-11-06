@@ -131,7 +131,7 @@ class DonorEmailVerificationServiceTest {
     @Test
     @DisplayName("Given an unverified donor, when a verification is requested from the donate section, then the new link carries the way back there")
     void should_carry_the_way_back_when_requested_from_the_donate_section_given_unverified_donor() {
-        when(donors.findByEmail(EMAIL)).thenReturn(Optional.of(unverifiedDonor(LocaleCode.CS)));
+        when(donors.findByEmailForUpdate(EMAIL)).thenReturn(Optional.of(unverifiedDonor(LocaleCode.CS)));
         when(tokens.countOf(DONOR)).thenReturn(0);
 
         service.requestVerification(EMAIL, RegistrationReturn.DONATE);
@@ -187,7 +187,7 @@ class DonorEmailVerificationServiceTest {
     @Test
     @DisplayName("Given an address no donor has, when a verification is requested, then nothing is stored and nothing is published")
     void should_store_and_publish_nothing_when_requested_given_unknown_email() {
-        when(donors.findByEmail(EMAIL)).thenReturn(Optional.empty());
+        when(donors.findByEmailForUpdate(EMAIL)).thenReturn(Optional.empty());
 
         service.requestVerification(EMAIL);
 
@@ -197,7 +197,7 @@ class DonorEmailVerificationServiceTest {
     @Test
     @DisplayName("Given a verified donor, when a verification is requested, then nothing is stored and nothing is published")
     void should_store_and_publish_nothing_when_requested_given_verified_donor() {
-        when(donors.findByEmail(EMAIL)).thenReturn(Optional.of(verifiedDonor()));
+        when(donors.findByEmailForUpdate(EMAIL)).thenReturn(Optional.of(verifiedDonor()));
 
         service.requestVerification(EMAIL);
 
@@ -207,7 +207,7 @@ class DonorEmailVerificationServiceTest {
     @Test
     @DisplayName("Given an unverified donor, when a verification is requested, then a new link is stored and published")
     void should_issue_link_when_requested_given_unverified_donor() {
-        when(donors.findByEmail(EMAIL)).thenReturn(Optional.of(unverifiedDonor(LocaleCode.CS)));
+        when(donors.findByEmailForUpdate(EMAIL)).thenReturn(Optional.of(unverifiedDonor(LocaleCode.CS)));
         when(tokens.countOf(DONOR)).thenReturn(0);
 
         service.requestVerification(EMAIL);
