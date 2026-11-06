@@ -36,7 +36,7 @@ class JpaAdminActionTrail implements AdminActionTrail {
 
     @Override
     public List<AdminActionSummary> findAllSummariesNewestFirst() {
-        return actions.findAllSummariesByOrderByPerformedAtDescIdDesc().stream().map(AdminActionJpaRepository.SummaryRow::toSummary).toList();
+        return actions.findAllSummariesNewestFirst().stream().map(AdminActionSummaryRow::toSummary).toList();
     }
 
     @Override

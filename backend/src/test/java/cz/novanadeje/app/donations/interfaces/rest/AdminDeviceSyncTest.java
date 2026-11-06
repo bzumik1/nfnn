@@ -185,8 +185,8 @@ class AdminDeviceSyncTest {
             millis[run] = Duration.ofNanos(System.nanoTime() - start).toMillis();
         }
         Arrays.sort(millis);
-        assertThat(millis[0]).as("the fastest of %d manifests over %d donors, %d gifts and payments and %d receipts, in ms: %s", TIMED_RUNS,
-                TIMED_DONORS, TIMED_DONATIONS, TIMED_DONORS * TIMED_RECEIPT_YEARS * 2, Arrays.toString(millis)).isLessThan(MANIFEST_BUDGET_MILLIS);
+        assertThat(millis[0]).as("the fastest manifest took %d ms (budget %d ms); all %d over %d donors, %d gifts and payments and %d receipts, in ms: %s",
+                millis[0], MANIFEST_BUDGET_MILLIS, TIMED_RUNS, TIMED_DONORS, TIMED_DONATIONS, TIMED_DONORS * TIMED_RECEIPT_YEARS * 2, Arrays.toString(millis)).isLessThan(MANIFEST_BUDGET_MILLIS);
     }
 
     private void issueReceipts(Random random, List<UUID> donors) {

@@ -114,7 +114,7 @@ class JpaDonationReceiptRepository implements DonationReceiptRepository {
 
     @Override
     public List<ReceiptSummary> findAllSummariesNewestFirst() {
-        return jpa.findAllSummariesNewestFirst().stream().map(IssuedReceiptJpaRepository.SummaryRow::toSummary).toList();
+        return jpa.findAllSummariesNewestFirst().stream().map(IssuedReceiptSummaryRow::toSummary).toList();
     }
 
     @Override
