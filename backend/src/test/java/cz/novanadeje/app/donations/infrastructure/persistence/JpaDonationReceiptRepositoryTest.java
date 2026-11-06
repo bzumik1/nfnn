@@ -633,6 +633,7 @@ class JpaDonationReceiptRepositoryTest {
         DonationReceipt receipt = yearly(jana, YEAR_2025, "2026-000001", Optional.empty());
         receipts.save(receipt);
         flushAndClear();
+        jdbc.sql("set local session_replication_role = replica").update();
         jdbc.sql("update issued_receipt set number = '2026-000099' where id = ?").param(receipt.id().value()).update();
 
         assertThatThrownBy(() -> receipts.findById(receipt.id()))
