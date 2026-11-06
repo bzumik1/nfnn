@@ -1,6 +1,7 @@
 import { Location } from '@angular/common';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { Provider } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Title } from '@angular/platform-browser';
 import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
@@ -15,6 +16,10 @@ import {
 } from '../../content/testing/news-fixtures';
 import { OTHER_PERSON_ID, person, PERSON_ID } from '../../content/testing/people-fixtures';
 import { PersonResponse } from '../../content/people-api';
+import {
+  MemoryDraftShelf,
+  memoryDraftShelfProviders,
+} from '../../../core/drafts/testing/memory-draft-shelf';
 import { AdminNewsEditor } from './admin-news-editor';
 
 const NEWS_URL = '/api/admin/content/news';
@@ -42,6 +47,7 @@ function problem(status: number, type: string, title: string, detail: string) {
 async function setUp(
   id: string | null,
   signers: Signers = {},
+  providers: Provider[] = [],
 ): Promise<{
   fixture: ComponentFixture<AdminNewsEditor>;
   http: HttpTestingController;
@@ -57,6 +63,7 @@ async function setUp(
         provide: ActivatedRoute,
         useValue: { snapshot: { paramMap: convertToParamMap(id === null ? {} : { id }) } },
       },
+      ...providers,
     ],
   }).compileComponents();
   const http = TestBed.inject(HttpTestingController);
@@ -1231,5 +1238,256 @@ describe('Given an administrator editing a signed news article while the people 
     const request = http.expectOne(`${NEWS_URL}/${signed.id}`);
     expect(request.request.body.signerId).toBe(OTHER_PERSON_ID);
     request.flush(signed);
+  });
+});
+
+describe('Given an administrator editing a published news article on a device that keeps drafts', () => {
+  const key = `news/${newsArticle().id}`;
+  let shelf: MemoryDraftShelf;
+  let fixture: ComponentFixture<AdminNewsEditor>;
+  let http: HttpTestingController;
+
+  async function open(): Promise<void> {
+    ({ fixture, http } = await setUp(newsArticle().id, {}, memoryDraftShelfProviders(shelf)));
+    http.expectOne(`${NEWS_URL}/${newsArticle().id}`).flush(newsArticle());
+    await drafted();
+  }
+
+  async function drafted(): Promise<void> {
+    for (let round = 0; round < 3; round++) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await settle(fixture);
+    }
+  }
+
+  function keptDraft(title: string, base = `version:${newsArticle().version}`) {
+    shelf.seed('administration', {
+      key,
+      base,
+      values: {
+        title,
+        slug: 'zahrada-pro-deti',
+        tag: 'Projekt',
+        perex: newsArticle().perex,
+        body: newsArticle().body,
+        coverImageAlt: '',
+        signerId: '',
+        publishDate: '2026-10-20',
+      },
+      savedAt: '2026-11-06T09:00:00.000Z',
+    });
+  }
+
+  beforeEach(() => {
+    shelf = new MemoryDraftShelf();
+  });
+
+  afterEach(() => http.verify());
+
+  it('when they type into the text, then the whole form is kept on the device under the version they read', async () => {
+    await open();
+
+    await type(fixture, '#news-body', 'Rozepsaný odstavec.');
+    await drafted();
+
+    expect(shelf.draftOf('administration', key)).toMatchObject({
+      base: `version:${newsArticle().version}`,
+      values: { title: 'Zahrada pro děti', body: 'Rozepsaný odstavec.' },
+    });
+  });
+
+  it('when they save the edit, then the draft leaves the device', async () => {
+    await open();
+    await type(fixture, '#news-body', 'Rozepsaný odstavec.');
+    await drafted();
+
+    await submit(fixture);
+    http
+      .expectOne(`${NEWS_URL}/${newsArticle().id}`)
+      .flush(newsArticle({ body: 'Rozepsaný odstavec.', version: '1111111111111111' }));
+    await drafted();
+
+    expect(shelf.draftOf('administration', key)).toBeNull();
+  });
+
+  it('when they leave without saving, then the draft leaves the device', async () => {
+    await open();
+    await type(fixture, '#news-body', 'Rozepsaný odstavec.');
+    await drafted();
+
+    const answer = fixture.componentInstance.canLeave();
+    await settle(fixture);
+    button(fixture, 'Odejít bez uložení').click();
+    await drafted();
+
+    await expect(answer).resolves.toBe(true);
+    expect(shelf.draftOf('administration', key)).toBeNull();
+  });
+
+  describe('when the device kept a draft of the version they open', () => {
+    beforeEach(async () => {
+      keptDraft('Zahrada pro všechny děti');
+      await open();
+    });
+
+    it('then the page offers it above the form, which still shows the saved text', () => {
+      expect(text(fixture, 'app-draft-offer')).toContain('Máte tu rozepsaný text');
+      expect(text(fixture, 'app-draft-offer')).toContain('z 06. 11. 2026 10:00');
+      expect(text(fixture, 'app-draft-offer')).not.toContain('Uložená verze se od té doby změnila');
+      expect(element<HTMLInputElement>(fixture, '#news-title').value).toBe('Zahrada pro děti');
+    });
+
+    it('and they continue it, then the form takes the draft, counts as unsaved and saves it under the version read', async () => {
+      button(fixture, 'Pokračovat v rozepsaném').click();
+      await drafted();
+
+      expect(fixture.nativeElement.querySelector('app-draft-offer')).toBeNull();
+      expect(element<HTMLInputElement>(fixture, '#news-title').value).toBe(
+        'Zahrada pro všechny děti',
+      );
+      expect(text(fixture, '[role="status"]:not(:empty)')).toBe(
+        'Pokračujete v rozepsaném textu. Uloží se, až ho uložíte.',
+      );
+      expect(document.activeElement?.tagName).toBe('H1');
+      expect(fixture.componentInstance.canLeave()).not.toBe(true);
+      fixture.componentInstance['stay']();
+      await settle(fixture);
+
+      await submit(fixture);
+      const request = http.expectOne(`${NEWS_URL}/${newsArticle().id}`);
+      expect(request.request.headers.get('If-Match')).toBe(`"${newsArticle().version}"`);
+      expect(request.request.body.title).toBe('Zahrada pro všechny děti');
+      request.flush(
+        newsArticle({ title: 'Zahrada pro všechny děti', version: '2222222222222222' }),
+      );
+      await drafted();
+      expect(shelf.draftOf('administration', key)).toBeNull();
+    });
+
+    it('and they discard it, then it leaves the device and the form keeps the saved text', async () => {
+      button(fixture, 'Zahodit').click();
+      await drafted();
+
+      expect(fixture.nativeElement.querySelector('app-draft-offer')).toBeNull();
+      expect(shelf.draftOf('administration', key)).toBeNull();
+      expect(element<HTMLInputElement>(fixture, '#news-title').value).toBe('Zahrada pro děti');
+      expect(text(fixture, '[role="status"]:not(:empty)')).toBe(
+        'Rozepsaný text jsme z tohoto zařízení zahodili.',
+      );
+    });
+  });
+
+  describe('when the device kept a draft of an older version', () => {
+    const older = '0000000000000001';
+
+    beforeEach(async () => {
+      keptDraft('Zahrada pro všechny děti', `version:${older}`);
+      await open();
+    });
+
+    it('then the offer says the saved version changed since', () => {
+      expect(text(fixture, 'app-draft-offer')).toContain('Uložená verze se od té doby změnila');
+    });
+
+    it('and they continue it and save, then the save names the older version and the refusal says the draft was overtaken', async () => {
+      button(fixture, 'Pokračovat v rozepsaném').click();
+      await drafted();
+
+      await submit(fixture);
+      const request = http.expectOne(`${NEWS_URL}/${newsArticle().id}`);
+      expect(request.request.headers.get('If-Match')).toBe(`"${older}"`);
+      request.flush(
+        {
+          type: 'https://nfnn.cz/problems/content/changed-meanwhile',
+          title: 'Mezitím se to změnilo',
+          status: 409,
+          version: newsArticle().version,
+          current: { id: newsArticle().id, updatedAt: '2026-11-05T08:00:00Z' },
+        },
+        { status: 409, statusText: 'Conflict' },
+      );
+      await settle(fixture);
+
+      const sheet = element(fixture, 'app-changed-meanwhile-dialog dialog');
+      expect(sheet.textContent).toContain('Od chvíle, kdy jste text na tomto zařízení rozepsali');
+      expect(element<HTMLInputElement>(fixture, '#news-title').value).toBe(
+        'Zahrada pro všechny děti',
+      );
+
+      button(fixture, 'Uložit svou verzi místo novější').click();
+      await settle(fixture);
+      const overwrite = http.expectOne(`${NEWS_URL}/${newsArticle().id}`);
+      expect(overwrite.request.headers.get('If-Match')).toBe(`"${newsArticle().version}"`);
+      overwrite.flush(
+        newsArticle({ title: 'Zahrada pro všechny děti', version: '3333333333333333' }),
+      );
+      await drafted();
+      expect(shelf.draftOf('administration', key)).toBeNull();
+    });
+
+    it('and they continue it, are refused and discard their edits, then the draft leaves the device and the newer version shows', async () => {
+      button(fixture, 'Pokračovat v rozepsaném').click();
+      await drafted();
+      await submit(fixture);
+      http.expectOne(`${NEWS_URL}/${newsArticle().id}`).flush(
+        {
+          type: 'https://nfnn.cz/problems/content/changed-meanwhile',
+          title: 'Mezitím se to změnilo',
+          status: 409,
+          version: newsArticle().version,
+          current: { id: newsArticle().id },
+        },
+        { status: 409, statusText: 'Conflict' },
+      );
+      await settle(fixture);
+
+      button(fixture, 'Zahodit své úpravy a načíst novější verzi').click();
+      await settle(fixture);
+      http.expectOne(`${NEWS_URL}/${newsArticle().id}`).flush(newsArticle());
+      await drafted();
+
+      expect(shelf.draftOf('administration', key)).toBeNull();
+      expect(fixture.nativeElement.querySelector('app-draft-offer')).toBeNull();
+      expect(element<HTMLInputElement>(fixture, '#news-title').value).toBe('Zahrada pro děti');
+    });
+  });
+});
+
+describe('Given an administrator writing a new news article on a device that keeps drafts', () => {
+  let shelf: MemoryDraftShelf;
+  let fixture: ComponentFixture<AdminNewsEditor>;
+  let http: HttpTestingController;
+
+  async function drafted(): Promise<void> {
+    for (let round = 0; round < 3; round++) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await settle(fixture);
+    }
+  }
+
+  beforeEach(async () => {
+    shelf = new MemoryDraftShelf();
+    ({ fixture, http } = await setUp(null, {}, memoryDraftShelfProviders(shelf)));
+    await drafted();
+  });
+
+  afterEach(() => http.verify());
+
+  it('when they type a title, then it is kept as the draft of a new article, and once created that draft leaves the device', async () => {
+    await type(fixture, '#news-title', 'Benefiční koncert');
+    await drafted();
+    expect(shelf.draftOf('administration', 'news/new')?.values).toMatchObject({
+      title: 'Benefiční koncert',
+      slug: 'beneficni-koncert',
+    });
+
+    await type(fixture, '#news-perex', 'Zveme vás na koncert.');
+    await type(fixture, '#news-body', 'Text o koncertu.');
+    await submit(fixture);
+    http.expectOne(NEWS_URL).flush(draftArticle());
+    await drafted();
+
+    expect(shelf.draftOf('administration', 'news/new')).toBeNull();
+    expect(shelf.draftOf('administration', `news/${draftArticle().id}`)).toBeNull();
   });
 });

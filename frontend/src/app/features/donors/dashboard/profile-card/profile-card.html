@@ -16,6 +16,16 @@
     }
   </div>
 
+  @if (draft.offer(); as offer) {
+    <app-draft-offer
+      [headingLevel]="3"
+      [savedAt]="draftSavedAt(offer.savedAt)"
+      [stale]="offer.stale"
+      (resumed)="resumeDraft()"
+      (discarded)="discardDraft()"
+    />
+  }
+
   @if (editing()) {
     <form
       #profile="ngForm"
@@ -152,6 +162,34 @@
         <p class="ui-field-error" role="alert">{{ error() }}</p>
       }
 
+      @if (confirmingStale()) {
+        <div class="ui-callout ui-callout--warning profile-stale" role="alert">
+          <p i18n="@@donor.profile.stale.text">
+            Od chvíle, kdy jste údaje na tomto zařízení rozepsali, se uložené údaje změnily, třeba
+            na jiném zařízení. Vaše úpravy jsme zatím neuložili.
+          </p>
+          <div class="profile-actions">
+            <button
+              appNeedsConnection
+              type="button"
+              class="ui-button ui-button--primary profile-stale-keep"
+              (click)="keepEdits(profile)"
+              i18n="@@donor.profile.stale.keep"
+            >
+              Uložit své úpravy místo nich
+            </button>
+            <button
+              type="button"
+              class="ui-button ui-button--large profile-stale-drop"
+              (click)="dropEdits()"
+              i18n="@@donor.profile.stale.drop"
+            >
+              Zahodit své úpravy
+            </button>
+          </div>
+        </div>
+      }
+
       <div class="profile-actions">
         <button
           appNeedsConnection
@@ -203,7 +241,9 @@
   }
 
   <p class="ui-form-status profile-status" role="status">
-    @if (saved()) {
+    @if (draftStatus(); as status) {
+      <span>{{ status }}</span>
+    } @else if (saved()) {
       <span i18n="@@donor.profile.saved.receiptScope">
         Údaje jsme uložili. Jméno a adresu ponesou všechna potvrzení, která si stáhnete od teď,
         zvolený jazyk jen ta, která si stáhnete poprvé.

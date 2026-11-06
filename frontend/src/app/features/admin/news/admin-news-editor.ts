@@ -63,6 +63,12 @@ import {
   ChangedMeanwhileState,
 } from '../changed-meanwhile/changed-meanwhile-dialog';
 import { CompactLayout } from '../../../core/layout/compact-layout';
+import { formDraft } from '../../../core/drafts/form-draft';
+import {
+  DRAFT_DISCARDED_TEXT,
+  DRAFT_RESUMED_TEXT,
+  DraftOffer,
+} from '../../../shared/ui/draft-offer/draft-offer';
 
 type LoadState = 'loading' | 'ready' | 'error';
 type EditorMode = 'edit' | 'preview';
@@ -75,6 +81,18 @@ const NOT_FOUND = 'content/news-not-found';
 const SLUG_TAKEN = 'content/slug-taken';
 const EDIT_TITLE = $localize`:@@admin.newsEditor.pageTitle.edit:Úprava aktuality | Správa | Nová naděje – nadační fond`;
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const NEW_ARTICLE_BASE = 'new';
+
+interface NewsDraftValues {
+  readonly title: string;
+  readonly slug: string;
+  readonly tag: string;
+  readonly perex: string;
+  readonly body: string;
+  readonly coverImageAlt: string;
+  readonly signerId: string;
+  readonly publishDate: string;
+}
 
 @Component({
   selector: 'app-admin-news-editor',
@@ -93,6 +111,7 @@ const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
     ActionBar,
     FocalPointPicker,
     NeedsConnection,
+    DraftOffer,
   ],
   templateUrl: './admin-news-editor.html',
   styleUrl: './admin-news-editor.scss',
@@ -188,6 +207,22 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
   protected signerId = '';
   protected publishDate = todayIso();
   private slugEdited = false;
+  private readonly routeId = inject(ActivatedRoute).snapshot.paramMap.get('id');
+  protected readonly draft = formDraft<NewsDraftValues>({
+    copy: 'administration',
+    key: () => `news/${this.article()?.id ?? this.routeId ?? 'new'}`,
+    values: () => ({
+      title: this.articleTitle,
+      slug: this.slug,
+      tag: this.tag,
+      perex: this.perex,
+      body: this.body,
+      coverImageAlt: this.coverImageAlt,
+      signerId: this.signerId,
+      publishDate: this.publishDate,
+    }),
+    apply: (values) => this.applyDraft(values),
+  });
 
   protected readonly isNew = computed(() => this.article() === null);
   protected readonly isPublished = computed(() => this.article()?.publishedOn != null);
@@ -314,6 +349,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
         next: (article) => {
           this.show(article);
           this.state.set('ready');
+          this.draft.ready(article.version);
           loaded?.();
         },
         error: (failure: unknown) => {
@@ -349,9 +385,56 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
           this.people.set(
             people.members.map(({ id, name, role, portrait }) => ({ id, name, role, portrait })),
           );
+          this.newArticleReady(withDefault);
         },
-        error: () => this.people.set([]),
+        error: () => {
+          this.people.set([]);
+          this.newArticleReady(withDefault);
+        },
       });
+  }
+
+  private newArticleReady(isNew: boolean): void {
+    if (isNew && this.article() === null) {
+      this.draft.ready(NEW_ARTICLE_BASE);
+    }
+  }
+
+  protected draftSavedAt(savedAt: string): string {
+    return formatBankTime(savedAt);
+  }
+
+  protected resumeDraft(): void {
+    this.draft.resume();
+    const stale = this.draft.staleVersion();
+    if (stale !== null) {
+      this.article.update((saved) => (saved ? { ...saved, version: stale } : saved));
+    }
+    this.notice.set({ kind: 'status', text: DRAFT_RESUMED_TEXT });
+    afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
+  }
+
+  protected discardDraft(): void {
+    this.draft.discard();
+    this.notice.set({ kind: 'status', text: DRAFT_DISCARDED_TEXT });
+    afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
+  }
+
+  private applyDraft(values: NewsDraftValues): void {
+    this.articleTitle = values.title;
+    this.slug = values.slug;
+    this.slugEdited = values.slug.trim() !== '';
+    this.slugOrDraft.set(values.slug);
+    this.tag = values.tag;
+    this.perex = values.perex;
+    this.body = values.body;
+    this.coverImageAlt = values.coverImageAlt;
+    this.signerId = values.signerId;
+    const today = todayIso();
+    this.publishDate =
+      this.isPublished() || values.publishDate >= today ? values.publishDate : today;
+    this.articleForm()?.form.markAsDirty();
+    this.edited.set(true);
   }
 
   canLeave(): boolean | Promise<boolean> {
@@ -372,6 +455,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
   }
 
   protected leaveWithoutSaving(): void {
+    this.draft.left();
     this.closeLeaveQuestion(true);
   }
 
@@ -500,6 +584,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
             overwrite: true,
             publish,
             savedAt: savedAtInRefusal(failure),
+            fromDraft: this.draft.resumedStale(),
           });
           return;
         }
@@ -581,6 +666,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
         next: (article) => {
           this.saving.set(null);
           this.article.set(article);
+          this.draft.saved(article.version);
           const on = formatDonationDate(article.publishedOn ?? date);
           this.notice.set({
             kind: 'status',
@@ -621,6 +707,9 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
           this.unpublishing.set(false);
           this.article.set(article);
           this.publishDate = todayIso();
+          if (!this.unsaved()) {
+            this.draft.saved(article.version);
+          }
           this.notice.set({
             kind: 'status',
             text: $localize`:@@admin.newsEditor.unpublished:Aktualitu jsme z webu stáhli. Zůstává tu jako koncept.`,
@@ -667,6 +756,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
         next: () => {
           this.deleting.set(false);
           this.discarded = true;
+          this.draft.left();
           this.router.navigateByUrl('/sprava/aktuality', { state: { deleted: existing.title } });
         },
         error: (failure: unknown) => {
@@ -700,6 +790,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     }
     this.publishRequested = changed.publish;
     this.article.update((saved) => (saved ? { ...saved, version } : saved));
+    this.draft.overwriteConfirmed();
     this.submit(form);
   }
 
@@ -710,6 +801,9 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     this.changedMeanwhile.set(null);
     if (!saved) {
       return;
+    }
+    if (discardedEdits) {
+      this.draft.discard();
     }
     this.articleForm()?.form.markAsPristine();
     this.edited.set(false);
@@ -758,6 +852,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     this.show(article);
     this.articleForm()?.form.markAsPristine();
     this.edited.set(false);
+    this.draft.saved(article.version);
     if (created) {
       this.location.replaceState(`/sprava/aktuality/${article.id}`);
       this.pageTitle.setTitle(EDIT_TITLE);

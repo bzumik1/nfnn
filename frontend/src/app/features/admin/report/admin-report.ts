@@ -45,6 +45,19 @@ import {
 } from '../../../core/version/row-version';
 import { DialogAnnouncer } from '../../../shared/ui/dialog/dialog-announcer';
 import { ChangedMeanwhileDialog } from '../changed-meanwhile/changed-meanwhile-dialog';
+import { formDraft } from '../../../core/drafts/form-draft';
+import {
+  DRAFT_DISCARDED_TEXT,
+  DRAFT_RESUMED_TEXT,
+  DraftOffer,
+} from '../../../shared/ui/draft-offer/draft-offer';
+
+interface ReportDraftValues {
+  readonly recipients: string;
+  readonly sendDay: number;
+  readonly sendHour: number;
+  readonly sections: AdminReportResponse['settings']['sections'];
+}
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -72,6 +85,7 @@ const SEND_HOURS = Array.from({ length: 24 }, (_, index) => index);
     EmailListValidator,
     NeedsConnection,
     ChangedMeanwhileDialog,
+    DraftOffer,
   ],
   templateUrl: './admin-report.html',
   styleUrl: './admin-report.scss',
@@ -99,9 +113,11 @@ export class AdminReport {
   protected readonly sending = signal(false);
   protected readonly settingsError = signal<string | null>(null);
   protected readonly confirmingSend = signal(false);
-  protected readonly changedMeanwhile = signal<{ version: string; savedAt: string | null } | null>(
-    null,
-  );
+  protected readonly changedMeanwhile = signal<{
+    version: string;
+    savedAt: string | null;
+    fromDraft: boolean;
+  } | null>(null);
   protected readonly sendDays = SEND_DAYS;
   protected readonly sendHours = SEND_HOURS;
 
@@ -120,6 +136,23 @@ export class AdminReport {
   protected sendHour = 7;
   protected sections = { donors: true, donations: true, unpairedPayments: true, bankImport: true };
   protected month = '';
+  protected readonly draft = formDraft<ReportDraftValues>({
+    copy: 'administration',
+    key: () => 'report-settings',
+    values: () => ({
+      recipients: this.recipients(),
+      sendDay: Number(this.sendDay),
+      sendHour: Number(this.sendHour),
+      sections: { ...this.sections },
+    }),
+    apply: (values) => {
+      this.recipients.set(values.recipients);
+      this.sendDay = values.sendDay;
+      this.sendHour = values.sendHour;
+      this.sections = { ...values.sections };
+      this.settingsForm()?.form.markAsDirty();
+    },
+  });
 
   protected readonly changedAt = computed(() => time(this.report()?.settings.changedAt));
   protected readonly nextReport = computed(() => {
@@ -191,6 +224,7 @@ export class AdminReport {
           this.sections = { ...report.settings.sections };
           this.month = report.lastEndedMonth;
           this.state.set('ready');
+          this.draft.ready(report.settings.version);
           loaded?.();
         },
         error: (failure: unknown) => {
@@ -215,6 +249,10 @@ export class AdminReport {
     return formatBankTime(item.sentAt);
   }
 
+  protected draftSavedAt(savedAt: string): string {
+    return formatBankTime(savedAt);
+  }
+
   protected noSectionChosen(): boolean {
     return !Object.values(this.sections).some(Boolean);
   }
@@ -236,13 +274,25 @@ export class AdminReport {
     }
     const report = this.report();
     if (report !== null) {
-      this.submitSettings(report.settings.version);
+      this.submitSettings(this.draft.staleVersion() ?? report.settings.version);
     }
+  }
+
+  protected resumeDraft(): void {
+    this.draft.resume();
+    this.settingsError.set(null);
+    this.settingsStatus.set(DRAFT_RESUMED_TEXT);
+  }
+
+  protected discardDraft(): void {
+    this.draft.discard();
+    this.settingsStatus.set(DRAFT_DISCARDED_TEXT);
   }
 
   protected overwriteAfterChange(): void {
     const changed = this.changedMeanwhile();
     if (changed !== null) {
+      this.draft.overwriteConfirmed();
       this.submitSettings(changed.version);
     }
   }
@@ -250,6 +300,7 @@ export class AdminReport {
   protected reloadAfterChange(): void {
     this.changedMeanwhile.set(null);
     this.settingsError.set(null);
+    this.draft.discard();
     this.fetch(() => {
       this.markSettingsSaved();
       this.settingsStatus.set(
@@ -285,6 +336,7 @@ export class AdminReport {
         next: () => {
           this.saving.set(false);
           this.changedMeanwhile.set(null);
+          this.draft.discard();
           this.settingsStatus.set(
             $localize`:@@admin.report.settings.saved:Nastavení jsme uložili. Příští přehled odejde podle něj.`,
           );
@@ -300,7 +352,11 @@ export class AdminReport {
                   $localize`:@@admin.report.settings.changedAgain:Nastavení mezitím změnil ještě někdo další. Vyberte prosím znovu, co s vašimi úpravami.`,
                 );
               }
-              this.changedMeanwhile.set({ version: current, savedAt: savedAtInRefusal(failure) });
+              this.changedMeanwhile.set({
+                version: current,
+                savedAt: savedAtInRefusal(failure),
+                fromDraft: this.draft.resumedStale(),
+              });
               return;
             }
           }

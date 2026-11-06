@@ -5,11 +5,13 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   ElementRef,
   inject,
   Injector,
   output,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { FormsModule, NgForm } from '@angular/forms';
@@ -33,6 +35,13 @@ import {
   STREET_MESSAGES,
 } from '../../donor-field-messages';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
+import { formDraft } from '../../../../core/drafts/form-draft';
+import {
+  DRAFT_DISCARDED_TEXT,
+  DRAFT_RESUMED_TEXT,
+  DraftOffer,
+} from '../../../../shared/ui/draft-offer/draft-offer';
+import { formatBankTime } from '../../../donations/donation-date';
 
 interface ProfileFields {
   name: string;
@@ -65,6 +74,7 @@ const PROFILE_FIELDS: Readonly<Record<string, string>> = {
     FocusFirstInvalid,
     PrintableOnReceiptValidator,
     NeedsConnection,
+    DraftOffer,
   ],
   templateUrl: './profile-card.html',
   styleUrl: './profile-card.scss',
@@ -79,6 +89,7 @@ export class ProfileCard {
 
   private readonly editButton = viewChild<ElementRef<HTMLButtonElement>>('editButton');
   private readonly nameInput = viewChild<ElementRef<HTMLInputElement>>('nameInput');
+  private readonly profileForm = viewChild<NgForm>('profile');
 
   protected readonly donor = this.auth.donor;
   protected readonly company = computed(() => this.donor()?.type === 'COMPANY');
@@ -86,9 +97,37 @@ export class ProfileCard {
   protected readonly saving = signal(false);
   protected readonly saved = signal(false);
   protected readonly error = signal('');
+  protected readonly draftStatus = signal<string | null>(null);
+  protected readonly confirmingStale = signal(false);
   protected readonly localeLabels = LOCALE_LABELS;
 
   protected fields: ProfileFields = fieldsOf(null);
+  protected readonly draft = formDraft<ProfileFields>({
+    copy: 'donor',
+    key: () => (this.donor() === null ? null : 'profile'),
+    values: () => (this.editing() ? { ...this.fields } : fieldsOf(this.donor())),
+    apply: (values) => {
+      this.fields = { ...values };
+      this.error.set('');
+      this.saved.set(false);
+      this.editing.set(true);
+      afterNextRender(
+        () => {
+          this.profileForm()?.form.markAsDirty();
+          this.nameInput()?.nativeElement.focus();
+        },
+        { injector: this.injector },
+      );
+    },
+  });
+
+  constructor() {
+    effect(() => {
+      if (this.donor() !== null && !untracked(this.editing)) {
+        untracked(() => this.draft.ready());
+      }
+    });
+  }
 
   protected readonly nameMessages = computed(() =>
     this.company() ? COMPANY_NAME_MESSAGES : PERSON_NAME_MESSAGES,
@@ -101,20 +140,55 @@ export class ProfileCard {
     return `${donor.address.street}, ${donor.address.postalCode} ${donor.address.city}`;
   }
 
+  protected draftSavedAt(savedAt: string): string {
+    return formatBankTime(savedAt);
+  }
+
+  protected resumeDraft(): void {
+    this.draft.resume();
+    this.draftStatus.set(DRAFT_RESUMED_TEXT);
+  }
+
+  protected discardDraft(): void {
+    this.draft.discard();
+    this.draftStatus.set(DRAFT_DISCARDED_TEXT);
+    afterNextRender(() => this.editButton()?.nativeElement.focus(), { injector: this.injector });
+  }
+
+  protected keepEdits(form: NgForm): void {
+    this.confirmingStale.set(false);
+    this.draft.overwriteConfirmed();
+    this.save(form);
+  }
+
+  protected dropEdits(): void {
+    this.confirmingStale.set(false);
+    this.draft.discard();
+    this.draftStatus.set(DRAFT_DISCARDED_TEXT);
+    this.close();
+  }
+
   edit(): void {
     this.fields = fieldsOf(this.donor());
     this.error.set('');
     this.saved.set(false);
+    this.draftStatus.set(null);
     this.editing.set(true);
     afterNextRender(() => this.nameInput()?.nativeElement.focus(), { injector: this.injector });
   }
 
   cancel(): void {
+    this.confirmingStale.set(false);
+    this.draft.discard();
     this.close();
   }
 
   save(form: NgForm): void {
     if (form.invalid || this.saving()) {
+      return;
+    }
+    if (this.draft.resumedStale()) {
+      this.confirmingStale.set(true);
       return;
     }
     this.saving.set(true);
@@ -133,7 +207,9 @@ export class ProfileCard {
         next: () => {
           this.saving.set(false);
           this.saved.set(true);
+          this.draftStatus.set(null);
           this.close();
+          this.draft.saved();
         },
         error: (failure: unknown) => {
           this.saving.set(false);

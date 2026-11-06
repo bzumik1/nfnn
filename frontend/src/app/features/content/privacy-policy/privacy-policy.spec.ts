@@ -125,6 +125,12 @@ describe('Given the privacy policy page', () => {
     );
   });
 
+  it('when it renders, then the cookies section says that unsaved edits go only into the encrypted copies and when they go', () => {
+    expect(texts('#cookies .drafts')).toEqual([
+      'Do těchto šifrovaných kopií si portál a správa ukládají i rozepsané, ještě neuložené úpravy (vaše údaje na potvrzení, u správců texty a nastavení webu), aby se neztratily zavřením stránky. Zmizí uložením, zahozením nebo spolu s kopií. Kontaktní formulář nic neukládá a na cizím počítači se neukládá nic.',
+    ]);
+  });
+
   it('when it renders, then the cookies section says that administrators keep an encrypted copy of the administration on their devices, how it locks, and when it goes', () => {
     const [paragraph] = texts('#cookies .administration-copy');
 
