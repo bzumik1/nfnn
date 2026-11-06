@@ -289,7 +289,12 @@ test.describe('Given a visitor on the Přispět page', () => {
         expect(
           await page.evaluate(() => (window as unknown as { offeredFiles: unknown }).offeredFiles),
         ).toEqual([
-          { name: 'qr-platba-nova-nadeje.png', type: 'image/png', text: '', title: 'QR platba' },
+          {
+            name: 'QR platba Nová naděje 500 Kč.png',
+            type: 'image/png',
+            text: '',
+            title: 'QR platba',
+          },
         ]);
       });
 
@@ -346,7 +351,12 @@ test.describe('Given a visitor on the Přispět page', () => {
         expect(
           await page.evaluate(() => (window as unknown as { offeredFiles: unknown }).offeredFiles),
         ).toEqual([
-          { name: 'qr-platba-nova-nadeje.png', type: 'image/png', text: '', title: 'QR platba' },
+          {
+            name: 'QR platba Nová naděje 500 Kč.png',
+            type: 'image/png',
+            text: '',
+            title: 'QR platba',
+          },
         ]);
       });
     });
