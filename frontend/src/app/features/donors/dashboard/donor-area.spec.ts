@@ -1021,7 +1021,7 @@ describe('Given a signed-in donor in the donor area', () => {
 
       expect(text('.last-gift h2')).toBe('Poslední dar');
       expect(text('.last-gift-amount')).toBe('500 Kč');
-      expect(text('.last-gift-date')).toBe('15. 03. 2026');
+      expect(text('.last-gift-date')).toBe('15. 3. 2026');
       expect(text('.last-gift-status')).toBe('Přijato');
       expect(blockOrder()).toEqual([
         'receipt-ready',
@@ -1039,7 +1039,7 @@ describe('Given a signed-in donor in the donor area', () => {
       await respond(twoYearSummary(), list);
 
       expect(text('.last-gift-amount')).toBe('500 Kč');
-      expect(text('.last-gift-date')).toBe('15. 03. 2026');
+      expect(text('.last-gift-date')).toBe('15. 3. 2026');
       expect(texts('.recent-card tbody tr td:nth-child(3)')[0]).toBe('Ověření účtu');
     });
 
@@ -1256,10 +1256,10 @@ describe('Given a signed-in donor in the donor area', () => {
           .map((cell) => normalized(cell.textContent ?? '')),
       );
       expect(rows).toEqual([
-        ['15. 03. 2026', '500 Kč', 'Obecný příspěvek', 'Přijato'],
-        ['10. 01. 2026', '1 000 Kč', 'Obecný příspěvek', 'Přijato'],
-        ['05. 11. 2025', '250 Kč', 'Obecný příspěvek', 'Přijato'],
-        ['20. 08. 2025', '2 000 Kč', 'Obecný příspěvek', 'Vráceno'],
+        ['15. 3. 2026', '500 Kč', 'Obecný příspěvek', 'Přijato'],
+        ['10. 1. 2026', '1 000 Kč', 'Obecný příspěvek', 'Přijato'],
+        ['5. 11. 2025', '250 Kč', 'Obecný příspěvek', 'Přijato'],
+        ['20. 8. 2025', '2 000 Kč', 'Obecný příspěvek', 'Vráceno'],
       ]);
     });
 
@@ -1424,7 +1424,7 @@ describe('Given a signed-in donor in the donor area', () => {
       await settle();
       await new Promise((resolve) => setTimeout(resolve, 0));
 
-      expect(text(secondRowButton)).toBe('Otevřít PDF, dar z 10. 01. 2026, 1 000 Kč');
+      expect(text(secondRowButton)).toBe('Otevřít PDF, dar z 10. 1. 2026, 1 000 Kč');
       expect(text(`${yearSection(2026)} tbody tr:nth-child(2) .receipt-saved`)).toBe(
         'Potvrzení potvrzeni-o-daru-2026-000017.pdf je připravené. Otevřete ho tlačítkem Otevřít PDF.',
       );
@@ -1434,7 +1434,7 @@ describe('Given a signed-in donor in the donor area', () => {
 
       http.expectNone({ method: 'POST', url: RECEIPTS_URL });
       expect(share).toHaveBeenCalledTimes(1);
-      expect(text(secondRowButton)).toBe('Stáhnout PDF, dar z 10. 01. 2026, 1 000 Kč');
+      expect(text(secondRowButton)).toBe('Stáhnout PDF, dar z 10. 1. 2026, 1 000 Kč');
     });
 
     it('then a yearly receipt the server refuses shows the reason at that year, not above the years', async () => {
@@ -1925,7 +1925,7 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(
         [...first.querySelectorAll('td')].map((cell) => normalized(cell.textContent ?? '')),
       ).toEqual([
-        '20. 03. 2026',
+        '20. 3. 2026',
         '1 Kč',
         'Ověření účtu',
         'Přijato',
@@ -1944,13 +1944,13 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(button(secondRowButton).getAttribute('aria-disabled')).toBe('true');
       expect(text(secondRowButton)).toBe('Připravujeme PDF…');
       expect(text('.payments-card tbody tr:first-child .download-btn')).toBe(
-        'Stáhnout PDF, dar z 15. 03. 2026, 500 Kč',
+        'Stáhnout PDF, dar z 15. 3. 2026, 500 Kč',
       );
 
       receiptRequest({ donationId: 'd-3' }).flush(issuedSingle('2026-000017'));
       await settle();
       expect(button(secondRowButton).getAttribute('aria-disabled')).toBeNull();
-      expect(text(secondRowButton)).toBe('Stáhnout PDF, dar z 10. 01. 2026, 1 000 Kč');
+      expect(text(secondRowButton)).toBe('Stáhnout PDF, dar z 10. 1. 2026, 1 000 Kč');
     });
 
     it('then a receipt no longer available shows the problem title in its row and loads the payments again', async () => {
@@ -2903,14 +2903,14 @@ describe('Given a signed-in donor in the donor area', () => {
 
       const rows = [...root().querySelectorAll<HTMLElement>('.single-card tbody tr')];
       expect(rows.map((row) => normalized(row.querySelector('.date')?.textContent ?? ''))).toEqual([
-        '15. 03. 2026',
-        '10. 01. 2026',
+        '15. 3. 2026',
+        '10. 1. 2026',
       ]);
       expect(
         rows.map((row) => normalized(row.querySelector('.download-btn')?.textContent ?? '')),
       ).toEqual([
-        'Stáhnout PDF, dar z 15. 03. 2026, 500 Kč',
-        'Stáhnout PDF, dar z 10. 01. 2026, 1 000 Kč',
+        'Stáhnout PDF, dar z 15. 3. 2026, 500 Kč',
+        'Stáhnout PDF, dar z 10. 1. 2026, 1 000 Kč',
       ]);
       expect(text('.single-card .yearly-sub')).toBe(
         'Potvrzení k letošním darům stáhnete tady hned po jejich připsání, ke starším darům v části Moje dary.',

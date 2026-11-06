@@ -254,7 +254,7 @@ describe('Given an administrator on the bank payments page', () => {
       expect(
         fixture.nativeElement.querySelector('tbody tr .donor-name a')?.getAttribute('href'),
       ).toBe('/sprava/darci/01a18e56-bdb0-775a-bd0a-a60756831369');
-      expect(rows()[1]).toContain('01. 09. 2025');
+      expect(rows()[1]).toContain('1. 9. 2025');
       expect(rows()[1]).toContain('dárce bez záznamu ručně správcem vráceno');
       expect(rows()[1]).toContain('Zrušit přiřazení');
     });

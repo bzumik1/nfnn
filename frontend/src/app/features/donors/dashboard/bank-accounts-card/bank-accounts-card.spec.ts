@@ -119,7 +119,7 @@ describe('Given the bank accounts card in the overview', () => {
       'Platby bez variabilního symbolu z něj vám přiřazujeme automaticky.',
     );
     expect(texts('.account-meta > li')).toEqual([
-      'ověřeno 12. 03. 2026',
+      'ověřeno 12. 3. 2026',
       '14 darů bez symbolu',
       '7 400 Kč',
     ]);
@@ -130,7 +130,7 @@ describe('Given the bank accounts card in the overview', () => {
     await respond([bankAccount({ donationCount: 1, totalAmountMinor: 50050 })]);
 
     expect(texts('.account-meta > li')).toEqual([
-      'ověřeno 12. 03. 2026',
+      'ověřeno 12. 3. 2026',
       '1 dar bez symbolu',
       '500,50 Kč',
     ]);
@@ -145,7 +145,7 @@ describe('Given the bank accounts card in the overview', () => {
   it('when an account has no gifts without a symbol yet, then the row does not count them', async () => {
     await respond([bankAccount({ donationCount: 0, totalAmountMinor: 0, lastDonationOn: null })]);
 
-    expect(texts('.account-meta > li')).toEqual(['ověřeno 12. 03. 2026']);
+    expect(texts('.account-meta > li')).toEqual(['ověřeno 12. 3. 2026']);
   });
 
   it('when another donor verified the same account, then the row warns that it is shared and says what the donor can do', async () => {
@@ -184,7 +184,7 @@ describe('Given the bank accounts card in the overview', () => {
       'Z tohoto účtu už přiřazujeme jen platby s variabilním symbolem. Posílejte z něj prosím vždy s vaším variabilním symbolem.',
     );
     expect(texts('.account-meta > li')).toEqual([
-      'ověřeno 12. 03. 2026',
+      'ověřeno 12. 3. 2026',
       '14 darů bez symbolu',
       '7 400 Kč',
     ]);
@@ -276,14 +276,14 @@ describe('Given the bank accounts card in the overview', () => {
     expect(texts('.account-status')).toEqual(['Nepřiřazujeme', 'Nepřiřazujeme']);
     expect(element('.account')?.classList).toContain('account--disconnected');
     expect(texts('.account:nth-child(1) .account-meta > li')).toEqual([
-      'ověřeno 12. 03. 2026',
+      'ověřeno 12. 3. 2026',
       'vypnuto od 19. 10. 2026',
       '14 darů bez symbolu',
       '7 400 Kč',
     ]);
     expect(texts('.account:nth-child(2) .account-meta > li')).toEqual([
-      'ověřeno 12. 03. 2026',
-      'vypnuto od 01. 01. 2026',
+      'ověřeno 12. 3. 2026',
+      'vypnuto od 1. 1. 2026',
     ]);
     expect(element('.account-hint')).toBeNull();
     expect(texts('.account-action')).toEqual([
@@ -377,7 +377,7 @@ describe('Given the bank accounts card in the overview', () => {
     ]);
     expect(texts('.account-hint strong')).toEqual(['6123456789', '7001234567']);
     expect(texts('.account-meta > li')).toEqual([
-      'ověřeno 12. 03. 2026',
+      'ověřeno 12. 3. 2026',
       '14 darů bez symbolu',
       '7 400 Kč',
     ]);
