@@ -94,6 +94,53 @@ describe('Given the back target of the app', () => {
     });
   });
 
+  describe('when the root of the tab is asked for from a page opened from that root', () => {
+    beforeEach(async () => {
+      await router.navigateByUrl('/aktuality');
+      await router.navigateByUrl('/aktuality/druhy');
+      const returned = navigated(router);
+      back.toTabRoot('/aktuality');
+      await returned;
+    });
+
+    it('then the app steps back to the root, so the page it left is no longer behind it', () => {
+      expect(router.url).toBe('/aktuality');
+      expect(back.canGoBack).toBe(true);
+      expect(back.returningByButton).toBe(true);
+    });
+
+    it('and back is pressed, then it returns to the page before the root, not to the page left', async () => {
+      const returned = navigated(router);
+      back.back('/');
+      await returned;
+
+      expect(router.url).toBe('/aktuality/clanek');
+    });
+  });
+
+  it('when the root of the tab is asked for from a page opened elsewhere, then the page is replaced by the root', async () => {
+    await router.navigateByUrl('/o-nas');
+    await router.navigateByUrl('/aktuality/druhy');
+
+    const replaced = navigated(router);
+    back.toTabRoot('/aktuality');
+    await replaced;
+    const returned = navigated(router);
+    TestBed.inject(Location).back();
+    await returned;
+
+    expect(router.url).toBe('/o-nas');
+  });
+
+  it('when the app starts on a deep link and the root of its tab is asked for, then the root replaces the entry', async () => {
+    const replaced = navigated(router);
+    back.toTabRoot('/aktuality');
+    await replaced;
+
+    expect(router.url).toBe('/aktuality');
+    expect(back.canGoBack).toBe(false);
+  });
+
   it('when back returns to the page before, then the app knows the return came from its own button', async () => {
     await router.navigateByUrl('/aktuality/druhy');
     expect(back.returningByButton).toBe(false);

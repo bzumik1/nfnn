@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'touch-target';
 
 .type-switch {
   margin-bottom: var(--space-4);
@@ -82,6 +83,7 @@
     transition: all var(--duration-base);
     background: transparent;
     color: var(--color-text-muted);
+    @include touch-target.reaches-finger-size;
 
     &.is-active {
       background: var(--color-accent);
@@ -208,6 +210,7 @@
   cursor: pointer;
   padding: 0 0 0 var(--space-1);
   font-family: var(--font-sans);
+  @include touch-target.reaches-finger-size;
 }
 
 .step-back {

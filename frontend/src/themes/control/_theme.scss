@@ -200,6 +200,8 @@
     var(--tab-bar-rendered-height) + 2 * var(--tab-bar-gap-browser) + env(safe-area-inset-bottom)
   );
   --back-button-size: 45px;
+  --scroll-edge-fade: 15px;
+  --touch-target-size: 45px;
   --list-row-min-height: 55px;
   --list-group-title-top: 0rem;
 

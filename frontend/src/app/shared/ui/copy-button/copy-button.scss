@@ -1,5 +1,11 @@
+@use 'touch-target';
+
 :host {
   display: inline-flex;
+}
+
+.ui-pill-button {
+  @include touch-target.reaches-finger-size;
 }
 
 :host(.has-failed) {
