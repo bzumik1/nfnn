@@ -2,7 +2,8 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  margin: 0 var(--space-8) var(--space-4) 0;
+  min-height: var(--sheet-close-size);
+  margin: 0 calc(var(--sheet-close-size) + var(--space-3)) var(--space-4) 0;
 }
 
 .account-initials {

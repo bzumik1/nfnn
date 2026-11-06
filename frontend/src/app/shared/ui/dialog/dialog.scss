@@ -75,7 +75,8 @@
   }
 }
 
-.dialog-grabber {
+.dialog-grabber,
+.dialog-close-icon {
   display: none;
 }
 
@@ -137,6 +138,30 @@
 
   .dialog--sheet .dialog-panel--dragging {
     transition: none;
+  }
+
+  .dialog--sheet .dialog-panel--tall {
+    height: calc(100dvh - env(safe-area-inset-top) - var(--sheet-top-gap));
+    max-height: none;
+    padding-top: var(--sheet-close-inset);
+  }
+
+  .dialog--sheet .dialog-close {
+    top: var(--sheet-close-inset);
+    right: max(var(--sheet-close-inset), env(safe-area-inset-right));
+    width: var(--sheet-close-size);
+    height: var(--sheet-close-size);
+    border-radius: var(--radius-pill);
+    background: var(--color-sheet-close);
+    color: var(--color-on-sheet-close);
+  }
+
+  .dialog--sheet .dialog-close-icon {
+    display: block;
+  }
+
+  .dialog--sheet .dialog-close-glyph {
+    display: none;
   }
 
   .dialog--sheet .dialog-grabber {

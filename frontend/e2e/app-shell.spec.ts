@@ -27,6 +27,15 @@ async function publishedArticle(page: Page): Promise<void> {
   );
 }
 
+async function settledPanel(page: Page) {
+  const panel = page.getByRole('dialog').locator('.dialog-panel');
+  await expect(panel).toBeVisible();
+  await panel.evaluate((element) =>
+    Promise.all(element.getAnimations().map((animation) => animation.finished)),
+  );
+  return panel;
+}
+
 function tabs(page: Page) {
   return page.getByRole('navigation', { name: 'Hlavní sekce' });
 }
@@ -170,6 +179,35 @@ test.describe('Given a signed-in donor on a phone who opens a section from the a
     await page.keyboard.press('Enter');
 
     await expect(page.getByRole('dialog').getByRole('button', { name: 'Zavřít' })).toBeFocused();
+  });
+
+  test('when the sheet has opened, then it rises almost to the top of the screen even though its list is short', async ({
+    page,
+  }) => {
+    await page.getByRole('banner').getByRole('button', { name: 'Účet' }).click();
+    const panel = await settledPanel(page);
+
+    const box = await panel.boundingBox();
+
+    expect(box?.y).toBeLessThanOrEqual(16);
+    expect(box && Math.round(box.y + box.height)).toBe(page.viewportSize()?.height);
+  });
+
+  test('when the sheet has opened, then its close button is as large as Zpět and on one row with the name', async ({
+    page,
+  }) => {
+    await page.getByRole('banner').getByRole('button', { name: 'Účet' }).click();
+    const sheet = page.getByRole('dialog');
+    await settledPanel(page);
+
+    const close = await sheet.getByRole('button', { name: 'Zavřít' }).boundingBox();
+    const name = await sheet.getByRole('heading', { level: 2 }).boundingBox();
+
+    expect(close?.width).toBe(44);
+    expect(close?.height).toBe(44);
+    expect(close && name && close.y < name.y + name.height && name.y < close.y + close.height).toBe(
+      true,
+    );
   });
 });
 
