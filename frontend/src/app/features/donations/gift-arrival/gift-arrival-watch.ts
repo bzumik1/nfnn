@@ -33,6 +33,7 @@ interface Watching {
   readonly feed: GiftFeed;
   baseline: ReadonlySet<string> | null;
   baselineRead: Subscription | null;
+  askAfterBaseline: boolean;
   checks: number;
   following: Subscription | null;
   effects: readonly EffectRef[];
@@ -47,6 +48,7 @@ export class GiftArrivalWatch {
   private readonly provided = inject(GIFT_FEED, { optional: true });
   private readonly shown = signal<GiftArrival | null>(null);
   private enabled = false;
+  private thankedDonor: string | null = null;
   private watching: Watching | null = null;
   private scheduled: ReturnType<typeof setTimeout>[] = [];
   private lastAskedAt: number | null = null;
@@ -60,6 +62,14 @@ export class GiftArrivalWatch {
   constructor() {
     const visibilityChanged = () => this.visibilityChanged();
     this.document.addEventListener('visibilitychange', visibilityChanged);
+    effect(() => {
+      const donorId = this.auth.donor()?.id ?? null;
+      untracked(() => {
+        if (this.thankedDonor !== null && donorId !== this.thankedDonor) {
+          this.dismiss();
+        }
+      });
+    });
     inject(DestroyRef).onDestroy(() => {
       this.document.removeEventListener('visibilitychange', visibilityChanged);
       this.observers.forEach((observer) => observer.disconnect());
@@ -72,6 +82,7 @@ export class GiftArrivalWatch {
     this.enabled = enabled;
     if (!enabled) {
       this.end();
+      this.dismiss();
     }
   }
 
@@ -90,6 +101,7 @@ export class GiftArrivalWatch {
 
   dismiss(): void {
     this.shown.set(null);
+    this.thankedDonor = null;
   }
 
   observe(panel: Element, qr: Element): void {
@@ -155,6 +167,7 @@ export class GiftArrivalWatch {
       feed,
       baseline: null,
       baselineRead: null,
+      askAfterBaseline: false,
       checks: 0,
       following: null,
       effects: [],
@@ -175,8 +188,13 @@ export class GiftArrivalWatch {
       .pipe(take(1))
       .subscribe({
         next: (gifts) => {
-          if (this.watching === watching) {
-            watching.baseline = idsOf(gifts);
+          if (this.watching !== watching) {
+            return;
+          }
+          watching.baseline = idsOf(gifts);
+          if (watching.askAfterBaseline) {
+            watching.askAfterBaseline = false;
+            this.askSoon();
           }
         },
         error: () => undefined,
@@ -219,6 +237,7 @@ export class GiftArrivalWatch {
       if (arrived.length === 0) {
         return;
       }
+      this.thankedDonor = watching.donorId;
       this.shown.set({
         count: arrived.length,
         totalMinor: arrived.reduce((total, gift) => total + gift.amountMinor, 0),
@@ -249,6 +268,13 @@ export class GiftArrivalWatch {
       this.connectivity.offline() ||
       watching.checks >= GIFT_WATCH_MAX_CHECKS
     ) {
+      return;
+    }
+    if (watching.baseline === null) {
+      watching.askAfterBaseline = true;
+      if (watching.baselineRead?.closed ?? true) {
+        this.readBaseline(watching);
+      }
       return;
     }
     const wait =

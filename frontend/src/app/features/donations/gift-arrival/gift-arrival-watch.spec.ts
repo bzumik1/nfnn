@@ -336,6 +336,42 @@ describe('Given the watch for an arriving gift', () => {
     expect(watch.arrival()).toEqual({ count: 1, totalMinor: 50_000 });
   });
 
+  it('when the baseline read failed, then the next check reads it again first and asks the bank only once it is known', async () => {
+    feed.freshGifts = 'failing';
+    watch.intent();
+    feed.freshGifts = 'pending';
+
+    await advance(GIFT_CHECK_OFFSETS_MS[0]);
+    expect(feed.loads).toBe(2);
+    expect(feed.asks).toBe(0);
+    feed.answerRead([EARLIER]);
+    await advance(0);
+
+    expect(feed.asks).toBe(1);
+  });
+
+  it('when the thanks stand and the donor signs out or another signs in, then the thanks go', () => {
+    watch.intent();
+    feed.gifts.set([EARLIER, gift('new')]);
+    TestBed.tick();
+    expect(watch.arrival()).not.toBeNull();
+
+    donor.set(null);
+    TestBed.tick();
+
+    expect(watch.arrival()).toBeNull();
+  });
+
+  it('when the thanks stand and the panel loses its variable symbol, then the thanks go', () => {
+    watch.intent();
+    feed.gifts.set([EARLIER, gift('new')]);
+    TestBed.tick();
+
+    watch.enable(false);
+
+    expect(watch.arrival()).toBeNull();
+  });
+
   it('when another donor signs in while the gifts change in the same moment, then no gift of the other donor is thanked for', () => {
     watch.intent();
     TestBed.tick();

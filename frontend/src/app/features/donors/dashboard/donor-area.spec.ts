@@ -1242,6 +1242,39 @@ describe('Given a signed-in donor in the donor area', () => {
       );
     });
 
+    it('then a check the watch for an arriving gift asks for, which finds a new gift, takes back the line that no gift came', async () => {
+      await open('/darce/prehled');
+      await respond(twoYearSummary(), twoYearDonations());
+      bankCheck.flush(
+        { bankDataAsOf: EARLIER, checking: false },
+        { status: 202, statusText: 'Accepted' },
+      );
+      await respond(twoYearSummary(), twoYearDonations());
+      await click('.bank-check-btn');
+      http
+        .expectOne({ method: 'POST', url: BANK_CHECK_URL })
+        .flush({ bankDataAsOf: EARLIER, checking: false });
+      await respond(twoYearSummary(), twoYearDonations());
+      expect(text('.bank-check-status')).toContain('Žádný nový dar zatím nepřišel.');
+
+      harness.fixture.debugElement
+        .query(By.directive(DonorArea))
+        .injector.get(DonorDonations)
+        .askBank();
+      await settle();
+      http
+        .expectOne({ method: 'POST', url: BANK_CHECK_URL })
+        .flush({ bankDataAsOf: LATER, checking: false });
+      const list = twoYearDonations();
+      await respond(twoYearSummary(), {
+        ...list,
+        items: [donationItem({ id: 'd-5', receivedAt: '2026-04-02' }), ...list.items],
+        count: list.count + 1,
+      });
+
+      expect(text('.bank-check-status')).not.toContain('Žádný nový dar');
+    });
+
     it('then the last five donations show without receipts and a link leads to all of them', async () => {
       const list = twoYearDonations();
       list.items = [

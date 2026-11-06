@@ -606,6 +606,9 @@ export class DonorDonations implements GiftFeed {
           this.reloadDonations(!byDonor && this.shown?.source === 'copy').subscribe((items) => {
             this.bankCheckEnded();
             if (!byDonor) {
+              if (items !== null) {
+                this.dropOutdatedOutcome(outcomeOf(check, items, known));
+              }
               return;
             }
             if (items !== null) {
@@ -627,6 +630,13 @@ export class DonorDonations implements GiftFeed {
           this.bankCheckOutcome.set({ kind: 'failed' });
         },
       });
+  }
+
+  private dropOutdatedOutcome(latest: BankCheckOutcome): void {
+    const standing = this.bankCheckOutcome();
+    if (standing !== null && (latest.kind === 'found' || standing.kind !== 'none')) {
+      this.bankCheckOutcome.set(null);
+    }
   }
 
   private bankCheckEnded(): void {
