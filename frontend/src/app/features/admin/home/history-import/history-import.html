@@ -49,6 +49,7 @@
       #submitButton
       type="submit"
       class="ui-button ui-button--primary"
+      appNeedsConnection
       [attr.aria-disabled]="busy() ? 'true' : null"
     >
       @if (running()) {
@@ -65,6 +66,7 @@
     <button
       type="button"
       class="ui-button ui-button--quiet history-check-again"
+      appNeedsConnection
       (click)="checkAgain()"
       i18n="@@admin.home.history.checkAgain"
     >

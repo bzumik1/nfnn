@@ -23,6 +23,7 @@ import { FocusFirstInvalid } from '../../../../shared/ui/form-field/focus-first-
 import { FormControlDirective } from '../../../../shared/ui/form-field/form-control';
 import { FieldMessages, FormField } from '../../../../shared/ui/form-field/form-field';
 import { LiveNotice, Notice } from '../../../../shared/ui/live-notice/live-notice';
+import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
 import {
   formatBankClock,
   formatBankTime,
@@ -63,6 +64,7 @@ const FROM_MESSAGES: FieldMessages = {
     FormControlDirective,
     FocusFirstInvalid,
     LiveNotice,
+    NeedsConnection,
   ],
   templateUrl: './history-import.html',
   styleUrl: './history-import.scss',

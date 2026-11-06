@@ -1,7 +1,9 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { Connectivity } from '../../../../core/connectivity/connectivity';
 import { HistoryImportResponse, ImportStateResponse } from '../../admin-api';
 import { historyImport, importState } from '../../testing/admin-fixtures';
 import { HistoryImport } from './history-import';
@@ -15,15 +17,22 @@ describe('Given the part for older bank payments on the import card', () => {
   let fixture: ComponentFixture<HistoryImport>;
   let http: HttpTestingController;
   let finished: ImportStateResponse[];
+  const offline = signal(false);
 
   beforeEach(() => {
     vi.useFakeTimers({
       toFake: ['Date', 'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'],
     });
     vi.setSystemTime(new Date('2026-11-05T10:00:05Z'));
+    offline.set(false);
     TestBed.configureTestingModule({
       imports: [HistoryImport],
-      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: Connectivity, useValue: { offline } },
+      ],
     });
     http = TestBed.inject(HttpTestingController);
     finished = [];
@@ -571,6 +580,21 @@ describe('Given the part for older bank payments on the import card', () => {
       await open(importState({ defaultHistoryFrom: '2024-05-01' }));
 
       expect(dateField().value).toBe('2024-05-01');
+    });
+  });
+
+  describe('when the device is offline', () => {
+    it('then the button says it needs a connection and pressing it posts nothing', async () => {
+      await open();
+      offline.set(true);
+      await settle();
+
+      expect(button().getAttribute('aria-disabled')).toBe('true');
+      expect(button().nextElementSibling?.textContent).toBe('Potřebuje připojení');
+
+      await submit();
+
+      http.expectNone(HISTORY_URL);
     });
   });
 });
