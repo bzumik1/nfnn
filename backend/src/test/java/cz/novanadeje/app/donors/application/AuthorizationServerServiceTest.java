@@ -318,6 +318,20 @@ class AuthorizationServerServiceTest {
         }
 
         @Test
+        @DisplayName("when the same token is presented twice at once, then the donor's sessions are locked before the token is used up, so the replay never holds a token while it waits for them")
+        void should_lock_sessions_before_using_up_when_refreshed_given_token_used_concurrently() {
+            when(donors.findById(DONOR)).thenReturn(Optional.of(administrator()));
+            when(refreshTokens.markUsed(token.id(), NOW)).thenReturn(false);
+
+            assertThatThrownBy(() -> service.refresh(secret.value(), CLAUDE.value())).isInstanceOf(InvalidGrant.class);
+
+            InOrder order = inOrder(refreshTokens, signOuts);
+            order.verify(refreshTokens).lockSessionsOf(DONOR);
+            order.verify(refreshTokens).markUsed(token.id(), NOW);
+            order.verify(signOuts).endAllOf(DONOR, DeviceSignOutReason.REPLAY, NOW);
+        }
+
+        @Test
         @DisplayName("when another client presents the token, then the grant is invalid")
         void should_refuse_when_refreshed_given_other_client() {
             assertThatThrownBy(() -> service.refresh(secret.value(), "https://claude.ai/oauth/claude-code-client-metadata"))

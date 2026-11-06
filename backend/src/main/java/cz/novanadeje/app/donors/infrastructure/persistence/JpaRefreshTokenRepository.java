@@ -5,8 +5,12 @@ import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.RefreshToken;
 import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
 import cz.novanadeje.app.shared.application.event.DonorSessionsEnded;
+import cz.novanadeje.app.shared.infrastructure.lock.AdvisoryLock;
+import jakarta.persistence.EntityManager;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
@@ -18,10 +22,12 @@ class JpaRefreshTokenRepository implements RefreshTokenRepository {
 
     private final RefreshTokenJpaRepository jpa;
     private final ApplicationEventPublisher events;
+    private final EntityManager entityManager;
 
-    JpaRefreshTokenRepository(RefreshTokenJpaRepository jpa, ApplicationEventPublisher events) {
+    JpaRefreshTokenRepository(RefreshTokenJpaRepository jpa, ApplicationEventPublisher events, EntityManager entityManager) {
         this.jpa = jpa;
         this.events = events;
+        this.entityManager = entityManager;
     }
 
     @Override
@@ -42,6 +48,17 @@ class JpaRefreshTokenRepository implements RefreshTokenRepository {
     @Override
     public Optional<RefreshToken> findBySecretHashForUpdate(String secretHash) {
         return jpa.findForUpdateBySecretHash(secretHash).map(RefreshTokenJpaEntity::toDomain);
+    }
+
+    @Override
+    public Optional<DonorId> findDonorOfSecretHash(String secretHash) {
+        return jpa.findDonorIdBySecretHash(secretHash).map(DonorId::new);
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void lockSessionsOf(DonorId donorId) {
+        AdvisoryLock.DONOR_SESSIONS.acquireFor(entityManager, donorId.value().toString());
     }
 
     @Override
@@ -93,6 +110,7 @@ class JpaRefreshTokenRepository implements RefreshTokenRepository {
 
     @Override
     public int deleteSpentBefore(Instant cutoff) {
+        jpa.lockSpentBeforeInIdOrder(cutoff);
         return jpa.deleteSpentBefore(cutoff);
     }
 }

@@ -30,7 +30,8 @@ class AdvisoryLockTest {
                 .containsEntry(AdvisoryLock.PUSH_SUBSCRIPTION_WRITES, 20261105L)
                 .containsEntry(AdvisoryLock.REPORT_SETTINGS_CHANGES, 20261106L)
                 .containsEntry(AdvisoryLock.OPERATIONAL_ALERT_CHANGES, 20261107L)
-                .containsEntry(AdvisoryLock.DONOR_EMAIL_ADDRESSES, 20261108L);
+                .containsEntry(AdvisoryLock.DONOR_EMAIL_ADDRESSES, 20261108L)
+                .containsEntry(AdvisoryLock.DONOR_SESSIONS, 20261109L);
     }
 
     @Test
