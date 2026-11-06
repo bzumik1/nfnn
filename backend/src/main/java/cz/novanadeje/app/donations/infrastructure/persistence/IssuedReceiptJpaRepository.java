@@ -1,8 +1,15 @@
 package cz.novanadeje.app.donations.infrastructure.persistence;
 
+import cz.novanadeje.app.donations.domain.donation.DonationId;
+import cz.novanadeje.app.donations.domain.donor.DonorReference;
+import cz.novanadeje.app.donations.domain.receipt.DonationReceiptId;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptKind;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptStatus;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptSummary;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptWithdrawal;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptWithdrawalReason;
+import cz.novanadeje.app.shared.domain.LocaleCode;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -13,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.Year;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -45,7 +53,14 @@ interface IssuedReceiptJpaRepository extends JpaRepository<IssuedReceiptJpaEntit
 
     List<IssuedReceiptJpaEntity> findByDonorIdOrderByIssuedAtDescNumberDesc(UUID donorId);
 
-    List<IssuedReceiptJpaEntity> findAllByOrderByIssuedAtDescNumberDesc();
+    @Query(nativeQuery = true, value = """
+            select r.id as id, r.donor_id as donorId, r.kind as kind, r.number as number, r.donation_id as donationId, r.receipt_year as receiptYear,
+                   r.issued_on as issuedOn, r.issued_at as issuedAt, r.locale as locale, r.status as status, r.superseded_at as supersededAt,
+                   r.withdrawn_at as withdrawnAt, r.withdrawal_reason as withdrawalReason,
+                   r.gift_count as giftCount, r.total_amount_minor as totalAmountMinor, r.certified_year as certifiedYear
+            from issued_receipt r
+            order by r.issued_at desc, r.number desc""")
+    List<SummaryRow> findAllSummariesNewestFirst();
 
     @Query("select count(r) > 0 from IssuedReceiptJpaEntity r where r.donorId = :donorId and (r.signatureImageSha256 = :image or r.portraitImageSha256 = :image)")
     boolean showsImage(@Param("donorId") UUID donorId, @Param("image") String image);
@@ -70,6 +85,51 @@ interface IssuedReceiptJpaRepository extends JpaRepository<IssuedReceiptJpaEntit
     @Transactional(propagation = Propagation.MANDATORY)
     @Query(nativeQuery = true, value = "select donor_id from donor_record where donor_id = :donorId for update")
     Optional<UUID> lockDonorRecord(@Param("donorId") UUID donorId);
+
+    interface SummaryRow {
+
+        UUID getId();
+
+        UUID getDonorId();
+
+        String getKind();
+
+        String getNumber();
+
+        UUID getDonationId();
+
+        Integer getReceiptYear();
+
+        LocalDate getIssuedOn();
+
+        Instant getIssuedAt();
+
+        String getLocale();
+
+        String getStatus();
+
+        Instant getSupersededAt();
+
+        Instant getWithdrawnAt();
+
+        String getWithdrawalReason();
+
+        Integer getGiftCount();
+
+        Long getTotalAmountMinor();
+
+        Integer getCertifiedYear();
+
+        default ReceiptSummary toSummary() {
+            Optional<Year> year = Optional.ofNullable(getReceiptYear()).map(Year::of);
+            return new ReceiptSummary(new DonationReceiptId(getId()), new DonorReference(getDonorId()), ReceiptKind.valueOf(getKind()),
+                    new ReceiptNumber(getNumber()), Optional.ofNullable(getDonationId()).map(DonationId::new), year,
+                    Year.of(getCertifiedYear()), getIssuedOn(), getIssuedAt(), LocaleCode.fromTag(getLocale()),
+                    ReceiptStatus.valueOf(getStatus()), Optional.ofNullable(getSupersededAt()),
+                    Optional.ofNullable(getWithdrawnAt()).map(at -> new ReceiptWithdrawal(at, ReceiptWithdrawalReason.valueOf(getWithdrawalReason()))),
+                    getGiftCount(), getTotalAmountMinor());
+        }
+    }
 
     interface KeptStatus {
 

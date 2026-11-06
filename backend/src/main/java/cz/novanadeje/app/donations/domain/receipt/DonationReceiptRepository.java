@@ -39,7 +39,7 @@ public interface DonationReceiptRepository {
 
     List<DonationReceipt> findActiveForYearOfEveryDonor(Year year);
 
-    List<DonationReceipt> findAllNewestFirst();
+    List<ReceiptSummary> findAllSummariesNewestFirst();
 
     boolean showsImage(DonorReference donor, ContentDigest image);
 

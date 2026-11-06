@@ -2,7 +2,27 @@ package cz.novanadeje.app.donations.interfaces.rest;
 
 import cz.novanadeje.app.donations.DonationRowsContext;
 import cz.novanadeje.app.donations.application.donor.DonorRecordService;
+import cz.novanadeje.app.donations.application.receipt.ReceiptTextSource;
+import cz.novanadeje.app.donations.domain.donation.Donation;
+import cz.novanadeje.app.donations.domain.donation.DonationId;
+import cz.novanadeje.app.donations.domain.donation.DonationSource;
+import cz.novanadeje.app.donations.domain.donation.DonationStatus;
+import cz.novanadeje.app.donations.domain.donor.DonorRecord;
+import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimRepository;
+import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
+import cz.novanadeje.app.donations.domain.receipt.DonationReceiptId;
+import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
+import cz.novanadeje.app.donations.domain.receipt.FrozenReceipt;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptDocument;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptDocumentFactory;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptFingerprint;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptTextSet;
+import cz.novanadeje.app.donations.domain.receipt.Receipts;
+import cz.novanadeje.app.shared.domain.LocaleCode;
+import cz.novanadeje.app.shared.domain.Money;
+import cz.novanadeje.app.shared.domain.VariableSymbol;
 import cz.novanadeje.app.shared.domain.FoundationZone;
 import cz.novanadeje.app.shared.infrastructure.json.CanonicalRows;
 import cz.novanadeje.app.sharedcases.CaseRows;
@@ -28,6 +48,7 @@ import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.time.Year;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -57,6 +78,9 @@ class AdminDeviceSyncTest {
     private static final int TIMED_DONATIONS = 1_000;
     private static final int WARM_UP_RUNS = 5;
     private static final int TIMED_RUNS = 21;
+    private static final int TIMED_FIRST_RECEIPT_YEAR = 2021;
+    private static final int TIMED_RECEIPT_YEARS = 5;
+    private static final int LARGE_YEARLY_RECEIPT_GIFTS = 300;
     private static final long MANIFEST_BUDGET_MILLIS = 100;
     private static final String MANIFEST = "/api/admin/donations/sync";
     private static final String CHUNKS = "/api/admin/donations/sync/chunks";
@@ -80,6 +104,10 @@ class AdminDeviceSyncTest {
     private SymbolClaimRepository symbolClaims;
     @Autowired
     private DonorRecordService erasures;
+    @Autowired
+    private DonationReceiptRepository receipts;
+    @Autowired
+    private ReceiptTextSource receiptTexts;
 
     @AfterEach
     void truncate() {
@@ -116,8 +144,8 @@ class AdminDeviceSyncTest {
     }
 
     @Test
-    @DisplayName("Given two hundred donors, each with a linked bank account and half of them with an older-symbol answer, and a thousand gifts and payments, when an administration device asks for the manifest, then the backend answers within 100 ms")
-    void should_answer_within_100_ms_when_an_administration_device_asks_for_the_manifest_given_a_thousand_gifts() throws Exception {
+    @DisplayName("Given two hundred donors, each with a linked bank account, half of them with an older-symbol answer, and five yearly and five single receipts, a tenth of the yearly ones listing 300 gifts, and a thousand gifts and payments, when an administration device asks for the manifest, then the backend answers within 100 ms")
+    void should_answer_within_100_ms_when_an_administration_device_asks_for_the_manifest_given_a_thousand_gifts_and_two_thousand_receipts() throws Exception {
         CaseRows rows = CaseRows.fromJson(json.readTree(THREE_DONORS));
         rows.write(jdbc, clock);
         rows.writeAdministrator(jdbc);
@@ -144,6 +172,7 @@ class AdminDeviceSyncTest {
                 insertManualGift(id, donor, day, 100 + random.nextInt(1_000_000));
             }
         }
+        issueReceipts(random, donors);
         for (int run = 0; run < WARM_UP_RUNS; run++) {
             RateLimiterWindows.reset(List.of(syncRateLimiter));
             answer(get(MANIFEST));
@@ -156,8 +185,48 @@ class AdminDeviceSyncTest {
             millis[run] = Duration.ofNanos(System.nanoTime() - start).toMillis();
         }
         Arrays.sort(millis);
-        assertThat(millis[0]).as("the fastest of %d manifests over %d donors and %d gifts and payments, in ms: %s", TIMED_RUNS, TIMED_DONORS,
-                TIMED_DONATIONS, Arrays.toString(millis)).isLessThan(MANIFEST_BUDGET_MILLIS);
+        assertThat(millis[0]).as("the fastest of %d manifests over %d donors, %d gifts and payments and %d receipts, in ms: %s", TIMED_RUNS,
+                TIMED_DONORS, TIMED_DONATIONS, TIMED_DONORS * TIMED_RECEIPT_YEARS * 2, Arrays.toString(millis)).isLessThan(MANIFEST_BUDGET_MILLIS);
+    }
+
+    private void issueReceipts(Random random, List<UUID> donors) {
+        jdbc.sql("insert into receipt_signing_key (key_id, public_key, registered_at, status, seal) values (:key, :publicKey, :at, 'active', 'seal')")
+                .param("key", Receipts.KEY_ID.value())
+                .param("publicKey", new byte[32])
+                .param("at", Timestamp.from(clock.instant()))
+                .update();
+        ReceiptTextSet texts = receiptTexts.textsFor(LocaleCode.CS);
+        long serial = 0;
+        for (int index = 0; index < donors.size(); index++) {
+            DonorRecord record = DonorRecord.registerPerson(new DonorReference(donors.get(index)), "Dárce", Receipts.JANA_ADDRESS,
+                    new VariableSymbol(Long.toString(5_000_000_000L + index)), LocaleCode.CS, clock.instant());
+            for (int year = TIMED_FIRST_RECEIPT_YEAR; year < TIMED_FIRST_RECEIPT_YEAR + TIMED_RECEIPT_YEARS; year++) {
+                Year receiptYear = Year.of(year);
+                int giftCount = index % 10 == 0 ? LARGE_YEARLY_RECEIPT_GIFTS : 1 + random.nextInt(12);
+                List<Donation> gifts = IntStream.range(0, giftCount)
+                        .mapToObj(gift -> receivedGift(record.id(), new DonationId(new UUID(random.nextLong(), random.nextLong())),
+                                receiptYear.atDay(1 + random.nextInt(365)), 100 + random.nextInt(1_000_000)))
+                        .toList();
+                issue(record.id(), ReceiptDocumentFactory.forYear(record, receiptYear, gifts, Receipts.FOUNDATION, Receipts.SIGNATORY,
+                        ReceiptNumber.of(receiptYear.plusYears(1), ++serial), receiptYear.plusYears(1).atDay(15), LocaleCode.CS, Optional.empty()), texts);
+                UUID single = new UUID(random.nextLong(), random.nextLong());
+                LocalDate day = receiptYear.atDay(1 + random.nextInt(365));
+                long amount = 100 + random.nextInt(1_000_000);
+                insertManualGift(single, record.id().value(), day, amount);
+                issue(record.id(), ReceiptDocumentFactory.forDonation(record, receivedGift(record.id(), new DonationId(single), day, amount), Receipts.FOUNDATION,
+                        Receipts.SIGNATORY, ReceiptNumber.of(receiptYear, ++serial), day, LocaleCode.CS, Optional.empty()), texts);
+            }
+        }
+    }
+
+    private void issue(DonorReference donor, ReceiptDocument document, ReceiptTextSet texts) {
+        receipts.save(DonationReceipt.issue(DonationReceiptId.newId(clock.instant()), donor, clock.instant(), new ReceiptFingerprint("4".repeat(64)), new FrozenReceipt(document, texts, Optional.empty(), Optional.empty(),
+                        Receipts.verificationOf(document.number())), Optional.empty()));
+    }
+
+    private Donation receivedGift(DonorReference donor, DonationId id, LocalDate day, long amount) {
+        return Donation.reconstitute(id, donor, Optional.empty(), day, Money.czk(amount), DonationSource.MANUAL, DonationStatus.RECEIVED, Optional.empty(),
+                clock.instant());
     }
 
     private void converge(int seed) throws Exception {
