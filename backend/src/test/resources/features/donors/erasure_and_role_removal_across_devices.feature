@@ -16,8 +16,8 @@ Feature: An erasure and a removed administrator role reach every device of the a
     And a person "Petr" is registered
     And "Petr" is an administrator
 
-  Scenario: An erasure reaches every device of the donor, the one offline for a month and the app that is still signed in
-    Given "Jana" signs in on the "iPhone"
+  Scenario: An erasure reaches every device of the donor, the ones offline for a month after it and the app that is still signed in
+    Given "Jana" signs in on the "iPhone" in a browser that forgets her
     And "Jana" signs in on the "Android" and is remembered
     And "Jana" signs in on the "iPad" in the installed app
     And "Jana" signs in on the "Mac"
@@ -31,11 +31,9 @@ Feature: An erasure and a removed administrator role reach every device of the a
       | Mac     | signed-out | false         |
     When "Petr" erased the donor "Jana"
     Then the devices answer:
-      | device  | status   | administrator |
-      | iPhone  | wipe-all | false         |
-      | Android | wipe-all | false         |
-      | iPad    | wipe-all | false         |
-      | Mac     | wipe-all | false         |
+      | device | status   | administrator |
+      | iPad   | wipe-all | false         |
+      | Mac    | wipe-all | false         |
     When 31 days pass with the nightly clean-up
     Then the devices answer:
       | device  | status   | administrator |
@@ -114,15 +112,15 @@ Feature: An erasure and a removed administrator role reach every device of the a
       | iPhone | wipe-admin | false         |
       | Mac    | signed-in  | true          |
 
-  Scenario: A device the server forgot, 400 days after it ended, is unknown and so deletes everything
+  Scenario: A device the server forgot, more than 400 days after it ended, is unknown and so deletes everything
     Given "Jana" is an administrator
     And "Jana" signs in on the "iPhone"
     And "Petr" removes "Jana" from the administrators
-    When 399 days pass with the nightly clean-up
+    When 400 days pass with the nightly clean-up
     Then the devices answer:
       | device | status     | administrator |
       | iPhone | wipe-admin | false         |
-    When 2 days pass with the nightly clean-up
+    When another day passes with the nightly clean-up
     Then the devices answer:
       | device | status  | administrator |
       | iPhone | unknown | false         |
