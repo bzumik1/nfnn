@@ -66,6 +66,8 @@
 
 .tab-switch {
   display: flex;
+  flex-wrap: wrap;
+  row-gap: var(--space-1);
   background: var(--color-accent-bg);
   border-radius: var(--radius-pill);
   padding: var(--space-1);
@@ -73,6 +75,8 @@
 
   button {
     flex: 1;
+    max-width: 100%;
+    overflow-wrap: break-word;
     padding: var(--space-2-5);
     border-radius: var(--radius-pill);
     border: none;
