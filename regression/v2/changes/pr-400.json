@@ -1,0 +1,22 @@
+[
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/receipts/formatting.json",
+    "reason": "Jakub 2026-11-06 (#388) reverts plan v3 decision D11: a Czech receipt date reads 15. 3. 2026, day and month without leading zeros (ČSN 01 6910), as everywhere in the product; English dates stay 15 March 2026",
+    "contract": "docs/frontend-overview.md, receipt-format.ts; docs/requirements.md, Veřejný web"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/receipts/v1/printed.json",
+    "reason": "Jakub 2026-11-06 (#388) reverts plan v3 decision D11: the printed receipt lines carry the Czech dates as 15. 3. 2026 (issue day, gift days, the replaced receipt's day, the place and date line), as v2 printed them",
+    "contract": "docs/frontend-overview.md, receipt-format.ts; docs/requirements.md, Potvrzení o daru"
+  },
+  {
+    "path": "GET /api/admin/donors/actions",
+    "scenario": "donors/connected_apps: A connected application unpairs a gift no receipt lists*",
+    "kind": "body",
+    "field": "$.items[*].summary",
+    "reason": "Jakub 2026-11-06 (#388): the Czech sentence of the audit trail writes a day as d. M. yyyy and a Prague time as d. M. yyyy H:mm (admin.action.format.day and .time), so the payment booked on 2026-12-01 reads 1. 12. 2026",
+    "contract": "docs/api-contract.md, Audit trail"
+  }
+]
