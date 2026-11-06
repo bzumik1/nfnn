@@ -1,4 +1,5 @@
 @use 'theme';
+@use 'breakpoints' as bp;
 @use 'styles/form-controls';
 @use 'styles/controls';
 @use 'styles/ui/page';
@@ -39,6 +40,14 @@ html:has(app-tab-bar) {
 
 html:has(app-landing) {
   background: var(--color-image-shade);
+  overscroll-behavior: none;
+}
+
+@include bp.down(nav) {
+  html:has(app-not-found),
+  html:has(app-not-found) body {
+    background: var(--color-surface-inverse);
+  }
 }
 
 :focus-visible {

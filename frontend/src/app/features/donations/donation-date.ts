@@ -1,6 +1,6 @@
 export function formatDonationDate(isoDate: string): string {
   const [year, month, day] = isoDate.slice(0, 10).split('-');
-  return `${day}. ${month}. ${year}`;
+  return `${Number(day)}. ${Number(month)}. ${year}`;
 }
 
 const BANK_TIME = new Intl.DateTimeFormat('cs-CZ', {
@@ -15,7 +15,7 @@ const BANK_TIME = new Intl.DateTimeFormat('cs-CZ', {
 
 export function formatBankTime(isoInstant: string): string {
   const parts = pragueParts(isoInstant);
-  return `${parts['day']}. ${parts['month']}. ${parts['year']} ${parts['hour']}:${parts['minute']}`;
+  return `${Number(parts['day'])}. ${Number(parts['month'])}. ${parts['year']} ${Number(parts['hour'])}:${parts['minute']}`;
 }
 
 export function pragueDay(isoInstant: string): string {

@@ -88,8 +88,8 @@ describe('Given an administrator on the project list', () => {
 
     expect(rows()).toEqual([
       'Benefiční koncert 2026 Ostatní bez štítku Koncept 22. 10. 2026 11:00',
-      'Zahrada pro děti 2024 Děti Projekt Zveřejní se 30. 10. 2026 20. 10. 2026 09:30',
-      'Zahrada pro děti 2024 Děti Projekt Na webu od 20. 10. 2026 20. 10. 2026 09:30',
+      'Zahrada pro děti 2024 Děti Projekt Zveřejní se 30. 10. 2026 20. 10. 2026 9:30',
+      'Zahrada pro děti 2024 Děti Projekt Na webu od 20. 10. 2026 20. 10. 2026 9:30',
     ]);
     const links = fixture.nativeElement.querySelectorAll(
       'tbody a',

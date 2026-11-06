@@ -162,7 +162,7 @@ describe('Given every frozen receipt case and the text v2 printed for it', () =>
           expect(expected).toBeDefined();
         });
 
-        it('when it is drawn, then the text outside the page artifacts is v2 text word for word, with the D11 dates and only the listed additions', () => {
+        it('when it is drawn, then the text outside the page artifacts is v2 text word for word, its dates without leading zeros, with only the listed additions', () => {
           let body = normalised(read.pages.map((page) => page.text).join(' '));
           if (expected?.tableHeader) {
             expect(occurrences(body, expected.tableHeader)).toBe(1);
@@ -231,7 +231,7 @@ describe('Given every frozen receipt case and the text v2 printed for it', () =>
             return;
           }
           const tablePages = read.pages.filter((page) =>
-            /\d{2}\. \d{2}\. \d{4}( \([^)]*\))? [\d ]+(,\d\d)? Kč/.test(page.text),
+            /\d{1,2}\. \d{1,2}\. \d{4}( \([^)]*\))? [\d ]+(,\d\d)? Kč/.test(page.text),
           );
           for (const page of tablePages.slice(1)) {
             expect(page.artifacts).toContain(expected.tableHeader);
