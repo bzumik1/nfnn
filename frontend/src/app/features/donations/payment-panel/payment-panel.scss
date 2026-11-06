@@ -22,7 +22,7 @@
 .panel-label {
   font-size: var(--text-md);
   font-weight: var(--weight-regular);
-  color: var(--color-text-soft);
+  color: var(--color-text-muted);
   margin-bottom: var(--space-3-5);
 
   &:focus {
@@ -269,13 +269,7 @@
   }
 
   .bank-value-wrap {
-    flex-wrap: nowrap;
     justify-content: space-between;
-  }
-
-  .bank-value {
-    min-width: 0;
-    overflow-wrap: anywhere;
   }
 
   app-copy-button {
