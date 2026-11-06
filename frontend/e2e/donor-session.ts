@@ -449,3 +449,70 @@ export async function openSection(page: Page, name: string): Promise<void> {
   await tab.click();
   await expect(tab).toHaveAttribute('aria-current', /^(page|true)$/);
 }
+
+export async function serveAdministrationCopy(
+  page: RouteTarget,
+  parts: { donations: Record<string, unknown[]>; donors: Record<string, unknown[]> },
+): Promise<void> {
+  for (const [part, chunks] of Object.entries(parts)) {
+    const served = await Promise.all(
+      Object.entries(chunks).map(async ([id, rows]) => ({
+        id,
+        rowsSha256: await rowsSha256(rows),
+        count: rows.length,
+        rows,
+      })),
+    );
+    const summary = part === 'donations' ? { summary: { today: '2026-11-06', byYear: [] } } : {};
+    await page.route(
+      (url) => url.pathname === `/api/admin/${part}/sync`,
+      (route) =>
+        route.fulfill({
+          json: {
+            subject: administrator.id,
+            administrator: true,
+            ...summary,
+            chunks: served.map(({ id, rowsSha256, count }) => ({ id, rowsSha256, count })),
+          },
+        }),
+    );
+    await page.route(
+      (url) => url.pathname === `/api/admin/${part}/sync/chunks`,
+      (route) => {
+        const asked = (new URL(route.request().url()).searchParams.get('ids') ?? '').split(',');
+        return route.fulfill({
+          json: {
+            subject: administrator.id,
+            administrator: true,
+            ...summary,
+            chunks: served.filter((chunk) => asked.includes(chunk.id)),
+            missing: asked.filter((id) => !served.some((chunk) => chunk.id === id)),
+          },
+        });
+      },
+    );
+  }
+}
+
+export function administrationCopyGift(
+  id: string,
+  donorId: string,
+  receivedAt: string,
+  amountMinor: number,
+) {
+  return {
+    id,
+    donorId,
+    paymentId: id,
+    receivedAt,
+    amountMinor,
+    currency: 'CZK',
+    status: 'RECEIVED',
+    source: 'BANK_TRANSFER',
+    purpose: 'GENERAL',
+    pairedBy: 'VARIABLE_SYMBOL',
+    bankAccountId: null,
+    symbolClaimId: null,
+    recordedAt: `${receivedAt}T09:00:00Z`,
+  };
+}
