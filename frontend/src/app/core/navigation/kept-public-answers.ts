@@ -7,6 +7,7 @@ import {
 } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { finalize, Observable, of, tap } from 'rxjs';
+import { ShownAnswers } from '../connectivity/shown-answers';
 
 export const KEPT_ANSWER_MAX_AGE_MS = 10 * 60 * 1000;
 export const KEPT_ANSWERS_LIMIT = 50;
@@ -21,6 +22,7 @@ const CONTENT_WRITES = /^\/api\/admin\/content\//;
 interface KeptAnswer {
   readonly response: HttpResponse<unknown>;
   readonly keptAt: number;
+  readonly receivedAt: number;
 }
 
 export function isKeptPublicAnswer(request: HttpRequest<unknown>): boolean {
@@ -35,6 +37,7 @@ export function isKeptPublicAnswer(request: HttpRequest<unknown>): boolean {
 export class KeptPublicAnswers {
   private readonly answers = new Map<string, KeptAnswer>();
   private readonly refreshing = new Set<string>();
+  private readonly shown = inject(ShownAnswers);
 
   answer(request: HttpRequest<unknown>, next: HttpHandlerFn): Observable<HttpEvent<unknown>> {
     const key = request.urlWithParams;
@@ -42,6 +45,7 @@ export class KeptPublicAnswers {
     if (kept === undefined || performance.now() - kept.keptAt > KEPT_ANSWER_MAX_AGE_MS) {
       return this.fromServer(key, request, next);
     }
+    this.shown.record(key, kept.response.headers, kept.receivedAt);
     this.refresh(key, request, next);
     return of(kept.response.clone({ body: structuredClone(kept.response.body) }));
   }
@@ -86,6 +90,7 @@ export class KeptPublicAnswers {
     this.answers.set(key, {
       response: response.clone({ body: structuredClone(response.body) }),
       keptAt: performance.now(),
+      receivedAt: Date.now(),
     });
     for (const oldest of this.answers.keys()) {
       if (this.answers.size <= KEPT_ANSWERS_LIMIT) {

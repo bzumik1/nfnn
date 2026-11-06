@@ -1,7 +1,9 @@
 import { HttpClient, HttpRequest, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
+import { ShownAnswers } from '../connectivity/shown-answers';
 import { mayComeFromServiceWorker } from '../updates/service-worker-bypass';
 import {
   isKeptPublicAnswer,
@@ -23,6 +25,7 @@ describe('Given the public answers the app keeps in memory', () => {
       providers: [
         provideHttpClient(withInterceptors([keptPublicAnswersInterceptor])),
         provideHttpClientTesting(),
+        provideRouter([]),
       ],
     });
     http = TestBed.inject(HttpClient);
@@ -38,9 +41,13 @@ describe('Given the public answers the app keeps in memory', () => {
     return firstValueFrom(http.get<T>(url));
   }
 
-  async function seen(url: string, body: object): Promise<void> {
+  async function seen(
+    url: string,
+    body: object,
+    headers: Record<string, string> = {},
+  ): Promise<void> {
     const answer = get(url);
-    backend.expectOne(url).flush(body);
+    backend.expectOne(url).flush(body, { headers });
     await answer;
   }
 
@@ -64,6 +71,16 @@ describe('Given the public answers the app keeps in memory', () => {
 
       expect(await get(HOME)).toEqual({ news: ['second'] });
       backend.expectOne(HOME).flush({ news: ['second'] });
+    });
+
+    it('then the page shows the data as old as the server dated the kept answer', async () => {
+      const servedAt = 'Thu, 05 Nov 2026 12:00:00 GMT';
+      await seen(NEWS, { items: [] }, { Date: servedAt });
+
+      await get(NEWS);
+      backend.expectOne(NEWS).flush({ items: [] });
+
+      expect(TestBed.inject(ShownAnswers).fetchedAtOf(NEWS)).toBe(Date.parse(servedAt));
     });
 
     it('and the page changes what it got, then the kept answer stays as the server sent it', async () => {

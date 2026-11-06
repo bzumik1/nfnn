@@ -16,6 +16,7 @@ import {
   tabPagesPreloading,
 } from './app.config';
 import { Connectivity } from './core/connectivity/connectivity';
+import { ShownAnswers } from './core/connectivity/shown-answers';
 import { UnseenPhotos } from './core/connectivity/unseen-photos';
 import { BackTarget } from './core/navigation/back-target';
 import { LOADED_AHEAD } from './core/navigation/tab-preloading';
@@ -47,6 +48,37 @@ describe('Given the public content the app has already shown', () => {
 
     backend.expectOne('/api/content/home').flush({ news: [] });
     backend.verify();
+  });
+
+  it('when a visitor comes back to a page, then it shows the date of the kept answer until the answer from the background replaces it', async () => {
+    @Component({ template: '' })
+    class AnyPage {}
+    TestBed.configureTestingModule({
+      providers: [
+        appHttpClient,
+        provideHttpClientTesting(),
+        provideRouter([{ path: '**', component: AnyPage }]),
+      ],
+    });
+    const router = TestBed.inject(Router);
+    const http = TestBed.inject(HttpClient);
+    const backend = TestBed.inject(HttpTestingController);
+    const shown = TestBed.inject(ShownAnswers);
+    const news = '/api/content/news?page=0&size=10';
+    const keptAt = 'Thu, 05 Nov 2026 12:00:00 GMT';
+    const refreshedAt = 'Thu, 05 Nov 2026 12:05:00 GMT';
+    await router.navigateByUrl('/aktuality');
+    const first = firstValueFrom(http.get(news));
+    backend.expectOne(news).flush({ items: [] }, { headers: { Date: keptAt } });
+    await first;
+    await router.navigateByUrl('/o-nas');
+    await router.navigateByUrl('/aktuality');
+
+    await firstValueFrom(http.get(news));
+
+    expect(shown.fetchedAtOf(news)).toBe(Date.parse(keptAt));
+    backend.expectOne(news).flush({ items: [] }, { headers: { Date: refreshedAt } });
+    expect(shown.fetchedAtOf(news)).toBe(Date.parse(refreshedAt));
   });
 });
 
