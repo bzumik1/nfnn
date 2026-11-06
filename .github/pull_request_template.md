@@ -29,3 +29,6 @@
 
 Roadmapa: <!-- beze změny -->
 Vzhled: <!-- beze změny -->
+
+<!-- Suppressions: for each file where the diff adds a suppression or a skipped test (@SuppressWarnings, @Disabled, eslint-disable, @ts-expect-error, it.skip, .only, a relaxed test or lint setting …), and for every changed file under .github/workflows/ or .github/actions/, script that decides a required check or file of the build definition (listed in docs/system-overview.md, Suppression guard; on purpose: such a change cannot be judged line by line), and for a changed line in the "scripts" of a package.json, write the line below once per file with the path and why, at least 10 characters; one line covers every suppression of its file, later pushes included. Left as it is, it declares nothing. Editing the description runs the check Výjimky again by itself. -->
+Výjimka: <!-- path/to/File.java: why the suppression must stay -->
