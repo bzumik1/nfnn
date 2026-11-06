@@ -104,7 +104,7 @@ class ReportSettingsServiceTest {
         assertThat(audited.getValue().adminId()).isEqualTo(ADMIN);
         assertThat(audited.getValue().action()).isEqualTo("CHANGE_REPORT_SETTINGS");
         assertThat(audited.getValue().subjectId()).isEmpty();
-        assertThat(audited.getValue().details()).isEqualTo("Nastavení měsíčního přehledu změněno: příjemci pavel@example.cz, jakub@example.cz;"
+        assertThat(audited.getValue().details()).isEqualTo("Nastavení měsíčního přehledu změněno: počet příjemců 2;"
                 + " odesílá se 5. den v měsíci v 9:00; části dárci, dary, stahování z banky");
         assertThat(audited.getValue().performedAt()).isEqualTo(NOW);
     }

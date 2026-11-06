@@ -29,7 +29,7 @@ Feature: An administrator sets up the monthly report, sends it again and reads t
       | sendHour   | 9                                  |
       | sections   | donations, bankImport              |
     Then the response status is 200
-    And the admin action "CHANGE_REPORT_SETTINGS" by "Jana" is recorded with details containing "pavel@example.cz, jakub@example.cz; odesílá se 5. den v měsíci v 9:00; části dary, stahování z banky"
+    And the admin action "CHANGE_REPORT_SETTINGS" by "Jana" is recorded with details containing "počet příjemců 2; odesílá se 5. den v měsíci v 9:00; části dary, stahování z banky"
     When "Jana" asks for the monthly report settings
     Then the monthly report settings say:
       | settings.recipients.1       | jakub@example.cz |
@@ -71,7 +71,7 @@ Feature: An administrator sets up the monthly report, sends it again and reads t
       | recipients.0 | info@nfnn.cz |
     And 2 monthly report e-mails are sent to "info@nfnn.cz"
     And monthly report e-mail 2 has the subject "Měsíční přehled Nová naděje – říjen 2026"
-    And the admin action "SEND_MONTHLY_REPORT" by "Jana" is recorded with details containing "Měsíční přehled za 2026-10 ručně odeslán na info@nfnn.cz"
+    And the admin action "SEND_MONTHLY_REPORT" by "Jana" is recorded with details containing "Měsíční přehled za 2026-10 ručně odeslán, počet příjemců 1"
     When "Jana" asks for the monthly report settings
     Then the monthly report settings say:
       | sentReports.0.month | 2026-10    |

@@ -498,6 +498,21 @@ describe('Given an administrator connected with the reading permission only', ()
     ).toHaveLength(0);
   });
 
+  it('when the history is asked after the last action listed, then the backend gets its time and id, so actions of one moment are not skipped', async () => {
+    await client.callTool({
+      name: 'nfnn_admin_actions',
+      arguments: {
+        limit: 10,
+        before: '2026-10-23T06:00:00.654321Z',
+        beforeId: '019a1c00-0000-7000-8000-00000000e002',
+      },
+    });
+
+    expect(stack.backend.requests.map((request) => request.path)).toContain(
+      '/api/admin/donors/actions?limit=10&before=2026-10-23T06%3A00%3A00.654321Z&beforeId=019a1c00-0000-7000-8000-00000000e002',
+    );
+  });
+
   it('when the history, the report and the content are asked, then they come from the administration', async () => {
     const actions = await client.callTool({
       name: 'nfnn_admin_actions',
@@ -505,7 +520,7 @@ describe('Given an administrator connected with the reading permission only', ()
     });
     expect(textOf(actions)).toContain('PAIR_PAYMENT');
     expect(textOf(actions)).toContain(
-      'Older actions: call nfnn_admin_actions again with before "2026-10-23T06:00:00.654321Z".',
+      'Older actions: call nfnn_admin_actions again with before "2026-10-23T06:00:00.654321Z" and beforeId "019a1c00-0000-7000-8000-00000000e002".',
     );
     expect(stack.backend.requests.map((request) => request.path)).toContain(
       '/api/admin/donors/actions?limit=10&before=2026-10-23T07%3A00%3A00Z',

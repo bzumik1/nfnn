@@ -119,7 +119,10 @@ test.describe('Given an administrator on the history page', () => {
     await expect(page.locator('tbody tr').nth(2)).toContainText('správce bez účtu');
     await expect(page.locator('tbody tr').nth(2)).toContainText('Odebrání správce');
     await expect(page.getByRole('button', { name: 'Načíst starší' })).toHaveCount(0);
-    expect(requests).toEqual(['?limit=50', '?limit=50&before=2026-10-21T15:20:00Z']);
+    expect(requests).toEqual([
+      '?limit=50',
+      '?limit=50&before=2026-10-21T15:20:00Z&beforeId=019a1c00-0000-7000-8000-00000000e002',
+    ]);
   });
 
   test('when nothing was changed yet, then the page says so', async ({ page }) => {

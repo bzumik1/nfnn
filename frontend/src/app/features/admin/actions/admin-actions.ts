@@ -144,14 +144,14 @@ export class AdminActions {
   }
 
   protected loadMore(): void {
-    const oldest = this.items().at(-1);
-    if (oldest === undefined || this.loadingMore()) {
+    const lastListed = this.items().at(-1);
+    if (lastListed === undefined || this.loadingMore()) {
       return;
     }
     this.loadingMore.set(true);
     this.moreFailed.set(false);
     this.api
-      .adminActions(oldest.performedAt)
+      .adminActions(lastListed)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (page) => {

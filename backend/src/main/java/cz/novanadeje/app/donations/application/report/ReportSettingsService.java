@@ -75,7 +75,7 @@ public class ReportSettingsService {
         Instant now = clock.instant();
         settings.save(changed, now);
         events.publishEvent(new AdminActionPerformed(adminId, CHANGE_ACTION, Optional.empty(),
-                "Nastavení měsíčního přehledu změněno: příjemci " + String.join(", ", changed.recipients().values())
+                "Nastavení měsíčního přehledu změněno: počet příjemců " + changed.recipients().count()
                         + "; odesílá se " + changed.sendDay() + ". den v měsíci v " + changed.sendHour() + ":00; části " + czechSections(changed.sections()), now));
         log.info("Admin {} changed the monthly report settings: {} recipient(s), day {} at {}:00, sections {}", adminId, changed.recipients().count(),
                 changed.sendDay(), changed.sendHour(), changed.sections().names());
