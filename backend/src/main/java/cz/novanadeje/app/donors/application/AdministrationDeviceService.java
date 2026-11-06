@@ -48,6 +48,12 @@ public class AdministrationDeviceService {
     }
 
     @Transactional
+    public void unlockWithPasskey(DonorId adminId, PasskeyProof passkey) {
+        Donor admin = donors.findById(adminId).orElseThrow(() -> new DonorNotFound(adminId));
+        confirmations.confirm(admin, Confirmation.withPasskey(passkey));
+    }
+
+    @Transactional
     public void storedCopy(DonorId adminId, RequestingDevice device) {
         Instant now = clock.instant();
         String described = device.description().platform().name() + " " + device.description().browser().name();

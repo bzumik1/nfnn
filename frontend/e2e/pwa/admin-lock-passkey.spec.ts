@@ -165,3 +165,72 @@ test.describe('Given an administrator who signs in with a passkey that supports 
     expect(unlocks).toEqual([]);
   });
 });
+
+test.describe('Given an administrator who signs in with the password and has a passkey on the account', () => {
+  test('when the app starts again, then the passkey of the account is offered first, the server checks it and the copy is kept under that passkey alone', async ({
+    page,
+    context,
+    virtualAuthenticator,
+    idbDump,
+    swReady,
+  }) => {
+    const unlocks: string[] = [];
+    const sent: unknown[] = [];
+    await mockAdministration(context, unlocks);
+    await context.route(
+      (url) => url.pathname === UNLOCK,
+      (route) => {
+        sent.push(route.request().postDataJSON());
+        return route.fulfill({ status: 204 });
+      },
+    );
+    await context.route(
+      (url) => url.pathname === '/api/donors/auth/login',
+      (route) => route.fulfill(session(200, administrator)),
+    );
+    await context.route(
+      (url) => url.pathname === '/api/donors/me/passkeys',
+      (route) =>
+        route.fulfill({
+          json: {
+            items: [
+              {
+                id: '0190c3a2-7b1e-7cc1-8a52-0000000000aa',
+                name: 'iPhone',
+                createdAt: '2026-11-01T08:00:00Z',
+                lastUsedAt: null,
+              },
+            ],
+          },
+        }),
+    );
+    await page.goto('/');
+    await swReady();
+    await createAdministratorPasskey(page);
+    expect(await virtualAuthenticator.credentialCount()).toBe(1);
+
+    await page.getByRole('banner').getByRole('button', { name: 'Přihlásit se' }).click();
+    await page.locator('#login-email').fill('jana@example.cz');
+    await page.locator('#login-password').fill('correct horse battery');
+    await page.getByRole('dialog').locator('.ui-button--block').click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect.poll(async () => administrationWraps(await idbDump())).toEqual(['password']);
+
+    await page.goto('/sprava/prehledy');
+    await expect(page.getByRole('heading', { level: 1, name: LOCKED })).toBeVisible();
+    const unlockButtons = page.locator('.lock-actions').getByRole('button');
+    await expect(unlockButtons).toHaveText(['Odemknout přístupovým klíčem', 'Použít heslo']);
+    await unlockButtons.first().click();
+
+    await expect(page.getByRole('heading', { level: 1, name: 'Měsíční e-mail' })).toBeVisible();
+    expect(sent).toEqual([
+      {
+        passkey: {
+          challenge: 'c'.repeat(43),
+          credential: expect.objectContaining({ type: 'public-key' }),
+        },
+      },
+    ]);
+    await expect.poll(async () => administrationWraps(await idbDump())).toEqual(['prf']);
+  });
+});

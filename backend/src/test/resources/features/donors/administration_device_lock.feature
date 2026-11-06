@@ -38,6 +38,31 @@ Feature: An administrator unlocks the administration's copy on a device with the
     Then the response status is 400
     And the problem type ends with "donors/second-factor-code-rejected"
 
+  Scenario: A passkey of the administrator's own account unlocks the administration without the password or a code, and its challenge only once
+    Given "Jana" added a passkey named "iPhone"
+    When "Jana" unlocks the administration on this device with the passkey "iPhone"
+    Then the response status is 204
+    And no admin action "STORE_ADMINISTRATION_COPY" is recorded
+    When "Jana" unlocks the administration on this device with the passkey "iPhone" answering a spent challenge
+    Then the response status is 400
+    And the problem type ends with "donors/passkey-confirmation-rejected"
+
+  Scenario: A passkey of another account does not unlock the administration
+    Given "Jana" added a passkey named "iPhone"
+    And a person "Petr" is registered
+    And "Petr" added a passkey named "Klíč"
+    When "Jana" unlocks the administration on this device with the passkey "Klíč" of "Petr"
+    Then the response status is 400
+    And the problem type ends with "donors/passkey-confirmation-rejected"
+
+  Scenario: An administrator who signs in with a passkey and has no authenticator app unlocks with that passkey
+    Given a person "Petr" is registered
+    And "Petr" is given the administrator role without signing in again
+    And "Petr" added a passkey named "iPhone"
+    And "Petr" signs in with the passkey "iPhone"
+    When "Petr" unlocks the administration on this device with the passkey "iPhone"
+    Then the response status is 204
+
   Scenario: Unlocking is limited per client address before any password is checked
     When "Jana" unlocks the administration on this device with the password "Spatne-heslo-123" and the code "000000" 10 times
     And "Jana" unlocks the administration on this device with her password and a fresh code
@@ -46,6 +71,13 @@ Feature: An administrator unlocks the administration's copy on a device with the
     When the following requests come from another client address
     And "Jana" unlocks the administration on this device with her password and a fresh code
     Then the response status is 204
+
+  Scenario: A passkey counts against the same limit per client address as the password and a code
+    Given "Jana" added a passkey named "iPhone"
+    When "Jana" unlocks the administration on this device with the password "Spatne-heslo-123" and the code "000000" 10 times
+    And "Jana" unlocks the administration on this device with the passkey "iPhone"
+    Then the response status is 429
+    And the problem type ends with "donors/rate-limited"
 
   Scenario: Ten wrong codes from any address stop unlocking with any code, even the right one, and tell the administrator by e-mail
     When "Jana" unlocks the administration on this device with her password and the code "000000" 10 times, each from another client address
