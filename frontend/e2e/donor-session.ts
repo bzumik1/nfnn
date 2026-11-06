@@ -420,7 +420,7 @@ export const adminSettings = {
 };
 
 function sectionName(name: string): RegExp {
-  return new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}( |$)`);
+  return new RegExp(`(^| )${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}( |$)`);
 }
 
 export async function openAccountItem(page: Page, name: string): Promise<void> {

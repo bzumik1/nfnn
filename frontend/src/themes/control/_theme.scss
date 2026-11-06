@@ -64,6 +64,11 @@
   --color-on-sheet-close: var(--color-text);
   --color-sheet-grouped: var(--color-surface-muted);
   --color-sheet-group: var(--color-surface);
+  --color-sheet-text: var(--color-text);
+  --color-sheet-secondary: var(--color-text-muted);
+  --color-sheet-separator: var(--color-border);
+  --color-sheet-chevron: var(--color-text-subtle);
+  --shadow-sheet-close: none;
 
   --font-serif: Georgia, 'Times New Roman', serif;
   --font-sans: system-ui, 'Segoe UI', Roboto, Arial, sans-serif;
@@ -214,6 +219,18 @@
   --sheet-close-inset: var(--space-4);
   --sheet-top-gap: var(--space-2);
   --sheet-group-gap: var(--space-6);
+  --font-sheet: var(--font-sans);
+  --sheet-inset-inline: var(--space-3);
+  --sheet-header-gap: var(--space-6);
+  --sheet-row-height: 3rem;
+  --sheet-row-padding-inline: var(--space-3);
+  --sheet-profile-padding: var(--space-3);
+  --sheet-avatar-size: var(--back-button-size);
+  --sheet-logo-height: 32px;
+  --sheet-chevron-size: 16px;
+  --text-sheet-body: 1rem;
+  --text-sheet-subtitle: var(--text-sm);
+  --text-sheet-footnote: var(--text-xs);
   --tab-bar-height: 60px;
   --tab-bar-gap: 15px;
   --tab-bar-gap-browser: 15px;

@@ -48,6 +48,8 @@
 
   &--grouped {
     background: var(--color-sheet-grouped);
+    color: var(--color-sheet-text);
+    font-family: var(--font-sheet);
   }
 }
 
@@ -147,16 +149,23 @@
   .dialog--sheet .dialog-panel--tall {
     height: calc(100dvh - env(safe-area-inset-top) - var(--sheet-top-gap));
     max-height: none;
-    padding-top: var(--sheet-close-inset);
+    padding: var(--sheet-close-inset) max(var(--sheet-inset-inline), env(safe-area-inset-right))
+      calc(var(--space-8) + env(safe-area-inset-bottom))
+      max(var(--sheet-inset-inline), env(safe-area-inset-left));
+  }
+
+  .dialog--sheet .dialog-panel--tall .dialog-grabber::before {
+    display: none;
   }
 
   .dialog--sheet .dialog-close {
     top: var(--sheet-close-inset);
-    right: max(var(--sheet-close-inset), env(safe-area-inset-right));
+    right: max(var(--sheet-inset-inline), env(safe-area-inset-right));
     width: var(--sheet-close-size);
     height: var(--sheet-close-size);
     border-radius: var(--radius-pill);
     background: var(--color-sheet-close);
+    box-shadow: var(--shadow-sheet-close);
     color: var(--color-on-sheet-close);
   }
 

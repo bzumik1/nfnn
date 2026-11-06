@@ -208,7 +208,7 @@ test.describe('Given a signed-in donor on a phone who opens a section from the a
     await expect(page.getByRole('dialog')).toHaveCount(0);
   });
 
-  test('when the sheet has opened, then its close button is as large as Zpět and on one row with the name', async ({
+  test('when the sheet has opened, then its round close button stands on one row with the logo', async ({
     page,
   }) => {
     await page.getByRole('banner').getByRole('button', { name: 'Účet' }).click();
@@ -218,8 +218,8 @@ test.describe('Given a signed-in donor on a phone who opens a section from the a
     const close = await sheet.getByRole('button', { name: 'Zavřít' }).boundingBox();
     const name = await sheet.getByRole('heading', { level: 2 }).boundingBox();
 
-    expect(close?.width).toBe(44);
-    expect(close?.height).toBe(44);
+    expect(close?.width).toBe(40);
+    expect(close?.height).toBe(40);
     expect(close && name && close.y < name.y + name.height && name.y < close.y + close.height).toBe(
       true,
     );

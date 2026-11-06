@@ -129,10 +129,15 @@
   --color-on-tab-bar: #ffffff;
   --color-tab-focus-ring: #ffffff;
   --color-sheet-grabber: var(--color-border-rule);
-  --color-sheet-close: color-mix(in srgb, var(--color-text) 10%, var(--color-surface));
+  --color-sheet-close: var(--color-surface);
   --color-on-sheet-close: var(--color-text);
   --color-sheet-grouped: var(--color-surface-muted);
   --color-sheet-group: var(--color-surface);
+  --color-sheet-text: var(--color-text);
+  --color-sheet-secondary: var(--color-text-muted);
+  --color-sheet-separator: var(--color-border);
+  --color-sheet-chevron: var(--color-text-subtle);
+  --shadow-sheet-close: 0 1px 6px rgb(0 0 0 / 0.12);
 
   --font-serif: 'Playfair Display', serif;
   --font-sans: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
@@ -229,8 +234,8 @@
   --radius-card: 16px;
   --radius-media: 20px;
   --radius-dialog: 24px;
-  --radius-sheet: var(--radius-dialog);
-  --radius-sheet-group: var(--radius-media);
+  --radius-sheet: 34px;
+  --radius-sheet-group: 24px;
   --radius-pill: 50px;
   --radius-round: 50%;
 
@@ -279,10 +284,22 @@
   --sheet-max-width: 600px;
   --sheet-grabber-width: 36px;
   --sheet-grabber-height: 5px;
-  --sheet-close-size: var(--back-button-size);
-  --sheet-close-inset: var(--space-4);
-  --sheet-top-gap: var(--space-2);
-  --sheet-group-gap: var(--space-6);
+  --sheet-close-size: 40px;
+  --sheet-close-inset: 17px;
+  --sheet-top-gap: 0px;
+  --sheet-group-gap: 32px;
+  --font-sheet: var(--font-sans);
+  --sheet-inset-inline: 18px;
+  --sheet-header-gap: 40px;
+  --sheet-row-height: 2.765rem;
+  --sheet-row-padding-inline: 20px;
+  --sheet-profile-padding: 13.5px 18px;
+  --sheet-avatar-size: 50px;
+  --sheet-logo-height: 36px;
+  --sheet-chevron-size: 20px;
+  --text-sheet-body: 1rem;
+  --text-sheet-subtitle: 0.882rem;
+  --text-sheet-footnote: 0.765rem;
   --tab-bar-height: 62px;
   --tab-bar-gap: 20px;
   --tab-bar-gap-browser: 16px;
@@ -358,7 +375,10 @@
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
-    --color-sheet-grouped: var(--color-surface-alt);
+    --color-sheet-grouped: var(--color-surface);
+    --color-sheet-group: var(--color-surface-muted);
+    --color-sheet-close: var(--color-border);
+    --shadow-sheet-close: none;
     --color-accent: #6ea8ff;
     --color-accent-soft: #162a4d;
     --color-accent-bg: #121d33;
