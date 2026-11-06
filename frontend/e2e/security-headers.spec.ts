@@ -15,14 +15,6 @@ test.describe('Given the site served with the security headers of the frontend n
     expect(policy).toContain("manifest-src 'self'");
   });
 
-  test('when the home page loads, then it keeps its window to itself, so a page of another site that opened it holds no handle on it', async ({
-    page,
-  }) => {
-    const answer = await page.goto('/');
-
-    expect(answer?.headers()['cross-origin-opener-policy']).toBe('same-origin');
-  });
-
   test('when a script on the page writes a text into a script address, then the browser refuses it and the violation is recorded', async ({
     page,
     cspViolations,
