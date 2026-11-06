@@ -19,6 +19,7 @@ import {
   RouterOutlet,
 } from '@angular/router';
 import { CompactLayout } from '../../core/layout/compact-layout';
+import { HomeScreenApp } from '../../core/layout/home-screen-app';
 import { BackTarget } from '../../core/navigation/back-target';
 import { RouteChrome } from '../../core/navigation/route-chrome';
 import { AppHeader } from '../app-header/app-header';
@@ -44,8 +45,10 @@ export class PublicShell {
   private readonly chrome = inject(RouteChrome).current;
   private readonly compact = inject(CompactLayout).isCompact;
   protected readonly tabBar = computed(() => this.chrome().tabBar);
-  protected readonly footer = computed(() =>
-    this.compact() ? this.chrome().phoneFooter : !this.chrome().landing,
+  private readonly homeScreenApp = inject(HomeScreenApp).onTouchScreen;
+  protected readonly footer = computed(
+    () =>
+      !this.homeScreenApp && (this.compact() ? this.chrome().phoneFooter : !this.chrome().landing),
   );
   protected readonly roomForTabBar = computed(
     () => this.tabBar() && !this.footer() && !this.chrome().landing,

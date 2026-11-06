@@ -4,16 +4,19 @@ import { ContactForm } from '../../contact/contact-form/contact-form';
 import { HomeApi, HomeResponse } from '../home-api';
 import { About } from '../home/sections/about/about';
 import { StatsBar } from '../home/sections/stats-bar/stats-bar';
+import { HomeScreenApp } from '../../../core/layout/home-screen-app';
+import { FoundationLinks } from './foundation-links/foundation-links';
 
 @Component({
   selector: 'app-about-page',
-  imports: [About, StatsBar, ContactForm],
+  imports: [About, StatsBar, ContactForm, FoundationLinks],
   templateUrl: './about-page.html',
   styleUrl: './about-page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AboutPage {
   protected readonly content = signal<HomeResponse | null>(null);
+  protected readonly homeScreenApp = inject(HomeScreenApp).onTouchScreen;
   protected readonly aboutPhoto = computed(() => this.content()?.about?.photo ?? null);
   protected readonly people = computed(() => this.content()?.people ?? null);
 

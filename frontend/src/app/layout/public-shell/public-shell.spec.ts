@@ -6,6 +6,7 @@ import { NavigationEnd, provideRouter, Router, withInMemoryScrolling } from '@an
 import { filter, firstValueFrom } from 'rxjs';
 import { Location } from '@angular/common';
 import { CompactLayout } from '../../core/layout/compact-layout';
+import { HomeScreenApp } from '../../core/layout/home-screen-app';
 import { BackTarget } from '../../core/navigation/back-target';
 import { PublicShell } from './public-shell';
 
@@ -176,9 +177,11 @@ class TabPage {}
 
 describe('Given the public shell around the pages of the tabs', () => {
   const compact = signal(false);
+  const homeScreen = { onTouchScreen: false };
 
   beforeEach(async () => {
     compact.set(false);
+    homeScreen.onTouchScreen = false;
     await TestBed.configureTestingModule({
       imports: [PublicShell],
       providers: [
@@ -196,6 +199,7 @@ describe('Given the public shell around the pages of the tabs', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: CompactLayout, useValue: { isCompact: compact.asReadonly() } },
+        { provide: HomeScreenApp, useValue: homeScreen },
       ],
     }).compileComponents();
   });
@@ -243,6 +247,16 @@ describe('Given the public shell around the pages of the tabs', () => {
 
     expect((await openAt('/aktuality')).querySelector('app-site-footer')).toBeNull();
     expect((await openAt('/o-nas')).querySelector('app-site-footer')).not.toBeNull();
+  });
+
+  it('when the app opened from the home screen of an iPhone or iPad shows a page, then no web footer ends it, on a phone or a tablet', async () => {
+    homeScreen.onTouchScreen = true;
+
+    expect((await openAt('/aktuality')).querySelector('app-site-footer')).toBeNull();
+    compact.set(true);
+    const about = await openAt('/o-nas');
+    expect(about.querySelector('app-site-footer')).toBeNull();
+    expect(about.querySelector('main')?.classList).toContain('with-tab-bar');
   });
 
   it('when a page asks for no tab bar, then the shell leaves it out', async () => {
