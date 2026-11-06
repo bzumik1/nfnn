@@ -1,10 +1,13 @@
 import { createReadStream, existsSync, readFileSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { extname, join, resolve, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { APP_ROUTES_FILE, appRouteMatcher } from './app-routes.mjs';
+import { checkoutMarkerPath, devPort } from './dev-port.mjs';
 import { readSecurityHeaders } from './security-headers.mjs';
 
-const [folder, portArgument = '4200'] = process.argv.slice(2);
+const repositoryRoot = fileURLToPath(new URL('../..', import.meta.url));
+const [folder, portArgument = String(devPort({ root: repositoryRoot }))] = process.argv.slice(2);
 if (!folder) {
   console.error('Usage: node scripts/serve-dist.mjs <dist/.../browser> [port]');
   process.exit(2);
@@ -17,6 +20,7 @@ if (!existsSync(appShell)) {
 }
 
 const securityHeaders = readSecurityHeaders();
+const ownMarker = checkoutMarkerPath(repositoryRoot);
 const isAppRoute = appRouteMatcher(readFileSync(APP_ROUTES_FILE, 'utf8'));
 const verificationPage = /^\/overit\/?$/;
 
@@ -74,6 +78,12 @@ createServer((request, response) => {
     pathname = decodeURIComponent(new URL(request.url ?? '/', 'http://localhost').pathname);
   } catch {
     response.writeHead(400).end();
+    return;
+  }
+  if (pathname === ownMarker) {
+    response
+      .writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' })
+      .end(repositoryRoot);
     return;
   }
   const served = fileFor(pathname);

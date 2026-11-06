@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { checkoutMarkerPath, devPort } from './scripts/dev-port.mjs';
 import {
   DEVICE_PROJECT_PREFIX,
   DeviceOptions,
@@ -15,6 +16,9 @@ const build = theme
   ? `npm run build -- --configuration=production,${theme}-theme --output-path=dist/${theme}-theme`
   : 'npm run build';
 const served = process.env.E2E_DIST ?? builtApp;
+const checkoutRoot = join(__dirname, '..');
+const localPort = devPort({ root: checkoutRoot });
+const localUrl = `http://localhost:${localPort}`;
 const askedProjects = process.argv.filter((argument) => argument.startsWith('--project='));
 const onlyWebApp =
   process.env.E2E_DIST !== undefined &&
@@ -41,7 +45,7 @@ export default defineConfig<DeviceOptions, { safariPose?: SafariPose }>({
   workers: safari ? 1 : process.env.CI ? 3 : undefined,
   reporter: [[process.env.CI && !safari ? 'github' : 'list'], ['./e2e/devices/device-report.ts']],
   use: {
-    baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:4200',
+    baseURL: process.env.E2E_BASE_URL ?? localUrl,
     trace: 'on-first-retry',
     serviceWorkers: 'block',
   },
@@ -94,9 +98,9 @@ export default defineConfig<DeviceOptions, { safariPose?: SafariPose }>({
       ? undefined
       : {
           command: process.env.E2E_DIST
-            ? `node scripts/serve-dist.mjs ${served}`
-            : `${build} && node scripts/serve-dist.mjs ${served}`,
-          url: 'http://localhost:4200',
+            ? `node scripts/serve-dist.mjs ${served} ${localPort}`
+            : `${build} && node scripts/serve-dist.mjs ${served} ${localPort}`,
+          url: localUrl + checkoutMarkerPath(checkoutRoot),
           reuseExistingServer: !process.env.CI,
           timeout: 120_000,
         },
