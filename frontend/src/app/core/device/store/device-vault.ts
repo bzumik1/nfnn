@@ -407,6 +407,36 @@ export class DeviceVault implements SessionDevice {
     });
   }
 
+  unlockAdministrationWithPrf(
+    account: DeviceAccount,
+    reading: PrfReading,
+    storeNothing: boolean,
+  ): Promise<boolean> {
+    const generation = this.sessionGeneration;
+    return this.run(async () => {
+      try {
+        const storage =
+          generation === this.sessionGeneration
+            ? await this.administrationStorageFor(storeNothing, true)
+            : null;
+        if (storage === null) {
+          return false;
+        }
+        this.closeAdministration();
+        return (
+          (await this.openAdministration(
+            storage,
+            account,
+            { kind: 'prf', reading },
+            { replacesRefused: true, reason: 'unlocked' },
+          )) === 'opened'
+        );
+      } finally {
+        reading.output.fill(0);
+      }
+    });
+  }
+
   unlockAdministrationWithPassword(
     account: DeviceAccount,
     password: string,
