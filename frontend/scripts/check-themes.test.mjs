@@ -326,8 +326,12 @@ const ICON_SIZES = new Map([
 ]);
 
 describe('Given the web app manifest of a theme', () => {
-  const problemsOf = (manifest, iconSizes = ICON_SIZES, source = THEME_COLOURS) =>
-    manifestProblems({ theme: 'control', manifest, source, iconSizes });
+  const problemsOf = (
+    manifest,
+    iconSizes = ICON_SIZES,
+    source = THEME_COLOURS,
+    homeScreenTitle = 'Nová naděje',
+  ) => manifestProblems({ theme: 'control', manifest, source, iconSizes, homeScreenTitle });
 
   it('when it opens /aplikace standalone in Czech with the theme colours and icons it carries, then nothing is reported', () => {
     assert.deepEqual(problemsOf(MANIFEST), []);
@@ -382,6 +386,25 @@ describe('Given the web app manifest of a theme', () => {
       'theme control: manifest icon /icon-512.png is 500x500, not 512x512',
       'theme control: manifest icon /icon-gone.png is not a PNG in assets/',
       'theme control: manifest has no maskable icon of 512x512',
+    ]);
+  });
+
+  it('when its short name is longer than the twelve characters an iPhone shows under the icon, then it is reported', () => {
+    const name = 'Nová naděje – nadační fond';
+    assert.deepEqual(
+      problemsOf({ ...MANIFEST, short_name: name }, ICON_SIZES, THEME_COLOURS, name),
+      [
+        'theme control: manifest short_name Nová naděje – nadační fond is longer than 12 characters',
+      ],
+    );
+  });
+
+  it('when the page names the app for the home screen otherwise than its short name or not at all, then it is reported', () => {
+    assert.deepEqual(problemsOf(MANIFEST, ICON_SIZES, THEME_COLOURS, 'NFNN'), [
+      'theme control: manifest short_name Nová naděje is not the apple-mobile-web-app-title NFNN of src/index.html',
+    ]);
+    assert.deepEqual(problemsOf(MANIFEST, ICON_SIZES, THEME_COLOURS, null), [
+      'theme control: manifest short_name Nová naděje is not the apple-mobile-web-app-title null of src/index.html',
     ]);
   });
 });

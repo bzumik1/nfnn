@@ -33,6 +33,7 @@ import { PaymentDetailsStore } from '../payment-details-store';
 import { saveBlob } from '../file-download';
 import { spayd } from '../spayd';
 import {
+  deviceShares,
   Handoff,
   handOver,
   IMAGE_FILE_NAME,
@@ -59,9 +60,12 @@ interface AmountPreset {
 }
 
 interface Payment {
+  readonly amount: number;
   readonly spayd: string;
   readonly matrix: QrMatrix;
 }
+
+type HandoffStep = 'sharing' | 'opening' | 'saving';
 
 type HandoffNotice =
   'bankNotOpened' | 'spaydDownloaded' | 'imageSaved' | 'imageNotShared' | 'fileNotShared';
@@ -203,7 +207,8 @@ export class PaymentPanel {
   protected readonly sendsFiles = sharesPaymentFiles();
   protected readonly opensWithImage = this.sendsImages && this.sendsFiles;
   protected readonly qrShown = signal(false);
-  protected readonly handingOff = signal(false);
+  protected readonly handoffStep = signal<HandoffStep | null>(null);
+  protected readonly handingOff = computed(() => this.handoffStep() !== null);
   protected readonly handoffNotice = signal<HandoffNotice | null>(null);
   protected readonly handoffReady = computed(() => this.payment() !== null && !this.redrawing());
   private readonly preparedImage = signal<PreparedImage | null>(null);
@@ -354,7 +359,7 @@ export class PaymentPanel {
     }
     const png = this.opensWithImage ? (this.preparedImage()?.png ?? null) : null;
     if (png !== null) {
-      await this.handOverPayment(payment, imageFile(png), imageNotice);
+      await this.handOverPayment(payment, imageFile(png, sharedImageName(payment)), imageNotice);
       return;
     }
     await this.handOverPayment(payment, spaydFile(payment.spayd), bankNotice, () =>
@@ -377,14 +382,14 @@ export class PaymentPanel {
     openLocally?: () => Promise<Handoff | null>,
   ): Promise<void> {
     this.clearNotices();
-    this.handingOff.set(true);
+    this.handoffStep.set(deviceShares(file) ? 'sharing' : 'opening');
     try {
       const handoff = await handOver(file, this.shareTitle, openLocally);
       if (this.payment() === payment) {
         this.handoffNotice.set(notice(handoff));
       }
     } finally {
-      this.handingOff.set(false);
+      this.handoffStep.set(null);
     }
   }
 
@@ -410,26 +415,27 @@ export class PaymentPanel {
       return;
     }
     this.clearNotices();
-    this.handingOff.set(true);
+    const prepared = this.preparedImage()?.png ?? null;
+    const shared = prepared === null ? null : imageFile(prepared, sharedImageName(payment));
+    this.handoffStep.set(shared !== null && deviceShares(shared) ? 'sharing' : 'saving');
     try {
-      const prepared = this.preparedImage()?.png ?? null;
       const saved =
-        prepared === null
+        shared === null
           ? this.saveImage(await qrCode.pngBlob(SAVED_QR_SIDE_PX))
-          : await this.shareImage(imageFile(prepared));
+          : await this.shareImage(shared);
       if (saved && this.payment() === payment) {
         this.savedQrFile.set(IMAGE_FILE_NAME);
         this.handoffNotice.set('imageSaved');
       }
     } finally {
-      this.handingOff.set(false);
+      this.handoffStep.set(null);
     }
   }
 
   private async shareImage(file: File): Promise<boolean> {
     const handoff = await handOver(file, this.shareTitle);
     if (handoff === 'refused') {
-      saveBlob({ blob: file, fileName: file.name });
+      saveBlob({ blob: file, fileName: IMAGE_FILE_NAME });
     }
     return handoff === 'refused' || handoff === 'downloaded';
   }
@@ -518,10 +524,15 @@ function paymentOf(
     return null;
   }
   try {
-    return { spayd: payment.spayd, matrix: encodeText(payment.spayd, PAYMENT_QR_LEVEL) };
+    return { amount, spayd: payment.spayd, matrix: encodeText(payment.spayd, PAYMENT_QR_LEVEL) };
   } catch {
     return null;
   }
+}
+
+function sharedImageName(payment: Payment): string {
+  const amount = formatCrowns(payment.amount).replace(/\s/g, ' ');
+  return `${$localize`:@@home.donate.bankApp.imageName:QR platba Nová naděje ${amount}:amount: Kč`}.png`;
 }
 
 function bankNotice(handoff: Handoff): HandoffNotice | null {

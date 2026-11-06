@@ -11,8 +11,8 @@ export function spaydFile(text: string): File {
   return new File([text], SPAYD_FILE_NAME, { type: SPAYD_MEDIA_TYPE });
 }
 
-export function imageFile(png: Blob): File {
-  return new File([png], IMAGE_FILE_NAME, { type: IMAGE_MEDIA_TYPE });
+export function imageFile(png: Blob, name = IMAGE_FILE_NAME): File {
+  return new File([png], name, { type: IMAGE_MEDIA_TYPE });
 }
 
 export function sharesPaymentFiles(): boolean {
@@ -46,7 +46,7 @@ export async function handOver(
   }
 }
 
-function deviceShares(file: File): boolean {
+export function deviceShares(file: File): boolean {
   return (
     typeof navigator.share === 'function' &&
     typeof navigator.canShare === 'function' &&
