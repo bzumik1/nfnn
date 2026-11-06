@@ -164,6 +164,7 @@
                 <p class="passkey-alternative">
                   <span i18n="@@donor.connect.consent.orPasskey">Nebo bez kódu:</span>
                   <button
+                    appNeedsConnection
                     type="button"
                     class="ui-link-button"
                     [disabled]="deciding() !== null || unknownScope"
@@ -203,6 +204,7 @@
             }
             <div class="actions">
               <button
+                appNeedsConnection
                 type="submit"
                 class="ui-button ui-button--primary ui-button--block"
                 [disabled]="
@@ -220,6 +222,7 @@
                 }
               </button>
               <button
+                appNeedsConnection
                 type="button"
                 class="ui-button ui-button--block"
                 [disabled]="deciding() !== null"
@@ -269,6 +272,7 @@
                 Přihlásit se jiným účtem
               </button>
               <button
+                appNeedsConnection
                 type="button"
                 class="ui-button ui-button--block"
                 [disabled]="deciding() !== null"
@@ -317,6 +321,7 @@
           </h1>
           <p class="ui-panel__lead" role="alert">{{ error() }}</p>
           <button
+            appNeedsConnection
             type="button"
             class="ui-button ui-button--primary ui-button--block"
             (click)="retry()"

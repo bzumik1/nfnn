@@ -1,7 +1,7 @@
 import { ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
 import { GuardsUnsavedChanges, unsavedChangesGuard } from './unsaved-changes-guard';
 
-function ask(component: GuardsUnsavedChanges) {
+function ask(component: GuardsUnsavedChanges | null) {
   return unsavedChangesGuard(
     component,
     {} as ActivatedRouteSnapshot,
@@ -19,5 +19,9 @@ describe('Given a page that guards unsaved changes', () => {
     const answer = ask({ canLeave: () => Promise.resolve(false) });
 
     await expect(answer).resolves.toBe(false);
+  });
+
+  it('when the page is not rendered, because the administration is locked, then the navigation goes on', () => {
+    expect(ask(null)).toBe(true);
   });
 });

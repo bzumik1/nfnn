@@ -21,6 +21,7 @@
         <div class="ui-load-state ui-load-state--inset ui-load-state--error" role="alert">
           <p i18n="@@admin.projects.order.error">Řazení se nepodařilo načíst.</p>
           <button
+            appNeedsConnection
             type="button"
             class="ui-button"
             (click)="load()"
@@ -56,7 +57,12 @@
               </label>
             }
           </fieldset>
-          <button type="submit" class="ui-button ui-button--primary" [disabled]="saving()">
+          <button
+            appNeedsConnection
+            type="submit"
+            class="ui-button ui-button--primary"
+            [disabled]="saving()"
+          >
             @if (saving()) {
               <span i18n="@@admin.projects.order.saving">Ukládáme…</span>
             } @else {

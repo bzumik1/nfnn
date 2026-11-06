@@ -1,7 +1,7 @@
 import { DOCUMENT } from '@angular/common';
 import { DestroyRef, inject, Injectable } from '@angular/core';
 
-import { Connectivity } from '../navigation/connectivity';
+import { Connectivity } from '../connectivity/connectivity';
 import { APP_REVISION } from './app-revision';
 import { ClientPlatform, detectPlatform } from './client-platform';
 import { ErrorKind, ErrorName, errorNameOf, ErrorPlace } from './error-vocabulary';
@@ -60,7 +60,7 @@ export class ErrorReporter {
     this.heldBack.delete(key);
     this.lastSent.set(key, now);
     const report = this.reportOf(kind, place, name, count);
-    if (this.connectivity.isOffline()) {
+    if (this.connectivity.browserSaysOffline()) {
       if (this.queue.length < MAX_QUEUED_REPORTS) {
         this.queue.push(report);
       }
@@ -71,7 +71,7 @@ export class ErrorReporter {
 
   private flush(): void {
     try {
-      while (this.queue.length > 0 && !this.connectivity.isOffline()) {
+      while (this.queue.length > 0 && !this.connectivity.browserSaysOffline()) {
         this.send(this.queue.shift()!);
       }
     } catch {

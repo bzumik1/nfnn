@@ -37,11 +37,14 @@ describe('Given the sign-in dialog', () => {
   let passkeys: FakePasskeyAuthenticator;
   let history: FakeDialogHistory;
   let secrets: SignInSecret[];
+  let prepared: number;
 
   beforeEach(async () => {
     secrets = [];
+    prepared = 0;
     const device: SessionDevice = {
       ...NO_SESSION_DEVICE,
+      prepare: () => void prepared++,
       signedIn: async (_account, secret) => void secrets.push(secret),
     };
     localStorage.clear();
@@ -130,6 +133,10 @@ describe('Given the sign-in dialog', () => {
       expect(field.nextElementSibling?.querySelector('.forgot-link')?.textContent?.trim()).toBe(
         'Zapomněli jste heslo?',
       );
+    });
+
+    it('then the device copies start loading at once, so a passkey sign-in finds the device ready for its PRF input', () => {
+      expect(prepared).toBe(1);
     });
 
     it('and the browser closes it on Esc, then the dialog is closed', () => {

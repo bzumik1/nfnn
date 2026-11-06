@@ -23,6 +23,7 @@ import { Avatar } from '../../../shared/ui/avatar/avatar';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 import { PeopleApi, PersonResponse } from '../../content/people-api';
 import { AdminApi, AdministratorResponse } from '../admin-api';
+import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -44,6 +45,7 @@ const PORTRAIT_WIDTH = 480;
     FocusFirstInvalid,
     RouterLink,
     Avatar,
+    NeedsConnection,
   ],
   templateUrl: './admin-administrators.html',
   styleUrl: './admin-administrators.scss',

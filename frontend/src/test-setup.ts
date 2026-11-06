@@ -13,3 +13,11 @@ if (
     }
   };
 }
+
+afterEach(() => {
+  try {
+    globalThis.localStorage?.clear();
+  } catch {
+    return;
+  }
+});

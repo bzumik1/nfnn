@@ -30,6 +30,7 @@ import { ReceiptSignatory } from './receipt-signatory/receipt-signatory';
 import { ReceiptSigningKey } from './receipt-signing-key/receipt-signing-key';
 import { AdminApi, AdminSettingResponse, AdminTestEmailRequest } from '../admin-api';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
+import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 
 type LoadState = 'loading' | 'ready' | 'error' | 'restarting' | 'slow';
 
@@ -193,6 +194,7 @@ const INPUTS: Partial<Readonly<Record<SettingName, Input>>> = {
     ReceiptSignatory,
     ReceiptSigningKey,
     TrackedForm,
+    NeedsConnection,
   ],
   templateUrl: './admin-settings.html',
   styleUrl: './admin-settings.scss',

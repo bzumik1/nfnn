@@ -137,7 +137,7 @@ jobs:
           node scripts/stack-journey.mjs receipts --state "$JOURNEY_STATE"
           node scripts/stack-journey.mjs bank --phase deployed --state "$JOURNEY_STATE"
           logs="$RUNNER_TEMP/first/logs"
-          grep -q "Backend revision $DEPLOYED_REVISION is ready" "$logs/backend.log" || { echo "::error::the backend of the older images did not report revision $DEPLOYED_REVISION"; exit 1; }
+          [ "$(scripts/backend-log.sh "$logs" | grep -c "Backend revision $DEPLOYED_REVISION is ready")" -ge 1 ] || { echo "::error::the backend of the older images did not report revision $DEPLOYED_REVISION"; exit 1; }
           backups="$RUNNER_TEMP/first/backups"
           docker exec nfnn-backend sh -c 'touch /backups/requests/before-upgrade.backup'
           for _ in $(seq 60); do
@@ -156,9 +156,9 @@ jobs:
         run: |
           . "$RUNNER_TEMP/rehearsal.sh"
           logs="$RUNNER_TEMP/first/logs"
-          before=$(wc -l < "$logs/backend.log")
+          before=$(scripts/backend-log.sh "$logs" | wc -l)
           docker compose up -d --wait --wait-timeout 300
-          tail -n "+$((before + 1))" "$logs/backend.log" | sed -n '/ Starting AppApplication /,$p' > "$RUNNER_TEMP/candidate-start.log"
+          scripts/backend-log.sh "$logs" | tail -n "+$((before + 1))" | sed -n '/ Starting AppApplication /,$p' > "$RUNNER_TEMP/candidate-start.log"
           grep -q 'Backend revision dev is ready' "$RUNNER_TEMP/candidate-start.log" || { echo "::error::the candidate's backend did not start on the database of the older images"; exit 1; }
           for container in nfnn-postgres nfnn-backup nfnn-backend nfnn-mcp nfnn-frontend; do
             [ "$(docker inspect -f '{{.RestartCount}}' "$container")" = 0 ] || { echo "::error::$container restarted while the candidate's images took over"; exit 1; }
@@ -181,7 +181,7 @@ jobs:
           . "$RUNNER_TEMP/rehearsal.sh"
           logs="$RUNNER_TEMP/first/logs"
           docker compose up -d --wait --wait-timeout 300
-          [ "$(grep -c "Backend revision $DEPLOYED_REVISION is ready" "$logs/backend.log")" -ge 3 ] || { echo "::error::the older images' backend did not start again after the candidate's"; exit 1; }
+          [ "$(scripts/backend-log.sh "$logs" | grep -c "Backend revision $DEPLOYED_REVISION is ready")" -ge 3 ] || { echo "::error::the older images' backend did not start again after the candidate's"; exit 1; }
           node scripts/stack-journey.mjs check --state "$JOURNEY_STATE"
           answer=$(curl -sS --max-time 10 -o /dev/null -w '%{http_code} %{content_type}' http://localhost:8089/ngsw.json)
           case "$answer" in
@@ -238,17 +238,17 @@ jobs:
           node scripts/stack-journey.mjs restore-setup --dump "$RUNNER_TEMP/first-server.dump.age" --key "$RUNNER_TEMP/first-server.key" --state "$RUNNER_TEMP/second-journey.json"
           rm -f "$RUNNER_TEMP/first-server.key"
           docker compose up -d --wait --wait-timeout 300
-          grep -q "Receipt signing key $first_key from a restored backup is sealed again and published" "$second/logs/backend.log" || { echo "::error::the second server did not adopt the first server's receipt signing key $first_key"; grep -i 'receipt signing key' "$second/logs/backend.log"; exit 1; }
+          scripts/backend-log.sh "$second/logs" | grep "Receipt signing key $first_key from a restored backup is sealed again and published" > /dev/null || { echo "::error::the second server did not adopt the first server's receipt signing key $first_key"; grep -i 'receipt signing key' "$second/logs/backend.log"; exit 1; }
           [ "$(docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select count(*) from admin_action where action = 'ADOPT_RECEIPT_SIGNING_KEY' and details like '%$first_key%'")" = 1 ] || { echo "::error::the adoption of $first_key is not in the audit trail exactly once"; exit 1; }
           [ "$(sudo grep -m 1 '^AGE-SECRET-KEY-' "$second/secrets/backup-key")" = "$(sudo grep -m 1 '^AGE-SECRET-KEY-' "$first/secrets/backup-key")" ] || { echo "::error::the second server did not adopt the backup key the backup came with"; exit 1; }
-          if grep -E "Receipt signing key [0-9a-f]{8} (is sealed by the settings key of another server|fails its seal)" "$second/logs/backend.log"; then
+          if scripts/backend-log.sh "$second/logs" | grep -E "Receipt signing key [0-9a-f]{8} (is sealed by the settings key of another server|fails its seal)"; then
             echo "::error::the second server refused a receipt signing key"
             exit 1
           fi
           node scripts/stack-journey.mjs adopted --state "$RUNNER_TEMP/second-journey.json"
           docker restart nfnn-backend
           docker compose up -d --wait --wait-timeout 300
-          [ "$(grep -c "Receipt signing key $first_key from a restored backup is sealed again and published" "$second/logs/backend.log")" = 1 ] || { echo "::error::a later start adopted the key again, so a restore confirmed more than one adoption"; exit 1; }
+          [ "$(scripts/backend-log.sh "$second/logs" | grep -c "Receipt signing key $first_key from a restored backup is sealed again and published")" = 1 ] || { echo "::error::a later start adopted the key again, so a restore confirmed more than one adoption"; exit 1; }
           node scripts/stack-journey.mjs adopted --state "$RUNNER_TEMP/second-journey.json"
 
       - name: Logs
