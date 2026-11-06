@@ -53,5 +53,42 @@
     "field": "$.defaultHistoryFrom",
     "reason": "Plan v3 2.33 (Jakub 2026-11-05, roadmap PR #312): an administrator loads older bank payments from /sprava without a restart: the import state names the last run of older payments since the start (or null) and the day the administration offers for one; the fields before them answer as they did; the administration device sync scenario reads it to compare the stored state its chunk holds, which carries neither field",
     "contract": "docs/api-contract.md, Administration: GET /api/admin/donations/import-state and POST /api/admin/donations/import/history; Administration device sync: import-state"
+  },
+  {
+    "kind": "log-field",
+    "line": "donations.application.importing.BankStatementRecorder: Fio movements between <n>-<n>-<n> and <n>-<n>-<n> were not downloaded; unlock the history in Fio internet banking and press Načíst starší platby on /sprava from <n>-<n>-<n>",
+    "reason": "Plan v3 2.33: the WARN about a gap in the covered period now points to the Načíst starší platby button on /sprava instead of setting FIO_HISTORY_FROM and restarting the backend; the same days as before",
+    "contract": "docs/api-contract.md, Administration: POST /api/admin/donations/import/history; docs/system-overview.md, donations (bank import); .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #318, Jakub 2026-11-06",
+      "fields": {
+        "<n>": "the year, month and day of the first and last day not downloaded and of the day to load from (Prague days); no name, account or amount"
+      }
+    }
+  },
+  {
+    "kind": "log-field",
+    "line": "donations.application.importing.ImportBankPaymentsService: Fio import HISTORY <n>-<n>-<n>/<n>-<n>-<n> completed: bank reported <n>-<n>-<n>/<n>-<n>-<n>, <n> movements, <n> new incoming, <n> known, <n> paired by symbol, <n> by account, <n> by confirmed symbol, <n> accounts learned, <n> left unpaired, covered <n>-<n>-<n>/<n>-<n>-<n>",
+    "reason": "Plan v3 2.33: the existing completion line of an import run also appears for the new trigger HISTORY (an administrator's run of older payments), with the same fields as for STARTUP and SCHEDULED",
+    "contract": "docs/api-contract.md, Administration: POST /api/admin/donations/import/history; docs/system-overview.md, donations (bank import); .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #318, Jakub 2026-11-06",
+      "fields": {
+        "<n>": "the days of the requested, reported and covered periods (year, month, day) and the counts of movements, new and known incoming payments, pairings by kind, learned account links and unpaired payments; no name, account, symbol or amount"
+      }
+    }
+  },
+  {
+    "scenario": "donations/donation_receipts_frozen: *",
+    "kind": "logs",
+    "line": "donations.application.importing.BankStatementRecorder: Fio movements between * and * were not downloaded; unlock the history in Fio internet banking, set FIO_HISTORY_FROM=* and restart the backend",
+    "reason": "Plan v3 2.33: the gap WARN no longer tells to set FIO_HISTORY_FROM and restart; it names the Načíst starší platby button on /sprava instead (the new shape is declared as a log-field), with the same days",
+    "contract": "docs/api-contract.md, Administration: POST /api/admin/donations/import/history; docs/system-overview.md, donations (bank import); .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #318, Jakub 2026-11-06",
+      "fields": {
+        "<n>": "the year, month and day of the first and last day not downloaded and of the day to load from (Prague days), as before; no name, account or amount"
+      }
+    }
   }
 ]
