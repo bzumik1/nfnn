@@ -3,6 +3,7 @@ package cz.novanadeje.app.donors.application;
 import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.application.event.DonorAccountErased;
 import cz.novanadeje.app.donors.domain.AdministratorNotErasable;
+import cz.novanadeje.app.donors.domain.AuthorizationCodeRepository;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorAlreadyErased;
 import cz.novanadeje.app.donors.domain.DonorId;
@@ -13,6 +14,8 @@ import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.PasskeyRepository;
 import cz.novanadeje.app.donors.domain.PasswordResetTokenRepository;
 import cz.novanadeje.app.donors.domain.Role;
+import cz.novanadeje.app.donors.domain.SecondFactorChallengeRepository;
+import cz.novanadeje.app.donors.domain.SecondFactorRecoveryRepository;
 import cz.novanadeje.app.donors.domain.SecondFactorRepository;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.event.DonorErased;
@@ -71,14 +74,20 @@ class DonorErasureServiceTest {
     @Mock
     private EmailVerificationTokenRepository emailVerificationTokens;
     @Mock
+    private SecondFactorChallengeRepository challenges;
+    @Mock
+    private SecondFactorRecoveryRepository recoveries;
+    @Mock
+    private AuthorizationCodeRepository authorizationCodes;
+    @Mock
     private ApplicationEventPublisher events;
 
     private DonorErasureService service;
 
     @BeforeEach
     void setUp() {
-        service = new DonorErasureService(donors, secondFactors, passkeys, passwordResetTokens, emailVerificationTokens, events,
-                Clock.fixed(NOW, ZoneOffset.UTC), signOuts);
+        service = new DonorErasureService(donors, secondFactors, passkeys, passwordResetTokens, emailVerificationTokens,
+                challenges, recoveries, authorizationCodes, events, Clock.fixed(NOW, ZoneOffset.UTC), signOuts);
     }
 
     @Test
@@ -97,6 +106,9 @@ class DonorErasureServiceTest {
         order.verify(signOuts).endAllOf(PETR, DeviceSignOutReason.ERASED, NOW);
         order.verify(passwordResetTokens).deleteAllOf(PETR);
         order.verify(emailVerificationTokens).deleteAllOf(PETR);
+        verify(challenges).deleteAllOfWithoutWaiting(PETR);
+        verify(recoveries).deleteAllOfWithoutWaiting(PETR);
+        verify(authorizationCodes).deleteAllOfWithoutWaiting(PETR);
         assertThat(saved.getValue()).isSameAs(petr);
         assertThat(petr.isErased()).isTrue();
         assertThat(petr.erasedAt()).contains(NOW);
@@ -125,7 +137,7 @@ class DonorErasureServiceTest {
         assertThatThrownBy(() -> service.erase(JANA, PETR)).isInstanceOf(DonorNotFound.class);
 
         verify(donors, never()).save(any());
-        verifyNoInteractions(secondFactors, signOuts, passwordResetTokens, emailVerificationTokens, events);
+        verifyNoInteractions(secondFactors, signOuts, passwordResetTokens, emailVerificationTokens, challenges, recoveries, authorizationCodes, events);
     }
 
     @Test
@@ -136,7 +148,7 @@ class DonorErasureServiceTest {
         assertThatThrownBy(() -> service.erase(JANA, PETR)).isInstanceOf(AdministratorNotErasable.class);
 
         verify(donors, never()).save(any());
-        verifyNoInteractions(secondFactors, signOuts, passwordResetTokens, emailVerificationTokens, events);
+        verifyNoInteractions(secondFactors, signOuts, passwordResetTokens, emailVerificationTokens, challenges, recoveries, authorizationCodes, events);
     }
 
     @Test
@@ -149,7 +161,7 @@ class DonorErasureServiceTest {
         assertThatThrownBy(() -> service.erase(JANA, PETR)).isInstanceOf(DonorAlreadyErased.class);
 
         verify(donors, never()).save(any());
-        verifyNoInteractions(secondFactors, signOuts, passwordResetTokens, emailVerificationTokens, events);
+        verifyNoInteractions(secondFactors, signOuts, passwordResetTokens, emailVerificationTokens, challenges, recoveries, authorizationCodes, events);
     }
 
     private static Donor donor(DonorId id, Set<Role> roles, LocaleCode locale) {

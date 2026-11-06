@@ -9,8 +9,10 @@ Feature: An administrator erases a donor's personal data
 
   Scenario: An administrator erases a donor who asked for it, the donor is told and the account cannot be used any more
     Given "Petr" enables the second factor
+    And "Petr" and "Jana" each hold a second-factor challenge, a used and an open recovery by payment and a connection code
     When "Jana" erases the donor "Petr"
     Then the response status is 204
+    And "Petr" holds no second-factor challenge, recovery by payment or connection code any more, while "Jana" keeps hers
     And the admin action "ERASE_DONOR" by "Jana" on "Petr" is recorded
     And e-mail 1 goes to the address of "Petr" with the subject "Vaše osobní údaje jsme vymazali – Nová naděje"
     And both parts of the last e-mail contain "Vydaná potvrzení o daru jsou účetní doklady"

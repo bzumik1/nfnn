@@ -13,4 +13,8 @@ public interface SecondFactorChallengeRepository {
     boolean reserveAttempt(UUID challengeId, Instant now, int maxAttempts);
 
     boolean markUsed(UUID challengeId, Instant at);
+
+    int deleteExpiredBefore(Instant cutoff);
+
+    void deleteAllOfWithoutWaiting(DonorId donorId);
 }
