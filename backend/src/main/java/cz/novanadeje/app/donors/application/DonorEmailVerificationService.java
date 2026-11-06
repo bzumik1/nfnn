@@ -28,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Optional;
+import java.util.function.Predicate;
 
 @Service
 public class DonorEmailVerificationService {
@@ -67,18 +68,29 @@ public class DonorEmailVerificationService {
 
     @Transactional
     public AuthenticatedDonor confirm(String token, DeviceDescription device, SessionKind kind) {
-        LinkSecret secret = new LinkSecret(token);
         Instant now = clock.instant();
+        EmailVerificationToken found = usableLink(token, now, candidate -> candidate.newEmail().isEmpty());
+        Donor donor = verifyRegistration(found, now);
+        return views.authenticated(donor, sessions.signIn(donor, false, device, kind));
+    }
+
+    @Transactional
+    public void confirmChange(String token) {
+        Instant now = clock.instant();
+        EmailVerificationToken found = usableLink(token, now, candidate -> candidate.newEmail().isPresent());
+        changeEmail(found, found.newEmail().orElseThrow(InvalidEmailVerificationToken::new), now);
+    }
+
+    private EmailVerificationToken usableLink(String token, Instant now, Predicate<EmailVerificationToken> purpose) {
+        LinkSecret secret = new LinkSecret(token);
         EmailVerificationToken found = tokens.findBySecretHash(secret.hash())
                 .filter(candidate -> candidate.isUsableAt(now))
+                .filter(purpose)
                 .orElseThrow(InvalidEmailVerificationToken::new);
         if (!tokens.markUsed(found.id(), now)) {
             throw new InvalidEmailVerificationToken();
         }
-        Donor donor = found.newEmail()
-                .map(newEmail -> changeEmail(found, newEmail, now))
-                .orElseGet(() -> verifyRegistration(found, now));
-        return views.authenticated(donor, sessions.signIn(donor, false, device, kind));
+        return found;
     }
 
     private Donor verifyRegistration(EmailVerificationToken found, Instant now) {
@@ -96,7 +108,7 @@ public class DonorEmailVerificationService {
         return donor;
     }
 
-    private Donor changeEmail(EmailVerificationToken found, EmailAddress newEmail, Instant now) {
+    private void changeEmail(EmailVerificationToken found, EmailAddress newEmail, Instant now) {
         Donor donor = donors.findById(found.donorId())
                 .filter(Donor::isEmailVerified)
                 .filter(candidate -> !donors.existsByEmail(newEmail))
@@ -108,7 +120,6 @@ public class DonorEmailVerificationService {
         signOuts.endAllOf(donor.id(), DeviceSignOutReason.CREDENTIALS_CHANGED, now);
         events.publishEvent(new DonorEmailChanged(donor.id().value(), previousEmail, newEmail, donor.preferredLocale()));
         log.info("E-mail of donor {} changed", donor.id());
-        return donor;
     }
 
     void issueChangeLink(Donor donor, EmailAddress newEmail) {

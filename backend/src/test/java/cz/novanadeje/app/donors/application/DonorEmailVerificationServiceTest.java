@@ -318,6 +318,32 @@ class DonorEmailVerificationServiceTest {
     }
 
     @Test
+    @DisplayName("Given a live change link, when it is confirmed as a registration, then it is invalid, stays unused and nothing changes")
+    void should_be_invalid_and_leave_link_unused_when_confirmed_as_registration_given_change_link() {
+        LinkSecret secret = LinkSecret.generate();
+        when(tokens.findBySecretHash(secret.hash()))
+                .thenReturn(Optional.of(EmailVerificationToken.issueForChange(secret, DONOR, NEW_EMAIL, NOW.minusSeconds(60), TTL)));
+
+        assertThatThrownBy(() -> service.confirm(secret.value(), DeviceDescription.UNKNOWN, SessionKind.REMEMBERED))
+                .isInstanceOf(InvalidEmailVerificationToken.class);
+
+        verify(tokens, never()).markUsed(any(), any());
+        verifyNoInteractions(donors, sessions, events, signOuts);
+    }
+
+    @Test
+    @DisplayName("Given a live registration link, when it is confirmed as an e-mail change, then it is invalid, stays unused and nothing changes")
+    void should_be_invalid_and_leave_link_unused_when_confirmed_as_change_given_registration_link() {
+        LinkSecret secret = LinkSecret.generate();
+        when(tokens.findBySecretHash(secret.hash())).thenReturn(Optional.of(EmailVerificationToken.issue(secret, DONOR, NOW.minusSeconds(60), TTL)));
+
+        assertThatThrownBy(() -> service.confirmChange(secret.value())).isInstanceOf(InvalidEmailVerificationToken.class);
+
+        verify(tokens, never()).markUsed(any(), any());
+        verifyNoInteractions(donors, sessions, events, signOuts);
+    }
+
+    @Test
     @DisplayName("Given a verified donor and a free address, when a change link is issued, then the earlier change links go, the stored token carries the new address and the event its secret")
     void should_replace_change_links_and_publish_secret_when_change_link_issued_given_free_address() {
         when(donors.findByEmail(NEW_EMAIL)).thenReturn(Optional.empty());
@@ -400,8 +426,8 @@ class DonorEmailVerificationServiceTest {
     }
 
     @Test
-    @DisplayName("Given a live change token, when it is confirmed, then the address changes, every link and session goes, DonorEmailChanged is published and a session opens")
-    void should_change_email_revoke_sessions_and_publish_when_confirmed_given_change_token() {
+    @DisplayName("Given a live change token, when the change is confirmed, then the address changes, every link and session goes, DonorEmailChanged is published and no session opens")
+    void should_change_email_revoke_sessions_publish_and_open_no_session_when_change_confirmed_given_change_token() {
         LinkSecret secret = LinkSecret.generate();
         EmailVerificationToken token = EmailVerificationToken.issueForChange(secret, DONOR, NEW_EMAIL, NOW.minusSeconds(60), TTL);
         Donor donor = verifiedDonor();
@@ -409,25 +435,22 @@ class DonorEmailVerificationServiceTest {
         when(tokens.markUsed(token.id(), NOW)).thenReturn(true);
         when(donors.findById(DONOR)).thenReturn(Optional.of(donor));
         when(donors.existsByEmail(NEW_EMAIL)).thenReturn(false);
-        when(sessions.signIn(donor, false, DeviceDescription.UNKNOWN, SessionKind.REMEMBERED)).thenReturn(TOKENS);
 
-        AuthenticatedDonor result = service.confirm(secret.value(), DeviceDescription.UNKNOWN, SessionKind.REMEMBERED);
+        service.confirmChange(secret.value());
 
-        InOrder order = inOrder(donors, tokens, signOuts, events, sessions);
+        InOrder order = inOrder(donors, tokens, signOuts, events);
         order.verify(donors).save(donor);
         order.verify(tokens).deleteAllOf(DONOR);
         order.verify(signOuts).endAllOf(DONOR, DeviceSignOutReason.CREDENTIALS_CHANGED, NOW);
         order.verify(events).publishEvent(new DonorEmailChanged(DONOR.value(), EMAIL, NEW_EMAIL, LocaleCode.CS));
-        order.verify(sessions).signIn(donor, false, DeviceDescription.UNKNOWN, SessionKind.REMEMBERED);
         assertThat(donor.email()).isEqualTo(NEW_EMAIL);
-        assertThat(result.donor().email()).isEqualTo("jana.nova@example.cz");
-        assertThat(result.tokens()).isEqualTo(TOKENS);
         verify(events, never()).publishEvent(any(DonorRegistered.class));
+        verifyNoInteractions(sessions);
     }
 
     @Test
-    @DisplayName("Given a change token whose address was registered meanwhile or whose donor is unverified, when it is confirmed, then it is invalid")
-    void should_be_invalid_when_confirmed_given_taken_address_or_unverified_donor() {
+    @DisplayName("Given a change token whose address was registered meanwhile or whose donor is unverified, when the change is confirmed, then it is invalid")
+    void should_be_invalid_when_change_confirmed_given_taken_address_or_unverified_donor() {
         LinkSecret secret = LinkSecret.generate();
         EmailVerificationToken token = EmailVerificationToken.issueForChange(secret, DONOR, NEW_EMAIL, NOW.minusSeconds(60), TTL);
         when(tokens.findBySecretHash(secret.hash())).thenReturn(Optional.of(token));
@@ -435,8 +458,8 @@ class DonorEmailVerificationServiceTest {
         when(donors.findById(DONOR)).thenReturn(Optional.of(verifiedDonor()), Optional.of(unverifiedDonor(LocaleCode.CS)));
         when(donors.existsByEmail(NEW_EMAIL)).thenReturn(true);
 
-        assertThatThrownBy(() -> service.confirm(secret.value(), DeviceDescription.UNKNOWN, SessionKind.REMEMBERED)).isInstanceOf(InvalidEmailVerificationToken.class);
-        assertThatThrownBy(() -> service.confirm(secret.value(), DeviceDescription.UNKNOWN, SessionKind.REMEMBERED)).isInstanceOf(InvalidEmailVerificationToken.class);
+        assertThatThrownBy(() -> service.confirmChange(secret.value())).isInstanceOf(InvalidEmailVerificationToken.class);
+        assertThatThrownBy(() -> service.confirmChange(secret.value())).isInstanceOf(InvalidEmailVerificationToken.class);
 
         verify(donors, never()).save(any());
         verifyNoInteractions(sessions, signOuts, events);
