@@ -147,6 +147,25 @@ describe('Given the header of the app', () => {
     expect(logo(await openAt('/aktuality'))).toBe('/images/logo-on-dark.svg');
   });
 
+  it('when a page has a light head, then the back and account circles are the light glass of the chrome, and over a photo or a dark head the dark glass', async () => {
+    donor.set(sampleDonor({ name: 'Jana Nováková' }));
+    const circles = (header: HTMLElement) =>
+      ['button.back-button', 'button.account-button'].map((selector) => {
+        const classes = header.querySelector(selector)!.classList;
+        return [classes.contains('ui-glass'), classes.contains('ui-glass--on-dark')];
+      });
+
+    expect(circles(await openAt('/darce/ucty'))).toEqual([
+      [true, false],
+      [true, false],
+    ]);
+    fixture.destroy();
+    expect(circles(await openAt('/aktuality/clanek'))).toEqual([
+      [true, true],
+      [true, true],
+    ]);
+  });
+
   it('when a donor is signed in, then the initials of their name stand for a button named Účet that opens their account sheet', async () => {
     donor.set(sampleDonor({ name: 'Jana Marie Nováková' }));
     const header = await openAt('/o-nas');

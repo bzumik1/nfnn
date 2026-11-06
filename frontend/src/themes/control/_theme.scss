@@ -78,6 +78,13 @@
   --color-tab-active: #5eead4;
   --color-on-tab-bar: #fdfcf7;
   --color-tab-focus-ring: #fdba74;
+  --color-tab-bar-on-dark: color-mix(in srgb, #1c2b25 72%, transparent);
+  --color-tab-bar-rim-on-dark: color-mix(in srgb, #fdfcf7 30%, transparent);
+  --color-tab-pill-on-dark: color-mix(in srgb, #111a16 92%, transparent);
+  --color-tab-pill-rim-on-dark: var(--color-tab-bar-rim-on-dark);
+  --color-tab-active-on-dark: #5eead4;
+  --color-on-tab-bar-on-dark: #fdfcf7;
+  --color-tab-focus-ring-on-dark: #fdba74;
   --color-sheet-grabber: #8a877c;
   --color-sheet-close: color-mix(in srgb, var(--color-text) 10%, var(--color-surface));
   --color-on-sheet-close: var(--color-text);
@@ -216,6 +223,7 @@
   --shadow-dialog: 0 6px 0 var(--color-border-field);
   --shadow-sheet: 0 -3px 0 var(--color-border-field);
   --shadow-tab-bar: 0 3px 0 var(--color-surface-inverse);
+  --shadow-tab-bar-on-dark: 0 3px 0 var(--color-surface-inverse);
   --shadow-header: 0 1px 0 var(--color-border);
   --shadow-menu: 0 3px 0 var(--color-border-field);
   --shadow-action-bar: 0 3px 0 var(--color-border-field);
@@ -249,6 +257,7 @@
   --text-dialog-close: min(var(--text-4xl), var(--dialog-close-size));
   --blur-backdrop: 6px;
   --blur-bar: 12px;
+  --bar-saturate: 100%;
   --filter-ink: none;
   --blend-ink: normal;
   --sheet-max-width: 640px;
@@ -266,7 +275,7 @@
   --sheet-profile-padding: var(--space-3);
   --sheet-avatar-size: var(--back-button-size);
   --sheet-logo-height: 32px;
-  --sheet-chevron-size: 16px;
+  --sheet-chevron-size: 1rem;
   --text-sheet-body: 1rem;
   --text-sheet-subtitle: var(--text-sm);
   --text-sheet-footnote: var(--text-xs);
@@ -279,8 +288,11 @@
   --tab-pill-drag-scale: 1.04;
   --tab-bar-max-width: 400px;
   --tab-bar-home-indicator-overlap: 15px;
-  --tab-icon-size: 20px;
+  --tab-icon-size: 1.25rem;
   --text-tab-label: min(var(--text-2xs), (100cqi - 40px) / 19);
+  --back-icon-size: min(1.25rem, var(--back-button-size) * 0.5);
+  --list-chevron-size: 1rem;
+  --sheet-close-icon-size: min(1.125rem, var(--sheet-close-size) * 0.5);
   --launch-icon-size: 96px;
   --tab-bar-rendered-height: var(--tab-bar-height);
   --tab-bar-clearance: calc(
@@ -334,6 +346,8 @@
   :root {
     --color-tab-bar: #5c6662;
     --color-tab-pill: #0b110e;
+    --color-tab-bar-on-dark: #5c6662;
+    --color-tab-pill-on-dark: #0b110e;
     --blur-bar: 0px;
   }
 }

@@ -9,7 +9,13 @@
 >
   <div class="app-header-inner" [class.app-header-inner--without-logo]="!showsLogo()">
     @if (parent()) {
-      <button type="button" class="back-button" [attr.aria-label]="backLabel" (click)="back()">
+      <button
+        type="button"
+        class="back-button ui-glass"
+        [class.ui-glass--on-dark]="onDark()"
+        [attr.aria-label]="backLabel"
+        (click)="back()"
+      >
         <svg
           aria-hidden="true"
           width="22"
@@ -42,7 +48,13 @@
       </a>
     }
     @if (auth.signedIn()) {
-      <button type="button" class="account-button" aria-haspopup="dialog" (click)="openAccount()">
+      <button
+        type="button"
+        class="account-button ui-glass"
+        [class.ui-glass--on-dark]="onDark()"
+        aria-haspopup="dialog"
+        (click)="openAccount()"
+      >
         <span class="visually-hidden" i18n="@@layout.header.account">Účet</span>
         @if (accountBadge(); as badge) {
           &ngsp;<span class="visually-hidden">{{ badge.description }}</span>

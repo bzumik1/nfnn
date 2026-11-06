@@ -15,6 +15,7 @@ import {
 import { SoftKeyboard } from '../../core/layout/soft-keyboard';
 import { APP_TABS, AppTab, AppTabId } from '../../core/navigation/app-tabs';
 import { BackTarget } from '../../core/navigation/back-target';
+import { RouteChrome } from '../../core/navigation/route-chrome';
 import { TabMemory } from '../../core/navigation/tab-memory';
 import { FOUNDATION_STAR } from '../../shared/ui/foundation-star/foundation-star';
 import { followFingerAcrossTabs } from './finger-across-tabs';
@@ -45,6 +46,8 @@ export class TabBar {
   private readonly chosen = signal<AppTabId | null>(null);
   protected readonly shown = computed(() => this.chosen() ?? this.current());
   private draggedAt = Number.NEGATIVE_INFINITY;
+  private readonly chrome = inject(RouteChrome).current;
+  protected readonly onDark = computed(() => this.chrome().head !== 'light');
   protected readonly label = $localize`:@@layout.tabs.label:Hlavní sekce`;
   private readonly backTarget = inject(BackTarget);
 
