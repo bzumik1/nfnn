@@ -1,4 +1,9 @@
-<app-dialog presentation="viewer" [labelledBy]="titleId" (dismissed)="close()">
+<app-dialog
+  presentation="viewer"
+  [labelledBy]="titleId"
+  [pulledAway]="swipeProgress()"
+  (dismissed)="close()"
+>
   <div class="zoom-viewer">
     <h2 class="visually-hidden" [id]="titleId">
       @if (photo()) {
@@ -26,7 +31,13 @@
       (wheel)="turn($event)"
       (keydown)="key($event)"
     >
-      <div #shown class="zoom-content" [class.is-easing]="easing()" [style.transform]="transform()">
+      <div
+        #shown
+        class="zoom-content"
+        [class.is-easing]="easing()"
+        [style.transform]="transform()"
+        [style.translate]="swipeTranslate()"
+      >
         @if (photo(); as photo) {
           <img
             class="zoom-photo"

@@ -2,6 +2,7 @@
 @use 'touch-target';
 
 .dialog {
+  --dialog-pull: 0;
   position: fixed;
   inset: 0;
   width: 100%;
@@ -111,6 +112,12 @@
     padding: 0;
     align-items: flex-end;
     overflow: hidden;
+    background: color-mix(
+      in srgb,
+      var(--color-backdrop) calc((1 - var(--dialog-pull)) * 100%),
+      transparent
+    );
+    transition: background-color var(--duration-base) ease;
   }
 
   .dialog--sheet .dialog-panel {
@@ -160,7 +167,11 @@
 
 .dialog--viewer {
   padding: 0;
-  background: var(--color-surface-inverse);
+  background: color-mix(
+    in srgb,
+    var(--color-surface-inverse) calc((1 - var(--dialog-pull)) * 100%),
+    transparent
+  );
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   overflow: hidden;
