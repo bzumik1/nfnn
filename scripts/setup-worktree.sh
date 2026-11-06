@@ -1,15 +1,19 @@
 #!/usr/bin/env bash
-set -uo pipefail
+set -u
 
 root=$(git rev-parse --show-toplevel) || exit 1
 markers="$root/.t3"
 log="$markers/setup.log"
 running="$markers/setup-running"
+takeover="$markers/setup-claim"
 
 mkdir -p "$markers"
 
 claim() {
-  (set -C; echo $$ > "$running") 2>/dev/null
+  echo $$ > "$running.$$" && ln "$running.$$" "$running" 2>/dev/null
+  local claimed=$?
+  rm -f "$running.$$"
+  return $claimed
 }
 
 held_by_setup() {
@@ -44,6 +48,12 @@ cancel() {
     kill -TERM -- "-$install" 2>/dev/null
     kill -CONT -- "-$install" 2>/dev/null
     wait "$install" 2>/dev/null
+    local tries=50
+    while [ "$tries" -gt 0 ] && kill -TERM -- "-$install" 2>/dev/null; do
+      sleep 0.1
+      tries=$((tries - 1))
+    done
+    kill -KILL -- "-$install" 2>/dev/null
   fi
   exit "$1"
 }
@@ -55,9 +65,17 @@ trap_signals() {
 }
 
 if ! claim; then
-  held_by_setup && refuse
+  find "$markers" -maxdepth 1 -name setup-claim -type d -mmin +1 -exec rmdir {} + 2>/dev/null
+  mkdir "$takeover" 2>/dev/null || refuse
+  if held_by_setup; then
+    rmdir "$takeover"
+    refuse
+  fi
   rm -f "$running"
-  claim || refuse
+  claim
+  claimed=$?
+  rmdir "$takeover"
+  [ "$claimed" -eq 0 ] || refuse
 fi
 trap finish EXIT
 trap_signals
@@ -68,9 +86,12 @@ trap 'deferred=129' HUP
 trap 'deferred=130' INT
 trap 'deferred=143' TERM
 set -m
-{ bash "$(dirname "$0")/install-node-modules.sh" "$root" 2>&1 | tee "$log"; } </dev/null &
+bash "$(dirname "$0")/install-node-modules.sh" "$root" </dev/null >"$log" 2>&1 &
 install=$!
 set +m
 trap_signals
 [ -z "$deferred" ] || cancel "$deferred"
 wait "$install"
+installed=$?
+cat "$log"
+exit $installed

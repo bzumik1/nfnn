@@ -54,6 +54,47 @@ function fakeNpm(bin, log, { failIn } = {}) {
   chmodSync(npm, 0o755);
 }
 
+async function gone(pid) {
+  const deadline = Date.now() + 2_000;
+  for (;;) {
+    try {
+      process.kill(pid, 0);
+    } catch (error) {
+      assert.equal(error.code, 'ESRCH');
+      return;
+    }
+    assert.ok(Date.now() < deadline, `process ${pid} still runs`);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+}
+
+const IN_TERMINAL = `
+import os, pty, select, sys, time
+pid, fd = pty.fork()
+if pid == 0:
+    os.execvp('bash', ['bash', '-c', 'stty tostop; exec bash "$0"', sys.argv[1]])
+deadline = time.time() + 5
+while time.time() < deadline:
+    if select.select([fd], [], [], 0.1)[0]:
+        try:
+            sys.stdout.buffer.write(os.read(fd, 4096))
+        except OSError:
+            pass
+    done, status = os.waitpid(pid, os.WNOHANG)
+    if done:
+        while select.select([fd], [], [], 0.1)[0]:
+            try:
+                chunk = os.read(fd, 4096)
+            except OSError:
+                break
+            if not chunk:
+                break
+            sys.stdout.buffer.write(chunk)
+        sys.exit(os.WEXITSTATUS(status) if os.WIFEXITED(status) else 128 + os.WTERMSIG(status))
+os.killpg(pid, 9)
+sys.exit(99)
+`;
+
 function run(script, cwd, bin) {
   return spawnSync('bash', [script], {
     cwd,
@@ -237,6 +278,80 @@ describe('Given a worktree with the frontend and the connector', () => {
     assert.ok(existsSync(join(root, '.t3', 'setup-done')));
   });
 
+  function slowNpm() {
+    mkdirSync(bin, { recursive: true });
+    writeFileSync(
+      join(bin, 'npm'),
+      `#!/usr/bin/env bash\necho "$(basename "$PWD")" >> '${npmLog}'\nsleep 1\nmkdir -p node_modules && touch node_modules/.package-lock.json\n`,
+    );
+    chmodSync(join(bin, 'npm'), 0o755);
+  }
+
+  function started() {
+    return new Promise((resolve) => {
+      const child = spawn('bash', [SETUP], { cwd: root, stdio: 'ignore', env: { ...process.env, PATH: `${bin}:${process.env.PATH}` } });
+      child.on('exit', (code) => resolve(code));
+    });
+  }
+
+  test('when three setups start at the same moment over a stale marker, then exactly one installs', async () => {
+    slowNpm();
+    const gonePid = spawnSync('bash', ['-c', 'echo $$']).stdout.toString().trim();
+    mkdirSync(join(root, '.t3'));
+    writeFileSync(join(root, '.t3', 'setup-running'), `${gonePid}\n`);
+
+    const codes = await Promise.all([started(), started(), started()]);
+
+    assert.deepEqual([...codes].sort(), [0, 1, 1]);
+    assert.deepEqual(calls(), ['frontend', 'mcp']);
+    assert.ok(existsSync(join(root, '.t3', 'setup-done')));
+    assert.ok(!existsSync(join(root, '.t3', 'setup-claim')));
+  });
+
+  test('when a crashed setup left its takeover lock over a minute ago, then the next setup removes it and runs', () => {
+    fakeNpm(bin, npmLog);
+    const gonePid = spawnSync('bash', ['-c', 'echo $$']).stdout.toString().trim();
+    mkdirSync(join(root, '.t3', 'setup-claim'), { recursive: true });
+    const old = Date.now() / 1000 - 120;
+    utimesSync(join(root, '.t3', 'setup-claim'), old, old);
+    writeFileSync(join(root, '.t3', 'setup-running'), `${gonePid}\n`);
+
+    const result = run(SETUP, root, bin);
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(calls().length, 2);
+    assert.ok(!existsSync(join(root, '.t3', 'setup-claim')));
+  });
+
+  test('when a fresh takeover lock is held, then the setup over a stale marker refuses', () => {
+    fakeNpm(bin, npmLog);
+    const gonePid = spawnSync('bash', ['-c', 'echo $$']).stdout.toString().trim();
+    mkdirSync(join(root, '.t3', 'setup-claim'), { recursive: true });
+    writeFileSync(join(root, '.t3', 'setup-running'), `${gonePid}\n`);
+
+    const result = run(SETUP, root, bin);
+
+    assert.notEqual(result.status, 0);
+    assert.deepEqual(calls(), []);
+  });
+
+  test('when the setup runs in a terminal with tostop, then its output does not stop it and the log reaches the terminal', () => {
+    mkdirSync(bin, { recursive: true });
+    writeFileSync(join(bin, 'npm'), '#!/usr/bin/env bash\necho "installed $(basename "$PWD")"\nmkdir -p node_modules && touch node_modules/.package-lock.json\n');
+    chmodSync(join(bin, 'npm'), 0o755);
+
+    const result = spawnSync('python3', ['-c', IN_TERMINAL, SETUP], {
+      cwd: root,
+      encoding: 'utf8',
+      env: { ...process.env, PATH: `${bin}:${process.env.PATH}` },
+    });
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /installed frontend/);
+    assert.match(result.stdout, /installed mcp/);
+    assert.ok(existsSync(join(root, '.t3', 'setup-done')));
+  });
+
   async function interruptedSetup(signal, { group }) {
     mkdirSync(bin, { recursive: true });
     const started = join(scratch, 'started');
@@ -267,7 +382,7 @@ describe('Given a worktree with the frontend and the connector', () => {
     assert.equal(code, 129);
     assert.ok(existsSync(join(root, '.t3', 'setup-failed')));
     assert.ok(!existsSync(join(root, '.t3', 'setup-running')));
-    assert.throws(() => process.kill(npm, 0), { code: 'ESRCH' });
+    await gone(npm);
   });
 
   test('when the setup alone gets SIGTERM during the install, then it stops the install and exits 143 marked failed', async () => {
@@ -276,7 +391,7 @@ describe('Given a worktree with the frontend and the connector', () => {
     assert.equal(code, 143);
     assert.ok(existsSync(join(root, '.t3', 'setup-failed')));
     assert.ok(!existsSync(join(root, '.t3', 'setup-running')));
-    assert.throws(() => process.kill(npm, 0), { code: 'ESRCH' });
+    await gone(npm);
   });
 
   test('when the install is running, then setup-running holds the PID of the setup', () => {
