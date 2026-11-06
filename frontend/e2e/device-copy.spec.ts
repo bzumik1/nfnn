@@ -14,7 +14,6 @@ import {
   session,
   signIn,
   signOutFromAccount,
-  type DonorSyncMock,
 } from './donor-session';
 import { expect, test } from './fixtures';
 
