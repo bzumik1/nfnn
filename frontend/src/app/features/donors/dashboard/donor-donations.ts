@@ -46,6 +46,7 @@ import {
   DonationSummaryResponse,
   DownloadedFile,
 } from '../../donations/donations-api';
+import { GiftFeed } from '../../donations/gift-arrival/gift-feed';
 import { ReceiptSubject } from '../../donations/receipt-pdf/frozen-receipt';
 import { giftsOnActiveYearlyReceipts } from './yearly-receipt';
 import { PdfDelivery } from '../../donations/receipt-pdf/pdf-delivery';
@@ -137,7 +138,7 @@ interface IncomingDonations {
 }
 
 @Injectable()
-export class DonorDonations {
+export class DonorDonations implements GiftFeed {
   private readonly router = inject(Router);
   private readonly auth = inject(AuthStore);
   private readonly loginDialog = inject(LoginDialogService);
@@ -171,6 +172,12 @@ export class DonorDonations {
   readonly incomingCount = computed(() =>
     this.checkingBank() ? 0 : (this.incoming()?.added ?? 0),
   );
+
+  readonly gifts = computed(() =>
+    this.state() === 'ready' ? (this.incoming()?.read.items ?? this.items()) : null,
+  );
+  readonly asking = this.checkingBank.asReadonly();
+  readonly listedHere = true;
 
   readonly bankAccounts = signal<readonly BankAccountItem[]>([]);
   readonly accountsWithQuestion = computed(() =>
@@ -246,6 +253,18 @@ export class DonorDonations {
         error: () => this.bankAccounts.set([]),
       });
     this.followLiveChanges();
+  }
+
+  requestGifts(): Observable<readonly DonationItem[]> {
+    return this.repository.fresh('sync').pipe(map((read) => read.items));
+  }
+
+  follow(): Observable<unknown> {
+    return EMPTY;
+  }
+
+  askBank(): void {
+    this.checkBank(false);
   }
 
   showIncoming(): void {
@@ -564,7 +583,9 @@ export class DonorDonations {
       return;
     }
     this.checkingBank.set(true);
-    this.bankCheckOutcome.set(null);
+    if (byDonor) {
+      this.bankCheckOutcome.set(null);
+    }
     const known = new Set(this.items().map((item) => item.id));
     let asOfBefore: string | null | undefined;
     this.donations
@@ -585,6 +606,9 @@ export class DonorDonations {
           this.reloadDonations(!byDonor && this.shown?.source === 'copy').subscribe((items) => {
             this.bankCheckEnded();
             if (!byDonor) {
+              if (items !== null) {
+                this.dropOutdatedOutcome(outcomeOf(check, items, known));
+              }
               return;
             }
             if (items !== null) {
@@ -606,6 +630,13 @@ export class DonorDonations {
           this.bankCheckOutcome.set({ kind: 'failed' });
         },
       });
+  }
+
+  private dropOutdatedOutcome(latest: BankCheckOutcome): void {
+    const standing = this.bankCheckOutcome();
+    if (standing !== null && (latest.kind === 'found' || standing.kind !== 'none')) {
+      this.bankCheckOutcome.set(null);
+    }
   }
 
   private bankCheckEnded(): void {

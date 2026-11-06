@@ -9,6 +9,7 @@ import {
   rememberedSession,
   serveRecentDonors,
 } from './baseline/screen-mocks';
+import { giftArrivesAfterSavingQr } from './gift-arrival';
 import { fakeCameraShowing, pdfWithLink, pngDataUrl, qrCodePng } from './receipt-code-files';
 import {
   administrator,
@@ -198,6 +199,14 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await expect(page.locator('#prispet .bank-app-hint')).toContainText(
       'Nenašli jste v nabídce svou banku?',
     );
+
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when a signed-in donor pays from Přispět and the gift arrives, then the thanks with the link to the overview break no rule', async ({
+    page,
+  }) => {
+    await giftArrivesAfterSavingQr(page);
 
     expect(await violations(page)).toEqual([]);
   });
