@@ -1,9 +1,8 @@
 package cz.novanadeje.app.shared.infrastructure.schema;
 
+import cz.novanadeje.app.TestcontainersConfiguration;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.testcontainers.postgresql.PostgreSQLContainer;
-import org.testcontainers.utility.DockerImageName;
 
 import java.sql.DriverManager;
 
@@ -19,7 +18,7 @@ class AdminActionMigrationTest {
     @Test
     @DisplayName("Given a migrated database with administrators' actions, which the database keeps append-only, when a later changeset rewrites and deletes some, then Liquibase applies it while the application still cannot")
     void should_apply_a_changeset_that_rewrites_the_trail_when_liquibase_runs_it_given_an_append_only_trail() throws Exception {
-        try (var postgres = new PostgreSQLContainer(DockerImageName.parse("postgres:17-alpine"))) {
+        try (var postgres = TestcontainersConfiguration.newPostgres()) {
             postgres.start();
             try (var connection = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword())) {
                 BaselineDatabase.migrate(connection, CURRENT_CHANGELOG);
@@ -55,7 +54,7 @@ class AdminActionMigrationTest {
     @Test
     @DisplayName("Given a database whose trail became append-only before the recipient counts changeset ran, when the current changelogs run, then that changeset still rewrites the addresses into counts")
     void should_rewrite_recipient_addresses_when_the_counts_changeset_runs_after_the_trail_became_append_only_given_records_with_addresses() throws Exception {
-        try (var postgres = new PostgreSQLContainer(DockerImageName.parse("postgres:17-alpine"))) {
+        try (var postgres = TestcontainersConfiguration.newPostgres()) {
             postgres.start();
             try (var connection = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword())) {
                 BaselineDatabase.migrate(connection, TRAIL_APPEND_ONLY_BEFORE_COUNTS_CHANGELOG);

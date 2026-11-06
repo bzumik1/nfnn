@@ -185,6 +185,12 @@ Nová databáze vzniká s kontrolními součty datových stránek (`--data-check
 
 Když krok 3 skončí chybou, databáze zůstane, jak byla (bez součtů), a aplikace normálně nastartuje.
 
+### Řazení jmen a jazykové nastavení databáze
+
+Seznamy lidí, které řadí server (správci, hledání dárců ve správě a dárci v dialogu párování platby), jsou podle české abecedy: `ambrož, Cibulka, Čermák, Dvořák, Hrubý, Chalupa, …, Žák` (`ch` za `h`, `Č` za `C`, malá a velká písmena spolu). Dotazy si české řazení (`cs-x-icu` z knihovny ICU, kterou obraz PostgreSQL má) říkají samy, takže platí hned po nasazení na každé databázi, staré i nové, bez ručního kroku.
+
+Nová databáze navíc vzniká s vestavěným jazykovým nastavením PostgreSQL `C.UTF-8` (`--locale-provider=builtin --builtin-locale=C.UTF-8` v `deploy/postgres/Dockerfile`) místo `en_US.utf8` ze systémové knihovny obrazu. Řazení textu v indexech (e-maily, adresy článků) a převod na malá písmena tak nezávisí na tom, z jaké knihovny obraz je: přesun datové složky na jiný obraz by jinak mohl indexy potichu rozházet. Databáze založená dřív si své nastavení nechá a běží dál stejně (na Alpine řadí `en_US.utf8` stejně jako `C.UTF-8`, po bajtech); na vestavěné nastavení přejde sama při příští obnově zálohy, protože kontejner záloh zakládá dočasnou databázi obnovy už s ním a `pg_restore` všechny indexy postaví znovu. Nic se kvůli tomu dělat nemusí. Které nastavení databáze má, zjistíš `sudo docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -tA -c "select datlocprovider, datlocale from pg_database where datname = current_database()"`: `b|C.UTF-8` je vestavěné, `c|` to dřívější.
+
 ### Nová hlavní verze PostgreSQL
 
 Dependabot nové hlavní verze PostgreSQL (18 a další) nenabízí: `postgres:18` datovou složku verze 17 nepřečte (a jinak ji i ukládá), takže přechod je samostatný PR, ve kterém se v `deploy/postgres/Dockerfile` i `deploy/backup/Dockerfile` změní `FROM postgres:17-alpine` (a případně cesta k datům v `deploy/compose.yml`, pak je potřeba přeinstalace). Data se přenesou zálohou a obnovou, kterou už web umí:
