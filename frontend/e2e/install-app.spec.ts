@@ -113,6 +113,34 @@ test.describe('Given the app starting before its code has run', () => {
       'rgb(255, 255, 255)',
     );
   });
+
+  test('when the device is dark, then the star of the theme SVG stands on the dark surface without a tile around it', async ({
+    page,
+  }) => {
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await page.route('**/main-*.js', () => undefined);
+    await page.goto('/aplikace', { waitUntil: 'commit' });
+
+    const icon = page.locator('.launch-screen__icon');
+    await expect(icon).toBeVisible();
+    await expect(icon).toHaveAttribute('src', 'launch-icon.svg');
+    await expect(page.locator('.launch-screen')).toHaveCSS('background-color', 'rgb(16, 20, 31)');
+    const alphas = await icon.evaluate(async (image: HTMLImageElement) => {
+      await image.decode();
+      const canvas = document.createElement('canvas');
+      canvas.width = 128;
+      canvas.height = 128;
+      const context = canvas.getContext('2d')!;
+      context.drawImage(image, 0, 0, 128, 128);
+      const alphaAt = (x: number, y: number) => context.getImageData(x, y, 1, 1).data[3];
+      return {
+        corners: [alphaAt(1, 1), alphaAt(126, 1), alphaAt(1, 126), alphaAt(126, 126)],
+        centre: alphaAt(64, 60),
+      };
+    });
+    expect(alphas.corners).toEqual([0, 0, 0, 0]);
+    expect(alphas.centre).toBe(255);
+  });
 });
 
 test.describe('Given the installed app opening its start address /aplikace', () => {

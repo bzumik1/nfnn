@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import {
   appearanceProblems,
   barContrastProblems,
+  launchIconProblems,
   manifestProblems,
   receiptTokensOutsideRoot,
   themeAssetProblems,
@@ -518,6 +519,44 @@ describe('Given the web app manifest of a theme', () => {
     ]);
     assert.deepEqual(problemsOf(MANIFEST, ICON_SIZES, THEME_COLOURS, null), [
       'theme control: manifest short_name Nová naděje is not the apple-mobile-web-app-title null of src/index.html',
+    ]);
+  });
+});
+
+describe('Given the launch icon of a theme', () => {
+  const star =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><title>Star</title><path fill="#005dab" d="M5 1L9 9L1 9Z"/></svg>';
+
+  it('when it is filled paths with transparent corners, then nothing is reported', () => {
+    assert.deepEqual(launchIconProblems({ theme: 'control', svg: star }), []);
+  });
+
+  it('when the theme has none, then the missing file is reported', () => {
+    assert.deepEqual(launchIconProblems({ theme: 'control', svg: null }), [
+      'theme control has no assets/launch-icon.svg, which the launch screen and the launch images draw',
+    ]);
+  });
+
+  it('when it holds what the launch images cannot draw, then that is reported', () => {
+    const stroked = star.replace('<path fill', '<path stroke="#000" fill');
+
+    const problems = launchIconProblems({ theme: 'control', svg: stroked });
+
+    assert.equal(problems.length, 1);
+    assert.match(
+      problems[0],
+      /^theme control: assets\/launch-icon\.svg cannot be drawn into the launch images: .*stroke/,
+    );
+  });
+
+  it('when it paints a tile behind the star, then the tile is reported, because it would stand out on the dark surface', () => {
+    const tiled = star.replace(
+      '<path fill',
+      '<path fill="#ffffff" d="M0 0L10 0L10 10L0 10Z"/><path fill',
+    );
+
+    assert.deepEqual(launchIconProblems({ theme: 'control', svg: tiled }), [
+      'theme control: assets/launch-icon.svg paints its corners, so a tile would stand around the star on the dark launch screen',
     ]);
   });
 });

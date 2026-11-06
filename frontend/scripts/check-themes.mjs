@@ -3,6 +3,8 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { rasterizeSvg } from './svg-raster.mjs';
+
 const root = new URL('..', import.meta.url).pathname;
 const themesDir = join(root, 'src/themes');
 const reference = 'nova-nadeje';
@@ -442,6 +444,38 @@ const REQUIRED_ICONS = [
   ['maskable', '512x512'],
 ];
 
+const LAUNCH_ICON = 'launch-icon.svg';
+const LAUNCH_ICON_PROBE_SIZE = 64;
+
+export function launchIconProblems({ theme, svg }) {
+  if (svg === null) {
+    return [
+      `theme ${theme} has no assets/${LAUNCH_ICON}, which the launch screen and the launch images draw`,
+    ];
+  }
+  let image;
+  try {
+    image = rasterizeSvg(svg, { width: LAUNCH_ICON_PROBE_SIZE, height: LAUNCH_ICON_PROBE_SIZE });
+  } catch (error) {
+    return [
+      `theme ${theme}: assets/${LAUNCH_ICON} cannot be drawn into the launch images: ${error.message}`,
+    ];
+  }
+  const last = LAUNCH_ICON_PROBE_SIZE - 1;
+  const corners = [
+    [0, 0],
+    [last, 0],
+    [0, last],
+    [last, last],
+  ];
+  if (corners.some(([x, y]) => image.pixels[(y * LAUNCH_ICON_PROBE_SIZE + x) * 4 + 3] > 0)) {
+    return [
+      `theme ${theme}: assets/${LAUNCH_ICON} paints its corners, so a tile would stand around the star on the dark launch screen`,
+    ];
+  }
+  return [];
+}
+
 export function manifestProblems({ theme, manifest, source, iconSizes, homeScreenTitle }) {
   if (manifest === null) {
     return [`theme ${theme} has no assets/manifest.webmanifest`];
@@ -650,6 +684,13 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
         homeScreenTitle,
       }),
     );
+    const launchIcon = join(assetsDir, LAUNCH_ICON);
+    problems.push(
+      ...launchIconProblems({
+        theme,
+        svg: existsSync(launchIcon) ? readFileSync(launchIcon, 'utf8') : null,
+      }),
+    );
   }
   problems.push(
     ...themeAssetProblems({
@@ -688,6 +729,6 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     process.exit(1);
   }
   console.log(
-    `${themes.size} themes set all ${needed.size} tokens the styles and the receipt use, and carry content-named receipt fonts, literal receipt colours and readable receipt text, set only in their top-level :root, keep text, controls and focus rings readable in the light and the dark appearance, with and without more contrast, keep the tab bar readable over a white and a black page, its solid pill apart from the bar, serve the same theme files and a web app manifest in their colours with the icons it names and the home screen name of src/index.html.`,
+    `${themes.size} themes set all ${needed.size} tokens the styles and the receipt use, and carry content-named receipt fonts, literal receipt colours and readable receipt text, set only in their top-level :root, keep text, controls and focus rings readable in the light and the dark appearance, with and without more contrast, keep the tab bar readable over a white and a black page, its solid pill apart from the bar, serve the same theme files and a web app manifest in their colours with the icons it names and the home screen name of src/index.html, and a launch icon the launch images can draw, with no tile behind the star.`,
   );
 }

@@ -3,6 +3,8 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { crc32, deflateSync, inflateSync } from 'node:zlib';
 
+import { rasterizeSvg } from './svg-raster.mjs';
+
 export const STARTUP_SCREENS = [
   { width: 375, height: 667, scale: 2 },
   { width: 414, height: 736, scale: 3 },
@@ -28,25 +30,33 @@ export const STARTUP_SCREENS = [
 ];
 
 const FOLDER = 'startup';
-const ICON = 'icon-512.png';
+const ICON = 'launch-icon.svg';
 const MANIFEST = 'manifest.webmanifest';
 const ICON_SIZE_TOKEN = '--launch-icon-size';
 const SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 
+const APPEARANCES = [
+  { appearance: 'light', suffix: '', query: '' },
+  { appearance: 'dark', suffix: '-dark', query: ' and (prefers-color-scheme: dark)' },
+];
+
 export function startupImages() {
-  return STARTUP_SCREENS.flatMap(({ width, height, scale }) => {
-    const query = `(device-width: ${width}px) and (device-height: ${height}px) and (-webkit-device-pixel-ratio: ${scale})`;
-    const portrait = { width: width * scale, height: height * scale, scale };
-    const landscape = { width: height * scale, height: width * scale, scale };
-    return [
-      { ...portrait, orientation: 'portrait' },
-      { ...landscape, orientation: 'landscape' },
-    ].map((image) => ({
-      ...image,
-      href: `${FOLDER}/${image.width}x${image.height}.png`,
-      media: `${query} and (orientation: ${image.orientation})`,
-    }));
-  });
+  return APPEARANCES.flatMap(({ appearance, suffix, query: appearanceQuery }) =>
+    STARTUP_SCREENS.flatMap(({ width, height, scale }) => {
+      const query = `(device-width: ${width}px) and (device-height: ${height}px) and (-webkit-device-pixel-ratio: ${scale})`;
+      const portrait = { width: width * scale, height: height * scale, scale };
+      const landscape = { width: height * scale, height: width * scale, scale };
+      return [
+        { ...portrait, orientation: 'portrait' },
+        { ...landscape, orientation: 'landscape' },
+      ].map((image) => ({
+        ...image,
+        appearance,
+        href: `${FOLDER}/${image.width}x${image.height}${suffix}.png`,
+        media: `${query} and (orientation: ${image.orientation})${appearanceQuery}`,
+      }));
+    }),
+  );
 }
 
 function chunks(png) {
@@ -204,41 +214,73 @@ export function drawLaunchImage({ icon, background, width, height, iconSize }) {
   return { width, height, channels: 3, pixels };
 }
 
-function hexColour(colour) {
+function hexColour(colour, source) {
   const match = /^#([0-9a-f]{6})$/i.exec(colour ?? '');
   if (!match) {
-    throw new Error(`${MANIFEST} names no background_color as #rrggbb (found ${colour})`);
+    throw new Error(`${source} names no #rrggbb (found ${colour})`);
   }
   return [0, 2, 4].map((at) => parseInt(match[1].slice(at, at + 2), 16));
 }
 
-function launchIconPoints(browser) {
-  const sizes = readdirSync(browser)
+function builtStyles(browser) {
+  return readdirSync(browser)
     .filter((name) => /^styles-.*\.css$/.test(name))
-    .map((name) =>
-      new RegExp(`${ICON_SIZE_TOKEN}:\\s*(\\d+)px`).exec(readFileSync(join(browser, name), 'utf8')),
-    )
-    .filter(Boolean);
-  if (sizes.length === 0) {
+    .map((name) => readFileSync(join(browser, name), 'utf8'))
+    .join('\n');
+}
+
+function launchIconPoints(styles) {
+  const size = new RegExp(`${ICON_SIZE_TOKEN}:\\s*(\\d+)px`).exec(styles);
+  if (!size) {
     throw new Error(
       `the built stylesheet sets no ${ICON_SIZE_TOKEN} in px, which the launch images take`,
     );
   }
-  return Number(sizes[0][1]);
+  return Number(size[1]);
+}
+
+function darkSurface(styles) {
+  const block = /@media\s*\(prefers-color-scheme:\s*dark\)\s*\{\s*:root\s*\{([^}]*)\}/.exec(styles);
+  const surface = block && /--color-surface:\s*([^;}\s]+)/.exec(block[1]);
+  if (!surface) {
+    throw new Error(
+      'the built stylesheet sets no --color-surface under @media (prefers-color-scheme: dark), which the dark launch images take',
+    );
+  }
+  return hexColour(surface[1], 'the dark --color-surface');
 }
 
 export function makeStartupImages(browser) {
   if (!existsSync(join(browser, MANIFEST)) || !existsSync(join(browser, ICON))) {
     return [];
   }
-  const background = hexColour(
-    JSON.parse(readFileSync(join(browser, MANIFEST), 'utf8')).background_color,
-  );
-  const points = launchIconPoints(browser);
-  const icon = decodePng(readFileSync(join(browser, ICON)));
+  const styles = builtStyles(browser);
+  const points = launchIconPoints(styles);
+  const backgrounds = {
+    light: hexColour(
+      JSON.parse(readFileSync(join(browser, MANIFEST), 'utf8')).background_color,
+      `the background_color of ${MANIFEST}`,
+    ),
+    dark: darkSurface(styles),
+  };
+  const svg = readFileSync(join(browser, ICON), 'utf8');
+  const icons = new Map();
+  const iconAt = (size) => {
+    if (!icons.has(size)) {
+      icons.set(size, rasterizeSvg(svg, { width: size, height: size }));
+    }
+    return icons.get(size);
+  };
   mkdirSync(join(browser, FOLDER), { recursive: true });
-  return startupImages().map(({ href, width, height, scale }) => {
-    const image = drawLaunchImage({ icon, background, width, height, iconSize: points * scale });
+  return startupImages().map(({ href, width, height, scale, appearance }) => {
+    const iconSize = points * scale;
+    const image = drawLaunchImage({
+      icon: iconAt(iconSize),
+      background: backgrounds[appearance],
+      width,
+      height,
+      iconSize,
+    });
     const file = join(browser, href);
     writeFileSync(file, encodePng(image));
     return file;
