@@ -13,6 +13,7 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { authInterceptor } from '../../../core/auth/auth-interceptor';
 import { AdminAccessRefusal } from '../../../core/auth/admin-access-refusal';
 import { AuthStore } from '../../../core/auth/auth-store';
+import { SignedOutNotice } from '../../../core/auth/signed-out-notice';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
 import { userHandleOf } from '../../../core/auth/session-device';
@@ -352,7 +353,7 @@ describe('Given a signed-in donor in the donor area', () => {
       await open('/darce/dary');
       await respond(twoYearSummary(), twoYearDonations());
 
-      const account = element('header button.account-button');
+      const account = element('header a.account-button');
       expect(normalized(account?.querySelector('.account-badge')?.textContent ?? '')).toBe('1');
       expect(normalized(account?.textContent ?? '')).toContain('Účet 1 otázka čeká na odpověď');
 
@@ -603,7 +604,8 @@ describe('Given a signed-in donor in the donor area', () => {
       await open('/darce/prehled');
       await respond(twoYearSummary(), twoYearDonations());
 
-      const account = element('header button.account-button') as HTMLButtonElement;
+      const account = element('header a.account-button') as HTMLAnchorElement;
+      expect(account.getAttribute('href')).toBe('/darce/prehled');
       expect(normalized(account.querySelector('.visually-hidden')?.textContent ?? '')).toBe('Účet');
       expect(normalized(account.querySelector('[aria-hidden="true"]')?.textContent ?? '')).toBe(
         'JN',
@@ -681,21 +683,154 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(navigate).toHaveBeenCalledWith('/');
     });
 
-    it('then signing out ends the session and opens the home page', async () => {
-      await open('/darce/prehled');
+    it('then on a computer the side panel ends with Odhlásit se, which ends the session, opens the home page and says the donor was signed out', async () => {
+      await open('/darce/dary');
       await respond(twoYearSummary(), twoYearDonations());
       const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
 
-      button('header button.account-button').click();
+      const signOut = button('.side-nav .donor-sign-out');
+      expect(normalized(signOut.textContent ?? '')).toBe('Odhlásit se');
+      signOut.click();
       await settle();
-      button('.account-sign-out').click();
+      expect(signOut.disabled).toBe(true);
+      expect(normalized(signOut.textContent ?? '')).toBe('Odhlašujeme…');
       http
         .expectOne('/api/donors/auth/logout')
         .flush(null, { status: 204, statusText: 'No Content' });
       await settle();
 
       expect(store.signedIn()).toBe(false);
-      expect(navigate).toHaveBeenCalledWith('/', expect.objectContaining({ replaceUrl: true }));
+      expect(navigate).toHaveBeenCalledWith('/');
+      expect(TestBed.inject(SignedOutNotice).shown()).toBe(true);
+    });
+  });
+
+  describe('when the overview opens on a phone, where no side panel shows', () => {
+    beforeEach(() => compact.set(true));
+
+    function rows(): string[][] {
+      return [...root().querySelectorAll<HTMLAnchorElement>('nav[aria-label="Můj účet"] a')].map(
+        (link) => [
+          normalized(link.querySelector('.ui-list__title')?.textContent ?? ''),
+          link.getAttribute('href') ?? '',
+        ],
+      );
+    }
+
+    it('then the rows under the page title lead to every other section of the account, after the receipt and the questions that need the donor', async () => {
+      areaAccounts = [bankAccount({ id: 'question', symbolOffer: symbolOffer() })];
+      await open('/darce/prehled');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      expect(element('#donor-nav')).toBeNull();
+      expect(rows()).toEqual([
+        ['Moje dary', '/darce/dary'],
+        ['Potvrzení o daru', '/darce/potvrzeni'],
+        ['Bankovní účty', '/darce/ucty'],
+        ['Údaje a zabezpečení', '/darce/udaje'],
+      ]);
+      const sections = element('app-section-rows')!;
+      expect(element('.overview-question')!.compareDocumentPosition(sections)).toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+      expect(sections.compareDocumentPosition(element('.last-gift')!)).toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+      const bankAccounts = element('nav[aria-label="Můj účet"] a[href="/darce/ucty"]')!;
+      expect(normalized(bankAccounts.querySelector('.ui-list__count')?.textContent ?? '')).toBe(
+        '1',
+      );
+      expect(normalized(bankAccounts.querySelector('.visually-hidden')?.textContent ?? '')).toBe(
+        '1 otázka čeká na odpověď',
+      );
+    });
+
+    it('then an administrator also finds Správa there, under its own heading', async () => {
+      store.login('jana@example.cz', 'correct horse battery').subscribe();
+      http
+        .expectOne('/api/donors/auth/login')
+        .flush(authResponse('token-2', sampleDonor({ roles: ['DONOR', 'ADMIN'] })));
+      await open('/darce/prehled');
+      await respond(twoYearSummary(), twoYearDonations());
+      http.expectOne('/api/admin/content/people/me').flush({ member: null });
+      await settle();
+
+      expect(rows().at(-1)).toEqual(['Správa', '/sprava']);
+      expect(texts('app-section-rows h2')).toEqual(['Můj účet', 'Pro správce']);
+    });
+
+    it('then a section chosen there opens with its own heading', async () => {
+      await open('/darce/prehled');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      element('nav[aria-label="Můj účet"] a[href="/darce/potvrzeni"]')!.dispatchEvent(
+        new MouseEvent('click', { bubbles: true, cancelable: true }),
+      );
+      await settle();
+
+      expect(TestBed.inject(Router).url).toBe('/darce/potvrzeni');
+      expect(text('h1')).toBe('Potvrzení o daru');
+      expect(element('app-section-rows')).toBeNull();
+    });
+
+    it('then Zpět on a section opened by its address leads to the overview that lists the sections', async () => {
+      await open('/darce/potvrzeni');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      button('header button.back-button').click();
+      await settle();
+      await answerPaymentDetails();
+
+      expect(TestBed.inject(Router).url).toBe('/darce/prehled');
+      expect(element('app-section-rows')).not.toBeNull();
+    });
+
+    it('then the overview ends with Odhlásit se and under it how to reach the foundation, its register entry and the privacy policy', async () => {
+      await open('/darce/prehled');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      const end = element('.overview-account-end')!;
+      expect(normalized(end.querySelector('.donor-sign-out')?.textContent ?? '')).toBe(
+        'Odhlásit se',
+      );
+      expect(
+        [...end.querySelectorAll('a')].map((link) => [
+          normalized(link.textContent ?? ''),
+          link.getAttribute('href'),
+        ]),
+      ).toEqual([
+        ['Kontakt', '/o-nas#kontakt'],
+        ['Zásady ochrany osobních údajů', '/zasady-ochrany-osobnich-udaju'],
+      ]);
+      expect(normalized(end.textContent ?? '')).toContain(
+        'Zapsán u KS Ústí nad Labem, oddíl N, vložka 78 · IČO 27278794',
+      );
+      expect(element('.side-nav .donor-sign-out')).toBeNull();
+    });
+
+    it('then Odhlásit se there ends the session and opens the home page', async () => {
+      await open('/darce/prehled');
+      await respond(twoYearSummary(), twoYearDonations());
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+
+      button('.overview-account-end .donor-sign-out').click();
+      http
+        .expectOne('/api/donors/auth/logout')
+        .flush(null, { status: 204, statusText: 'No Content' });
+      await settle();
+
+      expect(store.signedIn()).toBe(false);
+      expect(navigate).toHaveBeenCalledWith('/');
+    });
+
+    it('then on a computer the overview shows neither the rows nor its own Odhlásit se, which the side panel holds', async () => {
+      compact.set(false);
+      await open('/darce/prehled');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      expect(element('app-section-rows')).toBeNull();
+      expect(element('.overview-account-end')).toBeNull();
+      expect(element('.side-nav .donor-sign-out')).not.toBeNull();
     });
   });
 

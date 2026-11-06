@@ -27,3 +27,8 @@
     text-decoration: none;
   }
 }
+
+.donor-nav-end {
+  display: grid;
+  gap: var(--space-2);
+}

@@ -190,3 +190,33 @@
     }
   }
 }
+
+.overview-sections {
+  display: block;
+  margin-bottom: var(--space-6);
+}
+
+.overview-account-end {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-8);
+}
+
+.overview-foundation {
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+  font-size: var(--text-xs);
+  line-height: var(--leading-relaxed);
+  color: var(--color-text-subtle);
+
+  p {
+    margin: 0 0 var(--space-1);
+  }
+
+  a {
+    display: inline-block;
+    min-height: var(--space-6);
+    color: var(--color-accent);
+  }
+}

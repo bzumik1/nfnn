@@ -1,4 +1,4 @@
-import { expect, Page } from '@playwright/test';
+import { expect, Locator, Page } from '@playwright/test';
 import { FOUNDATION_PAYMENT_DETAILS } from './qr-matrices';
 import { rowsSha256 } from '../src/app/features/donations/sync/canonical-rows';
 import { mockReceiptIssuing, ReceiptIssuing } from './receipt-issuing';
@@ -423,13 +423,26 @@ function sectionName(name: string): RegExp {
   return new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}( |$)`);
 }
 
+export function accountLink(page: Page): Locator {
+  return page.getByRole('banner').getByRole('link', { name: 'Účet' });
+}
+
 export async function openAccountItem(page: Page, name: string): Promise<void> {
-  await page.getByRole('banner').getByRole('button', { name: 'Účet' }).click();
-  const sheet = page.getByRole('dialog');
-  await expect(sheet).toBeVisible();
-  await sheet.getByRole('link', { name: sectionName(name) }).click();
-  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await accountLink(page).click();
+  await expect(page).toHaveURL(/\/darce\/prehled$/);
   await expect(page.locator('app-public-shell')).toHaveCount(0);
+  if (name === 'Můj přehled') {
+    return;
+  }
+  const sections = page.getByRole('navigation', { name: 'Můj účet' });
+  await sections.getByRole('link', { name: sectionName(name) }).click();
+  await expect(page).not.toHaveURL(/\/darce\/prehled$/);
+}
+
+export async function signOutFromAccount(page: Page): Promise<void> {
+  await accountLink(page).click();
+  await expect(page).toHaveURL(/\/darce\/prehled$/);
+  await page.getByRole('button', { name: 'Odhlásit se' }).click();
 }
 
 export async function openDonorSection(page: Page, name: string): Promise<void> {

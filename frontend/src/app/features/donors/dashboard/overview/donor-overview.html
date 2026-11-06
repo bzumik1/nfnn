@@ -77,6 +77,10 @@
   </p>
 }
 
+@if (compact()) {
+  <app-section-rows class="overview-sections" [label]="navLabel" [groups]="sectionRows()" />
+}
+
 <ng-template #bankStatus>
   <app-bank-check />
   <p class="recent-hint" i18n="@@donor.dashboard.bank.hint">
@@ -186,3 +190,21 @@
 }
 
 <app-install-card />
+
+@if (compact()) {
+  <div class="overview-account-end">
+    <app-install-row howId="overview-install-how" />
+    <app-donor-sign-out />
+    <div class="overview-foundation">
+      <p>
+        <a routerLink="/o-nas" fragment="kontakt" i18n="@@layout.header.nav.contact">Kontakt</a>
+      </p>
+      <p i18n="@@layout.footer.registry">
+        Zapsán u KS Ústí nad Labem, oddíl N, vložka 78 · IČO 27278794
+      </p>
+      <a routerLink="/zasady-ochrany-osobnich-udaju" i18n="@@layout.footer.privacy"
+        >Zásady ochrany osobních údajů</a
+      >
+    </div>
+  </div>
+}

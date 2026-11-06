@@ -8,12 +8,12 @@ import {
   viewChild,
 } from '@angular/core';
 import { ADMIN_OCCASIONAL, ADMIN_TECHNICAL } from '../shell/admin-sections';
-import { AdminSectionRows, SectionRowGroup } from '../shell/section-rows/admin-section-rows';
+import { SectionRows, SectionRowGroup } from '../../../shared/ui/section-rows/section-rows';
 import { SideNavGroup } from '../../../shared/ui/side-nav/side-nav';
 
 @Component({
   selector: 'app-admin-more',
-  imports: [AdminSectionRows],
+  imports: [SectionRows],
   templateUrl: './admin-more.html',
   styleUrl: './admin-more.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

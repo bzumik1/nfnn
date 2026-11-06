@@ -1,0 +1,12 @@
+<button
+  type="button"
+  class="ui-button ui-button--danger-soft ui-button--block donor-sign-out"
+  [disabled]="signingOut()"
+  (click)="signOut()"
+>
+  @if (signingOut()) {
+    <span i18n="@@layout.account.signingOut">Odhlašujeme…</span>
+  } @else {
+    <span i18n="@@donor.dashboard.logout">Odhlásit se</span>
+  }
+</button>

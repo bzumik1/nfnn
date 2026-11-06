@@ -35,7 +35,7 @@
       </a>
     }
     @if (auth.signedIn()) {
-      <button type="button" class="account-button" aria-haspopup="dialog" (click)="openAccount()">
+      <a class="account-button" [routerLink]="overviewPath">
         <span class="visually-hidden" i18n="@@layout.header.account">Účet</span>
         @if (accountBadge(); as badge) {
           &ngsp;<span class="visually-hidden">{{ badge.description }}</span>
@@ -61,7 +61,7 @@
             <path d="M4 21a8 8 0 0 1 16 0" />
           </svg>
         }
-      </button>
+      </a>
     } @else {
       <button type="button" class="sign-in" (click)="openLogin()" i18n="@@layout.header.nav.login">
         Přihlásit se
@@ -69,6 +69,3 @@
     }
   </div>
 </header>
-@if (accountOpen()) {
-  <app-account-sheet [portrait]="portrait()" (closed)="closeAccount()" />
-}

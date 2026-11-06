@@ -424,17 +424,6 @@ const SCREENS: Screen[] = [
 const SCREENS_SINCE_V2: Screen[] = [
   publicPage('landing', '/'),
   publicPage('about', '/o-nas'),
-  {
-    name: 'account-sheet',
-    open: async (page) => {
-      await mockDonorApi(page, donorWithDonations);
-      await rememberedSession(page, donor);
-      await page.goto('/darce/prehled');
-      await expect(page.locator('h1').first()).toBeVisible();
-      await page.getByRole('banner').getByRole('button', { name: 'Účet' }).click();
-      await expect(page.getByRole('dialog').getByRole('link').first()).toBeVisible();
-    },
-  },
   adminPage('admin-more', '/sprava/vice'),
   {
     name: 'donor-overview-send-gift',

@@ -6,6 +6,7 @@ import {
   paymentDetails,
   problem,
   session,
+  signOutFromAccount,
 } from './donor-session';
 import { drawnModulesMatch, PAYMENT_QR_500_WITH_SYMBOL } from './qr-matrices';
 
@@ -215,8 +216,7 @@ test.describe('Given a visitor who wants a donor account', () => {
     await openAccountItem(page, 'Můj přehled');
     await expect(page).toHaveURL(/\/darce\/prehled$/);
 
-    await page.getByRole('banner').getByRole('button', { name: 'Účet' }).click();
-    await page.getByRole('dialog').getByRole('button', { name: 'Odhlásit se' }).click();
+    await signOutFromAccount(page);
 
     await expect(page).toHaveURL(/\/$/);
     await expect(
@@ -266,7 +266,7 @@ test.describe('Given a visitor who wants a donor account', () => {
 
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(page).toHaveURL(/\/$/);
-    const account = page.getByRole('banner').getByRole('button', { name: 'Účet' });
+    const account = page.getByRole('banner').getByRole('link', { name: 'Účet' });
     await expect(account).toBeVisible();
     await expect(account).toBeFocused();
     await expect(account).toHaveCSS('outline-style', 'none');
@@ -286,9 +286,7 @@ test.describe('Given a visitor who wants a donor account', () => {
 
     await expect(page).toHaveURL(/\/darce\/prehled$/);
     await expect(page.getByRole('heading', { level: 1, name: 'Můj přehled' })).toBeVisible();
-    await expect(page.getByRole('banner').getByRole('button', { name: 'Účet' })).toContainText(
-      'JN',
-    );
+    await expect(page.getByRole('banner').getByRole('link', { name: 'Účet' })).toContainText('JN');
   });
 
   test('when they open the portal without a session, then they land on the home page with the sign-in dialog', async ({
@@ -313,9 +311,7 @@ test.describe('Given a visitor who wants a donor account', () => {
     await page.goto('/darce/prehled');
 
     await expect(page.getByRole('heading', { level: 1, name: 'Můj přehled' })).toBeVisible();
-    await expect(page.getByRole('banner').getByRole('button', { name: 'Účet' })).toContainText(
-      'JN',
-    );
+    await expect(page.getByRole('banner').getByRole('link', { name: 'Účet' })).toContainText('JN');
   });
 
   test('when they come back with a remembered session to the Přispět page, then the QR payment carries their variable symbol', async ({

@@ -1,6 +1,12 @@
 import { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
-import { mockDonorApi, openAccountItem, signIn } from './donor-session';
+import {
+  accountLink,
+  mockDonorApi,
+  openAccountItem,
+  signIn,
+  signOutFromAccount,
+} from './donor-session';
 
 const article = {
   id: '0199f3e0-0000-7000-8000-00000000c001',
@@ -102,7 +108,7 @@ test.describe('Given a visitor who moves through the tabs and back', () => {
   });
 });
 
-test.describe('Given a signed-in donor on a phone who opens a section from the account sheet', () => {
+test.describe('Given a signed-in donor on a phone who taps the account on a public page', () => {
   test.beforeEach(async ({ page }) => {
     await mockDonorApi(page);
     await page.setViewportSize({ width: 1280, height: 800 });
@@ -113,44 +119,51 @@ test.describe('Given a signed-in donor on a phone who opens a section from the a
     await expect(page).toHaveURL('/o-nas');
   });
 
-  test('when they go back with the browser, then the page the sheet was opened on returns', async ({
+  test('when they tap it, then Můj přehled opens at once, with no sheet over the page', async ({
+    page,
+  }) => {
+    await accountLink(page).click();
+
+    await expect(page).toHaveURL('/darce/prehled');
+    await expect(page.getByRole('heading', { level: 1, name: 'Můj přehled' })).toBeVisible();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+  });
+
+  test('when they open a section from the overview and go back with the browser, then the overview and then the page they came from return', async ({
     page,
   }) => {
     await openAccountItem(page, 'Moje dary');
     await expect(page).toHaveURL('/darce/dary');
 
     await page.goBack();
+    await expect(page).toHaveURL('/darce/prehled');
+    await page.goBack();
 
     await expect(page).toHaveURL('/o-nas');
-    await expect(page.getByRole('dialog')).toHaveCount(0);
   });
 
-  test('when they press Zpět, then the page the sheet was opened on returns', async ({ page }) => {
+  test('when they press Zpět twice, then the overview and then the page they came from return', async ({
+    page,
+  }) => {
     await openAccountItem(page, 'Moje dary');
     await expect(page).toHaveURL('/darce/dary');
 
+    await back(page).click();
+    await expect(page).toHaveURL('/darce/prehled');
     await back(page).click();
 
     await expect(page).toHaveURL('/o-nas');
   });
 
-  test('when they choose the section already open, then the sheet closes and one Back leaves it', async ({
+  test('when they sign out at the end of the overview, then the home page says they were signed out', async ({
     page,
   }) => {
-    await openAccountItem(page, 'Moje dary');
-    await page.getByRole('banner').getByRole('button', { name: 'Účet' }).click();
-    const sheet = page.getByRole('dialog');
-    await expect(sheet.getByRole('link', { name: 'Moje dary' })).toHaveAttribute(
-      'aria-current',
-      'page',
-    );
+    await page.route('**/api/donors/auth/logout', (route) => route.fulfill({ status: 204 }));
 
-    await sheet.getByRole('link', { name: 'Moje dary' }).click();
-    await expect(page.getByRole('dialog')).toHaveCount(0);
-    await expect(page).toHaveURL('/darce/dary');
-    await page.goBack();
+    await signOutFromAccount(page);
 
-    await expect(page).toHaveURL('/o-nas');
+    await expect(page).toHaveURL('/');
+    await expect(page.getByRole('status').getByText('Odhlásili jste se.')).toBeVisible();
   });
 });
 

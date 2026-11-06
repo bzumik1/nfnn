@@ -9,7 +9,6 @@ import {
   ElementRef,
   inject,
   Injector,
-  linkedSignal,
   untracked,
   viewChild,
 } from '@angular/core';
@@ -23,12 +22,11 @@ import { BackTarget } from '../../core/navigation/back-target';
 import { RouteChrome } from '../../core/navigation/route-chrome';
 import { initialsOf } from '../../core/auth/initials';
 import { AccountBadges } from '../../core/layout/account-badges';
-import { AccountPortrait } from '../account-sheet/account-portrait';
-import { AccountSheet } from '../account-sheet/account-sheet';
+import { AccountPortrait } from './account-portrait';
 
 @Component({
   selector: 'app-header',
-  imports: [RouterLink, AccountSheet],
+  imports: [RouterLink],
   templateUrl: './app-header.html',
   styleUrl: './app-header.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -64,10 +62,7 @@ export class AppHeader {
   protected readonly accountBadge = computed(() => this.badges.total(this.path()));
   private readonly portraits = inject(AccountPortrait);
   protected readonly portrait = this.portraits.url;
-  protected readonly accountOpen = linkedSignal({
-    source: () => this.auth.signedIn(),
-    computation: () => false,
-  });
+  protected readonly overviewPath = '/darce/prehled';
   protected readonly backLabel = $localize`:@@layout.header.back:Zpět`;
 
   constructor() {
@@ -89,19 +84,11 @@ export class AppHeader {
     this.loginDialog.open('login', { afterSignIn: () => this.focusAccount() });
   }
 
-  protected openAccount(): void {
-    this.accountOpen.set(true);
-  }
-
-  protected closeAccount(): void {
-    this.accountOpen.set(false);
-  }
-
   private focusAccount(): void {
     afterNextRender(
       () => {
         const header = this.header().nativeElement;
-        (header.querySelector<HTMLElement>('button.account-button') ?? header).focus();
+        (header.querySelector<HTMLElement>('a.account-button') ?? header).focus();
       },
       { injector: this.injector },
     );

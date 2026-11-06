@@ -251,15 +251,6 @@ export const STEPS: Step[] = [
     },
   },
   {
-    id: 'account-sheet',
-    title: "the donor's account sheet",
-    open: async (ui) => {
-      await donorPage(ui, '/darce/prehled');
-      await ui.click({ css: 'header button.account-button' });
-      await ui.waitVisible({ css: 'dialog[open] a' });
-    },
-  },
-  {
     id: 'admin-lock',
     title: 'the locked administration',
     open: (ui) => lockedAdministration(ui, '/sprava'),

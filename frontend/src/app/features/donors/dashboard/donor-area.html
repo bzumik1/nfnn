@@ -1,6 +1,10 @@
 <app-header />
 
 <app-side-nav navId="donor-nav" [groups]="groups()" [label]="navLabel" [panel]="!compact()">
+  <div sideNavEnd class="donor-nav-end">
+    <app-install-row howId="donor-nav-install-how" />
+    <app-donor-sign-out />
+  </div>
   <div class="container" [class.container--compact]="compact()">
     <router-outlet />
     <p class="contact-line">
