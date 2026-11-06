@@ -5,6 +5,7 @@ import {
   afterNextRender,
   afterRenderEffect,
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   computed,
   DestroyRef,
@@ -101,6 +102,8 @@ export class PaymentPanel {
   private readonly bankApp = viewChild<ElementRef<HTMLElement>>('bankApp');
   private readonly bankAppOpen = viewChild<ElementRef<HTMLButtonElement>>('bankAppOpen');
   private readonly retryButton = viewChild<ElementRef<HTMLButtonElement>>('retryButton');
+  private readonly customAmountField = viewChild<ElementRef<HTMLInputElement>>('customAmountField');
+  private readonly changeDetector = inject(ChangeDetectorRef);
 
   readonly variableSymbol = input<string | null>(null);
   readonly idPrefix = input('donate');
@@ -269,9 +272,17 @@ export class PaymentPanel {
   }
 
   chooseCustomAmount(): void {
-    if (this.customChosen()) {
-      return;
+    if (!this.customChosen()) {
+      this.openCustomAmount();
     }
+    this.focusCustomAmount();
+  }
+
+  finishCustomAmount(): void {
+    this.customAmountField()?.nativeElement.blur();
+  }
+
+  private openCustomAmount(): void {
     this.clearNotices();
     this.customAmount.set(null);
     this.customText.set('');
@@ -281,6 +292,11 @@ export class PaymentPanel {
     this.lastAnnounced = null;
     clearTimeout(this.announceTimer);
     this.redrawLater();
+  }
+
+  private focusCustomAmount(): void {
+    this.changeDetector.detectChanges();
+    this.customAmountField()?.nativeElement.focus();
   }
 
   enterCustomAmount(event: Event): void {

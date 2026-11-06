@@ -103,7 +103,7 @@ test.describe('Given an administrator on the backups page', () => {
     await expect(page).toHaveTitle('Zálohy | Správa | Nová naděje – nadační fond');
     await expect(page.getByRole('heading', { level: 1, name: 'Zálohy' })).toBeFocused();
     await expect(page.getByText('Zálohování je v pořádku.')).toBeVisible();
-    await expect(page.locator('.run dd').first()).toHaveText('23. 10. 2026 03:00 (2 kB)');
+    await expect(page.locator('.run dd').first()).toHaveText('23. 10. 2026 3:00 (2 kB)');
     await expect(page.locator('tbody tr')).toHaveCount(2);
 
     const [download] = await Promise.all([

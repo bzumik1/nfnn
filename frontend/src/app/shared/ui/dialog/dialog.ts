@@ -1,3 +1,4 @@
+import { KeyboardAvoidance } from './keyboard-avoidance';
 import {
   afterNextRender,
   AfterViewInit,
@@ -27,6 +28,7 @@ const ROOM_ABOVE_STICKY_ACTIONS_PX = 16;
 
 @Component({
   selector: 'app-dialog',
+  imports: [KeyboardAvoidance],
   templateUrl: './dialog.html',
   styleUrl: './dialog.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

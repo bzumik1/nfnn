@@ -246,10 +246,10 @@ describe('Given the verification page', () => {
     it('then the signed data are listed as on paper', () => {
       expect(data()).toEqual({
         'Číslo potvrzení': '2026-000042',
-        Vystaveno: '05. 11. 2026',
+        Vystaveno: '5. 11. 2026',
         Dárce: 'Marie Dvořáková',
         Adresa: 'Lipová 12, 460 01 Liberec',
-        'Dar ze dne': '03. 11. 2026',
+        'Dar ze dne': '3. 11. 2026',
         Částka: '2 500 Kč',
       });
       expect(root().querySelector('table')).toBeNull();
@@ -271,8 +271,8 @@ describe('Given the verification page', () => {
 
     expect(data()).toEqual({
       'Číslo potvrzení': '2027-000007',
-      Vystaveno: '15. 01. 2027',
-      'Nahrazuje potvrzení': '2026-000042 ze dne 05. 11. 2026',
+      Vystaveno: '15. 1. 2027',
+      'Nahrazuje potvrzení': '2026-000042 ze dne 5. 11. 2026',
       Dárce: 'Acme s.r.o.',
       IČO: '25596641',
       Adresa: 'Lipová 12, 460 01 Liberec',
@@ -288,11 +288,11 @@ describe('Given the verification page', () => {
     );
     expect(rows).toEqual([
       [
-        ['th', 'row', '15. 03. 2026'],
+        ['th', 'row', '15. 3. 2026'],
         ['td', null, '500 Kč'],
       ],
       [
-        ['th', 'row', '03. 11. 2026'],
+        ['th', 'row', '3. 11. 2026'],
         ['td', null, '1 250,50 Kč'],
       ],
     ]);

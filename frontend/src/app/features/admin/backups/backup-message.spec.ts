@@ -33,7 +33,7 @@ describe('Given the state of the backups', () => {
           'Technické podrobnosti:',
           '- Backend nevidí složku záloh. Zkontrolujte compose na serveru: backend má mít připojenou složku /DATA/AppData/nfnn/backups jako /backups.',
           '- Poslední záloha selhala.',
-          '- Poslední záloha: nepovedla se 23. 10. 2026 03:00: pg_dump: error: connection to server failed',
+          '- Poslední záloha: nepovedla se 23. 10. 2026 3:00: pg_dump: error: connection to server failed',
           '- Poslední zkušební obnova: zatím žádná',
         ].join('\n'),
       );
@@ -61,8 +61,8 @@ describe('Given the state of the backups', () => {
 
     it('then the message lists the last successful runs', () => {
       expect(technicianMessage(view).split('\n').slice(-2)).toEqual([
-        '- Poslední záloha: 23. 10. 2026 03:00, nfnn-2026-10-23_0300.dump.age (2\u00a0kB)',
-        '- Poslední zkušební obnova: 18. 10. 2026 04:00, 37 tabulek, nfnn-2026-10-18_0300.dump.age',
+        '- Poslední záloha: 23. 10. 2026 3:00, nfnn-2026-10-23_0300.dump.age (2\u00a0kB)',
+        '- Poslední zkušební obnova: 18. 10. 2026 4:00, 37 tabulek, nfnn-2026-10-18_0300.dump.age',
       ]);
     });
   });

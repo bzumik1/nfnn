@@ -101,7 +101,7 @@ describe('Given the card "Data v tomto zařízení"', () => {
     vault.opened.set(openedWith({ chunks: [], summary: {}, storedAt: '2026-11-05T09:30:00Z' }));
     await settle();
 
-    expect(state()).toBe('Uloženo v zařízení · aktualizováno 05. 11. 2026 10:30');
+    expect(state()).toBe('Uloženo v zařízení · aktualizováno 5. 11. 2026 10:30');
     expect(normalized(root().querySelector('.device-data-about')?.textContent)).toBe(
       'Kopie vašich darů, potvrzení a bankovních účtů se v tomto prohlížeči ukládá zašifrovaně a klíč k ní zná jen toto zařízení. Na serveru se tím nic nemění. Když jste se přihlásili heslem, zůstane kopie po odhlášení zamčená tímto heslem. Po přihlášení přístupovým klíčem zůstane jen tehdy, když to váš klíč umí; jinak se odhlášením smaže.',
     );
@@ -114,7 +114,7 @@ describe('Given the card "Data v tomto zařízení"', () => {
     const parts = Array.from(root().querySelectorAll('.device-data-time')).map((part) =>
       normalized(part.textContent),
     );
-    expect(parts).toEqual(['05. 11. 2026', '10:30']);
+    expect(parts).toEqual(['5. 11. 2026', '10:30']);
   });
 
   it('when a copy on this device stays locked, then the card says how it opens and offers no reload', async () => {

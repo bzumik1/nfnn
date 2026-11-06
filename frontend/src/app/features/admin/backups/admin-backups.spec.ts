@@ -109,13 +109,13 @@ describe('Given an administrator on the backups page', () => {
       'Poslední obnova',
     ]);
     expect(texts('.run dd')).toEqual([
-      '23. 10. 2026 03:00 (2 kB)',
-      '18. 10. 2026 04:00, 37 tabulek ze zálohy nfnn-2026-10-18_0300.dump.age',
+      '23. 10. 2026 3:00 (2 kB)',
+      '18. 10. 2026 4:00, 37 tabulek ze zálohy nfnn-2026-10-18_0300.dump.age',
       'Zatím žádná.',
     ]);
     expect(texts('tbody tr')).toEqual([
-      '23. 10. 2026 03:00 nfnn-2026-10-23_0300.dump.age Plánovaná 2 kB Stáhnout Obnovit…',
-      '22. 10. 2026 03:00 nfnn-2026-10-22_0300.dump.age Plánovaná 1 kB Stáhnout Obnovit…',
+      '23. 10. 2026 3:00 nfnn-2026-10-23_0300.dump.age Plánovaná 2 kB Stáhnout Obnovit…',
+      '22. 10. 2026 3:00 nfnn-2026-10-22_0300.dump.age Plánovaná 1 kB Stáhnout Obnovit…',
     ]);
     expect(text('.off-server')).toBe(
       'Zálohy leží na stejném disku jako web. Jednou za měsíc si nejnovější stáhněte tlačítkem Stáhnout a uložte jinam, třeba na flash disk nebo do cloudu. Jsou zašifrované, takže je bez klíče k zálohám nikdo nepřečte.',
@@ -158,7 +158,7 @@ describe('Given an administrator on the backups page', () => {
       'Zkušební obnova ještě neproběhla, i když zálohy jsou starší než týden.',
     ]);
     expect(fixture.nativeElement.querySelector('.problems')?.getAttribute('role')).toBe('alert');
-    expect(text('.run:nth-child(1) dd .run-text')).toBe('Nepovedla se 23. 10. 2026 03:00.');
+    expect(text('.run:nth-child(1) dd .run-text')).toBe('Nepovedla se 23. 10. 2026 3:00.');
     expect(text('.run:nth-child(1) dd details summary')).toBe('Technické podrobnosti');
     expect(text('.run:nth-child(1) dd .run-error')).toBe(
       'pg_dump: error: connection to server failed',
@@ -166,11 +166,11 @@ describe('Given an administrator on the backups page', () => {
     expect(texts('.run dd')[1]).toBe('Zatím žádná. Podle plánu běží v neděli 4:00.');
     expect(text('.restore-files-title')).toBe('Soubory k obnově');
     expect(texts('.restore-files li')).toEqual([
-      'zaloha.dump.skipped byl 23. 10. 2026 06:36 přeskočen: databáze nebyla prázdná nebo ve složce leželo víc souborů.',
-      'stara.dump.failed se 22. 10. 2026 06:36 obnovit nepodařilo; data zůstala, jak byla.',
+      'zaloha.dump.skipped byl 23. 10. 2026 6:36 přeskočen: databáze nebyla prázdná nebo ve složce leželo víc souborů.',
+      'stara.dump.failed se 22. 10. 2026 6:36 obnovit nepodařilo; data zůstala, jak byla.',
     ]);
     expect(text('.run:nth-child(3) dd .run-text')).toBe(
-      'Nepovedla se 23. 10. 2026 03:00, data zůstala, jak byla.',
+      'Nepovedla se 23. 10. 2026 3:00, data zůstala, jak byla.',
     );
     expect(text('.run:nth-child(3) dd .run-error')).toBe(
       'the database is not empty; name the file .force.dump to replace it',
@@ -403,7 +403,7 @@ describe('Given an administrator on the backups page', () => {
     it('then a dialog names the backup, what is lost, the receipts issued since and the safety backup, and cancelling posts nothing', async () => {
       expect(text('#restore-title')).toBe('Obnovit databázi ze zálohy?');
       expect(text('.restore-lead')).toBe(
-        'Web se vrátí do stavu z 23. 10. 2026 03:00, ze zálohy nfnn-2026-10-23_0300.dump.age.',
+        'Web se vrátí do stavu z 23. 10. 2026 3:00, ze zálohy nfnn-2026-10-23_0300.dump.age.',
       );
       expect(texts('.restore-points li')[1]).toContain(
         'Potvrzení o daru vydaná po vytvoření zálohy z databáze zmizí',
