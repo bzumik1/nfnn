@@ -141,17 +141,17 @@ Feature: An administrator sets up the monthly report, sends it again and reads t
       | settings.sendDay      | 1            |
     When the connector exchanges the connector token for an API token
     And the exchanged API token changes the monthly report settings:
-      | recipients | INFO@nfnn.cz |
-      | sendDay    | 5            |
-      | sendHour   | 9            |
-      | sections   | donations    |
+      | recipients | INFO@nfnn.cz          |
+      | sendDay    | 5                     |
+      | sendHour   | 9                     |
+      | sections   | donations, bankImport |
     Then the response status is 200
     When "Jana" asks for the monthly report settings
     Then the monthly report settings say:
       | settings.recipients.0 | info@nfnn.cz |
       | settings.sendDay      | 5            |
       | settings.sendHour     | 9            |
-    And the admin action "CHANGE_REPORT_SETTINGS" by "Jana" is recorded with details containing "odesílá se 5. den v měsíci v 9:00; části dary"
+    And the admin action "CHANGE_REPORT_SETTINGS" by "Jana" is recorded with details containing "odesílá se 5. den v měsíci v 9:00; části dary, stahování z banky"
 
   Scenario: Settings with a malformed address, a day outside every month, an hour outside the day or no section are refused
     When "Jana" changes the monthly report settings:

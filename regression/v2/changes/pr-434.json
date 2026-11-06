@@ -28,5 +28,13 @@
     "field": "$.detail",
     "reason": "Security audit 2026-11-06 (#434): operations/secret-settings-in-browser-only covers the mail settings too, so its detail names them",
     "contract": "docs/api-contract.md, Settings"
+  },
+  {
+    "kind": "retired",
+    "suite": "mcp-vitest",
+    "test": "test/tools.spec.ts > Given an administrator connected with the writing permission > when the report settings change, then the whole settings reach the administration",
+    "replacement": "test/tools.spec.ts > Given an administrator connected with the writing permission > when the report settings change, then the day, the hour and the sections reach the administration with the recipients it holds now, whatever recipients the call names",
+    "reason": "Security audit 2026-11-06, second round (#434): nfnn_update_report_settings takes no recipients and sends back the ones the backend holds, so the test that sent the whole settings now proves the stored recipients reach the administration whatever the call names",
+    "contract": "docs/api-contract.md, MCP connector"
   }
 ]
