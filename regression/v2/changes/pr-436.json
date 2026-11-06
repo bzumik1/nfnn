@@ -2321,5 +2321,40 @@
     "field": "nfnn-api",
     "reason": "#436 bumps the API generation from 2 to 3 (.claude/rules/backend.md, API versions and compatibility): the registration confirmation no longer takes an e-mail change link, which now has its own endpoint, a changed meaning of an endpoint the previous app calls; so every /api answer names generation 3 and a write from an older tab is refused with 426 app/update-required",
     "contract": "docs/api-contract.md, Conventions (Versions)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.DonorEmailVerificationServiceTest > Given a live change token, when it is confirmed, then the address changes, every link and session goes, DonorEmailChanged is published and a session opens",
+    "reason": "#436 (security audit 2026-11-06): confirming an e-mail change link opens no session and goes to its own endpoint, so the tests that expected a session or the registration endpoint are renamed for what they now prove",
+    "replacement": "donors.application.DonorEmailVerificationServiceTest > Given a live change token, when the change is confirmed, then the address changes, every link and session goes, DonorEmailChanged is published and no session opens"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.DonorEmailVerificationServiceTest > Given a change token whose address was registered meanwhile or whose donor is unverified, when it is confirmed, then it is invalid",
+    "reason": "#436 (security audit 2026-11-06): confirming an e-mail change link opens no session and goes to its own endpoint, so the tests that expected a session or the registration endpoint are renamed for what they now prove",
+    "replacement": "donors.application.DonorEmailVerificationServiceTest > Given a change token whose address was registered meanwhile or whose donor is unverified, when the change is confirmed, then it is invalid"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/email-verification/email-verification.spec.ts > Given the page that confirms the e-mail from the registration link > when the link confirms a new address of the account > and the server confirms it, then the page says the address changed and sign-in now uses it, without asking for a passkey",
+    "reason": "#436 (security audit 2026-11-06): confirming an e-mail change link opens no session and goes to its own endpoint, so the tests that expected a session or the registration endpoint are renamed for what they now prove",
+    "replacement": "src/app/features/donors/email-verification/email-verification.spec.ts > Given the page that confirms the e-mail from the registration link > when the link confirms a new address of the account > and the server confirms it, then the page says the address changed and asks to sign in with it, without a session or a passkey"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/email-verification/email-verification.spec.ts > Given the page that confirms the e-mail from the registration link > when the link confirms a new address of the account > then only the token is sent and the address bar keeps neither",
+    "reason": "#436 (security audit 2026-11-06): confirming an e-mail change link opens no session and goes to its own endpoint, so the tests that expected a session or the registration endpoint are renamed for what they now prove",
+    "replacement": "src/app/features/donors/email-verification/email-verification.spec.ts > Given the page that confirms the e-mail from the registration link > when the link confirms a new address of the account > then only the token is sent to the change confirmation and the address bar keeps neither"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/email-verification.spec.ts > Given a visitor who registered and received the confirmation e-mail > when the link confirms a new address of the account, then the page says the address changed and leads to the overview",
+    "reason": "#436 (security audit 2026-11-06): confirming an e-mail change link opens no session and goes to its own endpoint, so the tests that expected a session or the registration endpoint are renamed for what they now prove",
+    "replacement": "e2e/email-verification.spec.ts > Given a visitor who registered and received the confirmation e-mail > when the link confirms a new address of the account, then the page says the address changed, opens no session and offers the sign-in"
   }
 ]
