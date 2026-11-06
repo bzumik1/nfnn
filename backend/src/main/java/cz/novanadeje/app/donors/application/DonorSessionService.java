@@ -16,6 +16,7 @@ import cz.novanadeje.app.donors.domain.Role;
 import cz.novanadeje.app.donors.domain.SessionKind;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionOperations;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -33,16 +34,18 @@ public class DonorSessionService {
     private final DonorRepository donors;
     private final AccessTokenIssuer accessTokens;
     private final DonorSessionProperties properties;
+    private final TransactionOperations transactions;
     private final Clock clock;
 
     public DonorSessionService(RefreshTokenRepository refreshTokens, DonorDeviceRepository devices, DeviceSignOuts signOuts, DonorRepository donors,
-                               AccessTokenIssuer accessTokens, DonorSessionProperties properties, Clock clock) {
+                               AccessTokenIssuer accessTokens, DonorSessionProperties properties, TransactionOperations transactions, Clock clock) {
         this.refreshTokens = refreshTokens;
         this.devices = devices;
         this.signOuts = signOuts;
         this.donors = donors;
         this.accessTokens = accessTokens;
         this.properties = properties;
+        this.transactions = transactions;
         this.clock = clock;
     }
 
@@ -74,25 +77,59 @@ public class DonorSessionService {
         return issue(device, secondFactorVerified, donor.sessionRoles(secondFactorVerified), now).tokens();
     }
 
-    @Transactional(noRollbackFor = InvalidRefreshToken.class)
     public RefreshedSession refresh(String presentedSecret, SessionCookie presentedIn, DeviceDescription description) {
+        String secretHash = RefreshTokenSecret.fromValue(presentedSecret).hash();
+        RefreshAttempt attempt = attempt(secretHash, presentedIn, description, SessionsLock.NOT_HELD);
+        if (attempt instanceof RefreshAttempt.NeedsSessionsLock) {
+            attempt = attempt(secretHash, presentedIn, description, SessionsLock.HELD);
+        }
+        return switch (attempt) {
+            case RefreshAttempt.Refreshed(RefreshedSession session) -> session;
+            case RefreshAttempt.Refused(InvalidRefreshToken refusal) -> throw refusal;
+            case RefreshAttempt.NeedsSessionsLock() -> throw new IllegalStateException("a refresh under the donor's sessions lock asked for it again");
+        };
+    }
+
+    private RefreshAttempt attempt(String secretHash, SessionCookie presentedIn, DeviceDescription description, SessionsLock lock) {
+        return transactions.execute(status -> {
+            try {
+                RefreshAttempt attempt = refresh(secretHash, presentedIn, description, lock);
+                if (attempt instanceof RefreshAttempt.NeedsSessionsLock) {
+                    status.setRollbackOnly();
+                }
+                return attempt;
+            } catch (InvalidRefreshToken refusal) {
+                return new RefreshAttempt.Refused(refusal);
+            }
+        });
+    }
+
+    private RefreshAttempt refresh(String secretHash, SessionCookie presentedIn, DeviceDescription description, SessionsLock lock) {
         Instant now = clock.instant();
-        RefreshToken token = refreshTokens.findBySecretHashForUpdate(RefreshTokenSecret.fromValue(presentedSecret).hash())
-                .orElseThrow(InvalidRefreshToken::new);
+        if (lock == SessionsLock.HELD) {
+            refreshTokens.findDonorOfSecretHash(secretHash).ifPresent(refreshTokens::lockSessionsOf);
+        }
+        RefreshToken token = refreshTokens.findBySecretHashForUpdate(secretHash).orElseThrow(InvalidRefreshToken::new);
+        if (lock == SessionsLock.NOT_HELD && (token.isSuperseded() || token.isUsed())) {
+            return new RefreshAttempt.NeedsSessionsLock();
+        }
         if (token.isSuperseded()) {
             throw replay(token, now);
         }
         if (token.isUsed()) {
-            return reissueWithinReuseGrace(token, presentedIn, description, now);
+            return new RefreshAttempt.Refreshed(reissueWithinReuseGrace(token, presentedIn, description, now));
         }
         if (!token.isUsableAt(now) || token.clientId().isPresent() || deviceEnded(token) || !presentedInItsCookie(token, presentedIn)) {
             throw new InvalidRefreshToken();
         }
         Donor donor = donors.findById(token.donorId()).orElseThrow(InvalidRefreshToken::new);
         if (!refreshTokens.markUsed(token.id(), now)) {
+            if (lock == SessionsLock.NOT_HELD) {
+                return new RefreshAttempt.NeedsSessionsLock();
+            }
             throw replay(token, now);
         }
-        return succeed(token, donor, description, now);
+        return new RefreshAttempt.Refreshed(succeed(token, donor, description, now));
     }
 
     private RefreshedSession reissueWithinReuseGrace(RefreshToken token, SessionCookie presentedIn, DeviceDescription description, Instant now) {
@@ -158,7 +195,9 @@ public class DonorSessionService {
     @Transactional
     public void close(String presentedSecret) {
         Instant now = clock.instant();
-        refreshTokens.findBySecretHashForUpdate(RefreshTokenSecret.fromValue(presentedSecret).hash()).ifPresent(token -> {
+        String secretHash = RefreshTokenSecret.fromValue(presentedSecret).hash();
+        refreshTokens.findDonorOfSecretHash(secretHash).ifPresent(refreshTokens::lockSessionsOf);
+        refreshTokens.findBySecretHashForUpdate(secretHash).ifPresent(token -> {
             if (token.isSuperseded()) {
                 signOuts.endAllOf(token.donorId(), DeviceSignOutReason.REPLAY, now);
                 return;
@@ -199,5 +238,21 @@ public class DonorSessionService {
     }
 
     private record Issued(UUID refreshTokenId, IssuedTokens tokens) {
+    }
+
+    private enum SessionsLock {
+        NOT_HELD, HELD
+    }
+
+    private sealed interface RefreshAttempt {
+
+        record Refreshed(RefreshedSession session) implements RefreshAttempt {
+        }
+
+        record Refused(InvalidRefreshToken refusal) implements RefreshAttempt {
+        }
+
+        record NeedsSessionsLock() implements RefreshAttempt {
+        }
     }
 }

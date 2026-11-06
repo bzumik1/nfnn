@@ -7,7 +7,6 @@ import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.EmailNotVerified;
 import cz.novanadeje.app.donors.domain.InvalidCredentials;
-import cz.novanadeje.app.donors.domain.InvalidRefreshToken;
 import cz.novanadeje.app.donors.domain.InvalidSecondFactorChallenge;
 import cz.novanadeje.app.donors.domain.InvalidSecondFactorCode;
 import cz.novanadeje.app.donors.domain.LinkSecret;
@@ -118,7 +117,6 @@ public class DonorAuthenticationService {
         return views.authenticated(donor, sessions.signIn(donor, true, device, kind));
     }
 
-    @Transactional(noRollbackFor = InvalidRefreshToken.class)
     public AuthenticatedDonor refresh(String refreshToken, SessionCookie presentedIn, DeviceDescription device) {
         RefreshedSession session = sessions.refresh(refreshToken, presentedIn, device);
         return views.authenticated(session.donor(), session.tokens());

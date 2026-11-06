@@ -152,6 +152,7 @@ public class AuthorizationServerService {
         } catch (IllegalArgumentException malformed) {
             throw new InvalidGrant("the refresh token or the client is malformed");
         }
+        refreshTokens.lockSessionsOf(token.donorId());
         if (token.isUsed()) {
             signOuts.endAllOf(token.donorId(), DeviceSignOutReason.REPLAY, now);
             log.warn("A used refresh token of donor {} was presented by a client; every session of the donor is ended", token.donorId());
