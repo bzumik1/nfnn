@@ -1528,7 +1528,10 @@ describe('Given an administrator on a donor card with the administration copy on
         },
         { provide: RECEIPT_PDF_ENVIRONMENT, useValue: new FakeReceiptPdfEnvironment() },
         { provide: DeviceVault, useValue: { administration: signal(opened).asReadonly() } },
-        { provide: Connectivity, useValue: { offline: offline.asReadonly() } },
+        {
+          provide: Connectivity,
+          useValue: { offline: offline.asReadonly(), cause: signal('network').asReadonly() },
+        },
         {
           provide: AdministrationCopyDownload,
           useValue: {
@@ -1600,7 +1603,7 @@ describe('Given an administrator on a donor card with the administration copy on
     expect(accountsCard()).toContain('2900233333/2010');
   });
 
-  it('when the server cannot give the bank accounts, then the card says so and asks again on Zkusit znovu', async () => {
+  it('when the server cannot give the bank accounts, then the card says so, and Zkusit znovu keeps the focus in the card, asks again and says the accounts are loaded', async () => {
     await open(false);
     await vi.waitFor(() =>
       http.expectOne(DETAIL_URL).flush(null, { status: 500, statusText: 'Error' }),
@@ -1619,5 +1622,20 @@ describe('Given an administrator on a donor card with the administration copy on
     await settle();
 
     expect(accountsCard()).toContain('2900233333/2010');
+    expect(document.activeElement?.id).toBe('bankovni-ucty');
+    expect(
+      fixture.nativeElement.querySelector('[aria-labelledby="accounts-title"] [role="status"]')
+        ?.textContent,
+    ).toContain('Bankovní účty dárce jsme načetli.');
+  });
+
+  it('when the server is unreachable while the device is online, then the card says the accounts come once the server answers again', async () => {
+    await open(false);
+    await vi.waitFor(() =>
+      http.expectOne(DETAIL_URL).flush(null, { status: 503, statusText: 'Unavailable' }),
+    );
+    await settle();
+
+    expect(accountsCard()).toContain('Bankovní účty dárce ukážeme, až server zase odpoví.');
   });
 });

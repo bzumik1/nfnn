@@ -439,9 +439,15 @@
               Načítáme bankovní účty…
             </p>
           } @else if (bankAccountsSource() === 'offline') {
-            <p class="ui-card__empty" i18n="@@admin.donorDetail.accounts.offline">
-              Bankovní účty dárce ukážeme, až budete online.
-            </p>
+            @if (serverAway()) {
+              <p class="ui-card__empty" i18n="@@admin.donorDetail.accounts.serverAway">
+                Bankovní účty dárce ukážeme, až server zase odpoví.
+              </p>
+            } @else {
+              <p class="ui-card__empty" i18n="@@admin.donorDetail.accounts.offline">
+                Bankovní účty dárce ukážeme, až budete online.
+              </p>
+            }
           } @else if (bankAccountsSource() === 'failed') {
             <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
               <p i18n="@@admin.donorDetail.accounts.failed">

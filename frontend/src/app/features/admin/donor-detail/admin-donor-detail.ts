@@ -325,10 +325,16 @@ export class AdminDonorDetail {
 
   protected reloadBankAccounts(): void {
     this.bankAccountsSource.set('pending');
-    this.readCard();
+    this.cardNotice.set(null);
+    this.focusAfterRender(() => this.byId(this.ids.accounts.id));
+    this.readCard(true);
   }
 
-  private readCard(): void {
+  protected serverAway(): boolean {
+    return !this.connectivity.offline() || this.connectivity.cause() === 'server';
+  }
+
+  private readCard(retried = false): void {
     this.reads
       .donorCard(this.donorId)
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -336,6 +342,15 @@ export class AdminDonorDetail {
         next: ({ detail, bankAccounts }) => {
           this.detail.set(detail);
           this.bankAccountsSource.set(bankAccounts);
+          if (retried && bankAccounts === 'server') {
+            this.cardNotice.set({
+              card: 'accounts',
+              notice: {
+                kind: 'status',
+                text: $localize`:@@admin.donorDetail.accounts.reloaded:Bankovní účty dárce jsme načetli.`,
+              },
+            });
+          }
           this.loadWithdrawnKeysFor(detail);
         },
         error: (failure: unknown) => this.donationsState.set(this.stateAfter(failure)),
