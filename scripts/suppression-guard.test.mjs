@@ -716,6 +716,8 @@ describe('Given a change to a script that decides a required check', () => {
     'frontend/scripts/serve-dist.mjs',
     'frontend/scripts/dev-port.mjs',
     'frontend/eslint-confinement.js',
+    'scripts/agent-context-budget.mjs',
+    'mcp/src/tool-list.ts',
   ];
   for (const path of SCRIPTS) {
     it(`when ${path} changes, then it needs a declaration`, () => {

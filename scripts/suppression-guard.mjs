@@ -40,6 +40,8 @@ const CHECK_SCRIPTS = new Set([
   'frontend/scripts/serve-dist.mjs',
   'frontend/scripts/dev-port.mjs',
   'frontend/eslint-confinement.js',
+  'scripts/agent-context-budget.mjs',
+  'mcp/src/tool-list.ts',
 ]);
 const BUILD_DEFINITION =
   /(?:^|\/)settings\.gradle(?:\.kts)?$|(?:^|\/)buildSrc\/|(?:^|\/)gradle\/(?:.*\/)?[^/]+\.gradle(?:\.kts)?$|(?:^|\/)gradle\/wrapper\/gradle-wrapper\.properties$|^\.github\/docker-bake\.hcl$/;
