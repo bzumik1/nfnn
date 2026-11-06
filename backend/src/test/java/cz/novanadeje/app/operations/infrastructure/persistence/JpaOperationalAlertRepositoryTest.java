@@ -3,6 +3,7 @@ package cz.novanadeje.app.operations.infrastructure.persistence;
 import cz.novanadeje.app.operations.domain.alerts.MonitoredArea;
 import cz.novanadeje.app.operations.domain.alerts.OperationalAlert;
 import cz.novanadeje.app.operations.domain.alerts.OperationalAlertRepository;
+import cz.novanadeje.app.shared.infrastructure.lock.AdvisoryLock;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,7 +11,14 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.Import;
 
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.Instant;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -23,6 +31,9 @@ class JpaOperationalAlertRepositoryTest {
 
     @Autowired
     private OperationalAlertRepository alerts;
+
+    @Autowired
+    private DataSource dataSource;
 
     @Test
     @DisplayName("Given nothing saved, when the alerts are read, then every area is closed and has never changed")
@@ -46,5 +57,30 @@ class JpaOperationalAlertRepositoryTest {
 
         assertThat(alerts.find(MonitoredArea.BACKUPS)).contains(resolved);
         assertThat(resolved.changes()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("Given the alert changes locked in one transaction, when another connection tries each lock, then it gets the report settings lock and not the alerts' lock")
+    void should_leave_the_report_settings_lock_free_when_tried_given_the_alert_changes_locked() throws Exception {
+        alerts.lockChanges();
+
+        assertThat(triedFromAnotherConnection(AdvisoryLock.REPORT_SETTINGS_CHANGES)).isTrue();
+        assertThat(triedFromAnotherConnection(AdvisoryLock.OPERATIONAL_ALERT_CHANGES)).isFalse();
+    }
+
+    private boolean triedFromAnotherConnection(AdvisoryLock lock) throws Exception {
+        return CompletableFuture.supplyAsync(() -> {
+            try (Connection connection = dataSource.getConnection();
+                 PreparedStatement statement = connection.prepareStatement("select pg_try_advisory_xact_lock(?)")) {
+                connection.setAutoCommit(true);
+                statement.setLong(1, lock.key());
+                try (ResultSet result = statement.executeQuery()) {
+                    result.next();
+                    return result.getBoolean(1);
+                }
+            } catch (SQLException e) {
+                throw new IllegalStateException(e);
+            }
+        }).get(10, TimeUnit.SECONDS);
     }
 }
