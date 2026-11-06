@@ -281,6 +281,8 @@ const MANIFEST_FIELDS = [
   ['lang', 'cs'],
 ];
 
+const HOME_SCREEN_NAME_MAX_LENGTH = 12;
+
 const MANIFEST_COLOURS = [
   ['theme_color', '--color-accent'],
   ['background_color', '--color-surface'],
@@ -292,7 +294,7 @@ const REQUIRED_ICONS = [
   ['maskable', '512x512'],
 ];
 
-export function manifestProblems({ theme, manifest, source, iconSizes }) {
+export function manifestProblems({ theme, manifest, source, iconSizes, homeScreenTitle }) {
   if (manifest === null) {
     return [`theme ${theme} has no assets/manifest.webmanifest`];
   }
@@ -301,6 +303,17 @@ export function manifestProblems({ theme, manifest, source, iconSizes }) {
     if (manifest[field] !== wanted) {
       problems.push(`theme ${theme}: manifest ${field} is ${manifest[field]}, not ${wanted}`);
     }
+  }
+  const shortName = String(manifest.short_name ?? '');
+  if ([...shortName].length > HOME_SCREEN_NAME_MAX_LENGTH) {
+    problems.push(
+      `theme ${theme}: manifest short_name ${shortName} is longer than ${HOME_SCREEN_NAME_MAX_LENGTH} characters`,
+    );
+  }
+  if (shortName !== homeScreenTitle) {
+    problems.push(
+      `theme ${theme}: manifest short_name ${shortName} is not the apple-mobile-web-app-title ${homeScreenTitle} of src/index.html`,
+    );
   }
   const atRoot = new Map(
     declarationsByBlock(source)
@@ -332,6 +345,11 @@ export function manifestProblems({ theme, manifest, source, iconSizes }) {
     }
   }
   return problems;
+}
+
+function homeScreenTitleOf(html) {
+  const meta = html.match(/<meta\s+name="apple-mobile-web-app-title"\s+content="([^"]*)"/);
+  return meta ? meta[1] : null;
 }
 
 function pngSize(path) {
@@ -470,6 +488,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       problems.push(`theme ${theme} has no licence beside its receipt fonts`);
     }
   }
+  const homeScreenTitle = homeScreenTitleOf(readFileSync(join(root, 'src/index.html'), 'utf8'));
   for (const [theme, source] of sources) {
     problems.push(...barContrastProblems(theme, source));
     const assetsDir = join(themesDir, theme, 'assets');
@@ -479,6 +498,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
         manifest: manifestIn(assetsDir),
         source,
         iconSizes: iconSizesUnder(assetsDir),
+        homeScreenTitle,
       }),
     );
   }
@@ -519,6 +539,6 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     process.exit(1);
   }
   console.log(
-    `${themes.size} themes set all ${needed.size} tokens the styles and the receipt use, and carry content-named receipt fonts, literal receipt colours and readable receipt text, set only in their top-level :root, keep the tab bar readable over a white and a black page, its solid pill apart from the bar, serve the same theme files and a web app manifest in their colours with the icons it names.`,
+    `${themes.size} themes set all ${needed.size} tokens the styles and the receipt use, and carry content-named receipt fonts, literal receipt colours and readable receipt text, set only in their top-level :root, keep the tab bar readable over a white and a black page, its solid pill apart from the bar, serve the same theme files and a web app manifest in their colours with the icons it names and the home screen name of src/index.html.`,
   );
 }
