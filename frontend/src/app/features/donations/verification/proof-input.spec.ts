@@ -7,7 +7,7 @@ import {
   SCAN_INTERVAL_MS,
   SCAN_TIME_LIMIT_MS,
 } from './proof-input';
-import { PictureTooLarge, SCAN_DEVICE, type ScanDevice } from './scan-device';
+import { type FrameRegion, PictureTooLarge, SCAN_DEVICE, type ScanDevice } from './scan-device';
 
 const DIGITS = '10031885061882060800046343990168929322040303989858395561963591784434255';
 const LINK = `https://nfnn.cz/overit#${DIGITS}`;
@@ -43,6 +43,7 @@ class FakeDevice implements ScanDevice {
   framing: () => QrImage | null = () => FRAME;
   attachedTo: HTMLVideoElement | null = null;
   framesTaken = 0;
+  readonly regions: FrameRegion[] = [];
 
   hasCamera(): boolean {
     return this.camera;
@@ -58,8 +59,9 @@ class FakeDevice implements ScanDevice {
     return this.attaching(video);
   }
 
-  frame(): QrImage | null {
+  frame(_video: HTMLVideoElement, region: FrameRegion): QrImage | null {
     this.framesTaken++;
+    this.regions.push(region);
     return this.framing();
   }
 
@@ -254,6 +256,17 @@ describe('Given the ways to read a receipt code on the verification page', () =>
 
       expect(found).toEqual([DIGITS]);
       expect(alertText()).toBe('');
+    });
+
+    it('and no code is in view, then it reads the centre of the picture at full resolution and the whole picture by turns', async () => {
+      await render();
+
+      button('Naskenovat QR kód')?.click();
+      await settle();
+      await vi.advanceTimersByTimeAsync(SCAN_INTERVAL_MS * 4);
+      await settle();
+
+      expect(device.regions.slice(0, 4)).toEqual(['centre', 'whole', 'centre', 'whole']);
     });
 
     it('and they stop it, then the camera turns off and the scan button returns, focused', async () => {

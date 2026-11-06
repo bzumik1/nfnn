@@ -145,7 +145,8 @@ describe('Given the privacy policy page', () => {
     const cookies = sectionText('Cookies');
 
     expect(cookies).toContain('veřejné klíče fondu');
-    expect(cookies).toContain('nenesou žádné osobní údaje');
+    expect(cookies).toContain('údaj o tom, který fotoaparát zařízení naposledy načetl kód');
+    expect(cookies).toContain('ani jedno nenese osobní údaje');
   });
 
   it('when it renders, then it says a company ID fills the name and seat from ARES, which gets only the ID', () => {
