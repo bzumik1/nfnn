@@ -9,7 +9,13 @@
   </h2>
   <div id="changed-meanwhile-lead">
     @if (keepsDraft()) {
-      @if (canOverwrite()) {
+      @if (fromDraft()) {
+        <p class="ui-dialog__lead" i18n="@@admin.changedMeanwhile.leadFromDraft">
+          Od chvíle, kdy jste text na tomto zařízení rozepsali, uložil novější verzi někdo jiný:
+          jiný správce, připojená aplikace, nebo vy na jiném zařízení. Vaše úpravy jsme neuložili a
+          zůstávají ve formuláři.
+        </p>
+      } @else if (canOverwrite()) {
         <p class="ui-dialog__lead" i18n="@@admin.changedMeanwhile.leadDraft">
           Zatímco jste měli formulář otevřený, uložil novější verzi někdo jiný: jiný správce nebo
           připojená aplikace. Vaše úpravy jsme neuložili a zůstávají ve formuláři.
