@@ -45,12 +45,11 @@ public final class CanonicalRows {
             string(node.stringValue(), text);
         } else if (node.isArray()) {
             text.append('[');
-            List<JsonNode> elements = node.valueStream().toList();
-            for (int index = 0; index < elements.size(); index++) {
+            for (int index = 0; index < node.size(); index++) {
                 if (index > 0) {
                     text.append(',');
                 }
-                write(elements.get(index), text);
+                write(node.get(index), text);
             }
             text.append(']');
         } else if (node.isObject()) {
@@ -79,6 +78,10 @@ public final class CanonicalRows {
 
     private static void string(String value, StringBuilder text) {
         text.append('"');
+        if (isPlain(value)) {
+            text.append(value).append('"');
+            return;
+        }
         for (int index = 0; index < value.length(); index++) {
             char character = value.charAt(index);
             switch (character) {
@@ -99,6 +102,16 @@ public final class CanonicalRows {
             }
         }
         text.append('"');
+    }
+
+    private static boolean isPlain(String value) {
+        for (int index = 0; index < value.length(); index++) {
+            char character = value.charAt(index);
+            if (character < FIRST_PRINTABLE || character == '"' || character == '\\' || Character.isSurrogate(character)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static boolean isLoneSurrogate(String value, int index) {

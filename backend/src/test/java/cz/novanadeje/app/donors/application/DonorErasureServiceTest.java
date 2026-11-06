@@ -3,6 +3,7 @@ package cz.novanadeje.app.donors.application;
 import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.application.event.DonorAccountErased;
 import cz.novanadeje.app.donors.domain.AdministratorNotErasable;
+import cz.novanadeje.app.donors.domain.AuthorizationCodeRepository;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorAlreadyErased;
 import cz.novanadeje.app.donors.domain.DonorId;
@@ -13,6 +14,8 @@ import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.PasskeyRepository;
 import cz.novanadeje.app.donors.domain.PasswordResetTokenRepository;
 import cz.novanadeje.app.donors.domain.Role;
+import cz.novanadeje.app.donors.domain.SecondFactorChallengeRepository;
+import cz.novanadeje.app.donors.domain.SecondFactorRecoveryRepository;
 import cz.novanadeje.app.donors.domain.SecondFactorRepository;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.event.DonorErased;
@@ -71,21 +74,27 @@ class DonorErasureServiceTest {
     @Mock
     private EmailVerificationTokenRepository emailVerificationTokens;
     @Mock
+    private SecondFactorChallengeRepository challenges;
+    @Mock
+    private SecondFactorRecoveryRepository recoveries;
+    @Mock
+    private AuthorizationCodeRepository authorizationCodes;
+    @Mock
     private ApplicationEventPublisher events;
 
     private DonorErasureService service;
 
     @BeforeEach
     void setUp() {
-        service = new DonorErasureService(donors, secondFactors, passkeys, passwordResetTokens, emailVerificationTokens, events,
-                Clock.fixed(NOW, ZoneOffset.UTC), signOuts);
+        service = new DonorErasureService(donors, secondFactors, passkeys, passwordResetTokens, emailVerificationTokens,
+                challenges, recoveries, authorizationCodes, events, Clock.fixed(NOW, ZoneOffset.UTC), signOuts);
     }
 
     @Test
     @DisplayName("Given a plain English donor, when an administrator erases the donor, then the anonymized donor is saved, the factor and tokens go, every session ends, and the three events carry the former address and the audit text")
     void should_anonymize_and_publish_events_when_erased_given_plain_donor() {
         Donor petr = donor(PETR, Set.of(Role.DONOR), LocaleCode.EN);
-        when(donors.findById(PETR)).thenReturn(Optional.of(petr));
+        when(donors.findByIdForUpdate(PETR)).thenReturn(Optional.of(petr));
 
         service.erase(JANA, PETR);
 
@@ -97,6 +106,9 @@ class DonorErasureServiceTest {
         order.verify(signOuts).endAllOf(PETR, DeviceSignOutReason.ERASED, NOW);
         order.verify(passwordResetTokens).deleteAllOf(PETR);
         order.verify(emailVerificationTokens).deleteAllOf(PETR);
+        verify(challenges).deleteAllOfWithoutWaiting(PETR);
+        verify(recoveries).deleteAllOfWithoutWaiting(PETR);
+        verify(authorizationCodes).deleteAllOfWithoutWaiting(PETR);
         assertThat(saved.getValue()).isSameAs(petr);
         assertThat(petr.isErased()).isTrue();
         assertThat(petr.erasedAt()).contains(NOW);
@@ -120,23 +132,23 @@ class DonorErasureServiceTest {
     @Test
     @DisplayName("Given an unknown donor, when erased, then it is not found and nothing else happens")
     void should_fail_as_not_found_when_erased_given_unknown_donor() {
-        when(donors.findById(PETR)).thenReturn(Optional.empty());
+        when(donors.findByIdForUpdate(PETR)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.erase(JANA, PETR)).isInstanceOf(DonorNotFound.class);
 
         verify(donors, never()).save(any());
-        verifyNoInteractions(secondFactors, signOuts, passwordResetTokens, emailVerificationTokens, events);
+        verifyNoInteractions(secondFactors, signOuts, passwordResetTokens, emailVerificationTokens, challenges, recoveries, authorizationCodes, events);
     }
 
     @Test
     @DisplayName("Given an administrator, when erased, then it is refused as not erasable and nothing is written or published")
     void should_refuse_when_erased_given_administrator() {
-        when(donors.findById(PETR)).thenReturn(Optional.of(donor(PETR, Set.of(Role.DONOR, Role.ADMIN), LocaleCode.CS)));
+        when(donors.findByIdForUpdate(PETR)).thenReturn(Optional.of(donor(PETR, Set.of(Role.DONOR, Role.ADMIN), LocaleCode.CS)));
 
         assertThatThrownBy(() -> service.erase(JANA, PETR)).isInstanceOf(AdministratorNotErasable.class);
 
         verify(donors, never()).save(any());
-        verifyNoInteractions(secondFactors, signOuts, passwordResetTokens, emailVerificationTokens, events);
+        verifyNoInteractions(secondFactors, signOuts, passwordResetTokens, emailVerificationTokens, challenges, recoveries, authorizationCodes, events);
     }
 
     @Test
@@ -144,12 +156,12 @@ class DonorErasureServiceTest {
     void should_refuse_when_erased_given_erased_donor() {
         Donor petr = donor(PETR, Set.of(Role.DONOR), LocaleCode.CS);
         petr.erase(NOW.minusSeconds(60));
-        when(donors.findById(PETR)).thenReturn(Optional.of(petr));
+        when(donors.findByIdForUpdate(PETR)).thenReturn(Optional.of(petr));
 
         assertThatThrownBy(() -> service.erase(JANA, PETR)).isInstanceOf(DonorAlreadyErased.class);
 
         verify(donors, never()).save(any());
-        verifyNoInteractions(secondFactors, signOuts, passwordResetTokens, emailVerificationTokens, events);
+        verifyNoInteractions(secondFactors, signOuts, passwordResetTokens, emailVerificationTokens, challenges, recoveries, authorizationCodes, events);
     }
 
     private static Donor donor(DonorId id, Set<Role> roles, LocaleCode locale) {

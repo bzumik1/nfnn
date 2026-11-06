@@ -69,6 +69,7 @@
 
 :root {
   --color-accent: #2563eb;
+  --color-accent-fill: #2563eb;
   --color-accent-soft: #eff6ff;
   --color-accent-bg: #f0f4ff;
   --color-accent-on-inverse: #93c5fd;
@@ -90,6 +91,7 @@
   --color-surface-inverse: #0f172a;
   --color-surface-inverse-strong: #060d1f;
   --color-on-inverse: #ffffff;
+  --color-surface-quote: #1a1a2e;
 
   --color-on-image: #ffffff;
   --color-image-shade: #080c24;
@@ -103,6 +105,7 @@
   --color-focus-ring: #2563eb;
 
   --color-danger: #b91c1c;
+  --color-danger-fill: #b91c1c;
   --color-danger-bg: #fef2f2;
   --color-danger-border: #fecaca;
   --color-on-danger: #ffffff;
@@ -114,6 +117,8 @@
   --color-qr-module: #1a1a2e;
   --color-qr-mark: #2563eb;
   --color-qr-ground: #ffffff;
+  --color-paper: #ffffff;
+  --color-paper-muted: #f1f3f5;
   --color-logo: #005dab;
   --color-logo-fill: #ffffff;
   --color-tab-bar: color-mix(in srgb, #0f172a 66%, transparent);
@@ -126,9 +131,13 @@
   --color-sheet-grabber: var(--color-border-rule);
 
   --font-serif: 'Playfair Display', serif;
-  --font-sans: 'Inter', sans-serif;
-  --font-mono: monospace;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+  --font-display: var(--font-serif);
+  --font-title: var(--font-sans);
+  --font-figures: var(--font-sans);
+  --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
   --numeric-figures: lining-nums tabular-nums;
+  --figure-features: 'tnum' 1;
 
   --text-2xs: 0.6875rem;
   --text-xs: 0.75rem;
@@ -141,13 +150,14 @@
   --text-4xl: 1.5rem;
   --text-5xl: 1.75rem;
   --text-6xl: 2.75rem;
-  --text-heading: clamp(1.625rem, 4vw, 2rem);
-  --text-section-title-compact: clamp(1.75rem, 4vw, 2.875rem);
-  --text-section-title: clamp(1.875rem, 4vw, 3.125rem);
-  --text-cta-title: clamp(1.625rem, 3.5vw, 2.75rem);
-  --text-article-title: clamp(2.125rem, 5vw, 3.5rem);
-  --text-page-title: clamp(2.25rem, 5.5vw, 3.75rem);
-  --text-hero: clamp(3.25rem, 8vw, 6.25rem);
+  --text-heading: clamp(max(1rem, min(1.625rem, 16vw)), 4vw, 2rem);
+  --text-section-title-compact: clamp(max(1rem, min(1.75rem, 16vw)), 4vw, 2.875rem);
+  --text-section-title: clamp(max(1rem, min(1.875rem, 16vw)), 4vw, 3.125rem);
+  --text-cta-title: clamp(max(1rem, min(1.625rem, 16vw)), 3.5vw, 2.75rem);
+  --text-article-title: clamp(max(1rem, min(2.125rem, 16vw)), 5vw, 3.5rem);
+  --text-page-title: clamp(max(1rem, min(2.25rem, 16vw)), 5.5vw, 3.75rem);
+  --text-hero: clamp(max(1rem, min(3.25rem, 27vw)), 8vw, 6.25rem);
+  --text-hero-short: max(2.25rem, min(6vw, 13svh));
 
   --weight-regular: 400;
   --weight-medium: 500;
@@ -205,6 +215,7 @@
   --color-pressed: color-mix(in srgb, currentColor 8%, transparent);
   --pressed-brightness: 0.92;
   --pressed-scale: 0.97;
+  --pressed-opacity: 0.35;
 
   --radius-xs: 2px;
   --radius-sm: 8px;
@@ -231,19 +242,23 @@
   --shadow-menu: 0 8px 24px rgb(0 0 0 / 0.1);
   --shadow-action-bar: 0 6px 28px rgb(0 0 0 / 0.14);
   --shadow-text-on-image: 0 1px 4px rgb(0 0 0 / 0.4);
-  --shadow-cta: 0 8px 28px color-mix(in srgb, var(--color-accent) 35%, transparent);
-  --shadow-cta-hero: 0 8px 28px color-mix(in srgb, var(--color-accent) 50%, transparent);
-  --shadow-cta-nav: 0 4px 14px color-mix(in srgb, var(--color-accent) 35%, transparent);
-  --shadow-button: 0 6px 20px color-mix(in srgb, var(--color-accent) 35%, transparent);
-  --shadow-button-sm: 0 4px 14px color-mix(in srgb, var(--color-accent) 30%, transparent);
-  --shadow-tab: 0 4px 12px color-mix(in srgb, var(--color-accent) 30%, transparent);
-  --shadow-badge: 0 16px 48px color-mix(in srgb, var(--color-accent) 40%, transparent);
-  --shadow-qr: 0 4px 20px color-mix(in srgb, var(--color-accent) 13%, transparent);
+  --shadow-cta: 0 8px 28px color-mix(in srgb, var(--color-accent-fill) 35%, transparent);
+  --shadow-cta-hero: 0 8px 28px color-mix(in srgb, var(--color-accent-fill) 50%, transparent);
+  --shadow-cta-nav: 0 4px 14px color-mix(in srgb, var(--color-accent-fill) 35%, transparent);
+  --shadow-button: 0 6px 20px color-mix(in srgb, var(--color-accent-fill) 35%, transparent);
+  --shadow-button-sm: 0 4px 14px color-mix(in srgb, var(--color-accent-fill) 30%, transparent);
+  --shadow-tab: 0 4px 12px color-mix(in srgb, var(--color-accent-fill) 30%, transparent);
+  --shadow-badge: 0 16px 48px color-mix(in srgb, var(--color-accent-fill) 40%, transparent);
+  --shadow-qr: 0 4px 20px color-mix(in srgb, var(--color-accent-fill) 13%, transparent);
   --shadow-nav-active: inset 3px 0 0 var(--color-accent);
   --shadow-focus: 0 0 0 3px color-mix(in srgb, var(--color-accent) 40%, transparent);
 
   --content-max: 1200px;
   --header-height: 72px;
+  --text-header-action: min(
+    var(--text-sm),
+    (60vw - 1.2 * var(--space-5) - 2 * var(--space-4-5) - 3px) / 5.6
+  );
   --side-nav-layout-max: 1320px;
   --side-nav-width: 240px;
   --floating-notice-height: 0rem;
@@ -252,8 +267,11 @@
   --dialog-max-width-wide: 520px;
   --dialog-close-inset: 14px;
   --dialog-close-size: 32px;
+  --text-dialog-close: min(var(--text-4xl), var(--dialog-close-size));
   --blur-backdrop: 6px;
   --blur-bar: 22px;
+  --filter-ink: none;
+  --blend-ink: normal;
   --sheet-max-width: 600px;
   --sheet-grabber-width: 36px;
   --sheet-grabber-height: 5px;
@@ -264,11 +282,18 @@
   --tab-bar-max-width: 420px;
   --tab-bar-home-indicator-overlap: 13px;
   --tab-icon-size: 22px;
+  --launch-icon-size: 128px;
   --tab-bar-rendered-height: var(--tab-bar-height);
   --tab-bar-clearance: calc(
     var(--tab-bar-rendered-height) + 2 * var(--tab-bar-gap-browser) + env(safe-area-inset-bottom)
   );
   --back-button-size: 44px;
+  --window-controls-room-inline: 74px;
+  --window-controls-room-block: 52px;
+  --window-controls-inset-inline: 0px;
+  --window-controls-inset-block: 0px;
+  --scroll-edge-fade: 16px;
+  --touch-target-size: 44px;
   --list-row-min-height: 56px;
   --list-group-title-top: 0rem;
 
@@ -319,5 +344,73 @@
     --color-tab-bar: #616672;
     --color-tab-pill: #0f172a;
     --blur-bar: 0px;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --color-accent: #6ea8ff;
+    --color-accent-soft: #162a4d;
+    --color-accent-bg: #121d33;
+    --color-accent-2: #818cf8;
+    --color-accent-3: #38bdf8;
+
+    --color-text: #e6e8ee;
+    --color-text-secondary: #d1d5db;
+    --color-text-muted: #b4bac4;
+    --color-text-soft: #9aa3b2;
+    --color-text-subtle: #9aa3b2;
+
+    --color-surface: #10141f;
+    --color-surface-alt: #080b12;
+    --color-surface-muted: #1b2130;
+    --color-border-rule: #5d677a;
+    --color-surface-accent: #122340;
+    --color-surface-inverse: #13213f;
+    --color-surface-inverse-strong: #05070c;
+    --color-surface-quote: #13213f;
+
+    --color-backdrop: color-mix(in srgb, #000000 70%, transparent);
+
+    --color-border: #2a3243;
+    --color-border-field: #6b7588;
+    --color-border-soft: #1f2638;
+    --color-border-accent: #2c4a80;
+    --color-divider: #1c2232;
+    --color-focus-ring: #6ea8ff;
+
+    --color-danger: #f87171;
+    --color-danger-bg: #2c1316;
+    --color-danger-border: #b54646;
+    --color-warning: #fbbf24;
+    --color-warning-bg: #2a1f08;
+    --color-success: #4ade80;
+    --color-success-bg: #0e2a19;
+
+    --filter-ink: invert(1) hue-rotate(180deg);
+    --blend-ink: screen;
+  }
+}
+
+@media (prefers-color-scheme: dark) and (prefers-contrast: more) {
+  :root {
+    --color-text: #f8fafc;
+    --color-text-secondary: #f1f3f8;
+    --color-text-muted: #e5e7eb;
+    --color-text-soft: #c3c9d3;
+    --color-text-subtle: #c3c9d3;
+    --color-border: #8a93a3;
+    --color-border-soft: #8a93a3;
+    --color-border-accent: #6ea8ff;
+    --color-border-field: #9aa3b2;
+    --color-divider: #8a93a3;
+  }
+}
+
+@media (inverted-colors: inverted) {
+  :root {
+    --filter-ink: none;
+    --blend-ink: normal;
   }
 }

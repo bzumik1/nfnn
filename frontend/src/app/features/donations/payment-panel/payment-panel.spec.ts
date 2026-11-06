@@ -258,10 +258,23 @@ describe('Given the payment panel on a phone or a tablet', () => {
     expect(shared).toHaveLength(1);
     const [file] = shared[0].files ?? [];
     expect(shared[0].title).toBe('QR platba');
-    expect(file.name).toBe('qr-platba-nova-nadeje.png');
+    expect(file.name).toBe('QR platba Nová naděje 500 Kč.png');
     expect(file.type).toBe('image/png');
     expect(await readText(file)).toBe(pngTextOf(QR_OF_500.spayd));
     expect(downloads).toEqual([]);
+    expect(handoffStatus()).toBe('');
+  });
+
+  it('when the phone offers the QR image, then a line says the offer is opening until it closes', async () => {
+    const answer = deferred();
+    shareAnswer = answer.promise;
+    await openWithQr();
+
+    await tap('Otevřít v aplikaci banky');
+    expect(handoffStatus()).toBe('Otevíráme nabídku sdílení…');
+
+    answer.resolve();
+    await settle();
     expect(handoffStatus()).toBe('');
   });
 
@@ -382,6 +395,15 @@ describe('Given the payment panel on a phone or a tablet', () => {
     expect(await readText((shared[0].files ?? [])[0])).toBe(pngTextOf(QR_OF_1000.spayd));
   });
 
+  it('when the visitor picks 1 000 Kč and taps Otevřít v aplikaci banky, then the image offered is named after the foundation and the amount', async () => {
+    await openWithQr();
+    await tap('1 000 Kč');
+
+    await tap('Otevřít v aplikaci banky');
+
+    expect((shared[0].files ?? [])[0].name).toBe('QR platba Nová naděje 1 000 Kč.png');
+  });
+
   it('when a signed-in donor taps Otevřít v aplikaci banky, then the file carries their variable symbol', async () => {
     panel().componentRef.setInput('variableSymbol', '1234567890');
     await openWithQr();
@@ -470,6 +492,16 @@ describe('Given the payment panel on a phone or a tablet', () => {
       );
     });
 
+    it('and the device is still getting the payment ready, then a line says the bank app is opening', async () => {
+      await openWithQr();
+
+      await tap('Otevřít v aplikaci banky');
+
+      expect(handoffStatus()).toBe('Otevíráme platbu v aplikaci banky…');
+      reservations[0].answer(RESERVATION_ID);
+      await settle();
+    });
+
     it('and the worker reserves nothing, then platba.spayd downloads as before', async () => {
       await openWithQr();
 
@@ -511,7 +543,7 @@ describe('Given the payment panel on a phone or a tablet', () => {
 
     expect(shared).toHaveLength(1);
     const [file] = shared[0].files ?? [];
-    expect(file.name).toBe('qr-platba-nova-nadeje.png');
+    expect(file.name).toBe('QR platba Nová naděje 500 Kč.png');
     expect(file.type).toBe('image/png');
     expect(shared[0].title).toBe('QR platba');
     expect(await readText(file)).toBe(pngTextOf(QR_OF_500.spayd));

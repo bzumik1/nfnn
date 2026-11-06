@@ -282,7 +282,7 @@
                     {{ donor.giftCount }}
                   </td>
                   <td
-                    class="number"
+                    class="number ui-figures"
                     data-label="Celkem"
                     i18n-data-label="@@admin.yearlyReceipts.col.total"
                   >
@@ -290,7 +290,7 @@
                   </td>
                   <td data-label="Potvrzení" i18n-data-label="@@admin.yearlyReceipts.col.receipt">
                     @if (donor.receipt; as receipt) {
-                      <span class="ui-mono">{{ receipt.number }}</span>
+                      <span class="ui-figures">{{ receipt.number }}</span>
                     } @else {
                       <span class="muted" i18n="@@admin.yearlyReceipts.receipt.none">zatím ne</span>
                     }

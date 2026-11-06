@@ -72,7 +72,7 @@
       <div class="bank-row">
         <span class="bank-key" i18n="@@home.donate.bank.account">Číslo účtu</span>
         <span class="bank-value-wrap">
-          <span class="bank-value">{{ account.number }}</span>
+          <span class="bank-value ui-figures">{{ account.number }}</span>
           <app-copy-button
             [value]="account.number"
             what="číslo účtu"
@@ -84,7 +84,7 @@
         <div class="bank-row">
           <span class="bank-key" i18n="@@home.donate.bank.amount">Částka</span>
           <span class="bank-value-wrap">
-            <span class="bank-value"
+            <span class="bank-value ui-figures"
               >{{ crowns(chosen) }}&nbsp;<ng-container i18n="@@home.donate.amount.currency"
                 >Kč</ng-container
               ></span
@@ -101,7 +101,7 @@
         <div class="bank-row">
           <span class="bank-key" i18n="@@home.donate.bank.vs">Variabilní symbol</span>
           <span class="bank-value-wrap">
-            <span class="bank-value">{{ symbol }}</span>
+            <span class="bank-value ui-figures">{{ symbol }}</span>
             <app-copy-button
               [value]="symbol"
               what="variabilní symbol"
@@ -113,7 +113,10 @@
       <div class="bank-row">
         <span class="bank-key" i18n="@@home.donate.bank.iban">IBAN</span>
         <span class="bank-value-wrap">
-          <span class="bank-value">{{ ibanInGroups() }}</span>
+          <span class="bank-value ui-figures ui-figures--groups"
+            ><span class="iban-half">{{ ibanLines()[0] }}</span
+            >&ngsp;<span class="iban-half">{{ ibanLines()[1] }}</span></span
+          >
           <app-copy-button
             [value]="account.iban"
             what="IBAN"
@@ -167,6 +170,21 @@
       <span i18n="@@home.donate.bankApp.open">Otevřít v aplikaci banky</span>
     </button>
     <div class="bank-app-status" role="status">
+      @switch (handoffStep()) {
+        @case ('sharing') {
+          <p class="bank-app-progress" i18n="@@home.donate.bankApp.sharing">
+            Otevíráme nabídku sdílení…
+          </p>
+        }
+        @case ('opening') {
+          <p class="bank-app-progress" i18n="@@home.donate.bankApp.opening">
+            Otevíráme platbu v aplikaci banky…
+          </p>
+        }
+        @case ('saving') {
+          <p class="bank-app-progress" i18n="@@home.donate.qr.saving">Připravujeme obrázek…</p>
+        }
+      }
       @switch (handoffNotice()) {
         @case ('imageSaved') {
           <p class="ui-form-status">{{ savedQrText() }}</p>

@@ -106,6 +106,9 @@ public final class DonorRecord {
         PostalAddress checkedAddress = require(newAddress, "Address");
         LocaleCode checkedLocale = require(newLocale, "Preferred locale");
         Instant checkedAt = require(at, "Update time");
+        if (erasedAt != null) {
+            throw new IllegalStateException("Donor record " + id + " is erased, so its profile does not change");
+        }
         this.name = checkedName;
         this.address = checkedAddress;
         this.preferredLocale = checkedLocale;

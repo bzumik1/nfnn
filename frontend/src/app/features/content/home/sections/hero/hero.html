@@ -18,7 +18,7 @@
     <p class="hero-lead" i18n="@@home.hero.lead">
       Pomáháme zdravotně postiženým dětem k lepšímu životu. Každý příspěvek mění příběh.
     </p>
-    @if (!compact()) {
+    @if (showsActions()) {
       <div class="hero-btns">
         <a class="ui-cta" routerLink="/prispet" i18n="@@home.hero.cta.primary">Přispět</a>
         <a

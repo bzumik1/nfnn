@@ -36,6 +36,8 @@ const EDGE_ONLY = [
 ];
 const STATUS_PATH = '/api/donations/receipts/status';
 const STATUS_BODY_LIMIT = 1024;
+const API_BODY_LIMIT = 1024 * 1024;
+const UPLOAD_PATH = '/api/admin/content/media';
 const APP_SHELL = ['/', '/overit'];
 const NOT_INDEXED = ['/overit', '/overit/'];
 const CLIENT_ERRORS = '/api/operations/client-errors';
@@ -292,6 +294,28 @@ if (oversized.status !== 413) {
   );
 }
 expectEdgeNoStore(`POST ${STATUS_PATH} over ${STATUS_BODY_LIMIT} bytes`, oversized);
+
+const oversizedSignIn = await request({
+  ...signIn,
+  body: JSON.stringify({ email: `a@${'.'.repeat(API_BODY_LIMIT)}@`, password: 'x' }),
+});
+if (oversizedSignIn.status !== 413) {
+  fail(
+    `POST ${signIn.path} with a body over ${API_BODY_LIMIT} bytes answered ${oversizedSignIn.status}, expected 413 from nginx`,
+  );
+}
+expectEdgeNoStore(`POST ${signIn.path} over ${API_BODY_LIMIT} bytes`, oversizedSignIn);
+const largeUpload = await request({
+  method: 'POST',
+  path: UPLOAD_PATH,
+  headers: { 'Content-Type': 'application/octet-stream' },
+  body: 'x'.repeat(2 * API_BODY_LIMIT),
+});
+if (largeUpload.status !== 401) {
+  fail(
+    `POST ${UPLOAD_PATH} without a token and a body of ${2 * API_BODY_LIMIT} bytes answered ${largeUpload.status}, expected 401 from the backend (nginx lets photo uploads through up to 11 MB)`,
+  );
+}
 
 const clientError = (body) => ({
   method: 'POST',

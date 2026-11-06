@@ -361,6 +361,36 @@ class DonationReceiptIssuerTest {
     }
 
     @Test
+    @DisplayName("Given 60 replacements since the start of the year in Prague, when one more replacement is issued, then it is refused by the yearly cap before a number is taken")
+    void should_refuse_before_numbering_when_replaced_given_sixty_replacements_this_year() {
+        DonationReceipt active = yearlyReceipt(ReceiptDocumentFactory.fingerprintForYear(jana(), YEAR_2026, List.of(MARCH)), LocaleCode.CS);
+        givenDonationsOfJana(jana(), JUNE, MARCH);
+        when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.of(active));
+        when(receipts.countReplacementsIssuedSince(JANA, Instant.parse("2026-12-31T23:00:00Z"))).thenReturn(60L);
+
+        assertThatThrownBy(() -> issuer.issueForYear(JANA, YEAR_2026, TODAY)).isInstanceOfSatisfying(ReceiptIssueLimitReached.class,
+                refused -> assertThat(refused.code()).isEqualTo("donations/receipt-issue-limit"));
+
+        verify(receipts, never()).nextSerial();
+        verify(receipts, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Given 59 replacements since the start of the year in Prague, when one more replacement is issued, then it takes a new number")
+    void should_replace_when_replaced_given_fifty_nine_replacements_this_year() {
+        DonationReceipt active = yearlyReceipt(ReceiptDocumentFactory.fingerprintForYear(jana(), YEAR_2026, List.of(MARCH)), LocaleCode.CS);
+        givenDonationsOfJana(jana(), JUNE, MARCH);
+        when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.of(active));
+        when(receipts.countReplacementsIssuedSince(JANA, Instant.parse("2026-12-31T23:00:00Z"))).thenReturn(59L);
+        when(receipts.nextSerial()).thenReturn(2L);
+        givenFreezer();
+
+        DonationReceipt issued = issuer.issueForYear(JANA, YEAR_2026, TODAY);
+
+        assertThat(issued.supersedes()).contains(active.id());
+    }
+
+    @Test
     @DisplayName("Given a single receipt to issue, when issued, then no outdated yearly receipt is looked for")
     void should_not_look_for_outdated_receipt_when_issued_given_single_receipt() {
         givenDonationsOfJana(jana(), MARCH);

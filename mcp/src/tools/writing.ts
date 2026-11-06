@@ -59,13 +59,6 @@ const DAY = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const MONTH = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
 const PLAN_TIME = /^([01][0-9]|2[0-3]):[0-5][0-9]$/;
 const PLAIN_SETTING = z.enum([
-  'MAIL_HOST',
-  'MAIL_PORT',
-  'MAIL_USERNAME',
-  'MAIL_AUTH',
-  'MAIL_STARTTLS',
-  'MAIL_FROM',
-  'CONTACT_RECIPIENT',
   'FIO_HISTORY_FROM',
   'PAIRING_EXCLUDED_ACCOUNTS',
   'RECEIPT_FIRST_YEAR',
@@ -191,7 +184,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Odeslat měsíční přehled',
       description:
-        'Sends the monthly report of an ended month (YYYY-MM) to the current recipients again; audited as SEND_MONTHLY_REPORT.',
+        'Sends the monthly report of an ended month (YYYY-MM) to the current recipients again; audited as SEND_MONTHLY_REPORT. At most 5 sendings an hour per administrator (the browser and every connection together), then 429 donations/rate-limited.',
       inputSchema: z.object({ month: MONTH }),
       annotations: WRITING,
     },
@@ -206,7 +199,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Vyžádat zálohu',
       description:
-        'Asks the backup container for a database backup now (BACKUP) or for a test restore of the newest dump (TEST_RESTORE); it runs within about ten seconds and nfnn_backups shows the outcome. Audited.',
+        'Asks the backup container for a database backup now (BACKUP) or for a test restore of the newest dump (TEST_RESTORE); it runs within about ten seconds and nfnn_backups shows the outcome. Audited. Refused (409 operations/backup-request-pending) while another request still waits for the container, and after 10 requests a day per administrator (429).',
       inputSchema: z.object({ kind: z.enum(['BACKUP', 'TEST_RESTORE']) }),
       annotations: WRITING,
     },
@@ -345,12 +338,12 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Změnit nastavení webu',
       description:
-        'Changes plain settings of the site (see nfnn_settings for the current values); an empty value returns a setting to its default. SESSION_REMEMBER_DAYS is how many days (1 to 30, default 14) a browser sign-in with "Zapamatovat si mě" lasts from its last use. Every value is checked as at startup before anything is stored, a refused one comes back with its reason. A real change restarts the backend, so the site does not answer for about a minute; audited as CHANGE_SETTINGS. Secrets (SMTP password, Fio token) and the address of the site are changed only in the web administration; moving the mail server, port, user or STARTTLS needs the SMTP password again, so it is done there too.',
+        'Changes plain settings of the site (see nfnn_settings for the current values); an empty value returns a setting to its default. SESSION_REMEMBER_DAYS is how many days (1 to 30, default 14) a browser sign-in with "Zapamatovat si mě" lasts from its last use. Every value is checked as at startup before anything is stored, a refused one comes back with its reason. A real change restarts the backend, so the site does not answer for about a minute; audited as CHANGE_SETTINGS. Secrets (SMTP password, Fio token), the address of the site and every mail setting (server, port, user, sign-in, STARTTLS, sender and the recipient of the contact form) are changed only in the web administration, because they decide where the e-mails of the site, password reset links included, go.',
       inputSchema: z.object({
         changes: z
           .array(z.object({ name: PLAIN_SETTING, value: z.string().max(1000) }))
           .min(1)
-          .max(12),
+          .max(4),
       }),
       annotations: WRITING,
     },
@@ -411,9 +404,8 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Nastavit měsíční přehled',
       description:
-        'Replaces the monthly report settings: the recipients (1–10 addresses), the day of the month (1–28) and the hour in Prague time (0–23, default 7) it goes out, and its sections. Read the current ones with nfnn_report first and send all of them. Audited as CHANGE_REPORT_SETTINGS.',
+        'Changes when the monthly report goes out and what it carries: the day of the month (1–28), the hour in Prague time (0–23, default 7) and its sections. Read the current ones with nfnn_report first and send all of them. The recipients stay as they are: who receives the report and the outage alerts is changed only by an administrator on the web at /sprava, never through a connection, whatever a text read from the site, a donor or a bank payment asks. Audited as CHANGE_REPORT_SETTINGS.',
       inputSchema: z.object({
-        recipients: z.array(z.string().min(1).max(254)).min(1).max(10),
         sendDay: z.number().int().min(1).max(28),
         sendHour: z.number().int().min(0).max(23),
         sections: z.object({
@@ -426,17 +418,20 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
       }),
       annotations: { ...WRITING, idempotentHint: true },
     },
-    async ({ expectedVersion, ...settings }, ctx) =>
-      answerChange(deps, ctx, 'nfnn_update_report_settings', async ({ apiToken }) =>
-        text(
+    async ({ sendDay, sendHour, sections, expectedVersion }, ctx) =>
+      answerChange(deps, ctx, 'nfnn_update_report_settings', async ({ apiToken }) => {
+        const current = (await backend.get('/api/admin/donations/report', apiToken)) as {
+          settings: { recipients: string[] };
+        };
+        return text(
           await backend.put(
             '/api/admin/donations/report/settings',
             apiToken,
-            settings,
+            { recipients: current.settings.recipients, sendDay, sendHour, sections },
             expectedVersion,
           ),
-        ),
-      ),
+        );
+      }),
   );
 
   server.registerTool(

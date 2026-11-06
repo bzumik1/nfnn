@@ -2,10 +2,13 @@
   #dialog
   appKeyboardAvoidance
   class="dialog"
+  tabindex="-1"
   [class.dialog--sheet]="look() === 'sheet'"
   [class.dialog--full]="look() === 'full'"
   [class.dialog--viewer]="look() === 'viewer'"
   [attr.data-presentation]="look()"
+  [attr.role]="alert() ? 'alertdialog' : null"
+  [style.--dialog-pull]="pull()"
   [attr.aria-labelledby]="labelledBy()"
   [attr.aria-describedby]="describedBy()"
   (cancel)="onCancel($event)"
@@ -19,9 +22,14 @@
     [class.dialog-panel--wide]="wide()"
     [class.dialog-panel--dragging]="dragging()"
     [style.translate]="dragTranslate()"
+    [inert]="leaving()"
     (focusin)="keepFocusAboveActions($event)"
+    (touchstart)="touchStarted($event)"
+    (touchmove)="touchMoved($event)"
+    (touchend)="touchEnded($event)"
+    (touchcancel)="abandonTouch()"
   >
-    @if (look() === 'sheet' && dismissible()) {
+    @if (look() === 'sheet') {
       <span
         class="dialog-grabber"
         aria-hidden="true"
@@ -50,3 +58,37 @@
     </p>
   </div>
 </dialog>
+@if (askingToDiscard()) {
+  <app-dialog
+    presentation="sheet"
+    [labelledBy]="discardTitleId"
+    [alert]="true"
+    (dismissed)="keepWriting()"
+  >
+    <h2 class="ui-dialog__title" [id]="discardTitleId" i18n="@@ui.dialog.discard.title">
+      Zahodit rozepsané údaje?
+    </h2>
+    <p class="ui-dialog__lead" i18n="@@ui.dialog.discard.lead">
+      Co jste do formuláře napsali, se neuloží.
+    </p>
+    <div class="ui-dialog__actions">
+      <button
+        type="button"
+        class="ui-button ui-button--primary"
+        autofocus
+        (click)="keepWriting()"
+        i18n="@@ui.dialog.discard.keep"
+      >
+        Pokračovat v psaní
+      </button>
+      <button
+        type="button"
+        class="ui-button ui-button--large ui-button--danger-outline"
+        (click)="discard()"
+        i18n="@@ui.dialog.discard.confirm"
+      >
+        Zahodit
+      </button>
+    </div>
+  </app-dialog>
+}

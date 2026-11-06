@@ -6,8 +6,12 @@ import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.Role;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
+import cz.novanadeje.app.shared.infrastructure.lock.AdvisoryLock;
 import cz.novanadeje.app.shared.infrastructure.search.AccentFolding;
+import jakarta.persistence.EntityManager;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.Collection;
@@ -19,9 +23,11 @@ import java.util.stream.Collectors;
 class JpaDonorRepository implements DonorRepository {
 
     private final DonorJpaRepository jpa;
+    private final EntityManager entityManager;
 
-    JpaDonorRepository(DonorJpaRepository jpa) {
+    JpaDonorRepository(DonorJpaRepository jpa, EntityManager entityManager) {
         this.jpa = jpa;
+        this.entityManager = entityManager;
     }
 
     @Override
@@ -43,6 +49,28 @@ class JpaDonorRepository implements DonorRepository {
     @Override
     public Optional<Donor> findByEmail(EmailAddress email) {
         return jpa.findByEmail(email.value()).map(DonorJpaEntity::toDomain);
+    }
+
+    @Override
+    public Optional<Donor> findByIdForUpdate(DonorId id) {
+        return jpa.findByIdForUpdate(id.value()).map(DonorJpaEntity::toDomain);
+    }
+
+    @Override
+    public Optional<Donor> findByEmailForUpdate(EmailAddress email) {
+        return jpa.findByEmailForUpdate(email.value()).map(DonorJpaEntity::toDomain);
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void lockEmail(EmailAddress email) {
+        AdvisoryLock.DONOR_EMAIL_ADDRESSES.acquireFor(entityManager, email.value());
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void lockAdministrators() {
+        AdvisoryLock.ADMINISTRATORS.acquireFor(entityManager);
     }
 
     @Override

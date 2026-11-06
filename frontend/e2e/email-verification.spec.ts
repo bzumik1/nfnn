@@ -1,5 +1,5 @@
 import { expect, test } from './fixtures';
-import { donor, mockDonorApi, problem, session } from './donor-session';
+import { mockDonorApi, problem, session } from './donor-session';
 
 test.describe('Given a visitor on the donate section without an account', () => {
   test('when they register from there, then the registration asks the e-mail link to lead back to the donate section', async ({
@@ -89,24 +89,29 @@ test.describe('Given a visitor who registered and received the confirmation e-ma
     await expect(page).toHaveURL(/\/darce\/prehled$/);
   });
 
-  test('when the link confirms a new address of the account, then the page says the address changed and leads to the overview', async ({
+  test('when the link confirms a new address of the account, then the page says the address changed, opens no session and offers the sign-in', async ({
     page,
   }) => {
-    await page.route('**/api/donors/auth/email-verification/confirm', (route) =>
-      route.fulfill(session(200, { ...donor, email: 'jana.nova@example.cz' })),
-    );
-    await mockDonorApi(page);
+    const posted: unknown[] = [];
+    await page.route('**/api/donors/auth/email-change/confirm', async (route) => {
+      posted.push(route.request().postDataJSON());
+      await route.fulfill({ status: 204 });
+    });
 
     await page.goto('/potvrzeni-emailu#token=abc&change=email');
 
     await expect(page.getByRole('heading', { name: 'E-mail je změněný' })).toBeFocused();
     await expect(page.getByRole('status').filter({ hasText: /\S/ })).toContainText(
-      'Účet teď používá adresu jana.nova@example.cz.',
+      'Nová adresa je potvrzená.',
     );
+    expect(posted).toEqual([{ token: 'abc' }]);
     expect(page.url()).not.toContain('change');
-    await page.getByRole('button', { name: 'Přejít na můj přehled' }).click();
+    await page
+      .getByRole('region', { name: 'E-mail je změněný' })
+      .getByRole('button', { name: 'Přihlásit se' })
+      .click();
 
-    await expect(page).toHaveURL(/\/darce\/prehled$/);
+    await expect(page.getByRole('dialog')).toBeVisible();
   });
 
   test('when the link has expired, then the page sends a new one to the address they enter', async ({

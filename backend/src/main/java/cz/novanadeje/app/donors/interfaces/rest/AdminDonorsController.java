@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.interfaces.rest;
 
+import cz.novanadeje.app.donors.application.AdminActionCursor;
 import cz.novanadeje.app.donors.application.AdministratorActivityService;
 import cz.novanadeje.app.donors.application.AdministratorService;
 import cz.novanadeje.app.donors.application.DonorAdministrationService;
@@ -14,6 +15,7 @@ import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -106,10 +108,21 @@ class AdminDonorsController {
     @GetMapping("/actions")
     AdminActionListResponse actions(
             @RequestParam(required = false) Instant before,
+            @RequestParam(required = false) UUID beforeId,
             @RequestParam(defaultValue = "" + AdministratorActivityService.DEFAULT_PAGE_SIZE)
             @Min(1) @Max(AdministratorActivityService.MAX_PAGE_SIZE) int limit
-    ) {
-        return AdminActionListResponse.from(activity.list(Optional.ofNullable(before), limit), summaries, LocaleContextHolder.getLocale());
+    ) throws MissingServletRequestParameterException {
+        return AdminActionListResponse.from(activity.list(cursor(before, beforeId), limit), summaries, LocaleContextHolder.getLocale());
+    }
+
+    private static Optional<AdminActionCursor> cursor(Instant before, UUID beforeId) throws MissingServletRequestParameterException {
+        if (before == null) {
+            if (beforeId != null) {
+                throw new MissingServletRequestParameterException("before", Instant.class.getSimpleName());
+            }
+            return Optional.empty();
+        }
+        return Optional.of(new AdminActionCursor(before, Optional.ofNullable(beforeId)));
     }
 
     private static DonorId admin(Jwt jwt) {

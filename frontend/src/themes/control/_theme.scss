@@ -1,5 +1,6 @@
 :root {
   --color-accent: #0f766e;
+  --color-accent-fill: #0f766e;
   --color-accent-soft: #e6f4f1;
   --color-accent-bg: #ecfdf8;
   --color-accent-on-inverse: #5eead4;
@@ -21,6 +22,7 @@
   --color-surface-inverse: #1c2b25;
   --color-surface-inverse-strong: #111a16;
   --color-on-inverse: #fdfcf7;
+  --color-surface-quote: #202020;
 
   --color-on-image: #fdfcf7;
   --color-image-shade: #14201b;
@@ -31,9 +33,10 @@
   --color-border-soft: #e8e6dd;
   --color-border-accent: #99d5c9;
   --color-divider: #ebe9e1;
-  --color-focus-ring: #c2410c;
+  --color-focus-ring: #ea580c;
 
   --color-danger: #a1121a;
+  --color-danger-fill: #a1121a;
   --color-danger-bg: #fdf0ef;
   --color-danger-border: #f2b8b5;
   --color-on-danger: #ffffff;
@@ -45,6 +48,8 @@
   --color-qr-module: #202020;
   --color-qr-mark: #0f766e;
   --color-qr-ground: #ffffff;
+  --color-paper: #ffffff;
+  --color-paper-muted: #ecebe4;
   --color-logo: #0f766e;
   --color-logo-fill: #fdfcf7;
   --color-tab-bar: color-mix(in srgb, #1c2b25 72%, transparent);
@@ -58,8 +63,12 @@
 
   --font-serif: Georgia, 'Times New Roman', serif;
   --font-sans: system-ui, 'Segoe UI', Roboto, Arial, sans-serif;
+  --font-display: var(--font-serif);
+  --font-title: var(--font-serif);
+  --font-figures: var(--font-mono);
   --font-mono: ui-monospace, 'Courier New', monospace;
   --numeric-figures: tabular-nums;
+  --figure-features: normal;
 
   --text-2xs: 0.75rem;
   --text-xs: 0.8125rem;
@@ -72,13 +81,14 @@
   --text-4xl: 1.5rem;
   --text-5xl: 1.75rem;
   --text-6xl: 2.5rem;
-  --text-heading: clamp(1.5rem, 3.5vw, 1.875rem);
-  --text-section-title-compact: clamp(1.625rem, 3.5vw, 2.5rem);
-  --text-section-title: clamp(1.75rem, 3.5vw, 2.75rem);
-  --text-cta-title: clamp(1.5rem, 3vw, 2.5rem);
-  --text-article-title: clamp(2rem, 4.5vw, 3.25rem);
-  --text-page-title: clamp(2rem, 5vw, 3.5rem);
-  --text-hero: clamp(2.75rem, 7vw, 5.5rem);
+  --text-heading: clamp(max(1rem, min(1.5rem, 16vw)), 3.5vw, 1.875rem);
+  --text-section-title-compact: clamp(max(1rem, min(1.625rem, 16vw)), 3.5vw, 2.5rem);
+  --text-section-title: clamp(max(1rem, min(1.75rem, 16vw)), 3.5vw, 2.75rem);
+  --text-cta-title: clamp(max(1rem, min(1.5rem, 16vw)), 3vw, 2.5rem);
+  --text-article-title: clamp(max(1rem, min(2rem, 16vw)), 4.5vw, 3.25rem);
+  --text-page-title: clamp(max(1rem, min(2rem, 16vw)), 5vw, 3.5rem);
+  --text-hero: clamp(max(1rem, min(2.75rem, 27vw)), 7vw, 5.5rem);
+  --text-hero-short: max(2rem, min(5.5vw, 12svh));
 
   --weight-regular: 400;
   --weight-medium: 500;
@@ -136,6 +146,7 @@
   --color-pressed: color-mix(in srgb, currentColor 14%, transparent);
   --pressed-brightness: 0.8;
   --pressed-scale: 0.94;
+  --pressed-opacity: 0.5;
 
   --radius-xs: 0;
   --radius-sm: 2px;
@@ -175,6 +186,10 @@
 
   --content-max: 1140px;
   --header-height: 68px;
+  --text-header-action: min(
+    var(--text-sm),
+    (60vw - 1.2 * var(--space-5) - 2 * var(--space-4-5) - 3px) / 5.6
+  );
   --side-nav-layout-max: 1280px;
   --side-nav-width: 230px;
   --floating-notice-height: 0rem;
@@ -183,8 +198,11 @@
   --dialog-max-width-wide: 520px;
   --dialog-close-inset: 14px;
   --dialog-close-size: 32px;
+  --text-dialog-close: min(var(--text-4xl), var(--dialog-close-size));
   --blur-backdrop: 6px;
   --blur-bar: 12px;
+  --filter-ink: none;
+  --blend-ink: normal;
   --sheet-max-width: 640px;
   --sheet-grabber-width: 40px;
   --sheet-grabber-height: 4px;
@@ -195,11 +213,18 @@
   --tab-bar-max-width: 400px;
   --tab-bar-home-indicator-overlap: 15px;
   --tab-icon-size: 20px;
+  --launch-icon-size: 96px;
   --tab-bar-rendered-height: var(--tab-bar-height);
   --tab-bar-clearance: calc(
     var(--tab-bar-rendered-height) + 2 * var(--tab-bar-gap-browser) + env(safe-area-inset-bottom)
   );
   --back-button-size: 45px;
+  --window-controls-room-inline: 75px;
+  --window-controls-room-block: 55px;
+  --window-controls-inset-inline: 0px;
+  --window-controls-inset-block: 0px;
+  --scroll-edge-fade: 15px;
+  --touch-target-size: 45px;
   --list-row-min-height: 55px;
   --list-group-title-top: 0rem;
 
@@ -236,5 +261,51 @@
     --color-tab-bar: #5c6662;
     --color-tab-pill: #0b110e;
     --blur-bar: 0px;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --color-accent: #5eead4;
+    --color-accent-soft: #133a35;
+    --color-accent-bg: #10302b;
+    --color-accent-2: #fbbf77;
+    --color-accent-3: #c4b5fd;
+
+    --color-text: #ecebe4;
+    --color-text-secondary: #d6d3c8;
+    --color-text-muted: #c2beb1;
+    --color-text-soft: #a8a493;
+    --color-text-subtle: #a8a494;
+
+    --color-surface: #161a18;
+    --color-surface-alt: #0e1110;
+    --color-surface-muted: #222826;
+    --color-border-rule: #6b706a;
+    --color-surface-accent: #12302b;
+    --color-surface-inverse: #1f3a31;
+    --color-surface-inverse-strong: #0a0d0c;
+    --color-surface-quote: #1f3a31;
+
+    --color-backdrop: color-mix(in srgb, #0a0d0c 72%, transparent);
+
+    --color-border: #34403b;
+    --color-border-field: #78827c;
+    --color-border-soft: #26302c;
+    --color-border-accent: #2c5c53;
+    --color-divider: #232b28;
+    --color-focus-ring: #fdba74;
+
+    --color-danger: #fca5a5;
+    --color-danger-bg: #3a1214;
+    --color-danger-border: #b4474a;
+    --color-warning: #fcd34d;
+    --color-warning-bg: #2e2208;
+    --color-success: #86efac;
+    --color-success-bg: #0f2b1a;
+
+    --filter-ink: invert(1) hue-rotate(180deg);
+    --blend-ink: screen;
   }
 }

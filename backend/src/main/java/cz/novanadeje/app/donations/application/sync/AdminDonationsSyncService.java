@@ -11,8 +11,8 @@ import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimRepository;
 import cz.novanadeje.app.donations.domain.importing.BankImportStateRepository;
-import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptSummary;
 import cz.novanadeje.app.donations.domain.report.AdministrationYears;
 import cz.novanadeje.app.shared.application.account.AdministrationHolders;
 import org.springframework.stereotype.Service;
@@ -63,7 +63,7 @@ public class AdminDonationsSyncService {
         Set<DonorReference> erased = donorRecords.stream().filter(DonorRecord::isErased).map(DonorRecord::id).collect(Collectors.toSet());
         List<BankPayment> booked = payments.findAllNewestFirst();
         List<Donation> received = donations.findAllNewestFirst();
-        List<DonationReceipt> kept = receipts.findAllNewestFirst().stream().filter(receipt -> !erased.contains(receipt.donor())).toList();
+        List<ReceiptSummary> kept = receipts.findAllSummariesNewestFirst().stream().filter(receipt -> !erased.contains(receipt.donor())).toList();
         return new AdminDonationsSyncSnapshot(subject, true, today, AdministrationYears.everyOfferedYear(today, received, booked, donorRecords), booked,
                 received, donorRecords, claims.findAllNewestFirst(), kept, Optional.of(importStates.current()), Optional.of(reportSettings.view()));
     }

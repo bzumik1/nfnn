@@ -132,6 +132,7 @@ public class PeopleAdminService {
     public PersonView setWebSignature(UUID adminId, PersonId id, MediaId signature) {
         Instant now = clock.instant();
         Person current = find(id);
+        media.lockForUse(signature);
         if (media.findSize(signature).isEmpty()) {
             throw new MediaNotFound(signature);
         }
@@ -159,6 +160,7 @@ public class PeopleAdminService {
     }
 
     private PersonDetails checked(PersonDetails details) {
+        details.portrait().ifPresent(media::lockForUse);
         details.portrait().filter(portrait -> media.findSize(portrait).isEmpty()).ifPresent(portrait -> {
             throw new MediaNotFound(portrait);
         });

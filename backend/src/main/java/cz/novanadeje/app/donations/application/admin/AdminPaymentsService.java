@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donations.application.admin;
 
+import cz.novanadeje.app.donations.application.receipt.AdministrationChannel;
 import cz.novanadeje.app.donations.application.sync.AdminDonationsRows;
 import cz.novanadeje.app.donations.domain.bank.BankPayment;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentId;
@@ -58,6 +59,10 @@ public class AdminPaymentsService {
     }
 
     public AdminPaymentList listPaired(Optional<Year> requested, PaymentFilter filter) {
+        return listPaired(requested, filter, AdministrationChannel.BROWSER);
+    }
+
+    public AdminPaymentList listPaired(Optional<Year> requested, PaymentFilter filter, AdministrationChannel channel) {
         List<Year> availableYears = donations.findReceivedYearsNewestFirst();
         if (requested.isEmpty() && availableYears.isEmpty()) {
             return new AdminPaymentList(Optional.empty(), availableYears, List.of(), 0);
@@ -80,16 +85,17 @@ public class AdminPaymentsService {
         Set<DonationId> withReceipt = receipts.findDonationsWithReceipt(paired.stream().map(Donation::id).toList());
         List<AdminPaymentView> matching = paired.stream()
                 .map(donation -> pairedView(paymentsById.get(donation.bankPayment().orElseThrow()), donation,
-                        donorsById.get(donation.donor()), withReceipt.contains(donation.id())))
+                        donorsById.get(donation.donor()), withReceipt.contains(donation.id()), channel))
                 .filter(filter::matches)
                 .sorted(NEWEST_FIRST)
                 .toList();
         return new AdminPaymentList(requested, availableYears, filter.page(matching), matching.size());
     }
 
-    private AdminPaymentView pairedView(BankPayment payment, Donation donation, DonorRecord giver, boolean receiptIssued) {
+    private AdminPaymentView pairedView(BankPayment payment, Donation donation, DonorRecord giver, boolean receiptIssued, AdministrationChannel channel) {
         String version = rows.paidPayment(payment, donation, giver).version();
-        return new AdminPaymentView(payment, Optional.of(new PairedDonationView(donation, Optional.of(giver), receiptIssued)), version);
+        boolean payerWithheld = channel == AdministrationChannel.CONNECTED_APPLICATION && giver.isErased();
+        return new AdminPaymentView(payment, Optional.of(new PairedDonationView(donation, Optional.of(giver), receiptIssued)), version, payerWithheld);
     }
 
     public List<DonorRecord> searchDonors(String query) {

@@ -96,6 +96,8 @@ class DonorSecondFactorServiceTest {
     private PasskeyCeremonies ceremonies;
     @Mock
     private ApplicationEventPublisher events;
+    @Mock
+    private WrongSecondFactorCodeCount wrongCodes;
 
     private DonorSecondFactorService service;
 
@@ -103,7 +105,8 @@ class DonorSecondFactorServiceTest {
     void setUp() {
         service = new DonorSecondFactorService(donors, secondFactors, new DonorConfirmations(passwordHasher, passkeys, challenges, ceremonies, Clock.fixed(NOW, ZoneOffset.UTC)), sessions, new DonorViews(secondFactors, verificationTokens, Clock.fixed(NOW, ZoneOffset.UTC)),
                 new SecondFactorSessionGuard(secondFactors, passkeys),
-                new DonorSecondFactorProperties(Duration.ofMinutes(5), 5, "Nová naděje", Duration.ofDays(14)), events, Clock.fixed(NOW, ZoneOffset.UTC), signOuts);
+                new DonorSecondFactorProperties(Duration.ofMinutes(5), 5, "Nová naděje", Duration.ofDays(14)), events, Clock.fixed(NOW, ZoneOffset.UTC), signOuts,
+                new SecondFactorCodes(secondFactors, wrongCodes));
     }
 
     @Test
@@ -217,6 +220,7 @@ class DonorSecondFactorServiceTest {
         when(passwordHasher.matches(new RawPassword(PASSWORD), HASH)).thenReturn(true);
         when(secondFactors.findByDonor(DONOR)).thenReturn(Optional.of(SecondFactor.enrol(DONOR, SECRET, NOW.minusSeconds(60))), Optional.of(enabledFactor()));
         doThrow(new SessionEnded()).when(sessions).requireLasting(donor, DEVICE);
+        when(secondFactors.recordUse(any())).thenReturn(true);
 
         assertThatThrownBy(() -> service.confirm(DONOR, codeAt(NOW), DEVICE)).isInstanceOf(SessionEnded.class);
         assertThatThrownBy(() -> service.disable(DONOR, Confirmation.withPassword(PASSWORD), codeAt(NOW), DEVICE)).isInstanceOf(SessionEnded.class);
@@ -260,6 +264,7 @@ class DonorSecondFactorServiceTest {
         when(donors.findById(DONOR)).thenReturn(Optional.of(donor));
         when(passwordHasher.matches(new RawPassword(PASSWORD), HASH)).thenReturn(true);
         when(secondFactors.findByDonor(DONOR)).thenReturn(Optional.of(enabledFactor()), Optional.empty());
+        when(secondFactors.recordUse(any())).thenReturn(true);
         when(sessions.continueOn(donor, false, DEVICE)).thenReturn(TOKENS);
 
         AuthenticatedDonor result = service.disable(DONOR, Confirmation.withPassword(PASSWORD), codeAt(NOW), DEVICE);

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="008-drop-admin-action-admin-id-index" author="nfnn">
+        <preConditions onFail="MARK_RAN">
+            <indexExists tableName="admin_action" indexName="ix_admin_action_admin_id"/>
+        </preConditions>
+        <dropIndex tableName="admin_action" indexName="ix_admin_action_admin_id"/>
+    </changeSet>
+
+    <changeSet id="008-drop-admin-action-subject-id-index" author="nfnn">
+        <preConditions onFail="MARK_RAN">
+            <indexExists tableName="admin_action" indexName="ix_admin_action_subject_id"/>
+        </preConditions>
+        <dropIndex tableName="admin_action" indexName="ix_admin_action_subject_id"/>
+    </changeSet>
+
+</databaseChangeLog>

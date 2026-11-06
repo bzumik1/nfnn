@@ -16,6 +16,8 @@ describe('Given the panel of the locked administration', () => {
   let donor: ReturnType<typeof signal<Donor | null>>;
   let lock: {
     passkeyUnlocks: ReturnType<typeof vi.fn>;
+    accountPasskeyUnlocks: ReturnType<typeof vi.fn>;
+    unlockWithAccountPasskey: ReturnType<typeof vi.fn>;
     unlockWithPasskey: ReturnType<typeof vi.fn>;
     unlockWithPassword: ReturnType<typeof vi.fn>;
     signOut: ReturnType<typeof vi.fn>;
@@ -23,7 +25,11 @@ describe('Given the panel of the locked administration', () => {
   let logout: ReturnType<typeof vi.fn>;
   let online: boolean;
 
-  async function render(options: { passkey: boolean; donor?: Partial<Donor> }): Promise<void> {
+  async function render(options: {
+    passkey: boolean;
+    accountPasskey?: boolean;
+    donor?: Partial<Donor>;
+  }): Promise<void> {
     donor = signal<Donor | null>(
       sampleDonor({
         roles: ['DONOR', 'ADMIN'],
@@ -34,6 +40,8 @@ describe('Given the panel of the locked administration', () => {
     );
     lock = {
       passkeyUnlocks: vi.fn(async () => options.passkey),
+      accountPasskeyUnlocks: vi.fn(async () => options.accountPasskey ?? false),
+      unlockWithAccountPasskey: vi.fn(async () => true),
       unlockWithPasskey: vi.fn(async () => true),
       unlockWithPassword: vi.fn(() => of(undefined)),
       signOut: vi.fn(async () => undefined),
@@ -158,6 +166,66 @@ describe('Given the panel of the locked administration', () => {
       const alert = element('[role="alert"]')?.textContent ?? '';
       expect(alert).toContain('Přístupový klíč správu neodemkl');
       expect(alert).not.toContain('heslo');
+    });
+  });
+
+  describe('when the device keeps the administration under the password and the account has a passkey', () => {
+    beforeEach(() => render({ passkey: false, accountPasskey: true }));
+
+    it('then the passkey is offered first as the main way, with the password beside it', () => {
+      expect(buttons()).toEqual([
+        'Odemknout přístupovým klíčem',
+        'Použít heslo',
+        'Odhlásit se z tohoto zařízení',
+      ]);
+      expect(element('button.lock-passkey')?.classList).toContain('ui-button--primary');
+      expect(element('button.lock-use-password')?.classList).not.toContain('ui-button--primary');
+    });
+
+    it('and the passkey is pressed, then the server checks the passkey of the account and nothing is asked of the device copy', async () => {
+      element('button.lock-passkey')!.click();
+      await settle();
+
+      expect(lock.unlockWithAccountPasskey).toHaveBeenCalledOnce();
+      expect(lock.unlockWithPasskey).not.toHaveBeenCalled();
+      expect(element('[role="alert"]')).toBeNull();
+    });
+
+    it('and the passkey is cancelled, then it says so and offers the password', async () => {
+      lock.unlockWithAccountPasskey.mockResolvedValue(false);
+
+      element('button.lock-passkey')!.click();
+      await settle();
+
+      expect(element('[role="alert"]')?.textContent).toContain('Přístupový klíč správu neodemkl');
+    });
+
+    it('and the server refuses the passkey, then its reason is shown', async () => {
+      lock.unlockWithAccountPasskey.mockRejectedValue(
+        new HttpErrorResponse({
+          status: 400,
+          error: {
+            type: 'https://nfnn.cz/problems/donors/passkey-confirmation-rejected',
+            title: 'Přístupový klíč nesouhlasí',
+            status: 400,
+          },
+        }),
+      );
+
+      element('button.lock-passkey')!.click();
+      await settle();
+
+      expect(element('[role="alert"]')?.textContent).toContain('Přístupový klíč nesouhlasí');
+    });
+
+    it('and the device is offline, then the passkey waits for a connection like the password, and no offline passkey is promised', async () => {
+      online = false;
+      window.dispatchEvent(new Event('offline'));
+      await settle();
+
+      expect((element('button.lock-passkey') as HTMLButtonElement).disabled).toBe(true);
+      expect(element('.lock-lead')?.textContent).not.toContain('bez připojení');
+      TestBed.inject(HttpTestingController).match('/api/operations/setup');
     });
   });
 

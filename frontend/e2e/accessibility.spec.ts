@@ -7,6 +7,7 @@ import {
   mockAdministration,
   PETR_DETAIL_PATH,
   rememberedSession,
+  serveRecentDonors,
 } from './baseline/screen-mocks';
 import { fakeCameraShowing, pdfWithLink, pngDataUrl, qrCodePng } from './receipt-code-files';
 import {
@@ -1293,7 +1294,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await expect(
       sheet.getByRole('button', { name: 'Uložit svou verzi místo novější' }),
     ).toBeVisible();
-    await expect(sheet.getByRole('button', { name: 'Zavřít' })).toBeFocused();
+    await expect(sheet).toBeFocused();
 
     expect(await violations(page)).toEqual([]);
   });
@@ -1418,7 +1419,10 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await expect(page.locator('.action-rows > li').first()).toBeVisible();
     expect(await violations(page)).toEqual([]);
 
+    await serveRecentDonors(page);
     await page.goto('/sprava/darci');
+    await expect(page.locator('.donor-rows a.ui-list__row').first()).toBeVisible();
+    expect(await violations(page)).toEqual([]);
     await page.getByRole('searchbox', { name: 'Jméno, e-mail nebo variabilní symbol' }).fill('Svo');
     await expect(page.locator('.donor-rows a.ui-list__row').first()).toBeVisible();
     expect(await violations(page)).toEqual([]);

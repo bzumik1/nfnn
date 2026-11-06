@@ -58,7 +58,7 @@
             <div>
               <dt i18n="@@admin.donorDetail.summary.symbol">VS</dt>
               <dd class="summary-symbol">
-                <span class="ui-mono">{{ account.variableSymbol }}</span
+                <span class="ui-figures">{{ account.variableSymbol }}</span
                 >&ngsp;
                 <app-copy-button
                   [value]="account.variableSymbol"
@@ -319,7 +319,7 @@
                 <div>
                   <dt i18n="@@admin.donorDetail.account.symbol">Variabilní symbol</dt>
                   <dd>
-                    <span class="ui-mono">{{ account.variableSymbol }}</span>
+                    <span class="ui-figures">{{ account.variableSymbol }}</span>
                   </dd>
                 </div>
                 <div>
@@ -619,7 +619,7 @@
                         data-label="Účet"
                         i18n-data-label="@@admin.donorDetail.accounts.col.account"
                       >
-                        <span class="ui-mono admin-name">{{ item.accountNumber }}</span>
+                        <span class="ui-figures admin-name">{{ item.accountNumber }}</span>
                         @if (item.shared) {
                           <span class="tag tag--warn" i18n="@@admin.donorDetail.accounts.shared"
                             >sdílený</span
@@ -634,9 +634,14 @@
                           <span class="muted">
                             <ng-container i18n="@@admin.donorDetail.accounts.confirmedSymbols"
                               >Potvrzené starší symboly:</ng-container
-                            >&ngsp;<span class="ui-mono">{{
-                              item.confirmedSymbols.join(', ')
-                            }}</span>
+                            >&ngsp;<span class="ui-figures ui-figures--groups">
+                              @for (symbol of item.confirmedSymbols; track symbol) {
+                                @if (!$first) {
+                                  ,&ngsp;
+                                }
+                                <span>{{ symbol }}</span>
+                              }
+                            </span>
                           </span>
                         }
                       </td>
@@ -899,7 +904,7 @@
                         <span class="ui-list__meta">
                           {{ item.purpose }} · {{ pairingLabel(item) }}
                           @if (item.senderAccount) {
-                            <span class="ui-mono">{{ item.senderAccount }}</span>
+                            <span class="ui-figures">{{ item.senderAccount }}</span>
                           }
                           @if (item.confirmedSymbol) {
                             <ng-container i18n="@@admin.donorDetail.donations.symbol"
@@ -907,7 +912,9 @@
                             >
                           }
                         </span>
-                        <span class="ui-list__value">{{ crowns(item.amountMinor) }}&nbsp;Kč</span>
+                        <span class="ui-list__value ui-figures"
+                          >{{ crowns(item.amountMinor) }}&nbsp;Kč</span
+                        >
                         @if (item.status === 'REFUNDED') {
                           <span class="ui-list__state">
                             <span
@@ -963,7 +970,7 @@
                         data-label="Částka"
                         i18n-data-label="@@admin.donorDetail.donations.col.amount"
                       >
-                        <span class="ui-mono">{{ crowns(item.amountMinor) }}&nbsp;Kč</span>
+                        <span class="ui-figures">{{ crowns(item.amountMinor) }}&nbsp;Kč</span>
                       </td>
                       <td
                         data-label="Účel"
@@ -977,7 +984,7 @@
                       >
                         {{ pairingLabel(item) }}
                         @if (item.senderAccount) {
-                          <span class="muted ui-mono">{{ item.senderAccount }}</span>
+                          <span class="muted ui-figures">{{ item.senderAccount }}</span>
                         }
                         @if (item.confirmedSymbol) {
                           <span class="muted">
@@ -992,7 +999,7 @@
                         i18n-data-label="@@admin.donorDetail.donations.col.receipt"
                       >
                         @if (item.receiptNumber) {
-                          <span class="ui-mono">{{ item.receiptNumber }}</span>
+                          <span class="ui-figures">{{ item.receiptNumber }}</span>
                         } @else {
                           <span class="muted" i18n="@@admin.donorDetail.donations.noReceipt"
                             >zatím žádné</span
@@ -1106,7 +1113,7 @@
                       data-label="Číslo"
                       i18n-data-label="@@admin.donorDetail.receipts.col.number"
                     >
-                      <span class="ui-mono admin-name">{{ receipt.number }}</span>
+                      <span class="ui-figures admin-name">{{ receipt.number }}</span>
                     </td>
                     <td
                       data-label="Potvrzuje"

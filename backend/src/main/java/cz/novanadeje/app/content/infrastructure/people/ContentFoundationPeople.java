@@ -1,8 +1,8 @@
 package cz.novanadeje.app.content.infrastructure.people;
 
 import cz.novanadeje.app.content.domain.media.MediaId;
-import cz.novanadeje.app.content.domain.media.MediaImage;
 import cz.novanadeje.app.content.domain.media.MediaImageRepository;
+import cz.novanadeje.app.content.domain.media.MediaVariant;
 import cz.novanadeje.app.content.domain.people.Person;
 import cz.novanadeje.app.content.domain.people.PersonId;
 import cz.novanadeje.app.content.domain.people.PersonRepository;
@@ -63,12 +63,12 @@ class ContentFoundationPeople implements FoundationPeople {
     }
 
     private Optional<PrintPortrait> prepare(MediaId portrait) {
-        Optional<MediaImage> image = media.findById(portrait);
-        if (image.isEmpty()) {
+        Optional<MediaVariant> largest = media.findLargestVariant(portrait);
+        if (largest.isEmpty()) {
             return Optional.empty();
         }
         try {
-            return Optional.of(PrintPortraits.prepare(image.get().largest()));
+            return Optional.of(PrintPortraits.prepare(largest.get()));
         } catch (IllegalStateException undecodable) {
             log.warn("Portrait {} cannot be prepared for print, the receipt is issued without it", portrait.value());
             return Optional.empty();

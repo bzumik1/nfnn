@@ -32,4 +32,15 @@ class DeviceSignOutRulesTest {
             .and().resideOutsideOfPackage("..infrastructure.persistence..")
             .should().callMethodWhere(A_SIGN_OUT_OF_THE_TOKEN_REPOSITORY)
             .because("ending sessions must also end the devices and tell the access token check at once (plan v3, slice 2.9)");
+
+    private static final DescribedPredicate<JavaMethodCall> A_LOCK_OF_EVERY_TOKEN_OF_A_DONOR = DescribedPredicate.describe(
+            "a lock of every token of a donor in " + RefreshTokenRepository.class.getSimpleName(),
+            call -> call.getTarget().getName().equals("lockAllOf") && call.getTargetOwner().isAssignableTo(RefreshTokenRepository.class));
+
+    @ArchTest
+    static final ArchRule every_token_of_a_donor_is_locked_only_through_the_device_sign_outs = noClasses()
+            .that().doNotHaveFullyQualifiedName(DeviceSignOuts.class.getName())
+            .and().resideOutsideOfPackage("..infrastructure.persistence..")
+            .should().callMethodWhere(A_LOCK_OF_EVERY_TOKEN_OF_A_DONOR)
+            .because("the device sign-outs take the donor's sessions lock before they lock the donor's tokens, so two of them never deadlock (database audit #453)");
 }

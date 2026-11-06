@@ -822,10 +822,14 @@ export class AdminApi {
     );
   }
 
-  adminActions(before: string | null = null, limit = 50): Observable<AdminActionListResponse> {
+  adminActions(
+    after: Pick<AdminActionResponse, 'id' | 'performedAt'> | null = null,
+    limit = 50,
+  ): Observable<AdminActionListResponse> {
     const params: Record<string, string> = { limit: String(limit) };
-    if (before !== null) {
-      params['before'] = before;
+    if (after !== null) {
+      params['before'] = after.performedAt;
+      params['beforeId'] = after.id;
     }
     return this.http.get<AdminActionListResponse>('/api/admin/donors/actions', { params });
   }

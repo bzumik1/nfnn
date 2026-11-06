@@ -152,6 +152,7 @@ public class AuthorizationServerService {
         } catch (IllegalArgumentException malformed) {
             throw new InvalidGrant("the refresh token or the client is malformed");
         }
+        refreshTokens.lockSessionsOf(token.donorId());
         if (token.isUsed()) {
             signOuts.endAllOf(token.donorId(), DeviceSignOutReason.REPLAY, now);
             log.warn("A used refresh token of donor {} was presented by a client; every session of the donor is ended", token.donorId());
@@ -183,6 +184,9 @@ public class AuthorizationServerService {
         VerifiedAccessToken subject = accessTokenVerifier.verify(subjectToken);
         if (!subject.audiences().contains(properties.mcpResource())) {
             throw new InvalidGrant("the subject token was not issued for the connector");
+        }
+        if (subject.scopes().isEmpty()) {
+            throw new InvalidGrant("the subject token carries no scope");
         }
         Donor donor = donors.findById(subject.donorId()).filter(found -> !found.isErased()).orElseThrow(() -> new InvalidGrant("unknown donor"));
         Instant now = clock.instant();

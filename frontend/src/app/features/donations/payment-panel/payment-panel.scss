@@ -20,12 +20,11 @@
 }
 
 .panel-label {
-  font-size: var(--text-2xs);
-  font-weight: var(--weight-bold);
-  color: var(--color-accent);
+  font-family: var(--font-title);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
   margin-bottom: var(--space-3-5);
-  letter-spacing: var(--tracking-wide);
-  text-transform: uppercase;
 
   &:focus {
     outline: none;
@@ -67,8 +66,8 @@
   }
 
   &.active {
-    background: var(--color-accent);
-    border-color: var(--color-accent);
+    background: var(--color-accent-fill);
+    border-color: var(--color-accent-fill);
     color: var(--color-on-accent);
     box-shadow: var(--shadow-cta);
   }
@@ -137,7 +136,6 @@
 .bank-value {
   font-weight: var(--weight-bold);
   color: var(--color-text);
-  font-family: var(--font-mono);
   font-size: var(--text-md);
 }
 
@@ -272,13 +270,11 @@
   }
 
   .bank-value-wrap {
-    flex-wrap: nowrap;
     justify-content: space-between;
   }
 
   .bank-value {
-    min-width: 0;
-    overflow-wrap: anywhere;
+    flex: 1 1 0;
   }
 
   app-copy-button {
@@ -343,6 +339,12 @@
 
 .bank-app-status > * {
   margin: var(--space-3) 0 0;
+}
+
+.bank-app-progress {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
 }
 
 .bank-app .bank-app-second {

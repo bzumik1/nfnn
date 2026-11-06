@@ -97,6 +97,7 @@ public final class Donor {
     }
 
     public void verifyEmail(Instant at) {
+        requireNotErased();
         if (emailVerifiedAt != null) {
             throw new IllegalStateException("The e-mail of donor " + id + " is already verified");
         }
@@ -112,12 +113,14 @@ public final class Donor {
     }
 
     public void updateProfile(String newName, PostalAddress newAddress, LocaleCode newLocale) {
+        requireNotErased();
         this.name = requireName(newName);
         this.address = require(newAddress, "Address");
         this.preferredLocale = require(newLocale, "Preferred locale");
     }
 
     public void changePassword(PasswordHash newPasswordHash) {
+        requireNotErased();
         this.passwordHash = require(newPasswordHash, "Password hash");
     }
 
@@ -130,6 +133,7 @@ public final class Donor {
     }
 
     public void changeEmail(EmailAddress newEmail) {
+        requireNotErased();
         if (emailVerifiedAt == null) {
             throw new IllegalStateException("The e-mail of donor " + id + " is not verified yet");
         }
@@ -209,6 +213,12 @@ public final class Donor {
 
     public Instant registeredAt() {
         return registeredAt;
+    }
+
+    private void requireNotErased() {
+        if (erasedAt != null) {
+            throw new DonorAlreadyErased(id);
+        }
     }
 
     private static String requireName(String value) {

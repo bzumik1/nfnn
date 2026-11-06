@@ -13,7 +13,7 @@
 }
 
 .title {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: var(--text-section-title);
   font-weight: var(--weight-extrabold);
   line-height: var(--leading-display);
@@ -94,7 +94,7 @@
   position: absolute;
   bottom: -28px;
   left: -28px;
-  background: var(--color-accent);
+  background: var(--color-accent-fill);
   color: var(--color-on-accent);
   border-radius: var(--radius-media);
   padding: var(--space-5-5) var(--space-7);
@@ -103,7 +103,7 @@
 }
 
 .about-badge-title {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: var(--text-5xl);
   font-weight: var(--weight-extrabold);
   line-height: var(--leading-none);
@@ -149,7 +149,7 @@
 }
 
 .board-name {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: var(--text-3xl);
   font-weight: var(--weight-bold);
   line-height: var(--leading-heading);
@@ -197,6 +197,8 @@
   width: auto;
   height: 44px;
   max-width: 100%;
+  filter: var(--filter-ink);
+  mix-blend-mode: var(--blend-ink);
 }
 
 .signature-name {

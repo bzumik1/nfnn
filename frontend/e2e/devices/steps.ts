@@ -6,9 +6,10 @@ import {
   PETR_DETAIL_PATH,
   project,
   servePaymentDetails,
+  serveRecentDonors,
 } from '../baseline/screen-mocks';
 import { administrator, donor, mockDonorApi, session } from '../donor-session';
-import { ADMINISTRATION_UNLOCK_PATH } from '../fixtures';
+import { ADMINISTRATION_COPY_RECORD_PATH, ADMINISTRATION_UNLOCK_PATH } from '../fixtures';
 import { serveReceiptKeys, serveReceiptStatus, SINGLE_RECEIPT } from '../receipt-verification';
 import { FOUR_DONORS, mockYearlyReceipts } from '../yearly-receipts';
 import type { Ui } from './ui';
@@ -104,6 +105,10 @@ async function donorPage(ui: Ui, path: string): Promise<void> {
 async function lockedAdministration(ui: Ui, path: string): Promise<void> {
   await mockDonorApi(ui.routes, donorWithDonations);
   await mockAdministration(ui.routes);
+  await ui.routes.route(
+    (url) => url.pathname === ADMINISTRATION_COPY_RECORD_PATH,
+    (route) => route.fulfill({ status: 204 }),
+  );
   await ui.routes.route(
     (url) => url.pathname === ADMINISTRATION_UNLOCK_PATH,
     (route) => route.fulfill({ status: 204 }),
@@ -283,6 +288,15 @@ export const STEPS: Step[] = [
     id: 'admin-donors',
     title: 'the donors in the administration',
     open: (ui) => adminPage(ui, '/sprava/darci'),
+  },
+  {
+    id: 'admin-donors-recent',
+    title: 'the donors who gave last in the administration',
+    open: async (ui) => {
+      await serveRecentDonors(ui.routes);
+      await adminPage(ui, '/sprava/darci');
+      await ui.waitVisible({ css: '.recent-title' });
+    },
   },
   {
     id: 'admin-donor-detail',

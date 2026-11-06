@@ -2,9 +2,11 @@
 @use 'breakpoints' as bp;
 @use 'styles/form-controls';
 @use 'styles/controls';
+@use 'styles/launch-screen';
 @use 'styles/ui/page';
 @use 'styles/ui/card';
 @use 'styles/ui/notice';
+@use 'styles/ui/figures';
 @use 'styles/ui/button';
 @use 'styles/ui/table';
 @use 'styles/ui/form';
@@ -26,7 +28,7 @@
 html {
   touch-action: manipulation;
   scroll-behavior: smooth;
-  scroll-padding-top: calc(var(--header-height) + var(--space-4));
+  scroll-padding-top: calc(env(safe-area-inset-top) + var(--header-height) + var(--space-4));
 }
 
 html.follows-system-text-size {
@@ -34,12 +36,20 @@ html.follows-system-text-size {
   font-family: var(--font-sans);
 }
 
+:where(h1, h2, h3) {
+  overflow-wrap: break-word;
+}
+
 html:has(app-tab-bar) {
   scroll-padding-bottom: var(--tab-bar-clearance);
 }
 
-html:has(app-landing) {
+html:has(app-landing),
+html:has(app-landing) body {
   background: var(--color-image-shade);
+}
+
+html:has(app-landing) {
   overscroll-behavior: none;
 }
 
@@ -48,6 +58,10 @@ html:has(app-landing) {
   html:has(app-not-found) body {
     background: var(--color-surface-inverse);
   }
+}
+
+html.footer-in-view body {
+  background: var(--color-surface-inverse-strong);
 }
 
 :focus-visible {
@@ -122,10 +136,15 @@ body {
   }
 }
 
+html.has-window-controls {
+  --window-controls-inset-inline: var(--window-controls-room-inline);
+  --window-controls-inset-block: var(--window-controls-room-block);
+}
+
 .skip-link {
   position: fixed;
   top: var(--space-4);
-  left: var(--space-4);
+  left: max(var(--space-4), var(--window-controls-inset-inline));
   z-index: 300;
   padding: var(--space-3) var(--space-5);
   border-radius: var(--radius-pill);

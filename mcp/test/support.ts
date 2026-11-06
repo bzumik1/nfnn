@@ -79,10 +79,14 @@ export async function startApp(): Promise<TestApp> {
   };
 }
 
-export async function connect(app: App, token: string): Promise<Client> {
+export async function connect(
+  app: App,
+  token: string,
+  headers: Record<string, string> = {},
+): Promise<Client> {
   const transport = new StreamableHTTPClientTransport(new URL(MCP_URL), {
     fetch: (input, init) => app.fetch(new Request(input, init)),
-    requestInit: { headers: { authorization: `Bearer ${token}` } },
+    requestInit: { headers: { ...headers, authorization: `Bearer ${token}` } },
   });
   const client = new Client({ name: 'test', version: '0' });
   await client.connect(transport);

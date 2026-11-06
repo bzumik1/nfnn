@@ -70,7 +70,7 @@ public class SecondFactorRecoveryService {
     public SecondFactorRecoveryInstructions start(String challenge) {
         Instant now = clock.instant();
         SecondFactorChallenge waiting = waitingSignIn(challenge, now);
-        Donor donor = donors.findById(waiting.donorId()).orElseThrow(InvalidSecondFactorChallenge::new);
+        Donor donor = donors.findByIdForUpdate(waiting.donorId()).orElseThrow(InvalidSecondFactorChallenge::new);
         secondFactors.findByDonor(donor.id()).filter(SecondFactor::isEnabled).orElseThrow(InvalidSecondFactorChallenge::new);
         SecondFactorRecoveryTarget target = targets.targetFor(donor.id().value()).orElseThrow(SecondFactorRecoveryUnavailable::new);
         Optional<SecondFactorRecovery> open = recoveries.findOpenOf(donor.id(), now).filter(found -> found.code().isPresent());
@@ -98,12 +98,12 @@ public class SecondFactorRecoveryService {
         DonorId donorId = new DonorId(payment.donorId());
         Optional<SecondFactorRecovery> recovery = recoveries.findByCodeHash(payment.code().hash())
                 .filter(found -> found.donorId().equals(donorId) && found.isOpenAt(now));
-        if (recovery.isEmpty() || !recoveries.markUsed(recovery.get().id(), now)) {
+        Optional<Donor> locked = recovery.flatMap(found -> donors.findByIdForUpdate(donorId));
+        if (locked.isEmpty() || !recoveries.markUsed(recovery.get().id(), now)) {
             log.info("A second-factor recovery payment of donor {} matches no open recovery", donorId);
             return;
         }
-        Optional<Donor> donor = donors.findById(donorId)
-                .filter(found -> secondFactors.findByDonor(donorId).filter(SecondFactor::isEnabled).isPresent());
+        Optional<Donor> donor = locked.filter(found -> secondFactors.findByDonor(donorId).filter(SecondFactor::isEnabled).isPresent());
         if (donor.isEmpty()) {
             log.info("Second-factor recovery {} of donor {} was paid, but the second factor is off already", recovery.get().id(), donorId);
             return;

@@ -18,7 +18,9 @@ async function clippedTexts(page: Page): Promise<string[]> {
         const ownText = Array.from(element.childNodes).some(
           (node) => node.nodeType === Node.TEXT_NODE && node.textContent!.trim() !== '',
         );
-        if (!ownText || element.closest('svg, .visually-hidden')) {
+        const box = element.getBoundingClientRect();
+        const visuallyHidden = box.width <= 1 && box.height <= 1;
+        if (!ownText || visuallyHidden || element.closest('svg, .visually-hidden')) {
           return false;
         }
         const style = getComputedStyle(element);

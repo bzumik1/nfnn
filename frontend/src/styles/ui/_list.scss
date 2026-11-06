@@ -65,7 +65,7 @@ div.ui-list__row {
   overflow-wrap: anywhere;
 }
 
-.ui-list__row:not(:has(.ui-list__meta)) > .ui-list__title {
+.ui-list__row:has(.ui-list__state):not(:has(.ui-list__meta)) > .ui-list__title {
   grid-row: 1 / span 2;
 }
 
@@ -93,7 +93,7 @@ div.ui-list__row {
   min-width: var(--space-5);
   padding: var(--space-0-5) var(--space-1-5);
   border-radius: var(--radius-pill);
-  background: var(--color-accent);
+  background: var(--color-accent-fill);
   color: var(--color-on-accent);
   font-size: var(--text-xs);
   font-weight: var(--weight-bold);

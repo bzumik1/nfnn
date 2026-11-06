@@ -52,6 +52,15 @@ export class BackTarget {
     }
   }
 
+  toTabRoot(root: string): void {
+    if (this.canGoBack && this.behind === root) {
+      this.buttonPressed = true;
+      this.location.back();
+    } else {
+      void this.router.navigateByUrl(root, { replaceUrl: true });
+    }
+  }
+
   nextDepth(): number {
     return this.depth + 1;
   }

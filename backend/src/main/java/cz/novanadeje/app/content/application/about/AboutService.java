@@ -46,6 +46,7 @@ public class AboutService {
     public AboutView change(UUID adminId, AboutCommand command) {
         Instant now = clock.instant();
         Optional<AboutPhoto> next = command.toPhoto();
+        next.map(AboutPhoto::image).ifPresent(media::lockForUse);
         Optional<MediaSize> size = next.map(photo -> media.findSize(photo.image()).orElseThrow(() -> new MediaNotFound(photo.image())));
         Optional<AboutSection> stored = about.find();
         if (next.isEmpty() && stored.flatMap(AboutSection::photo).isEmpty()) {

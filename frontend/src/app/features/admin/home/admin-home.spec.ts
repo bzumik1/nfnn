@@ -24,6 +24,7 @@ import {
   receiptSignatory,
 } from '../testing/admin-fixtures';
 import { CompactLayout } from '../../../core/layout/compact-layout';
+import { FOUNDATION_STAR } from '../../../shared/ui/foundation-star/foundation-star';
 import { AdminHome } from './admin-home';
 
 const IMPORT_STATE_URL = '/api/admin/donations/import-state';
@@ -915,6 +916,14 @@ describe('Given an administrator on the administration home', () => {
         ],
         ['Občas a pro technika', 'Lidé fondu, správci, zálohy, nastavení… → /sprava/vice'],
       ]);
+    });
+
+    it("then the way to the rest leads with the foundation's star, hidden from screen readers", () => {
+      const lead = sections()?.querySelector('a[href="/sprava/vice"] .ui-list__lead');
+
+      expect(lead?.getAttribute('aria-hidden')).toBe('true');
+      expect(lead?.querySelector('svg')?.getAttribute('viewBox')).toBe(FOUNDATION_STAR.viewBox);
+      expect(lead?.querySelector('path')?.getAttribute('d')).toBe(FOUNDATION_STAR.path);
     });
 
     it('then the payments row shows how many payments wait to be paired and says it to screen readers', async () => {

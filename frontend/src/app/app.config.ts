@@ -38,12 +38,14 @@ import { AppInstall } from './core/install/app-install';
 import { AlertNotificationClicks } from './core/push/alert-notification-clicks';
 import { AppBadge } from './core/push/app-badge';
 import { pressedOnTouchAtStart } from './core/touch/pressed-on-touch';
+import { inputModalityAtStart } from './core/input/input-modality';
 import { AppUpdates } from './core/updates/app-updates';
 import { provideAppServiceWorker } from './core/updates/angular-service-worker';
 import { serviceWorkerBypassInterceptor } from './core/updates/service-worker-bypass';
 import { versionInterceptor } from './core/version/version-interceptor';
 import { pagePinchLockAtStart } from './core/zoom/page-pinch-lock';
 import { systemTextSizeAtStart } from './core/zoom/system-text-size';
+import { windowControlsAtStart } from './core/layout/window-controls';
 import { DeviceCopies } from './device-copies';
 import { DialogHistory } from './shared/ui/dialog/dialog-history';
 
@@ -115,7 +117,9 @@ export const appConfig: ApplicationConfig = {
     connectivityAtStart,
     pagePinchLockAtStart,
     pressedOnTouchAtStart,
+    inputModalityAtStart,
     systemTextSizeAtStart,
+    windowControlsAtStart,
     navigationAtStart,
     edgeSwipeBackAtStart,
   ],

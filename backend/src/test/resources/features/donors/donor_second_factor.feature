@@ -78,14 +78,45 @@ Feature: Donor protects the account with a second factor from an authenticator a
     And the donor turned the second factor on with password "correct horse battery"
     And 30 seconds pass
     And the donor signed in with email "jana@example.cz" and password "correct horse battery" up to the code
-    And the donor completed the sign-in with code "000000" 10 times
+    And the donor completed the sign-in with code "000000" 5 times
+    And the donor signed in with email "jana@example.cz" and password "correct horse battery" up to the code
+    And the donor completed the sign-in with code "000000" 4 times
     When the donor completes the sign-in with the current code
+    Then the response status is 200
+    When 30 seconds pass
+    And the donor signed in with email "jana@example.cz" and password "correct horse battery" up to the code
+    And the donor completes the sign-in with code "000000"
     Then the response status is 429
     And the problem type ends with "donors/rate-limited"
     When the following requests come from another client address
     And the donor signed in with email "jana@example.cz" and password "correct horse battery" up to the code
     And the donor completes the sign-in with the current code
     Then the response status is 200
+
+  Scenario: Ten wrong codes within 15 minutes, from any address, stop every code of the donor for an hour, even the right one, and tell the donor once by e-mail
+    Given the donor signed in with email "jana@example.cz" and password "correct horse battery"
+    And the donor turned the second factor on with password "correct horse battery"
+    And 30 seconds pass
+    And the donor entered the code "000000" 10 times, each after signing in with email "jana@example.cz" and password "correct horse battery" from another client address
+    When the following requests come from another client address
+    And the donor signed in with email "jana@example.cz" and password "correct horse battery" up to the code
+    And the donor completes the sign-in with the current code
+    Then the response status is 409
+    And the problem type ends with "donors/second-factor-codes-paused"
+    And the problem has the title "Kódy z aplikace teď nepřijímáme"
+    And no refresh cookie is set
+    And 1 e-mail is sent to "jana@example.cz" with the subject "Někdo zkouší kódy k vašemu účtu – Nová naděje"
+    When 1 hour passes
+    And the following requests come from another client address
+    And the donor signed in with email "jana@example.cz" and password "correct horse battery" up to the code
+    And the donor completes the sign-in with the current code
+    Then the response status is 409
+    And the problem type ends with "donors/second-factor-codes-paused"
+    And 1 e-mail is sent to "jana@example.cz" with the subject "Někdo zkouší kódy k vašemu účtu – Nová naděje"
+    When 1 second passes
+    And the donor completes the sign-in with the current code
+    Then the response status is 200
+    And the response carries an access token and a refresh cookie
 
   Scenario: An administrator holds the administrator role only in a session opened with the code, and keeps it across refreshes
     Given the donor with email "jana@example.cz" is given the administrator role

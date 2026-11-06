@@ -693,6 +693,39 @@ Feature: A donor issues receipts of their donations as frozen, signed data
     And 22 receipts are stored
     And 1 receipt is active
 
+  Scenario: A donor gets at most 60 replacements in a calendar year in Prague, and the count starts again on 1 January
+    Given today is 2026-12-20
+    And a person "Jana" is registered
+    And the bank account has these movements:
+      | id   | date       | amount  | account    | bankCode | name          | variableSymbol |
+      | 2001 | 2026-10-01 | 1000.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
+    And the application starts the import
+    And today is 2027-12-28
+    And "Jana" changed her address and issued her yearly receipt for 2026 21 times
+    And 1 days pass
+    And "Jana" changed her address and issued her yearly receipt for 2026 20 times
+    And 1 days pass
+    And "Jana" changed her address and issued her yearly receipt for 2026 20 times
+    When 1 days pass
+    And "Jana" changes her address to street "Nová 7", postal code "405 02" and city "Děčín"
+    And "Jana" issues her yearly receipt for 2026
+    Then the response status is 409
+    And the problem type ends with "donations/receipt-issue-limit"
+    And 61 receipts are stored
+    And 1 receipt is active
+    When 719 minutes pass
+    And "Jana" issues her yearly receipt for 2026
+    Then the response status is 409
+    When 1 minutes pass
+    And "Jana" issues her yearly receipt for 2026
+    Then the response status is 200
+    And the issued receipt has number "2028-000062"
+    And the frozen receipt holds:
+      | field                | value       |
+      | donor.address.street | Nová 7      |
+      | replaces.number      | 2027-000061 |
+    And 62 receipts are stored
+
   Scenario: A donor with many gifts gets the first receipt of each of them on one day
     Given today is 2026-12-20
     And a person "Jana" is registered

@@ -2,6 +2,8 @@ import { BrowserPlatformLocation, Location, PlatformLocation } from '@angular/co
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
+import { InputModality } from '../../../core/input/input-modality';
+import { CompactLayout } from '../../../core/layout/compact-layout';
 import { Dialog } from './dialog';
 import { SuspendsDialogs } from './dialog-suspension';
 import { DialogAnnouncer } from './dialog-announcer';
@@ -193,6 +195,81 @@ describe('Given a dialog opened from a button', () => {
 @Component({
   imports: [Dialog],
   template: `
+    <button type="button" id="opener" (click)="open.set(true)">Otevřít</button>
+    @if (open()) {
+      <app-dialog labelledBy="title" (dismissed)="open.set(false)">
+        <h2 id="title">Název</h2>
+        <input id="field" [attr.autofocus]="fieldTakesFocus() ? '' : null" />
+      </app-dialog>
+    }
+  `,
+})
+class PressedHost {
+  readonly open = signal(false);
+  readonly fieldTakesFocus = signal(false);
+}
+
+describe('Given a dialog and the press that opens it', () => {
+  let fixture: ComponentFixture<PressedHost>;
+  let modality: InputModality;
+
+  const opener = () => fixture.nativeElement.querySelector('#opener') as HTMLButtonElement;
+  const native = () => fixture.nativeElement.querySelector('dialog') as HTMLDialogElement;
+
+  const openBy = (press: Event): void => {
+    opener().focus();
+    opener().dispatchEvent(press);
+    opener().click();
+    fixture.detectChanges();
+  };
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [PressedHost],
+      providers: [{ provide: DialogHistory, useClass: FakeDialogHistory }],
+    });
+    modality = TestBed.inject(InputModality);
+    modality.start();
+    fixture = TestBed.createComponent(PressedHost);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    modality.stop();
+    fixture.nativeElement.remove();
+  });
+
+  it('when a finger or a mouse opens it, then the dialog itself holds the focus, so no control shows a focus ring nobody asked for', () => {
+    openBy(new Event('pointerdown', { bubbles: true }));
+
+    expect(document.activeElement).toBe(native());
+  });
+
+  it('when a finger or a mouse opens it, then the dialog itself stays out of the tab order', () => {
+    openBy(new Event('pointerdown', { bubbles: true }));
+
+    expect(native().getAttribute('tabindex')).toBe('-1');
+  });
+
+  it('when the keyboard opens it, then the browser moves the focus into it as before', () => {
+    openBy(new KeyboardEvent('keydown', { bubbles: true, key: 'Enter' }));
+
+    expect(document.activeElement).not.toBe(native());
+  });
+
+  it('when a finger opens it and a field asks for the focus, then the field keeps it', () => {
+    fixture.componentInstance.fieldTakesFocus.set(true);
+
+    openBy(new Event('pointerdown', { bubbles: true }));
+
+    expect(document.activeElement?.id).toBe('field');
+  });
+});
+
+@Component({
+  imports: [Dialog],
+  template: `
     @if (open()) {
       <app-dialog
         labelledBy="title"
@@ -316,6 +393,8 @@ describe('Given a dialog presented as a sheet that the visitor drags by its top 
     grabber().dispatchEvent(pointer('pointerup', 0, 0));
     fixture.detectChanges();
     await fixture.whenStable();
+    await new Promise((resolve) => setTimeout(resolve));
+    fixture.detectChanges();
   };
 
   beforeEach(async () => {
@@ -368,12 +447,19 @@ describe('Given a dialog presented as a sheet that the visitor drags by its top 
     expect(panel().style.translate).toBe('');
   });
 
-  it('when the page holds the sheet open while something runs, then no grabber offers to drag it away', async () => {
+  it('when the page holds the sheet open while something runs, then a drag only stretches it and it returns', async () => {
     fixture.componentInstance.locked.set(true);
     fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(grabber()).toBeNull();
+    press();
+    await dragTo(400, 1000);
+    const stretched = parseFloat(panel().style.translate.split(' ')[1]);
+    await release();
+
+    expect(stretched).toBeGreaterThan(0);
+    expect(stretched).toBeLessThan(100);
+    expect(fixture.componentInstance.dismissals).toBe(0);
     expect(panel().style.translate).toBe('');
   });
 
@@ -400,6 +486,215 @@ describe('Given a dialog presented as a sheet that the visitor drags by its top 
 
     expect(fixture.componentInstance.dismissals).toBe(0);
     expect(panel().style.translate).toBe('');
+  });
+});
+
+@Component({
+  imports: [Dialog],
+  template: `
+    @if (open()) {
+      <app-dialog
+        labelledBy="pulled-title"
+        presentation="sheet"
+        [dismissible]="!locked()"
+        [unsavedInput]="unsaved()"
+        (dismissed)="dismissed()"
+      >
+        <h2 id="pulled-title">Údaje</h2>
+        <p id="pulled-text">Text listu</p>
+        <input id="pulled-field" />
+      </app-dialog>
+    }
+  `,
+})
+class PulledHost {
+  readonly open = signal(true);
+  readonly locked = signal(false);
+  readonly unsaved = signal(false);
+  dismissals = 0;
+
+  dismissed(): void {
+    this.dismissals++;
+    this.open.set(false);
+  }
+}
+
+describe('Given a sheet whose content the visitor pulls with a finger', () => {
+  let fixture: ComponentFixture<PulledHost>;
+
+  const panel = () => fixture.nativeElement.querySelector('.dialog-panel') as HTMLElement;
+  const text = () => fixture.nativeElement.querySelector('#pulled-text') as HTMLElement;
+  const question = () =>
+    document.querySelector('dialog[role="alertdialog"]') as HTMLDialogElement | null;
+  const touch = (
+    type: string,
+    target: Element,
+    points: readonly (readonly [number, number])[],
+    timeStamp: number,
+  ): Event => {
+    const event = new Event(type, { bubbles: true, cancelable: true });
+    Object.defineProperties(event, {
+      touches: { value: points.map(([clientX, clientY]) => ({ clientX, clientY })) },
+      timeStamp: { value: timeStamp },
+    });
+    target.dispatchEvent(event);
+    return event;
+  };
+  const settle = async (): Promise<void> => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+    await new Promise((resolve) => setTimeout(resolve));
+    fixture.detectChanges();
+  };
+  const pull = async (to: number, from = 100): Promise<Event> => {
+    touch('touchstart', text(), [[100, from]], 0);
+    touch('touchmove', text(), [[100, from + 20]], 20);
+    const last = touch('touchmove', text(), [[100, to]], 40);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    return last;
+  };
+  const letGo = async (): Promise<void> => {
+    touch('touchend', text(), [], 400);
+    await settle();
+  };
+
+  beforeEach(async () => {
+    TestBed.configureTestingModule({
+      imports: [PulledHost],
+      providers: [
+        { provide: DialogHistory, useClass: FakeDialogHistory },
+        { provide: CompactLayout, useValue: { isCompact: signal(true).asReadonly() } },
+      ],
+    });
+    fixture = TestBed.createComponent(PulledHost);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    await fixture.whenStable();
+  });
+
+  afterEach(() => fixture.nativeElement.remove());
+
+  it('when the content is at its top and the finger moves down, then the sheet follows it and the content does not scroll', async () => {
+    const move = await pull(160);
+
+    expect(panel().style.translate).toBe('0 60px');
+    expect(move.defaultPrevented).toBe(true);
+  });
+
+  it('when the finger lets go far enough down, then the sheet slides away, cannot be pressed meanwhile and asks to be dismissed', async () => {
+    await pull(400);
+    touch('touchend', text(), [], 400);
+    fixture.detectChanges();
+
+    expect(panel().inert).toBe(true);
+    await settle();
+    expect(fixture.componentInstance.dismissals).toBe(1);
+  });
+
+  it('when the finger lets go after a short way, then the sheet returns and stays open', async () => {
+    await pull(140);
+    await letGo();
+
+    expect(fixture.componentInstance.dismissals).toBe(0);
+    expect(panel().style.translate).toBe('');
+  });
+
+  it('when the content is scrolled down, then the finger scrolls it and the sheet stays', async () => {
+    panel().scrollTop = 50;
+
+    const move = await pull(400);
+
+    expect(panel().style.translate).toBe('');
+    expect(move.defaultPrevented).toBe(false);
+  });
+
+  it('when the finger first moves up, then it scrolls the content until it lets go, even when it comes back down', async () => {
+    touch('touchstart', text(), [[100, 300]], 0);
+    touch('touchmove', text(), [[100, 260]], 20);
+    const back = touch('touchmove', text(), [[100, 500]], 40);
+    fixture.detectChanges();
+
+    expect(panel().style.translate).toBe('');
+    expect(back.defaultPrevented).toBe(false);
+  });
+
+  it('when a second finger touches during the pull, then the sheet returns and stays open', async () => {
+    await pull(300);
+    touch(
+      'touchstart',
+      text(),
+      [
+        [100, 300],
+        [200, 300],
+      ],
+      60,
+    );
+    await letGo();
+
+    expect(fixture.componentInstance.dismissals).toBe(0);
+    expect(panel().style.translate).toBe('');
+  });
+
+  it('when the page holds the sheet open while something runs, then the pull only stretches it and it returns', async () => {
+    fixture.componentInstance.locked.set(true);
+    fixture.detectChanges();
+
+    await pull(500);
+    const stretched = parseFloat(panel().style.translate.split(' ')[1]);
+    await letGo();
+
+    expect(stretched).toBeLessThan(100);
+    expect(fixture.componentInstance.dismissals).toBe(0);
+    expect(question()).toBeNull();
+  });
+
+  describe('when it holds unsaved input and is pulled far down', () => {
+    beforeEach(async () => {
+      fixture.componentInstance.unsaved.set(true);
+      fixture.detectChanges();
+      await pull(500);
+      await letGo();
+    });
+
+    it('then it returns and asks whether to discard the input, offering to keep writing first', () => {
+      expect(fixture.componentInstance.dismissals).toBe(0);
+      expect(panel().style.translate).toBe('');
+      expect(question()?.open).toBe(true);
+      expect(
+        document.getElementById(question()!.getAttribute('aria-labelledby')!)?.textContent?.trim(),
+      ).toBe('Zahodit rozepsané údaje?');
+      expect(document.activeElement?.textContent?.trim()).toBe('Pokračovat v psaní');
+    });
+
+    it('and the visitor keeps writing, then the question closes and the sheet stays open', async () => {
+      (document.activeElement as HTMLButtonElement).click();
+      await settle();
+
+      expect(question()).toBeNull();
+      expect(fixture.componentInstance.dismissals).toBe(0);
+    });
+
+    it('and the visitor discards it, then the sheet asks to be dismissed', async () => {
+      const discard = Array.from(question()!.querySelectorAll('button')).find(
+        (button) => button.textContent?.trim() === 'Zahodit',
+      )!;
+      discard.click();
+      await settle();
+
+      expect(fixture.componentInstance.dismissals).toBe(1);
+    });
+  });
+
+  it('when it holds unsaved input and the close button is pressed, then it asks to be dismissed without a question', async () => {
+    fixture.componentInstance.unsaved.set(true);
+    fixture.detectChanges();
+
+    (panel().querySelector('.dialog-close') as HTMLButtonElement).click();
+    await settle();
+
+    expect(fixture.componentInstance.dismissals).toBe(1);
+    expect(question()).toBeNull();
   });
 });
 

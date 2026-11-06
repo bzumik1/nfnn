@@ -12,6 +12,7 @@ import cz.novanadeje.app.operations.domain.push.PushSubscriptionLimitReached;
 import cz.novanadeje.app.operations.domain.push.PushSubscriptionNotFound;
 import cz.novanadeje.app.operations.domain.push.PushSubscriptionRepository;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.shared.application.session.SignedInDevices;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,15 +34,17 @@ public class PushSubscriptionService {
     private final PushKeyService keys;
     private final PushSender sender;
     private final OperationalAlertService alerts;
+    private final SignedInDevices devices;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public PushSubscriptionService(PushSubscriptionRepository subscriptions, PushKeyService keys, PushSender sender,
-                                   OperationalAlertService alerts, ApplicationEventPublisher events, Clock clock) {
+                                   OperationalAlertService alerts, SignedInDevices devices, ApplicationEventPublisher events, Clock clock) {
         this.subscriptions = subscriptions;
         this.keys = keys;
         this.sender = sender;
         this.alerts = alerts;
+        this.devices = devices;
         this.events = events;
         this.clock = clock;
     }
@@ -56,6 +59,7 @@ public class PushSubscriptionService {
     @Transactional
     public PushSubscriptionView subscribe(UUID administratorId, UUID deviceId, PushEndpoint endpoint, PushClientKeys clientKeys, PushAlerts alerts) {
         Instant now = clock.instant();
+        devices.holdSignedIn(administratorId, deviceId);
         subscriptions.lockWrites();
         List<PushSubscription> displaced = subscriptions.findByEndpointOrDevice(endpoint, deviceId);
         subscriptions.deleteByEndpointOrDevice(endpoint, deviceId);

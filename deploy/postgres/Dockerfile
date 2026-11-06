@@ -1,5 +1,7 @@
 FROM postgres:17-alpine
 
+ENV POSTGRES_INITDB_ARGS="--data-checksums"
+
 COPY nfnn-postgres.sh /usr/local/bin/nfnn-postgres
 COPY app-role.sql own-by-app-role.sql /usr/local/share/nfnn/
 COPY nfnn-app-role.sh /docker-entrypoint-initdb.d/nfnn-app-role.sh
@@ -7,4 +9,4 @@ RUN chmod 0755 /usr/local/bin/nfnn-postgres /docker-entrypoint-initdb.d/nfnn-app
     && chmod 0644 /usr/local/share/nfnn/app-role.sql /usr/local/share/nfnn/own-by-app-role.sql
 
 ENTRYPOINT ["/usr/local/bin/nfnn-postgres"]
-CMD ["postgres"]
+CMD ["postgres", "-c", "log_error_verbosity=terse", "-c", "log_min_error_statement=panic"]
