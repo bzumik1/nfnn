@@ -1,3 +1,5 @@
+@use 'pressed';
+
 .ui-button {
   display: inline-block;
   border: none;
@@ -16,6 +18,10 @@
   &[aria-disabled='true'] {
     cursor: progress;
     opacity: 0.7;
+  }
+
+  @include pressed.when-pressed {
+    @include pressed.darkens;
   }
 }
 
@@ -108,8 +114,10 @@
     border-color var(--duration-base),
     color var(--duration-base);
 
-  &:hover {
-    border-color: var(--color-accent);
+  @media (hover: hover) {
+    &:hover {
+      border-color: var(--color-accent);
+    }
   }
 
   &[aria-disabled='true'] {
