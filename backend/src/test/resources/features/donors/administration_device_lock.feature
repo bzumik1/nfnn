@@ -1,5 +1,5 @@
 @donors
-Feature: An administrator unlocks the administration's copy on a device with a passkey of the account or the password and a code the server checks, and each copy stored on a device is recorded
+Feature: An administrator unlocks the administration's copy on a device with the password and a code the server checks, and each copy stored on a device is recorded
 
   Background:
     Given today is 2026-11-05
