@@ -6,6 +6,7 @@ import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import {
   acceptedStates,
+  bothSides,
   compareImages,
   cropAround,
   declaredAppearance,
@@ -399,6 +400,25 @@ describe('Given shots with the routes they were taken at', () => {
     assert.match(markdown, /\| home-390\.png \| \/ \| page \| 900 \|.*\| ne \|/);
     assert.match(markdown, /\| admin-payments-1280\.png \| \/sprava\/platby \| page \| 900 \|.*\| ano \|/);
     assert.match(markdown, /Vzhled se mění: \/sprava\/platby, \//);
+  });
+});
+
+describe('Given the base and the head shot at the same time', () => {
+  it('when both runs end, then their results come back in the order of the sides', async () => {
+    const slowBase = new Promise((done) => setTimeout(() => done('base'), 20));
+    assert.deepEqual(await bothSides(slowBase, Promise.resolve('head')), ['base', 'head']);
+  });
+
+  it('when one side fails at once, then the failure comes only after the other side has ended', async () => {
+    let headEnded = false;
+    const head = new Promise((done) =>
+      setTimeout(() => {
+        headEnded = true;
+        done('head');
+      }, 20),
+    );
+    await assert.rejects(bothSides(Promise.reject(new Error('the base build failed')), head), /the base build failed/);
+    assert.equal(headEnded, true);
   });
 });
 
