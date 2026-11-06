@@ -348,7 +348,22 @@ for (const width of [320, 390]) {
       expect(await widerThanScreen(page)).toBe(0);
     });
 
-    test('when they look at the tabs, then the four stand in one row, no label breaks inside a word and the end of the page stays above the bar', async ({
+    test('when they look at the tabs, then the four stand side by side in one row', async ({
+      page,
+    }) => {
+      await page.goto('/aktuality/zahrada-pro-deti');
+      await page.addStyleTag({ content: 'html { font-size: 200%; }' });
+      await expect(page.getByRole('heading', { level: 1, name: 'Zahrada pro děti' })).toBeVisible();
+
+      const tabs = page.getByRole('navigation', { name: 'Hlavní sekce' }).getByRole('link');
+      await expect(tabs).toHaveText(['O nás', 'Aktuality', 'Pomáháme', 'Přispět']);
+      const rows = await tabs.evaluateAll((elements) =>
+        elements.map((element) => Math.round(element.getBoundingClientRect().top)),
+      );
+      expect(new Set(rows).size).toBe(1);
+    });
+
+    test('when they look at the tabs, then no label breaks inside a word and the end of the page stays above the bar', async ({
       page,
     }) => {
       await page.goto('/aktuality/zahrada-pro-deti');
@@ -356,11 +371,6 @@ for (const width of [320, 390]) {
       await expect(page.getByRole('heading', { level: 1, name: 'Zahrada pro děti' })).toBeVisible();
 
       expect(await splitWords(page, 'app-tab-bar .tab-label')).toEqual([]);
-      const tabs = page.getByRole('navigation', { name: 'Hlavní sekce' }).getByRole('link');
-      const rows = await tabs.evaluateAll((elements) =>
-        elements.map((element) => Math.round(element.getBoundingClientRect().top)),
-      );
-      expect(new Set(rows).size).toBe(1);
       await expect
         .poll(() =>
           page.evaluate(() => {
