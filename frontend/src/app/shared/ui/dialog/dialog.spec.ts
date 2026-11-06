@@ -2,6 +2,7 @@ import { BrowserPlatformLocation, Location, PlatformLocation } from '@angular/co
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
+import { InputModality } from '../../../core/input/input-modality';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { Dialog } from './dialog';
 import { SuspendsDialogs } from './dialog-suspension';
@@ -188,6 +189,81 @@ describe('Given a dialog opened from a button', () => {
 
     expect(document.activeElement).toBe(main);
     main.remove();
+  });
+});
+
+@Component({
+  imports: [Dialog],
+  template: `
+    <button type="button" id="opener" (click)="open.set(true)">Otevřít</button>
+    @if (open()) {
+      <app-dialog labelledBy="title" (dismissed)="open.set(false)">
+        <h2 id="title">Název</h2>
+        <input id="field" [attr.autofocus]="fieldTakesFocus() ? '' : null" />
+      </app-dialog>
+    }
+  `,
+})
+class PressedHost {
+  readonly open = signal(false);
+  readonly fieldTakesFocus = signal(false);
+}
+
+describe('Given a dialog and the press that opens it', () => {
+  let fixture: ComponentFixture<PressedHost>;
+  let modality: InputModality;
+
+  const opener = () => fixture.nativeElement.querySelector('#opener') as HTMLButtonElement;
+  const native = () => fixture.nativeElement.querySelector('dialog') as HTMLDialogElement;
+
+  const openBy = (press: Event): void => {
+    opener().focus();
+    opener().dispatchEvent(press);
+    opener().click();
+    fixture.detectChanges();
+  };
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [PressedHost],
+      providers: [{ provide: DialogHistory, useClass: FakeDialogHistory }],
+    });
+    modality = TestBed.inject(InputModality);
+    modality.start();
+    fixture = TestBed.createComponent(PressedHost);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    modality.stop();
+    fixture.nativeElement.remove();
+  });
+
+  it('when a finger or a mouse opens it, then the dialog itself holds the focus, so no control shows a focus ring nobody asked for', () => {
+    openBy(new Event('pointerdown', { bubbles: true }));
+
+    expect(document.activeElement).toBe(native());
+  });
+
+  it('when a finger or a mouse opens it, then the dialog itself stays out of the tab order', () => {
+    openBy(new Event('pointerdown', { bubbles: true }));
+
+    expect(native().getAttribute('tabindex')).toBe('-1');
+  });
+
+  it('when the keyboard opens it, then the browser moves the focus into it as before', () => {
+    openBy(new KeyboardEvent('keydown', { bubbles: true, key: 'Enter' }));
+
+    expect(document.activeElement).not.toBe(native());
+  });
+
+  it('when a finger opens it and a field asks for the focus, then the field keeps it', () => {
+    fixture.componentInstance.fieldTakesFocus.set(true);
+
+    openBy(new Event('pointerdown', { bubbles: true }));
+
+    expect(document.activeElement?.id).toBe('field');
   });
 });
 
