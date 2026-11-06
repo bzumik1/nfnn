@@ -1,7 +1,7 @@
 import { bankNameOf, CZECH_BANK_CODES } from './czech-banks';
 
 const LEGAL_FORMS =
-  /a\.\s?s\.|s\.r\.o\.|organizační složka|odštěpný závod|pobočka|spořitelní družstvo|v likvidaci|\beG\b|\bAG\b|S\.A\.|p\.l\.c\.|N\.V\.|UAB|Ltd|Limited|Aktiengesellschaft|Branch/i;
+  /a\.\s?s\.|s\.r\.o\.|organizační složka|odštěpný závod|pobočka|spořitelní družstvo|v likvidaci|\beG\b|\bAG\b|S\.A\.|p\.l\.c\.|N\.V\.|UAB|Ltd|Limited|Aktiengesellschaft|Branch|\bplc\b|Filiale/i;
 
 describe('Given the ČNB list of Czech bank codes', () => {
   it('when a Czech account names a listed bank code, then it gives the short name of that bank', () => {

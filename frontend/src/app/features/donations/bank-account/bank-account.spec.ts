@@ -21,6 +21,7 @@ describe('Given a Czech account of a bank on the ČNB list', () => {
     expect(element.textContent?.replace(/\s+/g, ' ').trim()).toBe(
       '2000145399/0800 · Česká spořitelna',
     );
+    expect(element.querySelector('.bank')?.textContent).toBe('·\u00a0Česká spořitelna');
   });
 });
 

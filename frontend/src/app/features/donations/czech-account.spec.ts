@@ -18,9 +18,12 @@ describe('Given an account as the bank or the learned link writes it', () => {
   it.each([
     ['2000145399/0800', '0800'],
     ['19-2000145399/0800', '0800'],
-    ['1234567890/0800', '0800'],
   ])('when the bank code of %j is read, then it is %j', (account, bankCode) => {
     expect(bankCodeOf(account)).toBe(bankCode);
+  });
+
+  it('when the number fails the modulo 11 check, then its bank code is still read, because naming the bank checks only the shape', () => {
+    expect(bankCodeOf('1234567890/0800')).toBe('0800');
   });
 
   it.each(['CZ6508000000192000145399', '2000145399', '2000145399/80', 'abc/0800', ''])(
