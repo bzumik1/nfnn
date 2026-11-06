@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.SecondFactorCodesPaused;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorNotFound;
@@ -20,16 +21,18 @@ public class FreshSecondFactorCheck {
     private final DonorRepository donors;
     private final SecondFactorRepository secondFactors;
     private final DonorConfirmations confirmations;
+    private final SecondFactorCodes codes;
     private final Clock clock;
 
-    public FreshSecondFactorCheck(DonorRepository donors, SecondFactorRepository secondFactors, DonorConfirmations confirmations, Clock clock) {
+    public FreshSecondFactorCheck(DonorRepository donors, SecondFactorRepository secondFactors, DonorConfirmations confirmations, SecondFactorCodes codes, Clock clock) {
         this.donors = donors;
         this.secondFactors = secondFactors;
         this.confirmations = confirmations;
+        this.codes = codes;
         this.clock = clock;
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = {SecondFactorCodeRejected.class, SecondFactorCodesPaused.class})
     public void require(DonorId donorId, SecondFactorProof proof) {
         Optional<PasskeyProof> passkey = proof.givenPasskey();
         if (passkey.isPresent()) {
@@ -39,9 +42,6 @@ public class FreshSecondFactorCheck {
         }
         String code = proof.givenCode().orElseThrow(FreshSecondFactorRequired::new);
         SecondFactor factor = secondFactors.findByDonor(donorId).filter(SecondFactor::isEnabled).orElseThrow(SecondFactorCodeRejected::new);
-        factor.check(code, clock.instant());
-        if (!secondFactors.recordUse(factor)) {
-            throw new SecondFactorCodeRejected();
-        }
+        codes.check(factor, code, clock.instant());
     }
 }

@@ -76,6 +76,8 @@ class DonorAuthenticationServiceTest {
     @Mock
     private DonorSessionService sessions;
     @Mock
+    private WrongSecondFactorCodeCount wrongCodes;
+    @Mock
     private SecondFactorRepository secondFactors;
     @Mock
     private EmailVerificationTokenRepository verificationTokens;
@@ -88,7 +90,7 @@ class DonorAuthenticationServiceTest {
     @BeforeEach
     void setUp() {
         service = new DonorAuthenticationService(donors, passwordHasher, sessions, new DonorViews(secondFactors, verificationTokens, Clock.fixed(NOW, ZoneOffset.UTC)), secondFactors, challenges,
-                new DonorSecondFactorProperties(CHALLENGE_TTL, CHALLENGE_ATTEMPTS, "Nová naděje", Duration.ofDays(14)), Clock.fixed(NOW, ZoneOffset.UTC));
+                new DonorSecondFactorProperties(CHALLENGE_TTL, CHALLENGE_ATTEMPTS, "Nová naděje", Duration.ofDays(14)), new SecondFactorCodes(secondFactors, wrongCodes), Clock.fixed(NOW, ZoneOffset.UTC));
         donor = Donor.register(DonorId.newId(NOW), DonorType.COMPANY, "Stavby Novák s.r.o.", new CompanyIdentifier("45274649"),
                 new PostalAddress("Průmyslová 5", "Teplice", "415 01"), EMAIL, HASH, new VariableSymbol("1234567890"), LocaleCode.CS, NOW);
         donor.verifyEmail(NOW);
@@ -240,13 +242,35 @@ class DonorAuthenticationServiceTest {
         when(sessions.signIn(donor, true, DeviceDescription.UNKNOWN, SessionKind.REMEMBERED)).thenReturn(TOKENS);
         when(challenges.reserveAttempt(challenge.id(), NOW, CHALLENGE_ATTEMPTS)).thenReturn(true);
         when(challenges.markUsed(challenge.id(), NOW)).thenReturn(true);
+        when(secondFactors.recordUse(factor)).thenReturn(true);
 
         AuthenticatedDonor result = service.completeSecondFactor(secret.value(), codeAt(NOW), DeviceDescription.UNKNOWN, SessionKind.REMEMBERED);
 
         assertThat(result.tokens()).isEqualTo(TOKENS);
         assertThat(factor.lastUsedStep()).hasValue(Totp.stepAt(NOW));
         verify(challenges).markUsed(challenge.id(), NOW);
-        verify(secondFactors).save(factor);
+        verify(secondFactors).recordUse(factor);
+        verify(secondFactors, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Given another open challenge of the donor completed with the same code at the same moment, when the second factor is completed, then the code is refused as used and no session opens")
+    void should_refuse_code_and_open_no_session_when_second_factor_completed_given_the_code_spent_by_another_challenge() {
+        LinkSecret secret = LinkSecret.generate();
+        SecondFactorChallenge challenge = SecondFactorChallenge.issue(secret, donor.id(), NOW.minusSeconds(60), CHALLENGE_TTL);
+        SecondFactor factor = enabledFactor();
+        when(challenges.findBySecretHash(secret.hash())).thenReturn(Optional.of(challenge));
+        when(donors.findById(donor.id())).thenReturn(Optional.of(donor));
+        when(secondFactors.findByDonor(donor.id())).thenReturn(Optional.of(factor));
+        when(challenges.reserveAttempt(challenge.id(), NOW, CHALLENGE_ATTEMPTS)).thenReturn(true);
+        when(secondFactors.recordUse(factor)).thenReturn(false);
+
+        assertThatThrownBy(() -> service.completeSecondFactor(secret.value(), codeAt(NOW), DeviceDescription.UNKNOWN, SessionKind.REMEMBERED))
+                .isInstanceOf(InvalidSecondFactorCode.class);
+
+        verify(challenges, never()).markUsed(any(), any());
+        verify(secondFactors, never()).save(any());
+        verifyNoInteractions(sessions);
     }
 
     @Test
@@ -277,6 +301,7 @@ class DonorAuthenticationServiceTest {
         when(secondFactors.findByDonor(donor.id())).thenReturn(Optional.of(enabledFactor()));
         when(challenges.reserveAttempt(challenge.id(), NOW, CHALLENGE_ATTEMPTS)).thenReturn(true);
         when(challenges.markUsed(challenge.id(), NOW)).thenReturn(false);
+        when(secondFactors.recordUse(any())).thenReturn(true);
 
         assertThatThrownBy(() -> service.completeSecondFactor(secret.value(), codeAt(NOW), DeviceDescription.UNKNOWN, SessionKind.REMEMBERED)).isInstanceOf(InvalidSecondFactorChallenge.class);
 

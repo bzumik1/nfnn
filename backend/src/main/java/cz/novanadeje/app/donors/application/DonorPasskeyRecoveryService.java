@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.SecondFactorCodesPaused;
 import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.domain.AdministratorRecoveryRefused;
 import cz.novanadeje.app.donors.domain.Donor;
@@ -33,10 +34,12 @@ public class DonorPasskeyRecoveryService {
     private final DonorPasskeyService passkeys;
     private final Clock clock;
     private final DeviceSignOuts signOuts;
+    private final SecondFactorCodes codes;
 
     public DonorPasskeyRecoveryService(PasswordResetTokenRepository tokens, DonorRepository donors, SecondFactorRepository secondFactors,
-                                       DonorPasskeyService passkeys, Clock clock, DeviceSignOuts signOuts) {
+                                       DonorPasskeyService passkeys, Clock clock, DeviceSignOuts signOuts, SecondFactorCodes codes) {
         this.signOuts = signOuts;
+        this.codes = codes;
         this.tokens = tokens;
         this.donors = donors;
         this.secondFactors = secondFactors;
@@ -44,7 +47,7 @@ public class DonorPasskeyRecoveryService {
         this.clock = clock;
     }
 
-    @Transactional(noRollbackFor = SecondFactorCodeRejected.class)
+    @Transactional(noRollbackFor = {SecondFactorCodeRejected.class, SecondFactorCodesPaused.class})
     public PasskeyCreationOptions options(String token, String code) {
         Instant now = clock.instant();
         Donor donor = recoverableDonor(usableToken(token, now));
@@ -53,8 +56,7 @@ public class DonorPasskeyRecoveryService {
             if (code == null || code.isBlank()) {
                 throw new SecondFactorCodeRequired();
             }
-            factor.get().check(code, now);
-            secondFactors.save(factor.get());
+            codes.check(factor.get(), code, now);
         }
         log.info("Passkey recovery started for donor {}", donor.id());
         return passkeys.optionsFor(donor);

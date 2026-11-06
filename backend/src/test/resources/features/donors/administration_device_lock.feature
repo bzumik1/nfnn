@@ -47,6 +47,14 @@ Feature: An administrator unlocks the administration's copy on a device with the
     And "Jana" unlocks the administration on this device with her password and a fresh code
     Then the response status is 204
 
+  Scenario: Ten wrong codes from any address stop unlocking with any code, even the right one, and tell the administrator by e-mail
+    When "Jana" unlocks the administration on this device with her password and the code "000000" 10 times, each from another client address
+    And the following requests come from another client address
+    And "Jana" unlocks the administration on this device with her password and a fresh code
+    Then the response status is 409
+    And the problem type ends with "donors/second-factor-codes-paused"
+    And an e-mail goes to the address of "Jana" with the subject "Někdo zkouší kódy k vašemu účtu – Nová naděje"
+
   Scenario: A copy of the administration stored on a device is recorded with the kind of device, every time a device stores one
     When "Jana" records that this device, an iPhone with Safari, stores a copy of the administration
     Then the response status is 204
