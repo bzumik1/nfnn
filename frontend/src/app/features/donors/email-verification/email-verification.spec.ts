@@ -282,36 +282,68 @@ describe('Given the page that confirms the e-mail from the registration link', (
   describe('when the link confirms a new address of the account', () => {
     beforeEach(() => open('/potvrzeni-emailu#token=abc&change=email'));
 
-    it('then only the token is sent and the address bar keeps neither', () => {
+    it('then only the token is sent to the change confirmation and the address bar keeps neither', () => {
       expect(TestBed.inject(Location).path(true)).toBe('/potvrzeni-emailu');
-      const request = http.expectOne('/api/donors/auth/email-verification/confirm');
-      expect(request.request.body).toEqual({ token: 'abc', session: 'BROWSER' });
-      request.flush(authResponse('token-1'));
+      http.expectNone('/api/donors/auth/email-verification/confirm');
+      const request = http.expectOne('/api/donors/auth/email-change/confirm');
+      expect(request.request.method).toBe('POST');
+      expect(request.request.body).toEqual({ token: 'abc' });
+      request.flush(null, { status: 204, statusText: 'No Content' });
     });
 
-    it('and the server confirms it, then the page says the address changed and sign-in now uses it, without asking for a passkey', async () => {
-      await answerConfirm(
-        authResponse(
-          'token-1',
-          sampleDonor({ email: 'jana.nova@example.cz', hasPassword: false }),
-        ) as unknown as Record<string, unknown>,
-        200,
-        'OK',
-      );
+    it('and the server confirms it, then the page says the address changed and asks to sign in with it, without a session or a passkey', async () => {
+      http
+        .expectOne('/api/donors/auth/email-change/confirm')
+        .flush(null, { status: 204, statusText: 'No Content' });
+      await settle();
 
+      expect(store.signedIn()).toBe(false);
       expect(heading().textContent).toContain('E-mail je změněný');
       expect(document.activeElement).toBe(heading());
       const status = element('[role="status"]').textContent?.replace(/\s+/g, ' ');
-      expect(status).toContain('Účet teď používá adresu jana.nova@example.cz.');
-      expect(status).toContain('Přihlašujte se odteď touto adresou.');
-      expect(status).not.toContain('Účet je připravený');
+      expect(status).toContain('Nová adresa je potvrzená.');
+      expect(status).toContain('Přihlaste se jí');
+      expect(status).not.toContain('jste přihlášeni');
       expect(harness.routeNativeElement!.textContent).not.toContain('přístupový klíč');
-      expect(element('a.overview-link')).toBeNull();
-      expect(element('.ui-button--primary').textContent?.trim()).toBe('Přejít na můj přehled');
+      expect(element('.ui-button--primary').textContent?.trim()).toBe('Přihlásit se');
 
       await click('.ui-button--primary');
 
+      const dialog = TestBed.inject(LoginDialogService);
+      expect(dialog.isOpen()).toBe(true);
+      expect(dialog.initialMode()).toBe('login');
+      dialog.signedIn();
       expect(navigate).toHaveBeenCalledWith('/darce/prehled');
+    });
+
+    it('and the link is no longer valid, then the invalid panel shows', async () => {
+      const refusal = problem('donors/invalid-email-verification-token', 'Odkaz je neplatný', '');
+      http
+        .expectOne('/api/donors/auth/email-change/confirm')
+        .flush(refusal, { status: 400, statusText: 'Bad Request' });
+      await settle();
+
+      expect(element('.already-confirmed')).not.toBeNull();
+    });
+  });
+
+  describe('when the browser still holds a session and the link confirms a new address of the account', () => {
+    it('and the server confirms it, then that session is signed out here too, because the change ended it on the server', async () => {
+      store.login('jana@example.cz', 'correct horse battery').subscribe();
+      http.expectOne('/api/donors/auth/login').flush(authResponse('token-1'));
+      await open('/potvrzeni-emailu#token=abc&change=email');
+
+      http
+        .expectOne('/api/donors/auth/email-change/confirm')
+        .flush(null, { status: 204, statusText: 'No Content' });
+      await settle();
+      http
+        .expectOne('/api/donors/auth/logout')
+        .flush(null, { status: 401, statusText: 'Unauthorized' });
+      await settle();
+
+      expect(store.signedIn()).toBe(false);
+      expect(heading().textContent).toContain('E-mail je změněný');
     });
   });
 

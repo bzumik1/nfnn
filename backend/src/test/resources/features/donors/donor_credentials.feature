@@ -77,10 +77,9 @@ Feature: Donor changes the password or the e-mail while signed in
     And neither part of the last e-mail contains "jana@example.cz"
     And 1 verification link is stored
     And the donor profile shows type "PERSON", name "Jana Nováková" and email "jana@example.cz"
-    When the donor confirms the e-mail with the link from the e-mail
-    Then the response status is 200
-    And the response carries an access token and a refresh cookie
-    And the donor profile shows type "PERSON", name "Jana Nováková" and email "jana.nova@example.cz"
+    When the donor confirms the e-mail change with the link from the e-mail
+    Then the response status is 204
+    And the response carries no access token and no refresh cookie
     And 0 verification links are stored
     And e-mail 2 goes to "jana@example.cz" with the subject "E-mail vašeho dárcovského účtu byl změněn – Nová naděje"
     And both parts of the last e-mail contain "jana.nova@example.cz"
@@ -88,9 +87,10 @@ Feature: Donor changes the password or the e-mail while signed in
     When the donor refreshes the session with the previous refresh cookie
     Then the response status is 401
     When the donor refreshes the session
-    Then the response status is 200
+    Then the response status is 401
     When the donor signs in with email "jana.nova@example.cz" and password "correct horse battery"
     Then the response status is 200
+    And the donor profile shows type "PERSON", name "Jana Nováková" and email "jana.nova@example.cz"
     When the donor signs in with email "jana@example.cz" and password "correct horse battery"
     Then the response status is 401
 
@@ -102,11 +102,38 @@ Feature: Donor changes the password or the e-mail while signed in
     And 1 e-mail is sent to "jana.nova@example.cz" with the subject "Potvrďte novou e-mailovou adresu – Nová naděje"
     When the donor signs in with email "jana@example.cz" and password "correct horse battery"
     Then the response status is 200
-    When the donor confirms the e-mail with the link from the e-mail
-    Then the response status is 200
-    When the donor confirms the e-mail with the link from e-mail 1
+    When the donor confirms the e-mail change with the link from the e-mail
+    Then the response status is 204
+    When the donor confirms the e-mail change with the link from e-mail 1
     Then the response status is 400
     And the problem type ends with "donors/invalid-email-verification-token"
+
+  Scenario: Confirming a change link opens no session, so whoever holds the new mailbox still needs the password and the code
+    Given a person registered with email "jana@example.cz" and password "correct horse battery"
+    And the donor signed in with email "jana@example.cz" and password "correct horse battery"
+    And the donor turned the second factor on with password "correct horse battery"
+    When the donor asks to change the e-mail to "jana.nova@example.cz" with password "correct horse battery"
+    Then the response status is 202
+    And the donor keeps the link from the e-mail
+    When the donor confirms the e-mail change with the kept link
+    Then the response status is 204
+    And the response carries no access token and no refresh cookie
+    When the donor signs in with email "jana.nova@example.cz" and password "correct horse battery"
+    Then the response status is 401
+    And the problem type ends with "auth/second-factor-required"
+
+  Scenario: A change link is no registration link: the registration confirmation refuses it and leaves it usable
+    Given a person registered with email "jana@example.cz" and password "correct horse battery"
+    And the donor signed in with email "jana@example.cz" and password "correct horse battery"
+    When the donor asks to change the e-mail to "jana.nova@example.cz" with password "correct horse battery"
+    Then the response status is 202
+    And the donor keeps the link from the e-mail
+    When the kept link is confirmed as a registration
+    Then the response status is 400
+    And the problem type ends with "donors/invalid-email-verification-token"
+    And the response carries no access token and no refresh cookie
+    When the donor confirms the e-mail change with the kept link
+    Then the response status is 204
 
   Scenario: An address another account has gets a notice, nothing changes and the answer does not say so
     Given a person registered with email "petr@example.cz" and password "correct horse battery"
@@ -145,7 +172,7 @@ Feature: Donor changes the password or the e-mail while signed in
     Then the response status is 202
     And the donor keeps the link from the e-mail
     Given a person registered with email "jana.nova@example.cz" and password "another fine passphrase"
-    When the donor confirms the e-mail with the kept link
+    When the donor confirms the e-mail change with the kept link
     Then the response status is 400
     And the problem type ends with "donors/invalid-email-verification-token"
     When the donor signs in with email "jana@example.cz" and password "correct horse battery"
@@ -169,10 +196,10 @@ Feature: Donor changes the password or the e-mail while signed in
     When the donor asks to change the e-mail to "Jana.Nova@Example.cz" with password "correct horse battery"
     Then the response status is 202
     And the donor profile shows a pending e-mail change to "jana.nova@example.cz" expiring 24 hours from now
-    When the donor confirms the e-mail with the link from the e-mail
-    Then the response status is 200
-    And the response carries an access token and a refresh cookie
-    And the donor profile shows type "PERSON", name "Jana Nováková" and email "jana.nova@example.cz"
+    When the donor confirms the e-mail change with the link from the e-mail
+    Then the response status is 204
+    When the donor signs in with email "jana.nova@example.cz" and password "correct horse battery"
+    Then the donor profile shows type "PERSON", name "Jana Nováková" and email "jana.nova@example.cz"
     And the donor profile shows no pending e-mail change
 
   Scenario: A new request replaces the pending change and the link sent before stops working
@@ -183,7 +210,7 @@ Feature: Donor changes the password or the e-mail while signed in
     Then the response status is 202
     And 1 verification link is stored
     And the donor profile shows a pending e-mail change to "jana.nova@example.cz" expiring 24 hours from now
-    When the donor confirms the e-mail with the link from e-mail 1
+    When the donor confirms the e-mail change with the link from e-mail 1
     Then the response status is 400
     And the problem type ends with "donors/invalid-email-verification-token"
 
@@ -197,13 +224,13 @@ Feature: Donor changes the password or the e-mail while signed in
     And e-mail 2 goes to "jana.nova@example.cz" with the subject "Potvrďte novou e-mailovou adresu – Nová naděje"
     And 1 verification link is stored
     And the donor profile shows a pending e-mail change to "jana.nova@example.cz" expiring 24 hours from now
-    When the donor confirms the e-mail with the link from e-mail 1
+    When the donor confirms the e-mail change with the link from e-mail 1
     Then the response status is 400
     And the problem type ends with "donors/invalid-email-verification-token"
-    When the donor confirms the e-mail with the link from e-mail 2
-    Then the response status is 200
-    And the response carries an access token and a refresh cookie
-    And the donor profile shows type "PERSON", name "Jana Nováková" and email "jana.nova@example.cz"
+    When the donor confirms the e-mail change with the link from e-mail 2
+    Then the response status is 204
+    When the donor signs in with email "jana.nova@example.cz" and password "correct horse battery"
+    Then the donor profile shows type "PERSON", name "Jana Nováková" and email "jana.nova@example.cz"
 
   Scenario: Cancelling the pending change keeps the address, the sent link stops working and cancelling again changes nothing
     Given a person registered with email "jana@example.cz" and password "correct horse battery"
@@ -215,7 +242,7 @@ Feature: Donor changes the password or the e-mail while signed in
     And the donor profile shows no pending e-mail change
     When the donor cancels the e-mail change
     Then the response status is 204
-    When the donor confirms the e-mail with the link from the e-mail
+    When the donor confirms the e-mail change with the link from the e-mail
     Then the response status is 400
     And the problem type ends with "donors/invalid-email-verification-token"
     When the donor signs in with email "jana@example.cz" and password "correct horse battery"

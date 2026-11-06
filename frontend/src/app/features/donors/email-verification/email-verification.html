@@ -30,17 +30,21 @@
             >
               E-mail je změněný
             </h1>
-            <p class="ui-panel__lead" role="status" i18n="@@donor.emailVerification.changed.text">
-              Účet teď používá adresu {{ donorEmail() }}. Přihlašujte se odteď touto adresou. Teď už
-              jste přihlášeni.
+            <p
+              class="ui-panel__lead"
+              role="status"
+              i18n="@@donor.emailVerification.changed.signInText"
+            >
+              Nová adresa je potvrzená. Přihlaste se jí, heslem nebo přístupovým klíčem jako dosud.
+              Kvůli bezpečnosti jsme vás odhlásili na všech zařízeních.
             </p>
             <button
               type="button"
               class="ui-button ui-button--primary ui-button--block"
-              (click)="enterPortal()"
-              i18n="@@donor.emailVerification.overviewAction"
+              (click)="signIn()"
+              i18n="@@donor.emailVerification.changed.signIn"
             >
-              Přejít na můj přehled
+              Přihlásit se
             </button>
           } @else {
             <h1
