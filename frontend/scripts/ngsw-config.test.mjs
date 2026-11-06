@@ -187,13 +187,13 @@ describe('Given the service worker configuration', () => {
     assert.equal(config.index, '/index.html');
   });
 
-  it('when the build is listed, then the app shell with its fonts and logos is kept at install, photos, icons and the receipt files only once asked for, and the worker files never', async () => {
+  it('when the build is listed, then the app shell with its fonts, logos and launch icon is kept at install, photos, icons and the receipt files only once asked for, and the worker files never', async () => {
     const shell = [
       '/index.html',
       '/boot-guard.js',
       '/manifest.webmanifest',
       '/favicon.svg',
-      '/icon-512.png',
+      '/launch-icon.svg',
       '/images/logo.svg',
       '/images/logo-on-dark.svg',
       '/main-ABCDEFGH.js',
@@ -207,6 +207,7 @@ describe('Given the service worker configuration', () => {
       '/receipt-fonts/body.0123456789abcdef.ttf',
       '/images/hero-1024.webp',
       '/icon-192.png',
+      '/icon-512.png',
       '/apple-touch-icon.png',
       '/favicon.ico',
       '/robots.txt',
