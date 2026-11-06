@@ -7,6 +7,13 @@
     "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
   },
   {
+    "scenario": "content/choose_project_order: *",
+    "kind": "mails",
+    "subject": "Potvrďte svůj e-mail – Nová naděje",
+    "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
+    "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
+  },
+  {
     "scenario": "content/clean_up_unused_photos: *",
     "kind": "mails",
     "subject": "Potvrďte svůj e-mail – Nová naděje",
@@ -21,7 +28,21 @@
     "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
   },
   {
+    "scenario": "content/manage_about: *",
+    "kind": "mails",
+    "subject": "Potvrďte svůj e-mail – Nová naděje",
+    "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
+    "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
+  },
+  {
     "scenario": "content/manage_news: *",
+    "kind": "mails",
+    "subject": "Potvrďte svůj e-mail – Nová naděje",
+    "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
+    "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
+  },
+  {
+    "scenario": "content/manage_people: *",
     "kind": "mails",
     "subject": "Potvrďte svůj e-mail – Nová naděje",
     "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
@@ -31,6 +52,41 @@
     "scenario": "content/manage_projects: *",
     "kind": "mails",
     "subject": "Potvrďte svůj e-mail – Nová naděje",
+    "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
+    "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
+  },
+  {
+    "scenario": "content/place_photo_focal_point: *",
+    "kind": "mails",
+    "subject": "Potvrďte svůj e-mail – Nová naděje",
+    "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
+    "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
+  },
+  {
+    "scenario": "content/stale_content_writes: *",
+    "kind": "mails",
+    "subject": "Potvrďte svůj e-mail – Nová naděje",
+    "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
+    "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
+  },
+  {
+    "scenario": "donations/admin_activity_since: *",
+    "kind": "mails",
+    "subject": "Potvrďte svůj e-mail – Nová naděje",
+    "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
+    "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
+  },
+  {
+    "scenario": "donations/admin_device_sync: *",
+    "kind": "mails",
+    "subject": "Potvrďte svůj e-mail – Nová naděje",
+    "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
+    "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
+  },
+  {
+    "scenario": "donations/admin_device_sync: *",
+    "kind": "mails",
+    "subject": "Vaše osobní údaje jsme vymazali – Nová naděje",
     "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
     "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
   },
@@ -45,6 +101,13 @@
     "scenario": "donations/admin_donor_erasure: *",
     "kind": "mails",
     "subject": "Potvrďte svůj e-mail – Nová naděje",
+    "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
+    "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
+  },
+  {
+    "scenario": "donations/admin_donor_erasure: *",
+    "kind": "mails",
+    "subject": "Vaše osobní údaje jsme vymazali – Nová naděje",
     "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
     "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
   },
@@ -70,7 +133,49 @@
     "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
   },
   {
+    "scenario": "donations/admin_payments: *",
+    "kind": "mails",
+    "subject": "Vaše osobní údaje jsme vymazali – Nová naděje",
+    "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
+    "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
+  },
+  {
     "scenario": "donations/admin_receipt_signature: *",
+    "kind": "mails",
+    "subject": "Potvrďte svůj e-mail – Nová naděje",
+    "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
+    "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
+  },
+  {
+    "scenario": "donations/admin_receipt_signing_key_withdrawal: *",
+    "kind": "mails",
+    "subject": "Potvrďte svůj e-mail – Nová naděje",
+    "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
+    "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
+  },
+  {
+    "scenario": "donations/admin_receipt_signing_keys: *",
+    "kind": "mails",
+    "subject": "Potvrďte svůj e-mail – Nová naděje",
+    "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
+    "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
+  },
+  {
+    "scenario": "donations/admin_receipts: *",
+    "kind": "mails",
+    "subject": "Potvrďte svůj e-mail – Nová naděje",
+    "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
+    "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
+  },
+  {
+    "scenario": "donations/admin_receipts: *",
+    "kind": "mails",
+    "subject": "Vaše osobní údaje jsme vymazali – Nová naděje",
+    "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
+    "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
+  },
+  {
+    "scenario": "donations/admin_stale_writes: *",
     "kind": "mails",
     "subject": "Potvrďte svůj e-mail – Nová naděje",
     "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
@@ -84,6 +189,20 @@
     "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
   },
   {
+    "scenario": "donations/admin_yearly_receipts: *",
+    "kind": "mails",
+    "subject": "Potvrďte svůj e-mail – Nová naděje",
+    "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
+    "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
+  },
+  {
+    "scenario": "donations/admin_yearly_receipts: *",
+    "kind": "mails",
+    "subject": "Vaše osobní údaje jsme vymazali – Nová naděje",
+    "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
+    "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
+  },
+  {
     "scenario": "donations/bank_check_on_demand: *",
     "kind": "mails",
     "subject": "Potvrďte svůj e-mail – Nová naděje",
@@ -91,9 +210,37 @@
     "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
   },
   {
+    "scenario": "donations/donation_receipts_frozen: *",
+    "kind": "mails",
+    "subject": "Potvrďte svůj e-mail – Nová naděje",
+    "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
+    "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
+  },
+  {
+    "scenario": "donations/donation_receipts_frozen: *",
+    "kind": "mails",
+    "subject": "Vaše osobní údaje jsme vymazali – Nová naděje",
+    "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
+    "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
+  },
+  {
     "scenario": "donations/donor_bank_accounts: *",
     "kind": "mails",
     "subject": "Potvrďte svůj e-mail – Nová naděje",
+    "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
+    "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
+  },
+  {
+    "scenario": "donations/donor_device_sync: *",
+    "kind": "mails",
+    "subject": "Potvrďte svůj e-mail – Nová naděje",
+    "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
+    "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
+  },
+  {
+    "scenario": "donations/donor_device_sync: *",
+    "kind": "mails",
+    "subject": "Vaše osobní údaje jsme vymazali – Nová naděje",
     "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
     "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
   },
@@ -119,7 +266,28 @@
     "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
   },
   {
+    "scenario": "donations/payment_details: *",
+    "kind": "mails",
+    "subject": "Potvrďte svůj e-mail – Nová naděje",
+    "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
+    "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
+  },
+  {
     "scenario": "donations/payment_pairing: *",
+    "kind": "mails",
+    "subject": "Potvrďte svůj e-mail – Nová naděje",
+    "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
+    "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
+  },
+  {
+    "scenario": "donations/receipt_keys: *",
+    "kind": "mails",
+    "subject": "Potvrďte svůj e-mail – Nová naděje",
+    "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
+    "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
+  },
+  {
+    "scenario": "donations/receipt_status: *",
     "kind": "mails",
     "subject": "Potvrďte svůj e-mail – Nová naděje",
     "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
@@ -147,9 +315,37 @@
     "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
   },
   {
+    "scenario": "donors/admin_device_sync: *",
+    "kind": "mails",
+    "subject": "Obnova hesla k dárcovskému účtu – Nová naděje",
+    "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
+    "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
+  },
+  {
+    "scenario": "donors/admin_device_sync: *",
+    "kind": "mails",
+    "subject": "Potvrďte svůj e-mail – Nová naděje",
+    "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
+    "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
+  },
+  {
+    "scenario": "donors/admin_device_sync: *",
+    "kind": "mails",
+    "subject": "Vaše osobní údaje jsme vymazali – Nová naděje",
+    "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
+    "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
+  },
+  {
     "scenario": "donors/admin_donor_erasure: *",
     "kind": "mails",
     "subject": "Potvrďte svůj e-mail – Nová naděje",
+    "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
+    "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
+  },
+  {
+    "scenario": "donors/admin_donor_erasure: *",
+    "kind": "mails",
+    "subject": "Vaše osobní údaje jsme vymazali – Nová naděje",
     "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
     "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
   },
@@ -161,7 +357,49 @@
     "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
   },
   {
+    "scenario": "donors/admin_previous_sign_in: *",
+    "kind": "mails",
+    "subject": "Potvrďte svůj e-mail – Nová naděje",
+    "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
+    "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
+  },
+  {
+    "scenario": "donors/administration_device_lock: *",
+    "kind": "mails",
+    "subject": "Potvrďte svůj e-mail – Nová naděje",
+    "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
+    "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
+  },
+  {
     "scenario": "donors/connected_apps: *",
+    "kind": "mails",
+    "subject": "Potvrďte svůj e-mail – Nová naděje",
+    "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
+    "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
+  },
+  {
+    "scenario": "donors/donor_credentials: *",
+    "kind": "mails",
+    "subject": "Potvrďte novou e-mailovou adresu – Nová naděje",
+    "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
+    "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
+  },
+  {
+    "scenario": "donors/donor_credentials: *",
+    "kind": "mails",
+    "subject": "Potvrďte svůj e-mail – Nová naděje",
+    "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
+    "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
+  },
+  {
+    "scenario": "donors/donor_credentials: *",
+    "kind": "mails",
+    "subject": "Vaši adresu chtěl použít jiný účet – Nová naděje",
+    "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
+    "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
+  },
+  {
+    "scenario": "donors/donor_devices: *",
     "kind": "mails",
     "subject": "Potvrďte svůj e-mail – Nová naděje",
     "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
@@ -217,6 +455,13 @@
     "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
   },
   {
+    "scenario": "donors/donor_passkeys: *",
+    "kind": "mails",
+    "subject": "Vaše osobní údaje jsme vymazali – Nová naděje",
+    "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
+    "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
+  },
+  {
     "scenario": "donors/donor_password_reset: *",
     "kind": "mails",
     "subject": "Confirm your e-mail – Nová naděje",
@@ -239,6 +484,27 @@
   },
   {
     "scenario": "donors/donor_password_reset: *",
+    "kind": "mails",
+    "subject": "Potvrďte svůj e-mail – Nová naděje",
+    "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
+    "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
+  },
+  {
+    "scenario": "donors/donor_passwordless: *",
+    "kind": "mails",
+    "subject": "Obnova hesla k dárcovskému účtu – Nová naděje",
+    "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
+    "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
+  },
+  {
+    "scenario": "donors/donor_passwordless: *",
+    "kind": "mails",
+    "subject": "Potvrďte novou e-mailovou adresu – Nová naděje",
+    "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
+    "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
+  },
+  {
+    "scenario": "donors/donor_passwordless: *",
     "kind": "mails",
     "subject": "Potvrďte svůj e-mail – Nová naděje",
     "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
@@ -273,6 +539,20 @@
     "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
   },
   {
+    "scenario": "donors/session_kinds: *",
+    "kind": "mails",
+    "subject": "Potvrďte svůj e-mail – Nová naděje",
+    "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
+    "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
+  },
+  {
+    "scenario": "operations/admin_push: *",
+    "kind": "mails",
+    "subject": "Potvrďte svůj e-mail – Nová naděje",
+    "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
+    "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
+  },
+  {
     "scenario": "operations/backup_key: *",
     "kind": "mails",
     "subject": "Potvrďte svůj e-mail – Nová naděje",
@@ -295,6 +575,27 @@
   },
   {
     "scenario": "operations/plan_backups: *",
+    "kind": "mails",
+    "subject": "Potvrďte svůj e-mail – Nová naděje",
+    "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
+    "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
+  },
+  {
+    "scenario": "operations/problem_answers: *",
+    "kind": "mails",
+    "subject": "Potvrďte svůj e-mail – Nová naděje",
+    "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
+    "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
+  },
+  {
+    "scenario": "operations/push_alerts: *",
+    "kind": "mails",
+    "subject": "Potvrďte svůj e-mail – Nová naděje",
+    "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
+    "contract": "docs/frontend-overview.md, Surfaces, dark levels and accent"
+  },
+  {
+    "scenario": "operations/request_text_in_logs: *",
     "kind": "mails",
     "subject": "Potvrďte svůj e-mail – Nová naděje",
     "reason": "PR #509 (design slice s3, Jakub's J6): the e-mail templates take the current theme colours, links the accent #1d5fc9, the tinted note #edf2fb with its border #c0d2f0 and grey text #676f7d, so only the HTML part's styles change",
