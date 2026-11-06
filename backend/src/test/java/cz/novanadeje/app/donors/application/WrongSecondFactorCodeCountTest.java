@@ -1,6 +1,5 @@
 package cz.novanadeje.app.donors.application;
 
-import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
@@ -28,6 +27,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import javax.sql.DataSource;
+import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -84,7 +84,7 @@ class WrongSecondFactorCodeCountTest {
     }
 
     @Test
-    @DisplayName("Given thirty code checks of one donor at the same moment, when each reserves its check, then exactly ten are reserved, the rest are refused as paused and the pause is started and logged once")
+    @DisplayName("Given thirty code checks of one donor at the same moment, when each reserves its check, then exactly ten are reserved, the rest are refused as paused, the pause of an hour is stored and nothing is logged")
     void should_reserve_exactly_ten_and_start_one_pause_when_reserved_at_once_given_thirty_checks() throws Exception {
         Instant now = clock.instant();
         CountDownLatch start = new CountDownLatch(1);
@@ -109,9 +109,9 @@ class WrongSecondFactorCodeCountTest {
             }
 
             assertThat(reserved).filteredOn(Boolean::booleanValue).hasSize(10);
-            assertThat(logged.list).filteredOn(line -> line.getLevel() == Level.WARN).singleElement()
-                    .satisfies(line -> assertThat(line.getFormattedMessage())
-                            .isEqualTo("Second factor codes of donor " + jana.id() + " are paused for an hour after 10 wrong codes"));
+            assertThat(jdbc.sql("select paused_until from donor_second_factor_wrong_codes where donor_id = ?").param(jana.id().value())
+                    .query(Timestamp.class).single().toInstant()).isEqualTo(now.plus(Duration.ofHours(1)));
+            assertThat(logged.list).as("the pause writes no log line until Jakub approves one").isEmpty();
         } finally {
             callers.shutdownNow();
         }

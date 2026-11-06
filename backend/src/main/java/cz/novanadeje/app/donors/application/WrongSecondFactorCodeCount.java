@@ -6,8 +6,6 @@ import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.SecondFactorCodeReservation;
 import cz.novanadeje.app.donors.domain.SecondFactorCodesPaused;
 import cz.novanadeje.app.donors.domain.WrongSecondFactorCodes;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,8 +14,6 @@ import java.time.Instant;
 
 @Component
 public class WrongSecondFactorCodeCount {
-
-    private static final Logger log = LoggerFactory.getLogger(WrongSecondFactorCodeCount.class);
 
     private final WrongSecondFactorCodes wrongCodes;
     private final DonorRepository donors;
@@ -36,7 +32,6 @@ public class WrongSecondFactorCodeCount {
             return;
         }
         if (reservation == SecondFactorCodeReservation.PAUSE_STARTED) {
-            log.warn("Second factor codes of donor {} are paused for an hour after {} wrong codes", donorId, WrongSecondFactorCodes.ALLOWED_IN_WINDOW);
             donors.findById(donorId).filter(donor -> !donor.isErased())
                     .ifPresent(donor -> events.publishEvent(new DonorSecondFactorCodesPaused(donorId.value(), donor.email(), donor.preferredLocale())));
         }
